@@ -1064,6 +1064,35 @@ typedef struct {
 } VBMVolume;
 
 static VBMPool *vbm_instance[MAX_VBM_POOLS] = {NULL};
+
+#if defined(PLATFORM_T21)
+/*
+ * T21/T20 (PC420: 23 MiB rmem for ISP, 1080p + 360p): timps disables an
+ * idle FrameSource channel and enables it again when a client connects.
+ * Freeing the 6 MB main-stream pool on every disable let the first-fit
+ * rmem allocator place later allocations in the hole, and the next enable
+ * or the main encoder's 3 MB reference frame then found enough free rmem
+ * but no contiguous block.  Keep a destroyed pool's DMA block parked per
+ * channel and reuse it for the next pool of the same size.
+ */
+static IMPDMABufferInfo vbm_parked_dma[MAX_VBM_POOLS];
+
+static int vbm_take_parked(int chn, int size, IMPDMABufferInfo *info)
+{
+    IMPDMABufferInfo *parked = &vbm_parked_dma[chn];
+
+    if (!parked->phys_addr)
+        return -1;
+    if (parked->size != (uint32_t)size) {
+        DMA_FreePhys(parked->phys_addr);
+        memset(parked, 0, sizeof(*parked));
+        return -1;
+    }
+    *info = *parked;
+    memset(parked, 0, sizeof(*parked));
+    return 0;
+}
+#endif
 static VBMVolume g_framevolumes[30]; /* Global frame volumes array */
 
 static VBMVolume *vbm_find_volume_by_vaddr(uint32_t vaddr)
@@ -1256,6 +1285,11 @@ int VBMCreatePool(int chn, void *fmt, void *ops, void *priv) {
     int ret;
 
     if (pool->pool_id < 0) {
+#if defined(PLATFORM_T21)
+        if (vbm_take_parked(chn, total_size, &alloc_info) == 0)
+            ret = 0;
+        else
+#endif
         ret = DMA_AllocDescriptor(&alloc_info, total_size, pool->name);
     } else {
         ret = DMA_PoolAllocDescriptor(pool->pool_id, &alloc_info, total_size, pool->name);
@@ -1407,6 +1441,18 @@ int VBMDestroyPool(int chn) {
     }
 
     /* Free allocated memory */
+#if defined(PLATFORM_T21)
+    if (pool->phys_base != 0 && pool->pool_id < 0) {
+        IMPDMABufferInfo *parked = &vbm_parked_dma[chn];
+
+        if (parked->phys_addr)
+            DMA_FreePhys(parked->phys_addr);
+        memset(parked, 0, sizeof(*parked));
+        parked->phys_addr = pool->phys_base;
+        parked->virt_addr = pool->virt_base;
+        parked->size = (uint32_t)(pool->frame_size * pool->frame_count);
+    } else
+#endif
     if (pool->phys_base != 0) {
         DMA_FreePhys(pool->phys_base);
     }
