@@ -6538,6 +6538,7 @@ struct AL_CodecEncode {
 #endif
 #if defined(PLATFORM_T30)
     T30HelixEncoder *t30_helix;    /* Native T30 /dev/soc_vpu encoder */
+    uint64_t t30_helix_retry_ms;   /* No create attempt before (monotonic) */
 #endif
 };
 
@@ -8894,6 +8895,19 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #if defined(PLATFORM_T30)
     if (codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_AVC) {
         if (!enc->t30_helix) {
+            struct timespec now;
+            uint64_t now_ms;
+
+            /* A failed create (typically rmem exhausted) allocates and
+             * frees ~10 MB per attempt; retry once a second, not per
+             * frame. */
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            now_ms = (uint64_t)now.tv_sec * 1000u +
+                     (uint64_t)now.tv_nsec / 1000000u;
+            if (now_ms < enc->t30_helix_retry_ms) {
+                codec_set_error(enc, -1);
+                return -1;
+            }
             enc->hw_params.width = width;
             enc->hw_params.height = height;
             if (!enc->hw_params.fps_num)
@@ -8906,6 +8920,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 enc->hw_params.bitrate = 2000000u;
             if (OpenIMP_T30_HelixCreate(&enc->t30_helix,
                                         &enc->hw_params) != 0) {
+                enc->t30_helix_retry_ms = now_ms + 1000u;
                 codec_set_error(enc, -1);
                 return -1;
             }

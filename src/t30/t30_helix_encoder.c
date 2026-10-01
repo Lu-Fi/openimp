@@ -11,6 +11,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,6 +133,45 @@ struct T30HelixEncoder {
     OpenIMPT31RateController rate_control;
     int rate_control_enabled;
 };
+
+/*
+ * One /dev/soc_vpu descriptor per process.  The soc_vpu driver's release()
+ * frees every channel and VPU whose owner tgid/pid matches the closing
+ * thread, not just the ones requested through that descriptor: closing a
+ * second fd (for example after a failed encoder create) silently returned
+ * the running encoder's channel to the free list.  The next REQUEST then
+ * handed the same channel out twice and the second RELEASE added it to the
+ * free list again, corrupting the driver's list until the process exit
+ * hung the kernel.  Keep a single shared descriptor open while any encoder
+ * exists; channels are still requested and released individually.
+ */
+static pthread_mutex_t t30_vpu_lock = PTHREAD_MUTEX_INITIALIZER;
+static int t30_vpu_fd = -1;
+static unsigned int t30_vpu_users;
+
+static int t30_vpu_get(void)
+{
+    int fd;
+
+    pthread_mutex_lock(&t30_vpu_lock);
+    if (t30_vpu_fd < 0)
+        t30_vpu_fd = open("/dev/soc_vpu", O_RDWR | O_CLOEXEC);
+    fd = t30_vpu_fd;
+    if (fd >= 0)
+        t30_vpu_users++;
+    pthread_mutex_unlock(&t30_vpu_lock);
+    return fd;
+}
+
+static void t30_vpu_put(void)
+{
+    pthread_mutex_lock(&t30_vpu_lock);
+    if (t30_vpu_users && --t30_vpu_users == 0 && t30_vpu_fd >= 0) {
+        close(t30_vpu_fd);
+        t30_vpu_fd = -1;
+    }
+    pthread_mutex_unlock(&t30_vpu_lock);
+}
 
 static void t30_dma_release(IMPDMABufferInfo *dma)
 {
@@ -385,7 +425,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
     encoder->params = *params;
     t30_normalize_params(&encoder->params, NULL);
 
-    encoder->fd = open("/dev/soc_vpu", O_RDWR | O_CLOEXEC);
+    encoder->fd = t30_vpu_get();
     if (encoder->fd < 0)
         goto fail;
     memset(&encoder->channel, 0, sizeof(encoder->channel));
@@ -681,7 +721,7 @@ void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder)
         (void)ioctl(encoder->fd, T30_CHANNEL_RELEASE, &encoder->channel);
     }
     if (encoder->fd >= 0)
-        close(encoder->fd);
+        t30_vpu_put();
     for (i = 0; i < 2u; i++)
         t30_dma_release(&encoder->reference[i].dma);
     t30_dma_release(&encoder->temporary);

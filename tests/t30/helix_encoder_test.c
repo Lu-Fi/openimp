@@ -62,6 +62,9 @@ static unsigned int runs;
 static uint64_t flushed_before_run;
 static uint64_t flushed_after_run;
 static int in_run_window;
+static unsigned int vpu_opens;
+static unsigned int vpu_closes;
+static unsigned int channels_held;
 
 /* ---- fakes for the rmem allocator ---- */
 
@@ -126,20 +129,47 @@ static FakeAllocation *allocation(const char *tag)
     return NULL;
 }
 
+/* The bitstream window allocated right after the encoder's command list. */
+static FakeAllocation *bitstream_for(uint32_t descriptor)
+{
+    unsigned int i, j;
+
+    for (i = 0; i < 16u; i++) {
+        if ((uint32_t)(uintptr_t)allocations[i].mapping != descriptor)
+            continue;
+        for (j = 1; j < 16u; j++) {
+            FakeAllocation *next = &allocations[(i + j) % 16u];
+
+            if (next->mapping && !strcmp(next->tag, "t30-helix-bs"))
+                return next;
+        }
+    }
+    assert(!"no bitstream window for this command list");
+    return NULL;
+}
+
 /* ---- fakes for /dev/soc_vpu (linked with --wrap) ---- */
 
 int __real_open(const char *path, int flags, ...);
 int __wrap_open(const char *path, int flags, ...)
 {
-    if (!strcmp(path, "/dev/soc_vpu"))
+    if (!strcmp(path, "/dev/soc_vpu")) {
+        vpu_opens++;
         return FAKE_FD;
+    }
     return __real_open(path, flags, 0);
 }
 
 int __real_close(int fd);
 int __wrap_close(int fd)
 {
-    return fd == FAKE_FD ? 0 : __real_close(fd);
+    if (fd != FAKE_FD)
+        return __real_close(fd);
+    /* The real driver frees every channel of the closing thread here,
+     * including ones requested through other descriptors. */
+    assert(channels_held == 0);
+    vpu_closes++;
+    return 0;
 }
 
 int __wrap_ioctl(int fd, unsigned long request, ...)
@@ -154,10 +184,14 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     if (request == T30_CHANNEL_REQUEST) {
         channel->clist = 1;
         channel->channel_id = 3;
+        channels_held++;
         return 0;
     }
-    if (request == T30_CHANNEL_RELEASE)
+    if (request == T30_CHANNEL_RELEASE) {
+        assert(channels_held > 0);
+        channels_held--;
         return 0;
+    }
     assert(request == T30_CHANNEL_RUN);
     runs++;
     in_run_window = 1;
@@ -165,8 +199,8 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         errno = EIO;
         return -1;
     }
-    memcpy((uint8_t *)allocation("t30-helix-bs")->mapping + 256u, payload,
-           payload_length);
+    memcpy((uint8_t *)bitstream_for(channel->dma_addr)->mapping + 256u,
+           payload, payload_length);
     if (run_sets_length)
         channel->output_len = payload_length;
     channel->status = 0x1;
@@ -473,6 +507,24 @@ static void test_dma_footprint(void)
     OpenIMP_T30_HelixDestroy(encoder);
 }
 
+/* Two encoders share one soc_vpu descriptor; it closes with the last. */
+static void test_shared_vpu_descriptor(void)
+{
+    unsigned int opens = vpu_opens;
+    unsigned int closes = vpu_closes;
+    T30HelixEncoder *first = create(1920, 1080, 25, 25);
+    T30HelixEncoder *second = create(640, 360, 25, 25);
+    PictureInfo info;
+
+    assert(vpu_opens == opens + 1u);
+    assert(encode(first, &info) == 0 && encode(second, &info) == 0);
+    OpenIMP_T30_HelixDestroy(second);
+    assert(vpu_closes == closes);
+    assert(encode(first, &info) == 0);
+    OpenIMP_T30_HelixDestroy(first);
+    assert(vpu_closes == closes + 1u);
+}
+
 static void test_large_frame_level(void)
 {
     T30HelixEncoder *encoder = create(2560, 1440, 20, 25);
@@ -494,6 +546,7 @@ int main(void)
     test_runtime_parameters();
     test_large_frame_level();
     test_dma_footprint();
+    test_shared_vpu_descriptor();
     for (i = 0; i < 16u; i++)
         assert(!allocations[i].mapping);
 #if defined(PLATFORM_T20)
