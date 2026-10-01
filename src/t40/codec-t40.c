@@ -6538,6 +6538,7 @@ struct AL_CodecEncode {
 #endif
 #if defined(PLATFORM_T30)
     T30HelixEncoder *t30_helix;    /* Native T30 /dev/soc_vpu encoder */
+    uint64_t t30_helix_retry_ms;   /* No create attempt before (monotonic) */
 #endif
 };
 
@@ -8894,6 +8895,19 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #if defined(PLATFORM_T30)
     if (codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_AVC) {
         if (!enc->t30_helix) {
+            struct timespec now;
+            uint64_t now_ms;
+
+            /* A failed create (typically rmem exhausted) allocates and
+             * frees ~10 MB per attempt; retry once a second, not per
+             * frame. */
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            now_ms = (uint64_t)now.tv_sec * 1000u +
+                     (uint64_t)now.tv_nsec / 1000000u;
+            if (now_ms < enc->t30_helix_retry_ms) {
+                codec_set_error(enc, -1);
+                return -1;
+            }
             enc->hw_params.width = width;
             enc->hw_params.height = height;
             if (!enc->hw_params.fps_num)
@@ -8906,10 +8920,18 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 enc->hw_params.bitrate = 2000000u;
             if (OpenIMP_T30_HelixCreate(&enc->t30_helix,
                                         &enc->hw_params) != 0) {
+                enc->t30_helix_retry_ms = now_ms + 1000u;
                 codec_set_error(enc, -1);
                 return -1;
             }
             enc->use_hardware = 3;
+        }
+        {
+            /* Setters run on the caller's thread and only touch hw_params;
+             * hand a snapshot to the encoder here, between pictures. */
+            HWEncoderParams current = enc->hw_params;
+
+            (void)OpenIMP_T30_HelixUpdateParams(enc->t30_helix, &current);
         }
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
@@ -10588,6 +10610,10 @@ queue_encoded_stream:
     /* Queue encoded stream to FIFO */
     if (Fifo_Queue(enc->fifo_streams, hw_stream, -1) == 0) {
         LOG_CODEC("Process: failed to queue stream");
+        /* Same ownership rule as the legacy ReleaseStream: a heap stream
+         * without a DMA address owns its payload (native Helix, software). */
+        if (hw_stream->virt_addr != 0 && hw_stream->phys_addr == 0)
+            free((void *)(uintptr_t)hw_stream->virt_addr);
         free(hw_stream);
         return -1;
     }
@@ -11008,13 +11034,7 @@ int AL_Codec_Encode_SetBitRate(void *codec, int targetBitrate, int maxBitrate)
 
     enc = (AL_CodecEncode *)codec;
     bitrate_bps = (uint32_t)(targetBitrate > 0 ? targetBitrate : maxBitrate);
-#if defined(PLATFORM_T30)
-    if (enc->t30_helix &&
-        OpenIMP_T30_HelixSetBitrate(enc->t30_helix, bitrate_bps) != 0) {
-        codec_set_error(enc, -1);
-        return -1;
-    }
-#endif
+    /* T30/T21 Helix adopts hw_params on its encoding thread (Process). */
     enc->hw_params.bitrate = bitrate_bps;
     enc->avpu.bitrate = bitrate_bps;
     codec_param_write_bitrate_bps(enc->codec_param, bitrate_bps);
@@ -11395,10 +11415,9 @@ int AL_Codec_Encode_RequestIDR(void *codec) {
     if (__atomic_load_n(&t23_helix_idr_disabled, __ATOMIC_RELAXED))
         return 0;                   /* natural GOP, see t23_helix_idr_check */
 #endif
-#if defined(PLATFORM_T30)
-    if (enc->t30_helix)
-        return OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
-#endif
+    /* T30/T21 Helix: latch only as well.  Process hands the request to the
+     * native encoder on the encoding thread, so it cannot race the encoder's
+     * own IDR bookkeeping. */
     __sync_lock_test_and_set(&enc->force_next_idr, 1);
 
     { static unsigned int idr_req_count = 0; unsigned int c = __sync_add_and_fetch(&idr_req_count, 1);
