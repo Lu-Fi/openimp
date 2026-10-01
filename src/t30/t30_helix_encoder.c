@@ -51,8 +51,17 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #define T30_CHANNEL_DELAY_MS 20000u
 /* The longest command list (T21 P slice) is 2060 words, about 8 KiB. */
 #define T30_DESCRIPTOR_WINDOW (1u << 14)
-#if defined(PLATFORM_T21)
-#define T30_BITSTREAM_WINDOW  (1u << 20)
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+/* T21 programs the window size into EMC_BS_SIZE, so the VPU stops with
+ * BSFULL at its end.  1 MiB is the OEM size for 1080p; smaller pictures
+ * get w*h (360p: 256 KiB), which leaves room for both PC420 streams in
+ * the 23 MiB rmem. */
+#define T30_BITSTREAM_WINDOW_MAX (1u << 20)
+#define T30_BITSTREAM_WINDOW_MIN (1u << 18)
+#elif defined(PLATFORM_T21)
+/* T20 runs the T30 command list, which has no EMC_BS_SIZE limit. */
+#define T30_BITSTREAM_WINDOW_MAX (1u << 20)
+#define T30_BITSTREAM_WINDOW_MIN (1u << 20)
 #endif
 #define T30_EMC_SIZE          (1u << 21)
 #define T30_DBLK_SIZE         (1u << 20)
@@ -204,6 +213,19 @@ static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
     return 0;
 }
 
+#if defined(PLATFORM_T21)
+static uint32_t t30_bitstream_window(uint32_t frame_size)
+{
+    uint32_t window = (frame_size + 0xfffu) & ~0xfffu;
+
+    if (window < T30_BITSTREAM_WINDOW_MIN)
+        return T30_BITSTREAM_WINDOW_MIN;
+    if (window > T30_BITSTREAM_WINDOW_MAX)
+        return T30_BITSTREAM_WINDOW_MAX;
+    return window;
+}
+#endif
+
 static void t30_init_parameter_sets(T30HelixEncoder *encoder)
 {
     h264_sps_t *sps = &encoder->sps;
@@ -349,6 +371,9 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
     slice->descriptor_words = encoder->descriptor.size / sizeof(uint32_t);
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
     slice->scratch_base = encoder->emc.phys_addr;
+    /* The VPU writes from T30_SLICE_OFFSET on. */
+    slice->bitstream_kib =
+        (encoder->temporary.size - T30_SLICE_OFFSET) / 1024u;
 #else
     /* SDK 1.0.5 selects the alternate DCS threshold for its substream. */
     slice->dcs_oth = encoder->params.width <= 640u ? 1u : 0u;
@@ -441,7 +466,8 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
                          "t30-helix-emc") != 0 ||
 #endif
 #if defined(PLATFORM_T21)
-        t30_dma_allocate(&encoder->temporary, T30_BITSTREAM_WINDOW,
+        t30_dma_allocate(&encoder->temporary,
+                         t30_bitstream_window((uint32_t)frame_size),
 #else
         t30_dma_allocate(&encoder->temporary, (uint32_t)frame_size * 2u,
 #endif

@@ -386,7 +386,7 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x30050, config->scratch_base + 0xb0000u);
     EMIT(0x30058, config->scratch_base + 0x150000u);
     EMIT(0x30054, config->scratch_base + 0xd0000u);
-    EMIT(0x30040, 0x400u);
+    EMIT(0x30040, config->bitstream_kib ? config->bitstream_kib : 0x400u);
     EMIT(0x30024, 1);
     for (i = 0; i < 8u; i++)
         EMIT(0x00060u + i * 4u, 0);
