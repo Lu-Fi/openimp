@@ -385,19 +385,18 @@ Nebenbefund: Die letzten Snapshots (06:56–06:57) fielen nach dem Ende der Live
 
 Dateien: [`integration/`](integration/). Branch gepusht.
 
-## open-tx-isp: DQBUF mit O_NONBLOCK und poll (`claude/t31-isp-dqbuf-nonblock`, lokal) – Funktion bestanden, rmmod nicht
+## open-tx-isp: DQBUF mit O_NONBLOCK und poll (`claude/t31-isp-dqbuf-nonblock`) – bestanden
 
 Mit Zustimmung per `insmod` aus `/tmp` getestet (nicht geflasht), danach Neustart auf das geflashte Modul. Testprogramm `fc_nonblock_test` (von einem Agenten, statisch gegen die libimp-Objekte des Images gelinkt; steuert `/dev/framechan0` direkt). Ausgaben: [`isp-nonblock/fc_nonblock_test.txt`](isp-nonblock/fc_nonblock_test.txt).
 
 - **Befund im bisherigen Modul (`6caeb75e`):** DQBUF ignoriert O_NONBLOCK (blockiert bis zum nächsten Frame), und **poll/select melden immer POLLIN**, auch ohne Frame und nach STREAMOFF. Ursache: `tx_isp_core.c` hatte eine eigene `static frame_channel_fops` ohne `.poll`; das `extern` bei der Registrierung der misc-Geräte band an diese Kopie, die vollständige fops in `tx_isp_module.c` war toter Code. Der libimp-Worker wartete deshalb nie wirklich in `select`, sondern im blockierenden DQBUF.
 - **`85fbd1fd` (nur O_NONBLOCK):** (a) EAGAIN in 4 µs, aber poll weiter immer „bereit“ → mit timps dreht der FS-Worker (FS(0)-tick 2–10 % CPU statt ~0 %). So nicht einsetzbar.
 - **`5fe6bbb2` (+ poll wirklich verdrahtet):** 6/6 PASS (EAGAIN 3 µs, poll ohne Frame 0, POLLIN nach 62 ms, POLLERR nach STREAMOFF, EINTR ohne Pufferverlust). timps mit `claude/t31-integration`, 5 min 25 fps: 0 Fehler, FS-Worker 0–0,3 % CPU; `kill -9` 3× ohne Zombie, Neustart sauber.
-- **Aber:** anschließendes `rmmod tx_isp_t31` → Kernel-Oops (`Unable to handle kernel paging request`, Modul hängt in „Unloading“), Neustart nötig ([`isp-nonblock/oops.txt`](isp-nonblock/oops.txt)). Das geflashte `6caeb75e` ließ sich in derselben Sitzung sauber entladen. Analyse und Fix laufen; der Branch wird erst nach bestandenem rmmod-Test gepusht.
+- **rmmod-Oops nach `kill -9`** (mit `5fe6bbb2`): `rmmod tx_isp_t31` → `Unable to handle kernel paging request`, Modul hing in „Unloading“, Neustart nötig ([`isp-nonblock/oops.txt`](isp-nonblock/oops.txt)). Ursache (Agent, per Symbolauflösung): Use-after-free des Sensormoduls, **schon in `6caeb75e` vorhanden**. Nur `IMP_ISP_DelSensor` meldete den Sensor beim ISP ab; nach `kill -9` von timps fehlt das, `rmmod` des Sensors gibt dessen Speicher frei, und `tx_isp_exit()` ruft danach `reset` über den veralteten Zeiger auf. Frühere rmmod-Tests waren sauber, weil vorher DelSensor lief.
+- **Fix `d9b68caa`:** `tx_isp_subdev_deinit()` löst einen noch angemeldeten Sensor vom ISP (Liste, Slot, `ourISPdev->sensor`, gesicherte ops). Test ([`isp-nonblock/rmmod-cycles-d9b68caa.txt`](isp-nonblock/rmmod-cycles-d9b68caa.txt)): 3 Zyklen insmod → `fc_nonblock_test` (6/6) → timps 40 s → Ende per `kill -9` / sauberem Stopp / `kill -9` → rmmod Sensor + tx-isp: alle sauber, kein Oops. Danach Neustart auf das geflashte Modul.
+- Restrisiko laut Agent: nach `kill -9` laufen ISP/AE-Threads weiter; ein Sensor-Zugriff, der genau mit dem Entladen des Sensors zusammenfällt, ist weiter möglich (sehr kleines Fenster). Vollständig wäre ein Stopp von ISP/Sensor beim letzten `close` von `/dev/tx-isp`.
+- Branch `claude/t31-isp-dqbuf-nonblock` (`85fbd1fd` → `5fe6bbb2` → `d9b68caa`) gepusht. Für den Einsatz im Image müsste `OPEN_TX_ISP_VERSION` umgestellt und neu geflasht werden (nicht gemacht).
 
-## Weitere Branches ohne Gerätetest
-
-- **`claude/t31-avc-au-check`** (OpenIMP, auf `dfbd90f`, 3 Commits, von einem Agenten; inzwischen auf dem Gerät getestet, siehe „Nachtests in der Nacht“): Prüft jede H.264-AU wie ein Decoder und verwirft fehlerhafte AUs mit folgendem IDR (`OPENIMP_T31_AU_GATE=0` nur Protokoll); ersetzt das feste `usleep(2000)` vor der EBSP-Kopie durch einen Vergleich des Nutzlast-Endes; `idr_pic_id` wechselt bei aufeinanderfolgenden IDRs. Hintergrund: die ffmpeg-Meldung `(0+2) exceeds max (1)` ließ sich offline nur mit einem unmaskierten Startcode mitten im Slice nachstellen; im Code von `dfbd90f` ist dieser Pfad aber nicht belegbar – die Diagnose soll es am Gerät klären.
-
-## Endzustand der Kamera (2026-10-01, 07:47)
+## Endzustand der Kamera (2026-10-01, 07:57)
 
 Neustart; geflashtes Modul `claude/t31-isp-fixes` (md5 `4d5d4978…`), Flash-libimp (md5 `d1d9d43c…`), kein Bind-Mount, timps über `S95timps` mit `/etc/timps.conf` (15 fps), Main und Sub dekodierbar. `/etc` und Overlay unverändert; Testdateien lagen nur in `/tmp`.
