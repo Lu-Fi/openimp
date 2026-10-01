@@ -397,6 +397,14 @@ Mit Zustimmung per `insmod` aus `/tmp` getestet (nicht geflasht), danach Neustar
 - Restrisiko laut Agent: nach `kill -9` laufen ISP/AE-Threads weiter; ein Sensor-Zugriff, der genau mit dem Entladen des Sensors zusammenfällt, ist weiter möglich (sehr kleines Fenster). Vollständig wäre ein Stopp von ISP/Sensor beim letzten `close` von `/dev/tx-isp`.
 - Branch `claude/t31-isp-dqbuf-nonblock` (`85fbd1fd` → `5fe6bbb2` → `d9b68caa`) gepusht. Für den Einsatz im Image müsste `OPEN_TX_ISP_VERSION` umgestellt und neu geflasht werden (nicht gemacht).
 
-## Endzustand der Kamera (2026-10-01, 07:57)
+## OSD standardmäßig an (`claude/t31-osd-default`) – bestanden
 
-Neustart; geflashtes Modul `claude/t31-isp-fixes` (md5 `4d5d4978…`), Flash-libimp (md5 `d1d9d43c…`), kein Bind-Mount, timps über `S95timps` mit `/etc/timps.conf` (15 fps), Main und Sub dekodierbar. `/etc` und Overlay unverändert; Testdateien lagen nur in `/tmp`.
+Bisher blendete OpenIMP das OSD auf T31 nur mit `OPENIMP_T31_OSD=1` ein (timps legt die Regionen an, im Bild erschien nichts). `18127d2` (auf `claude/t31-integration`) schaltet das IPU-Backend standardmäßig ein, `OPENIMP_T31_OSD=0` schaltet es ab. libimp md5 `4569960ed6d62804dcd77d367c73c50f`. Test per Bind-Mount, 15 fps (`/etc`-Konfiguration als Kopie): `phase.sh osd-s 300 10` → Main/Sub 4446/4445 Frames, 0 Fehler, 27/27 Snapshots Ø 0,23 s, timpsd 8,5–12,6 % CPU, `[ERR]` 0; OSD (Datum/Uhrzeit, Name, Uptime, Logo) im Main-Snapshot und im Sub-Stream sichtbar (lokal angesehen, nicht eingecheckt); `cycle2.sh osd-c … 12` → 12/12, dieselbe PID.
+
+## Neues Image geflasht (komplette OTA, mit Zustimmung)
+
+thingino `ciao` (Build wie zuvor) mit open-tx-isp `claude/t31-isp-dqbuf-nonblock` `d9b68caa` (Modul md5 `da108912…`) und OpenIMP `claude/t31-osd-default` `18127d2` (libimp md5 `4569960e…`, identisch mit dem getesteten Build). Erst nur das Modul (08:10, mit Flash-libimp `3f501a2`: 3 min Main+Sub 0 Fehler, FS-Thread 0,2 % CPU, zwei Neustarts über `S95timps` in 1–2 s), dann beides (08:35). Nach dem Flash: timps läuft über `S95timps`, Log `T31 IPU OSD backend enabled`, Main und Sub dekodierbar, OSD im Bild, kein Oops.
+
+## Endzustand der Kamera (2026-10-01, 08:37)
+
+Neues Image (siehe oben): Modul `d9b68caa`, libimp `18127d2` mit OSD, kein Bind-Mount, timps über `S95timps` mit `/etc/timps.conf` (15 fps), Main und Sub dekodierbar. `/etc` und Overlay unverändert; Testdateien lagen nur in `/tmp`.
