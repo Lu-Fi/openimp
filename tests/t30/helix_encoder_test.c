@@ -525,6 +525,47 @@ static void test_shared_vpu_descriptor(void)
     assert(vpu_closes == closes + 1u);
 }
 
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+static uint32_t descriptor_value(T30HelixEncoder *encoder, uint32_t reg)
+{
+    const uint32_t *desc = NULL;
+    unsigned int i;
+
+    (void)encoder;
+    for (i = 0; i < 16u; i++)
+        if (allocations[i].mapping &&
+            !strcmp(allocations[i].tag, "t30-helix-desc"))
+            desc = allocations[i].mapping;
+    assert(desc);
+    for (i = 0; i < 4096u; i += 2u) {
+        if ((desc[i + 1] & 0xffffcu) == reg)
+            return desc[i];
+        if (desc[i + 1] & 0x40000000u)
+            break;
+    }
+    assert(!"register not in command list");
+    return 0;
+}
+
+/* T21 sizes the bitstream window to the picture and tells the VPU. */
+static void test_t21_bitstream_window(void)
+{
+    T30HelixEncoder *encoder = create(640, 360, 25, 25);
+    PictureInfo info;
+
+    assert(allocation("t30-helix-bs")->size == 256u * 1024u);
+    assert(encode(encoder, &info) == 0);
+    assert(descriptor_value(encoder, 0x30040) == 255u);
+    OpenIMP_T30_HelixDestroy(encoder);
+
+    encoder = create(1920, 1080, 25, 25);
+    assert(allocation("t30-helix-bs")->size == 1024u * 1024u);
+    assert(encode(encoder, &info) == 0);
+    assert(descriptor_value(encoder, 0x30040) == 1023u);
+    OpenIMP_T30_HelixDestroy(encoder);
+}
+#endif
+
 static void test_large_frame_level(void)
 {
     T30HelixEncoder *encoder = create(2560, 1440, 20, 25);
@@ -547,6 +588,9 @@ int main(void)
     test_large_frame_level();
     test_dma_footprint();
     test_shared_vpu_descriptor();
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    test_t21_bitstream_window();
+#endif
     for (i = 0; i < 16u; i++)
         assert(!allocations[i].mapping);
 #if defined(PLATFORM_T20)

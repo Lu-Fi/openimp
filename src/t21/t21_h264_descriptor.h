@@ -26,6 +26,9 @@ typedef struct {
     uint32_t output_c;
     uint32_t bitstream;
     uint32_t scratch_base;
+    /* Bitstream limit in KiB (EMC_BS_SIZE): the VPU stops with BSFULL at
+     * this size instead of writing past the window.  0 selects 1024. */
+    uint32_t bitstream_kib;
     uint32_t *descriptor;
     size_t descriptor_words;
 } T21H264SliceConfig;
