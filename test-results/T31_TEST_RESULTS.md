@@ -334,6 +334,70 @@ libimp `claude/t31-all-fixes` (`4653f0a`, md5 `b2ab4fee6923f8da59ae87cbd739b9bc`
 | Start | `audio resume: flushed 6 stale AI frame(s)`, `HWJPEG: ready`, `T31 ISP driver: open tx-isp` |
 | Speicher | belegt 33,7 → 37,4–38,0 MB (Cache), stabil |
 
+## Nachtests in der Nacht (neues Modul `claude/t31-isp-fixes`, geflasht)
+
+### `claude/t31-avc-au-check` – bestanden (auf `claude/t31-all-fixes` gemergt)
+
+Allein (Basis `dfbd90f`) nicht testbar: Mit dem neuen Modul hing timps beim ersten Stopp des Sub-Streams im bekannten `pthread_cancel`-Deadlock (behoben in `claude/t31-fs-stop-order`) und musste mit `kill -9` beendet werden. Deshalb neuer Branch **`claude/t31-all-fixes-au`** (`5b8b451` = `claude/t31-all-fixes` + AU-Check; Konflikt in `src/t40/openimp_p2_encoder.c` von einem Agenten aufgelöst, beide Seiten behalten; libimp md5 `938e213dafc5e09a3d8262cd305b8555`).
+
+Befehl: `cycle2.sh allau-c /tmp/libimp-allau.so 12`, danach dreimal `ffmpeg -loglevel verbose -rtsp_transport tcp -t 3 -i rtsp://…/ch0 -map 0:v -c copy -bsf:v trace_headers -f null -`.
+
+| | Ergebnis |
+|---|---|
+| 12 Verbindungszyklen Main/Sub | 12/12, je 2 JPEGs Main, Sub 30 Frames/2 s, 0 Dekodierfehler, kein `allocation failed`/`rmem out of memory`, dieselbe PID |
+| VCL-NALs pro AU (3 × 45 AUs) | immer genau 1 |
+| `exceeds max`, Fehler im Trace | 0 |
+| `idr_pic_id` | wechselt (1, dann 0) |
+| `malformed AU` im timps-Log | 0 (Gate hat nichts verworfen) |
+
+Dateien: [`au-check/`](au-check/). Die frühere ffmpeg-Meldung `(0+2) exceeds max (1)` trat in diesem Lauf nicht auf; die Diagnose bleibt im Code, um sie bei einem Wiederauftreten einzuordnen.
+
+### `claude/t31-fs-timestamps` (`5e3b064`) – bestanden
+
+libimp md5 `d7b29289631300ce35b314a7760e71ce`, 5 min Main+Sub live, Snapshots. Log: `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW`. PTS-Abstände Sub (443 Frames): Median 0,067 s, p99 0,072 s, max 0,100 s, keine doppelten oder rückwärts laufenden PTS. Main/Sub 4446/4445 Frames, 0 Dekodierfehler, 27/27 Snapshots. Dateien: [`timestamps/`](timestamps/).
+
+### Nachtlauf: `claude/t31-quiet-logs`, 25 fps, 6 h 40 min – bestanden
+
+libimp `claude/t31-quiet-logs` (`6431d97`, md5 `be8d27034b00dda14b7dc1bcf5f5b465` = `claude/t31-all-fixes` + leisere Logs + schneller Tuning-Stopp), Modul `claude/t31-isp-fixes`, Konfigurationskopie mit 25 fps. 00:15–06:56, Main+Sub live dekodiert, Snapshot alle 10 s (bis 06:57), `top`/`free` alle 5 min. Dateien: [`night-25fps/`](night-25fps/).
+
+| | Ergebnis |
+|---|---|
+| Frames Main / Sub | 592053 / 592111 (≈ 24,7 fps), kein 10-s-Intervall unter 227, 1 Verbindung je Stream über 24000 s, 0 Dekodierfehler |
+| Snapshots | 2350/2350 (HTTP 200, JPEG), Ø 0,22 s; erster Snapshot 1,5 s, danach während Live-Clients verbunden max 0,34 s; ohne Live-Client (06:56–06:57, Kaltstart der FrameSource): 1,7 s |
+| timps | dieselbe PID über die ganze Zeit, `[ERR]` 0, `[WRN]` 9 (alle `jpeg chn3: PollingStream idle (miss#1)`, siehe unten) |
+| Logumfang | 25 KB in 6,7 h (gemessen alle 10 min; das Kürzen bei > 1 MB griff nie) |
+| Speicher (`free` used) | nach der ersten Stunde 19,2–19,8 MB, kein Trend; RSS timpsd 4,1–4,7 MB |
+| CPU timpsd | Median 7,6 % (5-min-Stichproben) |
+| Stopp danach | 0,2 s (`stopped (waited 2x100ms)`) |
+
+Nebenbefund: Die letzten Snapshots (06:56–06:57) fielen nach dem Ende der Live-Clients an. timps schaltet die FrameSource dafür jeweils ein und nach ~3,6 s wieder aus; der Snapshot braucht dann 1,7 s statt 0,2 s, und timps meldet bei jedem Kaltstart einmal `jpeg chn3: PollingStream idle (miss#1)`, weil die FrameSource erst 0,5 s läuft. Das ist kosmetisch und betrifft timps, nicht die libimp; timps könnte `miss#1` direkt nach dem Einschalten unterdrücken.
+
+## Sammel-Branch `claude/t31-integration` – bestanden
+
+`aedfced` = `claude/t31-all-fixes-au` + `claude/t31-quiet-logs` + `claude/t31-fs-timestamps` + zwei kleine Korrekturen (Zeitstempel-Folge startet neu, wenn die P0-Zeitbasis zurückspringt; Zusammenfassung zu synthetischen Zeitstempeln nur bei neuen Fällen). Merges von einem Agenten, ohne Konflikte; libimp md5 `d991d14150e555bd7827e86b14ea8da5`; Modul `claude/t31-isp-fixes` (geflasht).
+
+| Test | Ergebnis |
+|---|---|
+| `cycle2.sh integ-c /tmp/libimp-integ.so 12` | 12/12, 0 Dekodierfehler, kein `allocation failed`/`rmem out of memory`, dieselbe PID |
+| `trace_headers` (3 × 3 s Main) | je AU genau 1 VCL-NAL, `idr_pic_id` 1/0 wechselnd, 0 Fehler |
+| Zeitstempel | `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW` |
+| `phase.sh integ-s 1200 10` (25 fps, Main+Sub live, Snapshots) | Main/Sub 29597/29609 Frames, kein 10-s-Intervall unter 234, 0 Fehler; 116/116 Snapshots Ø 0,22 s; Sub-PTS Median 0,040 s, max 0,047 s; `[ERR]` 0; Log 10 KB; Stopp 0,9 s |
+
+Dateien: [`integration/`](integration/). Branch gepusht.
+
+## open-tx-isp: DQBUF mit O_NONBLOCK und poll (`claude/t31-isp-dqbuf-nonblock`, lokal) – Funktion bestanden, rmmod nicht
+
+Mit Zustimmung per `insmod` aus `/tmp` getestet (nicht geflasht), danach Neustart auf das geflashte Modul. Testprogramm `fc_nonblock_test` (von einem Agenten, statisch gegen die libimp-Objekte des Images gelinkt; steuert `/dev/framechan0` direkt). Ausgaben: [`isp-nonblock/fc_nonblock_test.txt`](isp-nonblock/fc_nonblock_test.txt).
+
+- **Befund im bisherigen Modul (`6caeb75e`):** DQBUF ignoriert O_NONBLOCK (blockiert bis zum nächsten Frame), und **poll/select melden immer POLLIN**, auch ohne Frame und nach STREAMOFF. Ursache: `tx_isp_core.c` hatte eine eigene `static frame_channel_fops` ohne `.poll`; das `extern` bei der Registrierung der misc-Geräte band an diese Kopie, die vollständige fops in `tx_isp_module.c` war toter Code. Der libimp-Worker wartete deshalb nie wirklich in `select`, sondern im blockierenden DQBUF.
+- **`85fbd1fd` (nur O_NONBLOCK):** (a) EAGAIN in 4 µs, aber poll weiter immer „bereit“ → mit timps dreht der FS-Worker (FS(0)-tick 2–10 % CPU statt ~0 %). So nicht einsetzbar.
+- **`5fe6bbb2` (+ poll wirklich verdrahtet):** 6/6 PASS (EAGAIN 3 µs, poll ohne Frame 0, POLLIN nach 62 ms, POLLERR nach STREAMOFF, EINTR ohne Pufferverlust). timps mit `claude/t31-integration`, 5 min 25 fps: 0 Fehler, FS-Worker 0–0,3 % CPU; `kill -9` 3× ohne Zombie, Neustart sauber.
+- **Aber:** anschließendes `rmmod tx_isp_t31` → Kernel-Oops (`Unable to handle kernel paging request`, Modul hängt in „Unloading“), Neustart nötig ([`isp-nonblock/oops.txt`](isp-nonblock/oops.txt)). Das geflashte `6caeb75e` ließ sich in derselben Sitzung sauber entladen. Analyse und Fix laufen; der Branch wird erst nach bestandenem rmmod-Test gepusht.
+
 ## Weitere Branches ohne Gerätetest
 
-- **`claude/t31-avc-au-check`** (OpenIMP, auf `dfbd90f`, 3 Commits, von einem Agenten): Prüft jede H.264-AU wie ein Decoder und verwirft fehlerhafte AUs mit folgendem IDR (`OPENIMP_T31_AU_GATE=0` nur Protokoll); ersetzt das feste `usleep(2000)` vor der EBSP-Kopie durch einen Vergleich des Nutzlast-Endes; `idr_pic_id` wechselt bei aufeinanderfolgenden IDRs. Hintergrund: die ffmpeg-Meldung `(0+2) exceeds max (1)` ließ sich offline nur mit einem unmaskierten Startcode mitten im Slice nachstellen; im Code von `dfbd90f` ist dieser Pfad aber nicht belegbar – die Diagnose soll es am Gerät klären.
+- **`claude/t31-avc-au-check`** (OpenIMP, auf `dfbd90f`, 3 Commits, von einem Agenten; inzwischen auf dem Gerät getestet, siehe „Nachtests in der Nacht“): Prüft jede H.264-AU wie ein Decoder und verwirft fehlerhafte AUs mit folgendem IDR (`OPENIMP_T31_AU_GATE=0` nur Protokoll); ersetzt das feste `usleep(2000)` vor der EBSP-Kopie durch einen Vergleich des Nutzlast-Endes; `idr_pic_id` wechselt bei aufeinanderfolgenden IDRs. Hintergrund: die ffmpeg-Meldung `(0+2) exceeds max (1)` ließ sich offline nur mit einem unmaskierten Startcode mitten im Slice nachstellen; im Code von `dfbd90f` ist dieser Pfad aber nicht belegbar – die Diagnose soll es am Gerät klären.
+
+## Endzustand der Kamera (2026-10-01, 07:47)
+
+Neustart; geflashtes Modul `claude/t31-isp-fixes` (md5 `4d5d4978…`), Flash-libimp (md5 `d1d9d43c…`), kein Bind-Mount, timps über `S95timps` mit `/etc/timps.conf` (15 fps), Main und Sub dekodierbar. `/etc` und Overlay unverändert; Testdateien lagen nur in `/tmp`.
