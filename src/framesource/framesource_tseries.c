@@ -799,8 +799,8 @@ static uint32_t g_fs_step_seen_ms[FS_MAX_CHANNELS];
 static volatile int g_fs_step_iter[FS_MAX_CHANNELS];
 #endif
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20)
-/* Monotonic ms, for the worker-stop wait (T31, T23, T20) and the T31 stop
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+/* Monotonic ms, for the worker-stop wait (T31, T23, T20, T21) and the T31 stop
  * diagnostics. */
 static uint32_t fs_now_ms(void)
 {
@@ -2139,7 +2139,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
     return 0;
 }
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
 /* After STREAMOFF the worker leaves within one select timeout (25 ms) plus
  * the delivery of a frame it had already dequeued. Anything near a second
  * is a genuine hang (a consumer blocking notify, a VBM mutex, ...). */
@@ -2322,10 +2322,11 @@ int IMP_FrameSource_DisableChn(int chnNum)
         fs_stream_off(ctx->fd);
     }
     if (ctx->thread != 0) {
-#if defined(PLATFORM_T23) || defined(PLATFORM_T20)
-        /* Both drivers wake the worker on STREAMOFF (open tx-isp T23: the
-         * DQBUF wait ends with -EPIPE; T20 vb2: poll reports POLLERR and
-         * DQBUF fails), so let it leave by itself and cancel only a worker
+#if defined(PLATFORM_T23) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+        /* These drivers wake the worker on STREAMOFF (open tx-isp T23: the
+         * DQBUF wait ends with -EPIPE; T20 vb2 and open tx-isp T21: poll
+         * reports POLLERR and DQBUF fails with -EINVAL), so let it leave by
+         * itself and cancel only a worker
          * that is still running after FS_WORKER_STOP_TIMEOUT_MS. A worker
          * cancelled while it delivers a frame can leave a VBM or encoder
          * mutex locked. */
