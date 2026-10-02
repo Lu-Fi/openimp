@@ -115,7 +115,8 @@ static const uint32_t t30_h264_chroma_interpolation[16][4] = {
     {0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u},
 };
 
-static unsigned int t30_vmau_context_index(uint8_t slice_type,
+static unsigned int __attribute__((unused))
+t30_vmau_context_index(uint8_t slice_type,
                                             unsigned int index)
 {
     if (index < 10u)
@@ -127,7 +128,8 @@ static unsigned int t30_vmau_context_index(uint8_t slice_type,
     return index + 12u;
 }
 
-static int t30_emit_motion_estimation(T30DescriptorWriter *writer,
+static int __attribute__((unused))
+t30_emit_motion_estimation(T30DescriptorWriter *writer,
                                       const T30H264SliceConfig *config)
 {
     static const uint32_t luma_register_offset[6] = {
@@ -227,6 +229,8 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     min_qp = config->qp > 12u ? config->qp - 12u : 0u;
 #endif
     max_qp = config->qp < 39u ? config->qp + 13u : 51u;
+    (void)max_qp;
+    (void)aligned_height;
 
 #define EMIT(reg, value)                                                     \
     do {                                                                     \
@@ -243,6 +247,17 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x40014, config->raw[1]);
     EMIT(0x40034, config->raw[2]);
     EMIT(0x40038, (config->stride[0] << 16) | config->stride[1]);
+#if defined(PLATFORM_T20)
+    /* T10/T20 NVPU VRAM base map, taken from the stock T10 descriptor; it
+     * differs from the T30 addresses. */
+    EMIT(0x40018, 0x132c4000u);
+    EMIT(0x4001c, 0x132c4400u);
+    EMIT(0x40020, 0x132c5000u);
+    EMIT(0x40024, 0x132c4800u);
+    EMIT(0x40028, 0x132c4c00u);
+    EMIT(0x4002c, 0x132c5200u);
+    EMIT(0x40030, 0x132f0000u);
+#else
     EMIT(0x40018, T30_VRAM_TOPMV);
     EMIT(0x4001c, T30_VRAM_TOPPA);
     EMIT(0x40020, T30_VRAM_ME);
@@ -250,8 +265,13 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x40028, T30_VRAM_DBLK);
     EMIT(0x4002c, T30_VRAM_SDE);
     EMIT(0x40030, T30_VRAM_RAW);
+#endif
 
+#if defined(PLATFORM_T20)
+    EMIT(0x40040, config->qp);
+#else
     EMIT(0x40040, max_qp);
+#endif
     EMIT(0x40044, 0);
     EMIT(0x40048, 0);
 #if defined(PLATFORM_T20)
@@ -265,23 +285,79 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     for (i = 0; i < 16u; i++)
         EMIT(roi_position_registers[i], 0);
 #endif
+#if defined(PLATFORM_T20)
+    /* T10 MCE/ME init block, transcribed from the stock T10 descriptor. */
+    EMIT(0x40108, 0);
+    EMIT(0x4010c, 0x00400000u);
+    EMIT(0x50004, 7u);
+    EMIT(0x50804, 7u);
+    EMIT(0x50000, 0x0f7c0999u);
+    EMIT(0x5005c, 0xa4u);
+    EMIT(0x50d00, 0x200u);
+    for (i = 0; i < 3u; i++)
+        EMIT(0x50d04u + i * 4u, 0);
+    EMIT(0x50d10, 0x80003004u);
+    for (i = 0; i < 11u; i++)
+        EMIT(0x50d14u + i * 4u, 0);
+    EMIT(0x50d40, 0x8000b004u);
+    for (i = 0; i < 3u; i++)
+        EMIT(0x50d44u + i * 4u, 0);
+    EMIT(0x50d50, 0x80000000u);
+    EMIT(0x50d54, 0x8000e020u);
+    for (i = 0; i < 10u; i++)
+        EMIT(0x50d58u + i * 4u, 0);
+    EMIT(0x50030, 0x0cc04000u);
+    EMIT(0x50830, 0x0001c000u);
+    EMIT(0x50034, 0xa8100500u);
+    EMIT(0x50038, 0xa1100500u);
+    EMIT(0x5003c, 0x1414fb01u);
+    EMIT(0x50044, 0x000001fbu);
+    EMIT(0x50040, 0x1414fb01u);
+    EMIT(0x50048, 0x000001fbu);
+    EMIT(0x50304, config->slice_type ? config->reference_y : 0x00005300u);
+    EMIT(0x50b04, config->slice_type ? config->reference_c : 0x00002980u);
+    EMIT(0x50020, 0);
+    EMIT(0x50820, 0);
+    EMIT(0x50024, 0);
+    EMIT(0x50824, 0);
+    EMIT(0x50828, 0);
+    EMIT(0x5002c, 0);
+    EMIT(0x5082c, 0);
+    EMIT(0x5004c, 0x05201000u);
+    EMIT(0x5084c, 0x05200000u);
+    EMIT(0x50050, 0x02d00500u);
+    EMIT(0x50058, 0x13200070u);
+    EMIT(0x5000c, 0x13240100u);
+    EMIT(0x50054, 0x132c5000u);
+#else
     EMIT(0x4006c, 0x000c5800u);
     EMIT(0x40120, 0);
     EMIT(0x40108, 0);
-#if defined(PLATFORM_T20)
-    EMIT(0x4010c, 0x03400000u);
-#else
     EMIT(0x4010c, 0x00400000u | ((uint32_t)config->dcs_oth << 24));
     EMIT(0x40074, (max_qp << 24) | (min_qp << 16) |
                   ((uint32_t)config->qp << 8));
     for (i = 0; i < 13u; i++)
         EMIT(qpg_zero_registers[i], 0);
-#endif
-
     if (config->slice_type &&
         t30_emit_motion_estimation(&writer, config) != 0)
         return -1;
+#endif
 
+#if defined(PLATFORM_T20)
+    /* T10 VMAU section (8 registers) plus the stock 0x88000 fixed block. */
+    EMIT(0x80040, 4);
+    EMIT(0x80050, 0x80000b01u);
+    EMIT(0x8000c, 0x132c4800u);
+    EMIT(0x8005c, T30_VRAM_DUMMY);
+    EMIT(0x80058, 0x13200074u);
+    EMIT(0x80054, aligned_width);
+    EMIT(0x80044, 0x01000001u);
+    EMIT(0x80078, 0x0b150b15u);
+    for (i = 0; i < 16u; i++)
+        EMIT(0x88000u + i * 4u, 0x10101010u);
+    for (i = 0; i < 32u; i++)
+        EMIT(0x88040u + i * 4u, 0x00100010u);
+#else
     /* VMAU mode decision and the 42 CABAC contexts it consumes directly. */
     EMIT(0x80040, 4);
     EMIT(0x80050, 0x80000b00u);
@@ -295,27 +371,39 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x80030, ((uint32_t)config->last_mby << 24) |
                   (((uint32_t)config->mb_width - 1u) << 16) |
                   (config->slice_type ? 2u : 1u));
-#if defined(PLATFORM_T20)
-    EMIT(0x80034, 0x00008202u);
-#else
     EMIT(0x80034, 0x0000c202u);
-#endif
     EMIT(0x80038, 0xcccc0111u);
     EMIT(0x8003c, 0);
     EMIT(0x800d8, 0);
     EMIT(0x800dc, 0);
-#if !defined(PLATFORM_T20)
     EMIT(0x800fc, 0x00774533u);
     EMIT(0x80114, 0x00002a42u);
     EMIT(0x80118, 0x01800200u);
     EMIT(0x8011c, 0x00000400u);
-#endif
     for (i = 0; i < 42u; i++)
         EMIT(0x8002c,
              config->cabac_state[t30_vmau_context_index(config->slice_type,
                                                         i)]);
     EMIT(0x8007c, 2);
+#endif
 
+#if defined(PLATFORM_T20)
+    /* T10 deblock section (stock values). */
+    EMIT(0x70060, 4);
+    EMIT(0x70000, 0x132c4c00u);
+    EMIT(0x70078, 0x13200078u);
+    EMIT(0x70074, ((uint32_t)config->mb_height << 16) |
+                  config->mb_width);
+    EMIT(0x7007c, (uint32_t)config->first_mby << 16);
+    EMIT(0x70064, 0x11u);
+    EMIT(0x70084, config->output_y);
+    EMIT(0x70088, config->output_c);
+    EMIT(0x7008c, T30_VRAM_DUMMY);
+    EMIT(0x70080, ((uint32_t)config->mb_width << 23) |
+                  ((uint32_t)config->mb_width << 8));
+    EMIT(0x70068, ((uint32_t)config->slice_type << 3) | 1u);
+    EMIT(0x70060, 8);
+#else
     /* Deblocking. */
     EMIT(0x80040, 1);
     EMIT(0x70060, 4);
@@ -332,7 +420,6 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
                   ((uint32_t)config->mb_width << 8));
     EMIT(0x70068, ((uint32_t)config->slice_type << 3) | 1u);
     EMIT(0x70060, 8);
-#if !defined(PLATFORM_T20)
     EMIT(0x70240, 0x68040100u);
     EMIT(0x70244, 0x132c7000u);
 #endif
@@ -347,7 +434,11 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x90014, 3);
     EMIT(0x90018, ((uint32_t)config->qp << 8) |
                   (config->slice_type ? 0x12u : 0x11u));
+#if defined(PLATFORM_T20)
+    EMIT(0x9001c, 0x132c5200u);
+#else
     EMIT(0x9001c, T30_VRAM_SDE);
+#endif
     EMIT(0x90020, 0x1320007cu);
     EMIT(0x90024, config->bitstream);
     for (i = 0; i < 460u; i++) {
