@@ -295,6 +295,22 @@ static void t31_osd_draw_cpu(struct osd_canvas *cv, const struct t31_osd_region 
     }
 }
 
+/* Cache maintenance for the CPU OSD pass: osd_canvas_sync() reports the byte
+ * ranges the CPU wrote as offsets from the frame base, and dir is the
+ * DMA_RmemFlushCache direction (0 before the draw to drop stale lines, 1 after
+ * to publish them for the IPU pass and the encoder DMA). */
+struct t31_osd_sync {
+    uint8_t *base;
+    int dir;
+};
+
+static void t31_osd_sync_range(void *ctx, uint32_t off, uint32_t len)
+{
+    struct t31_osd_sync *s = ctx;
+
+    DMA_RmemFlushCache(s->base + off, len, s->dir);
+}
+
 void openimp_t31_osd_apply(int group, void *frame)
 {
     const uint8_t *fi = frame;
@@ -361,10 +377,16 @@ void openimp_t31_osd_apply(int group, void *frame)
     /* LINE/RECT/BITMAP first (stock order). The frame is cached rmem that
      * ISP DMA wrote: a line still cached from an earlier use of this buffer
      * (IVS/JPEG reads, an earlier OSD pass) would take the CPU stores and
-     * then write its stale neighbour bytes back. So: find the touched rows
-     * (dry pass), write back + invalidate them, draw, write them back for
-     * the IPU pass and the encoder DMA. The CPU path only runs if the frame
-     * buffer holds the stock layout (UV plane at align16(height) rows). */
+     * then write its stale neighbour bytes back. So: find what the CPU will
+     * touch (dry pass), write back + invalidate exactly that, draw, write it
+     * back for the IPU pass and the encoder DMA. osd_canvas_sync() expands the
+     * dry pass into byte ranges, so a RECT costs its two edge bands plus one
+     * narrow range per row of its two vertical edges instead of the whole
+     * frame (the vertical edges are one small rmem ioctl per row, which buys
+     * ~3 MB of cache maintenance per pass on a 1080p border). A region the
+     * plan cannot express (diagonal LINE, large BITMAP) still gets the whole
+     * touched band. The CPU path only runs if the frame buffer holds the
+     * stock layout (UV plane at align16(height) rows). */
     if (cpu_count > 0 && virt &&
         (!fsize || fsize >= width * bg_h + width * ((height + 1u) / 2u))) {
         struct osd_canvas cv;
@@ -376,20 +398,14 @@ void openimp_t31_osd_apply(int group, void *frame)
             for (i = 0; i < cpu_count; i++)
                 t31_osd_draw_cpu(&cv, &osd_regions[cpu_order[i]]);
             if (cv.ymin <= cv.ymax) {
-                uint32_t y0 = (uint32_t)cv.ymin, y1 = (uint32_t)cv.ymax + 1u;
-                void *yp = (void *)(uintptr_t)(virt + y0 * width);
-                void *uvp = (void *)(uintptr_t)(virt + width * bg_h +
-                                                (y0 / 2u) * width);
-                uint32_t ylen = (y1 - y0) * width;
-                uint32_t uvlen = ((y1 + 1u) / 2u - y0 / 2u) * width;
+                struct t31_osd_sync sync = { (uint8_t *)(uintptr_t)virt, 0 };
 
-                DMA_RmemFlushCache(yp, ylen, 0 /* write back + invalidate */);
-                DMA_RmemFlushCache(uvp, uvlen, 0);
+                osd_canvas_sync(&cv, t31_osd_sync_range, &sync);
                 cv.dry = 0;
                 for (i = 0; i < cpu_count; i++)
                     t31_osd_draw_cpu(&cv, &osd_regions[cpu_order[i]]);
-                DMA_RmemFlushCache(yp, ylen, 1 /* write back */);
-                DMA_RmemFlushCache(uvp, uvlen, 1);
+                sync.dir = 1 /* write back */;
+                osd_canvas_sync(&cv, t31_osd_sync_range, &sync);
             }
         }
     }

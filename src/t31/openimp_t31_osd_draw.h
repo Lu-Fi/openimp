@@ -25,6 +25,22 @@
 #include <stdint.h>
 #include <string.h>
 
+/* Box the dry pass wrote, in Y rows/columns (inclusive, inside the frame).
+ * Recorded so the caller can sync only what the CPU touched instead of the
+ * whole ymin..ymax band: a RECT records one per edge, a LINE one (or, for a
+ * diagonal, one per stamp), a BITMAP one. */
+struct osd_span {
+    uint16_t ya, yb;
+    uint16_t xa, xb;
+};
+
+/* Boxes a dry pass may record before it gives up on the fine-grained sync and
+ * falls back to the whole touched band. 64 RECT regions (the region limit)
+ * use four spans each, so a frame of full-frame borders still fits; a diagonal
+ * line (one span per stamp) or a large bitmap overflows and keeps the old
+ * behaviour. */
+#define OSD_DRAW_MAX_SPANS 256
+
 struct osd_canvas {
     uint8_t *base;      /* Y plane; UV plane at base + uv_off */
     uint32_t width;     /* visible size, width must be even */
@@ -33,6 +49,9 @@ struct osd_canvas {
     size_t uv_off;      /* byte offset of the UV plane */
     int ymin, ymax;     /* touched Y rows (ymin > ymax: nothing) */
     int dry;            /* 1: only compute ymin/ymax, write nothing */
+    struct osd_span spans[OSD_DRAW_MAX_SPANS];  /* dry pass: written boxes */
+    int nspans;         /* valid when !span_overflow */
+    int span_overflow;  /* more boxes than spans[]: sync the whole band */
 };
 
 /* Canvas limit, and the line width cap. With lw >= 2 * max(w, h) every
@@ -53,6 +72,8 @@ static inline void osd_canvas_init(struct osd_canvas *c, uint8_t *base,
     c->ymin = (int)height;
     c->ymax = -1;
     c->dry = 0;
+    c->nspans = 0;
+    c->span_overflow = 0;
 }
 
 static inline int osd_canvas_valid(const struct osd_canvas *c)
@@ -67,6 +88,24 @@ static inline int osd_clampi(int64_t v, int lo, int hi)
     return v < lo ? lo : v > hi ? hi : (int)v;
 }
 
+/* Record one written box during the dry pass (a no-op in a real pass: the
+ * plan comes from the dry pass and must not change while it is used). */
+static inline void osd_note_span(struct osd_canvas *c, int xa, int ya, int xb,
+                                 int yb)
+{
+    if (!c->dry || c->span_overflow)
+        return;
+    if (c->nspans >= OSD_DRAW_MAX_SPANS) {
+        c->span_overflow = 1;
+        return;
+    }
+    c->spans[c->nspans].xa = (uint16_t)xa;
+    c->spans[c->nspans].xb = (uint16_t)xb;
+    c->spans[c->nspans].ya = (uint16_t)ya;
+    c->spans[c->nspans].yb = (uint16_t)yb;
+    c->nspans++;
+}
+
 /* Fill the inclusive box [xa,xb] x [ya,yb], already inside the frame. */
 static inline void osd_fill_box(struct osd_canvas *c, int xa, int ya, int xb,
                                 int yb, uint32_t word)
@@ -78,6 +117,7 @@ static inline void osd_fill_box(struct osd_canvas *c, int xa, int ya, int xb,
     if (xa > xb || ya > yb || xa < 0 || ya < 0 ||
         xb >= (int)c->width || yb >= (int)c->height)
         return;
+    osd_note_span(c, xa, ya, xb, yb);
     if (c->dry)
         goto band;
     cx0 = xa & ~1;
@@ -271,6 +311,10 @@ static inline void osd_draw_bitmap(struct osd_canvas *c, const uint8_t *bmp,
     c1 = ox + (int64_t)bw > (int64_t)c->width ? (int64_t)c->width - ox : (int64_t)bw;
     if (r0 >= r1 || c0 >= c1)
         return;
+    /* The whole clipped rect is one span: the flush may cover bytes the mask
+     * left zero, which is safe and still no more than the old band. */
+    osd_note_span(c, (int)(ox + c0), (int)(oy + r0), (int)(ox + c1 - 1),
+                  (int)(oy + r1 - 1));
     for (row = c->dry ? r1 : r0; row < r1; row++) {
         uint8_t *yp = c->base + (size_t)(oy + row) * c->stride + ox;
         uint8_t *uv = c->base + c->uv_off + (size_t)((oy + row) >> 1) * c->stride + ox;
@@ -287,6 +331,65 @@ static inline void osd_draw_bitmap(struct osd_canvas *c, const uint8_t *bmp,
         c->ymin = (int)(oy + r0);
     if ((int)(oy + r1 - 1) > c->ymax)
         c->ymax = (int)(oy + r1 - 1);
+}
+
+/*
+ * Cache maintenance for the CPU-drawn regions.
+ *
+ * The dry pass records every box it would write (osd_note_span); this walks
+ * that plan and calls fn() once per contiguous byte range of the frame buffer
+ * (offset from c->base, so Y and UV come out of the same plan). Everything the
+ * CPU writes is covered, and nothing outside the frame buffer is touched:
+ *  - Y: a span that covers the full row and a tight stride is one range over
+ *    its rows, any other span is one range per row over [xa, xb].
+ *  - UV: rows ya/2..yb/2, the bytes the box writes there are
+ *    [xa & ~1, (xb & ~1) + 1] (a superset of the BITMAP path, which writes one
+ *    chroma byte per column), again one range per row unless the full chroma
+ *    row is written and the stride is tight.
+ * Without a plan (nothing recorded, or more boxes than spans[] - a diagonal
+ * LINE, a large BITMAP) it syncs the whole ymin..ymax band of both planes,
+ * exactly what this used to do unconditionally.
+ */
+typedef void (*osd_sync_fn)(void *ctx, uint32_t off, uint32_t len);
+
+static inline void osd_canvas_sync(const struct osd_canvas *c, osd_sync_fn fn,
+                                   void *ctx)
+{
+    uint32_t stride = c->stride, width = c->width;
+    int i;
+
+    if (!c->base || c->ymin > c->ymax)
+        return;
+    if (c->span_overflow || c->nspans <= 0) {
+        uint32_t y0 = (uint32_t)c->ymin, y1 = (uint32_t)c->ymax + 1u;
+
+        fn(ctx, y0 * stride, (y1 - y0) * stride);
+        fn(ctx, (uint32_t)c->uv_off + (y0 / 2u) * stride,
+           ((y1 + 1u) / 2u - y0 / 2u) * stride);
+        return;
+    }
+    for (i = 0; i < c->nspans; i++) {
+        int xa = c->spans[i].xa, xb = c->spans[i].xb;
+        int ya = c->spans[i].ya, yb = c->spans[i].yb;
+        int cxa = xa & ~1, cxb = (xb & ~1) + 1, y, cy;
+        uint32_t clen = (uint32_t)(cxb - cxa) + 1u;
+
+        if (xa == 0 && xb == (int)width - 1 && stride == width) {
+            fn(ctx, (uint32_t)ya * stride, (uint32_t)(yb - ya + 1) * stride);
+        } else {
+            for (y = ya; y <= yb; y++)
+                fn(ctx, (uint32_t)y * stride + (uint32_t)xa,
+                   (uint32_t)(xb - xa) + 1u);
+        }
+        if (cxa == 0 && clen >= width && stride == width) {
+            fn(ctx, (uint32_t)c->uv_off + (uint32_t)(ya / 2) * stride,
+               (uint32_t)(yb / 2 - ya / 2 + 1) * stride);
+        } else {
+            for (cy = ya / 2; cy <= yb / 2; cy++)
+                fn(ctx, (uint32_t)c->uv_off + (uint32_t)cy * stride +
+                        (uint32_t)cxa, clen);
+        }
+    }
 }
 
 #endif
