@@ -415,6 +415,195 @@ static void test_invalid_canvas(void)
     osd_draw_rect(&c, 0, 0, 5, 3, 1, WORD, 0, 0);
 }
 
+/* ---- cache-sync plan: record and check the flushed byte ranges ---------- */
+
+#define MAX_REC 16384u
+
+static uint32_t g_off[MAX_REC], g_len[MAX_REC];
+static unsigned g_n;
+static unsigned long long g_bytes;
+
+static void rec_fn(void *ctx, uint32_t off, uint32_t len)
+{
+    (void)ctx;
+    if (g_n < MAX_REC) {
+        g_off[g_n] = off;
+        g_len[g_n] = len;
+    }
+    g_n++;
+    g_bytes += len;
+}
+
+static void rec_reset(void)
+{
+    g_n = 0;
+    g_bytes = 0;
+}
+
+static int covered(size_t o)
+{
+    unsigned i;
+
+    for (i = 0; i < g_n && i < MAX_REC; i++)
+        if (o >= g_off[i] && o < (size_t)g_off[i] + g_len[i])
+            return 1;
+    return 0;
+}
+
+/* Every byte the drawer wrote (all fill values are non-zero) must be inside a
+ * flushed range, and no range may leave the frame buffer. */
+static void check_synced(const struct frame *drawn, size_t body, const char *what)
+{
+    unsigned i;
+    size_t o;
+
+    CHECK(g_n > 0, "%s: nothing flushed", what);
+    CHECK(g_n <= MAX_REC, "%s: %u ranges overrun the recorder", what, g_n);
+    for (o = 0; o < body; o++)
+        if (drawn->base[o])
+            CHECK(covered(o), "%s: byte %zu written but not flushed", what, o);
+    for (i = 0; i < g_n && i < MAX_REC; i++)
+        CHECK((size_t)g_off[i] + g_len[i] <= body,
+              "%s: range %u+%u leaves the frame", what, g_off[i], g_len[i]);
+}
+
+/* A stride column >= width, or a row past the plane: never part of a flush. */
+static int is_padding(size_t o, size_t uv_off, uint32_t stride, uint32_t width,
+                      uint32_t height)
+{
+    if (o < uv_off)
+        return o / stride >= height || o % stride >= width;
+    o -= uv_off;
+    return o / stride >= height / 2u || o % stride >= width;
+}
+
+static void draw_shapes(struct osd_canvas *c, const uint8_t *bmp)
+{
+    osd_draw_rect(c, 4, 6, 42, 24, 3, WORD, 2, 1);      /* four edges */
+    osd_draw_line(c, 2, 30, 60, 30, 2, WORD, 0, 0);     /* horizontal */
+    osd_draw_line(c, 20, 28, 21, 44, 4, WORD, 0, 0);    /* near vertical */
+    osd_draw_bitmap(c, bmp, 30, 4, 4, 3, 0, 0);
+}
+
+/* stride > width: row padding must not be flushed by the span plan. */
+static void test_sync_padded(void)
+{
+    struct frame f, g;
+    struct osd_canvas c, d;
+    size_t body = (size_t)STRIDE * H * 3 / 2;
+    uint8_t bmp[12];
+    unsigned i;
+    size_t o;
+
+    memset(bmp, 0x50, sizeof(bmp));
+    frame_new(&f);
+    frame_new(&g);
+    canvas(&f, &c);
+    canvas(&g, &d);
+    d.dry = 1;
+    draw_shapes(&c, bmp);
+    draw_shapes(&d, bmp);
+    CHECK(!d.span_overflow, "padded: shapes overflowed the plan");
+    rec_reset();
+    osd_canvas_sync(&d, rec_fn, NULL);
+    check_synced(&f, body, "padded");
+    for (i = 0; i < g_n && i < MAX_REC; i++)
+        for (o = g_off[i]; o < (size_t)g_off[i] + g_len[i]; o++)
+            CHECK(!is_padding(o, (size_t)STRIDE * H, STRIDE, W, H),
+                  "padded: range %u+%u flushes padding at %zu",
+                  g_off[i], g_len[i], o);
+    free(f.mem);
+    free(g.mem);
+}
+
+/* stride == width: a full-width span is one contiguous range over its rows. */
+static void test_sync_tight(void)
+{
+    struct frame f, g;
+    struct osd_canvas c, d;
+    size_t body = (size_t)W * H * 3 / 2;
+    uint8_t bmp[12];
+
+    memset(bmp, 0x50, sizeof(bmp));
+    frame_new(&f);
+    frame_new(&g);
+    osd_canvas_init(&c, f.base, W, H, W, (size_t)W * H);
+    osd_canvas_init(&d, g.base, W, H, W, (size_t)W * H);
+    d.dry = 1;
+    draw_shapes(&c, bmp);
+    draw_shapes(&d, bmp);
+    CHECK(!d.span_overflow, "tight: shapes overflowed the plan");
+    rec_reset();
+    osd_canvas_sync(&d, rec_fn, NULL);
+    check_synced(&f, body, "tight");
+    free(f.mem);
+    free(g.mem);
+}
+
+/* A shape the plan cannot express keeps the old whole-band sync: three
+ * diagonals need more spans than the plan holds. */
+static void test_sync_fallback(void)
+{
+    struct frame f, g;
+    struct osd_canvas c, d;
+    size_t body = (size_t)STRIDE * H * 3 / 2;
+    unsigned long long band;
+
+    frame_new(&f);
+    frame_new(&g);
+    canvas(&f, &c);
+    canvas(&g, &d);
+    d.dry = 1;
+    osd_draw_line(&c, 1, 2, 62, 45, 3, WORD, 0, 0);
+    osd_draw_line(&c, 3, 44, 63, 5, 3, WORD, 0, 0);
+    osd_draw_line(&c, 1, 3, 60, 46, 5, WORD, 0, 0);
+    osd_draw_line(&d, 1, 2, 62, 45, 3, WORD, 0, 0);
+    osd_draw_line(&d, 3, 44, 63, 5, 3, WORD, 0, 0);
+    osd_draw_line(&d, 1, 3, 60, 46, 5, WORD, 0, 0);
+    CHECK(d.span_overflow, "three diagonals must overflow the plan");
+    CHECK(d.ymin == c.ymin && d.ymax == c.ymax, "fallback band differs");
+    band = (unsigned long long)(d.ymax - d.ymin + 1) * STRIDE +
+           (unsigned long long)((d.ymax + 1) / 2 - d.ymin / 2) * STRIDE;
+    rec_reset();
+    osd_canvas_sync(&d, rec_fn, NULL);
+    CHECK(g_n == 2 && g_bytes == band, "fallback %u ranges %llu bytes, want 2/%llu",
+          g_n, g_bytes, band);
+    check_synced(&f, body, "fallback");
+    free(f.mem);
+    free(g.mem);
+}
+
+/* A full-frame 4 px RECT writes four lw-wide bands: two full rows bands and
+ * two vertical strips. Syncing those instead of the whole frame is the win. */
+static void test_sync_fullframe_rect(void)
+{
+    const uint32_t w = 1920, h = 1080;
+    size_t body = (size_t)w * h * 3 / 2;
+    uint8_t *mem = malloc(body);
+    struct osd_canvas c;
+    unsigned long long band;
+
+    CHECK(mem != NULL, "1920x1080 alloc");
+    if (!mem)
+        return;
+    memset(mem, 0, body);
+    osd_canvas_init(&c, mem, w, h, w, (size_t)w * h);
+    c.dry = 1;
+    osd_draw_rect(&c, 0, 0, (int)w - 1, (int)h - 1, 4, WORD, 0, 0);
+    CHECK(c.ymin == 0 && c.ymax == (int)h - 1, "1920x1080 band %d..%d",
+          c.ymin, c.ymax);
+    band = (unsigned long long)(c.ymax - c.ymin + 1) * w +
+           (unsigned long long)((c.ymax + 1) / 2 - c.ymin / 2) * w;
+    rec_reset();
+    osd_canvas_sync(&c, rec_fn, NULL);
+    printf("osd sync: %ux%u full-frame 4px rect: %llu bytes in %u ranges "
+           "(old band: %llu bytes)\n", w, h, g_bytes, g_n, band);
+    CHECK(g_n <= MAX_REC, "1920x1080: %u ranges overrun the recorder", g_n);
+    CHECK(g_bytes * 50ull < band, "1920x1080: %llu not far below %llu",
+          g_bytes, band);
+    free(mem);
+}
+
 int main(void)
 {
     test_rect();
@@ -426,6 +615,10 @@ int main(void)
     test_stock_details();
     test_dry();
     test_invalid_canvas();
+    test_sync_padded();
+    test_sync_tight();
+    test_sync_fallback();
+    test_sync_fullframe_rect();
     if (failures) {
         fprintf(stderr, "%d failure(s)\n", failures);
         return 1;
