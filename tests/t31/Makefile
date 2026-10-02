@@ -12,7 +12,7 @@ AEC_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-aec-test
 NV12_ROTATE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-nv12-rotate-test
 LAMBDA_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-lambda-test
 
-.PHONY: check clean
+.PHONY: check clean p2-jpeg-source
 
 check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(FRAME_PIN_TEST_BIN) \
@@ -121,3 +121,22 @@ clean:
 		$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(FRAME_PIN_TEST_BIN) \
 		$(AO_SENDFRAME_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 		$(LAMBDA_TEST_BIN)
+
+# A JPEG channel that is the only one on its framesource (timps' jpeg.*
+# channel) must get frames from PollingStream. Not part of check: fails
+# until src/t40/openimp_p2_encoder.c takes such a channel's frames from the
+# framesource on T31 too (see p2_jpeg_frames_from_fanout, claude/helix-jpeg
+# 43e9f9a for T20/T21/T23/T30).
+P2_JPEG_SOURCE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-jpeg-source-test
+
+p2-jpeg-source: p2_jpeg_source_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
+	mkdir -p "$(dir $(P2_JPEG_SOURCE_TEST_BIN))"
+	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
+		'-D_Static_assert(c,m)=' -Wno-unused-result \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		-I$(PROJECT_DIR)/src/t40 p2_jpeg_source_test.c \
+		$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
+		$(PROJECT_DIR)/src/openimp_profile.c \
+		$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
+		-lpthread -o $(P2_JPEG_SOURCE_TEST_BIN)
+	$(P2_JPEG_SOURCE_TEST_BIN)
