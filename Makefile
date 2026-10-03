@@ -33,6 +33,7 @@ t41:
 	./build-t41.sh
 
 check:
+	$(MAKE) -C tests/caps check
 	$(MAKE) -C tests/eprc check
 	$(MAKE) -C tests/rc_t20 check
 	$(MAKE) -C tests/rc_t10 check

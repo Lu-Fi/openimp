@@ -51,6 +51,10 @@ repo_includes="-I$project_dir/include -I$project_dir/src"
     -o "$output_dir/openimp_profile.o"
 
 "$compiler" $strict_flags $repo_includes \
+    -c "$project_dir/src/isp/openimp_caps.c" \
+    -o "$output_dir/openimp_caps.o"
+
+"$compiler" $strict_flags $repo_includes \
     -c "$project_dir/src/openimp_tuning.c" \
     -o "$output_dir/openimp_tuning.o"
 
@@ -90,6 +94,7 @@ done
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
     "$output_dir/openimp_profile.o" \
+    "$output_dir/openimp_caps.o" \
     "$output_dir/openimp_tuning.o" \
     "$output_dir/openimp_p1.o" \
     "$output_dir/openimp_p2_dma.o" \

@@ -67,6 +67,7 @@ compile()
 # T-series stock-driver seam. Audio remains in the OEM libimp used by RAD.
 compile openimp_p0 src/t40/openimp_p0.c -Werror
 compile openimp_profile src/openimp_profile.c -Werror
+compile openimp_caps src/isp/openimp_caps.c -Werror
 compile openimp_tuning src/openimp_tuning.c -Werror
 compile openimp_p2_encoder src/t40/openimp_p2_encoder.c -Werror
 compile openimp_avc src/t40/openimp_avc.c -Werror
@@ -109,6 +110,7 @@ compile t30_helix_jpeg src/t30/helix_jpeg.c -Werror
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
     "$output_dir/openimp_profile.o" \
+    "$output_dir/openimp_caps.o" \
     "$output_dir/openimp_tuning.o" \
     "$output_dir/openimp_p2_encoder.o" \
     "$output_dir/openimp_avc.o" \
