@@ -13,6 +13,7 @@
  */
 #include <fcntl.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -115,6 +116,18 @@ int IMP_ISP_QueryCaps(IMPISPCaps *caps)
     out.size = sizeof(out);
     out.version = IMP_ISP_CAPS_VERSION;
     caps_table(&out.known, &out.applied);
+    {
+        /* Debug-only: OPENIMP_CAPS_DROP=<hex mask> marks those bits known and
+         * not applied (restrict only), to test a streamer's handling of
+         * restricted keys on any SoC. */
+        const char *drop = getenv("OPENIMP_CAPS_DROP");
+        if (drop && *drop) {
+            uint64_t m = strtoull(drop, NULL, 16) &
+                         ((1ULL << IMP_ISP_CAP_COUNT_V1) - 1ULL);
+            out.known |= m;
+            out.applied &= ~m;
+        }
+    }
     out.applied &= out.known;
     /* a newer caller may pass a bigger struct: fill what we know, leave the
      * rest zero (callers zero it; .version says what was filled) */

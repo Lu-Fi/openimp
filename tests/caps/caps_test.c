@@ -94,6 +94,16 @@ int main(int argc, char **argv)
 #else
     CHECK(c.known == 0 && c.applied == 0);
 #endif
+    /* debug drop mask: restricts, never extends */
+    {
+        IMPISPCaps d, base = query();
+        setenv("OPENIMP_CAPS_DROP", "60", 1);       /* hflip + vflip */
+        d = query();
+        CHECK(!(d.applied & (B(HFLIP) | B(VFLIP))));
+        CHECK((d.known & (B(HFLIP) | B(VFLIP))) == (B(HFLIP) | B(VFLIP)));
+        CHECK((d.applied & ~base.applied) == 0);
+        unsetenv("OPENIMP_CAPS_DROP");
+    }
     printf("caps %-3s known=%06llx applied=%06llx %s\n", p,
            (unsigned long long)c.known, (unsigned long long)c.applied,
            fails ? "FAIL" : "ok");
