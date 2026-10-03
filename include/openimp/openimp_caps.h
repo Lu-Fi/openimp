@@ -20,9 +20,13 @@
  *  - new fields may be appended after .applied; .size tells the library how
  *    much the caller has room for, .version tells the caller what was filled.
  *
- * A caller should use the result only to RESTRICT a capability list it built
- * from the vendor headers, never to extend it: a bit may be applied by the
- * driver while the SoC's vendor header has no setter for it.
+ * A caller builds its capability list from the vendor headers and then
+ * RESTRICTS it (known && !applied). It may also EXTEND it with an applied
+ * feature the vendor header lacks - the open driver doing more than the
+ * vendor - but only where it can call the setter safely: bind it weakly
+ * under its own prototype (identical to the other SoCs' SDK signature),
+ * check the symbol is non-NULL, and keep the vendor value range. A bit may
+ * be applied while this SoC's vendor header has no setter for it.
  *
  * Cheap: a static per-SoC table plus, on some SoCs, one sysfs read of a
  * module parameter. Safe to call before IMP_System_Init. Returns 0 on success,

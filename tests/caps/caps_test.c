@@ -15,6 +15,9 @@
 #if defined(PLATFORM_T23)
 extern const char *openimp_caps_t23_ae_param;
 #endif
+#if defined(PLATFORM_T20)
+extern const char *openimp_caps_t10_module;
+#endif
 
 static int fails;
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
@@ -53,13 +56,26 @@ int main(int argc, char **argv)
         CHECK(big[sizeof(IMPISPCaps)] == 0xa5 && big[63] == 0xa5);
     }
 
+#if defined(PLATFORM_T20)
+    openimp_caps_t10_module = "/nonexistent/tx_isp_t10";   /* T20 */
+#endif
     c = query();
 #if defined(PLATFORM_T20)
     CHECK(!(c.known & B(DRC)));
     CHECK((c.known & B(HUE)) && !(c.applied & B(HUE)));
     CHECK(!(c.applied & (B(DPC) | B(DEFOG) | B(BACKLIGHT))));
-    CHECK((c.applied & (B(AE_IT_MAX) | B(SINTER) | B(COLORFX) | B(WB))) ==
-          (B(AE_IT_MAX) | B(SINTER) | B(COLORFX) | B(WB)));
+    CHECK((c.applied & (B(AE_IT_MAX) | B(SINTER) | B(TEMPER) | B(COLORFX) |
+                        B(SCENE) | B(WB))) ==
+          (B(AE_IT_MAX) | B(SINTER) | B(TEMPER) | B(COLORFX) | B(SCENE) | B(WB)));
+    {
+        IMPISPCaps t10;
+        openimp_caps_t10_module = "/";           /* any existing path = T10 */
+        t10 = query();                           /* T10 driver: no scene/colorfx */
+        CHECK((t10.known & (B(COLORFX) | B(SCENE))) == (B(COLORFX) | B(SCENE)));
+        CHECK(!(t10.applied & (B(COLORFX) | B(SCENE))));
+        CHECK(t10.applied == (c.applied & ~(B(COLORFX) | B(SCENE))));
+        openimp_caps_t10_module = "/nonexistent/tx_isp_t10";
+    }
 #elif defined(PLATFORM_T21)
     CHECK((c.known & B(AE_IT_MAX)) && !(c.applied & B(AE_IT_MAX)));
     CHECK(c.applied & B(DRC));

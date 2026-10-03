@@ -46,6 +46,17 @@ static int caps_module_param_off(const char *path)
 }
 #endif
 
+#if defined(PLATFORM_T20)
+/* The shared T10/T20 libimp runs on either; the loaded ISP module says which.
+ * access() only, no ISP or /dev/mem access. */
+#if defined(OPENIMP_CAPS_TEST)
+const char *openimp_caps_t10_module =
+#else
+static const char *const openimp_caps_t10_module =
+#endif
+    "/sys/module/tx_isp_t10";
+#endif
+
 #if defined(PLATFORM_T23)
 #if defined(OPENIMP_CAPS_TEST)
 /* host test (tests/caps): points this at a temporary file */
@@ -65,12 +76,16 @@ static void caps_table(uint64_t *known, uint64_t *applied)
      * T20 driver takes DRC_ATTR.strength, the T10 one has no DRC handler and
      * neither is device-verified, so no statement. Sinter/temper act through
      * the open driver's table scale (claude/t10-t20-nr-wdr); AE IT max via
-     * the legacy SetIntegrationTime range mode (device-tested 2026-10-03). */
+     * the legacy SetIntegrationTime range mode (device-tested 2026-10-03).
+     * Scene/colorfx: the T20 driver's apical tuning handles both V4L2
+     * controls; the T10 driver (open-tx-isp driver/t10) has no handler. */
     *known = CAPS_ALL_V1 & ~B(DRC);
     *applied = CAPS_BCSH | CAPS_FLIP | B(RUNNING_MODE) | B(ANTIFLICKER) |
                B(AE_COMP) | B(MAX_AGAIN) | B(MAX_DGAIN) | B(SINTER) |
                B(TEMPER) | B(HILIGHT) | B(COLORFX) | B(SCENE) | B(WB) |
                B(AE_IT_MAX);
+    if (access(openimp_caps_t10_module, F_OK) == 0)
+        *applied &= ~(B(COLORFX) | B(SCENE));
 #elif defined(PLATFORM_T21)
     /* Driver lifted from the vendor module. The legacy integration-time range
      * (SetIntegrationTime mode 2) is accepted but the AE ignores it (device
