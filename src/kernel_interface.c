@@ -1090,7 +1090,11 @@ typedef struct {
                              : (size_t)0x180)
 
 static VBMPool *vbm_instance[MAX_VBM_POOLS] = {NULL};
-static VBMVolume g_framevolumes[30]; /* Global frame volumes array */
+/* One record per capture buffer: the largest pool (32 frames, see
+ * CreatePool) on every channel. */
+#define VBM_MAX_POOL_FRAMES 32
+#define VBM_MAX_VOLUMES (MAX_VBM_POOLS * VBM_MAX_POOL_FRAMES)
+static VBMVolume g_framevolumes[VBM_MAX_VOLUMES]; /* Global frame volumes array */
 
 /*
  * Pool lifetime. vbm_instance[chn] is published, freed, and used by the
@@ -1175,7 +1179,7 @@ static int vbm_frame_index(const VBMPool *pool, const void *frame)
 static void vbm_unregister_volumes(int chn)
 {
     pthread_mutex_lock(&vbm_volume_lock);
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < VBM_MAX_VOLUMES; i++) {
         if (g_framevolumes[i].frame != NULL &&
             g_framevolumes[i].frame->chn == chn)
             memset(&g_framevolumes[i], 0, sizeof(g_framevolumes[i]));
@@ -1185,7 +1189,7 @@ static void vbm_unregister_volumes(int chn)
 
 static VBMVolume *vbm_find_volume_by_vaddr(uint32_t vaddr)
 {
-    for (int i = 0; i < 30; ++i) {
+    for (int i = 0; i < VBM_MAX_VOLUMES; ++i) {
         if (g_framevolumes[i].frame != NULL && g_framevolumes[i].virt_addr == vaddr) {
             return &g_framevolumes[i];
         }
@@ -1300,7 +1304,7 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
     memcpy(&frame_count, fmt_bytes + 0x34, sizeof(int));
 
     /* Sanity check frame count - default to 4 if invalid */
-    if (frame_count <= 0 || frame_count > 32) {
+    if (frame_count <= 0 || frame_count > VBM_MAX_POOL_FRAMES) {
         fprintf(stderr, "[VBM] CreatePool: invalid frame_count=%d, using default 4\n", frame_count);
         frame_count = 4;
     }
@@ -1481,13 +1485,24 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
 
         /* Register in global frame volumes */
         pthread_mutex_lock(&vbm_volume_lock);
-        for (int j = 0; j < 30; j++) {
-            if (g_framevolumes[j].frame == NULL) {
-                g_framevolumes[j].frame = frame;
-                g_framevolumes[j].phys_addr = frame->phys_addr;
-                g_framevolumes[j].virt_addr = frame->virt_addr;
-                g_framevolumes[j].ref_count = 0;
-                break;
+        {
+            static int volumes_full_logged;
+            int j;
+
+            for (j = 0; j < VBM_MAX_VOLUMES; j++) {
+                if (g_framevolumes[j].frame == NULL) {
+                    g_framevolumes[j].frame = frame;
+                    g_framevolumes[j].phys_addr = frame->phys_addr;
+                    g_framevolumes[j].virt_addr = frame->virt_addr;
+                    g_framevolumes[j].ref_count = 0;
+                    break;
+                }
+            }
+            if (j == VBM_MAX_VOLUMES && !volumes_full_logged) {
+                volumes_full_logged = 1;
+                IMP_LOG_ERR("VBM", "frame volume table full (%d): frame by "
+                            "vaddr lock/unlock will fail for further buffers",
+                            VBM_MAX_VOLUMES);
             }
         }
         pthread_mutex_unlock(&vbm_volume_lock);
