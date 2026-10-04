@@ -2614,16 +2614,13 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     return result;
 }
 
-int IMP_Encoder_RequestIDR(int channel)
+/* Called with the channel lock held; codec is the channel's live codec. */
+static int p2_request_idr_locked(int channel, void *codec)
 {
 #if defined(PLATFORM_T23)
     static unsigned int t23_idr_request_count;
 #endif
-
-    if (!p2_valid_channel(channel) || !p2_channels[channel].codec)
-        return -1;
-    if (p2_channels[channel].codec_type == IMP_ENC_TYPE_JPEG)
-        return 0;
+    (void)channel;
 #if defined(PLATFORM_T23)
     /* Forwarded by default: the codec latches the request and the encoder
      * thread hands it to the Helix worker right before the next frame
@@ -2642,7 +2639,7 @@ int IMP_Encoder_RequestIDR(int channel)
             forward = !(value && value[0] == '0' && value[1] == '\0');
         }
         if (forward)
-            return AL_Codec_Encode_RequestIDR(p2_channels[channel].codec);
+            return AL_Codec_Encode_RequestIDR(codec);
     }
 #endif
 #if defined(PLATFORM_T23)
@@ -2660,8 +2657,36 @@ int IMP_Encoder_RequestIDR(int channel)
     /* The native T21/T30 Helix encoder never touches the stock YUV seam: an
      * IDR request only latches a flag consumed before the next picture, so
      * forwarding it is safe and lets a joining RTSP client start at once. */
-    return AL_Codec_Encode_RequestIDR(p2_channels[channel].codec);
+    return AL_Codec_Encode_RequestIDR(codec);
 #endif
+}
+
+
+int IMP_Encoder_RequestIDR(int channel)
+{
+    P2EncoderChannel *ch;
+    void *codec;
+    int ret;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    ch = &p2_channels[channel];
+    /* An RTSP thread asks for an IDR while the stream thread may be in
+     * DestroyChn: take the codec under the channel lock so it cannot be
+     * freed underneath (every codec RequestIDR only latches a flag). */
+    pthread_mutex_lock(&ch->lock);
+    codec = ch->created ? ch->codec : NULL;
+    if (!codec) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
+    ret = p2_request_idr_locked(channel, codec);
+    pthread_mutex_unlock(&ch->lock);
+    return ret;
 }
 
 int IMP_Encoder_Query(int channel, IMPEncoderCHNStat *stat)
