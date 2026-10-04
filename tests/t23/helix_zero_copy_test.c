@@ -11,6 +11,7 @@
 
 #include "dma_alloc.h"
 #include "t23/openimp_t23_helix_bridge.h"
+#include "../fake_rmem.h"
 
 #define WIDTH 64u
 #define HEIGHT 32u
@@ -79,11 +80,9 @@ void DMA_LogRmem(const char *when)
 
 static unsigned char *frame_memory(void)
 {
-    unsigned char *p = mmap(NULL, FRAME_SIZE, PROT_READ | PROT_WRITE,
-                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+    unsigned char *p = fake_rmem_map(FRAME_SIZE);
     uint32_t i;
 
-    assert(p != MAP_FAILED);
     for (i = 0; i < FRAME_SIZE; i++)
         p[i] = (unsigned char)(i * 7u + 3u);
     return p;

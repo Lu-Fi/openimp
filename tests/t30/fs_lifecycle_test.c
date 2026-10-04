@@ -30,6 +30,7 @@
 #include "imp/imp_framesource.h"
 #include "core/module.h"
 #include "dma_alloc.h"
+#include "../fake_rmem.h"
 
 /* ------------------------------------------------------------ helpers -- */
 
@@ -85,12 +86,7 @@ static int dma_alloc(IMPDMABufferInfo *info, int size)
         pthread_mutex_unlock(&dma_lock);
         return -1;
     }
-    p = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    if (p == MAP_FAILED) {
-        pthread_mutex_unlock(&dma_lock);
-        return -1;
-    }
+    p = fake_rmem_map((size_t)size);
     for (i = 0; i < FAKE_DMA_MAX && dma_live[i].addr; i++)
         ;
     if (i == FAKE_DMA_MAX)
@@ -125,7 +121,7 @@ int DMA_FreePhys(uint32_t phys)
     pthread_mutex_lock(&dma_lock);
     for (i = 0; i < FAKE_DMA_MAX; i++) {
         if (dma_live[i].addr == phys) {
-            munmap((void *)(uintptr_t)phys, dma_live[i].size);
+            fake_rmem_unmap((void *)(uintptr_t)phys, dma_live[i].size);
             dma_live[i].addr = 0;
             pthread_mutex_unlock(&dma_lock);
             return 0;

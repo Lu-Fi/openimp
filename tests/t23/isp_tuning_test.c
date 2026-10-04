@@ -43,6 +43,7 @@ ISPDevice *gISP;
 #define ioctl test_ioctl
 int test_ioctl(int fd, unsigned long nr, ...);
 #include "../../src/isp/isp_t23_tuning.c"
+#include "../fake_rmem.h"
 #undef ioctl
 
 /* ---- environment stubs ------------------------------------------------ */
@@ -757,12 +758,11 @@ static void *run(void *unused)
 int main(void)
 {
     const size_t stack_size = 1u << 20;
-    void *stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+    void *stack = fake_rmem_map(stack_size);
     pthread_attr_t attr;
     pthread_t thread;
 
-    if (stack == MAP_FAILED || (uintptr_t)buf > 0xffffffffu) {
+    if ((uintptr_t)buf > 0xffffffffu) {
         fprintf(stderr, "needs a non-PIE x86-64 build\n");
         return 2;
     }

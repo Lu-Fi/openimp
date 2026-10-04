@@ -31,6 +31,7 @@
 #include "t30/t30_helix_encoder.h"
 #include "t30/h264enc/common.h"
 #include "dma_alloc.h"
+#include "../fake_rmem.h"
 
 #define WIDTH 640u
 #define HEIGHT 360u
@@ -1228,9 +1229,7 @@ int main(int argc, char **argv)
         return 2;
     /* the encoder keeps addresses in 32-bit words, as on MIPS */
     mallopt(M_MMAP_MAX, 0);
-    rmem = mmap(NULL, RMEM_SIZE, PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    assert(rmem != MAP_FAILED);
+    rmem = fake_rmem_map(RMEM_SIZE);
     if (strcmp(argv[1], "crop") == 0)
         return crop_test(argv[2]);
     if (strcmp(argv[1], "encode") == 0)
