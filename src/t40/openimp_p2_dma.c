@@ -599,9 +599,25 @@ int IMP_FlushCache(void *address, uint32_t length)
     return DMA_RmemFlushCache(address, length, 1);
 }
 
+/* The mapping is set up once and never torn down, so once it exists the
+ * translations below read it without the lock; the first-time setup must
+ * not race a concurrent allocation's p2_dma_prepare (two /dev/rmem
+ * mappings, one of them leaked, otherwise). */
+static int p2_dma_ready(void)
+{
+    int result;
+
+    if (p2_dma.mapping)
+        return 0;
+    p2_lock();
+    result = p2_dma_prepare();
+    p2_unlock();
+    return result;
+}
+
 void *IMP_Phys_to_Virt(uint32_t physical)
 {
-    if (p2_dma_prepare() != 0 || physical < p2_dma.base ||
+    if (p2_dma_ready() != 0 || physical < p2_dma.base ||
         physical >= p2_dma.base + p2_dma.size)
         return NULL;
     return (unsigned char *)p2_dma.mapping + (physical - p2_dma.base);
@@ -612,7 +628,7 @@ uint32_t IMP_Virt_to_Phys(void *virtual_address)
     uintptr_t address = (uintptr_t)virtual_address;
     uintptr_t base;
 
-    if (p2_dma_prepare() != 0)
+    if (p2_dma_ready() != 0)
         return 0;
     base = (uintptr_t)p2_dma.mapping;
     if (address < base || address >= base + p2_dma.size)
