@@ -257,14 +257,13 @@ static struct {
     } stats;
     int16_t *aec_mic;               /* stats copy of the unprocessed frame */
     size_t aec_mic_capacity;
-#if defined(PLATFORM_T23)
-    /* GET_STREAM bounce buffers: whole driver fragments, up to one frame,
-     * and the reference of the same fragments (mono, like the AI) */
+    /* GET_STREAM bounce buffers: whole driver fragments (see
+     * t31_capture_start) and the reference of the same fragments (mono,
+     * like the AI) */
     unsigned char *capture_chunk;
     unsigned char *capture_ref_chunk;
     size_t capture_chunk_capacity;
     size_t capture_chunk_bytes;
-#endif
     /* SendFrame re-blocks arbitrary frame sizes into whole driver periods */
     unsigned char *ao_period;
     size_t ao_period_capacity;
@@ -703,6 +702,24 @@ static size_t t31_frame_bytes(void)
     return (size_t)t31_audio.ai_attr.numPerFrm * channels * sizeof(int16_t);
 }
 
+/* Driver fragment, for capture and playback. Both kernel ABIs copy whole
+ * fragments only and keep a request that ends in a partial one waiting for
+ * good: the T23 OSS3 driver in 20 ms units (T23_FRAGMENT_10MS_UNITS), the
+ * OSS2 driver of T31/T30/T21/T20 in 10 ms units (xb_snd_dsp.c
+ * ai_copy_to_user/ao_copy_from_user, xb47xx_i2s_v12.c
+ * SND_DSP_GET_RECORD/REPLAY_FRAGMENTSIZE). */
+static size_t t31_fragment_bytes(const IMPAudioIOAttr *attribute)
+{
+#if defined(PLATFORM_T23)
+    return t23_fragment_bytes(attribute);
+#else
+    size_t channels =
+        attribute->soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U;
+
+    return (size_t)(attribute->samplerate / 100) * channels * sizeof(int16_t);
+#endif
+}
+
 static int64_t t31_bytes_to_us(size_t bytes)
 {
     unsigned int channels;
@@ -739,16 +756,13 @@ static int t31_ref_reserve(size_t capacity)
  * consumer falls behind, whole frames are dropped from the oldest end. */
 static void *t31_capture_main(void *argument)
 {
-#if defined(PLATFORM_T23)
-    /* Up to one IMP frame per GET_STREAM, like the OEM __ai_dev_read, but
-     * always whole driver fragments; the FIFO re-blocks into frames. */
+    /* Whole driver fragments per GET_STREAM (t31_capture_start); the FIFO
+     * re-blocks them into frames. */
     unsigned char *chunk = t31_audio.capture_chunk;
     unsigned char *ref_chunk = t31_audio.capture_ref_chunk;
     const size_t chunk_size = t31_audio.capture_chunk_bytes;
+#if defined(PLATFORM_T23)
     T23AudioTimeval capture_time;
-#else
-    unsigned char chunk[T31_CAPTURE_CHUNK_BYTES];
-    unsigned char ref_chunk[T31_CAPTURE_CHUNK_BYTES];
 #endif
     int with_ref;
     T31AudioInputStream stream;
@@ -779,10 +793,10 @@ static void *t31_capture_main(void *argument)
          * route was disabled under it - capture_stop is checked below) */
         size = result == 0 ? chunk_size : 0;
 #else
-        stream.size = sizeof(chunk);
+        stream.size = (uint32_t)chunk_size;
         stream.aec = with_ref ? ref_chunk : NULL;
         result = ioctl(t31_audio.ai_fd, T31_AI_GET_STREAM, &stream);
-        size = stream.size < sizeof(chunk) ? stream.size : sizeof(chunk);
+        size = stream.size < chunk_size ? stream.size : chunk_size;
 #endif
         size -= size % align;
         pthread_mutex_lock(&t31_capture_lock);
@@ -843,13 +857,26 @@ static int t31_capture_start(void)
         depth = t31_audio.ai_attr.frmNum < T31_CAPTURE_MAX_DEPTH
                     ? (size_t)t31_audio.ai_attr.frmNum
                     : T31_CAPTURE_MAX_DEPTH;
-#if defined(PLATFORM_T23)
     {
-        size_t fragment = t23_fragment_bytes(&t31_audio.ai_attr);
-        size_t chunk = frame - frame % (fragment ? fragment : 1U);
+        /* The driver only ever copies whole fragments: a GET_STREAM size
+         * that is not a fragment multiple never completes and the capture
+         * thread hangs in the driver (OSS2: 1280 bytes at 48 kHz mono =
+         * 1 x 960 + 320).  T23 reads up to one IMP frame per call, like the
+         * OEM __ai_dev_read; the OSS2 SoCs at least 40 ms worth, so a
+         * period with several ready fragments is drained in one call.
+         * Both are rounded down to whole fragments, at least one. */
+        size_t fragment = t31_fragment_bytes(&t31_audio.ai_attr);
+#if defined(PLATFORM_T23)
+        size_t target = frame;
+#else
+        size_t target = frame > T31_CAPTURE_CHUNK_BYTES
+                            ? frame : T31_CAPTURE_CHUNK_BYTES;
+#endif
+        size_t chunk;
 
         if (!fragment)
             return -1;
+        chunk = target - target % fragment;
         if (!chunk)
             chunk = fragment;
         if (chunk > t31_audio.capture_chunk_capacity) {
@@ -866,9 +893,6 @@ static int t31_capture_start(void)
         t31_audio.capture_chunk_bytes = chunk;
         capacity = frame * depth + chunk;
     }
-#else
-    capacity = frame * depth + T31_CAPTURE_CHUNK_BYTES;
-#endif
     if (capacity > t31_audio.capture_capacity) {
         void *buffer = realloc(t31_audio.capture_buffer, capacity);
         if (!buffer)
@@ -1592,23 +1616,6 @@ int IMP_AO_GetPubAttr(int device, IMPAudioIOAttr *attribute)
     return 0;
 }
 
-/* Playback fragment of the driver. Both kernel ABIs copy whole fragments
- * only and keep a write that ends in a partial one waiting for good: the
- * T23 OSS3 driver in 20 ms units (T23_FRAGMENT_10MS_UNITS), the OSS2 driver
- * of T31/T30/T21/T20 in 10 ms units (xb_snd_dsp.c ao_copy_from_user,
- * xb47xx_i2s_v12.c SND_DSP_GET_REPLAY_FRAGMENTSIZE). */
-static size_t t31_ao_fragment_bytes(const IMPAudioIOAttr *attribute)
-{
-#if defined(PLATFORM_T23)
-    return t23_fragment_bytes(attribute);
-#else
-    size_t channels =
-        attribute->soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U;
-
-    return (size_t)(attribute->samplerate / 100) * channels * sizeof(int16_t);
-#endif
-}
-
 int IMP_AO_Enable(int device)
 {
     int fd;
@@ -1618,7 +1625,7 @@ int IMP_AO_Enable(int device)
     if (t31_audio.ao_enabled)
         return 0;
     {
-        size_t fragment = t31_ao_fragment_bytes(&t31_audio.ao_attr);
+        size_t fragment = t31_fragment_bytes(&t31_audio.ao_attr);
         size_t period = (size_t)t31_audio.ao_attr.numPerFrm *
                         (t31_audio.ao_attr.soundmode ==
                                  AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
