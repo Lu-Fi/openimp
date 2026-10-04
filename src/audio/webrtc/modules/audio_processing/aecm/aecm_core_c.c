@@ -73,9 +73,9 @@ static void WindowAndFFT(AecmCore* aecm,
   for (i = 0; i < PART_LEN; i++) {
     // Window time domain signal and insert into real part of
     // transformation array |fft|
-    int16_t scaled_time_signal = time_signal[i] << time_signal_scaling;
+    int16_t scaled_time_signal = time_signal[i] * (1 << time_signal_scaling);
     fft[i] = (int16_t)((scaled_time_signal * WebRtcAecm_kSqrtHanning[i]) >> 14);
-    scaled_time_signal = time_signal[i + PART_LEN] << time_signal_scaling;
+    scaled_time_signal = time_signal[i + PART_LEN] * (1 << time_signal_scaling);
     fft[PART_LEN + i] = (int16_t)((
         scaled_time_signal * WebRtcAecm_kSqrtHanning[PART_LEN - i]) >> 14);
   }
@@ -488,13 +488,13 @@ int WebRtcAecm_ProcessBlock(AecmCore* aecm,
     assert(zeros16 >= 0);  // |zeros16| is a norm, hence non-negative.
     dfa_clean_q_domain_diff = aecm->dfaCleanQDomain - aecm->dfaCleanQDomainOld;
     if (zeros16 < dfa_clean_q_domain_diff && aecm->nearFilt[i]) {
-      tmp16no1 = aecm->nearFilt[i] << zeros16;
+      tmp16no1 = aecm->nearFilt[i] * (1 << zeros16);
       qDomainDiff = zeros16 - dfa_clean_q_domain_diff;
       tmp16no2 = ptrDfaClean[i] >> -qDomainDiff;
     } else {
       tmp16no1 = dfa_clean_q_domain_diff < 0
           ? aecm->nearFilt[i] >> -dfa_clean_q_domain_diff
-          : aecm->nearFilt[i] << dfa_clean_q_domain_diff;
+          : aecm->nearFilt[i] * (1 << dfa_clean_q_domain_diff);
       qDomainDiff = 0;
       tmp16no2 = ptrDfaClean[i];
     }
@@ -505,7 +505,7 @@ int WebRtcAecm_ProcessBlock(AecmCore* aecm,
     if ((tmp16no2) & (-qDomainDiff > zeros16)) {
       aecm->nearFilt[i] = WEBRTC_SPL_WORD16_MAX;
     } else {
-      aecm->nearFilt[i] = qDomainDiff < 0 ? tmp16no2 << -qDomainDiff
+      aecm->nearFilt[i] = qDomainDiff < 0 ? tmp16no2 * (1 << -qDomainDiff)
                                           : tmp16no2 >> qDomainDiff;
     }
 
