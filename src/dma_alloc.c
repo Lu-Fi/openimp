@@ -234,6 +234,45 @@ static DMABufferRecord* lookup_buffer_containing_virt(const void *virt_addr, uin
     return NULL;
 }
 
+/* Finds the live record for an address and takes it out of the registry in
+ * one step, so concurrent frees of one address cannot both get the record
+ * (the loser sees "not live" and does nothing). */
+static DMABufferRecord *claim_buffer(uintptr_t addr)
+{
+    DMABufferRecord *found = NULL;
+    int slot = -1;
+
+    pthread_mutex_lock(&g_registry_mutex);
+    for (int pass = 0; pass < 3 && !found; pass++) {
+        if (pass != 1 && addr > UINT32_MAX)
+            continue;
+        for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
+            DMABufferRecord *b = g_buffer_registry[i];
+            int hit;
+
+            if (b == NULL)
+                continue;
+            if (pass == 0)
+                hit = b->phys_addr == (uint32_t)addr;
+            else if (pass == 1)
+                hit = b->virt_addr != NULL && addr >= (uintptr_t)b->virt_addr &&
+                      addr < (uintptr_t)b->virt_addr + b->size;
+            else
+                hit = (uint32_t)addr >= b->phys_addr &&
+                      (uint32_t)addr < b->phys_addr + b->size;
+            if (hit) {
+                found = b;
+                slot = i;
+                break;
+            }
+        }
+    }
+    if (found)
+        g_buffer_registry[slot] = NULL;
+    pthread_mutex_unlock(&g_registry_mutex);
+    return found;
+}
+
 static void fill_dma_info(IMPDMABufferInfo *info_out, const DMABufferRecord *buf)
 {
     if (info_out == NULL || buf == NULL) {
@@ -560,7 +599,8 @@ static int dma_free_buffer(DMABufferRecord *buf)
     LOG_DMA("Free: phys=0x%x virt=%p", buf->phys_addr, buf->virt_addr);
 
     /* Out of the registry before the pages can be handed out again, so a
-     * lookup never finds two records for one address. */
+     * lookup never finds two records for one address (a no-op when the
+     * caller already claimed the record). */
     unregister_buffer(buf);
 
     if (buf->virt_addr != NULL) {
@@ -808,22 +848,20 @@ uintptr_t IMP_PoolAlloc(int pool_id, void *name_or_size, intptr_t size, char *ta
 }
 
 int IMP_Free(uintptr_t phys_or_virt_addr) {
-    DMABufferRecord *buf = NULL;
+    static int warned_unknown;
+    DMABufferRecord *buf;
 
     if (phys_or_virt_addr == 0) {
         return -1;
     }
 
-    if (phys_or_virt_addr <= UINT32_MAX) {
-        buf = lookup_buffer_by_phys((uint32_t)phys_or_virt_addr);
-    }
+    buf = claim_buffer(phys_or_virt_addr);
     if (buf == NULL) {
-        buf = lookup_buffer_containing_virt((const void*)phys_or_virt_addr, NULL);
-    }
-    if (buf == NULL && phys_or_virt_addr <= UINT32_MAX) {
-        buf = lookup_buffer_containing_phys((uint32_t)phys_or_virt_addr, NULL);
-    }
-    if (buf == NULL) {
+        /* Not live: a double free or a foreign address.  Ignored. */
+        if (!__atomic_exchange_n(&warned_unknown, 1, __ATOMIC_RELAXED))
+            IMP_LOG_ERR("DMA", "free of an address that is not a live "
+                        "allocation ignored (arg=%p); further ones not logged",
+                        (void *)phys_or_virt_addr);
         LOG_DMA("Free: buffer not found in registry (arg=%p)", (void*)phys_or_virt_addr);
         return 0;
     }
@@ -1403,13 +1441,15 @@ int IMP_Alloc_Dump(void) {
         }
     }
     LOG_DMA("  Total: %d buffers, %zu bytes", count, total_size);
+    pthread_mutex_unlock(&g_registry_mutex);
+
+    pthread_mutex_lock(&g_alloc_mutex);
     if (g_rmem_arena_ready)
         LOG_DMA("  rmem: used %zu of %zu, largest free block %zu, %d allocations",
                 g_rmem_arena.used, g_rmem_arena.size,
                 rmem_arena_largest_gap(&g_rmem_arena), g_rmem_arena.count);
+    pthread_mutex_unlock(&g_alloc_mutex);
     LOG_DMA("==========================");
-
-    pthread_mutex_unlock(&g_registry_mutex);
     return 0;
 }
 
