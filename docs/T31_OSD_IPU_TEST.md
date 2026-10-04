@@ -17,7 +17,7 @@ Hintergrund: [`T31_OSD_RE.md`](T31_OSD_RE.md). Kurz gesagt:
 ## Bauen
 
 ```sh
-git clone https://github.com/Lu-Fi/openimp && cd openimp
+git clone https://github.com/opensensor/openimp && cd openimp
 git switch claude/t31-re
 mipsel-linux-gnu-gcc -O2 -march=mips32r2 -static -Wall -Wextra \
     -o t31_ipu_osd_probe tools/t31_ipu_osd_probe.c        # oder die thingino-Toolchain

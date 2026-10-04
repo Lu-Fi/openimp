@@ -65,7 +65,7 @@ Hintergrund: [`T31_HW_JPEG_RE.md`](T31_HW_JPEG_RE.md),
 ## 3. Bauen
 
 ```sh
-git clone https://github.com/Lu-Fi/openimp && cd openimp
+git clone https://github.com/opensensor/openimp && cd openimp
 git switch claude/t31-re
 TC=<thingino>/output/<branch>/<target>/host/bin/mipsel-linux
 $TC-gcc -O2 -fPIC -shared -Wall -Wextra -o liboem_trace.so tools/oem_trace/oem_trace.c -ldl

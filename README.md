@@ -12,23 +12,25 @@
 [![license](https://img.shields.io/badge/license-per%20file-blue)](NOTICE)
 [![SoCs](https://img.shields.io/badge/SoC-T10%20%C2%B7%20T20%20%C2%B7%20T21%20%C2%B7%20T23%20%C2%B7%20T30%20%C2%B7%20T31%20%C2%B7%20T41-3e63dd)](#status)
 [![status](https://img.shields.io/badge/open%20stack-device%20tested-30a46c)](#status)
-[![branch next](https://img.shields.io/badge/branch-next-e5484d)](https://github.com/Lu-Fi/openimp/tree/next)
+[![branch next](https://img.shields.io/badge/branch-next-e5484d)](https://github.com/opensensor/openimp/tree/next)
 [![thingino](https://img.shields.io/badge/thingino-integrated-orange)](https://github.com/themactep/thingino-firmware)
 [![platform](https://img.shields.io/badge/platform-MIPS%20%C2%B7%20Linux%203.10%20%26%204.4-lightgrey)](#build)
-[![last commit](https://img.shields.io/github/last-commit/Lu-Fi/openimp/next)](https://github.com/Lu-Fi/openimp/commits/next)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/Lu-Fi/openimp/pulls)
+[![last commit](https://img.shields.io/github/last-commit/opensensor/openimp/next)](https://github.com/opensensor/openimp/commits/next)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/opensensor/openimp/pulls)
 
 </p>
 
 OpenIMP is an open replacement for Ingenic's closed `libimp.so` (the IMP video,
 encoder, OSD, IVS and audio API). Together with
-[open-tx-isp](https://github.com/Lu-Fi/open-tx-isp) (the open ISP kernel driver) and a
+[open-tx-isp](https://github.com/opensensor/open-tx-isp) (the open ISP kernel driver) and a
 streamer such as [timps](https://github.com/Lu-Fi/timps) it forms an open camera stack
 for Ingenic T10, T20, T21, T23, T30, T31, T40 and T41 SoCs. The public API is the
 vendor IMP API, so existing streamers (prudynt, raptor, timps) link against it unchanged.
 
-This fork tracks [opensensor/openimp](https://github.com/opensensor/openimp) and adds the
-device-test campaign work for T10/T20/T21/T23/T31/T41.
+OpenIMP was started by Matt Davis ([matteius](https://github.com/matteius), opensensor), who remains
+the original author and owner of this project. The `next` branch carries the open-stack work of
+[Lu-Fi](https://github.com/Lu-Fi) as maintainer and contributor: device-test campaign on
+T10/T20/T21/T23/T31/T41, rate control, hardening and documentation.
 
 ## Status
 
@@ -98,7 +100,7 @@ The packages `openimp` (this repository) and `open-tx-isp` (kernel driver) are i
 [thingino-firmware](https://github.com/themactep/thingino-firmware) branch `aperto`
 ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), selected with
 `BR2_PACKAGE_THINGINO_ISP_OPEN` (menu "ISP stack") and pinned by commit SHA to the `next`
-branches of the Lu-Fi forks. Both replace the proprietary `libimp.so` and `tx-isp-<soc>.ko`; the
+branches (thingino currently pins the Lu-Fi forks and will follow the release tags of this repository). Both replace the proprietary `libimp.so` and `tx-isp-<soc>.ko`; the
 SDK sensor, audio and AVPU modules stay; T23 runs fully on OpenIMP without any vendor helper. The
 kernel VPU/rmem stability patches
 ([#1748](https://github.com/themactep/thingino-firmware/pull/1748),
@@ -141,7 +143,7 @@ loaded at runtime from `libaudioProcess-neo`. Acoustic echo cancellation uses th
 
 ## Documentation
 
-- [Wiki](https://github.com/Lu-Fi/openimp/wiki): build and install, module parameters, `OPENIMP_*` variables, memory sizing, troubleshooting, release scheme (one wiki for OpenIMP and open-tx-isp).
+- [Wiki](https://github.com/opensensor/openimp/wiki): build and install, module parameters, `OPENIMP_*` variables, memory sizing, troubleshooting, release scheme (one wiki for OpenIMP and open-tx-isp).
 - [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md) (also as [`feature-matrix.html`](docs/feature-matrix.html)): what works on which SoC.
 - [`docs/OPEN_STACK_CHANGELOG.md`](docs/OPEN_STACK_CHANGELOG.md) and [`CHANGELOG.md`](CHANGELOG.md): history of the open stack.
 - [`docs/OPENIMP_BEYOND_VENDOR.md`](docs/OPENIMP_BEYOND_VENDOR.md) and [`docs/OPENIMP_SOC_DIFFS.md`](docs/OPENIMP_SOC_DIFFS.md): differences to the vendor stack, for streamer authors.
@@ -151,11 +153,12 @@ loaded at runtime from `libaudioProcess-neo`. Acoustic echo cancellation uses th
 
 ## Reporting problems
 
-Open an issue at [Lu-Fi/openimp](https://github.com/Lu-Fi/openimp/issues) (library, encoder, streamer integration) or [Lu-Fi/open-tx-isp](https://github.com/Lu-Fi/open-tx-isp/issues) (kernel driver, ISP, memory). Please include the SoC and sensor, the revisions of open-tx-isp, OpenIMP and the streamer, `dmesg`, the streamer log (including the `rmem peak` and "effective rate control" lines), the stream set and the `rmem`/`ispmem` values. Do not post addresses, credentials or location names. Details: [Troubleshooting](https://github.com/Lu-Fi/openimp/wiki/Troubleshooting#reporting-a-problem).
+Open an issue at [opensensor/openimp](https://github.com/opensensor/openimp/issues) (library, encoder, streamer integration) or [opensensor/open-tx-isp](https://github.com/opensensor/open-tx-isp/issues) (kernel driver, ISP, memory). Please include the SoC and sensor, the revisions of open-tx-isp, OpenIMP and the streamer, `dmesg`, the streamer log (including the `rmem peak` and "effective rate control" lines), the stream set and the `rmem`/`ispmem` values. Do not post addresses, credentials or location names. Details: [Troubleshooting](https://github.com/opensensor/openimp/wiki/Troubleshooting#reporting-a-problem).
 
 ## Credits
 
-OpenIMP started as [opensensor/openimp](https://github.com/opensensor/openimp). It builds on the
+OpenIMP was started by Matt Davis ([matteius](https://github.com/matteius), opensensor); the open-stack
+work on `next` (device tests, rate control, hardening) is maintained by [Lu-Fi](https://github.com/Lu-Fi). It builds on the
 Thingino and Ingenic reverse-engineering community: [thingino-firmware](https://github.com/themactep/thingino-firmware),
 [ingenic-sdk](https://github.com/themactep/ingenic-sdk), `libaudioProcess-neo` and
 `ingenic-system-libs-neo` (gtxaspec). Vendored third-party code: WebRTC AECM (BSD-3-Clause),

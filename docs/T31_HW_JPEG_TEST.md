@@ -43,7 +43,7 @@ Die Regeln sind verbindlich. Bei Unklarheit fragst du den Menschen.
 Auf dem lokalen Rechner:
 
 ```sh
-git clone https://github.com/Lu-Fi/openimp && cd openimp
+git clone https://github.com/opensensor/openimp && cd openimp
 git switch claude/t31-re
 git log --oneline -15
 ```
