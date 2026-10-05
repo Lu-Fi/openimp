@@ -119,6 +119,36 @@ static int osd_ipu_fd = -1;
 static int osd_ipu_errors;
 static int osd_backend_state;       /* 0 unknown, 1 on, -1 off */
 
+/*
+ * T21 first-snapshot hunt (2026-10-05): the first IPU blends of a process
+ * leave no overlay in the frame (JPEG encoded right after an apply with
+ * ipu ret 0 shows none; later blends of the same burst do).  Two knobs:
+ *   OPENIMP_OSD_IPU_WARMUP=n (default 1 on T21, 0 elsewhere): the first n
+ *     IPU_START calls of the process are issued twice (the first op after
+ *     the driver's clk_enable + reset is suspected to be lost).
+ *   OPENIMP_OSD_VERIFY=1: for the first 16 applies, sum one luma row of the
+ *     first blended region before and after the IPU op (cache invalidated
+ *     both times) and log whether the IPU changed memory at all.
+ */
+static int osd_ipu_warmup_left = -1;
+static int osd_verify = -1;
+
+static int osd_env_int(const char *name, int dflt)
+{
+    const char *v = getenv(name);
+
+    return v && *v ? atoi(v) : dflt;
+}
+
+static uint32_t osd_row_sum(const uint8_t *row, uint32_t n)
+{
+    uint32_t sum = 0, i;
+
+    for (i = 0; i < n; i++)
+        sum += row[i];
+    return sum;
+}
+
 static int t31_osd_backend_enabled(void)
 {
     if (osd_backend_state == 0) {
@@ -454,6 +484,58 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 c->buf_p = r->bitmap[r->active].phys;
             }
             p.cmd |= 1u << k;
+        }
+        if (osd_ipu_warmup_left < 0) {
+#if defined(PLATFORM_T21)
+            osd_ipu_warmup_left = osd_env_int("OPENIMP_OSD_IPU_WARMUP", 1);
+#else
+            osd_ipu_warmup_left = osd_env_int("OPENIMP_OSD_IPU_WARMUP", 0);
+#endif
+            osd_verify = osd_env_int("OPENIMP_OSD_VERIFY", 0);
+            IMP_LOG_INFO("OSD", "IPU warm-up ops: %d, verify: %d",
+                         osd_ipu_warmup_left, osd_verify);
+        }
+        {
+            static unsigned int verify_n;
+            const struct t31_osd_region *r0 = &osd_regions[order[i]];
+            uint32_t vy = (uint32_t)r0->attr.rect.p0.y + 1u, vw = width, before = 0;
+            const uint8_t *vrow = (const uint8_t *)(uintptr_t)(virt + vy * width);
+            int verifying = osd_verify && virt && verify_n < 16u && vy < height;
+
+            if (verifying) {
+                DMA_RmemFlushCache((void *)vrow, vw, 2);
+                before = osd_row_sum(vrow, vw);
+            }
+            if (osd_ipu_warmup_left > 0) {
+                int wr = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+
+                osd_ipu_warmup_left--;
+                IMP_LOG_INFO("OSD", "IPU warm-up op ret=%d (%d left), repeating it",
+                             wr, osd_ipu_warmup_left);
+            }
+            if (verifying) {
+                /* the op below runs; verify after it */
+                int ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+                uint32_t after;
+
+                DMA_RmemFlushCache((void *)vrow, vw, 2);
+                after = osd_row_sum(vrow, vw);
+                verify_n++;
+                IMP_LOG_INFO("OSD", "IPU verify #%u grp %d: ret=%d row %u sum %u -> %u (%s)",
+                             verify_n, group, ret, vy, before, after,
+                             before == after ? "UNCHANGED - IPU wrote nothing visible"
+                                             : "changed");
+                if (ret < 0) {
+                    if (++osd_ipu_errors >= T31_OSD_MAX_IPU_ERRORS) {
+                        pthread_mutex_unlock(&osd_lock);
+                        t31_osd_backend_disable("repeated IPU errors");
+                        return;
+                    }
+                } else {
+                    osd_ipu_errors = 0;
+                }
+                continue;
+            }
         }
         if (ioctl(osd_ipu_fd, T31_IPU_START, &p) < 0) {
             if (++osd_ipu_errors >= T31_OSD_MAX_IPU_ERRORS) {
