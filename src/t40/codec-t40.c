@@ -7151,6 +7151,11 @@ struct AL_CodecEncode {
 #else
     /* JPEG quality 1..100 from iInitialQP at CreateChn (0: default 75) */
     uint32_t jpeg_quality;
+#if defined(PLATFORM_T41)
+    /* IMP_Encoder_SetJpegeQl (software JPEG), under jpeg_ql_lock */
+    int jpeg_user_tables;
+    uint8_t jpeg_tables[128];
+#endif
 #endif
     /* AL_Codec_Encode_SetJpegSkip: the caller can stand in a picture of its
      * own, so a JPEG that would wait for the busy core or for rmem fails
@@ -7286,6 +7291,53 @@ static inline uint32_t codec_jpeg_quality(const AL_CodecEncode *enc)
 {
     return enc->jpeg_quality ? enc->jpeg_quality : 75u;
 }
+
+#if defined(PLATFORM_T41)
+static pthread_mutex_t jpeg_ql_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* IMP_Encoder_SetJpegeQl on T41: enable != 0 replaces the quantizers the
+ * software JPEG encoder derives from the channel quality with the caller's
+ * (luma then chroma, 64 bytes each, the same order as on T20/T21/T23);
+ * enable == 0 goes back to the channel quality.  Takes effect with the
+ * next picture. */
+int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
+                              const uint8_t tables[128])
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc || (enable && !tables))
+        return -1;
+    pthread_mutex_lock(&jpeg_ql_lock);
+    if (enable)
+        memcpy(enc->jpeg_tables, tables, sizeof(enc->jpeg_tables));
+    enc->jpeg_user_tables = enable != 0;
+    pthread_mutex_unlock(&jpeg_ql_lock);
+    return 0;
+}
+
+static int codec_encode_jpeg_t41(AL_CodecEncode *enc, HWFrameBuffer *frame,
+                                 HWStreamBuffer *stream)
+{
+    uint8_t tables[128];
+    int user;
+
+    pthread_mutex_lock(&jpeg_ql_lock);
+    user = enc->jpeg_user_tables;
+    if (user)
+        memcpy(tables, enc->jpeg_tables, sizeof(tables));
+    pthread_mutex_unlock(&jpeg_ql_lock);
+#if OPENIMP_SW_JPEG
+    return user ? HW_Encoder_Encode_NV12_JPEG_Tables(frame, stream,
+                                                     codec_jpeg_quality(enc),
+                                                     tables)
+                : HW_Encoder_Encode_NV12_JPEG(frame, stream,
+                                              codec_jpeg_quality(enc));
+#else
+    (void)frame; (void)stream;
+    return -1;
+#endif
+}
+#endif
 #endif
 
 /* The caller (p2 JPEG channel) holds a recent picture it can deliver
@@ -11794,6 +11846,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T30)
             (codec_type == IMP_ENC_TYPE_JPEG
                 ? codec_encode_jpeg_ql(enc, &hw_frame, hw_stream)
+                : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
+#elif defined(PLATFORM_T41)
+            (codec_type == IMP_ENC_TYPE_JPEG
+                ? codec_encode_jpeg_t41(enc, &hw_frame, hw_stream)
                 : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
 #else
             (codec_type == IMP_ENC_TYPE_JPEG
