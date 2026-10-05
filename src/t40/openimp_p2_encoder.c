@@ -453,11 +453,12 @@ static P2FramePinTable p2_frame_pins = P2_FRAME_PIN_TABLE_INITIALIZER;
 
 /* OPENIMP_JPEG_TRACE=1: log every JPEG encode and hand-out (T21 hunt).
  * The host tests link this file without the system module: weak. */
-extern int64_t IMP_System_GetTimeStamp(void) __attribute__((weak));
+#pragma weak IMP_System_GetTimeStamp
 static int64_t p2_jpeg_trace_now(void)
 {
-    return IMP_System_GetTimeStamp ? IMP_System_GetTimeStamp()
-                                   : (int64_t)p2_monotonic_us();
+    if (IMP_System_GetTimeStamp)
+        return (int64_t)IMP_System_GetTimeStamp();
+    return (int64_t)p2_monotonic_us();
 }
 
 static int p2_jpeg_trace_enabled(void)
@@ -2042,7 +2043,7 @@ static void t23_pace_account(int channel, uint64_t start_us,
         if (value > st->max_encode_us)
             st->max_encode_us = value;
         st->collect_us += done_us - encoded_us;
-        now_ts = p2_jpeg_trace_now();
+        now_ts = IMP_System_GetTimeStamp();
         if (captured && now_ts > captured) {
             value = now_ts - captured;
             st->age_us += value;
