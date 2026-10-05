@@ -14,10 +14,10 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 #if defined(PLATFORM_T41)
 #include <pthread.h>
-#include <time.h>
 #endif
 
 #include "openimp_profile.h"
@@ -26,6 +26,7 @@
 #include "t31/openimp_t31_ivs.h"
 #endif
 #include "t40/openimp_p2_dma.h"
+#include "video_drop.h"
 
 #define OPENIMP_P1_MAGIC        0x50315434U /* "P1T4" */
 #define OPENIMP_FS_CHANNELS     4
@@ -678,6 +679,21 @@ int IMP_ISP_EnableTuning(void)
     return 0;
 }
 
+/* Vendor: with tuning enabled, store the video-loss callback (NULL clears
+ * it); the monitor is src/core/video_drop.c. */
+int IMP_ISP_Tuning_SetVideoDrop(void *attr)
+{
+    uint32_t enabled;
+
+    lock_p1();
+    prepare_p1();
+    enabled = p1.tuning_enabled;
+    unlock_p1();
+    if (!enabled)
+        return -1;
+    return openimp_video_drop_set((void (*)(void))attr);
+}
+
 int IMP_ISP_DisableTuning(void)
 {
     lock_p1();
@@ -994,6 +1010,36 @@ static void p1_ivs_feeder_start(void)
 #define p1_monotonic_us() 0u
 #endif
 
+/* Last IMP_FrameSource_GetFrame call, CLOCK_MONOTONIC ms (wraps). */
+static uint32_t p1_reader_ms;
+
+static uint32_t p1_now_ms(void)
+{
+    struct timespec now;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (uint32_t)now.tv_sec * 1000u + (uint32_t)(now.tv_nsec / 1000000);
+}
+
+/* IMP_ISP_Tuning_SetVideoDrop (video_drop.h): there is no capture thread
+ * here, frames are dequeued by their readers, so frames are expected while
+ * a channel is enabled and something asked for one within 1.5 s (the IVS
+ * feeder counts too). */
+int openimp_fs_video_demand(void)
+{
+    uint32_t reader = __atomic_load_n(&p1_reader_ms, __ATOMIC_RELAXED);
+    int channel;
+    int enabled = 0;
+
+    lock_p1();
+    prepare_p1();
+    for (channel = 0; channel < OPENIMP_FS_CHANNELS; channel++)
+        if (p1.channels[channel].enabled)
+            enabled = 1;
+    unlock_p1();
+    return enabled && reader && p1_now_ms() - reader < 1500u;
+}
+
 int IMP_FrameSource_EnableChn(int channel)
 {
     struct openimp_fs_channel *chn;
@@ -1131,6 +1177,12 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
         return -1;
     }
     unlock_p1();
+    {
+        uint32_t now_ms = p1_now_ms();
+
+        __atomic_store_n(&p1_reader_ms, now_ms ? now_ms : 1u,
+                         __ATOMIC_RELAXED);
+    }
 
     wait_profile = openimp_profile_begin();
 
@@ -1203,6 +1255,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     buffer->frame.timeStamp = IMP_System_GetTimeStamp();
 #endif
     chn->frames_dequeued++;
+    openimp_video_drop_note_frame();
 #if defined(PLATFORM_T41)
     if (!p1_in_ivs_feeder)
         chn->last_dequeue_us = p1_monotonic_us();

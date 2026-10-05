@@ -35,6 +35,7 @@
 #include "isp_tseries_dev.h"
 
 #include "imp_log_fun.h"
+#include "video_drop.h"
 int IMP_Encoder_RequestIDR(int encChn);
 int32_t set_framesource_fps(int32_t fps_num, int32_t fps_den);
 int32_t set_framesource_changewait_cnt(void);
@@ -1879,12 +1880,15 @@ int IMP_ISP_Tuning_GetNCUAlloc(void)
     return isp ? (int)(intptr_t)isp->sensor_alloc[0] : 0;
 }
 
-/* The tuning daemon's video-drop callback. */
+/* The tuning daemon's video-drop callback: called when the frames stop
+ * (monitor in src/core/video_drop.c); NULL clears it. */
 int IMP_ISP_Tuning_SetVideoDrop(void *attr)
 {
     ISPDevice *isp = gISP;
 
     if (isp == NULL || isp->tuning_state != 2)
+        return -1;
+    if (openimp_video_drop_set((void (*)(void))attr) != 0)
         return -1;
     pthread_mutex_lock(&t23_deamon_mutex);
     t23_video_drop = attr;

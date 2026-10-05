@@ -20,6 +20,7 @@
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_persist.h"
 #endif
+#include "video_drop.h"
 
 #if defined(PLATFORM_T23)
 #define TISP_TUNING_IOCTL 0xc01056c6U
@@ -3279,11 +3280,8 @@ int IMP_ISP_Tuning_SetWB_ALGO(int mode)
 }
 
 /* Vendor (T21 1.0.33 0x6544): with tuning enabled, store the callback
- * under the tuning mutex (NULL clears it) and return 0. It used to be
- * written over the first word of the tuning block and NULL was refused. */
-static pthread_mutex_t tseries_video_drop_lock = PTHREAD_MUTEX_INITIALIZER;
-static void *tseries_video_drop_cb;
-
+ * (NULL clears it) and return 0; the tuning daemon calls it when the ISP
+ * frame counter stalls.  OpenIMP's monitor is src/core/video_drop.c. */
 int IMP_ISP_Tuning_SetVideoDrop(void *attr)
 {
     ISPDevice *isp;
@@ -3291,11 +3289,7 @@ int IMP_ISP_Tuning_SetVideoDrop(void *attr)
     if (tseries_get_isp(&isp) != 0 || isp->tuning_state != 2) {
         return -1;
     }
-
-    pthread_mutex_lock(&tseries_video_drop_lock);
-    tseries_video_drop_cb = attr;
-    pthread_mutex_unlock(&tseries_video_drop_lock);
-    return 0;
+    return openimp_video_drop_set((void (*)(void))attr);
 }
 
 #if defined(PLATFORM_T21) || defined(PLATFORM_T31) /* T21, T20 and T31 */

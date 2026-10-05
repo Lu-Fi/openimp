@@ -51,6 +51,7 @@
 #include "kernel_interface.h"
 #include "vbm_dq_step.h"
 #include "imp_log_int.h"
+#include "video_drop.h"
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_persist.h"
 #endif
@@ -1216,6 +1217,7 @@ static void *frame_pooling_thread(void *arg)
                 }
                 no_frame_cycles = 0;
                 drained++;
+                openimp_video_drop_note_frame();
 
                 m = g_modules[0][chn];
                 if (m != NULL) {
@@ -1247,6 +1249,7 @@ static void *frame_pooling_thread(void *arg)
             }
             continue;
         }
+        openimp_video_drop_note_frame();
 
         m = g_modules[0][chn];
         if (m != NULL) {
@@ -1269,6 +1272,19 @@ static void *frame_pooling_thread(void *arg)
     FS_STEP(chn, FS_STEP_EXIT);
     FS_FLAG_STORE(g_fs_thread_exited[chn], 1);
     return NULL;
+}
+
+/* IMP_ISP_Tuning_SetVideoDrop (video_drop.h): every enabled channel has a
+ * capture thread that dequeues each frame, so frames are expected while
+ * one runs. */
+int openimp_fs_video_demand(void)
+{
+    int chn;
+
+    for (chn = 0; chn < FS_MAX_CHANNELS; chn++)
+        if (fs_chan_get_state(chn) == 2 && FS_FLAG_LOAD(g_fs_ctx[chn].running))
+            return 1;
+    return 0;
 }
 
 /* ---------------------------------------------------------------------

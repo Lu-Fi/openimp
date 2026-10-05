@@ -65,6 +65,11 @@ do
         -o "$output_dir/$source.o"
 done
 
+# IMP_ISP_Tuning_SetVideoDrop monitor
+"$compiler" $strict_flags $repo_includes \
+    -c "$project_dir/src/core/video_drop.c" \
+    -o "$output_dir/core_video_drop.o"
+
 "$compiler" $base_flags $repo_includes \
     -c "$project_dir/src/alcodec/EncHwScalingList.c" \
     -o "$output_dir/backend-enc-hw-scaling-list.o"
@@ -91,6 +96,7 @@ done
     -Wl,--version-script="$project_dir/src/t40/libimp.map" \
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
+    "$output_dir/core_video_drop.o" \
     "$output_dir/openimp_profile.o" \
     "$output_dir/openimp_tuning.o" \
     "$output_dir/openimp_p1.o" \
