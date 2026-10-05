@@ -657,15 +657,24 @@ static void test_misc(void)
           ev[0] == 0x11 && ev[23] == 0x11, "ev attr");
 
     reset();
-    get_block_len = sizeof(wf);
+    get_block_len = 24;                     /* the kernel writes 24 bytes */
     {
-        T23WaitFrameAttr k = { 0, 0, 0x1122334455ull };
+        T23WaitFrameBlock k;
 
+        memset(&k, 0xee, sizeof(k));
+        k.attr.timeout = 0;
+        k.attr.cnt = 0x1122334455ull;
         memcpy(get_block, &k, sizeof(k));
     }
     set_block_len = 0;
     CHECK(IMP_ISP_Tuning_WaitFrame(&wf) == 0 && last_req.cid == 0x8000162 &&
           wf.cnt == 0x1122334455ull && wf.timeout == 33, "wait frame");
+    reset();
+    get_block_len = 24;
+    ioctl_ret = -1;                         /* timeout: count not stored */
+    wf.cnt = 7;
+    CHECK(IMP_ISP_Tuning_WaitFrame(&wf) == -1 && wf.cnt == 7,
+          "wait frame failure keeps the count");
 
     reset();
     CHECK(IMP_ISP_Tuning_SetAfWeight_Sec(buf) == 0 && last_req.dir == 1 &&
