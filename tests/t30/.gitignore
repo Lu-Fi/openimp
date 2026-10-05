@@ -28,4 +28,5 @@ rc_readback_test_t21
 rc_readback_test_t20
 rc_readback_test_t23
 t21_sinter_map_test
+t21_front_crop_test
 rmem_highwater_test
