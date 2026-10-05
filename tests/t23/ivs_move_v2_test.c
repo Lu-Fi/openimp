@@ -28,6 +28,7 @@
 #include "openimp_t31_ivs.h"
 #include "openimp_t31_ivs_abi.h"
 #include "openimp_t31_ivs_move.h"
+#include "../fake_rmem.h"
 
 IMPIVSInterface *IMP_IVS_CreateMoveInterface(IMP_IVS_MoveParam *param);
 void IMP_IVS_DestroyMoveInterface(IMPIVSInterface *moveInterface);
@@ -83,14 +84,7 @@ int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
 
 static void *map_low(size_t size)
 {
-    void *p = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-
-    if (p == MAP_FAILED || (uintptr_t)p + size > 0xffffffffu) {
-        fprintf(stderr, "cannot map a frame buffer below 4 GiB\n");
-        exit(2);
-    }
-    return p;
+    return fake_rmem_map(size);
 }
 
 static void put32(uint8_t *rec, size_t off, uint32_t v)
@@ -202,7 +196,7 @@ static void chan_close(struct chan *ch)
     CHECK(IMP_IVS_DestroyChn(0) == 0, "DestroyChn");
     IMP_IVS_DestroyMoveInterface(ch->inf);
     CHECK(IMP_IVS_DestroyGroup(0) == 0, "DestroyGroup");
-    munmap(ch->frame, ch->fsize);
+    fake_rmem_unmap(ch->frame, ch->fsize);
 }
 
 /* Push the current frame; returns 1 and the result when one was produced. */
