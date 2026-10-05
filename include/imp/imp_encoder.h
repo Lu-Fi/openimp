@@ -662,8 +662,13 @@ typedef struct {
     IMPEncoderAttr encAttr;
     IMPEncoderRcAttr rcAttr;
     IMPEncoderGopAttr gopAttr;
+#if !defined(PLATFORM_T31)
+    /* T40 only.  The T31 1.1.6 vendor IMPEncoderChnAttr ends after gopAttr
+     * (112 bytes); a trailing member here made IMP_Encoder_GetChnAttr and
+     * IMP_Encoder_SetDefaultParam write 4 bytes past a caller's struct. */
     uint8_t bEnableIvdc;
     uint8_t _reserved2[3];
+#endif
 } IMPEncoderChnAttr;
 
 typedef IMPEncoderChnAttr IMPEncoderCHNAttr;
@@ -674,7 +679,11 @@ _Static_assert(sizeof(IMPEncoderAttr) == 0x2c, "IMPEncoderAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, encAttr) == 0x00, "IMPEncoderChnAttr.encAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, rcAttr) == 0x2c, "IMPEncoderChnAttr.rcAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, gopAttr) == 0x58, "IMPEncoderChnAttr.gopAttr ABI mismatch");
+#if defined(PLATFORM_T31)
+_Static_assert(sizeof(IMPEncoderChnAttr) == 0x70, "T31 IMPEncoderChnAttr ABI mismatch (vendor 1.1.6: 112 bytes)");
+#else
 _Static_assert(offsetof(IMPEncoderChnAttr, bEnableIvdc) == 0x70, "IMPEncoderChnAttr.bEnableIvdc ABI mismatch");
+#endif
 #else
 /**
  * H264 CBR attributes

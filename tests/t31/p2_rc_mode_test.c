@@ -10,6 +10,7 @@
  * Builds src/t40/openimp_p2_encoder.c (T31) against a stub codec.
  */
 #define _GNU_SOURCE
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,6 +334,40 @@ int main(void)
     make_attr(&attr, IMP_ENC_RC_MODE_VBR);
     CHECK(IMP_Encoder_CreateChn(2, &attr) == 0 && cap_calls == 1 &&
           cap_mode == IMP_ENC_RC_MODE_VBR, "VBR CreateChn cap call");
+
+    /* ABI: the T31 1.1.6 vendor IMPEncoderChnAttr is 112 bytes (encAttr 0,
+     * rcAttr 0x2c, gopAttr 0x58).  GetChnAttr and SetDefaultParam must not
+     * write past it into the caller's stack. */
+    {
+        /* a caller's vendor-sized (112 byte) struct followed by a guard */
+        struct {
+            uint8_t attr[112] __attribute__((aligned(8)));
+            uint8_t guard[16];
+        } v;
+        unsigned int g;
+        int clean = 1;
+
+        CHECK(sizeof(IMPEncoderChnAttr) == 112, "T31 ChnAttr size %zu",
+              sizeof(IMPEncoderChnAttr));
+        CHECK(offsetof(IMPEncoderChnAttr, rcAttr) == 0x2c &&
+              offsetof(IMPEncoderChnAttr, gopAttr) == 0x58,
+              "T31 ChnAttr offsets");
+        memset(v.guard, 0xa5, sizeof(v.guard));
+        CHECK(IMP_Encoder_GetChnAttr(0, (IMPEncoderChnAttr *)v.attr) == 0, "GetChnAttr");
+        for (g = 0; g < sizeof(v.guard); g++)
+            clean &= v.guard[g] == 0xa5;
+        CHECK(clean, "GetChnAttr wrote past the 112-byte struct");
+        memset(v.guard, 0xa5, sizeof(v.guard));
+        CHECK(IMP_Encoder_SetDefaultParam((IMPEncoderChnAttr *)v.attr,
+                                          IMP_ENC_PROFILE_AVC_HIGH,
+                                          IMP_ENC_RC_MODE_CBR, 1920, 1080,
+                                          25, 1, 50, 1, -1, 3000) == 0,
+              "SetDefaultParam");
+        clean = 1;
+        for (g = 0; g < sizeof(v.guard); g++)
+            clean &= v.guard[g] == 0xa5;
+        CHECK(clean, "SetDefaultParam wrote past the 112-byte struct");
+    }
 
     /* SetDefaultParam: the OEM default cap is 42 dB */
     CHECK(IMP_Encoder_SetDefaultParam(&attr, IMP_ENC_PROFILE_AVC_HIGH,
