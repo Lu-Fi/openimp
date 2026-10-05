@@ -1243,11 +1243,18 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
         return -1;
     }
     index = words[0];
-    if (index >= chn->buffer_count) {
+    lock_p1();
+    /* DQBUF ran without the P1 lock: DisableChn (another thread, or the
+     * T41 IVS feeder racing a stream stop) may have released the queue
+     * meanwhile. Only a buffer of a still enabled channel that was queued
+     * to the driver is a frame; anything else would hand the IVS and the
+     * encoder a zeroed record (virAddr 0). */
+    if (!chn->enabled || index >= chn->buffer_count ||
+        !chn->buffers[index].queued || !chn->buffers[index].physical) {
+        unlock_p1();
         openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT, wait_profile);
         return -1;
     }
-    lock_p1();
     buffer = &chn->buffers[index];
     buffer->queued = 0;
     memset(&buffer->frame, 0, sizeof(buffer->frame));
