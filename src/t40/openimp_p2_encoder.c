@@ -1041,6 +1041,13 @@ extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
 extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
 #endif
+#if defined(PLATFORM_T20)
+/* HW_SUPERFRM_NONE / HW_SUPERFRM_REENCODE in hw_encoder.h */
+#define P2_HW_SUPERFRM_NONE     1u
+#define P2_HW_SUPERFRM_REENCODE 2u
+extern int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                         uint32_t i_bits, uint32_t p_bits);
+#endif
 #if defined(PLATFORM_T31)
 extern int AL_Codec_Encode_SetRcQualityCap(void *codec, int rc_mode,
                                            unsigned int max_psnr);
@@ -1728,6 +1735,13 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         (void)AL_Codec_Encode_SetMbRC(ch->codec,
                                       ch->macroblock_rate_control);
     }
+#endif
+#if defined(PLATFORM_T20)
+    /* GetSuperFrameCfg before any Set: the OEM controller's thresholds
+     * (i264e_param_default; RCT20_DefaultParams) */
+    ch->superframe.superFrmMode = IMP_RC_SUPERFRM_REENCODE;
+    ch->superframe.superIFrmBitsThr = 0x12c0000u;
+    ch->superframe.superPFrmBitsThr = 0xd64925u;
 #endif
     p2_startup_trace("openimp/P2 startup: CreateChn codec created %p\n",
                      ch->codec);
@@ -3698,8 +3712,28 @@ int IMP_Encoder_SetSuperFrameCfg(int channel,
 
     if (!ch || !config)
         return -1;
+#if defined(PLATFORM_T20)
+    /* T20/T10: the super-frame re-encode of the OEM controller (src/rc_t20,
+     * src/rc_t10; OEM i264e parameter 13 -> its I/P thresholds).  It has
+     * no frame discard. */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE &&
+        config->superFrmMode != IMP_RC_SUPERFRM_REENCODE)
+        return -1;
+#elif !defined(PLATFORM_T23)
+    /* T21: the Helix eprc controller has no super-frame control */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->superframe = *config;
+#if defined(PLATFORM_T20)
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetSuperFrame(
+            ch->codec,
+            config->superFrmMode == IMP_RC_SUPERFRM_NONE
+                ? P2_HW_SUPERFRM_NONE : P2_HW_SUPERFRM_REENCODE,
+            config->superIFrmBitsThr, config->superPFrmBitsThr);
+#endif
 #if defined(PLATFORM_T23)
     if (openimp_t23_enc_push_superframe(ch->codec, ch->codec_type,
                                         config) != 0) {

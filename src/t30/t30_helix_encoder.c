@@ -1821,6 +1821,18 @@ static void t20_rc_start(T30HelixEncoder *encoder)
         !hp->fps_num || !hp->fps_den || !hp->gop_length)
         return;
     RCT20_DefaultParams(&p);
+    /* IMP_Encoder_SetSuperFrameCfg: the OEM i264e parameter 13 puts the
+     * I/P thresholds into [280]/[284], which i264e_ratecontrol_init reads;
+     * NONE: thresholds no picture reaches, so nothing is coded again */
+    if (hp->super_mode == HW_SUPERFRM_REENCODE) {
+        p.super_i_bits = (int32_t)(hp->super_i_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_i_bits);
+        p.super_p_bits = (int32_t)(hp->super_p_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_p_bits);
+    } else if (hp->super_mode == HW_SUPERFRM_NONE) {
+        p.super_i_bits = INT32_MAX;
+        p.super_p_bits = INT32_MAX;
+    }
     p.method = hp->rc_mode == HW_RC_MODE_CBR ? 1u : smart ? 3u : 2u;
     p.width = hp->width;
     p.height = hp->height;
@@ -3427,6 +3439,12 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
      * i264e_ratecontrol_init on a parameter change) */
     if (requested->mb_rc == HW_MBRC_ON || requested->mb_rc == HW_MBRC_OFF)
         next.mb_rc = requested->mb_rc;
+    /* IMP_Encoder_SetSuperFrameCfg: new thresholds restart the controller */
+    if (requested->super_mode != HW_SUPERFRM_DEFAULT) {
+        next.super_mode = requested->super_mode;
+        next.super_i_bits = requested->super_i_bits;
+        next.super_p_bits = requested->super_p_bits;
+    }
     /* the application's range as given (a min QP of 0 is valid); a max QP
      * of 0 means "unchanged", as for the other fields */
     t20_range_changed = requested->max_qp &&

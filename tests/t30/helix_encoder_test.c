@@ -652,6 +652,56 @@ static void test_color2grey(void)
     assert(!allocation("t30-helix-grey"));
 }
 
+#if defined(PLATFORM_T20)
+/* IMP_Encoder_SetSuperFrameCfg on T20: the OEM controller codes a picture
+ * again (raised QP, up to three times) when it is above the threshold;
+ * NONE never does */
+static void test_t20_superframe(void)
+{
+    T30HelixEncoder *encoder;
+    HWEncoderParams p;
+    PictureInfo info;
+    unsigned int i, before;
+
+    unsetenv("OPENIMP_T20_RC");
+    unsetenv("OPENIMP_T20_MBRC");
+    encoder = create(640, 360, 25, 10);
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 10;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    fill_payload(20000u, 30);           /* 160 kbit per picture */
+    for (i = 0; i < 3u; i++) {          /* OEM thresholds: no second pass */
+        before = runs;
+        assert(encode(encoder, &info) == 0);
+        assert(runs == before + 1u);
+    }
+    p.super_mode = HW_SUPERFRM_REENCODE;
+    p.super_i_bits = 50000u;
+    p.super_p_bits = 50000u;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    before = runs;
+    assert(encode(encoder, &info) == 0);
+    assert(runs > before + 1u && runs <= before + 4u);
+    p.super_mode = HW_SUPERFRM_NONE;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 0; i < 3u; i++) {
+        before = runs;
+        assert(encode(encoder, &info) == 0);
+        assert(runs == before + 1u);
+    }
+    OpenIMP_T30_HelixDestroy(encoder);
+    fill_payload(5000u, 30);
+}
+#endif
+
 static void test_unaligned_width_rejected(void)
 {
     HWEncoderParams params;
@@ -1386,6 +1436,7 @@ int main(void)
 #if defined(PLATFORM_T20)
     test_t20_rate_control();
     test_t10_rate_control();
+    test_t20_superframe();
 #endif
     /* nothing leaks; the shared bitstream buffer is kept for the process */
     for (i = 0; i < 16u; i++)

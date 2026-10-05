@@ -7896,6 +7896,21 @@ int AL_Codec_Encode_SetColor2Grey(void *codec, int enable)
     ((AL_CodecEncode *)codec)->hw_params.color2grey = enable ? 1u : 0u;
     return 0;
 }
+
+int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                  uint32_t i_bits, uint32_t p_bits)
+{
+    HWEncoderParams *hp;
+
+    if (codec == NULL ||
+        (mode != HW_SUPERFRM_NONE && mode != HW_SUPERFRM_REENCODE))
+        return -1;
+    hp = &((AL_CodecEncode *)codec)->hw_params;
+    hp->super_i_bits = i_bits;
+    hp->super_p_bits = p_bits;
+    hp->super_mode = mode;
+    return 0;
+}
 #endif
 
 static void codec_sync_rc_cache(AL_CodecEncode *enc)
