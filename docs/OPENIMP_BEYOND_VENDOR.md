@@ -210,6 +210,7 @@ force; `OPENIMP_MOTION_V2=0` (or `features = 0` via `SetConfigEx`) is the vendor
 | Kernel patch 0100: invalid rmem flush direction rejected | T31 | vendor oopses | Bad flush args return an error | cam-A, 0 oops [-all-13] |
 | soc_vpu: busy VPU sleeps (no 200 ms busy-wait); encoder error IRQ ends the wait immediately | T20, T10, T23 | vendor busy-waits up to 200 ms | Lower CPU, faster error recovery | patch 0099, flashed |
 | Double release of AENC/ADEC channels rejected | all | vendor can crash | Idempotent teardown is safe | per matrix |
+| AENC/ADEC codec state per channel (vendor: one static state per codec); GetStream(NOBLOCK) on an empty channel returns -1 | all | vendor channels of the same codec share G.726/ADPCM predictor state; vendor returns 0 with an untouched stream | Two G.726/ADPCM channels at once decode correctly; a non-blocking poll loop can tell "nothing yet" from a stream | `claude/aenc-adec-all`, host-tested |
 | All user copies checked, out-of-bounds writes fixed | T20, T23 | vendor has unchecked copies | n/a | `claude/t20-robust`, `claude/t23-robust` |
 | Frame source / VBM pool parked and reused at idle | T21 | vendor frees pool, later allocations fail in 23 MB rmem | Stream start/stop cycles do not exhaust video memory | `claude/t21-bringup` |
 | One startup warning when pools plus fixed buffers exceed video memory | all | silent failure later | Read the warning to size your stream set | early-morning changelog |
