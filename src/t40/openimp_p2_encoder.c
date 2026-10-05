@@ -3544,6 +3544,13 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
 
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no ROI QP (the OEM
+     * i264e_reconfig_roi_set feeds its macroblock QP); an enabled region
+     * is refused instead of being stored without effect */
+    if (config->bEnable)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->roi[config->u32Index] = *config;
 #if defined(PLATFORM_T23)
@@ -3594,7 +3601,20 @@ int IMP_Encoder_SetChnDenoise(int channel,
         }
     }
 #else
-    ch->attr.rcAttr.attrDenoise = *config;
+    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no encoder-side
+     * denoise; like the OEM the on/off switch stays as created, and a
+     * denoise type that would act (dnType 1 or 2 on a channel created
+     * with denoise enabled) is refused */
+    if (ch->attr.rcAttr.attrDenoise.enable && config->dnType != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    {
+        bool created_enable = ch->attr.rcAttr.attrDenoise.enable;
+
+        ch->attr.rcAttr.attrDenoise = *config;
+        ch->attr.rcAttr.attrDenoise.enable = created_enable;
+    }
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -3766,6 +3786,13 @@ int IMP_Encoder_SetH264TransCfg(int channel,
     if (!ch || !config || config->chroma_qp_index_offset < -12 ||
         config->chroma_qp_index_offset > 12)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T20/T21/T10: the Helix/NVPU command list of OpenIMP has no chroma QP
+     * offset and the PPS carries 0; another offset is refused instead of
+     * being stored without effect (it may not go into the PPS alone) */
+    if (config->chroma_qp_index_offset != 0)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->h264_transform = *config;
 #if defined(PLATFORM_T23)
@@ -3827,6 +3854,13 @@ int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 
     if (!ch || !mode || *mode < ENC_QPG_CLOSE || *mode > ENC_QPG_SASM_TAB)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T21: the eprc controller of OpenIMP has no QP-generation modes (the
+     * OEM i264e parameter 15); only CLOSE, what it does, is accepted.
+     * Macroblock rate control is IMP_Encoder_SetMbRC. */
+    if (*mode != ENC_QPG_CLOSE)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->qpg_mode = *mode;
 #if defined(PLATFORM_T23)
