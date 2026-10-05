@@ -1656,6 +1656,57 @@ int IMP_Encoder_DestroyGroup(int group)
     return 0;
 }
 
+#if !defined(PLATFORM_T23)
+/* Test hook for the ROI / chroma QP offset path without a streamer that
+ * calls the API: OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..." (pixel
+ * corners as IMPRect p0/p1, region index = position in the list) and
+ * OPENIMP_DEBUG_CHROMA_QP="ch:offset", applied after CreateChn. */
+static void p2_debug_roi_chroma(int channel)
+{
+    const char *env = getenv("OPENIMP_DEBUG_ROI");
+    int ch, n, v[7];
+    uint32_t index = 0;
+
+    while (env && *env && index < 8u) {
+        if (sscanf(env, "%d:%d,%d,%d,%d,%d,%d,%d%n", &ch, &v[0], &v[1],
+                   &v[2], &v[3], &v[4], &v[5], &v[6], &n) != 8)
+            break;
+        if (ch == channel) {
+            IMPEncoderROICfg roi;
+
+            memset(&roi, 0, sizeof(roi));
+            roi.u32Index = index++;
+            roi.bEnable = v[0] != 0;
+            roi.bRelatedQp = v[1] != 0;
+            roi.s32Qp = v[2];
+            roi.rect.x = v[3];
+            roi.rect.y = v[4];
+            roi.rect.width = v[5];      /* p1.x */
+            roi.rect.height = v[6];     /* p1.y */
+            IMP_LOG_INFO("Encoder", "debug ROI ch%d[%u]: %s", channel,
+                         roi.u32Index,
+                         IMP_Encoder_SetChnROI(channel, &roi) == 0
+                             ? "set" : "refused");
+        }
+        env += n;
+        if (*env != ';')
+            break;
+        env++;
+    }
+    env = getenv("OPENIMP_DEBUG_CHROMA_QP");
+    if (env && sscanf(env, "%d:%d", &ch, &v[0]) == 2 && ch == channel) {
+        IMPEncoderH264TransCfg tr;
+
+        memset(&tr, 0, sizeof(tr));
+        tr.chroma_qp_index_offset = v[0];
+        IMP_LOG_INFO("Encoder", "debug chroma QP offset ch%d %d: %s",
+                     channel, v[0],
+                     IMP_Encoder_SetH264TransCfg(channel, &tr) == 0
+                         ? "set" : "refused");
+    }
+}
+#endif
+
 int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
 {
     P2EncoderChannel *ch;
@@ -1827,6 +1878,9 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     pthread_mutex_unlock(&ch->lock);
+#if !defined(PLATFORM_T23)
+    p2_debug_roi_chroma(channel);
+#endif
     p2_trace("openimp/P2: CreateChn done ch=%d codec=%p\n",
              channel, ch->codec);
     return 0;
