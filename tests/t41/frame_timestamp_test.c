@@ -9,6 +9,19 @@
 static uint32_t seconds, microseconds;
 static uint64_t normalized_input;
 static const uint64_t timestamp_base = 100000000;
+static int disable_during_dqbuf = -1;   /* channel DisableChn hits mid-DQBUF */
+static int ivs_captures;
+static const void *ivs_last_frame;
+
+/* IVS hooks of the real build (src/t31/openimp_t31_ivs.c). */
+int openimp_t31_ivs_source_active(int fs_chn) { (void)fs_chn; return 0; }
+void openimp_t31_ivs_capture(int fs_chn, const void *frame)
+{
+    (void)fs_chn;
+    ivs_captures++;
+    ivs_last_frame = frame;
+    assert(((const IMPFrameInfo *)frame)->virAddr != 0);
+}
 
 int test_ioctl(int fd, unsigned long command, ...)
 {
@@ -21,6 +34,15 @@ int test_ioctl(int fd, unsigned long command, ...)
     va_end(args);
     assert(words[1] == TISP_BUF_TYPE_VIDEO_CAPTURE);
     words[0] = 0;
+    if (disable_during_dqbuf >= 0) {
+        /* What IMP_FrameSource_DisableChn does to the channel while this
+         * thread waits in DQBUF without the P1 lock. */
+        struct openimp_fs_channel *chn = &p1.channels[disable_during_dqbuf];
+
+        chn->enabled = 0;
+        memset(chn->buffers, 0, sizeof(chn->buffers));
+        chn->buffer_count = 0;
+    }
     words[5] = seconds;
     words[6] = microseconds;
     return 0;
@@ -51,8 +73,40 @@ static void check_frame(int channel, uint32_t sec, uint32_t usec, int64_t expect
     assert(!chn->buffers[0].queued);
     assert(frame->timeStamp == expected);
     assert(frame->pool_idx == channel && frame->direct_phyAddr == 0x6000000);
+    assert(ivs_last_frame == frame);
     if (usec < 1000000)
         assert(normalized_input == (uint64_t)sec * 1000000 + usec);
+}
+
+/* A stream stop between DQBUF and the frame record: no frame, no IVS. */
+static void check_disable_race(int channel)
+{
+    IMPFrameInfo *frame = (IMPFrameInfo *)1;
+    struct openimp_fs_channel *chn = &p1.channels[channel];
+    int captures = ivs_captures;
+
+    chn->fd = 42;
+    chn->enabled = 1;
+    chn->buffer_count = 1;
+    chn->buffers[0].queued = 1;
+    chn->buffers[0].physical = 0x6000000;
+    chn->buffers[0].virtual_address = (void *)(uintptr_t)0x20000000;
+    seconds = 100;
+    microseconds = 0;
+    disable_during_dqbuf = channel;
+    assert(IMP_FrameSource_GetFrame(channel, &frame) == -1);
+    disable_during_dqbuf = -1;
+    assert(frame == NULL);
+    assert(ivs_captures == captures);
+
+    /* A buffer the application still holds is not handed out twice. */
+    chn->enabled = 1;
+    chn->buffer_count = 1;
+    chn->buffers[0].queued = 0;
+    chn->buffers[0].physical = 0x6000000;
+    chn->buffers[0].virtual_address = (void *)(uintptr_t)0x20000000;
+    assert(IMP_FrameSource_GetFrame(channel, &frame) == -1);
+    assert(ivs_captures == captures);
 }
 
 int main(void)
@@ -66,6 +120,8 @@ int main(void)
     check_frame(0, 100, 1000000, 1234567); /* Invalid timeval. */
     check_frame(0, 0, 0, 1234567); /* Missing timestamp. */
     check_frame(1, 4000000, 999999, 3999900999999LL); /* No 32-bit multiply. */
+    check_disable_race(0);
+    check_disable_race(1);
     puts("T41 P1 capture timestamps: passed");
     return 0;
 }
