@@ -92,6 +92,23 @@ writes labelled contact sheets (case + set ret + diff vs base) and
 Cases where no visible change is expected (anti-flicker, fps, awb-auto,
 hilight depress, ...) are not flagged as suspect.
 
+The set ret comes from the `[R]` lines of `summary-<SoC>.txt` and `*.log` in
+OUTDIR; a filtered re-run appends only its own cases there, so keep the
+console output of the full run (`tee console.txt`, rename to `.log`) or pass it
+with `--log console.txt`. Cases without an `[R]` line show ret `?` (and can
+still be flagged SUSPECT). The `dH%` column is the change of the mean
+|Laplacian| of Y (detail + noise energy): sharpness, noise reduction and
+shading change that, not the mean colour/brightness, so such cases get the
+verdict `detail` instead of `same`.
+
+Notes per function (T21, see docs/ of the driver): SetBrightness is the AE
+target compensation (needs AE settle time); FS SetChnAttr (crop) only takes
+effect with DisableChn/EnableChn and the T21 crop window is inside the scaler
+output frame; RawDRC, SceneMode and Colorfx SEPIA are accepted-and-ignored by
+the stock kernel; the T21 module bypass bits are the vendor T21 layout
+(DPC 0, LSC 2, ADR 4, CCM 6, GAMMA 7, DEFOG 8, YSHARPEN 10, MDNS 11, SDNS 12),
+checked at run time.
+
 ## Build
 
 `./build.sh` cross-builds all six binaries (toolchain and libimp from

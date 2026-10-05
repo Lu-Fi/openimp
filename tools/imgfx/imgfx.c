@@ -404,7 +404,30 @@ static int c_fps(int ph, int arg, char *info, size_t n)
     return r;
 }
 
-/* FS ch1 scaler crop: arg 0 = mid 50 %, 1 = top-left 50 % (source coordinates) */
+/* FS ch1 crop: arg 0 = mid 50 %, 1 = top-left 50 %.
+ *
+ * IMP_FrameSource_SetChnAttr only stores the attribute; the vendor libimp
+ * hands it to the kernel in EnableChn (set-format with the crop/scaler
+ * fields), so the channel is stopped, changed and started again here (a
+ * SetChnAttr on a running channel has no effect on any SoC).
+ *
+ * T21: the kernel applies the crop window in the SCALER OUTPUT frame
+ * (tisp_channel_attr_set: scaler out size, then the crop window inside it;
+ * the output picture is the window).  The 640x360 scaled channel therefore
+ * cannot take a window of 50 % of the sensor size (960x540 > 640x360 was
+ * ignored); the test scales ch1 to 2x (1280x720) and crops a 640x360
+ * window, which is a 2x digital zoom with the same 640x360 picture size. */
+static int fs1_restart(const IMPFSChnAttr *a)
+{
+    int r;
+
+    IMP_FrameSource_DisableChn(1);
+    r = IMP_FrameSource_SetChnAttr(1, (IMPFSChnAttr *)a);
+    IMP_FrameSource_SetFrameDepth(1, 1);
+    if (IMP_FrameSource_EnableChn(1) < 0) r = -1;
+    return r;
+}
+
 static int c_fs1crop(int ph, int arg, char *info, size_t n)
 {
     static IMPFSChnAttr old;
@@ -412,15 +435,23 @@ static int c_fs1crop(int ph, int arg, char *info, size_t n)
     int r;
 
     if (!HAVE(IMP_FrameSource_SetChnAttr)) return CASE_NA;
-    if (ph) { IMP_FrameSource_SetChnAttr(1, &old); return 0; }
+    if (ph) { fs1_restart(&old); return 0; }
     memset(&old, 0, sizeof(old));
     IMP_FrameSource_GetChnAttr(1, &old);
     a = old;
     a.crop.enable = 1;
+#ifdef PLATFORM_T21
+    a.scaler.enable = 1;
+    a.scaler.outwidth = SUB_W * 2; a.scaler.outheight = SUB_H * 2;
+    a.crop.left = arg ? 0 : SUB_W / 2; a.crop.top = arg ? 0 : SUB_H / 2;
+    a.crop.width = SUB_W; a.crop.height = SUB_H;
+#else
     a.crop.left = arg ? 0 : (g_sw / 4) & ~1; a.crop.top = arg ? 0 : (g_sh / 4) & ~1;
     a.crop.width = (g_sw / 2) & ~1; a.crop.height = (g_sh / 2) & ~1;
-    r = IMP_FrameSource_SetChnAttr(1, &a);
-    snprintf(info, n, "crop %d,%d %dx%d (was en=%d)", a.crop.left, a.crop.top, a.crop.width, a.crop.height, old.crop.enable);
+#endif
+    r = fs1_restart(&a);
+    snprintf(info, n, "crop %d,%d %dx%d scaler %dx%d (was en=%d)", a.crop.left, a.crop.top, a.crop.width, a.crop.height,
+             a.scaler.outwidth, a.scaler.outheight, old.crop.enable);
     return r;
 }
 
@@ -713,6 +744,17 @@ static int c_aeattr(int ph, int arg, char *info, size_t n)
 #define XE(nm, bit) MB_##nm,
 enum { MODBITS(XE) MB_N };
 #define XC(nm, bit) case MB_##nm: m.bit = 1; break;
+#if defined(PLATFORM_T21)
+/* T21 1.0.33 TOP bypass register 0xc (low 16 bits, 1 = bypass), vendor
+ * imp_isp.h IMPISPModuleCtl: DPC 0, GIB 1, LSC 2, AWB 3, ADR 4, DMSC 5,
+ * CCM 6, GAMMA 7, DEFOG 8, CLM 9, YSHARPEN 10, MDNS 11, SDNS 12, HLDC 13,
+ * TP 14, FONT 15.  tisp_s_module_control writes (key & 0xffff) | 1 << 31 to
+ * 0xc unchanged, so the key bit IS the register bit.  The T31 header layout
+ * (LSC 6, CCM 9, ...) is different: building against it sets other bits, so
+ * the bit that flips is checked against this table. */
+/* expected key bit per case, in MODBITS order: ccm gamma defog lsc dpc sdns mdns sharpen adr */
+static const int mod_exp_bit[MB_N] = { 6, 7, 8, 2, 0, 12, 11, 10, 4 };
+#endif
 static int c_mod(int ph, int arg, char *info, size_t n)
 {
     static IMPISPModuleCtl old;
@@ -724,6 +766,13 @@ static int c_mod(int ph, int arg, char *info, size_t n)
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetModuleControl(&old);
     m = old;
     switch (arg) { MODBITS(XC) default: break; }
+#if defined(PLATFORM_T21)
+    if (arg >= 0 && arg < MB_N && m.key != (old.key | (1u << mod_exp_bit[arg]))) {
+        snprintf(info, n, "HEADER MISMATCH: key 0x%08x, expected bit %d (T21 layout) set on 0x%08x; not applied",
+                 m.key, mod_exp_bit[arg], old.key);
+        return -1;
+    }
+#endif
     r = IMP_ISP_Tuning_SetModuleControl(&m);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetModuleControl(&cur);
     snprintf(info, n, "key 0x%08x -> 0x%08x (was 0x%08x)", m.key, cur.key, old.key);
@@ -1292,7 +1341,8 @@ static int c_scalerlv(int ph, int arg, char *info, size_t n)
 typedef struct { const char *name; casefn fn; int arg; int settle_ms; int risky; } Case;
 
 #define SET 400    /* settle for ISP-pipeline-only changes */
-#define AE 2500    /* AE/AWB re-convergence */
+#define AE 2500    /* AE/AWB re-convergence (also brightness: the stock T21 kernel maps
+                    * SetBrightness to tiziano_ae_compensation_set, an AE target change) */
 
 static const Case cases[] = {
     { "base", NULL, 0, 0, 0 },
@@ -1325,16 +1375,16 @@ static const Case cases[] = {
     { "fcrop-mid50", c_fcrop, 0, SET, 0 },
     { "fcrop-topleft50", c_fcrop, 1, SET, 0 },
 #endif
-    { "fs1-crop-mid50", c_fs1crop, 0, SET, 0 },
-    { "fs1-crop-topleft50", c_fs1crop, 1, SET, 0 },
+    { "fs1-crop-mid50", c_fs1crop, 0, 1200, 0 },
+    { "fs1-crop-topleft50", c_fs1crop, 1, 1200, 0 },
 #ifdef H_AUTOZOOM
     { "autozoom-ch1-mid50", c_autozoom, 0, SET, 0 },
 #endif
 #ifdef PLATFORM_T41
     { "autozoom-ch1-mid50", c_autozoom, 0, SET, 0 },
 #endif
-    { "brightness-low", c_bright, 30, SET, 0 },
-    { "brightness-high", c_bright, 225, SET, 0 },
+    { "brightness-low", c_bright, 30, AE, 0 },
+    { "brightness-high", c_bright, 225, AE, 0 },
     { "contrast-low", c_contrast, 30, SET, 0 },
     { "contrast-high", c_contrast, 225, SET, 0 },
     { "saturation-0", c_sat, 0, SET, 0 },
