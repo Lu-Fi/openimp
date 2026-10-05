@@ -117,6 +117,11 @@ typedef enum {
 
 /**
  * White balance structure
+ *
+ * T20: rgain/bgain are 16 bit here, as in the vendor header, but the ISP
+ * kernel (vendor and open) stores them as 8-bit SYSTEM_AWB_RED/BLUE_GAIN
+ * (Q7, 128 = 1.0, 0..255 = 0..2x): larger values keep only the low 8 bits
+ * (300 -> 44).  Callers clamp to 255.  GetWB reports the same Q7 gains.
  */
 typedef struct isp_core_wb_attr {
     IMPISPWBMode mode;                  /**< WB mode (enum isp_core_wb_mode) */
