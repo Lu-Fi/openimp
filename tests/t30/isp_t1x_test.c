@@ -63,6 +63,9 @@ static uint32_t seen_timeout;
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "%s:%d: %s\n", __FILE__, \
     __LINE__, #c); failures++; } } while (0)
 
+/* the video-drop monitor is covered by tests/t31 (video_drop_test) */
+int openimp_video_drop_set(void (*cb)(void)) { (void)cb; return 0; }
+
 int __real_ioctl(int fd, unsigned long request, ...);
 int __wrap_ioctl(int fd, unsigned long request, ...)
 {
