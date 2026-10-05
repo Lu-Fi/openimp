@@ -6,7 +6,9 @@
  * frame (FrameSource frame info: +0x08 width, +0x0c height, +0x18 phys,
  * +0x1c virt) with the IPU. Used on T31 and on the Helix path (T20, T21,
  * T30). No-op if OPENIMP_T31_OSD=0. */
-void openimp_t31_osd_apply(int group, void *frame);
+/* Both return 0, or -1 when the (T21) IPU blend was verified to have no
+ * effect after retries: a JPEG caller drops that frame. */
+int openimp_t31_osd_apply(int group, void *frame);
 
 /* openimp_t31_osd_apply_ex() flags.  OPENIMP_T31_OSD_DMA_ONLY: the caller
  * guarantees that every later CPU read of this frame invalidates its range
@@ -15,6 +17,6 @@ void openimp_t31_osd_apply(int group, void *frame);
  * after the IPU blend is skipped.  Without it the bands are invalidated as
  * openimp_t31_osd_apply() always did. */
 #define OPENIMP_T31_OSD_DMA_ONLY 1u
-void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags);
+int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags);
 
 #endif

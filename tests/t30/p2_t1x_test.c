@@ -47,8 +47,8 @@ int OpenIMP_HelixJpeg_Available(void) { return 0; }
 int openimp_t23_persist_enabled(void) { return 0; }
 int openimp_t23_persist_write(const char *a, const void *b, unsigned int c)
 { (void)a; (void)b; (void)c; return 0; }
-void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
-{ (void)group; (void)frame; (void)flags; }
+int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
+{ (void)group; (void)frame; (void)flags; return 0; }
 
 /* ---- stub codec ---- */
 static int c2g_calls, c2g_value = -1;

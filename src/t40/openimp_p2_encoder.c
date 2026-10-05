@@ -610,6 +610,8 @@ static void p2_jpeg_free_last(P2EncoderChannel *ch)
 static int p2_copy_requested_jpeg_frames(int source_channel,
                                          const P2SyntheticFrame *source)
 {
+    static unsigned int copy_logs;
+
     int channel;
 #if defined(PLATFORM_T41)
     int source_sync = 1;
@@ -635,6 +637,10 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
             pthread_mutex_unlock(&jpeg->lock);
             continue;
         }
+        if (copy_logs++ < 16u)
+            IMP_LOG_INFO("Encoder", "JPEG fan-out copy from src %d phys 0x%08x "
+                         "(OSD verified or not probed)", source_channel,
+                         (unsigned int)source->physical_address);
 #if defined(PLATFORM_T41)
         /* ISP DMA owns the captured pixels, whereas JPEG reads them on the
          * CPU. Synchronize once, before any fanout copy, while the caller
@@ -2134,6 +2140,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     int reader_counted = 0;
     int jpeg_may_skip = 0;
     int result = -1;
+    int osd_withhold_jpeg = 0;
     int process_result;
     OpenIMPProfileStamp poll_profile;
 #if defined(PLATFORM_T23)
@@ -2283,10 +2290,28 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
          * writes the frame in memory, where the Helix VPU reads it. */
         /* A video channel's frame is read by DMA only from here on; the
          * JPEG fan-out copy invalidates before reading it. */
-        if (ch->osd_group >= 0)
+        if (ch->osd_group >= 0 &&
             openimp_t31_osd_apply_ex(ch->osd_group, frame,
                                      ch->codec_type != IMP_ENC_TYPE_JPEG
-                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u);
+                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0) {
+            /* overlay not confirmed (T21 first op after idle): this frame
+             * must not become a JPEG.  A snapshot is cut from the video
+             * channel's frame by the fan-out copy below (the JPEG channel
+             * only waits for it), so withhold the copy; the request stays
+             * pending and the next frame serves it. */
+            {
+                static unsigned int wh_logs;
+
+                if (wh_logs++ < 16u)
+                    IMP_LOG_INFO("Encoder", "ch %d (%s): OSD unconfirmed, frame "
+                                 "phys 0x%08x withheld from JPEG", channel,
+                                 ch->codec_type == IMP_ENC_TYPE_JPEG ? "jpeg" : "video",
+                                 (unsigned int)((const P2SyntheticFrame *)frame)->physical_address);
+            }
+            if (ch->codec_type == IMP_ENC_TYPE_JPEG)
+                goto done;
+            osd_withhold_jpeg = 1;
+        }
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T41)
         /* OEM T23 osd_update: IPU covers/pictures, CPU lines and mosaics
          * (T41: the same IPU and OSD ABI family, see openimp_t23_osd.c) */
@@ -2311,8 +2336,9 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
         pthread_mutex_lock(&p2_core_lock);
         core_locked = 1;
-        (void)p2_copy_requested_jpeg_frames(
-            ch->source_channel, (const P2SyntheticFrame *)frame);
+        if (!osd_withhold_jpeg)
+            (void)p2_copy_requested_jpeg_frames(
+                ch->source_channel, (const P2SyntheticFrame *)frame);
         __atomic_sub_fetch(&ch->frame_readers, 1, __ATOMIC_RELEASE);
         reader_counted = 0;
     }
@@ -2326,6 +2352,12 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     }
 #endif
     if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
+        static unsigned int enc_logs;
+
+        if (enc_logs++ < 16u && frame)
+            IMP_LOG_INFO("Encoder", "JPEG ch %d encodes frame phys 0x%08x (fanout %d)",
+                         channel, (unsigned int)((const P2SyntheticFrame *)frame)->physical_address,
+                         ch->jpeg_fanout);
         pthread_mutex_lock(&ch->lock);
         jpeg_may_skip = p2_jpeg_reuse_fresh(ch, p2_monotonic_us());
         pthread_mutex_unlock(&ch->lock);
