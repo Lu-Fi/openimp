@@ -75,11 +75,23 @@ _Static_assert(sizeof(IMPFSChnAttr) == 0x3c,
 #endif
 
 /**
- * FIFO attributes
+ * Channel FIFO type (IMP_FrameSource_SetChnFifoAttr)
+ */
+typedef enum {
+    FIFO_CACHE_PRIORITY = 0,    /**< FIFO fills first, then outputs */
+    FIFO_DATA_PRIORITY,         /**< outputs first, then caches */
+} IMPFSChnFifoType;
+
+/**
+ * FIFO attributes. The SDK names the second word type; depth is the name
+ * older OpenIMP headers used for it.
  */
 typedef struct {
-    int maxdepth;           /**< Maximum FIFO depth */
-    int depth;              /**< Current depth */
+    int maxdepth;           /**< Maximum FIFO depth (frames) */
+    union {
+        IMPFSChnFifoType type;  /**< Channel FIFO type */
+        int depth;              /**< same word, older OpenIMP name */
+    };
 } IMPFSChnFifoAttr;
 
 /**

@@ -151,7 +151,7 @@ FS_SOURCES := fs_lifecycle_test.c \
 	$(ROOT)/src/kernel_interface.c $(ROOT)/src/core/video_drop.c
 FS_DEPS := $(FS_SOURCES) $(ROOT)/src/kernel_interface.h \
 	$(ROOT)/src/vbm_dq_step.h $(ROOT)/src/openimp_ready_event.h \
-	$(ROOT)/src/video_drop.h
+	$(ROOT)/src/video_drop.h $(ROOT)/src/vbm_delay.h
 FS_FLAGS = -Wno-unused-result '-D_Static_assert(c,m)=' -fno-pie -no-pie \
 	-I$(ROOT)/include -I$(ROOT)/src \
 	-Wl,--wrap=open,--wrap=close,--wrap=ioctl,--wrap=select

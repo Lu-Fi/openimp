@@ -22,6 +22,7 @@
 #include "kernel_interface.h"
 #include "trace_control.h"
 #include "vbm_dq_step.h"
+#include "vbm_delay.h"
 /* T31: frame-ready events of the encoder pull path; T23 shares that VBM
  * block (IVS capture, idle drain) since claude/t23-stub-fixes. */
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23)
@@ -1108,6 +1109,22 @@ static VBMVolume g_framevolumes[VBM_MAX_VOLUMES]; /* Global frame volumes array 
 static pthread_mutex_t vbm_pool_lock[MAX_VBM_POOLS] = {
     [0 ... MAX_VBM_POOLS - 1] = PTHREAD_MUTEX_INITIALIZER
 };
+
+/*
+ * Delay FIFO (vbm_delay.h): the capture worker holds the newest `delay`
+ * frames of a channel before publishing them, GetTimedFrame copies one.
+ * Inactive (max 0, the default) it is never locked.  vbm_delay_lock[chn]
+ * is taken after vbm_pool_lock (DestroyPool) and never held while taking
+ * it, nor while queueing a buffer to the driver.
+ */
+static pthread_mutex_t vbm_delay_lock[MAX_VBM_POOLS] = {
+    [0 ... MAX_VBM_POOLS - 1] = PTHREAD_MUTEX_INITIALIZER
+};
+static pthread_cond_t vbm_delay_cond[MAX_VBM_POOLS] = {
+    [0 ... MAX_VBM_POOLS - 1] = PTHREAD_COND_INITIALIZER
+};
+static VBMDelayRing vbm_delay[MAX_VBM_POOLS];
+static int vbm_delay_active[MAX_VBM_POOLS];   /* atomic copy of max != 0 */
 /* The last destroyed pool of each channel, kept allocated (header and
  * frame records only; its buffers are freed). A consumer that still holds
  * a frame from it releases a pointer into this block: as long as the block
@@ -1644,6 +1661,14 @@ static int vbm_destroy_pool(int chn, int park) {
     /* for the log line after the release (the pool is retired by then) */
     int pool_bytes = pool->frame_size * pool->frame_count;
     vbm_instance[chn] = NULL;
+
+    /* the held frames go with the pool; a GetTimedFrame waiting or copying
+     * finishes first (it holds vbm_delay_lock) */
+    pthread_mutex_lock(&vbm_delay_lock[chn]);
+    vbm_delay_reset(&vbm_delay[chn], 0, 0);
+    __atomic_store_n(&vbm_delay_active[chn], 0, __ATOMIC_RELAXED);
+    pthread_cond_broadcast(&vbm_delay_cond[chn]);
+    pthread_mutex_unlock(&vbm_delay_lock[chn]);
 
     fprintf(stderr, "[VBM] DestroyPool: chn=%d\n", chn);
 
@@ -2221,6 +2246,30 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
      * if this flag is set, preventing double-QBUF. */
     if (pool->buf_in_userspace)
         pool->buf_in_userspace[idx] = 1;
+    /* Delay FIFO: the new frame is held, the one that leaves it (captured
+     * `delay` frames ago) is published instead. */
+    if (__atomic_load_n(&vbm_delay_active[chn], __ATOMIC_RELAXED)) {
+        int out[2];
+        int n;
+
+        pthread_mutex_lock(&vbm_delay_lock[chn]);
+        if (vbm_delay[chn].max > 0) {
+            n = vbm_delay_push(&vbm_delay[chn], idx, out);
+            pthread_cond_broadcast(&vbm_delay_cond[chn]);
+        } else {
+            out[0] = idx;
+            n = 1;
+        }
+        pthread_mutex_unlock(&vbm_delay_lock[chn]);
+        if (n == 0) {
+            *frame_out = NULL;
+            return VBM_DQ_HELD;
+        }
+        /* SetDelay lowered the delay: the oldest goes back to the driver */
+        if (n == 2)
+            VBMReleaseFrame(chn, &pool->frames[out[0]]);
+        idx = out[n - 1];
+    }
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
     defined(PLATFORM_T21) || defined(PLATFORM_T30)
     if (vbm_pull_idle(chn)) {
@@ -2716,4 +2765,124 @@ int VBMFrame_GetBuffer(void *frame, void **virt, int *size) {
     *virt = (void*)(uintptr_t)f->virt_addr;
     *size = f->size;
     return 0;
+}
+
+/* ---------------------------------------------------------------------
+ * Delay FIFO API (IMP_FrameSource_SetMaxDelay/SetDelay/GetTimedFrame)
+ * ------------------------------------------------------------------- */
+
+/* EnableChn, after VBMCreatePool: max frames of the pool's nrVBs + max
+ * may be held, delay of them are. max 0 turns the FIFO off. */
+int VBMDelayConfigure(int chn, int max, int delay)
+{
+    if (chn < 0 || chn >= MAX_VBM_POOLS || max < 0 ||
+        max >= VBM_DELAY_MAX_FRAMES || delay < 0 || delay > max)
+        return -1;
+    pthread_mutex_lock(&vbm_delay_lock[chn]);
+    vbm_delay_reset(&vbm_delay[chn], max, delay);
+    __atomic_store_n(&vbm_delay_active[chn], max > 0, __ATOMIC_RELAXED);
+    pthread_mutex_unlock(&vbm_delay_lock[chn]);
+    return 0;
+}
+
+/* SetDelay on a running channel: takes effect with the next frame. */
+int VBMDelaySetDelay(int chn, int delay)
+{
+    int result = -1;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS || delay < 0)
+        return -1;
+    pthread_mutex_lock(&vbm_delay_lock[chn]);
+    if (vbm_delay[chn].max > 0 && delay <= vbm_delay[chn].max) {
+        vbm_delay[chn].delay = delay;
+        result = 0;
+    }
+    pthread_mutex_unlock(&vbm_delay_lock[chn]);
+    return result;
+}
+
+#define VBM_TIMED_WAIT_S 5      /* libimp: 5 s, then -1 */
+
+static int64_t vbm_frame_timestamp(const VBMFrame *frame)
+{
+#if defined(PLATFORM_T23)
+    return frame->time_stamp;
+#else
+    int64_t ts;
+
+    memcpy(&ts, frame->data, sizeof(ts));
+    return ts;
+#endif
+}
+
+/* GetTimedFrame: copies the held frame nearest to target into framedata
+ * (when not NULL, see vbm_delay_copy) and its record (info_size bytes of
+ * the IMPFrameInfo layout, the size field set to the bytes copied) into
+ * info (when not NULL).  0, -1 (no FIFO, target older than every held
+ * frame, error, or 5 s without a frame at or after target when block),
+ * -2 (not block, no frame at or after target yet). */
+int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
+                          void *framedata, void *info, size_t info_size)
+{
+    struct timespec deadline;
+    int deadline_set = 0;
+    int result;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS || info_size > VBM_FRAME_SIZE)
+        return -1;
+    pthread_mutex_lock(&vbm_delay_lock[chn]);
+    for (;;) {
+        VBMDelayRing *ring = &vbm_delay[chn];
+        VBMPool *pool = vbm_instance[chn];
+        int64_t ts[VBM_DELAY_MAX_FRAMES];
+        int i, pick;
+
+        if (ring->max <= 0 || !pool) {
+            result = -1;
+            break;
+        }
+        for (i = 0; i < ring->count; i++)
+            ts[i] = vbm_frame_timestamp(&pool->frames[vbm_delay_at(ring, i)]);
+        pick = vbm_delay_pick(ts, ring->count, target);
+        if (pick >= 0) {
+            VBMFrame *frame = &pool->frames[vbm_delay_at(ring, pick)];
+            uint32_t copied = vbm_delay_copy(
+                (uint8_t *)framedata,
+                (const uint8_t *)(uintptr_t)frame->virt_addr,
+                (uint32_t)frame->width, (uint32_t)frame->height,
+                (uint32_t)frame->pixfmt, (uint32_t)frame->size);
+
+            if (!copied) {
+                result = -1;
+                break;
+            }
+            if (info && info_size) {
+                uint8_t record[VBM_FRAME_SIZE];
+                int32_t size = (int32_t)copied;
+
+                memcpy(record, frame, info_size);
+                memcpy(record + offsetof(VBMFrame, size), &size,
+                       sizeof(size));
+                memcpy(info, record, info_size);
+            }
+            result = 0;
+            break;
+        }
+        if (pick == -1 || !block) {
+            result = pick;
+            break;
+        }
+        if (!deadline_set) {
+            clock_gettime(CLOCK_REALTIME, &deadline);
+            deadline.tv_sec += VBM_TIMED_WAIT_S;
+            deadline_set = 1;
+        }
+        if (pthread_cond_timedwait(&vbm_delay_cond[chn], &vbm_delay_lock[chn],
+                                   &deadline) == ETIMEDOUT) {
+            result = -1;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&vbm_delay_lock[chn]);
+    return result;
 }

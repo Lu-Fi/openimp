@@ -6,6 +6,7 @@
 #ifndef KERNEL_INTERFACE_H
 #define KERNEL_INTERFACE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -108,7 +109,17 @@ int fs_dqbuf(int fd, int *index_out, uint64_t *timestamp_out);
 
 /* Bridge between VBM and kernel queue */
 int VBMPrimeKernelQueue(int chn, int fd, int limit);
+/* VBM_DQ_HELD: a frame was dequeued and went into the delay FIFO, none
+ * is published this time */
+#define VBM_DQ_HELD (-4)
 int VBMKernelDequeue(int chn, int fd, void **frame_out);
+
+/* Delay FIFO (vbm_delay.h, IMP_FrameSource_SetMaxDelay/SetDelay/
+ * GetTimedFrame) */
+int VBMDelayConfigure(int chn, int max, int delay);
+int VBMDelaySetDelay(int chn, int delay);
+int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
+                          void *framedata, void *info, size_t info_size);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
     defined(PLATFORM_T21) || defined(PLATFORM_T30)
 /* Return ready frames to the driver while no reader pulls the channel. */
