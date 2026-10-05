@@ -527,6 +527,65 @@ static void test_cycles(void)
     check_clean("cycles");
 }
 
+/* The single live DMA buffer (address and size), 0 if there is not
+ * exactly one. */
+static uint32_t dma_only(uint32_t *size)
+{
+    uint32_t addr = 0;
+    int i, n = 0;
+
+    pthread_mutex_lock(&dma_lock);
+    for (i = 0; i < FAKE_DMA_MAX; i++)
+        if (dma_live[i].addr) {
+            addr = dma_live[i].addr;
+            *size = dma_live[i].size;
+            n++;
+        }
+    pthread_mutex_unlock(&dma_lock);
+    return n == 1 ? addr : 0;
+}
+
+/* T21/T20 keep a disabled channel's pool memory for its next pool of the
+ * same size (rmem fragmentation on timps' idle/re-enable cycles); a pool of
+ * another size and DestroyChn free it.  Other SoCs free it at once. */
+static void test_park(void)
+{
+    IMPFSChnAttr main_attr = attr_for(1920, 1080, 2);
+    IMPFSChnAttr small_attr = attr_for(640, 360, 2);
+    uint32_t addr, size = 0, size2 = 0;
+    int i;
+
+    CHECK(IMP_FrameSource_CreateChn(0, &main_attr) == 0, "create");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable");
+    addr = dma_only(&size);
+    CHECK(addr != 0, "one pool buffer while enabled (%d)", dma_count());
+    for (i = 0; i < 5; i++) {
+        CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable (cycle %d)", i);
+#if defined(PLATFORM_T21)
+        CHECK(dma_only(&size2) == addr && size2 == size,
+              "disabled: pool block parked (cycle %d)", i);
+#else
+        CHECK(dma_count() == 0, "disabled: pool freed (cycle %d)", i);
+#endif
+        CHECK(IMP_FrameSource_EnableChn(0) == 0, "re-enable (cycle %d)", i);
+#if defined(PLATFORM_T21)
+        CHECK(dma_only(&size2) == addr && size2 == size,
+              "re-enable reuses the parked block (cycle %d)", i);
+#else
+        CHECK(dma_count() == 1, "re-enabled: one pool (cycle %d)", i);
+#endif
+    }
+    /* another size while disabled: the parked block goes, a new one comes */
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
+    CHECK(IMP_FrameSource_SetChnAttr(0, &small_attr) == 0, "set small attr");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable small");
+    CHECK(dma_only(&size2) != 0 && size2 < size,
+          "small pool: one buffer of %u bytes (was %u)", size2, size);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable small");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy");
+    check_clean("park");
+}
+
 /* A failure in any EnableChn step leaves the channel created, nothing
  * open or allocated, and the next EnableChn works. */
 static void test_enable_failures(void)
@@ -816,6 +875,7 @@ int main(void)
     } while (0)
     RUN(cycles);
     RUN(enable_failures);
+    RUN(park);
     RUN(create_while_enabled);
     RUN(bad_channels);
     RUN(stale_release);
