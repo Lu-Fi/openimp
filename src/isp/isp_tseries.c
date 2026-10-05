@@ -1180,6 +1180,9 @@ enum {
     TISP_CID_DRC_RATIO = 0x80000a2,
 #endif
     TISP_CID_MODULE_CONTROL = 0x80000e2,
+    TISP_CID_FRONT_CROP = 0x80000e3,
+    TISP_CID_CUSTOM_MODE = 0x80000e7,
+    TISP_CID_ENABLE_DRC = 0x80000a3,
     TISP_CID_WAIT_FRAME = 0x8000162,
     TISP_CID_ENABLE_DEFOG = 0x80000a4,
     TISP_CID_BLC_ATTR = 0x80000a5,
@@ -2907,7 +2910,12 @@ int IMP_ISP_Tuning_SetFrontCrop(IMPISPFrontCrop *ispfrontcrop)
     if (ispfrontcrop == NULL) {
         return -1;
     }
-
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: tuning 0x80000e3 by pointer (tisp_s_fcrop_control) */
+    if (tseries_tuning_set_ptr(TISP_CID_FRONT_CROP, ispfrontcrop) != 0) {
+        return -1;
+    }
+#endif
     tseries_front_crop = *ispfrontcrop;
     return 0;
 }
@@ -2917,9 +2925,13 @@ int IMP_ISP_Tuning_GetFrontCrop(IMPISPFrontCrop *ispfrontcrop)
     if (ispfrontcrop == NULL) {
         return -1;
     }
-
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: tuning 0x80000e3 get by pointer */
+    return tseries_tuning_get_ptr(TISP_CID_FRONT_CROP, ispfrontcrop);
+#else
     *ispfrontcrop = tseries_front_crop;
     return 0;
+#endif
 }
 
 int IMP_ISP_Tuning_SetAutoZoom(void *zoom_attr)
@@ -2957,6 +2969,20 @@ int IMP_ISP_Tuning_GetAeTargetList(IMPISPAETargetList *at_list)
 
 int IMP_ISP_Tuning_SetISPCustomMode(IMPISPTuningOpsMode mode)
 {
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: tuning 0x80000e7 with the mode inline
+     * (tisp_cust_mode_s_ctrl: swaps to the custom parameter bank); the
+     * vendor checks only that tuning exists, not the tuning state */
+    ISPDevice *isp;
+    TSeriesTuningValReq req = { 0, TISP_CID_CUSTOM_MODE, (int32_t)mode };
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL) {
+        return -1;
+    }
+    if (ioctl(isp->tuning_fd, TISP_VIDIOC_TUNING, &req) != 0) {
+        return -1;
+    }
+#endif
     tseries_custom_mode = mode;
     return 0;
 }
@@ -2966,13 +2992,30 @@ int IMP_ISP_Tuning_GetISPCustomMode(IMPISPTuningOpsMode *mode)
     if (mode == NULL) {
         return -1;
     }
+#if defined(PLATFORM_T31)
+    {
+        int32_t value = 0;
 
+        /* vendor 1.1.6: tuning 0x80000e7 get, stored only on success */
+        if (tseries_tuning_get_val(TISP_CID_CUSTOM_MODE, &value) != 0) {
+            return -1;
+        }
+        tseries_custom_mode = (IMPISPTuningOpsMode)value;
+    }
+#endif
     *mode = tseries_custom_mode;
     return 0;
 }
 
 int IMP_ISP_Tuning_EnableDRC(IMPISPTuningOpsMode mode)
 {
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: tuning 0x80000a3 with the mode inline
+     * (tisp_s_adr_enable: 1 runs ADR, 0 bypasses it) */
+    if (tseries_tuning_set_val(TISP_CID_ENABLE_DRC, (int32_t)mode) != 0) {
+        return -1;
+    }
+#endif
     tseries_drc_enable = mode;
     return 0;
 }
