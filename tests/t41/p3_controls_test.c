@@ -66,6 +66,7 @@ int main(void)
     IMPISPModuleCtl ctl;
     IMPISPAutoZoom zoom;
     IMPISPWdrOutputMode wdr;
+    IMPISPHVFLIPAttr flip, got;
     int before;
 
     /* Vendor structure sizes the open-tx-isp routes rely on. */
@@ -86,6 +87,28 @@ int main(void)
     EXPECT(IMP_ISP_Tuning_SetModuleControl(IMPVI_MAIN, &ctl), 0, 0x08000072, &ctl);
     EXPECT(IMP_ISP_Tuning_SetAutoZoom(IMPVI_MAIN, &zoom), 0, 0x08000077, &zoom);
     EXPECT(IMP_ISP_Tuning_SetWdrOutputMode(IMPVI_MAIN, &wdr), 0, 0x08000054, &wdr);
+
+    /* HV flip: the 16-byte IMPISPHVFLIPAttr goes to 0x08000073 as is
+     * (open-tx-isp t41_tuning_hvflip applies sensor, LSC and MSCA). */
+    assert(sizeof(IMPISPHVFLIPAttr) == 16);
+    memset(&flip, 0, sizeof(flip));
+    flip.sensor_mode = IMPISP_FLIP_V_MODE;
+    flip.isp_mode[1] = IMPISP_FLIP_H_MODE;
+    EXPECT(IMP_ISP_Tuning_SetHVFLIP(IMPVI_MAIN, &flip), 0, 0x08000073, &flip);
+    got = flip;                         /* what the driver reports */
+    EXPECT(IMP_ISP_Tuning_GetHVFLIP(IMPVI_MAIN, &got), 1, 0x08000073, &got);
+    /* a rejected SET (sensor and ISP flip at once) is reported, and a
+     * failed GET reports the last accepted attributes */
+    last.result = -1;
+    memset(&got, 0x5a, sizeof(got));
+    got.sensor_mode = IMPISP_FLIP_HV_MODE;
+    got.isp_mode[0] = IMPISP_FLIP_V_MODE;
+    assert(IMP_ISP_Tuning_SetHVFLIP(IMPVI_MAIN, &got) == -1);
+    assert(IMP_ISP_Tuning_GetHVFLIP(IMPVI_MAIN, &got) == -1);
+    last.result = 0;
+    assert(got.sensor_mode == IMPISP_FLIP_V_MODE);
+    assert(got.isp_mode[1] == IMPISP_FLIP_H_MODE);
+    assert(IMP_ISP_Tuning_SetHVFLIP(IMPVI_SEC, &flip) == -1);
 
     /* Invalid arguments never reach the driver. */
     before = last.calls;
