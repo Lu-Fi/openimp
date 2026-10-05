@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "dma_alloc.h"
@@ -299,12 +300,114 @@ static void t31_osd_draw_cpu(struct osd_canvas *cv, const struct t31_osd_region 
     }
 }
 
-void openimp_t31_osd_apply(int group, void *frame)
+/*
+ * T21: the first IPU blend after an idle gap (on-demand JPEG channel wake)
+ * writes nothing into the frame; later blends do (proven on device, stock
+ * driver too).  For the first OSD_RETRY_WINDOW applies after such a gap one
+ * glyph pixel plus the row of the first PIC region of each IPU pass is read
+ * (cache invalidated) before and after the op; if memory did not change the
+ * op is repeated (OSD_RETRY_MAX times).  If it still did not take, the apply
+ * returns -1 so a JPEG caller can drop the frame instead of handing out a
+ * snapshot without overlay.  OPENIMP_OSD_RETRY=0 disables, =1 forces on;
+ * default on for T21 only.  OPENIMP_OSD_RETRY_IDLE_MS (1000) is the gap.
+ */
+#define OSD_RETRY_WINDOW 3
+#define OSD_RETRY_MAX    3
+
+static int osd_retry_cfg = -1;          /* -1 unread, 0 off, 1 on */
+static int osd_retry_idle_ms = 1000;
+static int osd_retry_left;
+static double osd_retry_last;
+
+struct osd_probe {
+    const uint8_t *row;
+    uint32_t w, px, before_sum, before_px;
+};
+
+static double osd_mono_now(void)
 {
-    openimp_t31_osd_apply_ex(group, frame, 0u);
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
-void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
+static void osd_retry_tick(void)
+{
+    double now;
+
+    if (osd_retry_cfg < 0) {
+        const char *v = getenv("OPENIMP_OSD_RETRY");
+        const char *g = getenv("OPENIMP_OSD_RETRY_IDLE_MS");
+#if defined(PLATFORM_T21)
+        osd_retry_cfg = v && *v ? atoi(v) != 0 : 1;
+#else
+        osd_retry_cfg = v && *v ? atoi(v) != 0 : 0;
+#endif
+        if (g && *g)
+            osd_retry_idle_ms = atoi(g);
+    }
+    if (!osd_retry_cfg)
+        return;
+    now = osd_mono_now();
+    if (osd_retry_last == 0.0 || (now - osd_retry_last) * 1000.0 >= osd_retry_idle_ms)
+        osd_retry_left = OSD_RETRY_WINDOW;
+    osd_retry_last = now;
+}
+
+static uint32_t osd_probe_sum(const uint8_t *row, uint32_t n)
+{
+    uint32_t sum = 0, i;
+
+    for (i = 0; i < n; i++)
+        sum += row[i];
+    return sum;
+}
+
+/* Arm a probe on the strongest-alpha pixel of the first PIC region. */
+static int osd_probe_begin(struct osd_probe *pr, const struct t31_osd_region *r,
+                           uint32_t virt, uint32_t width, uint32_t height)
+{
+    uint32_t rw = 0, rh = 0, x, y, bx = 0, by = 0, amax = 0;
+    const uint8_t *bm;
+
+    if ((r->attr.type != OSD_REG_PIC && r->attr.type != OSD_REG_PIC_RMEM) ||
+        r->active < 0 || !(bm = r->bitmap[r->active].virt) || !virt ||
+        t31_osd_rect_size(&r->attr, &rw, &rh) != 0 || !rw || !rh)
+        return 0;
+    for (y = 0; y < rh; y++)
+        for (x = 0; x < rw; x++) {
+            uint32_t a = bm[(y * rw + x) * 4u + 3u];
+
+            if (a > amax) { amax = a; bx = x; by = y; }
+        }
+    if (amax < 128u || (uint32_t)r->attr.rect.p0.y + by >= height)
+        return 0;
+    pr->row = (const uint8_t *)(uintptr_t)(virt +
+              ((uint32_t)r->attr.rect.p0.y + by) * width +
+              (uint32_t)r->attr.rect.p0.x);
+    pr->w = rw;
+    pr->px = bx;
+    DMA_RmemFlushCache((void *)pr->row, rw, 2 /* invalidate */);
+    pr->before_sum = osd_probe_sum(pr->row, rw);
+    pr->before_px = pr->row[bx];
+    return 1;
+}
+
+/* 1 when the IPU op changed the probed row/pixel. */
+static int osd_probe_changed(const struct osd_probe *pr)
+{
+    DMA_RmemFlushCache((void *)pr->row, pr->w, 2);
+    return osd_probe_sum(pr->row, pr->w) != pr->before_sum ||
+           pr->row[pr->px] != pr->before_px;
+}
+
+int openimp_t31_osd_apply(int group, void *frame)
+{
+    return openimp_t31_osd_apply_ex(group, frame, 0u);
+}
+
+int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
 {
     const uint8_t *fi = frame;
     uint32_t width, height, phys, virt, bg_h, fsize;
@@ -314,9 +417,10 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     int cpu_order[T31_OSD_REGIONS];
     int count = 0, cpu_count = 0, i;
     int ipu_enabled;
+    int result = 0;
 
     if (!frame || !valid_osd_group(group))
-        return;
+        return 0;
     /* LINE/RECT/BITMAP are drawn on the CPU and must keep working even when
      * the IPU backend is off (OPENIMP_T31_OSD=0, or a failed /dev/ipu open /
      * IPU error disabled it): only the PIC/COVER IPU pass is gated on it. */
@@ -327,13 +431,13 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     memcpy(&virt, fi + 0x1c, 4);
     memcpy(&fsize, fi + 0x14, 4);
     if (!phys || !width || !height || (width & 15u))
-        return;
+        return 0;
     bg_h = (height + 15u) & ~15u;
 
     pthread_mutex_lock(&osd_lock);
     if (!osd_groups[group].created || !osd_groups[group].started) {
         pthread_mutex_unlock(&osd_lock);
-        return;
+        return 0;
     }
     for (i = 0; i < T31_OSD_REGIONS; i++) {
         const struct t31_osd_region *r = &osd_regions[i];
@@ -425,10 +529,13 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
         if (osd_ipu_fd < 0) {
             pthread_mutex_unlock(&osd_lock);
             t31_osd_backend_disable("cannot open /dev/ipu");
-            return;
+            return 0;
         }
     }
+    if (ipu_enabled && count > 0)
+        osd_retry_tick();
     for (i = 0; ipu_enabled && i < count; i += 4) {
+        int ipu_ret;
         int n = count - i < 4 ? count - i : 4;
 
         memset(&p, 0, sizeof(p));
@@ -470,7 +577,30 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             }
             p.cmd |= 1u << k;
         }
-        if (ioctl(osd_ipu_fd, T31_IPU_START, &p) < 0) {
+        {
+            struct osd_probe pr;
+            int probing = osd_retry_left > 0 &&
+                          osd_probe_begin(&pr, &osd_regions[order[i]], virt,
+                                          width, height);
+            int tries = 0;
+
+            ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+            while (probing && ipu_ret >= 0 && !osd_probe_changed(&pr)) {
+                static unsigned int retry_logs;
+
+                if (tries++ >= OSD_RETRY_MAX) {
+                    result = -1;
+                    if (retry_logs++ < 8u)
+                        IMP_LOG_INFO("OSD", "IPU blend without effect after %d "
+                                     "retries, frame flagged", OSD_RETRY_MAX);
+                    break;
+                }
+                if (retry_logs++ < 8u)
+                    IMP_LOG_INFO("OSD", "IPU blend without effect, retry %d", tries);
+                ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+            }
+        }
+        if (ipu_ret < 0) {
             int ipu_errno = errno;
             static unsigned int ipu_fail_count;
 
@@ -484,12 +614,14 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             if (++osd_ipu_errors >= T31_OSD_MAX_IPU_ERRORS) {
                 pthread_mutex_unlock(&osd_lock);
                 t31_osd_backend_disable("repeated IPU errors");
-                return;
+                return 0;
             }
         } else {
             osd_ipu_errors = 0;
         }
     }
+    if (osd_retry_left > 0 && ipu_enabled && count > 0)
+        osd_retry_left--;
     for (i = 0; i < count; i++) {
         band_y0[i] = (uint32_t)osd_regions[order[i]].attr.rect.p0.y;
         band_y1[i] = (uint32_t)osd_regions[order[i]].attr.rect.p1.y + 1u;
@@ -515,8 +647,8 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                                ((y1 + 1u) / 2u - y0 / 2u) * width, 2);
         }
     }
+    return result;
 }
-
 int IMP_OSD_SetPoolSize(int size)
 {
     if (size < 0)

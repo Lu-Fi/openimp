@@ -2283,10 +2283,13 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
          * writes the frame in memory, where the Helix VPU reads it. */
         /* A video channel's frame is read by DMA only from here on; the
          * JPEG fan-out copy invalidates before reading it. */
-        if (ch->osd_group >= 0)
+        if (ch->osd_group >= 0 &&
             openimp_t31_osd_apply_ex(ch->osd_group, frame,
                                      ch->codec_type != IMP_ENC_TYPE_JPEG
-                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u);
+                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0 &&
+            ch->codec_type == IMP_ENC_TYPE_JPEG)
+            goto done;  /* overlay not confirmed (T21 first op after idle):
+                         * drop this JPEG, the next frame follows */
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T41)
         /* OEM T23 osd_update: IPU covers/pictures, CPU lines and mosaics
          * (T41: the same IPU and OSD ABI family, see openimp_t23_osd.c) */
