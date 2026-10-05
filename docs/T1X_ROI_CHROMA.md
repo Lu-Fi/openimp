@@ -91,3 +91,9 @@ PPS parse) and `tests/t30/p2_t1x_test.c`. The PPS of the dumped streams
 Hardware effect, open: whether x1/y1 are inclusive (the OEM `IMPRect` p1 is
 the bottom-right pixel, which suggests inclusive), and what a relative QP
 does at the 6-bit field limits.
+
+On-device test without a streamer that calls the API:
+`OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..."` (pixel corners p0/p1;
+the region index is the position in the list) and
+`OPENIMP_DEBUG_CHROMA_QP="ch:offset"` are applied after `CreateChn`. A
+streamer that calls `SetChnROI`/`SetH264TransCfg` later overrides them.
