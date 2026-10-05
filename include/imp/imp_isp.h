@@ -13,6 +13,7 @@ extern "C" {
 
 #include "imp_common.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * ISP running mode
@@ -43,11 +44,19 @@ typedef enum {
     IMPISP_DRC_MEDIUM,
     IMPISP_DRC_LOW,
     IMPISP_DRC_DISABLE,
+#if defined(PLATFORM_T20)
+    IMPISP_DRC_RANGE,
+#endif
 } IMPISPDrcMode;
 
 typedef struct {
     IMPISPDrcMode mode;
     unsigned char drc_strength;
+#if defined(PLATFORM_T20)
+    /* T20 3.12.0 header: range members before slop_*, 16 bytes */
+    unsigned char dval_max;
+    unsigned char dval_min;
+#endif
     unsigned char slop_max;
     unsigned char slop_min;
     unsigned short black_level;
@@ -58,25 +67,52 @@ typedef struct {
     IMPISPTuningOpsMode enable;
     IMPISPTuningOpsType type;
     unsigned char sinter_strength;
+#if defined(PLATFORM_T20)
+    unsigned char sval_max;
+    unsigned char sval_min;
+#endif
 } IMPISPSinterDenoiseAttr;
 
 typedef enum {
     IMPISP_TEMPER_DISABLE = 0,
     IMPISP_TEMPER_AUTO,
     IMPISP_TEMPER_MANUAL,
+#if defined(PLATFORM_T20)
+    IMPISP_TEMPER_RANGE,
+#endif
 } IMPISPTemperMode;
 
 typedef struct imp_isp_temper_denoise_attr {
     IMPISPTemperMode type;
     unsigned char temper_strength;
+#if defined(PLATFORM_T20)
+    unsigned char tval_max;
+    unsigned char tval_min;
+#endif
 } IMPISPTemperDenoiseAttr;
 
+#if defined(PLATFORM_T20)
+_Static_assert(sizeof(IMPISPDrcAttr) == 16 &&
+               offsetof(IMPISPDrcAttr, dval_max) == 5 &&
+               offsetof(IMPISPDrcAttr, slop_max) == 7 &&
+               offsetof(IMPISPDrcAttr, black_level) == 10 &&
+               offsetof(IMPISPDrcAttr, white_level) == 12,
+               "T20 IMPISPDrcAttr ABI mismatch");
+_Static_assert(sizeof(IMPISPSinterDenoiseAttr) == 12 &&
+               offsetof(IMPISPSinterDenoiseAttr, sval_min) == 10,
+               "T20 IMPISPSinterDenoiseAttr ABI mismatch");
+_Static_assert(sizeof(IMPISPTemperDenoiseAttr) == 8 &&
+               offsetof(IMPISPTemperDenoiseAttr, tval_min) == 6,
+               "T20 IMPISPTemperDenoiseAttr ABI mismatch");
+#else
 _Static_assert(sizeof(IMPISPDrcAttr) == 0xc,
                "T21 IMPISPDrcAttr ABI mismatch");
 _Static_assert(sizeof(IMPISPSinterDenoiseAttr) == 0xc,
                "T21 IMPISPSinterDenoiseAttr ABI mismatch");
 _Static_assert(sizeof(IMPISPTemperDenoiseAttr) == 0x8,
                "T21 IMPISPTemperDenoiseAttr ABI mismatch");
+
+#endif
 
 /**
  * Anti-flicker attribute

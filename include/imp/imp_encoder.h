@@ -391,11 +391,26 @@ typedef struct {
     };
 } IMPEncoderAttrRcMode;
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 header: a demask attribute sits between attrFrmUsed and
+ * attrDenoise (RcAttr 124, CHNAttr 172 bytes; the stock IMP_Encoder_
+ * GetChnAttr copies 172).  T21/T23/T30 have none (112 / 160). */
+typedef struct {
+    bool enable;
+    bool isAutoMode;
+    int demaskCnt;
+    int demaskThresd;
+} IMPEncoderAttrDemask;
+#endif
+
 typedef struct {
     IMPEncoderFrmRate outFrmRate;
     uint32_t maxGop;
     IMPEncoderAttrRcMode attrRcMode;
     IMPEncoderAttrFrmUsed attrFrmUsed;
+#if defined(PLATFORM_T20)
+    IMPEncoderAttrDemask attrDemask;
+#endif
     IMPEncoderAttrDenoise attrDenoise;
     IMPEncoderAttrInitHSkip attrHSkip;
 } IMPEncoderRcAttr;
@@ -485,9 +500,25 @@ typedef struct {
     IMPEncoderRcPriority rcPriority;
 } IMPEncoderSuperFrmCfg;
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 144 bytes, the offset at byte 140 (its
+ * IMP_Encoder_SetH264TransCfg reads 140(a1), Get clears 144 bytes) */
+typedef struct {
+    uint32_t intraTransMode;
+    uint32_t interTransMode;
+    bool bScalingListValid;
+    uint8_t interScalingList8X8[64];
+    uint8_t intraScalingList8X8[64];
+    int chroma_qp_index_offset;
+} IMPEncoderH264TransCfg;
+_Static_assert(sizeof(IMPEncoderH264TransCfg) == 144 &&
+               offsetof(IMPEncoderH264TransCfg, chroma_qp_index_offset) == 140,
+               "IMPEncoderH264TransCfg T20 ABI mismatch");
+#else
 typedef struct {
     int chroma_qp_index_offset;
 } IMPEncoderH264TransCfg;
+#endif
 
 typedef struct {
     int chroma_cr_qp_offset;
@@ -512,13 +543,24 @@ _Static_assert(sizeof(IMPEncoderSuperFrmCfg) == 0x14,
 
 _Static_assert(sizeof(IMPEncoderAttrRcMode) == 0x2c,
                "legacy IMPEncoderAttrRcMode ABI mismatch");
+#if defined(PLATFORM_T20)
+_Static_assert(sizeof(IMPEncoderRcAttr) == 124 &&
+               offsetof(IMPEncoderRcAttr, attrDemask) == 68 &&
+               offsetof(IMPEncoderRcAttr, attrDenoise) == 80 &&
+               offsetof(IMPEncoderRcAttr, attrHSkip) == 96,
+               "T20 IMPEncoderRcAttr ABI mismatch");
+#else
 _Static_assert(sizeof(IMPEncoderRcAttr) == 0x70,
                "legacy IMPEncoderRcAttr ABI mismatch");
+#endif
 _Static_assert(sizeof(IMPEncoderAttr) == 0x30,
                "legacy IMPEncoderAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderCHNAttr, rcAttr) == 0x30,
                "legacy IMPEncoderCHNAttr.rcAttr ABI mismatch");
-#if defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20)
+_Static_assert(sizeof(IMPEncoderCHNAttr) == 172,
+               "T20 IMPEncoderCHNAttr ABI mismatch");
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
 _Static_assert(sizeof(IMPEncoderCHNAttr) == 0xa0,
                "T21/T30 IMPEncoderCHNAttr ABI mismatch");
 #else
@@ -963,9 +1005,18 @@ typedef IMPEncoderCHNStat IMPEncoderChnStat;
 /**
  * JPEG quality level
  */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 257 bytes (Set copies and Get clears 257); the
+ * table is the first 128 bytes, the other 128 are zero */
+typedef struct {
+    bool user_ql_en;
+    uint8_t qmem_table[256];
+} IMPEncoderJpegeQl;
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 257,
+               "IMPEncoderJpegeQl T20 ABI mismatch");
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
     defined(PLATFORM_T41)
-/* T41 1.2.x has the same 129-byte table form as T20/T21/T23 */
+/* T21 1.0.33 / T23 / T30 libimp: 129 bytes; T41 1.2.x has the same form */
 typedef struct {
     bool user_ql_en;
     uint8_t qmem_table[128];
