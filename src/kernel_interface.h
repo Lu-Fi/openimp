@@ -78,6 +78,11 @@ void fs_close_device(int fd);
 /* VBM (Video Buffer Manager) operations */
 int VBMCreatePool(int chn, void *fmt, void *ops, void *priv);
 int VBMDestroyPool(int chn);
+/* DisableChn: like VBMDestroyPool, but T21/T20 keep the pool's rmem block
+ * for the channel's next pool of the same size (rmem fragmentation). */
+int VBMDestroyPoolParked(int chn);
+/* DestroyChn: frees the block VBMDestroyPoolParked kept, if any. */
+void VBMReleaseParked(int chn);
 int VBMFillPool(int chn);
 int VBMFlushFrame(int chn);
 /* Returns once no VBMReleaseFrame of chn is running: one that started

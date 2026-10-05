@@ -1115,6 +1115,70 @@ static VBMPool *vbm_retired[MAX_VBM_POOLS];
 static size_t vbm_rmem_bytes[MAX_VBM_POOLS];
 
 /*
+ * T21/T20: the rmem block of a pool DisableChn destroyed, kept for the
+ * channel's next pool (under vbm_pool_lock[chn]; phys_addr 0: none).
+ * timps disables an idle FrameSource channel and enables it again when a
+ * client connects.  On the PC420 (23 MiB rmem, 1080p + 360p) freeing the
+ * 6 MB main pool on every disable let later allocations land in the hole;
+ * after a few cycles the next enable found enough free rmem but no
+ * contiguous block for it.  The next pool of the same size takes the block
+ * back; one of another size frees it first; DestroyChn frees it.
+ * vbm_rmem_bytes keeps counting it.  OPENIMP_VBM_PARK=0 frees at once.
+ */
+#if defined(PLATFORM_T21)
+static IMPDMABufferInfo vbm_parked[MAX_VBM_POOLS];
+
+static int vbm_park_enabled(void)
+{
+    static int enabled = -1;
+
+    if (enabled < 0) {
+        const char *value = getenv("OPENIMP_VBM_PARK");
+
+        enabled = !(value && value[0] == '0');
+    }
+    return enabled;
+}
+#endif
+
+/* Frees chn's parked block, if any.  Caller holds vbm_pool_lock[chn]. */
+static void vbm_free_parked(int chn)
+{
+#if defined(PLATFORM_T21)
+    if (vbm_parked[chn].phys_addr) {
+        DMA_FreePhys(vbm_parked[chn].phys_addr);
+        memset(&vbm_parked[chn], 0, sizeof(vbm_parked[chn]));
+        __atomic_store_n(&vbm_rmem_bytes[chn], 0, __ATOMIC_RELAXED);
+    }
+#else
+    (void)chn;
+#endif
+}
+
+/* Takes chn's parked block for a pool of size bytes: 0 and *info filled,
+ * or -1 (nothing parked, or a block of another size, which is freed).
+ * Caller holds vbm_pool_lock[chn]. */
+static int vbm_take_parked(int chn, int size, IMPDMABufferInfo *info)
+{
+#if defined(PLATFORM_T21)
+    if (!vbm_parked[chn].phys_addr)
+        return -1;
+    if (vbm_parked[chn].size != (uint32_t)size) {
+        vbm_free_parked(chn);
+        return -1;
+    }
+    *info = vbm_parked[chn];
+    memset(&vbm_parked[chn], 0, sizeof(vbm_parked[chn]));
+    return 0;
+#else
+    (void)chn;
+    (void)size;
+    (void)info;
+    return -1;
+#endif
+}
+
+/*
  * Once per process, before a FrameSource pool is taken from rmem: warn when
  * it no longer fits next to what is already allocated - the other pools and
  * the fixed buffers (encoder, ISP, OSD, ...) - so an overcommitted
@@ -1384,7 +1448,12 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
     memset(&alloc_info, 0, sizeof(alloc_info));
     int ret;
 
-    if (pool->pool_id < 0) {
+    if (pool->pool_id < 0 &&
+        vbm_take_parked(chn, total_size, &alloc_info) == 0) {
+        fprintf(stderr, "[VBM] CreatePool: chn=%d reuses its parked rmem "
+                "block 0x%08x\n", chn, alloc_info.phys_addr);
+        ret = 0;
+    } else if (pool->pool_id < 0) {
         vbm_check_rmem_budget(chn, total_size);
         ret = DMA_AllocDescriptor(&alloc_info, total_size, pool->name);
         if (ret >= 0)
@@ -1528,7 +1597,25 @@ static void vbm_log_rmem(const char *what, int chn, int size)
         DMA_LogRmem(what);
 }
 
+static int vbm_destroy_pool(int chn, int park);
+
 int VBMDestroyPool(int chn) {
+    return vbm_destroy_pool(chn, 0);
+}
+
+int VBMDestroyPoolParked(int chn) {
+    return vbm_destroy_pool(chn, 1);
+}
+
+void VBMReleaseParked(int chn) {
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return;
+    pthread_mutex_lock(&vbm_pool_lock[chn]);
+    vbm_free_parked(chn);
+    pthread_mutex_unlock(&vbm_pool_lock[chn]);
+}
+
+static int vbm_destroy_pool(int chn, int park) {
     if (chn < 0 || chn >= MAX_VBM_POOLS) {
         return -1;
     }
@@ -1559,7 +1646,20 @@ int VBMDestroyPool(int chn) {
         free(pool->buf_in_userspace);
     }
 
-    /* Free allocated memory */
+    /* Free allocated memory, or park it (see vbm_parked) */
+#if defined(PLATFORM_T21)
+    park = park && pool->pool_id < 0 && pool->phys_base != 0 &&
+           vbm_park_enabled();
+    if (park) {
+        if (vbm_parked[chn].phys_addr)      /* not expected: one per chn */
+            DMA_FreePhys(vbm_parked[chn].phys_addr);
+        vbm_parked[chn].phys_addr = pool->phys_base;
+        vbm_parked[chn].virt_addr = pool->virt_base;
+        vbm_parked[chn].size = (uint32_t)pool_bytes;
+    } else
+#else
+    park = 0;
+#endif
     if (pool->phys_base != 0) {
         DMA_FreePhys(pool->phys_base);
     }
@@ -1570,10 +1670,12 @@ int VBMDestroyPool(int chn) {
     pool->phys_base = 0;
     free(vbm_retired[chn]);
     vbm_retired[chn] = pool;
-    __atomic_store_n(&vbm_rmem_bytes[chn], 0, __ATOMIC_RELAXED);
+    if (!park)
+        __atomic_store_n(&vbm_rmem_bytes[chn], 0, __ATOMIC_RELAXED);
     pthread_mutex_unlock(&vbm_pool_lock[chn]);
 
-    vbm_log_rmem("after releasing", chn, pool_bytes);
+    vbm_log_rmem(park ? "after parking" : "after releasing", chn,
+                 pool_bytes);
     OPENIMP_TRACE_STDERR("[VBM] DestroyPool: chn=%d destroyed\n", chn);
     return 0;
 }
