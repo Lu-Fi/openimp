@@ -1,6 +1,6 @@
 /*
  * T20/T21 (and T10, which runs the T20 libimp) ISP tuning calls that
- * reach the driver: WaitFrame (0x8000162).
+ * reach the driver: WaitFrame (0x8000162) and the T20 AE/AWB zone ABI.
  * src/isp/isp_tseries.c against a fake tuning ioctl (--wrap=ioctl).
  */
 #define _GNU_SOURCE
@@ -13,6 +13,9 @@
 
 #include "imp/imp_isp.h"
 #include "isp/isp_tseries_dev.h"
+
+int IMP_ISP_Tuning_GetAeZone(void *zone);
+int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b);
 
 ISPDevice *gISP;
 
@@ -108,6 +111,24 @@ static void test_wait_frame(void)
     driver_ret = 0;
 }
 
+static void test_zones(void)
+{
+    uint16_t ae[225];
+    uint8_t awb[1800];
+
+    calls = 0;
+    CHECK(IMP_ISP_Tuning_GetAeZone(ae) == 0);
+#if defined(PLATFORM_T20)
+    CHECK(calls == 1 && last_subcmd == 0x800002f);
+    /* one IMPISPAWBZone pointer, the other arguments are not looked at */
+    CHECK(IMP_ISP_Tuning_GetAwbZone(awb, (void *)1, (void *)2) == 0);
+    CHECK(calls == 2 && last_subcmd == 0x8000009);
+#else
+    CHECK(calls == 1 && last_subcmd == 0x8000030);
+    (void)awb;
+#endif
+}
+
 int main(void)
 {
     static ISPDevice isp;
@@ -117,6 +138,7 @@ int main(void)
     isp.tuning = &isp;
     isp.tuning_state = 2;
     test_wait_frame();
+    test_zones();
     if (failures) {
         fprintf(stderr, "isp_t1x_test: %d failure(s)\n", failures);
         return 1;

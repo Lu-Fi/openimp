@@ -1115,7 +1115,14 @@ enum {
 #else
     TISP_CID_AE_HIST_ORIGIN = 0x800002f,
 #endif
+#if defined(PLATFORM_T20)
+    /* T20 3.12.0 GetAeZone/GetAwbZone: {1, 0x800002f / 0x8000009, ptr}
+     * (one IMPISPAEZone / IMPISPAWBZone pointer each) */
+    TISP_CID_AE_ZONE = 0x800002f,
+    TISP_CID_T20_AWB_ZONE = 0x8000009,
+#else
     TISP_CID_AE_ZONE = 0x8000030,
+#endif
     /* OEM T23/T31 dispatches tisp_get_ae_luma at 0x8000033.  Command
      * 0x8000031 is a different statistics query; treating its first word as
      * luma makes bright scenes read near zero and forces RIC into night mode. */
@@ -3176,6 +3183,14 @@ int IMP_ISP_Tuning_GetAeState(void *state)
 
 int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b)
 {
+#if defined(PLATFORM_T20)
+    /* T20 3.12.0: int IMP_ISP_Tuning_GetAwbZone(IMPISPAWBZone *awb_zone),
+     * 15x15 {u16 r/g, u16 b/g, u32 pixel count}; the driver copies it
+     * to the pointer */
+    (void)zone_g;
+    (void)zone_b;
+    return tseries_tuning_get_ptr(TISP_CID_T20_AWB_ZONE, zone_r);
+#else
     struct {
         void *zone_r;
         void *zone_g;
@@ -3183,6 +3198,7 @@ int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b)
     } zones = { zone_r, zone_g, zone_b };
 
     return tseries_tuning_get_ptr(TISP_CID_AWB_ZONE, &zones);
+#endif
 }
 
 int IMP_ISP_Tuning_SetAwbHist(void *attr)
