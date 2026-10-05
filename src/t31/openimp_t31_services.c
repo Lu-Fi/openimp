@@ -136,7 +136,9 @@ static int t31_osd_backend_enabled(void)
 static void t31_osd_backend_disable(const char *reason)
 {
     osd_backend_state = -1;
-    IMP_LOG_INFO("OSD", "T31 IPU OSD backend disabled: %s", reason);
+    IMP_LOG_INFO("OSD", "T31 IPU OSD backend disabled: %s (errno=%d %s, "
+                 "%d consecutive IPU errors)", reason, errno,
+                 strerror(errno), osd_ipu_errors);
 }
 
 static int t31_osd_rect_size(const IMPOSDRgnAttr *attr, uint32_t *w, uint32_t *h)
@@ -350,11 +352,24 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             continue;
         }
         if (!r->created || r->group != group || !r->group_attr.show ||
-            t31_osd_rect_size(&r->attr, &w, &h) != 0 ||
-            r->attr.rect.p0.x < 0 || r->attr.rect.p0.y < 0 ||
-            (uint32_t)r->attr.rect.p0.x + w > width ||
-            (uint32_t)r->attr.rect.p0.y + h > height)
+            t31_osd_rect_size(&r->attr, &w, &h) != 0)
             continue;
+        if (r->attr.rect.p0.x < 0 || r->attr.rect.p0.y < 0 ||
+            (uint32_t)r->attr.rect.p0.x + w > width ||
+            (uint32_t)r->attr.rect.p0.y + h > height) {
+            /* Diagnostic: such a region is never drawn. Log the first few
+             * and then every 1000th. */
+            static unsigned int oob_count;
+
+            if (oob_count < 8u || oob_count % 1000u == 0u)
+                IMP_LOG_INFO("OSD", "group %d region %d (type %d) skipped: "
+                             "rect at %d,%d size %ux%u outside frame %ux%u "
+                             "(%u times)", group, i, (int)r->attr.type,
+                             r->attr.rect.p0.x, r->attr.rect.p0.y, w, h,
+                             width, height, oob_count + 1u);
+            oob_count++;
+            continue;
+        }
         if (!(r->attr.type == OSD_REG_COVER ||
               ((r->attr.type == OSD_REG_PIC || r->attr.type == OSD_REG_PIC_RMEM) &&
                r->active >= 0)))
@@ -456,6 +471,16 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             p.cmd |= 1u << k;
         }
         if (ioctl(osd_ipu_fd, T31_IPU_START, &p) < 0) {
+            int ipu_errno = errno;
+            static unsigned int ipu_fail_count;
+
+            if (ipu_fail_count < 8u || ipu_fail_count % 1000u == 0u)
+                IMP_LOG_INFO("OSD", "IPU_START failed: ret=-1 errno=%d (%s), "
+                             "bg %ux%u, %d layer(s) in this pass, "
+                             "consecutive errors %d (%u failures total)",
+                             ipu_errno, strerror(ipu_errno), width, bg_h, n,
+                             osd_ipu_errors + 1, ipu_fail_count + 1u);
+            ipu_fail_count++;
             if (++osd_ipu_errors >= T31_OSD_MAX_IPU_ERRORS) {
                 pthread_mutex_unlock(&osd_lock);
                 t31_osd_backend_disable("repeated IPU errors");
