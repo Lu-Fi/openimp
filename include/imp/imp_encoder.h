@@ -485,9 +485,25 @@ typedef struct {
     IMPEncoderRcPriority rcPriority;
 } IMPEncoderSuperFrmCfg;
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 144 bytes, the offset at byte 140 (its
+ * IMP_Encoder_SetH264TransCfg reads 140(a1), Get clears 144 bytes) */
+typedef struct {
+    uint32_t intraTransMode;
+    uint32_t interTransMode;
+    bool bScalingListValid;
+    uint8_t interScalingList8X8[64];
+    uint8_t intraScalingList8X8[64];
+    int chroma_qp_index_offset;
+} IMPEncoderH264TransCfg;
+_Static_assert(sizeof(IMPEncoderH264TransCfg) == 144 &&
+               offsetof(IMPEncoderH264TransCfg, chroma_qp_index_offset) == 140,
+               "IMPEncoderH264TransCfg T20 ABI mismatch");
+#else
 typedef struct {
     int chroma_qp_index_offset;
 } IMPEncoderH264TransCfg;
+#endif
 
 typedef struct {
     int chroma_cr_qp_offset;
@@ -954,11 +970,23 @@ typedef IMPEncoderCHNStat IMPEncoderChnStat;
 /**
  * JPEG quality level
  */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 257 bytes (Set copies and Get clears 257); the
+ * table is the first 128 bytes, the other 128 are zero */
+typedef struct {
+    bool user_ql_en;
+    uint8_t qmem_table[256];
+} IMPEncoderJpegeQl;
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 257,
+               "IMPEncoderJpegeQl T20 ABI mismatch");
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+/* T21 1.0.33 / T23 / T30 libimp: 129 bytes */
 typedef struct {
     bool user_ql_en;
     uint8_t qmem_table[128];
 } IMPEncoderJpegeQl;
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 129,
+               "IMPEncoderJpegeQl ABI mismatch");
 #else
 typedef struct {
     uint32_t qmaxI;                     /**< Maximum I frame quality */
