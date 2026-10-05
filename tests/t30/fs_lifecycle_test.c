@@ -394,6 +394,13 @@ int DMA_RmemStats(size_t *used, size_t *size, size_t *largest_free)
 }
 void DMA_LogRmem(const char *reason) { (void)reason; }
 void DMA_RmemStreamStarted(void) {}
+static int dma_flushes;
+int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
+{
+    (void)virt_addr; (void)size; (void)dir;
+    __atomic_add_fetch(&dma_flushes, 1, __ATOMIC_RELAXED);
+    return 0;
+}
 int remove_observer_from_module(void *src, void *dst)
 {
     (void)src; (void)dst;
@@ -446,10 +453,20 @@ int32_t destroy_group(Subject *s, int32_t dev)
 static pthread_mutex_t consumer_lock = PTHREAD_MUTEX_INITIALIZER;
 static int consumer_hold_ms;
 static int consumer_frames;
+/* size of the last frame record the consumers saw (0x08/0x0c) */
+static uint32_t consumer_width, consumer_height;
 
 int32_t notify_observers(Module *module, void *frame)
 {
-    (void)module; (void)frame;
+    (void)module;
+    if (frame) {
+        uint32_t w, h;
+
+        memcpy(&w, (const uint8_t *)frame + 0x08, 4);
+        memcpy(&h, (const uint8_t *)frame + 0x0c, 4);
+        __atomic_store_n(&consumer_width, w, __ATOMIC_RELAXED);
+        __atomic_store_n(&consumer_height, h, __ATOMIC_RELAXED);
+    }
     __atomic_add_fetch(&consumer_frames, 1, __ATOMIC_RELAXED);
     if (consumer_hold_ms) {
         pthread_mutex_lock(&consumer_lock);
@@ -793,6 +810,152 @@ static void test_disable_during_dqbuf(void)
     check_clean("disable during dqbuf");
 }
 
+#if !defined(PLATFORM_T23)
+#include "framesource/nv12_rotate.h"
+
+void openimp_fs_rotate_capture(int chn, void *frame);
+
+/* Reference rotation of an NV12 frame (pitch = width, chroma after
+ * ALIGN16(height) luma lines; sizes multiples of 16 here), straight from
+ * the definitions: CW (x,y) -> (h-1-y, x), CCW (x,y) -> (y, w-1-x). */
+static void ref_rotate(const uint8_t *src, uint8_t *dst, uint32_t w,
+                       uint32_t h, int cw)
+{
+    uint32_t p, x, y;
+
+    for (p = 0; p < 2; p++) {
+        uint32_t pw = p ? w / 2 : w, ph = p ? h / 2 : h, bpp = p ? 2 : 1;
+        const uint8_t *s = src + (p ? (size_t)w * h : 0);
+        uint8_t *d = dst + (p ? (size_t)w * h : 0);
+        uint32_t dp = h;            /* output pitch: the source height */
+
+        for (y = 0; y < ph; y++)
+            for (x = 0; x < pw; x++) {
+                uint32_t dx = cw ? ph - 1 - y : y;
+                uint32_t dy = cw ? x : pw - 1 - x;
+
+                memcpy(d + (size_t)dy * dp + dx * bpp,
+                       s + (size_t)y * w + x * bpp, bpp);
+            }
+    }
+}
+
+/* T10/T20/T21 SetChnRotate: geometry gate (16-aligned, sub-stream pixel
+ * cap), the per-frame rotate on a frame record against the reference,
+ * and the size the consumers see on a running channel. */
+static void test_rotate(void)
+{
+    static const struct { uint32_t w, h; int mode; } cases[] = {
+        { 640, 368, NV12_ROT_90_CW }, { 640, 368, NV12_ROT_90_CCW },
+        { 704, 576, NV12_ROT_90_CW }, { 352, 288, NV12_ROT_90_CCW },
+        { 64, 32, NV12_ROT_90_CW },
+    };
+    IMPFSChnAttr sub_attr = attr_for(640, 368, 2);
+    uint8_t record[0x428];
+    unsigned int i;
+    int waited;
+    pthread_t thread;
+
+    /* gate: the vendor values only, even, 16-aligned, <= 704x576 */
+    CHECK(IMP_FrameSource_SetChnRotate(1, 2, 640, 360) == -1,
+          "640x360 (height not 16-aligned) must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 1, 1920, 1080) == -1,
+          "1080p main stream must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 1, 1280, 720) == -1,
+          "720p main stream must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(1, 7, 640, 368) == -1, "bad mode");
+    CHECK(IMP_FrameSource_SetChnRotate(5, 1, 640, 368) == -1, "bad channel");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 0, 1920, 1080) == 0, "rot 0");
+
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        uint32_t w = cases[i].w, h = cases[i].h, size = w * h * 3 / 2;
+        uint32_t fourcc = 0x3231564eu, ow = 0, oh = 0, virt;
+        uint8_t *buf = mmap(NULL, size, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+        uint8_t *orig = malloc(size), *want = malloc(size);
+        uint32_t k, seed = 0x1234567u + i;
+
+        if (buf == MAP_FAILED || !orig || !want)
+            abort();
+        for (k = 0; k < size; k++) {
+            seed = seed * 1103515245u + 12345u;
+            orig[k] = (uint8_t)(seed >> 16);
+        }
+        memcpy(buf, orig, size);
+        ref_rotate(orig, want, w, h, cases[i].mode == NV12_ROT_90_CW);
+        memset(record, 0, sizeof(record));
+        virt = (uint32_t)(uintptr_t)buf;
+        memcpy(record + 0x08, &w, 4);
+        memcpy(record + 0x0c, &h, 4);
+        memcpy(record + 0x10, &fourcc, 4);
+        memcpy(record + 0x14, &size, 4);
+        memcpy(record + 0x18, &virt, 4);
+        memcpy(record + 0x1c, &virt, 4);
+        CHECK(IMP_FrameSource_SetChnRotate(2, cases[i].mode, (int)w,
+                                           (int)h) == 0,
+              "%ux%u mode %d accepted", w, h, cases[i].mode);
+        openimp_fs_rotate_capture(2, record);
+        memcpy(&ow, record + 0x08, 4);
+        memcpy(&oh, record + 0x0c, 4);
+        CHECK(ow == h && oh == w, "%ux%u: record %ux%u after rotate", w, h,
+              ow, oh);
+        CHECK(memcmp(buf, want, size) == 0,
+              "%ux%u mode %d: picture differs from the reference", w, h,
+              cases[i].mode);
+        /* the record now has the rotated size: the next frame of the
+         * buffer is rotated again (it holds a new capture on a device) */
+        memcpy(buf, orig, size);
+        openimp_fs_rotate_capture(2, record);
+        CHECK(memcmp(buf, want, size) == 0, "%ux%u: second frame", w, h);
+        /* a too small buffer is left alone */
+        memcpy(buf, orig, size);
+        memcpy(record + 0x08, &w, 4);
+        memcpy(record + 0x0c, &h, 4);
+        k = size - 1;
+        memcpy(record + 0x14, &k, 4);
+        openimp_fs_rotate_capture(2, record);
+        CHECK(memcmp(buf, orig, size) == 0, "%ux%u: short buffer touched",
+              w, h);
+        munmap(buf, size);
+        free(orig);
+        free(want);
+    }
+    CHECK(IMP_FrameSource_SetChnRotate(2, 0, 0, 0) == 0, "rot off");
+    openimp_fs_rotate_capture(2, record);   /* frees the scratch */
+
+    /* running channel: the consumers get the portrait record (the
+     * puller keeps channel 0 delivering) */
+    CHECK(IMP_FrameSource_SetChnRotate(0, NV12_ROT_90_CW, 640, 368) == 0,
+          "sub stream rotate");
+    CHECK(IMP_FrameSource_CreateChn(0, &sub_attr) == 0, "create 0");
+    __atomic_store_n(&consumer_width, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&puller_stop, 0, __ATOMIC_RELAXED);
+    pthread_create(&thread, NULL, puller, NULL);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable 0");
+    for (waited = 0; waited < 2000 &&
+         !__atomic_load_n(&consumer_width, __ATOMIC_RELAXED); waited++)
+        sleep_ms(1);
+    CHECK(__atomic_load_n(&consumer_width, __ATOMIC_RELAXED) == 368 &&
+          __atomic_load_n(&consumer_height, __ATOMIC_RELAXED) == 640,
+          "consumer saw %ux%u, want 368x640",
+          __atomic_load_n(&consumer_width, __ATOMIC_RELAXED),
+          __atomic_load_n(&consumer_height, __ATOMIC_RELAXED));
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable 0");
+    __atomic_store_n(&puller_stop, 1, __ATOMIC_RELAXED);
+    pthread_join(thread, NULL);
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy 0");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 0, 0, 0) == 0, "rot off 0");
+    check_clean("rotate");
+}
+#else
+/* T23 rotates in the caller (unbound YuvEncode): SetChnRotate refuses. */
+static void test_rotate(void)
+{
+    CHECK(IMP_FrameSource_SetChnRotate(1, 2, 640, 368) == -1, "T23 refuses");
+    CHECK(IMP_FrameSource_SetChnRotate(1, 0, 640, 368) == 0, "T23 rot 0");
+}
+#endif
+
 int main(void)
 {
     report = fdopen(dup(2), "w");
@@ -823,6 +986,7 @@ int main(void)
     RUN(depth_during_disable);
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
+    RUN(rotate);
     if (failures) {
         fprintf(report, "fs_lifecycle_test: %d failure(s)\n", failures);
         return 1;

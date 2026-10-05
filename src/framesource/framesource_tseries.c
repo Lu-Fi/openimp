@@ -1733,7 +1733,14 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
+/* Software 90/270 rotation of a FrameSource channel: T31 (vendor
+ * SetChnRotate) and the T20/T21 userspace (T10, T20, T21; OpenIMP only,
+ * the vendor T20/T21 libimp has no rotation). */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T21)
+#define FS_SW_ROTATE 1
+#endif
+
+#if defined(FS_SW_ROTATE)
 static void fs_rotate_release(int chn);
 #endif
 
@@ -1776,7 +1783,7 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     *(int32_t *)((char *)gFrameSource + 0x14) -= 1;
     g_fs_ctx[chnNum].created = 0;
     FS_FLAG_STORE(g_fs_ctx[chnNum].running, 0);
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
     fs_rotate_release(chnNum);
 #endif
     pthread_mutex_unlock(&g_fs_lock);
@@ -2557,7 +2564,7 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
     memcpy(out_buffer, src, expected);
     info->width = width;
     info->height = height;
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
     /* A rotated channel (SetChnRotate) delivers the rotated size. */
     memcpy(&info->width, (const uint8_t *)frame + 0x08, sizeof(info->width));
     memcpy(&info->height, (const uint8_t *)frame + 0x0c, sizeof(info->height));
@@ -2585,7 +2592,7 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
 /* ---------------------------------------------------------------------
  * Channel rotation (HLIL 0xa3a90 IMP_FrameSource_SetChnRotate, rotate step
  * of on_framesource_group_data_update at 0x9aa5c; docs/T31_ROTATE.md).
@@ -2600,6 +2607,14 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
  * buffer. The capture record keeps the landscape size in the vendor
  * library; here it is updated to the rotated size so consumers that read
  * the record (JPEG copy, OSD, IVS) see the geometry they get.
+ *
+ * T10/T20/T21 (OpenIMP extension, docs/T31_ROTATE.md "T10/T20/T21"): the
+ * same path. The Helix/NVPU encoder takes the picture size from the frame
+ * record and reads NV12 with pitch = width and the chroma plane after
+ * ALIGN16(height) luma lines, which is the nv12_rotate layout when both
+ * sides are multiples of 16, so SetChnRotate asks for that. The CPU is
+ * slower than T31's, so the picture size is capped (FS_ROT_T21_MAX_PIXELS,
+ * a sub stream); a main stream stays unrotated and SetChnRotate fails.
  * ------------------------------------------------------------------- */
 #include "framesource/nv12_rotate.h"
 #include "dma_alloc.h"
@@ -2609,7 +2624,9 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
 #define FS_FRAME_PIXFMT      0x10
 #define FS_FRAME_SIZE        0x14
 #define FS_FRAME_VIRT        0x1c
+#if defined(PLATFORM_T31)
 #define FS_FRAME_ROTATE_FLAG 0x28   /* IMPFrameInfo.rotate_osdflag */
+#endif
 #define FS_FOURCC_NV12       0x3231564eu
 #define FS_FOURCC_NV21       0x3132564eu
 
@@ -2748,7 +2765,11 @@ void openimp_fs_rotate_capture(int chn, void *frame)
 
     memcpy(f + FS_FRAME_WIDTH, &ow, 4);
     memcpy(f + FS_FRAME_HEIGHT, &oh, 4);
+#if defined(FS_FRAME_ROTATE_FLAG)
     memcpy(f + FS_FRAME_ROTATE_FLAG, &flag, 4);
+#else
+    (void)flag;   /* the T21 record has no rotate_osdflag */
+#endif
 
     if (t0) {
         uint32_t dt = (uint32_t)(fs_rotate_now_us() - t0);
@@ -2772,6 +2793,29 @@ void openimp_fs_rotate_capture(int chn, void *frame)
  * called before the channel is created, with the encoder channel set to
  * the rotated size. Here it also takes effect on a running channel from
  * its next frame. */
+#if defined(PLATFORM_T21)
+/* Largest rotated picture on T10/T20/T21: 704x576 (D1). T31 rotates
+ * 1280x704 in ~9 ms on 1.5 GHz; the ~1 GHz T10/T20/T21 cores with slower
+ * DDR need about 15-20 ms per megapixel, so a 720p main stream would cost
+ * ~25 % CPU at 15 fps and 1080p ~50-60 %. OPENIMP_FS_ROTATE_MAX_PIXELS
+ * overrides the cap (tests only). */
+#define FS_ROT_T21_MAX_PIXELS (704u * 576u)
+
+static uint32_t fs_rotate_max_pixels(void)
+{
+    static uint32_t max_pixels;
+
+    if (!max_pixels) {
+        const char *e = getenv("OPENIMP_FS_ROTATE_MAX_PIXELS");
+        unsigned long v = e && e[0] ? strtoul(e, NULL, 0) : 0;
+
+        max_pixels = v && v <= 4096ul * 4096ul ? (uint32_t)v
+                                               : FS_ROT_T21_MAX_PIXELS;
+    }
+    return max_pixels;
+}
+#endif
+
 int IMP_FrameSource_SetChnRotate(int chnNum, int rotTo90, int width, int height)
 {
     FsRotate *r;
@@ -2792,6 +2836,21 @@ int IMP_FrameSource_SetChnRotate(int chnNum, int rotTo90, int width, int height)
                 chnNum, mode, width, height);
         return -1;
     }
+#if defined(PLATFORM_T21)
+    if ((width | height) & 15) {
+        fprintf(stderr, "[FS] SetChnRotate ch%d: %dx%d not rotated: width "
+                "and height must be multiples of 16 on this SoC\n",
+                chnNum, width, height);
+        return -1;
+    }
+    if ((uint32_t)width * (uint32_t)height > fs_rotate_max_pixels()) {
+        fprintf(stderr, "[FS] SetChnRotate ch%d: %dx%d not rotated: software "
+                "rotation is limited to %u pixels (sub stream) on this SoC "
+                "for CPU load; the stream stays unrotated\n",
+                chnNum, width, height, fs_rotate_max_pixels());
+        return -1;
+    }
+#endif
     __atomic_store_n(&r->cfg, FS_ROT_CFG(mode, width, height),
                      __ATOMIC_RELEASE);
     return 0;
