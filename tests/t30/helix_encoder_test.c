@@ -31,6 +31,7 @@
 
 #include "dma_alloc.h"
 #include "t30/t30_helix_encoder.h"
+#include "t30/h264enc/common.h"
 #if defined(PLATFORM_T20)
 #include "rc_t20/rc_t20.h"
 #include "rc_t10/rc_t10.h"
@@ -275,6 +276,12 @@ int __wrap_close(int fd)
     return fd == FAKE_FD ? 0 : __real_close(fd);
 }
 
+/* EFE ROI (0x40044..0x40068) and chroma QP offset (0x40120) words of the
+ * last command list; list_chroma_seen: 0x40120 was programmed */
+static uint32_t list_roi[10];
+static uint32_t list_chroma;
+static int list_chroma_seen;
+
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
 /* 0x40074 and 0x40078..0x40090 of the last command list */
 static uint32_t list_mbrc[8];
@@ -355,11 +362,22 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         size_t i;
 
         run_raw_c = 0;
+        memset(list_roi, 0xa5, sizeof(list_roi));
+        list_chroma = 0;
+        list_chroma_seen = 0;
         for (i = 0; w && i + 1u < list->size / 4u; i += 2u) {
-            if ((w[i + 1u] & 0xffffcu) == 0x40014u) {
+            uint32_t reg = w[i + 1u] & 0xffffcu;
+
+            if (reg == 0x40014u && !run_raw_c)
                 run_raw_c = w[i];
-                break;
+            else if (reg >= 0x40044u && reg <= 0x40068u)
+                list_roi[(reg - 0x40044u) / 4u] = w[i];
+            else if (reg == 0x40120u) {
+                list_chroma = w[i];
+                list_chroma_seen = 1;
             }
+            if (w[i + 1u] & 0x40000000u)
+                break;          /* terminal command */
         }
     }
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
@@ -510,6 +528,18 @@ static int encode(T30HelixEncoder *encoder, PictureInfo *info)
         return -1;
     }
     assert(stream && stream->virt_addr && !stream->phys_addr);
+    {
+        /* HELIX_TEST_DUMP=file: append the access units (parameter sets
+         * can be checked with ffmpeg -bsf:v trace_headers) */
+        const char *dump = getenv("HELIX_TEST_DUMP");
+        FILE *f = dump ? fopen(dump, "ab") : NULL;
+
+        if (f) {
+            (void)fwrite((const void *)(uintptr_t)stream->virt_addr, 1,
+                         stream->length, f);
+            fclose(f);
+        }
+    }
     split_access_unit((const uint8_t *)(uintptr_t)stream->virt_addr,
                       stream->length);
     info->idr = stream->frame_type == HW_FRAME_TYPE_I;
@@ -1413,6 +1443,194 @@ static void test_eprc_mbrc(void)
 }
 #endif
 
+/* the chroma_qp_index_offset (and T21 second_chroma_qp_index_offset) of
+ * the PPS of the last IDR access unit (au.rbsp[1]) */
+static int32_t pps_chroma_offset(int32_t *second)
+{
+    Bits bits;
+    int32_t offset;
+
+    assert(au.types[1] == 8);
+    bits.data = au.rbsp[1];
+    bits.offset = 0;
+    assert(bits_ue(&bits) == 0u && bits_ue(&bits) == 0u);
+    (void)bits_read(&bits, 2);          /* cabac, bottom_field_pic_order */
+    assert(bits_ue(&bits) == 0u);       /* one slice group */
+    (void)bits_ue(&bits);
+    (void)bits_ue(&bits);
+    (void)bits_read(&bits, 3);          /* weighted prediction */
+    (void)bits_se(&bits);               /* pic_init_qp */
+    (void)bits_se(&bits);               /* pic_init_qs */
+    offset = bits_se(&bits);
+    *second = offset;
+    (void)bits_read(&bits, 3);
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    {
+        unsigned int list, j;
+
+        assert(bits_read(&bits, 1) == 1u);  /* transform_8x8_mode */
+        assert(bits_read(&bits, 1) == 1u);  /* pic_scaling_matrix_present */
+        for (list = 0; list < 8u; list++) {
+            if (!bits_read(&bits, 1))
+                continue;
+            {
+                int32_t last = 8, next = 8;
+
+                for (j = 0; j < (list < 6u ? 16u : 64u); j++) {
+                    if (next)
+                        next = (last + bits_se(&bits) + 256) % 256;
+                    last = next ? next : last;
+                }
+            }
+        }
+        *second = bits_se(&bits);
+    }
+#endif
+    /* rbsp_stop_one_bit, then zeros */
+    assert(bits_read(&bits, 1) == 1u);
+    while (bits.offset % 8u)
+        assert(bits_read(&bits, 1) == 0u);
+    assert(bits.offset / 8u == au.rbsp_length[1]);
+    return offset;
+}
+
+/* IMP_Encoder_SetChnROI (OpenIMP_T30_HelixSetRoi) and
+ * IMP_Encoder_SetH264TransCfg (HWEncoderParams.chroma_qp_offset): the OEM
+ * EFE ROI words in every command list (T10/T20; T21 only with
+ * OPENIMP_T21_ROI=1, T30: none), the chroma QP offset in the PPS and
+ * 0x40120 from the next IDR on (T10: neither) */
+static void test_roi_chroma(int t10)
+{
+    static const uint8_t roi[8][7] = {
+        {1, 0, 20, 2, 5, 3, 6},         /* absolute QP 20 */
+        {1, 1, (uint8_t)-5, 0, 39, 0, 1}, /* relative -5 */
+        {0},
+        {1, 1, 8, 10, 12, 20, 22},
+        {0},
+        {0, 1, 3, 1, 2, 3, 4},          /* disabled, rectangle kept */
+        {0},
+        {1, 0, 51, 7, 7, 9, 9},
+    };
+    static const uint8_t none[8][7];
+    T30HelixEncoder *encoder;
+    HWEncoderParams p;
+    PictureInfo info;
+    int32_t second;
+    int roi_hw, chroma_hw;
+    unsigned int i;
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    unsetenv("OPENIMP_T21_ROI");
+#endif
+    encoder = create(640, 360, 25, 4);
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 4;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+#if defined(PLATFORM_T20)
+    roi_hw = 1;
+    chroma_hw = !t10;
+#elif defined(PLATFORM_T21)
+    roi_hw = 0;
+    chroma_hw = 1;
+#else
+    roi_hw = 0;
+    chroma_hw = 0;
+#endif
+    (void)t10;
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == 0 && second == 0);
+    for (i = 0; i < 10u; i++)
+        assert(list_roi[i] == 0u);
+    assert(!list_chroma_seen || list_chroma == 0u);
+    assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
+    p.chroma_qp_offset = -3;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    /* ROI from the next picture; the chroma offset waits for the IDR */
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    if (roi_hw) {
+        /* qp << 2 | rel << 1 | en per region, 6-bit QP field */
+        assert(list_roi[0] == (0x51u | (0xecu | 3u)
+                               << 8 | 0x23u << 24));
+        assert(list_roi[1] == (0x0eu << 8 | 0xcdu << 24));
+        assert(list_roi[2] == 0x06030502u && list_roi[3] == 0x01002700u);
+        assert(list_roi[4] == 0u && list_roi[5] == 0x16140c0au);
+        assert(list_roi[6] == 0u && list_roi[7] == 0x04030201u);
+        assert(list_roi[8] == 0u && list_roi[9] == 0x09090707u);
+    } else {
+        for (i = 0; i < 10u; i++)
+            assert(list_roi[i] == 0u);
+    }
+    assert(!list_chroma_seen || list_chroma == 0u);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == (chroma_hw ? -3 : 0));
+    assert(second == (chroma_hw ? -3 : 0));
+    assert(chroma_hw ? list_chroma_seen && list_chroma == 0x1du
+                     : !list_chroma_seen || list_chroma == 0u);
+    /* back to 0 and no regions */
+    assert(OpenIMP_T30_HelixSetRoi(encoder, none) == 0);
+    p.chroma_qp_offset = 12;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 4u; i++) {
+        assert(encode(encoder, &info) == 0 && !info.idr);
+        assert(list_roi[0] == 0u && list_roi[2] == 0u);
+        assert(chroma_hw ? list_chroma == 0x1du : list_chroma == 0u);
+    }
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == (chroma_hw ? 12 : 0) &&
+           second == (chroma_hw ? 12 : 0));
+    assert(chroma_hw ? list_chroma == 0x0cu : list_chroma == 0u);
+    p.chroma_qp_offset = 0;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 0; i < 4u; i++)
+        assert(encode(encoder, &info) == 0);
+    assert(info.idr && pps_chroma_offset(&second) == 0 && second == 0);
+    OpenIMP_T30_HelixDestroy(encoder);
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    /* OPENIMP_T21_ROI=1: the regions reach the T21 command list */
+    setenv("OPENIMP_T21_ROI", "1", 1);
+    encoder = create(640, 360, 25, 4);
+    assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(list_roi[2] == 0x06030502u && list_roi[9] == 0x09090707u &&
+           (list_roi[0] & 0xffu) == 0x51u);
+    OpenIMP_T30_HelixDestroy(encoder);
+    unsetenv("OPENIMP_T21_ROI");
+#endif
+}
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+int OpenIMP_T21_PpsWithChromaOffset(bs_t *bits, int offset);
+
+/* the rewritten T21 PPS with offset 0 is the stock one bit for bit */
+static void test_t21_pps_rewrite(void)
+{
+    static const uint8_t stock[] = {
+        0xee, 0x3c, 0xe1, 0x00, 0x42, 0x42, 0x00, 0x84, 0x84, 0x04, 0x4c,
+        0x52, 0x1b, 0x93, 0xc5, 0x7c, 0x9f, 0x93, 0xf9, 0x3f, 0x27, 0xc9,
+        0xe6, 0xe4, 0xc9, 0x24, 0x2c, 0x22, 0x42, 0x90, 0x9c, 0x9e, 0x4f,
+        0xaf, 0xc9, 0xfd, 0x7e, 0x4f, 0xaf, 0x27, 0x26, 0xa4, 0xc0,
+    };
+    uint8_t out[128];
+    bs_t bits;
+
+    memset(out, 0, sizeof(out));
+    bs_init(&bits, out, sizeof(out));
+    assert(OpenIMP_T21_PpsWithChromaOffset(&bits, 0) == 0);
+    assert(bs_pos(&bits) == 8 * (int)sizeof(stock));
+    assert(!memcmp(out, stock, sizeof(stock)));
+}
+#endif
+
 int main(void)
 {
     unsigned int i;
@@ -1428,7 +1646,9 @@ int main(void)
     test_bottom_padding();
     test_unaligned_width_rejected();
     test_color2grey();
+    test_roi_chroma(0);
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    test_t21_pps_rewrite();
     test_eprc();
     test_eprc_runtime_hskip();
     test_eprc_mbrc();
@@ -1437,6 +1657,9 @@ int main(void)
     test_t20_rate_control();
     test_t10_rate_control();
     test_t20_superframe();
+    setenv("OPENIMP_HELIX_SOC", "t10", 1);
+    test_roi_chroma(1);
+    unsetenv("OPENIMP_HELIX_SOC");
 #endif
     /* nothing leaks; the shared bitstream buffer is kept for the process */
     for (i = 0; i < 16u; i++)

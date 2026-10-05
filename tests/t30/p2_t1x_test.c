@@ -6,8 +6,11 @@
  *  - SuperFrameCfg: T20 hands NONE/REENCODE and the thresholds to the
  *    codec, refuses DISCARD and reports the OEM defaults before a Set;
  *    T21 accepts NONE only;
- *  - ROI, Denoise, H264TransCfg, QpgMode: settings the encoder cannot
- *    apply return -1, the ones it already follows are stored.
+ *  - ROI: the OEM i264e table entry (sorted corners / 16) reaches the
+ *    codec, GetChnROI returns it x16; H264TransCfg: the chroma QP offset
+ *    reaches the codec (-12..12);
+ *  - Denoise, QpgMode: settings the encoder cannot apply return -1, the
+ *    ones it already follows are stored.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -84,6 +87,12 @@ int AL_Codec_Encode_SetDefaultParam(void *p) { (void)p; return 0; }
 int AL_Codec_Encode_SetSameSceneGops(void *c, uint32_t g) { (void)c; (void)g; return 0; }
 int AL_Codec_Encode_SetMbRC(void *c, int e) { (void)c; mbrc_calls++; mbrc_value = e; return 0; }
 int AL_Codec_Encode_SetColor2Grey(void *c, int e) { (void)c; c2g_calls++; c2g_value = e; return 0; }
+static uint8_t roi_entry[8][7];
+static int roi_calls, chroma_calls, chroma_value;
+int AL_Codec_Encode_SetRoi(void *c, uint32_t i, const uint8_t e[7])
+{ (void)c; if (i >= 8u) return -1; roi_calls++; memcpy(roi_entry[i], e, 7); return 0; }
+int AL_Codec_Encode_SetChromaQpOffset(void *c, int o)
+{ (void)c; chroma_calls++; chroma_value = o; return 0; }
 int AL_Codec_Encode_SetSuperFrame(void *c, uint32_t m, uint32_t i, uint32_t p)
 { (void)c; sf_calls++; sf_mode = m; sf_i = i; sf_p = p; return 0; }
 
@@ -161,13 +170,33 @@ int main(void)
     CHECK(sf_calls == 0);
 #endif
 
-    /* ROI: a disabled region is stored, an enabled one refused */
+    /* ROI: the OEM table entry {en, rel, (s8) qp, x0, x1, y0, y1} with the
+     * corners (+12/+20 x, +16/+24 y: the OEM IMPRect p0/p1) sorted and
+     * divided by 16 */
     memset(&roi, 0, sizeof(roi));
     roi.u32Index = 1;
-    CHECK(IMP_Encoder_SetChnROI(0, &roi) == 0);
+    CHECK(IMP_Encoder_SetChnROI(0, &roi) == 0 && roi_calls == 1);
     roi.bEnable = 1;
+    roi.bRelatedQp = 1;
     roi.s32Qp = -4;
-    CHECK(IMP_Encoder_SetChnROI(0, &roi) == -1);
+    roi.rect.x = 300;                   /* p0.x */
+    roi.rect.y = 199;                   /* p0.y */
+    roi.rect.width = 40;                /* p1.x: smaller, swapped */
+    roi.rect.height = 359;              /* p1.y */
+    CHECK(IMP_Encoder_SetChnROI(0, &roi) == 0 && roi_calls == 2);
+    CHECK(roi_entry[1][0] == 1 && roi_entry[1][1] == 1 &&
+          roi_entry[1][2] == 0xfc && roi_entry[1][3] == 2 &&
+          roi_entry[1][4] == 18 && roi_entry[1][5] == 12 &&
+          roi_entry[1][6] == 22);
+    memset(&roi, 0x5a, sizeof(roi));
+    roi.u32Index = 1;
+    CHECK(IMP_Encoder_GetChnROI(0, &roi) == 0);
+    CHECK(roi.u32Index == 1 && roi.bEnable && roi.bRelatedQp &&
+          roi.s32Qp == -4 && roi.rect.x == 32 && roi.rect.width == 288 &&
+          roi.rect.y == 192 && roi.rect.height == 352);
+    roi.u32Index = 8;
+    CHECK(IMP_Encoder_SetChnROI(0, &roi) == -1 && roi_calls == 2);
+    CHECK(IMP_Encoder_GetChnROI(0, &roi) == -1);
 
     /* Denoise: no effect on a channel created without it; refused where
      * it would act */
@@ -182,11 +211,17 @@ int main(void)
     memset(&dn, 0, sizeof(dn));
     CHECK(IMP_Encoder_GetChnDenoise(1, &dn) == 0 && dn.dnType == 0);
 
-    /* H264TransCfg: the PPS offset 0 only */
+    /* H264TransCfg: the chroma QP offset (-12..12) reaches the codec */
+    memset(&tr, 0, sizeof(tr));
     tr.chroma_qp_index_offset = 0;
-    CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == 0);
-    tr.chroma_qp_index_offset = 3;
-    CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == -1);
+    CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == 0 && chroma_value == 0);
+    tr.chroma_qp_index_offset = -3;
+    CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == 0 && chroma_value == -3);
+    memset(&tr, 0, sizeof(tr));
+    CHECK(IMP_Encoder_GetH264TransCfg(0, &tr) == 0 &&
+          tr.chroma_qp_index_offset == -3);
+    tr.chroma_qp_index_offset = 13;
+    CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == -1 && chroma_calls == 2);
 
     /* QpgMode: CLOSE only */
     qpg = ENC_QPG_CLOSE;

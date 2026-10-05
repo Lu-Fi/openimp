@@ -100,7 +100,10 @@ typedef struct {
     uint32_t super_mode;
     uint32_t super_i_bits;
     uint32_t super_p_bits;
-    uint32_t reserved[3];       /* 0x64-0x6f: Reserved */
+    /* 0x64: T20/T21 IMP_Encoder_SetH264TransCfg chroma_qp_index_offset
+     * (-12..12): PPS and the EFE chroma QP offset from the next IDR on */
+    int32_t chroma_qp_offset;
+    uint32_t reserved[2];       /* 0x68-0x6f: Reserved */
 } HWEncoderParams;
 
 #define HW_MBRC_DEFAULT 0u

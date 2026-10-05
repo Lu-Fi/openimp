@@ -25,6 +25,7 @@
 #include "p2_hevc_policy.h"
 #if defined(PLATFORM_T41) || defined(PLATFORM_T31) || defined(PLATFORM_T30)
 #include "dma_alloc.h"
+#include "t30/helix_roi.h"
 #endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 #include "t23/openimp_t23_persist.h"
@@ -1044,6 +1045,9 @@ extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
 extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
 extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
+extern int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                                  const uint8_t entry[7]);
+extern int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
 #endif
 #if defined(PLATFORM_T20)
 /* HW_SUPERFRM_NONE / HW_SUPERFRM_REENCODE in hw_encoder.h */
@@ -3597,11 +3601,48 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
 #if !defined(PLATFORM_T23)
-    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no ROI QP (the OEM
-     * i264e_reconfig_roi_set feeds its macroblock QP); an enabled region
-     * is refused instead of being stored without effect */
+    /* T20/T21/T10 (OEM 3.12.0 0x4899c, 1.0.33 0x467d0): an i264e ROI
+     * table entry {enable, relative, (s8) QP, the corners rect +12/+20
+     * (x of p0/p1) and +16/+24 (y) sorted and divided by 16}, which
+     * i264e_reconfig_roi_set adopts with the next picture.  The T10/T20
+     * command list programs it into the EFE ROI registers (0x40044..);
+     * the T21 libimp never does, OpenIMP only with OPENIMP_T21_ROI=1.
+     * Non-H.264 channels: nothing, success (T21 OEM). */
+    if (ch->codec_type != IMP_ENC_TYPE_AVC)
+        return 0;
+#if !defined(PLATFORM_T21)
+    /* T30: its command list's ROI registers are not known; an enabled
+     * region is refused instead of being stored without effect */
     if (config->bEnable)
         return -1;
+#endif
+    {
+        uint8_t entry[7];
+        IMPEncoderROICfg stored;
+
+        Helix_H264_RoiEntry(config->bEnable, config->bRelatedQp,
+                            config->s32Qp, config->rect.x, config->rect.y,
+                            config->rect.width, config->rect.height, entry);
+        /* what GetChnROI returns: the table entry, x16 */
+        memset(&stored, 0, sizeof(stored));
+        stored.u32Index = config->u32Index;
+        stored.bEnable = entry[0] != 0;
+        stored.bRelatedQp = entry[1] != 0;
+        stored.s32Qp = (int8_t)entry[2];
+        stored.rect.x = entry[3] * 16;
+        stored.rect.y = entry[5] * 16;
+        stored.rect.width = entry[4] * 16;      /* p1.x */
+        stored.rect.height = entry[6] * 16;     /* p1.y */
+        pthread_mutex_lock(&ch->lock);
+        if (AL_Codec_Encode_SetRoi(ch->codec, config->u32Index,
+                                   entry) != 0) {
+            pthread_mutex_unlock(&ch->lock);
+            return -1;
+        }
+        ch->roi[config->u32Index] = stored;
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
 #endif
     pthread_mutex_lock(&ch->lock);
     ch->roi[config->u32Index] = *config;
@@ -3838,14 +3879,24 @@ int IMP_Encoder_SetH264TransCfg(int channel,
     if (!ch || !config || config->chroma_qp_index_offset < -12 ||
         config->chroma_qp_index_offset > 12)
         return -1;
-#if !defined(PLATFORM_T23)
-    /* T20/T21/T10: the Helix/NVPU command list of OpenIMP has no chroma QP
-     * offset and the PPS carries 0; another offset is refused instead of
-     * being stored without effect (it may not go into the PPS alone) */
+#if !defined(PLATFORM_T23) && !defined(PLATFORM_T21)
+    /* T30: the chroma QP offset register is not known (the PPS alone
+     * would shift the colours) */
     if (config->chroma_qp_index_offset != 0)
         return -1;
 #endif
     pthread_mutex_lock(&ch->lock);
+#if !defined(PLATFORM_T23)
+    /* T20/T21 (OEM i264e_reconfig_trans_set): from the next IDR on in the
+     * PPS and the command list's chroma QP offset (0x40120) together; the
+     * T10 has no such register and keeps 0 */
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC &&
+        AL_Codec_Encode_SetChromaQpOffset(
+            ch->codec, config->chroma_qp_index_offset) != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+#endif
     ch->h264_transform = *config;
 #if defined(PLATFORM_T23)
     if (openimp_t23_enc_push_h264trans(ch->codec, ch->codec_type,

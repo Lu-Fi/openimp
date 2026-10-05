@@ -7164,6 +7164,7 @@ struct AL_CodecEncode {
     int jpeg_skip_allowed;
     int jpeg_skipped;
 #if defined(PLATFORM_T30)
+    uint8_t helix_roi[8][7];       /* AL_Codec_Encode_SetRoi (codec_roi_lock) */
     T30HelixEncoder *t30_helix;    /* Native T30 /dev/soc_vpu encoder */
     uint32_t t30_helix_width;      /* picture size t30_helix was made for */
     uint32_t t30_helix_height;
@@ -7946,6 +7947,40 @@ int AL_Codec_Encode_SetColor2Grey(void *codec, int enable)
     if (codec == NULL)
         return -1;
     ((AL_CodecEncode *)codec)->hw_params.color2grey = enable ? 1u : 0u;
+    return 0;
+}
+
+/* The ROI tables of all channels: set on the caller's thread, copied to
+ * the encoder on the encoding thread between pictures (codec_t30_roi). */
+#if defined(PLATFORM_T30)
+static pthread_mutex_t codec_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
+int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                           const uint8_t entry[7])
+{
+#if defined(PLATFORM_T30)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (enc == NULL || entry == NULL || index >= 8u)
+        return -1;
+    pthread_mutex_lock(&codec_roi_lock);
+    memcpy(enc->helix_roi[index], entry, sizeof(enc->helix_roi[index]));
+    pthread_mutex_unlock(&codec_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)index;
+    (void)entry;
+    return -1;
+#endif
+}
+
+int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset)
+{
+    if (codec == NULL || offset < -12 || offset > 12)
+        return -1;
+    ((AL_CodecEncode *)codec)->hw_params.chroma_qp_offset = offset;
     return 0;
 }
 
@@ -10038,8 +10073,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             /* Setters run on the caller's thread and only touch hw_params;
              * hand a snapshot to the encoder here, between pictures. */
             HWEncoderParams current = enc->hw_params;
+            uint8_t roi[8][7];
 
             (void)OpenIMP_T30_HelixUpdateParams(enc->t30_helix, &current);
+            pthread_mutex_lock(&codec_roi_lock);
+            memcpy(roi, enc->helix_roi, sizeof(roi));
+            pthread_mutex_unlock(&codec_roi_lock);
+            (void)OpenIMP_T30_HelixSetRoi(enc->t30_helix,
+                                          (const uint8_t (*)[7])roi);
         }
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
