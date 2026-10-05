@@ -311,13 +311,16 @@ static void t31_osd_draw_cpu(struct osd_canvas *cv, const struct t31_osd_region 
  * snapshot without overlay.  OPENIMP_OSD_RETRY=0 disables, =1 forces on;
  * default on for T21 only.  OPENIMP_OSD_RETRY_IDLE_MS (1000) is the gap.
  */
-#define OSD_RETRY_WINDOW 3
+#define OSD_RETRY_WINDOW_MS 3000   /* verify this long after an idle gap */
 #define OSD_RETRY_MAX    3
 
 static int osd_retry_cfg = -1;          /* -1 unread, 0 off, 1 on */
 static int osd_retry_idle_ms = 1000;
-static int osd_retry_left;
-static double osd_retry_last;
+static int osd_retry_active;
+static int osd_retry_win_ms = OSD_RETRY_WINDOW_MS;
+static double osd_retry_last, osd_retry_open;
+static unsigned int osd_retry_ops;
+static int osd_retry_done;     /* a probe saw the IPU write: window closed */
 
 struct osd_probe {
     const uint8_t *row;
@@ -346,13 +349,20 @@ static void osd_retry_tick(void)
 #endif
         if (g && *g)
             osd_retry_idle_ms = atoi(g);
+        g = getenv("OPENIMP_OSD_RETRY_WINDOW_MS");
+        if (g && *g)
+            osd_retry_win_ms = atoi(g);
     }
     if (!osd_retry_cfg)
         return;
     now = osd_mono_now();
-    if (osd_retry_last == 0.0 || (now - osd_retry_last) * 1000.0 >= osd_retry_idle_ms)
-        osd_retry_left = OSD_RETRY_WINDOW;
+    if (osd_retry_last == 0.0 || (now - osd_retry_last) * 1000.0 >= osd_retry_idle_ms) {
+        osd_retry_open = now;
+        osd_retry_ops = 0;
+        osd_retry_done = 0;
+    }
     osd_retry_last = now;
+    osd_retry_active = !osd_retry_done && (now - osd_retry_open) * 1000.0 < osd_retry_win_ms;
 }
 
 static uint32_t osd_probe_sum(const uint8_t *row, uint32_t n)
@@ -534,7 +544,7 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     }
     if (ipu_enabled && count > 0)
         osd_retry_tick();
-    if (ipu_enabled && count > 0 && osd_retry_left > 0 && virt) {
+    if (ipu_enabled && count > 0 && osd_retry_active && virt) {
         /* the IPU takes the frame record's phys as bg; the probe reads virt.
          * If the two do not map the same memory the blend lands elsewhere:
          * trust the virt mapping (what the CPU/JPEG copy reads). */
@@ -596,12 +606,13 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
         }
         {
             struct osd_probe pr;
-            int probing = osd_retry_left > 0 &&
+            int probing = osd_retry_active &&
                           osd_probe_begin(&pr, &osd_regions[order[i]], virt,
                                           width, height);
             int tries = 0;
 
             ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+            osd_retry_ops++;
             while (probing && ipu_ret >= 0 && !osd_probe_changed(&pr)) {
                 static unsigned int retry_logs;
 
@@ -614,7 +625,21 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 }
                 if (retry_logs++ < 8u)
                     IMP_LOG_INFO("OSD", "IPU blend without effect, retry %d", tries);
+                usleep(10000);  /* failure looks time-based: space the retries */
                 ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+                osd_retry_ops++;
+            }
+            if (probing && tries <= OSD_RETRY_MAX && ipu_ret >= 0)
+                osd_retry_done = 1;
+            if (probing) {
+                static unsigned int pass_logs;
+
+                if (pass_logs++ < 40u)
+                    IMP_LOG_INFO("OSD", "probe grp %d +%.0f ms after wake, op #%u, "
+                                 "retries %d: %s", group,
+                                 (osd_mono_now() - osd_retry_open) * 1000.0,
+                                 osd_retry_ops, tries > OSD_RETRY_MAX ? OSD_RETRY_MAX : tries,
+                                 result < 0 ? "NO EFFECT" : "ok");
             }
         }
         if (ipu_ret < 0) {
@@ -637,8 +662,6 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             osd_ipu_errors = 0;
         }
     }
-    if (osd_retry_left > 0 && ipu_enabled && count > 0)
-        osd_retry_left--;
     for (i = 0; i < count; i++) {
         band_y0[i] = (uint32_t)osd_regions[order[i]].attr.rect.p0.y;
         band_y1[i] = (uint32_t)osd_regions[order[i]].attr.rect.p1.y + 1u;
