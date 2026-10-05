@@ -1,7 +1,9 @@
 /* Host tests for the AENC/ADEC built-in codecs and channel API
- * (src/audio, shared by T31 and T23). Built once as is (T31 behaviour:
- * G.726 at 16 kbit/s, frame time stamps) and once with -DPLATFORM_T23
- * (G.726 at 32 kbit/s, wall-clock time stamps) by tests/t23. */
+ * (src/audio, shared by all SoCs). Built once per platform behaviour:
+ * as is (T31: G.726 at 16 kbit/s, frame time stamps), -DPLATFORM_T20/T21
+ * (same as T31), -DPLATFORM_T23 and -DPLATFORM_T41 (G.726 at 32 kbit/s,
+ * wall-clock AENC time stamps) and -DPLATFORM_T40 (G.726 at 32 kbit/s,
+ * frame time stamps). */
 
 #define _GNU_SOURCE
 #include <math.h>
@@ -14,6 +16,31 @@
 #include <imp/imp_audio.h>
 
 #include "audio/openimp_audio_codec.h"
+
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#define EXPECT_G726_32K 1
+#else
+#define EXPECT_G726_32K 0
+#endif
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
+#define EXPECT_WALLCLOCK 1
+#else
+#define EXPECT_WALLCLOCK 0
+#endif
+
+#if defined(PLATFORM_T41)
+#define PLATFORM_NAME "T41"
+#elif defined(PLATFORM_T40)
+#define PLATFORM_NAME "T40"
+#elif defined(PLATFORM_T23)
+#define PLATFORM_NAME "T23"
+#elif defined(PLATFORM_T20)
+#define PLATFORM_NAME "T10/T20"
+#elif defined(PLATFORM_T21)
+#define PLATFORM_NAME "T21"
+#else
+#define PLATFORM_NAME "T31"
+#endif
 
 #define CHECK(condition)                                                      \
     do {                                                                      \
@@ -264,6 +291,115 @@ static void test_g726(void)
     CHECK(snr_db(pcm, back, 1600, 80) > 6.0);
 }
 
+/* ITU-T G.711 Tables 1a/1b and 2a/2b, built from the recommendation's
+ * segment definition (independently of src/audio): decoder output values
+ * for all 256 code words, scaled to 16 bits (A-law 13-bit << 3, u-law
+ * 14-bit << 2), and the decision intervals every 16-bit input must fall
+ * into. */
+static int itu_alaw_decode(int code)
+{
+    int x = code ^ 0x55;
+    int seg = (x >> 4) & 7;
+    int step = (x & 0x0f);
+    int mag = seg ? ((2 * step + 33) << (seg - 1)) : (2 * step + 1);
+
+    return (x & 0x80) ? mag * 8 : -mag * 8;
+}
+
+static int itu_ulaw_decode(int code)
+{
+    int x = ~code & 0xff;
+    int seg = (x >> 4) & 7;
+    int step = x & 0x0f;
+    int mag = (((2 * step + 33) << seg) - 33);
+
+    return (x & 0x80) ? -mag * 4 : mag * 4;
+}
+
+static void test_g711_tables(void)
+{
+    int code;
+    int x;
+
+    for (code = 0; code < 256; code++) {
+        CHECK(openimp_alaw2linear((uint8_t)code) == itu_alaw_decode(code));
+        CHECK(openimp_ulaw2linear((uint8_t)code) == itu_ulaw_decode(code));
+    }
+    /* table end points and the u-law zero codes */
+    CHECK(itu_alaw_decode(0xd5) == 8 && itu_alaw_decode(0x55) == -8);
+    CHECK(itu_alaw_decode(0xaa) == 32256);
+    CHECK(itu_ulaw_decode(0xff) == 0 && itu_ulaw_decode(0x7f) == 0);
+    CHECK(itu_ulaw_decode(0x80) == 32124);
+
+    /* every 16-bit input encodes to the interval it lies in: the
+     * reconstruction is within one quantization step (ITU interval width,
+     * truncation of the 13/14-bit input) and the coder is monotonic */
+    {
+        int prev_a = -40000;
+        int prev_u = -40000;
+
+        for (x = -32768; x <= 32767; x++) {
+            int a = openimp_alaw2linear(openimp_linear2alaw((int16_t)x));
+            int u = openimp_ulaw2linear(openimp_linear2ulaw((int16_t)x));
+            int ax = x < 0 ? -x : x;
+            int aseg = 0;
+            int useg = 0;
+
+            while (aseg < 7 && ax >= (256 << aseg))
+                aseg++;
+            while (useg < 7 && ax + 132 >= (264 << useg))
+                useg++;
+            CHECK(a >= prev_a && u >= prev_u);
+            CHECK(abs(a - x) <= (aseg ? (16 << aseg) : 16) + 8 ||
+                  ax > 32256);
+            CHECK(abs(u - x) <= (8 << useg) + 4 || ax > 32124);
+            prev_a = a;
+            prev_u = u;
+        }
+    }
+}
+
+/* PT_G726 through the channel API matches the codec run directly at the
+ * platform's vendor rate (and so the ffmpeg reference above). */
+static void test_g726_api_reference(void)
+{
+    IMPAudioEncChnAttr enc_attr;
+    IMPAudioFrame frame;
+    IMPAudioStream stream;
+    OpenIMPG726State ref;
+    int16_t pcm[160];
+    uint8_t expect[160];
+    int expect_len;
+    int round;
+
+    make_signal(pcm, 160);
+#if EXPECT_G726_32K
+    openimp_g726_32_init(&ref);
+#else
+    openimp_g726_16_init(&ref);
+#endif
+    memset(&enc_attr, 0, sizeof(enc_attr));
+    enc_attr.type = PT_G726;
+    enc_attr.bufSize = 2;
+    CHECK(IMP_AENC_CreateChn(4, &enc_attr) == 0);
+    memset(&frame, 0, sizeof(frame));
+    frame.bitwidth = AUDIO_BIT_WIDTH_16;
+    frame.soundmode = AUDIO_SOUND_MODE_MONO;
+    frame.virAddr = (uint32_t *)(void *)pcm;
+    frame.len = (int)sizeof(pcm);
+    /* the channel keeps predictor state across frames */
+    for (round = 0; round < 3; round++) {
+        expect_len = openimp_g726_encode(&ref, expect, pcm, 160);
+        CHECK(expect_len == (EXPECT_G726_32K ? 80 : 40));
+        CHECK(IMP_AENC_SendFrame(4, &frame) == 0);
+        CHECK(IMP_AENC_GetStream(4, &stream, BLOCK) == 0);
+        CHECK(stream.len == expect_len);
+        CHECK(memcmp(stream.stream, expect, (size_t)expect_len) == 0);
+        CHECK(IMP_AENC_ReleaseStream(4, &stream) == 0);
+    }
+    CHECK(IMP_AENC_DestroyChn(4) == 0);
+}
+
 static int user_open_calls;
 static int user_close_calls;
 
@@ -355,8 +491,8 @@ static void test_api(void)
         int64_t before = wall_us();
 
         CHECK(IMP_AENC_GetStream(0, &stream, BLOCK) == 0);
-#if defined(PLATFORM_T23)
-        /* T23 OEM: GetStream stamps the stream with gettimeofday() */
+#if EXPECT_WALLCLOCK
+        /* T23/T41: GetStream stamps the stream with gettimeofday() */
         CHECK(stream.timeStamp >= before && stream.timeStamp <= wall_us());
 #else
         (void)before;
@@ -379,6 +515,9 @@ static void test_api(void)
     CHECK(IMP_ADEC_PollingStream(1, 10) == 0);
     CHECK(IMP_ADEC_GetStream(1, &decoded, BLOCK) == 0);
     CHECK(decoded.len == 320);
+    /* ADEC never stamps: the input stream's time stamp and sequence */
+    CHECK(decoded.timeStamp == stream.timeStamp);
+    CHECK(decoded.seq == stream.seq);
     CHECK(snr_db(pcm, (const int16_t *)(const void *)decoded.stream, 160, 0) >
           30.0);
     CHECK(IMP_ADEC_ReleaseStream(1, &decoded) == 0);
@@ -406,7 +545,7 @@ static void test_api(void)
         } cases[] = {
             { PT_G711U, 160, 320 },
             { PT_ADPCM, 80, 320 },
-#if defined(PLATFORM_T23)
+#if EXPECT_G726_32K
             { PT_G726, 80, 320 },   /* 32 kbit/s */
 #else
             { PT_G726, 40, 320 },   /* 16 kbit/s */
@@ -504,10 +643,8 @@ int main(void)
     test_g726();
     test_g726_32();
     test_api();
-#if defined(PLATFORM_T23)
-    printf("T23 audio codec tests passed\n");
-#else
-    printf("T31 audio codec tests passed\n");
-#endif
+    test_g711_tables();
+    test_g726_api_reference();
+    printf(PLATFORM_NAME " audio codec tests passed\n");
     return 0;
 }

@@ -113,6 +113,15 @@ do
         -o "$output_dir/t41_${source#openimp_t31_}.o"
 done
 
+# AENC/ADEC: the shared src/audio module (the repo imp_audio.h matches the
+# vendor T41 AENC/ADEC ABI; G.726 at 32 kbit/s like the vendor).
+for source in openimp_audio_codec openimp_audio_enc_dec
+do
+    "$compiler" $strict_flags $repo_includes \
+        -c "$project_dir/src/audio/$source.c" \
+        -o "$output_dir/$source.o"
+done
+
 for source in openimp_p3_controls openimp_p3_audio openimp_p3_compat
 do
     "$compiler" $strict_flags -I"$T41_HEADERS" \
@@ -143,6 +152,8 @@ done
     "$output_dir/openimp_avc.o" \
     "$output_dir/openimp_p3_controls.o" \
     "$output_dir/openimp_p3_audio.o" \
+    "$output_dir/openimp_audio_codec.o" \
+    "$output_dir/openimp_audio_enc_dec.o" \
     "$output_dir/openimp_p3_compat.o" \
     "$output_dir/t41_osd.o" \
     "$output_dir/t41_ivs.o" \

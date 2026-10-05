@@ -5,6 +5,12 @@ STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-stream-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-rate-control-test
 READY_EVENT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ready-event-test
 ACODEC_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-acodec-test
+# the same AENC/ADEC module with the other SoCs' vendor behaviour
+# (T23 runs in tests/t23)
+ACODEC_SOC_TEST_BINS := $(PROJECT_DIR)/build/tests/acodec-test-t20 \
+	$(PROJECT_DIR)/build/tests/acodec-test-t21 \
+	$(PROJECT_DIR)/build/tests/acodec-test-t40 \
+	$(PROJECT_DIR)/build/tests/acodec-test-t41
 FRAME_PIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-frame-pin-test
 AO_SENDFRAME_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ao-sendframe-test
 HEVC_HEADERS_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-hevc-headers-test
@@ -25,7 +31,8 @@ LOG_LIMIT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-limit-test
 .PHONY: check clean sanitize p2-jpeg-source bench
 
 check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
-	$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(FRAME_PIN_TEST_BIN) \
+	$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(ACODEC_SOC_TEST_BINS) \
+	$(FRAME_PIN_TEST_BIN) \
 	$(AO_SENDFRAME_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) \
@@ -35,6 +42,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(RATE_CONTROL_TEST_BIN)
 	$(READY_EVENT_TEST_BIN)
 	$(ACODEC_TEST_BIN)
+	for bin in $(ACODEC_SOC_TEST_BINS); do $$bin || exit 1; done
 	$(FRAME_PIN_TEST_BIN)
 	$(AO_SENDFRAME_TEST_BIN)
 	$(HEVC_HEADERS_TEST_BIN)
@@ -125,6 +133,23 @@ $(AEC_TEST_BIN): aec_test.c $(PROJECT_DIR)/src/audio/openimp_aec.c \
 		aec_test.c $(PROJECT_DIR)/src/audio/openimp_aec.c \
 		-lpthread -lm -o "$@"
 
+ACODEC_SOC_DEFS_t20 := -DPLATFORM_T20 -DPLATFORM_T21
+ACODEC_SOC_DEFS_t21 := -DPLATFORM_T21
+ACODEC_SOC_DEFS_t40 := -DPLATFORM_T40
+ACODEC_SOC_DEFS_t41 := -DPLATFORM_T41
+
+$(PROJECT_DIR)/build/tests/acodec-test-%: acodec_test.c \
+	$(PROJECT_DIR)/src/audio/openimp_audio_enc_dec.c \
+	$(PROJECT_DIR)/src/audio/openimp_audio_codec.c \
+	$(PROJECT_DIR)/src/audio/openimp_audio_codec.h \
+	$(PROJECT_DIR)/include/imp/imp_audio.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -std=gnu99 $(ACODEC_SOC_DEFS_$*) \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src acodec_test.c \
+		$(PROJECT_DIR)/src/audio/openimp_audio_enc_dec.c \
+		$(PROJECT_DIR)/src/audio/openimp_audio_codec.c \
+		-lpthread -lm -o "$@"
+
 $(ACODEC_TEST_BIN): acodec_test.c \
 	$(PROJECT_DIR)/src/audio/openimp_audio_enc_dec.c \
 	$(PROJECT_DIR)/src/audio/openimp_audio_codec.c \
@@ -204,7 +229,7 @@ $(HEVC_HEADERS_TEST_BIN): hevc_headers_test.c \
 
 clean:
 	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
-		$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(FRAME_PIN_TEST_BIN) \
+		$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(ACODEC_SOC_TEST_BINS) $(FRAME_PIN_TEST_BIN) \
 		$(AO_SENDFRAME_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 		$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(LOG_LIMIT_TEST_BIN) \
 		$(AI_LIFECYCLE_TEST_BIN)-asan $(AI_LIFECYCLE_TEST_BIN)-tsan \

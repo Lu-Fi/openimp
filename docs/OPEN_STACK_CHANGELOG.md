@@ -42,6 +42,7 @@ All test cameras run the open kernel driver (open-tx-isp), OpenIMP and timps. No
 | Framesource / VBM T21 | Idle teardown freed the pool; later allocations failed in 23 MB rmem | Pool parking and reuse | `claude/t21-bringup` |
 | T31 HW JPEG | Software JPEG only | Hardware JPEG path, hardened | `claude/t31-hwjpeg-default` |
 | Audio AEC T31/T23 | EnableAec only set a flag (T23) or returned fake success (T31) | Real WebRTC AECM (BSD-3) on the driver's speaker reference; errors when it cannot run; OPENIMP_AEC_STATS diagnostics | `claude/aec` |
+| Audio AENC/ADEC | T10/T20/T21: IMP_AENC_*/IMP_ADEC_* not exported; T40/T41: ENOTSUP stubs | Shared software codecs on all SoCs (G.711A/U, G.726, IMA ADPCM, Register* user codecs), G.726 rate and AENC time stamp per the stock libimp of each SoC; ADEC no longer stamps wall-clock time on T23 (vendor never does); host-tested, device test open | `claude/aenc-adec-all` |
 | Rotation T31 | SetChnRotate 90/270 returned -1 | Software rotation like the vendor (32x32 tiles) before OSD/IVS/encoder | `claude/t31-rotate` |
 | Tools | No way to exercise T23 tuning on device | `t23tune` (show, max gain, IT max, DRC, defog, sinter, flip, max dgain) | `claude/t23-tune-tool` |
 

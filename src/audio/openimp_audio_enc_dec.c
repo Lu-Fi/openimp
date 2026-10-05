@@ -1,4 +1,5 @@
-/* Audio encoder (AENC) and decoder (ADEC) channels, shared by T31 and T23.
+/* Audio encoder (AENC) and decoder (ADEC) channels, shared by all SoCs
+ * (T10/T20/T21/T23/T30/T31/T40/T41).
  *
  * Mirrors libimp 1.1.6 aenc.c/adec.c (the T23 SDK 1.3.0 objects behave the
  * same, with the two platform differences under OPENIMP_ACODEC_* below):
@@ -44,17 +45,23 @@
 #define ACODEC_DEFAULT_BYTES   800
 #define ACODEC_USER_MIN_BYTES  8192
 
-/* Platform differences of the vendor objects:
- * - PT_G726 rate: T31 libimp 1.1.6 opens g726_init(16000), the T23 OEM
- *   libimp g726_init(32000) (both in _aenc_pcm2g726/_adec_g726_2pcm);
- * - stream time stamp: the T23 OEM GetStream stamps the stream with
- *   gettimeofday() in microseconds; T31 libimp leaves it untouched, here it
- *   carries the frame's (AENC) or input stream's (ADEC) time stamp. */
-#if defined(PLATFORM_T23)
+/* Platform differences of the vendor objects (checked in the stock libimp
+ * builds: T10/T20 3.12.0, T21 1.0.33, T23 1.1.x/1.3.0, T31 1.1.6,
+ * T40 1.2.0/1.3.1, T41 1.1.1/1.2.0/1.2.6):
+ * - PT_G726 rate: T10/T20/T21/T31 open g726_init(16000), T23/T40/T41
+ *   g726_init(32000) (both in _aenc_pcm2g726/_adec_g726_2pcm);
+ * - AENC stream time stamp: the T23 and T41 IMP_AENC_GetStream stamp the
+ *   stream with gettimeofday() in microseconds; the others leave it
+ *   untouched, here it carries the frame's time stamp. IMP_ADEC_GetStream
+ *   never stamps it (all SoCs); here it carries the input stream's. */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
 #define OPENIMP_ACODEC_G726_32K       1
-#define OPENIMP_ACODEC_WALLCLOCK_TS   1
 #else
 #define OPENIMP_ACODEC_G726_32K       0
+#endif
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
+#define OPENIMP_ACODEC_WALLCLOCK_TS   1
+#else
 #define OPENIMP_ACODEC_WALLCLOCK_TS   0
 #endif
 
@@ -277,7 +284,7 @@ static int channel_polling(AcodecChannel *ch, unsigned int timeout_ms)
 }
 
 static int channel_get(AcodecChannel *ch, IMPAudioStream *stream,
-                       IMPBlock block)
+                       IMPBlock block, int wallclock)
 {
     AcodecNode *node = NULL;
 
@@ -297,16 +304,14 @@ static int channel_get(AcodecChannel *ch, IMPAudioStream *stream,
     stream->stream = node->data;
     stream->phyAddr = 0;
     stream->len = node->len;
-#if OPENIMP_ACODEC_WALLCLOCK_TS
-    {
+    if (wallclock) {
         struct timeval tv;
 
         gettimeofday(&tv, NULL);
         stream->timeStamp = (int64_t)tv.tv_sec * 1000000 + tv.tv_usec;
+    } else {
+        stream->timeStamp = node->timestamp;
     }
-#else
-    stream->timeStamp = node->timestamp;
-#endif
     stream->seq = node->seq;
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -564,7 +569,8 @@ int IMP_AENC_GetStream(int aeChn, IMPAudioStream *stream, IMPBlock block)
 {
     if (!aenc_valid(aeChn) || !stream || !aenc_channels[aeChn].enabled)
         return -1;
-    return channel_get(&aenc_channels[aeChn], stream, block);
+    return channel_get(&aenc_channels[aeChn], stream, block,
+                       OPENIMP_ACODEC_WALLCLOCK_TS);
 }
 
 int IMP_AENC_ReleaseStream(int aeChn, IMPAudioStream *stream)
@@ -765,7 +771,7 @@ int IMP_ADEC_GetStream(int adChn, IMPAudioStream *stream, IMPBlock block)
 {
     if (!adec_valid(adChn) || !stream || !adec_channels[adChn].enabled)
         return -1;
-    return channel_get(&adec_channels[adChn], stream, block);
+    return channel_get(&adec_channels[adChn], stream, block, 0);
 }
 
 int IMP_ADEC_ReleaseStream(int adChn, IMPAudioStream *stream)
