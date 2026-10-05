@@ -2839,6 +2839,25 @@ int IMP_ISP_Tuning_WaitFrame(IMPISPWaitFrameAttr *attr)
         }
         return result;
     }
+#elif defined(PLATFORM_T20) || defined(PLATFORM_T21)
+    {
+        /* vendor T20 3.12.0 / T21 1.0.33: {1, 0x8000162, &info} on the
+         * tuning ioctl with the driver's 0x18-byte isp_frame_done_info
+         * (timeout in ms in word 0, the 64-bit frame-done count in words
+         * 2-3).  The vendor copies the count back also when the wait
+         * failed (a timeout still reports the current count). */
+        uint32_t buf[6] = { attr->timeout, 0, 0, 0, 0, 0 };
+        ISPDevice *isp;
+        int result;
+
+        if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL ||
+            isp->tuning_state != 2) {
+            return -1;
+        }
+        result = tseries_tuning_get_ptr(TISP_CID_WAIT_FRAME, buf);
+        attr->cnt = (uint64_t)buf[2] | ((uint64_t)buf[3] << 32);
+        return result;
+    }
 #else
     return 0;
 #endif

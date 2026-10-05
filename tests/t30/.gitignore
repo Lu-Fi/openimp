@@ -29,3 +29,5 @@ rc_readback_test_t20
 rc_readback_test_t23
 t21_sinter_map_test
 rmem_highwater_test
+isp_t1x_test_t20
+isp_t1x_test_t21
