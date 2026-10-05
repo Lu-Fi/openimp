@@ -2134,6 +2134,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     int reader_counted = 0;
     int jpeg_may_skip = 0;
     int result = -1;
+    int osd_withhold_jpeg = 0;
     int process_result;
     OpenIMPProfileStamp poll_profile;
 #if defined(PLATFORM_T23)
@@ -2286,10 +2287,16 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         if (ch->osd_group >= 0 &&
             openimp_t31_osd_apply_ex(ch->osd_group, frame,
                                      ch->codec_type != IMP_ENC_TYPE_JPEG
-                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0 &&
-            ch->codec_type == IMP_ENC_TYPE_JPEG)
-            goto done;  /* overlay not confirmed (T21 first op after idle):
-                         * drop this JPEG, the next frame follows */
+                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0) {
+            /* overlay not confirmed (T21 first op after idle): this frame
+             * must not become a JPEG.  A snapshot is cut from the video
+             * channel's frame by the fan-out copy below (the JPEG channel
+             * only waits for it), so withhold the copy; the request stays
+             * pending and the next frame serves it. */
+            if (ch->codec_type == IMP_ENC_TYPE_JPEG)
+                goto done;
+            osd_withhold_jpeg = 1;
+        }
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T41)
         /* OEM T23 osd_update: IPU covers/pictures, CPU lines and mosaics
          * (T41: the same IPU and OSD ABI family, see openimp_t23_osd.c) */
@@ -2314,8 +2321,9 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
         pthread_mutex_lock(&p2_core_lock);
         core_locked = 1;
-        (void)p2_copy_requested_jpeg_frames(
-            ch->source_channel, (const P2SyntheticFrame *)frame);
+        if (!osd_withhold_jpeg)
+            (void)p2_copy_requested_jpeg_frames(
+                ch->source_channel, (const P2SyntheticFrame *)frame);
         __atomic_sub_fetch(&ch->frame_readers, 1, __ATOMIC_RELEASE);
         reader_counted = 0;
     }

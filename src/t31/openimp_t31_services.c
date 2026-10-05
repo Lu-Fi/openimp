@@ -534,6 +534,23 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     }
     if (ipu_enabled && count > 0)
         osd_retry_tick();
+    if (ipu_enabled && count > 0 && osd_retry_left > 0 && virt) {
+        /* the IPU takes the frame record's phys as bg; the probe reads virt.
+         * If the two do not map the same memory the blend lands elsewhere:
+         * trust the virt mapping (what the CPU/JPEG copy reads). */
+        static unsigned int phys_logs;
+        uint32_t vp = DMA_VirtToPhys((const void *)(uintptr_t)virt);
+        uint32_t rec[8];
+
+        memcpy(rec, fi + 0x10, sizeof(rec));
+        if (phys_logs++ < 24u)
+            IMP_LOG_INFO("OSD", "grp %d frame phys 0x%08x virt 0x%08x -> v2p 0x%08x%s "
+                         "rec+10: %08x %08x %08x %08x %08x %08x %08x %08x",
+                         group, phys, virt, vp, vp && vp != phys ? " MISMATCH" : "",
+                         rec[0], rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7]);
+        if (vp && vp != phys)
+            phys = vp;
+    }
     for (i = 0; ipu_enabled && i < count; i += 4) {
         int ipu_ret;
         int n = count - i < 4 ? count - i : 4;
