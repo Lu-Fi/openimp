@@ -39,7 +39,7 @@ Open stack = open-tx-isp + OpenIMP + timps. State on `next` (2026-10-04):
 | T10 | Runs the open stack from a flashed image (H.264, hardware JPEG/MJPEG, second stream, OSD, motion detection, day/night). Image controls and AE/AWB quality only partly documented. |
 | T20 | Fully open from a flashed image; long soaks (1 h 44 min at 25 fps) without errors; OEM rate controller default, A/B against the vendor stack measured. |
 | T21 | Fully open from a flashed image; vendor-identical rate controller, reference-buffer sharing on. |
-| T23 | Fully open, native Helix H.264 encoder, no vendor helper (2 h 34 min soak). Known: sporadic single Helix encode error, no real WDR yet. |
+| T23 | Fully open, native Helix H.264 encoder, no vendor helper (2 h 34 min soak). Frequent Helix frame drops fixed (residual interrupt 0x100, kernel patch merged upstream); still open: a rare single Helix encode error (errno 5), no real WDR yet. |
 | T30 | Builds against a real T30 kernel; H.264 command lists match the vendor in an emulator. No device in the test campaign, so not device-verified here. |
 | T31 | Reference SoC. H.264, HEVC, hardware JPEG, OSD, rotation, AEC; 2 h 53 min soak without errors. |
 | T40 | Builds; AVPU H.264 path from upstream work. Not part of the device campaign. |
@@ -141,9 +141,10 @@ loaded at runtime from `libaudioProcess-neo`. Acoustic echo cancellation uses th
 ## Documentation
 
 - [Wiki](https://github.com/Lu-Fi/openimp/wiki): build and install, module parameters, `OPENIMP_*` variables, memory sizing, troubleshooting, release scheme (one wiki for OpenIMP and open-tx-isp).
-- [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md) (also as [`feature-matrix.html`](docs/feature-matrix.html)): what works on which SoC.
+- [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md) (also as [`feature-matrix.html`](docs/feature-matrix.html), [rendered](https://htmlpreview.github.io/?https://github.com/Lu-Fi/openimp/blob/next/docs/feature-matrix.html)): what works on which SoC.
 - [`docs/OPEN_STACK_CHANGELOG.md`](docs/OPEN_STACK_CHANGELOG.md) and [`CHANGELOG.md`](CHANGELOG.md): history of the open stack.
 - [`docs/OPENIMP_BEYOND_VENDOR.md`](docs/OPENIMP_BEYOND_VENDOR.md) and [`docs/OPENIMP_SOC_DIFFS.md`](docs/OPENIMP_SOC_DIFFS.md): differences to the vendor stack, for streamer authors.
+- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md): performance and resources, open stack versus vendor stack, per SoC, with sources and caveats.
 - [`docs/test-reports/`](docs/test-reports): raw device test reports.
 - [`docs/re/`](docs/re): reverse-engineering dumps (vendor `libimp.so` HLIL, register traces) used by the RE notes.
 - [`docs/archive/`](docs/archive): historical status and design notes from the early OpenIMP work (kept for reference, may be outdated).
