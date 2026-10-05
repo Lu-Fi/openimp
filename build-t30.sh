@@ -87,6 +87,7 @@ compile core_device src/core/device.c
 compile core_group src/core/group.c
 compile core_module src/core/module.c
 compile core_imp_log src/core/imp_log.c -Werror
+compile core_video_drop src/core/video_drop.c -Werror
 compile framesource src/framesource/framesource_tseries.c
 compile isp src/isp/isp_tseries.c
 compile t23_compat src/t31/openimp_t31_compat.c
@@ -137,6 +138,7 @@ compile audio_enc_dec src/audio/openimp_audio_enc_dec.c -Werror
     "$output_dir/core_group.o" \
     "$output_dir/core_module.o" \
     "$output_dir/core_imp_log.o" \
+    "$output_dir/core_video_drop.o" \
     "$output_dir/framesource.o" \
     "$output_dir/isp.o" \
     "$output_dir/t23_compat.o" \

@@ -62,6 +62,14 @@ int32_t set_framesource_fps(int32_t n, int32_t d)
 int32_t set_framesource_changewait_cnt(void) { changewait_calls++; return 0; }
 int IMP_ISP_SetDefaultBinPath(const char *p) { (void)p; return 0; }
 int IMP_ISP_GetDefaultBinPath(char *p) { (void)p; return 0; }
+static void (*video_drop_seen)(void);
+static int video_drop_calls;
+int openimp_video_drop_set(void (*cb)(void))
+{
+    video_drop_seen = cb;
+    video_drop_calls++;
+    return 0;
+}
 
 /* ---- recording ioctl -------------------------------------------------- */
 static int calls;
@@ -751,6 +759,23 @@ static void test_movestate(void)
           last_req.dir == 1, "mode changed: no restore");
 }
 
+static void drop_cb(void) { }
+
+/* SetVideoDrop hands the callback to the video-drop monitor */
+static void test_video_drop(void)
+{
+    reset();
+    dev.tuning_state = 1;
+    CHECK(IMP_ISP_Tuning_SetVideoDrop((void *)drop_cb) == -1 &&
+          video_drop_calls == 0, "SetVideoDrop before EnableTuning");
+    reset();
+    CHECK(IMP_ISP_Tuning_SetVideoDrop((void *)drop_cb) == 0 &&
+          video_drop_seen == drop_cb && openimp_t23_isp_video_drop() ==
+          (void *)drop_cb, "SetVideoDrop did not register the callback");
+    CHECK(IMP_ISP_Tuning_SetVideoDrop(NULL) == 0 && video_drop_seen == NULL,
+          "SetVideoDrop(NULL) did not clear the callback");
+}
+
 static void *run(void *unused)
 {
     (void)unused;
@@ -761,6 +786,7 @@ static void *run(void *unused)
     test_mask();
     test_misc();
     test_movestate();
+    test_video_drop();
     return NULL;
 }
 

@@ -184,6 +184,10 @@ static int fake_closed_streaming; /* closed while streaming */
 static int fake_inject;
 static int fake_streamoffs;
 static unsigned int fake_dqbuf_delay_us; /* time spent "in the driver" */
+/* frames the driver may still complete (-1: any number) and the capture
+ * timestamp of the last one (40 ms apart, from 40 ms) */
+static int fake_frame_budget = -1;
+static unsigned int fake_frames_done;
 
 int __real_open(const char *path, int flags, ...);
 int __real_close(int fd);
@@ -303,12 +307,17 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
 #else
             ret = fake_fail(EINVAL);
 #endif
-        } else if (!c->queued) {
+        } else if (!c->queued || fake_frame_budget == 0) {
             ret = fake_fail(EAGAIN);
         } else {
+            uint64_t ts_us;
+
+            if (fake_frame_budget > 0)
+                fake_frame_budget--;
+            ts_us = 40000ull * ++fake_frames_done;
             words[0] = (uint32_t)c->queue[0];
-            words[0x14 / 4] = 0;
-            words[0x18 / 4] = 0;
+            words[0x14 / 4] = (uint32_t)(ts_us / 1000000u);
+            words[0x18 / 4] = (uint32_t)(ts_us % 1000000u);
             memmove(&c->queue[0], &c->queue[1],
                     (size_t)(c->queued - 1) * sizeof(c->queue[0]));
             memmove(&c->queue_addr[0], &c->queue_addr[1],
@@ -342,7 +351,8 @@ int __wrap_select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *tv)
         pthread_mutex_lock(&fake_lock);
         for (fd = 0; fd < n && fd < FAKE_FDS; fd++)
             if (r && FD_ISSET(fd, r) &&
-                (!fake[fd].open || !fake[fd].streaming || fake[fd].queued))
+                (!fake[fd].open || !fake[fd].streaming ||
+                 (fake[fd].queued && fake_frame_budget != 0)))
                 ready = 1;
         pthread_mutex_unlock(&fake_lock);
         if (ready)
@@ -751,6 +761,147 @@ static void test_pull_during_disable(void)
     check_clean("pull during disable");
 }
 
+/* The delay FIFO of SetMaxDelay/SetDelay/SetChnFifoAttr/GetTimedFrame:
+ * nrVBs + maxdelay buffers, the newest `delay` frames held back, the one
+ * nearest to a timestamp copied out. */
+static unsigned int frames_done(void)
+{
+    unsigned int n;
+
+    pthread_mutex_lock(&fake_lock);
+    n = fake_frames_done;
+    pthread_mutex_unlock(&fake_lock);
+    return n;
+}
+
+/* the one open frame channel (-1 if not exactly one) */
+static int open_chan_fd(int chn)
+{
+    int fd, found = -1, n = 0;
+
+    (void)chn;
+    pthread_mutex_lock(&fake_lock);
+    for (fd = 0; fd < FAKE_FDS; fd++)
+        if (fake[fd].open) {
+            found = fd;
+            n++;
+        }
+    pthread_mutex_unlock(&fake_lock);
+    return n == 1 ? found : -1;
+}
+
+static void give_frames(int n)
+{
+    unsigned int want = frames_done() + (unsigned int)n;
+    uint64_t until = now_ms() + 2000;
+
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = n;
+    pthread_mutex_unlock(&fake_lock);
+    while (frames_done() < want && now_ms() < until)
+        sleep_ms(1);
+    sleep_ms(5);            /* the worker files the last one */
+}
+
+static void test_delay_fifo(void)
+{
+    IMPFSChnAttr a = attr_for(64, 40, 2);
+    IMPFSChnFifoAttr fifo = { 0 };
+    IMPFrameInfo info;
+    IMPFrameTimestamp ts = { 0, 0, 0 };
+    static uint8_t data[64 * 40 * 3 / 2];
+    int value = -1, fd;
+    unsigned int base, plain_bufs;
+
+    /* without SetMaxDelay nothing changes: two buffers, no FIFO */
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "create");
+    CHECK(IMP_FrameSource_GetMaxDelay(0, &value) == 0 && value == 0,
+          "default maxdelay %d", value);
+    CHECK(IMP_FrameSource_SetDelay(0, 1) != 0, "delay above maxdelay 0");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable without FIFO");
+    fd = open_chan_fd(0);
+    /* nrVBs 2 (+ a frame depth an earlier test may have left) */
+    plain_bufs = fd >= 0 ? fake[fd].reqbufs : 0;
+    CHECK(plain_bufs >= 2 && plain_bufs <= 3, "%u buffers without FIFO",
+          plain_bufs);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "GetTimedFrame without FIFO");
+    CHECK(IMP_FrameSource_SetMaxDelay(0, 2) != 0, "SetMaxDelay while enabled");
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
+
+    /* SetChnFifoAttr: DATA_PRIORITY refused, maxdepth 0 a no-op */
+    fifo.maxdepth = 2;
+    fifo.type = FIFO_DATA_PRIORITY;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) != 0,
+          "FIFO_DATA_PRIORITY accepted");
+    fifo.maxdepth = 0;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) == 0, "maxdepth 0");
+    CHECK(IMP_FrameSource_SetMaxDelay(0, 101) != 0 &&
+          IMP_FrameSource_SetMaxDelay(0, 32) != 0, "maxdelay out of range");
+    /* FIFO_CACHE_PRIORITY maxdepth 3: maxdelay 3, delay 3; delay to 2 */
+    fifo.maxdepth = 3;
+    fifo.type = FIFO_CACHE_PRIORITY;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) == 0, "SetChnFifoAttr");
+    CHECK(IMP_FrameSource_GetMaxDelay(0, &value) == 0 && value == 3,
+          "maxdelay %d", value);
+    CHECK(IMP_FrameSource_GetDelay(0, &value) == 0 && value == 3,
+          "delay %d", value);
+    CHECK(IMP_FrameSource_SetDelay(0, 4) != 0 &&
+          IMP_FrameSource_SetDelay(0, 2) == 0, "SetDelay");
+
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = 0;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable with FIFO");
+    fd = open_chan_fd(0);
+    CHECK(fd >= 0 && fake[fd].reqbufs == plain_bufs + 3,
+          "%u buffers, want %u + maxdelay 3", fd >= 0 ? fake[fd].reqbufs : 0,
+          plain_bufs);
+    base = frames_done();
+    give_frames(5);
+    CHECK(frames_done() == base + 5, "%u frames captured, want 5",
+          frames_done() - base);
+    /* held: the two newest (base+4, base+5); the readers got the rest */
+    ts.ts = 40000ull * (base + 5) + 1000000ull;
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -2,
+          "frame from the future: not -2");
+    ts.ts = 40000ull * (base + 3);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "frame already handed on: not -1");
+    ts.ts = 40000ull * (base + 4) + 10000;
+    memset(&info, 0, sizeof(info));
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == 0 &&
+          info.timeStamp == (int64_t)(40000ull * (base + 4)) &&
+          info.width == 64 && info.height == 40 &&
+          info.size == 64 * 40 * 3 / 2,
+          "nearest held frame: ts %lld size %u", (long long)info.timeStamp,
+          info.size);
+    ts.ts = 40000ull * (base + 5);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, NULL, &info) == 0 &&
+          info.timeStamp == (int64_t)ts.ts, "exact newest");
+    /* block: the frame comes within the wait */
+    ts.ts = 40000ull * (base + 6);
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = 1;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 1, data, &info) == 0 &&
+          info.timeStamp == (int64_t)ts.ts, "blocking GetTimedFrame");
+    /* SetDelay while running */
+    CHECK(IMP_FrameSource_SetDelay(0, 1) == 0, "SetDelay running");
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable with FIFO");
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = -1;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "GetTimedFrame after disable");
+    /* the FIFO keeps working over enable cycles with frames flowing */
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "re-enable");
+    sleep_ms(20);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable again");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy");
+    check_clean("delay fifo");
+}
+
 /* SetFrameDepth from an API thread while the channel goes up and down
  * must never issue its ioctl on a closed (or reused) fd. */
 static int depth_stop;
@@ -1042,6 +1193,7 @@ int main(void)
     RUN(depth_during_disable);
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
+    RUN(delay_fifo);
     RUN(rotate);
     if (failures) {
         fprintf(report, "fs_lifecycle_test: %d failure(s)\n", failures);

@@ -963,11 +963,16 @@ typedef IMPEncoderCHNStat IMPEncoderChnStat;
 /**
  * JPEG quality level
  */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T41)
+/* T41 1.2.x has the same 129-byte table form as T20/T21/T23 */
 typedef struct {
     bool user_ql_en;
     uint8_t qmem_table[128];
 } IMPEncoderJpegeQl;
+
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 129,
+               "IMPEncoderJpegeQl ABI mismatch");
 #else
 typedef struct {
     uint32_t qmaxI;                     /**< Maximum I frame quality */
