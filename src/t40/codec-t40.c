@@ -7079,6 +7079,10 @@ typedef struct AL_CodecEncode AL_CodecEncode;
  * stops (with the OEM's 20 s soc_vpu wait: about one minute per round). */
 #define T30_HELIX_MAX_FAILURES 3u
 #define T30_HELIX_MAX_RESTARTS 2u
+/* A failed create (typically rmem exhausted) allocates and frees about
+ * 10 MB of rmem; the next attempt waits this long instead of coming with
+ * the next picture. */
+#define T30_HELIX_RETRY_MS 1000u
 #endif
 
 struct AL_CodecEncode {
@@ -7160,6 +7164,7 @@ struct AL_CodecEncode {
     uint32_t t30_helix_height;
     uint32_t t30_helix_restarts;   /* re-creations without a good picture */
     int t30_helix_stopped;         /* H.264 output given up */
+    uint64_t t30_helix_retry_ms;   /* no create before (CLOCK_MONOTONIC) */
 #endif
 #if defined(PLATFORM_T23)
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
@@ -9939,10 +9944,20 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             OpenIMP_T30_HelixDestroy(enc->t30_helix);
             enc->t30_helix = NULL;
         }
-        if (!enc->t30_helix &&
-            codec_t30_helix_create(enc, width, height) != 0) {
-            codec_set_error(enc, -1);
-            return -1;
+        if (!enc->t30_helix) {
+            struct timespec ts;
+            uint64_t now_ms;
+
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            now_ms = (uint64_t)ts.tv_sec * 1000u +
+                     (uint64_t)ts.tv_nsec / 1000000u;
+            if (now_ms < enc->t30_helix_retry_ms ||
+                codec_t30_helix_create(enc, width, height) != 0) {
+                if (now_ms >= enc->t30_helix_retry_ms)
+                    enc->t30_helix_retry_ms = now_ms + T30_HELIX_RETRY_MS;
+                codec_set_error(enc, -1);
+                return -1;
+            }
         }
         {
             /* Setters run on the caller's thread and only touch hw_params;
