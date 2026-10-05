@@ -26,6 +26,9 @@
 #include "t31/openimp_t31_ivs.h"
 #endif
 #include "t40/openimp_p2_dma.h"
+#if defined(PLATFORM_T41)
+#include "t40/t41_snap.h"
+#endif
 
 #define OPENIMP_P1_MAGIC        0x50315434U /* "P1T4" */
 #define OPENIMP_FS_CHANNELS     4
@@ -277,6 +280,7 @@ struct openimp_fs_channel {
 #if defined(PLATFORM_T41)
     uint64_t last_dequeue_us;       /* by a consumer other than the IVS
                                      * feeder, CLOCK_MONOTONIC */
+    struct t41_snap_state snap;     /* SnapFrame frame lend */
 #endif
     IMPFSChnAttr attr;
     struct openimp_fs_buffer buffers[OPENIMP_FS_BUFFERS];
@@ -990,6 +994,20 @@ static void p1_ivs_feeder_start(void)
         syslog(LOG_ERR, "openimp-p1: IVS frame feeder thread not started");
     pthread_attr_destroy(&attr);
 }
+
+/* SnapFrame waits here for a consumer's next dequeue (t41_snap.h). */
+static pthread_mutex_t p1_snap_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t p1_snap_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t p1_snap_serial[OPENIMP_FS_CHANNELS] = {
+    [0 ... OPENIMP_FS_CHANNELS - 1] = PTHREAD_MUTEX_INITIALIZER
+};
+
+static void p1_snap_wake(void)
+{
+    pthread_mutex_lock(&p1_snap_mutex);
+    pthread_cond_broadcast(&p1_snap_cond);
+    pthread_mutex_unlock(&p1_snap_mutex);
+}
 #else
 #define p1_monotonic_us() 0u
 #endif
@@ -1119,6 +1137,9 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     uint32_t index;
     int attempts;
     OpenIMPProfileStamp wait_profile;
+#if defined(PLATFORM_T41)
+    int snap_taken;
+#endif
 
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !frame)
         return -1;
@@ -1206,10 +1227,13 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
 #if defined(PLATFORM_T41)
     if (!p1_in_ivs_feeder)
         chn->last_dequeue_us = p1_monotonic_us();
+    snap_taken = t41_snap_on_dequeue(&chn->snap, index);
 #endif
     *frame = &buffer->frame;
     unlock_p1();
 #if defined(PLATFORM_T41)
+    if (snap_taken)
+        p1_snap_wake();
     /* T41 has no capture thread: IVS sees each frame as its consumer
      * dequeues it, as the T31 capture thread hands it every frame
      * (openimp_t31_ivs.c copies or pre-processes it synchronously). */
@@ -1243,6 +1267,14 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
         unlock_p1();
         return -1;
     }
+#if defined(PLATFORM_T41)
+    /* SnapFrame is still copying this frame: requeued when it is done. */
+    result = t41_snap_on_release(&chn->snap, index);
+    if (result) {
+        unlock_p1();
+        return result < 0 ? -1 : 0;
+    }
+#endif
     fill_qbuf(words, index, buffer->physical, buffer->size);
     result = record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words);
     if (result >= 0)
@@ -1250,6 +1282,132 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     unlock_p1();
     return result < 0 ? result : 0;
 }
+
+#if defined(PLATFORM_T41)
+/*
+ * Vendor T41 IMP_FrameSource_SnapFrame(chn, fmt, width, height, buffer,
+ * info): one frame of an enabled channel, NV12 at the channel resolution,
+ * copied into the caller's buffer; no SetFrameDepth needed; 0 or -1.
+ *
+ * The frame is borrowed, never taken: the next frame any consumer
+ * (encoder, IVS feeder, application GetFrame) dequeues is held while it is
+ * copied, and that consumer's release is deferred until the copy is done,
+ * so the encoder sees every frame.  Its buffer goes back to the ISP one
+ * copy later (a few ms per snapshot).  Only when no consumer dequeues
+ * within the IVS idle interval (the channel is idle) does SnapFrame dequeue
+ * a frame itself - there is no encoder to lose it then.
+ *
+ * info is the frame's record with index -1 (not releasable), virAddr the
+ * caller's buffer, no physical address, size the packed NV12 size.
+ */
+int IMP_FrameSource_SnapFrame(int channel, int fmt, int width, int height,
+                              void *framedata, IMPFrameInfo *info)
+{
+    struct openimp_fs_channel *chn;
+    struct openimp_fs_buffer *buffer;
+    struct timespec deadline;
+    IMPFrameInfo record;
+    uint64_t wait_us;
+    const void *source;
+    uint32_t source_size;
+    int pulled = 0, ready = 0, enabled, requeue, result = -1;
+    uint32_t words[TISP_BUFFER_WORDS];
+
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !framedata ||
+        !info || fmt != (int)TISP_PIX_FMT_NV12_ENUM || width <= 0 ||
+        height <= 0)
+        return -1;
+    lock_p1();
+    prepare_p1();
+    chn = &p1.channels[channel];
+    if (!chn->enabled || chn->attr.picWidth != width ||
+        chn->attr.picHeight != height ||
+        chn->attr.pixFmt != (int32_t)TISP_PIX_FMT_NV12_ENUM) {
+        unlock_p1();
+        syslog(LOG_ERR, "openimp-p1: SnapFrame chn=%d %dx%d fmt %d does "
+               "not match the enabled channel", channel, width, height, fmt);
+        return -1;
+    }
+    wait_us = p1_ivs_idle_us(chn);
+    unlock_p1();
+
+    pthread_mutex_lock(&p1_snap_serial[channel]);
+    pthread_mutex_lock(&p1_snap_mutex);
+    lock_p1();
+    chn->snap.waiting = 1;
+    unlock_p1();
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    deadline.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
+    deadline.tv_sec += (time_t)(wait_us / 1000000u) +
+                       deadline.tv_nsec / 1000000000L;
+    deadline.tv_nsec %= 1000000000L;
+    for (;;) {
+        lock_p1();
+        ready = chn->snap.ready;
+        enabled = chn->enabled && chn->snap.waiting;
+        unlock_p1();
+        if (ready || !enabled)
+            break;
+        if (pthread_cond_timedwait(&p1_snap_cond, &p1_snap_mutex,
+                                   &deadline) != ETIMEDOUT)
+            continue;
+        if (pulled)
+            break;
+        /* Idle channel: dequeue one frame here; the hook lends it. */
+        pulled = 1;
+        pthread_mutex_unlock(&p1_snap_mutex);
+        {
+            IMPFrameInfo *frame = NULL;
+
+            if (IMP_FrameSource_GetFrame(channel, &frame) == 0 && frame)
+                (void)IMP_FrameSource_ReleaseFrame(channel, frame);
+        }
+        pthread_mutex_lock(&p1_snap_mutex);
+    }
+    pthread_mutex_unlock(&p1_snap_mutex);
+
+    lock_p1();
+    if (!chn->snap.ready) {
+        (void)t41_snap_finish(&chn->snap);
+        unlock_p1();
+        pthread_mutex_unlock(&p1_snap_serial[channel]);
+        return -1;
+    }
+    buffer = &chn->buffers[chn->snap.index];
+    record = buffer->frame;
+    source = buffer->virtual_address;
+    source_size = buffer->size;
+    unlock_p1();
+
+    /* ISP DMA wrote the pixels: drop stale cache lines of this buffer
+     * (page aligned rmem, so no neighbour shares a line). */
+    if (DMA_RmemFlushCache((void *)source, source_size, 2) == 0 &&
+        t41_snap_copy_nv12(framedata, source, source_size,
+                           (uint32_t)width, (uint32_t)height) == 0)
+        result = 0;
+
+    lock_p1();
+    requeue = t41_snap_finish(&chn->snap);
+    if (requeue && chn->enabled) {
+        fill_qbuf(words, (uint32_t)record.index, buffer->physical,
+                  buffer->size);
+        if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words) >= 0)
+            buffer->queued = 1;
+    }
+    unlock_p1();
+    pthread_mutex_unlock(&p1_snap_serial[channel]);
+    if (result)
+        return -1;
+    *info = record;
+    info->index = -1;
+    info->size = t41_snap_nv12_bytes((uint32_t)width, (uint32_t)height);
+    info->phyAddr = 0;
+    info->virAddr = (uint32_t)(uintptr_t)framedata;
+    info->direct_phyAddr = 0;
+    info->pool = NULL;
+    return 0;
+}
+#endif
 
 int IMP_FrameSource_DisableChn(int channel)
 {
@@ -1266,6 +1424,16 @@ int IMP_FrameSource_DisableChn(int channel)
         unlock_p1();
         return 0;
     }
+#if defined(PLATFORM_T41)
+    /* A SnapFrame copy reads a capture buffer: never free it underneath
+     * (the copy is bounded, one frame). */
+    while (chn->snap.ready) {
+        unlock_p1();
+        usleep(1000);
+        lock_p1();
+    }
+    chn->snap.waiting = 0;
+#endif
     if (chn->enabled) {
         type = TISP_BUF_TYPE_VIDEO_CAPTURE;
         result = record_ioctl(chn->fd, TISP_VIDIOC_STREAMOFF, &type);

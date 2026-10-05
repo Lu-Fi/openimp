@@ -72,7 +72,9 @@ P3_UNSUPPORTED(IMP_FrameSource_GetTimedFrame)
 P3_UNSUPPORTED(IMP_FrameSource_SetDelay)
 P3_UNSUPPORTED(IMP_FrameSource_SetI2dAttr)
 P3_UNSUPPORTED(IMP_FrameSource_SetMaxDelay)
+#if !defined(PLATFORM_T41)   /* T41: openimp_p1.c */
 P3_UNSUPPORTED(IMP_FrameSource_SnapFrame)
+#endif
 
 P3_UNSUPPORTED(IMP_ISP_GetFrameDrop)
 P3_UNSUPPORTED(IMP_ISP_GetSensorRegister)
