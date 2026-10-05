@@ -496,15 +496,42 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                          osd_ipu_warmup_left, osd_verify);
         }
         {
-            static unsigned int verify_n;
+            static unsigned int verify_n, apply_n;
             const struct t31_osd_region *r0 = &osd_regions[order[i]];
-            uint32_t vy = (uint32_t)r0->attr.rect.p0.y + 1u, vw = width, before = 0;
-            const uint8_t *vrow = (const uint8_t *)(uintptr_t)(virt + vy * width);
-            int verifying = osd_verify && virt && verify_n < 16u && vy < height;
+            uint32_t rw = 0, rh = 0, bx = 0, by = 0, amax = 0, acount = 0;
+            uint32_t vy, vw, before = 0, pbefore = 0;
+            const uint8_t *vrow = NULL;
+            int verifying;
 
+            apply_n++;
+            t31_osd_rect_size(&r0->attr, &rw, &rh);
+            /* the pixel with the highest alpha of region 0's bitmap: its
+             * row is inside the glyphs, not a transparent margin */
+            if ((r0->attr.type == OSD_REG_PIC || r0->attr.type == OSD_REG_PIC_RMEM) &&
+                r0->active >= 0 && r0->bitmap[r0->active].virt && rw && rh) {
+                const uint8_t *bm = r0->bitmap[r0->active].virt;
+                uint32_t x, y;
+
+                for (y = 0; y < rh; y++)
+                    for (x = 0; x < rw; x++) {
+                        uint32_t a = bm[(y * rw + x) * 4u + 3u];
+
+                        if (a) acount++;
+                        if (a > amax) { amax = a; bx = x; by = y; }
+                    }
+            } else {
+                by = rh / 2u; bx = rw / 2u;
+            }
+            vy = (uint32_t)r0->attr.rect.p0.y + by;
+            vw = rw;
+            vrow = (const uint8_t *)(uintptr_t)(virt + vy * width +
+                                                (uint32_t)r0->attr.rect.p0.x);
+            verifying = osd_verify && virt && vy < height &&
+                        (apply_n <= 16u || apply_n % 25u == 0u) && apply_n <= 300u;
             if (verifying) {
                 DMA_RmemFlushCache((void *)vrow, vw, 2);
                 before = osd_row_sum(vrow, vw);
+                pbefore = vrow[bx];
             }
             if (osd_ipu_warmup_left > 0) {
                 int wr = ioctl(osd_ipu_fd, T31_IPU_START, &p);
@@ -521,10 +548,16 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 DMA_RmemFlushCache((void *)vrow, vw, 2);
                 after = osd_row_sum(vrow, vw);
                 verify_n++;
-                IMP_LOG_INFO("OSD", "IPU verify #%u grp %d: ret=%d row %u sum %u -> %u (%s)",
-                             verify_n, group, ret, vy, before, after,
-                             before == after ? "UNCHANGED - IPU wrote nothing visible"
-                                             : "changed");
+                IMP_LOG_INFO("OSD", "IPU verify apply#%u (#%u) grp %d: ret=%d rgn%d %ux%u@%d,%d "
+                             "bitmap[%d] phys=0x%08x alpha max %u at %u,%u (%u px>0) "
+                             "row %u sum %u -> %u, px %u -> %u (%s)",
+                             apply_n, verify_n, group, ret, order[i], rw, rh,
+                             r0->attr.rect.p0.x, r0->attr.rect.p0.y, r0->active,
+                             r0->active >= 0 ? r0->bitmap[r0->active].phys : 0u,
+                             amax, bx, by, acount, vy, before, after, pbefore,
+                             (unsigned)vrow[bx],
+                             before == after && pbefore == vrow[bx]
+                                 ? "UNCHANGED" : "changed");
                 if (ret < 0) {
                     if (++osd_ipu_errors >= T31_OSD_MAX_IPU_ERRORS) {
                         pthread_mutex_unlock(&osd_lock);
