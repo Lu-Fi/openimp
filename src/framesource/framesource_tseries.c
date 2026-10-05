@@ -1780,6 +1780,7 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     }
 
     fs_chan_set_state(chnNum, 0);
+    VBMReleaseParked(chnNum);
     *(int32_t *)((char *)gFrameSource + 0x14) -= 1;
     g_fs_ctx[chnNum].created = 0;
     FS_FLAG_STORE(g_fs_ctx[chnNum].running, 0);
@@ -2457,7 +2458,7 @@ int IMP_FrameSource_DisableChn(int chnNum)
      * driver drops the buffer addresses still queued in its hardware FIFO
      * on release, and freed pool pages are handed out again. */
     fs_close_chn_fd(chnNum, ctx);
-    VBMDestroyPool(chnNum);
+    VBMDestroyPoolParked(chnNum);
 
     fs_chan_set_state(chnNum, 1);
     pthread_mutex_unlock(&g_fs_lock);

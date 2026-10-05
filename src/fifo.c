@@ -105,11 +105,18 @@ void Fifo_Deinit(void *fifo_ptr) {
 
     Fifo *fifo = (Fifo*)fifo_ptr;
 
-    /* Set abort flag */
-    fifo->abort_flag = 1;
+    if (fifo->buffer == NULL) {
+        /* Init failed (or Deinit ran already): nothing was created. */
+        return;
+    }
 
-    /* Wake up any waiting threads */
+    /* Set the abort flag under the mutex, so a Dequeue that is between its
+     * count check and its cond wait cannot miss the broadcast; the caller
+     * must have stopped the threads that use the queue before this. */
+    pthread_mutex_lock(&fifo->mutex);
+    fifo->abort_flag = 1;
     pthread_cond_broadcast(&fifo->cond);
+    pthread_mutex_unlock(&fifo->mutex);
 
     /* Destroy synchronization primitives */
     pthread_mutex_destroy(&fifo->mutex);

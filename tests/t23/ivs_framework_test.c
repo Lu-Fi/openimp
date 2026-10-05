@@ -40,6 +40,7 @@
 #include "openimp_t31_ivs.h"
 #include "openimp_t31_ivs_abi.h"
 #include "openimp_t31_ivs_move.h"
+#include "../fake_rmem.h"
 
 IMPIVSInterface *IMP_IVS_CreateMoveInterface(IMP_IVS_MoveParam *param);
 void IMP_IVS_DestroyMoveInterface(IMPIVSInterface *moveInterface);
@@ -126,14 +127,7 @@ static int failures;
 
 static void *map_low(size_t size)
 {
-    void *p = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-
-    if (p == MAP_FAILED || (uintptr_t)p + size > 0xffffffffu) {
-        fprintf(stderr, "cannot map a frame buffer below 4 GiB\n");
-        exit(2);
-    }
-    return p;
+    return fake_rmem_map(size);
 }
 
 static void put32(uint8_t *rec, size_t off, uint32_t v)
@@ -285,7 +279,7 @@ static void test_move(void)
     IMP_IVS_DestroyMoveInterface(inf);
     CHECK(IMP_IVS_DestroyGroup(0) == 0, "DestroyGroup");
     t31_ivs_move_destroy(ref);
-    munmap(frame, fsize);
+    fake_rmem_unmap(frame, fsize);
     printf("move: roi hits %d %d %d %d\n", ones[0], ones[1], ones[2], ones[3]);
 }
 
@@ -352,7 +346,7 @@ static void test_base_move(void)
     CHECK(IMP_IVS_DestroyChn(1) == 0, "DestroyChn");
     IMP_IVS_DestroyBaseMoveInterface(inf);
     CHECK(IMP_IVS_DestroyGroup(0) == 0, "DestroyGroup");
-    munmap(frame, fsize);
+    fake_rmem_unmap(frame, fsize);
     printf("base move: %d detections\n", detections);
 }
 

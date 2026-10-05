@@ -6,8 +6,15 @@
  * what the wrapper itself owns -- access-unit layout, emulation prevention
  * across the header/payload seam, IDR and frame_num bookkeeping, failure
  * handling and runtime parameter changes.  The encoder's ABI keeps
- * addresses in 32-bit fields, so the fakes hand out low mappings
- * (MAP_32BIT) and the binary is linked without PIE.
+ * addresses in 32-bit fields, so the fakes hand out memory from one fixed
+ * low window (fake_rmem_map) and the binary is linked without PIE.
+ *
+ * Not MAP_32BIT: with ASLR the kernel places MAP_32BIT mappings bottom-up
+ * from about 1 GiB, and the brk heap of a non-PIE binary anywhere in the
+ * first GiB above its data.  When a mapping landed directly above the heap
+ * top, the next heap growth failed, glibc fell back to mmap above 4 GiB
+ * and the truncated stream buffer address crashed the test (about 2 % of
+ * runs).  The window sits at 1.5 GiB, above the heap's reach.
  */
 
 #define _GNU_SOURCE
@@ -90,6 +97,78 @@ static uint64_t flushed_before_run;
 static uint64_t flushed_after_run;
 static int in_run_window;
 
+/* ---- fake rmem: one fixed window below the heap, first fit ---- */
+
+#define FAKE_RMEM_BASE 0x60000000u
+#define FAKE_RMEM_SIZE (256u << 20)
+#define FAKE_RMEM_PAGE 4096u
+
+static uint8_t *fake_rmem;
+static struct { uintptr_t start, end; } fake_rmem_live[32];
+
+static void *fake_rmem_map(size_t size)
+{
+    uintptr_t start, end;
+    unsigned int i;
+    int moved;
+
+    if (!fake_rmem) {
+        uintptr_t base;
+
+        /* the next free 256 MiB window below 4 GiB, normally the first */
+        for (base = FAKE_RMEM_BASE; base + FAKE_RMEM_SIZE <= 0xffffffffu;
+             base += FAKE_RMEM_SIZE) {
+            fake_rmem = mmap((void *)base, FAKE_RMEM_SIZE, PROT_NONE,
+                             MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE |
+                             MAP_FIXED_NOREPLACE, -1, 0);
+            if (fake_rmem == (uint8_t *)base)
+                break;
+            if (fake_rmem != MAP_FAILED) /* old kernel: a hint only */
+                munmap(fake_rmem, FAKE_RMEM_SIZE);
+            fake_rmem = NULL;
+        }
+        assert(fake_rmem);
+    }
+    size = (size + FAKE_RMEM_PAGE - 1u) & ~(size_t)(FAKE_RMEM_PAGE - 1u);
+    start = (uintptr_t)fake_rmem;
+    do {
+        moved = 0;
+        end = start + size;
+        for (i = 0; i < 32u; i++) {
+            if (fake_rmem_live[i].end && start < fake_rmem_live[i].end &&
+                fake_rmem_live[i].start < end) {
+                start = fake_rmem_live[i].end;
+                moved = 1;
+                break;
+            }
+        }
+    } while (moved);
+    assert(end <= (uintptr_t)fake_rmem + FAKE_RMEM_SIZE);
+    for (i = 0; i < 32u && fake_rmem_live[i].end; i++)
+        ;
+    assert(i < 32u);
+    fake_rmem_live[i].start = start;
+    fake_rmem_live[i].end = end;
+    assert(mprotect((void *)start, size, PROT_READ | PROT_WRITE) == 0);
+    return (void *)start;
+}
+
+/* freed memory faults again, as after munmap, and comes back zeroed */
+static void fake_rmem_unmap(void *mapping, size_t size)
+{
+    uintptr_t start = (uintptr_t)mapping;
+    unsigned int i;
+
+    size = (size + FAKE_RMEM_PAGE - 1u) & ~(size_t)(FAKE_RMEM_PAGE - 1u);
+    for (i = 0; i < 32u; i++)
+        if (fake_rmem_live[i].start == start && fake_rmem_live[i].end)
+            break;
+    assert(i < 32u && fake_rmem_live[i].end == start + size);
+    assert(madvise(mapping, size, MADV_DONTNEED) == 0);
+    assert(mprotect(mapping, size, PROT_NONE) == 0);
+    fake_rmem_live[i].start = fake_rmem_live[i].end = 0;
+}
+
 /* ---- fakes for the rmem allocator ---- */
 
 int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
@@ -97,9 +176,7 @@ int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
     unsigned int i;
     void *mapping;
 
-    mapping = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    assert(mapping != MAP_FAILED);
+    mapping = fake_rmem_map((size_t)size);
     for (i = 0; i < 16u; i++) {
         if (!allocations[i].mapping) {
             allocations[i].mapping = mapping;
@@ -133,7 +210,7 @@ int DMA_FreePhys(uint32_t phys_addr)
 
     for (i = 0; i < 16u; i++) {
         if ((uint32_t)(uintptr_t)allocations[i].mapping == phys_addr) {
-            munmap(allocations[i].mapping, allocations[i].size);
+            fake_rmem_unmap(allocations[i].mapping, allocations[i].size);
             memset(&allocations[i], 0, sizeof(allocations[i]));
             return 0;
         }
@@ -918,9 +995,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
     uint32_t row;
     size_t i;
 
-    buffer = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                  MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    assert(buffer != MAP_FAILED);
+    buffer = fake_rmem_map(size);
     expected = malloc(size);
     assert(expected);
     chroma = buffer + (size_t)width * aligned;
@@ -972,7 +1047,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
         assert(aligned == height || buffer[i] == 0u);
 
     free(expected);
-    munmap(buffer, size);
+    fake_rmem_unmap(buffer, size);
     OpenIMP_T30_HelixDestroy(encoder);
 }
 

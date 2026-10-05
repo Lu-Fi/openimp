@@ -861,8 +861,19 @@ static void *ivs_thread(void *arg)
     return NULL;
 }
 
-/* Capture context, ivs_lock held, sem_end taken. */
-static void ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame)
+/* A foreign interface's NV12 copy, made after ivs_lock is dropped. */
+struct ivs_pending_copy {
+    struct t31_ivs_channel *c;
+    const void *src;
+    size_t size;
+    unsigned int gen;
+};
+
+/* Capture context, ivs_lock held, sem_end taken. Returns 1 when the frame
+ * still has to be copied into c->copy (and sem_start posted) by the caller
+ * outside the lock; *copy_size is the byte count. */
+static int ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame,
+                       size_t *copy_size)
 {
     IMPIVSInterface *inf = c->inf;
 
@@ -890,18 +901,20 @@ static void ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame)
 
                 if (!copy) {
                     sem_post(&c->sem_end);
-                    return;
+                    return 0;
                 }
                 c->copy = copy;
                 c->copy_size = size;
             }
-            memcpy(c->copy, (const void *)(uintptr_t)frame->virAddr, size);
             c->work = *frame;
             c->work.virAddr = (uint32_t)(uintptr_t)c->copy;
             c->work.phyAddr = 0;
+            *copy_size = size;
+            return 1;
         }
     }
     sem_post(&c->sem_start);
+    return 0;
 }
 
 int openimp_t31_ivs_source_active(int fs_chn)
@@ -929,6 +942,8 @@ int openimp_t31_ivs_source_active(int fs_chn)
 void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 {
     T31IVSFrameInfo info;
+    struct ivs_pending_copy pend[T31_IVS_CHANNELS];
+    int npend = 0;
     int source = -2;
     int i;
 
@@ -953,21 +968,57 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame)
         c->stats.frames++;
         if (sem_trywait(&c->sem_end) != 0) {
             c->stats.dropped++;     /* still busy: drop, as the vendor */
-        } else if (ivs_stats_enabled()) {
-            uint64_t t0 = ivs_now_ns(), dt;
-
-            ivs_deliver(c, &info);
-            dt = ivs_now_ns() - t0;
-            c->stats.copy_ns += dt;
-            if (dt > c->stats.copy_max_ns)
-                c->stats.copy_max_ns = (uint32_t)dt;
         } else {
-            ivs_deliver(c, &info);
+            uint64_t t0 = ivs_stats_enabled() ? ivs_now_ns() : 0;
+            size_t size = 0;
+
+            if (ivs_deliver(c, &info, &size)) {
+                /* Reference the channel (users) so DestroyChn waits; the
+                 * copy runs outside the lock, gen is re-checked after. */
+                c->users++;
+                pend[npend].c = c;
+                pend[npend].src = (const void *)(uintptr_t)info.virAddr;
+                pend[npend].size = size;
+                pend[npend].gen = c->gen;
+                npend++;
+            }
+            if (t0) {
+                uint64_t dt = ivs_now_ns() - t0;
+
+                c->stats.copy_ns += dt;
+                if (dt > c->stats.copy_max_ns)
+                    c->stats.copy_max_ns = (uint32_t)dt;
+            }
         }
         if (ivs_stats_enabled())
             ivs_stats_report(c);
     }
     pthread_mutex_unlock(&ivs_lock);
+
+    for (i = 0; i < npend; i++) {
+        struct t31_ivs_channel *c = pend[i].c;
+        uint64_t t0 = ivs_stats_enabled() ? ivs_now_ns() : 0;
+
+        /* c->copy is ours: sem_end is held and users keeps the channel. */
+        memcpy(c->copy, pend[i].src, pend[i].size);
+        pthread_mutex_lock(&ivs_lock);
+        if (t0) {
+            uint64_t dt = ivs_now_ns() - t0;
+
+            c->stats.copy_ns += dt;
+            if (dt > c->stats.copy_max_ns)
+                c->stats.copy_max_ns = (uint32_t)dt;
+        }
+        /* A channel being destroyed gets no new frame (its thread is told
+         * to quit); semaphores are posted before users drops, so
+         * DestroyChn cannot free them underneath. */
+        if (c->state == IVS_CHN_ACTIVE && c->gen == pend[i].gen)
+            sem_post(&c->sem_start);
+        else
+            sem_post(&c->sem_end);
+        c->users--;
+        pthread_mutex_unlock(&ivs_lock);
+    }
 }
 
 static int ivs_interface_in_use(const IMPIVSInterface *inf)

@@ -207,7 +207,7 @@ sanitize: $(FS_DEPS) $(HELIX_SOURCES) $(HELIX_T21_SOURCES) $(IVS_DEPS)
 	TSAN_OPTIONS=halt_on_error=1 ./system_tsan
 	set -e; for soc in "T30:$(HELIX_SOURCES)" \
 		"T21:$(HELIX_T21_SOURCES)" \
-		"T20 -DPLATFORM_T21:$(HELIX_SOURCES)"; do \
+		"T20 -DPLATFORM_T21:$(HELIX_T20_SOURCES)"; do \
 		defs=$${soc%%:*}; srcs=$${soc#*:}; name=$$(echo $$defs | cut -d' ' -f1); \
 		$(SAN_CC) $(HELIX_SANITIZE) -DPLATFORM_$$defs -fno-pie -no-pie \
 			-I$(ROOT)/include -I$(ROOT)/src $(INCLUDES) \
