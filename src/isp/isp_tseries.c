@@ -34,6 +34,7 @@
 
 #include "isp_tseries_dev.h"
 #include "isp_mask_rgb2yuv.h"
+#include "isp_ae_attr.h"
 
 static char *bpath;
 #if defined(PLATFORM_T23)
@@ -2866,12 +2867,40 @@ int IMP_ISP_Tuning_GetSensorAttr(IMPISPSENSORAttr *attr)
 
 int IMP_ISP_Tuning_SetAeAttr(void *ae_attr)
 {
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: the kernel takes the 152-byte tisp_ae_ctrls block, the
+     * caller's IMPISPAEAttr has 18 words (isp_ae_attr.h) */
+    uint32_t kernel[ISP_AE_KERNEL_WORDS];
+
+    if (ae_attr == NULL) {
+        return -1;
+    }
+    isp_ae_attr_to_kernel(kernel, (const uint32_t *)ae_attr);
+    return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, kernel);
+#else
     return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, ae_attr);
+#endif
 }
 
 int IMP_ISP_Tuning_GetAeAttr(void *ae_attr)
 {
+#if defined(PLATFORM_T31)
+    uint32_t kernel[ISP_AE_KERNEL_WORDS] = { 0 };
+    int result;
+
+    if (ae_attr == NULL) {
+        return -1;
+    }
+    result = tseries_tuning_get_ptr(TISP_CID_AE_ATTR, kernel);
+    /* the vendor copies the (then unset) words also when the ioctl failed;
+     * the caller's struct stays untouched here */
+    if (result == 0) {
+        isp_ae_attr_from_kernel((uint32_t *)ae_attr, kernel);
+    }
+    return result;
+#else
     return tseries_tuning_get_ptr(TISP_CID_AE_ATTR, ae_attr);
+#endif
 }
 
 int IMP_ISP_Tuning_SetModuleControl(IMPISPModuleCtl *ispmodule)
