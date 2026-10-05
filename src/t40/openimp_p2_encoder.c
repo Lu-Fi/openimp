@@ -184,6 +184,9 @@ typedef struct {
     void *raw_stream;
     void *codec_user;
     void *source_frame;
+    /* GetStream handed raw_stream to the application (FlushStream leaves
+     * it alone until ReleaseStream) */
+    int raw_stream_out;
     P2SyntheticFrame synthetic_frame;
     uint8_t *jpeg_frame_buffer;
     size_t jpeg_frame_capacity;
@@ -588,6 +591,7 @@ static int p2_jpeg_reuse_last(P2EncoderChannel *ch, uint64_t timestamp)
                      ch->jpeg_reused);
     }
     ch->raw_stream = &ch->jpeg_reuse;
+    ch->raw_stream_out = 0;
     ch->codec_user = P2_JPEG_REUSE_USER;
     ch->source_frame = &ch->synthetic_frame;
     return 0;
@@ -2388,6 +2392,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         p2_jpeg_keep_last(ch, (const P2HWStream *)stream);
     ch->source_frame = frame ? frame : &ch->synthetic_frame;
     ch->raw_stream = stream;
+    ch->raw_stream_out = 0;
     ch->codec_user = user;
     pthread_mutex_unlock(&ch->lock);
 #if defined(PLATFORM_T23)
@@ -2580,8 +2585,25 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     stream->seq = ch->sequence++;
     stream->isVI = false;
 #endif
+    ch->raw_stream_out = 1;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+}
+
+/* Hands a stream taken off the channel back to the codec and its source
+ * frame back to the FrameSource. */
+static int p2_return_stream(P2EncoderChannel *ch, void *raw, void *user,
+                            void *frame)
+{
+    int result;
+
+    /* a reused JPEG (p2_jpeg_reuse_last) is no codec stream */
+    result = user == P2_JPEG_REUSE_USER
+        ? 0 : AL_Codec_Encode_ReleaseStream(ch->codec, raw, user);
+    if (frame != &ch->synthetic_frame &&
+        p2_release_source_frame(ch->source_channel, frame) != 0)
+        result = -1;
+    return result;
 }
 
 int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
@@ -2593,7 +2615,6 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     void *raw;
     void *user;
     void *frame;
-    int result;
 
     if (!p2_valid_channel(channel) || p2_null_arg(__func__, stream))
         return -1;
@@ -2603,6 +2624,7 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     user = ch->codec_user;
     frame = ch->source_frame;
     ch->raw_stream = NULL;
+    ch->raw_stream_out = 0;
     ch->codec_user = NULL;
     ch->source_frame = NULL;
     pthread_mutex_unlock(&ch->lock);
@@ -2614,13 +2636,7 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
                  "source=%p\n", t23_release_trace_count - 1u, raw, user,
                  frame);
 #endif
-    /* a reused JPEG (p2_jpeg_reuse_last) is no codec stream */
-    result = user == P2_JPEG_REUSE_USER
-        ? 0 : AL_Codec_Encode_ReleaseStream(ch->codec, raw, user);
-    if (frame != &ch->synthetic_frame &&
-        p2_release_source_frame(ch->source_channel, frame) != 0)
-        result = -1;
-    return result;
+    return p2_return_stream(ch, raw, user, frame);
 }
 
 /* Called with the channel lock held; codec is the channel's live codec. */
@@ -2803,14 +2819,41 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 }
 #endif
 
-/* libimp: RequestIDR, then drain the streams already encoded. OpenIMP
- * encodes on demand in PollingStream, so nothing older than the next frame
- * is queued and the IDR request is the whole job. */
+/* libimp: RequestIDR, then drain the streams already encoded (Query's
+ * leftStreamFrames times PollingStream/GetStream/ReleaseStream).  OpenIMP
+ * encodes on demand in PollingStream, so the only encoded stream that can
+ * wait is the one a PollingStream left for GetStream: it is dropped here,
+ * unless GetStream already handed it out (the application still reads it
+ * and gives it back with ReleaseStream, as with the stock library). */
 int IMP_Encoder_FlushStream(int channel)
 {
+    P2EncoderChannel *ch;
+    void *raw = NULL;
+    void *user = NULL;
+    void *frame = NULL;
+
     if (!p2_valid_channel(channel) || !p2_channels[channel].created)
         return -1;
-    return IMP_Encoder_RequestIDR(channel) < 0 ? -1 : 0;
+    if (IMP_Encoder_RequestIDR(channel) < 0)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->created && ch->raw_stream && !ch->raw_stream_out &&
+        ch->source_frame) {
+        raw = ch->raw_stream;
+        user = ch->codec_user;
+        frame = ch->source_frame;
+        ch->raw_stream = NULL;
+        ch->codec_user = NULL;
+        ch->source_frame = NULL;
+    }
+    pthread_mutex_unlock(&ch->lock);
+    if (raw) {
+        p2_trace("openimp/P2: FlushStream ch=%d dropped an unread stream\n",
+                 channel);
+        (void)p2_return_stream(ch, raw, user, frame);
+    }
+    return 0;
 }
 
 int IMP_Encoder_SetbufshareChn(int channel, int share_channel)

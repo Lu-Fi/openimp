@@ -326,6 +326,28 @@ int main(void)
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
               stub_released == 2, "release (%d codec releases)",
               stub_released);
+
+        /* FlushStream drops an encoded stream nobody fetched yet: back
+         * to the codec, capture frame back to the FrameSource */
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0, "JPEG before flush");
+        CHECK(IMP_Encoder_FlushStream(2) == 0, "FlushStream");
+        CHECK(stub_released == 3 && !fs_outstanding[2],
+              "unread stream not dropped by FlushStream (%d codec "
+              "releases, frame held %d)", stub_released, fs_outstanding[2]);
+        CHECK(IMP_Encoder_GetStream(2, &stream, 0) != 0,
+              "GetStream still returns the flushed stream");
+        CHECK(IMP_Encoder_ReleaseStream(2, &stream) != 0,
+              "ReleaseStream of a flushed stream succeeded");
+        /* a stream the application holds stays until ReleaseStream */
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0 &&
+              IMP_Encoder_GetStream(2, &stream, 0) == 0, "JPEG after flush");
+        CHECK(IMP_Encoder_FlushStream(2) == 0 && stub_released == 3,
+              "FlushStream released a stream the application holds");
+        CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
+              stub_released == 4 && !fs_outstanding[2],
+              "release after flush (%d codec releases)", stub_released);
+        CHECK(IMP_Encoder_FlushStream(9) != 0 && IMP_Encoder_FlushStream(-1) != 0,
+              "FlushStream accepted a bad channel");
     }
 
     if (failures) {
