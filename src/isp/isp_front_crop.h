@@ -7,9 +7,10 @@
  * the caller's struct would hand the kernel three undefined padding bytes;
  * OpenIMP builds clean words instead.
  *
- * T10/T20/T21 have no crop stage in front of the scalers: the driver
- * accepts disable and the full frame, a smaller window fails (-1) instead
- * of the silent cache-only success older OpenIMP gave.
+ * T10/T20/T21 (open-tx-isp): channels whose output fits into the window
+ * show it (T21 every channel, T10/T20 the DS channels; shrink only), the
+ * others keep the full frame.  A window no channel can show fails (-1),
+ * as do odd or out-of-frame values.
  */
 #ifndef ISP_FRONT_CROP_H
 #define ISP_FRONT_CROP_H

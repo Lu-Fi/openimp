@@ -2934,8 +2934,8 @@ int IMP_ISP_Tuning_GetFrontCrop(IMPISPFrontCrop *ispfrontcrop)
     {
         uint32_t words[ISP_FRONT_CROP_WORDS] = { 0 };
 
-        /* the driver's window (full frame with the real size); a
-         * driver without the control leaves the last accepted set */
+        /* the driver's window (disabled: full frame with the real
+         * size); a driver without the control: the last accepted set */
         if (tseries_tuning_get_ptr(TISP_CID_FRONT_CROP, words) == 0) {
             isp_front_crop_unpack(words, ispfrontcrop);
             return 0;
