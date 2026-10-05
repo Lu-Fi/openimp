@@ -451,7 +451,15 @@ extern int OpenIMP_HelixJpeg_Available(void); /* t30/helix_jpeg.h */
 
 static P2FramePinTable p2_frame_pins = P2_FRAME_PIN_TABLE_INITIALIZER;
 
-/* OPENIMP_JPEG_TRACE=1: log every JPEG encode and hand-out (T21 hunt). */
+/* OPENIMP_JPEG_TRACE=1: log every JPEG encode and hand-out (T21 hunt).
+ * The host tests link this file without the system module: weak. */
+extern int64_t IMP_System_GetTimeStamp(void) __attribute__((weak));
+static int64_t p2_jpeg_trace_now(void)
+{
+    return IMP_System_GetTimeStamp ? IMP_System_GetTimeStamp()
+                                   : (int64_t)p2_monotonic_us();
+}
+
 static int p2_jpeg_trace_enabled(void)
 {
     static int on = -1;
@@ -2034,7 +2042,7 @@ static void t23_pace_account(int channel, uint64_t start_us,
         if (value > st->max_encode_us)
             st->max_encode_us = value;
         st->collect_us += done_us - encoded_us;
-        now_ts = IMP_System_GetTimeStamp();
+        now_ts = p2_jpeg_trace_now();
         if (captured && now_ts > captured) {
             value = now_ts - captured;
             st->age_us += value;
@@ -2321,7 +2329,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
          * capture time stamp against now, and whether a reuse may happen. */
         if (p2_jpeg_trace_enabled()) {
             const P2SyntheticFrame *sf = (const P2SyntheticFrame *)frame;
-            int64_t now_ts = IMP_System_GetTimeStamp();
+            int64_t now_ts = p2_jpeg_trace_now();
 
             IMP_LOG_INFO("Encoder", "JPEG ch%d encode #%u: %s frame phys=0x%08x "
                          "captured=%lld us (age %lld ms) may_reuse=%d",
@@ -2506,7 +2514,7 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
         return -1;
     }
     if (ch->codec_type == IMP_ENC_TYPE_JPEG && p2_jpeg_trace_enabled()) {
-        int64_t now_ts = IMP_System_GetTimeStamp();
+        int64_t now_ts = p2_jpeg_trace_now();
 
         IMP_LOG_INFO("Encoder", "JPEG ch%d hand-out: %u bytes stream_ts=%llu us "
                      "(age %lld ms)%s%s", channel, raw->length,
