@@ -3327,17 +3327,22 @@ int IMP_Encoder_SetChnMaxPictureSize(int channel, uint32_t maximum_i,
     IMPEncoderAttrRcMode *mode;
     uint32_t maximum;
 
-    if (!p2_valid_channel(channel) || !p2_channels[channel].created ||
-        !maximum_i || !maximum_p)
+    if (!p2_valid_channel(channel) || !p2_channels[channel].created)
         return -1;
+#if !defined(PLATFORM_T23)
+    if (!maximum_i || !maximum_p)
+        return -1;
+#endif
     mode = &p2_channels[channel].attr.rcAttr.attrRcMode;
     maximum = maximum_i > maximum_p ? maximum_i : maximum_p;
 #if defined(PLATFORM_T23)
-    /* OEM: one channel frame-loss threshold, kbit -> bytes, shared with
-     * IMP_Encoder_Setframelossthd */
+    /* OEM: one channel frame-loss threshold shared with
+     * IMP_Encoder_Setframelossthd, (kbit << 10) >> 3 bytes (22 bits of the
+     * argument survive), P size ignored, 0 accepted (no limit). */
     (void)mode;
     (void)maximum;
-    return openimp_t23_enc_set_lossthd(channel, maximum_i * 128u);
+    (void)maximum_p;
+    return openimp_t23_enc_set_lossthd(channel, (maximum_i << 10) >> 3);
 #elif defined(PLATFORM_T30)
     (void)mode;
     (void)maximum;

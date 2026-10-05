@@ -9,8 +9,7 @@
  * controls.  As in the OEM, these setters do nothing for JPEG channels.
  *
  * Settings that the OEM keeps on the channel for its own buffer and frame
- * scheduling logic - frame reuse mode, frame-loss threshold, fisheye
- * flag, pool sizes, multi-section mode, read-buffer sharing, pad frames -
+ * scheduling logic - frame-loss threshold, fisheye flag, pool sizes, multi-section mode, read-buffer sharing, pad frames -
  * are validated and stored like the OEM does, but have no effect on this
  * stack (documented per function).
  *
@@ -37,7 +36,6 @@ extern T23HelixBridge *OpenIMP_T23_CodecBridge(void *codec);
 
 typedef struct {
     IMPEncoderCropCfg crop;
-    IMPEncoderAttrFrmUsed frm_used;
     uint32_t loss_threshold;        /* bytes */
     int fisheye;
     int rd_buf_share;
@@ -662,28 +660,46 @@ int IMP_Encoder_RequestGDR(int channel, int frames)
 
 /* ---- channel bookkeeping (stored like the OEM, no effect here) --------- */
 
-/* The OEM channel thread reuses or skips input frames by this mode when
- * the source is slower than the encoder; OpenIMP paces every channel at
- * its frame rate instead, so the mode is only kept. */
+/* OEM: Set/GetChnFrmUsedMode copy the 12-byte IMPEncoderAttrFrmUsed to and
+ * from the channel's own attribute copy (rcAttr.attrFrmUsed, offset 0x68 of
+ * the IMPEncoderCHNAttr that IMP_Encoder_GetChnAttr returns), with no
+ * created check, so GetChnAttr reflects the call and a value given in
+ * CreateChn can be read back.  The OEM libimp has no other reader of it:
+ * reuse/skip is not done at this level, and OpenIMP paces every channel at
+ * its frame rate anyway. */
+typedef struct {
+    const IMPEncoderAttrFrmUsed *in;
+    IMPEncoderAttrFrmUsed *out;
+} FrmUsedCall;
+
+static int frm_used_cb(OpenIMPT23P2View *v, void *arg)
+{
+    FrmUsedCall *c = arg;
+
+    if (c->in)
+        v->attr->rcAttr.attrFrmUsed = *c->in;
+    else
+        *c->out = v->attr->rcAttr.attrFrmUsed;
+    return 0;
+}
+
 int IMP_Encoder_SetChnFrmUsedMode(int channel,
                                   const IMPEncoderAttrFrmUsed *attr)
 {
+    FrmUsedCall c = { attr, NULL };
+
     if (!valid_channel(channel) || !attr)
         return -1;
-    pthread_mutex_lock(&extra_lock);
-    extras[channel].frm_used = *attr;
-    pthread_mutex_unlock(&extra_lock);
-    return 0;
+    return openimp_t23_p2_call(channel, frm_used_cb, &c);
 }
 
 int IMP_Encoder_GetChnFrmUsedMode(int channel, IMPEncoderAttrFrmUsed *attr)
 {
+    FrmUsedCall c = { NULL, attr };
+
     if (!valid_channel(channel) || !attr)
         return -1;
-    pthread_mutex_lock(&extra_lock);
-    *attr = extras[channel].frm_used;
-    pthread_mutex_unlock(&extra_lock);
-    return 0;
+    return openimp_t23_p2_call(channel, frm_used_cb, &c);
 }
 
 static int created_cb(OpenIMPT23P2View *v, void *arg)
@@ -730,9 +746,9 @@ int IMP_Encoder_GetChnMaxPictureSize(int channel, uint32_t *maximum_i,
     if (!maximum_i || !maximum_p ||
         IMP_Encoder_Getframelossthd(channel, &threshold) != 0)
         return -1;
-    /* OEM: one shared threshold, bytes -> kbit for both */
-    *maximum_i = threshold / 128u;
-    *maximum_p = threshold / 128u;
+    /* OEM: one shared threshold, bytes -> kbit for both; signed divide */
+    *maximum_i = (uint32_t)((int32_t)threshold / 128);
+    *maximum_p = (uint32_t)((int32_t)threshold / 128);
     return 0;
 }
 

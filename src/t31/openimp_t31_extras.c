@@ -67,10 +67,12 @@ int IMP_Encoder_GetFisheyeEnableStatus(int encChn, int *enable)
     return 0;
 }
 
-/* libimp starts a thread that hands the source frame back to FrameSource
- * num/den of a frame interval after it was queued, before the encoder is
- * done with it. OpenIMP's encoder returns every frame as soon as the AVPU
- * has consumed it, so the ratio is recorded but changes nothing. */
+/* libimp 1.1.6 (imp_encoder.c:0xc06): under the channel mutex it stores
+ * num and den in the channel (offsets 0x6c/0x70 of the channel record) and
+ * returns 0, for a created channel (-1 otherwise).  Nothing in the library
+ * reads the two words back (checked over the whole text: no load of those
+ * offsets outside the setter and stack saves), and no getter exists: the
+ * call has no effect in the OEM either.  Same here. */
 int IMP_Encoder_SetFrameRelease(int encChn, int num, int den)
 {
     if (!extras_enc_valid(encChn) || !extras_enc_created(encChn))
