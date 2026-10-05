@@ -21,6 +21,7 @@ P2_RC_MODE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-rc-mode-test
 MASK_RGB2YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-mask-rgb2yuv-test
 AL_RC_TRACE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-al-rc-trace-test
 LOG_LIMIT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-limit-test
+AE_ATTR_MAP_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ae-attr-map-test
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -29,8 +30,9 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(AO_SENDFRAME_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) \
-	$(LOG_LIMIT_TEST_BIN)
+	$(LOG_LIMIT_TEST_BIN) $(AE_ATTR_MAP_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
+	$(AE_ATTR_MAP_TEST_BIN)
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(RATE_CONTROL_TEST_BIN)
 	$(READY_EVENT_TEST_BIN)
@@ -47,6 +49,10 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN)
 	$(MASK_RGB2YUV_TEST_BIN)
 	$(LOG_LIMIT_TEST_BIN)
+
+$(AE_ATTR_MAP_TEST_BIN): ae_attr_map_test.c $(PROJECT_DIR)/src/isp/t31_ae_attr_map.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src ae_attr_map_test.c -o "$@"
 
 $(LOG_LIMIT_TEST_BIN): log_limit_test.c $(PROJECT_DIR)/src/trace_control.h \
 	$(PROJECT_DIR)/src/imp_log_int.h
