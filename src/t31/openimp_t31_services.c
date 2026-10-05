@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "dma_alloc.h"
@@ -138,6 +139,14 @@ static int osd_env_int(const char *name, int dflt)
     const char *v = getenv(name);
 
     return v && *v ? atoi(v) : dflt;
+}
+
+static double osd_diag_now(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
 static uint32_t osd_row_sum(const uint8_t *row, uint32_t n)
@@ -532,6 +541,30 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 DMA_RmemFlushCache((void *)vrow, vw, 2);
                 before = osd_row_sum(vrow, vw);
                 pbefore = vrow[bx];
+            }
+            /* warm-up v2: after an IPU idle gap (OPENIMP_OSD_IPU_IDLE_MS,
+             * default 1000) a dummy op, then OPENIMP_OSD_IPU_WARMUP_US
+             * (default 2000) of sleep, then the real op; with warm-up n the
+             * first n real ops are repeated as before. */
+            {
+                static double last_op;
+                static int idle_ms = -1, warm_us;
+                double now = osd_diag_now();
+
+                if (idle_ms < 0) {
+                    idle_ms = osd_env_int("OPENIMP_OSD_IPU_IDLE_MS", 1000);
+                    warm_us = osd_env_int("OPENIMP_OSD_IPU_WARMUP_US", 2000);
+                }
+                if (osd_ipu_warmup_left > 0 && idle_ms > 0 &&
+                    (last_op == 0.0 || (now - last_op) * 1000.0 >= idle_ms)) {
+                    int wr = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+
+                    if (warm_us > 0)
+                        usleep((useconds_t)warm_us);
+                    IMP_LOG_INFO("OSD", "IPU dummy op after %.1f s idle ret=%d, slept %d us",
+                                 last_op == 0.0 ? -1.0 : now - last_op, wr, warm_us);
+                }
+                last_op = now;
             }
             if (osd_ipu_warmup_left > 0) {
                 int wr = ioctl(osd_ipu_fd, T31_IPU_START, &p);

@@ -208,6 +208,7 @@ typedef struct {
     P2HWStream jpeg_reuse;          /* raw_stream of a reused picture */
     uint32_t jpeg_reused;           /* pictures stood in for */
     uint32_t jpeg_trace_count;      /* OPENIMP_JPEG_TRACE encodes */
+    uint32_t jpeg_trace_handed;     /* hand-outs, for the trace */
     uint64_t jpeg_reuse_log_us;
     IMPEncoderCHNAttr attr;
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
@@ -2517,8 +2518,9 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG && p2_jpeg_trace_enabled()) {
         int64_t now_ts = p2_jpeg_trace_now();
 
-        IMP_LOG_INFO("Encoder", "JPEG ch%d hand-out: %u bytes stream_ts=%llu us "
-                     "(age %lld ms)%s%s", channel, raw->length,
+        IMP_LOG_INFO("Encoder", "JPEG ch%d hand-out #%u (after encode #%u): %u bytes stream_ts=%llu us "
+                     "(age %lld ms)%s%s", channel, ++ch->jpeg_trace_handed,
+                     ch->jpeg_trace_count, raw->length,
                      (unsigned long long)raw->timestamp,
                      (long long)(now_ts - (int64_t)raw->timestamp) / 1000,
                      ch->codec_user == P2_JPEG_REUSE_USER ? " REUSED-LAST" : "",

@@ -1944,13 +1944,27 @@ done:
     stream->timestamp = frame->timestamp;
     stream->frame_type = HW_FRAME_TYPE_I;
     helix_jpeg.pictures++;
-    if (helix_jpeg.dump_dir && helix_jpeg.dumps < 4u)
-        helix_dump(frame, slice.raw_y == frame->phys_addr && frame->phys_addr
-                       ? (const uint8_t *)(uintptr_t)frame->virt_addr
-                       : (const uint8_t *)(uintptr_t)
-                             helix_jpeg.source.virt_addr,
-                   slice.raw_c - slice.raw_y, stride, aligned_height,
-                   output, stream->length);
+    /* OPENIMP_HELIX_JPEG_DUMP_SKIP=n / _COUNT=m: skip the first n pictures,
+     * dump the next m (default 0 / 4) - T21 first-snapshot hunt */
+    if (helix_jpeg.dump_dir) {
+        static int skip = -1, count = -1;
+
+        if (skip < 0) {
+            const char *e = getenv("OPENIMP_HELIX_JPEG_DUMP_SKIP");
+            const char *c = getenv("OPENIMP_HELIX_JPEG_DUMP_COUNT");
+
+            skip = e ? atoi(e) : 0;
+            count = c ? atoi(c) : 4;
+        }
+        if (helix_jpeg.pictures > (uint32_t)skip &&
+            helix_jpeg.dumps < (uint32_t)count)
+            helix_dump(frame, slice.raw_y == frame->phys_addr && frame->phys_addr
+                           ? (const uint8_t *)(uintptr_t)frame->virt_addr
+                           : (const uint8_t *)(uintptr_t)
+                                 helix_jpeg.source.virt_addr,
+                       slice.raw_c - slice.raw_y, stride, aligned_height,
+                       output, stream->length);
+    }
     if (!helix_jpeg.stats &&
         (helix_jpeg.pictures <= 3u || helix_jpeg.pictures % 500u == 0u))
         IMP_LOG_INFO("Encoder", "Helix JPEG: %ux%u -> %u bytes status=0x%08x"
