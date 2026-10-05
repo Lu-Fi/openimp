@@ -765,6 +765,34 @@ static pthread_mutex_t g_fs_lock = PTHREAD_MUTEX_INITIALIZER;
 #define FS_FLAG_LOAD(x)     __atomic_load_n(&(x), __ATOMIC_RELAXED)
 #define FS_FLAG_STORE(x, v) __atomic_store_n(&(x), (v), __ATOMIC_RELAXED)
 static int g_fs_thread_entered[FS_MAX_CHANNELS];
+
+/*
+ * OPENIMP_FS_DROP_FIRST=n (default 0): after every STREAMON the first n
+ * dequeued frames of a channel are queued back without delivery.  T21 hunt
+ * (2026-10-05): the first snapshot after each on-demand (re)start has no
+ * OSD; both start buffers are queued at STREAMON and the T21 frame-done
+ * path completes every queued buffer up to the reported one ("mscaler:
+ * index"), so a start where the hardware reports the second buffer first
+ * hands out the first one with its old memory contents (two frames at once
+ * at +0.0 s in the OSD apply log).  n=1 drops that one.  Diagnostic knob
+ * until the done path is settled.
+ */
+static int g_fs_drop_first = -1;
+static int g_fs_drop_left[FS_MAX_CHANNELS];
+
+static int fs_drop_first_count(void)
+{
+    if (g_fs_drop_first < 0) {
+        const char *e = getenv("OPENIMP_FS_DROP_FIRST");
+        int n = e ? atoi(e) : 0;
+
+        g_fs_drop_first = n < 0 ? 0 : (n > 16 ? 16 : n);
+        if (g_fs_drop_first)
+            IMP_LOG_INFO("Framesource", "dropping the first %d frame(s) after each STREAMON (OPENIMP_FS_DROP_FIRST)",
+                         g_fs_drop_first);
+    }
+    return g_fs_drop_first;
+}
 static int g_fs_thread_enabled_seen[FS_MAX_CHANNELS];
 /* Set by the pooling worker when it leaves its loop (not when cancelled). */
 static int g_fs_thread_exited[FS_MAX_CHANNELS];
@@ -1216,6 +1244,14 @@ static void *frame_pooling_thread(void *arg)
                 }
                 no_frame_cycles = 0;
                 drained++;
+
+                if (g_fs_drop_left[chn] > 0) {
+                    g_fs_drop_left[chn]--;
+                    IMP_LOG_INFO("Framesource", "chn%d: dropping start frame %p (%d left) - OPENIMP_FS_DROP_FIRST",
+                                 chn, frame, g_fs_drop_left[chn]);
+                    VBMReleaseFrame(chn, frame);
+                    continue;
+                }
 
                 m = g_modules[0][chn];
                 if (m != NULL) {
@@ -2100,6 +2136,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
         return -1;
     }
     initial_queued_ok = queued_ok;
+    g_fs_drop_left[chnNum] = fs_drop_first_count();
     fs_trace("libimp/FS: enable fill-pool-ok ch=%d queued_ok=%d\n", chnNum, queued_ok);
 
     FS_FLAG_STORE(ctx->running, 1);
