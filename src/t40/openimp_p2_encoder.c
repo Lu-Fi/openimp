@@ -207,6 +207,7 @@ typedef struct {
     uint64_t jpeg_last_us;
     P2HWStream jpeg_reuse;          /* raw_stream of a reused picture */
     uint32_t jpeg_reused;           /* pictures stood in for */
+    uint32_t jpeg_trace_count;      /* OPENIMP_JPEG_TRACE encodes */
     uint64_t jpeg_reuse_log_us;
     IMPEncoderCHNAttr attr;
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
@@ -449,6 +450,19 @@ extern int OpenIMP_HelixJpeg_Available(void); /* t30/helix_jpeg.h */
 #endif
 
 static P2FramePinTable p2_frame_pins = P2_FRAME_PIN_TABLE_INITIALIZER;
+
+/* OPENIMP_JPEG_TRACE=1: log every JPEG encode and hand-out (T21 hunt). */
+static int p2_jpeg_trace_enabled(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *v = getenv("OPENIMP_JPEG_TRACE");
+
+        on = v && v[0] == '1';
+    }
+    return on;
+}
 
 static int p2_jpeg_src_copy_forced(void)
 {
@@ -2302,6 +2316,21 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         jpeg_may_skip = p2_jpeg_reuse_fresh(ch, p2_monotonic_us());
         pthread_mutex_unlock(&ch->lock);
         (void)AL_Codec_Encode_SetJpegSkip(ch->codec, jpeg_may_skip);
+        /* T21 first-snapshot hunt (OPENIMP_JPEG_TRACE=1): which picture the
+         * JPEG encoder is about to read - lent video frame or own pull, its
+         * capture time stamp against now, and whether a reuse may happen. */
+        if (p2_jpeg_trace_enabled()) {
+            const P2SyntheticFrame *sf = (const P2SyntheticFrame *)frame;
+            int64_t now_ts = IMP_System_GetTimeStamp();
+
+            IMP_LOG_INFO("Encoder", "JPEG ch%d encode #%u: %s frame phys=0x%08x "
+                         "captured=%lld us (age %lld ms) may_reuse=%d",
+                         channel, ++ch->jpeg_trace_count,
+                         frame == &ch->synthetic_frame ? "lent/copy" : "framesource",
+                         sf->physical_address, (long long)sf->timestamp,
+                         (long long)(now_ts - sf->timestamp) / 1000,
+                         jpeg_may_skip);
+        }
     }
     process_result = AL_Codec_Encode_Process(ch->codec, frame, frame);
 #if defined(PLATFORM_T23)
@@ -2475,6 +2504,16 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     if (!raw) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
+    }
+    if (ch->codec_type == IMP_ENC_TYPE_JPEG && p2_jpeg_trace_enabled()) {
+        int64_t now_ts = IMP_System_GetTimeStamp();
+
+        IMP_LOG_INFO("Encoder", "JPEG ch%d hand-out: %u bytes stream_ts=%llu us "
+                     "(age %lld ms)%s%s", channel, raw->length,
+                     (unsigned long long)raw->timestamp,
+                     (long long)(now_ts - (int64_t)raw->timestamp) / 1000,
+                     ch->codec_user == P2_JPEG_REUSE_USER ? " REUSED-LAST" : "",
+                     ch->source_frame == &ch->synthetic_frame ? " lent/copy" : " framesource");
     }
     is_idr = ch->codec_type != IMP_ENC_TYPE_JPEG &&
 #if defined(PLATFORM_T41)
