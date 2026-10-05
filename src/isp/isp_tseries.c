@@ -35,6 +35,7 @@
 
 #include "isp_tseries_dev.h"
 #include "isp_mask_rgb2yuv.h"
+#include "isp_ae_attr.h"
 
 static char *bpath;
 #if defined(PLATFORM_T23)
@@ -3193,65 +3194,43 @@ int IMP_ISP_Tuning_GetSensorAttr(IMPISPSENSORAttr *attr)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
-/*
- * vendor 1.1.6: the driver exchanges a 0x98-byte AE control block (38
- * words) for tuning 0x8000035; the public IMPISPAEAttr is 72 bytes (18
- * words).  The vendor library scatters/gathers through a local block with
- * this map (public word i <-> block word map[i]); passing the user struct
- * straight let the driver write 80 bytes past it.
- */
-#include "isp/t31_ae_attr_map.h"
-#define tseries_t31_ae_attr_map t31_ae_attr_map
-#define TSERIES_T31_AE_BLOCK_WORDS T31_AE_BLOCK_WORDS
-
 int IMP_ISP_Tuning_SetAeAttr(void *ae_attr)
 {
-    uint32_t k[TSERIES_T31_AE_BLOCK_WORDS];
-    const uint32_t *u = ae_attr;
-    unsigned int i;
+#if defined(PLATFORM_T31)
+    /* vendor 1.1.6: the kernel takes the 152-byte tisp_ae_ctrls block, the
+     * caller's IMPISPAEAttr has 18 words (isp_ae_attr.h) */
+    uint32_t kernel[ISP_AE_KERNEL_WORDS];
 
     if (ae_attr == NULL) {
         return -1;
     }
-    /* words the public struct does not set are 0 (vendor: stack) */
-    memset(k, 0, sizeof(k));
-    for (i = 0; i < sizeof(tseries_t31_ae_attr_map); i++) {
-        k[tseries_t31_ae_attr_map[i]] = u[i];
-    }
-    return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, k);
+    isp_ae_attr_to_kernel(kernel, (const uint32_t *)ae_attr);
+    return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, kernel);
+#else
+    return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, ae_attr);
+#endif
 }
 
 int IMP_ISP_Tuning_GetAeAttr(void *ae_attr)
 {
-    uint32_t k[TSERIES_T31_AE_BLOCK_WORDS];
-    uint32_t *u = ae_attr;
-    unsigned int i;
+#if defined(PLATFORM_T31)
+    uint32_t kernel[ISP_AE_KERNEL_WORDS] = { 0 };
     int result;
 
     if (ae_attr == NULL) {
         return -1;
     }
-    memset(k, 0, sizeof(k));
-    result = tseries_tuning_get_ptr(TISP_CID_AE_ATTR, k);
+    result = tseries_tuning_get_ptr(TISP_CID_AE_ATTR, kernel);
+    /* the vendor copies the (then unset) words also when the ioctl failed;
+     * the caller's struct stays untouched here */
     if (result == 0) {
-        for (i = 0; i < sizeof(tseries_t31_ae_attr_map); i++) {
-            u[i] = k[tseries_t31_ae_attr_map[i]];
-        }
+        isp_ae_attr_from_kernel((uint32_t *)ae_attr, kernel);
     }
     return result;
-}
 #else
-int IMP_ISP_Tuning_SetAeAttr(void *ae_attr)
-{
-    return tseries_tuning_set_ptr(TISP_CID_AE_ATTR, ae_attr);
-}
-
-int IMP_ISP_Tuning_GetAeAttr(void *ae_attr)
-{
     return tseries_tuning_get_ptr(TISP_CID_AE_ATTR, ae_attr);
-}
 #endif
+}
 
 int IMP_ISP_Tuning_SetModuleControl(IMPISPModuleCtl *ispmodule)
 {

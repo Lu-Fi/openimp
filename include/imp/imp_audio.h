@@ -68,10 +68,28 @@ typedef struct {
 /**
  * Audio input channel parameters
  */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
+/* T23 1.1.0-1.3.0 and T41 1.x: the vendor struct has the AEC channel select
+ * between the depth and Rev (12 bytes); with the 8-byte struct IMP_AI_GetChnParam
+ * left the caller's Rev unset and SetChnParam took aecChn for Rev. */
+typedef enum {
+    AUDIO_AEC_CHANNEL_FIRST_LEFT = 0,
+    AUDIO_AEC_CHANNEL_SECOND_RIGHT = 1,
+    AUDIO_AEC_CHANNEL_THIRD = 2,
+    AUDIO_AEC_CHANNEL_FOURTH = 3,
+} IMPAudioAecChn;
+
+typedef struct {
+    int usrFrmDepth;                    /**< User frame depth */
+    IMPAudioAecChn aecChn;              /**< AEC channel select */
+    int Rev;                            /**< Reserved */
+} IMPAudioIChnParam;
+#else
 typedef struct {
     int usrFrmDepth;                    /**< User frame depth */
     int Rev;                            /**< Reserved */
 } IMPAudioIChnParam;
+#endif
 
 /**
  * Audio output channel queue state
