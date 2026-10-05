@@ -44,6 +44,7 @@ static int stab_sets;
 static int32_t ctrl_temper = -1, ctrl_drc = -1;
 static int s_ctrls;
 static int32_t set_subcmd;
+static int32_t val_set[256];   /* value requests by subcmd & 0xff */
 static uint8_t set_bytes[16];
 
 typedef struct {
@@ -90,6 +91,21 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         } else {
             c->value = *slot;
         }
+        return 0;
+    }
+    if (fd == TUNING_FD && request == TUNING_IOCTL &&
+        (req->subcmd == 0x8000022 || req->subcmd == 0x8000001 ||
+         req->subcmd == 0x8000082)) {
+        /* value requests {cmd, subcmd, int32 value} */
+        int32_t *w = (int32_t *)req;
+
+        calls++;
+        last_cmd = w[0];
+        last_subcmd = w[1];
+        if (w[0] == 0)
+            val_set[w[1] & 0xff] = w[2];
+        else
+            w[2] = val_set[w[1] & 0xff];
         return 0;
     }
     if (fd != TUNING_FD || request != TUNING_IOCTL) {
@@ -160,6 +176,18 @@ static void test_wait_frame(void)
     CHECK(IMP_ISP_Tuning_WaitFrame(&attr) != 0);
     CHECK(attr.cnt == 7);
     driver_ret = 0;
+}
+
+static void test_ae_strategy(void)
+{
+    IMPISPAeStrategy st = IMPISP_AE_STRATEGY_SPLIT_BALANCED;
+
+    CHECK(IMP_ISP_Tuning_SetAeStrategy(
+              IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY) == 0);
+    CHECK(last_cmd == 0 && last_subcmd == 0x8000022 && val_set[0x22] == 1);
+    CHECK(IMP_ISP_Tuning_GetAeStrategy(&st) == 0 &&
+          st == IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY);
+    CHECK(IMP_ISP_Tuning_GetAeStrategy(NULL) == -1);
 }
 
 static void test_zones(void)
@@ -340,6 +368,31 @@ static void test_t20_denoise(void)
           raw[5] == 250 && raw[6] == 5);
     stab[9] = 1;
     CHECK(IMP_ISP_Tuning_GetRawDRC(drc) == 0 && drc->mode == IMPISP_DRC_MANUAL);
+
+    /* TemperDnsCtl: the strength as a value through 0x8000082, only
+     * when it changed */
+    memset(raw, 0, sizeof(raw));
+    temper->type = IMPISP_TEMPER_MANUAL;
+    temper->temper_strength = 140;
+    calls = 0;
+    CHECK(IMP_ISP_Tuning_SetTemperDnsCtl(temper) == 0);
+    CHECK(val_set[0x82] == 140 && calls == 1);
+    CHECK(IMP_ISP_Tuning_SetTemperDnsCtl(temper) == 0 && calls == 1);
+
+    /* CWF shift: rgain << 16 | bgain through 0x8000001 */
+    {
+        IMPISPWB wb;
+
+        memset(&wb, 0, sizeof(wb));
+        wb.rgain = 0x123;
+        wb.bgain = 0x456;
+        CHECK(IMP_ISP_Tuning_Awb_SetCwfShift(&wb) == 0);
+        CHECK(val_set[0x01] == 0x1230456);
+        memset(&wb, 0, sizeof(wb));
+        CHECK(IMP_ISP_Tuning_Awb_GetCwfShift(&wb) == 0 &&
+              wb.rgain == 0x123 && wb.bgain == 0x456);
+        CHECK(IMP_ISP_Tuning_Awb_SetCwfShift(NULL) == -1);
+    }
 }
 #endif
 
@@ -353,6 +406,7 @@ int main(void)
     isp.tuning_state = 2;
     test_wait_frame();
     test_zones();
+    test_ae_strategy();
 #if defined(PLATFORM_T20)
     test_t20_denoise();
 #else

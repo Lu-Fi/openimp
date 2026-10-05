@@ -2491,6 +2491,7 @@ int IMP_ISP_Tuning_GetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
 #define TSERIES_T20_CID_CUSTOM_DRC    0x0098e910
 #define TSERIES_T20_CID_RAW_DRC       0x80000a0
 #define TSERIES_T20_CID_TEMPER_ATTR   0x8000083
+#define TSERIES_T20_CID_TEMPER_STRENGTH 0x8000082
 #define TSERIES_T20_CID_STAB          0x800002c
 #define TSERIES_T20_STAB_SIZE         112
 #define TSERIES_T20_STAB_CTRL(item)   (60 + (item))
@@ -2694,6 +2695,42 @@ int IMP_ISP_Tuning_SetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
     }
     return tseries_t20_stab_range(TSERIES_T20_STAB_MANUAL_TEMPER,
                                   TSERIES_T20_STAB_TEMPER, 41, raw[5], raw[6]);
+}
+
+/* T20 3.12.0 0x5b39c: night mode leaves it alone; the type through
+ * 0x98e90c when it changed; MANUAL: the strength as a value through
+ * tuning 0x8000082 (TEMPER_STRENGTH) when it changed */
+int IMP_ISP_Tuning_SetTemperDnsCtl(IMPISPTemperDenoiseAttr *attribute)
+{
+    uint32_t type;
+    int result;
+
+    if (attribute == NULL || !tseries_t20_tuning_ready()) {
+        return -1;
+    }
+    if (tseries_running_mode == IMPISP_RUNNING_MODE_NIGHT) {
+        IMP_LOG_INFO("IMP-ISP", "SetTemperDnsCtl: ignored in night mode");
+        return 0;
+    }
+    type = (uint32_t)attribute->type;
+    if (type != tseries_t20_dns_cache.temper_type) {
+        result = tseries_v4l2_set(TSERIES_T20_CID_CUSTOM_TEMPER,
+                                  (int32_t)type);
+        if (result != 0) {
+            return result;
+        }
+        tseries_t20_dns_cache.temper_type = type;
+    }
+    if (type != IMPISP_TEMPER_MANUAL ||
+        attribute->temper_strength == tseries_t20_dns_cache.temper_strength) {
+        return 0;
+    }
+    result = tseries_tuning_set_val(TSERIES_T20_CID_TEMPER_STRENGTH,
+                                    attribute->temper_strength);
+    if (result == 0) {
+        tseries_t20_dns_cache.temper_strength = attribute->temper_strength;
+    }
+    return result;
 }
 
 int IMP_ISP_Tuning_GetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
@@ -3911,6 +3948,65 @@ int IMP_ISP_Tuning_Awb_GetRgbCoefft(void *attr)
 {
     return tseries_tuning_get_ptr(TISP_CID_AWB_CWF_SHIFT, attr);
 }
+
+#if defined(PLATFORM_T21)
+/* T20 3.12.0 / T21 1.0.33: the strategy as a value through tuning
+ * 0x8000022 (IMAGE_TUNING_CID_AE_STRATEGY in the T20 SDK) */
+#define TSERIES_CID_AE_STRATEGY 0x8000022
+
+int IMP_ISP_Tuning_SetAeStrategy(IMPISPAeStrategy strategy)
+{
+    return tseries_tuning_set_val(TSERIES_CID_AE_STRATEGY, (int32_t)strategy);
+}
+
+int IMP_ISP_Tuning_GetAeStrategy(IMPISPAeStrategy *strategy)
+{
+    int32_t value = 0;
+    int result;
+
+    if (strategy == NULL) {
+        return -1;
+    }
+    result = tseries_tuning_get_val(TSERIES_CID_AE_STRATEGY, &value);
+    if (result == 0) {
+        *strategy = (IMPISPAeStrategy)value;
+    }
+    return result;
+}
+#endif
+
+#if defined(PLATFORM_T20)
+/* T20 3.12.0: the CWF light source as rgain << 16 | bgain through tuning
+ * 0x8000001 (IMAGE_TUNING_CID_AWB_CWF_SHIFT; the driver writes it into the
+ * LIGHT_SRC calibration of the current day/night bank) */
+#define TSERIES_T20_CID_CWF_SHIFT 0x8000001
+
+int IMP_ISP_Tuning_Awb_SetCwfShift(IMPISPWB *isp_wb_attr)
+{
+    if (isp_wb_attr == NULL) {
+        return -1;
+    }
+    return tseries_tuning_set_val(TSERIES_T20_CID_CWF_SHIFT,
+                                  (int32_t)(((uint32_t)isp_wb_attr->rgain << 16) |
+                                            isp_wb_attr->bgain));
+}
+
+int IMP_ISP_Tuning_Awb_GetCwfShift(IMPISPWB *isp_wb_attr)
+{
+    int32_t value = 0;
+    int result;
+
+    if (isp_wb_attr == NULL) {
+        return -1;
+    }
+    result = tseries_tuning_get_val(TSERIES_T20_CID_CWF_SHIFT, &value);
+    if (result == 0) {
+        isp_wb_attr->rgain = (uint16_t)((uint32_t)value >> 16);
+        isp_wb_attr->bgain = (uint16_t)value;
+    }
+    return result;
+}
+#endif
 #endif /* !PLATFORM_T23 */
 
 int IMP_ISP_SetFrameDrop(void *attr)
