@@ -834,6 +834,52 @@ static void test_t20_rate_control(void)
         free(luma);
     }
 
+    /* IMP_Encoder_SetMbRC (HWEncoderParams.mb_rc) switches the macroblock
+     * QP table at run time without the environment variable */
+    {
+        uint8_t *luma = malloc(1280u * 736u * 3u / 2u + 64u);
+        HWEncoderParams mp;
+        int k;
+
+        assert(luma && (uintptr_t)luma < 0xffffffffu);
+        for (i = 0; i < 1280u * 736u * 3u / 2u + 64u; i++)
+            luma[i] = (uint8_t)(i * 13u >> 2);
+        frame_virt = (uint32_t)(uintptr_t)luma;
+        unsetenv("OPENIMP_T20_MBRC");
+        encoder = create(1280, 720, 25, 10);
+        memset(&mp, 0, sizeof(mp));
+        mp.width = 1280;
+        mp.height = 720;
+        mp.fps_num = 25;
+        mp.fps_den = 1;
+        mp.gop_length = 10;
+        mp.rc_mode = HW_RC_MODE_CBR;
+        mp.bitrate = 2000000;
+        mp.qp = 30;
+        mp.min_qp = 20;
+        mp.max_qp = 45;
+        fill_payload(3000u, 30);
+        run_qptab_words = 0;
+        assert(encode(encoder, &info) == 0);
+        assert(run_qptab_words == 0u);          /* default: off */
+        for (k = 0; k < 3; k++) {
+            mp.mb_rc = k == 1 ? HW_MBRC_OFF : HW_MBRC_ON;
+            assert(OpenIMP_T30_HelixUpdateParams(encoder, &mp) == 0);
+            run_qptab_words = 0;
+            assert(encode(encoder, &info) == 0);
+            assert(k == 1 ? run_qptab_words == 0u : run_qptab_words > 0u);
+            /* HW_MBRC_DEFAULT keeps the setting */
+            mp.mb_rc = HW_MBRC_DEFAULT;
+            assert(OpenIMP_T30_HelixUpdateParams(encoder, &mp) == 0);
+            run_qptab_words = 0;
+            assert(encode(encoder, &info) == 0);
+            assert(k == 1 ? run_qptab_words == 0u : run_qptab_words > 0u);
+        }
+        OpenIMP_T30_HelixDestroy(encoder);
+        frame_virt = 0;
+        free(luma);
+    }
+
     unsetenv("OPENIMP_T20_RC");     /* default: the OEM controller */
     encoder = create(1280, 720, 25, 10);
     reads = reg_reads;

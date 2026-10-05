@@ -3661,10 +3661,11 @@ int IMP_Encoder_SetMbRC(int channel, int enabled)
         return -1;
     }
 #endif
-#if defined(PLATFORM_T23) || \
-    (defined(PLATFORM_T21) && !defined(PLATFORM_T20))
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
     /* the native Helix encoder: eprc macroblock rate control
-     * (docs/T23_EPRC.md); the OEM only stores the flag */
+     * (docs/T23_EPRC.md); T20/T10: the macroblock QP table of the OEM T20
+     * controller (src/rc_t20), which the OEM switches with i264e
+     * parameter 11; the T10 controller has none */
     if (ch->codec)
         (void)AL_Codec_Encode_SetMbRC(ch->codec, enabled);
 #endif

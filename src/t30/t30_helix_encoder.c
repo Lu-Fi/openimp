@@ -1864,9 +1864,11 @@ static void t20_rc_start(T30HelixEncoder *encoder)
                      runtime ? " (run-time set)" : "");
         return;
     }
-    /* macroblock rate control (the OEM's default): OPENIMP_T20_MBRC=1 */
+    /* macroblock rate control (the OEM's default): IMP_Encoder_SetMbRC
+     * (HWEncoderParams.mb_rc, the OEM i264e parameter 11); without it
+     * off, OPENIMP_T20_MBRC=1/0 overrides both */
     env = getenv("OPENIMP_T20_MBRC");
-    encoder->t20rc_mb = env && env[0] == '1';
+    encoder->t20rc_mb = env ? env[0] == '1' : hp->mb_rc == HW_MBRC_ON;
     p.mb_rc = encoder->t20rc_mb ? 1u : 0u;
     /* I-aware P budget (OpenIMP extra, docs/T20_RC.md): default on for
      * CBR (device test), off for VBR/SMART; OPENIMP_T20_RC_IAWARE=1 forces
@@ -3367,6 +3369,11 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
     next.same_scene_gops = requested->same_scene_gops;
 #endif
 #if defined(PLATFORM_T20)
+    /* IMP_Encoder_SetMbRC: a change restarts the OEM controller with or
+     * without the macroblock QP table (the OEM re-runs
+     * i264e_ratecontrol_init on a parameter change) */
+    if (requested->mb_rc == HW_MBRC_ON || requested->mb_rc == HW_MBRC_OFF)
+        next.mb_rc = requested->mb_rc;
     /* the application's range as given (a min QP of 0 is valid); a max QP
      * of 0 means "unchanged", as for the other fields */
     t20_range_changed = requested->max_qp &&
