@@ -5,6 +5,10 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-05
+
+- Pending (branch `claude/t41-isp-round2`, host-tested only, no device test yet): T41 `IMP_ISP_Get/SetSensorRegister` (64-byte request on `/dev/tx-isp`, 0xc040540d / 0x8040540e), `IMP_ISP_Tuning_Get/SetCCMAttr` (13-bit sign words from the float matrix), `Get/SetGammaAttr` (curve type check), `Get/SetISPCSCAttr` (user matrix as Q10 words), `Get/SetAutoZoom` and `Get/SetWdrOutputMode` in the vendor 1.2.6 form, including the vendor error ladder (-4088 no ISP device, -4087 NULL/no running I2C sensor, -4084 vinum, -4091 tuning off, -4092 bad value, -4090 ioctl refused, -4095 sensor ioctl). T41 header versions: only the 1.2.0 and 1.2.5 `en` headers have a 256-byte `IMPOSDRgnAttr` (library: 432); see `docs/T41_STATUS.md`. `build-t41.sh` now takes the 1.2.6 headers (the built libimp is identical to the 1.2.0-zh one).
+
 ## 2026-10-04
 
 - thingino: `openimp` and `open-tx-isp` are part of upstream `aperto` ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), pinned to the Lu-Fi forks; the T23 OEM Helix helper option and hybrid install are gone. All test cameras run `aperto` images (30/30 snapshots, 0 oops, 0 VPU errors).

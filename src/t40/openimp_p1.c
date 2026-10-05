@@ -1568,6 +1568,84 @@ int OpenIMP_P1_GetState(uint32_t *isp_flags, uint32_t *channel_mask,
     return 0;
 }
 
+#if defined(PLATFORM_T41)
+#define TISP_VIDIOC_SET_SENSOR_REGISTER   0xc040540dU
+#define TISP_VIDIOC_GET_SENSOR_REGISTER   0x8040540eU
+
+/*
+ * P3 hook: tuning readiness for the vendor T41 error ladder.
+ * 0: no ISP device (IMP_ISP_Open not called), 1: tuning not enabled,
+ * 2: tuning enabled (the vendor tuning device state 3).
+ */
+int OpenIMP_P1_TuningReady(void)
+{
+    int ready;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.isp_open)
+        ready = 0;
+    else if (!p1.tuning_enabled || p1.tuning_fd < 0)
+        ready = 1;
+    else
+        ready = 2;
+    unlock_p1();
+    return ready;
+}
+
+/*
+ * Vendor T41 libimp 1.2.6 IMP_ISP_Get/SetSensorRegister: a 64-byte request
+ * on the /dev/tx-isp node ({ sensor name[32], vinum, cbus type (1 = I2C),
+ * pad, register (u64), value (u64) }) with 0xc040540d (set) or 0x8040540e
+ * (get).  The driver hands it to the active sensor's core s_register /
+ * g_register.  Error ladder as the vendor library: -4088 no ISP device,
+ * -4087 NULL argument or no running I2C sensor, -4084 vinum >= 2, -4095
+ * ioctl failure.  reg is {addr, value}.
+ */
+int OpenIMP_P1_SensorRegister(int32_t num, uint32_t *reg, int set)
+{
+    uint32_t request[16];
+    int result;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.isp_open || p1.isp_fd < 0) {
+        unlock_p1();
+        return -4088;
+    }
+    if (!reg) {
+        unlock_p1();
+        return -4087;
+    }
+    if ((uint32_t)num >= 2U) {
+        unlock_p1();
+        return -4084;
+    }
+    if (num != IMPVI_MAIN || !p1.sensor_added || !p1.sensor_enabled ||
+        p1.sensor.cbus_type != 1) {
+        unlock_p1();
+        return -4087;
+    }
+    memset(request, 0, sizeof(request));
+    memcpy(request, p1.sensor.name, 32);
+    request[8] = (uint32_t)num;
+    request[9] = (uint32_t)p1.sensor.cbus_type;
+    request[12] = reg[0];
+    if (set)
+        request[14] = reg[1];
+    result = record_ioctl(p1.isp_fd, set ? TISP_VIDIOC_SET_SENSOR_REGISTER :
+                          TISP_VIDIOC_GET_SENSOR_REGISTER, request);
+    if (result != 0) {
+        unlock_p1();
+        return -4095;
+    }
+    if (!set)
+        reg[1] = request[14];
+    unlock_p1();
+    return 0;
+}
+#endif
+
 /* P3 control-plane hook.  Keep ownership of the tuning descriptor in P1 so
  * later units do not duplicate ISP lifetime state or reach into this private
  * structure.  The helper is intentionally not part of the public IMP ABI. */

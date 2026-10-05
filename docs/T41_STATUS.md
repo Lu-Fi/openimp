@@ -399,3 +399,53 @@ main missed one source frame twice; in six main resizes the sub missed one
 each time. RTP sequence and audio remained continuous. JPEG support on this
 standalone backend, independent capture-rate negotiation, sub-only tuning
 progress, matched CPU/IQ comparisons and longer endurance remain unqualified.
+
+## Public header versions and structure sizes
+
+OpenIMP must use the layouts of the header each streamer builds against,
+because it fills the caller's structures (a larger library layout overruns
+the caller's object).  Measured with the T41 toolchain (`sizeof`) over
+every structure of `imp_{common,system,framesource,encoder,osd,isp}.h`,
+checked against the disassembled vendor libimp 1.2.0 / 1.2.6 (they copy
+432 bytes in `IMP_OSD_Get/SetRgnAttr`):
+
+| Structure | 1.0.1 | 1.1.0 / 1.1.1 | 1.2.0 en | 1.2.0 zh | 1.2.5 en | 1.2.6 en/zh | OpenIMP |
+|---|---|---|---|---|---|---|---|
+| `IMPOSDRgnAttr` | 256 | 256 | 256 | 432 | 256 | 432 | 432 |
+| `IMPOSDFontAttrData` (`colType[]`) | 104 (20) | 104 | 104 (20) | 280 (64) | 104 (20) | 280 (64) | 280 |
+| `IMPEncoderJpegeQl` | 129 | 129 | 129 | 129 | 129 | 129 | 129 |
+| `IMPISPWaitFrameAttr` | 24 | 24 | 24 | 24 | 24 | 24 | not implemented (T41 has no `IMP_ISP_Tuning_WaitFrame*`) |
+| `IMPEncoderStream` | 24 | 28 | 28 | 28 | 28 | 28 | 28 |
+| `IMPEncoderYuvIn` | - | - | 32 | 32 | 40 | 40 | `IMP_Encoder_Yuv*` not implemented |
+
+Everything else present in two versions has the same size; later headers
+only add structures (ROI, map ROI, AE/AWB lists, TMO curve, GPIO ...).
+The library layout is the 432-byte `IMPOSDRgnAttr`, so a streamer must
+build against 1.2.0 zh or 1.2.6 (en or zh):
+
+| Consumer | Header | `IMPOSDRgnAttr` |
+|---|---|---|
+| timps (`Makefile`, `IMP_INC`) | `T41/1.2.6/en` | 432, matches |
+| prudynt-t (`Makefile`, `LIBIMP_INC_DIR`) | `T41/1.2.0/zh` | 432, matches |
+| raptor-hal (`HEADER_VER_T41` / `HEADER_LANG_T41`) | `T41/1.2.5/en` | 256, **mismatch**: `hal_osd.c` `IMP_OSD_GetRgnAttr` writes 432 bytes into a 256-byte stack object, `IMP_OSD_SetRgnAttr` reads 432 bytes (the vendor libimp 1.2.6 does the same) |
+
+`build-t41.sh` takes the 1.2.6 headers by default; the libimp built with
+1.2.6 en, 1.2.6 zh and 1.2.0 zh is byte-identical.
+
+## ISP tuning API (vendor 1.2.6 form)
+
+`IMP_ISP_Get/SetSensorRegister`, `Get/SetCCMAttr`, `Get/SetGammaAttr`,
+`Get/SetISPCSCAttr`, `Get/SetAutoZoom`, `Get/SetWdrOutputMode` follow the
+disassembled vendor library: the same check ladder and error codes (-4088
+no ISP device, -4087 NULL pointer, -4084 vinum >= 2, -4091 tuning not
+enabled, -4092 invalid gamma type / CSC gamut, -4090 tuning ioctl failed,
+-4095 sensor register ioctl failed).  The CCM becomes a 40-byte kernel block
+(13-bit words, bit 13 = negative), the user CSC a 92-byte block (Q10, 10
+bit); gamma, auto zoom and the WDR output mode pass the public structure
+through.  Host-tested (`tests/t41/p3_controls_test.c`, arena guards around
+the getters); not yet run on a camera.  Stock-driver facts the callers meet:
+control 0x08000054 (WDR output mode) has no handler in the stock module (the
+library reports -4090), the stock library's `IMP_ISP_CG_USER` (4) selects
+the BT2020 full preset in the stock driver (its user table is mode 6, which
+the library never sends), and `tisp_s_ccm_attr` answers -1 although it
+applied the matrix when CCM and BCSH are both active.

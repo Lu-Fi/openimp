@@ -142,7 +142,7 @@ $(RMEM_FIT_T40_TEST_BIN): rmem_fit_test.c $(PROJECT_DIR)/src/t40/openimp_p2_dma.
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src $< -o "$@"
 
 # ISP tuning pass-through (vendor control IDs and envelope).  Needs the
-# vendor T41 1.2.0 headers; skipped when T41_HEADERS is not set.
+# vendor T41 headers (1.2.6 en or 1.2.0 zh); skipped when T41_HEADERS is not set.
 p3-controls:
 ifneq ($(T41_HEADERS),)
 	mkdir -p "$(dir $(P3_CONTROLS_TEST_BIN))"

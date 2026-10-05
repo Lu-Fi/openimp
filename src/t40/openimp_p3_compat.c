@@ -59,9 +59,13 @@ P3_UNSUPPORTED(IMP_FrameSource_SnapFrame)
 #endif
 
 P3_UNSUPPORTED(IMP_ISP_GetFrameDrop)
+#if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_GetSensorRegister)
+#endif
 P3_UNSUPPORTED(IMP_ISP_SetFrameDrop)
+#if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_SetSensorRegister)
+#endif
 P3_UNSUPPORTED(IMP_ISP_Tuning_CreateOsdRgn)
 P3_UNSUPPORTED(IMP_ISP_Tuning_DestroyOsdRgn)
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetAfWeight)

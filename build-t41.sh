@@ -54,7 +54,15 @@ if [ ! -d "$target_dir" ] && [ -x "$compiler" ]; then
 fi
 
 if [ -z "${T41_HEADERS:-}" ]; then
+    # 1.2.6 is the libimp thingino ships and the header timps builds
+    # against; 1.2.0/zh has the same layouts (the 1.2.0 and 1.2.5 "en"
+    # headers are NOT usable: their IMPOSDRgnAttr is 256 bytes, the
+    # library's is 432).  The libimp built from the two is identical.
     for candidate in \
+        "$target_dir"/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.6/en \
+        "$firmware_dir"/output/master/*-uclibc/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.6/en \
+        "$firmware_dir"/dl/thingino-raptor-hal/git/ingenic-headers/T41/1.2.6/en \
+        "$project_dir"/../timps/include/T41/1.2.6/en \
         "$target_dir"/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/zh \
         "$firmware_dir"/output/master/*-uclibc/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/zh \
         "$firmware_dir"/dl/thingino-raptor-hal/git/ingenic-headers/T41/1.2.0/zh \
@@ -67,7 +75,7 @@ if [ -z "${T41_HEADERS:-}" ]; then
     done
 fi
 
-: "${T41_HEADERS:?set T41_HEADERS to the T41 1.2.0 header root}"
+: "${T41_HEADERS:?set T41_HEADERS to the T41 1.2.6 (or 1.2.0 zh) header root}"
 test -x "$compiler"
 test -f "$T41_HEADERS/imp/imp_audio.h"
 mkdir -p "$output_dir"

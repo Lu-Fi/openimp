@@ -51,6 +51,10 @@ typedef struct {
 } P3TuningRequest;
 
 extern int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
+#if defined(PLATFORM_T41)
+extern int OpenIMP_P1_TuningReady(void);
+extern int OpenIMP_P1_SensorRegister(int32_t num, uint32_t *reg, int set);
+#endif
 extern int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
 
 void OpenIMP_P3_FrameStats(uint32_t luma, uint32_t u_mean, uint32_t v_mean)
@@ -395,12 +399,261 @@ int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
 
 P3_T41_POINTER_PAIR(AeScenceAttr, IMPISPAEScenceAttr, TISP_CID_AE_SCENCE)
 P3_T41_POINTER_PAIR(Module_Ratio, IMPISPModuleRatioAttr, TISP_CID_MODULE_RATIO)
-P3_T41_POINTER_PAIR(CCMAttr, IMPISPCCMAttr, TISP_CID_CCM)
-P3_T41_POINTER_PAIR(GammaAttr, IMPISPGammaAttr, TISP_CID_GAMMA)
-P3_T41_POINTER_PAIR(ISPCSCAttr, IMPISPCSCAttr, TISP_CID_CSC)
 P3_T41_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
-P3_T41_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
-P3_T41_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode, TISP_CID_WDR_OUTPUT_MODE)
+
+/*
+ * Vendor T41 libimp 1.2.6 (disassembled) for CCM, gamma, CSC, auto zoom and
+ * the WDR output mode: the same ladder in front of every tuning ioctl, with
+ * the vendor's own error codes (callers log them):
+ *   -4088  no ISP device (IMP_ISP_Open not called)
+ *   -4087  NULL attribute pointer
+ *   -4084  num >= 2
+ *   -4091  tuning not enabled (IMP_ISP_EnableTuning)
+ *   -4092  invalid attribute value (gamma curve type, CSC gamut)
+ *   -4090  the tuning ioctl failed (the driver refused the control)
+ * The request is the usual envelope with direction 0 (set) / 1 (get).
+ */
+#define P3V_NO_DEVICE   (-4088)
+#define P3V_NULL_ARG    (-4087)
+#define P3V_BAD_NUM     (-4084)
+#define P3V_NOT_READY   (-4091)
+#define P3V_BAD_VALUE   (-4092)
+#define P3V_IOCTL       (-4090)
+
+/* The part every function has: device, pointer, vinum (and, unless the
+ * vendor function omits it, tuning state). */
+static int p3v_check(IMPVI_NUM num, const void *attr, int need_tuning)
+{
+    int ready = OpenIMP_P1_TuningReady();
+
+    if (ready == 0)
+        return P3V_NO_DEVICE;
+    if (!attr)
+        return P3V_NULL_ARG;
+    if ((uint32_t)num >= 2U)
+        return P3V_BAD_NUM;
+    if (need_tuning && ready < 2)
+        return P3V_NOT_READY;
+    return 0;
+}
+
+static int p3v_ioctl(IMPVI_NUM num, int32_t direction, int32_t control,
+                     void *payload)
+{
+    P3TuningRequest request;
+
+    request.vinum = num;
+    request.direction = direction;
+    request.control = control;
+    request.payload = (uintptr_t)payload;
+    return OpenIMP_P1_TuningIOCtl(TISP_VIDIOC_DEFAULT_TUNING, &request) ?
+        P3V_IOCTL : 0;
+}
+
+/* MIPS trunc.w.s / trunc.w.d: out of range and NaN give 2^31 - 1. */
+static int32_t p3v_trunc(double value)
+{
+    if (!(value > -2147483649.0 && value < 2147483648.0))
+        return 0x7fffffff;
+    return (int32_t)value;
+}
+
+/*
+ * CCM: the 40-byte kernel block is { u8 ManualEn, u8 SatEn, pad[2],
+ * word[9] }.  Each ColorMatrix float becomes a 13-bit word: value * 1024
+ * truncated, a negative value (below -1e-5) as the 13-bit two's complement
+ * of its magnitude with bit 13 set.  (The vendor library also stores the
+ * negated magnitude back into the caller's matrix; this one leaves the
+ * caller's attribute alone.)
+ */
+#define P3V_CCM_BYTES 40U
+
+int32_t IMP_ISP_Tuning_SetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *ccm)
+{
+    uint32_t block[P3V_CCM_BYTES / 4U];
+    int result = p3v_check(num, ccm, 1);
+    unsigned int i;
+
+    if (result)
+        return result;
+    memset(block, 0, sizeof(block));
+    ((uint8_t *)block)[0] = (uint8_t)ccm->ManualEn;
+    ((uint8_t *)block)[1] = (uint8_t)ccm->SatEn;
+    for (i = 0; i < 9; i++) {
+        float value = ccm->ColorMatrix[i];
+        int32_t word;
+
+        if ((double)value < -1e-5) {
+            word = p3v_trunc((double)(-value * 1024.0f));
+            block[1 + i] = ((uint32_t)(-word) & 0x1fffU) | 0x2000U;
+        } else {
+            word = p3v_trunc((double)(value * 1024.0f));
+            block[1 + i] = (uint32_t)word & 0x1fffU;
+        }
+    }
+    return p3v_ioctl(num, 0, TISP_CID_CCM, block);
+}
+
+int32_t IMP_ISP_Tuning_GetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *ccm)
+{
+    uint32_t block[P3V_CCM_BYTES / 4U];
+    int result = p3v_check(num, ccm, 1);
+    unsigned int i;
+
+    if (result)
+        return result;
+    memset(block, 0, sizeof(block));
+    result = p3v_ioctl(num, 1, TISP_CID_CCM, block);
+    if (result)
+        return result;
+    ccm->ManualEn = (IMPISPTuningOpsMode)(int8_t)((uint8_t *)block)[0];
+    ccm->SatEn = (IMPISPTuningOpsMode)(int8_t)((uint8_t *)block)[1];
+    for (i = 0; i < 9; i++) {
+        uint32_t word = block[1 + i];
+
+        if (word & 0x2000U)
+            ccm->ColorMatrix[i] =
+                -(float)(int32_t)((0U - word) & 0x1fffU) * 0.0009765625f;
+        else
+            ccm->ColorMatrix[i] = (float)(int32_t)word * 0.0009765625f;
+    }
+    return 0;
+}
+
+/* Gamma: the 264-byte public attribute goes through unchanged; the vendor
+ * library only rejects a curve type >= 5. */
+int32_t IMP_ISP_Tuning_SetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *gamma)
+{
+    int result = p3v_check(num, gamma, 1);
+
+    if (result)
+        return result;
+    if ((uint32_t)gamma->Curve_type >= 5U)
+        return P3V_BAD_VALUE;
+    return p3v_ioctl(num, 0, TISP_CID_GAMMA, gamma);
+}
+
+int32_t IMP_ISP_Tuning_GetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *gamma)
+{
+    int result = p3v_check(num, gamma, 1);
+
+    if (result)
+        return result;
+    return p3v_ioctl(num, 1, TISP_CID_GAMMA, gamma);
+}
+
+/*
+ * CSC: the kernel block is 92 bytes { u32 mode, i32 word[9], u8 offset[2],
+ * u8 clip[4], ... }.  Only mode 4 (IMP_ISP_CG_USER) carries a matrix: each
+ * CscCoef becomes (int)(coef * 1024 + 0.5) & 0x3ff.  The vendor library
+ * checks the gamut (< 5) but not the tuning state on Set.  (The stock
+ * driver numbers its modes BT601 full/limited, BT709 full/limited, BT2020
+ * full/limited, user = 6, so mode 4 selects the BT2020 full preset there.)
+ */
+#define P3V_CSC_BYTES 92U
+
+int32_t IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
+{
+    uint32_t block[P3V_CSC_BYTES / 4U];
+    int result = p3v_check(num, csc, 0);
+    unsigned int i;
+
+    if (result)
+        return result;
+    if ((uint32_t)csc->ColorGamut >= 5U)
+        return P3V_BAD_VALUE;
+    memset(block, 0, sizeof(block));
+    block[0] = (uint32_t)csc->ColorGamut;
+    if (csc->ColorGamut == 4) {
+        for (i = 0; i < 9; i++) {
+            double scaled = (double)(csc->Matrix.CscCoef[i] * 1024.0f);
+
+            block[1 + i] = (uint32_t)p3v_trunc(scaled + 0.5) & 0x3ffU;
+        }
+        memcpy((uint8_t *)block + 40, csc->Matrix.CscOffset, 2);
+        memcpy((uint8_t *)block + 42, csc->Matrix.CscClip, 4);
+    }
+    return p3v_ioctl(num, 0, TISP_CID_CSC, block);
+}
+
+int32_t IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
+{
+    uint32_t block[P3V_CSC_BYTES / 4U];
+    int result = p3v_check(num, csc, 1);
+    unsigned int i;
+    uint32_t mode;
+
+    if (result)
+        return result;
+    memset(block, 0, sizeof(block));
+    result = p3v_ioctl(num, 1, TISP_CID_CSC, block);
+    if (result)
+        return result;
+    mode = block[0];
+    if (mode == 4U) {
+        for (i = 0; i < 9; i++)
+            csc->Matrix.CscCoef[i] =
+                (float)(int32_t)block[1 + i] * 0.0009765625f;
+        /* rows two and three carry the magnitude of their first two
+         * (negative) coefficients */
+        csc->Matrix.CscCoef[3] = -csc->Matrix.CscCoef[3];
+        csc->Matrix.CscCoef[4] = -csc->Matrix.CscCoef[4];
+        csc->Matrix.CscCoef[7] = -csc->Matrix.CscCoef[7];
+        csc->Matrix.CscCoef[8] = -csc->Matrix.CscCoef[8];
+        memcpy(csc->Matrix.CscOffset, (uint8_t *)block + 40, 2);
+        memcpy(csc->Matrix.CscClip, (uint8_t *)block + 42, 4);
+    } else {
+        memset(&csc->Matrix, 0, sizeof(csc->Matrix));
+    }
+    csc->ColorGamut = (IMPISPCSCColorGamut)mode;
+    return 0;
+}
+
+/* Auto zoom (60 bytes) and the WDR output mode (the stock library's
+ * pointer pass-through, the stock driver has no handler for 0x54). */
+int32_t IMP_ISP_Tuning_SetAutoZoom(IMPVI_NUM num, IMPISPAutoZoom *zoom)
+{
+    int result = p3v_check(num, zoom, 1);
+
+    return result ? result : p3v_ioctl(num, 0, TISP_CID_AUTOZOOM, zoom);
+}
+
+int32_t IMP_ISP_Tuning_GetAutoZoom(IMPVI_NUM num, IMPISPAutoZoom *zoom)
+{
+    int result = p3v_check(num, zoom, 1);
+
+    return result ? result : p3v_ioctl(num, 1, TISP_CID_AUTOZOOM, zoom);
+}
+
+int32_t IMP_ISP_Tuning_SetWdrOutputMode(IMPVI_NUM num,
+                                        IMPISPWdrOutputMode *mode)
+{
+    int result = p3v_check(num, mode, 1);
+
+    return result ? result :
+        p3v_ioctl(num, 0, TISP_CID_WDR_OUTPUT_MODE, mode);
+}
+
+int32_t IMP_ISP_Tuning_GetWdrOutputMode(IMPVI_NUM num,
+                                        IMPISPWdrOutputMode *mode)
+{
+    int result = p3v_check(num, mode, 1);
+
+    return result ? result :
+        p3v_ioctl(num, 1, TISP_CID_WDR_OUTPUT_MODE, mode);
+}
+
+/* Sensor registers: 64-byte request on the /dev/tx-isp node, see
+ * OpenIMP_P1_SensorRegister. */
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    return OpenIMP_P1_SensorRegister(num, reg ? &reg->addr : NULL, 1);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    return OpenIMP_P1_SensorRegister(num, reg ? &reg->addr : NULL, 0);
+}
 #endif
 
 int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
