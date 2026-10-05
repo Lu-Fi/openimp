@@ -20,6 +20,7 @@ HELIX_DESCRIPTOR := $(BUILD)/t23-helix-descriptor-test
 HELIX_STREAM := $(BUILD)/t23-helix-stream-test
 RMEM_LAYOUT := $(BUILD)/t23-rmem-layout-test
 OSD_PACK := $(BUILD)/t23-osd-pack-test
+ISP_OSD_POOL := $(BUILD)/t23-isp-osd-pool-test
 AUDIO_ABI := $(BUILD)/t23-audio-abi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
@@ -44,10 +45,11 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(ISP_OSD_POOL)
 	$(HELIX_DESCRIPTOR)
 	$(RMEM_LAYOUT)
 	$(OSD_PACK)
+	$(ISP_OSD_POOL)
 	$(AUDIO_ABI)
 	$(MAKE) hevc-policy
 	$(HELIX_STREAM) encode $(BUILD)/t23-helix.h264 $(BUILD)/t23-helix.ref
@@ -168,6 +170,13 @@ $(HELIX_STREAM): helix_stream_test.c $(HELIX_NATIVE_SOURCES) \
 
 # Reserved-memory layout with the native encoder: OpenIMP's arena and the
 # real encoder buffer sizes through timps' idle/re-enable cycles.
+# ISP OSD picture pool on stubs (no PIE: descriptors carry 32-bit addresses)
+$(ISP_OSD_POOL): isp_osd_pool_test.c $(PROJECT_DIR)/src/t23/openimp_t23_isp_osd.c \
+	$(PROJECT_DIR)/src/mempool_continuous.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -DPLATFORM_T23 '-D_Static_assert(c,m)=' -fno-pie -no-pie \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -o $@ isp_osd_pool_test.c -pthread
+
 $(OSD_PACK): osd_pack_test.c $(PROJECT_DIR)/src/t23/openimp_t23_osd_pack.h \
 	$(PROJECT_DIR)/src/t23/openimp_t23_osd_abi.h
 	@mkdir -p $(BUILD)
@@ -198,7 +207,7 @@ hevc-policy: hevc_policy_test.c $(PROJECT_DIR)/src/t40/p2_hevc_policy.h
 	done
 
 clean:
-	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(BUILD)/t23-helix.h264 \
+	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(ISP_OSD_POOL) $(AUDIO_ABI) $(BUILD)/t23-helix.h264 \
 		$(BUILD)/t23-helix.ref $(BUILD)/t23-helix.nv12
 	rm -f $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(DEVICE_TEST_BIN) \
 		$(ZERO_COPY_TEST_BIN) $(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) \

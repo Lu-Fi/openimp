@@ -17,6 +17,7 @@
 #include <imp/imp_framesource.h>
 
 #include "dma_alloc.h"
+#include "mempool_continuous.h"
 #include "imp_log_int.h"
 #include "t23/openimp_t23_osd_abi.h"
 
@@ -51,11 +52,19 @@ typedef struct {
     uint8_t *virt;                  /* picture copy in rmem */
     uint32_t phys;
     uint32_t size;
+    int in_pool;                    /* carved from the OSD pool, not own rmem */
 } T23IspOsdSlot;
 
 static pthread_mutex_t isp_osd_lock = PTHREAD_MUTEX_INITIALIZER;
 static int isp_osd_ready;
-static int isp_osd_pool_size = 0x100000;
+static int isp_osd_pool_size;          /* IMP_OSD_SetPoolSize_ISP, 0 = unset */
+/* The OEM reserves one rmem block of isp_osd_pool_size bytes at Init_ISP and
+ * cuts the pictures out of it in 256-byte units (src/mempool_continuous.h);
+ * when the size was never set, pictures get their own rmem buffers instead
+ * (the OEM default is a 1-byte pool, with which Init_ISP fails). */
+static MpcPool *isp_osd_pool;
+static uint8_t *isp_osd_pool_virt;
+static uint32_t isp_osd_pool_phys;
 static T23IspOsdSlot isp_osd[T23_ISP_OSD_CHANNELS][T23_ISP_OSD_PICS];
 
 static int valid_slot(int chn, int handle)
@@ -91,24 +100,50 @@ static int notify_isp(int handle, T23IspOsdSlot *slot)
 
 static void free_slot_picture(T23IspOsdSlot *slot)
 {
-    if (slot->phys)
+    if (slot->in_pool) {
+        if (isp_osd_pool)
+            (void)mpc_free(isp_osd_pool, slot->virt);
+    } else if (slot->phys) {
         DMA_FreePhys(slot->phys);
+    }
     slot->virt = NULL;
     slot->phys = 0;
     slot->size = 0;
+    slot->in_pool = 0;
 }
 
 int IMP_OSD_Init_ISP(void)
 {
-    /* The OEM pre-allocates one rmem pool of IMP_OSD_SetPoolSize_ISP bytes;
-     * pictures get their own rmem buffers here instead. */
+    int ret = 0;
+
     pthread_mutex_lock(&isp_osd_lock);
     if (!isp_osd_ready) {
         memset(isp_osd, 0, sizeof(isp_osd));
-        isp_osd_ready = 1;
+        if (isp_osd_pool_size > 0) {
+            IMPDMABufferInfo info;
+
+            memset(&info, 0, sizeof(info));
+            if (DMA_AllocDescriptor(&info, isp_osd_pool_size, "isp-osd-pool") !=
+                    0 || !info.virt_addr || !info.phys_addr) {
+                ret = -1;
+            } else {
+                isp_osd_pool_virt = (uint8_t *)(uintptr_t)info.virt_addr;
+                isp_osd_pool_phys = info.phys_addr;
+                isp_osd_pool = mpc_init(isp_osd_pool_virt,
+                                        (size_t)isp_osd_pool_size);
+                if (!isp_osd_pool) {        /* below 0x100 bytes */
+                    DMA_FreePhys(isp_osd_pool_phys);
+                    isp_osd_pool_virt = NULL;
+                    isp_osd_pool_phys = 0;
+                    ret = -1;
+                }
+            }
+        }
+        if (ret == 0)
+            isp_osd_ready = 1;
     }
     pthread_mutex_unlock(&isp_osd_lock);
-    return 0;
+    return ret;
 }
 
 void IMP_OSD_Exit_ISP(void)
@@ -126,10 +161,19 @@ void IMP_OSD_Exit_ISP(void)
         }
     }
     memset(isp_osd, 0, sizeof(isp_osd));
+    if (isp_osd_pool) {
+        mpc_deinit(isp_osd_pool);
+        DMA_FreePhys(isp_osd_pool_phys);
+        isp_osd_pool = NULL;
+        isp_osd_pool_virt = NULL;
+        isp_osd_pool_phys = 0;
+    }
     isp_osd_ready = 0;
     pthread_mutex_unlock(&isp_osd_lock);
 }
 
+/* OEM: size <= 0 is an error; otherwise the value is stored and the next
+ * IMP_OSD_Init_ISP reserves that many bytes of rmem for the pictures. */
 int IMP_OSD_SetPoolSize_ISP(int size)
 {
     if (size <= 0)
@@ -210,14 +254,27 @@ int IMP_OSD_SetRgnAttr_PicISP(int chn, int handle, IMPIspOsdAttrAsm *attr)
         IMPDMABufferInfo info;
 
         free_slot_picture(slot);
-        memset(&info, 0, sizeof(info));
-        if (DMA_AllocDescriptor(&info, size, "isp-osd") != 0 ||
-            !info.virt_addr || !info.phys_addr) {
-            pthread_mutex_unlock(&isp_osd_lock);
-            return -1;
+        if (isp_osd_pool) {
+            void *virt = mpc_alloc(isp_osd_pool, size);
+
+            if (!virt) {                /* pool full: OEM "space isn't enough" */
+                pthread_mutex_unlock(&isp_osd_lock);
+                return -1;
+            }
+            slot->virt = (uint8_t *)virt;
+            slot->phys = isp_osd_pool_phys +
+                         (uint32_t)((uint8_t *)virt - isp_osd_pool_virt);
+            slot->in_pool = 1;
+        } else {
+            memset(&info, 0, sizeof(info));
+            if (DMA_AllocDescriptor(&info, size, "isp-osd") != 0 ||
+                !info.virt_addr || !info.phys_addr) {
+                pthread_mutex_unlock(&isp_osd_lock);
+                return -1;
+            }
+            slot->virt = (uint8_t *)(uintptr_t)info.virt_addr;
+            slot->phys = info.phys_addr;
         }
-        slot->virt = (uint8_t *)(uintptr_t)info.virt_addr;
-        slot->phys = info.phys_addr;
         slot->size = (uint32_t)size;
     }
     slot->attr = *attr;
