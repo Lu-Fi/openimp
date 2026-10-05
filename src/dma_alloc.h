@@ -71,6 +71,18 @@ int IMP_Get_Info(void *info_out, uint32_t phys_addr);
  * @return Pool ID, or -1 if no pool
  */
 int IMP_FrameSource_GetPool(int chn);
+int IMP_FrameSource_SetPool(int chn, int pool_id);
+int IMP_FrameSource_ClearPoolId(void);
+
+/**
+ * Memory pools (OEM IMP_MemPool_*, behind IMP_System_MemPoolRequest/Free).
+ * InitPool reserves size bytes of rmem as pool pool_id (0..31), Release
+ * returns them (-1 while blocks are still allocated), GetById is 0 when the
+ * pool exists.
+ */
+int IMP_MemPool_InitPool(int pool_id, size_t size, const char *name);
+int IMP_MemPool_Release(int pool_id);
+int IMP_MemPool_GetById(int pool_id, void *info_out);
 
 /**
  * Flush cache for DMA buffer

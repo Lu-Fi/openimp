@@ -7,14 +7,13 @@
 
 #include <imp/imp_framesource.h>
 
+#include "dma_alloc.h"
 #include "imp_log_int.h"
 
 #define T23_FS_CHANNELS 9
-#define T23_MEM_POOLS   32
 
 static pthread_mutex_t misc_lock = PTHREAD_MUTEX_INITIALIZER;
 static int direct_threshold[T23_FS_CHANNELS];
-static size_t pool_request[T23_MEM_POOLS];
 
 static int fs_channel_created(int chn)
 {
@@ -48,20 +47,11 @@ int IMP_FrameSource_GetDirectModeAttr(int chn, int *data_threshold)
     return 0;
 }
 
-/* OEM: IMP_MemPool_InitPool(poolId, size, name) - carve a pool out of rmem
- * for the channels later bound to it with IMP_*_SetPool.  OpenIMP channels
- * allocate from the common rmem arena whatever pool they are given, so a
- * reserved pool would only take rmem away from them: the request is
- * validated and recorded, nothing is reserved. */
+/* OEM: IMP_System_MemPoolRequest is IMP_MemPool_InitPool(poolId, size,
+ * name): one block of rmem, zeroed, managed in 256-byte units, from which
+ * the channels bound with IMP_FrameSource_SetPool take their buffers
+ * (src/dma_alloc.c).  T23 1.3.0 has no IMP_System_MemPoolFree. */
 int IMP_System_MemPoolRequest(int poolId, size_t size, char *name)
 {
-    if (poolId < 0 || poolId >= T23_MEM_POOLS || !size)
-        return -1;
-    pthread_mutex_lock(&misc_lock);
-    pool_request[poolId] = size;
-    pthread_mutex_unlock(&misc_lock);
-    IMP_LOG_INFO("System", "mempool %d (%s, %u bytes) recorded; OpenIMP "
-                 "allocates from the shared rmem arena", poolId,
-                 name ? name : "", (unsigned int)size);
-    return 0;
+    return IMP_MemPool_InitPool(poolId, size, name);
 }

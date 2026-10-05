@@ -37,12 +37,15 @@ static int t23_check_vi(int vi)
 }
 #endif
 
+#if !defined(PLATFORM_T23)
+/* T23 forwards this to the ISP driver (src/isp/isp_t23_tuning.c). */
 int IMP_ISP_MultiCamera_SetSwitchgpio(void *info)
 {
-    /* A one-sensor T23 has no sensor-switch GPIO to program. */
+    /* A one-sensor board has no sensor-switch GPIO to program. */
     (void)info;
     return 0;
 }
+#endif
 
 #if !defined(PLATFORM_T23)
 #define T23_TUNING_WRAP_U8(name)                                           \

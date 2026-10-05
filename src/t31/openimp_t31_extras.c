@@ -12,8 +12,9 @@
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
 
+#include "dma_alloc.h"
+
 #define EXTRAS_ENC_CHANNELS 9      /* NR_MAX_ENC_CHN */
-#define EXTRAS_POOLS        32
 
 /* Implemented by the encoder module; declared here with opaque pointers so
  * this file does not depend on OpenIMP's generic encoder header layout. */
@@ -29,12 +30,6 @@ static struct {
     int release_num;
     int release_den;
 } extras_enc[EXTRAS_ENC_CHANNELS];
-
-static struct {
-    int requested;
-    size_t size;
-    char name[32];
-} extras_pools[EXTRAS_POOLS];
 
 static int extras_enc_valid(int channel)
 {
@@ -108,40 +103,24 @@ int IMP_Encoder_GetStream_Impl(int encChn, void *stream, int block, int force)
     return IMP_Encoder_GetStream(encChn, stream, block);
 }
 
-/* libimp reserves "size" bytes of rmem per pool and channels bound with
- * IMP_FrameSource_SetPool/IMP_Encoder_SetPool allocate from it. OpenIMP
- * allocates every channel from the one rmem arena, so a pool is a name only:
- * reserving memory nothing would draw from would just shrink the arena. */
+/* libimp IMP_System_MemPoolRequest is IMP_MemPool_InitPool: one block of
+ * "size" bytes of rmem, zeroed and managed in 256-byte units (src/dma_alloc.c).
+ * Channels bound with IMP_FrameSource_SetPool take their buffers from it.
+ * Returns -1 when the id is taken or the memory is not there. */
 int IMP_System_MemPoolRequest(int poolId, size_t size, const char *name)
 {
-    if (poolId < 0 || poolId >= EXTRAS_POOLS || size == 0)
-        return -1;
-    pthread_mutex_lock(&extras_lock);
-    if (extras_pools[poolId].requested) {
-        pthread_mutex_unlock(&extras_lock);
-        return -1;          /* libimp: "already request" */
-    }
-    extras_pools[poolId].requested = 1;
-    extras_pools[poolId].size = size;
-    memset(extras_pools[poolId].name, 0, sizeof(extras_pools[poolId].name));
-    if (name)
-        strncpy(extras_pools[poolId].name, name,
-                sizeof(extras_pools[poolId].name) - 1);
-    pthread_mutex_unlock(&extras_lock);
-    return 0;
+    return IMP_MemPool_InitPool(poolId, size, name);
 }
 
+/* libimp: IMP_MemPool_Release (fails while blocks are still allocated from
+ * the pool), then every FrameSource and encoder channel loses its pool
+ * binding, not only those of this pool. */
 int IMP_System_MemPoolFree(int poolId)
 {
-    if (poolId < 0 || poolId >= EXTRAS_POOLS)
+    if (IMP_MemPool_Release(poolId) < 0)
         return -1;
-    pthread_mutex_lock(&extras_lock);
-    if (!extras_pools[poolId].requested) {
-        pthread_mutex_unlock(&extras_lock);
-        return -1;          /* libimp: "pool null error" */
-    }
-    memset(&extras_pools[poolId], 0, sizeof(extras_pools[poolId]));
-    pthread_mutex_unlock(&extras_lock);
+    (void)IMP_FrameSource_ClearPoolId();
+    (void)IMP_Encoder_ClearPoolId(0);
     return 0;
 }
 

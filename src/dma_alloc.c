@@ -17,6 +17,7 @@
 
 #include "dma_alloc.h"
 #include "rmem_arena.h"
+#include "mempool_continuous.h"
 #include "imp_log_int.h"
 
 /* Best-effort check that a pointer looks like a C string within max bytes */
@@ -41,6 +42,14 @@ typedef struct {
     uint32_t flags;             /* 0x8c: Flags */
     uint32_t pool_id;           /* 0x90: Pool ID */
 } DMABufferRecord;
+
+/* Record flags (0x1 kernel, 0x2 rmem arena, 0x4 AVPU are below):
+ * 0x8  block carved from a memory pool (IMP_System_MemPoolRequest); the
+ *      memory belongs to the pool, free it with mpc_free (pool_id says which)
+ * 0x10 the pool's backing buffer: freed only by IMP_MemPool_Release, never
+ *      found by address lookups (the blocks inside it are) */
+#define DMA_BUF_POOL_BLOCK   0x8u
+#define DMA_BUF_POOL_BACKING 0x10u
 
 /* ioctl commands for memory allocation */
 #define IOCTL_MEM_ALLOC     0xc0104d01  /* Allocate memory */
@@ -103,6 +112,11 @@ static char g_chosen_dev_path[64] = {0};
 static const uint32_t kCompatMaxAllocSize = 256u * 1024u * 1024u;
 
 int IMP_FlushCache(void *virt_addr, uint32_t size);
+
+/* Memory pools (IMP_System_MemPoolRequest), see the end of this file. */
+static int pool_alloc_block(int pool_id, IMPDMABufferInfo *info_out, int size,
+                            const char *tag);
+static void pool_release_block(const DMABufferRecord *buf);
 
 /* OPENIMP_RMEM_NO_REUSE=1 keeps freed arena memory reserved, as the old
  * bump allocator did, to rule out reuse while debugging. */
@@ -176,6 +190,7 @@ static DMABufferRecord* lookup_buffer_by_phys(uint32_t phys_addr) {
 
     for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
         if (g_buffer_registry[i] != NULL &&
+            !(g_buffer_registry[i]->flags & DMA_BUF_POOL_BACKING) &&
             g_buffer_registry[i]->phys_addr == phys_addr) {
             DMABufferRecord *buf = g_buffer_registry[i];
             pthread_mutex_unlock(&g_registry_mutex);
@@ -192,7 +207,7 @@ static DMABufferRecord* lookup_buffer_containing_phys(uint32_t phys_addr, uint32
 
     for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
         DMABufferRecord *buf = g_buffer_registry[i];
-        if (buf == NULL) {
+        if (buf == NULL || (buf->flags & DMA_BUF_POOL_BACKING)) {
             continue;
         }
         if (phys_addr >= buf->phys_addr && phys_addr < buf->phys_addr + buf->size) {
@@ -215,7 +230,8 @@ static DMABufferRecord* lookup_buffer_containing_virt(const void *virt_addr, uin
 
     for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
         DMABufferRecord *buf = g_buffer_registry[i];
-        if (buf == NULL || buf->virt_addr == NULL) {
+        if (buf == NULL || buf->virt_addr == NULL ||
+            (buf->flags & DMA_BUF_POOL_BACKING)) {
             continue;
         }
 
@@ -250,7 +266,7 @@ static DMABufferRecord *claim_buffer(uintptr_t addr)
             DMABufferRecord *b = g_buffer_registry[i];
             int hit;
 
-            if (b == NULL)
+            if (b == NULL || (b->flags & DMA_BUF_POOL_BACKING))
                 continue;
             if (pass == 0)
                 hit = b->phys_addr == (uint32_t)addr;
@@ -603,6 +619,12 @@ static int dma_free_buffer(DMABufferRecord *buf)
      * caller already claimed the record). */
     unregister_buffer(buf);
 
+    if (buf->flags & DMA_BUF_POOL_BLOCK) {
+        pool_release_block(buf);
+        free(buf);
+        return 0;
+    }
+
     if (buf->virt_addr != NULL) {
         if ((buf->flags & 0x2) && g_is_rmem) {
             /* The pages go to the next owner, which may be a DMA device:
@@ -668,12 +690,17 @@ static void rmem_log_alloc_failed(const RmemArena *a, size_t req,
                 new_size >> 20);
 }
 
-static int dma_alloc_descriptor_internal(int pool_id, IMPDMABufferInfo *info_out, int size, const char *tag, int top)
+static int dma_alloc_descriptor_internal(int pool_id, IMPDMABufferInfo *info_out, int size, const char *tag, int top, uint32_t extra_flags)
 {
     if (info_out == NULL || size <= 0) {
         LOG_DMA("Alloc: invalid parameters");
         return -1;
     }
+
+    /* A pool id selects the carved pool block allocator (OEM IMP_PoolAlloc);
+     * extra_flags is for the pool's own backing buffer, which is not one. */
+    if (pool_id >= 0 && !(extra_flags & DMA_BUF_POOL_BACKING))
+        return pool_alloc_block(pool_id, info_out, size, tag);
 
     if (dma_init() < 0) {
         LOG_DMA("Alloc: initialization failed");
@@ -696,6 +723,7 @@ static int dma_alloc_descriptor_internal(int pool_id, IMPDMABufferInfo *info_out
     buf->name[0] = '\0';
     buf->size = (uint32_t)size;
     buf->pool_id = (pool_id >= 0) ? (uint32_t)pool_id : 0;
+    buf->flags |= extra_flags;
 
     /* Serializing the complete backend operation prevents concurrent
      * callers from receiving the same physical pages. */
@@ -821,14 +849,14 @@ uintptr_t IMP_Alloc(void *name_or_size, intptr_t size, char *tag) {
     if (looks_like_pointer_style_alloc(arg1, size, tag)) {
         IMPDMABufferInfo info;
         memset(&info, 0, sizeof(info));
-        if (dma_alloc_descriptor_internal(-1, &info, (int)arg1, "compat", 0) != 0) {
+        if (dma_alloc_descriptor_internal(-1, &info, (int)arg1, "compat", 0, 0) != 0) {
             return (uintptr_t)NULL;
         }
         LOG_DMA("Alloc compat: size=%u virt=0x%08x phys=0x%08x", (unsigned)arg1, info.virt_addr, info.phys_addr);
         return (uintptr_t)info.virt_addr;
     }
 
-    return (uintptr_t)dma_alloc_descriptor_internal(-1, (IMPDMABufferInfo*)name_or_size, (int)size, tag, 0);
+    return (uintptr_t)dma_alloc_descriptor_internal(-1, (IMPDMABufferInfo*)name_or_size, (int)size, tag, 0, 0);
 }
 
 uintptr_t IMP_PoolAlloc(int pool_id, void *name_or_size, intptr_t size, char *tag) {
@@ -837,14 +865,14 @@ uintptr_t IMP_PoolAlloc(int pool_id, void *name_or_size, intptr_t size, char *ta
     if (looks_like_pointer_style_pool_alloc(arg2, size, tag)) {
         IMPDMABufferInfo info;
         memset(&info, 0, sizeof(info));
-        if (dma_alloc_descriptor_internal(pool_id, &info, (int)arg2, "compat_pool", 0) != 0) {
+        if (dma_alloc_descriptor_internal(pool_id, &info, (int)arg2, "compat_pool", 0, 0) != 0) {
             return (uintptr_t)NULL;
         }
         LOG_DMA("PoolAlloc compat: pool=%d size=%u virt=0x%08x phys=0x%08x", pool_id, (unsigned)arg2, info.virt_addr, info.phys_addr);
         return (uintptr_t)info.virt_addr;
     }
 
-    return (uintptr_t)dma_alloc_descriptor_internal(pool_id, (IMPDMABufferInfo*)name_or_size, (int)size, tag, 0);
+    return (uintptr_t)dma_alloc_descriptor_internal(pool_id, (IMPDMABufferInfo*)name_or_size, (int)size, tag, 0, 0);
 }
 
 int IMP_Free(uintptr_t phys_or_virt_addr) {
@@ -894,18 +922,6 @@ int IMP_Get_Info(void *info_out, uint32_t phys_addr) {
 }
 
 /**
- * IMP_FrameSource_GetPool - Get pool ID for a channel
- * Based on decompilation
- */
-int IMP_FrameSource_GetPool(int chn) {
-    (void)chn;
-
-    /* Return -1 to indicate no pool available */
-    /* This will cause VBM to use IMP_Alloc instead of IMP_PoolAlloc */
-    return -1;
-}
-
-/**
  * Flush cache for DMA buffer
  */
 int IMP_Flush_Cache(uint32_t phys_addr, uint32_t size) {
@@ -918,17 +934,17 @@ int IMP_Flush_Cache(uint32_t phys_addr, uint32_t size) {
 
 int DMA_AllocDescriptor(IMPDMABufferInfo *info_out, int size, const char *tag)
 {
-    return dma_alloc_descriptor_internal(-1, info_out, size, tag, 0);
+    return dma_alloc_descriptor_internal(-1, info_out, size, tag, 0, 0);
 }
 
 int DMA_AllocDescriptorTop(IMPDMABufferInfo *info_out, int size, const char *tag)
 {
-    return dma_alloc_descriptor_internal(-1, info_out, size, tag, 1);
+    return dma_alloc_descriptor_internal(-1, info_out, size, tag, 1, 0);
 }
 
 int DMA_PoolAllocDescriptor(int pool_id, IMPDMABufferInfo *info_out, int size, const char *tag)
 {
-    return dma_alloc_descriptor_internal(pool_id, info_out, size, tag, 0);
+    return dma_alloc_descriptor_internal(pool_id, info_out, size, tag, 0, 0);
 }
 
 int DMA_FreePhys(uint32_t phys_addr)
@@ -1277,115 +1293,317 @@ int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
     return ret;
 }
 
-/* ========== IMP_MemPool — Pool management (from OEM BN audit) ========== */
+/* ========== Memory pools (IMP_System_MemPoolRequest) ==========
+ *
+ * libimp core/mempool/Jz_mempool.c: IMP_MemPool_InitPool(poolId, size, name)
+ * takes one block of rmem (IMP_Alloc), zeroes it and manages it with the
+ * continuous block allocator (mempool_continuous.h).  FrameSource channels
+ * bound with IMP_FrameSource_SetPool get their VBM buffer from that block
+ * (IMP_PoolAlloc) instead of from the shared arena; IMP_Free returns it.
+ * 32 pools (g_manager is 0x80 bytes in both T23 and T31).
+ *
+ * The OEM keeps the pool slot after IMP_MemPool_Release (dangling pointer:
+ * the same id then cannot be requested again); here the slot is cleared. */
 
-#define MAX_MEM_POOLS 16
+#define MAX_MEM_POOLS 32
+#define FS_POOL_CHANNELS 33         /* OEM: chnNum u< 0x21 */
 
 typedef struct {
     int in_use;
-    int pool_id;
-    uint32_t size;
+    size_t size;
     uint32_t phys_base;
     void *virt_base;
+    MpcPool *mp;
+    char name[32];
 } MemPoolEntry;
 
 static MemPoolEntry g_mem_pools[MAX_MEM_POOLS];
 static pthread_mutex_t mempool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int IMP_MemPool_InitPool(int pool_id, uint32_t size, int flags) {
+static int pool_id_valid(int pool_id)
+{
+    return pool_id >= 0 && pool_id < MAX_MEM_POOLS;
+}
+
+/* The pool's backing buffer is registered like any buffer so the rmem
+ * bookkeeping and the peak report see it, but flagged out of the address
+ * lookups: the blocks carved from it are what IMP_Free is given. */
+static int pool_backing_claim(uint32_t phys, DMABufferRecord **out)
+{
+    int found = -1;
+
+    pthread_mutex_lock(&g_registry_mutex);
+    for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
+        DMABufferRecord *b = g_buffer_registry[i];
+
+        if (b && (b->flags & DMA_BUF_POOL_BACKING) && b->phys_addr == phys) {
+            g_buffer_registry[i] = NULL;
+            *out = b;
+            found = 0;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&g_registry_mutex);
+    return found;
+}
+
+/* OEM IMP_MemPool_InitPool; 0 on success, -1 on failure (bad id, pool
+ * already requested, size below 0x100, no rmem). */
+int IMP_MemPool_InitPool(int pool_id, size_t size, const char *name)
+{
     IMPDMABufferInfo info;
     MemPoolEntry *pool;
+    MpcPool *mp;
 
-    if (pool_id < 0 || pool_id >= MAX_MEM_POOLS) {
-        LOG_DMA("MemPool_InitPool: invalid pool_id %d", pool_id);
+    if (!pool_id_valid(pool_id) || size < MPC_MIN_POOL ||
+        size > kCompatMaxAllocSize) {
+        LOG_DMA("MemPool_InitPool: invalid pool %d size %zu", pool_id, size);
         return -1;
     }
-    if (size == 0 || size > kCompatMaxAllocSize) {
-        LOG_DMA("MemPool_InitPool: invalid size %u", size);
-        return -1;
-    }
-
     pthread_mutex_lock(&mempool_mutex);
-
     pool = &g_mem_pools[pool_id];
     if (pool->in_use) {
-        LOG_DMA("MemPool_InitPool: pool %d already in use", pool_id);
         pthread_mutex_unlock(&mempool_mutex);
+        LOG_DMA("MemPool_InitPool: pool %d already requested", pool_id);
         return -1;
     }
-
-    /* This path needs both addresses.  Calling the dual-ABI IMP_Alloc with a
-     * NULL descriptor returns a status value, not an allocation address. */
     memset(&info, 0, sizeof(info));
-    if (DMA_AllocDescriptor(&info, (int)size, "mempool") != 0 ||
+    if (dma_alloc_descriptor_internal(pool_id, &info, (int)size, "mempool", 0,
+                                      DMA_BUF_POOL_BACKING) != 0 ||
         info.phys_addr == 0 || info.virt_addr == 0) {
-        LOG_DMA("MemPool_InitPool: DMA allocation failed for pool %d, size %u",
-                pool_id, size);
         pthread_mutex_unlock(&mempool_mutex);
+        LOG_DMA("MemPool_InitPool: no rmem for pool %d, size %zu", pool_id, size);
         return -1;
     }
+    {
+        /* info.virt_addr is 32 bit; the buffer's real pointer is in the record */
+        DMABufferRecord *rec = NULL;
+        void *virt;
 
+        pthread_mutex_lock(&g_registry_mutex);
+        for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
+            DMABufferRecord *b = g_buffer_registry[i];
+
+            if (b && (b->flags & DMA_BUF_POOL_BACKING) &&
+                b->phys_addr == info.phys_addr) {
+                rec = b;
+                break;
+            }
+        }
+        virt = rec ? rec->virt_addr : NULL;
+        pthread_mutex_unlock(&g_registry_mutex);
+        mp = virt ? mpc_init(virt, size) : NULL;
+        if (!mp) {
+            DMABufferRecord *gone = NULL;
+
+            if (pool_backing_claim(info.phys_addr, &gone) == 0)
+                dma_free_buffer(gone);
+            pthread_mutex_unlock(&mempool_mutex);
+            return -1;
+        }
+        /* zeroed through the cache: hand the pages to the devices clean */
+        if (g_is_rmem)
+            DMA_RmemFlushCache(virt, (uint32_t)size, 0);
+        pool->virt_base = virt;
+    }
     pool->in_use = 1;
-    pool->pool_id = pool_id;
     pool->size = size;
     pool->phys_base = info.phys_addr;
-    pool->virt_base = (void *)(uintptr_t)info.virt_addr;
-    (void)flags;
-
+    pool->mp = mp;
+    memset(pool->name, 0, sizeof(pool->name));
+    if (name)
+        strncpy(pool->name, name, sizeof(pool->name) - 1);
     pthread_mutex_unlock(&mempool_mutex);
-    LOG_DMA("MemPool_InitPool: pool=%d size=%u phys=0x%x",
-            pool_id, size, info.phys_addr);
+    LOG_DMA("MemPool_InitPool: pool=%d size=%zu phys=0x%x", pool_id, size,
+            info.phys_addr);
     return 0;
 }
 
-int IMP_MemPool_Release(int pool_id) {
-    if (pool_id < 0 || pool_id >= MAX_MEM_POOLS) {
-        LOG_DMA("MemPool_Release: invalid pool_id %d", pool_id);
+/* OEM IMP_MemPool_Release: -1 when the pool does not exist or blocks are
+ * still allocated from it ("you need free continus block"), else 0. */
+int IMP_MemPool_Release(int pool_id)
+{
+    MemPoolEntry *pool;
+    DMABufferRecord *rec = NULL;
+    uint32_t phys;
+
+    if (!pool_id_valid(pool_id))
+        return -1;
+    pthread_mutex_lock(&mempool_mutex);
+    pool = &g_mem_pools[pool_id];
+    if (!pool->in_use || pool->mp->used_blocks != 0) {
+        pthread_mutex_unlock(&mempool_mutex);
+        LOG_DMA("MemPool_Release: pool %d missing or still has blocks", pool_id);
         return -1;
     }
-
-    pthread_mutex_lock(&mempool_mutex);
-
-    MemPoolEntry *pool = &g_mem_pools[pool_id];
-    if (!pool->in_use) {
-        pthread_mutex_unlock(&mempool_mutex);
-        return 0;
-    }
-
-    if (pool->phys_base != 0) {
-        IMP_Free((uintptr_t)pool->phys_base);
-    }
-
+    phys = pool->phys_base;
+    mpc_deinit(pool->mp);
     memset(pool, 0, sizeof(*pool));
     pthread_mutex_unlock(&mempool_mutex);
+    if (pool_backing_claim(phys, &rec) == 0)
+        (void)dma_free_buffer(rec);
     LOG_DMA("MemPool_Release: pool=%d freed", pool_id);
     return 0;
 }
 
-int IMP_MemPool_GetById(int pool_id, void *info_out) {
-    if (pool_id < 0 || pool_id >= MAX_MEM_POOLS || info_out == NULL) {
+/* Existence check and descriptor of a pool (OEM IMP_MemPool_GetById returns
+ * the pool object, NULL when it was not requested): 0 and the backing
+ * block's phys/virt/size in info_out (may be NULL), or -1. */
+int IMP_MemPool_GetById(int pool_id, void *info_out)
+{
+    MemPoolEntry *pool;
+
+    if (!pool_id_valid(pool_id))
         return -1;
-    }
-
     pthread_mutex_lock(&mempool_mutex);
-
-    MemPoolEntry *pool = &g_mem_pools[pool_id];
+    pool = &g_mem_pools[pool_id];
     if (!pool->in_use) {
         pthread_mutex_unlock(&mempool_mutex);
         return -1;
     }
+    if (info_out) {
+        IMPDMABufferInfo *out = (IMPDMABufferInfo *)info_out;
 
-    /* OEM returns pool info — fill a generic struct with phys/virt/size */
-    IMPDMABufferInfo *out = (IMPDMABufferInfo *)info_out;
-    memset(out, 0, sizeof(*out));
-    snprintf(out->name, sizeof(out->name), "mempool_%d", pool_id);
-    out->phys_addr = pool->phys_base;
-    out->virt_addr = (uint32_t)(uintptr_t)pool->virt_base;
-    out->size = pool->size;
-    out->pool_id = (uint32_t)pool_id;
-
+        memset(out, 0, sizeof(*out));
+        snprintf(out->name, sizeof(out->name), "%s", pool->name);
+        out->phys_addr = pool->phys_base;
+        out->virt_addr = (uint32_t)(uintptr_t)pool->virt_base;
+        out->size = (uint32_t)pool->size;
+        out->pool_id = (uint32_t)pool_id;
+    }
     pthread_mutex_unlock(&mempool_mutex);
     return 0;
+}
+
+/* OEM IMP_PoolAlloc: one block of "size" bytes out of the pool, owner name
+ * in tag.  Descriptor as the OEM fills it: flags field = 1 (use count),
+ * pool id field 0. */
+static int pool_alloc_block(int pool_id, IMPDMABufferInfo *info_out, int size,
+                            const char *tag)
+{
+    MemPoolEntry *pool;
+    DMABufferRecord *rec;
+    void *virt;
+
+    if (!pool_id_valid(pool_id))
+        return -1;
+    rec = (DMABufferRecord *)calloc(1, sizeof(*rec));
+    if (!rec)
+        return -1;
+    pthread_mutex_lock(&mempool_mutex);
+    pool = &g_mem_pools[pool_id];
+    if (!pool->in_use) {
+        pthread_mutex_unlock(&mempool_mutex);
+        free(rec);
+        LOG_DMA("PoolAlloc: pool %d was not requested", pool_id);
+        return -1;
+    }
+    virt = mpc_alloc(pool->mp, size);
+    if (!virt) {
+        pthread_mutex_unlock(&mempool_mutex);
+        free(rec);
+        LOG_DMA("PoolAlloc: pool %d has no room for %d bytes", pool_id, size);
+        return -1;
+    }
+    if (tag_arg_looks_valid(tag))
+        strncpy(rec->tag, tag, sizeof(rec->tag) - 1);
+    rec->virt_addr = virt;
+    rec->phys_addr = pool->phys_base +
+                     (uint32_t)((uint8_t *)virt - (uint8_t *)pool->virt_base);
+    rec->size = (uint32_t)size;
+    rec->flags = DMA_BUF_POOL_BLOCK;
+    rec->pool_id = (uint32_t)pool_id;
+    if (register_buffer(rec) < 0) {
+        (void)mpc_free(pool->mp, virt);
+        pthread_mutex_unlock(&mempool_mutex);
+        free(rec);
+        return -1;
+    }
+    pthread_mutex_unlock(&mempool_mutex);
+    fill_dma_info(info_out, rec);
+    info_out->flags = 1;
+    info_out->pool_id = 0;
+    return 0;
+}
+
+static void pool_release_block(const DMABufferRecord *buf)
+{
+    MemPoolEntry *pool;
+
+    if (!pool_id_valid((int)buf->pool_id))
+        return;
+    /* The block is handed to the next user, possibly a device: write back
+     * and drop our lines first (as the arena free does). */
+    if (g_is_rmem && buf->virt_addr)
+        DMA_RmemFlushCache(buf->virt_addr,
+                           (buf->size + (MPC_ALIGN - 1u)) & ~(MPC_ALIGN - 1u),
+                           0);
+    pthread_mutex_lock(&mempool_mutex);
+    pool = &g_mem_pools[buf->pool_id];
+    if (pool->in_use && mpc_free(pool->mp, buf->virt_addr) != 0)
+        LOG_DMA("PoolFree: no block at %p in pool %u", buf->virt_addr,
+                buf->pool_id);
+    pthread_mutex_unlock(&mempool_mutex);
+}
+
+/* ---- FrameSource channel -> pool binding (framesource_tseries.c) ----
+ * g_pools: one pool id per channel, -1 = none, allocated on the first
+ * SetPool.  SetPool needs the pool to exist and the channel to be unbound;
+ * ClearPoolId drops every binding (IMP_System_MemPoolFree does it for all
+ * channels, whichever pool was freed). */
+static int g_fs_pools[FS_POOL_CHANNELS];
+static int g_fs_pools_ready;
+static pthread_mutex_t g_fs_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void fs_pools_reset_locked(void)
+{
+    for (int i = 0; i < FS_POOL_CHANNELS; i++)
+        g_fs_pools[i] = -1;
+    g_fs_pools_ready = 0;
+}
+
+int IMP_FrameSource_SetPool(int chn, int pool_id)
+{
+    int ret = -1;
+
+    if (chn < 0 || chn >= FS_POOL_CHANNELS)
+        return -1;
+    if (IMP_MemPool_GetById(pool_id, NULL) != 0)
+        return -1;                      /* "POOL is not init" */
+    pthread_mutex_lock(&g_fs_pool_mutex);
+    if (!g_fs_pools_ready) {
+        fs_pools_reset_locked();
+        g_fs_pools_ready = 1;
+    }
+    if (g_fs_pools[chn] < 0) {          /* else "pools already set" */
+        g_fs_pools[chn] = pool_id;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&g_fs_pool_mutex);
+    return ret;
+}
+
+int IMP_FrameSource_ClearPoolId(void)
+{
+    pthread_mutex_lock(&g_fs_pool_mutex);
+    fs_pools_reset_locked();
+    pthread_mutex_unlock(&g_fs_pool_mutex);
+    return 0;
+}
+
+/* OEM IMP_FrameSource_GetPool: the pool id bound to the channel, -1 when
+ * it has none (VBM then allocates from the shared arena). */
+int IMP_FrameSource_GetPool(int chn)
+{
+    int pool = -1;
+
+    if (chn < 0 || chn >= FS_POOL_CHANNELS)
+        return -1;
+    pthread_mutex_lock(&g_fs_pool_mutex);
+    if (g_fs_pools_ready)
+        pool = g_fs_pools[chn];
+    pthread_mutex_unlock(&g_fs_pool_mutex);
+    return pool;
 }
 
 /* ========== IMP_Alloc debug/attr functions (from OEM BN audit) ========== */
@@ -1506,7 +1724,7 @@ int IMP_PoolAlloc_Dump(void) {
         MemPoolEntry *pool = &g_mem_pools[i];
         if (pool->in_use) {
             LOG_DMA("  Pool[%d]: phys=0x%08x virt=%p size=%u",
-                    i, pool->phys_base, pool->virt_base, pool->size);
+                    i, pool->phys_base, pool->virt_base, (unsigned)pool->size);
         }
     }
     pthread_mutex_unlock(&mempool_mutex);
@@ -1516,7 +1734,7 @@ int IMP_PoolAlloc_Dump(void) {
     int count = 0;
     for (int i = 0; i < MAX_DMA_BUFFERS; i++) {
         DMABufferRecord *buf = g_buffer_registry[i];
-        if (buf != NULL && buf->pool_id > 0) {
+        if (buf != NULL && (buf->flags & DMA_BUF_POOL_BLOCK)) {
             LOG_DMA("  Buf[%d] pool=%u phys=0x%08x size=%u tag=%s",
                     i, buf->pool_id, buf->phys_addr, buf->size, buf->tag);
             count++;

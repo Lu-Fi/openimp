@@ -63,6 +63,7 @@ int IMP_ISP_GetDefaultBinPath(char *path);
 #define T23_VIDIOC_GET_FRAME_DROP_SEC 0xc00456ebU
 #define T23_VIDIOC_STREAM_CHECK 0xc00456ecU
 #define T23_VIDIOC_SET_STREAM_OUT 0xc00456edU
+#define T23_VIDIOC_SET_SWITCHGPIO 0xc00456eeU
 #define T23_VIDIOC_SET_SENSOR_REG 0x8038564fU
 #define T23_VIDIOC_GET_SENSOR_REG 0xc0385650U
 
@@ -1831,6 +1832,36 @@ int IMP_ISP_StreamCheck(void *state)
 int IMP_ISP_SetStreamOut(void *state)
 {
     return t23_dev_ioctl(__func__, T23_VIDIOC_SET_STREAM_OUT, state);
+}
+
+/* OEM: hands the IMPUserSwitchgpio (MIPI switch GPIOs of a dual/triple
+ * camera board) to the ISP driver with ioctl 0xc00456ee on the ISP device
+ * and returns its result; -1 without an open ISP or without info.  The open
+ * driver has no handler for that ioctl (ENOTTY), and a one-sensor board has
+ * no switch to program: that case reports success, like the OEM driver does
+ * for a valid request. */
+int IMP_ISP_MultiCamera_SetSwitchgpio(void *info)
+{
+    ISPDevice *isp = gISP;
+    static int warned;
+    int ret;
+
+    if (isp == NULL || info == NULL) {
+        T23_LOG_ERR(__func__, "%s(%d), ispdev or info is NULL\n", __func__,
+                    __LINE__);
+        return -1;
+    }
+    ret = ioctl(isp->fd, T23_VIDIOC_SET_SWITCHGPIO, info);
+    if (ret && errno == ENOTTY) {
+        if (!__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED))
+            imp_log_fun(4, IMP_Log_Get_Option(), 2, "IMP-ISP", T23_SRC_FILE,
+                        __LINE__, __func__, "the ISP driver has no switch "
+                        "GPIO handler; nothing to program\n");
+        return 0;
+    }
+    if (ret)
+        T23_LOG_ERR(__func__, "%s(%d), ioctl failed\n", __func__, __LINE__);
+    return ret;
 }
 
 /* --- Single-camera calls without a MultiCamera form --------------------- */
