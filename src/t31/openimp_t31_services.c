@@ -6,11 +6,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "dma_alloc.h"
@@ -114,6 +116,48 @@ struct t31_ipu_param {
     struct t31_ipu_osd_ch ch[4];
 };
 _Static_assert(sizeof(struct t31_ipu_param) == 0x98, "jz_ipu_v13 struct ipu_param");
+
+
+/* ---- diagnostics / A/B knobs (T21 OSD late-visibility hunt) ------------
+ * OPENIMP_T21_OSD_ALLOC=top|normal  bitmap placement (default: top on T21)
+ * OPENIMP_T21_OSD_FLUSH=wb|wbinv    cache op after the bitmap upload
+ *                                   (default wb = write back)              */
+static int osd_env_alloc_top(void)
+{
+    static int v = -1;
+
+    if (v < 0) {
+        const char *e = getenv("OPENIMP_T21_OSD_ALLOC");
+#if defined(PLATFORM_T21)
+        v = !(e && !strcmp(e, "normal"));
+#else
+        v = e && !strcmp(e, "top");
+#endif
+        IMP_LOG_INFO("OSD", "bitmap alloc: %s", v ? "top" : "normal");
+    }
+    return v;
+}
+
+static int osd_env_flush_dir(void)
+{
+    static int v = -1;
+
+    if (v < 0) {
+        const char *e = getenv("OPENIMP_T21_OSD_FLUSH");
+
+        v = e && !strcmp(e, "wbinv") ? 0 : 1;
+        IMP_LOG_INFO("OSD", "bitmap flush: %s", v ? "wb" : "wbinv");
+    }
+    return v;
+}
+
+static double osd_diag_now(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + ts.tv_nsec / 1e9;
+}
 
 static int osd_ipu_fd = -1;
 static int osd_ipu_errors;
@@ -243,15 +287,13 @@ static void t31_osd_load_region(struct t31_osd_region *r)
             DMA_FreePhys(b->phys);
         memset(b, 0, sizeof(*b));
         memset(&info, 0, sizeof(info));
-#if defined(PLATFORM_T21)
         /* T20/T21: the FrameSource pools share the reserved arena and are
          * re-created at its bottom on every DisableChn/EnableChn; keep the
          * long-lived bitmaps at the top, as the stock OSD pool is
-         * allocated once at start-up. */
-        if (DMA_AllocDescriptorTop(&info, (int)size, "osd-bitmap") != 0 ||
-#else
-        if (DMA_AllocDescriptor(&info, (int)size, "osd-bitmap") != 0 ||
-#endif
+         * allocated once at start-up (OPENIMP_T21_OSD_ALLOC overrides). */
+        if ((osd_env_alloc_top()
+                 ? DMA_AllocDescriptorTop(&info, (int)size, "osd-bitmap")
+                 : DMA_AllocDescriptor(&info, (int)size, "osd-bitmap")) != 0 ||
             !info.virt_addr || !info.phys_addr) {
             IMP_LOG_INFO("OSD", "no rmem for a %ux%u OSD bitmap", w, h);
             return;
@@ -261,7 +303,17 @@ static void t31_osd_load_region(struct t31_osd_region *r)
         b->size = size;
     }
     memcpy(b->virt, r->attr.data.picData.pData, size);
-    DMA_RmemFlushCache(b->virt, size, 1 /* write back */);
+    {
+        int fr = DMA_RmemFlushCache(b->virt, size, osd_env_flush_dir());
+        static unsigned int up_count;
+
+        if (up_count < 12u || fr != 0)
+            IMP_LOG_INFO("OSD", "bitmap upload %ux%u phys=0x%08x virt=%p "
+                         "flush(dir %d) ret=%d [#%u]", w, h, b->phys,
+                         (void *)b->virt, osd_env_flush_dir(), fr,
+                         up_count + 1u);
+        up_count++;
+    }
     r->active = r->last = next;
 }
 
@@ -314,6 +366,7 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     int cpu_order[T31_OSD_REGIONS];
     int count = 0, cpu_count = 0, i;
     int ipu_enabled;
+    int last_ipu_ret = 0;
 
     if (!frame || !valid_osd_group(group))
         return;
@@ -470,7 +523,8 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             }
             p.cmd |= 1u << k;
         }
-        if (ioctl(osd_ipu_fd, T31_IPU_START, &p) < 0) {
+        last_ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
+        if (last_ipu_ret < 0) {
             int ipu_errno = errno;
             static unsigned int ipu_fail_count;
 
@@ -488,6 +542,31 @@ void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
             }
         } else {
             osd_ipu_errors = 0;
+        }
+    }
+    {
+        static double first_t[T31_OSD_GROUPS], last_log[T31_OSD_GROUPS];
+        static unsigned int frames[T31_OSD_GROUPS];
+        double now = osd_diag_now();
+        unsigned int n = ++frames[group];
+
+        if (first_t[group] == 0.0)
+            first_t[group] = now;
+        if (n <= 8u || now - last_log[group] >= 10.0) {
+            char act[64] = "";
+            int m, pos = 0;
+
+            for (m = 0; m < T31_OSD_REGIONS && pos < 50; m++)
+                if (osd_regions[m].created && osd_regions[m].group == group)
+                    pos += snprintf(act + pos, sizeof(act) - pos, "%d:%d%s ",
+                                    m, osd_regions[m].active,
+                                    osd_regions[m].group_attr.show ? "" : "h");
+            last_log[group] = now;
+            IMP_LOG_INFO("OSD", "apply grp %d frame #%u t=+%.1fs ipu=%d "
+                         "ipu_cnt=%d cpu_cnt=%d last_ipu_ret=%d "
+                         "regions(id:active) %s", group, n,
+                         now - first_t[group], ipu_enabled, count, cpu_count,
+                         last_ipu_ret, act);
         }
     }
     for (i = 0; i < count; i++) {
