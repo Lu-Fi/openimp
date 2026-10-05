@@ -78,6 +78,9 @@ t23_ring_layout_test: $(T21_RMEM_SOURCES) $(ROOT)/src/rmem_arena.h \
 t21_sinter_map_test: t21_sinter_map_test.c $(ROOT)/src/isp/isp_t21_sinter.h
 	$(CC) $(CFLAGS) -I$(ROOT)/src -o $@ t21_sinter_map_test.c
 
+t21_front_crop_test: t21_front_crop_test.c $(ROOT)/src/isp/isp_front_crop.h $(ROOT)/include/imp/imp_isp.h
+	$(CC) $(CFLAGS) -I$(ROOT)/include -I$(ROOT)/src -o $@ t21_front_crop_test.c
+
 # T20 builds the T21 userspace with PLATFORM_T20 and the T30 descriptor.
 HELIX_T20_SOURCES := $(HELIX_SOURCES) $(ROOT)/src/rc_t20/rc_t20.c \
 	$(ROOT)/src/rc_t20/rc_t20_mb.c $(ROOT)/src/rc_t10/rc_t10.c
@@ -241,7 +244,7 @@ ref_ring_test_t23: ref_ring_test.c $(ROOT)/src/t21/t21_h264_descriptor.c \
 
 check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test helix_encoder_test \
 	helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
-	t21_sinter_map_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
+	t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23
@@ -256,6 +259,7 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	./t21_rmem_layout_test
 	./t23_ring_layout_test
 	./t21_sinter_map_test
+	./t21_front_crop_test
 	./helix_encoder_test_t20
 	./helix_jpeg_test_t21
 	./helix_jpeg_test_t20
@@ -289,7 +293,7 @@ clean:
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 		helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
-		t21_sinter_map_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
+		t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 		ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 		fs_lifecycle_asan_* fs_lifecycle_tsan_* helix_encoder_asan_* \

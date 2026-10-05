@@ -16,6 +16,7 @@
 #include "imp/imp_isp.h"
 #include "isp_ioctl_compat.h"
 #include "isp_t21_sinter.h"
+#include "isp_front_crop.h"
 #include "dma_alloc.h"
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_persist.h"
@@ -1186,6 +1187,7 @@ enum {
     TISP_CID_CSC_ATTR = 0x80000a6,
     TISP_CID_SENSOR_FPS = 0x80000e0,
     TISP_CID_RUNNING_MODE = 0x80000e1,
+    TISP_CID_FRONT_CROP = 0x80000e3,
     TISP_CID_MASK = 0x80000e5,
     TISP_CID_AUTO_ZOOM = 0x80000e8,
     TISP_CID_SCALER_LV = 0x80000e9,
@@ -2908,6 +2910,16 @@ int IMP_ISP_Tuning_SetFrontCrop(IMPISPFrontCrop *ispfrontcrop)
         return -1;
     }
 
+#if defined(PLATFORM_T21) /* T21 and T20/T10: FRONT_CROP, isp_front_crop.h */
+    {
+        uint32_t words[ISP_FRONT_CROP_WORDS];
+
+        isp_front_crop_pack(ispfrontcrop, words);
+        if (tseries_tuning_set_ptr(TISP_CID_FRONT_CROP, words) != 0) {
+            return -1;
+        }
+    }
+#endif
     tseries_front_crop = *ispfrontcrop;
     return 0;
 }
@@ -2918,6 +2930,18 @@ int IMP_ISP_Tuning_GetFrontCrop(IMPISPFrontCrop *ispfrontcrop)
         return -1;
     }
 
+#if defined(PLATFORM_T21)
+    {
+        uint32_t words[ISP_FRONT_CROP_WORDS] = { 0 };
+
+        /* the driver's window (disabled: full frame with the real
+         * size); a driver without the control: the last accepted set */
+        if (tseries_tuning_get_ptr(TISP_CID_FRONT_CROP, words) == 0) {
+            isp_front_crop_unpack(words, ispfrontcrop);
+            return 0;
+        }
+    }
+#endif
     *ispfrontcrop = tseries_front_crop;
     return 0;
 }
