@@ -9,10 +9,12 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <time.h>
@@ -115,6 +117,14 @@ typedef int (*P3AgcProcess)(void *, const int16_t *const *, size_t, size_t,
                             uint8_t *);
 typedef int (*P3AgcFree)(void *);
 
+/* The OSS3 driver only offers a blocking GET_STREAM (one frame per ioctl,
+ * ~numPerFrm/rate seconds).  For IMP_AI_GetFrame(NOBLOCK) a capture thread,
+ * started on the first NOBLOCK call, feeds a bounded FIFO of whole frames;
+ * the oldest frame is dropped when the consumer falls behind.  Once running,
+ * BLOCK callers consume the same FIFO so order is preserved. */
+#define P3_CAPTURE_FRAMES 16
+#define P3_CAPTURE_RETRY_US 10000
+
 static struct {
     int fd;
     int ai_enabled;
@@ -153,7 +163,20 @@ static struct {
     P3AgcFree agc_free;
     void *agc;
     int agc_enabled;
+    /* NOBLOCK capture queue, see p3_capture_start() */
+    int cap_running;
+    int cap_stop;
+    int cap_exited;
+    int cap_error;
+    size_t cap_frame_bytes;
+    unsigned int cap_count;
+    unsigned int cap_head;
+    unsigned char *cap_data;
+    int64_t cap_time[P3_CAPTURE_FRAMES];
 } p3_audio = { .fd = -1 };
+
+static pthread_mutex_t p3_cap_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t p3_cap_cond = PTHREAD_COND_INITIALIZER;
 
 extern int64_t IMP_System_GetTimeStamp(void);
 
@@ -163,6 +186,116 @@ static int p3_audio_open(void)
         return 0;
     p3_audio.fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC);
     return p3_audio.fd >= 0 ? 0 : -1;
+}
+
+static void *p3_capture_main(void *argument)
+{
+    const size_t bytes = p3_audio.cap_frame_bytes;
+    unsigned char *chunk = argument;
+    const int fd = p3_audio.fd;
+
+    pthread_mutex_lock(&p3_cap_lock);
+    while (!p3_audio.cap_stop) {
+        P3AudioInputStream stream;
+        int result;
+#if defined(PLATFORM_T41)
+        typeof(*stream.timestamp) capture_timestamp = { 0, 0 };
+#endif
+
+        pthread_mutex_unlock(&p3_cap_lock);
+        memset(&stream, 0, sizeof(stream));
+        stream.data = chunk;
+        stream.size = (uint32_t)bytes;
+#if defined(PLATFORM_T41)
+        stream.timestamp = &capture_timestamp;
+#endif
+        result = ioctl(fd, AMIC_AI_GET_STREAM, &stream);
+        pthread_mutex_lock(&p3_cap_lock);
+        if (p3_audio.cap_stop)
+            break;
+        if (result != 0) {
+            p3_audio.cap_error = 1;
+            pthread_cond_broadcast(&p3_cap_cond);
+            pthread_mutex_unlock(&p3_cap_lock);
+            usleep(P3_CAPTURE_RETRY_US);
+            pthread_mutex_lock(&p3_cap_lock);
+            continue;
+        }
+        if (p3_audio.cap_count == P3_CAPTURE_FRAMES) {
+            p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+            p3_audio.cap_count--;
+        }
+        {
+            unsigned int slot = (p3_audio.cap_head + p3_audio.cap_count) %
+                                P3_CAPTURE_FRAMES;
+
+            memcpy(p3_audio.cap_data + (size_t)slot * bytes, chunk, bytes);
+            p3_audio.cap_time[slot] = IMP_System_GetTimeStamp();
+            p3_audio.cap_count++;
+        }
+        p3_audio.cap_error = 0;
+        pthread_cond_broadcast(&p3_cap_cond);
+    }
+    p3_audio.cap_exited = 1;
+    pthread_cond_broadcast(&p3_cap_cond);
+    pthread_mutex_unlock(&p3_cap_lock);
+    free(chunk);
+    return NULL;
+}
+
+static int p3_capture_start(size_t bytes)
+{
+    pthread_t thread;
+    unsigned char *chunk = malloc(bytes);
+    unsigned char *data = malloc(bytes * P3_CAPTURE_FRAMES);
+
+    if (!chunk || !data) {
+        free(chunk);
+        free(data);
+        return -1;
+    }
+    pthread_mutex_lock(&p3_cap_lock);
+    p3_audio.cap_stop = 0;
+    p3_audio.cap_exited = 0;
+    p3_audio.cap_error = 0;
+    p3_audio.cap_count = 0;
+    p3_audio.cap_head = 0;
+    p3_audio.cap_frame_bytes = bytes;
+    free(p3_audio.cap_data);
+    p3_audio.cap_data = data;
+    p3_audio.cap_running = 1;
+    pthread_mutex_unlock(&p3_cap_lock);
+    if (pthread_create(&thread, NULL, p3_capture_main, chunk) != 0) {
+        pthread_mutex_lock(&p3_cap_lock);
+        p3_audio.cap_running = 0;
+        pthread_mutex_unlock(&p3_cap_lock);
+        free(chunk);
+        return -1;
+    }
+    pthread_detach(thread);
+    return 0;
+}
+
+/* Called with the stream already disabled where possible so a GET_STREAM in
+ * flight returns; waits at most one second for the thread. */
+static void p3_capture_stop(void)
+{
+    struct timespec deadline;
+
+    pthread_mutex_lock(&p3_cap_lock);
+    if (!p3_audio.cap_running) {
+        pthread_mutex_unlock(&p3_cap_lock);
+        return;
+    }
+    p3_audio.cap_stop = 1;
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    deadline.tv_sec += 1;
+    while (!p3_audio.cap_exited &&
+           pthread_cond_timedwait(&p3_cap_cond, &p3_cap_lock, &deadline) == 0)
+        ;
+    p3_audio.cap_running = 0;
+    p3_audio.cap_count = 0;
+    pthread_mutex_unlock(&p3_cap_lock);
 }
 
 static void p3_audio_maybe_close(void)
@@ -295,8 +428,13 @@ int IMP_AI_Disable(int device)
     int result = 0;
 
     (void)device;
-    if (p3_audio.ai_enabled)
+    if (p3_audio.ai_enabled) {
+        pthread_mutex_lock(&p3_cap_lock);
+        p3_audio.cap_stop = p3_audio.cap_running;
+        pthread_mutex_unlock(&p3_cap_lock);
         result = ioctl(p3_audio.fd, AMIC_AI_DISABLE_STREAM, 1);
+        p3_capture_stop();
+    }
     p3_audio.ai_enabled = 0;
     p3_audio.ai_channel_enabled = 0;
     p3_audio.frame_outstanding = 0;
@@ -318,6 +456,7 @@ int IMP_AI_DisableChn(int device, int channel)
     (void)device;
     if (channel != 0)
         return -1;
+    p3_capture_stop();
     p3_audio.ai_channel_enabled = 0;
     p3_audio.frame_outstanding = 0;
     return 0;
@@ -360,9 +499,9 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
 #endif
     size_t bytes;
     unsigned int channels;
+    int64_t capture_stamp;
 
     (void)device;
-    (void)block;
     if (channel != 0 || !frame || !p3_audio.ai_channel_enabled ||
         p3_audio.frame_outstanding)
         return -1;
@@ -377,21 +516,53 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
         p3_audio.frame_buffer = buffer;
         p3_audio.frame_capacity = bytes;
     }
-    memset(&stream, 0, sizeof(stream));
-    stream.data = p3_audio.frame_buffer;
-    stream.size = (uint32_t)bytes;
+    pthread_mutex_lock(&p3_cap_lock);
+    if (!p3_audio.cap_running && block == NOBLOCK) {
+        pthread_mutex_unlock(&p3_cap_lock);
+        if (p3_capture_start(bytes) != 0)
+            return -1;
+        pthread_mutex_lock(&p3_cap_lock);
+    }
+    if (p3_audio.cap_running) {
+        int64_t stamp;
+
+        if (p3_audio.cap_frame_bytes != bytes) {
+            pthread_mutex_unlock(&p3_cap_lock);
+            return -1;
+        }
+        while (block == BLOCK && !p3_audio.cap_count &&
+               !p3_audio.cap_error && !p3_audio.cap_exited)
+            pthread_cond_wait(&p3_cap_cond, &p3_cap_lock);
+        if (!p3_audio.cap_count) {
+            pthread_mutex_unlock(&p3_cap_lock);
+            return -1;
+        }
+        memcpy(p3_audio.frame_buffer,
+               p3_audio.cap_data + (size_t)p3_audio.cap_head * bytes, bytes);
+        stamp = p3_audio.cap_time[p3_audio.cap_head];
+        p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+        p3_audio.cap_count--;
+        pthread_mutex_unlock(&p3_cap_lock);
+        capture_stamp = stamp;
+    } else {
+        pthread_mutex_unlock(&p3_cap_lock);
+        memset(&stream, 0, sizeof(stream));
+        stream.data = p3_audio.frame_buffer;
+        stream.size = (uint32_t)bytes;
 #if defined(PLATFORM_T41)
-    stream.timestamp = &capture_timestamp;
+        stream.timestamp = &capture_timestamp;
 #endif
-    if (ioctl(p3_audio.fd, AMIC_AI_GET_STREAM, &stream) != 0)
-        return -1;
+        if (ioctl(p3_audio.fd, AMIC_AI_GET_STREAM, &stream) != 0)
+            return -1;
+        capture_stamp = IMP_System_GetTimeStamp();
+    }
     p3_process_effects((int16_t *)p3_audio.frame_buffer,
                        (int)(bytes / sizeof(int16_t)));
     memset(frame, 0, sizeof(*frame));
     frame->bitwidth = p3_audio.ai_attr.bitwidth;
     frame->soundmode = p3_audio.ai_attr.soundmode;
     frame->virAddr = (uint32_t *)(void *)p3_audio.frame_buffer;
-    frame->timeStamp = IMP_System_GetTimeStamp();
+    frame->timeStamp = capture_stamp;
     frame->seq = p3_audio.sequence++;
     frame->len = (int)bytes;
     p3_audio.frame_outstanding = 1;
