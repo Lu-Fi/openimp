@@ -1,6 +1,7 @@
 /*
  * T20/T21 (and T10, which runs the T20 libimp) ISP tuning calls that
- * reach the driver: WaitFrame (0x8000162) and the T20 AE/AWB zone ABI.
+ * reach the driver: WaitFrame (0x8000162), the T20 AE/AWB zone ABI and
+ * the T20 RawDRC / Sinter / Temper attributes (vendor 3.12.0 sequence).
  * src/isp/isp_tseries.c against a fake tuning ioctl (--wrap=ioctl).
  */
 #define _GNU_SOURCE
@@ -27,6 +28,23 @@ int DMA_FreePhys(uint32_t phys) { (void)phys; return 0; }
 
 #define TUNING_FD 77
 #define TUNING_IOCTL 0xc00c56c6UL
+#define G_CTRL 0xc008561bUL
+#define S_CTRL 0xc008561cUL
+
+typedef struct {
+    int32_t id;
+    int32_t value;
+} Ctrl;
+
+/* fake driver state: the T20 system table block, the custom controls and
+ * the last tuning set */
+static uint8_t stab[112];
+static uint8_t stab_sent[112];
+static int stab_sets;
+static int32_t ctrl_temper = -1, ctrl_drc = -1;
+static int s_ctrls;
+static int32_t set_subcmd;
+static uint8_t set_bytes[16];
 
 typedef struct {
     int32_t cmd;
@@ -53,6 +71,27 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     va_start(ap, request);
     req = va_arg(ap, PtrReq *);
     va_end(ap);
+    if (fd == TUNING_FD && (request == G_CTRL || request == S_CTRL)) {
+        Ctrl *c = (Ctrl *)req;
+        int32_t *slot = c->id == 0x98e90c ? &ctrl_temper :
+                        c->id == 0x98e910 ? &ctrl_drc : NULL;
+
+        if (!slot) {
+            errno = EPERM;
+            return -1;
+        }
+        if (request == S_CTRL) {
+            s_ctrls++;
+            if (c->value > 5 + (slot == &ctrl_drc)) {  /* v4l2 range */
+                errno = ERANGE;
+                return -1;
+            }
+            *slot = c->value;
+        } else {
+            c->value = *slot;
+        }
+        return 0;
+    }
     if (fd != TUNING_FD || request != TUNING_IOCTL) {
         errno = EINVAL;
         return -1;
@@ -73,6 +112,18 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     if (driver_ret) {
         errno = -driver_ret;
         return -1;
+    }
+    if (req->cmd == 0) {
+        set_subcmd = req->subcmd;
+        memcpy(set_bytes, req->ptr, 1);
+    }
+    if (req->subcmd == 0x800002c) {
+        if (req->cmd == 0) {
+            memcpy(stab_sent, req->ptr, sizeof(stab_sent));
+            stab_sets++;
+        } else {
+            memcpy(req->ptr, stab, sizeof(stab));
+        }
     }
     return 0;
 }
@@ -129,6 +180,149 @@ static void test_zones(void)
 #endif
 }
 
+#if defined(PLATFORM_T20)
+static int nonzero_except(const uint8_t *b, const int *idx, int n)
+{
+    int i, k, bad = 0;
+
+    for (i = 0; i < 112; i++) {
+        int listed = 0;
+
+        for (k = 0; k < n; k++)
+            listed |= idx[k] == i;
+        if (!listed && b[i])
+            bad++;
+    }
+    return bad;
+}
+
+static void test_t20_denoise(void)
+{
+    uint8_t raw[16];
+    IMPISPSinterDenoiseAttr *sinter = (IMPISPSinterDenoiseAttr *)raw;
+    IMPISPTemperDenoiseAttr *temper = (IMPISPTemperDenoiseAttr *)raw;
+    IMPISPDrcAttr *drc = (IMPISPDrcAttr *)raw;
+
+    /* Sinter MANUAL: manual_sinter + target with their ctrl flags */
+    memset(raw, 0, sizeof(raw));
+    sinter->enable = IMPISP_TUNING_OPS_MODE_ENABLE;
+    sinter->type = IMPISP_TUNING_OPS_TYPE_MANUAL;
+    sinter->sinter_strength = 77;
+    stab_sets = 0;
+    CHECK(IMP_ISP_Tuning_SetSinterDnsAttr(sinter) == 0 && stab_sets == 1);
+    CHECK(stab_sent[70] == 1 && stab_sent[10] == 1 && stab_sent[98] == 1 &&
+          stab_sent[43] == 77);
+    {
+        static const int idx[] = { 70, 10, 98, 43 };
+        CHECK(nonzero_except(stab_sent, idx, 4) == 0);
+    }
+    /* AUTO: only manual_sinter := 0 */
+    sinter->type = IMPISP_TUNING_OPS_TYPE_AUTO;
+    CHECK(IMP_ISP_Tuning_SetSinterDnsAttr(sinter) == 0);
+    CHECK(stab_sent[70] == 1 && stab_sent[10] == 0);
+    {
+        static const int idx[] = { 70 };
+        CHECK(nonzero_except(stab_sent, idx, 1) == 0);
+    }
+    /* RANGE (T20 type 2): sval_max/min into the sinter max/min items */
+    sinter->type = (IMPISPTuningOpsType)2;
+    raw[9] = 200;
+    raw[10] = 20;
+    CHECK(IMP_ISP_Tuning_SetSinterDnsAttr(sinter) == 0);
+    CHECK(stab_sent[70] == 1 && stab_sent[99] == 1 && stab_sent[44] == 200 &&
+          stab_sent[100] == 1 && stab_sent[45] == 20);
+    raw[9] = 10;
+    stab_sets = 0;
+    CHECK(IMP_ISP_Tuning_SetSinterDnsAttr(sinter) == -1 && stab_sets == 0);
+
+    /* Get reads the table */
+    memset(stab, 0, sizeof(stab));
+    stab[10] = 1;
+    stab[43] = 90;
+    stab[44] = 180;
+    stab[45] = 30;
+    memset(raw, 0xee, sizeof(raw));
+    CHECK(IMP_ISP_Tuning_GetSinterDnsAttr(sinter) == 0);
+    CHECK(sinter->enable == IMPISP_TUNING_OPS_MODE_ENABLE &&
+          sinter->type == IMPISP_TUNING_OPS_TYPE_MANUAL &&
+          sinter->sinter_strength == 90 && raw[9] == 180 && raw[10] == 30);
+    CHECK(raw[12] == 0xee);     /* nothing past the 12-byte attribute */
+
+    /* Temper MANUAL: type control, then the strength byte to 0x8000083 */
+    memset(raw, 0, sizeof(raw));
+    temper->type = IMPISP_TEMPER_MANUAL;
+    temper->temper_strength = 66;
+    s_ctrls = 0;
+    CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(temper) == 0);
+    CHECK(s_ctrls == 1 && ctrl_temper == 2);
+    CHECK(set_subcmd == 0x8000083 && set_bytes[0] == 66);
+    /* same type again: no control write */
+    CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(temper) == 0 && s_ctrls == 1);
+    /* RANGE (3): the v4l2 control refuses it, the table takes max/min */
+    temper->type = (IMPISPTemperMode)3;
+    raw[5] = 150;
+    raw[6] = 50;
+    stab_sets = 0;
+    CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(temper) == 0 && stab_sets == 1);
+    CHECK(stab_sent[71] == 1 && stab_sent[11] == 0 && stab_sent[102] == 1 &&
+          stab_sent[47] == 150 && stab_sent[103] == 1 && stab_sent[48] == 50);
+    /* night mode: the vendor leaves temper alone */
+    {
+        IMPISPRunningMode night = IMPISP_RUNNING_MODE_NIGHT;
+        IMPISPRunningMode day = IMPISP_RUNNING_MODE_DAY;
+
+        (void)IMP_ISP_Tuning_SetISPRunningMode(night);
+        temper->type = IMPISP_TEMPER_AUTO;
+        s_ctrls = 0;
+        stab_sets = 0;
+        CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(temper) == 0);
+        CHECK(s_ctrls == 0 && stab_sets == 0);
+        (void)IMP_ISP_Tuning_SetISPRunningMode(day);
+    }
+    memset(stab, 0, sizeof(stab));
+    stab[11] = 1;
+    stab[46] = 99;
+    stab[47] = 120;
+    stab[48] = 10;
+    CHECK(IMP_ISP_Tuning_GetTemperDnsAttr(temper) == 0);
+    CHECK(temper->type == IMPISP_TEMPER_MANUAL &&
+          temper->temper_strength == 99 && raw[5] == 120 && raw[6] == 10);
+
+    /* RawDRC MANUAL: mode control, then the attribute to 0x80000a0 */
+    memset(raw, 0, sizeof(raw));
+    drc->mode = IMPISP_DRC_HIGH;
+    s_ctrls = 0;
+    CHECK(IMP_ISP_Tuning_SetRawDRC(drc) == 0 && ctrl_drc == 2);
+    drc->mode = IMPISP_DRC_MANUAL;
+    drc->drc_strength = 180;
+    set_subcmd = 0;
+    CHECK(IMP_ISP_Tuning_SetRawDRC(drc) == 0 && ctrl_drc == 0);
+    CHECK(set_subcmd == 0x80000a0);
+    /* unchanged strength: nothing sent */
+    set_subcmd = 0;
+    CHECK(IMP_ISP_Tuning_SetRawDRC(drc) == 0 && set_subcmd == 0);
+    /* RANGE (6): Iridix max/min in the table */
+    drc->mode = (IMPISPDrcMode)6;
+    raw[5] = 220;
+    raw[6] = 40;
+    stab_sets = 0;
+    CHECK(IMP_ISP_Tuning_SetRawDRC(drc) == 0 && stab_sets == 1);
+    CHECK(stab_sent[69] == 1 && stab_sent[9] == 0 && stab_sent[96] == 1 &&
+          stab_sent[41] == 220 && stab_sent[97] == 1 && stab_sent[42] == 40);
+    raw[5] = 30;
+    CHECK(IMP_ISP_Tuning_SetRawDRC(drc) == -1);
+    memset(stab, 0, sizeof(stab));
+    stab[40] = 140;
+    stab[41] = 250;
+    stab[42] = 5;
+    CHECK(IMP_ISP_Tuning_GetRawDRC(drc) == 0);
+    CHECK(drc->mode == IMPISP_DRC_MEDIUM && drc->drc_strength == 140 &&
+          raw[5] == 250 && raw[6] == 5);
+    stab[9] = 1;
+    CHECK(IMP_ISP_Tuning_GetRawDRC(drc) == 0 && drc->mode == IMPISP_DRC_MANUAL);
+}
+#endif
+
 int main(void)
 {
     static ISPDevice isp;
@@ -139,6 +333,9 @@ int main(void)
     isp.tuning_state = 2;
     test_wait_frame();
     test_zones();
+#if defined(PLATFORM_T20)
+    test_t20_denoise();
+#endif
     if (failures) {
         fprintf(stderr, "isp_t1x_test: %d failure(s)\n", failures);
         return 1;
