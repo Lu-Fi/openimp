@@ -180,6 +180,26 @@ static void test_zones(void)
 #endif
 }
 
+#if !defined(PLATFORM_T20)
+/* T21 1.0.33: Set/GetModuleControl send the key through 0x80000e2 */
+static void test_t21_module_control(void)
+{
+    IMPISPModuleCtl ctl;
+
+    ctl.key = 0x1004;
+    set_subcmd = 0;
+    CHECK(IMP_ISP_Tuning_SetModuleControl(&ctl) == 0);
+    CHECK(set_subcmd == 0x80000e2 && set_bytes[0] == 0x04);
+    calls = 0;
+    CHECK(IMP_ISP_Tuning_GetModuleControl(&ctl) == 0);
+    CHECK(calls == 1 && last_cmd == 1 && last_subcmd == 0x80000e2);
+    driver_ret = -EPERM;
+    CHECK(IMP_ISP_Tuning_SetModuleControl(&ctl) == -1);
+    CHECK(IMP_ISP_Tuning_GetModuleControl(&ctl) != 0);
+    driver_ret = 0;
+}
+#endif
+
 #if defined(PLATFORM_T20)
 static int nonzero_except(const uint8_t *b, const int *idx, int n)
 {
@@ -335,6 +355,8 @@ int main(void)
     test_zones();
 #if defined(PLATFORM_T20)
     test_t20_denoise();
+#else
+    test_t21_module_control();
 #endif
     if (failures) {
         fprintf(stderr, "isp_t1x_test: %d failure(s)\n", failures);

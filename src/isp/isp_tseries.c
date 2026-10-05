@@ -3166,8 +3166,10 @@ int IMP_ISP_Tuning_SetModuleControl(IMPISPModuleCtl *ispmodule)
     if (ispmodule == NULL) {
         return -1;
     }
-#if defined(PLATFORM_T31)
-    /* vendor 1.1.6: the pointer goes to tuning 0x80000e2 (bypass bits) */
+#if defined(PLATFORM_T31) || (defined(PLATFORM_T21) && !defined(PLATFORM_T20))
+    /* vendor T31 1.1.6 and T21 1.0.33: the pointer goes to tuning
+     * 0x80000e2 (bypass bits; the T21 bit names differ, the key is
+     * passed through) */
     if (tseries_tuning_set_ptr(TISP_CID_MODULE_CONTROL, ispmodule) != 0) {
         return -1;
     }
@@ -3181,7 +3183,7 @@ int IMP_ISP_Tuning_GetModuleControl(IMPISPModuleCtl *ispmodule)
     if (ispmodule == NULL) {
         return -1;
     }
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || (defined(PLATFORM_T21) && !defined(PLATFORM_T20))
     return tseries_tuning_get_ptr(TISP_CID_MODULE_CONTROL, ispmodule);
 #else
     *ispmodule = tseries_module_ctl;
