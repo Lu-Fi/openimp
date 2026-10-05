@@ -3155,6 +3155,18 @@ int IMP_ISP_Tuning_GetAeState(void *state)
     return tseries_tuning_get_ptr(TISP_CID_AE_STATE, state);
 }
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0: IMP_ISP_Tuning_GetAwbZone(IMPISPAWBZone *) takes ONE pointer
+ * (stock libimp hands it straight to the driver).  The T31 form below
+ * would read two undefined argument registers as zone_g/zone_b and give the
+ * driver a 12-byte stack block to fill with the 1800-byte zone array. */
+int IMP_ISP_Tuning_GetAwbZone(void *zone)
+{
+    if (zone == NULL)
+        return -1;
+    return tseries_tuning_get_ptr(TISP_CID_AWB_ZONE, zone);
+}
+#else
 int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b)
 {
     struct {
@@ -3165,6 +3177,7 @@ int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b)
 
     return tseries_tuning_get_ptr(TISP_CID_AWB_ZONE, &zones);
 }
+#endif
 
 int IMP_ISP_Tuning_SetAwbHist(void *attr)
 {
