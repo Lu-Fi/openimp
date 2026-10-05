@@ -15,7 +15,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include <time.h>
 #include <imp/imp_audio.h>
+#include "../audio/openimp_ao_cache.h"
 
 #define P3_SIOR(number, type) _IOC(_IOC_READ, 'P', (number), sizeof(type))
 
@@ -127,6 +129,7 @@ static struct {
     int ai_gain;
     int ao_volume;
     int ao_gain;
+    openimp_ao_cache ao_cache;
     unsigned char *frame_buffer;
     size_t frame_capacity;
     int frame_outstanding;
@@ -665,10 +668,14 @@ int IMP_AO_Enable(int device)
     return 0;
 }
 
+static void p3_ao_cache_release(void);
+
 int IMP_AO_Disable(int device)
 {
     int result = 0;
     (void)device;
+    if (p3_audio.ao_enabled)
+        p3_ao_cache_release();
     if (p3_audio.ao_enabled)
         result = ioctl(p3_audio.fd, AMIC_AO_DISABLE_STREAM, 1);
     p3_audio.ao_enabled = 0;
@@ -677,12 +684,52 @@ int IMP_AO_Disable(int device)
     return result;
 }
 
+static int64_t p3_ao_now_ns(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static unsigned p3_ao_bytes_per_sec(void)
+{
+    return (unsigned)p3_audio.ao_attr.samplerate *
+           (p3_audio.ao_attr.soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
+           (unsigned)sizeof(int16_t);
+}
+
+static int p3_ao_driver_write(void *ctx, const void *data, size_t len)
+{
+    P3AudioOutputStream stream;
+
+    (void)ctx;
+    memset(&stream, 0, sizeof(stream));
+    stream.data = (void *)(uintptr_t)data;
+    stream.size = (uint32_t)len;
+    return ioctl(p3_audio.fd, AMIC_AO_SET_STREAM, &stream);
+}
+
+static void p3_ao_cache_release(void)
+{
+    if (p3_audio.fd >= 0)
+        (void)openimp_ao_cache_release(&p3_audio.ao_cache, p3_ao_now_ns(),
+                                       p3_ao_bytes_per_sec(),
+                                       p3_ao_driver_write, NULL);
+}
+
 int IMP_AO_EnableChn(int device, int channel)
 {
     (void)device;
     if (!p3_audio.ao_enabled || channel != 0)
         return -1;
     p3_audio.ao_channel_enabled = 1;
+    /* vendor _ao_chn_enable: cache switch back to its default, filling;
+     * threshold = OPENIMP_AO_CACHE_PERIODS periods of 20 ms (no fixed
+     * period here, the driver takes any size) */
+    openimp_ao_cache_reset(&p3_audio.ao_cache,
+                           p3_ao_bytes_per_sec() / 50 *
+                               OPENIMP_AO_CACHE_PERIODS);
     return 0;
 }
 
@@ -691,6 +738,8 @@ int IMP_AO_DisableChn(int device, int channel)
     (void)device;
     if (channel != 0)
         return -1;
+    if (p3_audio.ao_channel_enabled)
+        p3_ao_cache_release();
     p3_audio.ao_channel_enabled = 0;
     return 0;
 }
@@ -698,15 +747,16 @@ int IMP_AO_DisableChn(int device, int channel)
 int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
                      IMPBlock block)
 {
-    P3AudioOutputStream stream;
     (void)device;
     (void)block;
     if (channel != 0 || !frame || !frame->virAddr || frame->len <= 0 ||
         !p3_audio.ao_channel_enabled || p3_audio.ao_paused)
         return -1;
-    stream.data = frame->virAddr;
-    stream.size = (uint32_t)frame->len;
-    return ioctl(p3_audio.fd, AMIC_AO_SET_STREAM, &stream);
+    /* cache off (default): straight to the driver as before */
+    return openimp_ao_cache_submit(&p3_audio.ao_cache, frame->virAddr,
+                                   (size_t)frame->len, p3_ao_now_ns(),
+                                   p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                   NULL);
 }
 
 int IMP_AO_SetVol(int device, int channel, int value)
@@ -763,17 +813,23 @@ int IMP_AO_SetVolMute(int device, int channel, int mute)
 int IMP_AO_ClearChnBuf(int device, int channel)
 {
     (void)device;
-    return channel == 0 && p3_audio.fd >= 0
-               ? ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 1)
-               : -1;
+    if (channel != 0 || p3_audio.fd < 0)
+        return -1;
+    openimp_ao_cache_drop(&p3_audio.ao_cache);
+    return ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 1);
 }
 
 int IMP_AO_FlushChnBuf(int device, int channel)
 {
     (void)device;
-    return channel == 0 && p3_audio.fd >= 0
-               ? ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 1)
-               : -1;
+    if (channel != 0 || p3_audio.fd < 0)
+        return -1;
+    /* the vendor flush plays everything, also what the cache still holds */
+    if (openimp_ao_cache_release(&p3_audio.ao_cache, p3_ao_now_ns(),
+                                 p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                 NULL) != 0)
+        return -1;
+    return ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 1);
 }
 
 int IMP_AO_PauseChn(int device, int channel)
@@ -807,8 +863,15 @@ int IMP_AO_QueryChnStat(int device, int channel, IMPAudioOChnState *status)
 
 int IMP_AO_CacheSwitch(int device, int channel, int enable)
 {
-    (void)device;
-    return channel == 0 && (enable == 0 || enable == 1) ? 0 : -1;
+    if (device != 0 || channel != 0)
+        return -1;
+    /* vendor: any value is stored (non-zero = on); before the AO device is
+     * enabled there is no channel state yet and the call only logs */
+    if (!p3_audio.ao_enabled || p3_audio.fd < 0)
+        return 0;
+    return openimp_ao_cache_set(&p3_audio.ao_cache, enable, p3_ao_now_ns(),
+                                p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                NULL) == 0 ? 0 : -1;
 }
 
 int IMP_AO_Soft_Mute(int device, int channel)

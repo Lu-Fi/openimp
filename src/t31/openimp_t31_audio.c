@@ -29,6 +29,7 @@
 #include <imp/imp_audio.h>
 
 #include "audio/openimp_aec.h"
+#include "audio/openimp_ao_cache.h"
 
 #if defined(PLATFORM_T23)
 /* T23 speaks the OSS3 "AMIC" /dev/dsp ABI of ingenic-sdk audio/t23/oss3
@@ -193,6 +194,7 @@ static struct {
     int ai_alc_gain;
     int ao_volume;
     int ao_gain;
+    openimp_ao_cache ao_cache;
     /* The record thread owns T31_AI_GET_STREAM; the fields below up to
      * capture_tail_time are shared with it under capture_lock. */
     pthread_t capture_thread;
@@ -1616,6 +1618,10 @@ int IMP_AO_GetPubAttr(int device, IMPAudioIOAttr *attribute)
     return 0;
 }
 
+static int64_t t31_ao_now_ns(void);
+static unsigned t31_ao_bytes_per_sec(void);
+static int t31_ao_driver_write(void *ctx, const void *data, size_t len);
+
 int IMP_AO_Enable(int device)
 {
     int fd;
@@ -1671,6 +1677,10 @@ int IMP_AO_Disable(int device)
     if (device != 0)
         return -1;
     if (t31_audio.ao_fd >= 0) {
+        /* play what the cache still holds, it would be lost on close */
+        (void)openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                       t31_ao_bytes_per_sec(),
+                                       t31_ao_driver_write, NULL);
         if (t31_audio.ao_enabled)
 #if defined(PLATFORM_T23)
             result = ioctl(t31_audio.ao_fd, T23_AO_DISABLE_STREAM, 1);
@@ -1684,6 +1694,7 @@ int IMP_AO_Disable(int device)
     t31_audio.ao_channel_enabled = 0;
     t31_audio.ao_paused = 0;
     t31_audio.ao_period_valid = 0;
+    openimp_ao_cache_drop(&t31_audio.ao_cache);
     return result;
 }
 
@@ -1692,6 +1703,10 @@ int IMP_AO_EnableChn(int device, int channel)
     if (device != 0 || channel != 0 || !t31_audio.ao_enabled)
         return -1;
     t31_audio.ao_channel_enabled = 1;
+    /* vendor _ao_chn_enable: cache switch back to its default, filling */
+    openimp_ao_cache_reset(&t31_audio.ao_cache,
+                           t31_audio.ao_period_bytes *
+                               OPENIMP_AO_CACHE_PERIODS);
     return 0;
 }
 
@@ -1699,6 +1714,10 @@ int IMP_AO_DisableChn(int device, int channel)
 {
     if (device != 0 || channel != 0)
         return -1;
+    if (t31_audio.ao_channel_enabled && t31_audio.ao_fd >= 0)
+        (void)openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                       t31_ao_bytes_per_sec(),
+                                       t31_ao_driver_write, NULL);
     t31_audio.ao_channel_enabled = 0;
     return 0;
 }
@@ -1789,9 +1808,46 @@ void openimp_audio_set_ao_agc_mode(int mode)
     pthread_mutex_unlock(&t31_ao_fx_lock);
 }
 
+static int64_t t31_ao_now_ns(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static unsigned t31_ao_bytes_per_sec(void)
+{
+    return (unsigned)t31_audio.ao_attr.samplerate *
+           (t31_audio.ao_attr.soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
+           (unsigned)sizeof(int16_t);
+}
+
+static int t31_ao_driver_write(void *ctx, const void *data, size_t len)
+{
+    const unsigned char *bytes = data;
+
+    (void)ctx;
+    /* one period per call (held data is a multiple of it); each blocks until
+     * the driver took the whole period (OSS3: 800 ms timeout; OSS2 returns 0
+     * and the count in stream.size, a period is taken whole) */
+    while (len) {
+        T31AudioOutputStream stream;
+        size_t take = len < t31_audio.ao_period_bytes
+                          ? len : t31_audio.ao_period_bytes;
+
+        stream.data = (void *)(uintptr_t)bytes;
+        stream.size = (uint32_t)take;
+        if (ioctl(t31_audio.ao_fd, T31_AO_SET_STREAM, &stream) != 0)
+            return -1;
+        bytes += take;
+        len -= take;
+    }
+    return 0;
+}
+
 static int t31_ao_write_period(void)
 {
-    T31AudioOutputStream stream;
     int result;
 
     pthread_mutex_lock(&t31_ao_fx_lock);
@@ -1803,11 +1859,11 @@ static int t31_ao_write_period(void)
     t31_apply_ao_volume((int16_t *)(void *)t31_audio.ao_period,
                      (int)(t31_audio.ao_period_valid / sizeof(int16_t)),
                      t31_audio.ao_volume, t31_audio.ao_muted);
-    stream.data = t31_audio.ao_period;
-    stream.size = (uint32_t)t31_audio.ao_period_valid;
-    /* blocks until the driver took the whole period (OSS3: 800 ms timeout;
-     * OSS2 returns 0 and the count in stream.size, a period is taken whole) */
-    result = ioctl(t31_audio.ao_fd, T31_AO_SET_STREAM, &stream);
+    /* cache off (default): straight to the driver */
+    result = openimp_ao_cache_submit(&t31_audio.ao_cache, t31_audio.ao_period,
+                                     t31_audio.ao_period_valid,
+                                     t31_ao_now_ns(), t31_ao_bytes_per_sec(),
+                                     t31_ao_driver_write, NULL);
     t31_audio.ao_period_valid = 0;
     return result == 0 ? 0 : -1;
 }
@@ -1900,6 +1956,7 @@ int IMP_AO_ClearChnBuf(int device, int channel)
     if (device != 0 || channel != 0 || t31_audio.ao_fd < 0)
         return -1;
     t31_audio.ao_period_valid = 0;
+    openimp_ao_cache_drop(&t31_audio.ao_cache);
     return ioctl(t31_audio.ao_fd, T31_AO_CLEAR_STREAM, 1);
 }
 
@@ -1915,6 +1972,11 @@ int IMP_AO_FlushChnBuf(int device, int channel)
         if (t31_ao_write_period() != 0)
             return -1;
     }
+    /* the vendor flush plays everything, also what the cache still holds */
+    if (openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                 t31_ao_bytes_per_sec(),
+                                 t31_ao_driver_write, NULL) != 0)
+        return -1;
     return ioctl(t31_audio.ao_fd, T31_AO_SYNC_STREAM, 1);
 }
 
@@ -1946,9 +2008,15 @@ int IMP_AO_QueryChnStat(int device, int channel, IMPAudioOChnState *status)
 
 int IMP_AO_CacheSwitch(int device, int channel, int enable)
 {
-    return device == 0 && channel == 0 && (enable == 0 || enable == 1)
-               ? 0
-               : -1;
+    if (device != 0 || channel != 0)
+        return -1;
+    /* vendor: any value is stored (non-zero = on); before the AO device is
+     * enabled there is no channel state yet and the call only logs */
+    if (!t31_audio.ao_enabled || t31_audio.ao_fd < 0)
+        return 0;
+    return openimp_ao_cache_set(&t31_audio.ao_cache, enable, t31_ao_now_ns(),
+                                t31_ao_bytes_per_sec(), t31_ao_driver_write,
+                                NULL) == 0 ? 0 : -1;
 }
 
 int IMP_AO_Soft_Mute(int device, int channel)
