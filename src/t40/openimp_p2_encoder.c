@@ -1039,6 +1039,14 @@ extern int AL_Codec_Encode_SetRcParam(void *codec, void *rc_attr);
 extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
 extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
+extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
+#endif
+#if defined(PLATFORM_T20)
+/* HW_SUPERFRM_NONE / HW_SUPERFRM_REENCODE in hw_encoder.h */
+#define P2_HW_SUPERFRM_NONE     1u
+#define P2_HW_SUPERFRM_REENCODE 2u
+extern int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                         uint32_t i_bits, uint32_t p_bits);
 #endif
 #if defined(PLATFORM_T31)
 extern int AL_Codec_Encode_SetRcQualityCap(void *codec, int rc_mode,
@@ -1727,6 +1735,13 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         (void)AL_Codec_Encode_SetMbRC(ch->codec,
                                       ch->macroblock_rate_control);
     }
+#endif
+#if defined(PLATFORM_T20)
+    /* GetSuperFrameCfg before any Set: the OEM controller's thresholds
+     * (i264e_param_default; RCT20_DefaultParams) */
+    ch->superframe.superFrmMode = IMP_RC_SUPERFRM_REENCODE;
+    ch->superframe.superIFrmBitsThr = 0x12c0000u;
+    ch->superframe.superPFrmBitsThr = 0xd64925u;
 #endif
     p2_startup_trace("openimp/P2 startup: CreateChn codec created %p\n",
                      ch->codec);
@@ -3500,6 +3515,11 @@ int IMP_Encoder_SetChnColor2Grey(int channel,
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#else
+    /* T20/T21/T10: the Helix/NVPU encoder replaces the chroma plane with
+     * grey from the next IDR on (OEM i264e_reconfig_color2gray_set) */
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetColor2Grey(ch->codec, config->enable);
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -3524,6 +3544,13 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
 
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no ROI QP (the OEM
+     * i264e_reconfig_roi_set feeds its macroblock QP); an enabled region
+     * is refused instead of being stored without effect */
+    if (config->bEnable)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->roi[config->u32Index] = *config;
 #if defined(PLATFORM_T23)
@@ -3574,7 +3601,20 @@ int IMP_Encoder_SetChnDenoise(int channel,
         }
     }
 #else
-    ch->attr.rcAttr.attrDenoise = *config;
+    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no encoder-side
+     * denoise; like the OEM the on/off switch stays as created, and a
+     * denoise type that would act (dnType 1 or 2 on a channel created
+     * with denoise enabled) is refused */
+    if (ch->attr.rcAttr.attrDenoise.enable && config->dnType != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    {
+        bool created_enable = ch->attr.rcAttr.attrDenoise.enable;
+
+        ch->attr.rcAttr.attrDenoise = *config;
+        ch->attr.rcAttr.attrDenoise.enable = created_enable;
+    }
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -3661,10 +3701,11 @@ int IMP_Encoder_SetMbRC(int channel, int enabled)
         return -1;
     }
 #endif
-#if defined(PLATFORM_T23) || \
-    (defined(PLATFORM_T21) && !defined(PLATFORM_T20))
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
     /* the native Helix encoder: eprc macroblock rate control
-     * (docs/T23_EPRC.md); the OEM only stores the flag */
+     * (docs/T23_EPRC.md); T20/T10: the macroblock QP table of the OEM T20
+     * controller (src/rc_t20), which the OEM switches with i264e
+     * parameter 11; the T10 controller has none */
     if (ch->codec)
         (void)AL_Codec_Encode_SetMbRC(ch->codec, enabled);
 #endif
@@ -3691,8 +3732,28 @@ int IMP_Encoder_SetSuperFrameCfg(int channel,
 
     if (!ch || !config)
         return -1;
+#if defined(PLATFORM_T20)
+    /* T20/T10: the super-frame re-encode of the OEM controller (src/rc_t20,
+     * src/rc_t10; OEM i264e parameter 13 -> its I/P thresholds).  It has
+     * no frame discard. */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE &&
+        config->superFrmMode != IMP_RC_SUPERFRM_REENCODE)
+        return -1;
+#elif !defined(PLATFORM_T23)
+    /* T21: the Helix eprc controller has no super-frame control */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->superframe = *config;
+#if defined(PLATFORM_T20)
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetSuperFrame(
+            ch->codec,
+            config->superFrmMode == IMP_RC_SUPERFRM_NONE
+                ? P2_HW_SUPERFRM_NONE : P2_HW_SUPERFRM_REENCODE,
+            config->superIFrmBitsThr, config->superPFrmBitsThr);
+#endif
 #if defined(PLATFORM_T23)
     if (openimp_t23_enc_push_superframe(ch->codec, ch->codec_type,
                                         config) != 0) {
@@ -3725,6 +3786,13 @@ int IMP_Encoder_SetH264TransCfg(int channel,
     if (!ch || !config || config->chroma_qp_index_offset < -12 ||
         config->chroma_qp_index_offset > 12)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T20/T21/T10: the Helix/NVPU command list of OpenIMP has no chroma QP
+     * offset and the PPS carries 0; another offset is refused instead of
+     * being stored without effect (it may not go into the PPS alone) */
+    if (config->chroma_qp_index_offset != 0)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->h264_transform = *config;
 #if defined(PLATFORM_T23)
@@ -3786,6 +3854,13 @@ int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 
     if (!ch || !mode || *mode < ENC_QPG_CLOSE || *mode > ENC_QPG_SASM_TAB)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T21: the eprc controller of OpenIMP has no QP-generation modes (the
+     * OEM i264e parameter 15); only CLOSE, what it does, is accepted.
+     * Macroblock rate control is IMP_Encoder_SetMbRC. */
+    if (*mode != ENC_QPG_CLOSE)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->qpg_mode = *mode;
 #if defined(PLATFORM_T23)

@@ -242,12 +242,39 @@ ref_ring_test_t23: ref_ring_test.c $(ROOT)/src/t21/t21_h264_descriptor.c \
 	$(CC) $(CFLAGS) -DT21_HELIX_T23_DELTAS -I$(ROOT)/src -o $@ \
 		ref_ring_test.c $(ROOT)/src/t21/t21_h264_descriptor.c
 
-check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test helix_encoder_test \
+# ISP tuning calls of T20 (T10) and T21 against a fake tuning ioctl.
+ISP_T1X_FLAGS = -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+	-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl
+ISP_T1X_SOURCES := isp_t1x_test.c $(ROOT)/src/isp/isp_tseries.c
+
+isp_t1x_test_t20: $(ISP_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 -o $@ $(ISP_T1X_SOURCES)
+
+isp_t1x_test_t21: $(ISP_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T21 -o $@ $(ISP_T1X_SOURCES)
+
+# Encoder channel extras of T20 (T10) and T21 through the P2 API, stub codec.
+P2_T1X_SOURCES := p2_t1x_test.c $(ROOT)/src/t40/openimp_p2_encoder.c \
+	$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/t31_stream_layout.c
+P2_T1X_FLAGS = -std=gnu99 -Wno-unused-result '-D_Static_assert(c,m)=' \
+	-I$(ROOT)/include -I$(ROOT)/src -I$(ROOT)/src/t40 -no-pie
+
+p2_t1x_test_t20: $(P2_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 -o $@ $(P2_T1X_SOURCES) -lpthread
+
+p2_t1x_test_t21: $(P2_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T21 -o $@ $(P2_T1X_SOURCES) -lpthread
+
+check: isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21 rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test helix_encoder_test \
 	helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
 	t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23
+	./isp_t1x_test_t20
+	./isp_t1x_test_t21
+	./p2_t1x_test_t20
+	./p2_t1x_test_t21
 	./rmem_highwater_test
 	./ref_ring_test
 	./ref_ring_test_t23
@@ -290,6 +317,7 @@ rc_readback_test_t23: rc_readback_test.c $(ROOT)/src/t40/p2_rc_readback.h
 		-I$(ROOT)/src -o $@ rc_readback_test.c
 
 clean:
+	$(RM) isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 		helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \

@@ -377,6 +377,11 @@ struct T30HelixEncoder {
     uint32_t mbrc_log;          /* OPENIMP_EPRC_MBRC_LOG: every n pictures */
     uint32_t mbrc_pictures;
 #endif
+#if !defined(PLATFORM_T23)
+    /* IMP_Encoder_SetChnColor2Grey: the grey chroma plane that replaces
+     * the picture's (t30_color2grey_idr) */
+    IMPDMABufferInfo grey;
+#endif
 };
 
 static void t30_dma_release(IMPDMABufferInfo *dma)
@@ -415,6 +420,42 @@ static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
     }
     return 0;
 }
+
+#if !defined(PLATFORM_T23)
+/* OEM i264e_idr_reconfig (T20 3.12.0 0x33a70): Color2Grey changes with the
+ * next IDR.  On, a buffer of align16(width) x align16(height) / 2 bytes of
+ * 127 is allocated and i264e_reconfig hands it to the VPU as the picture's
+ * chroma plane; off frees it.  If the allocation fails the colour stays
+ * (the OEM clears its flag the same way).  The frame itself is not
+ * touched, so other channels of the same source keep their colour. */
+static void t30_color2grey_idr(T30HelixEncoder *encoder)
+{
+    uint32_t size;
+    int on = encoder->params.color2grey != 0u;
+
+    if (on == (encoder->grey.phys_addr != 0u))
+        return;
+    if (!on) {
+        t30_dma_release(&encoder->grey);
+        IMP_LOG_INFO("Encoder", "Helix: colour on again");
+        return;
+    }
+    size = (uint32_t)encoder->sps.i_mb_width * 16u *
+           (uint32_t)encoder->sps.i_mb_height * 16u / 2u;
+    if (t30_dma_allocate(&encoder->grey, size, "t30-helix-grey") != 0) {
+        IMP_LOG_WARN("Encoder", "Helix: no memory for the grey chroma "
+                     "plane (%u bytes), Color2Grey stays off", size);
+        return;
+    }
+    memset((void *)(uintptr_t)encoder->grey.virt_addr, 127, size);
+    if (DMA_RmemFlushCache((void *)(uintptr_t)encoder->grey.virt_addr, size,
+                           1) != 0) {
+        t30_dma_release(&encoder->grey);
+        return;
+    }
+    IMP_LOG_INFO("Encoder", "Helix: Color2Grey from this IDR on");
+}
+#endif
 
 #if defined(PLATFORM_T23)
 /* The shared bitstream area, see t30/t23_helix_bs.h.  Default size: the
@@ -751,6 +792,10 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
                     (uint32_t)encoder->sps.i_mb_width * 16u *
                     (uint32_t)encoder->sps.i_mb_height * 16u;
     slice->raw[2] = 0;
+#if !defined(PLATFORM_T23)
+    if (encoder->grey.phys_addr)
+        slice->raw[1] = encoder->grey.phys_addr;
+#endif
     if (!idr) {
         slice->reference_y = encoder->reference[encoder->reference_index].y;
         slice->reference_c = encoder->reference[encoder->reference_index].c;
@@ -1776,6 +1821,18 @@ static void t20_rc_start(T30HelixEncoder *encoder)
         !hp->fps_num || !hp->fps_den || !hp->gop_length)
         return;
     RCT20_DefaultParams(&p);
+    /* IMP_Encoder_SetSuperFrameCfg: the OEM i264e parameter 13 puts the
+     * I/P thresholds into [280]/[284], which i264e_ratecontrol_init reads;
+     * NONE: thresholds no picture reaches, so nothing is coded again */
+    if (hp->super_mode == HW_SUPERFRM_REENCODE) {
+        p.super_i_bits = (int32_t)(hp->super_i_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_i_bits);
+        p.super_p_bits = (int32_t)(hp->super_p_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_p_bits);
+    } else if (hp->super_mode == HW_SUPERFRM_NONE) {
+        p.super_i_bits = INT32_MAX;
+        p.super_p_bits = INT32_MAX;
+    }
     p.method = hp->rc_mode == HW_RC_MODE_CBR ? 1u : smart ? 3u : 2u;
     p.width = hp->width;
     p.height = hp->height;
@@ -1864,9 +1921,11 @@ static void t20_rc_start(T30HelixEncoder *encoder)
                      runtime ? " (run-time set)" : "");
         return;
     }
-    /* macroblock rate control (the OEM's default): OPENIMP_T20_MBRC=1 */
+    /* macroblock rate control (the OEM's default): IMP_Encoder_SetMbRC
+     * (HWEncoderParams.mb_rc, the OEM i264e parameter 11); without it
+     * off, OPENIMP_T20_MBRC=1/0 overrides both */
     env = getenv("OPENIMP_T20_MBRC");
-    encoder->t20rc_mb = env && env[0] == '1';
+    encoder->t20rc_mb = env ? env[0] == '1' : hp->mb_rc == HW_MBRC_ON;
     p.mb_rc = encoder->t20rc_mb ? 1u : 0u;
     /* I-aware P budget (OpenIMP extra, docs/T20_RC.md): default on for
      * CBR (device test), off for VBR/SMART; OPENIMP_T20_RC_IAWARE=1 forces
@@ -2752,6 +2811,10 @@ again:
                             (int)qp,
                             encoder->slice_header.i_cabac_init_idc);
 
+#if !defined(PLATFORM_T23)
+    if (idr)
+        t30_color2grey_idr(encoder);
+#endif
     t30_fill_slice(encoder, frame, qp, idr, output_index);
 #if defined(PLATFORM_T20)
     if (encoder->t20rc_on) {
@@ -3343,6 +3406,10 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
 #if defined(HELIX_T21_SYNTAX)
     helix_mbrc_set(encoder, requested->mb_rc);
 #endif
+#if !defined(PLATFORM_T23)
+    /* Color2Grey: picked up by the next IDR, no rate-control change */
+    encoder->params.color2grey = requested->color2grey ? 1u : 0u;
+#endif
     next = encoder->params;
     next.fps_num = requested->fps_num;
     next.fps_den = requested->fps_den;
@@ -3367,6 +3434,17 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
     next.same_scene_gops = requested->same_scene_gops;
 #endif
 #if defined(PLATFORM_T20)
+    /* IMP_Encoder_SetMbRC: a change restarts the OEM controller with or
+     * without the macroblock QP table (the OEM re-runs
+     * i264e_ratecontrol_init on a parameter change) */
+    if (requested->mb_rc == HW_MBRC_ON || requested->mb_rc == HW_MBRC_OFF)
+        next.mb_rc = requested->mb_rc;
+    /* IMP_Encoder_SetSuperFrameCfg: new thresholds restart the controller */
+    if (requested->super_mode != HW_SUPERFRM_DEFAULT) {
+        next.super_mode = requested->super_mode;
+        next.super_i_bits = requested->super_i_bits;
+        next.super_p_bits = requested->super_p_bits;
+    }
     /* the application's range as given (a min QP of 0 is valid); a max QP
      * of 0 means "unchanged", as for the other fields */
     t20_range_changed = requested->max_qp &&
@@ -3474,6 +3552,9 @@ void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder)
 #endif
     t30_dma_release(&encoder->emc);
     t30_dma_release(&encoder->descriptor);
+#if !defined(PLATFORM_T23)
+    t30_dma_release(&encoder->grey);
+#endif
 #if defined(PLATFORM_T20)
     t20_rc_stop(encoder);
 #endif

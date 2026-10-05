@@ -91,12 +91,25 @@ typedef struct {
     /* 0x50: T21/T23 eprc macroblock rate control (IMP_Encoder_SetMbRC):
      * HW_MBRC_DEFAULT (OPENIMP_EPRC_MBRC), HW_MBRC_OFF, HW_MBRC_ON */
     uint32_t mb_rc;
-    uint32_t reserved[7];       /* 0x54-0x6f: Reserved */
+    /* 0x54: T20/T21/T10 IMP_Encoder_SetChnColor2Grey: 1 = code the
+     * pictures without colour from the next IDR on */
+    uint32_t color2grey;
+    /* 0x58: T20/T10 IMP_Encoder_SetSuperFrameCfg for the OEM controller:
+     * HW_SUPERFRM_DEFAULT (OEM thresholds), _NONE, _REENCODE with the
+     * I/P thresholds in bits */
+    uint32_t super_mode;
+    uint32_t super_i_bits;
+    uint32_t super_p_bits;
+    uint32_t reserved[3];       /* 0x64-0x6f: Reserved */
 } HWEncoderParams;
 
 #define HW_MBRC_DEFAULT 0u
 #define HW_MBRC_OFF     1u
 #define HW_MBRC_ON      2u
+
+#define HW_SUPERFRM_DEFAULT  0u
+#define HW_SUPERFRM_NONE     1u
+#define HW_SUPERFRM_REENCODE 2u
 
 _Static_assert(sizeof(HWEncoderParams) == 0x70, "HWEncoderParams size");
 _Static_assert(offsetof(HWEncoderParams, static_time) == 0x30 &&

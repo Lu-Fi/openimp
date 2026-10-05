@@ -505,6 +505,18 @@ int IMP_ISP_Tuning_GetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute);
 /* T21 */
 int IMP_ISP_Tuning_SetTemperDnsCtl(IMPISPTemperDenoiseAttr *attribute);
 
+/* T20/T21 AE strategy (IMP_ISP_Tuning_Set/GetAeStrategy) */
+typedef enum {
+    IMPISP_AE_STRATEGY_SPLIT_BALANCED = 0,
+    IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY = 1,
+    IMPISP_AE_STRATEGY_BUTT,
+} IMPISPAeStrategy;
+int IMP_ISP_Tuning_SetAeStrategy(IMPISPAeStrategy strategy);
+int IMP_ISP_Tuning_GetAeStrategy(IMPISPAeStrategy *strategy);
+/* T20: the CWF light source of the AWB (rgain/bgain) */
+int IMP_ISP_Tuning_Awb_SetCwfShift(IMPISPWB *isp_wb_attr);
+int IMP_ISP_Tuning_Awb_GetCwfShift(IMPISPWB *isp_wb_attr);
+
 /**
  * Set highlight depress
  *
