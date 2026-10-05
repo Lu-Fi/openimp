@@ -1039,6 +1039,7 @@ extern int AL_Codec_Encode_SetRcParam(void *codec, void *rc_attr);
 extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
 extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
+extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
 #endif
 #if defined(PLATFORM_T31)
 extern int AL_Codec_Encode_SetRcQualityCap(void *codec, int rc_mode,
@@ -3500,6 +3501,11 @@ int IMP_Encoder_SetChnColor2Grey(int channel,
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#else
+    /* T20/T21/T10: the Helix/NVPU encoder replaces the chroma plane with
+     * grey from the next IDR on (OEM i264e_reconfig_color2gray_set) */
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetColor2Grey(ch->codec, config->enable);
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;

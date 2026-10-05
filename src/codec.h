@@ -125,6 +125,9 @@ int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 /* IMP_Encoder_SetMbRC: the eprc macroblock rate control of the Helix
  * encoder (T21, T23; applied from the next picture) */
 int AL_Codec_Encode_SetMbRC(void *codec, int enable);
+/* IMP_Encoder_SetChnColor2Grey on the native Helix/NVPU encoder (T20,
+ * T21, T10): grey chroma from the next IDR on */
+int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
 #endif
 #if defined(PLATFORM_T31)
 /* CappedVBR/CappedQuality: the PSNR cap (uMaxPSNR, dB) of the OEM capped

@@ -91,7 +91,10 @@ typedef struct {
     /* 0x50: T21/T23 eprc macroblock rate control (IMP_Encoder_SetMbRC):
      * HW_MBRC_DEFAULT (OPENIMP_EPRC_MBRC), HW_MBRC_OFF, HW_MBRC_ON */
     uint32_t mb_rc;
-    uint32_t reserved[7];       /* 0x54-0x6f: Reserved */
+    /* 0x54: T20/T21/T10 IMP_Encoder_SetChnColor2Grey: 1 = code the
+     * pictures without colour from the next IDR on */
+    uint32_t color2grey;
+    uint32_t reserved[6];       /* 0x58-0x6f: Reserved */
 } HWEncoderParams;
 
 #define HW_MBRC_DEFAULT 0u

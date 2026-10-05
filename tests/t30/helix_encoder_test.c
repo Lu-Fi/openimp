@@ -70,6 +70,7 @@ typedef struct {
 } FakeAllocation;
 
 static FakeAllocation allocations[16];
+static uint32_t run_raw_c;          /* chroma input address of the last RUN */
 static uint8_t payload[1u << 20];
 static uint32_t payload_length;
 static int run_result;
@@ -347,6 +348,20 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     }
 #endif
     in_run_window = 1;
+    {
+        /* the chroma input address (0x40014) of the command list */
+        const FakeAllocation *list = allocation("t30-helix-desc");
+        const uint32_t *w = list ? (const uint32_t *)list->mapping : NULL;
+        size_t i;
+
+        run_raw_c = 0;
+        for (i = 0; w && i + 1u < list->size / 4u; i += 2u) {
+            if ((w[i + 1u] & 0xffffcu) == 0x40014u) {
+                run_raw_c = w[i];
+                break;
+            }
+        }
+    }
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
     {
         /* the macroblock rate-control registers of the command list
@@ -579,6 +594,62 @@ static T30HelixEncoder *create(uint32_t width, uint32_t height,
     params.max_qp = 45;
     assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
     return encoder;
+}
+
+/* IMP_Encoder_SetChnColor2Grey (HWEncoderParams.color2grey): from the next
+ * IDR on the VPU reads a grey (127) chroma plane instead of the frame's;
+ * off frees it again at the following IDR */
+static void test_color2grey(void)
+{
+    const uint32_t chroma = 0x10000000u + 640u * 368u;
+    T30HelixEncoder *encoder = create(640, 360, 25, 4);
+    HWEncoderParams p;
+    PictureInfo info;
+    FakeAllocation *grey;
+    unsigned int i;
+    uint32_t k;
+
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 4;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(run_raw_c == chroma);
+    p.color2grey = 1;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 4u; i++) {          /* the rest of the GOP keeps colour */
+        assert(encode(encoder, &info) == 0 && !info.idr);
+        assert(run_raw_c == chroma && !allocation("t30-helix-grey"));
+    }
+    assert(encode(encoder, &info) == 0 && info.idr);
+    grey = allocation("t30-helix-grey");
+    assert(grey && grey->size == 640u * 368u / 2u);
+    for (k = 0; k < grey->size; k++)
+        assert(((const uint8_t *)grey->mapping)[k] == 127u);
+    assert(run_raw_c == (uint32_t)(uintptr_t)grey->mapping);
+    p.color2grey = 0;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(run_raw_c == (uint32_t)(uintptr_t)grey->mapping);
+    for (i = 2; i < 4u; i++)
+        assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(run_raw_c == chroma && !allocation("t30-helix-grey"));
+    /* on again, then destroyed while on: nothing leaks (main checks) */
+    p.color2grey = 1;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 5u; i++)
+        assert(encode(encoder, &info) == 0);
+    assert(info.idr && allocation("t30-helix-grey"));
+    OpenIMP_T30_HelixDestroy(encoder);
+    assert(!allocation("t30-helix-grey"));
 }
 
 static void test_unaligned_width_rejected(void)
@@ -1306,6 +1377,7 @@ int main(void)
     test_dma_footprint();
     test_bottom_padding();
     test_unaligned_width_rejected();
+    test_color2grey();
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
     test_eprc();
     test_eprc_runtime_hskip();

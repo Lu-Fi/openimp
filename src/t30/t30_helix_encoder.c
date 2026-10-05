@@ -377,6 +377,11 @@ struct T30HelixEncoder {
     uint32_t mbrc_log;          /* OPENIMP_EPRC_MBRC_LOG: every n pictures */
     uint32_t mbrc_pictures;
 #endif
+#if !defined(PLATFORM_T23)
+    /* IMP_Encoder_SetChnColor2Grey: the grey chroma plane that replaces
+     * the picture's (t30_color2grey_idr) */
+    IMPDMABufferInfo grey;
+#endif
 };
 
 static void t30_dma_release(IMPDMABufferInfo *dma)
@@ -415,6 +420,42 @@ static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
     }
     return 0;
 }
+
+#if !defined(PLATFORM_T23)
+/* OEM i264e_idr_reconfig (T20 3.12.0 0x33a70): Color2Grey changes with the
+ * next IDR.  On, a buffer of align16(width) x align16(height) / 2 bytes of
+ * 127 is allocated and i264e_reconfig hands it to the VPU as the picture's
+ * chroma plane; off frees it.  If the allocation fails the colour stays
+ * (the OEM clears its flag the same way).  The frame itself is not
+ * touched, so other channels of the same source keep their colour. */
+static void t30_color2grey_idr(T30HelixEncoder *encoder)
+{
+    uint32_t size;
+    int on = encoder->params.color2grey != 0u;
+
+    if (on == (encoder->grey.phys_addr != 0u))
+        return;
+    if (!on) {
+        t30_dma_release(&encoder->grey);
+        IMP_LOG_INFO("Encoder", "Helix: colour on again");
+        return;
+    }
+    size = (uint32_t)encoder->sps.i_mb_width * 16u *
+           (uint32_t)encoder->sps.i_mb_height * 16u / 2u;
+    if (t30_dma_allocate(&encoder->grey, size, "t30-helix-grey") != 0) {
+        IMP_LOG_WARN("Encoder", "Helix: no memory for the grey chroma "
+                     "plane (%u bytes), Color2Grey stays off", size);
+        return;
+    }
+    memset((void *)(uintptr_t)encoder->grey.virt_addr, 127, size);
+    if (DMA_RmemFlushCache((void *)(uintptr_t)encoder->grey.virt_addr, size,
+                           1) != 0) {
+        t30_dma_release(&encoder->grey);
+        return;
+    }
+    IMP_LOG_INFO("Encoder", "Helix: Color2Grey from this IDR on");
+}
+#endif
 
 #if defined(PLATFORM_T23)
 /* The shared bitstream area, see t30/t23_helix_bs.h.  Default size: the
@@ -751,6 +792,10 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
                     (uint32_t)encoder->sps.i_mb_width * 16u *
                     (uint32_t)encoder->sps.i_mb_height * 16u;
     slice->raw[2] = 0;
+#if !defined(PLATFORM_T23)
+    if (encoder->grey.phys_addr)
+        slice->raw[1] = encoder->grey.phys_addr;
+#endif
     if (!idr) {
         slice->reference_y = encoder->reference[encoder->reference_index].y;
         slice->reference_c = encoder->reference[encoder->reference_index].c;
@@ -2754,6 +2799,10 @@ again:
                             (int)qp,
                             encoder->slice_header.i_cabac_init_idc);
 
+#if !defined(PLATFORM_T23)
+    if (idr)
+        t30_color2grey_idr(encoder);
+#endif
     t30_fill_slice(encoder, frame, qp, idr, output_index);
 #if defined(PLATFORM_T20)
     if (encoder->t20rc_on) {
@@ -3345,6 +3394,10 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
 #if defined(HELIX_T21_SYNTAX)
     helix_mbrc_set(encoder, requested->mb_rc);
 #endif
+#if !defined(PLATFORM_T23)
+    /* Color2Grey: picked up by the next IDR, no rate-control change */
+    encoder->params.color2grey = requested->color2grey ? 1u : 0u;
+#endif
     next = encoder->params;
     next.fps_num = requested->fps_num;
     next.fps_den = requested->fps_den;
@@ -3481,6 +3534,9 @@ void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder)
 #endif
     t30_dma_release(&encoder->emc);
     t30_dma_release(&encoder->descriptor);
+#if !defined(PLATFORM_T23)
+    t30_dma_release(&encoder->grey);
+#endif
 #if defined(PLATFORM_T20)
     t20_rc_stop(encoder);
 #endif
