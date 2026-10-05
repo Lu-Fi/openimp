@@ -100,7 +100,9 @@ typedef struct {
     uint32_t super_mode;
     uint32_t super_i_bits;
     uint32_t super_p_bits;
-    uint32_t reserved[3];       /* 0x64-0x6f: Reserved */
+    /* 0x64: IMP_Encoder_SetPool (T23 native Helix): memory pool id + 1,
+     * 0 = buffers from the shared rmem arena */
+    uint32_t reserved[3];       /* 0x64-0x6f: [0] pool id + 1, rest reserved */
 } HWEncoderParams;
 
 #define HW_MBRC_DEFAULT 0u

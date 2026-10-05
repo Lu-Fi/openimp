@@ -33,6 +33,9 @@
 #include "t30/t30_annexb.h"
 #include "t30/t30_h264_level.h"
 #if defined(PLATFORM_T23)
+#include "t23/openimp_t23_maxpic.h"
+#endif
+#if defined(PLATFORM_T23)
 #include "t30/t23_helix_bs.h"
 #endif
 #if (defined(PLATFORM_T21) && !defined(PLATFORM_T20)) || \
@@ -292,6 +295,7 @@ struct T30HelixEncoder {
     unsigned int reference_index;
     int have_reference;
     int force_idr;
+    int pool_id;                /* IMP_Encoder_SetPool rmem pool, -1: none */
     OpenIMPT31RateController rate_control;
     int rate_control_enabled;
 #if defined(PLATFORM_T20)
@@ -351,6 +355,14 @@ struct T30HelixEncoder {
     uint32_t overflows;         /* pictures dropped on overflow */
     uint32_t canary_hits;       /* overflows that wrote past the window */
     int shared_bs;              /* bitstream in the shared area */
+    /* IMP_Encoder_SetChnMaxPictureSize / Setframelossthd (OEM
+     * update_h264_one_frmstrm + get_idr_frameqp) */
+    uint32_t maxpic_bytes;      /* 0: no limit */
+    uint32_t maxpic_qp;         /* QP of the next IDR, 0: the rate control's */
+    uint32_t last_qp;           /* QP the last picture was coded at */
+    uint32_t maxpic_drops;      /* oversized pictures dropped */
+    uint32_t maxpic_kept;       /* oversized, delivered (QP range used up) */
+    uint32_t maxpic_largest;    /* largest oversized picture, bytes */
 #endif
 #if defined(HELIX_T21_SYNTAX)
     /* OEM picture rate control (src/eprc, docs/T23_EPRC.md) */
@@ -392,17 +404,29 @@ static void t30_dma_release(IMPDMABufferInfo *dma)
     }
 }
 
-static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
-                            const char *tag)
+static int t30_dma_allocate_pool(int pool_id, IMPDMABufferInfo *dma,
+                                 uint32_t size, const char *tag)
 {
+    int ret;
+
     /* Long-lived encoder buffers (kept from the first picture or channel
      * creation to DestroyChn) go to the top of the reserved arena, away
      * from the FrameSource pools that are freed and re-created from the
      * bottom whenever a channel idles; mixed in between them, a pool's
-     * hole would be cut up and its re-creation could fail. */
-    if (size > INT32_MAX ||
-        DMA_AllocDescriptorTop(dma, (int)size, tag) != 0 ||
-        !dma->phys_addr || !dma->virt_addr) {
+     * hole would be cut up and its re-creation could fail.  A channel
+     * bound with IMP_Encoder_SetPool takes them from that memory pool
+     * instead (the OEM video_vbm_malloc: IMP_PoolAlloc, no fallback). */
+    if (size > INT32_MAX)
+        ret = -1;
+    else if (pool_id >= 0)
+        ret = DMA_PoolAllocDescriptor(pool_id, dma, (int)size, tag);
+    else
+        ret = DMA_AllocDescriptorTop(dma, (int)size, tag);
+    if (ret != 0 || !dma->phys_addr || !dma->virt_addr) {
+        if (pool_id >= 0)
+            IMP_LOG_ERR("Encoder", "Helix: memory pool %d has no room for "
+                        "%s (%u bytes); enlarge IMP_System_MemPoolRequest",
+                        pool_id, tag, size);
         LOG_CODEC("T30 Helix: DMA allocation failed tag=%s size=%u", tag,
                   size);
         return -1;
@@ -419,6 +443,12 @@ static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
         return -1;
     }
     return 0;
+}
+
+static inline int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
+                            const char *tag)
+{
+    return t30_dma_allocate_pool(-1, dma, size, tag);
 }
 
 #if !defined(PLATFORM_T23)
@@ -442,7 +472,7 @@ static void t30_color2grey_idr(T30HelixEncoder *encoder)
     }
     size = (uint32_t)encoder->sps.i_mb_width * 16u *
            (uint32_t)encoder->sps.i_mb_height * 16u / 2u;
-    if (t30_dma_allocate(&encoder->grey, size, "t30-helix-grey") != 0) {
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->grey, size, "t30-helix-grey") != 0) {
         IMP_LOG_WARN("Encoder", "Helix: no memory for the grey chroma "
                      "plane (%u bytes), Color2Grey stays off", size);
         return;
@@ -2114,7 +2144,7 @@ static int t30_ref_share_alloc(T30HelixEncoder *encoder, const char *tag)
                      "too small");
         return 0;
     }
-    if (t30_dma_allocate(&encoder->reference[0].dma,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->reference[0].dma,
                          t21_ref_ring_bytes(mbw, mbh), tag) != 0)
         return -1;
     t21_ref_ring_init(&encoder->ring, encoder->reference[0].dma.phys_addr,
@@ -2182,6 +2212,9 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
     if (!encoder)
         return -1;
     encoder->fd = -1;
+    /* IMP_Encoder_SetPool: reserved[0] = pool id + 1 (0: shared arena) */
+    encoder->pool_id = params->reserved[0] ? (int)(params->reserved[0] - 1u)
+                                           : -1;
 #if defined(HELIX_T21_SYNTAX)
     encoder->eprc_qp = -1;
     {
@@ -2321,7 +2354,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
     if (t30_ref_share_alloc(encoder, "t23-helix-ref") != 0)
         goto fail;
     for (i = 0; !encoder->ref_share && i < 2u; i++) {
-        if (t30_dma_allocate(&encoder->reference[i].dma,
+        if (t30_dma_allocate_pool(encoder->pool_id, &encoder->reference[i].dma,
                              (uint32_t)reference_size,
                              "t23-helix-ref") != 0)
             goto fail;
@@ -2340,41 +2373,41 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * allocation.  Short of reserved memory: the 1 MiB T21 window. */
     if (t23_bs_adopt_guard(&encoder->emc, encoder->scratch_size,
                            (encoder->bitstream_kib << 10) + 4096u) != 0 &&
-        t30_dma_allocate(&encoder->emc, encoder->scratch_size,
+        t30_dma_allocate_pool(encoder->pool_id, &encoder->emc, encoder->scratch_size,
                          "t23-helix-emc") != 0)
         goto fail;
     if (t23_bs_attach((encoder->bitstream_kib << 10) + 4096u,
                       &encoder->emc) == 0) {
         encoder->shared_bs = 1;
-    } else if (t30_dma_allocate(&encoder->temporary,
+    } else if (t30_dma_allocate_pool(encoder->pool_id, &encoder->temporary,
                                 (encoder->bitstream_kib << 10) + 4096u,
                                 "t23-helix-bs") != 0) {
         if (window_forced || encoder->bitstream_kib <= 1024u ||
-            t30_dma_allocate(&encoder->temporary, (1u << 20) + 4096u,
+            t30_dma_allocate_pool(encoder->pool_id, &encoder->temporary, (1u << 20) + 4096u,
                              "t23-helix-bs") != 0)
             goto fail;
         encoder->bitstream_kib = 1024u;
     }
-    if (t30_dma_allocate(&encoder->descriptor, T30_DESCRIPTOR_WINDOW,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->descriptor, T30_DESCRIPTOR_WINDOW,
                          "t23-helix-desc") != 0)
         goto fail;
     if (!encoder->shared_bs)
         t23_canary_arm(encoder);
 #else
-    if (t30_dma_allocate(&encoder->descriptor, T30_DESCRIPTOR_WINDOW,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->descriptor, T30_DESCRIPTOR_WINDOW,
                          "t30-helix-desc") != 0)
         goto fail;
 #if defined(HELIX_SHARED_BITSTREAM)
     /* Only the T21 command list points the VPU at an EMC scratch area.
      * The bitstream goes to the shared buffer, taken per picture. */
-    if (t30_dma_allocate(&encoder->emc, encoder->scratch_size,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->emc, encoder->scratch_size,
                          "t30-helix-emc") != 0 ||
         OpenIMP_HelixBitstream_Reserve(t30_bitstream_bytes(encoder)) != 0)
 #elif defined(PLATFORM_T21)
-    if (t30_dma_allocate(&encoder->temporary, T30_BITSTREAM_WINDOW,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->temporary, T30_BITSTREAM_WINDOW,
                          "t30-helix-bs") != 0)
 #else
-    if (t30_dma_allocate(&encoder->temporary, (uint32_t)frame_size * 2u,
+    if (t30_dma_allocate_pool(encoder->pool_id, &encoder->temporary, (uint32_t)frame_size * 2u,
                          "t30-helix-bs") != 0)
 #endif
         goto fail;
@@ -2391,7 +2424,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
         uint32_t chroma_plane = (uint32_t)T10_H264_ReferencePlaneSize(mbw, mbh, 1);
 
         for (i = 0; i < 2u; i++) {
-            if (t30_dma_allocate(&encoder->reference[i].dma,
+            if (t30_dma_allocate_pool(encoder->pool_id, &encoder->reference[i].dma,
                                  luma_plane + chroma_plane,
                                  "t10-nvpu-ref") != 0)
                 goto fail;
@@ -2410,7 +2443,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
          && !encoder->ref_share
 #endif
          ; i++) {
-        if (t30_dma_allocate(&encoder->reference[i].dma,
+        if (t30_dma_allocate_pool(encoder->pool_id, &encoder->reference[i].dma,
                              (uint32_t)reference_size,
                              "t30-helix-ref") != 0)
             goto fail;
@@ -2581,6 +2614,105 @@ uint32_t OpenIMP_T30_HelixFailures(const T30HelixEncoder *encoder)
 }
 #endif
 
+#if defined(PLATFORM_T23)
+static int t23_helix_encode_locked(T30HelixEncoder *encoder,
+                                   const IMPFrameInfo *frame,
+                                   HWStreamBuffer **stream_out)
+{
+    if (encoder && encoder->shared_bs) {
+        int ret;
+
+        if (!frame || !stream_out || !frame->phyAddr)
+            return -1;
+        /* this picture's window in the shared area, from the slice header
+         * to the copy into the access unit (stock bsbufsem); the canary
+         * at its end is armed per picture, other jobs write there */
+        if (OpenIMP_T23_HelixBs_Lock((encoder->bitstream_kib << 10) + 4096u,
+                                     &encoder->temporary) != 0) {
+            LOG_CODEC("T23 Helix: shared bitstream area missing");
+            return -1;
+        }
+        encoder->temporary.size = (encoder->bitstream_kib << 10) + 4096u;
+        t23_canary_arm(encoder);
+        ret = t30_helix_encode_job(encoder, frame, stream_out);
+        memset(&encoder->temporary, 0, sizeof(encoder->temporary));
+        OpenIMP_T23_HelixBs_Unlock();
+        return ret;
+    }
+    return t30_helix_encode_job(encoder, frame, stream_out);
+}
+
+/* OEM update_h264_one_frmstrm: an access unit of the channel's maximum
+ * picture size or more is not delivered.  Its stream is released, the next
+ * picture is an IDR and is coded at get_idr_frameqp()'s QP.  (The OEM does
+ * this for every picture, I and P alike.)  Returns T30_HELIX_DROPPED for a
+ * dropped picture, else 0. */
+static int t23_maxpic_check(T30HelixEncoder *encoder,
+                            HWStreamBuffer **stream_out)
+{
+    HWStreamBuffer *stream = *stream_out;
+    uint32_t bytes;
+    int fixqp;
+    int new_qp = 0;
+    int min_qp;
+    int max_qp;
+
+    if (!encoder->maxpic_bytes || !stream)
+        return 0;
+    bytes = stream->length;
+    fixqp = encoder->params.rc_mode == HW_RC_MODE_FIXQP;
+    min_qp = (int)encoder->params.min_qp;
+    max_qp = fixqp ? (int)encoder->params.qp : (int)encoder->params.max_qp;
+    if (!t23_maxpic_drop(bytes, encoder->maxpic_bytes, fixqp,
+                         (int)encoder->last_qp, min_qp, max_qp, &new_qp)) {
+        if (bytes >= encoder->maxpic_bytes)
+            encoder->maxpic_kept++;
+        return 0;
+    }
+    if (bytes > encoder->maxpic_largest)
+        encoder->maxpic_largest = bytes;
+    encoder->maxpic_drops++;
+    if (encoder->maxpic_drops <= 3u || encoder->maxpic_drops % 100u == 0u)
+        IMP_LOG_INFO("Encoder", "T23 Helix: %s of %u bytes is over the "
+                     "maximum picture size %u (QP %u), dropped; next IDR "
+                     "at QP %d (%u so far)",
+                     stream->frame_type == HW_FRAME_TYPE_I ? "IDR" : "P",
+                     bytes, encoder->maxpic_bytes, encoder->last_qp, new_qp,
+                     encoder->maxpic_drops);
+    /* the heap payload of the native encoder (no DMA address) */
+    if (stream->virt_addr && !stream->phys_addr)
+        free((void *)(uintptr_t)stream->virt_addr);
+    free(stream);
+    *stream_out = NULL;
+    encoder->force_idr = 1;
+    encoder->maxpic_qp = (uint32_t)new_qp;
+    return T30_HELIX_DROPPED;
+}
+
+int OpenIMP_T30_HelixSetMaxPicture(T30HelixEncoder *encoder, uint32_t bytes)
+{
+    if (!encoder)
+        return -1;
+    encoder->maxpic_bytes = bytes;
+    return 0;
+}
+
+int OpenIMP_T30_HelixMaxPictureStats(const T30HelixEncoder *encoder,
+                                     uint32_t *dropped, uint32_t *kept,
+                                     uint32_t *largest)
+{
+    if (!encoder)
+        return -1;
+    if (dropped)
+        *dropped = encoder->maxpic_drops;
+    if (kept)
+        *kept = encoder->maxpic_kept;
+    if (largest)
+        *largest = encoder->maxpic_largest;
+    return 0;
+}
+#endif
+
 int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
                             const IMPFrameInfo *frame,
                             HWStreamBuffer **stream_out)
@@ -2606,27 +2738,11 @@ int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
     OpenIMP_HelixBitstream_Unlock();
     return ret;
 #elif defined(PLATFORM_T23)
-    if (encoder && encoder->shared_bs) {
-        int ret;
+    int ret = t23_helix_encode_locked(encoder, frame, stream_out);
 
-        if (!frame || !stream_out || !frame->phyAddr)
-            return -1;
-        /* this picture's window in the shared area, from the slice header
-         * to the copy into the access unit (stock bsbufsem); the canary
-         * at its end is armed per picture, other jobs write there */
-        if (OpenIMP_T23_HelixBs_Lock((encoder->bitstream_kib << 10) + 4096u,
-                                     &encoder->temporary) != 0) {
-            LOG_CODEC("T23 Helix: shared bitstream area missing");
-            return -1;
-        }
-        encoder->temporary.size = (encoder->bitstream_kib << 10) + 4096u;
-        t23_canary_arm(encoder);
-        ret = t30_helix_encode_job(encoder, frame, stream_out);
-        memset(&encoder->temporary, 0, sizeof(encoder->temporary));
-        OpenIMP_T23_HelixBs_Unlock();
-        return ret;
-    }
-    return t30_helix_encode_job(encoder, frame, stream_out);
+    if (ret == 0 && encoder)
+        ret = t23_maxpic_check(encoder, stream_out);
+    return ret;
 #else
     return t30_helix_encode_job_counted(encoder, frame, stream_out);
 #endif
@@ -2779,6 +2895,11 @@ t20_again:
     if (!encoder->eprc_on)
         qp = t23_rc_picture_qp(encoder, qp, idr);
     qp = t23_overflow_qp(encoder, qp, idr);
+    if (idr && encoder->maxpic_qp) {
+        /* the IDR that replaces a picture over the size limit */
+        qp = encoder->maxpic_qp;
+        encoder->maxpic_qp = 0;
+    }
 #endif
     output_index = encoder->have_reference
         ? (encoder->reference_index ^ 1u) : 0u;
@@ -2788,6 +2909,9 @@ t20_again:
 #endif
 #if defined(HELIX_T21_SYNTAX)
 again:
+#endif
+#if defined(PLATFORM_T23)
+    encoder->last_qp = qp;
 #endif
 
     h264e_slice_header_init(&encoder->slice_header, &encoder->sps,

@@ -1606,6 +1606,60 @@ int IMP_FrameSource_GetPool(int chn)
     return pool;
 }
 
+/* ---- Encoder channel -> pool binding (IMP_Encoder_SetPool/GetPool) ----
+ * libimp (T23 1.3.0, T31 1.1.6): a table of 33 channel slots, -1 = none,
+ * allocated on the first SetPool.  SetPool needs the pool to exist and the
+ * slot to be free ("pools already set" otherwise); GetPool is -1 for a
+ * channel without one.  The encoder reads the binding once, when it is
+ * created (T23 video_vbm_malloc, T31 AL_Codec_Encode_Create) and takes all
+ * its buffers from the pool.  IMP_Encoder_ClearPoolId (T31) frees the table. */
+#define ENC_POOL_CHANNELS 33
+static int g_enc_pools[ENC_POOL_CHANNELS];
+static int g_enc_pools_ready;
+static pthread_mutex_t g_enc_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int DMA_EncoderPoolSet(int chn, int pool_id)
+{
+    int ret = -1;
+
+    if (chn < 0 || chn >= ENC_POOL_CHANNELS)
+        return -1;
+    if (IMP_MemPool_GetById(pool_id, NULL) != 0)
+        return -1;                      /* "POOL is not init" */
+    pthread_mutex_lock(&g_enc_pool_mutex);
+    if (!g_enc_pools_ready) {
+        for (int i = 0; i < ENC_POOL_CHANNELS; i++)
+            g_enc_pools[i] = -1;
+        g_enc_pools_ready = 1;
+    }
+    if (g_enc_pools[chn] < 0) {         /* else "pools already set" */
+        g_enc_pools[chn] = pool_id;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&g_enc_pool_mutex);
+    return ret;
+}
+
+int DMA_EncoderPoolGet(int chn)
+{
+    int pool = -1;
+
+    if (chn < 0 || chn >= ENC_POOL_CHANNELS)
+        return -1;
+    pthread_mutex_lock(&g_enc_pool_mutex);
+    if (g_enc_pools_ready)
+        pool = g_enc_pools[chn];
+    pthread_mutex_unlock(&g_enc_pool_mutex);
+    return pool;
+}
+
+void DMA_EncoderPoolClear(void)
+{
+    pthread_mutex_lock(&g_enc_pool_mutex);
+    g_enc_pools_ready = 0;
+    pthread_mutex_unlock(&g_enc_pool_mutex);
+}
+
 /* ========== IMP_Alloc debug/attr functions (from OEM BN audit) ========== */
 
 /* Per-buffer allocation attributes (OEM stores alignment, cache policy, etc.) */

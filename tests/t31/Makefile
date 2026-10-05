@@ -32,6 +32,7 @@ ISP_AE_ATTR_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-isp-ae-attr-test
 VIDEO_DROP_TEST_BIN := $(PROJECT_DIR)/build/tests/video-drop-test
 VBM_DELAY_TEST_BIN := $(PROJECT_DIR)/build/tests/vbm-delay-test
 MEMPOOL_TEST_BIN := $(PROJECT_DIR)/build/tests/mempool-test
+EVAL_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-eval-test
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -41,7 +42,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(AO_SENDFRAME_TEST_BIN) $(AO_CACHE_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) \
-	$(LOG_LIMIT_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(MEMPOOL_TEST_BIN)
+	$(LOG_LIMIT_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(MEMPOOL_TEST_BIN) $(EVAL_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(RATE_CONTROL_TEST_BIN)
@@ -65,6 +66,12 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(VIDEO_DROP_TEST_BIN)
 	$(VBM_DELAY_TEST_BIN)
 	$(MEMPOOL_TEST_BIN)
+	$(EVAL_TEST_BIN)
+
+# IMP_Encoder_GetChnEvalInfo record
+$(EVAL_TEST_BIN): eval_test.c $(PROJECT_DIR)/src/t31/openimp_t31_eval.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src eval_test.c -o "$@"
 
 # OEM memory pools: continuous block allocator and the real dma_alloc.c on a
 # private arena (no PIE: the descriptor carries 32-bit addresses)

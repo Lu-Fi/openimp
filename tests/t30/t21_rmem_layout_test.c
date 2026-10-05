@@ -103,6 +103,17 @@ int DMA_AllocDescriptorTop(IMPDMABufferInfo *info, int size,
     return 0;
 }
 
+/* IMP_Encoder_SetPool: no pool is bound in this test */
+int DMA_PoolAllocDescriptor(int pool_id, IMPDMABufferInfo *info, int size,
+                            const char *tag)
+{
+    (void)pool_id;
+    (void)info;
+    (void)size;
+    (void)tag;
+    return -1;
+}
+
 #if defined(PLATFORM_T23)
 uint32_t DMA_VirtToPhys(const void *virt_addr)
 {

@@ -29,6 +29,15 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
 void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder);
 
 #if defined(PLATFORM_T23)
+/* OpenIMP_T30_HelixEncode result for a picture that was dropped on purpose
+ * (over the maximum picture size): no stream, not a failure. */
+#define T30_HELIX_DROPPED 1
+/* IMP_Encoder_SetChnMaxPictureSize / Setframelossthd, in bytes, 0: off.
+ * Call on the encoding thread. */
+int OpenIMP_T30_HelixSetMaxPicture(T30HelixEncoder *encoder, uint32_t bytes);
+int OpenIMP_T30_HelixMaxPictureStats(const T30HelixEncoder *encoder,
+                                     uint32_t *dropped, uint32_t *kept,
+                                     uint32_t *largest);
 /* Apply changed rate-control, frame-rate, GOP and QP-bound settings
  * between pictures (call from the encoding thread).  Unchanged values are
  * a no-op; zero fields keep the current value. */

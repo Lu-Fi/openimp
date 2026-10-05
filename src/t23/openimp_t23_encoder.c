@@ -9,9 +9,11 @@
  * controls.  As in the OEM, these setters do nothing for JPEG channels.
  *
  * Settings that the OEM keeps on the channel for its own buffer and frame
- * scheduling logic - frame-loss threshold, fisheye flag, pool sizes, multi-section mode, read-buffer sharing, pad frames -
- * are validated and stored like the OEM does, but have no effect on this
- * stack (documented per function).
+ * scheduling logic - fisheye flag, pool sizes, multi-section mode,
+ * read-buffer sharing, pad frames - are validated and stored like the OEM
+ * does, but have no effect on this stack (documented per function).  The
+ * frame-loss threshold / maximum picture size is applied by the native
+ * Helix encoder (drop an oversized picture, re-code an IDR).
  *
  * OPENIMP_T23_ENC_PARAMS=0 keeps the settings local (nothing is sent to
  * the encoder), for comparison on a device. */
@@ -708,13 +710,29 @@ static int created_cb(OpenIMPT23P2View *v, void *arg)
     return v->created ? 0 : -1;
 }
 
-/* The OEM compares each encoded frame with this threshold (bytes) to
- * re-encode oversized frames at a higher QP; the Helix session has no such
- * hook, so the threshold is kept for the getters. */
+extern int OpenIMP_T23_CodecSetMaxPicture(void *codec, uint32_t bytes);
+
+/* The OEM compares each encoded access unit with this threshold (bytes)
+ * and drops one of that size or more: the next picture is an IDR coded at a
+ * higher QP (update_h264_one_frmstrm, get_idr_frameqp).  The native Helix
+ * encoder does the same (src/t30/t30_helix_encoder.c); the OEM worker
+ * (helixd) path has no such check, there the value is kept for the
+ * getters.  0 = no limit. */
+static int lossthd_cb(OpenIMPT23P2View *v, void *arg)
+{
+    uint32_t bytes = *(const uint32_t *)arg;
+
+    if (!v->created)
+        return -1;
+    if (v->codec && v->codec_type == IMP_ENC_TYPE_AVC)
+        (void)OpenIMP_T23_CodecSetMaxPicture(v->codec, bytes);
+    return 0;
+}
+
 int openimp_t23_enc_set_lossthd(int channel, uint32_t bytes)
 {
     if (!valid_channel(channel) ||
-        openimp_t23_p2_call(channel, created_cb, NULL) != 0)
+        openimp_t23_p2_call(channel, lossthd_cb, &bytes) != 0)
         return -1;
     pthread_mutex_lock(&extra_lock);
     extras[channel].loss_threshold = bytes;
@@ -758,9 +776,19 @@ static int not_created_cb(OpenIMPT23P2View *v, void *arg)
     return v->created ? -1 : 0;
 }
 
-/* OEM: a creation-time i264e option (fisheye lens motion search); the OEM
- * YUV session the Helix worker uses has no way to pass it, so it is kept
- * for the getter only. */
+/* OEM (libimp 1.3.0, checked in the disassembly): the flag is copied at
+ * CreateChn into the i264e parameter block and from there into the hwicodec
+ * configuration (offset 0x64).  hwicodec_pf_h264e_t21_init then calls
+ * watermark_init(), and hwicodec_pf_h264e_t21_enc runs
+ * embed_watermark(context, luma, width, height) on the luma plane of every
+ * I picture (slice type 0) before it is coded: an 8x8-block DCT-domain
+ * watermark written into the input frame.  It has nothing to do with a
+ * fisheye lens (no motion-search, geometry or rate-control change) and the
+ * library never reads the watermark back (check_watermark has no caller).
+ * Not implemented: the algorithm is closed, it alters the pixels of the
+ * application's frames for no function an application can use.  The flag
+ * is validated (before CreateChn only, as the OEM) and kept for the
+ * getter, so applications see what they set. */
 int IMP_Encoder_SetFisheyeEnableStatus(int channel, int enable)
 {
     if (!valid_channel(channel) ||

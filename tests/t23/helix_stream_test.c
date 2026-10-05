@@ -28,6 +28,7 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "t23/openimp_t23_maxpic.h"
 #include "t30/t30_helix_encoder.h"
 #include "t30/h264enc/common.h"
 #include "dma_alloc.h"
@@ -98,12 +99,21 @@ int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
  * below the 2 MiB the tests keep their capture frames in. */
 static uint32_t rmem_top = RMEM_SIZE - (2u << 20);
 
+/* what the encoder allocated, by source, for the pool test */
+static char top_tags[32][32];
+static unsigned int top_tag_n;
+static char pool_tags[32][32];
+static int pool_ids[32];
+static unsigned int pool_tag_n;
+static int pool_room[8];            /* bytes left in each fake pool */
+
 int DMA_AllocDescriptorTop(IMPDMABufferInfo *info, int size,
                            const char *tag)
 {
     uint32_t aligned = ((uint32_t)size + 4095u) & ~4095u;
 
-    (void)tag;
+    if (top_tag_n < 32u)
+        snprintf(top_tags[top_tag_n++], sizeof(top_tags[0]), "%s", tag);
     if (rmem_top < rmem_used + aligned || allocation_count >= 128u)
         return -1;
     rmem_top -= aligned;
@@ -113,6 +123,25 @@ int DMA_AllocDescriptorTop(IMPDMABufferInfo *info, int size,
     info->size = (uint32_t)size;
     allocations[allocation_count].phys = info->phys_addr;
     allocations[allocation_count++].size = (uint32_t)size;
+    return 0;
+}
+
+/* IMP_MemPool block: 256-byte units out of the pool's room; backed by the
+ * bottom of the fake arena */
+int DMA_PoolAllocDescriptor(int pool_id, IMPDMABufferInfo *info, int size,
+                            const char *tag)
+{
+    int units = (size + 255) & ~255;
+
+    if (pool_id < 0 || pool_id >= 8 || size <= 0 || units > pool_room[pool_id])
+        return -1;
+    if (DMA_AllocDescriptor(info, size, tag) != 0)
+        return -1;
+    pool_room[pool_id] -= units;
+    if (pool_tag_n < 32u) {
+        snprintf(pool_tags[pool_tag_n], sizeof(pool_tags[0]), "%s", tag);
+        pool_ids[pool_tag_n++] = pool_id;
+    }
     return 0;
 }
 
@@ -1222,10 +1251,182 @@ static int crop_test(const char *path)
     return 0;
 }
 
+
+/* encode one picture; returns the Encode result (0, T30_HELIX_DROPPED,
+ * -1) and, for a delivered picture, its size and type */
+static int encode_status(T30HelixEncoder *encoder, uint8_t *mem,
+                         uint32_t frame, uint32_t *bytes, int *idr)
+{
+    IMPFrameInfo info;
+    HWStreamBuffer *out = NULL;
+    int ret;
+
+    make_frame(mem, frame);
+    memset(&info, 0, sizeof(info));
+    info.width = WIDTH;
+    info.height = HEIGHT;
+    info.pixfmt = 0x3231564eu;
+    info.size = FRAME_BYTES;
+    info.virAddr = (uint32_t)(uintptr_t)mem;
+    info.phyAddr = phys_of(mem);
+    next_fault = FAULT_NONE;
+    ret = OpenIMP_T30_HelixEncode(encoder, &info, &out);
+    if (ret == 0) {
+        assert(out);
+        *bytes = out->length;
+        *idr = out->frame_type == HW_FRAME_TYPE_I;
+        free((void *)(uintptr_t)out->virt_addr);
+        free(out);
+    } else {
+        assert(!out);               /* a dropped picture hands out nothing */
+        *bytes = 0;
+        *idr = -1;
+    }
+    return ret;
+}
+
+/* IMP_Encoder_SetChnMaxPictureSize / Setframelossthd (OEM
+ * update_h264_one_frmstrm + get_idr_frameqp).  The fake core codes an IDR
+ * as lossless I_PCM (~350 KB) and a P picture as all-skip (tens of bytes),
+ * which makes both sizes exact. */
+static void maxpic_test(void)
+{
+    HWEncoderParams params;
+    T30HelixEncoder *encoder = NULL;
+    uint8_t *mem = rmem + RMEM_SIZE - FRAME_BYTES - 4096u;
+    uint32_t bytes, idr_bytes, p_bytes, dropped, kept, largest;
+    uint32_t frame = 0;
+    int idr;
+    int qp0;
+
+    /* FIXQP 30: the IDR is coded at 27 (QP - 3).  Limit 200000: dropped,
+     * the next IDR at the fixed QP 30 is still over, but 30 is no higher
+     * than the QP it was coded at: delivered (the OEM would drop it for
+     * ever) */
+    rc_params(&params, HW_RC_MODE_FIXQP);
+    params.gop_length = 100;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+    assert(encode_status(encoder, mem, frame++, &idr_bytes, &idr) == 0);
+    assert(idr == 1 && idr_bytes > 300000u);
+    assert(encode_status(encoder, mem, frame++, &p_bytes, &idr) == 0);
+    assert(idr == 0 && p_bytes < 1000u);
+    assert(OpenIMP_T30_HelixSetMaxPicture(encoder, 200000u) == 0);
+    /* limit set: a P picture below it is delivered as before */
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0);
+    assert(idr == 0);
+    OpenIMP_T30_HelixRequestIDR(encoder);
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) ==
+           T30_HELIX_DROPPED);
+    assert(last_qp_seen[0] == 27u);
+    assert(OpenIMP_T30_HelixFailures(encoder) == 0u);
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0);
+    assert(idr == 1 && last_qp_seen[0] == 30u && bytes > 300000u);
+    assert(OpenIMP_T30_HelixMaxPictureStats(encoder, &dropped, &kept,
+                                            &largest) == 0);
+    assert(dropped == 1u && kept == 1u && largest > 300000u);
+    /* the picture after it is a plain P again */
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0 &&
+           idr == 0);
+    /* 0 = no limit */
+    assert(OpenIMP_T30_HelixSetMaxPicture(encoder, 0u) == 0);
+    OpenIMP_T30_HelixRequestIDR(encoder);
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0 &&
+           idr == 1);
+    OpenIMP_T30_HelixDestroy(encoder);
+
+    /* CBR 20..45: a P picture over the limit is dropped too, the next
+     * picture is an IDR at the QP get_idr_frameqp gives (last QP + 5 +
+     * (int)log(size / limit), bounded), re-dropped while it is over the
+     * limit and a higher QP is possible, delivered at the QP range's end */
+    rc_params(&params, HW_RC_MODE_CBR);
+    params.gop_length = 100;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+    frame = 0;
+    assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0 && idr);
+    assert(encode_status(encoder, mem, frame++, &p_bytes, &idr) == 0 && !idr);
+    qp0 = (int)last_qp_seen[1];
+    assert(OpenIMP_T30_HelixSetMaxPicture(encoder, 10u) == 0);
+    assert(p_bytes >= 10u);
+    {
+        int want = t23_maxpic_idr_qp(0, p_bytes, 10u, qp0, 20, 45);
+
+        assert(want > qp0);
+        assert(encode_status(encoder, mem, frame++, &bytes, &idr) ==
+               T30_HELIX_DROPPED);
+        assert(encode_status(encoder, mem, frame++, &bytes, &idr) ==
+               T30_HELIX_DROPPED);      /* the IDR is far over 10 bytes */
+        assert((int)last_qp_seen[0] == want);
+        want = t23_maxpic_idr_qp(0, idr_bytes, 10u, want, 20, 45);
+        assert(want == 45);
+        assert(encode_status(encoder, mem, frame++, &bytes, &idr) == 0);
+        assert(idr == 1 && last_qp_seen[0] == 45u);
+    }
+    OpenIMP_T30_HelixDestroy(encoder);
+    printf("maximum picture size ok\n");
+}
+
+/* IMP_Encoder_SetPool: the buffers of a channel bound to a memory pool
+ * (HWEncoderParams.reserved[0] = pool + 1) come from the pool, the
+ * process-wide shared bitstream area does not; a pool without room fails
+ * the creation and leaks nothing. */
+static void pool_test(void)
+{
+    HWEncoderParams params;
+    T30HelixEncoder *encoder = NULL;
+    unsigned int live_before = allocation_count;
+    unsigned int live_plain, live_pool, i, j, plain_n;
+    char plain_tags[32][32];
+
+    rc_params(&params, HW_RC_MODE_CBR);
+    /* without a pool: everything from the top of the arena */
+    top_tag_n = pool_tag_n = 0;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+    assert(pool_tag_n == 0u && top_tag_n >= 4u);
+    plain_n = top_tag_n;
+    memcpy(plain_tags, top_tags, sizeof(plain_tags));
+    live_plain = allocation_count - live_before;
+    OpenIMP_T30_HelixDestroy(encoder);
+    assert(allocation_count < live_before + live_plain);
+
+    /* pool 3 with room: the per-channel buffers move there */
+    pool_room[3] = 64 << 20;
+    top_tag_n = pool_tag_n = 0;
+    params.reserved[0] = 3u + 1u;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+    assert(pool_tag_n >= 3u);
+    for (i = 0; i < pool_tag_n; i++)
+        assert(pool_ids[i] == 3);
+    for (i = 0; i < plain_n; i++) {
+        int in_pool = 0;
+
+        for (j = 0; j < pool_tag_n; j++)
+            in_pool |= !strcmp(plain_tags[i], pool_tags[j]);
+        /* the shared bitstream buffer is not the channel's */
+        if (!strncmp(plain_tags[i], "t23-helix-bs", 12))
+            continue;
+        assert(in_pool);
+    }
+    for (i = 0; i < top_tag_n; i++)
+        assert(!strncmp(top_tags[i], "t23-helix-bs", 12));
+    live_pool = allocation_count;
+    OpenIMP_T30_HelixDestroy(encoder);
+    assert(allocation_count < live_pool);   /* the pool blocks are freed */
+
+    /* a pool that cannot hold the buffers: creation fails, nothing is left */
+    pool_room[5] = 100 << 10;
+    params.reserved[0] = 5u + 1u;
+    live_before = allocation_count;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == -1);
+    assert(allocation_count == live_before);
+    printf("encoder memory pool ok\n");
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 4 && !(argc == 3 && strcmp(argv[1], "crop") == 0) &&
-        !(argc == 2 && strcmp(argv[1], "rc") == 0))
+        !(argc == 2 && (strcmp(argv[1], "rc") == 0 ||
+                        strcmp(argv[1], "maxpic") == 0 ||
+                        strcmp(argv[1], "pool") == 0)))
         return 2;
     /* the encoder keeps addresses in 32-bit words, as on MIPS */
     mallopt(M_MMAP_MAX, 0);
@@ -1238,5 +1439,13 @@ int main(int argc, char **argv)
         return verify(argv[2], argv[3]);
     if (strcmp(argv[1], "rc") == 0)
         return rc_test();
+    if (strcmp(argv[1], "maxpic") == 0) {
+        maxpic_test();
+        return 0;
+    }
+    if (strcmp(argv[1], "pool") == 0) {
+        pool_test();
+        return 0;
+    }
     return 2;
 }

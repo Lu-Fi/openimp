@@ -179,10 +179,60 @@ static void test_pools(void)
     assert(g_rmem_arena.used == 0);
 }
 
+/* IMP_Encoder_SetPool/GetPool/ClearPoolId (T23 1.3.0 and T31 1.1.6): 33
+ * channel slots, the pool must exist, one binding per channel; the
+ * encoder's buffers are then ordinary pool blocks. */
+static void test_encoder_pools(void)
+{
+    IMPDMABufferInfo a, b;
+    uint32_t pool_phys;
+
+    assert(DMA_EncoderPoolGet(0) == -1);                /* nothing yet */
+    assert(DMA_EncoderPoolSet(0, 6) == -1);             /* pool 6 missing */
+    assert(IMP_MemPool_InitPool(6, 32768, "enc") == 0);
+    pool_phys = g_mem_pools[6].phys_base;
+    assert(DMA_EncoderPoolSet(0, 6) == 0);
+    assert(DMA_EncoderPoolSet(0, 6) == -1);             /* "already set" */
+    assert(DMA_EncoderPoolSet(1, 7) == -1);
+    assert(DMA_EncoderPoolSet(1, -1) == -1);
+    assert(DMA_EncoderPoolSet(-1, 6) == -1);
+    assert(DMA_EncoderPoolSet(33, 6) == -1);            /* chn 0..32 only */
+    assert(DMA_EncoderPoolSet(32, 6) == 0);             /* the last slot */
+    assert(DMA_EncoderPoolGet(0) == 6 && DMA_EncoderPoolGet(32) == 6);
+    assert(DMA_EncoderPoolGet(1) == -1);
+    assert(DMA_EncoderPoolGet(33) == -1 && DMA_EncoderPoolGet(-1) == -1);
+    /* the frame source table is separate */
+    assert(IMP_FrameSource_GetPool(0) == -1);
+
+    /* the encoder takes its buffers from the pool, in 256-byte units, and
+     * the pool cannot be released while they are out */
+    assert(DMA_PoolAllocDescriptor(DMA_EncoderPoolGet(0), &a, 20000,
+                                   "AVPU_REC") == 0);
+    assert(DMA_PoolAllocDescriptor(DMA_EncoderPoolGet(0), &b, 12000,
+                                   "AVPU_REF") == 0);
+    assert(a.phys_addr == pool_phys && b.phys_addr == pool_phys + 20224);
+    assert(((a.phys_addr | b.phys_addr) & 0xffu) == 0);
+    assert(DMA_PoolAllocDescriptor(6, &a, 1 << 20, "big") == -1);
+    assert(IMP_MemPool_Release(6) == -1);
+    assert(DMA_FreePhys(a.phys_addr) == 0);
+    assert(DMA_FreePhys(b.phys_addr) == 0);
+
+    /* IMP_System_MemPoolFree clears every binding, then the pool goes */
+    DMA_EncoderPoolClear();
+    assert(DMA_EncoderPoolGet(0) == -1 && DMA_EncoderPoolGet(32) == -1);
+    assert(IMP_MemPool_Release(6) == 0);
+    assert(DMA_EncoderPoolSet(0, 6) == -1);             /* gone again */
+    assert(IMP_MemPool_InitPool(6, 4096, "again") == 0);
+    assert(DMA_EncoderPoolSet(0, 6) == 0);              /* slot is free again */
+    DMA_EncoderPoolClear();
+    assert(IMP_MemPool_Release(6) == 0);
+}
+
 int main(void)
 {
     test_continuous();
     test_pools();
+    test_encoder_pools();
     puts("memory pool tests passed");
     return 0;
 }

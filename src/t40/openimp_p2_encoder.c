@@ -23,7 +23,7 @@
 #include "trace_control.h"
 #include "p2_rc_readback.h"
 #include "p2_hevc_policy.h"
-#if defined(PLATFORM_T41) || defined(PLATFORM_T31) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T31) || defined(PLATFORM_T30) || defined(PLATFORM_T23)
 #include "dma_alloc.h"
 #endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
@@ -1033,6 +1033,12 @@ static uint32_t p2_fill_legacy_packs(P2EncoderChannel *channel,
 
 extern int AL_Codec_Encode_SetDefaultParam(void *param);
 extern int AL_Codec_Encode_Create(void **codec, void *params);
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+extern int AL_Codec_Encode_SetPool(void *codec, int pool_id);
+#endif
+#if defined(PLATFORM_T31)
+extern int AL_Codec_Encode_GetEvalInfo(void *codec, void *out, uint32_t *size);
+#endif
 extern int AL_Codec_Encode_SetStreamBufferCount(void *codec, int count);
 extern int AL_Codec_Encode_SetStreamBufferSize(void *codec, int size);
 extern int AL_Codec_Encode_SetFrameRate(void *codec, void *fps);
@@ -1710,6 +1716,10 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     P2_STARTUP_MARKER("openimp/P2 marker C8 codec create returned\n");
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    /* OEM: the pool of IMP_Encoder_SetPool is read here, at CreateChn */
+    (void)AL_Codec_Encode_SetPool(ch->codec, DMA_EncoderPoolGet(channel));
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20)
     /* The codec parameter block has no room for the Helix rate-control
      * extras (staticTime, changePos, qualityLvl, QP steps, iBiasLvl, SMART):
@@ -3442,8 +3452,37 @@ int IMP_Encoder_GetChnEvalInfo(int channel, void *info)
     if (!p2_valid_channel(channel) || !info ||
         !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T31)
+    /* libimp: 36 bytes of the last stream's statistics (H.264/H.265), 8
+     * bytes for JPEG.  A JPEG channel's record is zero here: the T31 JPEG
+     * path (hardware JPEG, p2_jpeg_*) reports no per-picture statistics. */
+    {
+        P2EncoderChannel *ch = &p2_channels[channel];
+        uint8_t record[36];
+        uint32_t size = 0;
+        int jpeg;
+        int ret = -1;
+
+        /* not ch->lock: it is held across encoder work on other threads;
+         * like GetChnEncType this reads the channel as CreateChn left it */
+        void *codec = ch->codec;
+
+        jpeg = ch->codec_type == IMP_ENC_TYPE_JPEG;
+        if (codec)
+            ret = AL_Codec_Encode_GetEvalInfo(codec, record, &size);
+        if (ret != 0)
+            return -1;
+        if (jpeg) {
+            memset(info, 0, 8);
+            return 0;
+        }
+        memcpy(info, record, sizeof(record));
+        return 0;
+    }
+#else
     errno = ENOTSUP;
     return -1;
+#endif
 }
 
 /* Not ch->lock: that is held across encoder work on other threads. */
@@ -3532,6 +3571,20 @@ int IMP_Encoder_GetChnEncType(int channel, IMPEncoderEncType *type)
     return 0;
 }
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+/* libimp: channels 0..32, the pool must exist (IMP_System_MemPoolRequest),
+ * one binding per channel; the encoder takes all its buffers from the pool
+ * when the channel is created (src/dma_alloc.c). */
+int IMP_Encoder_SetPool(int channel, int pool_id)
+{
+    return DMA_EncoderPoolSet(channel, pool_id);
+}
+
+int IMP_Encoder_GetPool(int channel)
+{
+    return DMA_EncoderPoolGet(channel);
+}
+#else
 int IMP_Encoder_SetPool(int channel, int pool_id)
 {
     if (!p2_valid_channel(channel) || pool_id < -1)
@@ -3548,6 +3601,7 @@ int IMP_Encoder_GetPool(int channel)
     EncoderInit();
     return p2_channels[channel].pool_id;
 }
+#endif
 
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 static P2EncoderChannel *p2_legacy_config_channel(int channel)

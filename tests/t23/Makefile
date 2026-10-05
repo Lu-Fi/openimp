@@ -21,6 +21,7 @@ HELIX_STREAM := $(BUILD)/t23-helix-stream-test
 RMEM_LAYOUT := $(BUILD)/t23-rmem-layout-test
 OSD_PACK := $(BUILD)/t23-osd-pack-test
 ISP_OSD_POOL := $(BUILD)/t23-isp-osd-pool-test
+MAXPIC := $(BUILD)/t23-maxpic-test
 AUDIO_ABI := $(BUILD)/t23-audio-abi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
@@ -45,7 +46,7 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(ISP_OSD_POOL)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(ISP_OSD_POOL) $(MAXPIC)
 	$(HELIX_DESCRIPTOR)
 	$(RMEM_LAYOUT)
 	$(OSD_PACK)
@@ -54,6 +55,9 @@ check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(MAKE) hevc-policy
 	$(HELIX_STREAM) encode $(BUILD)/t23-helix.h264 $(BUILD)/t23-helix.ref
 	$(HELIX_STREAM) rc
+	$(HELIX_STREAM) maxpic
+	$(HELIX_STREAM) pool
+	$(MAXPIC)
 	$(HELIX_STREAM) crop $(BUILD)/t23-helix-crop.h264
 	@if command -v ffprobe >/dev/null 2>&1; then \
 		test "$$(ffprobe -v error -flags unaligned -show_entries frame=width,height \
@@ -170,6 +174,11 @@ $(HELIX_STREAM): helix_stream_test.c $(HELIX_NATIVE_SOURCES) \
 
 # Reserved-memory layout with the native encoder: OpenIMP's arena and the
 # real encoder buffer sizes through timps' idle/re-enable cycles.
+# IMP_Encoder_SetChnMaxPictureSize decision code (OEM get_idr_frameqp)
+$(MAXPIC): maxpic_test.c $(PROJECT_DIR)/src/t23/openimp_t23_maxpic.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src -o $@ maxpic_test.c -lm
+
 # ISP OSD picture pool on stubs (no PIE: descriptors carry 32-bit addresses)
 $(ISP_OSD_POOL): isp_osd_pool_test.c $(PROJECT_DIR)/src/t23/openimp_t23_isp_osd.c \
 	$(PROJECT_DIR)/src/mempool_continuous.h
@@ -207,7 +216,7 @@ hevc-policy: hevc_policy_test.c $(PROJECT_DIR)/src/t40/p2_hevc_policy.h
 	done
 
 clean:
-	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(ISP_OSD_POOL) $(AUDIO_ABI) $(BUILD)/t23-helix.h264 \
+	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(ISP_OSD_POOL) $(MAXPIC) $(AUDIO_ABI) $(BUILD)/t23-helix.h264 \
 		$(BUILD)/t23-helix.ref $(BUILD)/t23-helix.nv12
 	rm -f $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(DEVICE_TEST_BIN) \
 		$(ZERO_COPY_TEST_BIN) $(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) \

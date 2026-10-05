@@ -73,6 +73,11 @@ int IMP_Get_Info(void *info_out, uint32_t phys_addr);
 int IMP_FrameSource_GetPool(int chn);
 int IMP_FrameSource_SetPool(int chn, int pool_id);
 int IMP_FrameSource_ClearPoolId(void);
+/* IMP_Encoder_SetPool/GetPool/ClearPoolId: channel 0..32 -> pool id (-1:
+ * none).  Set needs the pool to exist and the channel to be unbound. */
+int DMA_EncoderPoolSet(int chn, int pool_id);
+int DMA_EncoderPoolGet(int chn);
+void DMA_EncoderPoolClear(void);
 
 /**
  * Memory pools (OEM IMP_MemPool_*, behind IMP_System_MemPoolRequest/Free).

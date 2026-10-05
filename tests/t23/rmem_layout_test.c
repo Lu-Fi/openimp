@@ -95,6 +95,17 @@ int DMA_AllocDescriptorTop(IMPDMABufferInfo *info, int size,
     return 0;
 }
 
+/* IMP_Encoder_SetPool: no pool is bound in this test */
+int DMA_PoolAllocDescriptor(int pool_id, IMPDMABufferInfo *info, int size,
+                            const char *tag)
+{
+    (void)pool_id;
+    (void)info;
+    (void)size;
+    (void)tag;
+    return -1;
+}
+
 int DMA_RmemStats(size_t *used, size_t *size, size_t *largest)
 {
     if (used)

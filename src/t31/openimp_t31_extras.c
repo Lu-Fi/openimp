@@ -20,8 +20,6 @@
  * this file does not depend on OpenIMP's generic encoder header layout. */
 extern int IMP_Encoder_Query(int encChn, void *stat);
 extern int IMP_Encoder_GetStream(int encChn, void *stream, int block);
-extern int IMP_Encoder_SetPool(int encChn, int poolId);
-extern int IMP_Encoder_GetPool(int encChn);
 
 static pthread_mutex_t extras_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -87,13 +85,8 @@ int IMP_Encoder_SetFrameRelease(int encChn, int num, int den)
 /* libimp frees its whole channel->pool table; the argument is unused. */
 int IMP_Encoder_ClearPoolId(int encChn)
 {
-    int channel;
-
     (void)encChn;
-    for (channel = 0; channel < EXTRAS_ENC_CHANNELS; channel++) {
-        if (IMP_Encoder_GetPool(channel) >= 0)
-            (void)IMP_Encoder_SetPool(channel, -1);
-    }
+    DMA_EncoderPoolClear();
     return 0;
 }
 

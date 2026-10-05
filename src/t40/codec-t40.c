@@ -39,6 +39,7 @@
 #include "t31_rate_control.h"
 #include "t31_stream_layout.h"
 #include "t31_hevc_headers.h"
+#include "t31/openimp_t31_eval.h"
 #endif
 #if defined(PLATFORM_T41)
 #include "t41_stream_layout.h"
@@ -781,9 +782,59 @@ static int avpu_alloc_imp(size_t size, const char* tag, AvpuDMABuf* out)
  * standalone V4L2 consumer has no P1 FrameSource state, so that arena cannot
  * be discovered. Preserve the proven rmem path when present and fall back to
  * coherent allocations owned by the already-open AVPU channel otherwise. */
+/* A channel bound with IMP_Encoder_SetPool takes its buffers from that
+ * memory pool (the OEM AL_DmaAlloc_GetAllocator(pool) behind
+ * AL_Encoder_Create); a pool without room fails the allocation, there is
+ * no fall back to the shared arena. */
+static int avpu_alloc_pool(int pool_id, size_t size, const char *tag,
+                           AvpuDMABuf *out)
+{
+    IMPDMABufferInfo info;
+
+    if (!out || size == 0 || size > INT32_MAX)
+        return -1;
+    memset(&info, 0, sizeof(info));
+    if (DMA_PoolAllocDescriptor(pool_id, &info, (int)size,
+                                tag ? tag : "AVPU") != 0 ||
+        !info.virt_addr || !info.phys_addr) {
+        IMP_LOG_ERR("Codec", "AVPU: memory pool %d has no room for %s "
+                    "(%zu bytes); enlarge IMP_System_MemPoolRequest",
+                    pool_id, tag ? tag : "AVPU", size);
+        return -1;
+    }
+    out->phy_addr = info.phys_addr;
+    out->mmap_off = 0;
+    out->dmabuf_fd = -1;
+    out->map = (void *)(uintptr_t)info.virt_addr;
+    out->uncached_map = NULL;
+    out->size = size;
+    out->from_rmem = 1;     /* DMA_FreePhys returns the block to its pool */
+    LOG_CODEC("AVPU: pool-alloc ok pool=%d phys=0x%08x size=%zu virt=%p",
+              pool_id, info.phys_addr, size, out->map);
+    return 0;
+}
+
+static int avpu_alloc_encoder_pool(int pool_id, int fd, size_t size,
+                                   const char *tag, AvpuDMABuf *out);
+
 static int avpu_alloc_encoder(int fd, size_t size, const char *tag,
                               AvpuDMABuf *out)
 {
+    return avpu_alloc_encoder_pool(-1, fd, size, tag, out);
+}
+
+/* the pool of a codec's channel: T31 only (T41 has no SetPool binding) */
+#if defined(PLATFORM_T31)
+#define AVPU_ENC_POOL(enc) ((enc)->pool_bound ? (enc)->pool_id : -1)
+#else
+#define AVPU_ENC_POOL(enc) (-1)
+#endif
+
+static int avpu_alloc_encoder_pool(int pool_id, int fd, size_t size,
+                                   const char *tag, AvpuDMABuf *out)
+{
+    if (pool_id >= 0)
+        return avpu_alloc_pool(pool_id, size, tag, out);
     if (avpu_alloc_imp(size, tag, out) == 0)
         return 0;
     LOG_CODEC("AVPU: %s falling back to coherent allocation (%zu bytes)",
@@ -809,7 +860,11 @@ static void avpu_release_dma_buf(AvpuDMABuf *buf)
     from_rmem = buf->from_rmem;
 
     if (buf->uncached_map && buf->uncached_map != MAP_FAILED) {
-        munmap(buf->uncached_map, buf->size);
+        /* a pool block is not page aligned: the mapping starts at the page */
+        uintptr_t map = (uintptr_t)buf->uncached_map;
+        size_t skew = map & 4095u;
+
+        munmap((void *)(map - skew), buf->size + skew);
         buf->uncached_map = NULL;
     }
     if (!buf->from_rmem && buf->map && buf->map != MAP_FAILED) {
@@ -839,14 +894,19 @@ static void *avpu_remap_uncached(uint32_t phys_addr, size_t size)
         LOG_CODEC("AVPU: /dev/mem open failed: %s", strerror(errno));
         return NULL;
     }
-    void *p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                   fd, (off_t)phys_addr);
+    /* mmap offsets are page aligned; a block cut out of a memory pool (256
+     * byte units) is not: map from its page and return the block's address
+     * (avpu_release_dma_buf unmaps from the page again) */
+    size_t skew = (size_t)(phys_addr & 4095u);
+    void *p = mmap(NULL, size + skew, PROT_READ | PROT_WRITE, MAP_SHARED,
+                   fd, (off_t)(phys_addr - skew));
     close(fd);
     if (p == MAP_FAILED) {
         LOG_CODEC("AVPU: /dev/mem mmap failed for phys=0x%08x size=%zu: %s",
                   phys_addr, size, strerror(errno));
         return NULL;
     }
+    p = (uint8_t *)p + skew;
     LOG_CODEC("AVPU: /dev/mem uncached remap OK phys=0x%08x -> virt=%p size=%zu",
               phys_addr, p, size);
     return p;
@@ -5506,6 +5566,17 @@ static void avpu_end_encoding_callback(void *user_data)
         ctx->stream_buf_size > (int)AVPU_T31_PAYLOAD_OFFSET &&
         bitcount <= (uint32_t)ctx->stream_buf_size -
             AVPU_T31_PAYLOAD_OFFSET;
+    if (ctx && buf_idx >= 0 && buf_idx < 16) {
+        /* IMP_Encoder_GetChnEvalInfo: the picture's status statistics */
+        T31EvalInfo eval;
+
+        memset(&eval, 0, sizeof(eval));
+        if (completed)
+            openimp_t31_eval_from_status(
+                &eval, status_regs.raw,
+                ctx->t31_rate_control_qp_by_buf[buf_idx]);
+        memcpy(ctx->t31_eval_by_buf[buf_idx], &eval, sizeof(eval));
+    }
     if (completed && ctx->t31_al_rc.valid) {
         avpu_t31_allegro_complete(ctx, buf_idx, bitcount * 8u,
                                   status_regs.raw, sizeof(status_regs.raw));
@@ -7174,6 +7245,19 @@ struct AL_CodecEncode {
 #if defined(PLATFORM_T23)
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
     int t23_backend;               /* T23_BACKEND_*, chosen on first frame */
+    /* IMP_Encoder_SetChnMaxPictureSize / Setframelossthd in bytes (0: off),
+     * written by the API thread, read before each picture */
+    uint32_t t23_max_picture;
+#endif
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    /* IMP_Encoder_SetPool at CreateChn: the memory pool the encoder's
+     * buffers come from (pool_bound = 0: the shared arena) */
+    int pool_bound;
+    int pool_id;
+#endif
+#if defined(PLATFORM_T31)
+    /* IMP_Encoder_GetChnEvalInfo: record of the last stream taken */
+    uint8_t eval_last[T31_EVAL_INFO_SIZE];
 #endif
 };
 
@@ -10107,6 +10191,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                     enc->hw_params.gop_length = 25u;
                 if (!enc->hw_params.bitrate)
                     enc->hw_params.bitrate = 2000000u;
+                /* IMP_Encoder_SetPool: the encoder's buffers come from it */
+                enc->hw_params.reserved[0] = enc->pool_bound
+                    ? (uint32_t)enc->pool_id + 1u : 0u;
                 if (OpenIMP_T30_HelixCreate(&enc->t30_helix,
                                             &enc->hw_params) == 0) {
                     enc->t23_backend = T23_BACKEND_NATIVE;
@@ -10137,13 +10224,24 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
              * setter is half-way through updating them; Reconfigure
              * validates the snapshot as a whole. */
             HWEncoderParams current = enc->hw_params;
+            int native_ret;
 
             (void)OpenIMP_T30_HelixReconfigure(enc->t30_helix, &current);
+            (void)OpenIMP_T30_HelixSetMaxPicture(
+                enc->t30_helix,
+                __atomic_load_n(&enc->t23_max_picture, __ATOMIC_RELAXED));
             if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
                 OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
-            if (OpenIMP_T30_HelixEncode(enc->t30_helix,
-                                        (const IMPFrameInfo *)frame,
-                                        &hw_stream) != 0) {
+            native_ret = OpenIMP_T30_HelixEncode(enc->t30_helix,
+                                                 (const IMPFrameInfo *)frame,
+                                                 &hw_stream);
+            if (native_ret == T30_HELIX_DROPPED) {
+                /* over the maximum picture size: no stream for this
+                 * picture, the next one is the re-coded IDR (OEM
+                 * update_h264_one_frmstrm); not an error */
+                return -1;
+            }
+            if (native_ret != 0) {
                 if (OpenIMP_T30_HelixFailures(enc->t30_helix) >=
                     T23_NATIVE_MAX_FAILURES) {
                     IMP_LOG_ERR("Encoder", "T23 channel %d: %u consecutive "
@@ -10431,7 +10529,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         for (int i = 0; i < enc->avpu.stream_buf_count; ++i) {
                             LOG_CODEC("AVPU: alloc stream buf[%d] size=%d (IMP_Alloc)", i, enc->avpu.stream_buf_size);
                             AvpuDMABuf tmp = (AvpuDMABuf){0};
-                            if (avpu_alloc_encoder(fd, (size_t)enc->avpu.stream_buf_size, "AVPU_STRM", &tmp) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, (size_t)enc->avpu.stream_buf_size, "AVPU_STRM", &tmp) == 0) {
 #if defined(PLATFORM_T31)
                                 /*
                                  * Header/payload compaction happens after
@@ -10481,8 +10579,8 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         enc->avpu.cl_count = 0x13;
                         size_t cl_bytes = enc->avpu.cl_entry_size * enc->avpu.cl_count;
                         int cl_ok = 0;
-                        if (avpu_alloc_encoder(fd, cl_bytes, "AVPU_CL", &enc->avpu.cl_ring) == 0) {
-                            if (avpu_alloc_encoder(fd, cl_bytes, "AVPU_CL_SUBMIT", &enc->avpu.cl_submit_ring) == 0) {
+                        if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, cl_bytes, "AVPU_CL", &enc->avpu.cl_ring) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, cl_bytes, "AVPU_CL_SUBMIT", &enc->avpu.cl_submit_ring) == 0) {
                                 cl_ok = 1;
                                 void *virt = enc->avpu.cl_ring.map;
                                 void *submit_virt = enc->avpu.cl_submit_ring.map;
@@ -10638,7 +10736,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                 interm_total_sz += 0x100u;
 #endif
 
-                                if (avpu_alloc_encoder(fd, interm_total_sz, "AVPU_ITM", &enc->avpu.interm_buf) == 0) {
+                                if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, interm_total_sz, "AVPU_ITM", &enc->avpu.interm_buf) == 0) {
 #if !defined(PLATFORM_T41)
                                     int use_fixqp_lda = 0;
 #if defined(PLATFORM_T31)
@@ -10702,7 +10800,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                 }
                             }
 
-                            if (avpu_alloc_encoder(fd, aux_alloc_sz, "AVPU_REC", &enc->avpu.rec_buf) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, aux_alloc_sz, "AVPU_REC", &enc->avpu.rec_buf) == 0) {
                                 /* Do NOT memset — rec_buf is AVPU output (reconstruction),
                                  * and zeroing 3MB of uncached DMA memory can stall/hang
                                  * the AXI bus on cold boot. */
@@ -10716,7 +10814,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                             }
 
 #if !defined(PLATFORM_T41)
-                            if (avpu_alloc_encoder(fd, aux_alloc_sz, "AVPU_REF", &enc->avpu.ref_buf) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, aux_alloc_sz, "AVPU_REF", &enc->avpu.ref_buf) == 0) {
                                 /* Do NOT memset — ref_buf content is irrelevant for the
                                  * first IDR frame (intra-only), and subsequent frames will
                                  * have valid reconstruction data copied in by the AVPU. */
@@ -10736,7 +10834,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                              * 0x1420-byte per-core image in three 0x1500-byte
                              * picture-class slots. Keep this separate from
                              * reconstruction storage, matching OEM ownership. */
-                            if (avpu_alloc_encoder(fd, OPENIMP_T41_EP3_RING_SIZE,
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, OPENIMP_T41_EP3_RING_SIZE,
                                                    "AVPU_EP3", &enc->avpu.rec_trace_buf) == 0) {
                                 size_t ep3_initialized =
                                     openimp_t41_hwrc_ring_init(
@@ -10769,7 +10867,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                             /* The old trace-shadow allocations were based on a
                              * false interpretation of cmd[0x2d].  It is really
                              * the three-slot EP3 HW-rate-control ring. */
-                            if (avpu_alloc_encoder(fd,
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd,
                                                    AVPU_T40_EP3_SLOT_SIZE * AVPU_T40_EP3_SLOT_COUNT,
                                                    "AVPU_EP3", &enc->avpu.rec_trace_buf) == 0) {
                                 size_t ep3_initialized = avpu_t40_init_ep3_ring(&enc->avpu);
@@ -10784,12 +10882,12 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                 LOG_CODEC("AVPU: WARNING - failed to allocate EP3 ring");
                             }
 #else
-                            if (avpu_alloc_encoder(fd, aux_alloc_sz, "AVPU_TRC_REC", &enc->avpu.rec_trace_buf) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, aux_alloc_sz, "AVPU_TRC_REC", &enc->avpu.rec_trace_buf) == 0) {
                                 LOG_CODEC("AVPU: rec_trace_buf phys=0x%08x size=%zu", enc->avpu.rec_trace_buf.phy_addr, aux_frame_sz);
                             } else {
                                 LOG_CODEC("AVPU: WARNING - failed to allocate rec_trace_buf (%zu bytes)", aux_frame_sz);
                             }
-                            if (avpu_alloc_encoder(fd, aux_alloc_sz, "AVPU_TRC_REF", &enc->avpu.ref_trace_buf) == 0) {
+                            if (avpu_alloc_encoder_pool(AVPU_ENC_POOL(enc), fd, aux_alloc_sz, "AVPU_TRC_REF", &enc->avpu.ref_trace_buf) == 0) {
                                 LOG_CODEC("AVPU: ref_trace_buf phys=0x%08x size=%zu", enc->avpu.ref_trace_buf.phy_addr, aux_frame_sz);
                             } else {
                                 LOG_CODEC("AVPU: WARNING - failed to allocate ref_trace_buf (%zu bytes)", aux_frame_sz);
@@ -12164,6 +12262,41 @@ int AL_Codec_Encode_Process(void *codec, void *frame, void *user_data)
 #endif
 }
 
+#if defined(PLATFORM_T31)
+static pthread_mutex_t g_t31_eval_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* IMP_Encoder_GetChnEvalInfo: the statistics of the last stream taken with
+ * GetStream; 0 and *size = 36 (8 for JPEG, whose record is zero here), -1
+ * before any stream. */
+int AL_Codec_Encode_GetEvalInfo(void *codec, void *out, uint32_t *size)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc || !out || !size)
+        return -1;
+    pthread_mutex_lock(&g_t31_eval_lock);
+    memcpy(out, enc->eval_last, sizeof(enc->eval_last));
+    pthread_mutex_unlock(&g_t31_eval_lock);
+    *size = T31_EVAL_INFO_SIZE;
+    return 0;
+}
+#endif
+
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+/* IMP_Encoder_SetPool is read once, at CreateChn (OEM video_vbm_malloc /
+ * AL_Codec_Encode_Create); the buffers are allocated with the first picture. */
+int AL_Codec_Encode_SetPool(void *codec, int pool_id)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc)
+        return -1;
+    enc->pool_bound = pool_id >= 0;
+    enc->pool_id = pool_id >= 0 ? pool_id : 0;
+    return 0;
+}
+#endif
+
 /**
  * AL_Codec_Encode_GetStream - based on decompilation at 0x7a548
  * Get an encoded stream
@@ -12195,6 +12328,17 @@ int AL_Codec_Encode_GetStream(void *codec, void **stream, void **user_data) {
                 HWStreamBuffer *hw_stream = (HWStreamBuffer *)s;
                 *stream = s;
                 *user_data = avpu_hw_stream_get_user_data(hw_stream);
+#if defined(PLATFORM_T31)
+                /* OEM update_one_frmstrm: the channel record takes the
+                 * statistics of the stream the thread took */
+                if (hw_stream->reserved[2] < 16u) {
+                    pthread_mutex_lock(&g_t31_eval_lock);
+                    memcpy(enc->eval_last,
+                           ctx->t31_eval_by_buf[hw_stream->reserved[2]],
+                           sizeof(enc->eval_last));
+                    pthread_mutex_unlock(&g_t31_eval_lock);
+                }
+#endif
                 ctx->frames_consumed++;
                 if (ctx->frames_consumed % 50 == 0)
                 LOG_CODEC("GetStream[AVPU]: got queued stream stream=%p phys=0x%08x virt=0x%08x len=%u enc=%d cons=%d user=%p",
@@ -12859,6 +13003,18 @@ int AL_Codec_Encode_RequestIDR(void *codec) {
 }
 
 #if defined(PLATFORM_T23)
+/* IMP_Encoder_SetChnMaxPictureSize / Setframelossthd: the size in bytes
+ * from which the native Helix encoder drops a picture and re-codes an IDR
+ * (0: no limit).  The OEM worker (helixd) path has no such check. */
+int OpenIMP_T23_CodecSetMaxPicture(void *codec, uint32_t bytes)
+{
+    if (!codec)
+        return -1;
+    __atomic_store_n(&((AL_CodecEncode *)codec)->t23_max_picture, bytes,
+                     __ATOMIC_RELAXED);
+    return 0;
+}
+
 /* The Helix session behind a T23 H.264 codec, for the encoder extras in
  * src/t23/openimp_t23_encoder.c. */
 T23HelixBridge *OpenIMP_T23_CodecBridge(void *codec)

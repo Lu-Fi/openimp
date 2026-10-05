@@ -38,6 +38,7 @@ All test cameras run the open kernel driver (open-tx-isp), OpenIMP and timps. No
 | Helix T20/T21/T30 | Encoder issues on the Helix path | Fixed | `claude/t30-helix-fixes` |
 | OSD | Never drawn on T20/T21 (Helix path) | IPU OSD hook | `claude/t20-osd` |
 | Memory pools T23/T31 | `MemPoolRequest`, `FrameSource_SetPool/GetPool`, T23 `OSD_SetPoolSize_ISP` only recorded names/sizes | Real pools as in libimp (zeroed rmem block, 256-byte first-fit); FrameSource channels allocate from their pool; T23 `SetSwitchgpio` reaches the driver; T23 `FrmUsedMode` lives in the channel attribute. Host-tested only | `claude/t23t31-cacheonly` |
+| Encoder T23/T31 | T23 `SetChnMaxPictureSize` stored only; `Encoder_SetPool` stored only; T31 `GetChnEvalInfo` unsupported | T23 native Helix drops an oversized picture and re-codes an IDR at a higher QP as libimp; encoder buffers come from the `SetPool` memory pool (T23 native Helix, T31 AVPU); T31 `GetChnEvalInfo` returns the 36-byte per-picture status record. Host-tested only | `claude/t23-enc-rest` |
 | Motion detection | T20/T21/T30 always "no motion" | Real frame-diff IVS ported from T31/T23 | `claude/tseries-ivs` |
 | Audio out | Volume/mute ignored; partial OSS fragments dropped | Applied; whole-fragment writes | `claude/openimp-quickfixes`, `claude/t31-ao-fix` |
 | Framesource / VBM T21 | Idle teardown freed the pool; later allocations failed in 23 MB rmem | Pool parking and reuse | `claude/t21-bringup` |

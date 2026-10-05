@@ -135,6 +135,30 @@ int AL_Codec_Encode_Create(void **codec, void *params)
     return *codec ? 0 : -1;
 }
 int AL_Codec_Encode_Destroy(void *codec) { free(codec); return 0; }
+int AL_Codec_Encode_SetPool(void *codec, int pool_id)
+{
+    (void)codec;
+    (void)pool_id;
+    return 0;
+}
+int AL_Codec_Encode_GetEvalInfo(void *codec, void *out, uint32_t *size)
+{
+    (void)codec;
+    (void)out;
+    (void)size;
+    return -1;
+}
+int DMA_EncoderPoolSet(int chn, int pool_id)
+{
+    (void)chn;
+    (void)pool_id;
+    return -1;
+}
+int DMA_EncoderPoolGet(int chn)
+{
+    (void)chn;
+    return -1;
+}
 int AL_Codec_Encode_Process(void *codec, void *frame, void *user)
 {
     StubCodec *c = codec;

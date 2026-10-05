@@ -278,6 +278,8 @@ typedef struct ALAvpuContext {
     /* Exact entropy bytes reported at completion status +0x104. */
     uint32_t t31_payload_size_by_buf[16];
     uint32_t t31_rate_control_qp_by_buf[16];
+    /* IMP_Encoder_GetChnEvalInfo record of each stream buffer's picture */
+    uint8_t t31_eval_by_buf[16][36];
     OpenIMPT31RateController t31_rate_controller;
     /* CappedVBR/CappedQuality: PSNR cap in dB * 100 (0 = none), copied from
      * the codec at every AVPU setup; PSNR of the last completed picture. */
