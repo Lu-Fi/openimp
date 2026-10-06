@@ -1905,6 +1905,29 @@ int VBMWaitReady(int chn, unsigned int sequence, uint32_t timeout_us)
 
 #endif /* PLATFORM_T31 || PLATFORM_T23: frame-ready events */
 
+#if defined(PLATFORM_T20)
+/* Buffers the driver holds (queued by QBUF, not dequeued yet), -1 when the
+ * pool does not track it.  Read without the capture thread's own updates
+ * racing (it is the only one that marks a buffer dequeued). */
+int VBMBuffersInDriver(int chn)
+{
+    VBMPool *pool;
+    int i, n = 0;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return -1;
+    pool = vbm_instance[chn];
+    if (!pool || !pool->buf_in_userspace)
+        return -1;
+    pthread_mutex_lock(&pool->queue_mutex);
+    for (i = 0; i < pool->frame_count; i++)
+        if (!pool->buf_in_userspace[i])
+            n++;
+    pthread_mutex_unlock(&pool->queue_mutex);
+    return n;
+}
+#endif
+
 /* Return every frame still waiting in chn's ready queue to the driver while
  * no reader is pulling it.  Each index is popped under queue_mutex, so a
  * reader that races in can never receive a frame that is being recycled. */

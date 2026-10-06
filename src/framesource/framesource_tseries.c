@@ -1176,6 +1176,32 @@ static void *frame_pooling_thread(void *arg)
 #if defined(PLATFORM_T31)
                     openimp_vbm_dq_step[chn] = VBM_DQ_STEP_NONE;
 #endif
+#if defined(PLATFORM_T20)
+                    /* tx-isp-t20 reports the fd readable and sleeps in
+                     * DQBUF, O_NONBLOCK or not, while it holds no buffer.
+                     * When a reader stops with every buffer parked in the
+                     * ready queue (and the delay FIFO), this thread slept
+                     * there for good: the idle recycle never ran, the
+                     * channel delivered nothing more (an IVS group bound
+                     * to it got no result after the FS channel had been
+                     * pulled).  Without a buffer in the driver, hand idle
+                     * frames back first and dequeue only after that. */
+                    if (VBMBuffersInDriver(chn) == 0) {
+                        if (pthread_mutex_trylock(&g_fs_lock) == 0) {
+                            if (FS_FLAG_LOAD(ctx->running) &&
+                                fs_chan_get_state(chn) == 2) {
+                                FS_STEP(chn, FS_STEP_IDLE_RECYCLE);
+                                VBMRecycleIdleFrames(chn);
+                            }
+                            pthread_mutex_unlock(&g_fs_lock);
+                        }
+                        if (VBMBuffersInDriver(chn) == 0) {
+                            FS_STEP(chn, FS_STEP_DQ_EMPTY_SLEEP);
+                            usleep(5000);
+                            break;
+                        }
+                    }
+#endif
                     FS_STEP(chn, FS_STEP_DQBUF);
                     dq_ret = VBMKernelDequeue(chn, ctx->fd, &frame);
                     fs_trace("libimp/FS: pooling dequeue ch=%d fd=%d ret=%d frame=%p\n",
@@ -2672,15 +2698,18 @@ int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
     return 0;
 }
 
-/* libimp 3.12.0 (T20) waits up to 2 s for a frame (header: "default
- * timeout 2s"; pthread_cond_timedwait on the depth list).  The ready queue
+/* libimp 3.12.0 (T20), 1.0.33 (T21) and 1.3.0 (T23) wait up to 2 s for a
+ * frame (headers: "default timeout 2s"; pthread_cond_timedwait on the depth
+ * list).  The ready queue
  * here is filled by the capture thread, which hands frames back to the
  * driver while nobody pulled for VBM_PULL_IDLE_MS, so the first GetFrame
  * after a pause finds it empty: a non-blocking GetFrame failed at once for
  * every caller that does not retry.  Polled in 5 ms steps (T20 has no
  * frame-ready event); every attempt also keeps the pull marked active.
- * The encoder pulls with VBMGetFrame and keeps its own timeout. */
-#if defined(PLATFORM_T20)
+ * The encoder pulls with VBMGetFrame and keeps its own timeout.  T31 keeps
+ * its non-blocking GetFrame (its encoder waits on the ready event and calls
+ * the public GetFrame). */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
 #define FS_GETFRAME_TIMEOUT_MS 2000u
 #endif
 
@@ -2692,7 +2721,7 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
                         chnNum, (void *)frame);
         return -1;
     }
-#if defined(PLATFORM_T20)
+#if defined(FS_GETFRAME_TIMEOUT_MS)
     {
         uint32_t start = fs_now_ms();
 
@@ -2791,7 +2820,7 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
         return -1;
     }
 
-#if defined(PLATFORM_T20)
+#if defined(FS_GETFRAME_TIMEOUT_MS)
     /* the same 2 s wait as GetFrame (25 ms missed the first frame after
      * an idle pause, see IMP_FrameSource_GetFrame) */
     if (IMP_FrameSource_GetFrame(chnNum, &frame) != 0) frame = NULL;

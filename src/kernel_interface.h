@@ -118,6 +118,9 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out);
  * GetTimedFrame) */
 int VBMDelayConfigure(int chn, int max, int delay);
 int VBMDelaySetDelay(int chn, int delay);
+#if defined(PLATFORM_T20)
+int VBMBuffersInDriver(int chn);
+#endif
 int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
                           void *framedata, void *info, size_t info_size);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
