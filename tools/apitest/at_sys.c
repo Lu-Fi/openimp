@@ -77,6 +77,7 @@ void t_system_exit(int unused)
 
 /* ------------------------------------------------------------ FrameSource */
 static IMPFSChnAttr fs0, fs1;
+static int g_fifo_set;      /* SetChnFifoAttr(maxdepth 2) took effect */
 
 static void fs_attrs(void)
 {
@@ -102,10 +103,14 @@ void t_fs_pre(void)
     /* settings that must be made between CreateChn and EnableChn */
     NEED(IMP_FrameSource_SetMaxDelay) { r = IMP_FrameSource_SetMaxDelay(1, 3); RET0(IMP_FrameSource_SetMaxDelay, r, "ch1 max 3"); }
     NEED(IMP_FrameSource_SetDelay) { r = IMP_FrameSource_SetDelay(1, 1); RET0(IMP_FrameSource_SetDelay, r, "ch1 delay 1"); }
+    /* read back before SetChnFifoAttr: libimp's SetChnFifoAttr sets maxdelay = delay = maxdepth */
+    NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 3, "max delay %d (set 3, before SetChnFifoAttr)", *d); gfree(d); }
+    NEED(IMP_FrameSource_GetDelay) { G(int, d); r = IMP_FrameSource_GetDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetDelay, r, *d == 1, "delay %d (set 1, before SetChnFifoAttr)", *d); gfree(d); }
     NEED(IMP_FrameSource_SetChnFifoAttr) {
         IMPFSChnFifoAttr fa = { 2, FIFO_CACHE_PRIORITY };
         r = IMP_FrameSource_SetChnFifoAttr(1, &fa);
         RET0(IMP_FrameSource_SetChnFifoAttr, r, "ch1 maxdepth 2 cache-priority");
+        g_fifo_set = r == 0;
     }
 #if HAS_IMP_FrameSource_SetPool
     NEED(IMP_FrameSource_SetPool) { r = IMP_FrameSource_SetPool(1, 0); RET0(IMP_FrameSource_SetPool, r, "ch1 pool 0"); }
@@ -185,8 +190,11 @@ void t_fs(void)
         gfree(d);
     }
     /* delay / max delay / fifo / pool as set before EnableChn */
-    NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 3, "max delay %d (set 3)", *d); gfree(d); }
-    NEED(IMP_FrameSource_GetDelay) { G(int, d); r = IMP_FrameSource_GetDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetDelay, r, *d == 1, "delay %d (set 1)", *d); gfree(d); }
+    /* after SetChnFifoAttr(maxdepth 2): libimp stores maxdelay = delay = 2 */
+    if (g_fifo_set) {
+        NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 2, "max delay %d (SetChnFifoAttr maxdepth 2)", *d); gfree(d); }
+        NEED(IMP_FrameSource_GetDelay) { G(int, d); r = IMP_FrameSource_GetDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetDelay, r, *d == 2, "delay %d (SetChnFifoAttr sets delay = maxdepth 2)", *d); gfree(d); }
+    }
     NEED(IMP_FrameSource_GetChnFifoAttr) {
         G(IMPFSChnFifoAttr, f);
         r = IMP_FrameSource_GetChnFifoAttr(1, f);
@@ -253,6 +261,14 @@ void t_fs(void)
               "%d frames %dx%d luma %u ts monotonic %d, %.1f fps (wall), ts span %lld us", n, w, h, luma, mono,
               n > 1 ? (n - 1) * 1e6 / (double)(t1 - t0) : 0.0, (long long)(last - first));
         NEED(IMP_FrameSource_ReleaseFrame) rep(FN(IMP_FrameSource_ReleaseFrame), rr, rr == 0 ? V_PASS : V_FAIL, "last release");
+        /* libimp hands out the channel at the sensor rate (outFrmRate is not a
+         * FrameSource drop rate); apitest set the sensor to 15/1 as the vendor
+         * samples do, so ch1 must run at ~15 fps */
+        if (n == 16 && last > first) {
+            double fps = 15.0 * 1e6 / (double)(last - first);
+            rep(LBL("FrameSource rate = sensor rate"), 0, fps > 12.0 && fps < 18.0 ? V_PASS : V_FAIL,
+                "ch1 %.1f fps by timestamps (sensor 15/1, channel outFrmRate 15/1)", fps);
+        }
         gfree(pf);
     }
     NEED(IMP_FrameSource_SnapFrame) {
@@ -270,14 +286,30 @@ void t_fs(void)
         G(IMPFrameInfo, fi);
         G(IMPFrameTimestamp, ts);
         unsigned char *buf = gnew(nv12);
-        int w = 0, h = 0;
-        int64_t t = 0;
+        int w = 0, h = 0, r2 = -1;
+        int64_t t = 0, t2 = 0, iv = 66666, target, got = 0;
 
-        fs_peek(1, &w, &h, &t);
-        ts->ts = (uint64_t)t; ts->minus = 200000; ts->plus = 200000;
-        r = IMP_FrameSource_GetTimedFrame(1, ts, 0, buf, fi);
+        /* The FIFO holds the newest `delay` frames; a frame GetFrame handed
+         * out has left it, so its time stamp is older than every held frame
+         * (libimp: -1).  Ask for a time inside the held window instead:
+         * now - half a frame, blocking (waits for the next frame if the
+         * newest is older), then once more without block for exactly the
+         * time stamp of the held frame it returned. */
+        if (fs_peek(1, &w, &h, &t) == 0 && fs_peek(1, &w, &h, &t2) == 0 && t2 > t && t2 - t < 1000000) iv = t2 - t;
+        target = (int64_t)IMP_System_GetTimeStamp() - iv / 2;
+        ts->ts = (uint64_t)target; ts->minus = 200000; ts->plus = 200000;
+        r = IMP_FrameSource_GetTimedFrame(1, ts, 1, buf, fi);
         gchk(fi); gchk(buf); gchk(ts);
-        CHECK(IMP_FrameSource_GetTimedFrame, r, 1, "ts %lld +-200 ms, no block, info %ux%u (needs the delay cache: SetDelay 1)", (long long)t, fi->width, fi->height);
+        got = (int64_t)fi->timeStamp;
+        CHECK(IMP_FrameSource_GetTimedFrame, r, got && (got - target < iv && target - got < iv) && fi->width == SUB_W,
+              "ts now-%lld us, block: frame ts %+lld us from it, info %ux%u", (long long)(iv / 2), (long long)(got - target), fi->width, fi->height);
+        if (r == 0 && got) {
+            ts->ts = (uint64_t)got;
+            r2 = IMP_FrameSource_GetTimedFrame(1, ts, 0, buf, fi);
+            gchk(fi); gchk(buf);
+            rep(LBL("IMP_FrameSource_GetTimedFrame (no block, held frame)"), r2, r2 == 0 && (int64_t)fi->timeStamp == got ? V_PASS : V_FAIL,
+                "ts of the held frame -> %d, ts %s", r2, (int64_t)fi->timeStamp == got ? "equal" : "differs");
+        }
         gfree(fi); gfree(ts); gfree(buf);
     }
 #if HAS_IMP_FrameSource_GetFrameEx

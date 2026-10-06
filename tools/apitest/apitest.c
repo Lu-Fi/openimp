@@ -249,6 +249,14 @@ int main(int argc, char **argv)
     ret = IMP_ISP_EnableTuning();
     RET0(IMP_ISP_EnableTuning, ret, "");
     if (ret < 0) return 1;
+    /* as the vendor samples (sample-common.c): the FrameSource channels run at
+     * the sensor rate, their outFrmRate (15/1 here) does not drop frames */
+#ifdef PLATFORM_T41
+    { IMPISPSensorFps sf = { 15, 1 }; ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &sf) : -1; }
+#else
+    ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(15, 1) : -1;
+#endif
+    printf("[T] SetSensorFPS 15/1 -> %d\n", ret);
     { unsigned m = g_mode_night; int r;
 #ifdef PLATFORM_T41
       r = IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, (void *)&m);

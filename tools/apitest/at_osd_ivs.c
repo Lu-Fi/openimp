@@ -280,6 +280,18 @@ void t_ivs(void)
                 NEED(IMP_IVS_SetParam) {
                     *n = *g; n->sense[0] = 2;
                     r2 = IMP_IVS_SetParam(0, n);
+                    /* libimp copies the param into the interface and applies it
+                     * with the next frame the channel accepts; GetParam reads the
+                     * algorithm's copy, so wait for two results first */
+                    NEED(IMP_IVS_PollingResult) {
+                        void **pr = (void **)gnew(sizeof(void *));
+                        int k;
+                        for (k = 0; k < 2; k++) {
+                            if (IMP_IVS_PollingResult(0, 2000) != 0) break;
+                            if (IMP_IVS_GetResult(0, pr) == 0) IMP_IVS_ReleaseResult(0, *pr);
+                        }
+                        gfree(pr);
+                    }
                     r = IMP_IVS_GetParam(0, g); gchk(g);
                     CHECK(IMP_IVS_SetParam, r2, r == 0 && g->sense[0] == 2, "sense 2, read back %d", g->sense[0]);
                 }
