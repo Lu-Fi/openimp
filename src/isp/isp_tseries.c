@@ -2261,6 +2261,30 @@ int IMP_ISP_Tuning_GetDPC_Strength(uint32_t *pratio)
     return result;
 }
 
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+/* T21 1.0.33 SetDPStrength (0x5635c): with tuning running, the caller's
+ * value is capped at 200 and goes to isp_table_tuning_ratio(83, v), a
+ * percentage (100 = tuning table).  The stock kernel has no DPC strength
+ * control; the open T21 driver serves the DPC ratio (0x8000062, 128 =
+ * tuning file), so the vendor percentage is mapped onto that scale
+ * (100 % -> 128, 200 % -> 255).  The vendor exports no Get call. */
+int IMP_ISP_Tuning_SetDPStrength(uint32_t ratio)
+{
+    uint32_t v = ratio > 200u ? 200u : ratio;
+    uint32_t scaled = (v * 128u + 50u) / 100u;
+
+    return tseries_tuning_set_val(TISP_CID_DPC_RATIO, (int32_t)(scaled > 255u ? 255u : scaled));
+}
+
+/* T21 1.0.33 SetAntiFogAttr (0x56448): the attribute enum (0 disable,
+ * 1 strong, 2 medium, 3 weak) is sent as the value of the 0x8000163 control
+ * (VIDIOC_S_CTRL); 0 when the kernel accepts it. */
+int IMP_ISP_Tuning_SetAntiFogAttr(int attr)
+{
+    return tseries_v4l2_set(0x8000163, attr);
+}
+#endif
+
 int IMP_ISP_Tuning_SetDRC_Strength(uint32_t ratio)
 {
 #if defined(PLATFORM_T20)

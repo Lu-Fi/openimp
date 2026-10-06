@@ -9,6 +9,8 @@ Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one aft
 
 - T23: the FrameSource pool's rmem is parked at DisableChn, as on T21 (branch `claude/release-t23-vbm`). The open T23 driver keeps a stopped MSCA output enabled while the input runs, so the pool is no longer handed to other allocations while the MSCA may still write into it. The block is freed by `DestroyChn`, or at once with `OPENIMP_VBM_PARK=0`.
   - Tested on the Jooan A6M (raptor) together with open-tx-isp `claude/release-t23-driver`: 40 streamer restarts with every snapshot OK, 0 oopses.
+- T21: `IMP_ISP_Tuning_SetDPStrength` and `IMP_ISP_Tuning_SetAntiFogAttr` are exported like the vendor T21 libimp (an application built against the T21 SDK did not load without them). DP strength (vendor percentage, cap 200) reaches the open driver's DPC ratio; AntiFog goes to control 0x8000163 like the vendor, which the OEM kernel accepts without effect.
+- imgfx: the green/magenta stripe in the top rows of the saved ch1 pictures was a tool error (chroma plane read at width*height instead of after ALIGN16(height) lines); JPEG snapshots and streams were never affected.
 
 ## 2026-10-04
 
