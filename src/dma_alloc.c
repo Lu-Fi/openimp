@@ -897,7 +897,7 @@ int IMP_Get_Info(void *info_out, uint32_t phys_addr) {
  * IMP_FrameSource_GetPool - Get pool ID for a channel
  * Based on decompilation
  */
-int IMP_FrameSource_GetPool(int chn) {
+__attribute__((weak)) int IMP_FrameSource_GetPool(int chn) {
     (void)chn;
 
     /* Return -1 to indicate no pool available */

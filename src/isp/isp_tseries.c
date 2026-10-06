@@ -38,6 +38,16 @@
 #include "isp_mask_rgb2yuv.h"
 #include "isp_ae_attr.h"
 
+/* Offset of the sensor bus type (IMPSensorInfo.cbus_type) in the ISPDevice
+ * copy of the sensor record at 0x28.  The T23 1.3.0 record has a sensor_id
+ * before it (cbus_type at 0x24, 0x54 bytes), the other SoCs have it at 0x20.
+ * Stock T23 IMP_ISP_Get/SetSensorRegister read isp+0x4c. */
+#if defined(PLATFORM_T23)
+#define ISP_SENSOR_TYPE_OFF 0x4c
+#else
+#define ISP_SENSOR_TYPE_OFF 0x48
+#endif
+
 static char *bpath;
 #if defined(PLATFORM_T23)
 /* The T23 tuning API (isp_t23_tuning.c) owns the per-sensor contrast. */
@@ -404,14 +414,14 @@ int IMP_ISP_SetSensorRegister(uint32_t arg1, uint32_t arg2)
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 0) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 0) {
         v0_1 = IMP_Log_Get_Option();
         var_4c = "There isn't sensor!\n";
         v1_5 = 0x2e2;
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 1) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 1) {
         struct {
             int32_t sensor_type;
             uint32_t f_04;
@@ -430,7 +440,7 @@ int IMP_ISP_SetSensorRegister(uint32_t arg1, uint32_t arg2)
         } var_40;
         int32_t result;
 
-        var_40.sensor_type = *(int32_t *)((char *)gISP_1 + 0x48);
+        var_40.sensor_type = *(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF);
         var_40.f_04 = *(uint32_t *)((char *)gISP_1 + 0x28);
         var_40.f_08 = *(uint32_t *)((char *)gISP_1 + 0x2c);
         var_40.f_0c = *(uint32_t *)((char *)gISP_1 + 0x30);
@@ -491,14 +501,14 @@ int IMP_ISP_GetSensorRegister(uint32_t arg1, uint32_t *arg2)
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 0) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 0) {
         v0_1 = IMP_Log_Get_Option();
         var_54 = "There isn't sensor!\n";
         v1_6 = 0x306;
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 1) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 1) {
         struct {
             int32_t sensor_type;
             uint32_t f_04;
@@ -517,7 +527,7 @@ int IMP_ISP_GetSensorRegister(uint32_t arg1, uint32_t *arg2)
         } var_48;
         int32_t result;
 
-        var_48.sensor_type = *(int32_t *)((char *)gISP_1 + 0x48);
+        var_48.sensor_type = *(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF);
         var_48.f_04 = *(uint32_t *)((char *)gISP_1 + 0x28);
         var_48.f_08 = *(uint32_t *)((char *)gISP_1 + 0x2c);
         var_48.f_0c = *(uint32_t *)((char *)gISP_1 + 0x30);
@@ -3576,23 +3586,19 @@ int IMP_ISP_Tuning_GetAeState(void *state)
     return tseries_tuning_get_ptr(TISP_CID_AE_STATE, state);
 }
 
-int IMP_ISP_Tuning_GetAwbZone(void *zone_r, void *zone_g, void *zone_b)
+int IMP_ISP_Tuning_GetAwbZone(void *awb_zone)
 {
+    /* Stock: int IMP_ISP_Tuning_GetAwbZone(IMPISPAWBZone *awb_zone).
+     * T20 3.12.0: 15x15 {u16 r/g, u16 b/g, u32 pixel count}; T31 (and the
+     * other SoCs with the three-plane header): zone_r/zone_g/zone_b[225].
+     * Either way the request carries the caller's buffer and the driver
+     * copies the whole statistic to it.  (This took three pointers and
+     * passed a stack struct of them: the driver's 675-byte copy then
+     * overwrote the stack of the caller - a bus error on the T31.) */
 #if defined(PLATFORM_T20)
-    /* T20 3.12.0: int IMP_ISP_Tuning_GetAwbZone(IMPISPAWBZone *awb_zone),
-     * 15x15 {u16 r/g, u16 b/g, u32 pixel count}; the driver copies it
-     * to the pointer */
-    (void)zone_g;
-    (void)zone_b;
-    return tseries_tuning_get_ptr(TISP_CID_T20_AWB_ZONE, zone_r);
+    return tseries_tuning_get_ptr(TISP_CID_T20_AWB_ZONE, awb_zone);
 #else
-    struct {
-        void *zone_r;
-        void *zone_g;
-        void *zone_b;
-    } zones = { zone_r, zone_g, zone_b };
-
-    return tseries_tuning_get_ptr(TISP_CID_AWB_ZONE, &zones);
+    return tseries_tuning_get_ptr(TISP_CID_AWB_ZONE, awb_zone);
 #endif
 }
 
@@ -3613,16 +3619,14 @@ int IMP_ISP_Tuning_SetAwbCt(void *attr)
 
 int IMP_ISP_Tuning_GetAWBCt(uint32_t *ct)
 {
-    int32_t value = 0;
-    int result;
-
+    /* Stock T31: the request {1, 0x800000d, ptr} carries the caller's
+     * pointer and the driver stores the colour temperature through it (the
+     * inline-value form made the driver copy to address 0: always -1). */
     if (ct == NULL) {
         return -1;
     }
 
-    result = tseries_tuning_get_val(TISP_CID_AWB_CT, &value);
-    *ct = value;
-    return result;
+    return tseries_tuning_get_ptr(TISP_CID_AWB_CT, ct);
 }
 
 #if defined(PLATFORM_T23) || defined(PLATFORM_T31)

@@ -1284,7 +1284,6 @@ static VBMVolume *vbm_find_volume_by_vaddr(uint32_t vaddr)
 }
 
 /* External functions */
-extern int IMP_FrameSource_GetPool(int chn);
 
 /* Calculate frame size based on pixel format */
 static int calculate_frame_size(int width, int height, int pixfmt) {
@@ -1466,7 +1465,10 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
             frame_count, pool->frame_size, req_size, calc_size, pool->frame_size);
 
     /* Try to get pool from FrameSource */
-    pool->pool_id = IMP_FrameSource_GetPool(chn);
+    /* A pool bound with IMP_FrameSource_SetPool is a name only (see
+     * IMP_System_MemPoolRequest): every channel allocates from the one rmem
+     * arena, so the public GetPool value is not used here. */
+    pool->pool_id = -1;
 
     /* Allocate memory for frames via DMA allocator */
     int total_size = pool->frame_size * frame_count;

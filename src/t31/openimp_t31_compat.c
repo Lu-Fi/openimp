@@ -37,6 +37,16 @@ int IMP_FrameSource_SetPool(int channel, int pool_id)
     return 0;
 }
 
+/* Stock: the pool id set with SetPool, -1 when none (and a channel outside
+ * 0..32 is an error, also -1). */
+int IMP_FrameSource_GetPool(int channel)
+{
+    pthread_once(&t31_fs_pool_once, t31_init_pool_ids);
+    if (channel < 0 || channel >= T31_FS_CHANNELS)
+        return -1;
+    return t31_fs_pool_ids[channel];
+}
+
 int IMP_FrameSource_ClearPoolId(void)
 {
     pthread_once(&t31_fs_pool_once, t31_init_pool_ids);

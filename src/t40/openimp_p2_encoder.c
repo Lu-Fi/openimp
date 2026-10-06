@@ -3130,6 +3130,14 @@ int IMP_Encoder_SetMaxStreamCnt(int channel, int count)
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    /* Stock: the count is taken when the channel is created; on a created
+     * channel the call logs an error and fails (any codec, JPEG included). */
+    if (ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+#endif
     if (ch->codec &&
         AL_Codec_Encode_SetStreamBufferCount(ch->codec, count) != 0) {
         pthread_mutex_unlock(&ch->lock);
