@@ -300,7 +300,7 @@ woken thread reads the status: on cam-B (T23, 360p continuous, 1080p
 for the per-minute snapshot) about 4 per hour on all-20/all-21, both
 sizes, no correlation with framesource enable/disable, JPEG snapshots,
 ring size or BUF_SHARE (the soak before 0098 saw the same residue as
-"late interrupt status" pictures, which were kept). PC420 (T21, same handler) showed none
+"late interrupt status" pictures, which were kept). a T21 camera (same handler) showed none
 because nothing was encoding there (helix IRQ count unchanged over 20 s).
 
 OpenIMP cannot recover the picture: the length is gone, the core was

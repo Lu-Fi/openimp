@@ -130,3 +130,42 @@ plus about 4 per CbCr pair). It also costs one linear copy of
 On the host (x86), 1920x1080 takes about 1.0 ms against 0.2 ms for a
 `memcpy` of the frame. Measure on the device with
 `OPENIMP_FS_ROTATE_STATS=1`.
+
+## T10/T20/T21 (OpenIMP extension, host-tested only)
+
+The vendor T20/T21 libimp has no `IMP_FrameSource_SetChnRotate`; OpenIMP
+runs the T31 path above on the T20/T21 userspace too (one build covers
+T10 and T20, one T21). Same hook (`openimp_fs_rotate_capture` in
+`VBMKernelDequeue`), same in-place rotate + copy back, same
+`OPENIMP_FS_ROTATE_STATS=1`. Differences:
+
+- Width and height must be multiples of 16. The Helix (T20/T21) and NVPU
+  (T10) encoders read NV12 with pitch = width and the chroma plane after
+  `ALIGN16(height)` luma lines, and need a width that is a multiple of 16;
+  the rotated width is the source height. 640x360 is refused, 640x368 works.
+- At most 704x576 pixels (`FS_ROT_T21_MAX_PIXELS`, i.e. a sub stream).
+  A main stream is refused with
+  `[FS] SetChnRotate chN: WxH not rotated: software rotation is limited to ...`
+  and stays unrotated (SetChnRotate returns -1).
+  `OPENIMP_FS_ROTATE_MAX_PIXELS` raises the cap for measurements only.
+- The T21 frame record has no `rotate_osdflag`; only width/height change.
+- The caller creates the encoder channel with the rotated size; the encoder
+  takes the size from the frame record anyway.
+
+Memory per rotated stream: one heap scratch buffer of `w*h*1.5` bytes
+(640x368: 345 KiB, 704x576: 594 KiB), freed on DestroyChn or rotation off.
+No extra rmem: the capture buffers and the encoder references keep the same
+size (both sides are multiples of 16).
+
+CPU estimate, scaled from the T31 device number (1280x704 in 9 ms at
+1.4 GHz) to the ~1 GHz T10/T20/T21 cores with slower DDR (x1.5-1.8):
+
+| size      | per frame | at 15 fps | at 25 fps | allowed |
+|-----------|-----------|-----------|-----------|---------|
+| 640x368   | ~3.5-4.5 ms | ~5-7%   | ~9-11%    | yes     |
+| 704x576   | ~6-7.5 ms | ~9-11%    | ~15-19%   | yes     |
+| 1280x720  | ~14-17 ms | ~21-26%   | ~35-43%   | no      |
+| 1920x1080 | ~30-37 ms | ~45-56%   | ~75-90%   | no      |
+
+The rotation runs on the FrameSource dequeue thread, so it adds that much
+latency to the rotated channel's frames.
