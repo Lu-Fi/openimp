@@ -1561,6 +1561,7 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
         if (depth <= 0) {
             int s6;
             int released = 0;
+            int lists;
 
             pthread_mutex_lock(chan_lock);
             s6 = *(int32_t *)(chan + 0x1cc);
@@ -1570,14 +1571,24 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             }
 
             *(int32_t *)(chan + 0x1cc) = 0;
+            /* OpenIMP keeps the depth in the VBM pool and never allocates
+             * libimp's node lists: with none there is nothing to count, and
+             * the check below made every SetFrameDepth(chn, 0) fail and
+             * leave frame_depth set (EnableChn then sized the pool for it). */
+            lists = *(void **)(chan + 0x220) != NULL ||
+                    *(void **)(chan + 0x224) != NULL ||
+                    *(void **)(chan + 0x228) != NULL;
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x220), &released);
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x224), &released);
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x228), &released);
+            *(void **)(chan + 0x220) = NULL;
+            *(void **)(chan + 0x224) = NULL;
+            *(void **)(chan + 0x228) = NULL;
 
-            if (released != s6) {
+            if (lists && released != s6) {
                 imp_log_fun(6, IMP_Log_Get_Option(), 2, "Framesource",
                     "/home/user/git/proj/sdk-lv3/src/imp/framesource/framesource_tseries.c",
                     0x5a7, tag,
@@ -1605,11 +1616,16 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
         /* The fd belongs to Enable/DisableChn: check the state and use the
          * fd under g_fs_lock, or the ioctl can land on a closed (or already
          * reused) descriptor. */
+#if !defined(PLATFORM_T20)
         pthread_mutex_lock(&g_fs_lock);
         if (fs_chan_get_state(chnNum) == 2 && g_fs_ctx[chnNum].fd >= 0) {
             fs_set_depth(g_fs_ctx[chnNum].fd, depth);
         }
         pthread_mutex_unlock(&g_fs_lock);
+#endif
+        /* T20: 0x800456c5 is VIDIOC_DEFAULT_CMD_SET_BANKS (the DMA bank
+         * count of the next STREAMON), not a frame depth; libimp 3.12.0's
+         * SetFrameDepth issues no ioctl. */
         return 0;
     }
 }
@@ -2198,7 +2214,19 @@ int IMP_FrameSource_EnableChn(int chnNum)
         return -1;
     }
 
+#if defined(PLATFORM_T20)
+    /* tx-isp-t20 takes REQBUFS' count as the number of DMA banks it cycles
+     * through (vdev->reqbufs -> chan->usingbanks at STREAMON), and the bank
+     * ring stalls on the first bank without a buffer.  VBMFillPool queues
+     * exactly vbm_count buffers, so asking for more (nrVBs + frame depth)
+     * left banks that never got one: the channel delivered nrVBs frames and
+     * then nothing (GetFrame -1 for every app that calls SetFrameDepth;
+     * timps binds the encoder and never sets a depth, so it was unaffected).
+     * The frame depth is a userspace queue in libimp, not driver buffers. */
+    requested_bufcnt = vbm_count;
+#else
     requested_bufcnt = vbm_count + (frame_depth > 0 ? frame_depth : 0);
+#endif
     bufcnt = fs_set_buffer_count(ctx->fd, requested_bufcnt);
     if (bufcnt < 0) {
         fs_trace("libimp/FS: enable set-bufcnt-fail ch=%d req=%d\n", chnNum, requested_bufcnt);
@@ -2216,7 +2244,29 @@ int IMP_FrameSource_EnableChn(int chnNum)
     /* T21 folds the bank-count event into REQBUFS and has no 0x800456c5
      * command.  Later frame-channel ABIs issue the extra bank/depth ioctl.
      * Use nrVBs because it matches the pool shape configured above. */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T20)
+    /* libimp 3.12.0 (T20) EnableChn: REQBUFS(nrVBs + maxdelay), then with
+     * a delay FIFO (maxdelay > 0) SET_BANKS(nrVBs).  The driver cycles
+     * through REQBUFS-many DMA banks and stops on a bank without a buffer
+     * until that bank gets one back; the FIFO keeps `delay` buffers until
+     * the next frame arrives, so with every buffer a bank the channel
+     * stalled for good after maxdelay + 1 frames. */
+    if (delay_max > 0) {
+        int banks = ctx->attr.nrVBs < 1 ? 1 : ctx->attr.nrVBs;
+
+        if (fs_set_depth(ctx->fd, banks) < 0) {
+            IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                            "EnableChn(%d): cannot set the bank count %d",
+                            chnNum, banks);
+            VBMDestroyPool(chnNum);
+            fs_close_chn_fd(chnNum, ctx);
+            pthread_mutex_unlock(&g_fs_lock);
+            return -1;
+        }
+    }
+    fs_trace("libimp/FS: enable banks ch=%d fd=%d buffers=%d delay=%d\n",
+             chnNum, ctx->fd, vbm_count, delay_max);
+#elif defined(PLATFORM_T21)
     fs_trace("libimp/FS: enable set-banks-via-reqbufs ch=%d fd=%d banks=%d depth=%d\n",
              chnNum, ctx->fd, vbm_count, frame_depth);
 #else
@@ -2622,6 +2672,18 @@ int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
     return 0;
 }
 
+/* libimp 3.12.0 (T20) waits up to 2 s for a frame (header: "default
+ * timeout 2s"; pthread_cond_timedwait on the depth list).  The ready queue
+ * here is filled by the capture thread, which hands frames back to the
+ * driver while nobody pulled for VBM_PULL_IDLE_MS, so the first GetFrame
+ * after a pause finds it empty: a non-blocking GetFrame failed at once for
+ * every caller that does not retry.  Polled in 5 ms steps (T20 has no
+ * frame-ready event); every attempt also keeps the pull marked active.
+ * The encoder pulls with VBMGetFrame and keeps its own timeout. */
+#if defined(PLATFORM_T20)
+#define FS_GETFRAME_TIMEOUT_MS 2000u
+#endif
+
 int IMP_FrameSource_GetFrame(int chnNum, void **frame)
 {
     if (frame == NULL || chnNum < 0 || chnNum >= FS_MAX_CHANNELS) {
@@ -2630,7 +2692,28 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
                         chnNum, (void *)frame);
         return -1;
     }
+#if defined(PLATFORM_T20)
+    {
+        uint32_t start = fs_now_ms();
+
+        for (;;) {
+            if (VBMGetFrame(chnNum, frame) == 0 && *frame != NULL)
+                return 0;
+            if (fs_chan_get_state(chnNum) != 2 ||
+                !FS_FLAG_LOAD(g_fs_ctx[chnNum].running) ||
+                fs_now_ms() - start >= FS_GETFRAME_TIMEOUT_MS)
+                break;
+            usleep(5000);
+        }
+        *frame = NULL;
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "GetFrame(%d): no frame within %u ms", chnNum,
+                        FS_GETFRAME_TIMEOUT_MS);
+        return -1;
+    }
+#else
     return VBMGetFrame(chnNum, frame);
+#endif
 }
 
 /* libimp: the frame of the delay FIFO nearest to framets->ts (minus and
@@ -2708,10 +2791,16 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
         return -1;
     }
 
+#if defined(PLATFORM_T20)
+    /* the same 2 s wait as GetFrame (25 ms missed the first frame after
+     * an idle pause, see IMP_FrameSource_GetFrame) */
+    if (IMP_FrameSource_GetFrame(chnNum, &frame) != 0) frame = NULL;
+#else
     for (int i = 0; i < 5; i++) {
         if (VBMGetFrame(chnNum, &frame) == 0 && frame != NULL) break;
         usleep(5000);
     }
+#endif
     if (frame == NULL) return -1;
 
     if (VBMFrame_GetBuffer(frame, &src, &src_size) < 0 || src == NULL) {

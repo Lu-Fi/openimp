@@ -1087,6 +1087,12 @@ extern int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
 #endif
 extern int IMP_FrameSource_GetFrame(int channel, void **frame);
 extern int IMP_FrameSource_ReleaseFrame(int channel, void *frame);
+#if defined(PLATFORM_T20)
+extern int VBMGetFrame(int chn, void **frame);
+#define P2_FS_TRY_FRAME(chn, frame) VBMGetFrame((chn), (frame))
+#else
+#define P2_FS_TRY_FRAME(chn, frame) IMP_FrameSource_GetFrame((chn), (frame))
+#endif
 
 /* API argument checks: the answer is the same as ever (-1 from the caller),
  * but a bad handle now leaves a rate-limited line naming the entry point. */
@@ -2273,7 +2279,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                                (uint32_t)slice_us);
         }
 #else
-        while (IMP_FrameSource_GetFrame(ch->source_channel, &frame) != 0) {
+        /* T20: the public GetFrame waits up to 2 s like libimp; this loop
+         * keeps its own deadline and StopRecvPic check, so it polls the
+         * ready queue directly. */
+        while (P2_FS_TRY_FRAME(ch->source_channel, &frame) != 0) {
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             if (!timeout_ms || p2_monotonic_us() >= frame_deadline_us ||
                 !__atomic_load_n(&ch->receiving, __ATOMIC_RELAXED))
