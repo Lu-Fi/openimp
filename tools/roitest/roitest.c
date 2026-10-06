@@ -9,7 +9,7 @@
  * Every phase first disables all regions, applies the spec, requests an IDR
  * (unless '~'), then writes the H.264 stream to OUTDIR/label.h264 and prints
  * one result line:  [R] label frames bytes kbps idr_avg p_avg
- * Env: ROITEST_RC=cbr|fixqp (cbr), ROITEST_KBPS (2000), ROITEST_QP (30),
+ * Env: ROITEST_FS_FIRST=1 (enable FS before creating the encoder), ROITEST_OUT=WxH (scale ch0), ROITEST_RC=cbr|fixqp (cbr), ROITEST_KBPS (2000), ROITEST_QP (30),
  *      ROITEST_FPS (15), ROITEST_MINQP/ROITEST_MAXQP (15/45).
  * Stop the streamer first; the camera's /tmp is RAM, use short phases.
  */
@@ -48,6 +48,17 @@ typedef IMPEncoderRoiAttr RAttr;
 int IMP_Encoder_SetChnRoiAttr(int encChn, RAttr *a) __attribute__((weak));
 int IMP_Encoder_GetChnRoiAttr(int encChn, RAttr *a) __attribute__((weak));
 #endif
+/* the vendor libsysutils/libalog expect these from the application or libimp */
+#include <stdarg.h>
+__attribute__((weak)) int IMP_Log_Get_Option(void) { return 0; }
+__attribute__((weak)) void imp_log_fun(int level, const char *tag, const char *fmt, ...)
+{
+    va_list ap;
+    (void)level; (void)tag;
+    va_start(ap, fmt);
+    if (getenv("ROITEST_LOG")) vfprintf(stderr, fmt, ap);
+    va_end(ap);
+}
 #define CK(e, m) do { int r_ = (e); if (r_ < 0) { printf("[E] %s -> %d\n", m, r_); exit(1); } } while (0)
 
 static int64_t now_ms(void)
@@ -172,15 +183,27 @@ int main(int argc, char **argv)
 
     memset(&fa, 0, sizeof(fa));
     fa.picWidth = W; fa.picHeight = H; fa.pixFmt = PIX_FMT_NV12;
-    fa.outFrmRateNum = fps; fa.outFrmRateDen = 1; fa.nrVBs = 2; fa.type = FS_PHY_CHANNEL;
+    fa.outFrmRateNum = fps; fa.outFrmRateDen = 1; fa.nrVBs = getenv("ROITEST_NRVB") ? atoi(getenv("ROITEST_NRVB")) : 2; fa.type = FS_PHY_CHANNEL;
+    if (getenv("ROITEST_OUT")) {   /* WxH: scale the channel (encoder size) */
+        int ow = 0, oh = 0;
+        sscanf(getenv("ROITEST_OUT"), "%dx%d", &ow, &oh);
+        if (ow > 0 && oh > 0) {
+            fa.scaler.enable = 1; fa.scaler.outwidth = ow; fa.scaler.outheight = oh;
+            W = ow; H = oh;
+        }
+    }
     CK(IMP_FrameSource_CreateChn(0, &fa), "FS_CreateChn");
+    if (getenv("ROITEST_FS_FIRST")) {   /* apitest order: FS enabled before the encoder exists */
+        CK(IMP_FrameSource_EnableChn(0), "FS_Enable");
+        sleep(2);
+    }
 
 #ifdef ENC_NEW
     {
         IMPEncoderChnAttr a;
         memset(&a, 0, sizeof(a));
         CK(IMP_Encoder_SetDefaultParam(&a, IMP_ENC_PROFILE_AVC_HIGH, fixqp ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR,
-                                       W, H, fps, 1, fps * 2, 2, fixqp ? qp : -1, fixqp ? 0 : kbps * 1000), "SetDefaultParam");
+                                       W, H, fps, 1, fps * 2, 2, fixqp ? qp : -1, fixqp ? 0 : kbps), "SetDefaultParam");
         if (fixqp) {
             a.rcAttr.attrRcMode.attrFixQp.iInitialQP = qp;
 #ifdef PLATFORM_T41
@@ -219,7 +242,7 @@ int main(int argc, char **argv)
     CK(IMP_Encoder_CreateGroup(0), "CreateGroup");
     CK(IMP_Encoder_RegisterChn(0, chn), "RegisterChn");
     CK(IMP_System_Bind(&fs, &enc), "Bind");
-    CK(IMP_FrameSource_EnableChn(0), "FS_Enable");
+    if (!getenv("ROITEST_FS_FIRST")) CK(IMP_FrameSource_EnableChn(0), "FS_Enable");
     CK(IMP_Encoder_StartRecvPic(chn), "StartRecvPic");
     printf("[T] roitest %dx%d %s %s\n", W, H, fixqp ? "FixQP" : "CBR", fixqp ? "" : "");
     sleep(3);
@@ -286,5 +309,14 @@ int main(int argc, char **argv)
     IMP_Encoder_DestroyGroup(0);
     IMP_FrameSource_DestroyChn(0);
     IMP_System_Exit();
+    IMP_ISP_DisableTuning();
+#ifdef PLATFORM_T41
+    IMP_ISP_DisableSensor(IMPVI_MAIN);
+    IMP_ISP_DelSensor(IMPVI_MAIN, &sn);
+#else
+    IMP_ISP_DisableSensor();
+    IMP_ISP_DelSensor(&sn);
+#endif
+    IMP_ISP_Close();
     return 0;
 }

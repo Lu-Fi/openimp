@@ -224,6 +224,9 @@ typedef struct {
     uint32_t jpeg_reused;           /* pictures stood in for */
     uint64_t jpeg_reuse_log_us;
     IMPEncoderCHNAttr attr;
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    IMPEncoderRoiAttr roi_attr;     /* IMP_Encoder_SetChnRoiAttr */
+#endif
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
     IMPEncoderJpegeQl jpeg_quality;
     uint32_t sequence;
@@ -1912,6 +1915,9 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
     }
     ch->attr = *attr;
     ch->codec_type = (int)p2_attr_codec_type(attr);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    memset(&ch->roi_attr, 0, sizeof(ch->roi_attr));
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     ch->rc_runtime = 0;
     if (ch->jpeg_quality.user_ql_en)
@@ -3671,6 +3677,47 @@ int IMP_Encoder_SetChnQp(int channel, int qp_value)
     qp.qp_b = (uint32_t)qp_value;
     return AL_Codec_Encode_SetQp(p2_channels[channel].codec, &qp);
 }
+
+#if defined(PLATFORM_T41)
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnRoiAttr / GetChnRoiAttr: the windows
+ * go into the macroblock QP table of the AVC encoder from the next picture
+ * on (src/t40/codec-t40.c avpu_t41_roi_apply).  H.265, absolute QP and
+ * windows outside the picture are refused. */
+extern int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr);
+
+int IMP_Encoder_SetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    int ret;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_SetRoiAttr(ch->codec, attr);
+    if (ret == 0)
+        ch->roi_attr = *attr;
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+
+int IMP_Encoder_GetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    *attr = ch->roi_attr;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+}
+#endif
 
 int IMP_Encoder_SetChnQpIPDelta(int channel, int delta)
 {

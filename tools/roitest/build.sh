@@ -6,7 +6,7 @@ D=$(cd "$(dirname "$0")" && pwd)
 build() { # soc headerdir camdir
   local soc=$1 inc=$2 cam=$OUT/$3
   "$cam/host/bin/mipsel-linux-gcc" -O2 -Wall -Wno-unused-function -DPLATFORM_$soc -I"$HDR/$inc" -I"$HDR/$inc/imp" \
-      -o "$D/roitest_$(echo $soc | tr A-Z a-z)" "$D/roitest.c" -L"$cam/target/usr/lib" -limp -lm -ldl -lpthread -lrt \
+      -o "$D/roitest_$(echo $soc | tr A-Z a-z)" "$D/roitest.c" -L"$cam/target/usr/lib" -limp -lm -ldl -lpthread -lrt -Wl,--export-dynamic \
       -Wl,-rpath-link,"$cam/target/usr/lib" && echo "OK $soc" || echo "FAIL $soc"
 }
 case "${1:-all}" in

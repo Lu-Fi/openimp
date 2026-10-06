@@ -1412,6 +1412,42 @@ int IMP_Encoder_SetChnHSkip(int encChn, const IMPEncoderAttrHSkip *attr);
 int IMP_Encoder_GetChnHSkip(int encChn, IMPEncoderAttrHSkip *attr);
 #endif
 
+#if defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* Encoder ROI, vendor T40/T41 API (T41 1.2.6 imp_encoder.h): up to 10
+ * windows in pixels, a relative QP per window (-26..25).  Absolute QP is
+ * "not supported" in the vendor header and is refused here.  T31 has no ROI
+ * in the vendor library: there it is an OpenIMP-only extension
+ * (docs/OPENIMP_BEYOND_VENDOR.md). */
+#define IMP_ENC_ROI_WIN_COUNT 10
+
+typedef struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t w;
+    uint32_t h;
+} IMPEncoderRoiRect;
+
+typedef enum {
+    IMP_ROI_QPMODE_DELTA = 0,
+    IMP_ROI_QPMODE_FIXED_QP = 1,
+    IMP_ROI_QPMODE_MAX_ENUM,
+} IMPEncoderQPMode;
+
+typedef struct {
+    bool enable;
+    IMPEncoderRoiRect rect;
+    IMPEncoderQPMode mode;
+    int8_t qp;
+} IMPEncoderRoiWin;
+
+typedef struct {
+    IMPEncoderRoiWin st_roi[IMP_ENC_ROI_WIN_COUNT];
+} IMPEncoderRoiAttr;
+
+int IMP_Encoder_SetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
+int IMP_Encoder_GetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,6 +8,7 @@ Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one aft
 ## 2026-10-07 (branch `claude/roi-all`, not part of the first release)
 
 - T21: `IMP_Encoder_SetChnROI` is effective by default (beyond vendor: the stock T21 libimp stores the regions but never programs them). With no region set the command list is unchanged; `OPENIMP_T21_ROI=0` switches it off. Device-tested on the PC420 (jxf23, 1920x1080, FixQP 30, one 320x320 region): absolute QP 51 is a visible block, QP 15 stays clean, delta +/-15 works, live changes (P frames, no IDR) work. FixQP bitrate 657 kbit/s without ROI, 340 with QP 51, 504 with QP 15; CBR keeps the target (the bits move between the regions). Test tool `tools/roitest`.
+- T41: `IMP_Encoder_SetChnRoiAttr/GetChnRoiAttr` (vendor T41 API, 10 windows, delta QP) exist but are experimental and off (`OPENIMP_T41_ROI=1`): the macroblock QP table in EP2 was identified from a vendor capture and is written, but the AVPU did not react on the test camera; default behaviour unchanged (see `docs/ROI.md`). T31: no ROI.
 
 ## 2026-10-06
 

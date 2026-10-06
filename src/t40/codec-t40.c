@@ -3459,6 +3459,85 @@ static uint32_t avpu_t41_advance_luma_offset(uint32_t current,
     return current >= step ? current - step : current + luma_size - step;
 }
 
+#if defined(PLATFORM_T41)
+/* ROI (IMP_Encoder_SetChnRoiAttr).  The T41 AVC EP2 buffer holds, after a
+ * 0x40-byte header, one 32-bit entry per macroblock in raster order:
+ * byte 0 = the relative QP (int8), byte 3 = 0x20.  Measured on a T41 running
+ * the vendor libimp 1.2.6 (windows of 40x20 and 10x6 macroblocks, 1080p):
+ * only byte 0 of the covered entries changes and the command words are the
+ * same with and without a window.  While no window is set the table stays as
+ * it always was (zero); the encoding thread rewrites it before the next
+ * picture when a window was set or cleared. */
+static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* EXPERIMENTAL, off by default: on the T41 test camera the AVPU did not
+ * react to this table in any rate-control mode (docs/ROI.md).  Without
+ * OPENIMP_T41_ROI=1 nothing here runs, the EP2 buffer keeps its size and
+ * IMP_Encoder_SetChnRoiAttr is refused. */
+static int avpu_t41_roi_experimental(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T41_ROI");
+
+        on = e && e[0] == '1';
+    }
+    return on;
+}
+
+static void avpu_t41_roi_apply(ALAvpuContext *ctx)
+{
+    uint32_t cols, rows, i, y, x, mb;
+    uint8_t *table, *ep2;
+    int any = 0;
+
+    if (!ctx->roi_pending || ctx->codec_hevc || !ctx->interm_buf.map)
+        return;
+    cols = (ctx->enc_w + 15u) >> 4;
+    rows = (ctx->enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (ctx->interm_ep2_size < 0x40u + 4u * mb)
+        return;
+    ep2 = (uint8_t *)ctx->interm_buf.map + ctx->interm_ep1_size +
+          ctx->interm_wpp_size + 0x100u;
+    table = ep2 + 0x40u;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_pending = 0;
+    for (i = 0; i < 10u; i++)
+        any |= ctx->roi_win[i].enable != 0;
+    memset(table, 0, 4u * (size_t)mb);
+    if (any) {
+        for (i = 0; i < mb; i++)
+            table[4u * i + 3u] = 0x20u;
+        for (i = 0; i < 10u; i++) {
+            uint32_t x0, y0, nx, ny;
+
+            if (!ctx->roi_win[i].enable)
+                continue;
+            /* the vendor: corner rounded down, size to the nearest block */
+            x0 = ctx->roi_win[i].x >> 4;
+            y0 = ctx->roi_win[i].y >> 4;
+            nx = (ctx->roi_win[i].w + 8u) >> 4;
+            ny = (ctx->roi_win[i].h + 8u) >> 4;
+            for (y = y0; y < y0 + ny && y < rows; y++)
+                for (x = x0; x < x0 + nx && x < cols; x++)
+                    table[4u * (y * cols + x)] =
+                        (uint8_t)ctx->roi_win[i].qp;
+        }
+    }
+    ctx->roi_table_on = any;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    LOG_CODEC("AVPU: ROI QP table rewritten (%s) %ux%u macroblocks ep2=0x%08x",
+              any ? "windows" : "cleared", cols, rows,
+              ctx->interm_buf.phy_addr + ctx->interm_ep1_size +
+              ctx->interm_wpp_size + 0x100u);
+    (void)avpu_flush_dma_buf(ctx->fd, "roi_table", &ctx->interm_buf,
+                             ctx->interm_ep1_size + ctx->interm_wpp_size +
+                             0x100u + ctx->interm_ep2_size);
+}
+#endif
+
 static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
                                  int stream_buf_idx, uint32_t src_phys,
                                  int is_idr)
@@ -3498,6 +3577,7 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
     if (!luma_size || !chroma_size || !map_luma_size || !map_slot_size ||
         !mv_slot_size)
         return -1;
+    avpu_t41_roi_apply(ctx);
 
     maps_base = ctx->rec_buf.phy_addr + luma_size + chroma_size;
     mv_base = maps_base + 2u * map_slot_size + 0x100u;
@@ -7879,6 +7959,48 @@ static void codec_set_error(AL_CodecEncode *enc, int err)
 
 static void codec_sync_rc_cache(AL_CodecEncode *enc);
 
+int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
+{
+#if defined(PLATFORM_T41)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const IMPEncoderRoiAttr *attr = (const IMPEncoderRoiAttr *)roi_attr;
+    uint32_t i;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        !avpu_t41_roi_experimental())
+        return -1;
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        if (!w->enable)
+            continue;
+        if (w->mode != IMP_ROI_QPMODE_DELTA || w->qp < -26 || w->qp > 25 ||
+            w->rect.w == 0u || w->rect.h == 0u ||
+            w->rect.x + w->rect.w > enc->avpu.enc_w ||
+            w->rect.y + w->rect.h > enc->avpu.enc_h)
+            return -1;
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        enc->avpu.roi_win[i].enable = w->enable ? 1u : 0u;
+        enc->avpu.roi_win[i].qp = w->qp;
+        enc->avpu.roi_win[i].x = w->rect.x;
+        enc->avpu.roi_win[i].y = w->rect.y;
+        enc->avpu.roi_win[i].w = w->rect.w;
+        enc->avpu.roi_win[i].h = w->rect.h;
+    }
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)roi_attr;
+    return -1;
+#endif
+}
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 /* The Helix rate-control fields of IMPEncoderAttrRcMode that HWEncoderParams
  * has no core field for, taken as the application gave them (the encoders
@@ -10695,6 +10817,19 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                             enc->avpu.interm_ep1_size = avpu_get_enc1_ep1_size();
                             enc->avpu.interm_wpp_size = avpu_get_enc1_wpp_size(width, height);
                             enc->avpu.interm_ep2_size = avpu_get_enc1_ep2_size(width, height);
+#if defined(PLATFORM_T41)
+                            if (!enc->avpu.codec_hevc &&
+                                avpu_t41_roi_experimental()) {
+                                /* vendor T41 AVC: header + 4 bytes per
+                                 * macroblock (the ROI QP table) */
+                                uint32_t avc_ep2 = avpu_align_up_u32(
+                                    4u * (((width + 15u) >> 4) *
+                                          ((height + 15u) >> 4)), 128u) + 0x40u;
+
+                                if (avc_ep2 > enc->avpu.interm_ep2_size)
+                                    enc->avpu.interm_ep2_size = avc_ep2;
+                            }
+#endif
 #if defined(PLATFORM_T31) || defined(PLATFORM_T41)
                             if (enc->avpu.codec_hevc) {
                                 /* AL_GetAllocSizeEP2(HEVC) =
@@ -12792,6 +12927,7 @@ int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr)
     *(uint32_t *)(enc->codec_param + 0xb0) = enc->gop_cache.gopLength;
     enc->hw_params.gop_length = enc->gop_cache.gopLength;
     enc->avpu.gop_length = enc->gop_cache.gopLength;
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     enc->rc_attr_cache.maxGop = enc->gop_cache.gopLength;
 #elif !(defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41))

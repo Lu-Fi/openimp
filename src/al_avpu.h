@@ -340,6 +340,17 @@ typedef struct ALAvpuContext {
     uint32_t interm_ep2_size;
     uint32_t interm_map_size;
     uint32_t interm_data_size;
+    /* ROI windows (IMP_Encoder_SetChnRoiAttr, family B): set by the caller
+     * under the codec ROI lock, written into the EP2 QP table by the
+     * encoding thread before the next picture.  roi_table_on: the table
+     * holds window data (it is zeroed again when the last window goes). */
+    struct {
+        uint8_t enable;
+        int8_t qp;
+        uint32_t x, y, w, h;
+    } roi_win[10];
+    volatile int roi_pending;
+    int roi_table_on;
     uint8_t *stream_header_shadow; /* optional 16 x 0x220 host-prefix shadow */
     volatile unsigned int dropped_completions;
     volatile unsigned int reported_dropped_completions;
