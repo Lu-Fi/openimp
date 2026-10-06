@@ -14,6 +14,7 @@
 #include <stdio.h>
 
 #include <imp/imp_encoder.h>
+#include <imp/imp_framesource.h>
 #include <imp/imp_isp.h>
 
 #define VENDOR_CHN_ATTR 172
@@ -47,6 +48,35 @@ OFF(IMPISPDrcAttr, black_level, 10);
 OFF(IMPISPDrcAttr, white_level, 12);
 OFF(IMPISPSinterDenoiseAttr, sval_max, 9);
 OFF(IMPISPTemperDenoiseAttr, tval_max, 5);
+
+/* FrameSource: vendor T20 3.12.0 imp_framesource.h / imp_common.h */
+_Static_assert(sizeof(IMPFSChnCrop) == 20, "IMPFSChnCrop");
+_Static_assert(sizeof(IMPFSChnScaler) == 12, "IMPFSChnScaler");
+_Static_assert(sizeof(IMPFSChnAttr) == 0x3c, "IMPFSChnAttr size");
+OFF(IMPFSChnAttr, picWidth, 0x00);
+OFF(IMPFSChnAttr, picHeight, 0x04);
+OFF(IMPFSChnAttr, pixFmt, 0x08);
+OFF(IMPFSChnAttr, crop, 0x0c);
+OFF(IMPFSChnAttr, scaler, 0x20);
+OFF(IMPFSChnAttr, outFrmRateNum, 0x2c);
+OFF(IMPFSChnAttr, outFrmRateDen, 0x30);
+OFF(IMPFSChnAttr, nrVBs, 0x34);
+OFF(IMPFSChnAttr, type, 0x38);
+_Static_assert(sizeof(IMPFrameInfo) == 0x28, "IMPFrameInfo size");
+OFF(IMPFrameInfo, index, 0x00);
+OFF(IMPFrameInfo, pool_idx, 0x04);
+OFF(IMPFrameInfo, width, 0x08);
+OFF(IMPFrameInfo, height, 0x0c);
+OFF(IMPFrameInfo, pixfmt, 0x10);
+OFF(IMPFrameInfo, size, 0x14);
+OFF(IMPFrameInfo, phyAddr, 0x18);
+OFF(IMPFrameInfo, virAddr, 0x1c);
+OFF(IMPFrameInfo, timeStamp, 0x20);
+_Static_assert(sizeof(IMPFSChnFifoAttr) == 8, "IMPFSChnFifoAttr");
+/* pixel formats the T20 frame channels use (vendor enum values) */
+_Static_assert(PIX_FMT_YUV420P == 0 && PIX_FMT_YUYV422 == 1 &&
+               PIX_FMT_UYVY422 == 2 && PIX_FMT_NV12 == 10 &&
+               PIX_FMT_NV21 == 11, "IMPPixelFormat NV12/NV21/YUYV/UYVY");
 
 int t20_abi_test_anchor(void)
 {

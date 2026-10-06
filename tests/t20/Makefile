@@ -19,7 +19,9 @@ check: $(OBJ)
 endif
 
 $(OBJ): t20_abi_test.c $(PROJECT_DIR)/include/imp/imp_encoder.h \
-		$(PROJECT_DIR)/include/imp/imp_isp.h
+		$(PROJECT_DIR)/include/imp/imp_isp.h \
+		$(PROJECT_DIR)/include/imp/imp_framesource.h \
+		$(PROJECT_DIR)/include/imp/imp_common.h
 	@mkdir -p $(BUILD)
 	$(T20_CC) $(CFLAGS) -c -DPLATFORM_T20 -DPLATFORM_T21 -I$(PROJECT_DIR)/include -o $@ t20_abi_test.c
 
