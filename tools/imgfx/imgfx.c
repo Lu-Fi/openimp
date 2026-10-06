@@ -284,6 +284,16 @@ static int getu32(const char *sym, unsigned int *v)
 
 typedef int (*casefn)(int ph, int arg, char *info, size_t n);
 
+/* Controls the OEM T21 kernel (tx-isp-t21.ko, the vendor behaviour the open
+ * driver is lifted from) accepts but does not act on: brightness only stores the
+ * AE compensation (nothing reads it), scene mode is stored, AntiFog (0x8000163)
+ * is a silent no-op.  The collage then reports "stock-noop" instead of SUSPECT. */
+#ifdef PLATFORM_T21
+# define STOCK_NOOP " [stock-noop: vendor T21 kernel has no effect]"
+#else
+# define STOCK_NOOP ""
+#endif
+
 /* ------------------------------------------------------- common cases */
 /* unsigned-char attribute with Get/Set pair */
 #define U8CASE(fn, SETF, GETF) \
@@ -292,9 +302,12 @@ static int fn(int ph, int arg, char *info, size_t n) { \
     if (!HAVE(SETF) || !HAVE(GETF)) return CASE_NA; \
     if (ph) { SETU8(SETF, old); return 0; } \
     CALLP(GETF, &old); r = SETU8(SETF, arg); CALLP(GETF, &cur); \
-    snprintf(info, n, "%u->%u", old, cur); return r; }
+    snprintf(info, n, "%u->%u%s", old, cur, NOTE); return r; }
 
+#define NOTE STOCK_NOOP
 U8CASE(c_bright, IMP_ISP_Tuning_SetBrightness, IMP_ISP_Tuning_GetBrightness)
+#undef NOTE
+#define NOTE ""
 U8CASE(c_contrast, IMP_ISP_Tuning_SetContrast, IMP_ISP_Tuning_GetContrast)
 U8CASE(c_sat, IMP_ISP_Tuning_SetSaturation, IMP_ISP_Tuning_GetSaturation)
 U8CASE(c_sharp, IMP_ISP_Tuning_SetSharpness, IMP_ISP_Tuning_GetSharpness)
@@ -839,7 +852,7 @@ static int c_antifog(int ph, int arg, char *info, size_t n)
     if (!HAVE(IMP_ISP_Tuning_SetAntiFogAttr)) return CASE_NA;
     if (ph) { IMP_ISP_Tuning_SetAntiFogAttr(ANTIFOG_DISABLE); return 0; }
     r = IMP_ISP_Tuning_SetAntiFogAttr(arg);
-    snprintf(info, n, "antifog %d (no readback; restore = disable)", arg);
+    snprintf(info, n, "antifog %d (no readback; restore = disable)%s", arg, STOCK_NOOP);
     return r;
 }
 #endif
@@ -912,7 +925,7 @@ static int c_scene(int ph, int arg, char *info, size_t n)
     IMP_ISP_Tuning_GetSceneMode((void *)&old);
     r = IMP_ISP_Tuning_SetSceneMode(arg);
     IMP_ISP_Tuning_GetSceneMode((void *)&cur);
-    snprintf(info, n, "%u->%u", old, cur);
+    snprintf(info, n, "%u->%u%s", old, cur, STOCK_NOOP);
     return r;
 }
 #endif
@@ -960,10 +973,21 @@ static int c_fcrop(int ph, int arg, char *info, size_t n)
 /* CSC mode 0..4; 4 = user matrix (BT601 full, U/V sign inverted -> visible hue swap) */
 static int c_csc(int ph, int arg, char *info, size_t n)
 {
+#ifdef H_EXT_CSC
+    /* T10/T20/T21 (OpenIMP extension): the driver forces the matrix signs of
+     * the OEM presets (row 0 +++, row 1 --+, row 2 +--), so inverted signs
+     * give preset 0 again (no picture change).  Change the magnitudes
+     * instead: Y row at 75 % of BT601 -> a darker picture. */
+    static const int32_t user[15] = {
+        0xe6, 0x1c2, 0x57, -0xad, -0x153, 0x200, 0x200, -0x1ad, -0x53,
+        0x00, 0x80, 0x00, 0xff, 0x00, 0xff,
+    };
+#else
     static const int32_t user[15] = {
         0x132, 0x259, 0x75, 0xad, 0x153, -0x200, -0x200, 0x1ad, 0x53,
         0x00, 0x80, 0x00, 0xff, 0x00, 0xff,
     };
+#endif
     static int32_t old[16];
     int32_t a[16], b[16];
     int r;
@@ -975,7 +999,11 @@ static int c_csc(int ph, int arg, char *info, size_t n)
     if (arg == 4) memcpy(&a[1], user, sizeof(user));
     r = IMP_ISP_Tuning_SetCsc_Attr((void *)a);
     memset(b, 0, sizeof(b)); IMP_ISP_Tuning_GetCsc_Attr((void *)b);
-    snprintf(info, n, "mode %d (was %d) coef0 %d", b[0], old[0], b[1]);
+    snprintf(info, n, "mode %d (was %d) coef0 %d%s", b[0], old[0], b[1],
+#ifdef H_EXT_CSC
+             (arg == 0 && old[0] == 0) ? " [expect-same: default is preset 0]" :
+#endif
+             "");
     return r;
 }
 #endif
@@ -1556,7 +1584,22 @@ static const Case cases[] = {
 /* ------------------------------------------------------------- capture */
 static int g_got_w, g_got_h;
 
-/* drop 'skip' frames, then save the next one as raw NV12 */
+/* Byte offset of the chroma plane.  The T-series ISP/VBM layout puts the UV
+ * plane after ALIGN16(height) luma lines (the vendor encoder reads it there,
+ * 640x360 has 8 padding lines): reading it at width*height shows the padding
+ * (a constant stripe) as the top chroma rows and shifts the chroma by 16 luma
+ * lines.  The record size tells which layout the channel has. */
+static size_t uv_offset(const IMPFrameInfo *fr)
+{
+    size_t w = fr->width, h = fr->height, ah = (h + 15) & ~(size_t)15;
+
+    if (getenv("IMGFX_FRAMEINFO"))
+        fprintf(stderr, "[T] frame %zux%zu size %u uvoff %s\n", w, h, (unsigned)fr->size,
+                fr->size >= w * ah * 3 / 2 ? "aligned" : "packed");
+    return fr->size >= w * ah * 3 / 2 ? w * ah : w * h;
+}
+
+/* drop 'skip' frames, then save the next one as raw NV12 (packed: chroma right after luma) */
 static int snap(const char *path, int skip)
 {
     int got = 0, tries;
@@ -1572,10 +1615,11 @@ static int snap(const char *path, int skip)
         if (skip > 0) { skip--; IMP_FrameSource_ReleaseFrame(1, fr); continue; }
         f = fopen(path, "wb");
         if (f) {
-            size_t sz = (size_t)fr->width * fr->height * 3 / 2;
+            size_t ysz = (size_t)fr->width * fr->height, uvo = uv_offset(fr);
+            const unsigned char *vp = (const unsigned char *)(uintptr_t)fr->virAddr;
 
-            if (fr->size && fr->size < sz) sz = fr->size;
-            fwrite((void *)(uintptr_t)fr->virAddr, 1, sz, f);
+            fwrite(vp, 1, ysz, f);
+            fwrite(vp + uvo, 1, ysz / 2, f);
             fclose(f);
             g_got_w = fr->width; g_got_h = fr->height;
             got = 1;
@@ -1590,6 +1634,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
 {
     IMPFrameInfo *fr = NULL;
     unsigned w, h, x, y;
+    size_t uvo;
     const unsigned char *p;
     double sy = 0, su = 0, sv = 0, sd = 0;
     unsigned ny = 0, nc = 0, nd = 0;
@@ -1597,6 +1642,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
     if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
     w = fr->width; h = fr->height;
     p = (const unsigned char *)(uintptr_t)fr->virAddr;
+    uvo = uv_offset(fr);
     for (y = 4; y + 4 < h; y += 2)
         for (x = 1; x + 1 < w; x += 2) {
             int l = 4 * p[y * w + x] - p[y * w + x - 1] - p[y * w + x + 1] - p[(y - 1) * w + x] - p[(y + 1) * w + x];
@@ -1605,7 +1651,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
         }
     for (y = 2; y < h / 2; y += 2)
         for (x = 0; x + 1 < w; x += 4) {
-            su += p[w * h + y * w + x]; sv += p[w * h + y * w + x + 1]; nc++;
+            su += p[uvo + y * w + x]; sv += p[uvo + y * w + x + 1]; nc++;
         }
     IMP_FrameSource_ReleaseFrame(1, fr);
     *my = ny ? sy / ny : 0; *mu = nc ? su / nc : 0; *mv = nc ? sv / nc : 0; *md = nd ? sd / nd : 0;

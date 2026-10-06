@@ -24,8 +24,15 @@ before, so cases are independent. No encoder is used (raw frames from
   the scene static and lit. Pictures are ~337 KB each, 70-100 per run: use a
   directory with 40+ MB free (camera `/tmp` is RAM; with little free RAM use
   filters in batches or an SD/NFS path).
+* The saved file is packed NV12 (luma, then chroma). The ISP/VBM frame keeps the
+  chroma plane after ALIGN16(height) luma lines (640x360: 368), so the tool
+  reads it there (`uv_offset`); reading it at width*height shows the padding as
+  a constant stripe in the top chroma rows and shifts the chroma by 16 lines.
 * Case results are meant to be read with the host script (below); `set=0` only
-  means the call returned 0.
+  means the call returned 0. Calls the vendor kernel itself leaves without effect
+  (T21 brightness, scene mode, AntiFog) carry `[stock-noop ...]` in the readback
+  and are reported as "no change expected" instead of SUSPECT; `csc-0` on the
+  OpenIMP-extension SoCs is `expected-same` (the default is preset 0).
 
 ## Cases (what the vendor API of that SoC offers)
 

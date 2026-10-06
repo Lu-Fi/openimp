@@ -169,7 +169,12 @@ def process(d, extra=()):
             flags.append("ret?")
         if (diff is not None and st[0] in ("ok", "?") and st[1] in (None, 0) and not changed and not detailed
                 and not any(case.startswith(k) for k in NO_CHANGE_OK)):
-            flags.append("SUSPECT-unconnected")
+            if "[stock-noop" in st[2]:
+                flags.append("stock-noop")      # the tool says the vendor kernel has no effect either
+            elif "[expect-same" in st[2]:
+                flags.append("expected-same")   # e.g. csc mode 0 = the default preset
+            else:
+                flags.append("SUSPECT-unconnected")
         rows.append((nn, case if not isbase or not tag else "%s@%s" % (case, tag), st, diff, changed, flags, dh, detailed, key))
     for case in summ:   # cases with a result line but no picture
         if not any(k[1] == case for k in pics):
@@ -241,6 +246,9 @@ def process(d, extra=()):
     if noret:
         out.append("no [R] line (ret unknown, shown as ?): %d cases - pass the stdout of the full run with --log" % noret)
     out.append("SUSPECT (set=0 but no picture change; maybe unconnected): %s" % (", ".join(suspects) or "none"))
+    noops = [r[1] for r in rows if "stock-noop" in r[5] or "expected-same" in r[5]]
+    if noops:
+        out.append("no change expected (vendor kernel no-op / default value): %s" % ", ".join(noops))
     out.append("RET<0: %s" % (", ".join(bad) or "none"))
     out.append("N/A (not exported by libimp): %s" % (", ".join(na) or "none"))
     text = "\n".join(out) + "\n"
