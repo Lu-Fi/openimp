@@ -1585,63 +1585,67 @@ static int snap(const char *path, int skip)
     return got ? 0 : -1;
 }
 
-/* mean Y/U/V of the next frame (subsampled), -1 on no frame */
-static int frame_stats(double *my, double *mu, double *mv)
+/* mean Y/U/V and detail (mean |Laplacian| of Y, noise + edges) of the next frame (subsampled) */
+static int frame_stats(double *my, double *mu, double *mv, double *md)
 {
     IMPFrameInfo *fr = NULL;
     unsigned w, h, x, y;
     const unsigned char *p;
-    double sy = 0, su = 0, sv = 0;
-    unsigned ny = 0, nc = 0;
+    double sy = 0, su = 0, sv = 0, sd = 0;
+    unsigned ny = 0, nc = 0, nd = 0;
 
     if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
     w = fr->width; h = fr->height;
     p = (const unsigned char *)(uintptr_t)fr->virAddr;
-    for (y = 0; y < h; y += 4)
-        for (x = 0; x < w; x += 4) { sy += p[y * w + x]; ny++; }
-    for (y = 0; y < h / 2; y += 2)
+    for (y = 4; y + 4 < h; y += 2)
+        for (x = 1; x + 1 < w; x += 2) {
+            int l = 4 * p[y * w + x] - p[y * w + x - 1] - p[y * w + x + 1] - p[(y - 1) * w + x] - p[(y + 1) * w + x];
+            sd += l < 0 ? -l : l; nd++;
+            if (!(x & 3) && !(y & 3)) { sy += p[y * w + x]; ny++; }
+        }
+    for (y = 2; y < h / 2; y += 2)
         for (x = 0; x + 1 < w; x += 4) {
             su += p[w * h + y * w + x]; sv += p[w * h + y * w + x + 1]; nc++;
         }
     IMP_FrameSource_ReleaseFrame(1, fr);
-    *my = ny ? sy / ny : 0; *mu = nc ? su / nc : 0; *mv = nc ? sv / nc : 0;
+    *my = ny ? sy / ny : 0; *mu = nc ? su / nc : 0; *mv = nc ? sv / nc : 0; *md = nd ? sd / nd : 0;
     return 0;
 }
 
-/* wait until AE/AWB have converged: mean Y/U/V of the last 4 frames (0.3 s
- * apart) stay within Y 1.5 / U,V 0.6 levels; timeout 20 s.  Logs the time.
- * (frame statistics reflect exposure and AWB gains together, on every SoC) */
-static void wait_settled(const char *what)
+/* wait until AE/AWB (and the noise reduction that follows the gain) have
+ * converged: for the last 6 frames (0.4 s apart) mean Y moved < 0.8, U/V < 0.5
+ * and the detail energy < 6 %.  min_ms = lower bound (fresh ISP start),
+ * timeout 30 s.  Logs the settle time.  Frame statistics reflect exposure and
+ * AWB gains together on every SoC; the AWB gains are logged where readable. */
+#define SETTLE_N 6
+static void wait_settled(const char *what, int min_ms)
 {
-    double h[4][3];
+    double h[SETTLE_N][4];
     int n = 0, ms = 0, ok = 0;
     unsigned wr = 0, wbg = 0;
 
-    while (ms < 20000) {
-        double y, u, v;
+    while (ms < 30000) {
+        double v[4];
         int k, j;
 
-        if (frame_stats(&y, &u, &v) < 0) { usleep(100000); ms += 100; continue; }
-        if (n < 4) { h[n][0] = y; h[n][1] = u; h[n][2] = v; n++; }
-        else {
-            for (k = 0; k < 3; k++) { for (j = 0; j < 3; j++) h[k][j] = h[k + 1][j]; }
-            h[3][0] = y; h[3][1] = u; h[3][2] = v;
-        }
-        if (n == 4) {
-            double mn[3], mx[3];
-            for (j = 0; j < 3; j++) {
+        if (frame_stats(&v[0], &v[1], &v[2], &v[3]) < 0) { usleep(100000); ms += 100; continue; }
+        if (n == SETTLE_N) { for (k = 0; k < SETTLE_N - 1; k++) memcpy(h[k], h[k + 1], sizeof(h[k])); n--; }
+        memcpy(h[n++], v, sizeof(v));
+        if (n == SETTLE_N && ms >= min_ms) {
+            double mn[4], mx[4];
+            for (j = 0; j < 4; j++) {
                 mn[j] = mx[j] = h[0][j];
-                for (k = 1; k < 4; k++) { if (h[k][j] < mn[j]) mn[j] = h[k][j]; if (h[k][j] > mx[j]) mx[j] = h[k][j]; }
+                for (k = 1; k < SETTLE_N; k++) { if (h[k][j] < mn[j]) mn[j] = h[k][j]; if (h[k][j] > mx[j]) mx[j] = h[k][j]; }
             }
-            if (mx[0] - mn[0] < 1.5 && mx[1] - mn[1] < 0.6 && mx[2] - mn[2] < 0.6) { ok = 1; break; }
+            if (mx[0] - mn[0] < 0.8 && mx[1] - mn[1] < 0.5 && mx[2] - mn[2] < 0.5 && mx[3] - mn[3] < 0.06 * mx[3]) { ok = 1; break; }
         }
-        usleep(300000); ms += 300;
+        usleep(400000); ms += 400;
     }
 #ifndef PLATFORM_T41
     { IMPISPWB wb; memset(&wb, 0, sizeof(wb)); if (HAVE(IMP_ISP_Tuning_GetWB)) { IMP_ISP_Tuning_GetWB(&wb); wr = wb.rgain; wbg = wb.bgain; } }
 #endif
-    say("[R] settle %s %s after %d ms (Y %.1f U %.1f V %.1f, awb r=%u b=%u)\n", what, ok ? "stable" : "TIMEOUT", ms,
-        h[n ? n - 1 : 0][0], h[n ? n - 1 : 0][1], h[n ? n - 1 : 0][2], wr, wbg);
+    say("[R] settle %s %s after %d ms (Y %.1f U %.1f V %.1f detail %.2f, awb r=%u b=%u)\n", what, ok ? "stable" : "TIMEOUT", ms,
+        h[n - 1 > 0 ? n - 1 : 0][0], h[n - 1 > 0 ? n - 1 : 0][1], h[n - 1 > 0 ? n - 1 : 0][2], h[n - 1 > 0 ? n - 1 : 0][3], wr, wbg);
 }
 
 static void settle(int ms)
@@ -1740,7 +1744,7 @@ int main(int argc, char **argv)
     IMP_FrameSource_SetFrameDepth(1, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
     sleep(3);   /* AE/AWB settle */
-    wait_settled("start");
+    wait_settled("start", 8000);
 
     signal(SIGALRM, on_alarm);
     for (i = 0; i < NCASES; i++) {
@@ -1754,7 +1758,7 @@ int main(int argc, char **argv)
             g_cur = c->name; alarm(90);
             snprintf(path, sizeof(path), "%s/%s%02d-%s.nv12", outdir, g_tag, idx, c->name);
             settle(0);
-            wait_settled(c->name);
+            wait_settled(c->name, 0);
             r = snap(path, 0);
             say("[R] %s set=0 get=%s\n", c->name, r ? "NO PICTURE" : "picture");
             if (r) rc = 1;
@@ -1772,7 +1776,7 @@ int main(int argc, char **argv)
         nset++;
         snprintf(path, sizeof(path), "%s/%s%02d-%s.nv12", outdir, g_tag, idx, c->name);
         settle(c->settle_ms);
-        wait_settled(c->name);
+        wait_settled(c->name, 0);
         tmo = snap(path, 0);
         say("[R] %s set=%d get=%s%s\n", c->name, r, info, tmo ? " [NO PICTURE]" : "");
         if (tmo) rc = 1;

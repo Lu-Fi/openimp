@@ -130,11 +130,14 @@ def process(d, extra=()):
         thr_of[t] = [max(1.0, 2.5 * nz[0]), max(0.4, 2.5 * nz[1]), max(0.4, 2.5 * nz[2])]
         hb = det.get((t, "base"))
         hnoise_of[t] = abs(det[(t, "base-end")] - hb) * 100.0 / hb if hb and (t, "base-end") in det else 0.0
-    noise = [max(noise_of[t][i] for t in tags) if tags else 0.0 for i in range(3)]
-    thr = [max(thr_of[t][i] for t in tags) if tags else 1.0 for i in range(3)]
+    def med(v):
+        v = sorted(v)
+        return v[len(v) // 2] if v else 0.0
+    noise = [med([noise_of[t][i] for t in tags]) for i in range(3)]
+    thr = [med([thr_of[t][i] for t in tags]) for i in range(3)]
     hbase_all = [det[(t, "base")] for t in tags if (t, "base") in det]
     hbase = sum(hbase_all) / len(hbase_all) if hbase_all else 0.0
-    hnoise = max(hnoise_of.values()) if hnoise_of else 0.0
+    hnoise = med(list(hnoise_of.values()))
     hthr = max(1.5, 3.0 * hnoise)
     # rows: one per picture (tag, case)
     rows = []
@@ -197,19 +200,21 @@ def process(d, extra=()):
     # report
     out = []
     out.append("imgfx report for %s" % d)
-    out.append("noise floor (worst batch, base vs base-end of the same batch): dY %.2f dU %.2f dV %.2f; change threshold Y>%.1f U>%.1f V>%.1f" % (
+    out.append("noise floor (median over batches, base vs base-end of the same batch): dY %.2f dU %.2f dV %.2f; change threshold Y>%.1f U>%.1f V>%.1f" % (
         tuple(noise) + tuple(thr)))
     out.append("batches (each case is compared with the base of its own batch): %d" % len(tags))
     for t in tags:
         bs = pics.get((t, "base"))
         out.append("  batch %-8s noise dY %.2f dU %.2f dV %.2f  base mean Y/U/V %s" % (t or "-", noise_of[t][0], noise_of[t][1], noise_of[t][2],
             ("%.1f/%.1f/%.1f" % tuple(ImageStat.Stat(p).mean[0] for p in bs[1])) if bs and bs[1] else "-"))
-    out.append("detail energy (mean |Laplacian| of Y) mean base %.3f, worst base-end drift %.2f %%; detail threshold %.1f %%" % (
+    out.append("detail energy (mean |Laplacian| of Y) mean base %.3f, median base-end drift %.2f %%; detail threshold %.1f %%" % (
         hbase or 0.0, hnoise, hthr))
     out.append("")
     out.append("%-3s %-24s %-5s %-6s %-6s %-6s %-7s %-9s %s" % ("NN", "case", "ret", "dY", "dU", "dV", "dH%", "verdict", "flags / readback"))
     suspects, bad, na, chg, det_only, noret = [], [], [], 0, [], 0
     for nn, case, st, diff, changed, flags, dh, detailed, _key in rows:
+        if case.startswith("base") and _key[0]:
+            continue   # per-batch base rows: see the batch list above
         ret = "?" if st[1] is None else str(st[1])
         if st[1] is None and st[0] != "N/A" and not case.startswith("base"):
             noret += 1
