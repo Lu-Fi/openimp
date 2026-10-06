@@ -14,6 +14,8 @@
  *
  * Env: IMGFX_MODE=night   running mode night while testing (IR-cut open, IR on)
  *      IMGFX_SETTLE_MS    extra settle time added to every case (default 0)
+ *      IMGFX_TAG          batch tag; pictures are saved as <tag>.<NN>-<case>.nv12 so
+ *                         every batch keeps its own base (collage compares per tag)
  *      IMGFX_SKIP_RISKY=1 skip the cases that may wedge a pipeline
  *                         (ISP bypass, FPS change); they run last
  * Run with the camera's streamer (timps/prudynt) stopped.
@@ -253,6 +255,7 @@ W(IMP_ISP_Tuning_SetCsc_Attr) W(IMP_ISP_Tuning_GetCsc_Attr)
 /* ------------------------------------------------------------- globals */
 static const char *outdir = ".";
 static FILE *sum;
+static char g_tag[32];
 static int g_sw, g_sh, g_night, g_extra_ms, g_risky;
 static IMPSensorInfo g_sensor;
 
@@ -1582,6 +1585,65 @@ static int snap(const char *path, int skip)
     return got ? 0 : -1;
 }
 
+/* mean Y/U/V of the next frame (subsampled), -1 on no frame */
+static int frame_stats(double *my, double *mu, double *mv)
+{
+    IMPFrameInfo *fr = NULL;
+    unsigned w, h, x, y;
+    const unsigned char *p;
+    double sy = 0, su = 0, sv = 0;
+    unsigned ny = 0, nc = 0;
+
+    if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
+    w = fr->width; h = fr->height;
+    p = (const unsigned char *)(uintptr_t)fr->virAddr;
+    for (y = 0; y < h; y += 4)
+        for (x = 0; x < w; x += 4) { sy += p[y * w + x]; ny++; }
+    for (y = 0; y < h / 2; y += 2)
+        for (x = 0; x + 1 < w; x += 4) {
+            su += p[w * h + y * w + x]; sv += p[w * h + y * w + x + 1]; nc++;
+        }
+    IMP_FrameSource_ReleaseFrame(1, fr);
+    *my = ny ? sy / ny : 0; *mu = nc ? su / nc : 0; *mv = nc ? sv / nc : 0;
+    return 0;
+}
+
+/* wait until AE/AWB have converged: mean Y/U/V of the last 4 frames (0.3 s
+ * apart) stay within Y 1.5 / U,V 0.6 levels; timeout 20 s.  Logs the time.
+ * (frame statistics reflect exposure and AWB gains together, on every SoC) */
+static void wait_settled(const char *what)
+{
+    double h[4][3];
+    int n = 0, ms = 0, ok = 0;
+    unsigned wr = 0, wbg = 0;
+
+    while (ms < 20000) {
+        double y, u, v;
+        int k, j;
+
+        if (frame_stats(&y, &u, &v) < 0) { usleep(100000); ms += 100; continue; }
+        if (n < 4) { h[n][0] = y; h[n][1] = u; h[n][2] = v; n++; }
+        else {
+            for (k = 0; k < 3; k++) { for (j = 0; j < 3; j++) h[k][j] = h[k + 1][j]; }
+            h[3][0] = y; h[3][1] = u; h[3][2] = v;
+        }
+        if (n == 4) {
+            double mn[3], mx[3];
+            for (j = 0; j < 3; j++) {
+                mn[j] = mx[j] = h[0][j];
+                for (k = 1; k < 4; k++) { if (h[k][j] < mn[j]) mn[j] = h[k][j]; if (h[k][j] > mx[j]) mx[j] = h[k][j]; }
+            }
+            if (mx[0] - mn[0] < 1.5 && mx[1] - mn[1] < 0.6 && mx[2] - mn[2] < 0.6) { ok = 1; break; }
+        }
+        usleep(300000); ms += 300;
+    }
+#ifndef PLATFORM_T41
+    { IMPISPWB wb; memset(&wb, 0, sizeof(wb)); if (HAVE(IMP_ISP_Tuning_GetWB)) { IMP_ISP_Tuning_GetWB(&wb); wr = wb.rgain; wbg = wb.bgain; } }
+#endif
+    say("[R] settle %s %s after %d ms (Y %.1f U %.1f V %.1f, awb r=%u b=%u)\n", what, ok ? "stable" : "TIMEOUT", ms,
+        h[n ? n - 1 : 0][0], h[n ? n - 1 : 0][1], h[n ? n - 1 : 0][2], wr, wbg);
+}
+
 static void settle(int ms)
 {
     IMPFrameInfo *fr;
@@ -1635,6 +1697,7 @@ int main(int argc, char **argv)
     snprintf(path, sizeof(path), "%s/summary-%s.txt", outdir, SOC);
     sum = fopen(path, "a");   /* appended: filtered re-runs add to the same file */
     if (getenv("IMGFX_SETTLE_MS")) g_extra_ms = atoi(getenv("IMGFX_SETTLE_MS"));
+    if (getenv("IMGFX_TAG") && *getenv("IMGFX_TAG")) snprintf(g_tag, sizeof(g_tag), "%s.", getenv("IMGFX_TAG"));
     g_risky = !(getenv("IMGFX_SKIP_RISKY") && atoi(getenv("IMGFX_SKIP_RISKY")));
     g_night = (getenv("IMGFX_MODE") && !strcmp(getenv("IMGFX_MODE"), "night")) ||
               (getenv("CC_MODE") && !strcmp(getenv("CC_MODE"), "night"));
@@ -1677,6 +1740,7 @@ int main(int argc, char **argv)
     IMP_FrameSource_SetFrameDepth(1, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
     sleep(3);   /* AE/AWB settle */
+    wait_settled("start");
 
     signal(SIGALRM, on_alarm);
     for (i = 0; i < NCASES; i++) {
@@ -1688,8 +1752,9 @@ int main(int argc, char **argv)
         if (!match(c->name, filter) && strncmp(c->name, "base", 4)) continue;
         if (!c->fn) {
             g_cur = c->name; alarm(90);
-            snprintf(path, sizeof(path), "%s/%02d-%s.nv12", outdir, idx, c->name);
+            snprintf(path, sizeof(path), "%s/%s%02d-%s.nv12", outdir, g_tag, idx, c->name);
             settle(0);
+            wait_settled(c->name);
             r = snap(path, 0);
             say("[R] %s set=0 get=%s\n", c->name, r ? "NO PICTURE" : "picture");
             if (r) rc = 1;
@@ -1705,8 +1770,9 @@ int main(int argc, char **argv)
             continue;
         }
         nset++;
-        snprintf(path, sizeof(path), "%s/%02d-%s.nv12", outdir, idx, c->name);
+        snprintf(path, sizeof(path), "%s/%s%02d-%s.nv12", outdir, g_tag, idx, c->name);
         settle(c->settle_ms);
+        wait_settled(c->name);
         tmo = snap(path, 0);
         say("[R] %s set=%d get=%s%s\n", c->name, r, info, tmo ? " [NO PICTURE]" : "");
         if (tmo) rc = 1;
