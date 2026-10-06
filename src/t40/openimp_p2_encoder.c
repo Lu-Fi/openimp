@@ -2482,31 +2482,43 @@ int IMP_Encoder_PollingModuleStream(uint32_t *channel_bitmap,
     uint32_t ready = 0;
     int channel;
 
+    uint32_t wanted;
+    uint64_t deadline;
+
     if (!channel_bitmap)
         return -1;
+    /* in: the channels to wait for (0 = all, as before); out: those with a
+     * stream ready.  The OEM only reports channels of the input bitmap. */
+    wanted = *channel_bitmap ? *channel_bitmap : 0xffffffffu;
     EncoderInit();
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
         P2EncoderChannel *ch = &p2_channels[channel];
 
+        if (!(wanted & (1u << channel)))
+            continue;
         pthread_mutex_lock(&ch->lock);
         if (ch->raw_stream)
             ready |= 1u << channel;
         pthread_mutex_unlock(&ch->lock);
     }
-    if (!ready) {
-        for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
+    deadline = p2_monotonic_us() + (uint64_t)timeout_ms * 1000u;
+    while (!ready) {
+        /* slices over every selected channel: waiting the whole timeout on
+         * the first active one would starve the others */
+        for (channel = 0; channel < P2_MAX_CHANNELS && !ready; channel++) {
             P2EncoderChannel *ch = &p2_channels[channel];
             int active;
 
+            if (!(wanted & (1u << channel)))
+                continue;
             pthread_mutex_lock(&ch->lock);
             active = ch->created && ch->registered && ch->receiving;
             pthread_mutex_unlock(&ch->lock);
-            if (active &&
-                IMP_Encoder_PollingStream(channel, timeout_ms) == 0) {
+            if (active && IMP_Encoder_PollingStream(channel, 5) == 0)
                 ready |= 1u << channel;
-                break;
-            }
         }
+        if (ready || p2_monotonic_us() >= deadline)
+            break;
     }
     *channel_bitmap = ready;
     if (__sync_add_and_fetch(&trace_count, 1) <= 4)
