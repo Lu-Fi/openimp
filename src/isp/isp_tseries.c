@@ -38,6 +38,16 @@
 #include "isp_mask_rgb2yuv.h"
 #include "isp_ae_attr.h"
 
+/* Offset of the sensor bus type (IMPSensorInfo.cbus_type) in the ISPDevice
+ * copy of the sensor record at 0x28.  The T23 1.3.0 record has a sensor_id
+ * before it (cbus_type at 0x24, 0x54 bytes), the other SoCs have it at 0x20.
+ * Stock T23 IMP_ISP_Get/SetSensorRegister read isp+0x4c. */
+#if defined(PLATFORM_T23)
+#define ISP_SENSOR_TYPE_OFF 0x4c
+#else
+#define ISP_SENSOR_TYPE_OFF 0x48
+#endif
+
 static char *bpath;
 #if defined(PLATFORM_T23)
 /* The T23 tuning API (isp_t23_tuning.c) owns the per-sensor contrast. */
@@ -404,14 +414,14 @@ int IMP_ISP_SetSensorRegister(uint32_t arg1, uint32_t arg2)
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 0) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 0) {
         v0_1 = IMP_Log_Get_Option();
         var_4c = "There isn't sensor!\n";
         v1_5 = 0x2e2;
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 1) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 1) {
         struct {
             int32_t sensor_type;
             uint32_t f_04;
@@ -430,7 +440,7 @@ int IMP_ISP_SetSensorRegister(uint32_t arg1, uint32_t arg2)
         } var_40;
         int32_t result;
 
-        var_40.sensor_type = *(int32_t *)((char *)gISP_1 + 0x48);
+        var_40.sensor_type = *(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF);
         var_40.f_04 = *(uint32_t *)((char *)gISP_1 + 0x28);
         var_40.f_08 = *(uint32_t *)((char *)gISP_1 + 0x2c);
         var_40.f_0c = *(uint32_t *)((char *)gISP_1 + 0x30);
@@ -491,14 +501,14 @@ int IMP_ISP_GetSensorRegister(uint32_t arg1, uint32_t *arg2)
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 0) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 0) {
         v0_1 = IMP_Log_Get_Option();
         var_54 = "There isn't sensor!\n";
         v1_6 = 0x306;
         goto log_error;
     }
 
-    if (*(int32_t *)((char *)gISP_1 + 0x48) == 1) {
+    if (*(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF) == 1) {
         struct {
             int32_t sensor_type;
             uint32_t f_04;
@@ -517,7 +527,7 @@ int IMP_ISP_GetSensorRegister(uint32_t arg1, uint32_t *arg2)
         } var_48;
         int32_t result;
 
-        var_48.sensor_type = *(int32_t *)((char *)gISP_1 + 0x48);
+        var_48.sensor_type = *(int32_t *)((char *)gISP_1 + ISP_SENSOR_TYPE_OFF);
         var_48.f_04 = *(uint32_t *)((char *)gISP_1 + 0x28);
         var_48.f_08 = *(uint32_t *)((char *)gISP_1 + 0x2c);
         var_48.f_0c = *(uint32_t *)((char *)gISP_1 + 0x30);

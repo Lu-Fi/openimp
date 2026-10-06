@@ -1694,7 +1694,8 @@ static int t23_sensor_reg_check(const char *fn, ISPDevice *isp)
         T23_LOG_ERR(fn, "Sensor doesn't Run!\n");
         return -1;
     }
-    memcpy(&type, isp->sensor_info + 0x20, sizeof(type));
+    /* IMPSensorInfo.cbus_type: after name[32] and the u16 sensor_id */
+    memcpy(&type, isp->sensor_info + 0x24, sizeof(type));
     if (type == 0) {
         T23_LOG_ERR(fn, "There isn't sensor!\n");
         return -1;

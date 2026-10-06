@@ -208,6 +208,7 @@ static struct {
     size_t capture_limit;
     size_t capture_frame_bytes;
     int64_t capture_tail_time;
+    int64_t frame_last_ts;      /* stamp of the last frame handed out (0: none) */
     unsigned char *frame_buffer;
     size_t frame_capacity;
     int frame_outstanding;
@@ -910,6 +911,7 @@ static int t31_capture_start(void)
     t31_audio.capture_limit = frame * depth;
     t31_audio.capture_frame_bytes = frame;
     t31_audio.capture_valid = 0;
+    t31_audio.frame_last_ts = 0;
     t31_audio.capture_stop = 0;
     t31_audio.capture_exited = 0;
     t31_audio.capture_error = 0;
@@ -1139,6 +1141,15 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     /* Stamp the frame's capture end, not the time it was dequeued. */
     timestamp = t31_audio.capture_tail_time -
                 t31_bytes_to_us(t31_audio.capture_valid);
+    /* The tail time is read after each driver fragment and jitters by
+     * several ms, so two chunks could stamp a frame before its predecessor.
+     * Frames are consecutive samples: never stamp earlier than the previous
+     * frame plus its duration (the sample clock catches up with the wall
+     * clock again, so this cannot run away). */
+    if (t31_audio.frame_last_ts &&
+        timestamp < t31_audio.frame_last_ts + t31_bytes_to_us(bytes))
+        timestamp = t31_audio.frame_last_ts + t31_bytes_to_us(bytes);
+    t31_audio.frame_last_ts = timestamp;
     pthread_mutex_unlock(&t31_capture_lock);
     /* echo cancellation first, like libimp's record path; EnableAec
      * checked that frames are whole 10 ms blocks of mono samples */
