@@ -2004,6 +2004,20 @@ int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable)
     /* T21 has one link configuration.  This branch is reachable only when
      * bypass is enabled; the normal path above remains undisturbed. */
     sensor_index = 0;
+#elif defined(PLATFORM_T31) || defined(PLATFORM_T30)
+    /* Vendor 1.1.6 (T31, 0x8cf78) and 1.0.5 (T30, 0xc541c) never query the
+     * sensor here: the value handed to TISP_VIDIOC_CREATE_LINKS (0x800456d0)
+     * is derived from the requested bypass state, and the two are inverse
+     * (link config = enable ? 0 : 1).  Both compile to beqz <enable>,<config1>
+     * with the delay slot storing 1 into the request word, so enable == ENABLE
+     * picks link config 0 -- the topology IMP_ISP_EnableSensor installed
+     * (T31 vendor 0x98450 and T30 vendor 0xc3fe4 both pass 0 there) -- and
+     * enable == DISABLE picks config 1.  ISP_CTRL_BYPASS uses the inverted
+     * convention (the T31 driver keeps bypass_enabled = (value != 1)), which
+     * is what makes the two-line swap correct.  Passing the GET_SENSOR_INFO
+     * result through instead (the T31 driver answers 1, the T30 driver
+     * forwards the sensor input index) installed config 1 for both values. */
+    sensor_index = (enable == IMPISP_TUNING_OPS_MODE_DISABLE) ? 1 : 0;
 #else
     sensor_index = -1;
     if (ioctl(isp->fd, TISP_VIDIOC_GET_SENSOR_INDEX, &sensor_index) != 0 ||
