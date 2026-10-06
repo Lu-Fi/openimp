@@ -201,6 +201,17 @@ typedef struct {
                                      * fan-out (last decision) */
     int frame_readers;              /* video polls between the receiving
                                      * check and the fan-out (atomic) */
+    uint64_t last_poll_us;          /* video: end of the last PollingStream
+                                     * (atomic, p2_monotonic_us) */
+    /* IMP_Encoder_GetFd: readable while a stream is ready (pipe), filled
+     * by a pump thread that polls the channel as libimp's encoder thread
+     * would; created on the first GetFd, gone with DestroyChn. */
+    int evt_open;
+    int evt_rd;
+    int evt_wr;
+    int evt_signaled;
+    int pump_run;                   /* atomic */
+    pthread_t pump;
     pthread_cond_t jpeg_frame_ready;
     /* Last finished JPEG (heap copy, under lock), delivered again when the
      * codec skips a picture: p2_jpeg_reuse_last() */
@@ -761,6 +772,12 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
 
 static int p2_find_source_channel(int encoder_group);
 
+/* A receiving video channel nobody has polled for this long does not fan
+ * frames out any more (an application that streams JPEG only, or pulls the
+ * video stream rarely): the JPEG channel then reads the framesource itself,
+ * as the stock encoder's own thread would feed it. */
+#define P2_FANOUT_IDLE_US 300000ull
+
 /* Whether a JPEG channel gets its frames from a video channel on the same
  * framesource (fan-out above), decided at every poll.  Only a video channel
  * that is receiving, or whose last poll is still between its receiving
@@ -779,11 +796,21 @@ static int p2_jpeg_frames_from_fanout(const P2EncoderChannel *jpeg)
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
         P2EncoderChannel *other = &p2_channels[channel];
 
-        if (other != jpeg && other->created && other->registered &&
-            other->codec_type != IMP_ENC_TYPE_JPEG &&
-            (__atomic_load_n(&other->receiving, __ATOMIC_ACQUIRE) ||
-             __atomic_load_n(&other->frame_readers, __ATOMIC_ACQUIRE)) &&
-            p2_find_source_channel(other->group) == jpeg->source_channel)
+        uint64_t last;
+
+        if (other == jpeg || !other->created || !other->registered ||
+            other->codec_type == IMP_ENC_TYPE_JPEG ||
+            p2_find_source_channel(other->group) != jpeg->source_channel)
+            continue;
+        if (__atomic_load_n(&other->frame_readers, __ATOMIC_ACQUIRE))
+            return 1;
+        if (!__atomic_load_n(&other->receiving, __ATOMIC_ACQUIRE))
+            continue;
+        /* receiving: only while it is being polled (a poll in progress, or
+         * one that ended within P2_FANOUT_IDLE_US) */
+        last = __atomic_load_n(&other->last_poll_us, __ATOMIC_ACQUIRE);
+        if (__atomic_load_n(&other->in_poll, __ATOMIC_ACQUIRE) > 0 ||
+            (last && p2_monotonic_us() - last < P2_FANOUT_IDLE_US))
             return 1;
     }
     return 0;
@@ -795,6 +822,7 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
     struct timespec deadline;
     uint64_t generation;
     int wait_result = 0;
+    int slice_used = 0;
 
     if (!channel || !frame)
         return -1;
@@ -812,8 +840,34 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
     while (channel->receiving && channel->jpeg_frame_requested &&
            channel->jpeg_frame_generation == generation &&
            wait_result == 0) {
+        struct timespec slice;
+
+        /* Wake every P2_FANOUT_IDLE_US: when the video channel stopped
+         * being polled, the frame has to come from the framesource. */
+        clock_gettime(CLOCK_REALTIME, &slice);
+        slice.tv_nsec += (long)(P2_FANOUT_IDLE_US * 1000ull);
+        while (slice.tv_nsec >= 1000000000l) {
+            slice.tv_sec++;
+            slice.tv_nsec -= 1000000000l;
+        }
+        if (slice.tv_sec > deadline.tv_sec ||
+            (slice.tv_sec == deadline.tv_sec &&
+             slice.tv_nsec > deadline.tv_nsec))
+            slice = deadline;
+        else
+            slice_used = 1;
         wait_result = pthread_cond_timedwait(&channel->jpeg_frame_ready,
-                                             &channel->lock, &deadline);
+                                             &channel->lock, &slice);
+        if (wait_result == ETIMEDOUT && slice_used &&
+            channel->jpeg_frame_generation == generation) {
+            slice_used = 0;
+            if (!p2_jpeg_frames_from_fanout(channel)) {
+                channel->jpeg_frame_requested = 0;
+                pthread_mutex_unlock(&channel->lock);
+                return -2;
+            }
+            wait_result = 0;
+        }
     }
     if (!channel->receiving ||
         channel->jpeg_frame_generation == generation) {
@@ -1087,7 +1141,7 @@ extern int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
 #endif
 extern int IMP_FrameSource_GetFrame(int channel, void **frame);
 extern int IMP_FrameSource_ReleaseFrame(int channel, void *frame);
-#if defined(PLATFORM_T20)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
 extern int VBMGetFrame(int chn, void **frame);
 #define P2_FS_TRY_FRAME(chn, frame) VBMGetFrame((chn), (frame))
 #else
@@ -1840,6 +1894,81 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
     return 0;
 }
 
+static void p2_drop_unread_stream(P2EncoderChannel *ch);
+
+/* GetFd's pipe: called with ch->lock held when the ready stream is gone */
+static void p2_evt_clear(P2EncoderChannel *ch)
+{
+    char drain[16];
+
+    if (!ch->evt_open || !ch->evt_signaled)
+        return;
+    while (read(ch->evt_rd, drain, sizeof(drain)) > 0)
+        ;
+    ch->evt_signaled = 0;
+}
+
+static void *p2_fd_pump(void *arg)
+{
+    P2EncoderChannel *ch = (P2EncoderChannel *)arg;
+    int channel = (int)(ch - p2_channels);
+
+    while (__atomic_load_n(&ch->pump_run, __ATOMIC_ACQUIRE)) {
+        uint64_t start;
+        int active;
+
+        pthread_mutex_lock(&ch->lock);
+        if (ch->raw_stream) {
+            /* ready: the application takes it (GetStream/ReleaseStream
+             * clear the pipe) */
+            if (!ch->evt_signaled &&
+                write(ch->evt_wr, "s", 1) == 1)
+                ch->evt_signaled = 1;
+            pthread_mutex_unlock(&ch->lock);
+            usleep(2000);
+            continue;
+        }
+        active = ch->created && ch->registered && ch->receiving &&
+                 !ch->closing;
+        pthread_mutex_unlock(&ch->lock);
+        if (!active) {
+            usleep(10000);
+            continue;
+        }
+        start = p2_monotonic_us();
+        if (IMP_Encoder_PollingStream(channel, 100) != 0 &&
+            p2_monotonic_us() - start < 5000u)
+            usleep(5000);
+    }
+    return NULL;
+}
+
+/* Ends the pump of IMP_Encoder_GetFd and closes its pipe (without
+ * ch->lock: the pump polls the channel). */
+static void p2_fd_stop(P2EncoderChannel *ch)
+{
+    pthread_t pump;
+    int rd, wr;
+
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->evt_open) {
+        pthread_mutex_unlock(&ch->lock);
+        return;
+    }
+    ch->evt_open = 0;
+    pump = ch->pump;
+    rd = ch->evt_rd;
+    wr = ch->evt_wr;
+    __atomic_store_n(&ch->pump_run, 0, __ATOMIC_RELEASE);
+    pthread_mutex_unlock(&ch->lock);
+    pthread_join(pump, NULL);
+    close(rd);
+    close(wr);
+    pthread_mutex_lock(&ch->lock);
+    ch->evt_signaled = 0;
+    pthread_mutex_unlock(&ch->lock);
+}
+
 /* Called with ch->lock held. A PollingStream in progress still uses the
  * codec and the source channel; tearing them down underneath it freed the
  * codec during an encode and leaked capture buffers. */
@@ -1859,6 +1988,11 @@ int IMP_Encoder_DestroyChn(int channel)
         return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    if (ch->evt_open && !ch->registered) {
+        pthread_mutex_unlock(&ch->lock);
+        p2_fd_stop(ch);
+        pthread_mutex_lock(&ch->lock);
+    }
     p2_wait_poll_idle(ch);
     if (!ch->created || ch->registered || ch->raw_stream || ch->source_frame) {
         pthread_mutex_unlock(&ch->lock);
@@ -1924,6 +2058,14 @@ int IMP_Encoder_UnRegisterChn(int channel)
         return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    if (ch->evt_open && !ch->receiving) {
+        /* GetFd's pump ends here; a stream it encoded ahead that nobody
+         * took is dropped (libimp releases its stream queue too) */
+        pthread_mutex_unlock(&ch->lock);
+        p2_fd_stop(ch);
+        p2_drop_unread_stream(ch);
+        pthread_mutex_lock(&ch->lock);
+    }
     p2_wait_poll_idle(ch);
     if (!ch->created || !ch->registered || ch->receiving || ch->raw_stream) {
         pthread_mutex_unlock(&ch->lock);
@@ -2112,10 +2254,11 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
-    ch->in_poll++;
+    __atomic_add_fetch(&ch->in_poll, 1, __ATOMIC_RELEASE);
     pthread_mutex_unlock(&ch->lock);
     ret = p2_polling_stream(channel, timeout_ms);
     pthread_mutex_lock(&ch->lock);
+    __atomic_store_n(&ch->last_poll_us, p2_monotonic_us(), __ATOMIC_RELEASE);
     if (--ch->in_poll == 0)
         pthread_cond_broadcast(&ch->poll_idle);
     pthread_mutex_unlock(&ch->lock);
@@ -2247,9 +2390,14 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
     if (ch->codec_type == IMP_ENC_TYPE_JPEG && ch->jpeg_fanout) {
-        if (p2_wait_for_jpeg_frame(ch, timeout_ms, &frame) != 0)
+        int waited = p2_wait_for_jpeg_frame(ch, timeout_ms, &frame);
+
+        if (waited == -2)
+            ch->jpeg_fanout = 0;        /* video went idle: framesource */
+        else if (waited != 0)
             goto done;
-    } else {
+    }
+    if (!(ch->codec_type == IMP_ENC_TYPE_JPEG && ch->jpeg_fanout)) {
         /* FrameSource exposes a non-blocking userspace-ready queue, while
          * PollingStream is a blocking ABI.  Wait outside the shared AVPU lock
          * so an empty queue neither spins the caller nor starves capture. */
@@ -2279,7 +2427,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                                (uint32_t)slice_us);
         }
 #else
-        /* T20: the public GetFrame waits up to 2 s like libimp; this loop
+        /* T20/T21/T23: the public GetFrame waits up to 2 s like libimp; this loop
          * keeps its own deadline and StopRecvPic check, so it polls the
          * ready queue directly. */
         while (P2_FS_TRY_FRAME(ch->source_channel, &frame) != 0) {
@@ -2695,6 +2843,7 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     ch->raw_stream_out = 0;
     ch->codec_user = NULL;
     ch->source_frame = NULL;
+    p2_evt_clear(ch);
     pthread_mutex_unlock(&ch->lock);
     if (!raw || !frame)
         return -1;
@@ -2896,15 +3045,25 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 int IMP_Encoder_FlushStream(int channel)
 {
     P2EncoderChannel *ch;
-    void *raw = NULL;
-    void *user = NULL;
-    void *frame = NULL;
 
     if (!p2_valid_channel(channel) || !p2_channels[channel].created)
         return -1;
     if (IMP_Encoder_RequestIDR(channel) < 0)
         return -1;
     ch = &p2_channels[channel];
+    p2_drop_unread_stream(ch);
+    return 0;
+}
+
+/* A ready stream the application has not taken (GetStream) goes back to
+ * the codec. */
+static void p2_drop_unread_stream(P2EncoderChannel *ch)
+{
+    void *raw = NULL;
+    void *user = NULL;
+    void *frame = NULL;
+    int channel = (int)(ch - p2_channels);
+
     pthread_mutex_lock(&ch->lock);
     if (ch->created && ch->raw_stream && !ch->raw_stream_out &&
         ch->source_frame) {
@@ -2914,6 +3073,7 @@ int IMP_Encoder_FlushStream(int channel)
         ch->raw_stream = NULL;
         ch->codec_user = NULL;
         ch->source_frame = NULL;
+        p2_evt_clear(ch);
     }
     pthread_mutex_unlock(&ch->lock);
     if (raw) {
@@ -2921,7 +3081,6 @@ int IMP_Encoder_FlushStream(int channel)
                  channel);
         (void)p2_return_stream(ch, raw, user, frame);
     }
-    return 0;
 }
 
 int IMP_Encoder_SetbufshareChn(int channel, int share_channel)
@@ -4013,11 +4172,56 @@ int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
 }
 #endif
 
+/* libimp returns the channel's encoder device fd, readable when a stream
+ * is ready.  OpenIMP encodes in PollingStream, so the first GetFd starts a
+ * pump thread that polls the channel and makes a pipe readable while a
+ * stream waits for GetStream (the pipe is cleared by ReleaseStream and
+ * FlushStream).  Channels without GetFd are unchanged. */
 int IMP_Encoder_GetFd(int channel)
 {
-    (void)channel;
-    errno = ENOSYS;
-    return -1;
+    P2EncoderChannel *ch;
+    int fds[2];
+    int i;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "GetFd(%d): channel not created", channel);
+        return -1;
+    }
+    if (ch->evt_open) {
+        int fd = ch->evt_rd;
+
+        pthread_mutex_unlock(&ch->lock);
+        return fd;
+    }
+    if (pipe(fds) != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    for (i = 0; i < 2; i++) {
+        fcntl(fds[i], F_SETFL, fcntl(fds[i], F_GETFL) | O_NONBLOCK);
+        fcntl(fds[i], F_SETFD, FD_CLOEXEC);
+    }
+    ch->evt_rd = fds[0];
+    ch->evt_wr = fds[1];
+    ch->evt_signaled = 0;
+    __atomic_store_n(&ch->pump_run, 1, __ATOMIC_RELEASE);
+    if (pthread_create(&ch->pump, NULL, p2_fd_pump, ch) != 0) {
+        __atomic_store_n(&ch->pump_run, 0, __ATOMIC_RELEASE);
+        close(fds[0]);
+        close(fds[1]);
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ch->evt_open = 1;
+    pthread_mutex_unlock(&ch->lock);
+    return fds[0];
 }
 
 #if defined(PLATFORM_T23)
