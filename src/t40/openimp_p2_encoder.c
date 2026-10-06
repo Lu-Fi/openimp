@@ -2471,7 +2471,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
             uint64_t now_us;
             uint64_t slice_us;
 
-            if (IMP_FrameSource_GetFrame(ch->source_channel, &frame) == 0)
+            /* the pull stays non-blocking here: the public GetFrame of
+             * T31 waits up to 2 s like libimp, this loop has its own
+             * deadline and StopRecvPic check */
+            if (VBMGetFrame(ch->source_channel, &frame) == 0)
                 break;
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             now_us = p2_monotonic_us();

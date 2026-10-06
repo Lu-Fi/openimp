@@ -50,6 +50,9 @@ static uint8_t fs_pixels[4][640 * 368 * 3 / 2];
 static int fs_gets[4];
 static int fs_outstanding[4];
 
+int IMP_FrameSource_GetFrame(int chn, void **frame);
+int VBMGetFrame(int chn, void **frame) { return IMP_FrameSource_GetFrame(chn, frame); }
+
 int IMP_FrameSource_GetFrame(int chn, void **frame)
 {
     if (chn < 0 || chn >= 4 || fs_outstanding[chn])

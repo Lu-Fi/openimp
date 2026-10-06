@@ -2700,7 +2700,7 @@ int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
     return 0;
 }
 
-/* libimp 3.12.0 (T20), 1.0.33 (T21) and 1.3.0 (T23) wait up to 2 s for a
+/* libimp 3.12.0 (T20), 1.0.33 (T21), 1.1.6 (T31) and 1.3.0 (T23) wait up to 2 s for a
  * frame (headers: "default timeout 2s"; pthread_cond_timedwait on the depth
  * list).  The ready queue
  * here is filled by the capture thread, which hands frames back to the
@@ -2708,10 +2708,9 @@ int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
  * after a pause finds it empty: a non-blocking GetFrame failed at once for
  * every caller that does not retry.  Polled in 5 ms steps (T20 has no
  * frame-ready event); every attempt also keeps the pull marked active.
- * The encoder pulls with VBMGetFrame and keeps its own timeout.  T31 keeps
- * its non-blocking GetFrame (its encoder waits on the ready event and calls
- * the public GetFrame). */
-#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
+ * The encoder pulls with VBMGetFrame (T31 too) and keeps its own timeout. */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || \
+    defined(PLATFORM_T31)
 #define FS_GETFRAME_TIMEOUT_MS 2000u
 #endif
 
