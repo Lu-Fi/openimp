@@ -2903,6 +2903,11 @@ int IMP_Encoder_FlushStream(int channel)
     return 0;
 }
 
+/* Vendor T31 libimp (1.1.1..1.1.6, disassembled): checks both numbers,
+ * stores share_channel in the channel record (offset 640/672, kept over
+ * CreateChn's memset) and logs it; nothing in libimp ever reads it back, so
+ * there is nothing to apply.  Returning 0 after the checks is the vendor
+ * behaviour (T23 libimp has no such function). */
 int IMP_Encoder_SetbufshareChn(int channel, int share_channel)
 {
     return p2_valid_channel(channel) && p2_valid_channel(share_channel) ? 0 : -1;
