@@ -8,7 +8,7 @@
  * IMPFrameInfo; the OEM T20 3.12.0 libimp exports the same IMP_IVS_* and
  * move / base-move entry points with that parameter layout.
  * PLATFORM_T23 builds this file for T23:
- *   - one IVS group (0), up to 64 channels, each with its own processing
+ *   - two IVS groups (0, 1; every libimp checks group < 2), up to 64 channels, each with its own processing
  *     thread and three semaphores (process start = 0, process end = 1,
  *     result = 0);
  *   - every frame of the FrameSource channel bound to the group reaches
@@ -56,7 +56,7 @@
 #include "openimp_ivs_move_v2.h"
 #include "imp/openimp_ivs_move_ex.h"
 
-#define T31_IVS_GROUPS   1
+#define T31_IVS_GROUPS   2
 #define T31_IVS_CHANNELS 64
 #define T31_IVS_RESULTS  6
 
@@ -919,21 +919,23 @@ static int ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame,
 
 int openimp_t31_ivs_source_active(int fs_chn)
 {
-    int source = -2;
+    int source[T31_IVS_GROUPS];
     int active = 0;
     int i;
 
     if (!__atomic_load_n(&ivs_receiving, __ATOMIC_RELAXED))
         return 0;
+    for (i = 0; i < T31_IVS_GROUPS; i++)
+        source[i] = -2;
     pthread_mutex_lock(&ivs_lock);
     for (i = 0; i < T31_IVS_CHANNELS && !active; i++) {
         struct t31_ivs_channel *c = &ivs_channels[i];
 
         if (c->state != IVS_CHN_ACTIVE || !c->enabled || c->group < 0)
             continue;
-        if (source == -2)
-            source = ivs_group_source(0);
-        active = source == fs_chn;
+        if (source[c->group] == -2)
+            source[c->group] = ivs_group_source(c->group);
+        active = source[c->group] == fs_chn;
     }
     pthread_mutex_unlock(&ivs_lock);
     return active;
@@ -944,11 +946,13 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame)
     T31IVSFrameInfo info;
     struct ivs_pending_copy pend[T31_IVS_CHANNELS];
     int npend = 0;
-    int source = -2;
+    int source[T31_IVS_GROUPS];
     int i;
 
     if (!frame || !__atomic_load_n(&ivs_receiving, __ATOMIC_RELAXED))
         return;
+    for (i = 0; i < T31_IVS_GROUPS; i++)
+        source[i] = -2;
     memset(&info, 0, sizeof(info));
     memcpy(&info, frame, T31_IVS_FRAME_RECORD_BYTES);
     pthread_mutex_lock(&ivs_lock);
@@ -957,10 +961,11 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 
         if (c->state != IVS_CHN_ACTIVE || !c->enabled || c->group < 0)
             continue;
-        if (source == -2)
-            source = ivs_group_source(0);
-        if (source != fs_chn)
-            break;                  /* one group: nothing else to feed */
+        /* each group is fed by the FrameSource channel bound to it */
+        if (source[c->group] == -2)
+            source[c->group] = ivs_group_source(c->group);
+        if (source[c->group] != fs_chn)
+            continue;
         if (c->own && c->inf->preProcessSync == move_preprocess &&
             ivs_move_interval() > 1 &&
             c->interval_phase++ % ivs_move_interval() != 0)
