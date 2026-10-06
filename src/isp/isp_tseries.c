@@ -4196,9 +4196,12 @@ int IMP_ISP_Tuning_DisableMovestate(void)
 }
 #endif
 
-int IMP_ISP_Tuning_EnableDefog(void)
+/* Vendor HLIL 0x9145c sends the caller's enable flag in the ioctl value
+ * (cid 0x80000a4), so defog can be switched off again; the old OpenIMP stub
+ * took no argument and always wrote 1. */
+int IMP_ISP_Tuning_EnableDefog(int enable)
 {
-    return tseries_tuning_set_val(TISP_CID_ENABLE_DEFOG, 1);
+    return tseries_tuning_set_val(TISP_CID_ENABLE_DEFOG, enable);
 }
 
 int IMP_ISP_Tuning_Awb_SetRgbCoefft(void *attr)
