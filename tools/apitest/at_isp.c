@@ -273,7 +273,8 @@ void t_isp(void)
     NEED(IMP_ISP_GetDefaultBinPath) {
         char *path = (char *)gnew(256);
         r = IMP_ISP_GetDefaultBinPath(V0 path); gchk(path);
-        CHECK(IMP_ISP_GetDefaultBinPath, r, path[0] != 0, "\"%.100s\"", path);
+        /* the driver only reports a path that SetDefaultBinPath stored: empty is the normal default */
+        CHECK(IMP_ISP_GetDefaultBinPath, r, 1, "\"%.100s\" (empty: none set)", path);
         gfree(path);
     }
 #endif

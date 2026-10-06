@@ -25,10 +25,15 @@
 # define T_H265 PT_H264        /* no H.265 on this SoC: never used */
 #endif
 
+/* The rate-control attributes (outBitRate / uTargetBitRate) are in kbit/s on every SoC (the vendor
+ * samples pass 2000 for 720p).  Only IMP_Encoder_SetChnBitRate of the T31/T41 family takes bit/s. */
+#define BR_UNIT 1
 #ifdef ENC_NEW
-# define BR_UNIT 1000          /* bit/s */
+# define BR_SET_UNIT 1000      /* IMP_Encoder_SetChnBitRate: bit/s */
+# define YUV_BITRATE 512000    /* IMPEncoderYuvIn: bit/s */
 #else
-# define BR_UNIT 1             /* kbit/s */
+# define BR_SET_UNIT 1
+# define YUV_BITRATE BITRATE
 #endif
 #define BITRATE (512 * BR_UNIT)
 
@@ -91,7 +96,7 @@ static unsigned br_ue(BR *r) { int z = 0; while (!br_bit(r) && z < 32 && r->pos 
 
 static void parse_sps(const unsigned char *p, size_t n, SI *si)
 {
-    unsigned char u[64];
+    unsigned char u[256];
     size_t i, m = 0;
     BR r;
     unsigned profile, chroma = 1, wmb, hmu, fmo, crop = 0, cl = 0, cr = 0, ct = 0, cb = 0, poc;
@@ -108,7 +113,27 @@ static void parse_sps(const unsigned char *p, size_t n, SI *si)
         chroma = br_ue(&r);
         if (chroma == 3) br_bit(&r);
         br_ue(&r); br_ue(&r); br_bit(&r);
-        if (br_bit(&r)) return;                           /* scaling matrices: not parsed */
+        if (br_bit(&r)) {                                 /* seq_scaling_matrix_present: skip the lists */
+            unsigned li, lj, lists = chroma != 3 ? 8 : 12;
+
+            for (li = 0; li < lists; li++) {
+                if (!br_bit(&r)) continue;
+                {
+                    int last = 8, next = 8;
+                    unsigned size = li < 6 ? 16 : 64;
+
+                    for (lj = 0; lj < size; lj++) {
+                        if (next != 0) {
+                            unsigned k = br_ue(&r);
+                            int delta = (k & 1) ? (int)((k + 1) / 2) : -(int)(k / 2);
+
+                            next = (last + delta + 256) % 256;
+                        }
+                        last = next == 0 ? last : next;
+                    }
+                }
+            }
+        }
     }
     br_ue(&r);                                            /* log2_max_frame_num */
     poc = br_ue(&r);
@@ -150,7 +175,7 @@ static void scan_frame(const unsigned char *b, size_t n, int codec, SI *si)
         nal = b[i + 3];
         if (codec == CODEC_H264) {
             t = nal & 31;
-            if (t == 7) { si->sps++; if (!si->w) parse_sps(b + i + 4, n - i - 4 > 48 ? 48 : n - i - 4, si); }
+            if (t == 7) { si->sps++; if (!si->w) parse_sps(b + i + 4, n - i - 4 > 200 ? 200 : n - i - 4, si); }
             else if (t == 8) si->pps++;
             else if (t == 5) { si->idr++; idr_here = 1; }
             else if (t == 6) si->sei++;
@@ -499,11 +524,11 @@ static void live_common(int chn, int codec)
 #if HAS_IMP_Encoder_SetChnBitRate
         NEED(IMP_Encoder_SetChnBitRate) {
             G(IMPEncoderAttrRcMode, rc2);
-            int r2 = IMP_Encoder_SetChnBitRate(chn, 400 * BR_UNIT, 400 * BR_UNIT);
+            int r2 = IMP_Encoder_SetChnBitRate(chn, 400 * BR_SET_UNIT, 400 * BR_SET_UNIT);
 
             r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
             CHECK(IMP_Encoder_SetChnBitRate, r2, r == 0 && *rc_bitrate(rc2, codec) == (uint32_t)(400 * BR_UNIT), "400 kbit/s, read back %u", *rc_bitrate(rc2, codec));
-            IMP_Encoder_SetChnBitRate(chn, BITRATE, BITRATE);
+            IMP_Encoder_SetChnBitRate(chn, 512 * BR_SET_UNIT, 512 * BR_SET_UNIT);
             gfree(rc2);
         }
 #endif
@@ -932,19 +957,28 @@ static void live_misc(int chn, int codec)
         RET0(IMP_Encoder_GetMaxStreamCnt, r, "%d", *g);
         was = *g;
         NEED(IMP_Encoder_SetMaxStreamCnt) {
+#ifdef ENC_NEW
+            /* stock T31/T41: the buffer count is fixed when the channel is created; on a created
+             * channel the call fails and the count stays */
+            r2 = IMP_Encoder_SetMaxStreamCnt(chn, was > 3 ? 3 : was + 1);
+            r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
+            rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == -1 && r == 0 && *g == was) ? V_PASS : V_FAIL,
+                "refused on a created channel (before CreateChn only): ret %d, count stays %d (was %d)", r2, *g, was);
+#else
             r2 = IMP_Encoder_SetMaxStreamCnt(chn, was > 3 ? 3 : was + 1);
             r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
             CHECK(IMP_Encoder_SetMaxStreamCnt, r2, r == 0 && *g == (was > 3 ? 3 : was + 1), "set %d, read back %d", was > 3 ? 3 : was + 1, *g);
             IMP_Encoder_SetMaxStreamCnt(chn, was);
+#endif
         }
         gfree(g);
     }
 #if HAS_IMP_Encoder_SetFisheyeEnableStatus
-# ifdef PLATFORM_T23
-    /* stock T23: a creation-time option, SetFisheyeEnableStatus on a created channel fails */
+# if defined(PLATFORM_T23) || defined(ENC_NEW)
+    /* stock T23/T31: a creation-time option, SetFisheyeEnableStatus on a created channel fails */
     if (codec != CODEC_JPEG) NEED(IMP_Encoder_SetFisheyeEnableStatus) {
         int r2 = IMP_Encoder_SetFisheyeEnableStatus(chn, 1);
-        rep(FN(IMP_Encoder_SetFisheyeEnableStatus), r2, r2 == -1 ? V_PASS : V_FAIL, "stock T23 refuses it on a created channel: ret %d", r2);
+        rep(FN(IMP_Encoder_SetFisheyeEnableStatus), r2, r2 == -1 ? V_PASS : V_FAIL, "stock refuses it on a created channel: ret %d", r2);
     }
 # else
     if (codec != CODEC_JPEG) { RT_INT(IMP_Encoder_SetFisheyeEnableStatus, IMP_Encoder_GetFisheyeEnableStatus, 1, "fisheye") }
@@ -1197,7 +1231,7 @@ static void test_swenc(void)
             memset(&si, 0, sizeof(si)); si.first_idr_frame = -1;
 #  ifdef PLATFORM_T41
             in->type = IMP_ENC_TYPE_AVC; in->mode = IMP_ENC_RC_MODE_CBR; in->frameRate = EFPS; in->gopLength = EGOP;
-            in->targetBitrate = BITRATE; in->maxBitrate = BITRATE; in->initQp = -1; in->minQp = 20; in->maxQp = 45;
+            in->targetBitrate = YUV_BITRATE; in->maxBitrate = YUV_BITRATE; in->initQp = -1; in->minQp = 20; in->maxQp = 45;
 #  else
             in->type = PT_H264; in->mode.rcMode = ENC_RC_MODE_CBR;
             in->mode.attrH264Cbr.maxQp = 45; in->mode.attrH264Cbr.minQp = 15; in->mode.attrH264Cbr.outBitRate = BITRATE;
