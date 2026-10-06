@@ -158,7 +158,7 @@ The T23 start/stop hang work of the previous days is summarised in the earlier s
 ### Known issues (release candidate)
 
 - **T23 crop hang:** the pipeline stops after a FrameSource crop change (hard hang); under investigation, release blocker.
-- **T31 H.264 stalls after the JPEG channel is torn down:** apitest "H.264 stream after JPEG channel teardown" delivers 0 of 5 frames on T31; under investigation, release blocker. (A flaky variant of the same test was also seen on T41.)
+- **T31 H.264 stalls after the JPEG channel is torn down:** fixed: two threads polled the same encoder channel at once (`AL_Codec_Encode_Process` concurrently); `IMP_Encoder_PollingStream` now serialises per channel (openimp `claude/release-fix27` 5c2ccef), apitest on T31 FAIL 0 with the fix; goes into the next candidate (agg-29). The same encoder file is used on T41, whose flaky result probably has the same cause (not re-tested).
 - **T41 is not part of the first release** (channel 1 scaling registers staged, output-restart hang, 38 tuning IDs missing, see above).
 - T21: the IPU needs about 2 s after a wake before the OSD blend takes effect (first snapshot withheld until the overlay is confirmed, beyond vendor); the cause is not found. Whether the OSD shows in the live stream after a wake is checked after the candidate tests.
 - T23: sporadic single Helix encode error (errno 5), no real WDR.
@@ -167,7 +167,7 @@ The T23 start/stop hang work of the previous days is summarised in the earlier s
 
 ### Next steps
 
-1. Fix the T23 crop hang and the T31 H.264 stall (both block the release).
+1. Fix the T23 crop hang (blocks the release); the T31 H.264 stall is fixed (agg-29).
 2. Long soak of the candidate (6 h overnight, longer before the tag); on any hang set `msca_scratch=0` for the first release and re-test.
 3. Merge the candidate into `next`, fast-forward `aperto`, tag `vYYYY.MM.DD`; documentation and the matrix follow the final state.
 4. After the release: T21 ROI (0.5 to 1 day), SuperFrame DISCARD in software (< 1 day), T21 REENCODE (2 to 4 days), T21 QPG (1 to 3 days), brightness through the AE target on T20/T10.

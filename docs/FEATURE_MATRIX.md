@@ -21,7 +21,7 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 **Known issues (release candidate)**
 
 - **T23 crop hang:** the pipeline stops after a FrameSource crop change (hard hang, found with the crop test); under investigation. It is a release blocker.
-- **T31 H.264 stalls after the JPEG channel is torn down:** apitest "H.264 stream after JPEG channel teardown" fails on T31 (0 of 5 frames); under investigation. It is a release blocker.
+- **T31 H.264 stalled after the JPEG channel was torn down:** fixed: two threads polled the same encoder channel at once (`AL_Codec_Encode_Process` concurrently); `IMP_Encoder_PollingStream` now serialises per channel (openimp `claude/release-fix27` 5c2ccef), apitest on T31 FAIL 0 with the fix; goes into the next candidate (agg-29).
 - **T41 is not part of the first release:** MSCA channel 1 scaling registers are staged only (a downscale above 4:1 gives garbage, buffers with index 1 and above show a band), a restart of the output hangs the SoC (watchdog reboot at 1280x720 / 1440x810 on channel 1), 38 tuning IDs are still missing (gamma, CCM, CSC, module control, auto zoom, manual exposure, DRC, DPC, defog ratio, mask, scaler level), flip is not reset on restore, the FIFO delay of the frame source is missing. The T41 branches `claude/release-t41` (OpenIMP) and `claude/t41-ch1-fix` (driver) are not merged. T41 apitest on that branch: 255 PASS / 12 FAIL.
 - **T21:** the IPU needs about 2 s after a wake before the OSD blend takes effect; the first snapshot is withheld until the overlay is confirmed (beyond vendor), the cause is not found. The OSD in the live stream after a wake is checked after the candidate tests.
 - **T23:** sporadic single Helix encode error (errno 5) and no real WDR, as before.
@@ -554,7 +554,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T20:** ✅ 1 h 44 soak, 0 errors
 - **T21:** ✅ uptime 1:54 at the test, 0 oops
 - **T23:** ✅ the frequent Helix frame drops had a fixed cause (residual interrupt 0x100 treated as an error by the bounded-wait kernel patch): 60 min 0 errors after the fix, 5 h soak on the `aperto` images 0 encoder errors. Still listed open: a sporadic single Helix encode error (errno 5). Cold-start snapshot 503 on a second channel (stale MSCA FIFOs): fix `msca_fifo_rearm` gave 260 cold-start cycles without a failure (before ~1-7 %), soak pending before it enters `next`; 2026-10-06: release defaults of the driver are the stock-like set that ran 7 h overnight (`chan_stop_keep_input=1`, `msca_keep_enabled=2`, `msca_fifo_rearm=0`, `msca_flip_skip_noop=1`, `msca_restart_skip=1`, `msca_session_release=1`, `crumbs=0`); the cold-start snapshot 503 is prevented by the stock STREAMOFF drain wait and a QBUF cache invalidate (20 cold starts and 20 restarts without a failure); MSCA scratch buffer parks a stopped channel (80 parks, 0 settle timeouts). **Known issue: the pipeline stops after a FrameSource crop change (under investigation).**
-- **T31:** ✅ 4.5 h soak ok; 2026-10-06: **known issue: H.264 stalls after the JPEG channel was torn down (apitest 0 of 5 frames, under investigation).**
+- **T31:** ✅ 4.5 h soak ok; 2026-10-06: H.264 stall after JPEG teardown fixed (5c2ccef, agg-29).
 - **T41:** ⚠️ 5-min stress without reboot earlier; still open: OOM with three parallel streams, `AddSensor` EBUSY after an OOM kill; module reload 10/10 clean
 
 ##### 42. Helper libraries libalog / libsysutils

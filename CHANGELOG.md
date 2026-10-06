@@ -20,7 +20,7 @@ All test cameras run the open stack (open-tx-isp kernel driver + OpenIMP + timps
 | T20 | yes | 212 PASS / 0 FAIL on two cameras | `GetAeZone` is a vendor no-op (N/A); encoder ROI and chroma QP offset |
 | T21 | yes | 228 PASS / 0 FAIL on two cameras | `SetBrightness` acts and sepia works (beyond vendor); antifog/scene are vendor no-ops |
 | T23 | yes | 304 PASS / 4 FAIL (AF getters, fixed by `source_af=1`) | stock-like release defaults, MSCA scratch buffer; H.265 has no hardware; **crop hang open** |
-| T31 | yes | 274 PASS / 1 FAIL | `SetFrameDrop` with stock semantics; **H.264 stall after JPEG teardown open** |
+| T31 | yes | 274 PASS / 1 FAIL | `SetFrameDrop` with stock semantics; H.264 stall after JPEG teardown fixed (agg-29) |
 | T41 | **no** (experimental) | 255 PASS / 12 FAIL on the experimental branch | channel 1 scaling registers staged, output-restart hang, 38 tuning IDs missing |
 
 - **Frame source and encoder (all SoCs):** `GetFrame`/`SnapFrame` wait up to 2 s like the vendor library and the T20 capture no longer stalls (apps that set a frame depth got no frames before); `Encoder_GetFd` returns a pollable pipe; a JPEG channel feeds itself from the frame source when its video channel is not polled (beyond vendor); two IVS groups as every vendor libimp; `InsertUserData` SEI; `PollingModuleStream` honours the channel bitmap.
@@ -58,7 +58,7 @@ All test cameras run the open stack (open-tx-isp kernel driver + OpenIMP + timps
 ### Known issues (release candidate)
 
 - **T23 crop hang:** the pipeline stops after a FrameSource crop change; under investigation, release blocker.
-- **T31 H.264 stalls after the JPEG channel is torn down:** under investigation, release blocker.
+- **T31 H.264 stalls after the JPEG channel is torn down:** fixed: two threads polled the same encoder channel at once (`AL_Codec_Encode_Process` concurrently); `IMP_Encoder_PollingStream` now serialises per channel (openimp `claude/release-fix27` 5c2ccef), apitest on T31 FAIL 0 with the fix; goes into the next candidate (agg-29).
 - **T41 is not part of the first release:** channel 1 scaling registers are staged, an output restart hangs the SoC, 38 tuning IDs are missing (branches `claude/release-t41` and open-tx-isp `claude/t41-ch1-fix`, not merged).
 - T21: the OSD blend takes effect only about 2 s after a wake from idle (the first snapshot waits for it); cause not found.
 - The colour image functions must be re-tested in daylight (the candidate's imgfx run was made in the dark); T10 was not re-tested.
@@ -85,7 +85,7 @@ Only OpenIMP (userspace libimp) changes, newest first. Everything listed was dev
 - Release quick wins (host-tested only): T21 `SetModuleControl` cache fallback, `AI_SetHpfCoFrequency(0)` accepted on T40/T41, P3 capture restart guard, T21 OSD INFO lines trace-only.
 - Pending (host-tested and cross-built only): `IMP_AI_SetHpfCoFrequency` takes effect on T23/T31 (float biquad in libaudioProcess-neo, beyond the original library); T31 Enable/DisableMovestate run the vendor logic; T21 `QpgMode`/`H265TransCfg` as the vendor; `SetbufshareChn` documented as store-only.
 - imgfx: the green/magenta stripe in the top rows of the saved ch1 pictures was a tool error (chroma plane read at the wrong offset); streams and snapshots were never affected.
-- Known issues of the candidate: T23 crop hang, T31 H.264 stall after JPEG teardown (both under investigation), T41 not part of the release.
+- Known issues of the candidate: T23 crop hang (under investigation); T31 H.264 stall after JPEG teardown fixed for agg-29, T41 not part of the release.
 
 ## 2026-10-05
 
