@@ -3911,6 +3911,14 @@ int IMP_Encoder_GetH264TransCfg(int channel,
 int IMP_Encoder_SetH265TransCfg(int channel,
                                const IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21 libimp (1.0.33, disassembled): channel number and pointer
+     * are checked, nothing else happens (no range check, nothing stored);
+     * T21 has no HEVC encoder */
+    if (!p2_valid_channel(channel) || !config)
+        return -1;
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config || config->chroma_cr_qp_offset < -12 ||
@@ -3922,11 +3930,19 @@ int IMP_Encoder_SetH265TransCfg(int channel,
     ch->h265_transform = *config;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_GetH265TransCfg(int channel,
                                IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21: clears the 8 bytes and returns 0 */
+    if (!p2_valid_channel(channel) || !config)
+        return -1;
+    memset(config, 0, sizeof(*config));
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config)
@@ -3935,21 +3951,34 @@ int IMP_Encoder_GetH265TransCfg(int channel,
     *config = ch->h265_transform;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21 libimp (1.0.33, disassembled): channel number and pointer
+     * are checked; a channel that does not exist answers 0; the 4-byte mode
+     * goes to i264e parameter 15 without a range check, is kept for the
+     * next IDR and read back by Get.  Nothing in the library reads the
+     * stored mode (ratecontrol_init clears the active copy), so keeping it
+     * is all there is to do. */
+    P2EncoderChannel *ch;
+
+    if (!p2_valid_channel(channel) || !mode)
+        return -1;
+    ch = &p2_channels[channel];
+    if (!ch->created)
+        return 0;
+    pthread_mutex_lock(&ch->lock);
+    ch->qpg_mode = *mode;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !mode || *mode < ENC_QPG_CLOSE || *mode > ENC_QPG_SASM_TAB)
         return -1;
-#if !defined(PLATFORM_T23)
-    /* T21: the eprc controller of OpenIMP has no QP-generation modes (the
-     * OEM i264e parameter 15); only CLOSE, what it does, is accepted.
-     * Macroblock rate control is IMP_Encoder_SetMbRC. */
-    if (*mode != ENC_QPG_CLOSE)
-        return -1;
-#endif
     pthread_mutex_lock(&ch->lock);
     ch->qpg_mode = *mode;
 #if defined(PLATFORM_T23)
@@ -3960,10 +3989,24 @@ int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
 {
+#if defined(PLATFORM_T21)
+    P2EncoderChannel *ch;
+
+    if (!p2_valid_channel(channel) || !mode)
+        return -1;
+    ch = &p2_channels[channel];
+    if (!ch->created)
+        return 0;               /* vendor: nothing written */
+    pthread_mutex_lock(&ch->lock);
+    *mode = ch->qpg_mode;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !mode)
@@ -3972,6 +4015,7 @@ int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
     *mode = ch->qpg_mode;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 #endif
 

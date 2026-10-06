@@ -29,6 +29,9 @@ int IMP_Encoder_SetSuperFrameCfg(int, const IMPEncoderSuperFrmCfg *);
 int IMP_Encoder_GetSuperFrameCfg(int, IMPEncoderSuperFrmCfg *);
 int IMP_Encoder_SetH264TransCfg(int, const IMPEncoderH264TransCfg *);
 int IMP_Encoder_SetQpgMode(int, const IMPEncoderQpgMode *);
+int IMP_Encoder_GetQpgMode(int, IMPEncoderQpgMode *);
+int IMP_Encoder_SetH265TransCfg(int, const IMPEncoderH265TransCfg *);
+int IMP_Encoder_GetH265TransCfg(int, IMPEncoderH265TransCfg *);
 int IMP_Encoder_SetJpegeQl(int, IMPEncoderJpegeQl *);
 int IMP_Encoder_GetJpegeQl(int, IMPEncoderJpegeQl *);
 
@@ -194,11 +197,36 @@ int main(void)
     tr.chroma_qp_index_offset = 3;
     CHECK(IMP_Encoder_SetH264TransCfg(0, &tr) == -1);
 
-    /* QpgMode: CLOSE only */
+    /* QpgMode (vendor T21): any value is kept and read back, no range
+     * check; a channel that was not created answers 0 and keeps nothing */
     qpg = ENC_QPG_CLOSE;
     CHECK(IMP_Encoder_SetQpgMode(0, &qpg) == 0);
     qpg = ENC_QPG_SAS;
-    CHECK(IMP_Encoder_SetQpgMode(0, &qpg) == -1);
+    CHECK(IMP_Encoder_SetQpgMode(0, &qpg) == 0);
+    qpg = (IMPEncoderQpgMode)77;
+    CHECK(IMP_Encoder_SetQpgMode(1, &qpg) == 0);
+    qpg = ENC_QPG_CLOSE;
+    CHECK(IMP_Encoder_GetQpgMode(0, &qpg) == 0 && qpg == ENC_QPG_SAS);
+    CHECK(IMP_Encoder_GetQpgMode(1, &qpg) == 0 && (int)qpg == 77);
+    qpg = ENC_QPG_SAS;
+    CHECK(IMP_Encoder_SetQpgMode(5, &qpg) == 0);
+    qpg = ENC_QPG_CLOSE;
+    CHECK(IMP_Encoder_GetQpgMode(5, &qpg) == 0 && qpg == ENC_QPG_CLOSE);
+    CHECK(IMP_Encoder_SetQpgMode(0, NULL) == -1 &&
+          IMP_Encoder_SetQpgMode(99, &qpg) == -1);
+
+    /* H265TransCfg (vendor T21): checked and dropped, Get returns zeros */
+    {
+        IMPEncoderH265TransCfg h265 = { 99, -99 };
+
+        CHECK(IMP_Encoder_SetH265TransCfg(0, &h265) == 0);
+        CHECK(IMP_Encoder_SetH265TransCfg(5, &h265) == 0);
+        CHECK(IMP_Encoder_SetH265TransCfg(0, NULL) == -1);
+        CHECK(IMP_Encoder_SetH265TransCfg(99, &h265) == -1);
+        CHECK(IMP_Encoder_GetH265TransCfg(0, &h265) == 0 &&
+              h265.chroma_cr_qp_offset == 0 && h265.chroma_cb_qp_offset == 0);
+        CHECK(IMP_Encoder_GetH265TransCfg(0, NULL) == -1);
+    }
 
     /* JpegeQl: applied to the running codec at once (the vendor hands it to
      * its JPEG core), stored for Get; bad channel / NULL fail */
