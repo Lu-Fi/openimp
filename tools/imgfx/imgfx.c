@@ -1601,7 +1601,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
         for (x = 1; x + 1 < w; x += 2) {
             int l = 4 * p[y * w + x] - p[y * w + x - 1] - p[y * w + x + 1] - p[(y - 1) * w + x] - p[(y + 1) * w + x];
             sd += l < 0 ? -l : l; nd++;
-            if (!(x & 3) && !(y & 3)) { sy += p[y * w + x]; ny++; }
+            if ((x & 3) == 1 && !(y & 3)) { sy += p[y * w + x]; ny++; }
         }
     for (y = 2; y < h / 2; y += 2)
         for (x = 0; x + 1 < w; x += 4) {
