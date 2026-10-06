@@ -2473,12 +2473,19 @@ int IMP_Encoder_PollingModuleStream(uint32_t *channel_bitmap,
     uint32_t ready = 0;
     int channel;
 
+    uint32_t want;
+
     if (!channel_bitmap)
         return -1;
+    /* the bitmap goes in as the channels to watch and comes out as the ready
+     * ones; an empty request watches every channel */
+    want = *channel_bitmap ? *channel_bitmap : ~0u;
     EncoderInit();
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
         P2EncoderChannel *ch = &p2_channels[channel];
 
+        if (!(want & (1u << channel)))
+            continue;
         pthread_mutex_lock(&ch->lock);
         if (ch->raw_stream)
             ready |= 1u << channel;
@@ -2489,6 +2496,8 @@ int IMP_Encoder_PollingModuleStream(uint32_t *channel_bitmap,
             P2EncoderChannel *ch = &p2_channels[channel];
             int active;
 
+            if (!(want & (1u << channel)))
+                continue;
             pthread_mutex_lock(&ch->lock);
             active = ch->created && ch->registered && ch->receiving;
             pthread_mutex_unlock(&ch->lock);
@@ -2950,6 +2959,14 @@ int IMP_Encoder_SetMaxStreamCnt(int channel, int count)
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    /* Stock: the count is taken when the channel is created; on a created
+     * channel the call logs an error and fails (any codec, JPEG included). */
+    if (ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+#endif
     if (ch->codec &&
         AL_Codec_Encode_SetStreamBufferCount(ch->codec, count) != 0) {
         pthread_mutex_unlock(&ch->lock);
