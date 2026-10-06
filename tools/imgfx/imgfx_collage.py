@@ -162,14 +162,16 @@ def process(d, extra=()):
         if st[0] == "N/A":
             flags.append("N/A")
         if st[1] is not None and st[1] < 0:
-            flags.append("RET<0")
+            flags.append("expected-EINVAL" if "[expect-EINVAL" in st[2] else "RET<0")
         if p[3]:
             flags.append(p[3])
         if st[0] == "ok" and st[1] is None:
             flags.append("ret?")
         if (diff is not None and st[0] in ("ok", "?") and st[1] in (None, 0) and not changed and not detailed
                 and not any(case.startswith(k) for k in NO_CHANGE_OK)):
-            if "[stock-noop" in st[2]:
+            if "[expect-EINVAL" in st[2]:
+                pass
+            elif "[stock-noop" in st[2]:
                 flags.append("stock-noop")      # the tool says the vendor kernel has no effect either
             elif "[expect-same" in st[2]:
                 flags.append("expected-same")   # e.g. csc mode 0 = the default preset

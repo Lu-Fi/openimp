@@ -39,7 +39,7 @@ before, so cases are independent. No encoder is used (raw frames from
 base, base-end; ISP flip h/v/hv (+ SetHVFLIP enum on T23/T31, SetISPHVflip on
 T10/T20, sensor flip on T23/T41); front crop mid50/topleft50 (T10/T20/T21 use
 the OpenIMP crop extension, T23/T31 vendor `SetFrontCrop`), FS ch1 scaler crop
-(`fs1-crop-*`), ePTZ AutoZoom ch1 (T23/T31/T41); brightness, contrast,
+(`fs1-crop-*`: T21/T23 scale ch1 2x first, then crop the output size; on T23 a ch1 scaler locked by an earlier session makes the driver refuse it with -EINVAL), ePTZ AutoZoom ch1 (T23/T31/T41); brightness, contrast,
 saturation, sharpness low/high, hue and `bcsh-combo` (T23/T31/T41); gamma
 steep/linear; AE compensation low/high (T10/T20/T23/T31; T41 via
 `AeScenceAttr` incl. HLC/BLC); manual exposure short/long (`SetExpr`, T41

@@ -477,7 +477,9 @@ static int c_fs1crop(int ph, int arg, char *info, size_t n)
     IMP_FrameSource_GetChnAttr(1, &old);
     a = old;
     a.crop.enable = 1;
-#ifdef PLATFORM_T21
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
+    /* T21/T23: the FS crop is applied to the scaler output (the crop window is
+     * in output pixels): scale 2x first, then crop the SUB_W x SUB_H window */
     a.scaler.enable = 1;
     a.scaler.outwidth = SUB_W * 2; a.scaler.outheight = SUB_H * 2;
     a.crop.left = arg ? 0 : SUB_W / 2; a.crop.top = arg ? 0 : SUB_H / 2;
@@ -985,7 +987,14 @@ static int c_fcrop(int ph, int arg, char *info, size_t n)
     fc.fcrop_width = (g_sw / 2) & ~1; fc.fcrop_height = (g_sh / 2) & ~1;
     r = IMP_ISP_Tuning_SetFrontCrop(&fc);
     memset(&g, 0, sizeof(g)); IMP_ISP_Tuning_GetFrontCrop(&g);
-    snprintf(info, n, "en=%d %u,%u %ux%u", g.fcrop_enable, g.fcrop_left, g.fcrop_top, g.fcrop_width, g.fcrop_height);
+    snprintf(info, n, "en=%d %u,%u %ux%u%s", g.fcrop_enable, g.fcrop_left, g.fcrop_top, g.fcrop_width, g.fcrop_height,
+#ifdef PLATFORM_T23
+             /* imgfx ch0 = sensor size: a 50 % window would need a 2x upscale, which the MSCA cannot do.  The driver
+              * refuses it with -EINVAL (open-tx-isp claude/release-t23-crop) instead of stalling every channel.
+              * Valid windows: tools/cropt (small main channel). */
+             r ? " [expect-EINVAL: ch0 would upscale]" :
+#endif
+             "");
     return r;
 }
 #endif
@@ -1723,6 +1732,7 @@ static void wait_settled(const char *what, int min_ms)
 {
     double h[SETTLE_N][4];
     int n = 0, ms = 0, ok = 0;
+    memset(h, 0, sizeof(h));   /* no frame at all (timeout): print 0, not stack garbage */
     unsigned wr = 0, wbg = 0;
 
     while (ms < 30000) {
@@ -1745,6 +1755,7 @@ static void wait_settled(const char *what, int min_ms)
 #ifndef PLATFORM_T41
     { IMPISPWB wb; memset(&wb, 0, sizeof(wb)); if (HAVE(IMP_ISP_Tuning_GetWB)) { IMP_ISP_Tuning_GetWB(&wb); wr = wb.rgain; wbg = wb.bgain; } }
 #endif
+    if (n == 0) { say("[R] settle %s TIMEOUT after %d ms (no picture)\n", what, ms); return; }
     say("[R] settle %s %s after %d ms (Y %.1f U %.1f V %.1f detail %.2f, awb r=%u b=%u)\n", what, ok ? "stable" : "TIMEOUT", ms,
         h[n - 1 > 0 ? n - 1 : 0][0], h[n - 1 > 0 ? n - 1 : 0][1], h[n - 1 > 0 ? n - 1 : 0][2], h[n - 1 > 0 ? n - 1 : 0][3], wr, wbg);
 }
