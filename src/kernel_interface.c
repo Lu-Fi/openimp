@@ -1136,7 +1136,7 @@ static VBMPool *vbm_retired[MAX_VBM_POOLS];
 static size_t vbm_rmem_bytes[MAX_VBM_POOLS];
 
 /*
- * T21/T20: the rmem block of a pool DisableChn destroyed, kept for the
+ * T21/T23: the rmem block of a pool DisableChn destroyed, kept for the
  * channel's next pool (under vbm_pool_lock[chn]; phys_addr 0: none).
  * timps disables an idle FrameSource channel and enables it again when a
  * client connects.  On the PC420 (23 MiB rmem, 1080p + 360p) freeing the
@@ -1145,8 +1145,13 @@ static size_t vbm_rmem_bytes[MAX_VBM_POOLS];
  * contiguous block for it.  The next pool of the same size takes the block
  * back; one of another size frees it first; DestroyChn frees it.
  * vbm_rmem_bytes keeps counting it.  OPENIMP_VBM_PARK=0 frees at once.
+ * T23: the open tx-isp driver keeps a stopped MSCA output enabled while
+ * the input runs (stock behaviour, msca_keep_enabled=2); after STREAMOFF it
+ * may still write into the last addresses it was given.  Parking keeps
+ * those pages owned by the channel until its next pool takes them back or
+ * DestroyChn frees them, instead of handing them to another allocation.
  */
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
 static IMPDMABufferInfo vbm_parked[MAX_VBM_POOLS];
 
 static int vbm_park_enabled(void)
@@ -1165,7 +1170,7 @@ static int vbm_park_enabled(void)
 /* Frees chn's parked block, if any.  Caller holds vbm_pool_lock[chn]. */
 static void vbm_free_parked(int chn)
 {
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
     if (vbm_parked[chn].phys_addr) {
         DMA_FreePhys(vbm_parked[chn].phys_addr);
         memset(&vbm_parked[chn], 0, sizeof(vbm_parked[chn]));
@@ -1181,7 +1186,7 @@ static void vbm_free_parked(int chn)
  * Caller holds vbm_pool_lock[chn]. */
 static int vbm_take_parked(int chn, int size, IMPDMABufferInfo *info)
 {
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
     if (!vbm_parked[chn].phys_addr)
         return -1;
     if (vbm_parked[chn].size != (uint32_t)size) {
@@ -1687,7 +1692,7 @@ static int vbm_destroy_pool(int chn, int park) {
     }
 
     /* Free allocated memory, or park it (see vbm_parked) */
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
     park = park && pool->pool_id < 0 && pool->phys_base != 0 &&
            vbm_park_enabled();
     if (park) {

@@ -2674,9 +2674,11 @@ int IMP_FrameSource_DisableChn(int chnNum)
     fs_stop_worker(chnNum, ctx);
 #endif
     VBMFlushFrame(chnNum);
-    /* Close before the pool memory goes back to the allocator: the ISP
-     * driver drops the buffer addresses still queued in its hardware FIFO
-     * on release, and freed pool pages are handed out again. */
+    /* Close before the pool memory goes back to the allocator: freed pool
+     * pages are handed out again.  The open T23 driver waits at STREAMOFF
+     * until the MSCA consumed the queued addresses (stock drain wait), but
+     * keeps the output enabled while the input runs; the pool is parked
+     * (T21/T23, see vbm_parked in kernel_interface.c), not freed. */
     fs_close_chn_fd(chnNum, ctx);
     VBMDestroyPoolParked(chnNum);
 
