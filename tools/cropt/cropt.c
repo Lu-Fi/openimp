@@ -7,7 +7,8 @@
  * (raw NV12, OUTDIR/<case>.ch<N>.nv12).  A frame that does not arrive within 3 s prints NOFRAME.
  * Valid = the window is at least as large as every channel output (the MSCA cannot upscale);
  * invalid windows must return an error and keep the pictures flowing.
- * Env: CROPT_CASES=name,name (subset).  Stop the streamer first.
+ * Env: CROPT_CASES=name,name (subset), CROPT_CH0=WxH / CROPT_CH1=WxH (channel sizes, default W/2xH/2 and
+ *      320x180; T10/T20 "shrink only": use CROPT_CH0=<sensor size> CROPT_CH1=640x360), CROPT_STOP=1 (exit 3 at the first stall).  Stop the streamer first.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -22,17 +23,27 @@
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+/* OpenIMP extension (not in the vendor headers): 20 bytes, enable in the low byte */
+typedef struct { unsigned char fcrop_enable; unsigned int fcrop_top, fcrop_left, fcrop_width, fcrop_height; } IMPISPFrontCrop;
+int IMP_ISP_Tuning_SetFrontCrop(IMPISPFrontCrop *);
+int IMP_ISP_Tuning_GetFrontCrop(IMPISPFrontCrop *);
+#endif
 __attribute__((weak)) int IMP_Log_Get_Option(void) { return 0; }
 __attribute__((weak)) void imp_log_fun(int level, const char *tag, const char *fmt, ...) { (void)level; (void)tag; (void)fmt; }
 
 static int grab(int ch, const char *path)
 {
-    int t;
+    int t, got = 0;
     time_t t0 = time(NULL);
     for (t = 0; t < 40; t++) {
         IMPFrameInfo *fr = NULL;
         if (IMP_FrameSource_GetFrame(ch, &fr) == 0 && fr) {
             unsigned w = fr->width, h = fr->height, ah = (h + 15) & ~15u;
+            if (++got < 4) {   /* the first frames may predate the crop: save the 4th */
+                IMP_FrameSource_ReleaseFrame(ch, fr);
+                continue;
+            }
             const unsigned char *p = (const unsigned char *)(uintptr_t)fr->virAddr;
             FILE *f = fopen(path, "wb");
             if (f) { fwrite(p, 1, w * h, f); fwrite(p + (size_t)w * ah, 1, w * h / 2, f); fclose(f); }
@@ -51,7 +62,7 @@ typedef struct { const char *name; int l, t, w, h; int valid; } Case;
 
 int main(int argc, char **argv)
 {
-    int W, H, i, bad = 0;
+    int W, H, i, bad = 0, c0w, c0h, c1w, c1h;
     IMPSensorInfo sn;
     IMPFSChnAttr f0, f1;
     char path[600];
@@ -70,16 +81,22 @@ int main(int argc, char **argv)
         IMP_System_Init() < 0 || IMP_ISP_EnableTuning() < 0) { printf("[E] ISP init\n"); return 1; }
     IMP_ISP_Tuning_SetSensorFPS(15, 1);
 
+    {
+        const char *e0 = getenv("CROPT_CH0"), *e1 = getenv("CROPT_CH1");
+        c0w = W / 2; c0h = H / 2; c1w = 320; c1h = 180;
+        if (e0) sscanf(e0, "%dx%d", &c0w, &c0h);
+        if (e1) sscanf(e1, "%dx%d", &c1w, &c1h);
+    }
     memset(&f0, 0, sizeof(f0));
-    f0.picWidth = W / 2; f0.picHeight = H / 2; f0.pixFmt = PIX_FMT_NV12;
+    f0.picWidth = c0w; f0.picHeight = c0h; f0.pixFmt = PIX_FMT_NV12;
     f0.outFrmRateNum = 15; f0.outFrmRateDen = 1; f0.nrVBs = 2; f0.type = FS_PHY_CHANNEL;
-    f0.scaler.enable = 1; f0.scaler.outwidth = W / 2; f0.scaler.outheight = H / 2;
-    f1 = f0; f1.picWidth = 320; f1.picHeight = 180; f1.scaler.outwidth = 320; f1.scaler.outheight = 180;
+    f0.scaler.enable = !(c0w == W && c0h == H); f0.scaler.outwidth = c0w; f0.scaler.outheight = c0h;   /* no scaler on a full-size channel (T10/T20 ch0) */
+    f1 = f0; f1.picWidth = c1w; f1.picHeight = c1h; f1.scaler.outwidth = c1w; f1.scaler.outheight = c1h;
     if (IMP_FrameSource_CreateChn(0, &f0) < 0 || IMP_FrameSource_CreateChn(1, &f1) < 0) { printf("[E] CreateChn\n"); return 1; }
     IMP_FrameSource_SetFrameDepth(0, 1); IMP_FrameSource_SetFrameDepth(1, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { printf("[E] EnableChn\n"); return 1; }
     sleep(4);
-    printf("[T] cropt sensor %dx%d, ch0 %dx%d ch1 320x180\n", W, H, W / 2, H / 2);
+    printf("[T] cropt sensor %dx%d, ch0 %dx%d ch1 %dx%d\n", W, H, c0w, c0h, c1w, c1h);
 
     {
         int w75 = (W * 3 / 4) & ~1, h75 = (H * 3 / 4) & ~1, l8 = (W / 8) & ~1, t8 = (H / 8) & ~1;
@@ -101,26 +118,45 @@ int main(int argc, char **argv)
             { "v75-center-again", l8, t8, w75, h75, 1 },
             { "final-off",       0, 0, 0, 0, 1 },
         };
-        for (i = 0; i < (int)(sizeof(cs) / sizeof(cs[0])); i++) {
+        Case wc[64];
+        int ncs = (int)(sizeof(cs) / sizeof(cs[0]));
+        Case *list = cs;
+        const char *ew = getenv("CROPT_WIN");   /* "l,t,w,h;l,t,w,h": run only these (all expected valid) */
+
+        if (ew) {
+            char *dup = strdup(ew), *tok, *sp = NULL;
+            static char names[64][40];
+            ncs = 0;
+            wc[ncs++] = cs[0];
+            for (tok = strtok_r(dup, ";", &sp); tok && ncs < 63; tok = strtok_r(NULL, ";", &sp)) {
+                int l, t, w, h;
+                if (sscanf(tok, "%d,%d,%d,%d", &l, &t, &w, &h) != 4) continue;
+                snprintf(names[ncs], sizeof(names[ncs]), "w%d_%d_%dx%d", l, t, w, h);
+                wc[ncs].name = names[ncs]; wc[ncs].l = l; wc[ncs].t = t; wc[ncs].w = w; wc[ncs].h = h; wc[ncs].valid = 1;
+                ncs++;
+            }
+            list = wc;
+        }
+        for (i = 0; i < ncs; i++) {
             IMPISPFrontCrop fc, g;
             int r, e;
-            if (only && !strstr(only, cs[i].name)) continue;
+            if (!ew && only && !strstr(only, list[i].name)) continue;
             memset(&fc, 0, sizeof(fc)); memset(&g, 0, sizeof(g));
-            fc.fcrop_enable = cs[i].w ? 1 : 0;
-            fc.fcrop_left = cs[i].l; fc.fcrop_top = cs[i].t; fc.fcrop_width = cs[i].w; fc.fcrop_height = cs[i].h;
+            fc.fcrop_enable = (list[i].valid && !list[i].w) ? 0 : 1;
+            fc.fcrop_left = list[i].l; fc.fcrop_top = list[i].t; fc.fcrop_width = list[i].w; fc.fcrop_height = list[i].h;
             errno = 0;
             r = IMP_ISP_Tuning_SetFrontCrop(&fc);
             e = errno;
             IMP_ISP_Tuning_GetFrontCrop(&g);
-            printf("[R] %s %s set=%d(errno %d) get=en%d %u,%u %ux%u |", cs[i].name, cs[i].valid ? "VALID" : "INVALID", r, e,
+            printf("[R] %s %s set=%d(errno %d) get=en%d %u,%u %ux%u |", list[i].name, list[i].valid ? "VALID" : "INVALID", r, e,
                    g.fcrop_enable, g.fcrop_left, g.fcrop_top, g.fcrop_width, g.fcrop_height);
-            usleep(800000);
-            snprintf(path, sizeof(path), "%s/%s.ch0.nv12", argv[5], cs[i].name);
+            usleep(1500000);
+            snprintf(path, sizeof(path), "%s/%s.ch0.nv12", argv[5], list[i].name);
             if (grab(0, path) < 0) bad++;
-            snprintf(path, sizeof(path), "%s/%s.ch1.nv12", argv[5], cs[i].name);
+            snprintf(path, sizeof(path), "%s/%s.ch1.nv12", argv[5], list[i].name);
             if (grab(1, path) < 0) bad++;
-            printf(" -> %s\n", (cs[i].valid ? r == 0 : r != 0) ? "OK" : "UNEXPECTED");
-            if (getenv("CROPT_STOP") && cs[i].valid && r == 0 && bad) { printf("[T] stalled after %s\n", cs[i].name); return 3; }
+            printf(" -> %s\n", (list[i].valid ? r == 0 : r != 0) ? "OK" : "UNEXPECTED");
+            if (getenv("CROPT_STOP") && list[i].valid && r == 0 && bad) { printf("[T] stalled after %s\n", list[i].name); return 3; }
         }
     }
     printf("[T] done noframe=%d\n", bad);
