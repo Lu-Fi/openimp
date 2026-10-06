@@ -3907,7 +3907,7 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
      * (x of p0/p1) and +16/+24 (y) sorted and divided by 16}, which
      * i264e_reconfig_roi_set adopts with the next picture.  The T10/T20
      * command list programs it into the EFE ROI registers (0x40044..);
-     * the T21 libimp never does, OpenIMP only with OPENIMP_T21_ROI=1.
+     * the T21 libimp never does, OpenIMP does (OPENIMP_T21_ROI=0: off).
      * Non-H.264 channels: nothing, success (T21 OEM). */
     if (ch->codec_type != IMP_ENC_TYPE_AVC)
         return 0;

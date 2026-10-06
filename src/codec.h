@@ -133,8 +133,7 @@ int AL_Codec_Encode_SetMbRC(void *codec, int enable);
 /* IMP_Encoder_SetChnColor2Grey on the native Helix/NVPU encoder (T20,
  * T21, T10): grey chroma from the next IDR on */
 int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
-/* IMP_Encoder_SetChnROI on the native Helix/NVPU encoder (T20, T10; T21
- * with OPENIMP_T21_ROI=1): the i264e ROI table entry (t30/helix_roi.h)
+/* IMP_Encoder_SetChnROI on the native Helix/NVPU encoder (T20, T10, T21): the i264e ROI table entry (t30/helix_roi.h)
  * of region index (0..7), from the next picture on */
 int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
                            const uint8_t entry[7]);

@@ -5,6 +5,10 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-07 (branch `claude/roi-all`, not part of the first release)
+
+- T21: `IMP_Encoder_SetChnROI` is effective by default (beyond vendor: the stock T21 libimp stores the regions but never programs them). With no region set the command list is unchanged; `OPENIMP_T21_ROI=0` switches it off. Device-tested on the PC420 (jxf23, 1920x1080, FixQP 30, one 320x320 region): absolute QP 51 is a visible block, QP 15 stays clean, delta +/-15 works, live changes (P frames, no IDR) work. FixQP bitrate 657 kbit/s without ROI, 340 with QP 51, 504 with QP 15; CBR keeps the target (the bits move between the regions). Test tool `tools/roitest`.
+
 ## 2026-10-06
 
 - T31: `IMP_FrameSource_GetFrame`/`SnapFrame` wait up to 2 s like the vendor libimp (T31 1.1.6 header: default timeout 2 s) instead of failing at once (branch `claude/release-quickwins`, host-tested only). The T31 encoder pulls with `VBMGetFrame` and keeps its own deadline. T41 already waits (about 1 s of DQBUF retries, `openimp_p1.c`) and is unchanged.

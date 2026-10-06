@@ -73,8 +73,17 @@ changes the PPS alone.
   before each picture.
 - T10/T20: `T10_H264_BuildDescriptor` / `T30_H264_BuildDescriptor`
   (`PLATFORM_T20`) program the regions as the OEM does.
-- T21: the regions are programmed only with `OPENIMP_T21_ROI=1`. This goes
-  beyond the vendor; by default T21 behaves like the stock library.
+- T21: the regions are programmed by default (beyond the vendor: the stock
+  library never does). With no region set the table is all zero and the
+  command list is the stock one; `OPENIMP_T21_ROI=0` disables it. Device
+  test (PC420 jxf23 1920x1080, FixQP 30, one region 320x320 at 240,560,
+  `tools/roitest`): absolute QP 51 blurs exactly the region (rmse against
+  the reference 7.7 inside, 2.4 outside), QP 15 stays clean, delta +15 / -15
+  work, live changes on P frames work. FixQP stream: 657 kbit/s without
+  ROI, 340 with QP 51, 504 with QP 15; IDR 74 / 70 / 86 KB. CBR holds the
+  target bit rate (P frames 4.1 KB with and without ROI), the ROI only
+  moves the bits. The region corners are rounded down to macroblocks, x1/y1
+  are the last macroblock (inclusive).
 - Chroma QP offset (T20, T21): it is taken over at the next IDR, into the
   PPS and 0x40120 together. T20 uses the generated PPS. T21 rewrites the two
   se(v) fields `chroma_qp_index_offset` and `second_chroma_qp_index_offset`
@@ -88,9 +97,8 @@ changes the PPS alone.
 Tests: `tests/t30/helix_encoder_test.c` `test_roi_chroma` (register words,
 PPS parse) and `tests/t30/p2_t1x_test.c`. The PPS of the dumped streams
 (`HELIX_TEST_DUMP=file`) parses with `ffmpeg -bsf:v trace_headers`.
-Hardware effect, open: whether x1/y1 are inclusive (the OEM `IMPRect` p1 is
-the bottom-right pixel, which suggests inclusive), and what a relative QP
-does at the 6-bit field limits.
+Hardware effect: x1/y1 are inclusive macroblocks (T21 measured). Open: what
+a relative QP does at the 6-bit field limits.
 
 On-device test without a streamer that calls the API:
 `OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..."` (pixel corners p0/p1;

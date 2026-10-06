@@ -2540,14 +2540,15 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #endif
 #if !defined(PLATFORM_T23)
     /* T10/T20: the OEM programs the ROI regions in every command list.
-     * T21: the 1.0.33 libimp never does (its ROI slots only carry the eprc
-     * QP-map modes, which zero them by default), so the regions stay off
-     * unless OPENIMP_T21_ROI=1 (docs/T1X_ROI_CHROMA.md). */
+     * T21: the 1.0.33 libimp never does (beyond vendor): OpenIMP programs
+     * them like T20.  With no ROI set the table is all zero and the command
+     * list is unchanged.  OPENIMP_T21_ROI=0 switches it off
+     * (docs/T1X_ROI_CHROMA.md). */
 #if defined(HELIX_T21_SYNTAX)
     {
         const char *roi_env = getenv("OPENIMP_T21_ROI");
 
-        encoder->roi_hw = roi_env && roi_env[0] == '1';
+        encoder->roi_hw = !(roi_env && roi_env[0] == '0');
     }
 #elif defined(PLATFORM_T20)
     encoder->roi_hw = 1;

@@ -1496,8 +1496,8 @@ static int32_t pps_chroma_offset(int32_t *second)
 
 /* IMP_Encoder_SetChnROI (OpenIMP_T30_HelixSetRoi) and
  * IMP_Encoder_SetH264TransCfg (HWEncoderParams.chroma_qp_offset): the OEM
- * EFE ROI words in every command list (T10/T20; T21 only with
- * OPENIMP_T21_ROI=1, T30: none), the chroma QP offset in the PPS and
+ * EFE ROI words in every command list (T10/T20, T21 unless
+ * OPENIMP_T21_ROI=0; T30: none), the chroma QP offset in the PPS and
  * 0x40120 from the next IDR on (T10: neither) */
 static void test_roi_chroma(int t10)
 {
@@ -1538,7 +1538,7 @@ static void test_roi_chroma(int t10)
     roi_hw = 1;
     chroma_hw = !t10;
 #elif defined(PLATFORM_T21)
-    roi_hw = 0;
+    roi_hw = 1;                 /* beyond vendor; OPENIMP_T21_ROI=0: off */
     chroma_hw = 1;
 #else
     roi_hw = 0;
@@ -1596,13 +1596,12 @@ static void test_roi_chroma(int t10)
     assert(info.idr && pps_chroma_offset(&second) == 0 && second == 0);
     OpenIMP_T30_HelixDestroy(encoder);
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
-    /* OPENIMP_T21_ROI=1: the regions reach the T21 command list */
-    setenv("OPENIMP_T21_ROI", "1", 1);
+    /* OPENIMP_T21_ROI=0: the regions stay out of the T21 command list */
+    setenv("OPENIMP_T21_ROI", "0", 1);
     encoder = create(640, 360, 25, 4);
     assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
     assert(encode(encoder, &info) == 0 && info.idr);
-    assert(list_roi[2] == 0x06030502u && list_roi[9] == 0x09090707u &&
-           (list_roi[0] & 0xffu) == 0x51u);
+    assert(list_roi[0] == 0u && list_roi[2] == 0u && list_roi[9] == 0u);
     OpenIMP_T30_HelixDestroy(encoder);
     unsetenv("OPENIMP_T21_ROI");
 #endif
