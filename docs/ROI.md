@@ -5,8 +5,8 @@
 | T10/T20 | `IMP_Encoder_SetChnROI` (8 regions, pixel corners) | works, see `T1X_ROI_CHROMA.md` |
 | T21 | the same | works by default since this branch (beyond vendor), device-tested |
 | T23 | the same, passed to the vendor i264e (param 2) | code unchanged, not tested (below) |
-| T40/T41 | `IMP_Encoder_Set/GetChnRoiAttr` (10 windows, delta QP) | implemented, **experimental, off by default**: the hardware did not react |
-| T31 | none in the vendor library | not done |
+| T40/T41 | `IMP_Encoder_Set/GetChnRoiAttr` (10 windows, delta QP) | implemented, **experimental, off by default**; the missing enable bit is now set (below), not yet device-tested |
+| T31 | none in the vendor library; OpenIMP: `IMP_Encoder_Set/GetChnRoiAttr` (T41 API) | works by default (beyond vendor), device-tested |
 
 ## T21 (device-tested)
 
@@ -50,10 +50,67 @@ could not be made.
 IDR pictures did not respond to the table in any variant. `SetChnMapRoi` is
 not implemented.
 
-## T31
+**Probable cause, found with the T31 (code only on T41):** the AVPU reads the
+table only when the command enables it. In the vendor T41 1.2.6 `encode1`
+copies `AL_OPT_USE_QP_TABLE` (picture option bit 0) to SliceParam+0x63 and
+the "relative" flag to SliceParam+0x62 (offsets from the SliceParam base
+pic+0x248, matched against the neighbouring fields), and
+`SliceParamToCmdRegsEnc1` (0xe9d68) packs them into **cmd[152] bit 0 and
+bit 3**. OpenIMP's T41 builder writes cmd[152] = 0xf6 (both clear). With
+`OPENIMP_T41_ROI=1` and a window set, OpenIMP now ORs 0x9 into cmd[152].
+Not tested on a T41 yet; the header-word hang above is unrelated (do not
+write the EP2 header). On the vendor side the 32-bit entries with byte 3 =
+0x20 suggest that the vendor sets the bit for every picture.
 
-No ROI in the vendor library (only the Allegro `AL_RoiMngr_*` inside it).
-Not attempted: no working family-B reference on the AVPU (see T41).
+## T31 (device-tested, beyond vendor)
+
+The vendor T31 libimp 1.1.6 has no ROI API, but its Allegro core shows how
+the AVPU takes a macroblock QP table (HLIL in `docs/re/libimp.so_hlil.txt`):
+
+- `AL_Common_Encoder_Process` sets picture option bit 0
+  (`AL_OPT_USE_QP_TABLE`) when a QP buffer comes with the frame and uses that
+  buffer as EP2; otherwise EP2 is `AL_IntermMngr_GetEp2Addr` (interm buffer
+  + EP1 + WPP), which is OpenIMP's `cmd[0x23]`.
+- `encode1` copies the picture option bit 0 to SliceParam+0x6c and channel
+  option bit 0 to SliceParam+0x6b; `SliceParamToCmdRegsEnc1` packs them into
+  **cmd[9] bit 25 (use the table) and bit 24 (table relative)**. The vendor
+  watermark path (`embed_watermark`) sets both. Without bit 25 the AVPU
+  ignores EP2's table; OpenIMP's command template (cmd[9] = 0xfc010000 /
+  0xfc000000) had both clear.
+- table layout (`AL_GetAllocSizeEP2`, `AL_RoiMngr_FillBuff`): the 0x40-byte
+  EP2 header (auto-QP seed and QP range, written by `avpu_t40_init_ep2`;
+  zeroing it gives QP 0 pictures, 33 Mbit/s), then **one byte per 16x16
+  macroblock**, raster order: bits 5:0 QP (6-bit two's complement when
+  relative), bit 6 force intra, bit 7 force skip.
+
+Measured on the garage camera (sc4336p, 2560x1440): bit 25 alone = absolute
+table (an entry 0 is QP 0), bit 24 alone = no effect, both = relative table.
+OpenIMP always uses the relative table. An absolute window (`mode =
+IMP_ROI_QPMODE_FIXED_QP`, QP 0..51) is written as the difference to the
+picture QP of the last command and rewritten when that QP changes: exact under
+FixQP, one picture late under CBR/VBR. Delta windows take -32..31. A window
+covers every macroblock it touches; with overlapping windows the higher index
+wins. The table is rewritten (and flushed) only when the windows or, with an
+absolute window, the picture QP change; with no window the command and EP2
+are as before. `OPENIMP_T31_ROI=0` refuses `SetChnRoiAttr`. H.264 only.
+
+Results (`tools/roitest`, night/IR, region 768x512 at (896,464), 10 fps):
+
+| run | IDR bytes | P bytes | kbit/s |
+|---|---|---|---|
+| FixQP 30, no ROI | 176 K | 2.5 K | 1124 |
+| FixQP 30, delta +20 | 157 K | 2.2 K | 1410 (3 IDRs) |
+| FixQP 30, absolute 51 | 156 K | 2.2 K | 1403 (3 IDRs) |
+| FixQP 30, absolute 10 / delta -20 | 247 K | 44 K | 4550 |
+| FixQP 30, 2 windows (1280x720 delta +25, 1280x720 absolute 51) | 98 K | 1.2 K | 843 |
+| CBR 1 Mbit/s, no ROI / absolute 45 / delta +20 | 119 / 92 / 94 K | | 1336 / 911 / 1138 |
+
+The decoded pictures show the region visibly blurred/blocky at +20 / 51 and
+the rest unchanged (collages local only). A change on P pictures without IDR
+works (P frames 2.7 K to 2.5 K). Whole-picture offsets are not limited to
+the channel QP range (CBR +31: 82 kbit/s, -32: 9.9 Mbit/s; afterwards CBR
+needs a few seconds to recover). Stability: 8 live changes in one stream,
+streamer restarted, 0 oops.
 
 ## T23 (code only)
 

@@ -3678,7 +3678,7 @@ int IMP_Encoder_SetChnQp(int channel, int qp_value)
     return AL_Codec_Encode_SetQp(p2_channels[channel].codec, &qp);
 }
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
 /* Vendor T41 1.2.6 IMP_Encoder_SetChnRoiAttr / GetChnRoiAttr: the windows
  * go into the macroblock QP table of the AVC encoder from the next picture
  * on (src/t40/codec-t40.c avpu_t41_roi_apply).  H.265, absolute QP and

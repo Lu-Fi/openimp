@@ -1414,10 +1414,11 @@ int IMP_Encoder_GetChnHSkip(int encChn, IMPEncoderAttrHSkip *attr);
 
 #if defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
 /* Encoder ROI, vendor T40/T41 API (T41 1.2.6 imp_encoder.h): up to 10
- * windows in pixels, a relative QP per window (-26..25).  Absolute QP is
- * "not supported" in the vendor header and is refused here.  T31 has no ROI
+ * windows in pixels.  T41: a relative QP per window (-26..25); absolute QP
+ * is "not supported" in the vendor header and is refused.  T31 has no ROI
  * in the vendor library: there it is an OpenIMP-only extension
- * (docs/OPENIMP_BEYOND_VENDOR.md). */
+ * (docs/OPENIMP_BEYOND_VENDOR.md, docs/ROI.md) that also takes absolute QP
+ * (0..51) and relative QP -32..31. */
 #define IMP_ENC_ROI_WIN_COUNT 10
 
 typedef struct {

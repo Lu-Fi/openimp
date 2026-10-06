@@ -346,11 +346,14 @@ typedef struct ALAvpuContext {
      * holds window data (it is zeroed again when the last window goes). */
     struct {
         uint8_t enable;
+        uint8_t mode;   /* 0 relative, 1 absolute (T31) */
         int8_t qp;
         uint32_t x, y, w, h;
     } roi_win[10];
     volatile int roi_pending;
     int roi_table_on;
+    int roi_absolute;      /* T31: a window has an absolute QP */
+    uint32_t roi_base_qp;  /* T31: picture QP the absolute windows refer to */
     uint8_t *stream_header_shadow; /* optional 16 x 0x220 host-prefix shadow */
     volatile unsigned int dropped_completions;
     volatile unsigned int reported_dropped_completions;

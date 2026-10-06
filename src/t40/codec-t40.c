@@ -3285,6 +3285,125 @@ static uint32_t avpu_get_enc1_stream_part_offset(const ALAvpuContext *ctx)
     return (uint32_t)ctx->stream_buf_size - stream_part_size;
 }
 
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+/* ROI (IMP_Encoder_SetChnRoiAttr).  The T41 AVC EP2 buffer holds, after a
+ * 0x40-byte header, one 32-bit entry per macroblock in raster order:
+ * byte 0 = the relative QP (int8), byte 3 = 0x20.  Measured on a T41 running
+ * the vendor libimp 1.2.6 (windows of 40x20 and 10x6 macroblocks, 1080p):
+ * only byte 0 of the covered entries changes and the command words are the
+ * same with and without a window.  While no window is set the table stays as
+ * it always was (zero); the encoding thread rewrites it before the next
+ * picture when a window was set or cleared. */
+static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
+#if defined(PLATFORM_T31)
+/* T31 ROI (beyond vendor: the T31 libimp 1.1.6 has no ROI API).  The
+ * Allegro core in the vendor library shows the mechanism (HLIL of
+ * AL_Common_Encoder_Process, encode1, SliceParamToCmdRegsEnc1,
+ * AL_GetAllocSizeEP2, AL_RoiMngr_FillBuff):
+ *
+ *   - a picture with a QP table gets eEncOptions bit 0 (AL_OPT_USE_QP_TABLE),
+ *     encode1 copies it to SliceParam+0x6c, which SliceParamToCmdRegsEnc1
+ *     packs into cmd[9] bit 25; channel option bit 0 (SliceParam+0x6b) goes
+ *     to cmd[9] bit 24 (QP table relative).  The vendor watermark path
+ *     sets both.
+ *   - the table is the EP2 buffer (cmd[0x23]): a 0x40-byte header (auto-QP
+ *     control and QP range, avpu_t40_init_ep2, left alone), then one byte
+ *     per 16x16 macroblock
+ *     in raster order: bits 5:0 QP (6-bit two's complement when relative),
+ *     bit 6 force intra, bit 7 force skip (AL_RoiMngr_FillBuff).
+ *     AL_GetAllocSizeEP2(AVC) = align128(macroblocks) + 0x40, which OpenIMP
+ *     already allocates.
+ *
+ * Measured on the T31 (sc4336p, 2560x1440): bit 25 alone = absolute table
+ * (a 0 entry is QP 0), bit 24 alone = no effect, both = relative table.
+ * OpenIMP always uses the relative table; an absolute window is written as
+ * the difference to the picture QP of the last command (cmd[3] bits 21:16),
+ * rewritten when that QP changes, so it is exact under FixQP and follows
+ * the slice QP one picture late under CBR/VBR.  Whole-picture offsets are
+ * not limited to the channel min/max QP (CBR, +31: 82 kbit/s). */
+static int avpu_t31_roi_disabled(void)
+{
+    static int off = -1;
+
+    if (off < 0) {
+        const char *e = getenv("OPENIMP_T31_ROI");
+
+        off = e && e[0] == '0';
+    }
+    return off;
+}
+
+static void avpu_t31_roi_apply(ALAvpuContext *ctx)
+{
+    uint32_t cols, rows, i, y, x, mb;
+    uint8_t *table;
+    int any = 0, absolute = 0;
+
+    if (!ctx->roi_pending || ctx->codec_hevc || !ctx->interm_buf.map)
+        return;
+    cols = (ctx->enc_w + 15u) >> 4;
+    rows = (ctx->enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (ctx->interm_ep2_size < 0x40u + mb)
+        return;
+    table = (uint8_t *)ctx->interm_buf.map + ctx->interm_ep1_size +
+            ctx->interm_wpp_size + 0x40u;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_pending = 0;
+    /* the 0x40-byte header holds the auto-QP seed and the legal QP range
+     * (avpu_t40_init_ep2); zeroing it makes every picture QP 0 */
+    memset(table, 0, mb);
+    for (i = 0; i < 10u; i++) {
+        uint32_t x0, y0, x1, y1;
+        int d;
+
+        if (!ctx->roi_win[i].enable)
+            continue;
+        any = 1;
+        d = ctx->roi_win[i].qp;
+        if (ctx->roi_win[i].mode) {
+            absolute = 1;
+            d -= (int)ctx->roi_base_qp;
+        }
+        if (d < -32)
+            d = -32;
+        if (d > 31)
+            d = 31;
+        /* every macroblock the window touches; a later window wins */
+        x0 = ctx->roi_win[i].x >> 4;
+        y0 = ctx->roi_win[i].y >> 4;
+        x1 = (ctx->roi_win[i].x + ctx->roi_win[i].w + 15u) >> 4;
+        y1 = (ctx->roi_win[i].y + ctx->roi_win[i].h + 15u) >> 4;
+        for (y = y0; y < y1 && y < rows; y++)
+            for (x = x0; x < x1 && x < cols; x++)
+                table[y * cols + x] = (uint8_t)d & 0x3fu;
+    }
+    ctx->roi_table_on = any;
+    ctx->roi_absolute = absolute;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    LOG_CODEC("AVPU: T31 ROI QP table %s %ux%u macroblocks base QP %u",
+              any ? "set" : "cleared", cols, rows, ctx->roi_base_qp);
+    (void)avpu_flush_dma_buf(ctx->fd, "roi_table", &ctx->interm_buf,
+                             ctx->interm_ep1_size + ctx->interm_wpp_size +
+                             0x40u + mb);
+}
+
+/* After the command is built: an absolute window follows the picture QP. */
+static void avpu_t31_roi_track_qp(ALAvpuContext *ctx, const uint32_t *cmd)
+{
+    uint32_t qp = (cmd[0x03] >> 16) & 0x3fu;
+
+    if (ctx->roi_absolute && qp != ctx->roi_base_qp) {
+        pthread_mutex_lock(&avpu_roi_lock);
+        ctx->roi_base_qp = qp;
+        ctx->roi_pending = 1;
+        pthread_mutex_unlock(&avpu_roi_lock);
+    }
+}
+#endif
+
 #if defined(PLATFORM_T41)
 static int avpu_t41_rate_control_coupling_enabled(void)
 {
@@ -3459,17 +3578,8 @@ static uint32_t avpu_t41_advance_luma_offset(uint32_t current,
     return current >= step ? current - step : current + luma_size - step;
 }
 
-#if defined(PLATFORM_T41)
-/* ROI (IMP_Encoder_SetChnRoiAttr).  The T41 AVC EP2 buffer holds, after a
- * 0x40-byte header, one 32-bit entry per macroblock in raster order:
- * byte 0 = the relative QP (int8), byte 3 = 0x20.  Measured on a T41 running
- * the vendor libimp 1.2.6 (windows of 40x20 and 10x6 macroblocks, 1080p):
- * only byte 0 of the covered entries changes and the command words are the
- * same with and without a window.  While no window is set the table stays as
- * it always was (zero); the encoding thread rewrites it before the next
- * picture when a window was set or cleared. */
-static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
 
+#if defined(PLATFORM_T41)
 /* EXPERIMENTAL, off by default: on the T41 test camera the AVPU did not
  * react to this table in any rate-control mode (docs/ROI.md).  Without
  * OPENIMP_T41_ROI=1 nothing here runs, the EP2 buffer keeps its size and
@@ -3656,6 +3766,14 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
 
     if (openimp_t41_build_command(slot, ctx->cl_entry_size, &params) != 0)
         return -1;
+    /* ROI: the vendor T41 1.2.6 encode1 copies the picture option
+     * AL_OPT_USE_QP_TABLE to SliceParam+0x63 and the "table relative" flag
+     * to SliceParam+0x62; SliceParamToCmdRegsEnc1 (0xe9d68) packs them into
+     * cmd[152] bit 0 and bit 3.  The builder's 0xf6 has both clear, so the
+     * AVPU never read the table.  Same mechanism as the device-tested T31
+     * (cmd[9] bits 25/24); not yet tested on a T41. */
+    if (!ctx->codec_hevc && ctx->roi_table_on)
+        ((uint32_t *)slot)[152] |= 0x00000009u;
     {
         /* OPENIMP_T41_DUMP_CMD=1: the non-zero words of the first two
          * commands on stderr, for a diff against a vendor capture. */
@@ -4391,6 +4509,12 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         cmd[0x32] = AVPU_T31_STREAM_PREFIX_BYTES;
         cmd[0x33] = avpu_get_stream_window_budget(ctx, cmd[0x31],
                                                    cmd[0x32]);
+        /* ROI: QP table in EP2 (avpu_t31_roi_apply).  cmd[9] bit 25 =
+         * use the table (vendor SliceParam+0x6c, picture option
+         * AL_OPT_USE_QP_TABLE), bit 24 = table relative (SliceParam+0x6b,
+         * channel option bit 0). */
+        if (!ctx->codec_hevc && ctx->roi_table_on)
+            cmd[0x09] |= 0x03000000u;
         if (ctx->codec_hevc)
             avpu_t31_hevc_fill_cmd(ctx, cmd, is_idr);
 #endif
@@ -7961,7 +8085,51 @@ static void codec_sync_rc_cache(AL_CodecEncode *enc);
 
 int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
 {
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T31)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const IMPEncoderRoiAttr *attr = (const IMPEncoderRoiAttr *)roi_attr;
+    uint32_t i;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        avpu_t31_roi_disabled())
+        return -1;
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        if (!w->enable)
+            continue;
+        if (w->rect.w == 0u || w->rect.h == 0u ||
+            w->rect.x + w->rect.w > enc->avpu.enc_w ||
+            w->rect.y + w->rect.h > enc->avpu.enc_h)
+            return -1;
+        if (w->mode == IMP_ROI_QPMODE_DELTA) {
+            if (w->qp < -32 || w->qp > 31)
+                return -1;
+        } else if (w->mode == IMP_ROI_QPMODE_FIXED_QP) {
+            if (w->qp < 0 || w->qp > 51)
+                return -1;
+        } else {
+            return -1;
+        }
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        enc->avpu.roi_win[i].enable = w->enable ? 1u : 0u;
+        enc->avpu.roi_win[i].mode = w->mode == IMP_ROI_QPMODE_FIXED_QP;
+        enc->avpu.roi_win[i].qp = w->qp;
+        enc->avpu.roi_win[i].x = w->rect.x;
+        enc->avpu.roi_win[i].y = w->rect.y;
+        enc->avpu.roi_win[i].w = w->rect.w;
+        enc->avpu.roi_win[i].h = w->rect.h;
+    }
+    if (enc->avpu.roi_base_qp == 0u)
+        enc->avpu.roi_base_qp = enc->avpu.qp <= 51u ? enc->avpu.qp : 30u;
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#elif defined(PLATFORM_T41)
     AL_CodecEncode *enc = (AL_CodecEncode *)codec;
     const IMPEncoderRoiAttr *attr = (const IMPEncoderRoiAttr *)roi_attr;
     uint32_t i;
@@ -11674,8 +11842,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 OpenIMPProfileStamp command_profile =
                     openimp_profile_begin();
 
+#if defined(PLATFORM_T31)
+                avpu_t31_roi_apply(ctx);
+#endif
                 fill_cmd_regs_enc1(ctx, cmd, buf_idx, phys_addr, hdr_offset,
                                    is_idr, ref_phys);
+#if defined(PLATFORM_T31)
+                avpu_t31_roi_track_qp(ctx, cmd);
+#endif
                 openimp_profile_end(OPENIMP_PROFILE_COMMAND_BUILD,
                                     command_profile);
             }
