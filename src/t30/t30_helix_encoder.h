@@ -37,6 +37,13 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
                                   const HWEncoderParams *params);
 void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder);
 
+#if !defined(PLATFORM_T23)
+/* IMP_Encoder_SetChnROI: the eight i264e ROI table entries (helix_roi.h)
+ * for the next pictures.  Call on the encoding thread before a picture. */
+int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
+                            const uint8_t roi[8][7]);
+#endif
+
 #if defined(PLATFORM_T23)
 /* Apply changed rate-control, frame-rate, GOP and QP-bound settings
  * between pictures (call from the encoding thread).  Unchanged values are

@@ -133,6 +133,14 @@ int AL_Codec_Encode_SetMbRC(void *codec, int enable);
 /* IMP_Encoder_SetChnColor2Grey on the native Helix/NVPU encoder (T20,
  * T21, T10): grey chroma from the next IDR on */
 int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
+/* IMP_Encoder_SetChnROI on the native Helix/NVPU encoder (T20, T10; T21
+ * with OPENIMP_T21_ROI=1): the i264e ROI table entry (t30/helix_roi.h)
+ * of region index (0..7), from the next picture on */
+int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                           const uint8_t entry[7]);
+/* IMP_Encoder_SetH264TransCfg on the native Helix encoder (T20, T21):
+ * chroma_qp_index_offset (-12..12) from the next IDR on */
+int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
 /* IMP_Encoder_SetSuperFrameCfg for the OEM T20/T10 controller: mode
  * HW_SUPERFRM_NONE or HW_SUPERFRM_REENCODE, thresholds in bits */
 int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
