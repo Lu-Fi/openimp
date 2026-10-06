@@ -1922,11 +1922,15 @@ int IMP_ISP_Tuning_GetISPRunningMode(IMPISPRunningMode *pmode)
 #else
     result = tseries_tuning_get_val(TISP_CID_RUNNING_MODE, &value);
 #endif
+    /* Vendor 0x8ef94: `bnez v0,<return>` skips the store, i.e. the caller's
+     * word is published only when the tuning read succeeded.  Every vendor
+     * tuning getter does the same (0x907e8, 0x90ae0, 0x910d0, 0x90dd8,
+     * 0x95be0, 0x95ed4, 0x961c8, 0x8e8b4, 0x8eb34, 0x8ee18); OpenIMP used
+     * to write the stale cache on failure. */
     if (result == 0) {
         tseries_running_mode = value;
+        *pmode = tseries_running_mode;
     }
-
-    *pmode = tseries_running_mode;
     return result;
 }
 #endif /* !PLATFORM_T23 */
@@ -2129,12 +2133,13 @@ int IMP_ISP_Tuning_GetISPHflip(IMPISPTuningOpsMode *pmode)
     }
 
     result = tseries_v4l2_get(TISP_V4L2_CID_HFLIP, &value);
+    /* Vendor 0x8e92c: `bnez v0,` past the store.  A failed VIDIOC_G_CTRL
+     * leaves *pmode untouched instead of reporting the cached flip. */
     if (result == 0) {
         tseries_hvflip = (tseries_hvflip & 2) | (value ? 1 : 0);
+        *pmode = (tseries_hvflip & 1) ? IMPISP_TUNING_OPS_MODE_ENABLE
+                                      : IMPISP_TUNING_OPS_MODE_DISABLE;
     }
-
-    *pmode = (tseries_hvflip & 1) ? IMPISP_TUNING_OPS_MODE_ENABLE
-                                  : IMPISP_TUNING_OPS_MODE_DISABLE;
     return result;
 }
 
@@ -2158,12 +2163,12 @@ int IMP_ISP_Tuning_GetISPVflip(IMPISPTuningOpsMode *pmode)
     }
 
     result = tseries_v4l2_get(TISP_V4L2_CID_VFLIP, &value);
+    /* Vendor 0x8ebac: same store guard as GetISPHflip above. */
     if (result == 0) {
         tseries_hvflip = (tseries_hvflip & 1) | (value ? 2 : 0);
+        *pmode = (tseries_hvflip & 2) ? IMPISP_TUNING_OPS_MODE_ENABLE
+                                      : IMPISP_TUNING_OPS_MODE_DISABLE;
     }
-
-    *pmode = (tseries_hvflip & 2) ? IMPISP_TUNING_OPS_MODE_ENABLE
-                                  : IMPISP_TUNING_OPS_MODE_DISABLE;
     return result;
 }
 
@@ -2182,7 +2187,10 @@ int IMP_ISP_Tuning_GetMaxAgain(uint32_t *pgain)
     }
 
     result = tseries_tuning_get_val(TISP_CID_MAX_AGAIN, &value);
-    *pgain = value;
+    /* Vendor 0x90868. */
+    if (result == 0) {
+        *pgain = value;
+    }
     return result;
 }
 
@@ -2201,7 +2209,10 @@ int IMP_ISP_Tuning_GetMaxDgain(uint32_t *pgain)
     }
 
     result = tseries_tuning_get_val(TISP_CID_MAX_DGAIN, &value);
-    *pgain = value;
+    /* Vendor 0x90b60. */
+    if (result == 0) {
+        *pgain = value;
+    }
     return result;
 }
 
@@ -2220,7 +2231,10 @@ int IMP_ISP_Tuning_GetBacklightComp(uint32_t *pstrength)
     }
 
     result = tseries_tuning_get_val(TISP_CID_BACKLIGHT_COMP, &value);
-    *pstrength = value;
+    /* Vendor 0x91150. */
+    if (result == 0) {
+        *pstrength = value;
+    }
     return result;
 }
 
@@ -2284,7 +2298,10 @@ int IMP_ISP_Tuning_GetDPC_Strength(uint32_t *pratio)
     }
 
     result = tseries_tuning_get_val(TISP_CID_DPC_RATIO, &value);
-    *pratio = value;
+    /* Vendor 0x95c5c (cid 0x8000062 = 98). */
+    if (result == 0) {
+        *pratio = value;
+    }
     return result;
 }
 
@@ -2894,7 +2911,12 @@ int IMP_ISP_Tuning_GetDRC_Strength(uint32_t *pratio)
 #else
     result = tseries_tuning_get_val(TISP_CID_DRC_RATIO, &value);
 #endif
-    *pratio = value;
+    /* Vendor 0x95f50 (cid 0x80000a2 = 162).  On T20 the fallback above has
+     * already replaced both `value` and `result`, so the attr strength is
+     * still published whenever either read succeeded. */
+    if (result == 0) {
+        *pratio = value;
+    }
     return result;
 }
 
@@ -2913,7 +2935,10 @@ int IMP_ISP_Tuning_GetHiLightDepress(uint32_t *pstrength)
     }
 
     result = tseries_tuning_get_val(TISP_CID_HILIGHT_DEPRESS, &value);
-    *pstrength = value;
+    /* Vendor 0x90e58. */
+    if (result == 0) {
+        *pstrength = value;
+    }
     return result;
 }
 
@@ -3038,7 +3063,10 @@ int IMP_ISP_Tuning_GetBcshHue(unsigned char *phue)
     }
 
     result = tseries_tuning_get_val(TISP_CID_BCSH_HUE, &value);
-    *phue = value;
+    /* Vendor 0x96248 (cid 0x8000101 = 257). */
+    if (result == 0) {
+        *phue = value;
+    }
     return result;
 }
 
