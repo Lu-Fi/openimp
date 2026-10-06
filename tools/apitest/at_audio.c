@@ -281,7 +281,12 @@ static void ai_flow(int dev)
                 NEED(IMP_ADEC_PollingStream) { r2 = IMP_ADEC_PollingStream(0, 2000); RET0(IMP_ADEC_PollingStream, r2, "timeout 2000 ms"); }
                 memset(ds, 0, sizeof(*ds));
                 r2 = IMP_ADEC_GetStream(0, ds, BLOCK); gchk(ds);
-                CHECK(IMP_ADEC_GetStream, r2, ds->len == enc_len * 2, "%d bytes PCM (expected %d)", ds->len, enc_len * 2);
+                /* A decoder node holds one AO frame (numPerFrm * 2 bytes, 800 while the AO device attributes are
+                 * not set yet, as in the vendor libimp): the PCM is cut to the node size. */
+                int cap = 800, want;
+                { G(IMPAudioIOAttr, ga); if (IMP_AO_GetPubAttr(0, ga) == 0 && ga->numPerFrm > 0) cap = ga->numPerFrm * 2; gfree(ga); }
+                want = enc_len * 2 < cap ? enc_len * 2 : cap;
+                CHECK(IMP_ADEC_GetStream, r2, ds->len == want, "%d bytes PCM (expected %d = min(2 x %d, node %d))", ds->len, want, enc_len, cap);
                 r2 = IMP_ADEC_ReleaseStream(0, ds); gchk(ds);
                 RET0(IMP_ADEC_ReleaseStream, r2, "");
                 NEED(IMP_ADEC_ClearChnBuf) { r2 = IMP_ADEC_ClearChnBuf(0); RET0(IMP_ADEC_ClearChnBuf, r2, ""); }

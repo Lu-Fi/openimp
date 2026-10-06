@@ -1,5 +1,12 @@
 /* apitest: Encoder area (H.264 / H.265 / JPEG) and the stream verifier */
 #include "apitest.h"
+/* T20/T21: OpenIMP refuses (-1) settings its Helix/NVPU encoder cannot apply, instead of storing
+ * them without effect (the vendor stores them): report that as N/A, not as a failed function. */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21)
+# define REFUSES_UNSUPPORTED 1
+#else
+# define REFUSES_UNSUPPORTED 0
+#endif
 #include <errno.h>
 #include <poll.h>
 
@@ -318,7 +325,7 @@ static void fill_attr(EAttr *a, int codec, int gop)
     if (codec == CODEC_JPEG) { a->encAttr.enType = PT_JPEG; a->encAttr.profile = 2; return; }
     a->encAttr.enType = codec == CODEC_H264 ? PT_H264 : T_H265;
     a->encAttr.profile = 1;
-    a->encAttr.userData.maxUserDataCnt = 4;
+    a->encAttr.userData.maxUserDataCnt = 2;
     a->encAttr.userData.maxUserDataSize = 64;
     a->rcAttr.outFrmRate.frmRateNum = EFPS; a->rcAttr.outFrmRate.frmRateDen = 1;
     a->rcAttr.maxGop = gop;
@@ -596,9 +603,14 @@ static void live_common(int chn, int codec)
         NEED(IMP_Encoder_GetChnROI) {
             g->u32Index = 0;
             r2 = IMP_Encoder_GetChnROI(chn, g); gchk(g);
+            if (r != 0 && REFUSES_UNSUPPORTED) {
+                rep(FN(IMP_Encoder_SetChnROI), r, V_NA, "enabling a region is refused: no macroblock QP map in this SoC's OpenIMP encoder");
+                rep(FN(IMP_Encoder_GetChnROI), r2, V_NA, "nothing to read back (SetChnROI refused)");
+            } else {
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p1.x == 319 && g->s32Qp == -4,
                   "roi 0 (64,64)-(319,255) dQP -4, read back en %d (%d,%d)-(%d,%d) qp %d", g->bEnable, g->rect.p0.x, g->rect.p0.y, g->rect.p1.x, g->rect.p1.y, g->s32Qp);
             CHECK(IMP_Encoder_GetChnROI, r2, g->bEnable, "enabled %d", g->bEnable);
+            }
         }
         pull(chn, codec, 3, 0, 0, &si, 2000);
         rep(LBL("stream with ROI enabled"), 0, si.frames == 3 ? V_PASS : V_FAIL, "%d frames after enabling the ROI", si.frames);
@@ -695,12 +707,20 @@ static void live_old(int chn, int codec)
 
         r3 = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, o) : -1; gchk(o);
         memset(&n, 0, sizeof(n));
+#if defined(PLATFORM_T20)
+        n.superFrmMode = IMP_RC_SUPERFRM_REENCODE; n.superIFrmBitsThr = 400000; n.superPFrmBitsThr = 200000; n.superBFrmBitsThr = 100000;   /* T20 has no discard */
+#else
         n.superFrmMode = IMP_RC_SUPERFRM_DISCARD; n.superIFrmBitsThr = 400000; n.superPFrmBitsThr = 200000; n.superBFrmBitsThr = 100000;
+        n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
+#endif
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
         r2 = IMP_Encoder_SetSuperFrameCfg(chn, &n);
         r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
+        if (r2 != 0 && REFUSES_UNSUPPORTED)
+            rep(FN(IMP_Encoder_SetSuperFrameCfg), r2, V_NA, "mode %d refused: the Helix eprc controller of OpenIMP has no frame discard (T20: re-encode only, T21: none)", (int)n.superFrmMode);
+        else
         CHECK(IMP_Encoder_SetSuperFrameCfg, r2, r == 0 && g->superFrmMode == n.superFrmMode && g->superIFrmBitsThr == n.superIFrmBitsThr && g->rcPriority == n.rcPriority,
-              "discard I 400000 P 200000, read back mode %d I %u P %u prio %d", (int)g->superFrmMode, g->superIFrmBitsThr, g->superPFrmBitsThr, (int)g->rcPriority);
+              "mode %d I %u P %u, read back mode %d I %u P %u prio %d", (int)n.superFrmMode, n.superIFrmBitsThr, n.superPFrmBitsThr, (int)g->superFrmMode, g->superIFrmBitsThr, g->superPFrmBitsThr, (int)g->rcPriority);
         rep(FN(IMP_Encoder_GetSuperFrameCfg), r3, r3 == 0 ? V_PASS : V_FAIL, "initial mode %d I %u P %u", (int)o->superFrmMode, o->superIFrmBitsThr, o->superPFrmBitsThr);
         IMP_Encoder_SetSuperFrameCfg(chn, o);
         gfree(g); gfree(o);
@@ -794,6 +814,9 @@ static void live_old(int chn, int codec)
         r3 = IMP_Encoder_GetQpgMode ? IMP_Encoder_GetQpgMode(chn, o) : -1; gchk(o);
         r2 = IMP_Encoder_SetQpgMode(chn, &n);
         r = IMP_Encoder_GetQpgMode ? IMP_Encoder_GetQpgMode(chn, g) : -1; gchk(g);
+        if (r2 != 0 && REFUSES_UNSUPPORTED)
+            rep(FN(IMP_Encoder_SetQpgMode), r2, V_NA, "CRP refused: only CLOSE exists in the eprc controller of OpenIMP (macroblock RC is SetMbRC)");
+        else
         CHECK(IMP_Encoder_SetQpgMode, r2, r == 0 && *g == n, "CRP (%d), read back %d", (int)n, (int)*g);
         rep(FN(IMP_Encoder_GetQpgMode), r3, r3 == 0 ? V_PASS : V_FAIL, "initial %d", (int)*o);
         IMP_Encoder_SetQpgMode(chn, o);
@@ -974,6 +997,11 @@ static void live_misc(int chn, int codec)
         *bm = 1u << chn;
         r = IMP_Encoder_PollingModuleStream(bm, 2000); gchk(bm);
         CHECK(IMP_Encoder_PollingModuleStream, r, (*bm & (1u << chn)) != 0, "bitmap in 0x%x out 0x%x", 1u << chn, *bm);
+        if (r == 0 && (*bm & (1u << chn)) && IMP_Encoder_GetStream) {       /* the ready stream waits for its reader */
+            G(IMPEncoderStream, s);
+            if (IMP_Encoder_GetStream(chn, s, true) == 0) IMP_Encoder_ReleaseStream(chn, s);
+            gfree(s);
+        }
         gfree(bm);
     }
 #endif
@@ -1029,7 +1057,43 @@ static unsigned long jpeg_avg(int chn, int n)
     return si.bytes / (unsigned)n;
 }
 
+/* The JPEG channel is fed through the group of the H.264 channel (the frame is lent by the
+ * channel that dequeues it), as in the streamer, where the H.264 stream is always consumed.
+ * Without a reader on the H.264 channel its stream queue fills, it stops taking frames and
+ * the JPEG channel never gets one: drain it in the background while the JPEG test runs. */
+static volatile int g_drain_run;
+static void *drain_thread(void *arg)
+{
+    int chn = (int)(intptr_t)arg;
+    IMPEncoderStream *s = calloc(1, sizeof(*s));
+
+    while (s && g_drain_run) {
+        if (IMP_Encoder_PollingStream(chn, 100) != 0) continue;
+        memset(s, 0, sizeof(*s));
+        if (IMP_Encoder_GetStream(chn, s, true) == 0) IMP_Encoder_ReleaseStream(chn, s);
+    }
+    free(s);
+    return NULL;
+}
+
+static void test_jpeg_body(int jchn, int share_with);
 static void test_jpeg(int jchn, int share_with)
+{
+    pthread_t drain;
+    int draining = 0;
+    int r;
+    SI si;
+    (void)si;
+    if (IMP_Encoder_PollingStream) {
+        g_drain_run = 1;
+        draining = pthread_create(&drain, NULL, drain_thread, (void *)(intptr_t)0) == 0;
+    }
+    test_jpeg_body(jchn, share_with);
+    if (draining) { g_drain_run = 0; pthread_join(drain, NULL); }
+    (void)r;
+}
+
+static void test_jpeg_body(int jchn, int share_with)
 {
     SI si;
     int r;
@@ -1229,6 +1293,10 @@ void t_enc(void)
         grp_down(1);
     }
 #ifdef HAVE_H265
+# if defined(PLATFORM_T21) || defined(PLATFORM_T23)
+    /* the Helix encoder of T21/T23 is H.264/JPEG only: the headers declare H.265 types, the silicon has no HEVC core */
+    rep(LBL("H.265 stream"), -1, V_NA, "no HEVC encoder in the T21/T23 silicon (OpenIMP CreateChn refuses it so callers fall back to H.264)");
+# else
     if (grp_up(0, 0) == 0) {
         if (chn_up(0, CODEC_H265, 1, 1) == 0) {
             pull(0, CODEC_H265, 60, 2, 0, &si, 3000);
@@ -1240,6 +1308,7 @@ void t_enc(void)
         }
         grp_down(0);
     }
+# endif
 #endif
     (void)r;
 }

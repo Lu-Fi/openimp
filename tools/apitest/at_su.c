@@ -35,27 +35,42 @@ void t_su(void)
         CHECK(SU_Base_GetDevID, r, gtouched(d), "%02x%02x%02x%02x%02x%02x%02x%02x...", d->hex[0], d->hex[1], d->hex[2], d->hex[3], d->hex[4], d->hex[5], d->hex[6], d->hex[7]);
         gfree(d);
     }
+    /* The RTC (/dev/rtc0) and the ADC (/dev/ingenic_adc_aux_*, /dev/jz_adc_aux_*) are optional
+     * hardware: the vendor libsysutils opens the same nodes and fails the same way when the
+     * kernel has no such driver (checked on the T20 jxf23 board: no rtc class, no ADC node). */
+    int has_rtc = access("/dev/rtc0", F_OK) == 0;
+    const char *no_rtc = "no /dev/rtc0 (no RTC driver in this kernel/board; the vendor libsysutils opens the same node)";
+    /* the time conversions are pure arithmetic (no device): fixed time 2001-09-09 01:46:40 UTC = 1000000000 */
+    SUNEED(SU_Base_SUTime2Raw) {
+        G(SUTime, ft); G(uint32_t, raw); G(SUTime, back);
+        ft->year = 2001; ft->mon = 9; ft->mday = 9; ft->hour = 1; ft->min = 46; ft->sec = 40;
+        int r2 = f_SU_Base_SUTime2Raw(ft, raw); gchk(raw);
+        CHECK(SU_Base_SUTime2Raw, r2, *raw == 1000000000u, "2001-09-09 01:46:40 -> %u (expected 1000000000)", *raw);
+        SUNEED(SU_Base_Raw2SUTime) {
+            int r3 = f_SU_Base_Raw2SUTime(raw, back); gchk(back);
+            CHECK(SU_Base_Raw2SUTime, r3, back->year == 2001 && back->mon == 9 && back->mday == 9 && back->hour == 1 && back->min == 46 && back->sec == 40,
+                  "%u -> %04d-%02d-%02d %02d:%02d:%02d (round trip)", *raw, back->year, back->mon, back->mday, back->hour, back->min, back->sec);
+        }
+        gfree(ft); gfree(raw); gfree(back);
+    }
+    if (!has_rtc) {
+        rep(FN(SU_Base_GetTime), -1, V_NA, "%s", no_rtc);
+        rep(FN(SU_Base_SetTime), -1, V_NA, "%s", no_rtc);
+        rep(FN(SU_Base_SetAlarm), -1, V_NA, "%s", no_rtc);
+        rep(FN(SU_Base_GetAlarm), -1, V_NA, "%s", no_rtc);
+        rep(FN(SU_Base_DisableAlarm), -1, V_NA, "%s", no_rtc);
+    } else {
     SUNEED(SU_Base_GetTime) {
         G(SUTime, t); G(SUTime, t2);
-        G(uint32_t, raw); G(SUTime, back);
-        r = f_SU_Base_GetTime(t); gchk(t);
-        CHECK(SU_Base_GetTime, r, t->year >= 1970 && t->mon >= 1 && t->mon <= 12 && t->mday >= 1 && t->mday <= 31 && t->hour < 24 && t->min < 60 && t->sec < 62,
+        int r1 = f_SU_Base_GetTime(t); gchk(t);
+        CHECK(SU_Base_GetTime, r1, t->year >= 1970 && t->mon >= 1 && t->mon <= 12 && t->mday >= 1 && t->mday <= 31 && t->hour < 24 && t->min < 60 && t->sec < 62,
               "%04d-%02d-%02d %02d:%02d:%02d", t->year, t->mon, t->mday, t->hour, t->min, t->sec);
-        SUNEED(SU_Base_SUTime2Raw) {
-            int r2 = f_SU_Base_SUTime2Raw(t, raw); gchk(raw);
-            RET0(SU_Base_SUTime2Raw, r2, "-> %u", *raw);
-            SUNEED(SU_Base_Raw2SUTime) {
-                int r3 = f_SU_Base_Raw2SUTime(raw, back); gchk(back);
-                CHECK(SU_Base_Raw2SUTime, r3, back->year == t->year && back->mon == t->mon && back->mday == t->mday && back->hour == t->hour && back->min == t->min && back->sec == t->sec,
-                      "%u -> %04d-%02d-%02d %02d:%02d:%02d (round trip)", *raw, back->year, back->mon, back->mday, back->hour, back->min, back->sec);
-            }
-        }
         SUNEED(SU_Base_SetTime) {
             int r2 = f_SU_Base_SetTime(t);       /* writes the time just read back: no change */
             f_SU_Base_GetTime(t2); gchk(t2);
             CHECK(SU_Base_SetTime, r2, t2->year == t->year && t2->mon == t->mon && t2->mday == t->mday, "same time written back, now %04d-%02d-%02d %02d:%02d:%02d", t2->year, t2->mon, t2->mday, t2->hour, t2->min, t2->sec);
         }
-        gfree(t); gfree(t2); gfree(raw); gfree(back);
+        gfree(t); gfree(t2);
     }
     SUNEED(SU_Base_SetAlarm) {
         G(SUTime, a); G(SUTime, g);
@@ -71,6 +86,7 @@ void t_su(void)
         SUNEED(SU_Base_DisableAlarm) { int r3 = f_SU_Base_DisableAlarm(); RET0(SU_Base_DisableAlarm, r3, ""); }
         gfree(a); gfree(g);
     }
+    }
     rep(FN(SU_Base_EnableAlarm), 0, V_SKIP, "an enabled RTC alarm can wake/power the camera");
     rep(FN(SU_Base_PollingAlarm), 0, V_SKIP, "blocks until the alarm fires");
     rep(FN(SU_Base_Shutdown), 0, V_SKIP, "powers the camera off");
@@ -82,6 +98,9 @@ void t_su(void)
 
     /* misc / ADC / battery / cipher / key / LED */
 #if HAS_SU_ADC_Init
+    int has_adc = access("/dev/ingenic_adc_aux_0", F_OK) == 0 || access("/dev/jz_adc_aux_0", F_OK) == 0;
+    if (!has_adc) rep(FN(SU_ADC_Init), -1, V_NA, "no /dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0 (no ADC driver; the vendor libsysutils opens the same nodes)");
+    else {
     SUNEED(SU_ADC_Init) {
         r = f_SU_ADC_Init(); RET0(SU_ADC_Init, r, "");
         if (r == 0) {
@@ -97,6 +116,7 @@ void t_su(void)
             }
             SUNEED(SU_ADC_Exit) { r = f_SU_ADC_Exit(); RET0(SU_ADC_Exit, r, ""); }
         }
+    }
     }
 #endif
 #if HAS_SU_Battery_GetCapacity
