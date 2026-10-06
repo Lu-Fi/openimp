@@ -1656,6 +1656,13 @@ int main(int argc, char **argv)
     }
 #endif
     if (IMP_System_Init() < 0 || IMP_ISP_EnableTuning() < 0) { say("[E] System_Init/EnableTuning failed\n"); return 1; }
+    /* the sensor mode only starts delivering frames after SetSensorFPS on
+     * some SoCs (T20 jxf22: no frames without it; timps always sets it) */
+#ifdef PLATFORM_T41
+    { IMPISPSensorFps f = { .num = 15, .den = 1 }; IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &f); }
+#else
+    if (HAVE(IMP_ISP_Tuning_SetSensorFPS)) IMP_ISP_Tuning_SetSensorFPS(15, 1);
+#endif
     { char tmp[8]; c_runmode(1, 0, tmp, sizeof(tmp)); }   /* running mode = IMGFX_MODE (restore path) */
     say("[T] imgfx %s sensor %s %dx%d sub %dx%d mode %s\n", SOC, argv[1], g_sw, g_sh, SUB_W, SUB_H, g_night ? "night" : "day");
 
