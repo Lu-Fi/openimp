@@ -219,7 +219,10 @@ static struct {
     T31HpfProcess hpf_process;
     T31HpfFree hpf_free;
     int16_t hpf_state[16];
+    int16_t hpf_coefficients[5];    /* designed for IMP_AI_SetHpfCoFrequency */
+    int hpf_cutoff;                 /* IMP_AI_SetHpfCoFrequency, 0 = default */
     int hpf_enabled;
+    int effects_neo;                /* libaudioProcess-neo (has drc_create) */
     T31NsCreate ns_create;
     T31NsSetConfig ns_set_config;
     T31NsProcess ns_process;
@@ -539,6 +542,10 @@ static int t31_effects_load_locked(void)
     T31_EFFECT(agc_process, "audio_process_agc_process");
     T31_EFFECT(agc_free, "audio_process_agc_free");
 #undef T31_EFFECT
+    /* the original library has no DRC; the neo's HPF takes a float biquad
+     * in the state, not libimp's coefficient pointer */
+    t31_audio.effects_neo =
+        dlsym(t31_audio.effects_library, "audio_process_drc_create") != NULL;
     return 0;
 
 failure:
@@ -1288,21 +1295,120 @@ static const int16_t t31_hpf_coefficients_8k[5] = {
     3798, -7596, 3798, 7807, -3733
 };
 
-static void t31_hpf_setup(int16_t state[16], const int16_t *coefficients)
+/* tan() for 0 <= x < pi/2 from the sine and cosine series, so libimp
+ * keeps not depending on libm. */
+static void t31_sincos(double x, double *sin_out, double *cos_out)
+{
+    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
+    int n;
+
+    for (n = 1; n < 24; n++) {
+        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
+        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
+        sine += term_s;
+        cosine += term_c;
+    }
+    *sin_out = sine;
+    *cos_out = cosine;
+}
+
+static double t31_tan(double x)
+{
+    double sine, cosine;
+
+    t31_sincos(x, &sine, &cosine);
+    return sine / cosine;
+}
+
+/* libimp Hpf_gen_filter_coefficients: 2nd-order Butterworth high pass,
+ * bilinear transform, 4096 = 1.0, same float/double steps. */
+static void t31_hpf_design(int16_t coefficients[5], int sample_rate,
+                           int cutoff)
+{
+    float k = (float)t31_tan((double)((float)cutoff / (float)sample_rate) *
+                             3.14159265358979311600);
+    double ks = (double)k * 1.41421356237309514547;
+    float k2 = k * k;
+    float denominator = (float)((double)k2 + ks + 1.0);
+    float pole = (float)((double)k2 - ks + 1.0);
+    float a1 = -((k + k) * k - 2.0f);
+    int16_t b0 = (int16_t)(int)(1.0f / denominator * 4096.0f);
+
+    coefficients[0] = b0;
+    coefficients[1] = (int16_t)(-2 * b0);
+    coefficients[2] = b0;
+    coefficients[3] = (int16_t)(int)(a1 / denominator * 4096.0f);
+    coefficients[4] = (int16_t)(int)(-pole / denominator * 4096.0f);
+}
+
+/* libaudioProcess-neo's HPF state: a float biquad over the 32 bytes. It
+ * designs its own 300 Hz / 16 kHz filter while b0 is zero; with b0 set it
+ * runs what it finds, so a cut-off asked for through
+ * Set{AI,AO}HpfCoFrequency is put there (same RBJ design, Q 0.7071, at the
+ * stream's sample rate). Beyond the original library, which takes libimp's
+ * int16 coefficients through the pointer at +12. */
+static void t31_hpf_neo_overlay(int16_t state[16], int sample_rate,
+                                int cutoff)
+{
+    double sine, cosine;
+    float w0 = 2.0f * 3.14159265358979323846f * (float)cutoff /
+               (float)sample_rate;
+    float cw, alpha;
+    float a0_inv;
+    float bq[7];
+
+    t31_sincos((double)w0, &sine, &cosine);
+    cw = (float)cosine;
+    alpha = (float)sine / (2.0f * 0.7071f);
+    a0_inv = 1.0f / (1.0f + alpha);
+
+    bq[0] = ((1.0f + cw) / 2.0f) * a0_inv;
+    bq[1] = -(1.0f + cw) * a0_inv;
+    bq[2] = bq[0];
+    bq[3] = (-2.0f * cw) * a0_inv;
+    bq[4] = (1.0f - alpha) * a0_inv;
+    bq[5] = 0.0f;
+    bq[6] = 0.0f;
+    memcpy(state, bq, sizeof(bq));
+}
+
+static void t31_hpf_setup(int16_t state[16], const int16_t *coefficients,
+                          int sample_rate, int cutoff)
 {
     memset(state, 0, 16 * sizeof(int16_t));
     t31_audio.hpf_create(state + 4, state, 0, 0, 2, 4);
-    memcpy((unsigned char *)state + 12, &coefficients, sizeof(coefficients));
+    if (t31_audio.effects_neo && cutoff > 0 && sample_rate > 0 &&
+        (int64_t)cutoff * 2 < (int64_t)sample_rate)
+        t31_hpf_neo_overlay(state, sample_rate, cutoff);
+    else
+        memcpy((unsigned char *)state + 12, &coefficients,
+               sizeof(coefficients));
 }
 
 int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
 {
+    int cutoff;
+
     if (!t31_valid_attr(attribute) || t31_effects_load() != 0)
         return -1;
     pthread_mutex_lock(&t31_ai_fx_lock);
-    t31_hpf_setup(t31_audio.hpf_state,
-                  attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
-                                                : t31_hpf_coefficients);
+    cutoff = t31_audio.hpf_cutoff;
+    /* libimp: "HPF cut-off frequency is illegal" for a negative value or
+     * one above the sample rate */
+    if (cutoff < 0 || (unsigned int)attribute->samplerate < (unsigned int)cutoff) {
+        pthread_mutex_unlock(&t31_ai_fx_lock);
+        return -1;
+    }
+    if (cutoff)
+        t31_hpf_design(t31_audio.hpf_coefficients, attribute->samplerate,
+                       cutoff);
+    else
+        memcpy(t31_audio.hpf_coefficients,
+               attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
+                                             : t31_hpf_coefficients,
+               sizeof(t31_audio.hpf_coefficients));
+    t31_hpf_setup(t31_audio.hpf_state, t31_audio.hpf_coefficients,
+                  attribute->samplerate, cutoff);
     t31_audio.hpf_enabled = 1;
     pthread_mutex_unlock(&t31_ai_fx_lock);
     return 0;
@@ -1319,13 +1425,14 @@ int IMP_AI_DisableHpf(void)
 }
 
 /* libimp stores the cut-off for the next IMP_AI_EnableHpf and always
- * returns 0 (prudynt passes 0 to mean "default"). libaudioProcess-neo's HPF
- * designs its own fixed 300 Hz filter, so the value is only recorded. */
-static int t31_hpf_cutoff;
-
+ * returns 0 (prudynt passes 0 to mean "default"). EnableHpf designs the
+ * filter for it (libimp's Hpf_gen_filter_coefficients); libaudioProcess-neo
+ * gets it as a float biquad in the state (t31_hpf_neo_overlay). */
 int IMP_AI_SetHpfCoFrequency(int frequency)
 {
-    t31_hpf_cutoff = frequency;
+    pthread_mutex_lock(&t31_ai_fx_lock);
+    t31_audio.hpf_cutoff = frequency;
+    pthread_mutex_unlock(&t31_ai_fx_lock);
     return 0;
 }
 
@@ -1749,43 +1856,6 @@ static struct {
 
 static pthread_mutex_t t31_ao_fx_lock = PTHREAD_MUTEX_INITIALIZER;
 
-/* tan() for 0 <= x < pi/2 from the sine and cosine series, so libimp
- * keeps not depending on libm. */
-static double t31_tan(double x)
-{
-    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
-    int n;
-
-    for (n = 1; n < 24; n++) {
-        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
-        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
-        sine += term_s;
-        cosine += term_c;
-    }
-    return sine / cosine;
-}
-
-/* libimp Hpf_gen_filter_coefficients: 2nd-order Butterworth high pass,
- * bilinear transform, 4096 = 1.0, same float/double steps. */
-static void t31_hpf_design(int16_t coefficients[5], int sample_rate,
-                           int cutoff)
-{
-    float k = (float)t31_tan((double)((float)cutoff / (float)sample_rate) *
-                             3.14159265358979311600);
-    double ks = (double)k * 1.41421356237309514547;
-    float k2 = k * k;
-    float denominator = (float)((double)k2 + ks + 1.0);
-    float pole = (float)((double)k2 - ks + 1.0);
-    float a1 = -((k + k) * k - 2.0f);
-    int16_t b0 = (int16_t)(int)(1.0f / denominator * 4096.0f);
-
-    coefficients[0] = b0;
-    coefficients[1] = (int16_t)(-2 * b0);
-    coefficients[2] = b0;
-    coefficients[3] = (int16_t)(int)(a1 / denominator * 4096.0f);
-    coefficients[4] = (int16_t)(int)(-pole / denominator * 4096.0f);
-}
-
 /* Called with t31_ao_fx_lock held. */
 static void t31_ao_process_effects(int16_t *samples, int count)
 {
@@ -2062,7 +2132,8 @@ int IMP_AO_EnableHpf(IMPAudioIOAttr *attribute)
                attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
                                              : t31_hpf_coefficients,
                sizeof(t31_ao_fx.hpf_coefficients));
-    t31_hpf_setup(t31_ao_fx.hpf_state, t31_ao_fx.hpf_coefficients);
+    t31_hpf_setup(t31_ao_fx.hpf_state, t31_ao_fx.hpf_coefficients,
+                  attribute->samplerate, cutoff);
     t31_ao_fx.sample_rate = attribute->samplerate;
     t31_ao_fx.hpf_enabled = 1;
     pthread_mutex_unlock(&t31_ao_fx_lock);

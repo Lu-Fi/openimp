@@ -14,6 +14,7 @@
 
 #include "core/globals.h"
 #include "imp/imp_isp.h"
+#include "imp/imp_encoder.h"
 #include "isp_ioctl_compat.h"
 #include "isp_t21_sinter.h"
 #include "isp_front_crop.h"
@@ -49,6 +50,11 @@
 #endif
 
 static char *bpath;
+#if defined(PLATFORM_T31)
+void openimp_t31_isp_tuning_enabled(void);
+void openimp_t31_movestate_block(uint8_t ae[0x70], const uint8_t cur[0x70],
+                                 const uint32_t c[14], uint32_t mode);
+#endif
 #if defined(PLATFORM_T23)
 /* The T23 tuning API (isp_t23_tuning.c) owns the per-sensor contrast. */
 uint8_t openimp_t23_isp_custom_contrast(void);
@@ -4040,6 +4046,141 @@ int IMP_ISP_Tuning_GetAFMetrices(void *metrices)
     return tseries_tuning_get_ptr(TISP_CID_AF_METRICES, metrices);
 }
 
+#if defined(PLATFORM_T31)
+/*
+ * T31 (vendor libimp 1.1.x, disassembled): gmovestate is the 0x70-byte AE
+ * block of CID 0x800002c, the running mode it was captured in and the 14
+ * values of /etc/sensor/<sensor>move.txt (loaded by EnableTuning).  The
+ * logic equals the T23 library's (isp_t23_tuning.c): EnableMovestate reads
+ * the AE block, then sends a block with the day or night limits of
+ * move.txt and the enable bytes; DisableMovestate puts the captured block
+ * back if the running mode is still the same and asks for an IDR on
+ * channel 0.  The stock T31 driver does nothing with the control (OEM
+ * no-op), so the visible effects are the IDR and the return values: -1
+ * without tuning, 0 once past the checks, also when a request fails.
+ */
+static struct {
+    uint8_t ae[0x70];
+    int32_t mode;
+    uint32_t cfg[14];
+} tseries_movestate;
+_Static_assert(sizeof(tseries_movestate) == 0xac, "gmovestate size");
+static pthread_mutex_t tseries_movestate_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static int tseries_movestate_ready(void)
+{
+    ISPDevice *isp;
+
+    return tseries_get_isp(&isp) == 0 && isp->tuning != NULL &&
+           isp->tuning_state == 2;
+}
+
+void openimp_t31_isp_tuning_enabled(void)
+{
+    ISPDevice *isp = gISP;
+    char path[96];
+    FILE *fp;
+    uint32_t *c = tseries_movestate.cfg;
+
+    memset(&tseries_movestate, 0, sizeof(tseries_movestate));
+    if (isp == NULL)
+        return;
+    /* IMPSensorInfo.name, char[32], at +0x28 of the ISP device */
+    snprintf(path, sizeof(path), "%s%.32smove.txt", "/etc/sensor/",
+             (const char *)isp + 0x28);
+    fp = fopen(path, "r");
+    if (fp == NULL)
+        return;
+    if (fscanf(fp, "%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x "
+                   "%02x %02x %02x %02x",
+               &c[0], &c[1], &c[2], &c[3], &c[4], &c[5], &c[6], &c[7],
+               &c[8], &c[9], &c[10], &c[11], &c[12], &c[13]) != 14)
+        kmsg_trace("libimp/ISP: %s: short move configuration\n", path);
+    fclose(fp);
+}
+
+/* the AE block bytes the library sends: day (mode 0) or night limits */
+void openimp_t31_movestate_block(uint8_t ae[0x70], const uint8_t cur[0x70],
+                                 const uint32_t c[14], uint32_t mode)
+{
+    memset(ae, 0, 0x70);
+    if (mode != 0) {
+        ae[11] = 1;
+        ae[46] = (uint8_t)c[1];
+        ae[44] = (uint8_t)c[5];
+        ae[45] = (uint8_t)c[4];
+        ae[35] = (uint8_t)c[9];
+        ae[36] = (uint8_t)c[8];
+        ae[38] = (uint8_t)c[13];
+        ae[39] = (uint8_t)c[12];
+    } else {
+        uint32_t div = ((uint32_t)cur[33] * cur[29]) / 30u;
+        uint16_t it;
+
+        memcpy(&it, cur + 26, sizeof(it));
+        it = (uint16_t)((3u * it) / 5u);
+        memcpy(ae + 26, &it, sizeof(it));
+        /* the vendor divides unguarded (a zero divisor traps there) */
+        ae[43] = (uint8_t)((div ? ((uint32_t)cur[32] * cur[28]) / div : 0) + 1);
+        ae[11] = 1;
+        ae[82] = 1;
+        ae[10] = 1;
+        ae[70] = 1;
+        ae[98] = 1;
+        ae[46] = (uint8_t)c[0];
+        ae[44] = (uint8_t)c[3];
+        ae[45] = (uint8_t)c[2];
+        ae[35] = (uint8_t)c[7];
+        ae[36] = (uint8_t)c[6];
+        ae[38] = (uint8_t)c[11];
+        ae[39] = (uint8_t)c[10];
+    }
+    ae[71] = ae[101] = ae[99] = ae[100] = 1;
+    ae[90] = ae[91] = ae[93] = ae[94] = 1;
+}
+
+int IMP_ISP_Tuning_EnableMovestate(void)
+{
+    IMPISPRunningMode mode = 0;
+    uint8_t ae[0x70];
+
+    if (!tseries_movestate_ready())
+        return -1;
+    pthread_mutex_lock(&tseries_movestate_mutex);
+    if (IMP_ISP_Tuning_GetISPRunningMode(&mode) != 0)
+        goto out;
+    tseries_movestate.mode = (int32_t)mode;
+    memset(tseries_movestate.ae, 0, sizeof(tseries_movestate.ae));
+    if (tseries_tuning_get_ptr(TISP_CID_MOVESTATE, tseries_movestate.ae) != 0)
+        goto out;
+    openimp_t31_movestate_block(ae, tseries_movestate.ae,
+                                tseries_movestate.cfg, (uint32_t)mode);
+    (void)tseries_tuning_set_ptr(TISP_CID_MOVESTATE, ae);
+out:
+    pthread_mutex_unlock(&tseries_movestate_mutex);
+    return 0;
+}
+
+int IMP_ISP_Tuning_DisableMovestate(void)
+{
+    IMPISPRunningMode mode = 0;
+
+    if (!tseries_movestate_ready())
+        return -1;
+    pthread_mutex_lock(&tseries_movestate_mutex);
+    if (IMP_ISP_Tuning_GetISPRunningMode(&mode) == 0 &&
+        (int32_t)mode == tseries_movestate.mode) {
+        uint8_t *g = tseries_movestate.ae;
+
+        g[71] = g[82] = g[70] = g[101] = g[99] = 1;
+        g[100] = g[90] = g[91] = g[93] = g[94] = 1;
+        (void)tseries_tuning_set_ptr(TISP_CID_MOVESTATE, g);
+    }
+    pthread_mutex_unlock(&tseries_movestate_mutex);
+    IMP_Encoder_RequestIDR(0);
+    return 0;
+}
+#else
 int IMP_ISP_Tuning_EnableMovestate(void)
 {
     return tseries_tuning_set_val(TISP_CID_MOVESTATE, 1);
@@ -4049,6 +4190,7 @@ int IMP_ISP_Tuning_DisableMovestate(void)
 {
     return tseries_tuning_set_val(TISP_CID_MOVESTATE, 0);
 }
+#endif
 
 int IMP_ISP_Tuning_EnableDefog(void)
 {
@@ -4850,6 +4992,9 @@ int IMP_ISP_EnableTuning(void)
 #endif
 #if defined(PLATFORM_T23)
     openimp_t23_isp_tuning_enabled();
+#endif
+#if defined(PLATFORM_T31)
+    openimp_t31_isp_tuning_enabled();
 #endif
     if (tseries_start_tuning_worker() != 0)
         kmsg_trace("libimp/ISP: failed to start gain/contrast tuning worker\n");
