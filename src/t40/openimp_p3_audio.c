@@ -139,6 +139,8 @@ static struct {
     int ai_gain;
     int ao_volume;
     int ao_gain;
+    int ai_mute;        /* software mute, like the vendor T41 libimp (no driver ioctl) */
+    int ao_mute;
     openimp_ao_cache ao_cache;
     unsigned char *frame_buffer;
     size_t frame_capacity;
@@ -574,6 +576,8 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     }
     p3_process_effects((int16_t *)p3_audio.frame_buffer,
                        (int)(bytes / sizeof(int16_t)));
+    if (p3_audio.ai_mute)
+        memset(p3_audio.frame_buffer, 0, bytes);
     memset(frame, 0, sizeof(*frame));
     frame->bitwidth = p3_audio.ai_attr.bitwidth;
     frame->soundmode = p3_audio.ai_attr.soundmode;
@@ -696,11 +700,16 @@ int IMP_AI_GetGain(int device, int channel, int *value)
     return result;
 }
 
+/* The vendor T41 libimp keeps the mute as software state (the volume of its
+ * processing chain goes to zero, the codec is not touched; the audio driver
+ * has no mute ioctl that works on this board): captured frames are silent
+ * while muted. */
 int IMP_AI_SetVolMute(int device, int channel, int mute)
 {
-    P3AudioMute value = { (uint32_t)channel + 1U, (uint32_t)(mute != 0) };
-    (void)device;
-    return p3_audio_open() == 0 ? ioctl(p3_audio.fd, AMIC_AI_SET_MUTE, &value) : -1;
+    if (device < 0 || device > 1 || channel != 0 || (mute != 0 && mute != 1))
+        return -1;
+    p3_audio.ai_mute = mute;
+    return 0;
 }
 
 /* libaudioProcess-neo's HPF state is a float biquad (7 floats over the
@@ -980,6 +989,23 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
     if (channel != 0 || !frame || !frame->virAddr || frame->len <= 0 ||
         !p3_audio.ao_channel_enabled || p3_audio.ao_paused)
         return -1;
+    if (p3_audio.ao_mute) {
+        static unsigned char *silence;
+        static size_t silence_size;
+
+        if ((size_t)frame->len > silence_size) {
+            unsigned char *grown = realloc(silence, (size_t)frame->len);
+            if (!grown)
+                return -1;
+            silence = grown;
+            silence_size = (size_t)frame->len;
+        }
+        memset(silence, 0, (size_t)frame->len);
+        return openimp_ao_cache_submit(&p3_audio.ao_cache, silence,
+                                       (size_t)frame->len, p3_ao_now_ns(),
+                                       p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                       NULL);
+    }
     /* cache off (default): straight to the driver as before */
     return openimp_ao_cache_submit(&p3_audio.ao_cache, frame->virAddr,
                                    (size_t)frame->len, p3_ao_now_ns(),
@@ -1031,11 +1057,14 @@ int IMP_AO_GetGain(int device, int channel, int *value)
     return result;
 }
 
+/* Software mute as in the vendor T41 libimp: while set, IMP_AO_SendFrame sends
+ * silence of the same length. */
 int IMP_AO_SetVolMute(int device, int channel, int mute)
 {
-    P3AudioMute value = { (uint32_t)channel + 1U, (uint32_t)(mute != 0) };
-    (void)device;
-    return p3_audio_open() == 0 ? ioctl(p3_audio.fd, AMIC_SPK_SET_MUTE, &value) : -1;
+    if (device != 0 || channel != 0 || (mute != 0 && mute != 1))
+        return -1;
+    p3_audio.ao_mute = mute;
+    return 0;
 }
 
 int IMP_AO_ClearChnBuf(int device, int channel)

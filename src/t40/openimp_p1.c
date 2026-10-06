@@ -759,12 +759,84 @@ int IMP_FrameSource_SetChnAttr(int channel, const IMPFSChnAttr *attr)
         return -1;
     lock_p1();
     prepare_p1();
-    if (p1.channels[channel].enabled) {
+    /* Vendor T41: the attribute is only stored for an existing channel (no
+     * state check; it takes effect at the next EnableChn). */
+    if (!p1.channels[channel].created) {
         unlock_p1();
         return -1;
     }
     p1.channels[channel].attr = *attr;
     unlock_p1();
+    return 0;
+}
+
+/* Vendor T41 I2D attribute: stored in the channel attribute (its first member);
+ * flip/mirror and rotate exclude each other, flip and mirror may not both be
+ * set to the same value. */
+int IMP_FrameSource_SetI2dAttr(int channel, const IMPFSI2DAttr *i2d)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !i2d)
+        return -1;
+    if ((i2d->flip_enable & i2d->mirr_enable) ||
+        ((i2d->flip_enable | i2d->mirr_enable) & i2d->rotate_enable))
+        return -1;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return -1;
+    }
+    p1.channels[channel].attr.i2dattr = *i2d;
+    unlock_p1();
+    return 0;
+}
+
+int IMP_FrameSource_GetI2dAttr(int channel, IMPFSI2DAttr *i2d)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !i2d)
+        return -1;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return -1;
+    }
+    *i2d = p1.channels[channel].attr.i2dattr;
+    unlock_p1();
+    return 0;
+}
+
+/* The delay FIFO (hold the newest frames, IMP_FrameSource_GetTimedFrame) is not
+ * implemented on T41: delay and max delay are 0, and only 0 is accepted. */
+int IMP_FrameSource_SetMaxDelay(int channel, int max_delay)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || max_delay != 0)
+        return -1;
+    return p1.channels[channel].created ? 0 : -1;
+}
+
+int IMP_FrameSource_SetDelay(int channel, int delay)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || delay != 0)
+        return -1;
+    return p1.channels[channel].created ? 0 : -1;
+}
+
+int IMP_FrameSource_GetMaxDelay(int channel, int *max_delay)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !max_delay ||
+        !p1.channels[channel].created)
+        return -1;
+    *max_delay = 0;
+    return 0;
+}
+
+int IMP_FrameSource_GetDelay(int channel, int *delay)
+{
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !delay ||
+        !p1.channels[channel].created)
+        return -1;
+    *delay = 0;
     return 0;
 }
 
@@ -1147,7 +1219,7 @@ int IMP_FrameSource_EnableChn(int channel)
         }
         trace_p1("P1_INNER ALLOC_END\n");
         buffer->size = chn->sizeimage;
-        fill_qbuf(words, i, buffer->physical, buffer->size);
+            fill_qbuf(words, i, buffer->physical, buffer->size);
         trace_p1("P1_INNER QBUF_BEGIN\n");
         if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words) < 0)
             goto done;

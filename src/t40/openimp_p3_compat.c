@@ -47,13 +47,7 @@ P3_UNSUPPORTED(IMP_DMIC_SetPubAttr)
 P3_UNSUPPORTED(IMP_DMIC_SetUserInfo)
 P3_UNSUPPORTED(IMP_DMIC_SetVol)
 
-P3_UNSUPPORTED(IMP_FrameSource_GetDelay)
-P3_UNSUPPORTED(IMP_FrameSource_GetI2dAttr)
-P3_UNSUPPORTED(IMP_FrameSource_GetMaxDelay)
 P3_UNSUPPORTED(IMP_FrameSource_GetTimedFrame)
-P3_UNSUPPORTED(IMP_FrameSource_SetDelay)
-P3_UNSUPPORTED(IMP_FrameSource_SetI2dAttr)
-P3_UNSUPPORTED(IMP_FrameSource_SetMaxDelay)
 #if !defined(PLATFORM_T41)   /* T41: openimp_p1.c */
 P3_UNSUPPORTED(IMP_FrameSource_SnapFrame)
 #endif
