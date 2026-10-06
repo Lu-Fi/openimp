@@ -5,6 +5,11 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-06
+
+- T21: `IMP_ISP_Tuning_SetDPStrength` and `IMP_ISP_Tuning_SetAntiFogAttr` are exported like the vendor T21 libimp (an application built against the T21 SDK did not load without them). DP strength (vendor percentage, cap 200) reaches the open driver's DPC ratio; AntiFog goes to control 0x8000163 like the vendor, which the OEM kernel accepts without effect.
+- imgfx: the green/magenta stripe in the top rows of the saved ch1 pictures was a tool error (chroma plane read at width*height instead of after ALIGN16(height) lines); JPEG snapshots and streams were never affected.
+
 ## 2026-10-04
 
 - thingino: `openimp` and `open-tx-isp` are part of upstream `aperto` ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), pinned to the Lu-Fi forks; the T23 OEM Helix helper option and hybrid install are gone. All test cameras run `aperto` images (30/30 snapshots, 0 oops, 0 VPU errors).
