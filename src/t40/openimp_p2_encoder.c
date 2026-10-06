@@ -257,6 +257,7 @@ typedef struct {
     int in_poll;                    /* PollingStream calls in progress */
     int closing;                    /* teardown waits: refuse new polls */
     pthread_cond_t poll_idle;       /* signalled when in_poll drops to 0 */
+    pthread_mutex_t poll_serial;    /* one PollingStream encodes at a time */
     pthread_mutex_t lock;
 } P2EncoderChannel;
 
@@ -1597,6 +1598,7 @@ int EncoderInit(void)
             pthread_mutex_init(&p2_channels[i].lock, NULL);
             pthread_cond_init(&p2_channels[i].jpeg_frame_ready, NULL);
             pthread_cond_init(&p2_channels[i].poll_idle, NULL);
+            pthread_mutex_init(&p2_channels[i].poll_serial, NULL);
         }
         p2_initialized = 1;
         p2_startup_trace("openimp/P2 startup: EncoderInit channel locks initialized\n");
@@ -2314,7 +2316,24 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
     }
     __atomic_add_fetch(&ch->in_poll, 1, __ATOMIC_RELEASE);
     pthread_mutex_unlock(&ch->lock);
-    ret = p2_polling_stream(channel, timeout_ms);
+    /* Two threads polling one channel (an application thread next to the
+     * GetFd pump, or a drain thread) must not both feed the encoder: the
+     * second Process failed against the stream the first still held and
+     * its PollingStream returned -1 although frames were flowing.  The
+     * second poller waits for the first, then takes the stream it left
+     * (raw_stream) or encodes the next frame within what remains of its
+     * own timeout. */
+    {
+        uint64_t start_us = p2_monotonic_us();
+        uint64_t spent_ms;
+
+        pthread_mutex_lock(&ch->poll_serial);
+        spent_ms = (p2_monotonic_us() - start_us) / 1000u;
+        ret = p2_polling_stream(channel,
+                                spent_ms >= timeout_ms ? 0u
+                                    : timeout_ms - (uint32_t)spent_ms);
+        pthread_mutex_unlock(&ch->poll_serial);
+    }
     pthread_mutex_lock(&ch->lock);
     __atomic_store_n(&ch->last_poll_us, p2_monotonic_us(), __ATOMIC_RELEASE);
     if (--ch->in_poll == 0)
