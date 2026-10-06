@@ -1221,6 +1221,7 @@ enum {
     TISP_CID_WDR_OUTPUT_MODE = 0x80000ea,
     TISP_CID_CCM_ATTR = 0x8000100,
     TISP_CID_BCSH_HUE = 0x8000101,
+    TISP_CID_BCSH_FIXED_CONTRAST = 0x8000102,
 #if defined(PLATFORM_T20)
     /* IMAGE_TUNING_CID_CUSTOM_BASE + 7/8/10 in the T20 V4L2 tuning ABI
      * (T20 3.12.0 SetISPProcess/SetFWFreeze/SetShading). */
@@ -4297,10 +4298,33 @@ int IMP_ISP_GetFrameDrop(void *attr)
 }
 
 #if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
-int IMP_ISP_SetFixedContraster(int mode)
+/* Vendor 0x99420 forwards the caller's fixed-contrast attribute (an
+ * IMPISPFixedContrastAttr pointer, cid 0x8000102) to the firmware; the old
+ * OpenIMP stub dropped it and answered 0.  The vendor funnels a NULL attribute
+ * into the same "get_ispdev error !" exit as a missing ispdev, i.e. -1. */
+int IMP_ISP_SetFixedContraster(void *attr)
 {
-    (void)mode;
-    return 0;
+    ISPDevice *isp;
+    int result;
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL || attr == NULL) {
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+                    "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c",
+                    0x13c5, "IMP_ISP_SetFixedContraster",
+                    "get_ispdev error !\n");
+        return -1;
+    }
+    if (isp->tuning_state != 2)
+        return -1;
+
+    result = tseries_tuning_set_ptr(TISP_CID_BCSH_FIXED_CONTRAST, attr);
+    if (result != 0)
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+                    "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c",
+                    0x13d3, "IMP_ISP_SetFixedContraster",
+                    "%s(%d),ioctl IMAGE_TUNING_CID_BCSH_SET_FIXED_CONTRAST!\n",
+                    "IMP_ISP_SetFixedContraster", 0x13d3);
+    return result;
 }
 #endif /* !PLATFORM_T23 */
 
