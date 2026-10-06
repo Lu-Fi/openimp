@@ -238,7 +238,7 @@ void t_fs(void)
     NEED(IMP_FrameSource_GetFrame) {
         int64_t first = 0, last = 0, tprev = 0, tmeas = 0;
         int n = 0, mono = 1, w = 0, h = 0, rr = 0;
-        unsigned luma = 0;
+        unsigned luma = 0, luma0 = 0;
         IMPFrameInfo **pf = (IMPFrameInfo **)gnew(sizeof(IMPFrameInfo *));
         int64_t t0 = now_us(), t1;
 
@@ -247,8 +247,9 @@ void t_fs(void)
             r = IMP_FrameSource_GetFrame(1, pf);
             gchk(pf);
             if (r < 0 || !*pf) break;
-            if (n == 0) { first = (*pf)->timeStamp; w = (*pf)->width; h = (*pf)->height; luma = luma_mean(*pf);
+            if (n == 0) { first = (*pf)->timeStamp; w = (*pf)->width; h = (*pf)->height; luma0 = luma_mean(*pf);
                           if (!((*pf)->virAddr && (*pf)->size >= nv12)) mono = 0; }
+            { unsigned l = luma_mean(*pf); if (l > luma) luma = l; }   /* brightest of the 16: the first buffers can still be unwritten */
             if (n && (*pf)->timeStamp <= tprev) mono = 0;
             tprev = last = (*pf)->timeStamp;
             if (n == 4) tmeas = last;   /* frames 0..3 can be the ring of the first buffers (older than the sleep before) */
@@ -259,7 +260,7 @@ void t_fs(void)
         }
         t1 = now_us();
         CHECK(IMP_FrameSource_GetFrame, r < 0 ? r : 0, n == 16 && w == SUB_W && h == SUB_H && mono && luma > 0,
-              "%d frames %dx%d luma %u ts monotonic %d, %.1f fps (wall), ts span %lld us", n, w, h, luma, mono,
+              "%d frames %dx%d luma %u (first frame %u) ts monotonic %d, %.1f fps (wall), ts span %lld us", n, w, h, luma, luma0, mono,
               n > 1 ? (n - 1) * 1e6 / (double)(t1 - t0) : 0.0, (long long)(last - first));
         NEED(IMP_FrameSource_ReleaseFrame) rep(FN(IMP_FrameSource_ReleaseFrame), rr, rr == 0 ? V_PASS : V_FAIL, "last release");
         /* libimp hands out the channel at the sensor rate (outFrmRate is not a

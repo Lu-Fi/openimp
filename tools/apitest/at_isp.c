@@ -252,7 +252,12 @@ void t_isp(void)
 #endif
 #if HAS_IMP_ISP_Tuning_GetAeZone
 # if defined(PLATFORM_T10) || defined(PLATFORM_T20)
-    ISPGET(IMP_ISP_Tuning_GetAeZone, IMPISPAEZone, "zone[0] %u zone[112] %u", p->ae_sta_zone[0], p->ae_sta_zone[112])
+    /* the vendor T20 3.12.0 libimp sends {1, 0x800002f, ptr} and the stock tx-isp-t20 kernel module has no case for
+     * 0x800002f in isp_core_ops_g_ctrl (jump table entry 47 = the -1 default): the vendor stack returns -1 too */
+    NEED(IMP_ISP_Tuning_GetAeZone) { G(IMPISPAEZone, p); int r_ = IMP_ISP_Tuning_GetAeZone(V0 p); gchk(p);
+        if (r_ == 0) rep(FN(IMP_ISP_Tuning_GetAeZone), r_, V_PASS, "zone[0] %u zone[112] %u", p->ae_sta_zone[0], p->ae_sta_zone[112]);
+        else rep(FN(IMP_ISP_Tuning_GetAeZone), r_, V_NA, "-1 as on the vendor stack: the stock T10/T20 kernel module does not serve cid 0x800002f");
+        gfree(p); }
 # else
     ISPGET(IMP_ISP_Tuning_GetAeZone, IMPISPZone, "zone[7][7] %u", p->zone[7][7])
 # endif

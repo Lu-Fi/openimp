@@ -632,7 +632,13 @@ static void live_common(int chn, int codec)
                 rep(FN(IMP_Encoder_SetChnROI), r, V_NA, "enabling a region is refused: no macroblock QP map in this SoC's OpenIMP encoder");
                 rep(FN(IMP_Encoder_GetChnROI), r2, V_NA, "nothing to read back (SetChnROI refused)");
             } else {
+            /* T10/T20/T21 vendor (T20 3.12.0 0x4899c/0x48c3c, T21 1.0.33): Set stores the corners /16 (truncating) as
+             * macroblock bytes and Get returns them x16, so the read-back is the rect rounded down to 16 */
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+            CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p0.y == 64 && g->rect.p1.x == 304 && g->rect.p1.y == 240 && g->s32Qp == -4,
+#else
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p1.x == 319 && g->s32Qp == -4,
+#endif
                   "roi 0 (64,64)-(319,255) dQP -4, read back en %d (%d,%d)-(%d,%d) qp %d", g->bEnable, g->rect.p0.x, g->rect.p0.y, g->rect.p1.x, g->rect.p1.y, g->s32Qp);
             CHECK(IMP_Encoder_GetChnROI, r2, g->bEnable, "enabled %d", g->bEnable);
             }
