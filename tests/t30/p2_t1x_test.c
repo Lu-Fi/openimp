@@ -29,6 +29,8 @@ int IMP_Encoder_SetSuperFrameCfg(int, const IMPEncoderSuperFrmCfg *);
 int IMP_Encoder_GetSuperFrameCfg(int, IMPEncoderSuperFrmCfg *);
 int IMP_Encoder_SetH264TransCfg(int, const IMPEncoderH264TransCfg *);
 int IMP_Encoder_SetQpgMode(int, const IMPEncoderQpgMode *);
+int IMP_Encoder_SetJpegeQl(int, IMPEncoderJpegeQl *);
+int IMP_Encoder_GetJpegeQl(int, IMPEncoderJpegeQl *);
 
 static int failures;
 
@@ -64,7 +66,10 @@ int AL_Codec_Encode_GetStream(void *c, void **s, void **u) { (void)c; (void)s; (
 int AL_Codec_Encode_ReleaseStream(void *c, void *s, void *u) { (void)c; (void)s; (void)u; return 0; }
 int AL_Codec_Encode_JpegSkipped(void *c) { (void)c; return 0; }
 int AL_Codec_Encode_SetJpegSkip(void *c, int a) { (void)c; (void)a; return 0; }
-int AL_Codec_Encode_SetJpegQl(void *c, int a, const uint8_t *b) { (void)c; (void)a; (void)b; return 0; }
+static int jql_calls, jql_en = -1;
+static uint8_t jql_tab[128];
+int AL_Codec_Encode_SetJpegQl(void *c, int a, const uint8_t *b)
+{ (void)c; jql_calls++; jql_en = a; if (b) memcpy(jql_tab, b, sizeof(jql_tab)); return 0; }
 #define STUB0(name) int name(void *codec) { (void)codec; return 0; }
 #define STUB1(name, t) int name(void *codec, t a) { (void)codec; (void)a; return 0; }
 STUB0(AL_Codec_Encode_RequestIDR)
@@ -114,6 +119,7 @@ int main(void)
     IMPEncoderSuperFrmCfg sf;
     IMPEncoderH264TransCfg tr;
     IMPEncoderQpgMode qpg;
+    IMPEncoderJpegeQl jql;
 
     CHECK(IMP_Encoder_CreateGroup(0) == 0);
     make_attr(&attr, 0);
@@ -193,6 +199,22 @@ int main(void)
     CHECK(IMP_Encoder_SetQpgMode(0, &qpg) == 0);
     qpg = ENC_QPG_SAS;
     CHECK(IMP_Encoder_SetQpgMode(0, &qpg) == -1);
+
+    /* JpegeQl: applied to the running codec at once (the vendor hands it to
+     * its JPEG core), stored for Get; bad channel / NULL fail */
+    memset(&jql, 0, sizeof(jql));
+    jql.user_ql_en = 1;
+    memset(jql.qmem_table, 7, 128);
+    CHECK(IMP_Encoder_SetJpegeQl(0, &jql) == 0);
+    CHECK(jql_calls == 1 && jql_en == 1 && jql_tab[0] == 7 && jql_tab[127] == 7);
+    memset(&jql, 0xaa, sizeof(jql));
+    CHECK(IMP_Encoder_GetJpegeQl(0, &jql) == 0 && jql.user_ql_en &&
+          jql.qmem_table[5] == 7);
+    jql.user_ql_en = 0;
+    CHECK(IMP_Encoder_SetJpegeQl(0, &jql) == 0 && jql_calls == 2 && jql_en == 0);
+    CHECK(IMP_Encoder_SetJpegeQl(0, NULL) == -1);
+    CHECK(IMP_Encoder_GetJpegeQl(0, NULL) == -1);
+    CHECK(IMP_Encoder_SetJpegeQl(99, &jql) == -1 && jql_calls == 2);
 
     CHECK(IMP_Encoder_DestroyChn(0) == 0);
     CHECK(IMP_Encoder_DestroyChn(1) == 0);
