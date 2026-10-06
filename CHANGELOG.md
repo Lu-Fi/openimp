@@ -7,6 +7,7 @@ Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one aft
 
 ## 2026-10-06
 
+- Release quick wins from the 2026-10-06 review (`claude/release-quickwins`, host-tested only): T21 `IMP_ISP_Tuning_SetModuleControl` falls back to the cache when the open T21 driver rejects control 0x80000e2 (T31 still fails); `IMP_AI_SetHpfCoFrequency(0)` is accepted on T40/T41 (0 = default, as on T31); the P3 capture start is refused while the previous capture thread has not exited (no free of the buffer it still uses); the T21 OSD retry/probe and JPEG fan-out INFO lines are trace-only (`openimp_debug_trace_enabled`).
 - T23: the FrameSource pool's rmem is parked at DisableChn, as on T21 (branch `claude/release-t23-vbm`). The open T23 driver keeps a stopped MSCA output enabled while the input runs, so the pool is no longer handed to other allocations while the MSCA may still write into it. The block is freed by `DestroyChn`, or at once with `OPENIMP_VBM_PARK=0`.
   - Tested on the Jooan A6M (raptor) together with open-tx-isp `claude/release-t23-driver`: 40 streamer restarts with every snapshot OK, 0 oopses.
 - T21: `IMP_ISP_Tuning_SetDPStrength` and `IMP_ISP_Tuning_SetAntiFogAttr` are exported like the vendor T21 libimp (an application built against the T21 SDK did not load without them). DP strength (vendor percentage, cap 200) reaches the open driver's DPC ratio; AntiFog goes to control 0x8000163 like the vendor, which the OEM kernel accepts without effect.

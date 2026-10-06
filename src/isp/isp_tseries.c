@@ -3282,7 +3282,11 @@ int IMP_ISP_Tuning_SetModuleControl(IMPISPModuleCtl *ispmodule)
      * 0x80000e2 (bypass bits; the T21 bit names differ, the key is
      * passed through) */
     if (tseries_tuning_set_ptr(TISP_CID_MODULE_CONTROL, ispmodule) != 0) {
+#if defined(PLATFORM_T31)
         return -1;
+#endif
+        /* the open T21 driver has no handler for 0x80000e2: keep the value
+         * in the cache like before instead of failing */
     }
 #endif
     tseries_module_ctl = *ispmodule;

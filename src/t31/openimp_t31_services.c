@@ -554,7 +554,7 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
 
         memcpy(rec, fi + 0x10, sizeof(rec));
         if (phys_logs++ < 24u)
-            IMP_LOG_INFO("OSD", "grp %d frame phys 0x%08x virt 0x%08x -> v2p 0x%08x%s "
+            IMP_TRACE_LOG("OSD", "grp %d frame phys 0x%08x virt 0x%08x -> v2p 0x%08x%s "
                          "rec+10: %08x %08x %08x %08x %08x %08x %08x %08x",
                          group, phys, virt, vp, vp && vp != phys ? " MISMATCH" : "",
                          rec[0], rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7]);
@@ -619,12 +619,12 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 if (tries++ >= OSD_RETRY_MAX) {
                     result = -1;
                     if (retry_logs++ < 8u)
-                        IMP_LOG_INFO("OSD", "IPU blend without effect after %d "
+                        IMP_TRACE_LOG("OSD", "IPU blend without effect after %d "
                                      "retries, frame flagged", OSD_RETRY_MAX);
                     break;
                 }
                 if (retry_logs++ < 8u)
-                    IMP_LOG_INFO("OSD", "IPU blend without effect, retry %d", tries);
+                    IMP_TRACE_LOG("OSD", "IPU blend without effect, retry %d", tries);
                 usleep(10000);  /* failure looks time-based: space the retries */
                 ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
                 osd_retry_ops++;
@@ -635,7 +635,7 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
                 static unsigned int pass_logs;
 
                 if (pass_logs++ < 40u)
-                    IMP_LOG_INFO("OSD", "probe grp %d +%.0f ms after wake, op #%u, "
+                    IMP_TRACE_LOG("OSD", "probe grp %d +%.0f ms after wake, op #%u, "
                                  "retries %d: %s", group,
                                  (osd_mono_now() - osd_retry_open) * 1000.0,
                                  osd_retry_ops, tries > OSD_RETRY_MAX ? OSD_RETRY_MAX : tries,

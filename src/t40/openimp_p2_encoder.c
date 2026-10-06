@@ -650,7 +650,7 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
             continue;
         }
         if (copy_logs++ < 16u)
-            IMP_LOG_INFO("Encoder", "JPEG fan-out copy from src %d phys 0x%08x "
+            IMP_TRACE_LOG("Encoder", "JPEG fan-out copy from src %d phys 0x%08x "
                          "(OSD verified or not probed)", source_channel,
                          (unsigned int)source->physical_address);
 #if defined(PLATFORM_T41)
@@ -2518,7 +2518,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                 static unsigned int wh_logs;
 
                 if (wh_logs++ < 16u)
-                    IMP_LOG_INFO("Encoder", "ch %d (%s): OSD unconfirmed, frame "
+                    IMP_TRACE_LOG("Encoder", "ch %d (%s): OSD unconfirmed, frame "
                                  "phys 0x%08x withheld from JPEG", channel,
                                  ch->codec_type == IMP_ENC_TYPE_JPEG ? "jpeg" : "video",
                                  (unsigned int)((const P2SyntheticFrame *)frame)->physical_address);
@@ -2570,7 +2570,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         static unsigned int enc_logs;
 
         if (enc_logs++ < 16u && frame)
-            IMP_LOG_INFO("Encoder", "JPEG ch %d encodes frame phys 0x%08x (fanout %d)",
+            IMP_TRACE_LOG("Encoder", "JPEG ch %d encodes frame phys 0x%08x (fanout %d)",
                          channel, (unsigned int)((const P2SyntheticFrame *)frame)->physical_address,
                          ch->jpeg_fanout);
         pthread_mutex_lock(&ch->lock);

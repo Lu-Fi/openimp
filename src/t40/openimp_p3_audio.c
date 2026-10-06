@@ -169,6 +169,7 @@ static struct {
     int cap_running;
     int cap_stop;
     int cap_exited;
+    int cap_alive;                  /* capture thread not yet exited */
     int cap_error;
     size_t cap_frame_bytes;
     unsigned int cap_count;
@@ -239,6 +240,7 @@ static void *p3_capture_main(void *argument)
         pthread_cond_broadcast(&p3_cap_cond);
     }
     p3_audio.cap_exited = 1;
+    p3_audio.cap_alive = 0;
     pthread_cond_broadcast(&p3_cap_cond);
     pthread_mutex_unlock(&p3_cap_lock);
     free(chunk);
@@ -257,8 +259,17 @@ static int p3_capture_start(size_t bytes)
         return -1;
     }
     pthread_mutex_lock(&p3_cap_lock);
+    if (p3_audio.cap_alive) {
+        /* the previous thread outlived p3_capture_stop()'s 1 s wait (stuck
+         * GET_STREAM): it still owns cap_data, so refuse the restart */
+        pthread_mutex_unlock(&p3_cap_lock);
+        free(chunk);
+        free(data);
+        return -1;
+    }
     p3_audio.cap_stop = 0;
     p3_audio.cap_exited = 0;
+    p3_audio.cap_alive = 1;
     p3_audio.cap_error = 0;
     p3_audio.cap_count = 0;
     p3_audio.cap_head = 0;
@@ -270,6 +281,7 @@ static int p3_capture_start(size_t bytes)
     if (pthread_create(&thread, NULL, p3_capture_main, chunk) != 0) {
         pthread_mutex_lock(&p3_cap_lock);
         p3_audio.cap_running = 0;
+        p3_audio.cap_alive = 0;
         pthread_mutex_unlock(&p3_cap_lock);
         free(chunk);
         return -1;
@@ -749,8 +761,9 @@ int IMP_AI_DisableHpf(void)
 
 int IMP_AI_SetHpfCoFrequency(int frequency)
 {
-    if (frequency <= 0)
+    if (frequency < 0)
         return -1;
+    /* 0 = default cut-off (prudynt passes 0), as on T31 */
     p3_audio.hpf_cutoff = frequency;
     return 0;
 }
