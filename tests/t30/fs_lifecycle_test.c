@@ -568,7 +568,7 @@ static uint32_t dma_only(uint32_t *size)
     return n == 1 ? addr : 0;
 }
 
-/* T21/T20 keep a disabled channel's pool memory for its next pool of the
+/* T21/T20/T23 keep a disabled channel's pool memory for its next pool of the
  * same size (rmem fragmentation on timps' idle/re-enable cycles); a pool of
  * another size and DestroyChn free it.  Other SoCs free it at once. */
 static void test_park(void)
@@ -584,14 +584,14 @@ static void test_park(void)
     CHECK(addr != 0, "one pool buffer while enabled (%d)", dma_count());
     for (i = 0; i < 5; i++) {
         CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable (cycle %d)", i);
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
         CHECK(dma_only(&size2) == addr && size2 == size,
               "disabled: pool block parked (cycle %d)", i);
 #else
         CHECK(dma_count() == 0, "disabled: pool freed (cycle %d)", i);
 #endif
         CHECK(IMP_FrameSource_EnableChn(0) == 0, "re-enable (cycle %d)", i);
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
         CHECK(dma_only(&size2) == addr && size2 == size,
               "re-enable reuses the parked block (cycle %d)", i);
 #else
