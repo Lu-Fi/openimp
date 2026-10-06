@@ -38,6 +38,7 @@ static int ai_frames(int dev, int n, unsigned *rms, int *ts_ok)
         if (r != 0 || IMP_AI_GetFrame(dev, 0, f, BLOCK) != 0) { gfree(f); break; }
         if (f->len <= 0 || !f->virAddr) *ts_ok = 0;
         if (last >= 0 && f->timeStamp <= last) *ts_ok = 0;
+        if (getenv("APITEST_DEBUG_AI")) printf("[D] ai %d ts %lld len %d seq %d\n", k, (long long)f->timeStamp, f->len, f->seq);
         last = f->timeStamp;
         *rms = rms16(f);
         IMP_AI_ReleaseFrame(dev, 0, f);

@@ -639,7 +639,12 @@ static void live_common(int chn, int codec)
             uint32_t a = 60000, b = 40000, oi = *pi, op = *pp;
             int r2 = IMP_Encoder_SetChnMaxPictureSize(chn, a, b);
             r = IMP_Encoder_GetChnMaxPictureSize(chn, pi, pp); gchk(pi); gchk(pp);
+#ifdef PLATFORM_T23
+            /* stock T23: one frame-loss threshold from the I value, both getters report it */
+            CHECK(IMP_Encoder_SetChnMaxPictureSize, r2, r == 0 && *pi == a && *pp == a, "I 60000 P 40000, read back %u/%u (T23: one shared threshold from I)", *pi, *pp);
+#else
             CHECK(IMP_Encoder_SetChnMaxPictureSize, r2, r == 0 && *pi == a && *pp == b, "I 60000 P 40000, read back %u/%u", *pi, *pp);
+#endif
             IMP_Encoder_SetChnMaxPictureSize(chn, oi, op);
         }
         gfree(pi); gfree(pp);
@@ -768,7 +773,18 @@ static void live_old(int chn, int codec)
     RT_INT(IMP_Encoder_SetMbRC, IMP_Encoder_GetMbRC, 1, "MbRC")
 # endif
 # if HAS_IMP_Encoder_SetChangeRef
+#  ifdef PLATFORM_T23
+    /* stock T23 1.3.0: the getter has no read-back and fails on a created channel */
+    NEED(IMP_Encoder_SetChangeRef) {
+        int r2 = IMP_Encoder_SetChangeRef(chn, 1);
+        int g = 0, r3 = IMP_Encoder_GetChangeRef ? IMP_Encoder_GetChangeRef(chn, &g) : -1;
+        RET0(IMP_Encoder_SetChangeRef, r2, "ChangeRef set 1 (T23 stock: no read-back)");
+        rep(FN(IMP_Encoder_GetChangeRef), r3, r3 == -1 ? V_PASS : V_FAIL, "stock T23 getter fails on a created channel: ret %d", r3);
+        IMP_Encoder_SetChangeRef(chn, 0);
+    }
+#  else
     RT_INT(IMP_Encoder_SetChangeRef, IMP_Encoder_GetChangeRef, 1, "ChangeRef")
+#  endif
 # endif
 # if HAS_IMP_Encoder_SetQpgMode
     NEED(IMP_Encoder_SetQpgMode) {
@@ -901,7 +917,15 @@ static void live_misc(int chn, int codec)
         gfree(g);
     }
 #if HAS_IMP_Encoder_SetFisheyeEnableStatus
+# ifdef PLATFORM_T23
+    /* stock T23: a creation-time option, SetFisheyeEnableStatus on a created channel fails */
+    if (codec != CODEC_JPEG) NEED(IMP_Encoder_SetFisheyeEnableStatus) {
+        int r2 = IMP_Encoder_SetFisheyeEnableStatus(chn, 1);
+        rep(FN(IMP_Encoder_SetFisheyeEnableStatus), r2, r2 == -1 ? V_PASS : V_FAIL, "stock T23 refuses it on a created channel: ret %d", r2);
+    }
+# else
     if (codec != CODEC_JPEG) { RT_INT(IMP_Encoder_SetFisheyeEnableStatus, IMP_Encoder_GetFisheyeEnableStatus, 1, "fisheye") }
+# endif
 #endif
     NEED(IMP_Encoder_FlushStream) {
         r = IMP_Encoder_FlushStream(chn);
@@ -1127,6 +1151,7 @@ static void test_swenc(void)
                     memset(&f, 0, sizeof(f));
                     f.width = EW; f.height = EH; f.size = (uint32_t)nv12; f.pixfmt = PIX_FMT_NV12;
                     f.virAddr = (uint32_t)(uintptr_t)src; f.phyAddr = (uint32_t)IMP_Encoder_VbmV2P((intptr_t)src);
+                    out->outAddr = (void *)dst; out->outLen = (uint32_t)nv12;   /* caller's buffer and its capacity */
                     r2 = IMP_Encoder_YuvEncode(*h, f, out);
                     gchk(out);
                     if (r2 == 0 && out->outAddr && out->outLen > 4) scan_frame(out->outAddr, out->outLen, CODEC_H264, &si);
@@ -1140,7 +1165,14 @@ static void test_swenc(void)
                     G(IMPEncoderCropCfg, c);
                     int r2 = IMP_Encoder_YuvGetCrop(*h, c); gchk(c);
                     RET0(IMP_Encoder_YuvGetCrop, r2, "en %d %u,%u %ux%u", c->enable, c->x, c->y, c->w, c->h);
-                    NEED(IMP_Encoder_YuvSetCrop) { int r3 = IMP_Encoder_YuvSetCrop(*h, c); RET0(IMP_Encoder_YuvSetCrop, r3, "same value"); }
+                    NEED(IMP_Encoder_YuvSetCrop) {
+#  ifdef PLATFORM_T23
+                        /* even values inside the picture, every margin below 510: a disabled 0x0 window is not valid */
+                        c->enable = 1; c->x = 16; c->y = 16; c->w = EW - 32; c->h = EH - 32;
+#  endif
+                        int r3 = IMP_Encoder_YuvSetCrop(*h, c);
+                        RET0(IMP_Encoder_YuvSetCrop, r3, "%s", c->enable ? "16 px margin" : "same value");
+                    }
                     gfree(c);
                 }
 #  endif

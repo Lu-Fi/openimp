@@ -211,7 +211,15 @@ void t_isp(void)
 #if HAS_IMP_ISP_Tuning_GetAeStrategy
     ISPGETU(IMP_ISP_Tuning_GetAeStrategy, IMPISPAeStrategy, "strategy %d", (int)*p)
 #endif
-#if HAS_IMP_ISP_Tuning_GetBlcAttr
+#if HAS_IMP_ISP_Tuning_GetBlcAttr && defined(PLATFORM_T23)
+    /* stock T23 1.3.0: the BLC attribute control (0x80000a5) is not handled by the module, the call returns -1 */
+    NEED(IMP_ISP_Tuning_GetBlcAttr) {
+        G(IMPISPBlcAttr, p);
+        r = IMP_ISP_Tuning_GetBlcAttr(p); gchk(p);
+        rep(FN(IMP_ISP_Tuning_GetBlcAttr), r, r == -1 ? V_NA : (r == 0 ? V_PASS : V_FAIL), "stock T23 has no BLC attr control (ret %d)", r);
+        gfree(p);
+    }
+#elif HAS_IMP_ISP_Tuning_GetBlcAttr
     ISPGET(IMP_ISP_Tuning_GetBlcAttr, IMPISPBlcAttr, "r %u gr %u gb %u b %u", p->black_level_r, p->black_level_gr, p->black_level_gb, p->black_level_b)
 #endif
 #if HAS_IMP_ISP_Tuning_GetAeHist
