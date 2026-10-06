@@ -112,6 +112,7 @@ int gtouched(void *p);      /* user area differs from the 0 fill */
 extern int g_overwrites;
 
 /* ----------------------------------------------------------- environment */
+extern int g_fps;                 /* sensor rate in effect */
 extern int g_sw, g_sh;               /* sensor size = FS ch0 */
 #define SUB_W 640
 #define SUB_H 360

@@ -13,6 +13,7 @@
 int g_pass, g_fail, g_na, g_skip;
 int g_overwrites;
 int g_sw, g_sh, g_mode_night;
+int g_fps = 15;          /* the sensor rate in effect after SetSensorFPS 15/1 (some sensor drivers keep their only mode) */
 IMPSensorInfo g_sensor;
 
 /* ---------------------------------------------------------------- guards */
@@ -257,6 +258,16 @@ int main(int argc, char **argv)
     ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(15, 1) : -1;
 #endif
     printf("[T] SetSensorFPS 15/1 -> %d\n", ret);
+    if (IMP_ISP_Tuning_GetSensorFPS) {
+#ifdef PLATFORM_T41
+        IMPISPSensorFps gf = { 0, 0 };
+        if (IMP_ISP_Tuning_GetSensorFPS(IMPVI_MAIN, &gf) == 0 && gf.num > 0 && gf.den > 0) g_fps = (int)((gf.num + gf.den / 2) / gf.den);
+#else
+        uint32_t gn = 0, gd = 0;
+        if (IMP_ISP_Tuning_GetSensorFPS(&gn, &gd) == 0 && gn > 0 && gd > 0) g_fps = (int)((gn + gd / 2) / gd);
+#endif
+        printf("[T] sensor rate in effect: %d fps\n", g_fps);
+    }
     { unsigned m = g_mode_night; int r;
 #ifdef PLATFORM_T41
       r = IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, (void *)&m);

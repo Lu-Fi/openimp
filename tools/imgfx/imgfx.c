@@ -39,6 +39,21 @@
 
 #define SUB_W 640
 #define SUB_H 360
+/* The pictures are captured from channel CAPCH and saved as SUB_W x SUB_H NV12.
+ * T41: the second MSCA output (ch1, 640x360 from the 2880x1620 sensor) is
+ * broken in the kernel driver (ratio 4.5: a zoomed crop with garbled chroma,
+ * buffers >= 1 with a stale top band; the streamer's own sub stream shows the
+ * same), so imgfx reads ch0 scaled to CAP_W x CAP_H (exactly what timps uses
+ * as its main stream) and box-filters it down to SUB_W x SUB_H. */
+#ifdef PLATFORM_T41
+# define CAPCH 0
+# define CAP_W 1920
+# define CAP_H 1080
+#else
+# define CAPCH 1
+# define CAP_W SUB_W
+# define CAP_H SUB_H
+#endif
 #define CASE_NA (-0x7fff0000)
 
 /* ------------------------------------------------------------------ SoC */
@@ -449,6 +464,12 @@ static int c_fs1crop(int ph, int arg, char *info, size_t n)
     static IMPFSChnAttr old;
     IMPFSChnAttr a;
     int r;
+
+#ifdef PLATFORM_T41
+    /* T41 captures from ch0 (see CAPCH) and ch1 is not created */
+    (void)ph; (void)arg; (void)info; (void)n; (void)old; (void)a; (void)r;
+    return CASE_NA;
+#endif
 
     if (!HAVE(IMP_FrameSource_SetChnAttr)) return CASE_NA;
     if (ph) { fs1_restart(&old); return 0; }
@@ -1091,7 +1112,7 @@ static int c_scalerlv(int ph, int arg, char *info, size_t n)
     s.channel = 1; s.method = IMP_ISP_SCALER_METHOD_FIXED_WEIGHT; s.level = ph ? 128 : arg;
     if (ph) { s.method = IMP_ISP_SCALER_METHOD_FITTING_CURVE; IMP_ISP_Tuning_SetScalerLv(&s); return 0; }
     r = IMP_ISP_Tuning_SetScalerLv(&s);
-    snprintf(info, n, "ch1 fixed-weight level %d (no readback; restore = fitting curve)", arg);
+    snprintf(info, n, "ch%d fixed-weight level %d (no readback; restore = fitting curve)", CAPCH, arg);
     return r;
 }
 #endif
@@ -1319,15 +1340,15 @@ static int c_mask(int ph, int arg, char *info, size_t n)
     (void)arg;
     if (!HAVE(IMP_ISP_Tuning_SetMaskBlock)) return CASE_NA;
     memset(&a, 0, sizeof(a));
-    a.chx = 1; a.pinum = 0;
+    a.chx = CAPCH; a.pinum = 0;
     if (ph) { a.mask_en = 0; IMP_ISP_Tuning_SetMaskBlock(IMPVI_MAIN, &a); return 0; }
     memset(&old, 0, sizeof(old));
-    a.mask_en = 1; a.mask_pos_left = SUB_W / 4; a.mask_pos_top = SUB_H / 4;
-    a.mask_width = SUB_W / 2; a.mask_height = SUB_H / 2;
+    a.mask_en = 1; a.mask_pos_left = CAP_W / 4; a.mask_pos_top = CAP_H / 4;
+    a.mask_width = CAP_W / 2; a.mask_height = CAP_H / 2;
     a.mask_type = IMPISP_MASK_TYPE_RGB;
     a.mask_value.argb.r_value = 255;
     r = IMP_ISP_Tuning_SetMaskBlock(IMPVI_MAIN, &a);
-    snprintf(info, n, "chx1 block0 %dx%d (no readback; restore = off)", a.mask_width, a.mask_height);
+    snprintf(info, n, "chx%d block0 %dx%d (no readback; restore = off)", CAPCH, a.mask_width, a.mask_height);
     return r;
 }
 
@@ -1344,11 +1365,11 @@ static int c_autozoom(int ph, int arg, char *info, size_t n)
     memset(&old, 0, sizeof(old));
     if (HAVE(IMP_ISP_Tuning_GetAutoZoom)) IMP_ISP_Tuning_GetAutoZoom(IMPVI_MAIN, &old);
     z = old;
-    z.zoom_chx_en[1] = 1; z.zoom_left[1] = (g_sw / 4) & ~1; z.zoom_top[1] = (g_sh / 4) & ~1;
-    z.zoom_width[1] = (g_sw / 2) & ~1; z.zoom_height[1] = (g_sh / 2) & ~1;
+    z.zoom_chx_en[CAPCH] = 1; z.zoom_left[CAPCH] = (g_sw / 4) & ~1; z.zoom_top[CAPCH] = (g_sh / 4) & ~1;
+    z.zoom_width[CAPCH] = (g_sw / 2) & ~1; z.zoom_height[CAPCH] = (g_sh / 2) & ~1;
     r = IMP_ISP_Tuning_SetAutoZoom(IMPVI_MAIN, &z);
-    snprintf(info, n, "ch1 zoom %d,%d %dx%d (was en %d)", z.zoom_left[1], z.zoom_top[1], z.zoom_width[1], z.zoom_height[1],
-             old.zoom_chx_en[1]);
+    snprintf(info, n, "ch%d zoom %d,%d %dx%d (was en %d)", CAPCH, z.zoom_left[CAPCH], z.zoom_top[CAPCH], z.zoom_width[CAPCH],
+             z.zoom_height[CAPCH], old.zoom_chx_en[CAPCH]);
     return r;
 }
 
@@ -1360,7 +1381,7 @@ static int c_scalerlv(int ph, int arg, char *info, size_t n)
 
     if (!HAVE(IMP_ISP_Tuning_SetScalerLv)) return CASE_NA;
     memset(&s, 0, sizeof(s));
-    s.chx = 1; s.mode = ph ? IMPISP_SCALER_FITTING_CRUVE : IMPISP_SCALER_FIXED_WEIGHT; s.level = ph ? 128 : arg;
+    s.chx = CAPCH; s.mode = ph ? IMPISP_SCALER_FITTING_CRUVE : IMPISP_SCALER_FIXED_WEIGHT; s.level = ph ? 128 : arg;
     r = IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, &s);
     if (ph) return 0;
     snprintf(info, n, "ch1 fixed-weight level %d (no readback; restore = fitting curve)", arg);
@@ -1599,6 +1620,44 @@ static size_t uv_offset(const IMPFrameInfo *fr)
     return fr->size >= w * ah * 3 / 2 ? w * ah : w * h;
 }
 
+/* write the frame as SUB_W x SUB_H NV12 (packed): a larger frame (T41: 1920x1080
+ * from ch0) is box-filtered down by the integer ratio. */
+static void write_nv12(FILE *f, const IMPFrameInfo *fr)
+{
+    const unsigned char *vp = (const unsigned char *)(uintptr_t)fr->virAddr;
+    unsigned fw = fr->width, fh = fr->height, fx = fw / SUB_W, fy = fh / SUB_H, x, y, i, j;
+    size_t uvo = uv_offset(fr);
+    unsigned char *row;
+
+    if (fw == SUB_W && fh == SUB_H) {
+        fwrite(vp, 1, (size_t)SUB_W * SUB_H, f);
+        fwrite(vp + uvo, 1, (size_t)SUB_W * SUB_H / 2, f);
+        return;
+    }
+    if (!fx || !fy) return;
+    row = malloc(SUB_W);
+    if (!row) return;
+    for (y = 0; y < SUB_H; y++) {
+        for (x = 0; x < SUB_W; x++) {
+            unsigned sum = 0;
+            for (j = 0; j < fy; j++)
+                for (i = 0; i < fx; i++) sum += vp[(size_t)(y * fy + j) * fw + x * fx + i];
+            row[x] = (unsigned char)((sum + fx * fy / 2) / (fx * fy));
+        }
+        fwrite(row, 1, SUB_W, f);
+    }
+    for (y = 0; y < SUB_H / 2; y++) {          /* interleaved CbCr, the chroma plane has fw/2 samples per line */
+        for (x = 0; x < SUB_W; x++) {
+            unsigned sum = 0, c = x & 1, sx = x / 2;
+            for (j = 0; j < fy; j++)
+                for (i = 0; i < fx; i++) sum += vp[uvo + (size_t)(y * fy + j) * fw + (sx * fx + i) * 2 + c];
+            row[x] = (unsigned char)((sum + fx * fy / 2) / (fx * fy));
+        }
+        fwrite(row, 1, SUB_W, f);
+    }
+    free(row);
+}
+
 /* drop 'skip' frames, then save the next one as raw NV12 (packed: chroma right after luma) */
 static int snap(const char *path, int skip)
 {
@@ -1608,23 +1667,19 @@ static int snap(const char *path, int skip)
     for (tries = 0; tries < 30 && !got; tries++) {
         IMPFrameInfo *fr = NULL;
 
-        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) {
+        if (IMP_FrameSource_GetFrame(CAPCH, &fr) < 0 || !fr) {
             usleep(100000);
             continue;
         }
-        if (skip > 0) { skip--; IMP_FrameSource_ReleaseFrame(1, fr); continue; }
+        if (skip > 0) { skip--; IMP_FrameSource_ReleaseFrame(CAPCH, fr); continue; }
         f = fopen(path, "wb");
         if (f) {
-            size_t ysz = (size_t)fr->width * fr->height, uvo = uv_offset(fr);
-            const unsigned char *vp = (const unsigned char *)(uintptr_t)fr->virAddr;
-
-            fwrite(vp, 1, ysz, f);
-            fwrite(vp + uvo, 1, ysz / 2, f);
+            write_nv12(f, fr);
             fclose(f);
-            g_got_w = fr->width; g_got_h = fr->height;
+            g_got_w = SUB_W; g_got_h = SUB_H;
             got = 1;
         }
-        IMP_FrameSource_ReleaseFrame(1, fr);
+        IMP_FrameSource_ReleaseFrame(CAPCH, fr);
     }
     return got ? 0 : -1;
 }
@@ -1639,7 +1694,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
     double sy = 0, su = 0, sv = 0, sd = 0;
     unsigned ny = 0, nc = 0, nd = 0;
 
-    if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
+    if (IMP_FrameSource_GetFrame(CAPCH, &fr) < 0 || !fr) return -1;
     w = fr->width; h = fr->height;
     p = (const unsigned char *)(uintptr_t)fr->virAddr;
     uvo = uv_offset(fr);
@@ -1653,7 +1708,7 @@ static int frame_stats(double *my, double *mu, double *mv, double *md)
         for (x = 0; x + 1 < w; x += 4) {
             su += p[uvo + y * w + x]; sv += p[uvo + y * w + x + 1]; nc++;
         }
-    IMP_FrameSource_ReleaseFrame(1, fr);
+    IMP_FrameSource_ReleaseFrame(CAPCH, fr);
     *my = ny ? sy / ny : 0; *mu = nc ? su / nc : 0; *mv = nc ? sv / nc : 0; *md = nd ? sd / nd : 0;
     return 0;
 }
@@ -1702,7 +1757,7 @@ static void settle(int ms)
     usleep((300 + ms + g_extra_ms) * 1000);
     for (k = 0; k < 3; k++) {         /* skip 3 frames (older than the change) */
         fr = NULL;
-        if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(1, fr);
+        if (IMP_FrameSource_GetFrame(CAPCH, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(CAPCH, fr);
     }
 }
 
@@ -1783,12 +1838,22 @@ int main(int argc, char **argv)
     fs0.picWidth = g_sw; fs0.picHeight = g_sh; fs0.pixFmt = PIX_FMT_NV12;
     fs0.outFrmRateNum = 15; fs0.outFrmRateDen = 1; fs0.nrVBs = 2;
     fs0.type = FS_PHY_CHANNEL;
+#ifdef PLATFORM_T41
+    /* the only channel: ch0 scaled to CAP_W x CAP_H like the timps main stream (see CAPCH) */
+    fs0.picWidth = CAP_W; fs0.picHeight = CAP_H;
+    fs0.scaler.enable = 1; fs0.scaler.outwidth = CAP_W; fs0.scaler.outheight = CAP_H;
+    memset(&fs1, 0, sizeof(fs1));
+    if (IMP_FrameSource_CreateChn(0, &fs0) < 0) { say("[E] FS_CreateChn failed\n"); return 1; }
+    IMP_FrameSource_SetFrameDepth(CAPCH, 1);
+    if (IMP_FrameSource_EnableChn(0) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
+#else
     fs1 = fs0;
     fs1.picWidth = SUB_W; fs1.picHeight = SUB_H;
     fs1.scaler.enable = 1; fs1.scaler.outwidth = SUB_W; fs1.scaler.outheight = SUB_H;
     if (IMP_FrameSource_CreateChn(0, &fs0) < 0 || IMP_FrameSource_CreateChn(1, &fs1) < 0) { say("[E] FS_CreateChn failed\n"); return 1; }
     IMP_FrameSource_SetFrameDepth(1, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
+#endif
     sleep(3);   /* AE/AWB settle */
     wait_settled("start", 8000);
 
@@ -1833,9 +1898,13 @@ int main(int argc, char **argv)
     alarm(0);
     say("[T] done: %u pictures, %u cases N/A, %u functions exercised (picture size %dx%d)\n", ran, na, nset, g_got_w, g_got_h);
 
+#ifndef PLATFORM_T41
     IMP_FrameSource_DisableChn(1);
+#endif
     IMP_FrameSource_DisableChn(0);
+#ifndef PLATFORM_T41
     IMP_FrameSource_DestroyChn(1);
+#endif
     IMP_FrameSource_DestroyChn(0);
     IMP_ISP_DisableTuning();
     IMP_System_Exit();

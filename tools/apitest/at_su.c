@@ -1,5 +1,6 @@
 /* apitest: sysutils (SU_*) functions.  They live in libsysutils.so, resolved with dlsym
  * (type-checked against the vendor headers). Never called: SU_Base_Shutdown/Reboot/Suspend. */
+#include <unistd.h>
 #include "apitest.h"
 
 static void *g_su;
@@ -128,8 +129,13 @@ void t_su(void)
     SUNEED(SU_Key_OpenEvent) {
         int fd = f_SU_Key_OpenEvent();
 
-        rep(FN(SU_Key_OpenEvent), fd, fd >= 0 ? V_PASS : V_FAIL, "event fd %d (FAIL without an input device is normal on boards without keys)", fd);
-        SUNEED(SU_Key_CloseEvent) { r = fd >= 0 ? f_SU_Key_CloseEvent(fd) : -1; RET0(SU_Key_CloseEvent, r, "fd %d", fd); }
+        int nodev = fd < 0 && access("/dev/input/event0", F_OK) != 0;   /* no key / input device on this board */
+
+        rep(FN(SU_Key_OpenEvent), fd, fd >= 0 ? V_PASS : nodev ? V_NA : V_FAIL, "event fd %d%s", fd, nodev ? " (no /dev/input/event* on this board)" : "");
+        SUNEED(SU_Key_CloseEvent) {
+            if (nodev) rep(FN(SU_Key_CloseEvent), 0, V_NA, "no input device, nothing to close");
+            else { r = fd >= 0 ? f_SU_Key_CloseEvent(fd) : -1; RET0(SU_Key_CloseEvent, r, "fd %d", fd); }
+        }
     }
     rep(FN(SU_Key_ReadEvent), 0, V_SKIP, "blocks until a key is pressed");
     rep(FN(SU_Key_EnableEvent), 0, V_SKIP, "masks a hardware key in the input driver");

@@ -236,7 +236,7 @@ void t_fs(void)
 #endif
     /* GetFrame / ReleaseFrame: content, size, timestamps, rate */
     NEED(IMP_FrameSource_GetFrame) {
-        int64_t first = 0, last = 0, tprev = 0;
+        int64_t first = 0, last = 0, tprev = 0, tmeas = 0;
         int n = 0, mono = 1, w = 0, h = 0, rr = 0;
         unsigned luma = 0;
         IMPFrameInfo **pf = (IMPFrameInfo **)gnew(sizeof(IMPFrameInfo *));
@@ -251,6 +251,7 @@ void t_fs(void)
                           if (!((*pf)->virAddr && (*pf)->size >= nv12)) mono = 0; }
             if (n && (*pf)->timeStamp <= tprev) mono = 0;
             tprev = last = (*pf)->timeStamp;
+            if (n == 4) tmeas = last;   /* frames 0..3 can be the ring of the first buffers (older than the sleep before) */
             if (IMP_FrameSource_ReleaseFrame) {
                 rr = IMP_FrameSource_ReleaseFrame(1, *pf);
             }
@@ -264,10 +265,10 @@ void t_fs(void)
         /* libimp hands out the channel at the sensor rate (outFrmRate is not a
          * FrameSource drop rate); apitest set the sensor to 15/1 as the vendor
          * samples do, so ch1 must run at ~15 fps */
-        if (n == 16 && last > first) {
-            double fps = 15.0 * 1e6 / (double)(last - first);
-            rep(LBL("FrameSource rate = sensor rate"), 0, fps > 12.0 && fps < 18.0 ? V_PASS : V_FAIL,
-                "ch1 %.1f fps by timestamps (sensor 15/1, channel outFrmRate 15/1)", fps);
+        if (n == 16 && last > tmeas && tmeas) {
+            double fps = 11.0 * 1e6 / (double)(last - tmeas);
+            rep(LBL("FrameSource rate = sensor rate"), 0, fps > g_fps * 0.8 && fps < g_fps * 1.2 ? V_PASS : V_FAIL,
+                "ch1 %.1f fps by timestamps (sensor %d fps in effect, channel outFrmRate 15/1)", fps, g_fps);
         }
         gfree(pf);
     }
