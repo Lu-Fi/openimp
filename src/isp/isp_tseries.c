@@ -1215,6 +1215,12 @@ enum {
     TISP_CID_CSC_ATTR = 0x80000a6,
     TISP_CID_SENSOR_FPS = 0x80000e0,
     TISP_CID_RUNNING_MODE = 0x80000e1,
+    /* Vendor libimp 1.1.6 IMP_ISP_Tuning_SetHVFLIP/GetHVFlip (0x9634c /
+     * 0x964e8) send the combined flip mask as a scalar through the tuning ABI:
+     * H = bit 0, V = bit 1, valid range 0..3.  The T31 driver folds it into
+     * the same apical_isp_hvflip_update() as the separate 0x980914/0x980915
+     * S_CTRL writes, but as a single atomic update. */
+    TISP_CID_HV_FLIP = 0x80000e4,
     TISP_CID_MASK = 0x80000e5,
     TISP_CID_AUTO_ZOOM = 0x80000e8,
     TISP_CID_SCALER_LV = 0x80000e9,
@@ -3461,12 +3467,27 @@ int IMP_ISP_Tuning_SetHVFLIP(IMPISPHVFLIP hvflip)
 {
     int result;
 
+    /* Vendor: sltiu $v1,$a0,4 -> anything outside 0..3 (and any negative
+     * value, which the unsigned compare also rejects) is refused with -1
+     * before the driver is touched.  The old code masked silently, so
+     * SetHVFLIP(4) returned 0 where the vendor returns -1. */
+    if ((uint32_t)hvflip >= (uint32_t)IMPISP_FLIP_MODE_BUTT) {
+        return -1;
+    }
+
+#if defined(PLATFORM_T31)
+    /* Vendor 0x9634c sends the whole mask in one tuning-ABI call instead of
+     * two independent S_CTRL writes, so H and V change atomically. */
+    result = tseries_tuning_set_val(TISP_CID_HV_FLIP, (int32_t)hvflip);
+#else
     result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, hvflip & 1);
     if (result != 0) {
         return result;
     }
 
     result = tseries_v4l2_set(TISP_V4L2_CID_VFLIP, (hvflip >> 1) & 1);
+#endif
+
     if (result == 0) {
         tseries_hvflip = hvflip;
     }
@@ -3475,27 +3496,41 @@ int IMP_ISP_Tuning_SetHVFLIP(IMPISPHVFLIP hvflip)
 
 int IMP_ISP_Tuning_GetHVFlip(IMPISPHVFLIP *hvflip)
 {
-    int32_t hflip = 0;
-    int32_t vflip = 0;
+    int32_t value = 0;
     int result;
 
     if (hvflip == NULL) {
         return -1;
     }
 
-    result = tseries_v4l2_get(TISP_V4L2_CID_HFLIP, &hflip);
-    if (result != 0) {
-        return result;
-    }
+#if defined(PLATFORM_T31)
+    /* Vendor 0x964e8 reads the combined mask back from cid 0x80000e4 and
+     * stores it to *hvflip only when the ioctl succeeded. */
+    result = tseries_tuning_get_val(TISP_CID_HV_FLIP, &value);
+#else
+    {
+        int32_t hflip = 0;
+        int32_t vflip = 0;
 
-    result = tseries_v4l2_get(TISP_V4L2_CID_VFLIP, &vflip);
-    if (result != 0) {
-        return result;
-    }
+        result = tseries_v4l2_get(TISP_V4L2_CID_HFLIP, &hflip);
+        if (result != 0) {
+            return result;
+        }
 
-    tseries_hvflip = (hflip ? 1 : 0) | (vflip ? 2 : 0);
-    *hvflip = tseries_hvflip;
-    return 0;
+        result = tseries_v4l2_get(TISP_V4L2_CID_VFLIP, &vflip);
+        if (result != 0) {
+            return result;
+        }
+
+        value = (hflip ? 1 : 0) | (vflip ? 2 : 0);
+    }
+#endif
+
+    if (result == 0) {
+        tseries_hvflip = (IMPISPHVFLIP)(value & 3);
+        *hvflip = tseries_hvflip;
+    }
+    return result;
 }
 #endif /* !PLATFORM_T23 */
 
