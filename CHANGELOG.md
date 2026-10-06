@@ -5,6 +5,11 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-06
+
+- T23: the FrameSource pool's rmem is parked at DisableChn, as on T21 (branch `claude/release-t23-vbm`). The open T23 driver keeps a stopped MSCA output enabled while the input runs, so the pool is no longer handed to other allocations while the MSCA may still write into it. The block is freed by `DestroyChn`, or at once with `OPENIMP_VBM_PARK=0`.
+  - Tested on the Jooan A6M (raptor) together with open-tx-isp `claude/release-t23-driver`: 40 streamer restarts with every snapshot OK, 0 oopses.
+
 ## 2026-10-04
 
 - thingino: `openimp` and `open-tx-isp` are part of upstream `aperto` ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), pinned to the Lu-Fi forks; the T23 OEM Helix helper option and hybrid install are gone. All test cameras run `aperto` images (30/30 snapshots, 0 oops, 0 VPU errors).
