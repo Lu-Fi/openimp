@@ -71,6 +71,9 @@ int AL_Codec_Encode_Process(void *c, void *f, void *u) { (void)c; (void)f; (void
 int AL_Codec_Encode_GetStream(void *c, void **s, void **u) { (void)c; (void)s; (void)u; return 1; }
 int AL_Codec_Encode_ReleaseStream(void *c, void *s, void *u) { (void)c; (void)s; (void)u; return 0; }
 int AL_Codec_Encode_JpegSkipped(void *c) { (void)c; return 0; }
+int VBMGetFrame(int chn, void **frame) { (void)chn; (void)frame; return -1; }
+int AL_Codec_Encode_InsertUserData(void *c, const void *d, unsigned int s, unsigned int n, unsigned int m)
+{ (void)c; (void)d; (void)s; (void)n; (void)m; return 0; }
 int AL_Codec_Encode_SetJpegSkip(void *c, int a) { (void)c; (void)a; return 0; }
 static int jql_calls, jql_en = -1;
 static uint8_t jql_tab[128];
