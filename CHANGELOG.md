@@ -5,6 +5,10 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-06
+
+- Pending (branch `claude/streamer-gaps-t1x-t23-t31`, host-tested and cross-built only, no device test yet): `IMP_AI_SetHpfCoFrequency` takes effect on T23/T31 (and, untested, T41): `IMP_AI_EnableHpf` designs the filter for the cut-off like the vendor library (illegal for a negative value or above the sample rate; 0 = default tables) and hands it to libaudioProcess-neo as a float biquad at the stream's rate (beyond the original library, which takes libimp's coefficient pointer; neo is recognised by its DRC export); `IMP_AO_EnableHpf` reaches neo the same way. T31 `IMP_ISP_Tuning_Enable/DisableMovestate` run the vendor library's logic (AE block of control 0x800002c, day/night limits from `/etc/sensor/<sensor>move.txt` loaded by EnableTuning, IDR on channel 0 on disable; the stock T31 driver ignores the control). T21 `IMP_Encoder_Get/SetQpgMode` keep any value like the vendor library (nothing reads it there), `IMP_Encoder_Get/SetH265TransCfg` check and drop like the vendor (Get returns zeros). `IMP_Encoder_Get/SetJpegeQl` on T10/T20/T21 was already applied to the running encoder (host test added). `IMP_Encoder_SetbufshareChn` on T31 is store-only in the vendor library too.
+
 ## 2026-10-04
 
 - thingino: `openimp` and `open-tx-isp` are part of upstream `aperto` ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), pinned to the Lu-Fi forks; the T23 OEM Helix helper option and hybrid install are gone. All test cameras run `aperto` images (30/30 snapshots, 0 oops, 0 VPU errors).
