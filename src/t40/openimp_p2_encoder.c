@@ -1722,7 +1722,7 @@ int IMP_Encoder_DestroyGroup(int group)
     return 0;
 }
 
-#if !defined(PLATFORM_T23)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
 /* Test hook for the ROI / chroma QP offset path without a streamer that
  * calls the API: OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..." (pixel
  * corners as IMPRect p0/p1, region index = position in the list) and
@@ -1944,7 +1944,7 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     pthread_mutex_unlock(&ch->lock);
-#if !defined(PLATFORM_T23)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
     p2_debug_roi_chroma(channel);
 #endif
     p2_trace("openimp/P2: CreateChn done ch=%d codec=%p\n",
