@@ -4486,6 +4486,7 @@ int IMP_ISP_DisableSensor(void)
 {
     ISPDevice *isp;
     int32_t sensor_index = -1;
+    int32_t destroy_arg = -1;
 
     if (tseries_get_isp(&isp) != 0) {
         return -1;
@@ -4533,12 +4534,18 @@ int IMP_ISP_DisableSensor(void)
     }
     kmsg_trace("libimp/ISP: DisableSensor DISABLE_LINKS ok\n");
 
-    if (ioctl(isp->fd, TISP_VIDIOC_DESTROY_LINKS, &sensor_index) != 0) {
+    /* Vendor IMP_ISP_DisableSensor (0x97e7c, ioctl at 0x97f40) hands
+     * TISP_VIDIOC_DESTROY_LINKS a pointer to a local initialised to -1
+     * (HLIL: `result_1 = 0xffffffff` right before the ioctl) and never the
+     * sensor index it just read.  IMP_ISP_EnableSensor installed the graph
+     * with config 0 and this driver answers TISP_VIDIOC_GET_SENSOR_INDEX with
+     * 1, so forwarding that index named the other (bypass) topology. */
+    if (ioctl(isp->fd, TISP_VIDIOC_DESTROY_LINKS, &destroy_arg) != 0) {
         kmsg_trace("libimp/ISP: DisableSensor DESTROY_LINKS failed arg=%d errno=%d\n",
-                   sensor_index, errno);
+                   destroy_arg, errno);
         return -1;
     }
-    kmsg_trace("libimp/ISP: DisableSensor DESTROY_LINKS ok arg=%d\n", sensor_index);
+    kmsg_trace("libimp/ISP: DisableSensor DESTROY_LINKS ok arg=%d\n", destroy_arg);
 
     if (ioctl(isp->fd, TISP_VIDIOC_DISABLE_SENSOR, 0) != 0) {
         kmsg_trace("libimp/ISP: DisableSensor DISABLE_SENSOR failed errno=%d\n", errno);
