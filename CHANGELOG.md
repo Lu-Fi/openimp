@@ -5,6 +5,10 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-06
+
+- T21 `IMP_ISP_Tuning_SetBrightness` now acts (beyond vendor; the vendor T21 kernel only stores the value): needs open-tx-isp `claude/release-t21-brightness`, no libimp change. Device-tested on the PC420 (jxf23): brightness 30/128/225 gives Y 28.8/117.7/193.0, timps `image.brightness` live the same. 128 is the vendor picture.
+
 ## 2026-10-04
 
 - thingino: `openimp` and `open-tx-isp` are part of upstream `aperto` ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), pinned to the Lu-Fi forks; the T23 OEM Helix helper option and hybrid install are gone. All test cameras run `aperto` images (30/30 snapshots, 0 oops, 0 VPU errors).
