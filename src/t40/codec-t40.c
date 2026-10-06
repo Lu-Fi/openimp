@@ -7163,6 +7163,14 @@ struct AL_CodecEncode {
      * Encoder thread only. */
     int jpeg_skip_allowed;
     int jpeg_skipped;
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+    /* IMP_Encoder_InsertUserData: payloads waiting for the next picture
+     * (API thread writes, encoder thread hands them to the Helix encoder) */
+    pthread_mutex_t ud_lock;
+    uint32_t ud_count;
+    uint32_t ud_len[T30_USER_DATA_MAX_CNT];
+    uint8_t ud_data[T30_USER_DATA_MAX_CNT][T30_USER_DATA_MAX_SIZE];
+#endif
 #if defined(PLATFORM_T30)
     T30HelixEncoder *t30_helix;    /* Native T30 /dev/soc_vpu encoder */
     uint32_t t30_helix_width;      /* picture size t30_helix was made for */
@@ -7932,6 +7940,46 @@ int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops)
     return 0;
 }
 
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+/* IMP_Encoder_InsertUserData: queue one payload (SEI in front of the next
+ * picture).  -1 when max_cnt payloads are already waiting (the OEM: "no
+ * empty cache buffer, please wait") or the payload does not fit. */
+int AL_Codec_Encode_InsertUserData(void *codec, const void *data,
+                                   uint32_t size, uint32_t max_cnt,
+                                   uint32_t max_size)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    int ret = -1;
+
+    if (!enc || !data || !size || size > max_size ||
+        size > T30_USER_DATA_MAX_SIZE)
+        return -1;
+    if (max_cnt > T30_USER_DATA_MAX_CNT)
+        max_cnt = T30_USER_DATA_MAX_CNT;
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->ud_count < max_cnt) {
+        memcpy(enc->ud_data[enc->ud_count], data, size);
+        enc->ud_len[enc->ud_count] = size;
+        enc->ud_count++;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&enc->ud_lock);
+    return ret;
+}
+
+/* encoder thread, before a picture: move the queue into the Helix encoder */
+static void codec_push_user_data(AL_CodecEncode *enc, T30HelixEncoder *helix)
+{
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->ud_count &&
+        OpenIMP_T30_HelixSetUserData(helix, enc->ud_count, enc->ud_len,
+                                     (const uint8_t (*)[T30_USER_DATA_MAX_SIZE])
+                                     enc->ud_data) == 0)
+        enc->ud_count = 0;
+    pthread_mutex_unlock(&enc->ud_lock);
+}
+#endif
+
 int AL_Codec_Encode_SetMbRC(void *codec, int enable)
 {
     if (codec == NULL)
@@ -8552,6 +8600,9 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     }
 
     memset(enc, 0, sizeof(AL_CodecEncode));
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+    pthread_mutex_init(&enc->ud_lock, NULL);
+#endif
     CODEC_STARTUP_MARKER("openimp/codec marker A2 memset returned\n");
     codec_startup_trace("openimp/codec startup: encoder memset done\n");
 
@@ -10043,6 +10094,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         }
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
+        codec_push_user_data(enc, enc->t30_helix);
         if (OpenIMP_T30_HelixEncode(enc->t30_helix,
                                     (const IMPFrameInfo *)frame,
                                     &hw_stream) != 0) {
@@ -10141,6 +10193,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             (void)OpenIMP_T30_HelixReconfigure(enc->t30_helix, &current);
             if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
                 OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
+            codec_push_user_data(enc, enc->t30_helix);
             if (OpenIMP_T30_HelixEncode(enc->t30_helix,
                                         (const IMPFrameInfo *)frame,
                                         &hw_stream) != 0) {

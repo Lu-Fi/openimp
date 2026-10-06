@@ -269,6 +269,10 @@ typedef struct {
 
 struct T30HelixEncoder {
     int fd;
+    /* IMP_Encoder_InsertUserData: SEI payloads for the next access unit */
+    uint32_t ud_count;
+    uint32_t ud_len[T30_USER_DATA_MAX_CNT];
+    uint8_t ud_data[T30_USER_DATA_MAX_CNT][T30_USER_DATA_MAX_SIZE];
     T30ChannelNode channel;
     HWEncoderParams params;
     IMPDMABufferInfo descriptor;
@@ -3097,7 +3101,8 @@ again:
      * allocation follows the picture rather than the window size (which
      * also keeps T23's access units small). */
     capacity = (idr ? encoder->headers_size : 0u) +
-               t30_annexb_bound(header_length + encoder->channel.output_len);
+               t30_annexb_bound(header_length + encoder->channel.output_len) +
+               encoder->ud_count * t30_annexb_bound(T30_USER_DATA_MAX_SIZE + 24u);
     output = malloc(capacity);
     stream = calloc(1, sizeof(*stream));
     if (!output || !stream) {
@@ -3108,6 +3113,40 @@ again:
     if (idr) {
         memcpy(output, encoder->headers, encoder->headers_size);
         offset = encoder->headers_size;
+    }
+    /* user data (SEI, user_data_unregistered) in front of the slice, as the
+     * OEM libimp: 16-byte UUID, then the caller's bytes.  The queue is
+     * consumed with this picture. */
+    {
+        uint32_t ui;
+
+        for (ui = 0; ui < encoder->ud_count; ui++) {
+            uint8_t sei_head[8];
+            uint32_t payload = 16u + encoder->ud_len[ui];
+            uint32_t hl = 0;
+            T30AnnexBWriter sw;
+            uint32_t rest = payload;
+
+            sei_head[hl++] = 5; /* user_data_unregistered */
+            while (rest >= 255u) {
+                sei_head[hl++] = 255;
+                rest -= 255u;
+            }
+            sei_head[hl++] = (uint8_t)rest;
+            if (t30_annexb_begin(&sw, output + offset, capacity - offset,
+                                 NAL_SEI, NAL_PRIORITY_DISPOSABLE) != 0 ||
+                t30_annexb_append(&sw, sei_head, hl) != 0 ||
+                t30_annexb_append(&sw, t30_user_data_uuid, 16u) != 0 ||
+                t30_annexb_append(&sw, encoder->ud_data[ui],
+                                  encoder->ud_len[ui]) != 0 ||
+                t30_annexb_append(&sw, (const uint8_t *)"\x80", 1u) != 0) {
+                free(output);
+                free(stream);
+                return -1;
+            }
+            offset = (uint32_t)(sw.output - output);
+        }
+        encoder->ud_count = 0;
     }
     if (t30_annexb_begin(&writer, output + offset, capacity - offset,
                          idr ? NAL_SLICE_IDR : NAL_SLICE,
@@ -3378,6 +3417,30 @@ int OpenIMP_T30_HelixGetCrop(const T30HelixEncoder *encoder, int *enable,
     *y = encoder->crop_y;
     *w = encoder->crop_w;
     *h = encoder->crop_h;
+    return 0;
+}
+
+/* The OEM libimp's userDataUuid (IMP_Encoder_InsertUserData). */
+const uint8_t t30_user_data_uuid[16] = {
+    0xd7, 0x3e, 0xba, 0x3d, 0xe6, 0xa6, 0x4c, 0x80,
+    0x93, 0x79, 0x64, 0x0b, 0x42, 0xf2, 0xb8, 0x66
+};
+
+int OpenIMP_T30_HelixSetUserData(T30HelixEncoder *encoder, uint32_t count,
+                                 const uint32_t *lengths,
+                                 const uint8_t (*data)[T30_USER_DATA_MAX_SIZE])
+{
+    uint32_t i;
+
+    if (!encoder || count > T30_USER_DATA_MAX_CNT)
+        return -1;
+    for (i = 0; i < count; i++) {
+        if (lengths[i] > T30_USER_DATA_MAX_SIZE)
+            return -1;
+        encoder->ud_len[i] = lengths[i];
+        memcpy(encoder->ud_data[i], data[i], lengths[i]);
+    }
+    encoder->ud_count = count;
     return 0;
 }
 

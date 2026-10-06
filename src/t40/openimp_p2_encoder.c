@@ -3725,15 +3725,37 @@ int IMP_Encoder_GetChnDenoise(int channel, IMPEncoderAttrDenoise *config)
     return 0;
 }
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+extern int AL_Codec_Encode_InsertUserData(void *codec, const void *data,
+                                          uint32_t size, uint32_t max_cnt,
+                                          uint32_t max_size);
+#endif
 int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
 {
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !data || !size || size > 1024u)
         return -1;
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+    /* OEM: H.264 only; the channel attribute's userData cache (up to 2
+     * payloads of maxUserDataSize bytes) takes the data, which goes out as a
+     * user_data_unregistered SEI in front of the next picture. */
+    {
+        int ret = -1;
+
+        pthread_mutex_lock(&ch->lock);
+        if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+            ret = AL_Codec_Encode_InsertUserData(
+                ch->codec, data, size, ch->attr.encAttr.userData.maxUserDataCnt,
+                ch->attr.encAttr.userData.maxUserDataSize);
+        pthread_mutex_unlock(&ch->lock);
+        return ret;
+    }
+#else
     p2_trace("openimp/P2: accepted pending user data ch=%d size=%u\n",
              channel, (unsigned int)size);
     return 0;
+#endif
 }
 
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20) && !defined(PLATFORM_T23)
