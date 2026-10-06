@@ -151,6 +151,8 @@ static struct {
     P3HpfFree hpf_free;
     int16_t hpf_state[16];
     int hpf_enabled;
+    int hpf_cutoff;                 /* IMP_AI_SetHpfCoFrequency, 0 = default */
+    int effects_neo;                /* libaudioProcess-neo (has drc_create) */
     P3NsCreate ns_create;
     P3NsSetConfig ns_set_config;
     P3NsProcess ns_process;
@@ -348,6 +350,8 @@ static int p3_effects_load(void)
     P3_EFFECT(agc_process, "audio_process_agc_process");
     P3_EFFECT(agc_free, "audio_process_agc_free");
 #undef P3_EFFECT
+    p3_audio.effects_neo =
+        dlsym(p3_audio.effects_library, "audio_process_drc_create") != NULL;
     return 0;
 }
 
@@ -687,6 +691,38 @@ int IMP_AI_SetVolMute(int device, int channel, int mute)
     return p3_audio_open() == 0 ? ioctl(p3_audio.fd, AMIC_AI_SET_MUTE, &value) : -1;
 }
 
+/* libaudioProcess-neo's HPF state is a float biquad (7 floats over the
+ * 32 bytes); it designs 300 Hz at 16 kHz itself while b0 is zero.  A
+ * cut-off set with IMP_AI_SetHpfCoFrequency is written there (RBJ high
+ * pass, Q 0.7071, at the stream's rate), sine/cosine by series so libimp
+ * stays free of libm. */
+static void p3_hpf_neo_overlay(int16_t state[16], int sample_rate, int cutoff)
+{
+    double x = 2.0 * 3.14159265358979323846 * (double)cutoff /
+               (double)sample_rate;
+    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
+    float cw, alpha, a0_inv, bq[7];
+    int n;
+
+    for (n = 1; n < 24; n++) {
+        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
+        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
+        sine += term_s;
+        cosine += term_c;
+    }
+    cw = (float)cosine;
+    alpha = (float)sine / (2.0f * 0.7071f);
+    a0_inv = 1.0f / (1.0f + alpha);
+    bq[0] = ((1.0f + cw) / 2.0f) * a0_inv;
+    bq[1] = -(1.0f + cw) * a0_inv;
+    bq[2] = bq[0];
+    bq[3] = (-2.0f * cw) * a0_inv;
+    bq[4] = (1.0f - alpha) * a0_inv;
+    bq[5] = 0.0f;
+    bq[6] = 0.0f;
+    memcpy(state, bq, sizeof(bq));
+}
+
 int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
 {
     if (!attribute || p3_effects_load() != 0)
@@ -694,6 +730,11 @@ int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
     memset(p3_audio.hpf_state, 0, sizeof(p3_audio.hpf_state));
     p3_audio.hpf_create(p3_audio.hpf_state, p3_audio.hpf_state + 8,
                         0, 0, 8, 8);
+    if (p3_audio.effects_neo && p3_audio.hpf_cutoff > 0 &&
+        attribute->samplerate > 0 &&
+        (int64_t)p3_audio.hpf_cutoff * 2 < (int64_t)attribute->samplerate)
+        p3_hpf_neo_overlay(p3_audio.hpf_state, attribute->samplerate,
+                           p3_audio.hpf_cutoff);
     p3_audio.hpf_enabled = 1;
     return 0;
 }
@@ -708,7 +749,10 @@ int IMP_AI_DisableHpf(void)
 
 int IMP_AI_SetHpfCoFrequency(int frequency)
 {
-    return frequency > 0 ? 0 : -1;
+    if (frequency <= 0)
+        return -1;
+    p3_audio.hpf_cutoff = frequency;
+    return 0;
 }
 
 int IMP_AI_EnableNs(IMPAudioIOAttr *attribute, int mode)
