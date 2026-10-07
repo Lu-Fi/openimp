@@ -360,3 +360,5 @@ int main(void)
     printf("p2 JPEG source tests passed\n");
     return 0;
 }
+
+int AL_Codec_Encode_SetRoiAttr(void *c, const void *r) { (void)c; (void)r; return 0; }
