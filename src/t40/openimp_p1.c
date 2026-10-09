@@ -657,6 +657,42 @@ int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path)
     return 0;
 }
 
+/* Vendor IMP_ISP_GetDefaultBinPath hands out "the absolute path to the Bin
+ * file" of the running user-defined ISP (T40 1.3.1/en imp_isp.h, "must be
+ * called after the sensor is added").  libimp owns exactly one such path: the
+ * record the caller passed before AddSensor, which OpenIMP_P1_AddSensor forwards
+ * to the kernel through TISP_VIDIOC_SET_DEFAULT_BIN_PATH - that record, and
+ * nothing else, is the path in effect.  There is no libimp default to fall back
+ * to: on the open stack the T40 driver loads the module parameter
+ * t40_tuning_bin_path (default "/usr/share/sensor/gc4653-t40.bin",
+ * driver/t40/tx_isp_t40_recovered.c:9095, load site :73063 - it ignores the
+ * user-space path completely) and the T41 driver falls back to
+ * "/etc/sensor/<sensor>-t41.bin" (driver/t41/tx_isp_t41_recovered.c:54266).
+ * Both live in the kernel, so when OpenIMP was never given a path the only
+ * honest answer is an error, not an empty string with retval 0. */
+int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size)
+{
+    size_t length;
+
+    if (num < IMPVI_MAIN || num >= IMPVI_BUTT || path == NULL || size == 0U)
+        return -1;
+    lock_p1();
+    if (!p1.bin_path_set[num]) {
+        unlock_p1();
+        errno = ENODATA;
+        return -1;
+    }
+    length = strlen(p1.bin_paths[num].path);
+    if (length >= size) {
+        unlock_p1();
+        errno = ERANGE;
+        return -1;
+    }
+    memcpy(path, p1.bin_paths[num].path, length + 1U);
+    unlock_p1();
+    return 0;
+}
+
 int IMP_ISP_EnableTuning(void)
 {
     int fd;
