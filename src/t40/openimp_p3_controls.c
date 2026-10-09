@@ -396,12 +396,197 @@ int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
 
 P3_T41_POINTER_PAIR(AeScenceAttr, IMPISPAEScenceAttr, TISP_CID_AE_SCENCE)
 P3_T41_POINTER_PAIR(Module_Ratio, IMPISPModuleRatioAttr, TISP_CID_MODULE_RATIO)
-P3_T41_POINTER_PAIR(CCMAttr, IMPISPCCMAttr, TISP_CID_CCM)
 P3_T41_POINTER_PAIR(GammaAttr, IMPISPGammaAttr, TISP_CID_GAMMA)
-P3_T41_POINTER_PAIR(ISPCSCAttr, IMPISPCSCAttr, TISP_CID_CSC)
 P3_T41_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
 P3_T41_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
 P3_T41_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode, TISP_CID_WDR_OUTPUT_MODE)
+
+/*
+ * CCM and CSC do not travel as the public structures: the kernel (stock
+ * tisp_s_ccm_attr / tisp_csc_api_set) takes
+ *   CCM, 40 bytes: u8 ManualEn, u8 SatEn, 2 pad, 9 x s32 Q16 (65536 = 1.0)
+ *   CSC, 92 bytes: s32 version (0..3 = ColorGamut, 6 = user), 9 x s32 RGB->YUV
+ *     Q16, bytes {Y offset, UV offset, Y min, Y max}, bytes {UV min, UV max,
+ *     0, 0}, 9 x s32 YUV->RGB Q16 (the inverse), then the two byte words again.
+ */
+static int32_t p3_q16(float value)
+{
+    float scaled = value * 65536.0f;
+
+    if (scaled >= 2147483520.0f)
+        return 0x7fffff00;
+    if (scaled <= -2147483520.0f)
+        return -0x7fffff00;
+    return (int32_t)(scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f);
+}
+
+static void p3_put32(unsigned char *p, int32_t v)
+{
+    uint32_t u = (uint32_t)v;
+
+    p[0] = (unsigned char)u;
+    p[1] = (unsigned char)(u >> 8);
+    p[2] = (unsigned char)(u >> 16);
+    p[3] = (unsigned char)(u >> 24);
+}
+
+static int32_t p3_get32(const unsigned char *p)
+{
+    return (int32_t)((uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+                     ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24));
+}
+
+void OpenIMP_P3_CCMToWire(const IMPISPCCMAttr *attr, unsigned char wire[40])
+{
+    unsigned int i;
+
+    memset(wire, 0, 40);
+    wire[0] = (unsigned char)(attr->ManualEn ? 1 : 0);
+    wire[1] = (unsigned char)(attr->SatEn ? 1 : 0);
+    for (i = 0; i < 9; i++)
+        p3_put32(wire + 4 + i * 4, p3_q16(attr->ColorMatrix[i]));
+}
+
+void OpenIMP_P3_CCMFromWire(const unsigned char wire[40], IMPISPCCMAttr *attr)
+{
+    unsigned int i;
+
+    attr->ManualEn = wire[0] ? 1 : 0;
+    attr->SatEn = wire[1] ? 1 : 0;
+    for (i = 0; i < 9; i++)
+        attr->ColorMatrix[i] = (float)p3_get32(wire + 4 + i * 4) / 65536.0f;
+}
+
+/* Inverse of a 3x3 matrix; 0 when singular. */
+static int p3_invert3(const double m[9], double inv[9])
+{
+    double c0 = m[4] * m[8] - m[5] * m[7];
+    double c1 = m[5] * m[6] - m[3] * m[8];
+    double c2 = m[3] * m[7] - m[4] * m[6];
+    double det = m[0] * c0 + m[1] * c1 + m[2] * c2;
+
+    if (det > -1e-9 && det < 1e-9)
+        return 0;
+    inv[0] = c0 / det;
+    inv[1] = (m[2] * m[7] - m[1] * m[8]) / det;
+    inv[2] = (m[1] * m[5] - m[2] * m[4]) / det;
+    inv[3] = c1 / det;
+    inv[4] = (m[0] * m[8] - m[2] * m[6]) / det;
+    inv[5] = (m[2] * m[3] - m[0] * m[5]) / det;
+    inv[6] = c2 / det;
+    inv[7] = (m[1] * m[6] - m[0] * m[7]) / det;
+    inv[8] = (m[0] * m[4] - m[1] * m[3]) / det;
+    return 1;
+}
+
+/* 0, or -1 when the request cannot be expressed (bad gamut, singular user
+ * matrix). */
+int OpenIMP_P3_CSCToWire(const IMPISPCSCAttr *attr, unsigned char wire[92])
+{
+    double fwd[9], inv[9];
+    unsigned int i;
+
+    memset(wire, 0, 92);
+    if ((unsigned int)attr->ColorGamut > 4U)
+        return -1;
+    if (attr->ColorGamut != 4) {
+        p3_put32(wire, (int32_t)attr->ColorGamut);
+        return 0;
+    }
+    for (i = 0; i < 9; i++) {
+        float f = attr->Matrix.CscCoef[i];
+
+        if (!(f > -4.0f && f < 4.0f))
+            return -1;
+        fwd[i] = (double)p3_q16(f) / 65536.0;
+    }
+    if (!p3_invert3(fwd, inv))
+        return -1;
+    p3_put32(wire, 6);
+    for (i = 0; i < 9; i++) {
+        double r = inv[i];
+
+        if (!(r > -4.0 && r < 4.0))
+            return -1;
+        p3_put32(wire + 4 + i * 4, p3_q16(attr->Matrix.CscCoef[i]));
+        p3_put32(wire + 48 + i * 4,
+                 (int32_t)(r * 65536.0 + (r >= 0.0 ? 0.5 : -0.5)));
+    }
+    wire[40] = attr->Matrix.CscOffset[1];	/* Y offset */
+    wire[41] = attr->Matrix.CscOffset[0];	/* UV offset */
+    wire[42] = attr->Matrix.CscClip[1];		/* Y min */
+    wire[43] = attr->Matrix.CscClip[0];		/* Y max */
+    wire[44] = attr->Matrix.CscClip[3];		/* UV min */
+    wire[45] = attr->Matrix.CscClip[2];		/* UV max */
+    memcpy(wire + 84, wire + 40, 4);
+    memcpy(wire + 88, wire + 44, 4);
+    return 0;
+}
+
+void OpenIMP_P3_CSCFromWire(const unsigned char wire[92], IMPISPCSCAttr *attr)
+{
+    int32_t version = p3_get32(wire);
+    unsigned int i;
+
+    memset(attr, 0, sizeof(*attr));
+    attr->ColorGamut = (version >= 0 && version <= 3) ? (IMPISPCSCColorGamut)version
+                                                       : IMP_ISP_CG_USER;
+    for (i = 0; i < 9; i++)
+        attr->Matrix.CscCoef[i] = (float)p3_get32(wire + 4 + i * 4) / 65536.0f;
+    attr->Matrix.CscOffset[0] = wire[41];
+    attr->Matrix.CscOffset[1] = wire[40];
+    attr->Matrix.CscClip[0] = wire[43];
+    attr->Matrix.CscClip[1] = wire[42];
+    attr->Matrix.CscClip[2] = wire[45];
+    attr->Matrix.CscClip[3] = wire[44];
+}
+
+int32_t IMP_ISP_Tuning_SetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *ccm)
+{
+    unsigned char wire[40];
+
+    if (!ccm)
+        return -1;
+    OpenIMP_P3_CCMToWire(ccm, wire);
+    return p3_tuning_pointer(num, 0, TISP_CID_CCM, wire);
+}
+
+int32_t IMP_ISP_Tuning_GetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *ccm)
+{
+    unsigned char wire[40];
+    int result;
+
+    if (!ccm)
+        return -1;
+    memset(wire, 0, sizeof(wire));
+    result = p3_tuning_pointer(num, 1, TISP_CID_CCM, wire);
+    if (result == 0)
+        OpenIMP_P3_CCMFromWire(wire, ccm);
+    return result;
+}
+
+int32_t IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
+{
+    unsigned char wire[92];
+
+    if (!csc || OpenIMP_P3_CSCToWire(csc, wire))
+        return -1;
+    return p3_tuning_pointer(num, 0, TISP_CID_CSC, wire);
+}
+
+int32_t IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
+{
+    unsigned char wire[92];
+    int result;
+
+    if (!csc)
+        return -1;
+    memset(wire, 0, sizeof(wire));
+    result = p3_tuning_pointer(num, 1, TISP_CID_CSC, wire);
+    if (result == 0)
+        OpenIMP_P3_CSCFromWire(wire, csc);
+    return result;
+}
 #endif
 
 int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
