@@ -118,6 +118,44 @@ static int valid_group(int group)
     return group >= 0 && group < T23_OSD_GROUPS;
 }
 
+/*
+ * Copy a caller supplied IMPOSDRgnAttr into a destination object owned by
+ * OpenIMP (a region or a local).
+ *
+ * On T41 the caller may own the 256 byte 1.2.5/en layout while OpenIMP's own
+ * copy is 432 bytes (1.2.0/1.2.6, see openimp_t23_osd_abi.h). A plain struct
+ * assignment would read 176 bytes past the caller's object, so only the
+ * common prefix is copied and the remainder is zeroed.
+ */
+static void rgn_attr_copy(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
+{
+#if defined(PLATFORM_T41)
+    memcpy(dst, src, T23_OSD_RGN_ATTR_T41_MIN);
+    memset((char *)dst + T23_OSD_RGN_ATTR_T41_MIN, 0,
+           sizeof(*dst) - T23_OSD_RGN_ATTR_T41_MIN);
+#else
+    *dst = *src;
+#endif
+}
+
+/*
+ * Export region state into an IMPOSDRgnAttr owned by the caller.
+ *
+ * The size of that object is not known here: with the T41 1.2.5/en headers
+ * (what the board build of the video HAL uses) it is 256 bytes, with
+ * 1.2.0/1.2.6 it is 432. A plain assignment would write 176 bytes past the
+ * caller's object, so only the prefix both layouts share is written; the
+ * trailing bytes stay whatever the caller had there.
+ */
+static void rgn_attr_export(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
+{
+#if defined(PLATFORM_T41)
+    memcpy(dst, src, T23_OSD_RGN_ATTR_T41_MIN);
+#else
+    *dst = *src;
+#endif
+}
+
 static struct t23_osd_region *region_of(IMPRgnHandle handle)
 {
     if (handle < 0 || handle >= T23_OSD_REGIONS)
@@ -707,7 +745,7 @@ IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *attr)
     }
     r->active = r->last = -1;
     if (attr) {
-        r->attr = *attr;
+        rgn_attr_copy(&r->attr, attr);
         load_region(r);
     }
     osd_regions[handle] = r;
@@ -798,14 +836,14 @@ int IMP_OSD_SetRgnAttr(IMPRgnHandle handle, IMPOSDRgnAttr *attr)
         pthread_mutex_unlock(&osd_lock);
         return T23_OSD_ERR_UNEXIST;
     }
-    r->attr = *attr;
+    rgn_attr_copy(&r->attr, attr);
     load_region(r);
     if (attr->type == OSD_REG_ISP_LINE_RECT ||
         attr->type == OSD_REG_ISP_COVER) {
         for (int g = 0; g < T23_OSD_GROUPS; g++)
             if ((r->registered & (1u << g)) && r->grp[g].show)
                 isp_show = 1;
-        isp_attr = *attr;
+        rgn_attr_copy(&isp_attr, attr);
     }
     pthread_mutex_unlock(&osd_lock);
     if (isp_show)
@@ -836,7 +874,7 @@ int IMP_OSD_GetRgnAttr(IMPRgnHandle handle, IMPOSDRgnAttr *attr)
         pthread_mutex_unlock(&osd_lock);
         return T23_OSD_ERR_UNEXIST;
     }
-    *attr = r->attr;
+    rgn_attr_export(attr, &r->attr);
     pthread_mutex_unlock(&osd_lock);
     return 0;
 }
