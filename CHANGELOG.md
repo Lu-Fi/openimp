@@ -10,6 +10,7 @@ Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one aft
 - ROI QP stays valid H.264 (`src/avpu_roi.h`, `Helix_H264_RoiSanitize`): the encoder codes `mb_qp_delta` against the previous macroblock and H.264 allows -26..+25 only; outside it ffmpeg hides the error but VA-API/VLC/browsers show broken blocks (measured on T10/T20 with relative -26 and absolute 15 at QP 42). Every window delta is now in -25..25, the spread of all deltas (uncovered = 0) at most 25, picture QP + delta inside 0..51 and the RC min/max QP; larger requests are clamped with a one-time warning.
   - T31 (and the experimental T41 table): `SetChnRoiAttr` refuses a delta outside -26..25 like the vendor T41 (before: -32..31); the table follows the picture QP when the clamp depends on it.
   - T10/T20/T21: `IMP_Encoder_SetChnROI` clamps when each command list is built (relative -25..25, absolute inside max QP - 25 .. min QP + 25 of the picture, spread 25); a QP argument beyond the s8 range keeps its sign.
+  - T20 (review of agg-34): an absolute QP the clamp would push to the far side of the slice QP (cap 51 at slice QP 20: absolute 15 became 26, worse than the surroundings) is left at the slice QP instead, i.e. the region becomes a no-op rather than inverting the request. Test case absolute 15 at slice QP 20, cap 51.
   - Test `tests/t31/roi_clamp_test.c` (20000 random window sets, each table walked like the encoder).
 
 ## 2026-10-07 (branch `claude/roi-all`, not part of the first release)

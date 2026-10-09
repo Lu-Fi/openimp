@@ -187,6 +187,17 @@ int main(void)
         Helix_H264_RoiEntry(1, 0, 40, 640, 320, 960, 560, in[0]);
         f = Helix_H264_RoiSanitize((const uint8_t (*)[7])in, out, 42, 30, 51);
         CHECK((int8_t)out[0][2] == 40 && f == 0, "helix abs in range");
+        /* T20 cap 51 at slice QP 20: alo = 26 is above the slice QP, so
+         * absolute 15 (better quality) must not become 26 (worse): no-op */
+        Helix_H264_RoiEntry(1, 0, 15, 640, 320, 960, 560, in[0]);
+        f = Helix_H264_RoiSanitize((const uint8_t (*)[7])in, out, 20, 8, 51);
+        CHECK((int8_t)out[0][2] == 20 && (f & AVPU_ROI_CLAMP_RANGE),
+              "helix abs 15 @20 cap 51 -> %d", (int8_t)out[0][2]);
+        /* mirror: window ends below the slice QP, absolute above it */
+        Helix_H264_RoiEntry(1, 0, 50, 640, 320, 960, 560, in[0]);
+        f = Helix_H264_RoiSanitize((const uint8_t (*)[7])in, out, 40, 0, 30);
+        CHECK((int8_t)out[0][2] == 40, "helix abs 50 @40 max 30 -> %d",
+              (int8_t)out[0][2]);
         /* spread */
         memset(in, 0, sizeof(in));
         Helix_H264_RoiEntry(1, 1, 25, 0, 0, 160, 160, in[0]);

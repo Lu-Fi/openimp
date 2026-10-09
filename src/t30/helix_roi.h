@@ -82,7 +82,13 @@ static inline unsigned int Helix_H264_RoiSanitize(const uint8_t in[8][7],
             d[i] = q;
         } else {
             if (q < alo || q > ahi) {
-                q = q < alo ? alo : ahi;
+                /* A window that lies on the far side of the slice QP
+                 * (T20 with a wide cap: alo above it) would turn "better
+                 * quality" into worse: leave the region at the slice QP. */
+                if (q < alo)
+                    q = alo > slice_qp ? slice_qp : alo;
+                else
+                    q = ahi < slice_qp ? slice_qp : ahi;
                 flags |= AVPU_ROI_CLAMP_RANGE;
             }
             d[i] = q - slice_qp;
