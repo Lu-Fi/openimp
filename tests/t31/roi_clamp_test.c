@@ -212,6 +212,27 @@ int main(void)
         CHECK((int8_t)in[3][2] == 127, "helix entry clamp");
     }
 
+    /* T41 SetChnMapRoi entries: mode 1 takes Quality, mode 2 a signed 6 bit
+     * delta (63 << 2 | 2 is -1), both clamped, mode 3 undefined */
+    {
+        int d = 99;
+
+        CHECK(avpu_roi_map_delta(0u, 7, &d) == 0 && d == 0, "map none");
+        CHECK(avpu_roi_map_delta(1u, -9, &d) == 0 && d == -9, "map quality");
+        CHECK(avpu_roi_map_delta(1u, 25, &d) == 0 && d == 25, "map q max");
+        CHECK(avpu_roi_map_delta((63u << 2) | 2u, 0, &d) == 0 && d == -1,
+              "map -1");
+        CHECK(avpu_roi_map_delta((62u << 2) | 2u, 0, &d) == 0 && d == -2,
+              "map -2");
+        CHECK(avpu_roi_map_delta((15u << 2) | 2u, 0, &d) == 0 && d == 15,
+              "map 15");
+        CHECK(avpu_roi_map_delta((31u << 2) | 2u, 0, &d) == 0 && d == 25,
+              "map clamp high");
+        CHECK(avpu_roi_map_delta((32u << 2) | 2u, 0, &d) == 0 && d == -25,
+              "map clamp low");
+        CHECK(avpu_roi_map_delta(3u, 0, &d) == -1, "map mode 3");
+    }
+
     if (failures) {
         fprintf(stderr, "%d failure(s)\n", failures);
         return 1;

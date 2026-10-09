@@ -3657,6 +3657,8 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
     ctx->roi_pending = 0;
     for (i = 0; i < 10u; i++)
         any |= ctx->roi_win[i].enable != 0;
+    if (ctx->roi_map && ctx->roi_map_n == mb)
+        any = 1;
     memset(table, 0, 4u * (size_t)mb);
     if (any) {
         AvpuRoiResult res;
@@ -3669,6 +3671,11 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
         avpu_roi_fill(table, 4u, 8u, cols, rows, ctx->roi_win, 10u, 0u, 0u,
                       0u, 1, &res);
         avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
+        /* SetChnMapRoi: the per-block deltas replace the window value */
+        if (ctx->roi_map && ctx->roi_map_n == mb)
+            for (i = 0; i < mb; i++)
+                if (ctx->roi_map[i])
+                    table[4u * i] = (uint8_t)ctx->roi_map[i];
     }
     ctx->roi_table_on = any;
     pthread_mutex_unlock(&avpu_roi_lock);
@@ -8204,6 +8211,67 @@ int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
 #endif
 }
 
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnMapRoi: one byte per 16x16 block of
+ * an AVC picture, low 2 bits the mode (0 none, 1 the block takes `Quality`,
+ * 2 relative: the high 6 bits are a two's complement delta), the deltas
+ * -26..25 ("Absolute_QP" is unsupported in the vendor header).  A NULL map
+ * or size 0 removes the map.  Rides on the experimental T41 ROI table
+ * (OPENIMP_T41_ROI=1, docs/ROI.md): refused without it. */
+typedef struct {
+    uint8_t *map;
+    int mapSize;
+    int mode;
+    int8_t Quality;
+    int32_t reserved;
+} CodecMapRoiAttr;
+
+int AL_Codec_Encode_SetMapRoi(void *codec, const void *roi_attr)
+{
+#if defined(PLATFORM_T41)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const CodecMapRoiAttr *attr = (const CodecMapRoiAttr *)roi_attr;
+    uint32_t cols, rows, mb, i;
+    int8_t *table = NULL;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        !avpu_t41_roi_experimental())
+        return -1;
+    cols = (enc->avpu.enc_w + 15u) >> 4;
+    rows = (enc->avpu.enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (attr->map != NULL && attr->mapSize > 0) {
+        if ((uint32_t)attr->mapSize != mb || attr->mode != 0 ||
+            attr->Quality < -26 || attr->Quality > 25)
+            return -1;
+        table = calloc(mb, 1);
+        if (!table)
+            return -1;
+        for (i = 0; i < mb; i++) {
+            int d;
+
+            if (avpu_roi_map_delta(attr->map[i], attr->Quality, &d) != 0) {
+                free(table);
+                return -1;
+            }
+            table[i] = (int8_t)d;
+        }
+    } else if (attr->mapSize != 0 && attr->map == NULL) {
+        return -1;
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    free(enc->avpu.roi_map);
+    enc->avpu.roi_map = table;
+    enc->avpu.roi_map_n = table ? mb : 0u;
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)roi_attr;
+    return -1;
+#endif
+}
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 /* The Helix rate-control fields of IMPEncoderAttrRcMode that HWEncoderParams
  * has no core field for, taken as the application gave them (the encoders
@@ -9336,6 +9404,9 @@ static int al_codec_encode_destroy_impl(void *codec) {
         avpu_release_dma_buf(&enc->avpu.ref_buf);
         avpu_release_dma_buf(&enc->avpu.rec_trace_buf);
         avpu_release_dma_buf(&enc->avpu.ref_trace_buf);
+        free(enc->avpu.roi_map);
+        enc->avpu.roi_map = NULL;
+        enc->avpu.roi_map_n = 0u;
         codec_startup_trace(
             "openimp/codec teardown: dma buffers released\n");
 #if defined(PLATFORM_T41)

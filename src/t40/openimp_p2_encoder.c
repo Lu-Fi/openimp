@@ -3800,6 +3800,30 @@ int IMP_Encoder_SetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
     return ret == 0 ? 0 : -1;
 }
 
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnMapRoi (docs/ROI.md): AVC only, the
+ * map is copied.  The same switch as SetChnRoiAttr guards it. */
+extern int AL_Codec_Encode_SetMapRoi(void *codec, const void *roi_attr);
+
+#if defined(PLATFORM_T41)
+int IMP_Encoder_SetChnMapRoi(int channel, IMPEncoderMapRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    int ret;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_SetMapRoi(ch->codec, attr);
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+#endif
+
 int IMP_Encoder_GetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
 {
     P2EncoderChannel *ch;

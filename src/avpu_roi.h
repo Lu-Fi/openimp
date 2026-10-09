@@ -80,6 +80,36 @@ static inline int avpu_roi_get(const uint8_t *table, uint32_t stride,
     return (int)((uint32_t)table[idx * stride] << sh) >> sh;
 }
 
+/* One entry of a vendor T41 IMP_Encoder_SetChnMapRoi map: low 2 bits the
+ * mode (0 none, 1 the block takes `quality`, 2 relative with the high 6
+ * bits as two's complement), clamped to -25..25.  Returns 0 and the delta,
+ * or -1 for mode 3 (undefined). */
+static inline int avpu_roi_map_delta(uint8_t entry, int quality, int *delta)
+{
+    int d = 0;
+
+    switch (entry & 3u) {
+    case 0u:
+        break;
+    case 1u:
+        d = quality;
+        break;
+    case 2u:
+        d = (int)(entry >> 2);
+        if (d > 31)
+            d -= 64;
+        break;
+    default:
+        return -1;
+    }
+    if (d < AVPU_ROI_DELTA_MIN)
+        d = AVPU_ROI_DELTA_MIN;
+    else if (d > AVPU_ROI_DELTA_MAX)
+        d = AVPU_ROI_DELTA_MAX;
+    *delta = d;
+    return 0;
+}
+
 /* Fill cols*rows entries (entry i at table[i * stride], stride 1 for T31,
  * 4 for the T41 byte 0) from the windows.  bits: width of the two's
  * complement entry (6 for T31, 8 for T41).  A later window wins on overlap.

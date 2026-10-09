@@ -1478,6 +1478,21 @@ int IMP_Encoder_SetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
 int IMP_Encoder_GetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
 #endif
 
+#if defined(PLATFORM_T41)
+/* T41 1.2.6 map ROI: one byte per 16x16 block (AVC), low 2 bits the mode
+ * (0 none, 1 `Quality`, 2 relative with a 6-bit two's complement delta in
+ * the high bits).  Like SetChnRoiAttr it needs OPENIMP_T41_ROI=1. */
+typedef struct {
+    uint8_t *map;
+    int mapSize;
+    IMPEncoderQPMode mode;
+    int8_t Quality;
+    int32_t reserved;
+} IMPEncoderMapRoiAttr;
+
+int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiAttr *pstMapRoi);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -350,6 +350,9 @@ typedef struct ALAvpuContext {
     volatile int roi_pending;
     int roi_table_on;
     int roi_absolute;      /* T31: a window has an absolute QP */
+    int8_t *roi_map;       /* T41 SetChnMapRoi: QP delta per 16x16 block
+                            * (0: none), applied over the windows */
+    uint32_t roi_map_n;
     uint32_t roi_base_qp;  /* T31: picture QP the windows refer to */
     int roi_req_min, roi_req_max; /* T31: requested deltas before clamping */
     int roi_range_clamped; /* T31: the last table was cut by min/max QP */
