@@ -52,6 +52,7 @@ typedef struct {
 
 extern int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
 extern int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
+extern int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
 
 void OpenIMP_P3_FrameStats(uint32_t luma, uint32_t u_mean, uint32_t v_mean)
 {
@@ -495,12 +496,27 @@ int32_t IMP_ISP_SetDefaultBinPath(IMPVI_NUM num, char *path)
     return result;
 }
 
+/* Vendor IMP_ISP_GetDefaultBinPath returns the absolute path of the bin file the
+ * running ISP was started with (T40 1.3.1/en imp_isp.h:369-396).  The old body
+ * answered 0 for every call and copied the setter cache, so a caller that never
+ * set a path got a successful return plus an empty string, and a caller that
+ * follows the header's own example - char path[64] - could receive the 128-byte
+ * setter cache.  Report the path OpenIMP really forwarded to the kernel
+ * (OpenIMP_P1_GetDefaultBinPath, bounded by the vendor's 64-byte example) and
+ * fail when libimp was never given one. */
 int32_t IMP_ISP_GetDefaultBinPath(IMPVI_NUM num, char *path)
 {
-    if (num != IMPVI_MAIN || !path)
+    if (num != IMPVI_MAIN || path == NULL)
         return -1;
-    strcpy(path, p3_controls.bin_path);
-    return 0;
+    if (OpenIMP_P1_GetDefaultBinPath(num, path, 64U) == 0)
+        return 0;
+
+    /* No path was ever accepted by IMP_ISP_SetDefaultBinPath.  The default the
+     * kernel then uses is a driver property (T40 module parameter
+     * t40_tuning_bin_path, T41 "/etc/sensor/<sensor>-t41.bin") and unknown to
+     * libimp, so an empty string must not be reported as success. */
+    path[0] = '\0';
+    return -1;
 }
 
 int IMP_ISP_Tuning_SetOsdPoolSize(int size)
