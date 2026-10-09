@@ -1,6 +1,6 @@
 # Open stack vs vendor stack: feature matrix
 
-As of: 2026-10-09 evening (release candidate agg-34: OpenIMP `agg-34` 838f8147 and open-tx-isp `agg-34` da9baf1e on top of `next`; the per-cell details below are a chronological test log, newest results win). Camera mapping of the older sections: cam-A = T31, cam-B = T23, cam-C = T20, cam-D = T21, cam-E = T10, cam-F = T41; cam-G and cam-H are further T23 cameras (other sensors) that run the same stack. The agg-32 soak has its own letters (see the changelog).
+As of: 2026-10-10 morning (release candidate agg-34: OpenIMP `agg-34` 2a1b1cd and open-tx-isp `agg-34` b15ef235 on top of `next`, mandatory device tests of the night 2026-10-09/10 included; the per-cell details below are a chronological test log, newest results win). Camera mapping of the older sections: cam-A = T31, cam-B = T23, cam-C = T20, cam-D = T21, cam-E = T10, cam-F = T41; cam-G and cam-H are further T23 cameras (other sensors) that run the same stack. The agg-32 soak has its own letters (see the changelog).
 
 Branch names in brackets (`claude/...`) and the tags `[-all-N]` are historic: those branches were merged into `next` and deleted. Where a cell says "not yet in an aggregate", "device test pending" or "opt-in", check the summary below and the defaults table in [OPENIMP_BEYOND_VENDOR.md](OPENIMP_BEYOND_VENDOR.md) first.
 
@@ -10,20 +10,24 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 ## Summary
 
-**Release candidate agg-34 (2026-10-09 evening)**
+**Release candidate agg-34 (2026-10-09 evening, device results of the night 2026-10-09/10 added)**
 
+- Final agg-34 after the review fixes (S1 T31 front crop survives the ISP session, S2 T31 zoom only with a scaled main stream, S3 Helix absolute ROI no longer worse than the slice QP): OpenIMP 2a1b1cd, open-tx-isp b15ef235 (test images with these on all 10 test cameras since 2026-10-09 night). The first state of the candidate was:
 - State: OpenIMP `agg-34` (838f8147) = agg-32 (8980cae) + the encoder ROI clamp (fec3e69, 8545fb9) + the reviewed DeepSeek patches (11abe42 and 17 patches); open-tx-isp `agg-34` (da9baf1e) = agg-32 (3cf9bdac) + front-crop fixes for T31, T23, T20 and T10 (d940ba20 to 10bac52f, 164225e5) + T20 `isp-m0` reports the reachable analog gain cap (da9baf1e). The first release still covers T10, T20, T21, T23 and T31; T41 is experimental and not part of it.
 - Soak of agg-32 (2026-10-07 16:07 to 2026-10-09 11:31, 43.4 h, stopped early by the user): 0 unplanned reboots, 0 oopses, 0 guard trips, 0 snapshot failures and no memory trend on the cameras without user interaction. The only reboots were a planned OTA and two crashes from enabling a front crop on T31 (fixed in agg-34, see below). The numeric picture check found the T20 day/night regression, the T10 black frame in the dark and the T41 channel-1 colour/exposure problem (known issues below).
-- Encoder ROI (region QP): **T31** has an ROI that the vendor library does not have (`IMP_Encoder_SetChnRoiAttr` through the AVPU QP table, beyond vendor): device-tested, delta -10 gives 2.7x the bit rate, a relative -20 becomes -19 (clamped), 0 decoder errors in 20 VA-API checks. **T10/T20/T21** apply `SetChnROI` on the Helix/NVPU: device-tested (T21 by default, beyond vendor). All ROI paths now keep the stream valid H.264: every `mb_qp_delta` lies in -25..+25 (a relative -26 or an absolute QP far from the picture QP produced broken pictures in hardware decoders such as VA-API, VLC and browsers), picture QP plus delta stays inside the rate control's min/max QP. **T23**: the regions go to the vendor encoder, no visible effect measured (marked no-op). **T41**: code only, off by default, not device-tested. Rules and numbers: `docs/ROI.md`, `docs/OPENIMP_BEYOND_VENDOR.md`.
-- Front crop: **T10/T20/T21/T23** device-tested on 2026-10-09 after the fixes (T23: crop off unlocks the window, a window that does not fit is dropped instead of hanging the MSCA, the lock is released with the ISP session, module parameter `fcrop_upscale_pct`; T20/T10: a window is kept while no downscaled channel is open and applied at stream on, released with the tuning session). **T31**: the crash is fixed (the kernel refuses a window the MSCA would have to upscale with -EINVAL; scaler steps and latch are written; module parameter `fcrop_upscale_pct`), but the picture effect is **experimental, not proven**.
-- DeepSeek patches (17, reviewed, plus one corrected): struct sizes and layouts of the vendor ABI (T40/T41 encoder stream, channel attributes, frame info, sensor info, OSD attributes), encoder group bounds (6 like the vendor on T20/T21/T30/T31/T41, 8 kept on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)`, `GetDefaultBinPath`, idempotent IVS group create/destroy, polling-stream guards. Host tests and `make check` are green on all SoCs and the cross-builds pass; **no device run of the combined agg-34 yet**: still to check on cameras are OSD groups, IVS, `PollingStream` returning -1 without a channel (watch the streamer CPU at restart), T31 `SnapFrame` offsets and the T41 OSD size.
-- T20 day/night: the driver reported an analog gain cap of 158 in `isp-m0` while the AE stops at 128, so a streamer waiting for the cap never saw it reached and stayed in Day mode in the dark. `isp-m0` now reports the smaller of the two (host-tested); the streamer needs its matching change (timps 5bc4eff) for the switch to work. Not yet device-tested with both.
+- Encoder ROI (region QP): **T31** has an ROI that the vendor library does not have (`IMP_Encoder_SetChnRoiAttr` through the AVPU QP table, beyond vendor): device-tested, delta -10 gives 2.7x the bit rate, a relative -20 becomes -19 (clamped), 0 decoder errors in 20 VA-API checks; the night run of 2026-10-10 went through 20 phases (deltas, absolute QPs, clamp, off/on) with the stream valid in VA-API and in strict ffmpeg (`-err_detect`). Known deviation: under FixQP 42 a window of absolute 5 or relative -25 drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream stays valid). **T10/T20/T21** apply `SetChnROI` on the Helix/NVPU: device-tested (T21 by default, beyond vendor); T20/T10 absolute ROI re-tested on 2026-10-10: valid H.264, no inversion (fix S3). All ROI paths now keep the stream valid H.264: every `mb_qp_delta` lies in -25..+25 (a relative -26 or an absolute QP far from the picture QP produced broken pictures in hardware decoders such as VA-API, VLC and browsers), picture QP plus delta stays inside the rate control's min/max QP. **T23**: the regions go to the vendor encoder, no visible effect measured (marked no-op). **T41**: code only, off by default, not device-tested. Rules and numbers: `docs/ROI.md`, `docs/OPENIMP_BEYOND_VENDOR.md`.
+- Front crop: **T10/T20/T21/T23** device-tested on 2026-10-09 after the fixes (T23: crop off unlocks the window, a window that does not fit is dropped instead of hanging the MSCA, the lock is released with the ISP session, module parameter `fcrop_upscale_pct`; T20/T10: a window set before stream-on is kept while no downscaled channel is open, is applied at stream on and survives substream restarts (device-tested 2026-10-10); the release of the window at tuning-session close is **not verified**). **T31**: the crash is fixed (the kernel refuses a window the MSCA would have to upscale with -EINVAL; scaler steps and latch are written; module parameter `fcrop_upscale_pct`); device-tested on 2026-10-10: a valid window zooms both streams (**proven**), too-small windows are rejected without a hang, and the window survives a restart and a flip.
+- DeepSeek patches (17, reviewed, plus one corrected): struct sizes and layouts of the vendor ABI (T40/T41 encoder stream, channel attributes, frame info, sensor info, OSD attributes), encoder group bounds (6 like the vendor on T20/T21/T30/T31/T41, 8 kept on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)`, `GetDefaultBinPath`, idempotent IVS group create/destroy, polling-stream guards. Host tests and `make check` are green on all SoCs and the cross-builds pass; the combined agg-34 ran on the test cameras in the night 2026-10-09/10 (mandatory tests passed, streamer smoke on 9 cameras 50 of 50 without a `PollingStream` spin); not yet checked separately on cameras: OSD groups, IVS, T31 `SnapFrame` offsets and the T41 OSD size.
+- T20 day/night: the driver reported an analog gain cap of 158 in `isp-m0` while the AE stops at 128, so a streamer waiting for the cap never saw it reached and stayed in Day mode in the dark. `isp-m0` now reports the smaller of the two: device-tested on T20 on 2026-10-10 (maximum analog gain 128). The streamer needs its matching change (timps 5bc4eff) for the switch to work; day/night with both is **not yet confirmed**. On T10 (jxh42) `isp-m0` still reports 144 at boot (128 once it is set explicitly): open finding.
+- Streamer smoke test on 9 cameras (night 2026-10-09/10): 50 of 50 checks passed, no `PollingStream` spin (the streamer CPU stayed normal at stream restarts).
 
 **Known issues (agg-34)**
 
 - **T41 sub-channel (ch1):** green or flat frames at each day/night switch and the exposure of channel 1 does not follow channel 0 (channel 0 is fine). T41 is experimental and not part of the first release.
 - **T20 day/night** needs the open-tx-isp fix (da9baf1e) **and** the streamer change (timps 5bc4eff); with agg-32 alone both T20 cameras stayed in Day mode in the dark. Not yet confirmed on a camera with both.
-- **T31 front crop:** the crash is fixed, but the picture effect is not proven (experimental).
+- **T10 analog gain cap:** `isp-m0` of the jxh42 camera reports a maximum analog gain of 144 at boot (128 once set explicitly); T20 reports 128 (fixed). Open.
+- **ROI under FixQP:** with FixQP 42 an absolute 5 or relative -25 window lowers the P-frames to QP about 14 almost frame-wide (bit rate about x4); the stream is valid, but a streamer should not offer the extremes on a fixed-QP stream.
+- **T20/T10 front crop:** the release of the window at tuning-session close is not verified.
 - **T10:** the soak saw a few rounds where the camera switched to Day in the dark and delivered a black frame (3 events in 44 h).
 - **720p main stream** shows only the top-left corner when the streamer reads `/proc/jz/sensor/sensor0/*` before the sensor is started (streamer side; seen on T21 and T20).
 - **Streamer ROI limit:** the library keeps ROI streams valid H.264 from agg-34 on (a relative QP of -26 used to break Intel VA-API, VLC, Firefox and Edge from the ROI row on); a streamer that offers -26 should offer -25 as its lowest value.
@@ -350,7 +354,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T20:** ✅ scaler device-tested (640x360 and 480x272, 15.0 fps); front crop device-tested 2026-10-09 (same fix as T10: window kept while no downscaled channel is open, applied at stream on, released with the tuning session); CSC: no control path
 - **T21:** ✅ scaler device-tested (480x272, 24.9 fps); front crop device-tested (2026-10-05, again in the 2026-10-09 crop tests); CSC: no control path
 - **T23:** ✅ front crop via vendor path (960x540 crop ok); MASK -EINVAL as vendor (no stock handler); the 2026-10-06 crop hang is fixed in agg-34 and device-tested on 2026-10-09: crop off unlocks the window and restores the full sensor window, a locked window that does not fit is dropped (with a warning) instead of stalling the MSCA, the lock is released at the last close of the ISP device (a streamer restart without crop gets the full frame), module parameter `fcrop_upscale_pct` (default 0) lets the geometry check tolerate a measured upscale (T23 upscales up to 2.0; at 2.2 the MSCA stalled briefly, the crop was dropped, no reboot); flip, day/night, fast changes with many streamer restarts, corner windows, sub-stream and a reboot with a persisted crop all passed; `SetAutoZoom` as the stock control (host/build-tested only)
-- **T31:** ⚠️ BLC get, CSC presets 0–4 + user matrix, scaler level (tested on cam-A); front crop: the crash is fixed (enabling a window smaller than a channel's scaler output stalled every MSCA output until reboot; the kernel now refuses such a window with -EINVAL and logs it, a main stream larger than the window drops the crop with a warning, the crop survives idle off/on, disabling restores the full frame; module parameter `fcrop_upscale_pct`, default 0), but whether a valid window really zooms the picture is **experimental, not proven**
+- **T31:** ⚠️ BLC get, CSC presets 0–4 + user matrix, scaler level (tested on cam-A); front crop: the crash is fixed (enabling a window smaller than a channel's scaler output stalled every MSCA output until reboot; the kernel now refuses such a window with -EINVAL and logs it without a hang, a main stream larger than the window drops the crop with a warning, the crop survives idle off/on, a restart and a flip, disabling restores the full frame; module parameter `fcrop_upscale_pct`, default 0) and, device-tested on 2026-10-10, a valid window zooms both streams (**proven**)
 - **T41:** ❌ crop (I2D) still open: no control path
 
 ##### 21. Rotation 90°/270°
@@ -611,19 +615,19 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 ##### 45. Encoder ROI (region QP)
 
 - **Vendor stack:** `IMP_Encoder_SetChnROI` (T10/T20/T21/T23), `IMP_Encoder_Set/GetChnRoiAttr` (T40/T41); no ROI API in the T31 library
-- **T10:** ✅ regions on the Helix/NVPU, device-tested; absolute QPs are limited to the valid H.264 range
-- **T20:** ✅ regions and H.264 chroma QP offset, device-tested (QP 51 region blocky, QP 15 clean); valid H.264 from agg-34 (an absolute QP more than 25 from the macroblock QP broke hardware decoders before)
+- **T10:** ✅ regions on the Helix/NVPU, device-tested; absolute QPs are limited to the valid H.264 range; absolute ROI re-tested 2026-10-10: valid, no inversion
+- **T20:** ✅ regions and H.264 chroma QP offset, device-tested (QP 51 region blocky, QP 15 clean); valid H.264 from agg-34 (an absolute QP more than 25 from the macroblock QP broke hardware decoders before); absolute ROI re-tested 2026-10-10: valid, no inversion
 - **T21:** ✅+ effective by default (beyond vendor: the vendor never programs it), device-tested; relative QP acts inside -12/+13 of the slice QP; `OPENIMP_T21_ROI=0` switches it off
 - **T23:** ⚠️ the regions go unchanged to the vendor encoder; no visible effect measured (vendor no-op)
-- **T31:** ✅+ beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; `OPENIMP_T31_ROI=0` refuses the call
+- **T31:** ✅+ beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; 2026-10-10: 20 phases valid in VA-API and strict ffmpeg (`-err_detect`); known deviation: under FixQP 42 an absolute 5 or relative -25 window drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream valid); `OPENIMP_T31_ROI=0` refuses the call
 - **T41:** 🔧 code only (enable bits derived from the vendor library), off unless `OPENIMP_T41_ROI=1`, not device-tested
 - **Rules (all SoCs with ROI):** window deltas -25..+25; spread of all deltas at most 25; picture QP plus delta inside 0..51 and the rate control's min/max QP; requests beyond that are clamped with a one-time warning (`SetChnRoiAttr` returns -1 for a delta outside -26..25 or an absolute QP outside 0..51)
 
 ## Missing / incomplete functions (vendor IMP/SU API, per SoC)
 
-As of: 2026-10-06 (evening). The cells were updated from the release-candidate test day: every row/SoC whose apitest call passed on a camera of that SoC (T20, T21, T23, T31) is now **dev**; the cells changed by hand (vendor no-ops, functions that became real, functions that were fixed) are listed in the notes of the row. T10 and T41 cells were not re-measured (T10 mirrors T20 and was not re-tested; T41 is not part of the release).
+As of: 2026-10-10 (re-audit against agg-34; the cells below were set on 2026-10-06 from the release-candidate test day and changed since only where noted). The cells were updated from the release-candidate test day: every row/SoC whose apitest call passed on a camera of that SoC (T20, T21, T23, T31) is now **dev**; the cells changed by hand (vendor no-ops, functions that became real, functions that were fixed) are listed in the notes of the row. T10 and T41 cells were not re-measured (T10 mirrors T20 and was not re-tested; T41 is not part of the release).
 
-State of the work: OpenIMP `claude/agg-27` (affb8ff), open-tx-isp `claude/agg-28` (79b754b4). Source of the function list and of the base classes: the audit `NOT_CONNECTED_2026-10-05.md` (OpenIMP/open-tx-isp `agg-24`, built libimp.so/libsysutils.so, vendor header sets: T10/T20 331 functions, T21 330, T23 704 incl. `_Sec`/`MultiCamera_` variants, T31 405, T41 445). Rows are ALL vendor IMP_*/SU_* functions of the audit (Get/Set pairs share a row). Per area the first table shows only rows with at least one gap (cache-only, stub, error, missing, ?); the collapsible full list below it shows every row.
+State of the work: OpenIMP `claude/agg-34` (2a1b1cd), open-tx-isp `claude/agg-34` (b15ef235). Re-audit 2026-10-10: every row with a cache/stub/error/missing/? cell on T10/T20/T21/T23/T31 was checked against the exported symbols of the agg-34 libimp.so builds (T10 uses the T20 build) and the agg-34 source; the only function that became real since agg-27 is `IMP_Log_Set_Option` (now host on T10/T20/T21/T23/T31), the other gap rows are unchanged (still cache-only/error by design or not exported); `ISP_Tuning_Get/SetFrontCrop` T31 is now dev (night of 2026-10-10). The T41 column and the T41 count row were not touched (other agents work on T41). The counts are recomputed by a local helper script (parses the full lists; not in the repo). Source of the function list and of the base classes: the audit `NOT_CONNECTED_2026-10-05.md` (OpenIMP/open-tx-isp `agg-24`, built libimp.so/libsysutils.so, vendor header sets: T10/T20 331 functions, T21 330, T23 704 incl. `_Sec`/`MultiCamera_` variants, T31 405, T41 445). Rows are ALL vendor IMP_*/SU_* functions of the audit (Get/Set pairs share a row). Per area the first table shows only rows with at least one gap (cache-only, stub, error, missing, ?); the collapsible full list below it shows every row.
 
 Not re-measured in this update: T10 (not re-tested on the open stack), T41 (its fixes live in `claude/release-t41`, not in the release), the `_Sec` and `MultiCamera_` variants of T23 (the apitest exercises the base function), and every function the apitest skips on purpose. T10 uses the T20 userspace build (and the T20 SDK tuning code in the driver), so its cells mirror T20 unless the note says otherwise. T30/T40 are not tabled (no device, no build in the audit).
 
@@ -649,27 +653,27 @@ What every cell code means (the same short legend is repeated above each table b
 
 ### Progress per SoC
 
-The counts below are from the 2026-10-06 evening update; the cell changes of 2026-10-09 (`Encoder_Get/SetChnROI` T10 and T21 dev and T23 no-op, `Encoder_Get/SetChnRoiAttr` T41 host, `ISP_Tuning_Get/SetFrontCrop` T23 dev) are not counted in them yet.
+The counts below were recomputed on 2026-10-10 from the full-list tables of this file (all cell changes up to agg-34 are included; script a local helper script that parses the full lists, not in the repo). Method: rows of the full lists, a Get/Set row = 2 functions, a wildcard row counts its listed functions; the totals match the audit counts within one function (T10/T20 332 vs 331, T21 330, T23 442 vs 441, T31 406 vs 405). The T41 row is the unchanged figure of 2026-10-06 (T41 is being reworked by other agents; its cells were not touched).
 
 Counts are per vendor function of that SoC (T23 folded: base function = one; Get and Set count separately). "gaps" = cache-only + stub + error + missing; "vendor no-op" is not a gap; "audit gaps" = the same sum in the audit before the work of 2026-10-05 (T23 unfolded, about 3x per base function). "done %" = dev + host + aud / vendor fns. Bar: █ dev, ▓ host, ▒ aud / ?, ○ no-op, ░ gaps (40 characters per SoC).
 
 | SoC | fns | dev | host | aud | ? | no-op | cache | stub | err | miss | **gaps** | audit gaps | done % |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| T10 | 331 | 0 | 48 | 231 | 2 | 1 | 4 | 0 | 1 | 44 | **49** | 100 | 84.9 % |
-| T20 | 331 | 184 | 12 | 87 | 0 | 1 | 2 | 0 | 1 | 44 | **47** | 100 | 85.5 % |
-| T21 | 330 | 197 | 8 | 89 | 0 | 10 | 2 | 0 | 1 | 23 | **26** | 77 | 89.1 % |
-| T23 | 441 | 278 | 16 | 114 | 0 | 10 | 7 | 0 | 10 | 6 | **23** | 212 | 92.5 % |
-| T31 | 405 | 218 | 14 | 138 | 0 | 5 | 3 | 1 | 1 | 25 | **30** | 65 | 91.4 % |
+| T10 | 332 | 2 | 47 | 232 | 2 | 1 | 4 | 0 | 1 | 43 | **48** | 100 | 84.6 % |
+| T20 | 332 | 184 | 13 | 88 | 0 | 1 | 2 | 0 | 1 | 43 | **46** | 100 | 85.8 % |
+| T21 | 330 | 199 | 9 | 89 | 0 | 8 | 2 | 0 | 1 | 22 | **25** | 77 | 90.0 % |
+| T23 | 442 | 278 | 17 | 113 | 0 | 12 | 7 | 0 | 10 | 5 | **22** | 212 | 92.3 % |
+| T31 | 406 | 220 | 13 | 139 | 0 | 5 | 3 | 1 | 1 | 24 | **29** | 65 | 91.6 % |
 | T41 | 445 | 0 | 38 | 218 | 0 | 0 | 7 | 2 | 48 | 132 | **189** | 227 | 57.5 % |
 
 Columns: fns = vendor functions of that SoC; dev/host/aud/?/no-op/cache/stub/err/miss = counts per cell code (codes as in the legend); gaps = cache + stub + err + miss; audit gaps = the same sum in the audit before the work of 2026-10-05; done % = (dev + host + aud) / fns.
 
 ```
-T10  ▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒○░░░░░░
-T20  █████████████████████▓▒▒▒▒▒▒▒▒▒▒▒○░░░░░░
+T10  ▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░
+T20  ██████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▒░░░░░
 T21  ████████████████████████▓▒▒▒▒▒▒▒▒▒▒▒○░░░
-T23  ██████████████████████████▓▒▒▒▒▒▒▒▒▒▒○░░
-T31  █████████████████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒○░░░
+T23  █████████████████████████▓▓▒▒▒▒▒▒▒▒▒▒○░░
+T31  ██████████████████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░
 T41  ▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░░░░░░░░░
 ```
 
@@ -791,7 +795,7 @@ Notes:
 | `ISP_Tuning_Get/SetDRC_Strength` [42] | n.a. | n.a. | aud | aud | aud | n.a. | p† r† t |
 | `ISP_Tuning_Get/SetDefog_Strength` [43] | n.a. | n.a. | n.a. | aud | aud | n.a. | p† r† t |
 | `ISP_Tuning_Get/SetDrawBlock` [3] | n.a. | n.a. | n.a. | err | n.a. | miss | – |
-| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | dev | host | n.a. | r† |
+| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | dev | dev | n.a. | r† |
 | `ISP_Tuning_Get/SetGamma` [45] | aud | aud | aud | dev | aud | n.a. | p† r† |
 | `ISP_Tuning_Get/SetGammaAttr` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | host | p† r† |
 | `ISP_Tuning_Get/SetHVFLIP` [47] | n.a. | n.a. | n.a. | aud | aud | aud | see note |
@@ -891,7 +895,7 @@ Notes:
 42. `ISP_Tuning_Get/SetDRC_Strength`: audit: reaches the driver/kernel
 43. `ISP_Tuning_Get/SetDefog_Strength`: audit: reaches the driver/kernel
 3. `ISP_Tuning_Get/SetDrawBlock`: T23: driver rejects 0x8000180 (-EINVAL)
-44. `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale), the picture effect is experimental and not proven, hence host; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there
+44. `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)
 45. `ISP_Tuning_Get/SetGamma`: T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05
 46. `ISP_Tuning_Get/SetGammaAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested
 47. `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps
@@ -1321,6 +1325,7 @@ Notes:
 61. `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel
 62. `Encoder_YuvSetCrop`: audit: reaches the driver/kernel
 63. `Encoder_Get/SetChnRoiAttr`: not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40/T41: experimental, off unless `OPENIMP_T41_ROI=1`, code only (host), not device-tested; same valid-H.264 clamp as the Helix paths (docs/ROI.md)
+64. `Log_Set_Option` (`IMP_Log_Set_Option`): exported since agg-34 on T10/T20/T21/T23/T31 (the option is the OEM field mask of the log line); host test `tests/core/imp_log_test.c`, no device test; T41 cell not re-audited
 
 </details>
 
@@ -1755,7 +1760,7 @@ Notes:
 | Vendor function | T10 | T20 | T21 | T23 | T31 | T41 | Used by |
 |---|---|---|---|---|---|---|---|
 | `Log_Get_Option` | aud | aud | aud | aud | aud | miss | – |
-| `Log_Set_Option` | miss | miss | miss | miss | miss | miss | – |
+| `Log_Set_Option` [64] | host | host | host | host | host | miss | – |
 | `SU_Base_SetWkupMode` [1] | n.a. | n.a. | n.a. | n.a. | n.a. | err | – |
 | `SU_Base_Shutdown` [2] | err | err | err | err | err | err | – |
 | `SU_Battery_GetCapacity` | miss | miss | miss | miss | miss | miss | – |
@@ -1777,7 +1782,7 @@ Notes:
 | Vendor function | T10 | T20 | T21 | T23 | T31 | T41 | Used by |
 |---|---|---|---|---|---|---|---|
 | `Log_Get_Option` | aud | aud | aud | aud | aud | miss | – |
-| `Log_Set_Option` | miss | miss | miss | miss | miss | miss | – |
+| `Log_Set_Option` [64] | host | host | host | host | host | miss | – |
 | `SU_ADC_DisableChn` [4] | aud | aud | aud | aud | aud | aud | – |
 | `SU_ADC_EnableChn` [5] | aud | aud | aud | aud | aud | aud | – |
 | `SU_ADC_Exit` [6] | aud | aud | aud | aud | aud | aud | – |
