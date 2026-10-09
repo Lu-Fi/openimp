@@ -69,7 +69,31 @@
 #endif
 
 #define P2_MAX_GROUPS 8
+/*
+ * Encoder channels. The vendor count is per SoC and is visible twice in every
+ * libimp.so: as the size of the local `g_EncChannel` array (divided by its
+ * per-channel stride) and as the `slti` guard at the top of
+ * IMP_Encoder_CreateChn.
+ *
+ *   T31 1.1.6   0x1b48 / 0x308 = 9   slti a0,9
+ *   T31 1.1.1   0x15c0 / 0x2b8 = 8   slti a0,8
+ *   T40 1.0.2   0x1500 / 0x2a0 = 8   slti a0,8
+ *   T41 1.0.1   0x20c0 / 0x418 = 8   slti a0,8
+ *   T21 1.0.33  0x35d0 / 0x8f8 = 6   slti a0,6
+ *   T23 1.1.0   0x38a0 / 0x970 = 6   slti a0,6
+ *   T30 1.0.5   0x5070 / 0xd68 = 6   slti a0,6
+ *
+ * T31 1.1.6 - the build this tree audits - has nine, so the shared value of 8
+ * rejected channel 8, which the vendor accepts (IMP_Encoder_CreateChn,
+ * SetFisheyeEnableStatus, SetFrameRelease and SetbufshareChn all allow
+ * encChn < 9). T21/T23/T30 having only six is not enforced here on purpose:
+ * that would be a narrowing, and it is not verified on a device.
+ */
+#if defined(PLATFORM_T31)
+#define P2_MAX_CHANNELS 9
+#else
 #define P2_MAX_CHANNELS 8
+#endif
 #define P2_MAX_BINDS 16
 #define P2_MAX_PUBLIC_PACKS 16
 /*
