@@ -57,7 +57,9 @@
 #include "imp/openimp_ivs_move_ex.h"
 
 #define T31_IVS_GROUPS   2
-#define T31_IVS_CHANNELS 64
+/* T31 1.1.6 bounds the IVS channel with `sltiu ..,65` (CreateChn 0xc7b0c,
+ * GetResult 0xc8f70 and the other channel entry points), so 0..64 are valid. */
+#define T31_IVS_CHANNELS 65
 #define T31_IVS_RESULTS  6
 
 extern int IMP_System_GetBindbyDest(IMPCell *destination, IMPCell *source);
