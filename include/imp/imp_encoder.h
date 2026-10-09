@@ -972,11 +972,27 @@ typedef struct {
     uint32_t        packCount;
     uint32_t        seq;
     bool            isVI;
+#if !defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     union {
         IMPEncoderStreamInfo streamInfo;
         IMPEncoderJpegInfo   jpegInfo;
     };
+#endif
 } IMPEncoderStream;
+
+/*
+ * T40 1.3.1 and T41 1.2.6 end this structure after isVI and pad it to 28
+ * bytes; only T31 1.1.6 appends the streamInfo/jpegInfo union (64 bytes).
+ * OpenIMP's own T40/T41 backend writes exactly the 28-byte prefix
+ * (P2_ENCODER_STREAM_ABI_SIZE in src/t40/openimp_p2_encoder.c), so the
+ * public type must be 28 bytes there too -- a caller compiled against the
+ * 64-byte form would hand the library 36 bytes it never touches, and would
+ * read streamInfo/jpegInfo that the library never writes.
+ */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+_Static_assert(sizeof(IMPEncoderStream) == 0x1c,
+               "T40/T41 IMPEncoderStream ABI mismatch (vendor: 28 bytes)");
+#endif
 #endif
 
 /**
