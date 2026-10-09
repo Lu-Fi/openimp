@@ -83,7 +83,7 @@ the AVPU takes a macroblock QP table (HLIL in `docs/re/libimp.so_hlil.txt`):
   macroblock**, raster order: bits 5:0 QP (6-bit two's complement when
   relative), bit 6 force intra, bit 7 force skip.
 
-Measured on the garage camera (sc4336p, 2560x1440): bit 25 alone = absolute
+Measured on a T31 test camera (cam-D) (sc4336p, 2560x1440): bit 25 alone = absolute
 table (an entry 0 is QP 0), bit 24 alone = no effect, both = relative table.
 OpenIMP always uses the relative table. An absolute window (`mode =
 IMP_ROI_QPMODE_FIXED_QP`, QP 0..51) is written as the difference to the
