@@ -47,52 +47,41 @@ P3_UNSUPPORTED(IMP_DMIC_SetPubAttr)
 P3_UNSUPPORTED(IMP_DMIC_SetUserInfo)
 P3_UNSUPPORTED(IMP_DMIC_SetVol)
 
-P3_UNSUPPORTED(IMP_FrameSource_GetDelay)
-P3_UNSUPPORTED(IMP_FrameSource_GetI2dAttr)
-P3_UNSUPPORTED(IMP_FrameSource_GetMaxDelay)
-P3_UNSUPPORTED(IMP_FrameSource_GetTimedFrame)
-P3_UNSUPPORTED(IMP_FrameSource_SetDelay)
-P3_UNSUPPORTED(IMP_FrameSource_SetI2dAttr)
-P3_UNSUPPORTED(IMP_FrameSource_SetMaxDelay)
 #if !defined(PLATFORM_T41)   /* T41: openimp_p1.c */
 P3_UNSUPPORTED(IMP_FrameSource_SnapFrame)
 #endif
 
-P3_UNSUPPORTED(IMP_ISP_GetFrameDrop)
-P3_UNSUPPORTED(IMP_ISP_GetSensorRegister)
-P3_UNSUPPORTED(IMP_ISP_SetFrameDrop)
-P3_UNSUPPORTED(IMP_ISP_SetSensorRegister)
 P3_UNSUPPORTED(IMP_ISP_Tuning_CreateOsdRgn)
 P3_UNSUPPORTED(IMP_ISP_Tuning_DestroyOsdRgn)
-P3_UNSUPPORTED(IMP_ISP_Tuning_GetAfWeight)
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetCCMAttr)
 #endif
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetGammaAttr)
 #endif
+#if !defined(PLATFORM_T41)   /* no T41 export (vendor T41 has SetMaskBlock) */
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetMask)
+#endif
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetModuleControl)
 #endif
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_GetSensorAttr)
 #endif
-P3_UNSUPPORTED(IMP_ISP_Tuning_SetAfWeight)
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetCCMAttr)
 #endif
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetGammaAttr)
 #endif
+#if !defined(PLATFORM_T41)
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetMask)
+#endif
 #if !defined(PLATFORM_T41)   /* T41: openimp_p3_controls.c */
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetModuleControl)
 #endif
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetOsdRgnAttr)
 P3_UNSUPPORTED(IMP_ISP_Tuning_ShowOsdRgn)
-P3_UNSUPPORTED(IMP_ISP_WDR_ENABLE)
-P3_UNSUPPORTED(IMP_ISP_WDR_ENABLE_GET)
 
 #if !defined(PLATFORM_T41)
 /* T41 has IVS (src/t31/openimp_t31_ivs*.c) and the IPU OSD

@@ -16,9 +16,7 @@
 #include <syslog.h>
 #include <time.h>
 #include <unistd.h>
-#if defined(PLATFORM_T41)
 #include <pthread.h>
-#endif
 
 #include "openimp_profile.h"
 #include "dma_alloc.h"
@@ -275,6 +273,8 @@ struct openimp_fs_channel {
     uint32_t enabled;
     uint32_t depth;
     IMPFSChnFifoAttr fifo_attr;
+    int32_t maxdelay;               /* SetMaxDelay (vendor +772) */
+    int32_t delay;                  /* SetDelay / SetChnFifoAttr (+776) */
     uint32_t buffer_count;
     uint32_t sizeimage;
     uint32_t frames_dequeued;
@@ -746,6 +746,360 @@ int IMP_ISP_DisableTuning(void)
     return 0;
 }
 
+/*
+ * Frame delay cache (IMP_FrameSource_SetMaxDelay / SetDelay / GetTimedFrame).
+ * The vendor keeps the last `delay` frames of a channel and
+ * GetTimedFrame hands out the one closest to a time stamp.  OpenIMP has no
+ * capture thread, so the cache is fed by the frames the consumers dequeue
+ * (GetFrame, thus also the IVS feeder) and, for a blocking GetTimedFrame, by
+ * the call itself.  A cached frame is a copy: the capture buffer goes back
+ * to the driver as usual.  GetFrame itself is not delayed.
+ */
+#define FS_ERR_CHN      ((int)0x80010001u)  /* IMP_ERR_FS_INVALID_CHNID */
+#define FS_ERR_PARAM    ((int)0x80010002u)  /* IMP_ERR_FS_ILLEGAL_PARAM */
+#define FS_ERR_STATE    ((int)0x80010040u)  /* IMP_ERR_FS_NOT_SUPPORT */
+#define FS_ERR_EMPTY    ((int)0x80010400u)  /* IMP_ERR_FS_BUF_EMPTY */
+#define FS_ERR_TIMEOUT  ((int)0x80012000u)  /* IMP_ERR_FS_OVERTIME */
+#define FS_DELAY_MAX    100
+#define FS_TIMED_WAIT_US 2000000
+
+typedef struct {
+    uint64_t ts;
+    uint64_t minus;
+    uint64_t plus;
+} IMPFrameTimestamp;
+
+struct fs_delay_entry {
+    IMPFrameInfo info;
+    uint8_t *data;
+    size_t data_cap;
+    int valid;
+};
+
+static struct fs_delay_cache {
+    pthread_mutex_t lock;
+    struct fs_delay_entry *ent;
+    uint32_t cap;
+    uint32_t head;                  /* next slot to write */
+} p1_dly[OPENIMP_FS_CHANNELS] = {
+    [0 ... OPENIMP_FS_CHANNELS - 1] = { .lock = PTHREAD_MUTEX_INITIALIZER }
+};
+
+static void fs_delay_free_locked(struct fs_delay_cache *c)
+{
+    uint32_t i;
+
+    for (i = 0; i < c->cap; i++)
+        free(c->ent[i].data);
+    free(c->ent);
+    c->ent = NULL;
+    c->cap = 0;
+    c->head = 0;
+}
+
+static void fs_delay_free(int channel)
+{
+    pthread_mutex_lock(&p1_dly[channel].lock);
+    fs_delay_free_locked(&p1_dly[channel]);
+    pthread_mutex_unlock(&p1_dly[channel].lock);
+}
+
+/* Keep `cap` frames (0 frees the cache); a changed size drops the content. */
+static void fs_delay_resize(int channel, uint32_t cap)
+{
+    struct fs_delay_cache *c = &p1_dly[channel];
+
+    pthread_mutex_lock(&c->lock);
+    if (c->cap != cap) {
+        fs_delay_free_locked(c);
+        if (cap) {
+            c->ent = calloc(cap, sizeof(*c->ent));
+            if (c->ent)
+                c->cap = cap;
+        }
+    }
+    pthread_mutex_unlock(&c->lock);
+}
+
+/* Called by GetFrame with the frame it is about to return; the capture
+ * buffer stays owned by the caller until ReleaseFrame. */
+static void fs_delay_store(int channel, uint32_t want, const IMPFrameInfo *f,
+                           const void *virt, uint32_t size)
+{
+    struct fs_delay_cache *c = &p1_dly[channel];
+    struct fs_delay_entry *e;
+    uint8_t *grown;
+
+    if (!want || !virt || !size)
+        return;
+    if (want > FS_DELAY_MAX)
+        want = FS_DELAY_MAX;
+    fs_delay_resize(channel, want);
+    pthread_mutex_lock(&c->lock);
+    if (c->cap && c->ent) {
+        e = &c->ent[c->head];
+        if (e->data_cap < size) {
+            grown = realloc(e->data, size);
+            if (grown) {
+                e->data = grown;
+                e->data_cap = size;
+            }
+        }
+        if (e->data_cap >= size) {
+            memcpy(e->data, virt, size);
+            e->info = *f;
+            e->info.virAddr = 0;
+            e->info.size = size;
+            e->valid = 1;
+            c->head = (c->head + 1) % c->cap;
+        }
+    }
+    pthread_mutex_unlock(&c->lock);
+}
+
+/* Vendor: SetMaxDelay needs a created, not yet enabled channel; value
+ * 0..100.  Stores only (no hardware). */
+int IMP_FrameSource_SetMaxDelay(int channel, int maxcnt)
+{
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (maxcnt < 0 || maxcnt > FS_DELAY_MAX)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created || p1.channels[channel].enabled) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    p1.channels[channel].maxdelay = maxcnt;
+    unlock_p1();
+    return 0;
+}
+
+int IMP_FrameSource_GetMaxDelay(int channel, int *maxcnt)
+{
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (!maxcnt)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    *maxcnt = p1.channels[channel].maxdelay;
+    unlock_p1();
+    return 0;
+}
+
+/* Vendor: any created channel, 0..100 and not above the max delay. */
+int IMP_FrameSource_SetDelay(int channel, int cnt)
+{
+    uint32_t keep;
+
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (cnt < 0 || cnt > FS_DELAY_MAX)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    if (cnt > p1.channels[channel].maxdelay) {
+        unlock_p1();
+        return FS_ERR_PARAM;
+    }
+    p1.channels[channel].delay = cnt;
+    keep = (uint32_t)cnt;
+    unlock_p1();
+    fs_delay_resize(channel, keep);
+    return 0;
+}
+
+int IMP_FrameSource_GetDelay(int channel, int *cnt)
+{
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (!cnt)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    *cnt = p1.channels[channel].delay;
+    unlock_p1();
+    return 0;
+}
+
+extern int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame);
+extern int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame);
+
+static uint64_t fs_mono_us(void)
+{
+    struct timespec t;
+
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (uint64_t)t.tv_sec * 1000000u + (uint64_t)t.tv_nsec / 1000u;
+}
+
+/* The cached frame closest to ts inside [ts - minus, ts + plus].  Returns
+ * 1 and copies it (info and, with `out`, the picture) or 0; *newest gets
+ * the newest cached time stamp (-1: none). */
+static int fs_delay_find(int channel, const IMPFrameTimestamp *t, void *out,
+                         IMPFrameInfo *info, int64_t *newest)
+{
+    struct fs_delay_cache *c = &p1_dly[channel];
+    const struct fs_delay_entry *best = NULL;
+    uint64_t best_d = 0;
+    uint32_t i;
+    int found = 0;
+
+    *newest = -1;
+    pthread_mutex_lock(&c->lock);
+    for (i = 0; i < c->cap; i++) {
+        const struct fs_delay_entry *e = &c->ent[i];
+        uint64_t ts, d;
+
+        if (!e->valid || e->info.timeStamp < 0)
+            continue;
+        ts = (uint64_t)e->info.timeStamp;
+        if (e->info.timeStamp > *newest)
+            *newest = e->info.timeStamp;
+        if (ts < t->ts) {
+            d = t->ts - ts;
+            if (d > t->minus)
+                continue;
+        } else {
+            d = ts - t->ts;
+            if (d > t->plus)
+                continue;
+        }
+        if (!best || d < best_d) {
+            best = e;
+            best_d = d;
+        }
+    }
+    if (best) {
+        *info = best->info;
+        if (out) {
+            memcpy(out, best->data, best->info.size);
+            info->virAddr = (uint32_t)(uintptr_t)out;
+        } else {
+            info->virAddr = (uint32_t)(uintptr_t)best->data;
+        }
+        found = 1;
+    }
+    pthread_mutex_unlock(&c->lock);
+    return found;
+}
+
+/* Vendor GetTimedFrame: needs an enabled channel with a max delay; the
+ * picture is copied to `framedata` when given (it must hold one frame),
+ * otherwise virAddr points into the cache entry, valid until the cache
+ * wraps.  `block`: wait up to 2 s for a frame in the window. */
+int IMP_FrameSource_GetTimedFrame(int channel, IMPFrameTimestamp *framets,
+                                  int block, void *framedata,
+                                  IMPFrameInfo *frame)
+{
+    uint64_t deadline;
+    int64_t newest;
+    int maxdelay, delay, enabled;
+
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (!framets || !frame)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    enabled = p1.channels[channel].enabled;
+    maxdelay = p1.channels[channel].maxdelay;
+    delay = p1.channels[channel].delay;
+    unlock_p1();
+    if (!enabled || !maxdelay || !delay)
+        return FS_ERR_STATE;
+    deadline = fs_mono_us() + FS_TIMED_WAIT_US;
+    for (;;) {
+        IMPFrameInfo *pull = NULL;
+
+        if (fs_delay_find(channel, framets, framedata, frame, &newest))
+            return 0;
+        if (!block)
+            return FS_ERR_EMPTY;
+        /* everything cached is already newer than the window */
+        if (newest >= 0 &&
+            (uint64_t)newest > framets->ts &&
+            (uint64_t)newest - framets->ts > framets->plus)
+            return FS_ERR_EMPTY;
+        if (fs_mono_us() > deadline)
+            return FS_ERR_TIMEOUT;
+        /* pull one frame: GetFrame feeds the cache */
+        if (IMP_FrameSource_GetFrame(channel, &pull) == 0 && pull)
+            (void)IMP_FrameSource_ReleaseFrame(channel, pull);
+        else
+            usleep(2000);
+    }
+}
+
+/* Vendor GetI2dAttr / SetI2dAttr store the five words in the channel
+ * attribute (+44) and touch no hardware: the attribute is read when the
+ * channel is enabled.  Flip together with mirror, or flip/mirror together
+ * with rotate, is refused as the vendor does (bitwise on the raw words). */
+int IMP_FrameSource_GetI2dAttr(int channel, IMPFSI2DAttr *attr)
+{
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (!attr)
+        return FS_ERR_PARAM;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    *attr = p1.channels[channel].attr.i2dattr;
+    unlock_p1();
+    return 0;
+}
+
+int IMP_FrameSource_SetI2dAttr(int channel, IMPFSI2DAttr *attr)
+{
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (!attr)
+        return FS_ERR_PARAM;
+    if ((attr->flip_enable & attr->mirr_enable) ||
+        ((attr->flip_enable | attr->mirr_enable) & attr->rotate_enable))
+        return FS_ERR_STATE;
+    if (channel >= OPENIMP_FS_CHANNELS)
+        return FS_ERR_STATE;
+    lock_p1();
+    prepare_p1();
+    if (!p1.channels[channel].created) {
+        unlock_p1();
+        return FS_ERR_STATE;
+    }
+    p1.channels[channel].attr.i2dattr = *attr;
+    unlock_p1();
+    return 0;
+}
+
 int FrameSourceInit(void)
 {
     lock_p1();
@@ -796,8 +1150,19 @@ int IMP_FrameSource_SetChnAttr(int channel, const IMPFSChnAttr *attr)
     lock_p1();
     prepare_p1();
     if (p1.channels[channel].enabled) {
-        unlock_p1();
-        return -1;
+        /* the vendor stores the attribute, but the hardware format is
+         * only programmed by EnableChn: a running channel accepts the
+         * unchanged attribute (and I2D / frame rate words) only */
+        IMPFSChnAttr cur = p1.channels[channel].attr;
+        IMPFSChnAttr want = *attr;
+
+        cur.i2dattr = want.i2dattr;
+        cur.outFrmRateNum = want.outFrmRateNum;
+        cur.outFrmRateDen = want.outFrmRateDen;
+        if (memcmp(&cur, &want, sizeof(cur)) != 0) {
+            unlock_p1();
+            return -1;
+        }
     }
     p1.channels[channel].attr = *attr;
     unlock_p1();
@@ -871,6 +1236,8 @@ int IMP_FrameSource_GetPool(int channel)
 
 int IMP_FrameSource_SetChnFifoAttr(int channel, IMPFSChnFifoAttr *attr)
 {
+    int delay;
+
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !attr ||
         attr->maxdepth < 0)
         return -1;
@@ -881,7 +1248,13 @@ int IMP_FrameSource_SetChnFifoAttr(int channel, IMPFSChnFifoAttr *attr)
         return -1;
     }
     p1.channels[channel].fifo_attr = *attr;
+    /* vendor: the FIFO depth is the frame delay (+776); the max delay
+     * (+772) is not touched */
+    p1.channels[channel].delay = attr->maxdepth;
+    delay = attr->maxdepth;
     unlock_p1();
+    fs_delay_resize(channel, (uint32_t)(delay > FS_DELAY_MAX ?
+                                         FS_DELAY_MAX : delay));
     return 0;
 }
 
@@ -1218,6 +1591,8 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     uint32_t words[TISP_BUFFER_WORDS];
     uint32_t index;
     int attempts;
+    int delay_cache = 0;
+    IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
 #if defined(PLATFORM_T41)
     int snap_taken;
@@ -1319,6 +1694,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     buffer->frame.timeStamp = IMP_System_GetTimeStamp();
 #endif
     chn->frames_dequeued++;
+    delay_cache = chn->delay;
     openimp_video_drop_note_frame();
 #if defined(PLATFORM_T41)
     if (!p1_in_ivs_feeder)
@@ -1326,7 +1702,12 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     snap_taken = t41_snap_on_dequeue(&chn->snap, index);
 #endif
     *frame = &buffer->frame;
+    cache_frame = buffer->frame;
     unlock_p1();
+    if (delay_cache > 0)
+        fs_delay_store(channel, (uint32_t)delay_cache, &cache_frame,
+                       (const void *)(uintptr_t)cache_frame.virAddr,
+                       cache_frame.size);
 #if defined(PLATFORM_T41)
     if (snap_taken)
         p1_snap_wake();
@@ -1541,6 +1922,7 @@ int IMP_FrameSource_DisableChn(int channel)
     chn->enabled = 0;
     result = release_capture_queue(chn);
     unlock_p1();
+    fs_delay_free(channel);
     return result;
 }
 
@@ -1567,6 +1949,7 @@ int IMP_FrameSource_DestroyChn(int channel)
     chn->fd = -1;
     chn->pool_id = -1;
     unlock_p1();
+    fs_delay_free(channel);
     return 0;
 }
 
@@ -1600,6 +1983,40 @@ int OpenIMP_P1_GetState(uint32_t *isp_flags, uint32_t *channel_mask,
     *rmem_base = p1.dma.base;
     *rmem_used = p1.dma.next;
     OpenIMP_P2_DMAState(rmem_base, rmem_used);
+    unlock_p1();
+    return 0;
+}
+
+/* Raw ioctl on the main ISP node (the vendor ISPDevice fd) for the P3
+ * entries which do not go through the tuning node: sensor register access,
+ * frame drop, WDR switch. */
+int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
+{
+    int result;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.sensor_enabled || p1.isp_fd < 0) {
+        unlock_p1();
+        errno = ENODEV;
+        return -1;
+    }
+    result = record_ioctl(p1.isp_fd, command, argument);
+    unlock_p1();
+    return result;
+}
+
+/* The sensor the ISP runs: name (32 bytes) and control bus type. */
+int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type)
+{
+    lock_p1();
+    prepare_p1();
+    if (!p1.sensor_enabled) {
+        unlock_p1();
+        return -1;
+    }
+    memcpy(name, p1.sensor.name, 32);
+    *cbus_type = p1.sensor.cbus_type;
     unlock_p1();
     return 0;
 }
