@@ -42,9 +42,27 @@ typedef struct {
 } IMPFSChnScaler;
 
 /**
+ * I2D (rotate/flip/mirror) attributes.  T40 1.3.1 and T41 1.2.6 place this
+ * structure at the very start of IMPFSChnAttr; T31 1.1.6 and older do not
+ * have it at all (their picWidth is the first member).
+ */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+typedef struct {
+    int i2d_enable;         /**< Output rotate enable */
+    int flip_enable;        /**< Output flip enable */
+    int mirr_enable;        /**< Output mirror enable */
+    int rotate_enable;      /**< Output rotate enable */
+    int rotate_angle;       /**< Output rotate angle */
+} IMPFSI2DAttr;
+#endif
+
+/**
  * Frame source channel attributes
  */
 typedef struct {
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+    IMPFSI2DAttr i2dattr;   /**< T40/T41: I2D block comes first */
+#endif
     int picWidth;           /**< Picture width */
     int picHeight;          /**< Picture height */
     IMPPixelFormat pixFmt;  /**< Pixel format */
@@ -60,7 +78,32 @@ typedef struct {
 #elif defined(PLATFORM_T31) || defined(PLATFORM_C100) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
     IMPFSChnCrop fcrop;     /**< Frame crop (newer platforms) */
 #endif
+#if defined(PLATFORM_T41)
+    int mirr_enable;        /**< T41 1.2.6 mirror flag, after fcrop */
+#endif
 } IMPFSChnAttr;
+
+/*
+ * T40 1.3.1 / T41 1.2.6 put IMPFSI2DAttr in front of picWidth (picWidth at
+ * 0x14, 100 and 104 bytes total).  The OpenIMP T40/T41 backend reads exactly
+ * that layout (src/t40/openimp_p1.c declares its own vendor-exact copy and
+ * asserts the same offsets), so the public type has to match -- otherwise a
+ * caller built against this header writes picWidth to offset 0 and
+ * IMP_FrameSource_EnableChn fails on picWidth <= 0.
+ */
+#if defined(PLATFORM_T40)
+_Static_assert(offsetof(IMPFSChnAttr, picWidth) == 0x14,
+               "T40 IMPFSChnAttr.picWidth ABI mismatch");
+_Static_assert(sizeof(IMPFSChnAttr) == 0x64,
+               "T40 IMPFSChnAttr ABI mismatch");
+#elif defined(PLATFORM_T41)
+_Static_assert(offsetof(IMPFSChnAttr, picWidth) == 0x14,
+               "T41 IMPFSChnAttr.picWidth ABI mismatch");
+_Static_assert(offsetof(IMPFSChnAttr, mirr_enable) == 0x64,
+               "T41 IMPFSChnAttr.mirr_enable ABI mismatch");
+_Static_assert(sizeof(IMPFSChnAttr) == 0x68,
+               "T41 IMPFSChnAttr ABI mismatch");
+#endif
 
 #if defined(PLATFORM_T23)
 _Static_assert(offsetof(IMPFSChnAttr, mirr_enable) == 0x3c,
