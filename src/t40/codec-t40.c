@@ -3361,8 +3361,25 @@ static int avpu_t31_roi_disabled(void)
     return off;
 }
 
+/* FixQP pins min_qp = max_qp to the picture QP, but the hardware takes the
+ * table entry as it is (measured: QP 10 / 51 windows under FixQP 30), so the
+ * RC range must not clamp the entries there. */
+static void avpu_t31_roi_qp_range(const ALAvpuContext *ctx, uint32_t *mn,
+                                  uint32_t *mx)
+{
+    if (ctx->rc_mode == HW_RC_MODE_FIXQP) {
+        *mn = 0u;
+        *mx = 51u;
+    } else {
+        *mn = ctx->min_qp;
+        *mx = ctx->max_qp;
+    }
+}
+
 static void avpu_t31_roi_apply(ALAvpuContext *ctx)
 {
+    uint32_t rmin, rmax;
+
     uint32_t cols, rows, i, mb;
     uint8_t *table;
     int any = 0, absolute = 0;
@@ -3387,8 +3404,9 @@ static void avpu_t31_roi_apply(ALAvpuContext *ctx)
     }
     /* the 0x40-byte header holds the auto-QP seed and the legal QP range
      * (avpu_t40_init_ep2); zeroing it makes every picture QP 0 */
+    avpu_t31_roi_qp_range(ctx, &rmin, &rmax);
     avpu_roi_fill(table, 1u, 6u, cols, rows, ctx->roi_win, 10u,
-                  ctx->roi_base_qp, ctx->min_qp, ctx->max_qp, 0, &res);
+                  ctx->roi_base_qp, rmin, rmax, 0, &res);
     ctx->roi_table_on = any;
     ctx->roi_absolute = absolute;
     ctx->roi_req_min = res.req_min;
@@ -3408,14 +3426,16 @@ static void avpu_t31_roi_track_qp(ALAvpuContext *ctx, const uint32_t *cmd)
 {
     uint32_t qp = (cmd[0x03] >> 16) & 0x3fu;
     int dep;
+    uint32_t rmin, rmax;
 
     if (!ctx->roi_table_on || qp == ctx->roi_base_qp)
         return;
+    avpu_t31_roi_qp_range(ctx, &rmin, &rmax);
     /* the table depends on the picture QP when a window is absolute, or
      * when its delta is (or was) cut by the QP range */
     dep = ctx->roi_absolute || ctx->roi_range_clamped ||
-          (int)qp + ctx->roi_req_max > (int)(ctx->max_qp ? ctx->max_qp : 51u) ||
-          (int)qp + ctx->roi_req_min < (int)ctx->min_qp ||
+          (int)qp + ctx->roi_req_max > (int)(rmax ? rmax : 51u) ||
+          (int)qp + ctx->roi_req_min < (int)rmin ||
           (int)qp + ctx->roi_req_max > 51 || (int)qp + ctx->roi_req_min < 0;
     pthread_mutex_lock(&avpu_roi_lock);
     ctx->roi_base_qp = qp;
