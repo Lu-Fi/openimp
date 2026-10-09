@@ -711,7 +711,8 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
 }
 int IMP_OSD_SetPoolSize(int size)
 {
-    if (size < 0)
+    /* vendor 0xc5dc8 tests the size with blez: zero is rejected too */
+    if (size <= 0)
         return t31_fail(EINVAL);
     pthread_mutex_lock(&osd_lock);
     osd_pool_size = size;
