@@ -1,7 +1,7 @@
 /* OSD types in the layout of the T31 1.1.6 vendor headers (also T20, T21,
  * T30 and C100), which streamers are compiled against. OpenIMP's generic
- * include/imp/imp_osd.h differs (72-byte region attribute, x/y/w/h rect,
- * PIX_FMT_BGRA = 12) and must not be used for the T31 ABI. */
+ * include/imp/imp_osd.h differs (72-byte region attribute, x/y/w/h rect)
+ * and must not be used for the T31 ABI. */
 #ifndef OPENIMP_T31_OSD_ABI_H
 #define OPENIMP_T31_OSD_ABI_H
 

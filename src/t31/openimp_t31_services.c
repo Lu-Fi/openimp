@@ -27,7 +27,27 @@
 #endif
 #include "imp/imp_system.h"
 
-#define T31_OSD_GROUPS  16
+/*
+ * OSD groups. `group` is a caller-supplied index and every library in the set
+ * rejects 4 and above. IMP_OSD_CreateGroup/Start/Stop open with
+ * `slti v0,a0,4`; DestroyGroup uses the same constant against a saved copy of
+ * the argument (T23 1.1.0 `0x9a9ec slti v0,s1,4`, because its log call clobbers
+ * a0 first).
+ *
+ *   T31 1.1.6  0xc1cf8  slti v0,a0,4      T21 1.0.33  0x7ac08  slti v0,a0,4
+ *   T31 1.1.1  0xa6b80  slti v0,a0,4      T23 1.1.0   0x9a690  slti v0,a0,4
+ *   T40 1.0.2  0xa5250  slti v0,a0,4      T30 1.0.5   0xfd4e4  slti v0,a0,4
+ *   T41 1.0.1  0xc1fac  slti v0,a0,4
+ *
+ * The region-to-group calls carry the same constant on their group argument:
+ * IMP_OSD_RegisterRgn and SetGrpRgnAttr both do `slti a0,512` for the handle
+ * and then `slti a1,4` for the group (T31 1.1.6 `0xc2bdc`, `0xc5390`).
+ *
+ * OpenIMP accepted 0..15 - four times the vendor's table - letting a caller
+ * create and start groups the vendor can never have. Only group 0 is used
+ * anywhere in this tree (tests/api_test.c:162), so nothing existing breaks.
+ */
+#define T31_OSD_GROUPS  4
 #define T31_OSD_REGIONS 64
 
 /*
@@ -691,7 +711,8 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
 }
 int IMP_OSD_SetPoolSize(int size)
 {
-    if (size < 0)
+    /* vendor 0xc5dc8 tests the size with blez: zero is rejected too */
+    if (size <= 0)
         return t31_fail(EINVAL);
     pthread_mutex_lock(&osd_lock);
     osd_pool_size = size;

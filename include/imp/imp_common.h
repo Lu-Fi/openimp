@@ -46,28 +46,61 @@ typedef enum {
 
 /**
  * Pixel format
+ *
+ * Ingenic vendor numbering: identical in the T20 3.12.0 / T21 1.0.33 /
+ * T23 1.3.0 / T30 1.0.5 / T31 1.1.x / T40 / T41 headers.  These values are
+ * ABI -- the vendor IMP_FrameSource_SetChnAttr compares attr->pixFmt against
+ * PIX_FMT_RAW (34) in every libimp build and pixfmt_to_string() bounds the
+ * value by PIX_FMT_NB (36).  The older table that OpenIMP used to carry
+ * (PIX_FMT_YUVJ* at 7..9, BGRA/RGBA at 12/13, Bayer at 14..17, RAW at 18)
+ * comes from an unrelated ffmpeg-derived imp_common.h in the buildroot
+ * sysroot and matches no Ingenic SDK: consumers using it pass BGRA where
+ * libimp expects RGB24, and 18 (= BGGR8 here) where libimp expects RAW.
  */
 typedef enum {
-    PIX_FMT_YUV420P,    /**< Planar YUV 4:2:0 */
-    PIX_FMT_YUYV422,    /**< Packed YUV 4:2:2 */
-    PIX_FMT_UYVY422,    /**< Packed YUV 4:2:2 */
-    PIX_FMT_YUV422P,    /**< Planar YUV 4:2:2 */
-    PIX_FMT_YUV444P,    /**< Planar YUV 4:4:4 */
-    PIX_FMT_YUV410P,    /**< Planar YUV 4:1:0 */
-    PIX_FMT_YUV411P,    /**< Planar YUV 4:1:1 */
-    PIX_FMT_YUVJ420P,   /**< Planar YUV 4:2:0 full range */
-    PIX_FMT_YUVJ422P,   /**< Planar YUV 4:2:2 full range */
-    PIX_FMT_YUVJ444P,   /**< Planar YUV 4:4:4 full range */
-    PIX_FMT_NV12,       /**< Semi-planar YUV 4:2:0 */
-    PIX_FMT_NV21,       /**< Semi-planar YUV 4:2:0 */
-    PIX_FMT_BGRA,       /**< Packed BGRA 8:8:8:8 */
-    PIX_FMT_RGBA,       /**< Packed RGBA 8:8:8:8 */
-    PIX_FMT_BGGR8,      /**< Bayer BGGR 8-bit */
-    PIX_FMT_RGGB8,      /**< Bayer RGGB 8-bit */
-    PIX_FMT_GBRG8,      /**< Bayer GBRG 8-bit */
-    PIX_FMT_GRBG8,      /**< Bayer GRBG 8-bit */
-    PIX_FMT_RAW,        /**< Raw data */
+    PIX_FMT_YUV420P = 0,      /**< Planar YUV 4:2:0, 12 bpp */
+    PIX_FMT_YUYV422 = 1,      /**< Packed YUV 4:2:2, Y0 Cb Y1 Cr */
+    PIX_FMT_UYVY422 = 2,      /**< Packed YUV 4:2:2, Cb Y0 Cr Y1 */
+    PIX_FMT_YUV422P = 3,      /**< Planar YUV 4:2:2, 16 bpp */
+    PIX_FMT_YUV444P = 4,      /**< Planar YUV 4:4:4, 24 bpp */
+    PIX_FMT_YUV410P = 5,      /**< Planar YUV 4:1:0, 9 bpp */
+    PIX_FMT_YUV411P = 6,      /**< Planar YUV 4:1:1, 12 bpp */
+    PIX_FMT_GRAY8 = 7,        /**< 8 bpp gray */
+    PIX_FMT_MONOWHITE = 8,    /**< 1 bpp, 0 is white */
+    PIX_FMT_MONOBLACK = 9,    /**< 1 bpp, 0 is black */
+    PIX_FMT_NV12 = 10,        /**< Semi-planar YUV 4:2:0, U then V */
+    PIX_FMT_NV21 = 11,        /**< Semi-planar YUV 4:2:0, V then U */
+    PIX_FMT_RGB24 = 12,       /**< Packed RGB 8:8:8, 24 bpp */
+    PIX_FMT_BGR24 = 13,       /**< Packed BGR 8:8:8, 24 bpp */
+    PIX_FMT_ARGB = 14,        /**< Packed ARGB 8:8:8:8, 32 bpp */
+    PIX_FMT_RGBA = 15,        /**< Packed RGBA 8:8:8:8, 32 bpp */
+    PIX_FMT_ABGR = 16,        /**< Packed ABGR 8:8:8:8, 32 bpp */
+    PIX_FMT_BGRA = 17,        /**< Packed BGRA 8:8:8:8, 32 bpp */
+    PIX_FMT_RGB565BE = 18,    /**< Packed RGB 5:6:5, 16 bpp, big-endian */
+    PIX_FMT_RGB565LE = 19,    /**< Packed RGB 5:6:5, 16 bpp, little-endian */
+    PIX_FMT_RGB555BE = 20,    /**< Packed RGB 5:5:5, 16 bpp, big-endian */
+    PIX_FMT_RGB555LE = 21,    /**< Packed RGB 5:5:5, 16 bpp, little-endian */
+    PIX_FMT_BGR565BE = 22,    /**< Packed BGR 5:6:5, 16 bpp, big-endian */
+    PIX_FMT_BGR565LE = 23,    /**< Packed BGR 5:6:5, 16 bpp, little-endian */
+    PIX_FMT_BGR555BE = 24,    /**< Packed BGR 5:5:5, 16 bpp, big-endian */
+    PIX_FMT_BGR555LE = 25,    /**< Packed BGR 5:5:5, 16 bpp, little-endian */
+    PIX_FMT_0RGB = 26,        /**< Packed RGB 8:8:8 in the low 24 bits */
+    PIX_FMT_RGB0 = 27,        /**< Packed RGB 8:8:8 in the high 24 bits */
+    PIX_FMT_0BGR = 28,        /**< Packed BGR 8:8:8 in the low 24 bits */
+    PIX_FMT_BGR0 = 29,        /**< Packed BGR 8:8:8 in the high 24 bits */
+    PIX_FMT_BAYER_BGGR8 = 30, /**< Bayer BGGR, 8-bit samples */
+    PIX_FMT_BAYER_RGGB8 = 31, /**< Bayer RGGB, 8-bit samples */
+    PIX_FMT_BAYER_GBRG8 = 32, /**< Bayer GBRG, 8-bit samples */
+    PIX_FMT_BAYER_GRBG8 = 33, /**< Bayer GRBG, 8-bit samples */
+    PIX_FMT_RAW = 34,         /**< Raw data (ISP bypass / raw sensor) */
+    PIX_FMT_HSV = 35,         /**< HSV */
+    PIX_FMT_NB = 36,          /**< Number of pixel formats */
 } IMPPixelFormat;
+
+_Static_assert(PIX_FMT_NV12 == 10, "PIX_FMT_NV12 ABI mismatch");
+_Static_assert(PIX_FMT_NV21 == 11, "PIX_FMT_NV21 ABI mismatch");
+_Static_assert(PIX_FMT_RAW == 34, "PIX_FMT_RAW ABI mismatch");
+_Static_assert(PIX_FMT_NB == 36, "PIX_FMT_NB ABI mismatch");
 
 /**
  * Cell structure for binding modules
@@ -138,6 +171,103 @@ _Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x20,
                "legacy IMPFrameInfo.timeStamp ABI mismatch");
 _Static_assert(sizeof(IMPFrameInfo) == 0x28,
                "legacy IMPFrameInfo ABI mismatch");
+#elif defined(PLATFORM_T31)
+/** Vendor T31 1.1.6 imp_common.h: 0x30 bytes, rotate_osdflag at 0x28. */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    int64_t timeStamp;
+    uint32_t rotate_osdflag;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T31 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T31 IMPFrameInfo.virAddr ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x20,
+               "T31 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, rotate_osdflag) == 0x28,
+               "T31 IMPFrameInfo.rotate_osdflag ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T31 IMPFrameInfo ABI mismatch");
+#elif defined(PLATFORM_T40)
+/**
+ * Vendor T40 1.3.1 imp_common.h: 0x30 bytes, pool at 0x20.
+ * Same layout as the private copy in src/t40/openimp_p1.c.
+ */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    void *pool;
+    int64_t timeStamp;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T40 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T40 IMPFrameInfo.virAddr ABI mismatch");
+/* The vendor ABI is 32-bit (MIPS o32). The offsets below depend on
+ * sizeof(void *), so they are only asserted for 32-bit targets; host test
+ * builds with 8-byte pointers must not fail on this correct header. */
+#if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 4
+_Static_assert(offsetof(IMPFrameInfo, pool) == 0x20,
+               "T40 IMPFrameInfo.pool ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
+               "T40 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T40 IMPFrameInfo ABI mismatch");
+#endif
+#elif defined(PLATFORM_T41)
+/**
+ * Vendor T41 1.2.5/1.2.6 imp_common.h: 0x30 bytes, direct_phyAddr at 0x20,
+ * pool at 0x24. Same layout as the private copy in src/t40/openimp_p1.c.
+ */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    uint32_t direct_phyAddr;
+    void *pool;
+    int64_t timeStamp;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T41 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T41 IMPFrameInfo.virAddr ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, direct_phyAddr) == 0x20,
+               "T41 IMPFrameInfo.direct_phyAddr ABI mismatch");
+/* The vendor ABI is 32-bit (MIPS o32). pool and timeStamp follow the
+ * pointer, so their offsets only hold for 4-byte pointers and are asserted
+ * for 32-bit targets only (host test builds use 8-byte pointers). */
+#if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 4
+_Static_assert(offsetof(IMPFrameInfo, pool) == 0x24,
+               "T41 IMPFrameInfo.pool ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
+               "T41 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T41 IMPFrameInfo ABI mismatch");
+#endif
 #else
 typedef struct {
     int width;
@@ -220,6 +350,49 @@ typedef struct {
     int sensor_id;                          /**< Sensor ID (80-83) */
     /* Total: 32+4+4+24+4+4+4+4+4 = 84 bytes */
 } IMPSensorInfo;
+#elif defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/**
+ * Vendor T40 1.3.1 / T41 1.2.5 imp_isp.h: 100 bytes (0x64).
+ *
+ * The kernel's sensor registration reads the whole object (the T40/T41
+ * drivers expect the vendor layout up to default_boot at 0x60), so the
+ * public type must stay at the vendor size.  A caller built against an
+ * 84-byte object would otherwise let the kernel read 16 bytes past its
+ * own variable.  There is no `private_data` member in the vendor header.
+ */
+typedef struct {
+    char name[32];                      /**< Sensor name (0x00-0x1f) */
+    TXSensorControlBusType cbus_type;   /**< Control bus type (0x20) */
+    union {
+        TXSNSI2CConfig i2c;             /**< I2C bus information */
+        struct {
+            char modalias[32];          /**< SPI modalias */
+            int bus_num;                /**< SPI bus number */
+        } spi;                          /**< 36 bytes, as in the vendor union */
+    };                                  /**< 0x24-0x47 */
+    int rst_gpio;                       /**< Reset GPIO (0x48) */
+    int pwdn_gpio;                      /**< Power down GPIO (0x4c) */
+    int power_gpio;                     /**< Power GPIO (0x50) */
+    unsigned short sensor_id;           /**< Sensor ID (0x54) */
+    short _reserved_pad;                /**< padding to 0x58 */
+    int video_interface;                /**< IMPSensorVinType (0x58) */
+    int mclk;                           /**< IMPSensorMclk (0x5c) */
+    int default_boot;                   /**< Default boot setting (0x60) */
+    /* Total: 0x64 = 100 bytes, as in the vendor header */
+} IMPSensorInfo;
+
+_Static_assert(offsetof(IMPSensorInfo, cbus_type) == 0x20,
+               "T40/T41 IMPSensorInfo.cbus_type ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, rst_gpio) == 0x48,
+               "T40/T41 IMPSensorInfo.rst_gpio ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, sensor_id) == 0x54,
+               "T40/T41 IMPSensorInfo.sensor_id ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, video_interface) == 0x58,
+               "T40/T41 IMPSensorInfo.video_interface ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, default_boot) == 0x60,
+               "T40/T41 IMPSensorInfo.default_boot ABI mismatch");
+_Static_assert(sizeof(IMPSensorInfo) == 0x64,
+               "T40/T41 IMPSensorInfo ABI mismatch (vendor: 100 bytes)");
 #else
 typedef struct {
     char name[32];                          /**< Sensor name */
@@ -229,9 +402,6 @@ typedef struct {
     int pwdn_gpio;                          /**< Power down GPIO */
     int power_gpio;                         /**< Power GPIO */
     int sensor_id;                          /**< Sensor ID */
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
-    void *private_data;                     /**< Private data (T40/T41) */
-#endif
     /* Note: T31/T21/C100 have no field here, keeping struct at 80 bytes */
 } IMPSensorInfo;
 #endif

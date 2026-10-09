@@ -629,10 +629,27 @@ typedef struct {
     };
 } IMPEncoderAttrRcMode;
 
+/*
+ * Vendor values: 0x02/0xfe/0x04 (T31 1.1.5.2 and 1.1.6, T40 1.3.1, T41
+ * 1.2.0/1.2.5/1.2.6 - the T41 branch above already uses them). OpenIMP does
+ * not translate the field, so the value that leaves the library is the value
+ * that was stored. The default is written here:
+ *
+ *   - `codec-t40.c` sets `gop_cache.gopMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT`
+ *     for T31, T40 and T41 (`AL_Codec_Encode_Create` defaults).
+ *
+ * With the old numbers the library reported 0, which is not a value that
+ * exists in the vendor enum, and a caller comparing against the vendor
+ * constants saw a mode it could not name. With 0x02 the reported default is
+ * the vendor `DEFAULT`. raptor-hal compiles against the vendor headers, so
+ * its `switch (gopAttr.uGopCtrlMode)` in `hal_encoder.c:2259` was never
+ * comparing against OpenIMP's numbers - it is the OpenIMP-side default that
+ * changed.
+ */
 typedef enum {
-    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0,
-    IMP_ENC_GOP_CTRL_MODE_SMARTP = 1,
-    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 2,
+    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0x02,
+    IMP_ENC_GOP_CTRL_MODE_SMARTP = 0xfe,
+    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 0x04,
 } IMPEncoderGopCtrlMode;
 
 typedef struct {
@@ -704,13 +721,6 @@ typedef struct {
     IMPEncoderAttr encAttr;
     IMPEncoderRcAttr rcAttr;
     IMPEncoderGopAttr gopAttr;
-#if !defined(PLATFORM_T31)
-    /* T40 only.  The T31 1.1.6 vendor IMPEncoderChnAttr ends after gopAttr
-     * (112 bytes); a trailing member here made IMP_Encoder_GetChnAttr and
-     * IMP_Encoder_SetDefaultParam write 4 bytes past a caller's struct. */
-    uint8_t bEnableIvdc;
-    uint8_t _reserved2[3];
-#endif
 } IMPEncoderChnAttr;
 
 typedef IMPEncoderChnAttr IMPEncoderCHNAttr;
@@ -721,11 +731,14 @@ _Static_assert(sizeof(IMPEncoderAttr) == 0x2c, "IMPEncoderAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, encAttr) == 0x00, "IMPEncoderChnAttr.encAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, rcAttr) == 0x2c, "IMPEncoderChnAttr.rcAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, gopAttr) == 0x58, "IMPEncoderChnAttr.gopAttr ABI mismatch");
-#if defined(PLATFORM_T31)
-_Static_assert(sizeof(IMPEncoderChnAttr) == 0x70, "T31 IMPEncoderChnAttr ABI mismatch (vendor 1.1.6: 112 bytes)");
-#else
-_Static_assert(offsetof(IMPEncoderChnAttr, bEnableIvdc) == 0x70, "IMPEncoderChnAttr.bEnableIvdc ABI mismatch");
-#endif
+/* Neither vendor header of this branch has a member after gopAttr: T31 1.1.6
+ * and T40 1.3.1 both end at 112 bytes (encAttr 0x00, rcAttr 0x2c, gopAttr
+ * 0x58).  The trailing bEnableIvdc word made IMP_Encoder_GetChnAttr copy 116
+ * bytes and IMP_Encoder_SetDefaultParam clear 116 bytes into a caller's
+ * vendor-sized struct.  bEnableIvdc exists in the T41 1.2.5/1.2.6 header only
+ * (its own branch above, offset 0x78). */
+_Static_assert(sizeof(IMPEncoderChnAttr) == 0x70,
+               "T31/T40 IMPEncoderChnAttr ABI mismatch (vendor: 112 bytes)");
 #else
 /**
  * H264 CBR attributes
@@ -976,11 +989,27 @@ typedef struct {
     uint32_t        packCount;
     uint32_t        seq;
     bool            isVI;
+#if !defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     union {
         IMPEncoderStreamInfo streamInfo;
         IMPEncoderJpegInfo   jpegInfo;
     };
+#endif
 } IMPEncoderStream;
+
+/*
+ * T40 1.3.1 and T41 1.2.6 end this structure after isVI and pad it to 28
+ * bytes; only T31 1.1.6 appends the streamInfo/jpegInfo union (64 bytes).
+ * OpenIMP's own T40/T41 backend writes exactly the 28-byte prefix
+ * (P2_ENCODER_STREAM_ABI_SIZE in src/t40/openimp_p2_encoder.c), so the
+ * public type must be 28 bytes there too -- a caller compiled against the
+ * 64-byte form would hand the library 36 bytes it never touches, and would
+ * read streamInfo/jpegInfo that the library never writes.
+ */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+_Static_assert(sizeof(IMPEncoderStream) == 0x1c,
+               "T40/T41 IMPEncoderStream ABI mismatch (vendor: 28 bytes)");
+#endif
 #endif
 
 /**

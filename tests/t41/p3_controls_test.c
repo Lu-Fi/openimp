@@ -10,6 +10,7 @@
 
 int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
 int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
+int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
 
 static struct {
     uint32_t command;
@@ -41,6 +42,17 @@ int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path)
     (void)num;
     (void)path;
     return 0;
+}
+
+int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size)
+{
+    /* The record lives in P1 (openimp_p1.c).  This host test only covers the
+     * P3 wrapper, so the stub reports "never set", which is the state a caller
+     * without a preceding IMP_ISP_SetDefaultBinPath is in. */
+    (void)num;
+    (void)path;
+    (void)size;
+    return -1;
 }
 
 #define EXPECT(call, dir, id, ptr)                                            \
@@ -137,6 +149,19 @@ int main(void)
     fps.num = fps.den = 0;
     assert(IMP_ISP_Tuning_GetSensorFPS(IMPVI_MAIN, &fps) == -1);
     assert(fps.num == 15 && fps.den == 1);
+
+    /* IMP_ISP_GetDefaultBinPath: no IMP_ISP_SetDefaultBinPath preceded it, so
+     * the kernel owns the default and libimp cannot know it.  The wrapper must
+     * fail instead of answering "success" with an empty string. */
+    {
+        char bin_path[64];
+
+        memset(bin_path, 'x', sizeof(bin_path));
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, bin_path) == -1);
+        assert(bin_path[0] == '\0');
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_BUTT, bin_path) == -1);
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, NULL) == -1);
+    }
     puts("t41 p3 controls tests passed");
     return 0;
 }

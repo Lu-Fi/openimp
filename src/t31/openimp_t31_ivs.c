@@ -57,7 +57,9 @@
 #include "imp/openimp_ivs_move_ex.h"
 
 #define T31_IVS_GROUPS   2
-#define T31_IVS_CHANNELS 64
+/* T31 1.1.6 bounds the IVS channel with `sltiu ..,65` (CreateChn 0xc7b0c,
+ * GetResult 0xc8f70 and the other channel entry points), so 0..64 are valid. */
+#define T31_IVS_CHANNELS 65
 #define T31_IVS_RESULTS  6
 
 extern int IMP_System_GetBindbyDest(IMPCell *destination, IMPCell *source);
@@ -1068,6 +1070,12 @@ int IMP_IVS_CreateGroup(int group)
     if (!ivs_valid_group(group))
         return ivs_fail(EINVAL);
     pthread_mutex_lock(&ivs_lock);
+    /* Vendor (0xc75c8): creating a group twice is not an error. The second
+     * call only logs "IMP_IVS_CreateGroup(%d) had been used !" at level 2
+     * (line 0x1ad) and falls through to the same `return 0`. */
+    if (ivs_groups[group])
+        IMP_TRACE_LOG("IVS", "IMP_IVS_CreateGroup(%d) had been used !",
+                      group);
     ivs_groups[group] = 1;
     pthread_mutex_unlock(&ivs_lock);
     return 0;
@@ -1081,8 +1089,15 @@ int IMP_IVS_DestroyGroup(int group)
         return ivs_fail(EINVAL);
     pthread_mutex_lock(&ivs_lock);
     if (!ivs_groups[group]) {
+        /* Vendor (0xc7858): the same is true for a group that was never
+         * created -- it logs level 2 and *returns 0*, so the stock library
+         * lets an application destroy a group twice. The message is the
+         * OEM's own copy/paste: DestroyGroup logs "IMP_IVS_CreateGroup(%d)
+         * had been not used !" (line 0x1cc). */
+        IMP_TRACE_LOG("IVS",
+                      "IMP_IVS_CreateGroup(%d) had been not used !", group);
         pthread_mutex_unlock(&ivs_lock);
-        return ivs_fail(ENOENT);
+        return 0;
     }
     for (i = 0; i < T31_IVS_CHANNELS; i++) {
         if (ivs_channels[i].state == IVS_CHN_ACTIVE &&

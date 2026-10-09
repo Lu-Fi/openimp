@@ -68,8 +68,43 @@
 #include "t31/openimp_t31_osd.h"
 #endif
 
+/* Encoder groups, IMP_Encoder_CreateGroup bound per vendor libimp:
+ *   slti a0,6   T20 3.12.0, T21 1.0.33, T23 1.1.0/1.1.2, T30 1.0.5,
+ *               T31 1.1.6 (0x82668), T41 1.2.0/1.2.5
+ *   slti a0,9   T23 1.3.0 (the headers raptor-hal builds T23 against)
+ *   slti a0,13  T40 1.3.1
+ * T23 and T40 keep OpenIMP's previous 8 (no narrowing below the vendor
+ * versions the streamers use, no untested widening either). */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40)
 #define P2_MAX_GROUPS 8
+#else
+#define P2_MAX_GROUPS 6
+#endif
+/*
+ * Encoder channels. The vendor count is per SoC and is visible twice in every
+ * libimp.so: as the size of the local `g_EncChannel` array (divided by its
+ * per-channel stride) and as the `slti` guard at the top of
+ * IMP_Encoder_CreateChn.
+ *
+ *   T31 1.1.6   0x1b48 / 0x308 = 9   slti a0,9
+ *   T31 1.1.1   0x15c0 / 0x2b8 = 8   slti a0,8
+ *   T40 1.0.2   0x1500 / 0x2a0 = 8   slti a0,8
+ *   T41 1.0.1   0x20c0 / 0x418 = 8   slti a0,8
+ *   T21 1.0.33  0x35d0 / 0x8f8 = 6   slti a0,6
+ *   T23 1.1.0   0x38a0 / 0x970 = 6   slti a0,6
+ *   T30 1.0.5   0x5070 / 0xd68 = 6   slti a0,6
+ *
+ * T31 1.1.6 - the build this tree audits - has nine, so the shared value of 8
+ * rejected channel 8, which the vendor accepts (IMP_Encoder_CreateChn,
+ * SetFisheyeEnableStatus, SetFrameRelease and SetbufshareChn all allow
+ * encChn < 9). T21/T23/T30 having only six is not enforced here on purpose:
+ * that would be a narrowing, and it is not verified on a device.
+ */
+#if defined(PLATFORM_T31)
+#define P2_MAX_CHANNELS 9
+#else
 #define P2_MAX_CHANNELS 8
+#endif
 #define P2_MAX_BINDS 16
 #define P2_MAX_PUBLIC_PACKS 16
 /*
@@ -1104,7 +1139,8 @@ extern int AL_Codec_Encode_SetFrameRate(void *codec, void *fps);
 extern int AL_Codec_Encode_SetBitRate(void *codec, int target_bitrate,
                                      int max_bitrate);
 extern int AL_Codec_Encode_SetRcParam(void *codec, void *rc_attr);
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || \
+    defined(PLATFORM_T30)
 extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
 extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
@@ -2312,10 +2348,35 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
     P2EncoderChannel *ch;
     int ret;
 
-    if (!p2_valid_channel(channel))
+    /* Vendor 0x85734/0x85740 (log line 2468): `slti v0,a0,9` rejects the
+     * channel range before anything else. */
+    if (!p2_valid_channel(channel)) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder", "Invalid Channel Num: %d",
+                        channel);
         return -1;
+    }
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    /* Vendor 0x85768/0x858e0 (log line 2474): `lw a3,0(a1); bltz a3` --
+     * the descriptor doubles as the created flag, so a channel that was
+     * never created has nothing to poll. Vendor 0x85774/0x85810 (log line
+     * 2479): `lbu a1,264(a1); beqz a1` then refuses an unregistered
+     * channel. Both paths return -1; OpenIMP used to fall through into the
+     * poll and report a timeout instead. */
+    if (!ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been created",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
+    if (!ch->registered) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been registed",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
     if (ch->closing) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
@@ -3046,8 +3107,42 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 
     if (!attr || width <= 0 || height <= 0 || fps_num <= 0 || fps_den <= 0)
         return -1;
-    memset(attr, 0, sizeof(*attr));
     codec_type = ((uint32_t)profile >> 24) & 0xffu;
+    /* Vendor 0x831bc/0x831ec (log line 1784). `srl s2,a1,0x18` takes the
+     * encode type out of the top byte of the profile and `sltiu v0,s2,5`
+     * refuses every type but 0..4 (AVC, HEVC, JPEG and the two pack
+     * pseudo-types). The vendor returns -1 without touching *attr, so the
+     * caller's buffer stays as it was. */
+    if (codec_type > 4u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported encode type:%d, we only support avc, "
+                        "hevc and jpeg type", (int)codec_type);
+        return -1;
+    }
+    /* Vendor 0x831f4 (log line 1789). `lw s3,112(sp); beqz s3` refuses a
+     * zero frame-rate denominator; the message prints frmRateNum and then
+     * frmRateDen as the constant 0 (the vendor re-uses the value it just
+     * tested). OpenIMP already rejected it above without a message. */
+    if (fps_den == 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "invalid parameters:frmRateNum = %d, frmRateDen = %d",
+                        fps_num, fps_den);
+        return -1;
+    }
+    /* Vendor 0x8320c/0x83210 (log line 1798). `sltiu s7,a2,9` only runs
+     * after the `beq s2,v0(=4),0x8337c` at 0x83204, so JPEG accepts any rc
+     * mode while the other codecs are limited to the nine known ones. */
+    if (codec_type != IMP_ENC_TYPE_JPEG && (uint32_t)rc_mode > 8u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported rcmode:%d, we only support fixqp, cbr, "
+                        "vbr, capped vbr, capped quality", (int)rc_mode);
+        return -1;
+    }
+    /* Deliberate OpenIMP deviation: the stock code reads the height with
+     * `lhu s5,104(sp)` and the width with `andi s8,a3,0xffff` and never
+     * tests either for zero (it would just compute a zero-size stream), so
+     * the width/height test above is stricter than the vendor's. */
+    memset(attr, 0, sizeof(*attr));
     attr->encAttr.profile = profile;
     attr->encAttr.level = 51;
     attr->encAttr.maxPicWidth = (uint16_t)width;
