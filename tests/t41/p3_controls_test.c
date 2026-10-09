@@ -11,6 +11,35 @@
 int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
 int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
 int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
+int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
+int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
+
+/* ISPDevice-fd entries: what the library asked the main ISP node for */
+static struct {
+    uint32_t command;
+    unsigned char arg[64];
+    int calls;
+    int result;
+    int32_t bus;
+} isp;
+
+int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
+{
+    isp.command = command;
+    memcpy(isp.arg, argument, sizeof(isp.arg));
+    isp.calls++;
+    if (command == 0x8040540eU)             /* the driver returns the value */
+        *(uint32_t *)((char *)argument + 56) = 0x5a;
+    return isp.result;
+}
+
+int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type)
+{
+    memset(name, 0, 32);
+    strcpy(name, "gc5603");
+    *cbus_type = isp.bus;
+    return 0;
+}
 
 static struct {
     uint32_t command;
@@ -161,6 +190,79 @@ int main(void)
         assert(bin_path[0] == '\0');
         assert(IMP_ISP_GetDefaultBinPath(IMPVI_BUTT, bin_path) == -1);
         assert(IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, NULL) == -1);
+    }
+
+    /* AF weight: tuning control 0x8000032, pointer pass-through */
+    {
+        IMPISPWeight af;
+
+        last.result = 0;
+        EXPECT(IMP_ISP_Tuning_SetAfWeight(IMPVI_MAIN, &af), 0, 0x8000032, &af);
+        EXPECT(IMP_ISP_Tuning_GetAfWeight(IMPVI_MAIN, &af), 1, 0x8000032, &af);
+    }
+    /* sensor register: ISP node, 64-byte request {name, type, ..., reg at 48,
+     * value at 56}; SPI sensors are refused */
+    {
+        IMPISPSensorRegister reg;
+        uint32_t v;
+
+        last.result = 0;
+        isp.bus = 1;
+        reg.addr = 0x3107;
+        reg.value = 0;
+        assert(IMP_ISP_GetSensorRegister(IMPVI_MAIN, &reg) == 0);
+        assert(isp.command == 0x8040540eU && isp.calls == 1);
+        assert(strcmp((char *)isp.arg, "gc5603") == 0);
+        memcpy(&v, isp.arg + 32, 4);
+        assert(v == 1);
+        memcpy(&v, isp.arg + 48, 4);
+        assert(v == 0x3107 && reg.value == 0x5a);
+        reg.value = 0x11;
+        assert(IMP_ISP_SetSensorRegister(IMPVI_MAIN, &reg) == 0);
+        assert(isp.command == 0xc040540dU);
+        memcpy(&v, isp.arg + 56, 4);
+        assert(v == 0x11);
+        isp.bus = 2;
+        assert(IMP_ISP_GetSensorRegister(IMPVI_MAIN, &reg) == -1);
+        assert(IMP_ISP_GetSensorRegister(IMPVI_BUTT, &reg) == -1);
+        assert(isp.calls == 2);
+    }
+    /* frame drop: three channels, lsize 0..31 */
+    {
+        IMPISPFrameDropAttr fd, back;
+
+        memset(&fd, 0, sizeof(fd));
+        fd.fdrop[1].enable = IMPISP_TUNING_OPS_MODE_ENABLE;
+        fd.fdrop[1].lsize = 3;
+        fd.fdrop[1].fmark = 0x5;
+        isp.calls = 0;
+        assert(IMP_ISP_SetFrameDrop(IMPVI_MAIN, &fd) == 0);
+        assert(isp.command == 0xc004542cU && isp.calls == 1);
+        fd.fdrop[2].lsize = 32;
+        assert(IMP_ISP_SetFrameDrop(IMPVI_MAIN, &fd) == -1);
+        assert(isp.calls == 1);
+        assert(IMP_ISP_GetFrameDrop(IMPVI_MAIN, &back) == 0);
+        assert(isp.command == 0xc004542dU);
+        isp.result = -1;
+        assert(IMP_ISP_GetFrameDrop(IMPVI_MAIN, &back) == -1);
+        isp.result = 0;
+    }
+    /* WDR switch: ioctl 0x80045413 / 0x80045414, _GET answers from memory */
+    {
+        IMPISPTuningOpsMode m = IMPISP_TUNING_OPS_MODE_ENABLE, g = IMPISP_TUNING_OPS_MODE_DISABLE;
+
+        assert(IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &g) == 0 && g == IMPISP_TUNING_OPS_MODE_DISABLE);
+        assert(IMP_ISP_WDR_ENABLE(IMPVI_MAIN, &m) == 0);
+        assert(isp.command == 0x80045413U);
+        assert(IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &g) == 0 && g == IMPISP_TUNING_OPS_MODE_ENABLE);
+        m = IMPISP_TUNING_OPS_MODE_DISABLE;
+        assert(IMP_ISP_WDR_ENABLE(IMPVI_MAIN, &m) == 0);
+        assert(isp.command == 0x80045414U);
+        isp.result = -1;
+        m = IMPISP_TUNING_OPS_MODE_ENABLE;
+        assert(IMP_ISP_WDR_ENABLE(IMPVI_MAIN, &m) == -1);
+        assert(IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &g) == 0 && g == IMPISP_TUNING_OPS_MODE_DISABLE);
+        isp.result = 0;
     }
     puts("t41 p3 controls tests passed");
     return 0;

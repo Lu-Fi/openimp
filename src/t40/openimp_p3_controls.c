@@ -106,6 +106,162 @@ int32_t IMP_ISP_Tuning_GetSensorAttr(IMPVI_NUM num, IMPISPSENSORAttr *attr)
 }
 #endif
 
+/* ---- vendor ISPDevice-fd entries (T40 1.3.1 and T41 1.2.6 use the same
+ * ioctl numbers; the stock driver owns the hardware access) ---- */
+extern int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
+extern int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
+
+#define TISP_IOCTL_SET_SENSOR_REGISTER 0xc040540dU
+#define TISP_IOCTL_GET_SENSOR_REGISTER 0x8040540eU
+#define TISP_IOCTL_SET_WDR_ENABLE      0x80045413U
+#define TISP_IOCTL_SET_WDR_DISABLE     0x80045414U
+#define TISP_IOCTL_SET_FRAME_DROP      0xc004542cU
+#define TISP_IOCTL_GET_FRAME_DROP      0xc004542dU
+#define TISP_CID_AF_WEIGHT             0x08000032
+
+/* Vendor request: sensor name[32], bus type (1: I2C), 64-bit register and
+ * value.  SPI sensors are refused as the vendor does. */
+struct p3_sensor_reg {
+    char name[32];
+    int32_t type;
+    uint32_t size;
+    uint32_t unused[2];
+    uint32_t reg;
+    uint32_t reg_hi;
+    uint32_t value;
+    uint32_t value_hi;
+};
+
+static int p3_sensor_register(int set, uint32_t addr, uint32_t *value)
+{
+    struct p3_sensor_reg req;
+    int result;
+
+    memset(&req, 0, sizeof(req));
+    if (!value || OpenIMP_P1_GetSensorName(req.name, &req.type) != 0 ||
+        req.type != 1)
+        return -1;
+    req.reg = addr;
+    if (set)
+        req.value = *value;
+    result = OpenIMP_P1_IspIOCtl(set ? TISP_IOCTL_SET_SENSOR_REGISTER :
+                                 TISP_IOCTL_GET_SENSOR_REGISTER, &req);
+    if (result == 0 && !set)
+        *value = req.value;
+    return result;
+}
+
+#if defined(PLATFORM_T41)
+/* T41 1.2.6: one {addr, value} structure */
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(1, reg->addr, &reg->value);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(0, reg->addr, &reg->value);
+}
+#else
+/* T40 1.3.1: the address and the value by pointer */
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, uint32_t *reg, uint32_t *value)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(1, *reg, value);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, uint32_t *reg, uint32_t *value)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(0, *reg, value);
+}
+#endif
+
+/* Vendor: the 3 x {enable, lsize, fmark} table goes to the ISP as is
+ * (lsize 0..31 as the header states). */
+static int p3_frame_drop_valid(const IMPISPFrameDropAttr *attr)
+{
+    unsigned int i;
+
+    for (i = 0; i < 3U; i++)
+        if (attr->fdrop[i].enable >= IMPISP_TUNING_OPS_MODE_BUTT ||
+            attr->fdrop[i].lsize > 31U)
+            return 0;
+    return 1;
+}
+
+int32_t IMP_ISP_SetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    IMPISPFrameDropAttr copy;
+
+    if (num != IMPVI_MAIN || !attr || !p3_frame_drop_valid(attr))
+        return -1;
+    copy = *attr;
+    return OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_FRAME_DROP, &copy);
+}
+
+int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    IMPISPFrameDropAttr copy;
+    int result;
+
+    if (num != IMPVI_MAIN || !attr)
+        return -1;
+    memset(&copy, 0, sizeof(copy));
+    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_FRAME_DROP, &copy);
+    if (result == 0)
+        *attr = copy;
+    return result;
+}
+
+/* Vendor: AE/AWB/AF weights are 15x15 byte tables over the tuning node. */
+int32_t IMP_ISP_Tuning_SetAfWeight(IMPVI_NUM num, IMPISPWeight *af_weight)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_AF_WEIGHT, af_weight);
+}
+
+int32_t IMP_ISP_Tuning_GetAfWeight(IMPVI_NUM num, IMPISPWeight *af_weight)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_AF_WEIGHT, af_weight);
+}
+
+/* Vendor WDR_ENABLE: 1 / 0 switch the ISP's WDR mode by ioctl and the
+ * library remembers the last mode; _GET answers from that memory (no
+ * ioctl).  Any other value is accepted without effect. */
+static IMPISPTuningOpsMode p3_wdr_mode;
+
+int32_t IMP_ISP_WDR_ENABLE(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    int32_t zero = 0;
+    int result;
+
+    if (num != IMPVI_MAIN || !mode)
+        return -1;
+    if (*mode != IMPISP_TUNING_OPS_MODE_ENABLE &&
+        *mode != IMPISP_TUNING_OPS_MODE_DISABLE)
+        return 0;
+    result = OpenIMP_P1_IspIOCtl(*mode == IMPISP_TUNING_OPS_MODE_ENABLE ?
+                                 TISP_IOCTL_SET_WDR_ENABLE :
+                                 TISP_IOCTL_SET_WDR_DISABLE, &zero);
+    if (result == 0)
+        p3_wdr_mode = *mode;
+    return result;
+}
+
+int32_t IMP_ISP_WDR_ENABLE_GET(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    if (num != IMPVI_MAIN || !mode)
+        return -1;
+    *mode = p3_wdr_mode;
+    return 0;
+}
+
 int32_t IMP_ISP_Tuning_GetAeExprInfo(IMPVI_NUM num,
                                      IMPISPAEExprInfo *exprinfo)
 {
