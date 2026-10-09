@@ -2336,10 +2336,35 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
     P2EncoderChannel *ch;
     int ret;
 
-    if (!p2_valid_channel(channel))
+    /* Vendor 0x85734/0x85740 (log line 2468): `slti v0,a0,9` rejects the
+     * channel range before anything else. */
+    if (!p2_valid_channel(channel)) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder", "Invalid Channel Num: %d",
+                        channel);
         return -1;
+    }
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    /* Vendor 0x85768/0x858e0 (log line 2474): `lw a3,0(a1); bltz a3` --
+     * the descriptor doubles as the created flag, so a channel that was
+     * never created has nothing to poll. Vendor 0x85774/0x85810 (log line
+     * 2479): `lbu a1,264(a1); beqz a1` then refuses an unregistered
+     * channel. Both paths return -1; OpenIMP used to fall through into the
+     * poll and report a timeout instead. */
+    if (!ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been created",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
+    if (!ch->registered) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been registed",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
     if (ch->closing) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
