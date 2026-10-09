@@ -171,6 +171,103 @@ _Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x20,
                "legacy IMPFrameInfo.timeStamp ABI mismatch");
 _Static_assert(sizeof(IMPFrameInfo) == 0x28,
                "legacy IMPFrameInfo ABI mismatch");
+#elif defined(PLATFORM_T31)
+/** Vendor T31 1.1.6 imp_common.h: 0x30 bytes, rotate_osdflag at 0x28. */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    int64_t timeStamp;
+    uint32_t rotate_osdflag;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T31 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T31 IMPFrameInfo.virAddr ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x20,
+               "T31 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, rotate_osdflag) == 0x28,
+               "T31 IMPFrameInfo.rotate_osdflag ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T31 IMPFrameInfo ABI mismatch");
+#elif defined(PLATFORM_T40)
+/**
+ * Vendor T40 1.3.1 imp_common.h: 0x30 bytes, pool at 0x20.
+ * Same layout as the private copy in src/t40/openimp_p1.c.
+ */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    void *pool;
+    int64_t timeStamp;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T40 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T40 IMPFrameInfo.virAddr ABI mismatch");
+/* The vendor ABI is 32-bit (MIPS o32). The offsets below depend on
+ * sizeof(void *), so they are only asserted for 32-bit targets; host test
+ * builds with 8-byte pointers must not fail on this correct header. */
+#if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 4
+_Static_assert(offsetof(IMPFrameInfo, pool) == 0x20,
+               "T40 IMPFrameInfo.pool ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
+               "T40 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T40 IMPFrameInfo ABI mismatch");
+#endif
+#elif defined(PLATFORM_T41)
+/**
+ * Vendor T41 1.2.5/1.2.6 imp_common.h: 0x30 bytes, direct_phyAddr at 0x20,
+ * pool at 0x24. Same layout as the private copy in src/t40/openimp_p1.c.
+ */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    uint32_t direct_phyAddr;
+    void *pool;
+    int64_t timeStamp;
+    uint32_t priv[0];
+} IMPFrameInfo;
+
+_Static_assert(offsetof(IMPFrameInfo, width) == 0x08,
+               "T41 IMPFrameInfo.width ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, virAddr) == 0x1c,
+               "T41 IMPFrameInfo.virAddr ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, direct_phyAddr) == 0x20,
+               "T41 IMPFrameInfo.direct_phyAddr ABI mismatch");
+/* The vendor ABI is 32-bit (MIPS o32). pool and timeStamp follow the
+ * pointer, so their offsets only hold for 4-byte pointers and are asserted
+ * for 32-bit targets only (host test builds use 8-byte pointers). */
+#if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 4
+_Static_assert(offsetof(IMPFrameInfo, pool) == 0x24,
+               "T41 IMPFrameInfo.pool ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
+               "T41 IMPFrameInfo.timeStamp ABI mismatch");
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T41 IMPFrameInfo ABI mismatch");
+#endif
 #else
 typedef struct {
     int width;
