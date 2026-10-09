@@ -629,10 +629,28 @@ typedef struct {
     };
 } IMPEncoderAttrRcMode;
 
+/*
+ * Vendor values: 0x02/0xfe/0x04 (T31 1.1.5.2 and 1.1.6, T40 1.3.1, T41
+ * 1.2.0/1.2.5/1.2.6 - the T41 branch above already uses them). OpenIMP does
+ * not translate the field, so the value that leaves the library is the value
+ * that was stored. The default is written here:
+ *
+ *   - `codec-t40.c` sets `gop_cache.gopMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT`
+ *     for T31, T40 and T41 (line 9008 on `claude/agg-32`, `:8552` with the
+ *     series applied).
+ *
+ * With the old numbers the library reported 0, which is not a value that
+ * exists in the vendor enum, and a caller comparing against the vendor
+ * constants saw a mode it could not name. With 0x02 the reported default is
+ * the vendor `DEFAULT`. raptor-hal compiles against the vendor headers, so
+ * its `switch (gopAttr.uGopCtrlMode)` in `hal_encoder.c:2259` was never
+ * comparing against OpenIMP's numbers - it is the OpenIMP-side default that
+ * changed.
+ */
 typedef enum {
-    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0,
-    IMP_ENC_GOP_CTRL_MODE_SMARTP = 1,
-    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 2,
+    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0x02,
+    IMP_ENC_GOP_CTRL_MODE_SMARTP = 0xfe,
+    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 0x04,
 } IMPEncoderGopCtrlMode;
 
 typedef struct {
