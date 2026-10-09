@@ -1,6 +1,6 @@
 # Open stack vs vendor stack: feature matrix
 
-As of: 2026-10-06 evening (release candidate: OpenIMP `agg-27` affb8ff and open-tx-isp `agg-28` 79b754b4 on top of `next`; the per-cell details below are a chronological test log, newest results win). Camera mapping: cam-A = T31, cam-B = T23, cam-C = T20, cam-D = T21, cam-E = T10, cam-F = T41; cam-G and cam-H are further T23 cameras (other sensors) that run the same stack.
+As of: 2026-10-09 evening (release candidate agg-34: OpenIMP `agg-34` 838f8147 and open-tx-isp `agg-34` da9baf1e on top of `next`; the per-cell details below are a chronological test log, newest results win). Camera mapping of the older sections: cam-A = T31, cam-B = T23, cam-C = T20, cam-D = T21, cam-E = T10, cam-F = T41; cam-G and cam-H are further T23 cameras (other sensors) that run the same stack. The agg-32 soak has its own letters (see the changelog).
 
 Branch names in brackets (`claude/...`) and the tags `[-all-N]` are historic: those branches were merged into `next` and deleted. Where a cell says "not yet in an aggregate", "device test pending" or "opt-in", check the summary below and the defaults table in [OPENIMP_BEYOND_VENDOR.md](OPENIMP_BEYOND_VENDOR.md) first.
 
@@ -10,7 +10,25 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 ## Summary
 
-**Release candidate (2026-10-06 evening)**
+**Release candidate agg-34 (2026-10-09 evening)**
+
+- State: OpenIMP `agg-34` (838f8147) = agg-32 (8980cae) + the encoder ROI clamp (fec3e69, 8545fb9) + the reviewed DeepSeek patches (11abe42 and 17 patches); open-tx-isp `agg-34` (da9baf1e) = agg-32 (3cf9bdac) + front-crop fixes for T31, T23, T20 and T10 (d940ba20 to 10bac52f, 164225e5) + T20 `isp-m0` reports the reachable analog gain cap (da9baf1e). The first release still covers T10, T20, T21, T23 and T31; T41 is experimental and not part of it.
+- Soak of agg-32 (2026-10-07 16:07 to 2026-10-09 11:31, 43.4 h, stopped early by the user): 0 unplanned reboots, 0 oopses, 0 guard trips, 0 snapshot failures and no memory trend on the cameras without user interaction. The only reboots were a planned OTA and two crashes from enabling a front crop on T31 (fixed in agg-34, see below). The numeric picture check found the T20 day/night regression, the T10 black frame in the dark and the T41 channel-1 colour/exposure problem (known issues below).
+- Encoder ROI (region QP): **T31** has an ROI that the vendor library does not have (`IMP_Encoder_SetChnRoiAttr` through the AVPU QP table, beyond vendor): device-tested, delta -10 gives 2.7x the bit rate, a relative -20 becomes -19 (clamped), 0 decoder errors in 20 VA-API checks. **T10/T20/T21** apply `SetChnROI` on the Helix/NVPU: device-tested (T21 by default, beyond vendor). All ROI paths now keep the stream valid H.264: every `mb_qp_delta` lies in -25..+25 (a relative -26 or an absolute QP far from the picture QP produced broken pictures in hardware decoders such as VA-API, VLC and browsers), picture QP plus delta stays inside the rate control's min/max QP. **T23**: the regions go to the vendor encoder, no visible effect measured (marked no-op). **T41**: code only, off by default, not device-tested. Rules and numbers: `docs/ROI.md`, `docs/OPENIMP_BEYOND_VENDOR.md`.
+- Front crop: **T10/T20/T21/T23** device-tested on 2026-10-09 after the fixes (T23: crop off unlocks the window, a window that does not fit is dropped instead of hanging the MSCA, the lock is released with the ISP session, module parameter `fcrop_upscale_pct`; T20/T10: a window is kept while no downscaled channel is open and applied at stream on, released with the tuning session). **T31**: the crash is fixed (the kernel refuses a window the MSCA would have to upscale with -EINVAL; scaler steps and latch are written; module parameter `fcrop_upscale_pct`), but the picture effect is **experimental, not proven**.
+- DeepSeek patches (17, reviewed, plus one corrected): struct sizes and layouts of the vendor ABI (T40/T41 encoder stream, channel attributes, frame info, sensor info, OSD attributes), encoder group bounds (6 like the vendor on T20/T21/T30/T31/T41, 8 kept on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)`, `GetDefaultBinPath`, idempotent IVS group create/destroy, polling-stream guards. Host tests and `make check` are green on all SoCs and the cross-builds pass; **no device run of the combined agg-34 yet**: still to check on cameras are OSD groups, IVS, `PollingStream` returning -1 without a channel (watch the streamer CPU at restart), T31 `SnapFrame` offsets and the T41 OSD size.
+- T20 day/night: the driver reported an analog gain cap of 158 in `isp-m0` while the AE stops at 128, so a streamer waiting for the cap never saw it reached and stayed in Day mode in the dark. `isp-m0` now reports the smaller of the two (host-tested); the streamer needs its matching change (timps 5bc4eff) for the switch to work. Not yet device-tested with both.
+
+**Known issues (agg-34)**
+
+- **T41 sub-channel (ch1):** green or flat frames at each day/night switch and the exposure of channel 1 does not follow channel 0 (channel 0 is fine). T41 is experimental and not part of the first release.
+- **T20 day/night** needs the open-tx-isp fix (da9baf1e) **and** the streamer change (timps 5bc4eff); with agg-32 alone both T20 cameras stayed in Day mode in the dark. Not yet confirmed on a camera with both.
+- **T31 front crop:** the crash is fixed, but the picture effect is not proven (experimental).
+- **T10:** the soak saw a few rounds where the camera switched to Day in the dark and delivered a black frame (3 events in 44 h).
+- **720p main stream** shows only the top-left corner when the streamer reads `/proc/jz/sensor/sensor0/*` before the sensor is started (streamer side; seen on T21 and T20).
+- **Streamer ROI limit:** the library keeps ROI streams valid H.264 from agg-34 on (a relative QP of -26 used to break Intel VA-API, VLC, Firefox and Edge from the ROI row on); a streamer that offers -26 should offer -25 as its lowest value.
+
+**Release candidate agg-27/agg-28 (2026-10-06 evening; the apitest figures below are from that day)**
 
 - State: OpenIMP `agg-27` (affb8ff) and open-tx-isp `agg-28` (79b754b4). Release plan: `next` goes to `aperto` (fast-forward) after the long soak, tagged `vYYYY.MM.DD`. The first release covers T20, T21, T23 and T31; T10 is part of it but was **not re-tested** on the open stack today (its cells mirror T20 and were not re-measured); T41 is **not** part of the first release (experimental, see below).
 - Device results of the day (apitest, one call per vendor function; the camera streamer was stopped, the release libimp and the release-candidate modules were loaded from RAM): T20 on two cameras 212 PASS / 0 FAIL / 17 N/A / 30 SKIP, T21 on two cameras 228 PASS / 0 FAIL, T23 304 PASS / 4 FAIL (the four AF getters, off by default in that run; with the new default `source_af=1` they pass on a second T23 camera), T31 274 PASS / 1 FAIL (see known issues). N/A means the node or API does not exist on the board or in the vendor library (no RTC/ADC node, SU battery functions not exported, T20 `GetAeZone`, T23 `GetBlcAttr`), SKIP means the call is deliberately not exercised (writes hardware registers, reboot, cipher). 0 kernel oopses on every camera.
@@ -18,9 +36,9 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 - New since the last matrix: `GetFrame`/`SnapFrame` wait up to 2 s like the vendor library on T20/T21/T23/T31 and the T20 capture no longer stalls (apps that call `SetFrameDepth` get frames); `Encoder_GetFd` (pipe plus pump thread); a JPEG channel feeds itself from the frame source when its video channel is not polled; two IVS groups; `InsertUserData` SEI; `PollingModuleStream` honours the channel bitmap; T20 encoder ROI and chroma QP offset; T21 `SetBrightness` acts and SEPIA works (both beyond vendor); T31 `SetFrameDrop` with the stock semantics; T23 release defaults (stock-like start/stop set, STREAMOFF drain wait), VBM pool parking and MSCA scratch buffer, AF statistics on by default, 19 ISP getters.
 - Vendor no-ops that are matched, not "fixed": T21 `SetAntiFogAttr` and `SetSceneMode` (the OEM kernel accepts and ignores them), T20/T10 `GetAeZone` (the stock module does not serve the control), T23 `GetBlcAttr`/`SetScalerLv` (no handler in the stock module), T31 `SetbufshareChn` (store-only). T23 H.265 stays refused: there is no HEVC hardware (n.a.).
 
-**Known issues (release candidate)**
+**Known issues of the agg-27 candidate (older; superseded where agg-34 says so)**
 
-- **T23 crop hang:** the pipeline stops after a FrameSource crop change (hard hang, found with the crop test); under investigation. It is a release blocker.
+- **T23 crop hang:** the pipeline stops after a FrameSource crop change (hard hang, found with the crop test); under investigation. It is a release blocker. **Fixed in agg-34** (open-tx-isp 25b1d8c7, 164225e5; device-tested on T23, retest on the release image pending).
 - **T31 H.264 stalled after the JPEG channel was torn down:** fixed: two threads polled the same encoder channel at once (`AL_Codec_Encode_Process` concurrently); `IMP_Encoder_PollingStream` now serialises per channel (openimp `claude/release-fix27` 5c2ccef), apitest on T31 FAIL 0 with the fix; goes into the next candidate (agg-29).
 - **T41 is not part of the first release:** MSCA channel 1 scaling registers are staged only (a downscale above 4:1 gives garbage, buffers with index 1 and above show a band), a restart of the output hangs the SoC (watchdog reboot at 1280x720 / 1440x810 on channel 1), 38 tuning IDs are still missing (gamma, CCM, CSC, module control, auto zoom, manual exposure, DRC, DPC, defog ratio, mask, scaler level), flip is not reset on restore, the FIFO delay of the frame source is missing. The T41 branches `claude/release-t41` (OpenIMP) and `claude/t41-ch1-fix` (driver) are not merged. T41 apitest on that branch: 255 PASS / 12 FAIL.
 - **T21:** the IPU needs about 2 s after a wake before the OSD blend takes effect; the first snapshot is withheld until the overlay is confirmed (beyond vendor), the cause is not found. The OSD in the live stream after a wake is checked after the candidate tests.
@@ -88,7 +106,7 @@ Not adopted: OSD edge flush, reference sharing on T10/T20/T31 (hardware missing)
 | 17 | [DPC (defect pixels)](#17-dpc-defect-pixels) | ✅+ | ✅+ | ✅+ | ✅ | ✅ | ❌ |
 | 18 | [Scene mode / colour effects (B/W, negative, sepia, vivid)](#18-scene-mode--colour-effects-bw-negative-sepia-vivid) | ✅+ | ✅ | ✅+ | ✅ | ✅ | ❌ |
 | 19 | [Privacy mask (ISP hardware block)](#19-privacy-mask-isp-hardware-block) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 20 | [Front crop / scaler level / CSC presets](#20-front-crop--scaler-level--csc-presets) | ✅ | ✅ | ✅ | ⚠️ | ✅ | ❌ |
+| 20 | [Front crop / scaler level / CSC presets](#20-front-crop--scaler-level--csc-presets) | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
 | 21 | [Rotation 90°/270°](#21-rotation-90270) | — | — | — | ✅ | ✅ | ❌ |
 | | **Video encoder and streams** | | | | | | |
 | 22 | [H.264](#22-h264) | ✅ | ✅ | ✅ | ✅+ | ✅ | ✅ |
@@ -117,6 +135,8 @@ Not adopted: OSD edge flush, reference sharing on T10/T20/T31 (hardware missing)
 | 42 | [Helper libraries libalog / libsysutils](#42-helper-libraries-libalog--libsysutils) | ✅+ | ✅+ | ✅+ | ✅+ | ✅+ | ✅+ |
 | 43 | [Tuning getters / readback](#43-tuning-getters--readback) | ✅ | ✅ | ✅+ | ✅ | ✅ | ✅ |
 | 44 | [Encoder telemetry / diagnostics](#44-encoder-telemetry--diagnostics) | ✅+ | ✅+ | ✅+ | ✅+ | ✅+ | ⚠️ |
+| | **Region of interest** | | | | | | |
+| 45 | [Encoder ROI (region QP)](#45-encoder-roi-region-qp) | ✅ | ✅ | ✅+ | ⚠️ | ✅+ | 🔧 |
 
 Columns T10..T41: one status symbol per SoC (legend above). The number and the feature name link to the detail section below, which holds the full per-SoC text and the vendor-stack behaviour.
 
@@ -326,11 +346,11 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 ##### 20. Front crop / scaler level / CSC presets
 
 - **Vendor stack:** SetFrontCrop, CSC, BLC
-- **T10:** ✅ scaler device-tested (chn1 480x272, 25.0 fps); front crop / CSC: no control path
-- **T20:** ✅ scaler device-tested (640x360 and 480x272, 15.0 fps); front crop / CSC: no control path
-- **T21:** ✅ scaler device-tested (480x272, 24.9 fps); front crop / CSC: no control path
-- **T23:** ✅ front crop via vendor path (960x540 crop ok); MASK -EINVAL as vendor (no stock handler); 2026-10-06: **a FrameSource crop change stops the pipeline (hang, under investigation, release blocker)**; `SetAutoZoom` as the stock control (host/build-tested only)
-- **T31:** ✅ BLC get, CSC presets 0–4 + user matrix, crop get/set, scaler level (tested on cam-A)
+- **T10:** ✅ scaler device-tested (chn1 480x272, 25.0 fps); front crop device-tested 2026-10-09 (open-tx-isp agg-34: a window is kept while no downscaled channel is open, applied at stream on, released with the tuning session); CSC: no control path
+- **T20:** ✅ scaler device-tested (640x360 and 480x272, 15.0 fps); front crop device-tested 2026-10-09 (same fix as T10: window kept while no downscaled channel is open, applied at stream on, released with the tuning session); CSC: no control path
+- **T21:** ✅ scaler device-tested (480x272, 24.9 fps); front crop device-tested (2026-10-05, again in the 2026-10-09 crop tests); CSC: no control path
+- **T23:** ✅ front crop via vendor path (960x540 crop ok); MASK -EINVAL as vendor (no stock handler); the 2026-10-06 crop hang is fixed in agg-34 and device-tested on 2026-10-09: crop off unlocks the window and restores the full sensor window, a locked window that does not fit is dropped (with a warning) instead of stalling the MSCA, the lock is released at the last close of the ISP device (a streamer restart without crop gets the full frame), module parameter `fcrop_upscale_pct` (default 0) lets the geometry check tolerate a measured upscale (T23 upscales up to 2.0; at 2.2 the MSCA stalled briefly, the crop was dropped, no reboot); flip, day/night, fast changes with many streamer restarts, corner windows, sub-stream and a reboot with a persisted crop all passed; `SetAutoZoom` as the stock control (host/build-tested only)
+- **T31:** ⚠️ BLC get, CSC presets 0–4 + user matrix, scaler level (tested on cam-A); front crop: the crash is fixed (enabling a window smaller than a channel's scaler output stalled every MSCA output until reboot; the kernel now refuses such a window with -EINVAL and logs it, a main stream larger than the window drops the crop with a warning, the crop survives idle off/on, disabling restores the full frame; module parameter `fcrop_upscale_pct`, default 0), but whether a valid window really zooms the picture is **experimental, not proven**
 - **T41:** ❌ crop (I2D) still open: no control path
 
 ##### 21. Rotation 90°/270°
@@ -588,6 +608,17 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T41:** ⚠️ isp-m0 shows AE/AWB/anti-flicker/flip; encoder rc readback ok; query counters stayed 0 under load; other /proc/jz/isp nodes unreadable
 
 
+##### 45. Encoder ROI (region QP)
+
+- **Vendor stack:** `IMP_Encoder_SetChnROI` (T10/T20/T21/T23), `IMP_Encoder_Set/GetChnRoiAttr` (T40/T41); no ROI API in the T31 library
+- **T10:** ✅ regions on the Helix/NVPU, device-tested; absolute QPs are limited to the valid H.264 range
+- **T20:** ✅ regions and H.264 chroma QP offset, device-tested (QP 51 region blocky, QP 15 clean); valid H.264 from agg-34 (an absolute QP more than 25 from the macroblock QP broke hardware decoders before)
+- **T21:** ✅+ effective by default (beyond vendor: the vendor never programs it), device-tested; relative QP acts inside -12/+13 of the slice QP; `OPENIMP_T21_ROI=0` switches it off
+- **T23:** ⚠️ the regions go unchanged to the vendor encoder; no visible effect measured (vendor no-op)
+- **T31:** ✅+ beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; `OPENIMP_T31_ROI=0` refuses the call
+- **T41:** 🔧 code only (enable bits derived from the vendor library), off unless `OPENIMP_T41_ROI=1`, not device-tested
+- **Rules (all SoCs with ROI):** window deltas -25..+25; spread of all deltas at most 25; picture QP plus delta inside 0..51 and the rate control's min/max QP; requests beyond that are clamped with a one-time warning (`SetChnRoiAttr` returns -1 for a delta outside -26..25 or an absolute QP outside 0..51)
+
 ## Missing / incomplete functions (vendor IMP/SU API, per SoC)
 
 As of: 2026-10-06 (evening). The cells were updated from the release-candidate test day: every row/SoC whose apitest call passed on a camera of that SoC (T20, T21, T23, T31) is now **dev**; the cells changed by hand (vendor no-ops, functions that became real, functions that were fixed) are listed in the notes of the row. T10 and T41 cells were not re-measured (T10 mirrors T20 and was not re-tested; T41 is not part of the release).
@@ -617,6 +648,8 @@ What every cell code means (the same short legend is repeated above each table b
 
 
 ### Progress per SoC
+
+The counts below are from the 2026-10-06 evening update; the cell changes of 2026-10-09 (`Encoder_Get/SetChnROI` T10 and T21 dev and T23 no-op, `Encoder_Get/SetChnRoiAttr` T41 host, `ISP_Tuning_Get/SetFrontCrop` T23 dev) are not counted in them yet.
 
 Counts are per vendor function of that SoC (T23 folded: base function = one; Get and Set count separately). "gaps" = cache-only + stub + error + missing; "vendor no-op" is not a gap; "audit gaps" = the same sum in the audit before the work of 2026-10-05 (T23 unfolded, about 3x per base function). "done %" = dev + host + aud / vendor fns. Bar: █ dev, ▓ host, ▒ aud / ?, ○ no-op, ░ gaps (40 characters per SoC).
 
@@ -758,7 +791,7 @@ Notes:
 | `ISP_Tuning_Get/SetDRC_Strength` [42] | n.a. | n.a. | aud | aud | aud | n.a. | p† r† t |
 | `ISP_Tuning_Get/SetDefog_Strength` [43] | n.a. | n.a. | n.a. | aud | aud | n.a. | p† r† t |
 | `ISP_Tuning_Get/SetDrawBlock` [3] | n.a. | n.a. | n.a. | err | n.a. | miss | – |
-| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | aud | host | n.a. | r† |
+| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | dev | host | n.a. | r† |
 | `ISP_Tuning_Get/SetGamma` [45] | aud | aud | aud | dev | aud | n.a. | p† r† |
 | `ISP_Tuning_Get/SetGammaAttr` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | host | p† r† |
 | `ISP_Tuning_Get/SetHVFLIP` [47] | n.a. | n.a. | n.a. | aud | aud | aud | see note |
@@ -858,7 +891,7 @@ Notes:
 42. `ISP_Tuning_Get/SetDRC_Strength`: audit: reaches the driver/kernel
 43. `ISP_Tuning_Get/SetDefog_Strength`: audit: reaches the driver/kernel
 3. `ISP_Tuning_Get/SetDrawBlock`: T23: driver rejects 0x8000180 (-EINVAL)
-44. `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there
+44. `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale), the picture effect is experimental and not proven, hence host; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there
 45. `ISP_Tuning_Get/SetGamma`: T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05
 46. `ISP_Tuning_Get/SetGammaAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested
 47. `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps
@@ -1077,7 +1110,6 @@ Notes:
 | `Encoder_Get/SetChnH264FrmUsedMode` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnHSkip` | miss | miss | dev | dev | n.a. | n.a. | – |
 | `Encoder_Get/SetChnRcAttr` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_Get/SetChnRoiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_Get/SetChnSeiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_Get/SetFisheyeEnableStatus` [4] | miss | miss | miss | cache | cache | miss | – |
 | `Encoder_Get/SetH264TransCfg` [5] | cache | dev | dev | dev | n.a. | n.a. | T21: r† |
@@ -1125,7 +1157,7 @@ Notes:
 11. `Encoder_SetMultiSectionMode`: T23: kept for getter only (documented in source)
 12. `Encoder_SetbufshareChn`: T31: store-only in the vendor library too (documented in the encoder source); T41: validates channel numbers, returns 0
 
-<details><summary>All 92 rows of this area (42 with a gap)</summary>
+<details><summary>All 92 rows of this area (41 with a gap)</summary>
 
 *Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
 
@@ -1150,9 +1182,9 @@ Notes:
 | `Encoder_Get/SetChnH264Denoise` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264FrmUsedMode` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnHSkip` | miss | miss | dev | dev | n.a. | n.a. | – |
-| `Encoder_Get/SetChnROI` [23] | host | dev | no-op | dev | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetChnROI` [23] | dev | dev | dev | no-op | n.a. | n.a. | T21: r† |
 | `Encoder_Get/SetChnRcAttr` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_Get/SetChnRoiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `Encoder_Get/SetChnRoiAttr` [63] | n.a. | n.a. | n.a. | n.a. | n.a. | host | – |
 | `Encoder_Get/SetChnSeiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_Get/SetFisheyeEnableStatus` [4] | miss | miss | miss | cache | cache | miss | – |
 | `Encoder_Get/SetGDRCfg` [24] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
@@ -1239,7 +1271,7 @@ Notes:
 21. `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation
 3. `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25)
 22. `Encoder_Get/SetChnGopAttr`: audit: userspace implementation
-23. `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init (claude/t1x-roi, in the release candidate); not device-tested; T20: dev (apitest PASS; 2026-10-05 H.264 check: QP51 region blocky, QP15 fine); absolute QP 15 raises the bitrate 1.4 to 9.9 Mbit/s (CBR bypassed, vendor semantics unverified); T21: vendor 1.0.33 never programs IMP ROIs; stored and read back (apitest PASS), real ROI after the release
+23. `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: regions go to the vendor i264e unchanged, no effect measured (no-op); from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md
 4. `Encoder_Get/SetFisheyeEnableStatus`: T23+T31: kept for getter only (documented in source)
 24. `Encoder_Get/SetGDRCfg`: audit: userspace implementation
 5. `Encoder_Get/SetH264TransCfg`: T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested
@@ -1288,6 +1320,7 @@ Notes:
 60. `Encoder_YuvGetCrop`: audit: reaches the driver/kernel
 61. `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel
 62. `Encoder_YuvSetCrop`: audit: reaches the driver/kernel
+63. `Encoder_Get/SetChnRoiAttr`: not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40/T41: experimental, off unless `OPENIMP_T41_ROI=1`, code only (host), not device-tested; same valid-H.264 clamp as the Helix paths (docs/ROI.md)
 
 </details>
 

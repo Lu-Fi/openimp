@@ -8,6 +8,33 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Release candidate agg-34 (state of 2026-10-09 evening)
+
+OpenIMP `agg-34` (838f8147) = agg-32 (8980cae) + encoder ROI clamp (fec3e69, 8545fb9) + reviewed DeepSeek patches (11abe42 and 17 patches); open-tx-isp `agg-34` (da9baf1e) = agg-32 (3cf9bdac) + front-crop fixes for T31, T23, T20 and T10 (d940ba20 to 10bac52f, 164225e5) + T20 `isp-m0` gain cap (da9baf1e). The first release still covers T10, T20, T21, T23 and T31; T41 is experimental and not part of it. The combination agg-34 has not run on the cameras as a whole; the individual fixes below were device-tested on the SoC named.
+
+- **agg-32 soak (2026-10-07 16:07 to 2026-10-09 11:31, 43.4 h):** 0 unplanned reboots, 0 oopses, 0 guard trips, 0 snapshot failures and no memory trend on the seven timps cameras without user interaction; the only reboots were a planned OTA and two crashes from a front crop on T31 (fixed below). The picture check found the T20 day/night regression, a T10 black frame in the dark and the T41 channel-1 problem (known issues).
+- **Encoder ROI:**
+  - **T31** gets an ROI that the vendor library does not have (`IMP_Encoder_Set/GetChnRoiAttr` through the AVPU QP table, H.264, `OPENIMP_T31_ROI=0` refuses it): device-tested, relative -10 gave 2.7x the bit rate, 0 decoder errors in 20 VA-API checks.
+  - **T10/T20/T21** apply `SetChnROI` and the chroma QP offset on the Helix/NVPU (T21 by default, beyond vendor, `OPENIMP_T21_ROI=0` switches it off): device-tested.
+  - **Valid H.264 on every path:** window deltas -25..+25, spread at most 25, picture QP plus delta inside 0..51 and the rate control's min/max QP; a relative -26 used to give `mb_qp_delta` +26 at the window edge, which Intel VA-API, VLC, Firefox and Edge show as broken blocks (software ffmpeg hides it). Requests beyond that are clamped with a one-time warning.
+  - **T23:** regions go to the vendor encoder, no visible effect (no-op). **T41:** code only, off unless `OPENIMP_T41_ROI=1`.
+- **Front crop (open-tx-isp, device-tested):**
+  - **T31:** a window smaller than a channel's scaler output stalled every MSCA output until reboot; the kernel now refuses it (-EINVAL), drops a crop that a larger main stream cannot fit, and writes the scaler steps so a valid window zooms. The picture effect on T31 is experimental, not proven.
+  - **T23:** crop off unlocks the window, a window that does not fit is dropped instead of hanging, the lock is released with the ISP session (the 2026-10-06 crop hang is fixed).
+  - **T20/T10:** a window is kept while no downscaled channel is open and applied at stream on, and released with the tuning session.
+  - **T31/T23:** module parameter `fcrop_upscale_pct` (default 0) lets the geometry check tolerate a measured upscale (T23: up to 2.0).
+- **T20 day/night:** `isp-m0` reported an analog gain cap of 158 while the AE stops at 128, so the streamer never saw the cap reached; it now reports the smaller value (host-tested; the streamer needs its matching change, timps 5bc4eff).
+- **DeepSeek patches:** vendor ABI struct sizes (T40/T41), encoder group bounds (6; 8 kept on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)` rejected, idempotent T31 IVS group create/destroy, `PollingStream` guards, `GetDefaultBinPath`. Host-tested and cross-built; device checks pending.
+- Details: [docs/OPEN_STACK_CHANGELOG.md](docs/OPEN_STACK_CHANGELOG.md), section "2026-10-07 to 2026-10-09: agg-32 soak and release candidate agg-34"; per-function state: [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md); ROI rules: [docs/ROI.md](docs/ROI.md); beyond-vendor items: [docs/OPENIMP_BEYOND_VENDOR.md](docs/OPENIMP_BEYOND_VENDOR.md).
+
+### Known issues (agg-34)
+
+- **T41 sub-channel (channel 1):** green or flat frames at each day/night switch and the exposure of channel 1 does not follow channel 0; T41 is not part of the first release.
+- **T20 day/night** needs the driver fix (da9baf1e) and the streamer change (timps 5bc4eff); with agg-32 alone both T20 cameras stayed in Day mode in the dark.
+- **T31 front crop:** the crash is fixed, the picture effect is not proven.
+- **T10:** occasional switch to Day in the dark with a black frame (3 events in 44 h).
+- The older candidate's known issues below apply unless stated here; the T23 crop hang is fixed.
+
 ## Summary by area (state of 2026-10-06 evening)
 
 All test cameras run the open stack (open-tx-isp kernel driver + OpenIMP + timps) from full OTA images built from thingino `aperto`; no Ingenic or neo helper libraries remain, and T23 runs without helixd and without vendor libimp.
@@ -70,6 +97,19 @@ T23 sporadic single Helix encode error (errno 5; the frequent frame drops are fi
 ## OpenIMP changes by date (condensed)
 
 Only OpenIMP (userspace libimp) changes, newest first. Everything listed was device-tested on the SoC named unless marked otherwise.
+
+## 2026-10-09
+
+- Release candidate `agg-34` (838f8147): agg-32 plus the ROI clamp and the reviewed DeepSeek patches (see the section above).
+- ROI: every window delta is limited to -25..+25 (spread at most 25, picture QP plus delta inside the rate control's min/max QP) on T31 and on the T10/T20/T21 Helix command lists, so hardware decoders no longer show broken blocks; under FixQP the T31 table is not clamped to the RC range. T31 measured: relative -20 became -19, 0 decoder errors in 20 VA-API checks.
+- DeepSeek review: vendor ABI layouts, encoder group bounds (6; 8 on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)`, idempotent T31 IVS group create/destroy, `PollingStream` guards (host-tested; device checks pending).
+- open-tx-isp (not OpenIMP): front-crop guards on T31/T23/T20/T10 and the T20 `isp-m0` gain cap, see the section above.
+
+## 2026-10-07 to 2026-10-08 (agg-30 to agg-32)
+
+- T10/T20/T21: encoder ROI and chroma QP offset on the Helix/NVPU; T21 `SetChnROI` effective by default (beyond vendor, `OPENIMP_T21_ROI=0` switches it off); `roitest` tool.
+- T31: encoder ROI through the AVPU QP table (`IMP_Encoder_Set/GetChnRoiAttr`, beyond vendor, `OPENIMP_T31_ROI=0` refuses it); T41: experimental ROI table, off by default (`OPENIMP_T41_ROI=1`).
+- Soak of agg-32 for 43.4 h on ten cameras (see the section above).
 
 ## 2026-10-06
 

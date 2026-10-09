@@ -3,7 +3,7 @@
 Everything changed, extended or fixed in OpenIMP, open-tx-isp, timps and the thingino
 integration since the test campaign started on 2026-09-30. Kept up to date during the campaign.
 
-Last update: 2026-10-06 evening. Branch names (`claude/...`) in the tables and sections below are historic: the branches were merged into `next` and deleted.
+Last update: 2026-10-09 evening (release candidate agg-34). Branch names (`claude/...`) in the tables and sections below are historic: the branches were merged into `next` and deleted.
 
 Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20 and cam-J a second T21.
 
@@ -87,6 +87,82 @@ Goal: identical image behaviour, but cleaner unload/reload, less memory and chec
 OpenIMP: T20 green flicker in the bottom rows fixed by filling the encoder padding rows (`claude/t20-bottom-chroma`; 0 green pixels in 30 frames). Faster IVS (`claude/ivs-opt`; T20 timps CPU 4.1 % → 2.7 % with motion on).
 
 Aggregates: `claude/open-tx-isp-all-4` and `claude/openimp-all-4` (pushed); 58 merged single branches removed. `claude/open-tx-isp-all-5` adds t21-robust and t31-robust-2 (T31: sensor flip with shvflip=1, unload leaks, lazy WDR buffers; MemFree drift per reload 460 → 45 KB); all four cameras flashed with -all-5 images.
+
+## 2026-10-07 to 2026-10-09: agg-32 soak and release candidate agg-34
+
+Camera letters in this section follow the soak table below (they differ from the table at the top of this file); where it matters the SoC is named instead. No picture of any camera is part of this log.
+
+### State of the candidate
+
+| Repository | Branch | Commit | Contents |
+|---|---|---|---|
+| OpenIMP | `agg-34` | 838f8147 | agg-32 (8980cae) + T31 ROI clamp (fec3e69, 8545fb9) + reviewed DeepSeek patches (11abe42 and 17 patches) |
+| open-tx-isp | `agg-34` | da9baf1e | agg-32 (3cf9bdac) + front-crop fixes T31/T23/T20/T10 (d940ba20 to 10bac52f, 164225e5) + T20 `isp-m0` gain cap (da9baf1e) |
+
+`make check` is green on all SoCs and the cross-builds pass. The combination agg-34 has **not** run on the cameras as a whole yet; the individual fixes were device-tested as listed below.
+
+### agg-32 soak (2026-10-07 16:07 to 2026-10-09 11:31, 43.4 h)
+
+The soak was planned until 19:00 and stopped early by the user. Stack: OpenIMP 8980cae, open-tx-isp 3cf9bdac, timps a006fca (v1.9.33-50). Ten cameras: T21 x2 (one has the timps streamer, one is the 720p case), T23 x2 (one runs the raptor streamer), T31, T20 x2, T10, a further Ingenic camera and a T41 (experimental, rootfs only).
+
+Monitoring: a read-only poll every 5 min (uptime, streamer pid, wide oops grep, MemFree, guard state, snapshots of both channels), CPU/memory every 60 s, a numeric picture check every 15 min (decode, luma, flat blocks, colour cast, frozen frame), streamer memory every 2 h on three cameras. Load: one MJPEG sub-channel consumer per timps camera, 30 min on / 2 min off.
+
+| Result | Value |
+|---|---|
+| Unplanned kernel reboots, oopses, guard trips, snapshot failures, unreachable periods on the seven timps cameras without interaction | 0 on all, each ran about 44 h on one streamer PID |
+| T10 | 1 planned OTA (reboot), 38 unreachable polls during the OTA |
+| T31 | 2 reboots from the front-crop crash (below) plus 2 planned reflashes; out of scoring from 2026-10-09 08:45 |
+| T20 (one camera) | one streamer restart: the user saved a config while trying crop on several cameras; not a crash |
+| Streamer memory | no steady growth: +148 kB in 34 h on the first camera (flat in the last 12 h), 0 on the second, +1.9 MB step on the third coinciding with the user's crop attempts, flat afterwards; threads and fds constant |
+| CPU per stream (each alone) | RTSP, MP4 and MJPEG on the sub-channel about +5 to 10 % each; **MJPEG on the main channel is the expensive stream**: 14 to 33 % total, up to 30 % of capacity on the T41 and 25 % on a T20, scaling with the JPEG size (a 1080p daylight frame is up to about 770 kB, about 31 Mbit/s at 5 fps) |
+| Picture check (310 rounds per camera) | no frozen frame and no decode error anywhere; see the findings below |
+
+Findings of the picture check:
+
+- **T20 day/night regression (release relevant):** both T20 cameras stayed in Day mode in the dark (integration pinned at 1967 of 2246 lines, no day/night log line after start), black pictures at night; under agg-30 the switch worked. Cause (analysis): the driver reports an analog gain cap of 158 in `isp-m0`, the AE stops at 128, so the streamer's "cap reached" rule never fires. Fixed in the driver in agg-34 (da9baf1e, below); the streamer side is timps 5bc4eff.
+- **T10:** 6 bad rounds, the camera sometimes switches to Day in the dark and delivers a black frame (3 events in 44 h, once flapping). Open.
+- **T41 (experimental):** 13 bad rounds, channel 1 only: green or flat frames at every day/night switch, colour cast for about 1 h in night mode, channel 1 brightness does not follow channel 0 (luma 63 vs 110 to 130); channel 0 always fine. Open, not part of the release.
+- **720p main stream shows only the top-left corner** (seen on a T21 and a T20): `/proc/jz/sensor/sensor0/width|height|fps` are filled only while the streamer has the sensor started; the streamer reads them earlier at config load and falls back to the video0 size. Streamer side; the T20/T10 driver also kept the crop window across streamer restarts (fixed in agg-34).
+
+### Front crop (open-tx-isp, device-tested 2026-10-09)
+
+| SoC | Problem | Fix | Commit |
+|---|---|---|---|
+| T31 | Enabling `image.fcrop` live (320x180, later 732x412) stalled the stream and rebooted the camera twice without an oops; the persisted crop hung the next boot after about 3 min and tripped the isp-guard. Cause: the MSCA cannot upscale; a front-crop window smaller than any channel output stalls every MSCA output until reboot (same class as the T23 hang) | The kernel refuses such a window with -EINVAL and one log line (streamer shows "rejected"); the set-time check covers only running channels (a stale 2560x1440 register no longer vetoes a crop re-applied at start); a scaler output larger than an active window is refused; scaler steps and latch are written so a valid window zooms; the crop survives idle off/on; module parameter `fcrop_upscale_pct` (default 0) to measure the upscale limit. Beyond stock | d940ba20, f8ae7457, b9be16fb, 27dc8be4 |
+| T23 | Crop off kept the picture cropped (stock only clears the enable bit; the window stays locked until module reload); returning to a 1080p main stream then hung the MSCA and the watchdog rebooted the camera. A streamer restart without crop kept the old window | Crop off unlocks every channel record, restores the full sensor window and reloads the running channels; a set-format that does not fit a locked window drops the crop (warning) and is checked again; the lock is released at the last close of the ISP device; `fcrop_upscale_pct` (default 0). Beyond stock | 25b1d8c7, 164225e5 |
+| T20, T10 | A window was refused while no downscaled channel was open (a streamer closes an idle sub-stream), and a window survived streamer restarts so the picture stayed zoomed while the UI showed crop off | The window is stored while no downscaled channel is open and applied at stream on; it is released with the tuning session | 10bac52f, b9381941 |
+
+Device results: T23 passed an 18-case matrix (crop off with a 1080p main stream, flip, day/night, fast changes with many streamer restarts, corner windows, sub-stream, reboot with a persisted crop); it upscales up to 2.0, at 2.2 the MSCA stalled briefly and the crop was dropped without a reboot. T31 passed an 18-case matrix and a 30 min run with a 960x540 crop; the refusal works. **Whether a valid window really zooms the picture on T31 is experimental and not proven.** On T31 a crop window can only work when every stream is smaller than or equal to the window, or is scaled down.
+
+### Encoder ROI (OpenIMP, device-tested)
+
+| Area | Was | Now | Commit |
+|---|---|---|---|
+| T10/T20/T21 | T20: ROI and chroma QP offset only in the release candidate; T21 stored ROI like the vendor and applied nothing | `SetChnROI` and the H.264 chroma QP offset act on the Helix/NVPU (T21 by default, beyond vendor, `OPENIMP_T21_ROI=0` switches off); device-tested on all three | 8ba6fdd, 0a9389d |
+| T31 | No ROI in the vendor library | `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (beyond vendor, H.264 only, `OPENIMP_T31_ROI=0` refuses the call); end to end with the streamer: relative -10 gave 2.7x the bit rate | d03ca24 |
+| T41 | None | Experimental table path, off unless `OPENIMP_T41_ROI=1`, code only | f2fd9a5 |
+| All ROI paths | A relative QP of -26 (and an absolute QP far from the macroblock QP) gave `mb_qp_delta` outside -26..+25: invalid H.264 that software decoders hide and hardware decoders (Intel VA-API, VLC, Firefox, Edge) show broken from the ROI row on | Window deltas -25..+25, spread of all deltas at most 25, picture QP plus delta in 0..51 and in the rate control's min/max QP, requests clamped with a one-time warning; under FixQP the T31 table is not clamped to the rate control's min/max QP (8545fb9). T31 measured: relative -20 became -19, absolute 51 +21.7, 0 decoder errors in 20 VA-API checks | fec3e69, 8545fb9 |
+| T23 | n/a | Regions go to the vendor encoder; no visible effect was measured (no-op) | none |
+
+### DeepSeek patches (reviewed, in agg-34)
+
+An automated reviewer produced patches from a comparison against the vendor libraries; each one was reviewed against the disassembly. 17 are in agg-34 unchanged, one was corrected (11abe42: the encoder group bound is 6 on T20/T21/T30/T31/T41 but stays 8 on T23 and T40, where the vendor libraries use larger bounds) and one T30 build fix was added. Contents: vendor ABI layouts (T40/T41 `IMPEncoderStream` 28 bytes, T40 `IMPEncoderChnAttr` 4 bytes, T40/T41 `IMPFSChnAttr` and `IMPFrameInfo`, T40/T41 `IMPSensorInfo`, T41 `IMPOSDRgnAttr` caller size, pixel-format enum), encoder group and channel counts, `IMP_OSD_SetPoolSize(0)` rejected, T31 IVS channel 64 accepted, idempotent T31 IVS group create/destroy, `PollingStream` created/registered guards, `SetDefaultParam` profile/rate-control guards, GOP control mode values, `GetDefaultBinPath`. Host-tested and cross-built only. Device checks still to do: OSD groups, IVS, `PollingStream` returning -1 without a channel (watch the streamer CPU at restart), T31 `SnapFrame` offsets, T41 OSD size.
+
+### T20 gain cap (open-tx-isp da9baf1e)
+
+The compact AE clamps analog gain to `max_again` and to the stabilizer ceiling (128), but `isp-m0` printed only the sensor maximum (158 on the tested sensors). `isp-m0` now reports the smaller value, shared with T10. Host-tested (`tests/t20_ae_max_host_test.c`); a device run needs the matching streamer change.
+
+### Camera state after the crop work (2026-10-09 evening)
+
+T23 and T31 were reflashed with the agg-32 recipe plus the crop fix of their SoC; one T20 and the T10 run agg-32 plus an overlay `tx-isp-*.ko` module with the crop fix (rollback: delete the overlay module and reboot); the others run unchanged agg-32. The soak state of these cameras is therefore changed from 2026-10-09 afternoon.
+
+### Open items for the release
+
+1. T20 day/night: driver fix da9baf1e plus streamer change timps 5bc4eff, operational Day to Night test pending.
+2. Retest the merged crop fixes (T31, T23, T20, T10) on the release image.
+3. T41 channel 1 colour/exposure and the T10 black frame in the dark (not release blockers for T20/T21/T23/T31).
+4. T31 front-crop picture effect: experimental.
+5. Device run of the combined agg-34 (DeepSeek checks above), then the long soak of the release.
 
 ## 2026-10-06 afternoon/evening: release candidate agg-27/agg-28
 
