@@ -68,7 +68,10 @@
 #include "t31/openimp_t31_osd.h"
 #endif
 
-#define P2_MAX_GROUPS 8
+/* Encoder groups: every vendor libimp bounds the group with `slti a0,6`
+ * (IMP_Encoder_CreateGroup, e.g. T31 1.1.6 0x82668; same in T21/T23/T30/
+ * T40/T41), so groups 0..5 exist. */
+#define P2_MAX_GROUPS 6
 /*
  * Encoder channels. The vendor count is per SoC and is visible twice in every
  * libimp.so: as the size of the local `g_EncChannel` array (divided by its
