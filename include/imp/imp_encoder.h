@@ -636,8 +636,7 @@ typedef struct {
  * that was stored. The default is written here:
  *
  *   - `codec-t40.c` sets `gop_cache.gopMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT`
- *     for T31, T40 and T41 (line 9008 on `claude/agg-32`, `:8552` with the
- *     series applied).
+ *     for T31, T40 and T41 (`AL_Codec_Encode_Create` defaults).
  *
  * With the old numbers the library reported 0, which is not a value that
  * exists in the vendor enum, and a caller comparing against the vendor

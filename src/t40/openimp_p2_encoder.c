@@ -68,10 +68,18 @@
 #include "t31/openimp_t31_osd.h"
 #endif
 
-/* Encoder groups: every vendor libimp bounds the group with `slti a0,6`
- * (IMP_Encoder_CreateGroup, e.g. T31 1.1.6 0x82668; same in T21/T23/T30/
- * T40/T41), so groups 0..5 exist. */
+/* Encoder groups, IMP_Encoder_CreateGroup bound per vendor libimp:
+ *   slti a0,6   T20 3.12.0, T21 1.0.33, T23 1.1.0/1.1.2, T30 1.0.5,
+ *               T31 1.1.6 (0x82668), T41 1.2.0/1.2.5
+ *   slti a0,9   T23 1.3.0 (the headers raptor-hal builds T23 against)
+ *   slti a0,13  T40 1.3.1
+ * T23 and T40 keep OpenIMP's previous 8 (no narrowing below the vendor
+ * versions the streamers use, no untested widening either). */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40)
+#define P2_MAX_GROUPS 8
+#else
 #define P2_MAX_GROUPS 6
+#endif
 /*
  * Encoder channels. The vendor count is per SoC and is visible twice in every
  * libimp.so: as the size of the local `g_EncChannel` array (divided by its

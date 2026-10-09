@@ -123,7 +123,7 @@ static int valid_group(int group)
  * OpenIMP (a region or a local).
  *
  * On T41 the caller may own the 256 byte 1.2.5/en layout while OpenIMP's own
- * copy is 432 bytes (1.2.0/1.2.6, see openimp_t23_osd_abi.h). A plain struct
+ * copy is 432 bytes (1.2.0/zh, 1.2.6, see openimp_t23_osd_abi.h). A plain struct
  * assignment would read 176 bytes past the caller's object, so only the
  * common prefix is copied and the remainder is zeroed.
  */
@@ -143,7 +143,7 @@ static void rgn_attr_copy(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
  *
  * The size of that object is not known here: with the T41 1.2.5/en headers
  * (what the board build of the video HAL uses) it is 256 bytes, with
- * 1.2.0/1.2.6 it is 432. A plain assignment would write 176 bytes past the
+ * 1.2.0/zh or 1.2.6 it is 432. A plain assignment would write 176 bytes past the
  * caller's object, so only the prefix both layouts share is written; the
  * trailing bytes stay whatever the caller had there.
  */

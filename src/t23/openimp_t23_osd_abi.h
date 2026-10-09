@@ -237,10 +237,10 @@ _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 400,
  * T41 exists in two vendor layouts for IMPOSDRgnAttr that cannot be served at
  * the same time:
  *
- *   T41 1.2.0 / 1.2.6   sizeof 432   (asserts above: fmt 28, data 32,
+ *   T41 1.2.0/zh, 1.2.6 sizeof 432   (asserts above: fmt 28, data 32,
  *                                     osdispdraw 48, fontData 124,
  *                                     mosaicAttr 404)
- *   T41 1.2.5/en        sizeof 256   (identical up to fontData, but
+ *   T41 1.2.0/en, 1.2.5 sizeof 256   (identical up to fontData, but
  *                                     IMPOSDFontAttrData is 104 instead of
  *                                     280, so mosaicAttr moves to 228)
  *
