@@ -1149,7 +1149,7 @@ Notes:
 Notes:
 
 1. `Decoder_*` (8 functions): functions: CreateChn, DestroyChn, GetFrame, PollingFrame, ReleaseFrame, SendStreamTimeout, StartRecvPic, StopRecvPic.
-2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied: the Helix/NVPU encoders cannot denoise
+2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied. NOT a vendor no-op (vendor T21 libimp 1.0.33 i264e_reconfig_dn_set 0x2de7c, read in i264e_slice_write 0x31128): with attrDenoise.enable set at CreateChn and dnType 1/2 the vendor encodes every frame twice, a first pass (ctx pass flag 1) at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass; T10/T20 3.12.0 share the design. Needs a second Helix job per frame plus register-level work, not built (stability first)
 3. `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25)
 4. `Encoder_Get/SetFisheyeEnableStatus`: T23+T31: kept for getter only (documented in source)
 5. `Encoder_Get/SetH264TransCfg`: T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested
@@ -1271,7 +1271,7 @@ Notes:
 18. `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation
 19. `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25)
 20. `Encoder_Get/SetChnCrop`: audit: userspace implementation
-2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied: the Helix/NVPU encoders cannot denoise
+2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied. NOT a vendor no-op (vendor T21 libimp 1.0.33 i264e_reconfig_dn_set 0x2de7c, read in i264e_slice_write 0x31128): with attrDenoise.enable set at CreateChn and dnType 1/2 the vendor encodes every frame twice, a first pass (ctx pass flag 1) at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass; T10/T20 3.12.0 share the design. Needs a second Helix job per frame plus register-level work, not built (stability first)
 21. `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation
 3. `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25)
 22. `Encoder_Get/SetChnGopAttr`: audit: userspace implementation
