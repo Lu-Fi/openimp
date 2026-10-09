@@ -350,6 +350,49 @@ typedef struct {
     int sensor_id;                          /**< Sensor ID (80-83) */
     /* Total: 32+4+4+24+4+4+4+4+4 = 84 bytes */
 } IMPSensorInfo;
+#elif defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/**
+ * Vendor T40 1.3.1 / T41 1.2.5 imp_isp.h: 100 bytes (0x64).
+ *
+ * The kernel's sensor registration reads the whole object (the T40/T41
+ * drivers expect the vendor layout up to default_boot at 0x60), so the
+ * public type must stay at the vendor size.  A caller built against an
+ * 84-byte object would otherwise let the kernel read 16 bytes past its
+ * own variable.  There is no `private_data` member in the vendor header.
+ */
+typedef struct {
+    char name[32];                      /**< Sensor name (0x00-0x1f) */
+    TXSensorControlBusType cbus_type;   /**< Control bus type (0x20) */
+    union {
+        TXSNSI2CConfig i2c;             /**< I2C bus information */
+        struct {
+            char modalias[32];          /**< SPI modalias */
+            int bus_num;                /**< SPI bus number */
+        } spi;                          /**< 36 bytes, as in the vendor union */
+    };                                  /**< 0x24-0x47 */
+    int rst_gpio;                       /**< Reset GPIO (0x48) */
+    int pwdn_gpio;                      /**< Power down GPIO (0x4c) */
+    int power_gpio;                     /**< Power GPIO (0x50) */
+    unsigned short sensor_id;           /**< Sensor ID (0x54) */
+    short _reserved_pad;                /**< padding to 0x58 */
+    int video_interface;                /**< IMPSensorVinType (0x58) */
+    int mclk;                           /**< IMPSensorMclk (0x5c) */
+    int default_boot;                   /**< Default boot setting (0x60) */
+    /* Total: 0x64 = 100 bytes, as in the vendor header */
+} IMPSensorInfo;
+
+_Static_assert(offsetof(IMPSensorInfo, cbus_type) == 0x20,
+               "T40/T41 IMPSensorInfo.cbus_type ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, rst_gpio) == 0x48,
+               "T40/T41 IMPSensorInfo.rst_gpio ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, sensor_id) == 0x54,
+               "T40/T41 IMPSensorInfo.sensor_id ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, video_interface) == 0x58,
+               "T40/T41 IMPSensorInfo.video_interface ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, default_boot) == 0x60,
+               "T40/T41 IMPSensorInfo.default_boot ABI mismatch");
+_Static_assert(sizeof(IMPSensorInfo) == 0x64,
+               "T40/T41 IMPSensorInfo ABI mismatch (vendor: 100 bytes)");
 #else
 typedef struct {
     char name[32];                          /**< Sensor name */
@@ -359,9 +402,6 @@ typedef struct {
     int pwdn_gpio;                          /**< Power down GPIO */
     int power_gpio;                         /**< Power GPIO */
     int sensor_id;                          /**< Sensor ID */
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
-    void *private_data;                     /**< Private data (T40/T41) */
-#endif
     /* Note: T31/T21/C100 have no field here, keeping struct at 80 bytes */
 } IMPSensorInfo;
 #endif
