@@ -3070,8 +3070,42 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 
     if (!attr || width <= 0 || height <= 0 || fps_num <= 0 || fps_den <= 0)
         return -1;
-    memset(attr, 0, sizeof(*attr));
     codec_type = ((uint32_t)profile >> 24) & 0xffu;
+    /* Vendor 0x831bc/0x831ec (log line 1784). `srl s2,a1,0x18` takes the
+     * encode type out of the top byte of the profile and `sltiu v0,s2,5`
+     * refuses every type but 0..4 (AVC, HEVC, JPEG and the two pack
+     * pseudo-types). The vendor returns -1 without touching *attr, so the
+     * caller's buffer stays as it was. */
+    if (codec_type > 4u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported encode type:%d, we only support avc, "
+                        "hevc and jpeg type", (int)codec_type);
+        return -1;
+    }
+    /* Vendor 0x831f4 (log line 1789). `lw s3,112(sp); beqz s3` refuses a
+     * zero frame-rate denominator; the message prints frmRateNum and then
+     * frmRateDen as the constant 0 (the vendor re-uses the value it just
+     * tested). OpenIMP already rejected it above without a message. */
+    if (fps_den == 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "invalid parameters:frmRateNum = %d, frmRateDen = %d",
+                        fps_num, fps_den);
+        return -1;
+    }
+    /* Vendor 0x8320c/0x83210 (log line 1798). `sltiu s7,a2,9` only runs
+     * after the `beq s2,v0(=4),0x8337c` at 0x83204, so JPEG accepts any rc
+     * mode while the other codecs are limited to the nine known ones. */
+    if (codec_type != IMP_ENC_TYPE_JPEG && (uint32_t)rc_mode > 8u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported rcmode:%d, we only support fixqp, cbr, "
+                        "vbr, capped vbr, capped quality", (int)rc_mode);
+        return -1;
+    }
+    /* Deliberate OpenIMP deviation: the stock code reads the height with
+     * `lhu s5,104(sp)` and the width with `andi s8,a3,0xffff` and never
+     * tests either for zero (it would just compute a zero-size stream), so
+     * the width/height test above is stricter than the vendor's. */
+    memset(attr, 0, sizeof(*attr));
     attr->encAttr.profile = profile;
     attr->encAttr.level = 51;
     attr->encAttr.maxPicWidth = (uint16_t)width;
