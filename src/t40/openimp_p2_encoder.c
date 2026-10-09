@@ -3968,6 +3968,21 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
         uint8_t entry[7];
         IMPEncoderROICfg stored;
 
+        if (config->bEnable) {
+            static int warned;
+
+            if (config->bRelatedQp ? (config->s32Qp < AVPU_ROI_DELTA_MIN ||
+                                      config->s32Qp > AVPU_ROI_DELTA_MAX)
+                                   : (config->s32Qp < 0 ||
+                                      config->s32Qp > 51)) {
+                if (!warned) {
+                    warned = 1;
+                    IMP_LOG_WARN("Encoder", "ROI QP %d out of range: relative "
+                                 "-25..25, absolute 0..51 (clamped; H.264 "
+                                 "mb_qp_delta is -26..25)", config->s32Qp);
+                }
+            }
+        }
         Helix_H264_RoiEntry(config->bEnable, config->bRelatedQp,
                             config->s32Qp, config->rect.x, config->rect.y,
                             config->rect.width, config->rect.height, entry);

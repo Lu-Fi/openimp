@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include <pthread.h>
 
+#include "avpu_roi.h"
+
 #if defined(PLATFORM_T31)
 #include "t40/t31_rate_control.h"
 #include "t40/t31_al_rc.h"
@@ -344,16 +346,13 @@ typedef struct ALAvpuContext {
      * under the codec ROI lock, written into the EP2 QP table by the
      * encoding thread before the next picture.  roi_table_on: the table
      * holds window data (it is zeroed again when the last window goes). */
-    struct {
-        uint8_t enable;
-        uint8_t mode;   /* 0 relative, 1 absolute (T31) */
-        int8_t qp;
-        uint32_t x, y, w, h;
-    } roi_win[10];
+    AvpuRoiWin roi_win[10];
     volatile int roi_pending;
     int roi_table_on;
     int roi_absolute;      /* T31: a window has an absolute QP */
-    uint32_t roi_base_qp;  /* T31: picture QP the absolute windows refer to */
+    uint32_t roi_base_qp;  /* T31: picture QP the windows refer to */
+    int roi_req_min, roi_req_max; /* T31: requested deltas before clamping */
+    int roi_range_clamped; /* T31: the last table was cut by min/max QP */
     uint8_t *stream_header_shadow; /* optional 16 x 0x220 host-prefix shadow */
     volatile unsigned int dropped_completions;
     volatile unsigned int reported_dropped_completions;

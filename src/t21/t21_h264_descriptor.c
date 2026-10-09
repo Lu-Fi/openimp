@@ -322,6 +322,7 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     uint32_t min_qp;
     uint32_t max_qp;
     uint32_t roi_words[10];
+    uint8_t roi[8][7];
     uint32_t lambda_step;
     uint32_t ctrl0, ctrl1;
     uint32_t crop_flag;
@@ -386,7 +387,9 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x40040, max_qp);
     /* H264E_T21_SliceInit 0x1cfec..0x1d248: ROI flags 0x40044/0x40048
      * and the eight rectangles 0x4004c..0x40068 (slice +752..+807) */
-    Helix_H264_RoiRegisters(config->roi, roi_words);
+    (void)Helix_H264_RoiSanitize(config->roi, roi, (int)config->qp,
+                                 (int)min_qp, (int)max_qp);
+    Helix_H264_RoiRegisters((const uint8_t (*)[7])roi, roi_words);
     for (i = 0; i < 10u; i++)
         EMIT(0x40044u + i * 4u, roi_words[i]);
     EMIT(0x4006c, 0x000c5800u);

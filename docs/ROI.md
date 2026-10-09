@@ -6,7 +6,7 @@
 | T21 | the same | works by default since this branch (beyond vendor), device-tested |
 | T23 | the same, passed to the vendor i264e (param 2) | code unchanged, not tested (below) |
 | T40/T41 | `IMP_Encoder_Set/GetChnRoiAttr` (10 windows, delta QP) | implemented, **experimental, off by default**; the missing enable bit is now set (below), not yet device-tested |
-| T31 | none in the vendor library; OpenIMP: `IMP_Encoder_Set/GetChnRoiAttr` (T41 API) | works by default (beyond vendor), device-tested |
+| T31 | none in the vendor library; OpenIMP: `IMP_Encoder_Set/GetChnRoiAttr` (T41 API) | works by default (beyond vendor), device-tested; QP clamped to valid H.264 (below) |
 
 ## T21 (device-tested)
 
@@ -88,7 +88,8 @@ table (an entry 0 is QP 0), bit 24 alone = no effect, both = relative table.
 OpenIMP always uses the relative table. An absolute window (`mode =
 IMP_ROI_QPMODE_FIXED_QP`, QP 0..51) is written as the difference to the
 picture QP of the last command and rewritten when that QP changes: exact under
-FixQP, one picture late under CBR/VBR. Delta windows take -32..31. A window
+FixQP, one picture late under CBR/VBR. Delta windows take -26..25 (the vendor T41 range; `SetChnRoiAttr` returns -1
+outside, it used to take -32..31). A window
 covers every macroblock it touches; with overlapping windows the higher index
 wins. The table is rewritten (and flushed) only when the windows or, with an
 absolute window, the picture QP change; with no window the command and EP2
@@ -107,10 +108,46 @@ Results (`tools/roitest`, night/IR, region 768x512 at (896,464), 10 fps):
 
 The decoded pictures show the region visibly blurred/blocky at +20 / 51 and
 the rest unchanged (collages local only). A change on P pictures without IDR
-works (P frames 2.7 K to 2.5 K). Whole-picture offsets are not limited to
-the channel QP range (CBR +31: 82 kbit/s, -32: 9.9 Mbit/s; afterwards CBR
-needs a few seconds to recover). Stability: 8 live changes in one stream,
+works (P frames 2.7 K to 2.5 K). (Measured before the clamp below: whole-picture
+offsets were not limited to the channel QP range, CBR +31: 82 kbit/s, -32:
+9.9 Mbit/s; afterwards CBR needed a few seconds to recover.) Stability: 8 live changes in one stream,
 streamer restarted, 0 oops.
+
+## Valid H.264: the QP clamp (all SoCs with ROI)
+
+H.264 allows `mb_qp_delta` only in -26..+25, and the encoder writes it as
+QP(macroblock) - QP(previous macroblock in coding order); skipped macroblocks
+keep the previous QP. Anything outside is **invalid H.264**: software ffmpeg
+hides it, hardware decoders (Intel VA-API, VLC, browsers) show broken blocks.
+Measured on T10/T20: relative -26 and an absolute QP more than 25 from the
+macroblock QP (absolute 15 at QP 42) both break the stream. A relative -26
+fails on the way *out* of the window (+26 back to the neighbours).
+
+`src/avpu_roi.h` (T31, experimental T41) and `Helix_H264_RoiSanitize` in
+`src/t30/helix_roi.h` (T10/T20/T21, applied when each command list is built
+with the slice QP of that picture) therefore guarantee:
+
+- every window delta is in **-25..+25** (absolute QPs are turned into a delta
+  against the picture QP first);
+- the spread of all deltas, uncovered macroblocks counting as 0, is **at
+  most 25**; if it is larger the higher QPs are lowered (quality wins);
+- picture QP + delta stays in **0..51** and in the rate control's
+  **min_qp..max_qp** (T31/T41-style table; positive deltas above max_qp were
+  only capped by the hardware before, now the table says what happens);
+- Helix absolute QPs lie in `[max_qp - 25, min_qp + 25]` of the picture
+  (T21/T30/T10 command lists: slice QP -12/+13, which is also the saturation
+  seen on the T21; T20: the `max_qp_cap`), so every macroblock QP is within
+  25 of the window QP.
+
+Requests beyond that are clamped, a one-time warning is logged
+(`ROI: requested QP delta ... clamped`), `SetChnRoiAttr` (T31, T41) returns -1
+for a delta outside -26..25 or an absolute QP outside 0..51. The T31/T41
+table is rewritten when the picture QP changes and the clamp depends on it
+(absolute window, or a delta that touched the QP range). Under CBR/VBR the
+picture QP is the one of the last command, so the clamp can be one picture
+late. Host test: `tests/t31/roi_clamp_test.c` (fuzz of 20000 random window
+sets, every table is walked like the encoder and checked against -26..25).
+T23 passes the regions to the vendor i264e unchanged (not tested).
 
 ## T23 (code only)
 

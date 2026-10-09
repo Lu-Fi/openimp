@@ -139,7 +139,9 @@ int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
                            const uint8_t entry[7]);
 /* IMP_Encoder_SetChnRoiAttr on the AVPU encoder (T41, T31 beyond vendor):
  * the windows (IMPEncoderRoiAttr, up to 10) go into the QP table of the
- * next picture.  Returns -1 for an invalid window, mode or codec. */
+ * next picture.  Returns -1 for an invalid window, mode or codec, or a
+ * delta outside -26..25 (H.264 mb_qp_delta; the effective QPs are clamped
+ * further in src/avpu_roi.h so the stream stays valid). */
 int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr);
 /* IMP_Encoder_SetH264TransCfg on the native Helix encoder (T20, T21):
  * chroma_qp_index_offset (-12..12) from the next IDR on */

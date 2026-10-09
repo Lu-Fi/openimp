@@ -1557,9 +1557,24 @@ static void test_roi_chroma(int t10)
     assert(encode(encoder, &info) == 0 && !info.idr);
     if (roi_hw) {
         /* qp << 2 | rel << 1 | en per region, 6-bit QP field */
-        assert(list_roi[0] == (0x51u | (0xecu | 3u)
-                               << 8 | 0x23u << 24));
-        assert(list_roi[1] == (0x0eu << 8 | 0xcdu << 24));
+        /* Helix_H264_RoiSanitize (src/t30/helix_roi.h) limits the QPs of
+         * the picture: absolute inside [max QP - 25, min QP + 25], the
+         * spread of all windows at most 25.  Absolute 51 (region 7) ->
+         * slice QP + 13: T21 (picture QP 28) 41, T20 (QP 20) 33. */
+        if (t10) {
+            /* T10 test picture QP 44: absolute 20 -> 26, absolute 51 kept,
+             * relative +8 lowered to +7 for the 25 spread */
+            assert(list_roi[0] == 0x1f00ef69u);
+            assert(list_roi[1] == (0x0eu << 8 | 0xcdu << 24));
+        } else {
+#if defined(PLATFORM_T20)
+            assert(list_roi[1] == (0x0eu << 8 | 0x85u << 24));
+#else
+            assert(list_roi[1] == (0x0eu << 8 | 0xa5u << 24));
+#endif
+            assert(list_roi[0] == (0x51u | (0xecu | 3u)
+                                   << 8 | 0x23u << 24));
+        }
         assert(list_roi[2] == 0x06030502u && list_roi[3] == 0x01002700u);
         assert(list_roi[4] == 0u && list_roi[5] == 0x16140c0au);
         assert(list_roi[6] == 0u && list_roi[7] == 0x04030201u);

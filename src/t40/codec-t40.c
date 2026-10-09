@@ -3295,6 +3295,25 @@ static uint32_t avpu_get_enc1_stream_part_offset(const ALAvpuContext *ctx)
  * it always was (zero); the encoding thread rewrites it before the next
  * picture when a window was set or cleared. */
 static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void avpu_roi_warn_clamped(const char *soc, unsigned int c,
+                                  const AvpuRoiResult *r, uint32_t base_qp)
+{
+    static unsigned int warned;
+
+    c &= ~warned;
+    if (!c)
+        return;
+    warned |= c;
+    IMP_LOG_WARN("Codec", "%s ROI: requested QP delta %d..%d (picture QP %u) "
+                 "clamped (%s%s%s): H.264 allows mb_qp_delta -26..25 only, "
+                 "entries stay in -25..25 with at most 25 between the "
+                 "highest and lowest, and inside the RC min/max QP (logged "
+                 "once per cause)", soc, r->req_min, r->req_max, base_qp,
+                 (c & AVPU_ROI_CLAMP_DELTA) ? "delta limit " : "",
+                 (c & AVPU_ROI_CLAMP_RANGE) ? "min/max QP " : "",
+                 (c & AVPU_ROI_CLAMP_SPREAD) ? "spread" : "");
+}
 #endif
 
 #if defined(PLATFORM_T31)
@@ -3321,8 +3340,15 @@ static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
  * OpenIMP always uses the relative table; an absolute window is written as
  * the difference to the picture QP of the last command (cmd[3] bits 21:16),
  * rewritten when that QP changes, so it is exact under FixQP and follows
- * the slice QP one picture late under CBR/VBR.  Whole-picture offsets are
- * not limited to the channel min/max QP (CBR, +31: 82 kbit/s). */
+ * the slice QP one picture late under CBR/VBR.
+ *
+ * Validity: the hardware writes mb_qp_delta = QP(MB) - QP(previous MB),
+ * which H.264 limits to -26..+25.  src/avpu_roi.h therefore keeps every
+ * entry in -25..+25, the spread of all entries (uncovered = 0) at most 25,
+ * and picture QP + entry inside 0..51 and the RC min/max QP.  Larger
+ * requests are clamped and logged once (a decoder that checks the range,
+ * VA-API/VLC/browsers, shows broken blocks otherwise, ffmpeg hides it).
+ * The API refuses delta windows outside -26..25 like the vendor T41. */
 static int avpu_t31_roi_disabled(void)
 {
     static int off = -1;
@@ -3337,9 +3363,10 @@ static int avpu_t31_roi_disabled(void)
 
 static void avpu_t31_roi_apply(ALAvpuContext *ctx)
 {
-    uint32_t cols, rows, i, y, x, mb;
+    uint32_t cols, rows, i, mb;
     uint8_t *table;
     int any = 0, absolute = 0;
+    AvpuRoiResult res;
 
     if (!ctx->roi_pending || ctx->codec_hevc || !ctx->interm_buf.map)
         return;
@@ -3352,37 +3379,23 @@ static void avpu_t31_roi_apply(ALAvpuContext *ctx)
             ctx->interm_wpp_size + 0x40u;
     pthread_mutex_lock(&avpu_roi_lock);
     ctx->roi_pending = 0;
+    for (i = 0; i < 10u; i++) {
+        if (ctx->roi_win[i].enable) {
+            any = 1;
+            absolute |= ctx->roi_win[i].mode != 0;
+        }
+    }
     /* the 0x40-byte header holds the auto-QP seed and the legal QP range
      * (avpu_t40_init_ep2); zeroing it makes every picture QP 0 */
-    memset(table, 0, mb);
-    for (i = 0; i < 10u; i++) {
-        uint32_t x0, y0, x1, y1;
-        int d;
-
-        if (!ctx->roi_win[i].enable)
-            continue;
-        any = 1;
-        d = ctx->roi_win[i].qp;
-        if (ctx->roi_win[i].mode) {
-            absolute = 1;
-            d -= (int)ctx->roi_base_qp;
-        }
-        if (d < -32)
-            d = -32;
-        if (d > 31)
-            d = 31;
-        /* every macroblock the window touches; a later window wins */
-        x0 = ctx->roi_win[i].x >> 4;
-        y0 = ctx->roi_win[i].y >> 4;
-        x1 = (ctx->roi_win[i].x + ctx->roi_win[i].w + 15u) >> 4;
-        y1 = (ctx->roi_win[i].y + ctx->roi_win[i].h + 15u) >> 4;
-        for (y = y0; y < y1 && y < rows; y++)
-            for (x = x0; x < x1 && x < cols; x++)
-                table[y * cols + x] = (uint8_t)d & 0x3fu;
-    }
+    avpu_roi_fill(table, 1u, 6u, cols, rows, ctx->roi_win, 10u,
+                  ctx->roi_base_qp, ctx->min_qp, ctx->max_qp, 0, &res);
     ctx->roi_table_on = any;
     ctx->roi_absolute = absolute;
+    ctx->roi_req_min = res.req_min;
+    ctx->roi_req_max = res.req_max;
+    ctx->roi_range_clamped = (res.clamped & AVPU_ROI_CLAMP_RANGE) != 0;
     pthread_mutex_unlock(&avpu_roi_lock);
+    avpu_roi_warn_clamped("T31", res.clamped, &res, ctx->roi_base_qp);
     LOG_CODEC("AVPU: T31 ROI QP table %s %ux%u macroblocks base QP %u",
               any ? "set" : "cleared", cols, rows, ctx->roi_base_qp);
     (void)avpu_flush_dma_buf(ctx->fd, "roi_table", &ctx->interm_buf,
@@ -3394,13 +3407,21 @@ static void avpu_t31_roi_apply(ALAvpuContext *ctx)
 static void avpu_t31_roi_track_qp(ALAvpuContext *ctx, const uint32_t *cmd)
 {
     uint32_t qp = (cmd[0x03] >> 16) & 0x3fu;
+    int dep;
 
-    if (ctx->roi_absolute && qp != ctx->roi_base_qp) {
-        pthread_mutex_lock(&avpu_roi_lock);
-        ctx->roi_base_qp = qp;
+    if (!ctx->roi_table_on || qp == ctx->roi_base_qp)
+        return;
+    /* the table depends on the picture QP when a window is absolute, or
+     * when its delta is (or was) cut by the QP range */
+    dep = ctx->roi_absolute || ctx->roi_range_clamped ||
+          (int)qp + ctx->roi_req_max > (int)(ctx->max_qp ? ctx->max_qp : 51u) ||
+          (int)qp + ctx->roi_req_min < (int)ctx->min_qp ||
+          (int)qp + ctx->roi_req_max > 51 || (int)qp + ctx->roi_req_min < 0;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_base_qp = qp;
+    if (dep)
         ctx->roi_pending = 1;
-        pthread_mutex_unlock(&avpu_roi_lock);
-    }
+    pthread_mutex_unlock(&avpu_roi_lock);
 }
 #endif
 
@@ -3618,23 +3639,16 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
         any |= ctx->roi_win[i].enable != 0;
     memset(table, 0, 4u * (size_t)mb);
     if (any) {
+        AvpuRoiResult res;
+
         for (i = 0; i < mb; i++)
             table[4u * i + 3u] = 0x20u;
-        for (i = 0; i < 10u; i++) {
-            uint32_t x0, y0, nx, ny;
-
-            if (!ctx->roi_win[i].enable)
-                continue;
-            /* the vendor: corner rounded down, size to the nearest block */
-            x0 = ctx->roi_win[i].x >> 4;
-            y0 = ctx->roi_win[i].y >> 4;
-            nx = (ctx->roi_win[i].w + 8u) >> 4;
-            ny = (ctx->roi_win[i].h + 8u) >> 4;
-            for (y = y0; y < y0 + ny && y < rows; y++)
-                for (x = x0; x < x0 + nx && x < cols; x++)
-                    table[4u * (y * cols + x)] =
-                        (uint8_t)ctx->roi_win[i].qp;
-        }
+        /* byte 0 of each entry: same validity rules as the T31 (the picture
+         * QP is not tracked here, so no min/max QP clamp); the vendor
+         * rounds the window size to the nearest block */
+        avpu_roi_fill(table, 4u, 8u, cols, rows, ctx->roi_win, 10u, 0u, 0u,
+                      0u, 1, &res);
+        avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
     }
     ctx->roi_table_on = any;
     pthread_mutex_unlock(&avpu_roi_lock);
@@ -8103,7 +8117,8 @@ int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
             w->rect.y + w->rect.h > enc->avpu.enc_h)
             return -1;
         if (w->mode == IMP_ROI_QPMODE_DELTA) {
-            if (w->qp < -32 || w->qp > 31)
+            /* H.264 mb_qp_delta: -26..25, as the vendor T41 checks */
+            if (w->qp < -26 || w->qp > 25)
                 return -1;
         } else if (w->mode == IMP_ROI_QPMODE_FIXED_QP) {
             if (w->qp < 0 || w->qp > 51)

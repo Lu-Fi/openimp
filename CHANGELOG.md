@@ -5,6 +5,13 @@ Newest first, grouped by date. Everything listed was device-tested on the SoC na
 marked otherwise. Branch names refer to the `claude/*` topic branches merged into `next`.
 Release tags `vYYYY.MM.DD` on the `aperto` branch are planned (the first one after the 24 h soak that started 2026-10-04); until then dates are the reference. Branch names are historic: the topic branches were merged into `next` and deleted.
 
+## 2026-10-09 (branch `claude/roi-qp-clamp`, host-tested only)
+
+- ROI QP stays valid H.264 (`src/avpu_roi.h`, `Helix_H264_RoiSanitize`): the encoder codes `mb_qp_delta` against the previous macroblock and H.264 allows -26..+25 only; outside it ffmpeg hides the error but VA-API/VLC/browsers show broken blocks (measured on T10/T20 with relative -26 and absolute 15 at QP 42). Every window delta is now in -25..25, the spread of all deltas (uncovered = 0) at most 25, picture QP + delta inside 0..51 and the RC min/max QP; larger requests are clamped with a one-time warning.
+  - T31 (and the experimental T41 table): `SetChnRoiAttr` refuses a delta outside -26..25 like the vendor T41 (before: -32..31); the table follows the picture QP when the clamp depends on it.
+  - T10/T20/T21: `IMP_Encoder_SetChnROI` clamps when each command list is built (relative -25..25, absolute inside max QP - 25 .. min QP + 25 of the picture, spread 25); a QP argument beyond the s8 range keeps its sign.
+  - Test `tests/t31/roi_clamp_test.c` (20000 random window sets, each table walked like the encoder).
+
 ## 2026-10-07 (branch `claude/roi-all`, not part of the first release)
 
 - T21: `IMP_Encoder_SetChnROI` is effective by default (beyond vendor: the stock T21 libimp stores the regions but never programs them). With no region set the command list is unchanged; `OPENIMP_T21_ROI=0` switches it off. Device-tested on the PC420 (jxf23, 1920x1080, FixQP 30, one 320x320 region): absolute QP 51 is a visible block, QP 15 stays clean, delta +/-15 works, live changes (P frames, no IDR) work. FixQP bitrate 657 kbit/s without ROI, 340 with QP 51, 504 with QP 15; CBR keeps the target (the bits move between the regions). Test tool `tools/roitest`.

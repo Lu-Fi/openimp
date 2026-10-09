@@ -2,6 +2,9 @@
 #define OPENIMP_HELIX_ROI_H
 
 #include <stdint.h>
+#include <string.h>
+
+#include "../avpu_roi.h"
 
 /*
  * ROI registers of the Ingenic T10/T20/T21 H.264 EFE, as the OEM
@@ -33,6 +36,78 @@ static inline void Helix_H264_RoiRegisters(const uint8_t roi[8][7],
     }
 }
 
+/* Validity of the ROI QP (same reason as src/avpu_roi.h): the EFE codes
+ * mb_qp_delta = QP(MB) - QP(previous MB), H.264 allows -26..+25 only.
+ * Measured on T10/T20 (docs/ROI.md): relative -26, or an absolute QP more
+ * than 25 away from the macroblock QP (absolute 15 at QP 42) gives a stream
+ * that VA-API/VLC/browsers show as broken blocks; ffmpeg hides it.
+ * Applied when the command list is built, with the slice QP of that picture:
+ *   - relative QP -25..+25,
+ *   - absolute QP inside [max_qp - 25, min_qp + 25] (every macroblock QP
+ *     the rate control can produce is then at most 25 away) and 0..51,
+ *   - the spread of all windows' deltas (absolute: against the slice QP;
+ *     uncovered = 0) at most 25, the higher QPs are lowered.
+ * min_qp/max_qp: the picture's QP range (slice QP -12/+13 in the T21/T30/
+ * T10 command lists, the cap of the T20).  Returns AVPU_ROI_CLAMP_* bits;
+ * out may equal in. */
+static inline unsigned int Helix_H264_RoiSanitize(const uint8_t in[8][7],
+                                                  uint8_t out[8][7],
+                                                  int slice_qp, int min_qp,
+                                                  int max_qp)
+{
+    unsigned int flags = 0, i;
+    int d[8], lo = 0, hi = 0, cap, alo, ahi;
+
+    if (out != in)
+        memcpy(out, in, 8u * 7u);
+    alo = max_qp - AVPU_ROI_SPREAD_MAX;
+    ahi = min_qp + AVPU_ROI_SPREAD_MAX;
+    if (alo < 0)
+        alo = 0;
+    if (ahi > 51)
+        ahi = 51;
+    if (alo > ahi)      /* range wider than 25: nothing satisfies both */
+        alo = ahi = slice_qp;
+    for (i = 0; i < 8u; i++) {
+        int q = (int8_t)in[i][2];
+
+        d[i] = 0;
+        if (!(in[i][0] & 1u))
+            continue;
+        if (in[i][1] & 1u) {
+            if (q < AVPU_ROI_DELTA_MIN || q > AVPU_ROI_DELTA_MAX) {
+                q = q < 0 ? AVPU_ROI_DELTA_MIN : AVPU_ROI_DELTA_MAX;
+                flags |= AVPU_ROI_CLAMP_DELTA;
+            }
+            d[i] = q;
+        } else {
+            if (q < alo || q > ahi) {
+                q = q < alo ? alo : ahi;
+                flags |= AVPU_ROI_CLAMP_RANGE;
+            }
+            d[i] = q - slice_qp;
+        }
+        if (d[i] < lo)
+            lo = d[i];
+        if (d[i] > hi)
+            hi = d[i];
+    }
+    cap = lo + AVPU_ROI_SPREAD_MAX;
+    if (hi > cap) {
+        flags |= AVPU_ROI_CLAMP_SPREAD;
+        for (i = 0; i < 8u; i++)
+            if ((in[i][0] & 1u) && d[i] > cap)
+                d[i] = cap;
+    }
+    for (i = 0; i < 8u; i++) {
+        if (!(in[i][0] & 1u))
+            continue;
+        out[i][2] = (uint8_t)(int8_t)((in[i][1] & 1u) ? d[i]
+                                                       : slice_qp + d[i]);
+    }
+    return flags;
+}
+
 /* The i264e ROI table entry IMP_Encoder_SetChnROI makes of an
  * IMPEncoderROICfg (T20 3.12.0 0x4899c, T21 1.0.33 0x467d0): corners
  * sorted, divided by 16 with C (truncating) division, kept as bytes. */
@@ -45,7 +120,7 @@ static inline void Helix_H264_RoiEntry(int enable, int relative, int qp,
 
     entry[0] = (uint8_t)enable;
     entry[1] = (uint8_t)relative;
-    entry[2] = (uint8_t)(int8_t)qp;
+    entry[2] = (uint8_t)(int8_t)(qp < -128 ? -128 : qp > 127 ? 127 : qp);
     entry[3] = (uint8_t)(x0 / 16);
     entry[4] = (uint8_t)(x1 / 16);
     entry[5] = (uint8_t)(y0 / 16);
