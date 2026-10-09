@@ -46,28 +46,61 @@ typedef enum {
 
 /**
  * Pixel format
+ *
+ * Ingenic vendor numbering: identical in the T20 3.12.0 / T21 1.0.33 /
+ * T23 1.3.0 / T30 1.0.5 / T31 1.1.x / T40 / T41 headers.  These values are
+ * ABI -- the vendor IMP_FrameSource_SetChnAttr compares attr->pixFmt against
+ * PIX_FMT_RAW (34) in every libimp build and pixfmt_to_string() bounds the
+ * value by PIX_FMT_NB (36).  The older table that OpenIMP used to carry
+ * (PIX_FMT_YUVJ* at 7..9, BGRA/RGBA at 12/13, Bayer at 14..17, RAW at 18)
+ * comes from an unrelated ffmpeg-derived imp_common.h in the buildroot
+ * sysroot and matches no Ingenic SDK: consumers using it pass BGRA where
+ * libimp expects RGB24, and 18 (= BGGR8 here) where libimp expects RAW.
  */
 typedef enum {
-    PIX_FMT_YUV420P,    /**< Planar YUV 4:2:0 */
-    PIX_FMT_YUYV422,    /**< Packed YUV 4:2:2 */
-    PIX_FMT_UYVY422,    /**< Packed YUV 4:2:2 */
-    PIX_FMT_YUV422P,    /**< Planar YUV 4:2:2 */
-    PIX_FMT_YUV444P,    /**< Planar YUV 4:4:4 */
-    PIX_FMT_YUV410P,    /**< Planar YUV 4:1:0 */
-    PIX_FMT_YUV411P,    /**< Planar YUV 4:1:1 */
-    PIX_FMT_YUVJ420P,   /**< Planar YUV 4:2:0 full range */
-    PIX_FMT_YUVJ422P,   /**< Planar YUV 4:2:2 full range */
-    PIX_FMT_YUVJ444P,   /**< Planar YUV 4:4:4 full range */
-    PIX_FMT_NV12,       /**< Semi-planar YUV 4:2:0 */
-    PIX_FMT_NV21,       /**< Semi-planar YUV 4:2:0 */
-    PIX_FMT_BGRA,       /**< Packed BGRA 8:8:8:8 */
-    PIX_FMT_RGBA,       /**< Packed RGBA 8:8:8:8 */
-    PIX_FMT_BGGR8,      /**< Bayer BGGR 8-bit */
-    PIX_FMT_RGGB8,      /**< Bayer RGGB 8-bit */
-    PIX_FMT_GBRG8,      /**< Bayer GBRG 8-bit */
-    PIX_FMT_GRBG8,      /**< Bayer GRBG 8-bit */
-    PIX_FMT_RAW,        /**< Raw data */
+    PIX_FMT_YUV420P = 0,      /**< Planar YUV 4:2:0, 12 bpp */
+    PIX_FMT_YUYV422 = 1,      /**< Packed YUV 4:2:2, Y0 Cb Y1 Cr */
+    PIX_FMT_UYVY422 = 2,      /**< Packed YUV 4:2:2, Cb Y0 Cr Y1 */
+    PIX_FMT_YUV422P = 3,      /**< Planar YUV 4:2:2, 16 bpp */
+    PIX_FMT_YUV444P = 4,      /**< Planar YUV 4:4:4, 24 bpp */
+    PIX_FMT_YUV410P = 5,      /**< Planar YUV 4:1:0, 9 bpp */
+    PIX_FMT_YUV411P = 6,      /**< Planar YUV 4:1:1, 12 bpp */
+    PIX_FMT_GRAY8 = 7,        /**< 8 bpp gray */
+    PIX_FMT_MONOWHITE = 8,    /**< 1 bpp, 0 is white */
+    PIX_FMT_MONOBLACK = 9,    /**< 1 bpp, 0 is black */
+    PIX_FMT_NV12 = 10,        /**< Semi-planar YUV 4:2:0, U then V */
+    PIX_FMT_NV21 = 11,        /**< Semi-planar YUV 4:2:0, V then U */
+    PIX_FMT_RGB24 = 12,       /**< Packed RGB 8:8:8, 24 bpp */
+    PIX_FMT_BGR24 = 13,       /**< Packed BGR 8:8:8, 24 bpp */
+    PIX_FMT_ARGB = 14,        /**< Packed ARGB 8:8:8:8, 32 bpp */
+    PIX_FMT_RGBA = 15,        /**< Packed RGBA 8:8:8:8, 32 bpp */
+    PIX_FMT_ABGR = 16,        /**< Packed ABGR 8:8:8:8, 32 bpp */
+    PIX_FMT_BGRA = 17,        /**< Packed BGRA 8:8:8:8, 32 bpp */
+    PIX_FMT_RGB565BE = 18,    /**< Packed RGB 5:6:5, 16 bpp, big-endian */
+    PIX_FMT_RGB565LE = 19,    /**< Packed RGB 5:6:5, 16 bpp, little-endian */
+    PIX_FMT_RGB555BE = 20,    /**< Packed RGB 5:5:5, 16 bpp, big-endian */
+    PIX_FMT_RGB555LE = 21,    /**< Packed RGB 5:5:5, 16 bpp, little-endian */
+    PIX_FMT_BGR565BE = 22,    /**< Packed BGR 5:6:5, 16 bpp, big-endian */
+    PIX_FMT_BGR565LE = 23,    /**< Packed BGR 5:6:5, 16 bpp, little-endian */
+    PIX_FMT_BGR555BE = 24,    /**< Packed BGR 5:5:5, 16 bpp, big-endian */
+    PIX_FMT_BGR555LE = 25,    /**< Packed BGR 5:5:5, 16 bpp, little-endian */
+    PIX_FMT_0RGB = 26,        /**< Packed RGB 8:8:8 in the low 24 bits */
+    PIX_FMT_RGB0 = 27,        /**< Packed RGB 8:8:8 in the high 24 bits */
+    PIX_FMT_0BGR = 28,        /**< Packed BGR 8:8:8 in the low 24 bits */
+    PIX_FMT_BGR0 = 29,        /**< Packed BGR 8:8:8 in the high 24 bits */
+    PIX_FMT_BAYER_BGGR8 = 30, /**< Bayer BGGR, 8-bit samples */
+    PIX_FMT_BAYER_RGGB8 = 31, /**< Bayer RGGB, 8-bit samples */
+    PIX_FMT_BAYER_GBRG8 = 32, /**< Bayer GBRG, 8-bit samples */
+    PIX_FMT_BAYER_GRBG8 = 33, /**< Bayer GRBG, 8-bit samples */
+    PIX_FMT_RAW = 34,         /**< Raw data (ISP bypass / raw sensor) */
+    PIX_FMT_HSV = 35,         /**< HSV */
+    PIX_FMT_NB = 36,          /**< Number of pixel formats */
 } IMPPixelFormat;
+
+_Static_assert(PIX_FMT_NV12 == 10, "PIX_FMT_NV12 ABI mismatch");
+_Static_assert(PIX_FMT_NV21 == 11, "PIX_FMT_NV21 ABI mismatch");
+_Static_assert(PIX_FMT_RAW == 34, "PIX_FMT_RAW ABI mismatch");
+_Static_assert(PIX_FMT_NB == 36, "PIX_FMT_NB ABI mismatch");
 
 /**
  * Cell structure for binding modules
