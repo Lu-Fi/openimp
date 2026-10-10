@@ -141,20 +141,22 @@ int main(void)
         csc.Matrix.CscCoef[3] = -0.1687f; csc.Matrix.CscCoef[4] = -0.3313f; csc.Matrix.CscCoef[5] = 0.5f;
         csc.Matrix.CscCoef[6] = 0.5f; csc.Matrix.CscCoef[7] = -0.4187f; csc.Matrix.CscCoef[8] = -0.0813f;
         csc.Matrix.CscOffset[0] = 0x80; csc.Matrix.CscOffset[1] = 0;
-        csc.Matrix.CscClip[0] = 255; csc.Matrix.CscClip[1] = 0; csc.Matrix.CscClip[2] = 255; csc.Matrix.CscClip[3] = 0;
+        csc.Matrix.CscClip[0] = 16; csc.Matrix.CscClip[1] = 235; csc.Matrix.CscClip[2] = 17; csc.Matrix.CscClip[3] = 240;
         assert(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc) == 0);
         memcpy(&w, last.data, 4); assert(w == 6);
         memcpy(&w, last.data + 4, 4); assert(w == 19595 || w == 19596);
         memcpy(&w, last.data + 48, 4); assert(w >= 65530 && w <= 65542);	/* Y of Y,U,V -> R: 1.0 */
         memcpy(&w, last.data + 56, 4); assert(w >= 91860 && w <= 91900);	/* V -> R: 1.402 */
-        assert(last.data[40] == 0 && last.data[41] == 0x80 && last.data[42] == 0 && last.data[43] == 255 &&
-               last.data[44] == 0 && last.data[45] == 255);
+        /* header order: offsets Y,UV then clips Ymin,Ymax,UVmin,UVmax */
+        assert(last.data[40] == 0x80 && last.data[41] == 0 && last.data[42] == 16 && last.data[43] == 235 &&
+               last.data[44] == 17 && last.data[45] == 240);
         assert(!memcmp(last.data + 84, last.data + 40, 4) && !memcmp(last.data + 88, last.data + 44, 4));
         memcpy(last.reply, last.data, 92);
         memset(&csc, 0, sizeof(csc));
         assert(IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_MAIN, &csc) == 0);
         assert(csc.ColorGamut == IMP_ISP_CG_USER && csc.Matrix.CscOffset[0] == 0x80 &&
-               csc.Matrix.CscClip[0] == 255 && csc.Matrix.CscCoef[1] > 0.586f && csc.Matrix.CscCoef[1] < 0.588f);
+               csc.Matrix.CscOffset[1] == 0 && csc.Matrix.CscClip[0] == 16 && csc.Matrix.CscClip[1] == 235 &&
+               csc.Matrix.CscClip[2] == 17 && csc.Matrix.CscClip[3] == 240 && csc.Matrix.CscCoef[1] > 0.586f && csc.Matrix.CscCoef[1] < 0.588f);
         /* a singular matrix or a coefficient out of range never reaches the driver */
         before = last.calls;
         memset(csc.Matrix.CscCoef, 0, sizeof(csc.Matrix.CscCoef));
