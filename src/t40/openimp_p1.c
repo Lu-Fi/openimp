@@ -46,6 +46,13 @@
 #define TISP_VIDIOC_ENABLE_SENSOR         0xc008540bU
 #define TISP_VIDIOC_DISABLE_SENSOR        0xc008540cU
 #define TISP_VIDIOC_SET_DEFAULT_BIN_PATH  0xc004542aU
+#if !defined(PLATFORM_T41)
+/* vendor T40 1.3.1 libimp disassembly: IMP_ISP_SetCameraInputMode /
+ * SetCameraInputSelect on the main ISP node (the size field of the number
+ * says 4 although the mode argument is 24 bytes, as the vendor sends it) */
+#define TISP_VIDIOC_SET_CAMERA_INPUT_MODE   0xc0045415U
+#define TISP_VIDIOC_SET_CAMERA_INPUT_SELECT 0xc0045419U
+#endif
 #define TISP_VIDIOC_SET_MDNS_BUF_INFO     0x800c540fU
 #define TISP_VIDIOC_GET_MDNS_BUF_INFO     0x800c5410U
 
@@ -302,6 +309,9 @@ struct openimp_p1_state {
     uint32_t bin_path_set[IMPVI_BUTT];
     struct tisp_buf_info mdns;
     void *mdns_virtual;
+#if !defined(PLATFORM_T41)
+    uint32_t camera_input[6];       /* last SetCameraInputMode (vendor +612) */
+#endif
     struct openimp_dma_state dma;
     struct openimp_fs_channel channels[OPENIMP_FS_CHANNELS];
 };
@@ -470,10 +480,93 @@ int IMP_ISP_Close(void)
     p1.tuning_fd = -1;
     p1.isp_fd = -1;
     p1.isp_open = 0;
+#if !defined(PLATFORM_T41)
+    memset(p1.camera_input, 0, sizeof(p1.camera_input));
+#endif
     dma_deinit();
     unlock_p1();
     return 0;
 }
+
+#if !defined(PLATFORM_T41)
+/* Multi camera system (T40 only).  IMPISPCameraInputMode is 24 bytes:
+ * sensor_num, dual_mode, {en, switch_con, switch_con_num}, joint_mode.
+ * Checks and result codes follow the vendor T40 1.3.1 libimp: -8 ISP not
+ * open, -9 NULL argument, -4 value out of range, -10 select outside
+ * IMPISP_DUALSENSOR_DUAL_SELECT_MODE, -1 ioctl failure. */
+#define CAMIN_WORDS 6
+#define CAMIN_SELECT_MODE 2U
+
+static int camera_input_valid(const uint32_t *m)
+{
+    uint32_t joint = m[5];
+
+    if (m[0] >= 4 || m[1] >= 5 || joint > 16384U)
+        return 0;
+    if ((joint & 0xfU) >= 5 || ((joint >> 4) & 0xfU) >= 5 ||
+        ((joint >> 8) & 0xfU) >= 5)
+        return 0;
+    /* either the fs0+fs3 / fs1+fs4 nibbles or the fs0+fs1 / fs3+fs4 ones */
+    return (joint & 0x0f0fU) == 0 || (joint & 0xf0f0U) == 0;
+}
+
+int IMP_ISP_SetCameraInputMode(void *mode)
+{
+    int result = -1;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.isp_open || p1.isp_fd < 0)
+        result = -8;
+    else if (!mode)
+        result = -9;
+    else if (!camera_input_valid(mode))
+        result = -4;
+    else if (record_ioctl(p1.isp_fd, TISP_VIDIOC_SET_CAMERA_INPUT_MODE,
+                          mode) == 0) {
+        memcpy(p1.camera_input, mode, sizeof(p1.camera_input));
+        result = 0;
+    }
+    unlock_p1();
+    return result;
+}
+
+int IMP_ISP_GetCameraInputMode(void *mode)
+{
+    int result = 0;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.isp_open)
+        result = -8;
+    else if (!mode)
+        result = -9;
+    else
+        memcpy(mode, p1.camera_input, sizeof(p1.camera_input));
+    unlock_p1();
+    return result;
+}
+
+int IMP_ISP_SetCameraInputSelect(int vinum)
+{
+    int result = -1;
+    int32_t arg = vinum;
+
+    lock_p1();
+    prepare_p1();
+    if (!p1.isp_open || p1.isp_fd < 0)
+        result = -8;
+    else if (p1.camera_input[1] != CAMIN_SELECT_MODE)
+        result = -10;
+    else if ((uint32_t)vinum >= 2U)
+        result = -9;
+    else if (record_ioctl(p1.isp_fd, TISP_VIDIOC_SET_CAMERA_INPUT_SELECT,
+                          &arg) == 0)
+        result = 0;
+    unlock_p1();
+    return result;
+}
+#endif
 
 int IMP_ISP_AddSensor(IMPVI_NUM num, IMPSensorInfo *info)
 {
