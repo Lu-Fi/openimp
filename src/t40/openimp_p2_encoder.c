@@ -4357,8 +4357,12 @@ int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
 #endif
 }
 
-#if defined(PLATFORM_T21) && !defined(PLATFORM_T20) && !defined(PLATFORM_T23)
-/* OEM T21 1.0.33 IMP_Encoder_SetChnHSkip/GetChnHSkip (i264e_reconfig_hskip_set
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+/* OEM T20 3.12.0 (0x49dc8) behaves alike: created channel, skipType up to
+ * maxHSkipType, the six words stored; the T20 Helix path does not take the
+ * IDR period (no same-scene call).
+ *
+ * OEM T21 1.0.33 IMP_Encoder_SetChnHSkip/GetChnHSkip (i264e_reconfig_hskip_set
  * -> i264e_idr_reconfig): the skip type up to the channel's maxHSkipType;
  * the native Helix encoder takes the IDR period in GOPs (maxSameSceneCnt
  * for N1X/H1M, as CreateChn) with the next picture and then codes an IDR
@@ -4367,7 +4371,6 @@ int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
 int IMP_Encoder_SetChnHSkip(int channel, const IMPEncoderAttrHSkip *attr)
 {
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
-    int ok;
 
     if (!ch || !attr)
         return -1;
@@ -4377,13 +4380,18 @@ int IMP_Encoder_SetChnHSkip(int channel, const IMPEncoderAttrHSkip *attr)
         return -1;
     }
     ch->attr.rcAttr.attrHSkip.hSkipAttr = *attr;
-    ok = attr->skipType == IMP_Encoder_STYPE_N1X ||
-         attr->skipType == IMP_Encoder_STYPE_H1M_FALSE ||
-         attr->skipType == IMP_Encoder_STYPE_H1M_TRUE;
-    if (ch->codec)
-        (void)AL_Codec_Encode_SetSameSceneGops(
-            ch->codec, ok && attr->maxSameSceneCnt > 0
-                           ? (uint32_t)attr->maxSameSceneCnt : 0u);
+#if !defined(PLATFORM_T20)
+    {
+        int ok = attr->skipType == IMP_Encoder_STYPE_N1X ||
+                 attr->skipType == IMP_Encoder_STYPE_H1M_FALSE ||
+                 attr->skipType == IMP_Encoder_STYPE_H1M_TRUE;
+
+        if (ch->codec)
+            (void)AL_Codec_Encode_SetSameSceneGops(
+                ch->codec, ok && attr->maxSameSceneCnt > 0
+                               ? (uint32_t)attr->maxSameSceneCnt : 0u);
+    }
+#endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
 }
@@ -4529,6 +4537,35 @@ int IMP_Encoder_GetChangeRef(int channel, int *enable)
     pthread_mutex_unlock(&p2_channels[channel].lock);
     return ret;
 }
+
+#if defined(PLATFORM_T20)
+/* OEM T20/T10 3.12.0 Set/GetChnDemask (0x49160, 0x492d8): no created check;
+ * the three words {enable+isAutoMode, demaskCnt, demaskThresd} are stored in
+ * the channel record (SetChnDemask also pokes an i264e flag word of the OEM
+ * encoder; the Helix path has no demask stage).  CreateChn copies the same
+ * block in from rcAttr.attrDemask, so the record is the channel attribute. */
+int IMP_Encoder_SetChnDemask(int channel, const IMPEncoderAttrDemask *attr)
+{
+    if (!p2_valid_channel(channel) || !attr)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    p2_channels[channel].attr.rcAttr.attrDemask = *attr;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+
+int IMP_Encoder_GetChnDemask(int channel, IMPEncoderAttrDemask *attr)
+{
+    if (!p2_valid_channel(channel) || !attr)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    *attr = p2_channels[channel].attr.rcAttr.attrDemask;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+#endif
 
 int IMP_Encoder_SetChnHSkipBlackEnhance(int channel, const int enable)
 {

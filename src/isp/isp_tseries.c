@@ -2146,6 +2146,84 @@ int IMP_ISP_Tuning_GetISPVflip(IMPISPTuningOpsMode *pmode)
     return result;
 }
 
+#if defined(PLATFORM_T20)
+/* T20/T10 3.12.0 IMP_ISP_Tuning_Set/GetISPHVflip(hmode, vmode): both ISP
+ * flips in one call.  The vendor sends them as one module-control word
+ * (0x80000e2 through the 0xc00c56c6 tuning ioctl, hflip in bits 16..); the
+ * open T20 driver has no such handler, so this is the SetISPHflip /
+ * SetISPVflip pair (the V4L2 flip controls the driver does serve).  The
+ * flip stays the same, only the control it travels on differs. */
+int IMP_ISP_Tuning_SetISPHVflip(IMPISPTuningOpsMode hmode, IMPISPTuningOpsMode vmode)
+{
+    int result = IMP_ISP_Tuning_SetISPHflip(hmode);
+
+    if (result != 0) {
+        return result;
+    }
+    return IMP_ISP_Tuning_SetISPVflip(vmode);
+}
+
+int IMP_ISP_Tuning_GetISPHVflip(IMPISPTuningOpsMode *phmode, IMPISPTuningOpsMode *pvmode)
+{
+    int result;
+
+    if (phmode == NULL || pvmode == NULL) {
+        return -1;
+    }
+    result = IMP_ISP_Tuning_GetISPHflip(phmode);
+    if (result != 0) {
+        return result;
+    }
+    return IMP_ISP_Tuning_GetISPVflip(pvmode);
+}
+
+/* T20/T10 3.12.0 Set/GetWDRAttr (0x5bb38, 0x5bbf0): the WDR switch is the
+ * V4L2 control 0x98e912 (IMAGE_TUNING_CID_CUSTOM_WDR, frame-stitch HDR in
+ * the driver).  The vendor caches the last mode and Set returns 0 without
+ * a driver call when the mode is unchanged; a failed Get hands out the
+ * cached mode together with the driver's error.  Both need tuning running.
+ * The open T20 driver refuses the control (-EPERM) without a WDR frame
+ * buffer, as the stock module does. */
+#define TSERIES_CID_WDR_T20 0x98e912
+static int tseries_wdr_cached;
+
+int IMP_ISP_Tuning_SetWDRAttr(IMPISPTuningOpsMode mode)
+{
+    ISPDevice *isp;
+    int result;
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL || isp->tuning_state != 2) {
+        return -1;
+    }
+    if (tseries_wdr_cached == (int)mode) {
+        return 0;
+    }
+    result = tseries_v4l2_set(TSERIES_CID_WDR_T20, (int32_t)mode);
+    if (result == 0) {
+        tseries_wdr_cached = (int)mode;
+    }
+    return result;
+}
+
+int IMP_ISP_Tuning_GetWDRAttr(IMPISPTuningOpsMode *pmode)
+{
+    ISPDevice *isp;
+    int32_t value = -1;
+    int result;
+
+    if (pmode == NULL || tseries_get_isp(&isp) != 0 || isp->tuning == NULL ||
+        isp->tuning_state != 2) {
+        return -1;
+    }
+    result = tseries_v4l2_get(TSERIES_CID_WDR_T20, &value);
+    if (result == 0) {
+        tseries_wdr_cached = (int)value;
+    }
+    *pmode = (IMPISPTuningOpsMode)tseries_wdr_cached;
+    return result;
+}
+#endif /* PLATFORM_T20 */
+
 int IMP_ISP_Tuning_SetMaxAgain(uint32_t gain)
 {
     return tseries_tuning_set_val(TISP_CID_MAX_AGAIN, gain);
@@ -2267,8 +2345,11 @@ int IMP_ISP_Tuning_GetDPC_Strength(uint32_t *pratio)
     return result;
 }
 
-#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
-/* T21 1.0.33 SetDPStrength (0x5635c): with tuning running, the caller's
+#if defined(PLATFORM_T21)
+/* T20 3.12.0 (0x60138) does the same call: capped at 200, then
+ * isp_table_tuning_ratio(83, v) with tuning running.
+ *
+ * T21 1.0.33 SetDPStrength (0x5635c): with tuning running, the caller's
  * value is capped at 200 and goes to isp_table_tuning_ratio(83, v), a
  * percentage (100 = tuning table).  The stock kernel has no DPC strength
  * control; the open T21 driver serves the DPC ratio (0x8000062, 128 =
@@ -2281,7 +2362,9 @@ int IMP_ISP_Tuning_SetDPStrength(uint32_t ratio)
 
     return tseries_tuning_set_val(TISP_CID_DPC_RATIO, (int32_t)(scaled > 255u ? 255u : scaled));
 }
+#endif /* T21 and T20: SetDPStrength */
 
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
 /* T21 1.0.33 SetAntiFogAttr (0x56448): the attribute enum (0 disable,
  * 1 strong, 2 medium, 3 weak) is sent as the value of the 0x8000163 control
  * (VIDIOC_S_CTRL); 0 when the kernel accepts it. */

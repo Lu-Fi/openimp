@@ -276,7 +276,7 @@ check: isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test p2_t1x_test_t20 
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
-	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test
+	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20
 	./isp_t1x_test_t20
 	./isp_t1x_test_t21
 	./isp_t31_movestate_test
@@ -311,6 +311,8 @@ check: isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test p2_t1x_test_t20 
 	./p2_gap_test_t21
 	./p2_gap_test_t20
 	./osd_attach_test
+	./isp_gap_test_t21
+	./isp_gap_test_t20
 	./check_exports.sh
 
 # GetChnAttrRcMode read-back of T21, T20 and T23 (src/t40/p2_rc_readback.h).
@@ -345,6 +347,18 @@ p2_gap_test_t20: p2_gap_test.c p2_gap_stubs.c $(ROOT)/src/t40/openimp_p2_encoder
 osd_attach_test: osd_attach_test.c $(ROOT)/src/t31/openimp_t31_services.c
 	$(CC) $(CFLAGS) -DPLATFORM_T21 $(P2_GAP_FLAGS) -o $@ osd_attach_test.c \
 		-pthread
+
+# ISP vendor calls of the gap work (DPStrength, AntiFogAttr, WDRAttr, ISPHVflip)
+# against a fake tuning ioctl.
+isp_gap_test_t21: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
+	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T21 -o $@ \
+		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c -lpthread
+
+isp_gap_test_t20: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
+	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T20 -DPLATFORM_T21 -o $@ \
+		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c -lpthread
 
 clean:
 	$(RM) isp_t31_movestate_test isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21
