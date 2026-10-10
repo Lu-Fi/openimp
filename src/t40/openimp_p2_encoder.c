@@ -1879,9 +1879,10 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
     P2_STARTUP_MARKER("openimp/P2 marker C0 CreateChn entry\n");
     if (!p2_valid_channel(channel) || p2_null_arg(__func__, attr))
         return -1;
-#if !defined(PLATFORM_T31) && !defined(PLATFORM_T41)
+#if !defined(PLATFORM_T31) && !defined(PLATFORM_T40) && \
+    !defined(PLATFORM_T41)
     if (p2_attr_codec_type(attr) == IMP_ENC_TYPE_HEVC) {
-        /* Only the T31 and T41 AVPU backends encode HEVC
+        /* Only the T31, T40 and T41 AVPU backends encode HEVC
          * (docs/T31_HEVC.md, t41_command_builder.c); the
          * other backends (native and OEM Helix, software) are H.264/JPEG
          * only and used to create an HEVC channel that produced no stream
@@ -3003,7 +3004,7 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
 #endif
     ch->packs[0].frameEnd = true;
     ch->packs[0].sliceType = is_idr ? IMP_ENC_SLICE_I : IMP_ENC_SLICE_P;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     if (ch->codec_type == IMP_ENC_TYPE_HEVC)
         ch->packs[0].nalType.h265NalType = is_idr
             ? IMP_H265_NAL_SLICE_IDR_W_RADL : IMP_H265_NAL_SLICE_TRAIL_R;
