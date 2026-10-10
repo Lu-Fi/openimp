@@ -1,6 +1,6 @@
 # T40 HEVC (H.265) on the AVPU
 
-Status: device-tested on a T40XP (Eufy S350, SC830AI, vendor kernel driver), 2026-10-10.
+Status: device-tested on a T40XP (Eufy S350, SC830AI, vendor kernel driver), 2026-10-10; pictures correct since claude/t40-h265-rc2 (PPS tool flags, HWRC on).
 
 ## What blocked it
 
@@ -43,35 +43,76 @@ Vendor reference streams (same settings) decode clean with
 `ffmpeg -err_detect aggressive`: ch0 190 frames, ch1 168 frames,
 about 4.7 and 1.05 Mbit/s.
 
-## Hardware rate control (HWRC) is off by default
+## PPS tool flags: the T40 core ignores cmd[9] for transform skip and cu_qp_delta
 
-With HWRC on (cmd[9] bit 16, cmd[0x14..0x18], PPS `cu_qp_delta_enabled_flag`)
-the stream desynchronises ffmpeg in some P pictures ("cu_qp_delta outside
-the valid range", 3..26 per 10 s).  Command words, EP1 and EP2 match the
-vendor dump; the remaining differences are the EP3 row targets, cmd[9]
-bits 31/30/15 (vendor: scaling lists and transform skip) and the QP range.
-Toggling bit 15 or TMVP and the EP2 placement did not change it; with HWRC
-off every stream decodes clean.  OpenIMP therefore uses picture-level QP;
-`OPENIMP_T40_HEVC_HWRC=1` re-enables HWRC for tests.  EP2 sits behind a
-CTB-row WPP table, as in the vendor lists.
+Until 2026-10-10 every OpenIMP T40 HEVC stream was broken after the first
+CTB rows (also with HWRC off): ffmpeg `-err_detect aggressive` mostly
+reported nothing but decoded green garbage, and VA-API failed with
+"internal decoding error".  The earlier "clean" results only checked
+decoder messages.  The vendor T40 PPS always sets
+`transform_skip_enabled_flag` and `cu_qp_delta_enabled_flag` (also for
+FixQP); the T40 core codes both syntax elements whatever cmd[9] says.
+Tested on the T40XP at 720p (5 s each, `OPENIMP_T40_HEVC_TOOLS`):
 
-## Device results (OpenIMP, 13a3657 + HWRC off)
+| tools | PPS transform skip | PPS cu_qp_delta | picture |
+|-------|--------------------|-----------------|---------|
+| 0 | 0 | HWRC only | broken |
+| 1 | 1 | HWRC only | broken |
+| 4 | 0 | 1 | broken, cu_qp_delta errors |
+| 5 | 1 | 1 | correct, ffmpeg and VA-API clean |
+| 7 | + SPS default scaling lists, cmd[9] bits 31/30 | 1 | grey, about 330 bytes per picture |
 
-| run | ch0 3840x2160 | ch1 1280x720 |
-|-----|---------------|--------------|
-| H.265 CBR 4000/1000 kbit/s, 10 s | 164 frames, 322 kbit/s, clean | 190 frames, 121 kbit/s, clean |
-| H.265 CBR 16000/4000 kbit/s, 10 s | 165 frames, 4319 kbit/s, one `CABAC_MAX_BIN` message | 189 frames, 1084 kbit/s, clean |
-| H.264 CBR 4000/1000 kbit/s, 5 s | 99 frames, 1510 kbit/s, clean | 100 frames, 372 kbit/s, clean |
-| vendor H.265 4000/1000 | 190 frames, about 4.7 Mbit/s | 168 frames, about 1.05 Mbit/s |
+OpenIMP now writes both PPS flags on T40 (cmd[9] bit 15 set as the
+vendor), keeps scaling lists off and signals full range in the VUI like
+the vendor (default `OPENIMP_T40_HEVC_TOOLS=13`).  The PPS no longer
+depends on the RC mode, so a switch between FixQP and CBR does not force
+an IDR on T40.
 
-Clean = `ffmpeg -err_detect aggressive` without messages; VA-API HEVC
-decodes all streams.  The low bitrates are the open-loop picture QP of
-T40; the frame-level rate control of `claude/t40-rc` acts on the same
-picture QP and covers HEVC as well.
+## Hardware rate control (HWRC) is on by default
+
+The "cu_qp_delta outside the valid range" errors with HWRC on were the
+same desynchronisation.  With the PPS flags fixed, HWRC (cmd[9] bit 16,
+cmd[0x14..0x18]) decodes clean and is the default, as for H.264.
+`OPENIMP_T40_HEVC_HWRC=0` falls back to picture-level QP.  The HWRC
+targets cmd[0x15/0x16] use the vendor formula already (1.9 x and 95/70 x
+bit/s per group; the HEVC capture matched word for word), cmd[0x17] gets
+the rc2 min QP and IDR QP fields.
+
+## Device results (claude/t40-h265-rc2, 2026-10-10, night, IR-cut day)
+
+One channel per run, 30 s, 20 fps, GOP 40 x 2.  Clean = `ffmpeg
+-err_detect aggressive` and VA-API without messages.  SSIM against a
+vendor HEVC FixQP 22 reference taken in the same session.
+
+| run | OpenIMP HWRC on | OpenIMP HWRC off | vendor |
+|-----|-----------------|------------------|--------|
+| 4K CBR 4000 | 4008 kbit/s, SSIM 0.956, 19.24 fps, clean | 4059, 0.959, 19.36 fps, clean | 4117, 0.959, 19.94 fps |
+| 720p CBR 1000 | 1075, 0.964, clean | 1074, 0.963, clean | 1049, 0.964 |
+| 4K FixQP 30 | 2451, 0.960, 19.37 fps, clean | (FixQP never uses HWRC) | 1840, 0.959 |
+| 720p FixQP 30 | 80.0, 0.968, clean | | 74.3, 0.968 |
+
+Two channels in one process (4K CBR 4000 + 720p CBR 1000, 20 s):
+OpenIMP 337 + 349 pictures (17.0 / 17.5 fps), vendor 375 + 359
+(about 18.8 / 18.0 fps), all clean.  The vendor tool process hung at
+teardown after this run (killed; device and timps fine), so the
+throughput gap is not profiled yet.
+
+Open points:
+- FixQP 4K +33 % bit rate at equal SSIM (IDR smaller, P larger than the
+  vendor): the FixQP lambda table of H.264 (`avpu_t40_fixqp_lambdas`) is
+  not applied to HEVC yet.
+- 4K throughput: 3 % (one channel) and about 10 % (two channels) fewer
+  pictures than the vendor with identical command words; the H.264 path
+  reaches 19.9 fps at 4K.  Candidates: CPU work per picture (AU check /
+  EBSP scan of the payload), missing overlap of the next submit with the
+  previous completion.  Needs per-picture timing on the device.
+- Slice header POC counts 1 per picture, the vendor 2 (cmd[0x0c..0x11]
+  already use 2n); harmless for one reference.
 
 ## Implementation
 
 `avpu_t40_hevc_fill_cmd()` in `src/t40/codec-t40.c`; headers, EP1/EP2 and
-knobs are the T31 ones (`OPENIMP_T40_HEVC_HWRC`, `_CABAC_INIT`, `_TMVP`).
+knobs are the T31 ones (`OPENIMP_T40_HEVC_HWRC`, `_CABAC_INIT`, `_TMVP`)
+plus `OPENIMP_T40_HEVC_TOOLS` (`avpu_t40_hevc_tools()`).
 T40 publishes one pack per access unit (`h265NalType` IDR_W_RADL/TRAIL_R),
 like T41.

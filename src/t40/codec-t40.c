@@ -2900,11 +2900,11 @@ static int avpu_t31_hevc_hwrc_enabled(const ALAvpuContext *ctx)
 
     if (enabled < 0)
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
-        /* T40: off by default.  With the vendor-identical HWRC words the
-         * core's cu_qp_delta coding desynchronises ffmpeg in some P
-         * pictures (docs/T40_HEVC.md); picture-level QP decodes clean and
-         * still meets CBR targets.  OPENIMP_T40_HEVC_HWRC=1 re-enables it. */
-        enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 0);
+        /* T40: on by default like H.264 (vendor parity).  The earlier
+         * cu_qp_delta errors came from PPS flags the T40 core ignores
+         * (avpu_t40_hevc_tools()), not from HWRC; OPENIMP_T40_HEVC_HWRC=0
+         * falls back to picture-level QP. */
+        enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 1);
 #else
         enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 1);
 #endif
@@ -2939,6 +2939,29 @@ static int avpu_t31_hevc_tmvp_enabled(void)
     return enabled;
 }
 
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+/* The T40 HEVC core always codes transform_skip_flag and cu_qp_delta_abs,
+ * whatever cmd[9] says: with either PPS flag clear every picture breaks
+ * after the first CTBs (ffmpeg decodes garbage, mostly without an error;
+ * VA-API fails).  The vendor T40 PPS sets both, also for FixQP, and its VUI
+ * signals full range.  OPENIMP_T40_HEVC_TOOLS (bit mask, default 13):
+ * 1 transform skip (PPS + cmd[9] bit 15), 2 scaling lists (SPS default
+ * lists + cmd[9] bits 31/30; breaks the picture, test only), 4 PPS
+ * cu_qp_delta always on, 8 VUI full range. */
+static uint32_t avpu_t40_hevc_tools(void)
+{
+    static int tools = -1;
+
+    if (tools < 0) {
+        const char *value = getenv("OPENIMP_T40_HEVC_TOOLS");
+
+        tools = value && value[0] ? (int)(strtoul(value, NULL, 0) & 0xfu)
+                                  : 13;
+    }
+    return (uint32_t)tools;
+}
+#endif
+
 static void avpu_t31_hevc_config(const ALAvpuContext *ctx,
                                  OpenIMPT31HevcConfig *config)
 {
@@ -2956,6 +2979,17 @@ static void avpu_t31_hevc_config(const ALAvpuContext *ctx,
     /* Always present, so either uCabacInitIdc can be signalled. */
     config->cabac_init_present = 1u;
     config->tmvp_enabled = avpu_t31_hevc_tmvp_enabled() ? 1u : 0u;
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+    {
+        uint32_t tools = avpu_t40_hevc_tools();
+
+        config->transform_skip_enabled = (tools & 1u) ? 1u : 0u;
+        config->scaling_list_enabled = (tools & 2u) ? 1u : 0u;
+        if (tools & 4u)
+            config->cu_qp_delta_enabled = 1u;
+        config->video_full_range = (tools & 8u) ? 1u : 0u;
+    }
+#endif
 }
 
 /* VPS/SPS/PPS (IDR) and the slice segment header; returns the byte count
@@ -3142,7 +3176,9 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     uint32_t ctb_count = ctb_w * ctb_h;
     uint32_t picture_number =
         is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
-    int hwrc = ctx->hevc_pps_cu_qp_delta != 0u;
+    int hwrc = ctx->hevc_pps_cu_qp_delta != 0u &&
+               avpu_t31_hevc_hwrc_enabled(ctx);
+    uint32_t tools = avpu_t40_hevc_tools();
     uint32_t l2_rows;
 
     if (!ctb_w || !ctb_h)
@@ -3169,6 +3205,10 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     cmd[0x09] = (cmd[0x09] & 0x3fff7fffu) | 0x00040000u;
     if (!hwrc)
         cmd[0x09] &= ~0x00010000u;
+    if (tools & 1u)
+        cmd[0x09] |= 0x00008000u;
+    if (tools & 2u)
+        cmd[0x09] |= 0xc0000000u;
 
     /* high half: picture area in 1 KiB units (AVC template); low half:
      * PCM bytes of one 32x32 CTB. */
@@ -11923,6 +11963,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
          * rate-control change that switches the hardware RC on or off
          * needs a new IDR with a matching PPS. */
         if (ctx->codec_hevc && ctx->reference_valid &&
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+            !(avpu_t40_hevc_tools() & 4u) &&
+#endif
             (uint32_t)avpu_t31_hevc_hwrc_enabled(ctx) !=
                 ctx->hevc_pps_cu_qp_delta)
             force_idr = 1;
