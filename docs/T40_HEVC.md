@@ -1,6 +1,6 @@
 # T40 HEVC (H.265) on the AVPU
 
-Status: implemented and host/cross-build tested; **device test pending**.
+Status: device-tested on a T40XP (Eufy S350, SC830AI, vendor kernel driver), 2026-10-10.
 
 ## What blocked it
 
@@ -42,6 +42,32 @@ Addresses, pitches, map sizes and the MV offset are the AVC ones.
 Vendor reference streams (same settings) decode clean with
 `ffmpeg -err_detect aggressive`: ch0 190 frames, ch1 168 frames,
 about 4.7 and 1.05 Mbit/s.
+
+## Hardware rate control (HWRC) is off by default
+
+With HWRC on (cmd[9] bit 16, cmd[0x14..0x18], PPS `cu_qp_delta_enabled_flag`)
+the stream desynchronises ffmpeg in some P pictures ("cu_qp_delta outside
+the valid range", 3..26 per 10 s).  Command words, EP1 and EP2 match the
+vendor dump; the remaining differences are the EP3 row targets, cmd[9]
+bits 31/30/15 (vendor: scaling lists and transform skip) and the QP range.
+Toggling bit 15 or TMVP and the EP2 placement did not change it; with HWRC
+off every stream decodes clean.  OpenIMP therefore uses picture-level QP;
+`OPENIMP_T40_HEVC_HWRC=1` re-enables HWRC for tests.  EP2 sits behind a
+CTB-row WPP table, as in the vendor lists.
+
+## Device results (OpenIMP, 13a3657 + HWRC off)
+
+| run | ch0 3840x2160 | ch1 1280x720 |
+|-----|---------------|--------------|
+| H.265 CBR 4000/1000 kbit/s, 10 s | 164 frames, 322 kbit/s, clean | 190 frames, 121 kbit/s, clean |
+| H.265 CBR 16000/4000 kbit/s, 10 s | 165 frames, 4319 kbit/s, one `CABAC_MAX_BIN` message | 189 frames, 1084 kbit/s, clean |
+| H.264 CBR 4000/1000 kbit/s, 5 s | 99 frames, 1510 kbit/s, clean | 100 frames, 372 kbit/s, clean |
+| vendor H.265 4000/1000 | 190 frames, about 4.7 Mbit/s | 168 frames, about 1.05 Mbit/s |
+
+Clean = `ffmpeg -err_detect aggressive` without messages; VA-API HEVC
+decodes all streams.  The low bitrates are the open-loop picture QP of
+T40; the frame-level rate control of `claude/t40-rc` acts on the same
+picture QP and covers HEVC as well.
 
 ## Implementation
 

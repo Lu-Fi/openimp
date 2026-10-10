@@ -2886,7 +2886,15 @@ static int avpu_t31_hevc_hwrc_enabled(const ALAvpuContext *ctx)
     static int enabled = -1;
 
     if (enabled < 0)
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+        /* T40: off by default.  With the vendor-identical HWRC words the
+         * core's cu_qp_delta coding desynchronises ffmpeg in some P
+         * pictures (docs/T40_HEVC.md); picture-level QP decodes clean and
+         * still meets CBR targets.  OPENIMP_T40_HEVC_HWRC=1 re-enables it. */
+        enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 0);
+#else
         enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 1);
+#endif
     return enabled && ctx && ctx->rc_mode != HW_RC_MODE_FIXQP;
 }
 
@@ -3226,6 +3234,12 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
         memset(&cmd[0x14], 0, 5u * sizeof(uint32_t));
         cmd[0x2d] = 0u;
     }
+
+    /* EP2 behind the CTB-row WPP table (vendor: 4K EP1 + 0x6580, 720p
+     * EP1 + 0x6480); avpu_t40_init_ep2() seeds the same place. */
+    if (ctx->interm_buf.phy_addr)
+        cmd[0x23] = ctx->interm_buf.phy_addr + ctx->interm_ep1_size +
+                    ctx->interm_wpp_size;
 
     /* The HEVC core writes the final CABAC bitstream: no inline Enc2. */
     memset(&cmd[0x19], 0, 7u * sizeof(uint32_t));
@@ -11257,6 +11271,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                             enc->avpu.interm_buf.dmabuf_fd = -1;
                             enc->avpu.interm_ep1_size = avpu_get_enc1_ep1_size();
                             enc->avpu.interm_wpp_size = avpu_get_enc1_wpp_size(width, height);
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+                            /* T40 HEVC: one WPP entry per 32-line CTB row;
+                             * the vendor places EP2 right behind it
+                             * (cmd[0x23] = EP1 + 0x6400 + align128(4 * rows)). */
+                            if (enc->avpu.codec_hevc)
+                                enc->avpu.interm_wpp_size = avpu_align_up_u32(
+                                    ((height + 31u) >> 5) * 4u, 128u);
+#endif
                             enc->avpu.interm_ep2_size = avpu_get_enc1_ep2_size(width, height);
 #if defined(PLATFORM_T41)
                             if (!enc->avpu.codec_hevc &&
