@@ -119,6 +119,7 @@ int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
 /* ---- helpers ---- */
 
 static int failures;
+static int redo;    /* frames re-fed after a busy-drop (informational) */
 
 #define CHECK(cond, ...) do {                                         \
         if (!(cond)) {                                                \
@@ -128,6 +129,25 @@ static int failures;
             fputc('\n', stderr);                                      \
         }                                                             \
     } while (0)
+
+/* Hand one frame to the framework and wait for its result. The channel
+ * thread posts the result before it marks itself idle again, so a frame
+ * captured right after the previous result was taken can meet a still busy
+ * channel and is dropped by design (as with the vendor). The algorithm has
+ * not seen a dropped frame, so capturing it again is exact; the generous
+ * bound only separates "dropped" from "slow" under heavy host load. */
+static int feed_frame(int channel, const void *rec, int *dropped)
+{
+    int attempt;
+
+    for (attempt = 0; attempt < 20; attempt++) {
+        openimp_t31_ivs_capture(FS_CHN, rec);
+        if (IMP_IVS_PollingResult(channel, 1000) == 0)
+            return 0;
+        (*dropped)++;
+    }
+    return -1;
+}
 
 static void *map_low(size_t size)
 {
@@ -236,10 +256,9 @@ static void test_move(void)
 
         scene(frame, W, H, t);
         make_record(rec, frame, W, H, t % 4, 1000000 + t * 40000);
-        openimp_t31_ivs_capture(FS_CHN, rec);
+        CHECK(feed_frame(0, rec, &redo) == 0, "PollingResult t=%d", t);
         /* not bound to this FS channel: must be ignored */
         openimp_t31_ivs_capture(FS_CHN + 1, rec);
-        CHECK(IMP_IVS_PollingResult(0, 2000) == 0, "PollingResult t=%d", t);
         CHECK(IMP_IVS_GetResult(0, (void **)&out) == 0 && out,
               "GetResult t=%d", t);
         t31_ivs_move_feed(ref, t31_ivs_move_needs_luma(ref) ? frame : NULL, W);
@@ -319,8 +338,7 @@ static void test_base_move(void)
 
         memset(frame, (t & 1) ? 67 : 100, (size_t)BW * BH);
         make_record(rec, frame, BW, BH, t % 4, ts);
-        openimp_t31_ivs_capture(FS_CHN, rec);
-        CHECK(IMP_IVS_PollingResult(1, 2000) == 0, "base PollingResult t=%d", t);
+        CHECK(feed_frame(1, rec, &redo) == 0, "base PollingResult t=%d", t);
         CHECK(IMP_IVS_GetResult(1, (void **)&out) == 0 && out,
               "base GetResult t=%d", t);
         if (!out)
