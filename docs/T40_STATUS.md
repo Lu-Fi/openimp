@@ -69,7 +69,32 @@ maintained `libaudioProcess-neo`; logging uses the target's
 - AE/AWB and image-quality processing run in the stock ISP firmware using the
   selected sensor tuning blob. OpenIMP forwards tuning requests without
   duplicating sensor policy.
-- P4 surfaces not used by the active Raptor gate return `ENOTSUP`.
+- Still `ENOTSUP`: DMIC (21 calls), the ISP-drawn OSD (`IMP_ISP_Tuning_CreateOsdRgn`,
+  `DestroyOsdRgn`, `SetOsdRgnAttr`, `ShowOsdRgn`) and `IMP_ISP_Tuning_Get/SetMask`
+  (the vendor library keeps a 288-byte copy per input and converts the colour with
+  `IMP_ISP_Tuning_DumpMask`; the payload the T40 kernel expects is not settled).
+  `OSD_REG_ISP_*` regions are accepted and not drawn.
+
+## T40 on the T41 code paths (host tests only, no camera yet)
+
+Compared with the vendor libimp 1.3.1 disassembly (the camera runs 1.3.0, which
+is not available here; its OSD attribute is also larger than the 1.3.1 header):
+
+- **OSD** (`IMP_OSD_*`, 18 calls): the IPU OSD of `src/t23/openimp_t23_osd.c`.
+  The vendor `ipu_osd`, `ipu_init`, `_ipu_set_osdx_para` and `osd_update` are
+  instruction-identical to T41 1.2.6.  `IMPOSDRgnAttr` is 1772 bytes in the
+  1.3.1/en header and 1948 in the vendor libimp 1.3.1 (`colType[64]`); only the
+  shared 1772-byte prefix is read and written, mosaic regions are not drawn.
+- **IVS** (`IMP_IVS_*`, 18 calls) and `IMP_FrameSource_SnapFrame`: the T31/T41
+  framework; the vendor IVS code is the T41 code, the T40 frame record has the
+  pool at 0x20 instead of `direct_phyAddr`.
+- **ISP tuning**: `GetSensorAttr` (0x33), `Get/SetGammaAttr` (0x25),
+  `Get/SetModuleControl` (0x72), `Get/SetAutoZoom` (0x77), `Get/SetWdrOutputMode`
+  (0x54), `Get/SetModule_Ratio` (0xa4), `Get/SetAeScenceAttr` (0x24),
+  `Awb_Get/SetRgbCoefft` (0x9b, T41: 0x98), `IMP_ISP_SetScalerLv` (0xa6) and
+  `Get/SetCCMAttr` (0x80, 40-byte payload with the vendor sign/13-bit
+  conversion).  Control numbers are the same as on T41; the tuning ioctl is
+  0xc0105436 on T40 (T41: 0xc0105435).
 
 ## Build
 

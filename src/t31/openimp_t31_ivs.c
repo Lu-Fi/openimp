@@ -161,7 +161,7 @@ struct t31_move_priv {
     struct t31_move_v2 v2;
 };
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
 extern int IMP_ISP_Tuning_GetISPRunningMode(int num, int *mode)
     __attribute__((weak));
 #else
@@ -225,7 +225,7 @@ static void v2_poll_isp(struct t31_move_v2 *v, int64_t now)
         return;
     if ((v->isp_ok & 1) && IMP_ISP_Tuning_GetISPRunningMode) {
         int mode = 0;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
         if (IMP_ISP_Tuning_GetISPRunningMode(0, &mode) == 0)
 #else
         if (IMP_ISP_Tuning_GetISPRunningMode(&mode) == 0)
@@ -234,7 +234,7 @@ static void v2_poll_isp(struct t31_move_v2 *v, int64_t now)
         else
             v->isp_ok &= ~1;
     }
-#if !defined(PLATFORM_T41)
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T40)
     if ((v->isp_ok & 2) && IMP_ISP_Tuning_GetTotalGain) {
         uint32_t gain = 0;
 

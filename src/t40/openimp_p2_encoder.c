@@ -37,6 +37,9 @@
 #if defined(PLATFORM_T23)
 #include "t30/helix_roi.h"
 #endif
+#if defined(PLATFORM_T40)
+#include "dma_alloc.h"
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 #include "t23/openimp_t23_persist.h"
 #endif
@@ -69,7 +72,7 @@
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_osd.h"
 #include "t23/openimp_t23_encoder.h"
-#elif defined(PLATFORM_T41)
+#elif defined(PLATFORM_T41) || defined(PLATFORM_T40)
 #include "t23/openimp_t23_osd.h"
 #endif
 #if defined(PLATFORM_T30)
@@ -195,6 +198,8 @@ typedef struct {
     uint32_t virtual_address;
 #if defined(PLATFORM_T41)
     uint32_t direct_physical_address;
+#endif
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     void *pool;
 #endif
     int64_t timestamp;
@@ -207,6 +212,14 @@ _Static_assert(offsetof(P2SyntheticFrame, pool) == 0x24,
                "T41 synthetic frame pool ABI mismatch");
 _Static_assert(offsetof(P2SyntheticFrame, timestamp) == 0x28,
                "T41 synthetic frame timestamp ABI mismatch");
+#elif defined(PLATFORM_T40)
+/* vendor T40 1.3.1 IMPFrameInfo: pool at 0x20, timestamp at 0x28 (the frame
+ * pointer the encoder gets from FrameSource is cast to this type, so the
+ * timestamp read below must sit where the real frame has it) */
+_Static_assert(offsetof(P2SyntheticFrame, pool) == 0x20,
+               "T40 synthetic frame pool ABI mismatch");
+_Static_assert(offsetof(P2SyntheticFrame, timestamp) == 0x28,
+               "T40 synthetic frame timestamp ABI mismatch");
 #else
 _Static_assert(offsetof(P2SyntheticFrame, timestamp) == 0x20,
                "synthetic frame timestamp ABI mismatch");
@@ -676,7 +689,7 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
     int channel;
 #if defined(PLATFORM_T41)
     int source_sync = 1;
-#elif defined(PLATFORM_T31) || defined(PLATFORM_T30)
+#elif defined(PLATFORM_T31) || defined(PLATFORM_T30) || defined(PLATFORM_T40)
     int source_invalidated = 0;
 #endif
 #if defined(P2_JPEG_LEND)
@@ -780,7 +793,7 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
                 jpeg->jpeg_frame_capacity = source->size;
             }
         }
-#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30) || defined(PLATFORM_T40)
         /* The CPU reads what ISP DMA and the IPU OSD blend wrote: drop
          * stale cached lines once per frame before the first copy (the
          * encoder's OSD pass leaves this to the CPU readers, see
@@ -2646,9 +2659,11 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                 goto done;
             osd_withhold_jpeg = 1;
         }
-#elif defined(PLATFORM_T23) || defined(PLATFORM_T41)
+#elif defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T40)
         /* OEM T23 osd_update: IPU covers/pictures, CPU lines and mosaics
-         * (T41: the same IPU and OSD ABI family, see openimp_t23_osd.c) */
+         * (T41/T40: the same IPU and OSD ABI family, see openimp_t23_osd.c;
+         * the vendor T40 1.3.1 ipu_osd/_ipu_set_osdx_para/osd_update are the
+         * T41 ones) */
         if (ch->osd_group >= 0)
             openimp_t23_osd_apply(ch->osd_group, frame);
 #endif
@@ -3829,6 +3844,30 @@ int IMP_Encoder_SetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
     pthread_mutex_unlock(&ch->lock);
     return ret == 0 ? 0 : -1;
 }
+
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnMapRoi (docs/ROI.md): AVC only, the
+ * map is copied.  The same switch as SetChnRoiAttr guards it. */
+extern int AL_Codec_Encode_SetMapRoi(void *codec, const void *roi_attr);
+
+#if defined(PLATFORM_T41)
+int IMP_Encoder_SetChnMapRoi(int channel, IMPEncoderMapRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    int ret;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_SetMapRoi(ch->codec, attr);
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+#endif
 
 int IMP_Encoder_GetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
 {

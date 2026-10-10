@@ -23,6 +23,7 @@
 #include <imp/imp_encoder.h>
 #include <imp/imp_system.h>
 #include "codec.h"
+#include "codec_frame_ts.h"
 #include "fifo.h"
 #include "hw_encoder.h"
 
@@ -3657,6 +3658,8 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
     ctx->roi_pending = 0;
     for (i = 0; i < 10u; i++)
         any |= ctx->roi_win[i].enable != 0;
+    if (ctx->roi_map && ctx->roi_map_n == mb)
+        any = 1;
     memset(table, 0, 4u * (size_t)mb);
     if (any) {
         AvpuRoiResult res;
@@ -3668,6 +3671,14 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
          * rounds the window size to the nearest block */
         avpu_roi_fill(table, 4u, 8u, cols, rows, ctx->roi_win, 10u, 0u, 0u,
                       0u, 1, &res);
+        /* SetChnMapRoi: the per-block deltas replace the window value */
+        if (ctx->roi_map && ctx->roi_map_n == mb)
+            for (i = 0; i < mb; i++)
+                if (ctx->roi_map[i])
+                    table[4u * i] = (uint8_t)ctx->roi_map[i];
+        /* the map bypassed the clamp in avpu_roi_fill: neighbours -25/+25
+         * would be mb_qp_delta 50, invalid H.264 */
+        avpu_roi_spread_clamp(table, 4u, 8u, mb, &res);
         avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
     }
     ctx->roi_table_on = any;
@@ -8205,6 +8216,67 @@ int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
 #endif
 }
 
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnMapRoi: one byte per 16x16 block of
+ * an AVC picture, low 2 bits the mode (0 none, 1 the block takes `Quality`,
+ * 2 relative: the high 6 bits are a two's complement delta), the deltas
+ * -26..25 ("Absolute_QP" is unsupported in the vendor header).  A NULL map
+ * or size 0 removes the map.  Rides on the experimental T41 ROI table
+ * (OPENIMP_T41_ROI=1, docs/ROI.md): refused without it. */
+typedef struct {
+    uint8_t *map;
+    int mapSize;
+    int mode;
+    int8_t Quality;
+    int32_t reserved;
+} CodecMapRoiAttr;
+
+int AL_Codec_Encode_SetMapRoi(void *codec, const void *roi_attr)
+{
+#if defined(PLATFORM_T41)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const CodecMapRoiAttr *attr = (const CodecMapRoiAttr *)roi_attr;
+    uint32_t cols, rows, mb, i;
+    int8_t *table = NULL;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        !avpu_t41_roi_experimental())
+        return -1;
+    cols = (enc->avpu.enc_w + 15u) >> 4;
+    rows = (enc->avpu.enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (attr->map != NULL && attr->mapSize > 0) {
+        if ((uint32_t)attr->mapSize != mb || attr->mode != 0 ||
+            attr->Quality < -26 || attr->Quality > 25)
+            return -1;
+        table = calloc(mb, 1);
+        if (!table)
+            return -1;
+        for (i = 0; i < mb; i++) {
+            int d;
+
+            if (avpu_roi_map_delta(attr->map[i], attr->Quality, &d) != 0) {
+                free(table);
+                return -1;
+            }
+            table[i] = (int8_t)d;
+        }
+    } else if (attr->mapSize != 0 && attr->map == NULL) {
+        return -1;
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    free(enc->avpu.roi_map);
+    enc->avpu.roi_map = table;
+    enc->avpu.roi_map_n = table ? mb : 0u;
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)roi_attr;
+    return -1;
+#endif
+}
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 /* The Helix rate-control fields of IMPEncoderAttrRcMode that HWEncoderParams
  * has no core field for, taken as the application gave them (the encoders
@@ -9337,6 +9409,9 @@ static int al_codec_encode_destroy_impl(void *codec) {
         avpu_release_dma_buf(&enc->avpu.ref_buf);
         avpu_release_dma_buf(&enc->avpu.rec_trace_buf);
         avpu_release_dma_buf(&enc->avpu.ref_trace_buf);
+        free(enc->avpu.roi_map);
+        enc->avpu.roi_map = NULL;
+        enc->avpu.roi_map_n = 0u;
         codec_startup_trace(
             "openimp/codec teardown: dma buffers released\n");
 #if defined(PLATFORM_T41)
@@ -9529,6 +9604,23 @@ static int t40_encode_gray_jpeg(uint32_t width, uint32_t height,
     stream->frame_type = HW_FRAME_TYPE_I;
     stream->slice_type = 0u;
     return 0;
+}
+
+/* T40 snapshot channels: the AVPU JPEG path is not recovered, so encode the
+ * captured NV12 frame with the software baseline encoder (the CPU reads what
+ * ISP DMA wrote, so drop stale cache lines first).  The grey image remains the
+ * fallback when the software encoder cannot take the frame. */
+static int t40_encode_jpeg(AL_CodecEncode *enc, HWFrameBuffer *frame,
+                           HWStreamBuffer *stream)
+{
+    if (frame->phys_addr && frame->virt_addr && frame->size)
+        (void)DMA_RmemFlushCache((void *)(uintptr_t)frame->virt_addr,
+                                 frame->size, 2 /* invalidate */);
+    if (HW_Encoder_Encode_NV12_JPEG(frame, stream,
+                                    codec_jpeg_quality(enc)) == 0)
+        return 0;
+    return t40_encode_gray_jpeg(frame->width, frame->height,
+                                frame->timestamp, stream);
 }
 #endif
 
@@ -10408,12 +10500,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
      * of replacing it with jittery encoder-start wall time.  T41 releases
      * the FrameSource descriptor immediately after submission, so everything
      * needed at AVPU completion must be copied before Process returns. */
-    uint64_t timestamp = 0;
-#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
-    memcpy(&timestamp, (const uint8_t *)frame + 0x20, sizeof(timestamp));
-#elif defined(PLATFORM_T41) || defined(PLATFORM_T23)
-    memcpy(&timestamp, (const uint8_t *)frame + 0x28, sizeof(timestamp));
-#endif
+    uint64_t timestamp = codec_frame_capture_timestamp(frame);
 
 #if defined(PLATFORM_T30)
     if (codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_AVC) {
@@ -12306,7 +12393,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         if (
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
             (codec_type == IMP_ENC_TYPE_JPEG
-                ? t40_encode_gray_jpeg(width, height, timestamp, hw_stream)
+                ? t40_encode_jpeg(enc, &hw_frame, hw_stream)
                 : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
 #elif defined(PLATFORM_T31)
             (codec_type == IMP_ENC_TYPE_JPEG

@@ -1,6 +1,8 @@
 /* P3 T40 control plane: ISP tuning and direct system-register access. */
 
+#include <stddef.h>
 #include <errno.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -36,9 +38,18 @@
 #define TISP_CID_SHARPNESS 0x08000093
 #define TISP_CID_SATURATION 0x08000094
 #define TISP_CID_CONTRAST 0x08000095
+/* The same control numbers in the vendor T40 1.3.1 and T41 1.2.x libimp
+ * (checked in both disassemblies); only the ioctl number differs. */
+#define TISP_CID_AE_SCENCE 0x08000024
+#define TISP_CID_GAMMA 0x08000025
+#define TISP_CID_WDR_OUTPUT_MODE 0x08000054
+#define TISP_CID_MODULE_CONTROL 0x08000072
+#define TISP_CID_AUTOZOOM 0x08000077
+#define TISP_CID_CCM 0x08000080
+#define TISP_CID_SCALER_LV 0x080000a6
+#define TISP_CID_MODULE_RATIO 0x080000a4
 #if defined(PLATFORM_T41)
 #define TISP_CID_MASK_BLOCK 0x08000074
-#define TISP_CID_SCALER_LV 0x080000a6
 #define TISP_CID_AWB_RGB_COEFFT 0x08000098
 #define TISP_CID_ANTIFLICKER 0x08000026
 #endif
@@ -97,14 +108,197 @@ static int p3_tuning_scalar(IMPVI_NUM num, int32_t direction,
     return result;
 }
 
-#if defined(PLATFORM_T41)
-/* Vendor T41 1.2.0: the pointer tuning ioctl, get, control 0x8000033,
- * filling {hts, vts, fps, width, height}. */
+/* Vendor T41 1.2.0 and T40 1.3.1 (libimp disassembly of both): the pointer
+ * tuning ioctl, get, control 0x8000033, filling {hts, vts, fps, width,
+ * height}; only the ioctl number differs (TISP_VIDIOC_DEFAULT_TUNING). */
 int32_t IMP_ISP_Tuning_GetSensorAttr(IMPVI_NUM num, IMPISPSENSORAttr *attr)
 {
     return p3_tuning_pointer(num, 1, 0x8000033, attr);
 }
+
+/* ---- vendor ISPDevice-fd entries (T40 1.3.1 and T41 1.2.6 use the same
+ * ioctl numbers; the stock driver owns the hardware access) ---- */
+extern int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
+extern int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
+
+#define TISP_IOCTL_SET_SENSOR_REGISTER 0xc040540dU
+#define TISP_IOCTL_GET_SENSOR_REGISTER 0x8040540eU
+#define TISP_IOCTL_SET_WDR_ENABLE      0x80045413U
+#define TISP_IOCTL_SET_WDR_DISABLE     0x80045414U
+#define TISP_IOCTL_SET_FRAME_DROP      0xc004542cU
+#define TISP_IOCTL_GET_FRAME_DROP      0xc004542dU
+#define TISP_CID_AF_WEIGHT             0x08000032
+
+/* Vendor T41 1.2.6 request (64 bytes, IMP_ISP_Set/GetSensorRegister): name[32],
+ * vinum at 32, bus type (1: I2C) at 36, 64-bit register at 48, 64-bit value
+ * at 56.  SPI sensors are refused as the vendor does. */
+struct p3_sensor_reg {
+    char name[32];
+    uint32_t vinum;
+    int32_t type;
+    uint32_t unused[2];
+    uint32_t reg;
+    uint32_t reg_hi;
+    uint32_t value;
+    uint32_t value_hi;
+};
+_Static_assert(sizeof(struct p3_sensor_reg) == 64, "sensor register request is 64 bytes");
+_Static_assert(offsetof(struct p3_sensor_reg, vinum) == 32, "vinum at 32");
+_Static_assert(offsetof(struct p3_sensor_reg, type) == 36, "bus type at 36");
+_Static_assert(offsetof(struct p3_sensor_reg, reg) == 48, "reg at 48");
+_Static_assert(offsetof(struct p3_sensor_reg, value) == 56, "value at 56");
+
+/* Vendor frame drop request (40 bytes): channel word, then 3 x {enable,
+ * lsize, fmark}; the driver reads and writes back all 40 bytes. */
+struct p3_frame_drop_req {
+    uint32_t ch;
+    IMPISPFrameDropAttr attr;
+};
+_Static_assert(sizeof(IMPISPFrameDropAttr) == 36, "attr is 3 x 12 bytes");
+_Static_assert(sizeof(struct p3_frame_drop_req) == 40, "frame drop request is 40 bytes");
+
+static int p3_sensor_register(int set, uint32_t addr, uint32_t *value)
+{
+    struct p3_sensor_reg req;
+    int result;
+
+    memset(&req, 0, sizeof(req));
+    if (!value || OpenIMP_P1_GetSensorName(req.name, &req.type) != 0 ||
+        req.type != 1)
+        return -1;
+    req.vinum = 0;
+    req.reg = addr;
+    if (set)
+        req.value = *value;
+    result = OpenIMP_P1_IspIOCtl(set ? TISP_IOCTL_SET_SENSOR_REGISTER :
+                                 TISP_IOCTL_GET_SENSOR_REGISTER, &req);
+    if (result == 0 && !set)
+        *value = req.value;
+    return result;
+}
+
+#if defined(PLATFORM_T41)
+/* T41 1.2.6: one {addr, value} structure */
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(1, reg->addr, &reg->value);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(0, reg->addr, &reg->value);
+}
+#else
+/* T40 1.3.1: the address and the value by pointer */
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, uint32_t *reg, uint32_t *value)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(1, *reg, value);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, uint32_t *reg, uint32_t *value)
+{
+    if (num != IMPVI_MAIN || !reg)
+        return -1;
+    return p3_sensor_register(0, *reg, value);
+}
 #endif
+
+/* Frame drop: the vendor ioctl number has size 4 in its _IOC field but the
+ * library passes the whole attribute pointer (same as the other T-series
+ * vendor libs, e.g. 0xc00456e6 in docs/re); the driver reads the table.
+ * The sensor request's size word is left 0 as there (not written). */
+/* Vendor: the 3 x {enable, lsize, fmark} table goes to the ISP as is
+ * (lsize 0..31 as the header states). */
+static int p3_frame_drop_valid(const IMPISPFrameDropAttr *attr)
+{
+    unsigned int i;
+
+    for (i = 0; i < 3U; i++)
+        if (attr->fdrop[i].enable >= IMPISP_TUNING_OPS_MODE_BUTT ||
+            attr->fdrop[i].lsize > 31U)
+            return 0;
+    return 1;
+}
+
+int32_t IMP_ISP_SetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct p3_frame_drop_req req;
+
+    if (num != IMPVI_MAIN || !attr || !p3_frame_drop_valid(attr))
+        return -1;
+    memset(&req, 0, sizeof(req));
+    req.ch = (uint32_t)num;
+    req.attr = *attr;
+    return OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_FRAME_DROP, &req);
+}
+
+int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct p3_frame_drop_req req;
+    int result;
+
+    if (num != IMPVI_MAIN || !attr)
+        return -1;
+    memset(&req, 0, sizeof(req));
+    req.ch = (uint32_t)num;
+    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_FRAME_DROP, &req);
+    if (result == 0)
+        *attr = req.attr;
+    return result;
+}
+
+/* Vendor: AE/AWB/AF weights are 15x15 byte tables over the tuning node. */
+int32_t IMP_ISP_Tuning_SetAfWeight(IMPVI_NUM num, IMPISPWeight *af_weight)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_AF_WEIGHT, af_weight);
+}
+
+int32_t IMP_ISP_Tuning_GetAfWeight(IMPVI_NUM num, IMPISPWeight *af_weight)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_AF_WEIGHT, af_weight);
+}
+
+/* Vendor WDR_ENABLE: 1 / 0 switch the ISP's WDR mode by ioctl and the
+ * library remembers the last mode; _GET answers from that memory (no
+ * ioctl).  Any other value is accepted without effect. */
+static IMPISPTuningOpsMode p3_wdr_mode;
+static pthread_mutex_t p3_wdr_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int32_t IMP_ISP_WDR_ENABLE(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    int32_t zero = 0;
+    int result;
+
+    if (num != IMPVI_MAIN || !mode)
+        return -1;
+    if (*mode != IMPISP_TUNING_OPS_MODE_ENABLE &&
+        *mode != IMPISP_TUNING_OPS_MODE_DISABLE)
+        return 0;
+    pthread_mutex_lock(&p3_wdr_lock);
+    result = OpenIMP_P1_IspIOCtl(*mode == IMPISP_TUNING_OPS_MODE_ENABLE ?
+                                 TISP_IOCTL_SET_WDR_ENABLE :
+                                 TISP_IOCTL_SET_WDR_DISABLE, &zero);
+    if (result == 0)
+        p3_wdr_mode = *mode;
+    pthread_mutex_unlock(&p3_wdr_lock);
+    return result;
+}
+
+int32_t IMP_ISP_WDR_ENABLE_GET(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    if (num != IMPVI_MAIN || !mode)
+        return -1;
+    pthread_mutex_lock(&p3_wdr_lock);
+    *mode = p3_wdr_mode;
+    pthread_mutex_unlock(&p3_wdr_lock);
+    return 0;
+}
 
 int32_t IMP_ISP_Tuning_GetAeExprInfo(IMPVI_NUM num,
                                      IMPISPAEExprInfo *exprinfo)
@@ -375,14 +569,7 @@ int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
  * ratios, CCM, gamma, CSC, module bypass, auto zoom and WDR output mode,
  * so callers see the failure instead of an acknowledged no-op.
  */
-#define TISP_CID_AE_SCENCE 0x08000024
-#define TISP_CID_GAMMA 0x08000025
-#define TISP_CID_WDR_OUTPUT_MODE 0x08000054
-#define TISP_CID_MODULE_CONTROL 0x08000072
-#define TISP_CID_AUTOZOOM 0x08000077
-#define TISP_CID_CCM 0x08000080
 #define TISP_CID_CSC 0x08000096
-#define TISP_CID_MODULE_RATIO 0x080000a4
 
 #define P3_T41_POINTER_PAIR(Name, Type, id)                                   \
     int32_t IMP_ISP_Tuning_Set##Name(IMPVI_NUM num, Type *attr)               \
@@ -589,6 +776,132 @@ int32_t IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
 }
 #endif
 
+#if !defined(PLATFORM_T41)
+/*
+ * T40 1.3.1 (vendor libimp disassembly): the pointer pass-throughs hand the
+ * public structure to the tuning ioctl unchanged.  Control numbers equal the
+ * T41 ones except Awb_Get/SetRgbCoefft (0x9b here, 0x98 on T41).  The vendor
+ * kernel (tx_isp_t40) owns the semantics; the calls fail with its error.
+ */
+#define TISP_CID_AWB_RGB_COEFFT_T40 0x0800009b
+
+#define P3_T40_POINTER_PAIR(Name, Type, id)                                   \
+    int32_t IMP_ISP_Tuning_Set##Name(IMPVI_NUM num, Type *attr)               \
+    {                                                                         \
+        return p3_tuning_pointer(num, 0, (id), attr);                         \
+    }                                                                         \
+    int32_t IMP_ISP_Tuning_Get##Name(IMPVI_NUM num, Type *attr)               \
+    {                                                                         \
+        return p3_tuning_pointer(num, 1, (id), attr);                         \
+    }
+
+P3_T40_POINTER_PAIR(AeScenceAttr, IMPISPAEScenceAttr, TISP_CID_AE_SCENCE)
+P3_T40_POINTER_PAIR(Module_Ratio, IMPISPModuleRatioAttr, TISP_CID_MODULE_RATIO)
+P3_T40_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
+P3_T40_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
+P3_T40_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode,
+                    TISP_CID_WDR_OUTPUT_MODE)
+
+int IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_AWB_RGB_COEFFT_T40, attr);
+}
+
+int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_AWB_RGB_COEFFT_T40, attr);
+}
+
+/* Vendor: the scaler level goes out as the public structure (IMP_ISP_ name
+ * without Tuning_ on T40). */
+int32_t IMP_ISP_SetScalerLv(IMPVI_NUM num, IMPISPScalerLvAttr *attr)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_SCALER_LV, attr);
+}
+
+/* Vendor Set: the curve type must be below IMP_ISP_GAMMA_CURVE_BUTT (4) or
+ * the call fails before the ioctl; the 129-entry table is passed as is. */
+int32_t IMP_ISP_Tuning_SetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *attr)
+{
+    if (!attr || (uint32_t)attr->Curve_type >= (uint32_t)IMP_ISP_GAMMA_CURVE_BUTT)
+        return -1;
+    return p3_tuning_pointer(num, 0, TISP_CID_GAMMA, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *attr)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_GAMMA, attr);
+}
+
+/*
+ * CCM: unlike the pass-throughs the vendor library converts.  The ioctl
+ * payload is 40 bytes {int8 manual, int8 saturation, 2 pad, u32 matrix[9]};
+ * each coefficient is a sign + 13 bit value in 1/1024 steps:
+ *   c < -1e-5:  ((-trunc(|c| * 1024)) & 0x1fff) | 0x2000
+ *   otherwise:   trunc(c * 1024) & 0x1fff
+ * and back (Get): bit 13 set = -((-w) & 0x1fff) / 1024, else w / 1024.
+ * (The vendor Set also rewrites the caller's negative coefficients as
+ * positive values in place; that side effect is not reproduced.)
+ */
+struct p3_ccm_wire {
+    int8_t manual;
+    int8_t saturation;
+    uint8_t pad[2];
+    uint32_t matrix[9];
+};
+
+static uint32_t p3_ccm_encode(float c)
+{
+    if ((double)c < -1e-5) {
+        int32_t m = (int32_t)(-c * 1024.0f);
+
+        return ((uint32_t)(-m) & 0x1fffU) | 0x2000U;
+    }
+    return (uint32_t)(int32_t)(c * 1024.0f) & 0x1fffU;
+}
+
+static float p3_ccm_decode(uint32_t w)
+{
+    if (w & 0x2000U)
+        return -(float)(int32_t)((0U - w) & 0x1fffU) * (1.0f / 1024.0f);
+    return (float)(int32_t)w * (1.0f / 1024.0f);
+}
+
+int32_t IMP_ISP_Tuning_SetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *attr)
+{
+    struct p3_ccm_wire wire;
+    unsigned int i;
+
+    if (!attr)
+        return -1;
+    memset(&wire, 0, sizeof(wire));
+    wire.manual = (int8_t)attr->ManualEn;
+    wire.saturation = (int8_t)attr->SatEn;
+    for (i = 0; i < 9U; i++)
+        wire.matrix[i] = p3_ccm_encode(attr->ColorMatrix[i]);
+    return p3_tuning_pointer(num, 0, TISP_CID_CCM, &wire);
+}
+
+int32_t IMP_ISP_Tuning_GetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *attr)
+{
+    struct p3_ccm_wire wire;
+    unsigned int i;
+    int result;
+
+    if (!attr)
+        return -1;
+    memset(&wire, 0, sizeof(wire));
+    result = p3_tuning_pointer(num, 1, TISP_CID_CCM, &wire);
+    if (result != 0)
+        return result;
+    attr->ManualEn = (IMPISPTuningOpsMode)wire.manual;
+    attr->SatEn = (IMPISPTuningOpsMode)wire.saturation;
+    for (i = 0; i < 9U; i++)
+        attr->ColorMatrix[i] = p3_ccm_decode(wire.matrix[i]);
+    return 0;
+}
+#endif
+
 int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
                                          IMPISPRunningMode *mode)
 {
@@ -709,7 +1022,7 @@ int IMP_ISP_Tuning_SetOsdPoolSize(int size)
     return size >= 0 ? 0 : -1;
 }
 
-#if !defined(PLATFORM_T41)   /* T41: src/t23/openimp_t23_osd.c */
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T40)   /* src/t23/openimp_t23_osd.c */
 int IMP_OSD_SetPoolSize(int size)
 {
     return size >= 0 ? 0 : -1;

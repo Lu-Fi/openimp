@@ -80,6 +80,64 @@ static inline int avpu_roi_get(const uint8_t *table, uint32_t stride,
     return (int)((uint32_t)table[idx * stride] << sh) >> sh;
 }
 
+/* One entry of a vendor T41 IMP_Encoder_SetChnMapRoi map: low 2 bits the
+ * mode (0 none, 1 the block takes `quality`, 2 relative with the high 6
+ * bits as two's complement), clamped to -25..25.  Returns 0 and the delta,
+ * or -1 for mode 3 (undefined). */
+static inline int avpu_roi_map_delta(uint8_t entry, int quality, int *delta)
+{
+    int d = 0;
+
+    switch (entry & 3u) {
+    case 0u:
+        break;
+    case 1u:
+        d = quality;
+        break;
+    case 2u:
+        d = (int)(entry >> 2);
+        if (d > 31)
+            d -= 64;
+        break;
+    default:
+        return -1;
+    }
+    if (d < AVPU_ROI_DELTA_MIN)
+        d = AVPU_ROI_DELTA_MIN;
+    else if (d > AVPU_ROI_DELTA_MAX)
+        d = AVPU_ROI_DELTA_MAX;
+    *delta = d;
+    return 0;
+}
+
+/* Limit the highest entry to lowest + 25 (uncovered macroblocks are 0):
+ * H.264 mb_qp_delta between neighbours must stay within +-25.  Run it
+ * again after anything else wrote entries (SetChnMapRoi). */
+static inline void avpu_roi_spread_clamp(uint8_t *table, uint32_t stride,
+                                         unsigned int bits, uint32_t mb,
+                                         AvpuRoiResult *res)
+{
+    uint32_t emask = (1u << bits) - 1u, i;
+    int amin = 0, amax = 0;
+
+    for (i = 0; i < mb; i++) {
+        int v = avpu_roi_get(table, stride, i, bits);
+
+        if (v < amin)
+            amin = v;
+        if (v > amax)
+            amax = v;
+    }
+    if (amax - amin > AVPU_ROI_SPREAD_MAX) {
+        int cap = amin + AVPU_ROI_SPREAD_MAX;
+
+        res->clamped |= AVPU_ROI_CLAMP_SPREAD;
+        for (i = 0; i < mb; i++)
+            if (avpu_roi_get(table, stride, i, bits) > cap)
+                table[i * stride] = (uint8_t)((uint32_t)cap & emask);
+    }
+}
+
 /* Fill cols*rows entries (entry i at table[i * stride], stride 1 for T31,
  * 4 for the T41 byte 0) from the windows.  bits: width of the two's
  * complement entry (6 for T31, 8 for T41).  A later window wins on overlap.
@@ -93,7 +151,7 @@ static inline void avpu_roi_fill(uint8_t *table, uint32_t stride,
 {
     uint32_t mb = cols * rows, i, y, x, n;
     uint32_t emask = (1u << bits) - 1u;
-    int lo, hi, amin = 0, amax = 0;
+    int lo, hi;
 
     res->req_min = res->req_max = 0;
     res->clamped = 0;
@@ -137,23 +195,7 @@ static inline void avpu_roi_fill(uint8_t *table, uint32_t stride,
             for (x = x0; x < x1 && x < cols; x++)
                 table[(y * cols + x) * stride] = (uint8_t)((uint32_t)d & emask);
     }
-    /* spread (uncovered macroblocks are 0) */
-    for (i = 0; i < mb; i++) {
-        int v = avpu_roi_get(table, stride, i, bits);
-
-        if (v < amin)
-            amin = v;
-        if (v > amax)
-            amax = v;
-    }
-    if (amax - amin > AVPU_ROI_SPREAD_MAX) {
-        int cap = amin + AVPU_ROI_SPREAD_MAX;
-
-        res->clamped |= AVPU_ROI_CLAMP_SPREAD;
-        for (i = 0; i < mb; i++)
-            if (avpu_roi_get(table, stride, i, bits) > cap)
-                table[i * stride] = (uint8_t)((uint32_t)cap & emask);
-    }
+    avpu_roi_spread_clamp(table, stride, bits, mb, res);
 }
 
 #endif
