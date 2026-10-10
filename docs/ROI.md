@@ -4,7 +4,7 @@
 |---|---|---|
 | T10/T20 | `IMP_Encoder_SetChnROI` (8 regions, pixel corners) | works, see `T1X_ROI_CHROMA.md` |
 | T21 | the same | works by default since this branch (beyond vendor), device-tested |
-| T23 | the same, passed to the vendor i264e (param 2) | code unchanged, not tested (below) |
+| T23 | the same; native Helix encoder (default backend) programs it like T21, the OEM worker gets it through the bridge | works by default, device-tested (below) |
 | T40/T41 | `IMP_Encoder_Set/GetChnRoiAttr` (10 windows, delta QP) | implemented, **experimental, off by default**; the missing enable bit is now set (below), not yet device-tested |
 | T31 | none in the vendor library; OpenIMP: `IMP_Encoder_Set/GetChnRoiAttr` (T41 API) | works by default (beyond vendor), device-tested; QP clamped to valid H.264 (below) |
 
@@ -147,10 +147,61 @@ table is rewritten when the picture QP changes and the clamp depends on it
 picture QP is the one of the last command, so the clamp can be one picture
 late. Host test: `tests/t31/roi_clamp_test.c` (fuzz of 20000 random window
 sets, every table is walked like the encoder and checked against -26..25).
-T23 passes the regions to the vendor i264e unchanged (not tested).
+T23 (native Helix) uses the same `Helix_H264_RoiSanitize` as T21.
 
-## T23 (code only)
+## T23 (native Helix, branch `claude/t23-roi`)
 
-Untested; on the Jooan: `roitest_t23` (tools/roitest) with a region, FixQP
-and CBR, check the stream with a decoder, 8 regions, live change, region at the
-picture edge, H.265.
+Vendor libimp 1.3.0 (uclibc) does program the regions; the hardware has them:
+
+- `i264e_reconfig_roi_set` (0x3699c) stores the 7-byte entry at
+  i264e+10372+7*index and sets reconfig flag 0x4 (i264e+9828);
+- `i264e_reconfig` (0x35e44) copies the 56-byte table to the frame context
+  (`*(i264e+15832)`) +12 and clears the flag;
+- `i264e_icodec_enc` (0x42a2c) hands that table to the platform encoder: its
+  parameter block is frame+2768 and frame+3756 = parameter+988 = &frame[12];
+  (with i264e parameter +468 set it zeroes the table first);
+- `hwicodec_pf_h264e_t21_enc` (0x29468) copies parameter+988 to slice +752,
+  `H264E_T21_SliceInit` (0x25d80..0x25fd0) writes 0x40044..0x40068.
+
+So on T23 this is not a hardware no-op (unlike the T21 1.0.33 libimp). The
+native backend (`T23_DEFAULT_ENCODER=native`, the default) builds the T21
+command list, which already emits 0x40044..0x40068 (zero so far). OpenIMP now
+passes `IMP_Encoder_SetChnROI` entries to the native encoder per picture
+(`AL_Codec_Encode_SetRoi` -> `OpenIMP_T30_HelixSetRoi`), clamped by
+`Helix_H264_RoiSanitize` exactly as on T21; the worker backend still gets them
+through the bridge. With no region set the command list is unchanged
+(`make -C tests/t23 check`: same OEM register order and digest).
+`OPENIMP_T23_ROI=0` switches the programming off. `OPENIMP_DEBUG_ROI` works on
+T23 too.
+
+Device run 2026-10-10 (T23 Tapo, sc2336p, 1920x1080, `tools/roitest`, dark
+room, maximum gain, very noisy picture; window 640x384 at (640,352) = 12 % of
+the picture; 4 s phases at 10 fps):
+
+| FixQP 30 phase | kbit/s |
+|---|---|
+| no ROI | 63247 |
+| delta -15 | 67440 |
+| delta +20 | 58176 |
+| absolute 51 (clamped to slice QP +13) | 50250 |
+| delta -25 | 71971 |
+| absolute 10 (clamped to slice QP -12) | 67460 |
+| delta +20 without IDR | 61645 |
+| off | 64825 |
+
+CBR 1000 kbit/s (QP 15..45, not reachable in that noise): delta -15 16380,
+delta +20 10068, off 11160 kbit/s. Bit rate moves in the expected direction
+in every phase, no Helix failure, 0 oops. The base stream is valid
+(VA-API 0 errors, `ffmpeg -err_detect aggressive` clean). Second run (same day, one roitest per phase, 1080p, 5 fps, window 320x160
+at (160,96)): the QP map shows the window in every phase (delta -15/-25 and
+absolute 10 give slice QP -12, delta +20 and absolute 51 give +13, the T21
+saturation), FixQP 603 kbit/s base, 663 at -15, 673 at -25, 581 at +20, 578
+at absolute 51; CBR 449 / 489 (-15) / 439 (+20). All 9 streams: VA-API 0
+errors, `ffmpeg -err_detect aggressive` clean, steps within -13..13; 0 oops.
+(`ROITEST_OUT` did not scale on T23.) `roitest` built with `--export-dynamic` replaced libimp's
+`imp_log_fun` with a different signature and crashed on T23 with
+`ROITEST_LOG=1` (fixed in the tool).
+
+For timps (`src/roi_caps.h`): T23 + OpenIMP can move from "unsupported" to
+"effective" with this OpenIMP; vendor T23 stays
+as it is (the vendor worker path was measured without effect before).

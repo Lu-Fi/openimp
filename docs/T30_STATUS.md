@@ -79,3 +79,12 @@ defaults to the validated VDB1 profile. Set `T30_TARGET_DIR` when using a
 target outside those output directories. It rejects an OEM `libimp.so`
 dependency and requires complete RVD IMP symbol coverage when the target RVD
 binary is available.
+
+## Help wanted: T30 testers
+
+We have no T30 camera in the lab. If you own a T30/T30X camera running Thingino
+with the vendor stack, you can test OpenIMP without flashing anything: the test
+kit in `tools/testkit/t30/` (see its `README.md`) runs the vendor API test
+against the vendor and the OpenIMP `libimp.so`, a short H.264 encode, and packs
+the logs, `dmesg` and `/proc/jz/isp/isp-m0` into one tar.gz for you to review
+and send. It restores the streamer and changes no configuration.

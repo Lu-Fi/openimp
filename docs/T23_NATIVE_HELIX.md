@@ -296,11 +296,11 @@ fails every job whose saved status lacks ENDFLAG/BSFULL ("vpu error
 interrupt, status = 100", core reset, RUN returns -1/EIO and copies no
 status back). The 0x100 residue above has no error bit, so a finished
 picture is now dropped whenever the second interrupt lands before the
-woken thread reads the status: on cam-vorne (T23, 360p continuous, 1080p
+woken thread reads the status: on cam-B (T23, 360p continuous, 1080p
 for the per-minute snapshot) about 4 per hour on all-20/all-21, both
 sizes, no correlation with framesource enable/disable, JPEG snapshots,
 ring size or BUF_SHARE (the soak before 0098 saw the same residue as
-"late interrupt status" pictures, which were kept). PC420 (T21, same handler) showed none
+"late interrupt status" pictures, which were kept). a T21 camera (same handler) showed none
 because nothing was encoding there (helix IRQ count unchanged over 20 s).
 
 OpenIMP cannot recover the picture: the length is gone, the core was
@@ -312,7 +312,7 @@ otherwise timeout), keeps per-encoder counters, and a "recovered at
 frame=N (IDR ...)" line confirms the restart. The fix belongs in the
 kernel: the error branch must ignore a status without ENDFLAG and without
 ORESERR/BSERR/ACFGERR (keep the finished job's status and length, do not
-complete). Fixed: the local kernel patch 0102 (originally proposed as `0100-helix-ignore-late-interrupt-residue`) ignores the residue; it is part of the thingino `aperto` VPU patch series (merged upstream). cam-B: 60 min with 0 errors, then a 5 h soak on the `aperto` images with 0 encoder errors. A rare single errno 5 error remains listed open in the open-stack changelog.
+complete). Fixed: the local kernel patch 0102 (originally proposed as `0100-helix-ignore-late-interrupt-residue`) ignores the residue; it is part of the thingino `aperto` VPU patch series (merged upstream). cam-B: 60 min with 0 errors, then a 5 h soak on the `aperto` images with 0 encoder errors. The rare single errno 5 error: 0 errors in 6 days on cam-B since this fix (before it 342, 32, 37 and 419 errors per day on 10-01..10-04); provisionally closed, still observed.
 
 ### Status retest
 
