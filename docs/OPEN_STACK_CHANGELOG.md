@@ -214,6 +214,14 @@ Gap work 2026-10-10 (branch claude/gaps-t1x, T10/T20/T21, vendor export check on
 - T31 `ISP_SetFixedContraster` now takes the attr pointer and sends control 0x8000102 like the vendor (host test `tests/t31/fixed_contrast_test.c`; apitest PASS on T31 and T23).
 - Gap counts (functions): T23 22 to 15, T31 29 to 8. The rest needs driver handlers (T23 ISP controls) or closed-encoder features.
 
+### Vendor-API gaps T10/T20/T21 (2026-10-10, branch claude/gaps-t1x-impl)
+
+Return codes and stores read from the vendor disassembly (T21 1.0.33, T10/T20 3.12.0; the 3.12.0 libimp of T10 and T20 is the same binary), implemented with host tests (`tests/t30/p2_gap_test.c`, `isp_gap_test.c`, `osd_attach_test.c`) and run with the apitest on a T10, a T20 and a T21 camera (agg-34 plus these changes, libimp from /tmp, streamer stopped and restarted, config md5 unchanged, 0 oopses): T20 148 PASS / 0 FAIL / 2 N/A / 2 SKIP, T21 155 / 0 / 2 / 2, T10 147 / 1 / 2 / 2 (the one FAIL is the known `SetSuperFrameCfg` read-back on T10).
+- Done: `Encoder_Get/SetChnFrmUsedMode`, `Encoder_GetGOPSize` (T10/T20/T21), `ISP_Tuning_SetDPStrength` (T10/T20, T21 device-tested), `ISP_Tuning_Get/SetISPHVflip` and `Get/SetWDRAttr` (T10/T20), `OSD_AttachToGroup` (T10/T20/T21, host).
+- Stored with the vendor return codes, effect only in the closed vendor encoder: `Encoder_Get/SetChangeRef`, `SetChnHSkipBlackEnhance`, `Get/SetFisheyeEnableStatus` (a creation-time flag: -1 once the channel exists), T10/T20 `Get/SetChnDemask` and `Get/SetChnHSkip`.
+- Not done: `Decoder_*` and the 3.9.0-only `ChnH264*`/`ChnRcAttr` (class d), T10/T20 `SetAntiFogAttr` (the open driver's antifog preset path hung cameras) and `SetMeshShadingScale` (no driver control) are wishlist items for the driver.
+- Gap counts (rows): T10 21 to 15, T20 20 to 14, T21 8 to 5. Branch also carries 4443657 and ce9ec77 from agg-34 (T21 DPStrength/AntiFogAttr export, T20 CHNAttr with attrDemask), which `next` does not have yet.
+
 ## 2026-10-06 afternoon/evening: release candidate agg-27/agg-28
 
 The first release was gated on the apitest/imgfx FAILs of the day ("first release only when these problems are fixed"). Every FAIL was either fixed in libimp or the driver, proven to be a tool error (and the tool fixed), or marked as a vendor no-op. This section is the summary of that work and of its device results. Details per change are in the CHANGELOG of each repository.
