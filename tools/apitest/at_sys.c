@@ -192,7 +192,14 @@ void t_fs(void)
     /* delay / max delay / fifo / pool as set before EnableChn */
     /* after SetChnFifoAttr(maxdepth 2): libimp stores maxdelay = delay = 2 */
     if (g_fifo_set) {
-        NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 2, "max delay %d (SetChnFifoAttr maxdepth 2)", *d); gfree(d); }
+        NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); 
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+            /* vendor T40/T41 (disassembly): max delay stays at the value set before */
+            CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 3, "max delay %d (stays 3 after SetChnFifoAttr maxdepth 2, as the vendor)", *d);
+#else
+            CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 2, "max delay %d (SetChnFifoAttr maxdepth 2)", *d);
+#endif
+             gfree(d); }
         NEED(IMP_FrameSource_GetDelay) { G(int, d); r = IMP_FrameSource_GetDelay(1, d); gchk(d); CHECK(IMP_FrameSource_GetDelay, r, *d == 2, "delay %d (SetChnFifoAttr sets delay = maxdepth 2)", *d); gfree(d); }
     }
     NEED(IMP_FrameSource_GetChnFifoAttr) {
@@ -287,7 +294,7 @@ void t_fs(void)
     NEED(IMP_FrameSource_GetTimedFrame) {
         G(IMPFrameInfo, fi);
         G(IMPFrameTimestamp, ts);
-        unsigned char *buf = gnew(nv12);
+        unsigned char *buf = gnew(nv12 * 2); /* the cache copies a whole capture buffer (sizeimage, aligned) */
         int w = 0, h = 0, r2 = -1;
         int64_t t = 0, t2 = 0, iv = 66666, target, got = 0;
 

@@ -660,9 +660,18 @@ static void live_common(int chn, int codec)
         r = IMP_Encoder_SetChnRoiAttr(chn, c);
         NEED(IMP_Encoder_GetChnRoiAttr) {
             r2 = IMP_Encoder_GetChnRoiAttr(chn, g); gchk(g);
+#ifdef PLATFORM_T41
+            if (r == -1 && !(getenv("OPENIMP_T41_ROI") && getenv("OPENIMP_T41_ROI")[0] == '1')) {
+                rep(FN(IMP_Encoder_SetChnRoiAttr), r, V_NA, "refused without OPENIMP_T41_ROI=1 (experimental ROI table, docs/ROI.md)");
+                rep(FN(IMP_Encoder_GetChnRoiAttr), r2, V_NA, "nothing to read back (SetChnRoiAttr refused)");
+            } else {
+#endif
             CHECK(IMP_Encoder_SetChnRoiAttr, r, r2 == 0 && g->st_roi[0].enable && g->st_roi[0].rect.w == 128 && g->st_roi[0].qp == -4,
                   "win0 (64,64) 128x96 dQP -4, read back en %d %ux%u qp %d", g->st_roi[0].enable, g->st_roi[0].rect.w, g->st_roi[0].rect.h, g->st_roi[0].qp);
             CHECK(IMP_Encoder_GetChnRoiAttr, r2, g->st_roi[0].enable, "win0 enabled %d", g->st_roi[0].enable);
+#ifdef PLATFORM_T41
+            }
+#endif
         }
         pull(chn, codec, 3, 0, 0, &si, 2000);
         rep(LBL("stream with ROI enabled"), 0, si.frames == 3 ? V_PASS : V_FAIL, "%d frames after enabling the ROI", si.frames);

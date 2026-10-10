@@ -279,6 +279,11 @@ void t_isp(void)
         char *path = (char *)gnew(256);
         r = IMP_ISP_GetDefaultBinPath(V0 path); gchk(path);
         /* the driver only reports a path that SetDefaultBinPath stored: empty is the normal default */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+        /* vendor: -1 when no path was stored (review N8) */
+        if (r != 0) rep(FN(IMP_ISP_GetDefaultBinPath), r, V_NA, "-1 as the vendor: no default bin path stored");
+        else
+#endif
         CHECK(IMP_ISP_GetDefaultBinPath, r, 1, "\"%.100s\" (empty: none set)", path);
         gfree(path);
     }
