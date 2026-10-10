@@ -174,6 +174,12 @@ T23 and T31 were reflashed with the agg-32 recipe plus the crop fix of their SoC
 4. T10 `isp-m0` maximum analog gain 144 at boot (128 when set explicitly); release of the T20/T10 crop window at tuning-session close not verified.
 5. The long soak of the release (the combined agg-34 passed the mandatory device tests of 2026-10-10).
 
+### Vendor-API gaps T23/T31 (2026-10-10, branch claude/gaps-t23-t31)
+- Gap functions checked against every vendor libimp/libsysutils build (nm plus disassembly): `OSD_GetRegionLuma` (T23), `SU_Battery_*`, `DPStrength`, `Decoder_*`, `EmuFrameSource_*`, `ADEC_ReleaseDecoder`, `AENC_ReleaseEncoder` are declared in headers but not exported by any build, so they are n.a.
+- T23 `Encoder_Get/SetH265TransCfg` now behaves like the vendor (value dropped, Get zero-fills); T31 `Encoder_SetFrameRelease` is a vendor no-op in effect.
+- T31 `ISP_SetFixedContraster` now takes the attr pointer and sends control 0x8000102 like the vendor (host test `tests/t31/fixed_contrast_test.c`; apitest PASS on T31 and T23).
+- Gap counts (functions): T23 22 to 15, T31 29 to 8. The rest needs driver handlers (T23 ISP controls) or closed-encoder features.
+
 ## 2026-10-06 afternoon/evening: release candidate agg-27/agg-28
 
 The first release was gated on the apitest/imgfx FAILs of the day ("first release only when these problems are fixed"). Every FAIL was either fixed in libimp or the driver, proven to be a tool error (and the tool fixed), or marked as a vendor no-op. This section is the summary of that work and of its device results. Details per change are in the CHANGELOG of each repository.
