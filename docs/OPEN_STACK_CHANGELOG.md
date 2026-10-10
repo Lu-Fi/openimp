@@ -3,7 +3,7 @@
 Everything changed, extended or fixed in OpenIMP, open-tx-isp, timps and the thingino
 integration since the test campaign started on 2026-09-30. Kept up to date during the campaign.
 
-Last update: 2026-10-10 morning (release candidate agg-34, device results of the night 2026-10-09/10). Branch names (`claude/...`) in the tables and sections below are historic: the branches were merged into `next` and deleted.
+Last update: 2026-10-10 evening (docs-1010: results of 2026-10-10 collected; items marked "in branch" are not yet in an aggregate). Branch names (`claude/...`) in the tables and sections below are historic: the branches were merged into `next` and deleted.
 
 Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20 and cam-J a second T21.
 
@@ -88,6 +88,29 @@ Goal: identical image behaviour, but cleaner unload/reload, less memory and chec
 OpenIMP: T20 green flicker in the bottom rows fixed by filling the encoder padding rows (`claude/t20-bottom-chroma`; 0 green pixels in 30 frames). Faster IVS (`claude/ivs-opt`; T20 timps CPU 4.1 % → 2.7 % with motion on).
 
 Aggregates: `claude/open-tx-isp-all-4` and `claude/openimp-all-4` (pushed); 58 merged single branches removed. `claude/open-tx-isp-all-5` adds t21-robust and t31-robust-2 (T31: sensor flip with shvflip=1, unload leaks, lazy WDR buffers; MemFree drift per reload 460 → 45 KB); all four cameras flashed with -all-5 images.
+
+## 2026-10-10: results of the day (all code items "in branch, not yet in an aggregate")
+
+Status key: **in branch** = committed on a `claude/...` branch, built and device-tested as noted, **not yet in an aggregate** and not in `next`.
+
+| Area | Result | Status |
+|---|---|---|
+| T23 encoder ROI | `IMP_Encoder_SetChnROI` on the native Helix encoder (the vendor 1.3.0 encoder writes the same registers). Device-tested on cam-B: the QP map shows the window, relative QP saturates at -12/+13 around the slice QP (like T21), bit rate +10 % at delta -15 and -4 % at +20 / absolute 51, streams valid in VA-API (0 errors) and strict ffmpeg. `OPENIMP_T23_ROI=0` switches it off. Matrix row 45: T23 is now supported (was a vendor no-op). Details: `docs/ROI.md` | in branch `claude/t23-roi` (1f1f7d1 docs, 8e44d3c code) |
+| T23 runtime capability marker | libimp exports the const symbol `OpenIMP_Cap_T23HelixRoi`; older libimps drop T23 ROI regions silently, so a streamer probes it with a weak extern or `dlsym` (`docs/OPENIMP_BEYOND_VENDOR.md`) | in branch `claude/t23-roi` (c271c07) |
+| T21 / T20 / T10 encoder denoise | The vendor T21 libimp (1.0.33) disables the encoder denoise internally (encoder mode 4 from the CPU id), so `GetChnDenoise` reads back type 0. OpenIMP T21 matches these semantics (enable gate, dnType >= 3 is -1); A/B against the vendor stack equal. T10/T20 vendor two-pass denoise encode is **not built** | in branch `claude/t21-chn-denoise` (aaeb2d1) |
+| T10 max analog gain | open-tx-isp `isp-m0` now reports the gain step the AE really reaches (T10: 142 instead of 144; exact steps and the sensor maximum unchanged); device-tested on T10, reported equals the measured plateau | in branch open-tx-isp `claude/t10-gaincap` (d86533ee) |
+| T40/T41 API | apitest on T41: 260 PASS / 9 FAIL (was 167 / 19). Remaining: 4 driver, 4 audio mute (driver ioctl), 1 tool. New in the library: FrameSource delay cache and I2D attributes, ISP sensor register / frame drop / AF weight / WDR enable via the vendor control numbers (the driver must implement them), `IMP_Encoder_SetChnMapRoi` on the experimental T41 ROI table (`OPENIMP_T41_ROI=1`, host test only) | in branch `claude/t40-t41-api` (4ee16ea) |
+| T41 tuning | Gamma restore, CCM, CSC presets 0 to 4 (CSC wire-order fix: the swapped offset/clip order made the kernel refuse user tables), manual exposure readback, module control, module ratios. Device-tested. Matrix cells for these T41 functions are not yet moved to "dev" (done together with the T41 aggregate) | in branch `claude/t41-tuning` (OpenIMP 8b98b38; open-tx-isp 3561edd5, f0356bd4) |
+| Gap reclassification | Vendor export check of the remaining gap functions (host-only): T23 gaps 22 to 15, T31 29 to 8, T10 48 to 41, T20 46 to 39, T21 23 to 18 (with the denoise change); includes T23 `Encoder_Get/SetH265TransCfg` as the vendor, T31 `ISP_SetFixedContraster` with the attr pointer (host test) | docs from `claude/gaps-t23-t31`, `claude/gaps-t1x`; the two code commits are in those branches, not yet in an aggregate |
+
+New gap counts (functions, per-vendor-function counting, see the matrix): T10 41, T20 39, T21 18, T23 15, T31 8, T41 187. Done share: T10 86.5 %, T20 87.7 %, T21 92.0 %, T23 93.8 %, T31 96.4 %, T41 58.0 %.
+
+Operations findings (no branch):
+
+- cam-B (T23) rebooted silently once at 05:12 under agg-34. A hard hang is suspected; there is no Helix error before it and the cause is **unexplained**. Netconsole is impossible on its WiFi adapter (atbm driver), so a kernel-log capture to the SD card is installed to catch the next one.
+- T23 errno 5 (single Helix encode error): central syslog of cam-B "run failed errno=5": 342 (10-01), 32 (10-02), 37 (10-03), 419 (10-04), then 0 from 10-05 to 10-10. Kernel patch 0102 (residual interrupt 0x100) landed in between. A second T23 camera had 0 since boot. Status: 0 errors in 6 days since the 0102 fix, provisionally closed, still observed.
+- The vendor T21 driver oopses when `/proc/jz/isp/isp-m0` is read with no ISP session (timps-dn-isp-log; fixed in the timps firmware package, not in the vendor driver).
+- A vendor-stack reference T21 camera now exists for A/B tests (used for the denoise comparison above).
 
 ## 2026-10-07 to 2026-10-10: agg-32 soak and release candidate agg-34
 
