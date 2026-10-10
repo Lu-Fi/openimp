@@ -60,9 +60,18 @@ int main(void)
     CHECK(IMP_Encoder_SetFisheyeEnableStatus(2, 1) == -1);    /* too late */
     CHECK(IMP_Encoder_GetFisheyeEnableStatus(2, &v) == 0 && v == 0);
     CHECK(IMP_Encoder_SetChangeRef(2, 3) == 0);
+#if defined(PLATFORM_T20)
     CHECK(IMP_Encoder_GetChangeRef(2, &v) == 0 && v == 1);
     CHECK(IMP_Encoder_SetChangeRef(2, 0) == 0);
     CHECK(IMP_Encoder_GetChangeRef(2, &v) == 0 && v == 0);
+#else
+    /* T21 1.0.33 (0x48d90): a created channel logs "unsupport to change
+     * ref channel" and fails, the value is not written */
+    v = 99;
+    CHECK(IMP_Encoder_GetChangeRef(2, &v) == -1 && v == 99);
+    CHECK(IMP_Encoder_SetChangeRef(2, 0) == 0);
+    CHECK(IMP_Encoder_GetChangeRef(2, &v) == -1 && v == 99);
+#endif
     CHECK(IMP_Encoder_GetChangeRef(2, NULL) == -1);
     CHECK(IMP_Encoder_GetGOPSize(2, &gop) == 0 && gop.gopsize == 50);
     CHECK(IMP_Encoder_GetGOPSize(2, NULL) == -1);
@@ -75,8 +84,20 @@ int main(void)
     {
         IMPEncoderAttrHSkip hs = { IMP_Encoder_STYPE_N2X, 4, 5, 6, 1, 1 }, gh;
 
+#if defined(PLATFORM_T20)
         CHECK(IMP_Encoder_SetChnHSkip(1, &hs) == -1);        /* idle */
         CHECK(IMP_Encoder_GetChnHSkip(1, &gh) == -1);
+#else
+        /* T21: an idle channel accepts the Set (no maxHSkipType check,
+         * nothing reaches the encoder) and the Get answers all zero */
+        memset(&gh, 0xff, sizeof(gh));
+        CHECK(IMP_Encoder_SetChnHSkip(1, &hs) == 0);
+        CHECK(IMP_Encoder_GetChnHSkip(1, &gh) == 0 && gh.skipType == 0 &&
+              gh.m == 0 && gh.n == 0 && gh.maxSameSceneCnt == 0 &&
+              gh.bEnableScenecut == 0 && gh.bBlackEnhance == 0);
+        CHECK(IMP_Encoder_GetChnHSkip(1, NULL) == -1);
+        CHECK(IMP_Encoder_SetChnHSkip(P2_MAX_CHANNELS, &hs) == -1);
+#endif
         p2_channels[2].attr.rcAttr.attrHSkip.maxHSkipType = IMP_Encoder_STYPE_N2X;
         CHECK(IMP_Encoder_SetChnHSkip(2, &hs) == 0);
         memset(&gh, 0, sizeof(gh));

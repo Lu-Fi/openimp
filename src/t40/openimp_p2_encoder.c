@@ -23,8 +23,9 @@
 #include "trace_control.h"
 #include "p2_rc_readback.h"
 #include "p2_denoise.h"
-#if defined(PLATFORM_T21)
-/* vendor T21 libimp clears the denoise type in i264e_validate_parameters */
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+/* vendor T21 libimp clears the denoise type in i264e_validate_parameters;
+ * the T20/T10 3.12.0 libimp keeps it (the T20 build defines PLATFORM_T21 too) */
 #define P2_DENOISE_HW_ACTIVE false
 #else
 #define P2_DENOISE_HW_ACTIVE true
@@ -4370,11 +4371,27 @@ int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
  * reference structure itself is not coded (no HSkip on the native path). */
 int IMP_Encoder_SetChnHSkip(int channel, const IMPEncoderAttrHSkip *attr)
 {
-    P2EncoderChannel *ch = p2_legacy_config_channel(channel);
+    P2EncoderChannel *ch;
 
-    if (!ch || !attr)
+    if (!p2_valid_channel(channel) || !attr)
         return -1;
+    EncoderInit();
+    ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    if (!ch->created) {
+#if defined(PLATFORM_T20)
+        /* T20/T10 3.12.0 (0x49dc8): a channel that was never created is -1 */
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+#else
+        /* T21 1.0.33 (0x478f0): an idle channel stores the six words in its
+         * record without the maxHSkipType check and without reaching the
+         * encoder; CreateChn then takes rcAttr.attrHSkip.hSkipAttr over */
+        ch->attr.rcAttr.attrHSkip.hSkipAttr = *attr;
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+#endif
+    }
     if (attr->skipType > ch->attr.rcAttr.attrHSkip.maxHSkipType) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
@@ -4398,12 +4415,24 @@ int IMP_Encoder_SetChnHSkip(int channel, const IMPEncoderAttrHSkip *attr)
 
 int IMP_Encoder_GetChnHSkip(int channel, IMPEncoderAttrHSkip *attr)
 {
-    P2EncoderChannel *ch = p2_legacy_config_channel(channel);
+    P2EncoderChannel *ch;
 
-    if (!ch || !attr)
+    if (!p2_valid_channel(channel) || !attr)
         return -1;
+    EncoderInit();
+    ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
-    *attr = ch->attr.rcAttr.attrHSkip.hSkipAttr;
+    if (ch->created) {
+        *attr = ch->attr.rcAttr.attrHSkip.hSkipAttr;
+    } else {
+#if defined(PLATFORM_T20)
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+#else
+        /* T21 1.0.33 (0x47ba0): an idle channel answers all zero, 0 */
+        memset(attr, 0, sizeof(*attr));
+#endif
+    }
     pthread_mutex_unlock(&ch->lock);
     return 0;
 }
@@ -4525,14 +4554,23 @@ int IMP_Encoder_GetChangeRef(int channel, int *enable)
         return -1;
     EncoderInit();
     pthread_mutex_lock(&p2_channels[channel].lock);
+#if defined(PLATFORM_T20)
+    /* T20/T10 3.12.0 (0x4b220): created channel reads the i264e value */
     if (p2_channels[channel].created)
         *enable = p2_channels[channel].change_ref;
-#if defined(PLATFORM_T20)
     else
         ret = -1;
 #else
-    else
+    /* T21 1.0.33 (0x48d90): idle channel answers 0; any other state logs
+     * "unsupport to change ref channel" and fails, the stored value is
+     * never returned (T30 1.0.5 has the same code) */
+    if (p2_channels[channel].created) {
+        IMP_LOG_ERR("Encoder", "%s:unsupport to change ref channel:%d",
+                    __func__, channel);
+        ret = -1;
+    } else {
         *enable = 0;
+    }
 #endif
     pthread_mutex_unlock(&p2_channels[channel].lock);
     return ret;

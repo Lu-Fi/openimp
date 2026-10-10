@@ -235,6 +235,13 @@ Return codes and stores read from the vendor disassembly (T21 1.0.33, T10/T20 3.
 - Not done: `Decoder_*` and the 3.9.0-only `ChnH264*`/`ChnRcAttr` (class d), T10/T20 `SetAntiFogAttr` (the open driver's antifog preset path hung cameras) and `SetMeshShadingScale` (no driver control) are wishlist items for the driver.
 - Gap counts (rows): T10 21 to 15, T20 20 to 14, T21 8 to 5. Branch also carries 4443657 and ce9ec77 from agg-34 (T21 DPStrength/AntiFogAttr export, T20 CHNAttr with attrDemask), which `next` does not have yet.
 
+### Vendor deviations T10/T20/T21 (2026-10-10, branch claude/gaps-t1x-c, host tests only)
+
+- T21 `IMP_Encoder_GetChangeRef` on a created channel logs "unsupport to change ref channel" and returns -1 like the vendor (T21 1.0.33 / T30 1.0.5); it used to return the stored value. T10/T20 (3.12.0) read the value, unchanged.
+- T21 `Get/SetChnHSkip` accept an idle channel like the vendor (Set stores without the maxHSkipType check, Get answers all zero); T10/T20 stay -1.
+- T10/T20 `Get/SetChnDenoise` keep type and QPs like the vendor 3.12.0 (the T20 build also defines PLATFORM_T21 and read the type back as 0); still no two-pass encode, cell stays cache.
+- Other gap rows re-checked: all class c/d; T10 `SetMbRC` is a matched no-op (vendor T10 rate controller has no macroblock part).
+
 ## 2026-10-06 afternoon/evening: release candidate agg-27/agg-28
 
 The first release was gated on the apitest/imgfx FAILs of the day ("first release only when these problems are fixed"). Every FAIL was either fixed in libimp or the driver, proven to be a tool error (and the tool fixed), or marked as a vendor no-op. This section is the summary of that work and of its device results. Details per change are in the CHANGELOG of each repository.
