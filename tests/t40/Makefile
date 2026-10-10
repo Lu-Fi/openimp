@@ -10,7 +10,7 @@ CAMERA_INPUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-camera-input-test
 IVS_SRC := $(PROJECT_DIR)/src/t31
 IVS_FRAMEWORK_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-ivs-framework-test
 
-check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls abi-layout
+check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls abi-layout frame-ts
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(CAMERA_INPUT_TEST_BIN)
 	$(IVS_FRAMEWORK_TEST_BIN)
@@ -80,3 +80,10 @@ else
 	@echo "t40 abi layout vs vendor headers skipped (set T40_HEADERS)"
 endif
 endif
+
+.PHONY: frame-ts
+frame-ts:
+	mkdir -p $(PROJECT_DIR)/build/tests
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T40 -I$(PROJECT_DIR)/src \
+		codec_frame_ts_test.c -o $(PROJECT_DIR)/build/tests/t40-frame-ts-test
+	$(PROJECT_DIR)/build/tests/t40-frame-ts-test

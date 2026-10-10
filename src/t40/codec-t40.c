@@ -23,6 +23,7 @@
 #include <imp/imp_encoder.h>
 #include <imp/imp_system.h>
 #include "codec.h"
+#include "codec_frame_ts.h"
 #include "fifo.h"
 #include "hw_encoder.h"
 
@@ -10481,12 +10482,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
      * of replacing it with jittery encoder-start wall time.  T41 releases
      * the FrameSource descriptor immediately after submission, so everything
      * needed at AVPU completion must be copied before Process returns. */
-    uint64_t timestamp = 0;
-#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
-    memcpy(&timestamp, (const uint8_t *)frame + 0x20, sizeof(timestamp));
-#elif defined(PLATFORM_T41) || defined(PLATFORM_T23)
-    memcpy(&timestamp, (const uint8_t *)frame + 0x28, sizeof(timestamp));
-#endif
+    uint64_t timestamp = codec_frame_capture_timestamp(frame);
 
 #if defined(PLATFORM_T30)
     if (codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_AVC) {
