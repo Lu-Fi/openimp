@@ -2,7 +2,7 @@
 #include "apitest.h"
 /* T20/T21: OpenIMP refuses (-1) settings its Helix/NVPU encoder cannot apply, instead of storing
  * them without effect (the vendor stores them): report that as N/A, not as a failed function. */
-#if defined(PLATFORM_T20) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
 # define REFUSES_UNSUPPORTED 1
 #else
 # define REFUSES_UNSUPPORTED 0
@@ -634,7 +634,7 @@ static void live_common(int chn, int codec)
             } else {
             /* T10/T20/T21 vendor (T20 3.12.0 0x4899c/0x48c3c, T21 1.0.33): Set stores the corners /16 (truncating) as
              * macroblock bytes and Get returns them x16, so the read-back is the rect rounded down to 16 */
-#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p0.y == 64 && g->rect.p1.x == 304 && g->rect.p1.y == 240 && g->s32Qp == -4,
 #else
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p1.x == 319 && g->s32Qp == -4,

@@ -53,12 +53,14 @@
 # define SOC "T21"
 #elif defined(PLATFORM_T23)
 # define SOC "T23"
+#elif defined(PLATFORM_T30)
+# define SOC "T30"
 #elif defined(PLATFORM_T31)
 # define SOC "T31"
 #elif defined(PLATFORM_T41)
 # define SOC "T41"
 #else
-# error "define PLATFORM_T10|T20|T21|T23|T31|T41"
+# error "define PLATFORM_T10|T20|T21|T23|T30|T31|T41"
 #endif
 
 /* encoder API family: T10/T20/T21/T23 IMPEncoderCHNAttr (per-codec rc unions),
@@ -69,7 +71,7 @@
 # define ENC_OLD 1
 #endif
 /* H.265 in the vendor API of the SoC */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || defined(PLATFORM_T31) || defined(PLATFORM_T41)
 # define HAVE_H265 1
 #endif
 #ifdef PLATFORM_T41

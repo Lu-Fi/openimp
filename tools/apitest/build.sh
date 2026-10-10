@@ -16,6 +16,7 @@ for e in "T10 T10/3.12.0/zh secuplug_sp1_t10l_jxh42_mt7601-192.168.10.31" \
          "T20 T20/3.12.0/zh wyze_campan1_t20x_jxf22_rtl8189etv-192.168.10.163" \
          "T21 T21/1.0.33/zh victure_pc420_t21n_jxf23_eth+rtl8188ftv-192.168.10.27" \
          "T23 T23/1.3.0/zh jooan_a6m_t23n_sc1a4t_atbm6012bx-192.168.10.30" \
+         "T30 T30/1.0.5/zh victure_pc420_t21n_jxf23_eth+rtl8188ftv-192.168.10.27" \
          "T31 T31/1.1.6/en wuuk_y0510_t31x_sc4336p_ssv6158-192.168.10.21" \
          "T41 T41/1.2.6/zh vanhua_t55a_t41lq_gc5603_eth-192.168.178.179"; do
   set -- $e

@@ -244,7 +244,7 @@ void t_isp(void)
     ISPGET(IMP_ISP_Tuning_GetAfWeight, IMPISPWeight, "weight[7][7] %u", p->weight[7][7])
 #endif
 #if HAS_IMP_ISP_Tuning_AE_GetROI
-# if defined(PLATFORM_T10) || defined(PLATFORM_T20)
+# if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T30)
     ISPGET(IMP_ISP_Tuning_AE_GetROI, IMPISPAERoi, "roi 0x%08x", p->value)
 # elif !defined(PLATFORM_T41)
     ISPGET(IMP_ISP_Tuning_AE_GetROI, IMPISPWeight, "roi weight[7][7] %u", p->weight[7][7])
