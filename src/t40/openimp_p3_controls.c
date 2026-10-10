@@ -38,9 +38,18 @@
 #define TISP_CID_SHARPNESS 0x08000093
 #define TISP_CID_SATURATION 0x08000094
 #define TISP_CID_CONTRAST 0x08000095
+/* The same control numbers in the vendor T40 1.3.1 and T41 1.2.x libimp
+ * (checked in both disassemblies); only the ioctl number differs. */
+#define TISP_CID_AE_SCENCE 0x08000024
+#define TISP_CID_GAMMA 0x08000025
+#define TISP_CID_WDR_OUTPUT_MODE 0x08000054
+#define TISP_CID_MODULE_CONTROL 0x08000072
+#define TISP_CID_AUTOZOOM 0x08000077
+#define TISP_CID_CCM 0x08000080
+#define TISP_CID_SCALER_LV 0x080000a6
+#define TISP_CID_MODULE_RATIO 0x080000a4
 #if defined(PLATFORM_T41)
 #define TISP_CID_MASK_BLOCK 0x08000074
-#define TISP_CID_SCALER_LV 0x080000a6
 #define TISP_CID_AWB_RGB_COEFFT 0x08000098
 #define TISP_CID_ANTIFLICKER 0x08000026
 #endif
@@ -99,14 +108,13 @@ static int p3_tuning_scalar(IMPVI_NUM num, int32_t direction,
     return result;
 }
 
-#if defined(PLATFORM_T41)
-/* Vendor T41 1.2.0: the pointer tuning ioctl, get, control 0x8000033,
- * filling {hts, vts, fps, width, height}. */
+/* Vendor T41 1.2.0 and T40 1.3.1 (libimp disassembly of both): the pointer
+ * tuning ioctl, get, control 0x8000033, filling {hts, vts, fps, width,
+ * height}; only the ioctl number differs (TISP_VIDIOC_DEFAULT_TUNING). */
 int32_t IMP_ISP_Tuning_GetSensorAttr(IMPVI_NUM num, IMPISPSENSORAttr *attr)
 {
     return p3_tuning_pointer(num, 1, 0x8000033, attr);
 }
-#endif
 
 /* ---- vendor ISPDevice-fd entries (T40 1.3.1 and T41 1.2.6 use the same
  * ioctl numbers; the stock driver owns the hardware access) ---- */
@@ -561,14 +569,7 @@ int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
  * ratios, CCM, gamma, CSC, module bypass, auto zoom and WDR output mode,
  * so callers see the failure instead of an acknowledged no-op.
  */
-#define TISP_CID_AE_SCENCE 0x08000024
-#define TISP_CID_GAMMA 0x08000025
-#define TISP_CID_WDR_OUTPUT_MODE 0x08000054
-#define TISP_CID_MODULE_CONTROL 0x08000072
-#define TISP_CID_AUTOZOOM 0x08000077
-#define TISP_CID_CCM 0x08000080
 #define TISP_CID_CSC 0x08000096
-#define TISP_CID_MODULE_RATIO 0x080000a4
 
 #define P3_T41_POINTER_PAIR(Name, Type, id)                                   \
     int32_t IMP_ISP_Tuning_Set##Name(IMPVI_NUM num, Type *attr)               \
@@ -588,6 +589,132 @@ P3_T41_POINTER_PAIR(ISPCSCAttr, IMPISPCSCAttr, TISP_CID_CSC)
 P3_T41_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
 P3_T41_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
 P3_T41_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode, TISP_CID_WDR_OUTPUT_MODE)
+#endif
+
+#if !defined(PLATFORM_T41)
+/*
+ * T40 1.3.1 (vendor libimp disassembly): the pointer pass-throughs hand the
+ * public structure to the tuning ioctl unchanged.  Control numbers equal the
+ * T41 ones except Awb_Get/SetRgbCoefft (0x9b here, 0x98 on T41).  The vendor
+ * kernel (tx_isp_t40) owns the semantics; the calls fail with its error.
+ */
+#define TISP_CID_AWB_RGB_COEFFT_T40 0x0800009b
+
+#define P3_T40_POINTER_PAIR(Name, Type, id)                                   \
+    int32_t IMP_ISP_Tuning_Set##Name(IMPVI_NUM num, Type *attr)               \
+    {                                                                         \
+        return p3_tuning_pointer(num, 0, (id), attr);                         \
+    }                                                                         \
+    int32_t IMP_ISP_Tuning_Get##Name(IMPVI_NUM num, Type *attr)               \
+    {                                                                         \
+        return p3_tuning_pointer(num, 1, (id), attr);                         \
+    }
+
+P3_T40_POINTER_PAIR(AeScenceAttr, IMPISPAEScenceAttr, TISP_CID_AE_SCENCE)
+P3_T40_POINTER_PAIR(Module_Ratio, IMPISPModuleRatioAttr, TISP_CID_MODULE_RATIO)
+P3_T40_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
+P3_T40_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
+P3_T40_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode,
+                    TISP_CID_WDR_OUTPUT_MODE)
+
+int IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_AWB_RGB_COEFFT_T40, attr);
+}
+
+int IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_NUM num, IMPISPCoefftWb *attr)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_AWB_RGB_COEFFT_T40, attr);
+}
+
+/* Vendor: the scaler level goes out as the public structure (IMP_ISP_ name
+ * without Tuning_ on T40). */
+int32_t IMP_ISP_SetScalerLv(IMPVI_NUM num, IMPISPScalerLvAttr *attr)
+{
+    return p3_tuning_pointer(num, 0, TISP_CID_SCALER_LV, attr);
+}
+
+/* Vendor Set: the curve type must be below IMP_ISP_GAMMA_CURVE_BUTT (4) or
+ * the call fails before the ioctl; the 129-entry table is passed as is. */
+int32_t IMP_ISP_Tuning_SetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *attr)
+{
+    if (!attr || (uint32_t)attr->Curve_type >= (uint32_t)IMP_ISP_GAMMA_CURVE_BUTT)
+        return -1;
+    return p3_tuning_pointer(num, 0, TISP_CID_GAMMA, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetGammaAttr(IMPVI_NUM num, IMPISPGammaAttr *attr)
+{
+    return p3_tuning_pointer(num, 1, TISP_CID_GAMMA, attr);
+}
+
+/*
+ * CCM: unlike the pass-throughs the vendor library converts.  The ioctl
+ * payload is 40 bytes {int8 manual, int8 saturation, 2 pad, u32 matrix[9]};
+ * each coefficient is a sign + 13 bit value in 1/1024 steps:
+ *   c < -1e-5:  ((-trunc(|c| * 1024)) & 0x1fff) | 0x2000
+ *   otherwise:   trunc(c * 1024) & 0x1fff
+ * and back (Get): bit 13 set = -((-w) & 0x1fff) / 1024, else w / 1024.
+ * (The vendor Set also rewrites the caller's negative coefficients as
+ * positive values in place; that side effect is not reproduced.)
+ */
+struct p3_ccm_wire {
+    int8_t manual;
+    int8_t saturation;
+    uint8_t pad[2];
+    uint32_t matrix[9];
+};
+
+static uint32_t p3_ccm_encode(float c)
+{
+    if ((double)c < -1e-5) {
+        int32_t m = (int32_t)(-c * 1024.0f);
+
+        return ((uint32_t)(-m) & 0x1fffU) | 0x2000U;
+    }
+    return (uint32_t)(int32_t)(c * 1024.0f) & 0x1fffU;
+}
+
+static float p3_ccm_decode(uint32_t w)
+{
+    if (w & 0x2000U)
+        return -(float)(int32_t)((0U - w) & 0x1fffU) * (1.0f / 1024.0f);
+    return (float)(int32_t)w * (1.0f / 1024.0f);
+}
+
+int32_t IMP_ISP_Tuning_SetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *attr)
+{
+    struct p3_ccm_wire wire;
+    unsigned int i;
+
+    if (!attr)
+        return -1;
+    memset(&wire, 0, sizeof(wire));
+    wire.manual = (int8_t)attr->ManualEn;
+    wire.saturation = (int8_t)attr->SatEn;
+    for (i = 0; i < 9U; i++)
+        wire.matrix[i] = p3_ccm_encode(attr->ColorMatrix[i]);
+    return p3_tuning_pointer(num, 0, TISP_CID_CCM, &wire);
+}
+
+int32_t IMP_ISP_Tuning_GetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *attr)
+{
+    struct p3_ccm_wire wire;
+    unsigned int i;
+    int result;
+
+    if (!attr)
+        return -1;
+    memset(&wire, 0, sizeof(wire));
+    result = p3_tuning_pointer(num, 1, TISP_CID_CCM, &wire);
+    if (result != 0)
+        return result;
+    attr->ManualEn = (IMPISPTuningOpsMode)wire.manual;
+    attr->SatEn = (IMPISPTuningOpsMode)wire.saturation;
+    for (i = 0; i < 9U; i++)
+        attr->ColorMatrix[i] = p3_ccm_decode(wire.matrix[i]);
+    return 0;
+}
 #endif
 
 int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,

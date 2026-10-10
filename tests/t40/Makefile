@@ -7,9 +7,26 @@ STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-stream-layout-test
 
 CAMERA_INPUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-camera-input-test
 
-check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN)
+check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) p3-controls
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(CAMERA_INPUT_TEST_BIN)
+
+.PHONY: p3-controls
+P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-p3-controls-test
+
+# ISP tuning controls with the vendor T40 control numbers (request envelope,
+# pass-through, CCM conversion).  Needs the vendor T40 1.3.1 headers;
+# skipped when T40_HEADERS is not set.
+p3-controls:
+ifneq ($(T40_HEADERS),)
+	mkdir -p "$(dir $(P3_CONTROLS_TEST_BIN))"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T40 -I$(T40_HEADERS) \
+		p3_controls_test.c $(PROJECT_DIR)/src/t40/openimp_p3_controls.c \
+		-o "$(P3_CONTROLS_TEST_BIN)"
+	$(P3_CONTROLS_TEST_BIN)
+else
+	@echo "t40 p3 controls test skipped (set T40_HEADERS)"
+endif
 
 # host-only: private ioctl fixture, no camera
 $(CAMERA_INPUT_TEST_BIN): camera_input_test.c $(PROJECT_DIR)/src/t40/openimp_p1.c
@@ -28,4 +45,4 @@ $(STREAM_LAYOUT_TEST_BIN): stream_layout_test.c \
 		-o "$@"
 
 clean:
-	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN)
+	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(P3_CONTROLS_TEST_BIN)
