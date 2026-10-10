@@ -68,6 +68,15 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #if defined(PLATFORM_T20)
 #include "rc_t20/rc_t20.h"
 #include "rc_t10/rc_t10.h"
+
+#endif
+
+#if defined(PLATFORM_T23)
+/* Runtime capability marker for streamers: present (and 1) only in a libimp
+ * whose native Helix path programs the ROI table on T23.  Older libimps drop
+ * the regions silently, so a streamer can probe this symbol (weak extern or
+ * dlsym) instead of pinning a minimum OpenIMP commit. */
+__attribute__((visibility("default"))) const int OpenIMP_Cap_T23HelixRoi = 1;
 #endif
 
 #if defined(PLATFORM_T23)
@@ -381,14 +390,14 @@ struct T30HelixEncoder {
     uint32_t mbrc_log;          /* OPENIMP_EPRC_MBRC_LOG: every n pictures */
     uint32_t mbrc_pictures;
 #endif
-#if !defined(PLATFORM_T23)
-    /* IMP_Encoder_SetChnColor2Grey: the grey chroma plane that replaces
-     * the picture's (t30_color2grey_idr) */
-    IMPDMABufferInfo grey;
     /* IMP_Encoder_SetChnROI: the i264e ROI table (helix_roi.h), adopted
      * per picture as the OEM i264e_reconfig does (OpenIMP_T30_HelixSetRoi) */
     uint8_t roi[8][7];
     int roi_hw;                 /* the command list carries the regions */
+#if !defined(PLATFORM_T23)
+    /* IMP_Encoder_SetChnColor2Grey: the grey chroma plane that replaces
+     * the picture's (t30_color2grey_idr) */
+    IMPDMABufferInfo grey;
     /* IMP_Encoder_SetH264TransCfg: the chroma QP offset in the PPS and
      * the command list since the last IDR (t30_chroma_qp_idr) */
     int chroma_qp_offset;
@@ -991,9 +1000,9 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
     /* SDK 1.0.5 selects the alternate DCS threshold for its substream. */
     slice->dcs_oth = encoder->params.width <= 640u ? 1u : 0u;
 #endif
-#if !defined(PLATFORM_T23)
     if (encoder->roi_hw)
         memcpy(slice->roi, encoder->roi, sizeof(slice->roi));
+#if !defined(PLATFORM_T23)
     slice->chroma_qp_offset = (int8_t)encoder->chroma_qp_offset;
 #endif
 }
@@ -2538,13 +2547,22 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #if !defined(HELIX_T21_SYNTAX)
     t30_ref_share_ignored();
 #endif
-#if !defined(PLATFORM_T23)
     /* T10/T20: the OEM programs the ROI regions in every command list.
      * T21: the 1.0.33 libimp never does (beyond vendor): OpenIMP programs
      * them like T20.  With no ROI set the table is all zero and the command
      * list is unchanged.  OPENIMP_T21_ROI=0 switches it off
-     * (docs/T1X_ROI_CHROMA.md). */
-#if defined(HELIX_T21_SYNTAX)
+     * (docs/T1X_ROI_CHROMA.md).
+     * T23: the OEM 1.3.0 i264e copies the table into slice +752 of every
+     * picture (hwicodec_pf_h264e_t21_enc 0x29468, H264E_T21_SliceInit
+     * 0x40044..0x40068); the native encoder does the same.
+     * OPENIMP_T23_ROI=0 switches it off (docs/ROI.md). */
+#if defined(PLATFORM_T23)
+    {
+        const char *roi_env = getenv("OPENIMP_T23_ROI");
+
+        encoder->roi_hw = !(roi_env && roi_env[0] == '0');
+    }
+#elif defined(HELIX_T21_SYNTAX)
     {
         const char *roi_env = getenv("OPENIMP_T21_ROI");
 
@@ -2555,6 +2573,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #else
     encoder->roi_hw = 0;        /* T30: the regions are not known */
 #endif
+#if !defined(PLATFORM_T23)
     encoder->chroma_qp_offset = 0;
 #endif
     t30_init_parameter_sets(encoder);
@@ -3585,7 +3604,6 @@ int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder)
     return 0;
 }
 
-#if !defined(PLATFORM_T23)
 int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
                             const uint8_t roi[8][7])
 {
@@ -3594,7 +3612,6 @@ int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
     memcpy(encoder->roi, roi, sizeof(encoder->roi));
     return 0;
 }
-#endif
 
 int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
                                   const HWEncoderParams *requested)

@@ -7,6 +7,7 @@
         OpenIMP_AVC_*;
         OpenIMP_Encoder_StreamIsRmem;
         OpenIMP_Tuning_*;
+        OpenIMP_Cap_*;
         FrameSourceInit;
         EncoderInit;
         EncoderExit;
