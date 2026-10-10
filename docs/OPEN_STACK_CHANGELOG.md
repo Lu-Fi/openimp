@@ -33,6 +33,7 @@ All test cameras run the open kernel driver (open-tx-isp), OpenIMP and timps. No
 | Encoder rate control | CappedVBR/CappedQuality/SMART silently CBR | Mapped to VBR with log line | `claude/openimp-quickfixes` |
 | JPEG | Quality ignored (fixed 75 or cached only) | Configured quality applied | `claude/openimp-quickfixes` |
 | HEVC T31 | H.265 accepted but streams empty | Real HEVC on the AVPU: VPS/SPS/PPS, slice headers, CABAC init as vendor | `claude/t31-hevc` |
+| Encoder denoise T20/T21 | SetChnDenoise stored whatever it got, dnType >= 3 accepted, enable switch of CreateChn ignored | Vendor semantics: enable gate from CreateChn, dnType >= 3 is -1, IQp/PQp kept; on T21 dnType reads back 0 as on the vendor T21 (libimp 1.0.33 clears denoise at init: encoder mode from get_cpu_id). T10/T20 two-pass encode not built | `claude/t21-chn-denoise` |
 | Encoder telemetry | Channel-stat struct one word short; bitrate not averaged; stack overflow in ChnStatQuery | Vendor layout, real average, fixed | `claude/openimp-quickfixes` |
 | T23 encoder | Vendor Helix worker only; worker zeroed all of rmem; wrong RPATH | Per-worker rmem slices; native Helix encoder without vendor code | `claude/t23-helix-worker-fixes`, `claude/t23-native-helix-2` |
 | Helix T20/T21/T30 | Encoder issues on the Helix path | Fixed | `claude/t30-helix-fixes` |

@@ -22,6 +22,13 @@
 #include "imp_log_int.h"
 #include "trace_control.h"
 #include "p2_rc_readback.h"
+#include "p2_denoise.h"
+#if defined(PLATFORM_T21)
+/* vendor T21 libimp clears the denoise type in i264e_validate_parameters */
+#define P2_DENOISE_HW_ACTIVE false
+#else
+#define P2_DENOISE_HW_ACTIVE true
+#endif
 #include "p2_hevc_policy.h"
 #if defined(PLATFORM_T41) || defined(PLATFORM_T31) || defined(PLATFORM_T30)
 #include "dma_alloc.h"
@@ -1765,6 +1772,24 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     ch->attr = *attr;
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21)
+    ch->denoise = attr->rcAttr.attrDenoise;
+    {
+        P2DenoiseCache c = {0, 0, 0};
+
+        if (p2_denoise_apply(&c, attr->rcAttr.attrDenoise.enable,
+                             P2_DENOISE_HW_ACTIVE,
+                             attr->rcAttr.attrDenoise.dnType, 0, 0) == 0)
+            ch->denoise.dnType = c.type;
+        else
+            ch->denoise.dnType = 0;
+        if (!P2_DENOISE_HW_ACTIVE) {
+            /* vendor T21: the validation clears type and QPs */
+            ch->denoise.dnIQp = 0;
+            ch->denoise.dnPQp = 0;
+        }
+    }
+#endif
     ch->codec_type = (int)p2_attr_codec_type(attr);
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     ch->rc_runtime = 0;
@@ -3529,13 +3554,13 @@ int IMP_Encoder_GetChnROI(int channel, IMPEncoderROICfg *config)
 int IMP_Encoder_SetChnDenoise(int channel,
                              const IMPEncoderAttrDenoise *config)
 {
+#if defined(PLATFORM_T23)
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config)
         return -1;
     pthread_mutex_lock(&ch->lock);
     ch->denoise = *config;
-#if defined(PLATFORM_T23)
     {
         /* OEM: the on/off switch stays as created, only type/QPs change */
         bool created_enable = ch->attr.rcAttr.attrDenoise.enable;
@@ -3548,22 +3573,71 @@ int IMP_Encoder_SetChnDenoise(int channel,
             return -1;
         }
     }
-#else
-    ch->attr.rcAttr.attrDenoise = *config;
-#endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
-}
+#elif defined(PLATFORM_T20) || defined(PLATFORM_T21)
+    P2EncoderChannel *ch;
+    int ret;
 
-int IMP_Encoder_GetChnDenoise(int channel, IMPEncoderAttrDenoise *config)
-{
+    if (!config || !p2_valid_channel(channel))
+        return -1;
+    ch = p2_legacy_config_channel(channel);
+    if (!ch)
+        return 0;
+    pthread_mutex_lock(&ch->lock);
+    {
+        P2DenoiseCache c = {ch->denoise.dnType, ch->denoise.dnIQp,
+                            ch->denoise.dnPQp};
+
+        ret = p2_denoise_apply(&c, ch->attr.rcAttr.attrDenoise.enable,
+                               P2_DENOISE_HW_ACTIVE, config->dnType,
+                               config->dnIQp, config->dnPQp);
+        if (ret == 0) {
+            ch->denoise.dnType = c.type;
+            ch->denoise.dnIQp = c.iqp;
+            ch->denoise.dnPQp = c.pqp;
+            ch->attr.rcAttr.attrDenoise.dnType = c.type;
+            ch->attr.rcAttr.attrDenoise.dnIQp = c.iqp;
+            ch->attr.rcAttr.attrDenoise.dnPQp = c.pqp;
+        }
+    }
+    pthread_mutex_unlock(&ch->lock);
+    return ret;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config)
         return -1;
     pthread_mutex_lock(&ch->lock);
+    ch->denoise = *config;
+    ch->attr.rcAttr.attrDenoise = *config;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+#endif
+}
+
+int IMP_Encoder_GetChnDenoise(int channel, IMPEncoderAttrDenoise *config)
+{
+    P2EncoderChannel *ch;
+
+    if (!config || !p2_valid_channel(channel))
+        return -1;
+    ch = p2_legacy_config_channel(channel);
+#if !defined(PLATFORM_T20) && !defined(PLATFORM_T21)
+    if (!ch)
+        return -1;
+    pthread_mutex_lock(&ch->lock);
     *config = ch->denoise;
     pthread_mutex_unlock(&ch->lock);
+#else
+    if (!ch)
+        return 0;
+    pthread_mutex_lock(&ch->lock);
+    config->dnType = ch->denoise.dnType;
+    config->dnIQp = ch->denoise.dnIQp;
+    config->dnPQp = ch->denoise.dnPQp;
+    pthread_mutex_unlock(&ch->lock);
+#endif
     return 0;
 }
 

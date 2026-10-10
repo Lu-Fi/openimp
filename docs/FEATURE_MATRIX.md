@@ -661,7 +661,7 @@ Counts are per vendor function of that SoC (T23 folded: base function = one; Get
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | T10 | 332 | 2 | 47 | 232 | 2 | 1 | 4 | 0 | 1 | 43 | **48** | 100 | 84.6 % |
 | T20 | 332 | 184 | 13 | 88 | 0 | 1 | 2 | 0 | 1 | 43 | **46** | 100 | 85.8 % |
-| T21 | 330 | 199 | 9 | 89 | 0 | 8 | 2 | 0 | 1 | 22 | **25** | 77 | 90.0 % |
+| T21 | 330 | 201 | 9 | 89 | 0 | 8 | 0 | 0 | 1 | 22 | **23** | 77 | 90.6 % |
 | T23 | 442 | 278 | 17 | 113 | 0 | 12 | 7 | 0 | 10 | 5 | **22** | 212 | 92.3 % |
 | T31 | 406 | 220 | 13 | 139 | 0 | 5 | 3 | 1 | 1 | 24 | **29** | 65 | 91.6 % |
 | T41 | 445 | 0 | 38 | 218 | 0 | 0 | 7 | 2 | 48 | 132 | **189** | 227 | 57.5 % |
@@ -683,7 +683,7 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 
 - **T10**: 0 (no gap in a function that a streamer imports)
 - **T20**: 0 (no gap in a function that a streamer imports)
-- **T21**: 1 (timps 0, prudynt 0, raptor 1): `Encoder_Get/SetChnDenoise` (cache-only; raptor)
+- **T21**: 0 (no gap in a function that a streamer imports)
 - **T23**: 0 (no gap in a function that a streamer imports)
 - **T31**: 0 (no gap in a function that a streamer imports)
 - **T41**: 26 (timps 0, prudynt 6, raptor 23): `ISP_Get/SetFrameDrop` (error; raptor), `ISP_Get/SetISPBypass` (missing; prudynt), `ISP_Tuning_Get/SetModuleControl` (error; raptor), `ISP_Tuning_SetAutoZoom` (error; prudynt), `ISP_Tuning_SetMaskBlock` (error; raptor), `ISP_Tuning_SetScalerLv` (error; raptor), `ISP_Tuning_SwitchBin` (missing; prudynt), `ISP_WDR_ENABLE` (error; raptor), `ISP_WDR_ENABLE_GET` (error; raptor), `ISP_Tuning_Get/SetAfWeight` (error; raptor), `Encoder_SetChnMaxPictureSize` (cache-only; raptor), `Encoder_SetbufshareChn` (stub; prudynt+raptor), `FrameSource_Get/SetChnFifoAttr` (cache-only; prudynt+raptor), `FrameSource_Get/SetDelay` (error; raptor), `FrameSource_Get/SetFrameDepth` (cache-only; prudynt+raptor), `FrameSource_Get/SetI2dAttr` (error; raptor), `FrameSource_Get/SetMaxDelay` (error; raptor), `FrameSource_Get/SetPool` (cache-only; raptor), `FrameSource_GetTimedFrame` (error; raptor), `ISP_Tuning_CreateOsdRgn` (error; raptor), `ISP_Tuning_DestroyOsdRgn` (error; raptor), `ISP_Tuning_SetOsdPoolSize` (stub; raptor), `ISP_Tuning_SetOsdRgnAttr` (error; raptor), `ISP_Tuning_ShowOsdRgn` (error; raptor), `DMIC_*` (error; raptor), `DMIC_DisableAecRefFrame` (error; raptor)
@@ -1107,7 +1107,7 @@ Notes:
 | `Decoder_*` (8 functions) [1] | miss | miss | miss | aud | miss | miss | – |
 | `Encoder_Get/SetChangeRef` | miss | miss | miss | dev | n.a. | n.a. | – |
 | `Encoder_Get/SetChnDemask` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
-| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | cache | dev | n.a. | n.a. | T21: r† |
+| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | n.a. | n.a. | T21: r† |
 | `Encoder_Get/SetChnFrmUsedMode` [3] | miss | miss | miss | dev | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264Demask` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264Denoise` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
@@ -1149,7 +1149,7 @@ Notes:
 Notes:
 
 1. `Decoder_*` (8 functions): functions: CreateChn, DestroyChn, GetFrame, PollingFrame, ReleaseFrame, SendStreamTimeout, StartRecvPic, StopRecvPic.
-2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied. NOT a vendor no-op (vendor T21 libimp 1.0.33 i264e_reconfig_dn_set 0x2de7c, read in i264e_slice_write 0x31128): with attrDenoise.enable set at CreateChn and dnType 1/2 the vendor encodes every frame twice, a first pass (ctx pass flag 1) at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass; T10/T20 3.12.0 share the design. Needs a second Helix job per frame plus register-level work, not built (stability first)
+2. `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): stored and read back (apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first
 3. `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25)
 4. `Encoder_Get/SetFisheyeEnableStatus`: T23+T31: kept for getter only (documented in source)
 5. `Encoder_Get/SetH264TransCfg`: T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested
@@ -1178,7 +1178,7 @@ Notes:
 | `Encoder_Get/SetChnColor2Grey` [19] | host | dev | dev | dev | n.a. | n.a. | T21: r† |
 | `Encoder_Get/SetChnCrop` [20] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
 | `Encoder_Get/SetChnDemask` | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
-| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | cache | dev | n.a. | n.a. | T21: r† |
+| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | n.a. | n.a. | T21: r† |
 | `Encoder_Get/SetChnFrmRate` [21] | aud | dev | dev | dev | dev | aud | p† r† |
 | `Encoder_Get/SetChnFrmUsedMode` [3] | miss | miss | miss | dev | n.a. | n.a. | – |
 | `Encoder_Get/SetChnGopAttr` [22] | n.a. | n.a. | n.a. | n.a. | dev | aud | – |
@@ -1271,7 +1271,7 @@ Notes:
 18. `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation
 19. `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25)
 20. `Encoder_Get/SetChnCrop`: audit: userspace implementation
-2. `Encoder_Get/SetChnDenoise`: T10+T20+T21: stored and read back (apitest roundtrip PASS on T20/T21), not applied. NOT a vendor no-op (vendor T21 libimp 1.0.33 i264e_reconfig_dn_set 0x2de7c, read in i264e_slice_write 0x31128): with attrDenoise.enable set at CreateChn and dnType 1/2 the vendor encodes every frame twice, a first pass (ctx pass flag 1) at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass; T10/T20 3.12.0 share the design. Needs a second Helix job per frame plus register-level work, not built (stability first)
+2. `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): stored and read back (apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first
 21. `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation
 3. `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25)
 22. `Encoder_Get/SetChnGopAttr`: audit: userspace implementation
