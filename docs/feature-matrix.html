@@ -430,12 +430,12 @@ th small{font-weight:400;color:var(--muted)}
 <td class="s-ok"><span class="sym" title="supported">✅</span><span class="txt">rmem 26 MB in the current image (was 30): stream buffers sized like the vendor (1080p 0.95 MB), capture buffers from the bottom and the rest from the top so idle/restart cycles no longer fragment rmem; 5 idle/restart cycles clean. OOM with three parallel streams and <code>AddSensor</code> EBUSY after an OOM kill are still open</span></td>
 </tr>
 <tr id="r-refshare"><td><a href="#n-refshare">Reference-frame sharing (BUF_SHARE_CFG)</a></td><td class="vend">vendor T23: used by default (&lt;=1080p); vendor T21: off by default</td>
-<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">hardware missing</span></td>
-<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">hardware missing</span></td>
+<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">not in this SoC's encoder (vendor has none either)</span></td>
+<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">not in this SoC's encoder (vendor has none either)</span></td>
 <td class="s-plus"><span class="sym" title="improved beyond vendor">✅+</span><span class="txt">works (claude/t23-ref-ring) [-all-13]: P-frames 150-300 B in a static scene on cam-D, no artefacts; saves ~1.5 MB video memory at 1080p; on by default (&lt;=1920x1088), OPENIMP_REF_SHARE=0 disables</span></td>
 <td class="s-plus"><span class="sym" title="improved beyond vendor">✅+</span><span class="txt">works (claude/t23-ref-ring) [-all-13]: no artefacts on cam-B, P-frame sizes equal or smaller than without the ring; saves ~1.5 MB at 1080p; on by default (&lt;=1920x1088, like the vendor), OPENIMP_REF_SHARE=0 disables</span></td>
 <td class="s-unk"><span class="sym" title="unknown">?</span><span class="txt">not documented</span></td>
-<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">hardware missing</span></td>
+<td class="s-na"><span class="sym" title="hardware does not have it">—</span><span class="txt">not in this SoC's encoder (vendor has none either)</span></td>
 <td class="s-unk"><span class="sym" title="unknown">?</span><span class="txt">not documented</span></td>
 <td class="s-unk"><span class="sym" title="unknown">?</span><span class="txt">not wired in timps (SetbufshareChn exists in libimp); not tested</span></td>
 </tr>
