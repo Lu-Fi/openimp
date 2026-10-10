@@ -51,13 +51,20 @@ int IMP_Encoder_GetChnRoiAttr(int encChn, RAttr *a) __attribute__((weak));
 /* the vendor libsysutils/libalog expect these from the application or libimp */
 #include <stdarg.h>
 __attribute__((weak)) int IMP_Log_Get_Option(void) { return 0; }
-__attribute__((weak)) void imp_log_fun(int level, const char *tag, const char *fmt, ...)
+/* OEM signature (level, option, type, tag, file, line, func, fmt, ...): with
+ * --export-dynamic this definition replaces libimp's own, so it must take
+ * the same arguments (the old (level, tag, fmt) form crashed on T23 with
+ * ROITEST_LOG=1: fmt was the integer "type") */
+__attribute__((weak)) int imp_log_fun(int level, int option, int type, const char *tag, const char *file,
+                                      int line, const char *func, const char *fmt, ...)
 {
     va_list ap;
-    (void)level; (void)tag;
+    (void)level; (void)option; (void)type; (void)tag; (void)file; (void)line; (void)func;
+    if (!fmt || !getenv("ROITEST_LOG")) return 0;
     va_start(ap, fmt);
-    if (getenv("ROITEST_LOG")) vfprintf(stderr, fmt, ap);
+    vfprintf(stderr, fmt, ap);
     va_end(ap);
+    return 0;
 }
 #define CK(e, m) do { int r_ = (e); if (r_ < 0) { printf("[E] %s -> %d\n", m, r_); exit(1); } } while (0)
 

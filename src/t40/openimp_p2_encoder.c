@@ -27,6 +27,9 @@
 #include "dma_alloc.h"
 #include "t30/helix_roi.h"
 #endif
+#if defined(PLATFORM_T23)
+#include "t30/helix_roi.h"
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 #include "t23/openimp_t23_persist.h"
 #endif
@@ -1763,7 +1766,8 @@ int IMP_Encoder_DestroyGroup(int group)
     return 0;
 }
 
-#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T23)
 /* Test hook for the ROI / chroma QP offset path without a streamer that
  * calls the API: OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..." (pixel
  * corners as IMPRect p0/p1, region index = position in the list) and
@@ -1988,7 +1992,8 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     pthread_mutex_unlock(&ch->lock);
-#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T23)
     p2_debug_roi_chroma(channel);
 #endif
     p2_trace("openimp/P2: CreateChn done ch=%d codec=%p\n",
@@ -4103,13 +4108,30 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
     }
 #endif
     pthread_mutex_lock(&ch->lock);
-    ch->roi[config->u32Index] = *config;
 #if defined(PLATFORM_T23)
+    /* OEM 1.3.0: the same i264e ROI table entry; i264e_reconfig copies the
+     * table into every picture's slice (+752) and H264E_T21_SliceInit
+     * programs 0x40044..0x40068.  The native Helix encoder takes the entry
+     * here (Helix_H264_RoiSanitize clamps it per picture, as on T21); the
+     * OEM worker gets it through the bridge (no-op when native). */
+    if (ch->codec_type == IMP_ENC_TYPE_AVC && ch->codec) {
+        uint8_t entry[7];
+
+        Helix_H264_RoiEntry(config->bEnable, config->bRelatedQp,
+                            config->s32Qp, config->rect.x, config->rect.y,
+                            config->rect.width, config->rect.height, entry);
+        if (AL_Codec_Encode_SetRoi(ch->codec, config->u32Index,
+                                   entry) != 0) {
+            pthread_mutex_unlock(&ch->lock);
+            return -1;
+        }
+    }
     if (openimp_t23_enc_push_roi(ch->codec, ch->codec_type, config) != 0) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
 #endif
+    ch->roi[config->u32Index] = *config;
     pthread_mutex_unlock(&ch->lock);
     return 0;
 }

@@ -7419,6 +7419,7 @@ struct AL_CodecEncode {
     uint64_t t30_helix_retry_ms;   /* no create before (CLOCK_MONOTONIC) */
 #endif
 #if defined(PLATFORM_T23)
+    uint8_t helix_roi[8][7];       /* AL_Codec_Encode_SetRoi (codec_roi_lock) */
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
     int t23_backend;               /* T23_BACKEND_*, chosen on first frame */
 #endif
@@ -8325,14 +8326,14 @@ int AL_Codec_Encode_SetColor2Grey(void *codec, int enable)
 
 /* The ROI tables of all channels: set on the caller's thread, copied to
  * the encoder on the encoding thread between pictures (codec_t30_roi). */
-#if defined(PLATFORM_T30)
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
 static pthread_mutex_t codec_roi_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
                            const uint8_t entry[7])
 {
-#if defined(PLATFORM_T30)
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
     AL_CodecEncode *enc = (AL_CodecEncode *)codec;
 
     if (enc == NULL || entry == NULL || index >= 8u)
@@ -10555,8 +10556,15 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
              * setter is half-way through updating them; Reconfigure
              * validates the snapshot as a whole. */
             HWEncoderParams current = enc->hw_params;
+            uint8_t roi[8][7];
 
             (void)OpenIMP_T30_HelixReconfigure(enc->t30_helix, &current);
+            /* IMP_Encoder_SetChnROI: the table as of this picture */
+            pthread_mutex_lock(&codec_roi_lock);
+            memcpy(roi, enc->helix_roi, sizeof(roi));
+            pthread_mutex_unlock(&codec_roi_lock);
+            (void)OpenIMP_T30_HelixSetRoi(enc->t30_helix,
+                                          (const uint8_t (*)[7])roi);
             if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
                 OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
             codec_push_user_data(enc, enc->t30_helix);
