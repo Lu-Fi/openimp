@@ -79,7 +79,7 @@ Defaults in `next` that older cells may still call opt-in or pending: T20/T10 OE
 
 State on 2026-10-04: all test cameras run full OTA images built from thingino `aperto` (Lu-Fi forks pinned to open-tx-isp `next` 40cc77ec and OpenIMP `next` db760431) since 2026-10-04 17:39-17:47, with timps v1.9.31 and the kernel VPU/rmem patches as merged upstream; cam-F (T41) rootfs rev7 with rmem 26M. A 24 h soak has run since 17:50 (5 h so far: 0 streamer restarts, 0 encoder/VPU errors, 0 oops); the first release tag follows after it.
 
-Not adopted: OSD edge flush, reference sharing on T10/T20/T31 (hardware missing).
+Not adopted: OSD edge flush, reference sharing on T10/T20/T31 (not in that SoC's encoder; the vendor has none either).
 
 ## Legend
 
@@ -615,12 +615,12 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 ##### 37. Reference-frame sharing (BUF_SHARE_CFG)
 
 - **Vendor stack:** vendor T23: used by default (<=1080p); vendor T21: off by default
-- **T10:** — hardware missing
-- **T20:** — hardware missing
+- **T10:** — not in this SoC's encoder (vendor has none either)
+- **T20:** — not in this SoC's encoder (vendor has none either)
 - **T21:** ✅+ works (claude/t23-ref-ring) [-all-13]: P-frames 150-300 B in a static scene on cam-D, no artefacts; saves ~1.5 MB video memory at 1080p; on by default (<=1920x1088), OPENIMP_REF_SHARE=0 disables
 - **T23:** ✅+ works (claude/t23-ref-ring) [-all-13]: no artefacts on cam-B, P-frame sizes equal or smaller than without the ring; saves ~1.5 MB at 1080p; on by default (<=1920x1088, like the vendor), OPENIMP_REF_SHARE=0 disables
 - **T30:** ? not documented
-- **T31:** — hardware missing
+- **T31:** — not in this SoC's encoder (vendor has none either)
 - **T40:** ? not documented
 - **T41:** ? not wired in timps (SetbufshareChn exists in libimp); not tested
 
