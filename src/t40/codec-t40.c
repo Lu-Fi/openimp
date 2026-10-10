@@ -36,6 +36,9 @@
 #if defined(PLATFORM_T40)
 #include "t40_stream_layout.h"
 #endif
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#include "t40_vendor_cmd.h"
+#endif
 #if defined(PLATFORM_T31)
 #include "t31_rate_control.h"
 #include "t31_stream_layout.h"
@@ -73,6 +76,10 @@
  */
 #if defined(PLATFORM_T41)
 #define PLATFORM_T40 1
+#endif
+/* The T40 build itself (T41 shares this file with PLATFORM_T40 defined). */
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#define AVPU_T40_NATIVE 1
 #endif
 
 enum {
@@ -1476,10 +1483,10 @@ static int avpu_t40_init_ep2(ALAvpuContext *ctx)
 
     destination = (uint8_t *)ctx->interm_buf.map + offset;
     memcpy(destination, seed_words, sizeof(seed_words));
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(AVPU_T40_NATIVE)
     if (ctx->rc_mode == HW_RC_MODE_FIXQP) {
         /*
-         * T31 disables HWRC for FixQP and leaves EP2's legal QP range at the
+         * T31 (and T40, vendor capture) disables HWRC for FixQP and leaves EP2's legal QP range at the
          * OEM defaults (0..51).  Pinning both fields to the configured QP is
          * a T40-shaped interpretation that changes the IDR transform state.
          */
@@ -3879,6 +3886,131 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
  * RecBuffer context. Leaving the required DMA words at zero causes the AVPU to
  * DMA to physical address 0x0 → AXI bus hang → hard SoC crash.
  */
+#if defined(AVPU_T40_NATIVE)
+/*
+ * T40 command words that follow the vendor libimp 1.3.1 command lists
+ * (Eufy T40XP, SC830AI; H.264 High, CBR/VBR/FixQP at 3840x2160, 1920x1080,
+ * 1280x720 and 640x360, captured word by word at the AVPU push).  Each item
+ * can be switched back to the previous OpenIMP value for comparisons:
+ * OPENIMP_T40_<NAME>=0.
+ */
+static int avpu_t40_knob(int index, const char *name)
+{
+    static int cache[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+
+    if (index < 0 || index >= 8)
+        return 1;
+    if (cache[index] < 0) {
+        const char *value = getenv(name);
+
+        cache[index] = value && value[0] == '0' ? 0 : 1;
+        if (!cache[index])
+            IMP_LOG_INFO("Codec", "T40 encoder: %s=0 (pre-vendor value)", name);
+    }
+    return cache[index];
+}
+
+#define AVPU_T40_KNOB_FIXQP_NOHWRC 0  /* OPENIMP_T40_FIXQP_NOHWRC */
+#define AVPU_T40_KNOB_CMD12 1         /* OPENIMP_T40_CMD12 */
+#define AVPU_T40_KNOB_POC 2           /* OPENIMP_T40_POC */
+#define AVPU_T40_KNOB_HWRC_TARGET 3   /* OPENIMP_T40_HWRC_TARGET */
+#define AVPU_T40_KNOB_FIXQP_LDA 4     /* OPENIMP_T40_FIXQP_LDA */
+
+static uint32_t avpu_t40_cmd12_hi(uint32_t width)
+{
+    return t40_vendor_cmd12_hi(width);
+}
+
+static void avpu_t40_hwrc_targets(const ALAvpuContext *ctx, int is_idr,
+                                  uint32_t lcu_count, uint32_t groups,
+                                  uint32_t *word15, uint32_t *word16)
+{
+    uint64_t bitrate = ctx->bitrate ? ctx->bitrate : 2000000u;
+
+    t40_vendor_hwrc_targets(bitrate,
+                            ctx->rc_mode == HW_RC_MODE_VBR
+                                ? ctx->t31_max_bitrate : bitrate,
+                            ctx->fps_num, ctx->fps_den, lcu_count, groups,
+                            is_idr, word15, word16);
+}
+
+/* FixQP lambdas per picture type, as the vendor rewrites EP1 before each
+ * picture (only when the type changes; EP1 is at the start of interm_buf). */
+static void avpu_t40_fixqp_lambdas(ALAvpuContext *ctx, int is_idr)
+{
+    uint32_t type = is_idr ? 2u : 1u;
+
+    if (ctx->rc_mode != HW_RC_MODE_FIXQP || ctx->codec_hevc ||
+        !ctx->interm_buf.map || ctx->t40_ep1_lambda_type == type ||
+        !avpu_t40_knob(AVPU_T40_KNOB_FIXQP_LDA, "OPENIMP_T40_FIXQP_LDA"))
+        return;
+    if (openimp_t40_update_fixqp_ep1(ctx->interm_buf.map,
+                                     ctx->interm_ep1_size, is_idr) != 0)
+        return;
+    (void)avpu_flush_cache(ctx->fd, ctx->interm_buf.map, 0x100u, 1 /* WBACK */);
+    ctx->t40_ep1_lambda_type = type;
+}
+
+static void avpu_t40_native_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
+                                int is_idr, uint32_t lcu_count,
+                                uint32_t groups)
+{
+    uint32_t n = is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
+
+    /* The vendor never writes the picture size into the late window. */
+    cmd[0x64] = 0u;
+    cmd[0x65] = 0u;
+
+    if (avpu_t40_knob(AVPU_T40_KNOB_CMD12, "OPENIMP_T40_CMD12"))
+        cmd[0x12] = (cmd[0x12] & 0xf0ffffffu) |
+                    ((avpu_t40_cmd12_hi(ctx->enc_w) & 0xfu) << 24);
+
+    /* Picture numbers of the current picture and its references (in units
+     * of two, as the AVC frame POC), reset at every IDR. */
+    if (!is_idr && avpu_t40_knob(AVPU_T40_KNOB_POC, "OPENIMP_T40_POC")) {
+        uint32_t current = n * 2u;
+        uint32_t previous = n > 1u ? current - 2u : 0u;
+
+        cmd[0x0c] = current;
+        cmd[0x0d] = previous;
+        cmd[0x0e] = 0u;
+        cmd[0x0f] = previous;
+        cmd[0x10] = n > 1u ? current - 4u : 0xffffffffu;
+        cmd[0x11] = 0xffffffffu;
+    }
+
+    if (ctx->rc_mode == HW_RC_MODE_FIXQP) {
+        /* FixQP runs without the hardware rate controller: no enable bit,
+         * no targets, no QP window and no EP3 table. */
+        if (avpu_t40_knob(AVPU_T40_KNOB_FIXQP_NOHWRC,
+                          "OPENIMP_T40_FIXQP_NOHWRC")) {
+            cmd[0x09] &= ~0x00010000u;
+            memset(&cmd[0x14], 0, 5u * sizeof(uint32_t));
+            cmd[0x2d] = 0u;
+        }
+    } else if (avpu_t40_knob(AVPU_T40_KNOB_HWRC_TARGET,
+                             "OPENIMP_T40_HWRC_TARGET")) {
+        uint32_t word15;
+        uint32_t word16;
+
+        avpu_t40_hwrc_targets(ctx, is_idr, lcu_count, groups,
+                              &word15, &word16);
+        cmd[0x15] = word15 & 0x00ffffffu;
+        cmd[0x16] = (cmd[0x16] & 0xff000000u) | (word16 & 0x00ffffffu);
+        /* bits 31:24 the HW minimum QP; bits 23:16 hold the QP of the
+         * GOP's IDR on every picture */
+        cmd[0x17] = (cmd[0x17] & 0x00ffffffu) |
+                    ((t40_vendor_hwrc_min_qp(cmd[0x17] >> 24,
+                                             (cmd[0x17] >> 8) & 0xffu)
+                      & 0xffu) << 24);
+        cmd[0x17] = (cmd[0x17] & 0xff00ffffu) |
+                    ((is_idr ? cmd[0x17] & 0x3fu : ctx->t40_idr_qp & 0x3fu)
+                     << 16);
+        cmd[0x18] = (cmd[0x18] & 0xffff0000u) | ((word15 >> 7) & 0xffffu);
+    }
+}
+#endif
+
 static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
                                int stream_buf_idx, uint32_t src_phys, uint32_t hdr_offset,
                                int is_idr, uint32_t ref_phys)
@@ -4421,6 +4553,9 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         cmd[0x6e] = 0u;
         cmd[0x6f] = 0u;
 
+#if defined(AVPU_T40_NATIVE)
+        avpu_t40_native_cmd(ctx, cmd, is_idr, lcu_count, hwrc_group_count);
+#endif
 #if defined(PLATFORM_T31)
         /*
          * The T31 and T40 command engines use the same inline AVC layout,
@@ -11250,6 +11385,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                                   enc->avpu.codec_hevc ? "HEVC" : "AVC",
                                                   enc->avpu.interm_ep1_size);
                                     }
+#if defined(AVPU_T40_NATIVE)
+                                    enc->avpu.t40_ep1_lambda_type = 0u;
+#endif
 #if defined(PLATFORM_T40) || defined(PLATFORM_T31)
                                     if (avpu_t40_init_ep2(&enc->avpu) != 0)
                                         LOG_CODEC("AVPU: ERROR - default EP2 initialization failed");
@@ -11935,6 +12073,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 }
             }
 #endif
+#if defined(AVPU_T40_NATIVE)
+            avpu_t40_fixqp_lambdas(ctx, is_idr);
+#endif
 #if defined(OPENIMP_AL_FRAME_RC)
             if (avpu_t31_prepare_picture(ctx) != 0) {
                 LOG_CODEC("Process: failed to prepare T31 rate-control state frame=%u buf=%d",
@@ -11946,6 +12087,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             }
             ctx->t31_rate_control_qp_by_buf[buf_idx] =
                 avpu_t40_picture_qp(ctx, is_idr);
+#if defined(AVPU_T40_NATIVE)
+            if (is_idr)
+                ctx->t40_idr_qp = ctx->t31_rate_control_qp_by_buf[buf_idx];
+#endif
 #endif
             OpenIMPProfileStamp header_profile = openimp_profile_begin();
             uint32_t hdr_offset = avpu_prewrite_stream_headers(

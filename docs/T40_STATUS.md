@@ -96,6 +96,28 @@ is not available here; its OSD attribute is also larger than the 1.3.1 header):
   conversion).  Control numbers are the same as on T41; the tuning ioctl is
   0xc0105436 on T40 (T41: 0xc0105435).
 
+## Encoder command list versus the vendor (H.264)
+
+The AVC command words, EP1 (lambda table and scaling list, 8 KB) and EP2 now
+match the vendor libimp 1.3.1 word by word on the Eufy T40XP for CBR, VBR and
+FixQP at 3840x2160 and 640x360 (addresses aside; only cmd[0x1b] bit 16 still
+differs on some P pictures).  Values are in `src/t40/t40_vendor_cmd.h`,
+checked by `tests/t40/vendor_cmd_test.c`:
+
+- IDR period `uGopLength * uMaxSameSenceCnt` (the vendor header formula; GOP
+  40 x 2 gives an IDR every 80 pictures, not every 40);
+- iInitialQP -1: the vendor's bits-per-pixel table (4K 6 Mbit/s: QP 39, not 26);
+- FixQP: no hardware RC (cmd[9] bit 16, cmd[0x14..0x18], EP3 off), EP2 QP range
+  0..51 and the fixed-QP lambda table per picture type (IDR: intra lane only);
+- hardware RC targets cmd[0x15] = 1.9 x bit/s per group (I), 5/7 of it (P),
+  cmd[0x16] = per-frame maximum per group, cmd[0x17] min max(min, max - 32) and
+  the IDR QP in bits 23:16; cmd[0x12] bits 27:24 from 512 / 64-pixel columns;
+  picture numbers in cmd[0x0c..0x11]; no picture size in cmd[0x64/0x65];
+- SetDefaultParam CBR/VBR: QP 15..48, eRcOptions 1 (as vendor and T31).
+
+`OPENIMP_T40_{FIXQP_NOHWRC,FIXQP_LDA,CMD12,POC,HWRC_TARGET}=0` restore the old
+words one by one for comparisons.
+
 ## Build
 
 ```sh

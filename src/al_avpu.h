@@ -280,6 +280,12 @@ typedef struct ALAvpuContext {
     uint64_t t41_submit_ms;
     uint32_t t41_timeouts;
 #endif
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+    /* FixQP: picture type whose lambda words EP1 holds (0 = not yet). */
+    uint32_t t40_ep1_lambda_type;
+    /* Slice QP of the last IDR (HWRC cmd[0x17] bits 23:16). */
+    uint32_t t40_idr_qp;
+#endif
 #if defined(PLATFORM_T31)
     /* Exact entropy bytes reported at completion status +0x104. */
     uint32_t t31_payload_size_by_buf[16];
