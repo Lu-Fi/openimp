@@ -243,7 +243,8 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	t21_sinter_map_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
-	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23
+	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
+	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test
 	./rmem_highwater_test
 	./ref_ring_test
 	./ref_ring_test_t23
@@ -269,6 +270,9 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	./rc_readback_test_t21
 	./rc_readback_test_t20
 	./rc_readback_test_t23
+	./p2_gap_test_t21
+	./p2_gap_test_t20
+	./osd_attach_test
 	./check_exports.sh
 
 # GetChnAttrRcMode read-back of T21, T20 and T23 (src/t40/p2_rc_readback.h).
@@ -284,6 +288,26 @@ rc_readback_test_t23: rc_readback_test.c $(ROOT)/src/t40/p2_rc_readback.h
 	$(CC) $(CFLAGS) -DPLATFORM_T23 '-D_Static_assert(c,m)=' -I$(ROOT)/include \
 		-I$(ROOT)/src -o $@ rc_readback_test.c
 
+# Vendor bookkeeping calls of the P2 encoder (FrmUsedMode, Fisheye, GetGOPSize,
+# ChangeRef, HSkipBlackEnhance) and IMP_OSD_AttachToGroup; the .c files are
+# included, the codec/FrameSource/DMA calls the tests never reach stay unresolved
+# (--unresolved-symbols=ignore-all; a call would crash the test).
+# -O1: GCC 15 -O2 reports a bogus array-bounds path for the constant bad channels.
+P2_GAP_FLAGS = -O1 -Wno-unused-result '-D_Static_assert(c,m)=' -I$(ROOT)/include \
+	-I$(ROOT)/src -I$(ROOT)/src/t40 -I$(ROOT)/src/t31 -no-pie \
+	-Wl,--unresolved-symbols=ignore-all
+p2_gap_test_t21: p2_gap_test.c p2_gap_stubs.c $(ROOT)/src/t40/openimp_p2_encoder.c
+	$(CC) $(CFLAGS) -DPLATFORM_T21 $(P2_GAP_FLAGS) -o $@ p2_gap_test.c \
+		p2_gap_stubs.c $(ROOT)/src/openimp_profile.c -pthread
+
+p2_gap_test_t20: p2_gap_test.c p2_gap_stubs.c $(ROOT)/src/t40/openimp_p2_encoder.c
+	$(CC) $(CFLAGS) -DPLATFORM_T20 -DPLATFORM_T21 $(P2_GAP_FLAGS) -o $@ \
+		p2_gap_test.c p2_gap_stubs.c $(ROOT)/src/openimp_profile.c -pthread
+
+osd_attach_test: osd_attach_test.c $(ROOT)/src/t31/openimp_t31_services.c
+	$(CC) $(CFLAGS) -DPLATFORM_T21 $(P2_GAP_FLAGS) -o $@ osd_attach_test.c \
+		-pthread
+
 clean:
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
@@ -292,4 +316,5 @@ clean:
 		ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 		fs_lifecycle_asan_* fs_lifecycle_tsan_* helix_encoder_asan_* \
-		ivs_framework_asan_* ivs_framework_tsan_* system_test system_tsan
+		ivs_framework_asan_* ivs_framework_tsan_* system_test system_tsan \
+		p2_gap_test_t21 p2_gap_test_t20 osd_attach_test

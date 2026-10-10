@@ -747,6 +747,35 @@ int IMP_OSD_Stop(int group)
     pthread_mutex_unlock(&osd_lock);
     return 0;
 }
+
+#if defined(PLATFORM_T21)
+/* OEM T21/T20 IMP_OSD_AttachToGroup: a thin wrapper around system_attach();
+ * <0 is logged and returned as -1.  system_attach() inserts "from" between
+ * "to" and the cell that currently feeds it, i.e. src->to becomes
+ * src->from->to, and rolls the binds back on a failure.  The encoder looks
+ * its OSD group up at RegisterChn/StartRecvPic, so attach before starting
+ * the channel. */
+int IMP_OSD_AttachToGroup(IMPCell *from, IMPCell *to)
+{
+    IMPCell source;
+
+    if (!from || !to)
+        return -1;
+    if (IMP_System_GetBindbyDest(to, &source) != 0 ||
+        IMP_System_UnBind(&source, to) != 0)
+        return -1;
+    if (IMP_System_Bind(&source, from) != 0) {
+        (void)IMP_System_Bind(&source, to);
+        return -1;
+    }
+    if (IMP_System_Bind(from, to) != 0) {
+        (void)IMP_System_UnBind(&source, from);
+        (void)IMP_System_Bind(&source, to);
+        return -1;
+    }
+    return 0;
+}
+#endif /* PLATFORM_T21 */
 #endif /* !PLATFORM_T23 */
 
 

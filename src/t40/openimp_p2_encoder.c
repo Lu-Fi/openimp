@@ -227,6 +227,13 @@ typedef struct {
     IMPEncoderH265TransCfg h265_transform;
     IMPEncoderQpgMode qpg_mode;
     int macroblock_rate_control;
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+    /* stored like the OEM T20/T21 channel record (see the block after
+     * IMP_Encoder_GetChnHSkip) */
+    IMPEncoderAttrFrmUsed frm_used;
+    int fisheye;
+    int change_ref;
+#endif
     /* rc attribute last set by SetChnAttrRcMode: the OEM read-back then
      * shows the run-time clamps (p2_rc_readback.h) */
     int rc_runtime;
@@ -3618,6 +3625,149 @@ int IMP_Encoder_GetChnHSkip(int channel, IMPEncoderAttrHSkip *attr)
     pthread_mutex_lock(&ch->lock);
     *attr = ch->attr.rcAttr.attrHSkip.hSkipAttr;
     pthread_mutex_unlock(&ch->lock);
+    return 0;
+}
+#endif
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+/* ---- vendor channel bookkeeping, T20/T21 (gap work 2026-10-10) -----------
+ * Disassembly of libimp T21 1.0.33 and T20/T10 3.12.0 (identical build for
+ * both): every function below reads or writes the 0x908 (T21) / 0x810 (T20)
+ * byte channel record; channel >= 6 is -1 there (OpenIMP keeps its own
+ * channel limit).  "created" is the vendor state word 1 (set by CreateChn). */
+
+/* OEM: copies the three words {enable, frmUsedMode, frmUsedTimes} into the
+ * channel record, nothing else reads them in the OpenIMP encoder (the OEM
+ * channel thread reuses or skips input frames by this mode when the source
+ * is slower than the encoder; OpenIMP paces every channel at its frame
+ * rate).  Valid before and after CreateChn. */
+int IMP_Encoder_SetChnFrmUsedMode(int channel, const IMPEncoderAttrFrmUsed *attr)
+{
+    if (!p2_valid_channel(channel) || !attr)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    p2_channels[channel].frm_used = *attr;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+
+int IMP_Encoder_GetChnFrmUsedMode(int channel, IMPEncoderAttrFrmUsed *attr)
+{
+    if (!p2_valid_channel(channel) || !attr)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    *attr = p2_channels[channel].frm_used;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+
+/* OEM: a flag in the channel record, settable only while the channel is not
+ * created (-1 afterwards).  Its only reader is the closed fisheye motion
+ * search of the OEM i264e, which the Helix path does not contain. */
+int IMP_Encoder_SetFisheyeEnableStatus(int channel, int enable)
+{
+    int ret = -1;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (!p2_channels[channel].created) {
+        p2_channels[channel].fisheye = enable != 0;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return ret;
+}
+
+int IMP_Encoder_GetFisheyeEnableStatus(int channel, int *enable)
+{
+    if (!p2_valid_channel(channel) || !enable)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    *enable = p2_channels[channel].fisheye != 0;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+
+/* OEM GetGOPSize: reads i264e parameter 7 of a created channel (the GOP
+ * length the encoder runs with).  T21: an idle channel answers 0 and leaves
+ * *cfg alone; T20: an idle channel is -1. */
+int IMP_Encoder_GetGOPSize(int channel, IMPEncoderGOPSizeCfg *cfg)
+{
+    int ret = 0;
+
+    if (!p2_valid_channel(channel) || !cfg)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (p2_channels[channel].created)
+        cfg->gopsize = (int)p2_channels[channel].attr.rcAttr.maxGop;
+#if defined(PLATFORM_T20)
+    else
+        ret = -1;
+#endif
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return ret;
+}
+
+/* OEM SetChangeRef / GetChangeRef (i264e parameter 12) and
+ * SetChnHSkipBlackEnhance (parameter 10, flag kept in the channel record):
+ * only the OEM i264e reference-structure code reads them (HSkip modes,
+ * docs/T23_EPRC.md).  The Helix path codes no HSkip structure, so the value
+ * is kept and read back with the OEM return codes: an idle channel is -1
+ * for SetChangeRef (T20: also for a started one), 0 for the black-enhance
+ * call, and GetChangeRef of an idle channel is 0 (T20: -1). */
+int IMP_Encoder_SetChangeRef(int channel, int enable)
+{
+    int ret = -1;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (p2_channels[channel].created) {
+        p2_channels[channel].change_ref = enable != 0;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return ret;
+}
+
+int IMP_Encoder_GetChangeRef(int channel, int *enable)
+{
+    int ret = 0;
+
+    if (!p2_valid_channel(channel) || !enable)
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (p2_channels[channel].created)
+        *enable = p2_channels[channel].change_ref;
+#if defined(PLATFORM_T20)
+    else
+        ret = -1;
+#else
+    else
+        *enable = 0;
+#endif
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return ret;
+}
+
+int IMP_Encoder_SetChnHSkipBlackEnhance(int channel, const int enable)
+{
+    if (!p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (p2_channels[channel].created)
+        p2_channels[channel].attr.rcAttr.attrHSkip.hSkipAttr.bBlackEnhance =
+            enable != 0;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
     return 0;
 }
 #endif

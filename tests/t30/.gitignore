@@ -29,3 +29,6 @@ rc_readback_test_t20
 rc_readback_test_t23
 t21_sinter_map_test
 rmem_highwater_test
+p2_gap_test_t21
+p2_gap_test_t20
+osd_attach_test
