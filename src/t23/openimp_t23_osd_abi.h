@@ -117,11 +117,20 @@ typedef struct {
     int osd_pixel_alpha_disable;    /* IMPISPTuningOpsMode */
 } T23ISPOSDAttr;
 
+#if defined(PLATFORM_T40)
+/* T40 1.3.1: the ISP draw block holds draw, picture and a 288-byte
+ * IMPISPMASKAttr (3 x 4 mask blocks): 1592 bytes.  ISP regions are not
+ * drawn on T40, so the block stays opaque. */
+typedef struct {
+    uint8_t raw[1592];
+} IMPOSDIspDraw;
+#else
 typedef struct {
     T23ISPDrawBlockAttr stDrawAttr;
     T23ISPOSDBlockAttr stpicAttr;
     T23ISPMaskBlockAttr stCoverAttr;
 } IMPOSDIspDraw;
+#endif
 
 typedef struct {
     unsigned int fontWidth;
@@ -204,7 +213,9 @@ typedef struct {
 } IMPIspOsdAttrAsm;
 
 _Static_assert(sizeof(IMPOSDRgnAttrData) == 16, "T23 IMPOSDRgnAttrData");
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+_Static_assert(sizeof(IMPOSDIspDraw) == 1592, "T40 IMPOSDIspDraw");
+#elif defined(PLATFORM_T41)
 /* T41 1.2.0 imp_osd.h (measured with the T41 toolchain): the same layout
  * with a 24-byte IMPISPMaskBlockAttr, so the ISP draw block is 4 bytes
  * longer and fontData/mosaicAttr move by 4. */
@@ -218,21 +229,51 @@ _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fmt) == 28, "T23 OSD fmt");
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, data) == 32, "T23 OSD data");
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, osdispdraw) == 48,
                "T23 OSD osdispdraw");
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+_Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 1640,
+               "T40 OSD fontData");
+#elif defined(PLATFORM_T41)
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 124,
                "T41 OSD fontData");
 #else
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 120,
                "T23 OSD fontData");
 #endif
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+_Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 1920,
+               "T40 OSD mosaicAttr");
+#elif defined(PLATFORM_T41)
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 404,
                "T41 OSD mosaicAttr");
 #else
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 400,
                "T23 OSD mosaicAttr");
 #endif
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+/*
+ * T40 exists in two layouts of IMPOSDRgnAttr as well, found by comparing the
+ * vendor libimp 1.3.1 with its 1.3.1/en header (and 1.2.0/zh):
+ *
+ *   libimp 1.3.1 (IMP_OSD_GetRgnAttr/SetRgnAttr/CreateRgn copy 1948 bytes)
+ *                            sizeof 1948 (IMPOSDFontAttrData with
+ *                            colType[64] = 280 bytes, mosaicAttr at 1920)
+ *   header 1.3.1/en, 1.2.0/zh, libimp 1.2.0 (copies 1772)
+ *                            sizeof 1772 (colType[20] = 104 bytes,
+ *                            mosaicAttr at 1744)
+ *
+ * The first 1640 bytes (type, rect, line, fmt, data, the 1592-byte ISP draw
+ * block) are the same in both.  The streamers are built against the header
+ * (1772), the vendor 1.3.0/1.3.1 libraries write 1948 into it: that is the
+ * overrun of IMP_OSD_GetRgnAttr with the 1.3.0 lib.  OpenIMP keeps the
+ * 1948-byte state internally, but reads and writes only the 1772 bytes both
+ * layouts share; mosaic regions (mosaicAttr is at a different offset in each)
+ * are not drawn.
+ */
+#define T23_OSD_RGN_ATTR_T40_MIN 1772u
+_Static_assert(T23_OSD_RGN_ATTR_T40_MIN <= sizeof(IMPOSDRgnAttr),
+               "T40 IMPOSDRgnAttr is smaller than the readable prefix");
+_Static_assert(sizeof(IMPOSDRgnAttr) == 1948, "T40 IMPOSDRgnAttr");
+#elif defined(PLATFORM_T41)
 /*
  * T41 exists in two vendor layouts for IMPOSDRgnAttr that cannot be served at
  * the same time:

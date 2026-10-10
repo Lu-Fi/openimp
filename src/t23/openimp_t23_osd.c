@@ -80,10 +80,12 @@ static int osd_ipu_errors;
 static int osd_ipu_disabled;
 static int osd_state;               /* 0 unknown, 1 on, -1 off */
 
-#if defined(PLATFORM_T41)
-/* T41 builds this OSD for its IPU path (/dev/ipu, the same jz_ipu_v13 as
- * T23 and T31).  The T41 ISP OSD (OSD_REG_ISP_*) has its own ioctls and is
- * not implemented: those regions are accepted and not drawn. */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+/* T41 and T40 build this OSD for their IPU path (/dev/ipu, the same
+ * jz_ipu_v13 as T23 and T31; the vendor T40 1.3.1 ipu_osd, ipu_init and
+ * _ipu_set_osdx_para are instruction-identical to T41 1.2.6).  The ISP OSD
+ * (OSD_REG_ISP_*) has its own ioctls and is not implemented: those regions
+ * are accepted and not drawn. */
 static int IMP_OSD_SetRgnAttr_ISP(IMPOSDRgnAttr *attr, int show)
 {
     static int reported;
@@ -92,7 +94,7 @@ static int IMP_OSD_SetRgnAttr_ISP(IMPOSDRgnAttr *attr, int show)
     (void)show;
     if (!reported) {
         reported = 1;
-        IMP_LOG_INFO("OSD", "T41: ISP OSD regions are not drawn");
+        IMP_LOG_INFO("OSD", "ISP OSD regions are not drawn");
     }
     return -1;
 }
@@ -129,7 +131,11 @@ static int valid_group(int group)
  */
 static void rgn_attr_copy(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
 {
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+    memcpy(dst, src, T23_OSD_RGN_ATTR_T40_MIN);
+    memset((char *)dst + T23_OSD_RGN_ATTR_T40_MIN, 0,
+           sizeof(*dst) - T23_OSD_RGN_ATTR_T40_MIN);
+#elif defined(PLATFORM_T41)
     memcpy(dst, src, T23_OSD_RGN_ATTR_T41_MIN);
     memset((char *)dst + T23_OSD_RGN_ATTR_T41_MIN, 0,
            sizeof(*dst) - T23_OSD_RGN_ATTR_T41_MIN);
@@ -149,7 +155,9 @@ static void rgn_attr_copy(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
  */
 static void rgn_attr_export(IMPOSDRgnAttr *dst, const IMPOSDRgnAttr *src)
 {
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40)
+    memcpy(dst, src, T23_OSD_RGN_ATTR_T40_MIN);
+#elif defined(PLATFORM_T41)
     memcpy(dst, src, T23_OSD_RGN_ATTR_T41_MIN);
 #else
     *dst = *src;

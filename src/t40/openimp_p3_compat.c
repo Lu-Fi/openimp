@@ -1,6 +1,8 @@
 /* Loader-completeness shims for RVD/RAD features outside the active P3 gate.
  * Real P0-P3 implementations live in their subsystem translation units.
- * These return ENOTSUP instead of pretending that inactive P4 features work. */
+ * These return ENOTSUP instead of pretending that inactive P4 features work.
+ * OSD and IVS are real on T40 and T41 (src/t23/openimp_t23_osd.c,
+ * src/t31/openimp_t31_ivs*.c); SnapFrame is in openimp_p1.c. */
 
 #include <errno.h>
 #include <stddef.h>
@@ -47,6 +49,7 @@ P3_UNSUPPORTED(IMP_DMIC_SetPubAttr)
 P3_UNSUPPORTED(IMP_DMIC_SetUserInfo)
 P3_UNSUPPORTED(IMP_DMIC_SetVol)
 
+
 P3_UNSUPPORTED(IMP_ISP_Tuning_CreateOsdRgn)
 P3_UNSUPPORTED(IMP_ISP_Tuning_DestroyOsdRgn)
 #if !defined(PLATFORM_T41)   /* no T41 export (vendor T41 has SetMaskBlock) */
@@ -57,23 +60,3 @@ P3_UNSUPPORTED(IMP_ISP_Tuning_SetMask)
 #endif
 P3_UNSUPPORTED(IMP_ISP_Tuning_SetOsdRgnAttr)
 P3_UNSUPPORTED(IMP_ISP_Tuning_ShowOsdRgn)
-
-#if !defined(PLATFORM_T41)
-/* T41 has the IPU OSD (src/t23/openimp_t23_osd.c) */
-
-P3_UNSUPPORTED(IMP_OSD_CreateGroup)
-P3_UNSUPPORTED(IMP_OSD_CreateRgn)
-P3_UNSUPPORTED(IMP_OSD_DestroyGroup)
-P3_UNSUPPORTED(IMP_OSD_DestroyRgn)
-P3_UNSUPPORTED(IMP_OSD_GetGrpRgnAttr)
-P3_UNSUPPORTED(IMP_OSD_GetRgnAttr)
-P3_UNSUPPORTED(IMP_OSD_RegisterRgn)
-P3_UNSUPPORTED(IMP_OSD_SetGrpRgnAttr)
-P3_UNSUPPORTED(IMP_OSD_SetRgnAttr)
-P3_UNSUPPORTED(IMP_OSD_SetRgnAttrWithTimestamp)
-P3_UNSUPPORTED(IMP_OSD_ShowRgn)
-P3_UNSUPPORTED(IMP_OSD_Start)
-P3_UNSUPPORTED(IMP_OSD_Stop)
-P3_UNSUPPORTED(IMP_OSD_UnRegisterRgn)
-P3_UNSUPPORTED(IMP_OSD_UpdateRgnAttrData)
-#endif

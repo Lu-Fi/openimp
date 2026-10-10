@@ -3,14 +3,14 @@ CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
 STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-stream-layout-test
 
-.PHONY: check clean
+.PHONY: check clean abi-layout
 
 CAMERA_INPUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-camera-input-test
 
 IVS_SRC := $(PROJECT_DIR)/src/t31
 IVS_FRAMEWORK_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-ivs-framework-test
 
-check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls
+check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls abi-layout
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(CAMERA_INPUT_TEST_BIN)
 	$(IVS_FRAMEWORK_TEST_BIN)
@@ -61,3 +61,22 @@ $(STREAM_LAYOUT_TEST_BIN): stream_layout_test.c \
 clean:
 	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(P3_CONTROLS_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN)
 
+# Struct sizes and offsets against the vendor T40 1.3.1 headers and OpenIMP's
+# own T40 ABI headers.  Compile-only with a 32-bit MIPS compiler; skipped when
+# T40_CC or T40_HEADERS is missing.
+T40_CC ?= mipsel-linux-gcc
+abi-layout:
+ifeq ($(shell command -v $(T40_CC) 2>/dev/null),)
+	@echo "t40 abi layout test skipped ($(T40_CC) not found; set T40_CC to a 32-bit MIPS compiler)"
+else
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	$(T40_CC) -std=gnu99 -Wall -Wextra -Werror -DPLATFORM_T40 -I$(PROJECT_DIR)/src \
+		-c abi_internal_test.c -o "$(PROJECT_DIR)/build/tests/t40-abi-internal.o"
+ifneq ($(T40_HEADERS),)
+	$(T40_CC) -std=gnu99 -Wall -Wextra -Werror -I$(T40_HEADERS) \
+		-c abi_layout_test.c -o "$(PROJECT_DIR)/build/tests/t40-abi-layout.o"
+	@echo "t40 abi layout: vendor headers and OpenIMP headers agree"
+else
+	@echo "t40 abi layout vs vendor headers skipped (set T40_HEADERS)"
+endif
+endif

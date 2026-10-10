@@ -837,7 +837,7 @@ int IMP_ISP_Tuning_SetOsdPoolSize(int size)
     return size >= 0 ? 0 : -1;
 }
 
-#if !defined(PLATFORM_T41)   /* T41: src/t23/openimp_t23_osd.c */
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T40)   /* src/t23/openimp_t23_osd.c */
 int IMP_OSD_SetPoolSize(int size)
 {
     return size >= 0 ? 0 : -1;

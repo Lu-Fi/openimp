@@ -65,7 +65,11 @@ do
         -o "$output_dir/$source.o"
 done
 
+# OSD: the T23-family IPU OSD (T40 1.3.1 /dev/ipu = the T41 jz_ipu_v13 path);
 # IVS: the shared framework and move algorithm (T40 IMPFrameInfo ABI).
+"$compiler" $strict_flags $repo_includes \
+    -c "$project_dir/src/t23/openimp_t23_osd.c" \
+    -o "$output_dir/t40_osd.o"
 for source in openimp_t31_ivs openimp_t31_ivs_move openimp_ivs_move_v2
 do
     "$compiler" $strict_flags $repo_includes -I"$project_dir/src/t31" \
@@ -125,6 +129,7 @@ done
     "$output_dir/openimp_audio_codec.o" \
     "$output_dir/openimp_audio_enc_dec.o" \
     "$output_dir/openimp_p3_compat.o" \
+    "$output_dir/t40_osd.o" \
     "$output_dir/t40_ivs.o" \
     "$output_dir/t40_ivs_move.o" \
     "$output_dir/t40_openimp_ivs_move_v2.o" \
