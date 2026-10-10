@@ -18,6 +18,8 @@ static struct {
     uintptr_t payload;
     int calls;
     int result;
+    unsigned char data[92];		/* snapshot of the CCM (40) / CSC (92) wire */
+    unsigned char reply[92];		/* what a GET returns */
 } last;
 
 int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument)
@@ -34,6 +36,14 @@ int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument)
     last.control = request->control;
     last.payload = request->payload;
     last.calls++;
+    if (request->control == 0x08000080 || request->control == 0x08000096) {
+        size_t n = request->control == 0x08000080 ? 40 : 92;
+
+        if (request->direction)
+            memcpy((void *)request->payload, last.reply, n);
+        else
+            memcpy(last.data, (void *)request->payload, n);
+    }
     return last.result;
 }
 
@@ -97,10 +107,65 @@ int main(void)
     EXPECT(IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &ratio), 1, 0x080000a4, &ratio);
     EXPECT(IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &expr), 0, 0x08000023, &expr);
     EXPECT(IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &expr), 1, 0x08000023, &expr);
-    EXPECT(IMP_ISP_Tuning_SetCCMAttr(IMPVI_MAIN, &ccm), 0, 0x08000080, &ccm);
-    EXPECT(IMP_ISP_Tuning_GetCCMAttr(IMPVI_MAIN, &ccm), 1, 0x08000080, &ccm);
     EXPECT(IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, &gamma), 0, 0x08000025, &gamma);
-    EXPECT(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc), 0, 0x08000096, &csc);
+    /* CCM / CSC: converted to the kernel wire (Q16 words / 92-byte table). */
+    {
+        unsigned int i;
+        int32_t w;
+
+        memset(&ccm, 0, sizeof(ccm));
+        ccm.ManualEn = 1;
+        ccm.SatEn = 0;
+        ccm.ColorMatrix[0] = 1.0f; ccm.ColorMatrix[1] = -0.5f; ccm.ColorMatrix[8] = 2.0f;
+        before = last.calls;
+        assert(IMP_ISP_Tuning_SetCCMAttr(IMPVI_MAIN, &ccm) == 0);
+        assert(last.calls == before + 1 && last.direction == 0 && last.control == 0x08000080);
+        assert(last.data[0] == 1 && last.data[1] == 0);
+        memcpy(&w, last.data + 4, 4); assert(w == 65536);
+        memcpy(&w, last.data + 8, 4); assert(w == -32768);
+        memcpy(&w, last.data + 36, 4); assert(w == 131072);
+        memcpy(last.reply, last.data, 40);
+        memset(&ccm, 0, sizeof(ccm));
+        assert(IMP_ISP_Tuning_GetCCMAttr(IMPVI_MAIN, &ccm) == 0);
+        assert(ccm.ManualEn && !ccm.SatEn && ccm.ColorMatrix[0] == 1.0f &&
+               ccm.ColorMatrix[1] == -0.5f && ccm.ColorMatrix[8] == 2.0f);
+
+        /* presets pass only the version */
+        memset(&csc, 0, sizeof(csc));
+        csc.ColorGamut = IMP_ISP_CG_BT709_LIMITED;
+        assert(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc) == 0);
+        memcpy(&w, last.data, 4); assert(w == 3);
+        /* user table: BT601 full forward matrix, inverse computed */
+        csc.ColorGamut = IMP_ISP_CG_USER;
+        csc.Matrix.CscCoef[0] = 0.299f; csc.Matrix.CscCoef[1] = 0.587f; csc.Matrix.CscCoef[2] = 0.114f;
+        csc.Matrix.CscCoef[3] = -0.1687f; csc.Matrix.CscCoef[4] = -0.3313f; csc.Matrix.CscCoef[5] = 0.5f;
+        csc.Matrix.CscCoef[6] = 0.5f; csc.Matrix.CscCoef[7] = -0.4187f; csc.Matrix.CscCoef[8] = -0.0813f;
+        csc.Matrix.CscOffset[0] = 0x80; csc.Matrix.CscOffset[1] = 0;
+        csc.Matrix.CscClip[0] = 16; csc.Matrix.CscClip[1] = 235; csc.Matrix.CscClip[2] = 17; csc.Matrix.CscClip[3] = 240;
+        assert(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc) == 0);
+        memcpy(&w, last.data, 4); assert(w == 6);
+        memcpy(&w, last.data + 4, 4); assert(w == 19595 || w == 19596);
+        memcpy(&w, last.data + 48, 4); assert(w >= 65530 && w <= 65542);	/* Y of Y,U,V -> R: 1.0 */
+        memcpy(&w, last.data + 56, 4); assert(w >= 91860 && w <= 91900);	/* V -> R: 1.402 */
+        /* header order: offsets Y,UV then clips Ymin,Ymax,UVmin,UVmax */
+        assert(last.data[40] == 0x80 && last.data[41] == 0 && last.data[42] == 16 && last.data[43] == 235 &&
+               last.data[44] == 17 && last.data[45] == 240);
+        assert(!memcmp(last.data + 84, last.data + 40, 4) && !memcmp(last.data + 88, last.data + 44, 4));
+        memcpy(last.reply, last.data, 92);
+        memset(&csc, 0, sizeof(csc));
+        assert(IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_MAIN, &csc) == 0);
+        assert(csc.ColorGamut == IMP_ISP_CG_USER && csc.Matrix.CscOffset[0] == 0x80 &&
+               csc.Matrix.CscOffset[1] == 0 && csc.Matrix.CscClip[0] == 16 && csc.Matrix.CscClip[1] == 235 &&
+               csc.Matrix.CscClip[2] == 17 && csc.Matrix.CscClip[3] == 240 && csc.Matrix.CscCoef[1] > 0.586f && csc.Matrix.CscCoef[1] < 0.588f);
+        /* a singular matrix or a coefficient out of range never reaches the driver */
+        before = last.calls;
+        memset(csc.Matrix.CscCoef, 0, sizeof(csc.Matrix.CscCoef));
+        assert(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc) == -1);
+        csc.Matrix.CscCoef[0] = 9.0f;
+        assert(IMP_ISP_Tuning_SetISPCSCAttr(IMPVI_MAIN, &csc) == -1);
+        assert(last.calls == before);
+        for (i = 0; i < 9; i++) csc.Matrix.CscCoef[i] = 0.1f * i;
+    }
     EXPECT(IMP_ISP_Tuning_SetModuleControl(IMPVI_MAIN, &ctl), 0, 0x08000072, &ctl);
     EXPECT(IMP_ISP_Tuning_SetAutoZoom(IMPVI_MAIN, &zoom), 0, 0x08000077, &zoom);
     EXPECT(IMP_ISP_Tuning_SetWdrOutputMode(IMPVI_MAIN, &wdr), 0, 0x08000054, &wdr);
