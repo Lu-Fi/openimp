@@ -71,6 +71,39 @@ int main(void)
     CHECK(IMP_Encoder_SetChnHSkipBlackEnhance(2, 0) == 0);
     CHECK(p2_channels[2].attr.rcAttr.attrHSkip.hSkipAttr.bBlackEnhance == 0);
 
+    /* --- ChnHSkip (T20 and T21): created channel, skipType <= max ------- */
+    {
+        IMPEncoderAttrHSkip hs = { IMP_Encoder_STYPE_N2X, 4, 5, 6, 1, 1 }, gh;
+
+        CHECK(IMP_Encoder_SetChnHSkip(1, &hs) == -1);        /* idle */
+        CHECK(IMP_Encoder_GetChnHSkip(1, &gh) == -1);
+        p2_channels[2].attr.rcAttr.attrHSkip.maxHSkipType = IMP_Encoder_STYPE_N2X;
+        CHECK(IMP_Encoder_SetChnHSkip(2, &hs) == 0);
+        memset(&gh, 0, sizeof(gh));
+        CHECK(IMP_Encoder_GetChnHSkip(2, &gh) == 0 && gh.skipType == hs.skipType &&
+              gh.m == 4 && gh.n == 5 && gh.maxSameSceneCnt == 6 &&
+              gh.bEnableScenecut == 1 && gh.bBlackEnhance == 1);
+        hs.skipType = IMP_Encoder_STYPE_N4X;
+        CHECK(IMP_Encoder_SetChnHSkip(2, &hs) == -1);        /* above the maximum */
+        CHECK(IMP_Encoder_SetChnHSkip(2, NULL) == -1);
+    }
+#if defined(PLATFORM_T20)
+    /* --- ChnDemask (T20/T10): stored as given, no created check ---------- */
+    {
+        IMPEncoderAttrDemask dm = { true, false, 30, 70 }, gd;
+
+        memset(&gd, 0xff, sizeof(gd));
+        CHECK(IMP_Encoder_GetChnDemask(3, &gd) == 0 && !gd.enable &&
+              gd.demaskCnt == 0 && gd.demaskThresd == 0);
+        CHECK(IMP_Encoder_SetChnDemask(3, &dm) == 0);
+        CHECK(IMP_Encoder_GetChnDemask(3, &gd) == 0 && gd.enable && !gd.isAutoMode &&
+              gd.demaskCnt == 30 && gd.demaskThresd == 70);
+        CHECK(IMP_Encoder_SetChnDemask(3, NULL) == -1);
+        CHECK(IMP_Encoder_GetChnDemask(3, NULL) == -1);
+        CHECK(IMP_Encoder_SetChnDemask(-1, &dm) == -1);
+    }
+#endif
+
     if (failures) {
         fprintf(stderr, "p2_gap_test: %d failure(s)\n", failures);
         return 1;

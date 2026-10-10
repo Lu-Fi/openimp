@@ -244,7 +244,7 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
-	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test
+	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20
 	./rmem_highwater_test
 	./ref_ring_test
 	./ref_ring_test_t23
@@ -273,6 +273,8 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	./p2_gap_test_t21
 	./p2_gap_test_t20
 	./osd_attach_test
+	./isp_gap_test_t21
+	./isp_gap_test_t20
 	./check_exports.sh
 
 # GetChnAttrRcMode read-back of T21, T20 and T23 (src/t40/p2_rc_readback.h).
@@ -308,6 +310,18 @@ osd_attach_test: osd_attach_test.c $(ROOT)/src/t31/openimp_t31_services.c
 	$(CC) $(CFLAGS) -DPLATFORM_T21 $(P2_GAP_FLAGS) -o $@ osd_attach_test.c \
 		-pthread
 
+# ISP vendor calls of the gap work (DPStrength, AntiFogAttr, WDRAttr, ISPHVflip)
+# against a fake tuning ioctl.
+isp_gap_test_t21: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
+	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T21 -o $@ \
+		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c -lpthread
+
+isp_gap_test_t20: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
+	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T20 -DPLATFORM_T21 -o $@ \
+		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c -lpthread
+
 clean:
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
@@ -317,4 +331,4 @@ clean:
 		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 		fs_lifecycle_asan_* fs_lifecycle_tsan_* helix_encoder_asan_* \
 		ivs_framework_asan_* ivs_framework_tsan_* system_test system_tsan \
-		p2_gap_test_t21 p2_gap_test_t20 osd_attach_test
+		p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20

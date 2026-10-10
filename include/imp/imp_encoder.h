@@ -1345,6 +1345,10 @@ int IMP_Encoder_YuvGetCrop(void *h, IMPEncoderCropCfg *cfg);
 int IMP_Encoder_SetChnHSkip(int encChn, const IMPEncoderAttrHSkip *attr);
 int IMP_Encoder_GetChnHSkip(int encChn, IMPEncoderAttrHSkip *attr);
 int IMP_Encoder_SetChnHSkipBlackEnhance(int encChn, const int bBlackEnhance);
+#if defined(PLATFORM_T20)
+int IMP_Encoder_SetChnDemask(int encChn, const IMPEncoderAttrDemask *attr);
+int IMP_Encoder_GetChnDemask(int encChn, IMPEncoderAttrDemask *attr);
+#endif
 int IMP_Encoder_SetChnFrmUsedMode(int encChn, const IMPEncoderAttrFrmUsed *attr);
 int IMP_Encoder_GetChnFrmUsedMode(int encChn, IMPEncoderAttrFrmUsed *attr);
 int IMP_Encoder_GetGOPSize(int encChn, IMPEncoderGOPSizeCfg *cfg);
@@ -1367,8 +1371,8 @@ int IMP_Encoder_EnableAllNCUDenoise(void);
 int IMP_Encoder_DisableAllNCUDenoise(void);
 #endif
 
-#if defined(PLATFORM_T21) && !defined(PLATFORM_T20) && !defined(PLATFORM_T23)
-/* T21 1.0.33: run-time HSkip attribute (IDR period maxSameSceneCnt) */
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+/* T20 3.12.0 / T21 1.0.33: run-time HSkip attribute (T21: IDR period maxSameSceneCnt) */
 int IMP_Encoder_SetChnHSkip(int encChn, const IMPEncoderAttrHSkip *attr);
 int IMP_Encoder_GetChnHSkip(int encChn, IMPEncoderAttrHSkip *attr);
 #endif
