@@ -3729,6 +3729,12 @@ int IMP_Encoder_GetH264TransCfg(int channel,
 int IMP_Encoder_SetH265TransCfg(int channel,
                                const IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T23)
+    /* Vendor T23 libimp 1.3.0 (0x57ce0): channel below 9 and a non-NULL
+     * pointer return 0 and nothing else - no range check, no state; the
+     * chroma QP offsets are dropped and the getter reads zeros. */
+    return (channel >= 0 && channel < 9 && config) ? 0 : -1;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config || config->chroma_cr_qp_offset < -12 ||
@@ -3740,11 +3746,19 @@ int IMP_Encoder_SetH265TransCfg(int channel,
     ch->h265_transform = *config;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_GetH265TransCfg(int channel,
                                IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T23)
+    /* Vendor T23 (0x57dd8): zero-fills the 8-byte struct, see Set */
+    if (channel < 0 || channel >= 9 || !config)
+        return -1;
+    memset(config, 0, sizeof(*config));
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config)
@@ -3753,6 +3767,7 @@ int IMP_Encoder_GetH265TransCfg(int channel,
     *config = ch->h265_transform;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
