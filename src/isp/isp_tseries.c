@@ -3637,13 +3637,34 @@ int IMP_ISP_GetFrameDrop(void *attr)
     return ioctl(isp->fd, TISP_VIDIOC_GET_FRAME_DROP, attr);
 }
 
-#if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
+#if defined(PLATFORM_T31)
+/* Vendor (T31 1.1.6 0x9a070): the argument is an IMPISPFixedContrastAttr
+ * pointer, not a mode.  With the tuning session open (state 2) and a
+ * non-NULL attr the pointer is handed to the driver as control 0x8000102
+ * (the T31 driver copies 3 bytes: mode, range_low, range_high); every
+ * failed check returns -1. */
+#define TISP_CID_FIXED_CONTRAST 0x8000102
+
+int IMP_ISP_SetFixedContraster(void *attr)
+{
+    ISPDevice *isp;
+    TSeriesTuningValReq req = { 0, TISP_CID_FIXED_CONTRAST, 0 };
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL || attr == NULL ||
+        isp->tuning_state != 2) {
+        return -1;
+    }
+
+    req.value = (int32_t)(uintptr_t)attr;
+    return ioctl(isp->tuning_fd, TISP_VIDIOC_TUNING, &req);
+}
+#elif !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
 int IMP_ISP_SetFixedContraster(int mode)
 {
     (void)mode;
     return 0;
 }
-#endif /* !PLATFORM_T23 */
+#endif
 
 int IMP_ISP_SetAeAlgoFunc(void *func)
 {

@@ -21,6 +21,7 @@ P2_RC_MODE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-rc-mode-test
 MASK_RGB2YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-mask-rgb2yuv-test
 AL_RC_TRACE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-al-rc-trace-test
 LOG_LIMIT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-limit-test
+FIXED_CONTRAST_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-fixed-contrast-test
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -29,7 +30,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(AO_SENDFRAME_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) \
-	$(LOG_LIMIT_TEST_BIN)
+	$(LOG_LIMIT_TEST_BIN) $(FIXED_CONTRAST_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(RATE_CONTROL_TEST_BIN)
@@ -47,6 +48,16 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN)
 	$(MASK_RGB2YUV_TEST_BIN)
 	$(LOG_LIMIT_TEST_BIN)
+	$(FIXED_CONTRAST_TEST_BIN)
+
+# isp_tseries.c with the 32-bit ABI asserts off (host build), a fake ioctl and
+# unresolved symbols tolerated (none is reached by the test)
+$(FIXED_CONTRAST_TEST_BIN): fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
+		"-D_Static_assert(a,b)=" -DPLATFORM_T31 -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
+		fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
+		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o "$@"
 
 $(LOG_LIMIT_TEST_BIN): log_limit_test.c $(PROJECT_DIR)/src/trace_control.h \
 	$(PROJECT_DIR)/src/imp_log_int.h
