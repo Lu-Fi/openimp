@@ -512,12 +512,12 @@ int OpenIMP_P3_CSCToWire(const IMPISPCSCAttr *attr, unsigned char wire[92])
         p3_put32(wire + 48 + i * 4,
                  (int32_t)(r * 65536.0 + (r >= 0.0 ? 0.5 : -0.5)));
     }
-    wire[40] = attr->Matrix.CscOffset[1];	/* Y offset */
-    wire[41] = attr->Matrix.CscOffset[0];	/* UV offset */
-    wire[42] = attr->Matrix.CscClip[1];		/* Y min */
-    wire[43] = attr->Matrix.CscClip[0];		/* Y max */
-    wire[44] = attr->Matrix.CscClip[3];		/* UV min */
-    wire[45] = attr->Matrix.CscClip[2];		/* UV max */
+    wire[40] = attr->Matrix.CscOffset[0];	/* Y offset */
+    wire[41] = attr->Matrix.CscOffset[1];	/* UV offset */
+    wire[42] = attr->Matrix.CscClip[0];		/* Y min */
+    wire[43] = attr->Matrix.CscClip[1];		/* Y max */
+    wire[44] = attr->Matrix.CscClip[2];		/* UV min */
+    wire[45] = attr->Matrix.CscClip[3];		/* UV max */
     memcpy(wire + 84, wire + 40, 4);
     memcpy(wire + 88, wire + 44, 4);
     return 0;
@@ -533,12 +533,12 @@ void OpenIMP_P3_CSCFromWire(const unsigned char wire[92], IMPISPCSCAttr *attr)
                                                        : IMP_ISP_CG_USER;
     for (i = 0; i < 9; i++)
         attr->Matrix.CscCoef[i] = (float)p3_get32(wire + 4 + i * 4) / 65536.0f;
-    attr->Matrix.CscOffset[0] = wire[41];
-    attr->Matrix.CscOffset[1] = wire[40];
-    attr->Matrix.CscClip[0] = wire[43];
-    attr->Matrix.CscClip[1] = wire[42];
-    attr->Matrix.CscClip[2] = wire[45];
-    attr->Matrix.CscClip[3] = wire[44];
+    attr->Matrix.CscOffset[0] = wire[40];
+    attr->Matrix.CscOffset[1] = wire[41];
+    attr->Matrix.CscClip[0] = wire[42];
+    attr->Matrix.CscClip[1] = wire[43];
+    attr->Matrix.CscClip[2] = wire[44];
+    attr->Matrix.CscClip[3] = wire[45];
 }
 
 int32_t IMP_ISP_Tuning_SetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *ccm)
