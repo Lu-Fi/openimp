@@ -228,6 +228,17 @@ int IMP_OSD_ShowRgn(IMPRgnHandle handle, int grpNum, int showFlag);
 int IMP_OSD_Start(int grpNum);
 
 /**
+ * Insert an OSD group cell into an existing bind: src->to becomes
+ * src->from->to (rolled back on failure).  Exported by the vendor libimp
+ * of T20/T21/T23/T31; attach before the encoder channel is started.
+ *
+ * @param from OSD cell to insert
+ * @param to Cell that currently receives the bind (usually the encoder)
+ * @return 0 on success, negative on error
+ */
+int IMP_OSD_AttachToGroup(IMPCell *from, IMPCell *to);
+
+/**
  * Stop OSD group
  * 
  * @param grpNum Group number
