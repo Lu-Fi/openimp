@@ -117,6 +117,8 @@ Operations findings (no branch):
 - The vendor T21 driver oopses when `/proc/jz/isp/isp-m0` is read with no ISP session (timps-dn-isp-log; fixed in the timps firmware package, not in the vendor driver).
 - A vendor-stack reference T21 camera now exists for A/B tests (used for the denoise comparison above).
 - T20/T21 encoder ROI QA flake: timing only. A ROI change applies at the next IDR, so a check taken before that IDR sees the old QP map; no driver issue.
+- T30 and T40 columns added to the matrix (host/build evidence; T40 device test running).
+- AEC device-tested on 2026-10-10 (OpenIMP AECM, mono 16 kHz, `EnableAec` returns 0): ERLE on a speech segment T10 25 dB, T20 24 dB, T21 20 dB (vendor stack on the same model 16 dB), T23 19 dB, T31 25 dB; T41 not measurable (microphone shows no response to playback). AECM does not cancel pure tones; on T21 a microphone gain above 0 raises the noise floor to -11..-32 dBFS (hardware, open and vendor alike). Matrix row 33 updated.
 
 ## 2026-10-07 to 2026-10-10: agg-32 soak and release candidate agg-34
 
