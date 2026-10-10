@@ -1,5 +1,6 @@
 /* P3 T40 control plane: ISP tuning and direct system-register access. */
 
+#include <stddef.h>
 #include <errno.h>
 #include <pthread.h>
 #include <fcntl.h>
@@ -120,18 +121,33 @@ extern int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
 #define TISP_IOCTL_GET_FRAME_DROP      0xc004542dU
 #define TISP_CID_AF_WEIGHT             0x08000032
 
-/* Vendor request: sensor name[32], bus type (1: I2C), 64-bit register and
- * value.  SPI sensors are refused as the vendor does. */
+/* Vendor T41 1.2.6 request (64 bytes, IMP_ISP_Set/GetSensorRegister): name[32],
+ * vinum at 32, bus type (1: I2C) at 36, 64-bit register at 48, 64-bit value
+ * at 56.  SPI sensors are refused as the vendor does. */
 struct p3_sensor_reg {
     char name[32];
+    uint32_t vinum;
     int32_t type;
-    uint32_t size;
     uint32_t unused[2];
     uint32_t reg;
     uint32_t reg_hi;
     uint32_t value;
     uint32_t value_hi;
 };
+_Static_assert(sizeof(struct p3_sensor_reg) == 64, "sensor register request is 64 bytes");
+_Static_assert(offsetof(struct p3_sensor_reg, vinum) == 32, "vinum at 32");
+_Static_assert(offsetof(struct p3_sensor_reg, type) == 36, "bus type at 36");
+_Static_assert(offsetof(struct p3_sensor_reg, reg) == 48, "reg at 48");
+_Static_assert(offsetof(struct p3_sensor_reg, value) == 56, "value at 56");
+
+/* Vendor frame drop request (40 bytes): channel word, then 3 x {enable,
+ * lsize, fmark}; the driver reads and writes back all 40 bytes. */
+struct p3_frame_drop_req {
+    uint32_t ch;
+    IMPISPFrameDropAttr attr;
+};
+_Static_assert(sizeof(IMPISPFrameDropAttr) == 36, "attr is 3 x 12 bytes");
+_Static_assert(sizeof(struct p3_frame_drop_req) == 40, "frame drop request is 40 bytes");
 
 static int p3_sensor_register(int set, uint32_t addr, uint32_t *value)
 {
@@ -142,6 +158,7 @@ static int p3_sensor_register(int set, uint32_t addr, uint32_t *value)
     if (!value || OpenIMP_P1_GetSensorName(req.name, &req.type) != 0 ||
         req.type != 1)
         return -1;
+    req.vinum = 0;
     req.reg = addr;
     if (set)
         req.value = *value;
@@ -203,25 +220,28 @@ static int p3_frame_drop_valid(const IMPISPFrameDropAttr *attr)
 
 int32_t IMP_ISP_SetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
 {
-    IMPISPFrameDropAttr copy;
+    struct p3_frame_drop_req req;
 
     if (num != IMPVI_MAIN || !attr || !p3_frame_drop_valid(attr))
         return -1;
-    copy = *attr;
-    return OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_FRAME_DROP, &copy);
+    memset(&req, 0, sizeof(req));
+    req.ch = (uint32_t)num;
+    req.attr = *attr;
+    return OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_FRAME_DROP, &req);
 }
 
 int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
 {
-    IMPISPFrameDropAttr copy;
+    struct p3_frame_drop_req req;
     int result;
 
     if (num != IMPVI_MAIN || !attr)
         return -1;
-    memset(&copy, 0, sizeof(copy));
-    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_FRAME_DROP, &copy);
+    memset(&req, 0, sizeof(req));
+    req.ch = (uint32_t)num;
+    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_FRAME_DROP, &req);
     if (result == 0)
-        *attr = copy;
+        *attr = req.attr;
     return result;
 }
 

@@ -26,7 +26,8 @@ static struct {
 int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
 {
     isp.command = command;
-    memcpy(isp.arg, argument, sizeof(isp.arg));
+    memcpy(isp.arg, argument,
+           (command == 0xc004542cU || command == 0xc004542dU) ? 40 : sizeof(isp.arg));
     isp.calls++;
     if (command == 0x8040540eU)             /* the driver returns the value */
         *(uint32_t *)((char *)argument + 56) = 0x5a;
@@ -214,7 +215,9 @@ int main(void)
         assert(isp.command == 0x8040540eU && isp.calls == 1);
         assert(strcmp((char *)isp.arg, "gc5603") == 0);
         memcpy(&v, isp.arg + 32, 4);
-        assert(v == 1);
+        assert(v == 0);                     /* vinum */
+        memcpy(&v, isp.arg + 36, 4);
+        assert(v == 1);                     /* bus type */
         memcpy(&v, isp.arg + 48, 4);
         assert(v == 0x3107 && reg.value == 0x5a);
         reg.value = 0x11;
@@ -238,6 +241,11 @@ int main(void)
         isp.calls = 0;
         assert(IMP_ISP_SetFrameDrop(IMPVI_MAIN, &fd) == 0);
         assert(isp.command == 0xc004542cU && isp.calls == 1);
+        {   /* 40-byte request: channel word, then entry 1 at 4 + 12 */
+            uint32_t w[10];
+            memcpy(w, isp.arg, 40);
+            assert(w[0] == 0 && w[4] == 1 && w[5] == 3 && w[6] == 0x5);
+        }
         fd.fdrop[2].lsize = 32;
         assert(IMP_ISP_SetFrameDrop(IMPVI_MAIN, &fd) == -1);
         assert(isp.calls == 1);
