@@ -28,7 +28,11 @@
 
 #include "avpu_roi.h"
 
-#if defined(PLATFORM_T31)
+/* Frame-level rate control (the OEM Allegro core and the OpenIMP
+ * controller): T31, and T40 whose OEM libimp drives the same AVPU with the
+ * same Allegro lib_rate_ctrl.  Without it T40 ran one open-loop QP. */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T40)
+#define OPENIMP_AL_FRAME_RC 1
 #include "t40/t31_rate_control.h"
 #include "t40/t31_al_rc.h"
 #endif
@@ -279,6 +283,8 @@ typedef struct ALAvpuContext {
 #if defined(PLATFORM_T31)
     /* Exact entropy bytes reported at completion status +0x104. */
     uint32_t t31_payload_size_by_buf[16];
+#endif
+#if defined(OPENIMP_AL_FRAME_RC)
     uint32_t t31_rate_control_qp_by_buf[16];
     OpenIMPT31RateController t31_rate_controller;
     /* CappedVBR/CappedQuality: PSNR cap in dB * 100 (0 = none), copied from
@@ -297,6 +303,8 @@ typedef struct ALAvpuContext {
     uint32_t t31_al_filler_bits;    /* filler of the last picture (OEM request +2848) * 8 */
     uint32_t t31_al_filler_pictures; /* pictures the CBR HRD wanted stuffed */
     uint32_t t31_al_pictures;
+#endif
+#if defined(PLATFORM_T31)
     /* Published access-unit layout, handed to P2 for its AU check. */
     uint32_t t31_au_header_by_buf[16];
     uint32_t t31_ebsp_inserted_by_buf[16];

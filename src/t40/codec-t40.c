@@ -240,6 +240,12 @@ static uint64_t t31_monotonic_ms(void)
 #endif
 #endif
 
+#if defined(OPENIMP_AL_FRAME_RC) && !defined(PLATFORM_T31)
+/* See the T31 definition: the Allegro rate-control state is advanced by the
+ * submit thread and updated by the IRQ thread. */
+static pthread_mutex_t g_t31_al_rc_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 #define CODEC_READ_U8(base, off)  (*(uint8_t *)((uint8_t *)(base) + (off)))
 #define CODEC_READ_U16(base, off) (*(uint16_t *)((uint8_t *)(base) + (off)))
 #define CODEC_READ_S32(base, off) (*(int32_t *)((uint8_t *)(base) + (off)))
@@ -2398,7 +2404,7 @@ static uint32_t avpu_t40_picture_qp(const ALAvpuContext *ctx, int is_idr)
         return openimp_t41_rate_controller_qp(
             &ctx->t41_rate_controller);
 #endif
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
     if (ctx->t31_al_rc.valid) {
         /* Il1i: the OEM slice QP for the next picture (I = 2, P = 1) */
         T31AlRcPicture pic;
@@ -2492,7 +2498,7 @@ static uint32_t avpu_t40_picture_qp(const ALAvpuContext *ctx, int is_idr)
     return qp;
 }
 
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
 /* The picture's sum of squared errors, as the OEM EncodingStatusRegsTo-
  * SliceStatus reads it (status +0x158 high word, +0x15c low word; cmd[9]
  * bit 27, set in every T31 template, has the core compute it), turned into
@@ -4969,6 +4975,41 @@ static void avpu_mark_stream_buffer_released(ALAvpuContext *ctx, int buf_idx)
     pthread_mutex_unlock(mutex);
 }
 
+#if defined(OPENIMP_AL_FRAME_RC) && !defined(PLATFORM_T31)
+/*
+ * T40 frame-level rate control feedback.  T40 used to code every picture
+ * with the open-loop bits-per-LCU QP of avpu_t40_picture_qp(), so the
+ * bitrate followed the scene instead of the target (Eufy T40XP, 4K@20:
+ * 132 kbit/s for a 6 Mbit/s CBR target).  The OEM T40 libimp runs the same
+ * Allegro lib_rate_ctrl as T31 on the same AVPU, so the T31 port is reused:
+ * the published access-unit size (what the stream consumer receives) is
+ * the coded size.  No status registers are passed: their T40 offsets are
+ * not verified, and without them the core only skips its intra-share
+ * heuristics (all percentages read as 0).
+ */
+static void avpu_t40_rc_complete(ALAvpuContext *ctx, int buf_idx,
+                                 uint32_t frame_size)
+{
+    if (!ctx || buf_idx < 0 || buf_idx >= 16 || frame_size == 0u ||
+        frame_size > UINT32_MAX / 8u)
+        return;
+    if (ctx->t31_al_rc.valid) {
+        avpu_t31_allegro_complete(ctx, buf_idx, frame_size * 8u, NULL, 0u);
+    } else if (ctx->t31_rate_controller.initialized) {
+        int ret = openimp_t31_rate_controller_complete(
+            &ctx->t31_rate_controller, frame_size * 8u,
+            ctx->t31_rate_control_qp_by_buf[buf_idx],
+            ctx->stream_is_idr[buf_idx]);
+
+        if (ctx->frames_encoded < 16 || ctx->frames_encoded % 50 == 0)
+            LOG_CODEC("T40 rate controller: buf=%d idr=%u used=%u next=%u ret=%d",
+                      buf_idx, ctx->stream_is_idr[buf_idx],
+                      ctx->t31_rate_control_qp_by_buf[buf_idx],
+                      ctx->t31_rate_controller.current_qp, ret);
+    }
+}
+#endif
+
 static void avpu_complete_frame(ALAvpuContext *ctx, const char *source)
 {
     int buf_idx = -1;
@@ -5034,6 +5075,9 @@ static void avpu_complete_frame(ALAvpuContext *ctx, const char *source)
     }
 
     openimp_profile_frame_completed(frame_size);
+#if defined(OPENIMP_AL_FRAME_RC) && !defined(PLATFORM_T31)
+    avpu_t40_rc_complete(ctx, buf_idx, frame_size);
+#endif
 
     /* frames_encoded is intentionally advanced before stream publication so
      * DPB ownership is visible to consumers, but it is too early to release
@@ -7372,7 +7416,7 @@ struct AL_CodecEncode {
     int force_next_idr;             /* Per-codec RequestIDR latch */
     int last_error;                 /* Best-effort OEM-like sticky error */
     IMPEncoderRcAttr rc_attr_cache; /* Control-plane cache for wrapper APIs */
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
     uint32_t rc_quality_cap_x100;   /* CappedVBR/CappedQuality PSNR cap */
 #endif
     IMPEncoderFrmRate fps_cache;
@@ -8027,7 +8071,7 @@ static void avpu_sync_runtime_encode_state(AL_CodecEncode *enc)
     enc->avpu.min_qp = enc->hw_params.min_qp;
     enc->avpu.max_qp = enc->hw_params.max_qp;
     enc->avpu.entropy_mode = enc->entropy_mode;
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
     enc->avpu.t31_quality_cap_x100 = enc->rc_quality_cap_x100;
 #endif
     enc->avpu.gop_length = enc->gop_cache.gopLength ? enc->gop_cache.gopLength : enc->hw_params.gop_length;
@@ -11891,7 +11935,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 }
             }
 #endif
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
             if (avpu_t31_prepare_picture(ctx) != 0) {
                 LOG_CODEC("Process: failed to prepare T31 rate-control state frame=%u buf=%d",
                           ctx->frame_number, buf_idx);
@@ -12998,7 +13042,7 @@ int AL_Codec_Encode_SetRcParam(void *codec, void *rcAttr)
         enc->hw_params.min_qp = clamp_qp_u32(src->attrRcMode.attrH264Cbr.iMinQP);
         enc->hw_params.max_qp = clamp_qp_u32(src->attrRcMode.attrH264Cbr.iMaxQP);
         enc->avpu.qp_ip_delta = src->attrRcMode.attrH264Cbr.iIPDelta;
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
         enc->avpu.t31_max_bitrate = src->attrRcMode.attrH264Cbr.uTargetBitRate;
         enc->avpu.t31_rc_options = (uint32_t)src->attrRcMode.attrH264Cbr.eRcOptions;
         enc->avpu.t31_qp_pb_delta = src->attrRcMode.attrH264Cbr.iPBDelta;
@@ -13036,7 +13080,7 @@ int AL_Codec_Encode_SetRcParam(void *codec, void *rcAttr)
         enc->hw_params.min_qp = clamp_qp_u32(src->attrRcMode.attrH264Vbr.iMinQP);
         enc->hw_params.max_qp = clamp_qp_u32(src->attrRcMode.attrH264Vbr.iMaxQP);
         enc->avpu.qp_ip_delta = src->attrRcMode.attrH264Vbr.iIPDelta;
-#if defined(PLATFORM_T31)
+#if defined(OPENIMP_AL_FRAME_RC)
         enc->avpu.t31_max_bitrate = src->attrRcMode.attrH264Vbr.uMaxBitRate;
         enc->avpu.t31_rc_options = (uint32_t)src->attrRcMode.attrH264Vbr.eRcOptions;
         enc->avpu.t31_qp_pb_delta = src->attrRcMode.attrH264Vbr.iPBDelta;
