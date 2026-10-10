@@ -210,13 +210,17 @@ int main(void)
     CHECK(IMP_Encoder_SetChnROI(0, &roi) == -1 && roi_calls == 2);
     CHECK(IMP_Encoder_GetChnROI(0, &roi) == -1);
 
-    /* Denoise: no effect on a channel created without it; refused where
-     * it would act */
+    /* Denoise (vendor semantics, src/t40/p2_denoise.h): no effect on a
+     * channel created without it; on a channel created with it dnType
+     * 0..2 is accepted, dnType >= 3 is refused; the T21 library reads the
+     * type back as 0 (both builds of this test define PLATFORM_T21) */
     memset(&dn, 0, sizeof(dn));
     dn.enable = 1;
     dn.dnType = 1;
     dn.dnIQp = 30;
     CHECK(IMP_Encoder_SetChnDenoise(0, &dn) == 0);
+    CHECK(IMP_Encoder_SetChnDenoise(1, &dn) == 0);
+    dn.dnType = 3;
     CHECK(IMP_Encoder_SetChnDenoise(1, &dn) == -1);
     dn.dnType = 0;
     CHECK(IMP_Encoder_SetChnDenoise(1, &dn) == 0);
