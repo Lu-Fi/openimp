@@ -4546,6 +4546,11 @@ int IMP_Encoder_SetH265TransCfg(int channel,
     if (!p2_valid_channel(channel) || !config)
         return -1;
     return 0;
+#elif defined(PLATFORM_T23)
+    /* Vendor T23 libimp 1.3.0 (0x57ce0): channel below 9 and a non-NULL
+     * pointer return 0 and nothing else - no range check, no state; the
+     * chroma QP offsets are dropped and the getter reads zeros. */
+    return (channel >= 0 && channel < 9 && config) ? 0 : -1;
 #else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
@@ -4567,6 +4572,12 @@ int IMP_Encoder_GetH265TransCfg(int channel,
 #if defined(PLATFORM_T21)
     /* Vendor T21: clears the 8 bytes and returns 0 */
     if (!p2_valid_channel(channel) || !config)
+        return -1;
+    memset(config, 0, sizeof(*config));
+    return 0;
+#elif defined(PLATFORM_T23)
+    /* Vendor T23 (0x57dd8): zero-fills the 8-byte struct, see Set */
+    if (channel < 0 || channel >= 9 || !config)
         return -1;
     memset(config, 0, sizeof(*config));
     return 0;
