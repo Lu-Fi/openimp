@@ -47,10 +47,6 @@ P3_UNSUPPORTED(IMP_DMIC_SetPubAttr)
 P3_UNSUPPORTED(IMP_DMIC_SetUserInfo)
 P3_UNSUPPORTED(IMP_DMIC_SetVol)
 
-#if !defined(PLATFORM_T41)   /* T41: openimp_p1.c */
-P3_UNSUPPORTED(IMP_FrameSource_SnapFrame)
-#endif
-
 P3_UNSUPPORTED(IMP_ISP_Tuning_CreateOsdRgn)
 P3_UNSUPPORTED(IMP_ISP_Tuning_DestroyOsdRgn)
 #if !defined(PLATFORM_T41)   /* no T41 export (vendor T41 has SetMaskBlock) */
@@ -63,26 +59,7 @@ P3_UNSUPPORTED(IMP_ISP_Tuning_SetOsdRgnAttr)
 P3_UNSUPPORTED(IMP_ISP_Tuning_ShowOsdRgn)
 
 #if !defined(PLATFORM_T41)
-/* T41 has IVS (src/t31/openimp_t31_ivs*.c) and the IPU OSD
- * (src/t23/openimp_t23_osd.c) */
-P3_UNSUPPORTED_PTR(IMP_IVS_CreateBaseMoveInterface)
-P3_UNSUPPORTED(IMP_IVS_CreateChn)
-P3_UNSUPPORTED(IMP_IVS_CreateGroup)
-P3_UNSUPPORTED_PTR(IMP_IVS_CreateMoveInterface)
-P3_UNSUPPORTED(IMP_IVS_DestroyBaseMoveInterface)
-P3_UNSUPPORTED(IMP_IVS_DestroyChn)
-P3_UNSUPPORTED(IMP_IVS_DestroyGroup)
-P3_UNSUPPORTED(IMP_IVS_DestroyMoveInterface)
-P3_UNSUPPORTED(IMP_IVS_GetParam)
-P3_UNSUPPORTED(IMP_IVS_GetResult)
-P3_UNSUPPORTED(IMP_IVS_PollingResult)
-P3_UNSUPPORTED(IMP_IVS_RegisterChn)
-P3_UNSUPPORTED(IMP_IVS_ReleaseData)
-P3_UNSUPPORTED(IMP_IVS_ReleaseResult)
-P3_UNSUPPORTED(IMP_IVS_SetParam)
-P3_UNSUPPORTED(IMP_IVS_StartRecvPic)
-P3_UNSUPPORTED(IMP_IVS_StopRecvPic)
-P3_UNSUPPORTED(IMP_IVS_UnRegisterChn)
+/* T41 has the IPU OSD (src/t23/openimp_t23_osd.c) */
 
 P3_UNSUPPORTED(IMP_OSD_CreateGroup)
 P3_UNSUPPORTED(IMP_OSD_CreateRgn)

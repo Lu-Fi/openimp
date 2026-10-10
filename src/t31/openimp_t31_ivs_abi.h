@@ -48,6 +48,28 @@ typedef struct {
 /* Bytes of a capture frame record (kernel_interface.c VBMFrame) that carry
  * the public IMPFrameInfo. */
 #define T31_IVS_FRAME_RECORD_BYTES sizeof(T31IVSFrameInfo)
+#elif defined(PLATFORM_T40)
+/* Vendor IMPFrameInfo (imp_common.h, T40 1.3.1): no direct_phyAddr, the
+ * frame's pool follows virAddr at 0x20 and the timestamp is at 0x28 (0x30
+ * bytes in all, like T41).  The IVS framework of the vendor T40 1.3.1 libimp
+ * is instruction-for-instruction the T41 one (same field offsets in the
+ * frame, MoveParam, MoveOutput and BaseMoveParam), so the T41 algorithm
+ * code serves T40 unchanged. */
+typedef struct {
+    int index;
+    int pool_idx;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixfmt;
+    uint32_t size;
+    uint32_t phyAddr;
+    uint32_t virAddr;
+    uint32_t pool;                  /* void * in the vendor header */
+    int64_t timeStamp;
+} T31IVSFrameInfo;
+
+/* openimp_p1.c's frame record is the whole public IMPFrameInfo. */
+#define T31_IVS_FRAME_RECORD_BYTES sizeof(T31IVSFrameInfo)
 #elif defined(PLATFORM_T41)
 /* Vendor IMPFrameInfo (imp_common.h, T41 1.2.0): direct_phyAddr and the
  * frame's pool follow virAddr, the timestamp is at 0x28. */
@@ -134,7 +156,10 @@ typedef struct {
 } IMP_IVS_BaseMoveParam;
 
 /* IMP_IVS_BaseMoveOutput carries the frame timestamp (T23, T21, T30). */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || \
+/* T40: the 1.3.1 header omits the member, but the vendor libimp fills the
+ * output exactly like T41's (BaseMoveGetResult is the same code), and the
+ * result record is owned by OpenIMP, so the public field stays. */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T40) || \
     ((defined(PLATFORM_T21) || defined(PLATFORM_T30)) && !defined(PLATFORM_T20))
 #define OPENIMP_IVS_BASE_MOVE_TIMESTAMP 1
 #else
@@ -193,9 +218,13 @@ _Static_assert(sizeof(IMP_IVS_BaseMoveOutput) == 0x18 || sizeof(void *) != 4,
                "vendor IMP_IVS_BaseMoveOutput is 0x18 bytes");
 _Static_assert(offsetof(IMP_IVS_BaseMoveOutput, timeStamp) == 0x10 || sizeof(void *) != 4,
                "BaseMoveOutput.timeStamp at 0x10");
-#elif defined(PLATFORM_T41)
+#elif defined(PLATFORM_T41) || defined(PLATFORM_T40)
 _Static_assert(sizeof(T31IVSFrameInfo) == 0x30, "vendor IMPFrameInfo is 0x30 bytes");
+#if defined(PLATFORM_T41)
 _Static_assert(offsetof(T31IVSFrameInfo, direct_phyAddr) == 0x20, "IMPFrameInfo.direct_phyAddr at 0x20");
+#else
+_Static_assert(offsetof(T31IVSFrameInfo, pool) == 0x20, "T40 IMPFrameInfo.pool at 0x20");
+#endif
 _Static_assert(offsetof(T31IVSFrameInfo, timeStamp) == 0x28, "IMPFrameInfo.timeStamp at 0x28");
 _Static_assert(sizeof(T31IVSRect) == 0x10, "vendor IMPRect is 0x10 bytes");
 _Static_assert(offsetof(IMP_IVS_MoveParam, frameInfo) == 0xd8, "MoveParam.frameInfo at 0xd8");

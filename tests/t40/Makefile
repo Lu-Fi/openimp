@@ -7,9 +7,23 @@ STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-stream-layout-test
 
 CAMERA_INPUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-camera-input-test
 
-check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) p3-controls
+IVS_SRC := $(PROJECT_DIR)/src/t31
+IVS_FRAMEWORK_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-ivs-framework-test
+
+check: $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(CAMERA_INPUT_TEST_BIN)
+	$(IVS_FRAMEWORK_TEST_BIN)
+
+# IVS framework and move algorithm with the T40 1.3.1 ABI (IMPFrameInfo 0x30,
+# pool at 0x20, timestamp at 0x28); the test source is shared with tests/t23.
+$(IVS_FRAMEWORK_TEST_BIN): ../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
+	$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c $(IVS_SRC)/openimp_t31_ivs_abi.h
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_T40 \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -I$(IVS_SRC) \
+		../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
+		$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c -pthread -o "$@"
 
 .PHONY: p3-controls
 P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-p3-controls-test
@@ -45,4 +59,5 @@ $(STREAM_LAYOUT_TEST_BIN): stream_layout_test.c \
 		-o "$@"
 
 clean:
-	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(P3_CONTROLS_TEST_BIN)
+	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(P3_CONTROLS_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN)
+

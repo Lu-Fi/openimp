@@ -20,12 +20,18 @@
 
 #include "openimp_profile.h"
 #include "dma_alloc.h"
-#if defined(PLATFORM_T41)
+/* T41 and T40 share the frame-channel front end: no capture thread, frames
+ * leave the driver when a consumer dequeues them.  The IVS frame feeder and
+ * the SnapFrame frame lend (t41_snap.h) therefore work the same on both. */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#define P1_CAPTURE_FEEDER 1
+#endif
+#if defined(P1_CAPTURE_FEEDER)
 #include "t31/openimp_t31_ivs.h"
 #endif
 #include "t40/openimp_p2_dma.h"
 #include "video_drop.h"
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
 #include "t40/t41_snap.h"
 #endif
 
@@ -173,6 +179,16 @@ typedef struct {
     int64_t timeStamp;
 } IMPFrameInfo;
 
+#if defined(PLATFORM_T40)
+/* vendor T40 1.3.1 imp_common.h: no direct_phyAddr, pool at 0x20 */
+_Static_assert(sizeof(IMPFrameInfo) == 0x30,
+               "T40 IMPFrameInfo ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, pool) == 0x20,
+               "T40 IMPFrameInfo.pool ABI mismatch");
+_Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
+               "T40 IMPFrameInfo.timeStamp ABI mismatch");
+#endif
+
 #if defined(PLATFORM_T41)
 _Static_assert(sizeof(IMPFSChnAttr) == 0x68,
                "T41 IMPFSChnAttr ABI mismatch");
@@ -285,7 +301,7 @@ struct openimp_fs_channel {
     uint32_t buffer_count;
     uint32_t sizeimage;
     uint32_t frames_dequeued;
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     uint64_t last_dequeue_us;       /* by a consumer other than the IVS
                                      * feeder, CLOCK_MONOTONIC */
     struct t41_snap_state snap;     /* SnapFrame frame lend */
@@ -1441,7 +1457,7 @@ static void fill_qbuf(uint32_t *words, uint32_t index, uint32_t physical,
     words[14] = size;
 }
 
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
 /*
  * T41 has no capture thread: frames leave the driver only when a consumer
  * calls IMP_FrameSource_GetFrame, and the IVS sees them there.  A bound IVS
@@ -1682,7 +1698,7 @@ int IMP_FrameSource_EnableChn(int channel)
         goto done;
     trace_p1("P1_INNER STREAMON_END\n");
     chn->enabled = 1;
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     chn->last_dequeue_us = p1_monotonic_us();
 #endif
     result = 0;
@@ -1692,7 +1708,7 @@ done:
     unlock_p1();
     if (!result)
         fs_delay_set_on(channel, 1);
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     if (!result)
         (void)pthread_once(&p1_ivs_feeder_once, p1_ivs_feeder_start);
 #endif
@@ -1709,7 +1725,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     int delay_cache = 0;
     IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     int snap_taken;
 #endif
 
@@ -1814,7 +1830,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     delay_cache = chn->maxdelay ?
         (chn->delay < chn->maxdelay ? chn->delay : chn->maxdelay) : 0;
     openimp_video_drop_note_frame();
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     if (!p1_in_ivs_feeder)
         chn->last_dequeue_us = p1_monotonic_us();
     snap_taken = t41_snap_on_dequeue(&chn->snap, index);
@@ -1826,7 +1842,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
         fs_delay_store(channel, (uint32_t)delay_cache, &cache_frame,
                        (const void *)(uintptr_t)cache_frame.virAddr,
                        cache_frame.size);
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     if (snap_taken)
         p1_snap_wake();
     /* T41 has no capture thread: IVS sees each frame as its consumer
@@ -1862,7 +1878,7 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
         unlock_p1();
         return -1;
     }
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     /* SnapFrame is still copying this frame: requeued when it is done. */
     result = t41_snap_on_release(&chn->snap, index);
     if (result) {
@@ -1878,7 +1894,7 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     return result < 0 ? result : 0;
 }
 
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
 /*
  * Vendor T41 IMP_FrameSource_SnapFrame(chn, fmt, width, height, buffer,
  * info): one frame of an enabled channel, NV12 at the channel resolution,
@@ -1998,7 +2014,9 @@ int IMP_FrameSource_SnapFrame(int channel, int fmt, int width, int height,
     info->size = t41_snap_nv12_bytes((uint32_t)width, (uint32_t)height);
     info->phyAddr = 0;
     info->virAddr = (uint32_t)(uintptr_t)framedata;
+#if defined(PLATFORM_T41)
     info->direct_phyAddr = 0;
+#endif
     info->pool = NULL;
     return 0;
 }
@@ -2019,7 +2037,7 @@ int IMP_FrameSource_DisableChn(int channel)
         unlock_p1();
         return 0;
     }
-#if defined(PLATFORM_T41)
+#if defined(P1_CAPTURE_FEEDER)
     /* A SnapFrame copy reads a capture buffer: never free it underneath
      * (the copy is bounded, one frame). */
     while (chn->snap.ready) {

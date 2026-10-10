@@ -56,6 +56,7 @@ int OpenIMP_P2_DMAState(uint32_t *a, uint32_t *b) { (void)a; (void)b; abort(); }
 int OpenIMP_P2_DMARegion(uint32_t *a, uint32_t *b, void **c)
 { (void)a; (void)b; (void)c; abort(); }
 int DMA_FreePhys(uint32_t p) { (void)p; abort(); }
+int DMA_RmemFlushCache(void *a, uint32_t n, int d) { (void)a; (void)n; (void)d; abort(); }
 OpenIMPProfileStamp openimp_profile_begin(void) { OpenIMPProfileStamp z; memset(&z, 0, sizeof z); return z; }
 void openimp_profile_end(OpenIMPProfileStage st, OpenIMPProfileStamp t) { (void)st; (void)t; }
 void openimp_profile_count(OpenIMPProfileCounter c, uint64_t n) { (void)c; (void)n; }

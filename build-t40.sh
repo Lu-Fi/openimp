@@ -65,6 +65,14 @@ do
         -o "$output_dir/$source.o"
 done
 
+# IVS: the shared framework and move algorithm (T40 IMPFrameInfo ABI).
+for source in openimp_t31_ivs openimp_t31_ivs_move openimp_ivs_move_v2
+do
+    "$compiler" $strict_flags $repo_includes -I"$project_dir/src/t31" \
+        -c "$project_dir/src/t31/$source.c" \
+        -o "$output_dir/t40_${source#openimp_t31_}.o"
+done
+
 # IMP_ISP_Tuning_SetVideoDrop monitor
 "$compiler" $strict_flags $repo_includes \
     -c "$project_dir/src/core/video_drop.c" \
@@ -117,6 +125,9 @@ done
     "$output_dir/openimp_audio_codec.o" \
     "$output_dir/openimp_audio_enc_dec.o" \
     "$output_dir/openimp_p3_compat.o" \
+    "$output_dir/t40_ivs.o" \
+    "$output_dir/t40_ivs_move.o" \
+    "$output_dir/t40_openimp_ivs_move_v2.o" \
     "$output_dir/t40_ep1.o" \
     "$output_dir/t40_stream_layout.o" \
     "$output_dir/backend-enc-hw-scaling-list.o" \
