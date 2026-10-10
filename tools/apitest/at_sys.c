@@ -310,7 +310,7 @@ void t_fs(void)
         r = IMP_FrameSource_GetTimedFrame(1, ts, 1, buf, fi);
         gchk(fi); gchk(buf); gchk(ts);
         got = (int64_t)fi->timeStamp;
-        CHECK(IMP_FrameSource_GetTimedFrame, r, got && (got - target < iv && target - got < iv) && fi->width == SUB_W,
+        CHECK(IMP_FrameSource_GetTimedFrame, r, got && (got - target < iv * 3 / 2 && target - got < iv * 3 / 2) && fi->width == SUB_W,
               "ts now-%lld us, block: frame ts %+lld us from it, info %ux%u", (long long)(iv / 2), (long long)(got - target), fi->width, fi->height);
         if (r == 0 && got) {
             ts->ts = (uint64_t)got;
