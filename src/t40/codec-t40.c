@@ -9604,6 +9604,23 @@ static int t40_encode_gray_jpeg(uint32_t width, uint32_t height,
     stream->slice_type = 0u;
     return 0;
 }
+
+/* T40 snapshot channels: the AVPU JPEG path is not recovered, so encode the
+ * captured NV12 frame with the software baseline encoder (the CPU reads what
+ * ISP DMA wrote, so drop stale cache lines first).  The grey image remains the
+ * fallback when the software encoder cannot take the frame. */
+static int t40_encode_jpeg(AL_CodecEncode *enc, HWFrameBuffer *frame,
+                           HWStreamBuffer *stream)
+{
+    if (frame->phys_addr && frame->virt_addr && frame->size)
+        (void)DMA_RmemFlushCache((void *)(uintptr_t)frame->virt_addr,
+                                 frame->size, 2 /* invalidate */);
+    if (HW_Encoder_Encode_NV12_JPEG(frame, stream,
+                                    codec_jpeg_quality(enc)) == 0)
+        return 0;
+    return t40_encode_gray_jpeg(frame->width, frame->height,
+                                frame->timestamp, stream);
+}
 #endif
 
 #if defined(PLATFORM_T31)
@@ -12368,7 +12385,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         if (
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
             (codec_type == IMP_ENC_TYPE_JPEG
-                ? t40_encode_gray_jpeg(width, height, timestamp, hw_stream)
+                ? t40_encode_jpeg(enc, &hw_frame, hw_stream)
                 : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
 #elif defined(PLATFORM_T31)
             (codec_type == IMP_ENC_TYPE_JPEG
