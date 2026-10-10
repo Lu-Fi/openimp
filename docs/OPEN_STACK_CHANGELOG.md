@@ -14,7 +14,7 @@ All test cameras run the open kernel driver (open-tx-isp), OpenIMP and timps. No
 | Camera | SoC | Stack | State |
 |---|---|---|---|
 | cam-A | T31 | fully open | `aperto` image; H.264, H.265, hardware JPEG, OSD, AEC; rmem 36 MB |
-| cam-B | T23 | fully open (native encoder, no vendor helper) | `aperto` image; frequent Helix frame drops fixed (residual interrupt); a rare single Helix encode error (errno 5) is still open |
+| cam-B | T23 | fully open (native encoder, no vendor helper) | `aperto` image; frequent Helix frame drops fixed (residual interrupt); the rare single Helix encode error (errno 5): 0 errors in 6 days on cam-B since the 0102 fix (syslog: 342, 32, 37 and 419 errors on 10-01..10-04, then 0 from 10-05 to 10-10); provisionally closed, still observed |
 | cam-C | T20 | fully open | `aperto` image with kernel patch 0101; OEM rate controller default; A/B vs vendor measured |
 | cam-D | T21 | fully open | `aperto` image; reference sharing on; vendor-identical eprc |
 | cam-E | T10 | fully open | `aperto` image, boot guard auto; ispmem 6 MB |
@@ -33,6 +33,7 @@ All test cameras run the open kernel driver (open-tx-isp), OpenIMP and timps. No
 | Encoder rate control | CappedVBR/CappedQuality/SMART silently CBR | Mapped to VBR with log line | `claude/openimp-quickfixes` |
 | JPEG | Quality ignored (fixed 75 or cached only) | Configured quality applied | `claude/openimp-quickfixes` |
 | HEVC T31 | H.265 accepted but streams empty | Real HEVC on the AVPU: VPS/SPS/PPS, slice headers, CABAC init as vendor | `claude/t31-hevc` |
+| Encoder denoise T20/T21 | SetChnDenoise stored whatever it got, dnType >= 3 accepted, enable switch of CreateChn ignored | Vendor semantics: enable gate from CreateChn, dnType >= 3 is -1, IQp/PQp kept; on T21 dnType reads back 0 as on the vendor T21 (libimp 1.0.33 clears denoise at init: encoder mode from get_cpu_id). T10/T20 two-pass encode not built | `claude/t21-chn-denoise` |
 | Encoder telemetry | Channel-stat struct one word short; bitrate not averaged; stack overflow in ChnStatQuery | Vendor layout, real average, fixed | `claude/openimp-quickfixes` |
 | T23 encoder | Vendor Helix worker only; worker zeroed all of rmem; wrong RPATH | Per-worker rmem slices; native Helix encoder without vendor code | `claude/t23-helix-worker-fixes`, `claude/t23-native-helix-2` |
 | Helix T20/T21/T30 | Encoder issues on the Helix path | Fixed | `claude/t30-helix-fixes` |
@@ -255,7 +256,7 @@ The T23 start/stop hang work of the previous days is summarised in the earlier s
 - **T31 H.264 stalls after the JPEG channel is torn down:** fixed: two threads polled the same encoder channel at once (`AL_Codec_Encode_Process` concurrently); `IMP_Encoder_PollingStream` now serialises per channel (openimp `claude/release-fix27` 5c2ccef), apitest on T31 FAIL 0 with the fix; goes into the next candidate (agg-29). The same encoder file is used on T41, whose flaky result probably has the same cause (not re-tested).
 - **T41 is not part of the first release** (channel 1 scaling registers staged, output-restart hang, 38 tuning IDs missing, see above).
 - T21: the IPU needs about 2 s after a wake before the OSD blend takes effect (first snapshot withheld until the overlay is confirmed, beyond vendor); the cause is not found. Whether the OSD shows in the live stream after a wake is checked after the candidate tests.
-- T23: sporadic single Helix encode error (errno 5), no real WDR.
+- T23: no real WDR; the sporadic Helix encode error (errno 5) is provisionally closed since 2026-10-10 (see there).
 - Colour image functions (imgfx) have to be repeated in daylight; T10 has not been tested on the open stack today.
 - `ivs_framework_test` is flaky under `make -j4` (test harness).
 
@@ -727,7 +728,7 @@ Current aggregates: `claude/open-tx-isp-all-7` (all-6 + sinfo module-notifier fi
 | Kernel module, T31 | 829 KB | 711 KB | |
 
 ## Still open (2026-10-04)
-- T23: rare single Helix encode error (errno 5; the frequent frame drops are fixed, see 2026-10-04 afternoon); real WDR missing.
+- T23: real WDR missing; the rare Helix encode error (errno 5) is provisionally closed: 0 errors in 6 days on cam-B since the 0102 fix (syslog: 342, 32, 37 and 419 errors on 10-01..10-04, then 0 from 10-05 to 10-10); provisionally closed, still observed.
 - T41: flip, night column noise (gc5603), short IVS gaps, OOM with three parallel streams, `AddSensor` EBUSY after an OOM kill; day/night and AE/AWB quality untested; ioctl hardening awaits its device test; temper effect; crop/rotation (I2D).
 - T21: a 4th module reload in one boot crashed once (under investigation); VBM rmem block parking and Helix create back-off to be ported.
 - T23: AWB fix (static gains when no zone matches) awaits a daylight test.
