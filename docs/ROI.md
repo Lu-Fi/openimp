@@ -4,7 +4,7 @@
 |---|---|---|
 | T10/T20 | `IMP_Encoder_SetChnROI` (8 regions, pixel corners) | works, see `T1X_ROI_CHROMA.md` |
 | T21 | the same | works by default since this branch (beyond vendor), device-tested |
-| T23 | the same; native Helix encoder (default backend) programs it like T21, the OEM worker gets it through the bridge | implemented, device run partial (below) |
+| T23 | the same; native Helix encoder (default backend) programs it like T21, the OEM worker gets it through the bridge | works by default, device-tested (below) |
 | T40/T41 | `IMP_Encoder_Set/GetChnRoiAttr` (10 windows, delta QP) | implemented, **experimental, off by default**; the missing enable bit is now set (below), not yet device-tested |
 | T31 | none in the vendor library; OpenIMP: `IMP_Encoder_Set/GetChnRoiAttr` (T41 API) | works by default (beyond vendor), device-tested; QP clamped to valid H.264 (below) |
 
@@ -192,14 +192,16 @@ the picture; 4 s phases at 10 fps):
 CBR 1000 kbit/s (QP 15..45, not reachable in that noise): delta -15 16380,
 delta +20 10068, off 11160 kbit/s. Bit rate moves in the expected direction
 in every phase, no Helix failure, 0 oops. The base stream is valid
-(VA-API 0 errors, `ffmpeg -err_detect aggressive` clean). **Open:** the ROI
-phase streams were lost because the noisy 800 KB pictures filled the camera's
-18 MB /tmp, so the QP map and the decoder check of the ROI streams are still
-missing. Next run: `ROITEST_OUT=640x360 ROITEST_FPS=5`, 3 s phases, window
-(160,96) 320x160. `roitest` built with `--export-dynamic` replaced libimp's
+(VA-API 0 errors, `ffmpeg -err_detect aggressive` clean). Second run (same day, one roitest per phase, 1080p, 5 fps, window 320x160
+at (160,96)): the QP map shows the window in every phase (delta -15/-25 and
+absolute 10 give slice QP -12, delta +20 and absolute 51 give +13, the T21
+saturation), FixQP 603 kbit/s base, 663 at -15, 673 at -25, 581 at +20, 578
+at absolute 51; CBR 449 / 489 (-15) / 439 (+20). All 9 streams: VA-API 0
+errors, `ffmpeg -err_detect aggressive` clean, steps within -13..13; 0 oops.
+(`ROITEST_OUT` did not scale on T23.) `roitest` built with `--export-dynamic` replaced libimp's
 `imp_log_fun` with a different signature and crashed on T23 with
 `ROITEST_LOG=1` (fixed in the tool).
 
 For timps (`src/roi_caps.h`): T23 + OpenIMP can move from "unsupported" to
-"experimental" once the QP map and decoder check above pass; vendor T23 stays
+"effective" with this OpenIMP; vendor T23 stays
 as it is (the vendor worker path was measured without effect before).
