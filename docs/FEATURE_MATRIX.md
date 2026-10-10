@@ -631,6 +631,8 @@ State of the work: OpenIMP `claude/agg-34` (2a1b1cd), open-tx-isp `claude/agg-34
 
 Gap work 2026-10-10 (branch claude/gaps-t23-t31, T23 and T31 only): the vendor libimp/libsysutils of every build (8 T23, 28 T31) were checked for the gap functions. Not exported by any vendor build, so now n.a. instead of missing: T23 `OSD_GetRegionLuma`, `SU_Battery_*` (T23, T31), T31 `ISP_Tuning_SetDPStrength`, `Decoder_*`, `EmuFrameSource_*`, `ADEC_ReleaseDecoder`, `AENC_ReleaseEncoder` (declared in some headers only). Vendor no-op matched: T23 `Encoder_Get/SetH265TransCfg` (drops the value, Get zero-fills; device-tested), T31 `Encoder_SetFrameRelease`. Implemented: T31 `ISP_SetFixedContraster` (attr pointer as control 0x8000102 like the vendor; host test, device-tested; T23 now dev too). Remaining gaps are class c (T23 driver has no handler for the controls of `ISP_Tuning_SwitchBin`, `AwbSync`, `SetWB_ALGO`, `Get/SetOSDAttr`, `Get/SetOSDBlock`, `Get/SetDrawBlock`) or class d (fisheye flag, frame-loss threshold, multi-section mode, `FB_*`, `SU_Base_Shutdown`); see the notes of the rows.
 
+Gap work 2026-10-10 (branch claude/gaps-t1x, T10/T20/T21, vendor export check only, host-only, no device session): the 4 vendor libimp builds per SoC (T10 3.9.0/3.12.0, T20 3.9.0/3.12.0, T21 1.0.33) and their libsysutils were checked with nm. Exported by none, so now n.a.: `ISP_Tuning_SaveAllParam` (T10/T20/T21), `ADEC_ReleaseDecoder`/`AENC_ReleaseEncoder` (T10/T20), `SU_Battery_*` (T10/T20/T21). Gaps in functions: T10 28 to 21, T20 27 to 20, T21 14 to 9. Everything else stays open; the vendor libimp does export ChangeRef, FrmUsedMode, GOPSize, HSkipBlackEnhance, OSD_AttachToGroup, Decoder_* (T21), and the T10/T20 H264 variants, WDRAttr, ISPHVflip, MeshShadingScale, AntiFogAttr, DPStrength (T10/T20), so these are classes b/c and not yet worked (low priority: no streamer uses them).
+
 Not re-measured in this update: T10 (not re-tested on the open stack), T41 (its fixes live in `claude/release-t41`, not in the release), the `_Sec` and `MultiCamera_` variants of T23 (the apitest exercises the base function), and every function the apitest skips on purpose. T10 uses the T20 userspace build (and the T20 SDK tuning code in the driver), so its cells mirror T20 unless the note says otherwise. T30/T40 are not tabled (no device, no build in the audit).
 
 ### Legend
@@ -661,9 +663,9 @@ Counts are per vendor function of that SoC (T23 folded: base function = one; Get
 
 | SoC | fns | dev | host | aud | ? | no-op | cache | stub | err | miss | **gaps** | audit gaps | done % |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| T10 | 332 | 2 | 47 | 232 | 2 | 1 | 4 | 0 | 1 | 43 | **48** | 100 | 84.6 % |
-| T20 | 332 | 184 | 13 | 88 | 0 | 1 | 2 | 0 | 1 | 43 | **46** | 100 | 85.8 % |
-| T21 | 330 | 199 | 9 | 89 | 0 | 8 | 2 | 0 | 1 | 22 | **25** | 77 | 90.0 % |
+| T10 | 325 | 2 | 47 | 232 | 2 | 1 | 4 | 0 | 1 | 36 | **41** | 100 | 86.5 % |
+| T20 | 325 | 184 | 13 | 88 | 0 | 1 | 2 | 0 | 1 | 36 | **39** | 100 | 87.7 % |
+| T21 | 325 | 199 | 9 | 89 | 0 | 8 | 2 | 0 | 1 | 17 | **20** | 77 | 91.4 % |
 | T23 | 437 | 279 | 16 | 113 | 0 | 14 | 5 | 0 | 10 | 0 | **15** | 212 | 93.4 % |
 | T31 | 387 | 221 | 13 | 139 | 0 | 6 | 2 | 0 | 1 | 5 | **8** | 65 | 96.4 % |
 | T41 | 445 | 0 | 38 | 218 | 0 | 0 | 7 | 2 | 48 | 132 | **189** | 227 | 57.5 % |
@@ -671,9 +673,9 @@ Counts are per vendor function of that SoC (T23 folded: base function = one; Get
 Columns: fns = vendor functions of that SoC; dev/host/aud/?/no-op/cache/stub/err/miss = counts per cell code (codes as in the legend); gaps = cache + stub + err + miss; audit gaps = the same sum in the audit before the work of 2026-10-05; done % = (dev + host + aud) / fns.
 
 ```
-T10  ▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░
-T20  ██████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▒░░░░░
-T21  ████████████████████████▓▒▒▒▒▒▒▒▒▒▒▒○░░░
+T10  ▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░
+T20  ███████████████████████▓▒▒▒▒▒▒▒▒▒▒▒░░░░░
+T21  █████████████████████████▓▒▒▒▒▒▒▒▒▒▒▒○░░
 T23  ██████████████████████████▓▓▒▒▒▒▒▒▒▒▒▒○░
 T31  ███████████████████████▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒○░
 T41  ▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░░░░░░░░░
@@ -717,7 +719,6 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 | `ISP_Tuning_GetAutoZoom` [6] | n.a. | n.a. | n.a. | host | n.a. | err | – |
 | `ISP_Tuning_GetHVFlip` | n.a. | n.a. | n.a. | aud | aud | miss | T23/T31: r† |
 | `ISP_Tuning_GetMaskBlock` [7] | n.a. | n.a. | n.a. | host | n.a. | miss | – |
-| `ISP_Tuning_SaveAllParam` | miss | miss | miss | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetAntiFogAttr` [8] | miss | miss | no-op | n.a. | n.a. | n.a. | – |
 | ► `ISP_Tuning_SetAutoZoom` [9] | n.a. | n.a. | n.a. | host | host | err | see note |
 | `ISP_Tuning_SetDPStrength` [10] | miss | miss | host | n.a. | n.a. | n.a. | – |
@@ -748,7 +749,7 @@ Notes:
 14. `ISP_WDR_ENABLE`: T41: ENOTSUP stub (returns -1)
 15. `ISP_WDR_ENABLE_GET`: T41: ENOTSUP stub (returns -1)
 
-<details><summary>All 107 rows of this area (34 with a gap)</summary>
+<details><summary>All 107 rows of this area (33 with a gap)</summary>
 
 *Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
 
@@ -834,7 +835,7 @@ Notes:
 | `ISP_Tuning_GetSensorFPS` [71] | aud | dev | dev | dev | dev | aud | p† r† t |
 | `ISP_Tuning_GetSharpness` [72] | aud | aud | aud | aud | aud | aud | p† r† |
 | `ISP_Tuning_GetTotalGain` [73] | aud | dev | dev | dev | dev | n.a. | p† r† t |
-| `ISP_Tuning_SaveAllParam` | miss | miss | miss | n.a. | n.a. | n.a. | – |
+| `ISP_Tuning_SaveAllParam` [88] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetAntiFogAttr` [8] | miss | miss | no-op | n.a. | n.a. | n.a. | – |
 | ► `ISP_Tuning_SetAutoZoom` [9] | n.a. | n.a. | n.a. | host | host | err | see note |
 | `ISP_Tuning_SetBrightness` [74] | aud | aud | dev | aud | aud | aud | p† r† t |
@@ -929,6 +930,7 @@ Notes:
 71. `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel
 72. `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel
 73. `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel
+88. `ISP_Tuning_SaveAllParam`: T10/T20/T21 (4 builds each) and T23/T31: declared in the SDK header, exported by none of the vendor libimp builds (nm); a vendor-stack application cannot link it either
 8. `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect
 9. `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†
 74. `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value
@@ -1601,8 +1603,6 @@ Notes:
 
 | Vendor function | T10 | T20 | T21 | T23 | T31 | T41 | Used by |
 |---|---|---|---|---|---|---|---|
-| `ADEC_ReleaseDecoder` [53] | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
-| `AENC_ReleaseEncoder` [54] | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
 | `AI_DisableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | miss | – |
 | `AI_DisableGetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `AI_DisableHs` | n.a. | n.a. | n.a. | dev | n.a. | miss | – |
@@ -1622,18 +1622,16 @@ Notes:
 
 1. `DMIC_*` (20 functions): functions: Disable, DisableAec, DisableChn, Enable, EnableAec, EnableAecRefFrame, EnableChn, Get/SetChnParam, GetFrame, GetFrameAndRef, Get/SetGain, Get/SetPubAttr, Get/SetVol, PollingFrame, ReleaseFrame, SetUserInfo. T41: ENOTSUP stub (returns -1)
 2. `DMIC_DisableAecRefFrame`: T41: ENOTSUP stub (returns -1)
-53. `ADEC_ReleaseDecoder`: T31: declared in the SDK header, exported by none of the 28 vendor libimp builds (nm)
-54. `AENC_ReleaseEncoder`: T31: declared in the SDK header, exported by none of the 28 vendor libimp builds (nm)
 
-<details><summary>All 66 rows of this area (16 with a gap)</summary>
+<details><summary>All 66 rows of this area (14 with a gap)</summary>
 
 *Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
 
 | Vendor function | T10 | T20 | T21 | T23 | T31 | T41 | Used by |
 |---|---|---|---|---|---|---|---|
-| `ADEC_ReleaseDecoder` [53] | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
+| `ADEC_ReleaseDecoder` [53] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `AENC_* / ADEC_*` (17 functions) [3] | host | dev | dev | dev | dev | host | r† |
-| `AENC_ReleaseEncoder` [54] | miss | miss | n.a. | n.a. | n.a. | n.a. | – |
+| `AENC_ReleaseEncoder` [54] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `AI_Disable` [4] | aud | dev | dev | dev | dev | aud | p† r† t |
 | `AI_DisableAec` [5] | aud | aud | aud | aud | aud | aud | see note |
 | `AI_DisableAecRefFrame` [6] | aud | aud | aud | aud | aud | aud | r† |
@@ -1700,9 +1698,9 @@ Notes:
 
 Notes:
 
-53. `ADEC_ReleaseDecoder`: T31: declared in the SDK header, exported by none of the 28 vendor libimp builds (nm)
+53. `ADEC_ReleaseDecoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 3. `AENC_* / ADEC_*` (17 functions): functions: ClearChnBuf, CreateChn, DestroyChn, GetStream, PollingStream, RegisterDecoder, ReleaseStream, SendStream, UnRegisterDecoder, CreateChn, DestroyChn, GetStream, PollingStream, RegisterEncoder, ReleaseStream, SendFrame, UnRegisterEncoder. T10+T20+T21+T41: claude/aenc-adec-all (in agg-25): shared software codecs; device encode test open
-54. `AENC_ReleaseEncoder`: T31: declared in the SDK header, exported by none of the 28 vendor libimp builds (nm)
+54. `AENC_ReleaseEncoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 4. `AI_Disable`: audit: reaches the driver/kernel
 5. `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†
 6. `AI_DisableAecRefFrame`: audit: reaches the driver/kernel
@@ -1767,10 +1765,10 @@ Notes:
 | `Log_Set_Option` [64] | host | host | host | host | host | miss | – |
 | `SU_Base_SetWkupMode` [1] | n.a. | n.a. | n.a. | n.a. | n.a. | err | – |
 | `SU_Base_Shutdown` [2] | err | err | err | err | err | err | – |
-| `SU_Battery_GetCapacity` [48] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetEvent` [49] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetStatus` [50] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetVoltageUV` [51] | miss | miss | miss | n.a. | n.a. | miss | – |
+| `SU_Battery_GetCapacity` [48] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetEvent` [49] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetStatus` [50] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetVoltageUV` [51] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `System_MemPoolRequest` [3] | n.a. | n.a. | n.a. | dev | dev | miss | – |
 
 Notes:
@@ -1778,10 +1776,10 @@ Notes:
 1. `SU_Base_SetWkupMode`: T41: writes the mode number to /sys/power/state; neo PR #1 covers related struct overflows, unmerged
 2. `SU_Base_Shutdown`: all: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD
 3. `System_MemPoolRequest`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)
-48. `SU_Battery_GetCapacity`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-49. `SU_Battery_GetEvent`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-50. `SU_Battery_GetStatus`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-51. `SU_Battery_GetVoltageUV`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+48. `SU_Battery_GetCapacity`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+49. `SU_Battery_GetEvent`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+50. `SU_Battery_GetStatus`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+51. `SU_Battery_GetVoltageUV`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
 
 <details><summary>All 53 rows of this area (9 with a gap)</summary>
 
@@ -1809,10 +1807,10 @@ Notes:
 | `SU_Base_SetWkupMode` [1] | n.a. | n.a. | n.a. | n.a. | n.a. | err | – |
 | `SU_Base_Shutdown` [2] | err | err | err | err | err | err | – |
 | `SU_Base_Suspend` [19] | aud | aud | aud | aud | aud | aud | – |
-| `SU_Battery_GetCapacity` [48] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetEvent` [49] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetStatus` [50] | miss | miss | miss | n.a. | n.a. | miss | – |
-| `SU_Battery_GetVoltageUV` [51] | miss | miss | miss | n.a. | n.a. | miss | – |
+| `SU_Battery_GetCapacity` [48] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetEvent` [49] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetStatus` [50] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
+| `SU_Battery_GetVoltageUV` [51] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `SU_CIPHER_ConfigHandle` [20] | aud | aud | aud | aud | aud | aud | – |
 | `SU_CIPHER_CreateHandle` [21] | aud | aud | aud | aud | aud | aud | – |
 | `SU_CIPHER_DES_Exit` [22] | n.a. | n.a. | n.a. | n.a. | aud | aud | – |
@@ -1863,10 +1861,10 @@ Notes:
 1. `SU_Base_SetWkupMode`: T41: writes the mode number to /sys/power/state; neo PR #1 covers related struct overflows, unmerged
 2. `SU_Base_Shutdown`: all: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD
 19. `SU_Base_Suspend`: audit: sysfs/ioctl/syscall path
-48. `SU_Battery_GetCapacity`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-49. `SU_Battery_GetEvent`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-50. `SU_Battery_GetStatus`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
-51. `SU_Battery_GetVoltageUV`: T23 (8 builds, 1.1.0-1.3.0) and T31 (28 builds, 1.1.1-1.1.6): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+48. `SU_Battery_GetCapacity`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+49. `SU_Battery_GetEvent`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+50. `SU_Battery_GetStatus`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
+51. `SU_Battery_GetVoltageUV`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
 20. `SU_CIPHER_ConfigHandle`: audit: sysfs/ioctl/syscall path
 21. `SU_CIPHER_CreateHandle`: audit: sysfs/ioctl/syscall path
 22. `SU_CIPHER_DES_Exit`: audit: sysfs/ioctl/syscall path
