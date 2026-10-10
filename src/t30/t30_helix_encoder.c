@@ -68,6 +68,15 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #if defined(PLATFORM_T20)
 #include "rc_t20/rc_t20.h"
 #include "rc_t10/rc_t10.h"
+
+#endif
+
+#if defined(PLATFORM_T23)
+/* Runtime capability marker for streamers: present (and 1) only in a libimp
+ * whose native Helix path programs the ROI table on T23.  Older libimps drop
+ * the regions silently, so a streamer can probe this symbol (weak extern or
+ * dlsym) instead of pinning a minimum OpenIMP commit. */
+__attribute__((visibility("default"))) const int OpenIMP_Cap_T23HelixRoi = 1;
 #endif
 
 #if defined(PLATFORM_T23)
