@@ -3670,12 +3670,15 @@ static void avpu_t41_roi_apply(ALAvpuContext *ctx)
          * rounds the window size to the nearest block */
         avpu_roi_fill(table, 4u, 8u, cols, rows, ctx->roi_win, 10u, 0u, 0u,
                       0u, 1, &res);
-        avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
         /* SetChnMapRoi: the per-block deltas replace the window value */
         if (ctx->roi_map && ctx->roi_map_n == mb)
             for (i = 0; i < mb; i++)
                 if (ctx->roi_map[i])
                     table[4u * i] = (uint8_t)ctx->roi_map[i];
+        /* the map bypassed the clamp in avpu_roi_fill: neighbours -25/+25
+         * would be mb_qp_delta 50, invalid H.264 */
+        avpu_roi_spread_clamp(table, 4u, 8u, mb, &res);
+        avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
     }
     ctx->roi_table_on = any;
     pthread_mutex_unlock(&avpu_roi_lock);

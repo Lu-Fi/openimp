@@ -1,6 +1,7 @@
 /* P3 T40 control plane: ISP tuning and direct system-register access. */
 
 #include <errno.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -183,6 +184,10 @@ int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, uint32_t *reg, uint32_t *value)
 }
 #endif
 
+/* Frame drop: the vendor ioctl number has size 4 in its _IOC field but the
+ * library passes the whole attribute pointer (same as the other T-series
+ * vendor libs, e.g. 0xc00456e6 in docs/re); the driver reads the table.
+ * The sensor request's size word is left 0 as there (not written). */
 /* Vendor: the 3 x {enable, lsize, fmark} table goes to the ISP as is
  * (lsize 0..31 as the header states). */
 static int p3_frame_drop_valid(const IMPISPFrameDropAttr *attr)
@@ -235,6 +240,7 @@ int32_t IMP_ISP_Tuning_GetAfWeight(IMPVI_NUM num, IMPISPWeight *af_weight)
  * library remembers the last mode; _GET answers from that memory (no
  * ioctl).  Any other value is accepted without effect. */
 static IMPISPTuningOpsMode p3_wdr_mode;
+static pthread_mutex_t p3_wdr_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int32_t IMP_ISP_WDR_ENABLE(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
 {
@@ -246,11 +252,13 @@ int32_t IMP_ISP_WDR_ENABLE(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
     if (*mode != IMPISP_TUNING_OPS_MODE_ENABLE &&
         *mode != IMPISP_TUNING_OPS_MODE_DISABLE)
         return 0;
+    pthread_mutex_lock(&p3_wdr_lock);
     result = OpenIMP_P1_IspIOCtl(*mode == IMPISP_TUNING_OPS_MODE_ENABLE ?
                                  TISP_IOCTL_SET_WDR_ENABLE :
                                  TISP_IOCTL_SET_WDR_DISABLE, &zero);
     if (result == 0)
         p3_wdr_mode = *mode;
+    pthread_mutex_unlock(&p3_wdr_lock);
     return result;
 }
 
@@ -258,7 +266,9 @@ int32_t IMP_ISP_WDR_ENABLE_GET(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
 {
     if (num != IMPVI_MAIN || !mode)
         return -1;
+    pthread_mutex_lock(&p3_wdr_lock);
     *mode = p3_wdr_mode;
+    pthread_mutex_unlock(&p3_wdr_lock);
     return 0;
 }
 

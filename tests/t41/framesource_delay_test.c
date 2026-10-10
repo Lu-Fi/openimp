@@ -111,6 +111,7 @@ int main(void)
     assert(IMP_FrameSource_GetDelay(1, &v) == 0 && v == 2);
     assert(IMP_FrameSource_GetMaxDelay(1, &v) == 0 && v == 3);
     p1.channels[1].enabled = 1;
+    fs_delay_set_on(1, 1);
     assert(IMP_FrameSource_SetMaxDelay(1, 3) == FS_ERR_STATE); /* running */
     assert(IMP_FrameSource_SetDelay(1, 3) == 0);               /* allowed */
 
@@ -183,6 +184,31 @@ int main(void)
     p1.channels[1].enabled = 0;
     assert(IMP_FrameSource_SetDelay(1, 2) == 0);
     fs_delay_free(1);
+
+    /* a cache re-created by a GetFrame racing with Disable: not stored */
+    fs_delay_store(1, 2, &info, buf, PIC);
+    assert(p1_dly[1].cap == 0 && !p1_dly[1].ent);
+
+    /* only SetChnFifoAttr (no SetMaxDelay): no cache, GetFrame copies nothing */
+    setup_channel(2);
+    fifo.maxdepth = 50;
+    assert(IMP_FrameSource_SetChnFifoAttr(2, &fifo) == 0);
+    assert(p1.channels[2].delay == 50 && p1.channels[2].maxdelay == 0);
+    p1.channels[2].enabled = 1;
+    fs_delay_set_on(2, 1);
+    next_sec = 100;
+    next_usec = 10000;
+    dq_index = 0;
+    (void)get_release(2, &first);
+    assert(p1_dly[2].cap == 0 && !p1_dly[2].ent);
+    /* with a max delay the depth is clamped to it */
+    p1.channels[2].enabled = 0;
+    assert(IMP_FrameSource_SetMaxDelay(2, 2) == 0);
+    p1.channels[2].enabled = 1;
+    (void)get_release(2, &first);
+    assert(p1_dly[2].cap == 2);
+    p1.channels[2].enabled = 0;
+    fs_delay_free(2);
     puts("T41 P1 frame delay cache and I2D: passed");
     return 0;
 }

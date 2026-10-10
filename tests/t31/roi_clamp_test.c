@@ -168,6 +168,35 @@ int main(void)
 
     /* Helix: relative -26, absolute 15 at QP 42 (T10/T20 range 30..51),
      * two regions far apart */
+    /* T41 SetChnMapRoi: block deltas written after avpu_roi_fill must
+     * still obey the spread limit (-25 next to +25 would be 50) */
+    {
+        uint8_t t4[COLS * ROWS * 4];
+        AvpuRoiResult r;
+        AvpuRoiWin none[1];
+        uint32_t i;
+        int lo = 0, hi = 0, w2 = 0;
+
+        memset(none, 0, sizeof(none));
+        memset(t4, 0, sizeof(t4));
+        avpu_roi_fill(t4, 4, 8, COLS, ROWS, none, 1, 0, 0, 0, 1, &r);
+        t4[4 * 0] = (uint8_t)-25;
+        t4[4 * 1] = (uint8_t)25;
+        avpu_roi_spread_clamp(t4, 4, 8, COLS * ROWS, &r);
+        CHECK(r.clamped & AVPU_ROI_CLAMP_SPREAD, "map spread flagged");
+        for (i = 0; i < COLS * ROWS; i++) {
+            int v = avpu_roi_get(t4, 4, i, 8);
+
+            if (v < lo)
+                lo = v;
+            if (v > hi)
+                hi = v;
+        }
+        CHECK(lo == -25 && hi == 0, "map spread %d..%d", lo, hi);
+        (void)w2;
+        CHECK(walk(t4, 4, 8, 30, 0, 51, &w2) == 0, "map walk");
+    }
+
     {
         uint8_t in[8][7], out[8][7];
         unsigned int f;

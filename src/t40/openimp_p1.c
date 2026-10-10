@@ -781,6 +781,7 @@ static struct fs_delay_cache {
     struct fs_delay_entry *ent;
     uint32_t cap;
     uint32_t head;                  /* next slot to write */
+    int on;                         /* channel enabled (set by Enable) */
 } p1_dly[OPENIMP_FS_CHANNELS] = {
     [0 ... OPENIMP_FS_CHANNELS - 1] = { .lock = PTHREAD_MUTEX_INITIALIZER }
 };
@@ -800,16 +801,14 @@ static void fs_delay_free_locked(struct fs_delay_cache *c)
 static void fs_delay_free(int channel)
 {
     pthread_mutex_lock(&p1_dly[channel].lock);
+    p1_dly[channel].on = 0;
     fs_delay_free_locked(&p1_dly[channel]);
     pthread_mutex_unlock(&p1_dly[channel].lock);
 }
 
 /* Keep `cap` frames (0 frees the cache); a changed size drops the content. */
-static void fs_delay_resize(int channel, uint32_t cap)
+static void fs_delay_resize_locked(struct fs_delay_cache *c, uint32_t cap)
 {
-    struct fs_delay_cache *c = &p1_dly[channel];
-
-    pthread_mutex_lock(&c->lock);
     if (c->cap != cap) {
         fs_delay_free_locked(c);
         if (cap) {
@@ -818,7 +817,22 @@ static void fs_delay_resize(int channel, uint32_t cap)
                 c->cap = cap;
         }
     }
+}
+
+static void fs_delay_resize(int channel, uint32_t cap)
+{
+    struct fs_delay_cache *c = &p1_dly[channel];
+
+    pthread_mutex_lock(&c->lock);
+    fs_delay_resize_locked(c, cap);
     pthread_mutex_unlock(&c->lock);
+}
+
+static void fs_delay_set_on(int channel, int on)
+{
+    pthread_mutex_lock(&p1_dly[channel].lock);
+    p1_dly[channel].on = on;
+    pthread_mutex_unlock(&p1_dly[channel].lock);
 }
 
 /* Called by GetFrame with the frame it is about to return; the capture
@@ -834,9 +848,11 @@ static void fs_delay_store(int channel, uint32_t want, const IMPFrameInfo *f,
         return;
     if (want > FS_DELAY_MAX)
         want = FS_DELAY_MAX;
-    fs_delay_resize(channel, want);
     pthread_mutex_lock(&c->lock);
-    if (c->cap && c->ent) {
+    /* a GetFrame racing with Disable/Destroy must not re-create the cache */
+    if (c->on)
+        fs_delay_resize_locked(c, want);
+    if (c->on && c->cap && c->ent) {
         e = &c->ent[c->head];
         if (e->data_cap < size) {
             grown = realloc(e->data, size);
@@ -1009,7 +1025,8 @@ static int fs_delay_find(int channel, const IMPFrameTimestamp *t, void *out,
 /* Vendor GetTimedFrame: needs an enabled channel with a max delay; the
  * picture is copied to `framedata` when given (it must hold one frame),
  * otherwise virAddr points into the cache entry, valid until the cache
- * wraps.  `block`: wait up to 2 s for a frame in the window. */
+ * wraps or the channel is disabled (the vendor T41 skips the copy for NULL
+ * and returns the info the same way).  `block`: wait up to 2 s for a frame in the window. */
 int IMP_FrameSource_GetTimedFrame(int channel, IMPFrameTimestamp *framets,
                                   int block, void *framedata,
                                   IMPFrameInfo *frame)
@@ -1236,7 +1253,7 @@ int IMP_FrameSource_GetPool(int channel)
 
 int IMP_FrameSource_SetChnFifoAttr(int channel, IMPFSChnFifoAttr *attr)
 {
-    int delay;
+    int delay, maxdelay;
 
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !attr ||
         attr->maxdepth < 0)
@@ -1252,7 +1269,10 @@ int IMP_FrameSource_SetChnFifoAttr(int channel, IMPFSChnFifoAttr *attr)
      * (+772) is not touched */
     p1.channels[channel].delay = attr->maxdepth;
     delay = attr->maxdepth;
+    maxdelay = p1.channels[channel].maxdelay;
     unlock_p1();
+    if (delay > maxdelay)
+        delay = maxdelay;       /* no max delay: no cache */
     fs_delay_resize(channel, (uint32_t)(delay > FS_DELAY_MAX ?
                                          FS_DELAY_MAX : delay));
     return 0;
@@ -1577,6 +1597,8 @@ done:
     if (result && chn->buffer_count)
         release_capture_queue(chn);
     unlock_p1();
+    if (!result)
+        fs_delay_set_on(channel, 1);
 #if defined(PLATFORM_T41)
     if (!result)
         (void)pthread_once(&p1_ivs_feeder_once, p1_ivs_feeder_start);
@@ -1694,7 +1716,10 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     buffer->frame.timeStamp = IMP_System_GetTimeStamp();
 #endif
     chn->frames_dequeued++;
-    delay_cache = chn->delay;
+    /* vendor: the cache exists only with a max delay (SetMaxDelay); a bare
+     * SetChnFifoAttr must not make every GetFrame copy a frame */
+    delay_cache = chn->maxdelay ?
+        (chn->delay < chn->maxdelay ? chn->delay : chn->maxdelay) : 0;
     openimp_video_drop_note_frame();
 #if defined(PLATFORM_T41)
     if (!p1_in_ivs_feeder)
