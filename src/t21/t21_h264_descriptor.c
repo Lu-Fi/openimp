@@ -18,6 +18,7 @@
  */
 
 #include "t21_h264_descriptor.h"
+#include "../t30/helix_roi.h"
 
 #include <errno.h>
 
@@ -320,6 +321,8 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     uint32_t aligned_height;
     uint32_t min_qp;
     uint32_t max_qp;
+    uint32_t roi_words[10];
+    uint8_t roi[8][7];
     uint32_t lambda_step;
     uint32_t ctrl0, ctrl1;
     uint32_t crop_flag;
@@ -382,10 +385,16 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x4002c, T21_VRAM_SDE);
     EMIT(0x40030, T21_VRAM_RAW);
     EMIT(0x40040, max_qp);
+    /* H264E_T21_SliceInit 0x1cfec..0x1d248: ROI flags 0x40044/0x40048
+     * and the eight rectangles 0x4004c..0x40068 (slice +752..+807) */
+    (void)Helix_H264_RoiSanitize(config->roi, roi, (int)config->qp,
+                                 (int)min_qp, (int)max_qp);
+    Helix_H264_RoiRegisters((const uint8_t (*)[7])roi, roi_words);
     for (i = 0; i < 10u; i++)
-        EMIT(0x40044u + i * 4u, 0);
+        EMIT(0x40044u + i * 4u, roi_words[i]);
     EMIT(0x4006c, 0x000c5800u);
-    EMIT(0x40120, 0);
+    /* 0x1d278: the chroma QP offset (slice +457) */
+    EMIT(0x40120, (uint32_t)config->chroma_qp_offset & 0x1fu);
     EMIT(0x40108, 0);
     EMIT(0x4010c, (config->ref_share &&
                    (config->ring_flags & T21_RING_VENDOR_MISC))

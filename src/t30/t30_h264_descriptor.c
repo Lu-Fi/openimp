@@ -8,6 +8,7 @@
  */
 
 #include "t30_h264_descriptor.h"
+#include "helix_roi.h"
 
 #include <errno.h>
 
@@ -208,6 +209,10 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     uint32_t min_qp;
 #endif
     uint32_t max_qp;
+#if defined(PLATFORM_T20)
+    uint32_t roi_words[10];
+    uint8_t roi[8][7];
+#endif
     unsigned int i;
 
     if (!config || !config->descriptor || !config->cabac_state ||
@@ -258,14 +263,22 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
 #else
     EMIT(0x40040, max_qp);
 #endif
+#if defined(PLATFORM_T20)
+    /* H264E_T20_SliceInit 0x20cd8..0x20f38: the eight ROI regions.  T20's
+     * older JZ NVPU only has these eight slots; writes to the later T30
+     * EFE slots stop its VDMA walker before the terminal command. */
+    (void)Helix_H264_RoiSanitize(config->roi, roi, (int)config->qp,
+                                 config->qp > 12u ? (int)config->qp - 12 : 0,
+                                 config->max_qp_cap ? (int)config->max_qp_cap
+                                                    : (int)max_qp);
+    Helix_H264_RoiRegisters((const uint8_t (*)[7])roi, roi_words);
+    EMIT(0x40044, roi_words[0]);
+    EMIT(0x40048, roi_words[1]);
+    for (i = 0; i < 8u; i++)
+        EMIT(roi_position_registers[i], roi_words[2 + i]);
+#else
     EMIT(0x40044, 0);
     EMIT(0x40048, 0);
-#if defined(PLATFORM_T20)
-    /* T20's older JZ NVPU only has the first eight ROI slots.  Writes to the
-     * later T30 EFE slots stop its VDMA walker before the terminal command. */
-    for (i = 0; i < 8u; i++)
-        EMIT(roi_position_registers[i], 0);
-#else
     EMIT(0x40130, 0);
     EMIT(0x40134, 0);
     for (i = 0; i < 16u; i++)
@@ -281,7 +294,12 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
 #else
     EMIT(0x4006c, 0x000c5800u);
 #endif
+#if defined(PLATFORM_T20)
+    /* H264E_T20_SliceInit 0x20fcc: the chroma QP offset (slice +186) */
+    EMIT(0x40120, (uint32_t)config->chroma_qp_offset & 0x1fu);
+#else
     EMIT(0x40120, 0);
+#endif
     EMIT(0x40108, 0);
 #if defined(PLATFORM_T20)
     EMIT(0x4010c, 0x03400000u);
@@ -462,6 +480,8 @@ int T10_H264_BuildDescriptor(const T30H264SliceConfig *config,
     uint32_t max_qp;
     uint32_t reference_y;
     uint32_t reference_c;
+    uint32_t roi_words[10];
+    uint8_t roi[8][7];
     unsigned int i;
 
     if (!config || !config->descriptor || !config->cabac_state ||
@@ -510,10 +530,16 @@ int T10_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x4002c, T10_VRAM_SDE);
     EMIT(0x40030, T10_VRAM_RAW);
     EMIT(0x40040, max_qp);
-    EMIT(0x40044, 0);
-    EMIT(0x40048, 0);
+    /* H264E_T10_SliceInit 0x1ef78..: the eight ROI regions (slice +160),
+     * the same encoding as on the T20; no chroma QP offset register */
+    (void)Helix_H264_RoiSanitize(config->roi, roi, (int)config->qp,
+                                 config->qp > 12u ? (int)config->qp - 12 : 0,
+                                 (int)max_qp);
+    Helix_H264_RoiRegisters((const uint8_t (*)[7])roi, roi_words);
+    EMIT(0x40044, roi_words[0]);
+    EMIT(0x40048, roi_words[1]);
     for (i = 0; i < 8u; i++)
-        EMIT(0x4004cu + i * 4u, 0);
+        EMIT(0x4004cu + i * 4u, roi_words[2 + i]);
     EMIT(0x40108, 0);
     EMIT(0x4010c, 0x00400000u);
 

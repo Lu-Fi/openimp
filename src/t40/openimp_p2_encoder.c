@@ -25,6 +25,7 @@
 #include "p2_hevc_policy.h"
 #if defined(PLATFORM_T41) || defined(PLATFORM_T31) || defined(PLATFORM_T30)
 #include "dma_alloc.h"
+#include "t30/helix_roi.h"
 #endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 #include "t23/openimp_t23_persist.h"
@@ -67,8 +68,43 @@
 #include "t31/openimp_t31_osd.h"
 #endif
 
+/* Encoder groups, IMP_Encoder_CreateGroup bound per vendor libimp:
+ *   slti a0,6   T20 3.12.0, T21 1.0.33, T23 1.1.0/1.1.2, T30 1.0.5,
+ *               T31 1.1.6 (0x82668), T41 1.2.0/1.2.5
+ *   slti a0,9   T23 1.3.0 (the headers raptor-hal builds T23 against)
+ *   slti a0,13  T40 1.3.1
+ * T23 and T40 keep OpenIMP's previous 8 (no narrowing below the vendor
+ * versions the streamers use, no untested widening either). */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40)
 #define P2_MAX_GROUPS 8
+#else
+#define P2_MAX_GROUPS 6
+#endif
+/*
+ * Encoder channels. The vendor count is per SoC and is visible twice in every
+ * libimp.so: as the size of the local `g_EncChannel` array (divided by its
+ * per-channel stride) and as the `slti` guard at the top of
+ * IMP_Encoder_CreateChn.
+ *
+ *   T31 1.1.6   0x1b48 / 0x308 = 9   slti a0,9
+ *   T31 1.1.1   0x15c0 / 0x2b8 = 8   slti a0,8
+ *   T40 1.0.2   0x1500 / 0x2a0 = 8   slti a0,8
+ *   T41 1.0.1   0x20c0 / 0x418 = 8   slti a0,8
+ *   T21 1.0.33  0x35d0 / 0x8f8 = 6   slti a0,6
+ *   T23 1.1.0   0x38a0 / 0x970 = 6   slti a0,6
+ *   T30 1.0.5   0x5070 / 0xd68 = 6   slti a0,6
+ *
+ * T31 1.1.6 - the build this tree audits - has nine, so the shared value of 8
+ * rejected channel 8, which the vendor accepts (IMP_Encoder_CreateChn,
+ * SetFisheyeEnableStatus, SetFrameRelease and SetbufshareChn all allow
+ * encChn < 9). T21/T23/T30 having only six is not enforced here on purpose:
+ * that would be a narrowing, and it is not verified on a device.
+ */
+#if defined(PLATFORM_T31)
+#define P2_MAX_CHANNELS 9
+#else
 #define P2_MAX_CHANNELS 8
+#endif
 #define P2_MAX_BINDS 16
 #define P2_MAX_PUBLIC_PACKS 16
 /*
@@ -184,6 +220,9 @@ typedef struct {
     void *raw_stream;
     void *codec_user;
     void *source_frame;
+    /* GetStream handed raw_stream to the application (FlushStream leaves
+     * it alone until ReleaseStream) */
+    int raw_stream_out;
     P2SyntheticFrame synthetic_frame;
     uint8_t *jpeg_frame_buffer;
     size_t jpeg_frame_capacity;
@@ -198,6 +237,17 @@ typedef struct {
                                      * fan-out (last decision) */
     int frame_readers;              /* video polls between the receiving
                                      * check and the fan-out (atomic) */
+    uint64_t last_poll_us;          /* video: end of the last PollingStream
+                                     * (atomic, p2_monotonic_us) */
+    /* IMP_Encoder_GetFd: readable while a stream is ready (pipe), filled
+     * by a pump thread that polls the channel as libimp's encoder thread
+     * would; created on the first GetFd, gone with DestroyChn. */
+    int evt_open;
+    int evt_rd;
+    int evt_wr;
+    int evt_signaled;
+    int pump_run;                   /* atomic */
+    pthread_t pump;
     pthread_cond_t jpeg_frame_ready;
     /* Last finished JPEG (heap copy, under lock), delivered again when the
      * codec skips a picture: p2_jpeg_reuse_last() */
@@ -209,6 +259,9 @@ typedef struct {
     uint32_t jpeg_reused;           /* pictures stood in for */
     uint64_t jpeg_reuse_log_us;
     IMPEncoderCHNAttr attr;
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    IMPEncoderRoiAttr roi_attr;     /* IMP_Encoder_SetChnRoiAttr */
+#endif
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
     IMPEncoderJpegeQl jpeg_quality;
     uint32_t sequence;
@@ -242,6 +295,7 @@ typedef struct {
     int in_poll;                    /* PollingStream calls in progress */
     int closing;                    /* teardown waits: refuse new polls */
     pthread_cond_t poll_idle;       /* signalled when in_poll drops to 0 */
+    pthread_mutex_t poll_serial;    /* one PollingStream encodes at a time */
     pthread_mutex_t lock;
 } P2EncoderChannel;
 
@@ -588,6 +642,7 @@ static int p2_jpeg_reuse_last(P2EncoderChannel *ch, uint64_t timestamp)
                      ch->jpeg_reused);
     }
     ch->raw_stream = &ch->jpeg_reuse;
+    ch->raw_stream_out = 0;
     ch->codec_user = P2_JPEG_REUSE_USER;
     ch->source_frame = &ch->synthetic_frame;
     return 0;
@@ -606,6 +661,8 @@ static void p2_jpeg_free_last(P2EncoderChannel *ch)
 static int p2_copy_requested_jpeg_frames(int source_channel,
                                          const P2SyntheticFrame *source)
 {
+    static unsigned int copy_logs;
+
     int channel;
 #if defined(PLATFORM_T41)
     int source_sync = 1;
@@ -631,6 +688,10 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
             pthread_mutex_unlock(&jpeg->lock);
             continue;
         }
+        if (copy_logs++ < 16u)
+            IMP_TRACE_LOG("Encoder", "JPEG fan-out copy from src %d phys 0x%08x "
+                         "(OSD verified or not probed)", source_channel,
+                         (unsigned int)source->physical_address);
 #if defined(PLATFORM_T41)
         /* ISP DMA owns the captured pixels, whereas JPEG reads them on the
          * CPU. Synchronize once, before any fanout copy, while the caller
@@ -751,6 +812,12 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
 
 static int p2_find_source_channel(int encoder_group);
 
+/* A receiving video channel nobody has polled for this long does not fan
+ * frames out any more (an application that streams JPEG only, or pulls the
+ * video stream rarely): the JPEG channel then reads the framesource itself,
+ * as the stock encoder's own thread would feed it. */
+#define P2_FANOUT_IDLE_US 300000ull
+
 /* Whether a JPEG channel gets its frames from a video channel on the same
  * framesource (fan-out above), decided at every poll.  Only a video channel
  * that is receiving, or whose last poll is still between its receiving
@@ -769,11 +836,21 @@ static int p2_jpeg_frames_from_fanout(const P2EncoderChannel *jpeg)
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
         P2EncoderChannel *other = &p2_channels[channel];
 
-        if (other != jpeg && other->created && other->registered &&
-            other->codec_type != IMP_ENC_TYPE_JPEG &&
-            (__atomic_load_n(&other->receiving, __ATOMIC_ACQUIRE) ||
-             __atomic_load_n(&other->frame_readers, __ATOMIC_ACQUIRE)) &&
-            p2_find_source_channel(other->group) == jpeg->source_channel)
+        uint64_t last;
+
+        if (other == jpeg || !other->created || !other->registered ||
+            other->codec_type == IMP_ENC_TYPE_JPEG ||
+            p2_find_source_channel(other->group) != jpeg->source_channel)
+            continue;
+        if (__atomic_load_n(&other->frame_readers, __ATOMIC_ACQUIRE))
+            return 1;
+        if (!__atomic_load_n(&other->receiving, __ATOMIC_ACQUIRE))
+            continue;
+        /* receiving: only while it is being polled (a poll in progress, or
+         * one that ended within P2_FANOUT_IDLE_US) */
+        last = __atomic_load_n(&other->last_poll_us, __ATOMIC_ACQUIRE);
+        if (__atomic_load_n(&other->in_poll, __ATOMIC_ACQUIRE) > 0 ||
+            (last && p2_monotonic_us() - last < P2_FANOUT_IDLE_US))
             return 1;
     }
     return 0;
@@ -785,6 +862,7 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
     struct timespec deadline;
     uint64_t generation;
     int wait_result = 0;
+    int slice_used = 0;
 
     if (!channel || !frame)
         return -1;
@@ -802,8 +880,34 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
     while (channel->receiving && channel->jpeg_frame_requested &&
            channel->jpeg_frame_generation == generation &&
            wait_result == 0) {
+        struct timespec slice;
+
+        /* Wake every P2_FANOUT_IDLE_US: when the video channel stopped
+         * being polled, the frame has to come from the framesource. */
+        clock_gettime(CLOCK_REALTIME, &slice);
+        slice.tv_nsec += (long)(P2_FANOUT_IDLE_US * 1000ull);
+        while (slice.tv_nsec >= 1000000000l) {
+            slice.tv_sec++;
+            slice.tv_nsec -= 1000000000l;
+        }
+        if (slice.tv_sec > deadline.tv_sec ||
+            (slice.tv_sec == deadline.tv_sec &&
+             slice.tv_nsec > deadline.tv_nsec))
+            slice = deadline;
+        else
+            slice_used = 1;
         wait_result = pthread_cond_timedwait(&channel->jpeg_frame_ready,
-                                             &channel->lock, &deadline);
+                                             &channel->lock, &slice);
+        if (wait_result == ETIMEDOUT && slice_used &&
+            channel->jpeg_frame_generation == generation) {
+            slice_used = 0;
+            if (!p2_jpeg_frames_from_fanout(channel)) {
+                channel->jpeg_frame_requested = 0;
+                pthread_mutex_unlock(&channel->lock);
+                return -2;
+            }
+            wait_result = 0;
+        }
     }
     if (!channel->receiving ||
         channel->jpeg_frame_generation == generation) {
@@ -1035,10 +1139,22 @@ extern int AL_Codec_Encode_SetFrameRate(void *codec, void *fps);
 extern int AL_Codec_Encode_SetBitRate(void *codec, int target_bitrate,
                                      int max_bitrate);
 extern int AL_Codec_Encode_SetRcParam(void *codec, void *rc_attr);
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || \
+    defined(PLATFORM_T30)
 extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
 extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetMbRC(void *codec, int enable);
+extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
+extern int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                                  const uint8_t entry[7]);
+extern int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
+#endif
+#if defined(PLATFORM_T20)
+/* HW_SUPERFRM_NONE / HW_SUPERFRM_REENCODE in hw_encoder.h */
+#define P2_HW_SUPERFRM_NONE     1u
+#define P2_HW_SUPERFRM_REENCODE 2u
+extern int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                         uint32_t i_bits, uint32_t p_bits);
 #endif
 #if defined(PLATFORM_T31)
 extern int AL_Codec_Encode_SetRcQualityCap(void *codec, int rc_mode,
@@ -1062,9 +1178,19 @@ extern int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
                                      const uint8_t tables[128]);
 #else
 extern int AL_Codec_Encode_SetJpegQuality(void *codec, int quality);
+#if defined(PLATFORM_T41)
+extern int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
+                                     const uint8_t tables[128]);
+#endif
 #endif
 extern int IMP_FrameSource_GetFrame(int channel, void **frame);
 extern int IMP_FrameSource_ReleaseFrame(int channel, void *frame);
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
+extern int VBMGetFrame(int chn, void **frame);
+#define P2_FS_TRY_FRAME(chn, frame) VBMGetFrame((chn), (frame))
+#else
+#define P2_FS_TRY_FRAME(chn, frame) IMP_FrameSource_GetFrame((chn), (frame))
+#endif
 
 /* API argument checks: the answer is the same as ever (-1 from the caller),
  * but a bad handle now leaves a rate-limited line naming the entry point. */
@@ -1511,6 +1637,7 @@ int EncoderInit(void)
             pthread_mutex_init(&p2_channels[i].lock, NULL);
             pthread_cond_init(&p2_channels[i].jpeg_frame_ready, NULL);
             pthread_cond_init(&p2_channels[i].poll_idle, NULL);
+            pthread_mutex_init(&p2_channels[i].poll_serial, NULL);
         }
         p2_initialized = 1;
         p2_startup_trace("openimp/P2 startup: EncoderInit channel locks initialized\n");
@@ -1636,6 +1763,57 @@ int IMP_Encoder_DestroyGroup(int group)
     return 0;
 }
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+/* Test hook for the ROI / chroma QP offset path without a streamer that
+ * calls the API: OPENIMP_DEBUG_ROI="ch:en,rel,qp,x0,y0,x1,y1;..." (pixel
+ * corners as IMPRect p0/p1, region index = position in the list) and
+ * OPENIMP_DEBUG_CHROMA_QP="ch:offset", applied after CreateChn. */
+static void p2_debug_roi_chroma(int channel)
+{
+    const char *env = getenv("OPENIMP_DEBUG_ROI");
+    int ch, n, v[7];
+    uint32_t index = 0;
+
+    while (env && *env && index < 8u) {
+        if (sscanf(env, "%d:%d,%d,%d,%d,%d,%d,%d%n", &ch, &v[0], &v[1],
+                   &v[2], &v[3], &v[4], &v[5], &v[6], &n) != 8)
+            break;
+        if (ch == channel) {
+            IMPEncoderROICfg roi;
+
+            memset(&roi, 0, sizeof(roi));
+            roi.u32Index = index++;
+            roi.bEnable = v[0] != 0;
+            roi.bRelatedQp = v[1] != 0;
+            roi.s32Qp = v[2];
+            roi.rect.x = v[3];
+            roi.rect.y = v[4];
+            roi.rect.width = v[5];      /* p1.x */
+            roi.rect.height = v[6];     /* p1.y */
+            IMP_LOG_INFO("Encoder", "debug ROI ch%d[%u]: %s", channel,
+                         roi.u32Index,
+                         IMP_Encoder_SetChnROI(channel, &roi) == 0
+                             ? "set" : "refused");
+        }
+        env += n;
+        if (*env != ';')
+            break;
+        env++;
+    }
+    env = getenv("OPENIMP_DEBUG_CHROMA_QP");
+    if (env && sscanf(env, "%d:%d", &ch, &v[0]) == 2 && ch == channel) {
+        IMPEncoderH264TransCfg tr;
+
+        memset(&tr, 0, sizeof(tr));
+        tr.chroma_qp_index_offset = v[0];
+        IMP_LOG_INFO("Encoder", "debug chroma QP offset ch%d %d: %s",
+                     channel, v[0],
+                     IMP_Encoder_SetH264TransCfg(channel, &tr) == 0
+                         ? "set" : "refused");
+    }
+}
+#endif
+
 int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
 {
     P2EncoderChannel *ch;
@@ -1728,6 +1906,13 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
                                       ch->macroblock_rate_control);
     }
 #endif
+#if defined(PLATFORM_T20)
+    /* GetSuperFrameCfg before any Set: the OEM controller's thresholds
+     * (i264e_param_default; RCT20_DefaultParams) */
+    ch->superframe.superFrmMode = IMP_RC_SUPERFRM_REENCODE;
+    ch->superframe.superIFrmBitsThr = 0x12c0000u;
+    ch->superframe.superPFrmBitsThr = 0xd64925u;
+#endif
     p2_startup_trace("openimp/P2 startup: CreateChn codec created %p\n",
                      ch->codec);
 #if !defined(PLATFORM_T23) && !defined(PLATFORM_T30)
@@ -1766,6 +1951,9 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
     }
     ch->attr = *attr;
     ch->codec_type = (int)p2_attr_codec_type(attr);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    memset(&ch->roi_attr, 0, sizeof(ch->roi_attr));
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     ch->rc_runtime = 0;
     if (ch->jpeg_quality.user_ql_en)
@@ -1777,6 +1965,11 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         (void)AL_Codec_Encode_SetJpegQuality(
             ch->codec, attr->rcAttr.attrRcMode.attrFixQp.iInitialQP);
+#if defined(PLATFORM_T41)
+    if (ch->jpeg_quality.user_ql_en)
+        (void)AL_Codec_Encode_SetJpegQl(ch->codec, 1,
+                                        ch->jpeg_quality.qmem_table);
+#endif
 #endif
     ch->created = 1;
     ch->ave_bytes = 0;
@@ -1795,9 +1988,87 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     pthread_mutex_unlock(&ch->lock);
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+    p2_debug_roi_chroma(channel);
+#endif
     p2_trace("openimp/P2: CreateChn done ch=%d codec=%p\n",
              channel, ch->codec);
     return 0;
+}
+
+static void p2_drop_unread_stream(P2EncoderChannel *ch);
+
+/* GetFd's pipe: called with ch->lock held when the ready stream is gone */
+static void p2_evt_clear(P2EncoderChannel *ch)
+{
+    char drain[16];
+
+    if (!ch->evt_open || !ch->evt_signaled)
+        return;
+    while (read(ch->evt_rd, drain, sizeof(drain)) > 0)
+        ;
+    ch->evt_signaled = 0;
+}
+
+static void *p2_fd_pump(void *arg)
+{
+    P2EncoderChannel *ch = (P2EncoderChannel *)arg;
+    int channel = (int)(ch - p2_channels);
+
+    while (__atomic_load_n(&ch->pump_run, __ATOMIC_ACQUIRE)) {
+        uint64_t start;
+        int active;
+
+        pthread_mutex_lock(&ch->lock);
+        if (ch->raw_stream) {
+            /* ready: the application takes it (GetStream/ReleaseStream
+             * clear the pipe) */
+            if (!ch->evt_signaled &&
+                write(ch->evt_wr, "s", 1) == 1)
+                ch->evt_signaled = 1;
+            pthread_mutex_unlock(&ch->lock);
+            usleep(2000);
+            continue;
+        }
+        active = ch->created && ch->registered && ch->receiving &&
+                 !ch->closing;
+        pthread_mutex_unlock(&ch->lock);
+        if (!active) {
+            usleep(10000);
+            continue;
+        }
+        start = p2_monotonic_us();
+        if (IMP_Encoder_PollingStream(channel, 100) != 0 &&
+            p2_monotonic_us() - start < 5000u)
+            usleep(5000);
+    }
+    return NULL;
+}
+
+/* Ends the pump of IMP_Encoder_GetFd and closes its pipe (without
+ * ch->lock: the pump polls the channel). */
+static void p2_fd_stop(P2EncoderChannel *ch)
+{
+    pthread_t pump;
+    int rd, wr;
+
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->evt_open) {
+        pthread_mutex_unlock(&ch->lock);
+        return;
+    }
+    ch->evt_open = 0;
+    pump = ch->pump;
+    rd = ch->evt_rd;
+    wr = ch->evt_wr;
+    __atomic_store_n(&ch->pump_run, 0, __ATOMIC_RELEASE);
+    pthread_mutex_unlock(&ch->lock);
+    pthread_join(pump, NULL);
+    close(rd);
+    close(wr);
+    pthread_mutex_lock(&ch->lock);
+    ch->evt_signaled = 0;
+    pthread_mutex_unlock(&ch->lock);
 }
 
 /* Called with ch->lock held. A PollingStream in progress still uses the
@@ -1819,6 +2090,11 @@ int IMP_Encoder_DestroyChn(int channel)
         return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    if (ch->evt_open && !ch->registered) {
+        pthread_mutex_unlock(&ch->lock);
+        p2_fd_stop(ch);
+        pthread_mutex_lock(&ch->lock);
+    }
     p2_wait_poll_idle(ch);
     if (!ch->created || ch->registered || ch->raw_stream || ch->source_frame) {
         pthread_mutex_unlock(&ch->lock);
@@ -1884,6 +2160,14 @@ int IMP_Encoder_UnRegisterChn(int channel)
         return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    if (ch->evt_open && !ch->receiving) {
+        /* GetFd's pump ends here; a stream it encoded ahead that nobody
+         * took is dropped (libimp releases its stream queue too) */
+        pthread_mutex_unlock(&ch->lock);
+        p2_fd_stop(ch);
+        p2_drop_unread_stream(ch);
+        pthread_mutex_lock(&ch->lock);
+    }
     p2_wait_poll_idle(ch);
     if (!ch->created || !ch->registered || ch->receiving || ch->raw_stream) {
         pthread_mutex_unlock(&ch->lock);
@@ -2064,18 +2348,61 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
     P2EncoderChannel *ch;
     int ret;
 
-    if (!p2_valid_channel(channel))
+    /* Vendor 0x85734/0x85740 (log line 2468): `slti v0,a0,9` rejects the
+     * channel range before anything else. */
+    if (!p2_valid_channel(channel)) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder", "Invalid Channel Num: %d",
+                        channel);
         return -1;
+    }
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+    /* Vendor 0x85768/0x858e0 (log line 2474): `lw a3,0(a1); bltz a3` --
+     * the descriptor doubles as the created flag, so a channel that was
+     * never created has nothing to poll. Vendor 0x85774/0x85810 (log line
+     * 2479): `lbu a1,264(a1); beqz a1` then refuses an unregistered
+     * channel. Both paths return -1; OpenIMP used to fall through into the
+     * poll and report a timeout instead. */
+    if (!ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been created",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
+    if (!ch->registered) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "%s: Encoder Channel%d hasn't been registed",
+                        "IMP_Encoder_PollingStream", channel);
+        return -1;
+    }
     if (ch->closing) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
-    ch->in_poll++;
+    __atomic_add_fetch(&ch->in_poll, 1, __ATOMIC_RELEASE);
     pthread_mutex_unlock(&ch->lock);
-    ret = p2_polling_stream(channel, timeout_ms);
+    /* Two threads polling one channel (an application thread next to the
+     * GetFd pump, or a drain thread) must not both feed the encoder: the
+     * second Process failed against the stream the first still held and
+     * its PollingStream returned -1 although frames were flowing.  The
+     * second poller waits for the first, then takes the stream it left
+     * (raw_stream) or encodes the next frame within what remains of its
+     * own timeout. */
+    {
+        uint64_t start_us = p2_monotonic_us();
+        uint64_t spent_ms;
+
+        pthread_mutex_lock(&ch->poll_serial);
+        spent_ms = (p2_monotonic_us() - start_us) / 1000u;
+        ret = p2_polling_stream(channel,
+                                spent_ms >= timeout_ms ? 0u
+                                    : timeout_ms - (uint32_t)spent_ms);
+        pthread_mutex_unlock(&ch->poll_serial);
+    }
     pthread_mutex_lock(&ch->lock);
+    __atomic_store_n(&ch->last_poll_us, p2_monotonic_us(), __ATOMIC_RELEASE);
     if (--ch->in_poll == 0)
         pthread_cond_broadcast(&ch->poll_idle);
     pthread_mutex_unlock(&ch->lock);
@@ -2106,6 +2433,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     int reader_counted = 0;
     int jpeg_may_skip = 0;
     int result = -1;
+    int osd_withhold_jpeg = 0;
     int process_result;
     OpenIMPProfileStamp poll_profile;
 #if defined(PLATFORM_T23)
@@ -2206,9 +2534,14 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
     if (ch->codec_type == IMP_ENC_TYPE_JPEG && ch->jpeg_fanout) {
-        if (p2_wait_for_jpeg_frame(ch, timeout_ms, &frame) != 0)
+        int waited = p2_wait_for_jpeg_frame(ch, timeout_ms, &frame);
+
+        if (waited == -2)
+            ch->jpeg_fanout = 0;        /* video went idle: framesource */
+        else if (waited != 0)
             goto done;
-    } else {
+    }
+    if (!(ch->codec_type == IMP_ENC_TYPE_JPEG && ch->jpeg_fanout)) {
         /* FrameSource exposes a non-blocking userspace-ready queue, while
          * PollingStream is a blocking ABI.  Wait outside the shared AVPU lock
          * so an empty queue neither spins the caller nor starves capture. */
@@ -2224,7 +2557,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
             uint64_t now_us;
             uint64_t slice_us;
 
-            if (IMP_FrameSource_GetFrame(ch->source_channel, &frame) == 0)
+            /* the pull stays non-blocking here: the public GetFrame of
+             * T31 waits up to 2 s like libimp, this loop has its own
+             * deadline and StopRecvPic check */
+            if (VBMGetFrame(ch->source_channel, &frame) == 0)
                 break;
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             now_us = p2_monotonic_us();
@@ -2238,7 +2574,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                                (uint32_t)slice_us);
         }
 #else
-        while (IMP_FrameSource_GetFrame(ch->source_channel, &frame) != 0) {
+        /* T20/T21/T23: the public GetFrame waits up to 2 s like libimp; this loop
+         * keeps its own deadline and StopRecvPic check, so it polls the
+         * ready queue directly. */
+        while (P2_FS_TRY_FRAME(ch->source_channel, &frame) != 0) {
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             if (!timeout_ms || p2_monotonic_us() >= frame_deadline_us ||
                 !__atomic_load_n(&ch->receiving, __ATOMIC_RELAXED))
@@ -2255,10 +2594,28 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
          * writes the frame in memory, where the Helix VPU reads it. */
         /* A video channel's frame is read by DMA only from here on; the
          * JPEG fan-out copy invalidates before reading it. */
-        if (ch->osd_group >= 0)
+        if (ch->osd_group >= 0 &&
             openimp_t31_osd_apply_ex(ch->osd_group, frame,
                                      ch->codec_type != IMP_ENC_TYPE_JPEG
-                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u);
+                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0) {
+            /* overlay not confirmed (T21 first op after idle): this frame
+             * must not become a JPEG.  A snapshot is cut from the video
+             * channel's frame by the fan-out copy below (the JPEG channel
+             * only waits for it), so withhold the copy; the request stays
+             * pending and the next frame serves it. */
+            {
+                static unsigned int wh_logs;
+
+                if (wh_logs++ < 16u)
+                    IMP_TRACE_LOG("Encoder", "ch %d (%s): OSD unconfirmed, frame "
+                                 "phys 0x%08x withheld from JPEG", channel,
+                                 ch->codec_type == IMP_ENC_TYPE_JPEG ? "jpeg" : "video",
+                                 (unsigned int)((const P2SyntheticFrame *)frame)->physical_address);
+            }
+            if (ch->codec_type == IMP_ENC_TYPE_JPEG)
+                goto done;
+            osd_withhold_jpeg = 1;
+        }
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T41)
         /* OEM T23 osd_update: IPU covers/pictures, CPU lines and mosaics
          * (T41: the same IPU and OSD ABI family, see openimp_t23_osd.c) */
@@ -2283,8 +2640,9 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
         pthread_mutex_lock(&p2_core_lock);
         core_locked = 1;
-        (void)p2_copy_requested_jpeg_frames(
-            ch->source_channel, (const P2SyntheticFrame *)frame);
+        if (!osd_withhold_jpeg)
+            (void)p2_copy_requested_jpeg_frames(
+                ch->source_channel, (const P2SyntheticFrame *)frame);
         __atomic_sub_fetch(&ch->frame_readers, 1, __ATOMIC_RELEASE);
         reader_counted = 0;
     }
@@ -2298,6 +2656,12 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     }
 #endif
     if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
+        static unsigned int enc_logs;
+
+        if (enc_logs++ < 16u && frame)
+            IMP_TRACE_LOG("Encoder", "JPEG ch %d encodes frame phys 0x%08x (fanout %d)",
+                         channel, (unsigned int)((const P2SyntheticFrame *)frame)->physical_address,
+                         ch->jpeg_fanout);
         pthread_mutex_lock(&ch->lock);
         jpeg_may_skip = p2_jpeg_reuse_fresh(ch, p2_monotonic_us());
         pthread_mutex_unlock(&ch->lock);
@@ -2379,6 +2743,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         p2_jpeg_keep_last(ch, (const P2HWStream *)stream);
     ch->source_frame = frame ? frame : &ch->synthetic_frame;
     ch->raw_stream = stream;
+    ch->raw_stream_out = 0;
     ch->codec_user = user;
     pthread_mutex_unlock(&ch->lock);
 #if defined(PLATFORM_T23)
@@ -2412,31 +2777,43 @@ int IMP_Encoder_PollingModuleStream(uint32_t *channel_bitmap,
     uint32_t ready = 0;
     int channel;
 
+    uint32_t wanted;
+    uint64_t deadline;
+
     if (!channel_bitmap)
         return -1;
+    /* in: the channels to wait for (0 = all, as before); out: those with a
+     * stream ready.  The OEM only reports channels of the input bitmap. */
+    wanted = *channel_bitmap ? *channel_bitmap : 0xffffffffu;
     EncoderInit();
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
         P2EncoderChannel *ch = &p2_channels[channel];
 
+        if (!(wanted & (1u << channel)))
+            continue;
         pthread_mutex_lock(&ch->lock);
         if (ch->raw_stream)
             ready |= 1u << channel;
         pthread_mutex_unlock(&ch->lock);
     }
-    if (!ready) {
-        for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
+    deadline = p2_monotonic_us() + (uint64_t)timeout_ms * 1000u;
+    while (!ready) {
+        /* slices over every selected channel: waiting the whole timeout on
+         * the first active one would starve the others */
+        for (channel = 0; channel < P2_MAX_CHANNELS && !ready; channel++) {
             P2EncoderChannel *ch = &p2_channels[channel];
             int active;
 
+            if (!(wanted & (1u << channel)))
+                continue;
             pthread_mutex_lock(&ch->lock);
             active = ch->created && ch->registered && ch->receiving;
             pthread_mutex_unlock(&ch->lock);
-            if (active &&
-                IMP_Encoder_PollingStream(channel, timeout_ms) == 0) {
+            if (active && IMP_Encoder_PollingStream(channel, 5) == 0)
                 ready |= 1u << channel;
-                break;
-            }
         }
+        if (ready || p2_monotonic_us() >= deadline)
+            break;
     }
     *channel_bitmap = ready;
     if (__sync_add_and_fetch(&trace_count, 1) <= 4)
@@ -2571,8 +2948,25 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     stream->seq = ch->sequence++;
     stream->isVI = false;
 #endif
+    ch->raw_stream_out = 1;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+}
+
+/* Hands a stream taken off the channel back to the codec and its source
+ * frame back to the FrameSource. */
+static int p2_return_stream(P2EncoderChannel *ch, void *raw, void *user,
+                            void *frame)
+{
+    int result;
+
+    /* a reused JPEG (p2_jpeg_reuse_last) is no codec stream */
+    result = user == P2_JPEG_REUSE_USER
+        ? 0 : AL_Codec_Encode_ReleaseStream(ch->codec, raw, user);
+    if (frame != &ch->synthetic_frame &&
+        p2_release_source_frame(ch->source_channel, frame) != 0)
+        result = -1;
+    return result;
 }
 
 int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
@@ -2584,7 +2978,6 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     void *raw;
     void *user;
     void *frame;
-    int result;
 
     if (!p2_valid_channel(channel) || p2_null_arg(__func__, stream))
         return -1;
@@ -2594,8 +2987,10 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     user = ch->codec_user;
     frame = ch->source_frame;
     ch->raw_stream = NULL;
+    ch->raw_stream_out = 0;
     ch->codec_user = NULL;
     ch->source_frame = NULL;
+    p2_evt_clear(ch);
     pthread_mutex_unlock(&ch->lock);
     if (!raw || !frame)
         return -1;
@@ -2605,25 +3000,16 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
                  "source=%p\n", t23_release_trace_count - 1u, raw, user,
                  frame);
 #endif
-    /* a reused JPEG (p2_jpeg_reuse_last) is no codec stream */
-    result = user == P2_JPEG_REUSE_USER
-        ? 0 : AL_Codec_Encode_ReleaseStream(ch->codec, raw, user);
-    if (frame != &ch->synthetic_frame &&
-        p2_release_source_frame(ch->source_channel, frame) != 0)
-        result = -1;
-    return result;
+    return p2_return_stream(ch, raw, user, frame);
 }
 
-int IMP_Encoder_RequestIDR(int channel)
+/* Called with the channel lock held; codec is the channel's live codec. */
+static int p2_request_idr_locked(int channel, void *codec)
 {
 #if defined(PLATFORM_T23)
     static unsigned int t23_idr_request_count;
 #endif
-
-    if (!p2_valid_channel(channel) || !p2_channels[channel].codec)
-        return -1;
-    if (p2_channels[channel].codec_type == IMP_ENC_TYPE_JPEG)
-        return 0;
+    (void)channel;
 #if defined(PLATFORM_T23)
     /* Forwarded by default: the codec latches the request and the encoder
      * thread hands it to the Helix worker right before the next frame
@@ -2642,7 +3028,7 @@ int IMP_Encoder_RequestIDR(int channel)
             forward = !(value && value[0] == '0' && value[1] == '\0');
         }
         if (forward)
-            return AL_Codec_Encode_RequestIDR(p2_channels[channel].codec);
+            return AL_Codec_Encode_RequestIDR(codec);
     }
 #endif
 #if defined(PLATFORM_T23)
@@ -2660,8 +3046,36 @@ int IMP_Encoder_RequestIDR(int channel)
     /* The native T21/T30 Helix encoder never touches the stock YUV seam: an
      * IDR request only latches a flag consumed before the next picture, so
      * forwarding it is safe and lets a joining RTSP client start at once. */
-    return AL_Codec_Encode_RequestIDR(p2_channels[channel].codec);
+    return AL_Codec_Encode_RequestIDR(codec);
 #endif
+}
+
+
+int IMP_Encoder_RequestIDR(int channel)
+{
+    P2EncoderChannel *ch;
+    void *codec;
+    int ret;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    ch = &p2_channels[channel];
+    /* An RTSP thread asks for an IDR while the stream thread may be in
+     * DestroyChn: take the codec under the channel lock so it cannot be
+     * freed underneath (every codec RequestIDR only latches a flag). */
+    pthread_mutex_lock(&ch->lock);
+    codec = ch->created ? ch->codec : NULL;
+    if (!codec) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
+    ret = p2_request_idr_locked(channel, codec);
+    pthread_mutex_unlock(&ch->lock);
+    return ret;
 }
 
 int IMP_Encoder_Query(int channel, IMPEncoderCHNStat *stat)
@@ -2693,8 +3107,42 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 
     if (!attr || width <= 0 || height <= 0 || fps_num <= 0 || fps_den <= 0)
         return -1;
-    memset(attr, 0, sizeof(*attr));
     codec_type = ((uint32_t)profile >> 24) & 0xffu;
+    /* Vendor 0x831bc/0x831ec (log line 1784). `srl s2,a1,0x18` takes the
+     * encode type out of the top byte of the profile and `sltiu v0,s2,5`
+     * refuses every type but 0..4 (AVC, HEVC, JPEG and the two pack
+     * pseudo-types). The vendor returns -1 without touching *attr, so the
+     * caller's buffer stays as it was. */
+    if (codec_type > 4u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported encode type:%d, we only support avc, "
+                        "hevc and jpeg type", (int)codec_type);
+        return -1;
+    }
+    /* Vendor 0x831f4 (log line 1789). `lw s3,112(sp); beqz s3` refuses a
+     * zero frame-rate denominator; the message prints frmRateNum and then
+     * frmRateDen as the constant 0 (the vendor re-uses the value it just
+     * tested). OpenIMP already rejected it above without a message. */
+    if (fps_den == 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "invalid parameters:frmRateNum = %d, frmRateDen = %d",
+                        fps_num, fps_den);
+        return -1;
+    }
+    /* Vendor 0x8320c/0x83210 (log line 1798). `sltiu s7,a2,9` only runs
+     * after the `beq s2,v0(=4),0x8337c` at 0x83204, so JPEG accepts any rc
+     * mode while the other codecs are limited to the nine known ones. */
+    if (codec_type != IMP_ENC_TYPE_JPEG && (uint32_t)rc_mode > 8u) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "unsupported rcmode:%d, we only support fixqp, cbr, "
+                        "vbr, capped vbr, capped quality", (int)rc_mode);
+        return -1;
+    }
+    /* Deliberate OpenIMP deviation: the stock code reads the height with
+     * `lhu s5,104(sp)` and the width with `andi s8,a3,0xffff` and never
+     * tests either for zero (it would just compute a zero-size stream), so
+     * the width/height test above is stricter than the vendor's. */
+    memset(attr, 0, sizeof(*attr));
     attr->encAttr.profile = profile;
     attr->encAttr.level = 51;
     attr->encAttr.maxPicWidth = (uint16_t)width;
@@ -2769,16 +3217,58 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
 }
 #endif
 
-/* libimp: RequestIDR, then drain the streams already encoded. OpenIMP
- * encodes on demand in PollingStream, so nothing older than the next frame
- * is queued and the IDR request is the whole job. */
+/* libimp: RequestIDR, then drain the streams already encoded (Query's
+ * leftStreamFrames times PollingStream/GetStream/ReleaseStream).  OpenIMP
+ * encodes on demand in PollingStream, so the only encoded stream that can
+ * wait is the one a PollingStream left for GetStream: it is dropped here,
+ * unless GetStream already handed it out (the application still reads it
+ * and gives it back with ReleaseStream, as with the stock library). */
 int IMP_Encoder_FlushStream(int channel)
 {
+    P2EncoderChannel *ch;
+
     if (!p2_valid_channel(channel) || !p2_channels[channel].created)
         return -1;
-    return IMP_Encoder_RequestIDR(channel) < 0 ? -1 : 0;
+    if (IMP_Encoder_RequestIDR(channel) < 0)
+        return -1;
+    ch = &p2_channels[channel];
+    p2_drop_unread_stream(ch);
+    return 0;
 }
 
+/* A ready stream the application has not taken (GetStream) goes back to
+ * the codec. */
+static void p2_drop_unread_stream(P2EncoderChannel *ch)
+{
+    void *raw = NULL;
+    void *user = NULL;
+    void *frame = NULL;
+    int channel = (int)(ch - p2_channels);
+
+    pthread_mutex_lock(&ch->lock);
+    if (ch->created && ch->raw_stream && !ch->raw_stream_out &&
+        ch->source_frame) {
+        raw = ch->raw_stream;
+        user = ch->codec_user;
+        frame = ch->source_frame;
+        ch->raw_stream = NULL;
+        ch->codec_user = NULL;
+        ch->source_frame = NULL;
+        p2_evt_clear(ch);
+    }
+    pthread_mutex_unlock(&ch->lock);
+    if (raw) {
+        p2_trace("openimp/P2: FlushStream ch=%d dropped an unread stream\n",
+                 channel);
+        (void)p2_return_stream(ch, raw, user, frame);
+    }
+}
+
+/* Vendor T31 libimp (1.1.1..1.1.6, disassembled): checks both numbers,
+ * stores share_channel in the channel record (offset 640/672, kept over
+ * CreateChn's memset) and logs it; nothing in libimp ever reads it back, so
+ * there is nothing to apply.  Returning 0 after the checks is the vendor
+ * behaviour (T23 libimp has no such function). */
 int IMP_Encoder_SetbufshareChn(int channel, int share_channel)
 {
     return p2_valid_channel(channel) && p2_valid_channel(share_channel) ? 0 : -1;
@@ -2788,7 +3278,7 @@ int IMP_Encoder_SetJpegeQl(int channel, IMPEncoderJpegeQl *quality)
 {
     if (!p2_valid_channel(channel) || !quality)
         return -1;
-#if defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) || defined(PLATFORM_T41)
     {
         P2EncoderChannel *ch = &p2_channels[channel];
         int result = 0;
@@ -2826,6 +3316,14 @@ int IMP_Encoder_SetMaxStreamCnt(int channel, int count)
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    /* Stock: the count is taken when the channel is created; on a created
+     * channel the call logs an error and fails (any codec, JPEG included). */
+    if (ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+#endif
     if (ch->codec &&
         AL_Codec_Encode_SetStreamBufferCount(ch->codec, count) != 0) {
         pthread_mutex_unlock(&ch->lock);
@@ -3275,6 +3773,47 @@ int IMP_Encoder_SetChnQp(int channel, int qp_value)
     return AL_Codec_Encode_SetQp(p2_channels[channel].codec, &qp);
 }
 
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+/* Vendor T41 1.2.6 IMP_Encoder_SetChnRoiAttr / GetChnRoiAttr: the windows
+ * go into the macroblock QP table of the AVC encoder from the next picture
+ * on (src/t40/codec-t40.c avpu_t41_roi_apply).  H.265, absolute QP and
+ * windows outside the picture are refused. */
+extern int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr);
+
+int IMP_Encoder_SetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    int ret;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_SetRoiAttr(ch->codec, attr);
+    if (ret == 0)
+        ch->roi_attr = *attr;
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+
+int IMP_Encoder_GetChnRoiAttr(int channel, IMPEncoderRoiAttr *attr)
+{
+    P2EncoderChannel *ch;
+
+    if (!attr || !p2_valid_channel(channel) || !p2_channels[channel].created)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    *attr = ch->roi_attr;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+}
+#endif
+
 int IMP_Encoder_SetChnQpIPDelta(int channel, int delta)
 {
     P2EncoderChannel *ch;
@@ -3475,6 +4014,11 @@ int IMP_Encoder_SetChnColor2Grey(int channel,
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#else
+    /* T20/T21/T10: the Helix/NVPU encoder replaces the chroma plane with
+     * grey from the next IDR on (OEM i264e_reconfig_color2gray_set) */
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetColor2Grey(ch->codec, config->enable);
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -3499,6 +4043,65 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
 
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
+#if !defined(PLATFORM_T23)
+    /* T20/T21/T10 (OEM 3.12.0 0x4899c, 1.0.33 0x467d0): an i264e ROI
+     * table entry {enable, relative, (s8) QP, the corners rect +12/+20
+     * (x of p0/p1) and +16/+24 (y) sorted and divided by 16}, which
+     * i264e_reconfig_roi_set adopts with the next picture.  The T10/T20
+     * command list programs it into the EFE ROI registers (0x40044..);
+     * the T21 libimp never does, OpenIMP does (OPENIMP_T21_ROI=0: off).
+     * Non-H.264 channels: nothing, success (T21 OEM). */
+    if (ch->codec_type != IMP_ENC_TYPE_AVC)
+        return 0;
+#if !defined(PLATFORM_T21)
+    /* T30: its command list's ROI registers are not known; an enabled
+     * region is refused instead of being stored without effect */
+    if (config->bEnable)
+        return -1;
+#endif
+    {
+        uint8_t entry[7];
+        IMPEncoderROICfg stored;
+
+        if (config->bEnable) {
+            static int warned;
+
+            if (config->bRelatedQp ? (config->s32Qp < AVPU_ROI_DELTA_MIN ||
+                                      config->s32Qp > AVPU_ROI_DELTA_MAX)
+                                   : (config->s32Qp < 0 ||
+                                      config->s32Qp > 51)) {
+                if (!warned) {
+                    warned = 1;
+                    IMP_LOG_WARN("Encoder", "ROI QP %d out of range: relative "
+                                 "-25..25, absolute 0..51 (clamped; H.264 "
+                                 "mb_qp_delta is -26..25)", config->s32Qp);
+                }
+            }
+        }
+        Helix_H264_RoiEntry(config->bEnable, config->bRelatedQp,
+                            config->s32Qp, config->rect.x, config->rect.y,
+                            config->rect.width, config->rect.height, entry);
+        /* what GetChnROI returns: the table entry, x16 */
+        memset(&stored, 0, sizeof(stored));
+        stored.u32Index = config->u32Index;
+        stored.bEnable = entry[0] != 0;
+        stored.bRelatedQp = entry[1] != 0;
+        stored.s32Qp = (int8_t)entry[2];
+        stored.rect.x = entry[3] * 16;
+        stored.rect.y = entry[5] * 16;
+        stored.rect.width = entry[4] * 16;      /* p1.x */
+        stored.rect.height = entry[6] * 16;     /* p1.y */
+        pthread_mutex_lock(&ch->lock);
+        if (AL_Codec_Encode_SetRoi(ch->codec, config->u32Index,
+                                   entry) != 0) {
+            pthread_mutex_unlock(&ch->lock);
+            return -1;
+        }
+        ch->roi[config->u32Index] = stored;
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->roi[config->u32Index] = *config;
 #if defined(PLATFORM_T23)
@@ -3549,7 +4152,20 @@ int IMP_Encoder_SetChnDenoise(int channel,
         }
     }
 #else
-    ch->attr.rcAttr.attrDenoise = *config;
+    /* T20/T21/T10: the OpenIMP Helix/NVPU encoder has no encoder-side
+     * denoise; like the OEM the on/off switch stays as created, and a
+     * denoise type that would act (dnType 1 or 2 on a channel created
+     * with denoise enabled) is refused */
+    if (ch->attr.rcAttr.attrDenoise.enable && config->dnType != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    {
+        bool created_enable = ch->attr.rcAttr.attrDenoise.enable;
+
+        ch->attr.rcAttr.attrDenoise = *config;
+        ch->attr.rcAttr.attrDenoise.enable = created_enable;
+    }
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
@@ -3567,15 +4183,37 @@ int IMP_Encoder_GetChnDenoise(int channel, IMPEncoderAttrDenoise *config)
     return 0;
 }
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+extern int AL_Codec_Encode_InsertUserData(void *codec, const void *data,
+                                          uint32_t size, uint32_t max_cnt,
+                                          uint32_t max_size);
+#endif
 int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
 {
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !data || !size || size > 1024u)
         return -1;
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+    /* OEM: H.264 only; the channel attribute's userData cache (up to 2
+     * payloads of maxUserDataSize bytes) takes the data, which goes out as a
+     * user_data_unregistered SEI in front of the next picture. */
+    {
+        int ret = -1;
+
+        pthread_mutex_lock(&ch->lock);
+        if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+            ret = AL_Codec_Encode_InsertUserData(
+                ch->codec, data, size, ch->attr.encAttr.userData.maxUserDataCnt,
+                ch->attr.encAttr.userData.maxUserDataSize);
+        pthread_mutex_unlock(&ch->lock);
+        return ret;
+    }
+#else
     p2_trace("openimp/P2: accepted pending user data ch=%d size=%u\n",
              channel, (unsigned int)size);
     return 0;
+#endif
 }
 
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20) && !defined(PLATFORM_T23)
@@ -3636,10 +4274,11 @@ int IMP_Encoder_SetMbRC(int channel, int enabled)
         return -1;
     }
 #endif
-#if defined(PLATFORM_T23) || \
-    (defined(PLATFORM_T21) && !defined(PLATFORM_T20))
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
     /* the native Helix encoder: eprc macroblock rate control
-     * (docs/T23_EPRC.md); the OEM only stores the flag */
+     * (docs/T23_EPRC.md); T20/T10: the macroblock QP table of the OEM T20
+     * controller (src/rc_t20), which the OEM switches with i264e
+     * parameter 11; the T10 controller has none */
     if (ch->codec)
         (void)AL_Codec_Encode_SetMbRC(ch->codec, enabled);
 #endif
@@ -3666,8 +4305,28 @@ int IMP_Encoder_SetSuperFrameCfg(int channel,
 
     if (!ch || !config)
         return -1;
+#if defined(PLATFORM_T20)
+    /* T20/T10: the super-frame re-encode of the OEM controller (src/rc_t20,
+     * src/rc_t10; OEM i264e parameter 13 -> its I/P thresholds).  It has
+     * no frame discard. */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE &&
+        config->superFrmMode != IMP_RC_SUPERFRM_REENCODE)
+        return -1;
+#elif !defined(PLATFORM_T23)
+    /* T21: the Helix eprc controller has no super-frame control */
+    if (config->superFrmMode != IMP_RC_SUPERFRM_NONE)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
     ch->superframe = *config;
+#if defined(PLATFORM_T20)
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        (void)AL_Codec_Encode_SetSuperFrame(
+            ch->codec,
+            config->superFrmMode == IMP_RC_SUPERFRM_NONE
+                ? P2_HW_SUPERFRM_NONE : P2_HW_SUPERFRM_REENCODE,
+            config->superIFrmBitsThr, config->superPFrmBitsThr);
+#endif
 #if defined(PLATFORM_T23)
     if (openimp_t23_enc_push_superframe(ch->codec, ch->codec_type,
                                         config) != 0) {
@@ -3700,7 +4359,24 @@ int IMP_Encoder_SetH264TransCfg(int channel,
     if (!ch || !config || config->chroma_qp_index_offset < -12 ||
         config->chroma_qp_index_offset > 12)
         return -1;
+#if !defined(PLATFORM_T23) && !defined(PLATFORM_T21)
+    /* T30: the chroma QP offset register is not known (the PPS alone
+     * would shift the colours) */
+    if (config->chroma_qp_index_offset != 0)
+        return -1;
+#endif
     pthread_mutex_lock(&ch->lock);
+#if !defined(PLATFORM_T23)
+    /* T20/T21 (OEM i264e_reconfig_trans_set): from the next IDR on in the
+     * PPS and the command list's chroma QP offset (0x40120) together; the
+     * T10 has no such register and keeps 0 */
+    if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC &&
+        AL_Codec_Encode_SetChromaQpOffset(
+            ch->codec, config->chroma_qp_index_offset) != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+#endif
     ch->h264_transform = *config;
 #if defined(PLATFORM_T23)
     if (openimp_t23_enc_push_h264trans(ch->codec, ch->codec_type,
@@ -3729,6 +4405,14 @@ int IMP_Encoder_GetH264TransCfg(int channel,
 int IMP_Encoder_SetH265TransCfg(int channel,
                                const IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21 libimp (1.0.33, disassembled): channel number and pointer
+     * are checked, nothing else happens (no range check, nothing stored);
+     * T21 has no HEVC encoder */
+    if (!p2_valid_channel(channel) || !config)
+        return -1;
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config || config->chroma_cr_qp_offset < -12 ||
@@ -3740,11 +4424,19 @@ int IMP_Encoder_SetH265TransCfg(int channel,
     ch->h265_transform = *config;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_GetH265TransCfg(int channel,
                                IMPEncoderH265TransCfg *config)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21: clears the 8 bytes and returns 0 */
+    if (!p2_valid_channel(channel) || !config)
+        return -1;
+    memset(config, 0, sizeof(*config));
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !config)
@@ -3753,10 +4445,30 @@ int IMP_Encoder_GetH265TransCfg(int channel,
     *config = ch->h265_transform;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 {
+#if defined(PLATFORM_T21)
+    /* Vendor T21 libimp (1.0.33, disassembled): channel number and pointer
+     * are checked; a channel that does not exist answers 0; the 4-byte mode
+     * goes to i264e parameter 15 without a range check, is kept for the
+     * next IDR and read back by Get.  Nothing in the library reads the
+     * stored mode (ratecontrol_init clears the active copy), so keeping it
+     * is all there is to do. */
+    P2EncoderChannel *ch;
+
+    if (!p2_valid_channel(channel) || !mode)
+        return -1;
+    ch = &p2_channels[channel];
+    if (!ch->created)
+        return 0;
+    pthread_mutex_lock(&ch->lock);
+    ch->qpg_mode = *mode;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !mode || *mode < ENC_QPG_CLOSE || *mode > ENC_QPG_SASM_TAB)
@@ -3771,10 +4483,24 @@ int IMP_Encoder_SetQpgMode(int channel, const IMPEncoderQpgMode *mode)
 #endif
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 
 int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
 {
+#if defined(PLATFORM_T21)
+    P2EncoderChannel *ch;
+
+    if (!p2_valid_channel(channel) || !mode)
+        return -1;
+    ch = &p2_channels[channel];
+    if (!ch->created)
+        return 0;               /* vendor: nothing written */
+    pthread_mutex_lock(&ch->lock);
+    *mode = ch->qpg_mode;
+    pthread_mutex_unlock(&ch->lock);
+    return 0;
+#else
     P2EncoderChannel *ch = p2_legacy_config_channel(channel);
 
     if (!ch || !mode)
@@ -3783,14 +4509,60 @@ int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
     *mode = ch->qpg_mode;
     pthread_mutex_unlock(&ch->lock);
     return 0;
+#endif
 }
 #endif
 
+/* libimp returns the channel's encoder device fd, readable when a stream
+ * is ready.  OpenIMP encodes in PollingStream, so the first GetFd starts a
+ * pump thread that polls the channel and makes a pipe readable while a
+ * stream waits for GetStream (the pipe is cleared by ReleaseStream and
+ * FlushStream).  Channels without GetFd are unchanged. */
 int IMP_Encoder_GetFd(int channel)
 {
-    (void)channel;
-    errno = ENOSYS;
-    return -1;
+    P2EncoderChannel *ch;
+    int fds[2];
+    int i;
+
+    if (!p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->created) {
+        pthread_mutex_unlock(&ch->lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "GetFd(%d): channel not created", channel);
+        return -1;
+    }
+    if (ch->evt_open) {
+        int fd = ch->evt_rd;
+
+        pthread_mutex_unlock(&ch->lock);
+        return fd;
+    }
+    if (pipe(fds) != 0) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    for (i = 0; i < 2; i++) {
+        fcntl(fds[i], F_SETFL, fcntl(fds[i], F_GETFL) | O_NONBLOCK);
+        fcntl(fds[i], F_SETFD, FD_CLOEXEC);
+    }
+    ch->evt_rd = fds[0];
+    ch->evt_wr = fds[1];
+    ch->evt_signaled = 0;
+    __atomic_store_n(&ch->pump_run, 1, __ATOMIC_RELEASE);
+    if (pthread_create(&ch->pump, NULL, p2_fd_pump, ch) != 0) {
+        __atomic_store_n(&ch->pump_run, 0, __ATOMIC_RELEASE);
+        close(fds[0]);
+        close(fds[1]);
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ch->evt_open = 1;
+    pthread_mutex_unlock(&ch->lock);
+    return fds[0];
 }
 
 #if defined(PLATFORM_T23)

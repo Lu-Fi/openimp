@@ -233,6 +233,34 @@ _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 400,
                "T23 OSD mosaicAttr");
 #endif
 #if defined(PLATFORM_T41)
+/*
+ * T41 exists in two vendor layouts for IMPOSDRgnAttr that cannot be served at
+ * the same time:
+ *
+ *   T41 1.2.0/zh, 1.2.6 sizeof 432   (asserts above: fmt 28, data 32,
+ *                                     osdispdraw 48, fontData 124,
+ *                                     mosaicAttr 404)
+ *   T41 1.2.0/en, 1.2.5 sizeof 256   (identical up to fontData, but
+ *                                     IMPOSDFontAttrData is 104 instead of
+ *                                     280, so mosaicAttr moves to 228)
+ *
+ * 1.2.5 is not hypothetical: the T41 board's thingino-raptor-hal compiles
+ * hal_osd.c against ingenic-headers/T41/1.2.5/en (the header paths are in the
+ * object's .d file) and passes a stack object of that size to
+ * IMP_OSD_CreateRgn/SetRgnAttr. The first 256 bytes are valid and laid out
+ * identically in both generations, so this is the largest prefix OpenIMP may
+ * read from a caller object. The rest is zeroed instead of copied; mosaic
+ * regions are therefore not drawn on T41 (no in-tree caller uses
+ * OSD_REG_MOSAIC).
+ *
+ * The same limit applies in the other direction: IMP_OSD_GetRgnAttr writes
+ * into an object owned by the caller, whose size OpenIMP cannot know, and
+ * hal_osd_get_region_attr hands it the same 256 byte stack object. Writing
+ * more than the common prefix would corrupt the caller's frame.
+ */
+#define T23_OSD_RGN_ATTR_T41_MIN 256u
+_Static_assert(T23_OSD_RGN_ATTR_T41_MIN <= sizeof(IMPOSDRgnAttr),
+               "T41 IMPOSDRgnAttr is smaller than the readable prefix");
 _Static_assert(sizeof(IMPOSDRgnAttr) == 432, "T41 IMPOSDRgnAttr");
 #else
 _Static_assert(sizeof(IMPOSDRgnAttr) == 428, "T23 IMPOSDRgnAttr");

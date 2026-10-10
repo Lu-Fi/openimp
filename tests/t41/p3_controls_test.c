@@ -10,6 +10,7 @@
 
 int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
 int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
+int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
 
 static struct {
     uint32_t command;
@@ -43,6 +44,17 @@ int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path)
     return 0;
 }
 
+int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size)
+{
+    /* The record lives in P1 (openimp_p1.c).  This host test only covers the
+     * P3 wrapper, so the stub reports "never set", which is the state a caller
+     * without a preceding IMP_ISP_SetDefaultBinPath is in. */
+    (void)num;
+    (void)path;
+    (void)size;
+    return -1;
+}
+
 #define EXPECT(call, dir, id, ptr)                                            \
     do {                                                                      \
         int before = last.calls;                                              \
@@ -66,6 +78,12 @@ int main(void)
     IMPISPModuleCtl ctl;
     IMPISPAutoZoom zoom;
     IMPISPWdrOutputMode wdr;
+    IMPISPSENSORAttr sensor;
+    IMPISPAEWeightAttr weight;
+    IMPISPCoefftWb coefft;
+    IMPISPMaskBlockAttr mask;
+    IMPISPScalerLvAttr scaler;
+    IMPISPSensorFps fps;
     int before;
 
     /* Vendor structure sizes the open-tx-isp routes rely on. */
@@ -87,6 +105,33 @@ int main(void)
     EXPECT(IMP_ISP_Tuning_SetAutoZoom(IMPVI_MAIN, &zoom), 0, 0x08000077, &zoom);
     EXPECT(IMP_ISP_Tuning_SetWdrOutputMode(IMPVI_MAIN, &wdr), 0, 0x08000054, &wdr);
 
+    /* Controls open-tx-isp T41 routes since claude/t41-connect: pointer
+     * pass-through with the stock payload sizes the driver copies. */
+    assert(sizeof(IMPISPSENSORAttr) == 20);
+    assert(sizeof(IMPISPAEWeightAttr) == 460);
+    assert(sizeof(IMPISPCoefftWb) == 6);
+    EXPECT(IMP_ISP_Tuning_GetSensorAttr(IMPVI_MAIN, &sensor), 1, 0x08000033, &sensor);
+    EXPECT(IMP_ISP_Tuning_SetAeWeight(IMPVI_MAIN, &weight), 0, 0x08000021, &weight);
+    EXPECT(IMP_ISP_Tuning_GetAeWeight(IMPVI_MAIN, &weight), 1, 0x08000021, &weight);
+    EXPECT(IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, &coefft), 0, 0x08000098, &coefft);
+    EXPECT(IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_MAIN, &coefft), 1, 0x08000098, &coefft);
+    /* The driver refuses these (MSCA, no open path): -EOPNOTSUPP. */
+    EXPECT(IMP_ISP_Tuning_SetMaskBlock(IMPVI_MAIN, &mask), 0, 0x08000074, &mask);
+    EXPECT(IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, &scaler), 0, 0x080000a6, &scaler);
+
+    /* SetSensorFPS: stock s_ctrl 0x08000070 takes num<<16|den inline. */
+    fps.num = 15;
+    fps.den = 1;
+    EXPECT(IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &fps), 0, 0x08000070,
+           (15U << 16) | 1U);
+    fps.num = 0x10000;
+    before = last.calls;
+    assert(IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &fps) == -1);
+    fps.num = 25;
+    fps.den = 0;
+    assert(IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &fps) == -1);
+    assert(last.calls == before);
+
     /* Invalid arguments never reach the driver. */
     before = last.calls;
     assert(IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, NULL) == -1);
@@ -96,6 +141,27 @@ int main(void)
     /* Driver errors (e.g. -EOPNOTSUPP) are returned, not hidden. */
     last.result = -1;
     assert(IMP_ISP_Tuning_SetCCMAttr(IMPVI_MAIN, &ccm) == -1);
+    assert(IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, &scaler) == -1);
+    /* A refused rate is not cached: GetSensorFPS keeps 15/1. */
+    fps.num = 10;
+    fps.den = 1;
+    assert(IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &fps) == -1);
+    fps.num = fps.den = 0;
+    assert(IMP_ISP_Tuning_GetSensorFPS(IMPVI_MAIN, &fps) == -1);
+    assert(fps.num == 15 && fps.den == 1);
+
+    /* IMP_ISP_GetDefaultBinPath: no IMP_ISP_SetDefaultBinPath preceded it, so
+     * the kernel owns the default and libimp cannot know it.  The wrapper must
+     * fail instead of answering "success" with an empty string. */
+    {
+        char bin_path[64];
+
+        memset(bin_path, 'x', sizeof(bin_path));
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, bin_path) == -1);
+        assert(bin_path[0] == '\0');
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_BUTT, bin_path) == -1);
+        assert(IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, NULL) == -1);
+    }
     puts("t41 p3 controls tests passed");
     return 0;
 }

@@ -11,7 +11,9 @@
  *     reference was first used (larger frames on a later EnableChn);
  *   - the microphone effects (HPF, NS, AGC) switched on and off from one
  *     thread while another one pulls frames;
- *   - an AO HPF cut-off beyond any sample rate is refused.
+ *   - an AO HPF cut-off beyond any sample rate is refused;
+ *   - every GET_STREAM asks for whole 10 ms driver fragments (the OSS2
+ *     driver never completes a partial one), also at 48 kHz and 44.1 kHz.
  * Meant for ASan/UBSan and TSan as well (make sanitize).
  */
 #define _GNU_SOURCE
@@ -20,6 +22,8 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <dlfcn.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +62,8 @@ static int fail_open;
 static int fail_speed;
 static int aec_in_driver;
 static uint32_t chunk_bytes = 320;  /* bytes per GET_STREAM */
+static int fake_rate = 16000;       /* last SNDCTL_DSP_SPEED */
+static int partial_requests;        /* GET_STREAM sizes the driver hangs on */
 
 int __real_open(const char *path, int flags, ...);
 int __real_ioctl(int fd, unsigned long request, void *arg);
@@ -94,6 +100,10 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
         return __real_ioctl(fd, request, arg);
     if (request == T31_DSP_SPEED && fail_speed)
         return -1;
+    if (request == T31_DSP_SPEED) {
+        fake_rate = *(int *)arg;
+        return 0;
+    }
     if (request == T31_AI_ENABLE_AEC) {
         aec_in_driver = 1;
         return 0;
@@ -105,6 +115,16 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
     if (request == T31_AI_GET_STREAM) {
         FakeInputStream *stream = arg;
         uint32_t n = chunk_bytes < stream->size ? chunk_bytes : stream->size;
+        uint32_t fragment = (uint32_t)(fake_rate / 100) * 2U;
+
+        /* xb_snd_dsp.c ai_copy_to_user copies whole fragments only: a
+         * request with a partial one left never finishes in the driver */
+        if (fragment && stream->size % fragment) {
+            __atomic_add_fetch(&partial_requests, 1, __ATOMIC_RELAXED);
+            stream->size = 0;
+            usleep(500);
+            return 0;
+        }
 
         memset(stream->data, 0x11, n);
         if (stream->aec)
@@ -273,6 +293,74 @@ static void test_effects_while_capturing(void)
     IMP_AI_Disable(0);
 }
 
+/* 48 kHz and 44.1 kHz mono: 960 and 882 byte fragments, neither divides
+ * the 1280 bytes the capture thread used to ask for. */
+static void test_whole_fragments(void)
+{
+    static const int rates[] = { 48000, 44100, 8000, 16000 };
+    size_t i;
+
+    for (i = 0; i < sizeof(rates) / sizeof(rates[0]); i++) {
+        IMPAudioIOAttr attr = attr_for(rates[i], rates[i] / 50, 8);
+
+        partial_requests = 0;
+        chunk_bytes = (uint32_t)(rates[i] / 100) * 2U;
+        CHECK(IMP_AI_SetPubAttr(0, &attr) == 0 && IMP_AI_Enable(0) == 0 &&
+              IMP_AI_EnableChn(0, 0) == 0, "channel at %d Hz", rates[i]);
+        CHECK(pull_frames(5) == 5, "frames at %d Hz", rates[i]);
+        CHECK(__atomic_load_n(&partial_requests, __ATOMIC_RELAXED) == 0,
+              "%d GET_STREAM request(s) with a partial fragment at %d Hz",
+              partial_requests, rates[i]);
+        IMP_AI_DisableChn(0, 0);
+        IMP_AI_Disable(0);
+    }
+    chunk_bytes = 320;
+}
+
+/* IMP_AI_SetHpfCoFrequency reaches the filter: no value = the default
+ * pointer form, a cut-off = a float biquad at the stream's rate (neo) */
+static void test_ai_hpf_cutoff(void)
+{
+    IMPAudioIOAttr attr = attr_for(16000, 160, 8);
+    void *lib = dlopen("libaudioProcess.so", RTLD_NOW);
+    void (*last)(unsigned char *) =
+        lib ? (void (*)(unsigned char *))dlsym(lib, "fake_hpf_last_state") : NULL;
+    unsigned char st[32];
+    float bq[7];
+
+    CHECK(last != NULL, "fake library");
+    if (!last)
+        return;
+    CHECK(IMP_AI_SetPubAttr(0, &attr) == 0 && IMP_AI_Enable(0) == 0 &&
+          IMP_AI_EnableChn(0, 0) == 0, "channel");
+    CHECK(IMP_AI_SetHpfCoFrequency(-5) == 0, "SetHpfCoFrequency -5");
+    CHECK(IMP_AI_EnableHpf(&attr) != 0, "AI HPF negative cut-off accepted");
+    CHECK(IMP_AI_SetHpfCoFrequency(16001) == 0 &&
+          IMP_AI_EnableHpf(&attr) != 0, "AI HPF above the rate accepted");
+    CHECK(IMP_AI_SetHpfCoFrequency(0) == 0 &&
+          IMP_AI_EnableHpf(&attr) == 0, "AI HPF default refused");
+    CHECK(pull_frames(3) == 3, "frames, default");
+    last(st);
+    memcpy(bq, st, 4);
+    CHECK(bq[0] == 0.0f, "default HPF carries a biquad");
+    IMP_AI_DisableHpf();
+    CHECK(IMP_AI_SetHpfCoFrequency(1000) == 0 &&
+          IMP_AI_EnableHpf(&attr) == 0, "AI HPF 1000 Hz refused");
+    CHECK(pull_frames(3) == 3, "frames, 1000 Hz");
+    last(st);
+    memcpy(bq, st, sizeof(bq));
+    /* RBJ high pass, Q 0.7071, 1 kHz at 16 kHz: b0 0.757, a1 -1.454 */
+    CHECK(bq[0] > 0.7f && bq[0] < 0.8f && bq[1] < -1.4f && bq[1] > -1.6f &&
+          bq[2] == bq[0] && bq[3] < -1.4f && bq[3] > -1.5f &&
+          bq[4] > 0.4f && bq[4] < 0.6f && bq[5] == 0.0f && bq[6] == 0.0f,
+          "biquad %f %f %f %f %f", bq[0], bq[1], bq[2], bq[3], bq[4]);
+    CHECK(fabsf(bq[1] + 2.0f * bq[0]) < 1e-5f, "b1 = -2 b0");
+    IMP_AI_DisableHpf();
+    IMP_AI_SetHpfCoFrequency(0);
+    IMP_AI_DisableChn(0, 0);
+    IMP_AI_Disable(0);
+}
+
 static void test_ao_hpf_cutoff(void)
 {
     IMPAudioIOAttr attr = attr_for(16000, 160, 8);
@@ -293,6 +381,8 @@ int main(void)
     test_cycles();
     test_reference_grows();
     test_effects_while_capturing();
+    test_whole_fragments();
+    test_ai_hpf_cutoff();
     test_ao_hpf_cutoff();
     CHECK(open_count == 0, "%d descriptors left at exit", open_count);
     if (failures) {

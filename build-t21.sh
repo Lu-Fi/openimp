@@ -91,7 +91,9 @@ compile core_device src/core/device.c
 compile core_group src/core/group.c
 compile core_module src/core/module.c
 compile core_imp_log src/core/imp_log.c -Werror
+compile core_video_drop src/core/video_drop.c -Werror
 compile framesource src/framesource/framesource_tseries.c
+compile nv12_rotate src/framesource/nv12_rotate.c -Werror
 compile isp src/isp/isp_tseries.c
 compile t21_compat src/t31/openimp_t31_compat.c
 compile t21_state src/t31/openimp_t31_state.c -Werror
@@ -103,6 +105,9 @@ compile t21_platform_services src/t23/openimp_t23_services.c -Werror
 compile t21_persist src/t23/openimp_t23_persist.c -Werror
 compile t21_audio src/t31/openimp_t31_audio.c -Werror
 compile openimp_aec src/audio/openimp_aec.c -Werror -I"$project_dir/src/audio"
+# AENC/ADEC (shared src/audio; T10/T20/T21 vendor behaviour: G.726 16 kbit/s)
+compile audio_codec src/audio/openimp_audio_codec.c -Werror
+compile audio_enc_dec src/audio/openimp_audio_enc_dec.c -Werror
 compile t21_helix src/t30/t30_helix_encoder.c -Werror
 compile t21_h264_descriptor src/t21/t21_h264_descriptor.c -Werror
 compile t30_h264_descriptor src/t30/t30_h264_descriptor.c -Werror
@@ -161,7 +166,9 @@ esac
     "$output_dir/core_group.o" \
     "$output_dir/core_module.o" \
     "$output_dir/core_imp_log.o" \
+    "$output_dir/core_video_drop.o" \
     "$output_dir/framesource.o" \
+    "$output_dir/nv12_rotate.o" \
     "$output_dir/isp.o" \
     "$output_dir/t21_compat.o" \
     "$output_dir/t21_state.o" \
@@ -170,6 +177,8 @@ esac
     "$output_dir/t21_persist.o" \
     "$output_dir/t21_audio.o" \
     "$output_dir/openimp_aec.o" \
+    "$output_dir/audio_codec.o" \
+    "$output_dir/audio_enc_dec.o" \
     "$output_dir/t21_helix.o" \
     "$output_dir/t21_h264_descriptor.o" \
     "$output_dir/t30_h264_descriptor.o" \

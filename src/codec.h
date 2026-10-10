@@ -122,9 +122,34 @@ int AL_Codec_Encode_SetRcExtras(void *codec, const void *rcMode);
 /* rcAttr.attrHSkip.hSkipAttr.maxSameSceneCnt as the OEM i264e uses it: the
  * IDR period in GOPs (skip types N1X, H1M only; else 0) */
 int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
+/* IMP_Encoder_InsertUserData (T20/T21/T23/T30 native Helix): SEI payload for
+ * the next picture; -1 when the queue is full. */
+int AL_Codec_Encode_InsertUserData(void *codec, const void *data,
+                                   uint32_t size, uint32_t max_cnt,
+                                   uint32_t max_size);
 /* IMP_Encoder_SetMbRC: the eprc macroblock rate control of the Helix
  * encoder (T21, T23; applied from the next picture) */
 int AL_Codec_Encode_SetMbRC(void *codec, int enable);
+/* IMP_Encoder_SetChnColor2Grey on the native Helix/NVPU encoder (T20,
+ * T21, T10): grey chroma from the next IDR on */
+int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
+/* IMP_Encoder_SetChnROI on the native Helix/NVPU encoder (T20, T10, T21): the i264e ROI table entry (t30/helix_roi.h)
+ * of region index (0..7), from the next picture on */
+int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                           const uint8_t entry[7]);
+/* IMP_Encoder_SetChnRoiAttr on the AVPU encoder (T41, T31 beyond vendor):
+ * the windows (IMPEncoderRoiAttr, up to 10) go into the QP table of the
+ * next picture.  Returns -1 for an invalid window, mode or codec, or a
+ * delta outside -26..25 (H.264 mb_qp_delta; the effective QPs are clamped
+ * further in src/avpu_roi.h so the stream stays valid). */
+int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr);
+/* IMP_Encoder_SetH264TransCfg on the native Helix encoder (T20, T21):
+ * chroma_qp_index_offset (-12..12) from the next IDR on */
+int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
+/* IMP_Encoder_SetSuperFrameCfg for the OEM T20/T10 controller: mode
+ * HW_SUPERFRM_NONE or HW_SUPERFRM_REENCODE, thresholds in bits */
+int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                  uint32_t i_bits, uint32_t p_bits);
 #endif
 #if defined(PLATFORM_T31)
 /* CappedVBR/CappedQuality: the PSNR cap (uMaxPSNR, dB) of the OEM capped

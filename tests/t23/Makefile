@@ -20,6 +20,7 @@ HELIX_DESCRIPTOR := $(BUILD)/t23-helix-descriptor-test
 HELIX_STREAM := $(BUILD)/t23-helix-stream-test
 RMEM_LAYOUT := $(BUILD)/t23-rmem-layout-test
 OSD_PACK := $(BUILD)/t23-osd-pack-test
+AUDIO_ABI := $(BUILD)/t23-audio-abi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c \
@@ -43,10 +44,11 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI)
 	$(HELIX_DESCRIPTOR)
 	$(RMEM_LAYOUT)
 	$(OSD_PACK)
+	$(AUDIO_ABI)
 	$(MAKE) hevc-policy
 	$(HELIX_STREAM) encode $(BUILD)/t23-helix.h264 $(BUILD)/t23-helix.ref
 	$(HELIX_STREAM) rc
@@ -171,6 +173,10 @@ $(OSD_PACK): osd_pack_test.c $(PROJECT_DIR)/src/t23/openimp_t23_osd_pack.h \
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/src -o $@ osd_pack_test.c
 
+$(AUDIO_ABI): audio_abi_test.c $(PROJECT_DIR)/include/imp/imp_audio.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -DPLATFORM_T23 -I$(PROJECT_DIR)/include -o $@ audio_abi_test.c
+
 $(RMEM_LAYOUT): rmem_layout_test.c $(HELIX_NATIVE_SOURCES) \
 	$(PROJECT_DIR)/src/rmem_arena.h $(PROJECT_DIR)/src/t30/t30_helix_encoder.h
 	mkdir -p "$(dir $@)"
@@ -192,7 +198,7 @@ hevc-policy: hevc_policy_test.c $(PROJECT_DIR)/src/t40/p2_hevc_policy.h
 	done
 
 clean:
-	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(BUILD)/t23-helix.h264 \
+	rm -f $(HELIX_DESCRIPTOR) $(HELIX_STREAM) $(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(BUILD)/t23-helix.h264 \
 		$(BUILD)/t23-helix.ref $(BUILD)/t23-helix.nv12
 	rm -f $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(DEVICE_TEST_BIN) \
 		$(ZERO_COPY_TEST_BIN) $(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) \

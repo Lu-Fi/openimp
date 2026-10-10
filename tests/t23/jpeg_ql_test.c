@@ -21,6 +21,7 @@
 #include <sys/mman.h>
 
 #include "hw_encoder.h"
+#include "../fake_rmem.h"
 
 #define W 128
 #define H 96
@@ -79,12 +80,7 @@ static void make_frame(HWFrameBuffer *frame)
     int x, y;
 
     frame_size = (size_t)W * ((H + 15) & ~15) * 3 / 2;
-    frame_data = mmap(NULL, frame_size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    if (frame_data == MAP_FAILED) {
-        fprintf(stderr, "cannot map the frame below 4 GiB\n");
-        exit(2);
-    }
+    frame_data = fake_rmem_map(frame_size);
     for (y = 0; y < H; y++)
         for (x = 0; x < W; x++)
             frame_data[y * W + x] = (uint8_t)((x * 7 + y * 3 + (x * y) % 13) & 0xff);
@@ -182,7 +178,7 @@ int main(void)
     free((void *)(uintptr_t)custom.virt_addr);
     free((void *)(uintptr_t)reference.virt_addr);
 
-    munmap(frame_data, frame_size);
+    fake_rmem_unmap(frame_data, frame_size);
     if (failures) {
         fprintf(stderr, "%d check(s) failed\n", failures);
         return 1;

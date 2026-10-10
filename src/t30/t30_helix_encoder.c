@@ -269,6 +269,10 @@ typedef struct {
 
 struct T30HelixEncoder {
     int fd;
+    /* IMP_Encoder_InsertUserData: SEI payloads for the next access unit */
+    uint32_t ud_count;
+    uint32_t ud_len[T30_USER_DATA_MAX_CNT];
+    uint8_t ud_data[T30_USER_DATA_MAX_CNT][T30_USER_DATA_MAX_SIZE];
     T30ChannelNode channel;
     HWEncoderParams params;
     IMPDMABufferInfo descriptor;
@@ -377,6 +381,19 @@ struct T30HelixEncoder {
     uint32_t mbrc_log;          /* OPENIMP_EPRC_MBRC_LOG: every n pictures */
     uint32_t mbrc_pictures;
 #endif
+#if !defined(PLATFORM_T23)
+    /* IMP_Encoder_SetChnColor2Grey: the grey chroma plane that replaces
+     * the picture's (t30_color2grey_idr) */
+    IMPDMABufferInfo grey;
+    /* IMP_Encoder_SetChnROI: the i264e ROI table (helix_roi.h), adopted
+     * per picture as the OEM i264e_reconfig does (OpenIMP_T30_HelixSetRoi) */
+    uint8_t roi[8][7];
+    int roi_hw;                 /* the command list carries the regions */
+    /* IMP_Encoder_SetH264TransCfg: the chroma QP offset in the PPS and
+     * the command list since the last IDR (t30_chroma_qp_idr) */
+    int chroma_qp_offset;
+    int chroma_qp_warned;
+#endif
 };
 
 static void t30_dma_release(IMPDMABufferInfo *dma)
@@ -415,6 +432,87 @@ static int t30_dma_allocate(IMPDMABufferInfo *dma, uint32_t size,
     }
     return 0;
 }
+
+#if !defined(PLATFORM_T23)
+/* OEM i264e_idr_reconfig (T20 3.12.0 0x33a70): Color2Grey changes with the
+ * next IDR.  On, a buffer of align16(width) x align16(height) / 2 bytes of
+ * 127 is allocated and i264e_reconfig hands it to the VPU as the picture's
+ * chroma plane; off frees it.  If the allocation fails the colour stays
+ * (the OEM clears its flag the same way).  The frame itself is not
+ * touched, so other channels of the same source keep their colour. */
+static void t30_color2grey_idr(T30HelixEncoder *encoder)
+{
+    uint32_t size;
+    int on = encoder->params.color2grey != 0u;
+
+    if (on == (encoder->grey.phys_addr != 0u))
+        return;
+    if (!on) {
+        t30_dma_release(&encoder->grey);
+        IMP_LOG_INFO("Encoder", "Helix: colour on again");
+        return;
+    }
+    size = (uint32_t)encoder->sps.i_mb_width * 16u *
+           (uint32_t)encoder->sps.i_mb_height * 16u / 2u;
+    if (t30_dma_allocate(&encoder->grey, size, "t30-helix-grey") != 0) {
+        IMP_LOG_WARN("Encoder", "Helix: no memory for the grey chroma "
+                     "plane (%u bytes), Color2Grey stays off", size);
+        return;
+    }
+    memset((void *)(uintptr_t)encoder->grey.virt_addr, 127, size);
+    if (DMA_RmemFlushCache((void *)(uintptr_t)encoder->grey.virt_addr, size,
+                           1) != 0) {
+        t30_dma_release(&encoder->grey);
+        return;
+    }
+    IMP_LOG_INFO("Encoder", "Helix: Color2Grey from this IDR on");
+}
+
+static int t30_generate_headers(T30HelixEncoder *encoder);
+
+/* OEM i264e_reconfig_trans_set / i264e_idr_reconfig (T20 3.12.0 0x348fc,
+ * 0x339a8; T21 1.0.33 0x2d9a8): IMP_Encoder_SetH264TransCfg changes the
+ * chroma QP offset with the next IDR, in the PPS (i264e_pps_init) and in
+ * the command list (0x40120, H264E_T20/T21_SliceInit) together.  The T10
+ * list has no such register, so a T10 keeps 0 in both (the OEM would
+ * change the PPS alone, a chroma mismatch). */
+static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
+{
+    int offset = (int)encoder->params.chroma_qp_offset;
+
+    if (offset < -12 || offset > 12)
+        offset = 0;
+#if !defined(PLATFORM_T21)
+    /* T30: the register of its command list is not known, keep 0 */
+    offset = 0;
+#endif
+#if defined(PLATFORM_T20)
+    if (encoder->t10 && offset) {
+        if (!encoder->chroma_qp_warned) {
+            encoder->chroma_qp_warned = 1;
+            IMP_LOG_WARN("Encoder", "Helix: the T10 has no chroma QP "
+                         "offset, chroma_qp_index_offset %d not applied",
+                         offset);
+        }
+        offset = 0;
+    }
+#endif
+    if (offset == encoder->chroma_qp_offset)
+        return;
+    encoder->chroma_qp_offset = offset;
+    encoder->pps.i_chroma_qp_index_offset = offset;
+    if (t30_generate_headers(encoder) != 0) {
+        IMP_LOG_WARN("Encoder", "Helix: PPS with chroma QP offset %d "
+                     "failed, keeping 0", offset);
+        encoder->chroma_qp_offset = 0;
+        encoder->pps.i_chroma_qp_index_offset = 0;
+        (void)t30_generate_headers(encoder);
+        return;
+    }
+    IMP_LOG_INFO("Encoder", "Helix: chroma QP offset %d from this IDR on",
+                 offset);
+}
+#endif
 
 #if defined(PLATFORM_T23)
 /* The shared bitstream area, see t30/t23_helix_bs.h.  Default size: the
@@ -636,6 +734,9 @@ static void t30_init_parameter_sets(T30HelixEncoder *encoder)
 #if defined(HELIX_T21_SYNTAX)
     pps->b_transform_8x8_mode = 1;
 #endif
+#if !defined(PLATFORM_T23)
+    pps->i_chroma_qp_index_offset = encoder->chroma_qp_offset;
+#endif
 }
 
 static int t30_annexb_nal(bs_t *bits, uint8_t *destination,
@@ -650,6 +751,39 @@ static int t30_annexb_nal(bs_t *bits, uint8_t *destination,
         return -1;
     return (int)(writer.output - destination);
 }
+
+#if defined(HELIX_T21_SYNTAX) && !defined(PLATFORM_T23)
+int OpenIMP_T21_PpsWithChromaOffset(bs_t *bits, int offset);
+
+/* The T21 PPS (t21_high_profile_pps, with its scaling matrices) with
+ * another chroma_qp_index_offset: the RBSP bits are copied, the two se(v)
+ * fields chroma_qp_index_offset (payload bit 12, 0 there: '1') and
+ * second_chroma_qp_index_offset (the bit before the stop bit, '1') are
+ * rewritten.  Returns -1 if the blob does not have that shape. */
+int OpenIMP_T21_PpsWithChromaOffset(bs_t *bits, int offset)
+{
+    const uint8_t *rbsp = t21_high_profile_pps + 5;
+    uint32_t n = (uint32_t)sizeof(t21_high_profile_pps) - 5u;
+    uint32_t stop, i;
+
+#define T21_PPS_BIT(k) ((rbsp[(k) >> 3] >> (7u - ((k) & 7u))) & 1u)
+    for (stop = n * 8u; stop > 0u && !T21_PPS_BIT(stop - 1u); stop--)
+        ;
+    if (stop < 16u || !T21_PPS_BIT(12u) || !T21_PPS_BIT(stop - 2u))
+        return -1;
+    stop--;                     /* the stop bit */
+    for (i = 0; i < 12u; i++)
+        bs_write1(bits, T21_PPS_BIT(i));
+    bs_write_se(bits, offset);
+    for (i = 13u; i < stop - 1u; i++)
+        bs_write1(bits, T21_PPS_BIT(i));
+    bs_write_se(bits, offset);
+#undef T21_PPS_BIT
+    bs_rbsp_trailing(bits);
+    bs_flush(bits);
+    return 0;
+}
+#endif
 
 static int t30_generate_headers(T30HelixEncoder *encoder)
 {
@@ -669,6 +803,24 @@ static int t30_generate_headers(T30HelixEncoder *encoder)
     encoder->headers_size = (uint32_t)length;
 
 #if defined(HELIX_T21_SYNTAX)
+#if !defined(PLATFORM_T23)
+    if (encoder->chroma_qp_offset) {
+        memset(temporary, 0, sizeof(temporary));
+        bs_init(&bits, temporary, sizeof(temporary));
+        if (OpenIMP_T21_PpsWithChromaOffset(&bits,
+                                            encoder->chroma_qp_offset) != 0)
+            return -1;
+        length = t30_annexb_nal(&bits,
+                                encoder->headers + encoder->headers_size,
+                                sizeof(encoder->headers) -
+                                encoder->headers_size,
+                                NAL_PPS, NAL_PRIORITY_HIGHEST);
+        if (length < 0)
+            return -1;
+        encoder->headers_size += (uint32_t)length;
+        return 0;
+    }
+#endif
     if (sizeof(t21_high_profile_pps) >
         sizeof(encoder->headers) - encoder->headers_size)
         return -1;
@@ -751,6 +903,10 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
                     (uint32_t)encoder->sps.i_mb_width * 16u *
                     (uint32_t)encoder->sps.i_mb_height * 16u;
     slice->raw[2] = 0;
+#if !defined(PLATFORM_T23)
+    if (encoder->grey.phys_addr)
+        slice->raw[1] = encoder->grey.phys_addr;
+#endif
     if (!idr) {
         slice->reference_y = encoder->reference[encoder->reference_index].y;
         slice->reference_c = encoder->reference[encoder->reference_index].c;
@@ -834,6 +990,11 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
 #else
     /* SDK 1.0.5 selects the alternate DCS threshold for its substream. */
     slice->dcs_oth = encoder->params.width <= 640u ? 1u : 0u;
+#endif
+#if !defined(PLATFORM_T23)
+    if (encoder->roi_hw)
+        memcpy(slice->roi, encoder->roi, sizeof(slice->roi));
+    slice->chroma_qp_offset = (int8_t)encoder->chroma_qp_offset;
 #endif
 }
 
@@ -1776,6 +1937,18 @@ static void t20_rc_start(T30HelixEncoder *encoder)
         !hp->fps_num || !hp->fps_den || !hp->gop_length)
         return;
     RCT20_DefaultParams(&p);
+    /* IMP_Encoder_SetSuperFrameCfg: the OEM i264e parameter 13 puts the
+     * I/P thresholds into [280]/[284], which i264e_ratecontrol_init reads;
+     * NONE: thresholds no picture reaches, so nothing is coded again */
+    if (hp->super_mode == HW_SUPERFRM_REENCODE) {
+        p.super_i_bits = (int32_t)(hp->super_i_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_i_bits);
+        p.super_p_bits = (int32_t)(hp->super_p_bits > (uint32_t)INT32_MAX
+                                   ? (uint32_t)INT32_MAX : hp->super_p_bits);
+    } else if (hp->super_mode == HW_SUPERFRM_NONE) {
+        p.super_i_bits = INT32_MAX;
+        p.super_p_bits = INT32_MAX;
+    }
     p.method = hp->rc_mode == HW_RC_MODE_CBR ? 1u : smart ? 3u : 2u;
     p.width = hp->width;
     p.height = hp->height;
@@ -1864,9 +2037,11 @@ static void t20_rc_start(T30HelixEncoder *encoder)
                      runtime ? " (run-time set)" : "");
         return;
     }
-    /* macroblock rate control (the OEM's default): OPENIMP_T20_MBRC=1 */
+    /* macroblock rate control (the OEM's default): IMP_Encoder_SetMbRC
+     * (HWEncoderParams.mb_rc, the OEM i264e parameter 11); without it
+     * off, OPENIMP_T20_MBRC=1/0 overrides both */
     env = getenv("OPENIMP_T20_MBRC");
-    encoder->t20rc_mb = env && env[0] == '1';
+    encoder->t20rc_mb = env ? env[0] == '1' : hp->mb_rc == HW_MBRC_ON;
     p.mb_rc = encoder->t20rc_mb ? 1u : 0u;
     /* I-aware P budget (OpenIMP extra, docs/T20_RC.md): default on for
      * CBR (device test), off for VBR/SMART; OPENIMP_T20_RC_IAWARE=1 forces
@@ -2363,6 +2538,25 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #if !defined(HELIX_T21_SYNTAX)
     t30_ref_share_ignored();
 #endif
+#if !defined(PLATFORM_T23)
+    /* T10/T20: the OEM programs the ROI regions in every command list.
+     * T21: the 1.0.33 libimp never does (beyond vendor): OpenIMP programs
+     * them like T20.  With no ROI set the table is all zero and the command
+     * list is unchanged.  OPENIMP_T21_ROI=0 switches it off
+     * (docs/T1X_ROI_CHROMA.md). */
+#if defined(HELIX_T21_SYNTAX)
+    {
+        const char *roi_env = getenv("OPENIMP_T21_ROI");
+
+        encoder->roi_hw = !(roi_env && roi_env[0] == '0');
+    }
+#elif defined(PLATFORM_T20)
+    encoder->roi_hw = 1;
+#else
+    encoder->roi_hw = 0;        /* T30: the regions are not known */
+#endif
+    encoder->chroma_qp_offset = 0;
+#endif
     t30_init_parameter_sets(encoder);
     h264_cabac_init();
     if (t30_generate_headers(encoder) != 0)
@@ -2752,6 +2946,12 @@ again:
                             (int)qp,
                             encoder->slice_header.i_cabac_init_idc);
 
+#if !defined(PLATFORM_T23)
+    if (idr) {
+        t30_color2grey_idr(encoder);
+        t30_chroma_qp_idr(encoder);
+    }
+#endif
     t30_fill_slice(encoder, frame, qp, idr, output_index);
 #if defined(PLATFORM_T20)
     if (encoder->t20rc_on) {
@@ -3034,7 +3234,8 @@ again:
      * allocation follows the picture rather than the window size (which
      * also keeps T23's access units small). */
     capacity = (idr ? encoder->headers_size : 0u) +
-               t30_annexb_bound(header_length + encoder->channel.output_len);
+               t30_annexb_bound(header_length + encoder->channel.output_len) +
+               encoder->ud_count * t30_annexb_bound(T30_USER_DATA_MAX_SIZE + 24u);
     output = malloc(capacity);
     stream = calloc(1, sizeof(*stream));
     if (!output || !stream) {
@@ -3045,6 +3246,40 @@ again:
     if (idr) {
         memcpy(output, encoder->headers, encoder->headers_size);
         offset = encoder->headers_size;
+    }
+    /* user data (SEI, user_data_unregistered) in front of the slice, as the
+     * OEM libimp: 16-byte UUID, then the caller's bytes.  The queue is
+     * consumed with this picture. */
+    {
+        uint32_t ui;
+
+        for (ui = 0; ui < encoder->ud_count; ui++) {
+            uint8_t sei_head[8];
+            uint32_t payload = 16u + encoder->ud_len[ui];
+            uint32_t hl = 0;
+            T30AnnexBWriter sw;
+            uint32_t rest = payload;
+
+            sei_head[hl++] = 5; /* user_data_unregistered */
+            while (rest >= 255u) {
+                sei_head[hl++] = 255;
+                rest -= 255u;
+            }
+            sei_head[hl++] = (uint8_t)rest;
+            if (t30_annexb_begin(&sw, output + offset, capacity - offset,
+                                 NAL_SEI, NAL_PRIORITY_DISPOSABLE) != 0 ||
+                t30_annexb_append(&sw, sei_head, hl) != 0 ||
+                t30_annexb_append(&sw, t30_user_data_uuid, 16u) != 0 ||
+                t30_annexb_append(&sw, encoder->ud_data[ui],
+                                  encoder->ud_len[ui]) != 0 ||
+                t30_annexb_append(&sw, (const uint8_t *)"\x80", 1u) != 0) {
+                free(output);
+                free(stream);
+                return -1;
+            }
+            offset = (uint32_t)(sw.output - output);
+        }
+        encoder->ud_count = 0;
     }
     if (t30_annexb_begin(&writer, output + offset, capacity - offset,
                          idr ? NAL_SLICE_IDR : NAL_SLICE,
@@ -3318,6 +3553,30 @@ int OpenIMP_T30_HelixGetCrop(const T30HelixEncoder *encoder, int *enable,
     return 0;
 }
 
+/* The OEM libimp's userDataUuid (IMP_Encoder_InsertUserData). */
+const uint8_t t30_user_data_uuid[16] = {
+    0xd7, 0x3e, 0xba, 0x3d, 0xe6, 0xa6, 0x4c, 0x80,
+    0x93, 0x79, 0x64, 0x0b, 0x42, 0xf2, 0xb8, 0x66
+};
+
+int OpenIMP_T30_HelixSetUserData(T30HelixEncoder *encoder, uint32_t count,
+                                 const uint32_t *lengths,
+                                 const uint8_t (*data)[T30_USER_DATA_MAX_SIZE])
+{
+    uint32_t i;
+
+    if (!encoder || count > T30_USER_DATA_MAX_CNT)
+        return -1;
+    for (i = 0; i < count; i++) {
+        if (lengths[i] > T30_USER_DATA_MAX_SIZE)
+            return -1;
+        encoder->ud_len[i] = lengths[i];
+        memcpy(encoder->ud_data[i], data[i], lengths[i]);
+    }
+    encoder->ud_count = count;
+    return 0;
+}
+
 int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder)
 {
     if (!encoder)
@@ -3325,6 +3584,17 @@ int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder)
     encoder->force_idr = 1;
     return 0;
 }
+
+#if !defined(PLATFORM_T23)
+int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
+                            const uint8_t roi[8][7])
+{
+    if (!encoder || !roi)
+        return -1;
+    memcpy(encoder->roi, roi, sizeof(encoder->roi));
+    return 0;
+}
+#endif
 
 int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
                                   const HWEncoderParams *requested)
@@ -3342,6 +3612,12 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
         return -1;
 #if defined(HELIX_T21_SYNTAX)
     helix_mbrc_set(encoder, requested->mb_rc);
+#endif
+#if !defined(PLATFORM_T23)
+    /* Color2Grey, chroma QP offset: picked up by the next IDR, no
+     * rate-control change */
+    encoder->params.color2grey = requested->color2grey ? 1u : 0u;
+    encoder->params.chroma_qp_offset = requested->chroma_qp_offset;
 #endif
     next = encoder->params;
     next.fps_num = requested->fps_num;
@@ -3367,6 +3643,17 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
     next.same_scene_gops = requested->same_scene_gops;
 #endif
 #if defined(PLATFORM_T20)
+    /* IMP_Encoder_SetMbRC: a change restarts the OEM controller with or
+     * without the macroblock QP table (the OEM re-runs
+     * i264e_ratecontrol_init on a parameter change) */
+    if (requested->mb_rc == HW_MBRC_ON || requested->mb_rc == HW_MBRC_OFF)
+        next.mb_rc = requested->mb_rc;
+    /* IMP_Encoder_SetSuperFrameCfg: new thresholds restart the controller */
+    if (requested->super_mode != HW_SUPERFRM_DEFAULT) {
+        next.super_mode = requested->super_mode;
+        next.super_i_bits = requested->super_i_bits;
+        next.super_p_bits = requested->super_p_bits;
+    }
     /* the application's range as given (a min QP of 0 is valid); a max QP
      * of 0 means "unchanged", as for the other fields */
     t20_range_changed = requested->max_qp &&
@@ -3474,6 +3761,9 @@ void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder)
 #endif
     t30_dma_release(&encoder->emc);
     t30_dma_release(&encoder->descriptor);
+#if !defined(PLATFORM_T23)
+    t30_dma_release(&encoder->grey);
+#endif
 #if defined(PLATFORM_T20)
     t20_rc_stop(encoder);
 #endif

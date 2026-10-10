@@ -35,6 +35,7 @@
 #include "isp_tseries_dev.h"
 
 #include "imp_log_fun.h"
+#include "video_drop.h"
 int IMP_Encoder_RequestIDR(int encChn);
 int32_t set_framesource_fps(int32_t fps_num, int32_t fps_den);
 int32_t set_framesource_changewait_cnt(void);
@@ -209,6 +210,11 @@ typedef struct {
 } T23WaitFrameAttr;                         /* IMPISPWaitFrameAttr */
 
 typedef struct {
+    T23WaitFrameAttr attr;
+    uint8_t reserved[8];
+} T23WaitFrameBlock;                        /* the kernel's 24-byte block */
+
+typedef struct {
     uint8_t mask_en;
     uint8_t pad0;
     uint16_t mask_pos_top;
@@ -271,6 +277,7 @@ _Static_assert(sizeof(T23EVAttr) == 24, "IMPISPEVAttr ABI");
 _Static_assert(sizeof(T23WB) == 8, "IMPISPWB ABI");
 _Static_assert(sizeof(T23WaitFrameAttr) == 16, "IMPISPWaitFrameAttr ABI");
 _Static_assert(offsetof(T23WaitFrameAttr, cnt) == 8, "IMPISPWaitFrameAttr ABI");
+_Static_assert(sizeof(T23WaitFrameBlock) == 24, "T23 wait frame block ABI");
 _Static_assert(sizeof(T23MaskBlockPar) == 14, "IMP_ISP_MASK_BLOCK_PAR ABI");
 _Static_assert(offsetof(T23MaskBlockPar, mask_value) == 10,
                "IMP_ISP_MASK_BLOCK_PAR ABI");
@@ -671,24 +678,28 @@ int IMP_ISP_MultiCamera_Tuning_GetEVAttr(int num, void *p)
     return ret;
 }
 
-/* WaitFrame: timeout in, frame count (u64 at +8) out. */
+/* WaitFrame: timeout in, frame count (u64 at +8) out.  The stock library
+ * hands the kernel a 24-byte block (the kernel copies 24 bytes in and out)
+ * and stores the count only on success. */
 int IMP_ISP_MultiCamera_Tuning_WaitFrame(int num, void *p)
 {
     T23WaitFrameAttr *attr = p;
     ISPDevice *isp;
-    T23WaitFrameAttr k;
+    T23WaitFrameBlock k;
     uint32_t word = (uint32_t)(uintptr_t)&k;
     int ret = t23_prologue(__func__, num, p, T23F_NULLCHK, &isp);
 
     if (ret)
         return ret;
     memset(&k, 0, sizeof(k));
-    k.timeout = attr->timeout;
+    k.attr.timeout = attr->timeout;
     ret = t23_xfer(isp, num, 1, T23_CID_WAIT_FRAME, &word);
-    if (ret)
+    if (ret) {
         T23_LOG_ERR(__func__, "%s(%d),ioctl failed!\n", __func__, __LINE__);
-    attr->cnt = k.cnt;
-    return ret;
+        return ret;
+    }
+    attr->cnt = k.attr.cnt;
+    return 0;
 }
 
 /* SetAeAttr/GetAeAttr: the public nine-word attribute is scattered into the
@@ -1683,7 +1694,8 @@ static int t23_sensor_reg_check(const char *fn, ISPDevice *isp)
         T23_LOG_ERR(fn, "Sensor doesn't Run!\n");
         return -1;
     }
-    memcpy(&type, isp->sensor_info + 0x20, sizeof(type));
+    /* IMPSensorInfo.cbus_type: after name[32] and the u16 sensor_id */
+    memcpy(&type, isp->sensor_info + 0x24, sizeof(type));
     if (type == 0) {
         T23_LOG_ERR(fn, "There isn't sensor!\n");
         return -1;
@@ -1879,12 +1891,15 @@ int IMP_ISP_Tuning_GetNCUAlloc(void)
     return isp ? (int)(intptr_t)isp->sensor_alloc[0] : 0;
 }
 
-/* The tuning daemon's video-drop callback. */
+/* The tuning daemon's video-drop callback: called when the frames stop
+ * (monitor in src/core/video_drop.c); NULL clears it. */
 int IMP_ISP_Tuning_SetVideoDrop(void *attr)
 {
     ISPDevice *isp = gISP;
 
     if (isp == NULL || isp->tuning_state != 2)
+        return -1;
+    if (openimp_video_drop_set((void (*)(void))attr) != 0)
         return -1;
     pthread_mutex_lock(&t23_deamon_mutex);
     t23_video_drop = attr;

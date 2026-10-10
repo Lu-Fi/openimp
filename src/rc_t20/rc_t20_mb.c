@@ -295,8 +295,10 @@ static uint32_t rct20_f2u(float f)
 /* H264_SMA_CalMBQP (0xa6eb0): the macroblock QP map for the picture: the
  * class offsets chosen from the class shares, dark flat macroblocks
  * (centre luma < 128) a further log2(luma + 1) - 8, then the VPU table.
- * ROI regions (E+0x90170, IMP ROI) and the /tmp/smad, /tmp/roic debug
- * dumps are not reproduced: OpenIMP has no ROI on the T20. */
+ * The ROI regions (E+0x90174, IMP ROI) enter this map only with the
+ * debug file /tmp/roic present (0xa7740); by default the OEM programs them
+ * into the EFE ROI registers alone, which t30_h264_descriptor.c does.
+ * That switch and the /tmp/smad dump are not reproduced. */
 void RCT20_CalMBQP(uint8_t *E)
 {
     int32_t cols = RI32(E, 228), rows = RI32(E, 232);

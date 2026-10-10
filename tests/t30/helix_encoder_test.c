@@ -6,8 +6,15 @@
  * what the wrapper itself owns -- access-unit layout, emulation prevention
  * across the header/payload seam, IDR and frame_num bookkeeping, failure
  * handling and runtime parameter changes.  The encoder's ABI keeps
- * addresses in 32-bit fields, so the fakes hand out low mappings
- * (MAP_32BIT) and the binary is linked without PIE.
+ * addresses in 32-bit fields, so the fakes hand out memory from one fixed
+ * low window (fake_rmem_map) and the binary is linked without PIE.
+ *
+ * Not MAP_32BIT: with ASLR the kernel places MAP_32BIT mappings bottom-up
+ * from about 1 GiB, and the brk heap of a non-PIE binary anywhere in the
+ * first GiB above its data.  When a mapping landed directly above the heap
+ * top, the next heap growth failed, glibc fell back to mmap above 4 GiB
+ * and the truncated stream buffer address crashed the test (about 2 % of
+ * runs).  The window sits at 1.5 GiB, above the heap's reach.
  */
 
 #define _GNU_SOURCE
@@ -24,6 +31,7 @@
 
 #include "dma_alloc.h"
 #include "t30/t30_helix_encoder.h"
+#include "t30/h264enc/common.h"
 #if defined(PLATFORM_T20)
 #include "rc_t20/rc_t20.h"
 #include "rc_t10/rc_t10.h"
@@ -63,6 +71,7 @@ typedef struct {
 } FakeAllocation;
 
 static FakeAllocation allocations[16];
+static uint32_t run_raw_c;          /* chroma input address of the last RUN */
 static uint8_t payload[1u << 20];
 static uint32_t payload_length;
 static int run_result;
@@ -90,6 +99,78 @@ static uint64_t flushed_before_run;
 static uint64_t flushed_after_run;
 static int in_run_window;
 
+/* ---- fake rmem: one fixed window below the heap, first fit ---- */
+
+#define FAKE_RMEM_BASE 0x60000000u
+#define FAKE_RMEM_SIZE (256u << 20)
+#define FAKE_RMEM_PAGE 4096u
+
+static uint8_t *fake_rmem;
+static struct { uintptr_t start, end; } fake_rmem_live[32];
+
+static void *fake_rmem_map(size_t size)
+{
+    uintptr_t start, end;
+    unsigned int i;
+    int moved;
+
+    if (!fake_rmem) {
+        uintptr_t base;
+
+        /* the next free 256 MiB window below 4 GiB, normally the first */
+        for (base = FAKE_RMEM_BASE; base + FAKE_RMEM_SIZE <= 0xffffffffu;
+             base += FAKE_RMEM_SIZE) {
+            fake_rmem = mmap((void *)base, FAKE_RMEM_SIZE, PROT_NONE,
+                             MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE |
+                             MAP_FIXED_NOREPLACE, -1, 0);
+            if (fake_rmem == (uint8_t *)base)
+                break;
+            if (fake_rmem != MAP_FAILED) /* old kernel: a hint only */
+                munmap(fake_rmem, FAKE_RMEM_SIZE);
+            fake_rmem = NULL;
+        }
+        assert(fake_rmem);
+    }
+    size = (size + FAKE_RMEM_PAGE - 1u) & ~(size_t)(FAKE_RMEM_PAGE - 1u);
+    start = (uintptr_t)fake_rmem;
+    do {
+        moved = 0;
+        end = start + size;
+        for (i = 0; i < 32u; i++) {
+            if (fake_rmem_live[i].end && start < fake_rmem_live[i].end &&
+                fake_rmem_live[i].start < end) {
+                start = fake_rmem_live[i].end;
+                moved = 1;
+                break;
+            }
+        }
+    } while (moved);
+    assert(end <= (uintptr_t)fake_rmem + FAKE_RMEM_SIZE);
+    for (i = 0; i < 32u && fake_rmem_live[i].end; i++)
+        ;
+    assert(i < 32u);
+    fake_rmem_live[i].start = start;
+    fake_rmem_live[i].end = end;
+    assert(mprotect((void *)start, size, PROT_READ | PROT_WRITE) == 0);
+    return (void *)start;
+}
+
+/* freed memory faults again, as after munmap, and comes back zeroed */
+static void fake_rmem_unmap(void *mapping, size_t size)
+{
+    uintptr_t start = (uintptr_t)mapping;
+    unsigned int i;
+
+    size = (size + FAKE_RMEM_PAGE - 1u) & ~(size_t)(FAKE_RMEM_PAGE - 1u);
+    for (i = 0; i < 32u; i++)
+        if (fake_rmem_live[i].start == start && fake_rmem_live[i].end)
+            break;
+    assert(i < 32u && fake_rmem_live[i].end == start + size);
+    assert(madvise(mapping, size, MADV_DONTNEED) == 0);
+    assert(mprotect(mapping, size, PROT_NONE) == 0);
+    fake_rmem_live[i].start = fake_rmem_live[i].end = 0;
+}
+
 /* ---- fakes for the rmem allocator ---- */
 
 int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
@@ -97,9 +178,7 @@ int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
     unsigned int i;
     void *mapping;
 
-    mapping = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    assert(mapping != MAP_FAILED);
+    mapping = fake_rmem_map((size_t)size);
     for (i = 0; i < 16u; i++) {
         if (!allocations[i].mapping) {
             allocations[i].mapping = mapping;
@@ -133,7 +212,7 @@ int DMA_FreePhys(uint32_t phys_addr)
 
     for (i = 0; i < 16u; i++) {
         if ((uint32_t)(uintptr_t)allocations[i].mapping == phys_addr) {
-            munmap(allocations[i].mapping, allocations[i].size);
+            fake_rmem_unmap(allocations[i].mapping, allocations[i].size);
             memset(&allocations[i], 0, sizeof(allocations[i]));
             return 0;
         }
@@ -196,6 +275,12 @@ int __wrap_close(int fd)
 {
     return fd == FAKE_FD ? 0 : __real_close(fd);
 }
+
+/* EFE ROI (0x40044..0x40068) and chroma QP offset (0x40120) words of the
+ * last command list; list_chroma_seen: 0x40120 was programmed */
+static uint32_t list_roi[10];
+static uint32_t list_chroma;
+static int list_chroma_seen;
 
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
 /* 0x40074 and 0x40078..0x40090 of the last command list */
@@ -270,6 +355,31 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     }
 #endif
     in_run_window = 1;
+    {
+        /* the chroma input address (0x40014) of the command list */
+        const FakeAllocation *list = allocation("t30-helix-desc");
+        const uint32_t *w = list ? (const uint32_t *)list->mapping : NULL;
+        size_t i;
+
+        run_raw_c = 0;
+        memset(list_roi, 0xa5, sizeof(list_roi));
+        list_chroma = 0;
+        list_chroma_seen = 0;
+        for (i = 0; w && i + 1u < list->size / 4u; i += 2u) {
+            uint32_t reg = w[i + 1u] & 0xffffcu;
+
+            if (reg == 0x40014u && !run_raw_c)
+                run_raw_c = w[i];
+            else if (reg >= 0x40044u && reg <= 0x40068u)
+                list_roi[(reg - 0x40044u) / 4u] = w[i];
+            else if (reg == 0x40120u) {
+                list_chroma = w[i];
+                list_chroma_seen = 1;
+            }
+            if (w[i + 1u] & 0x40000000u)
+                break;          /* terminal command */
+        }
+    }
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
     {
         /* the macroblock rate-control registers of the command list
@@ -418,6 +528,18 @@ static int encode(T30HelixEncoder *encoder, PictureInfo *info)
         return -1;
     }
     assert(stream && stream->virt_addr && !stream->phys_addr);
+    {
+        /* HELIX_TEST_DUMP=file: append the access units (parameter sets
+         * can be checked with ffmpeg -bsf:v trace_headers) */
+        const char *dump = getenv("HELIX_TEST_DUMP");
+        FILE *f = dump ? fopen(dump, "ab") : NULL;
+
+        if (f) {
+            (void)fwrite((const void *)(uintptr_t)stream->virt_addr, 1,
+                         stream->length, f);
+            fclose(f);
+        }
+    }
     split_access_unit((const uint8_t *)(uintptr_t)stream->virt_addr,
                       stream->length);
     info->idr = stream->frame_type == HW_FRAME_TYPE_I;
@@ -503,6 +625,112 @@ static T30HelixEncoder *create(uint32_t width, uint32_t height,
     assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
     return encoder;
 }
+
+/* IMP_Encoder_SetChnColor2Grey (HWEncoderParams.color2grey): from the next
+ * IDR on the VPU reads a grey (127) chroma plane instead of the frame's;
+ * off frees it again at the following IDR */
+static void test_color2grey(void)
+{
+    const uint32_t chroma = 0x10000000u + 640u * 368u;
+    T30HelixEncoder *encoder = create(640, 360, 25, 4);
+    HWEncoderParams p;
+    PictureInfo info;
+    FakeAllocation *grey;
+    unsigned int i;
+    uint32_t k;
+
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 4;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(run_raw_c == chroma);
+    p.color2grey = 1;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 4u; i++) {          /* the rest of the GOP keeps colour */
+        assert(encode(encoder, &info) == 0 && !info.idr);
+        assert(run_raw_c == chroma && !allocation("t30-helix-grey"));
+    }
+    assert(encode(encoder, &info) == 0 && info.idr);
+    grey = allocation("t30-helix-grey");
+    assert(grey && grey->size == 640u * 368u / 2u);
+    for (k = 0; k < grey->size; k++)
+        assert(((const uint8_t *)grey->mapping)[k] == 127u);
+    assert(run_raw_c == (uint32_t)(uintptr_t)grey->mapping);
+    p.color2grey = 0;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(run_raw_c == (uint32_t)(uintptr_t)grey->mapping);
+    for (i = 2; i < 4u; i++)
+        assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(run_raw_c == chroma && !allocation("t30-helix-grey"));
+    /* on again, then destroyed while on: nothing leaks (main checks) */
+    p.color2grey = 1;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 5u; i++)
+        assert(encode(encoder, &info) == 0);
+    assert(info.idr && allocation("t30-helix-grey"));
+    OpenIMP_T30_HelixDestroy(encoder);
+    assert(!allocation("t30-helix-grey"));
+}
+
+#if defined(PLATFORM_T20)
+/* IMP_Encoder_SetSuperFrameCfg on T20: the OEM controller codes a picture
+ * again (raised QP, up to three times) when it is above the threshold;
+ * NONE never does */
+static void test_t20_superframe(void)
+{
+    T30HelixEncoder *encoder;
+    HWEncoderParams p;
+    PictureInfo info;
+    unsigned int i, before;
+
+    unsetenv("OPENIMP_T20_RC");
+    unsetenv("OPENIMP_T20_MBRC");
+    encoder = create(640, 360, 25, 10);
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 10;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    fill_payload(20000u, 30);           /* 160 kbit per picture */
+    for (i = 0; i < 3u; i++) {          /* OEM thresholds: no second pass */
+        before = runs;
+        assert(encode(encoder, &info) == 0);
+        assert(runs == before + 1u);
+    }
+    p.super_mode = HW_SUPERFRM_REENCODE;
+    p.super_i_bits = 50000u;
+    p.super_p_bits = 50000u;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    before = runs;
+    assert(encode(encoder, &info) == 0);
+    assert(runs > before + 1u && runs <= before + 4u);
+    p.super_mode = HW_SUPERFRM_NONE;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 0; i < 3u; i++) {
+        before = runs;
+        assert(encode(encoder, &info) == 0);
+        assert(runs == before + 1u);
+    }
+    OpenIMP_T30_HelixDestroy(encoder);
+    fill_payload(5000u, 30);
+}
+#endif
 
 static void test_unaligned_width_rejected(void)
 {
@@ -757,6 +985,52 @@ static void test_t20_rate_control(void)
         free(luma);
     }
 
+    /* IMP_Encoder_SetMbRC (HWEncoderParams.mb_rc) switches the macroblock
+     * QP table at run time without the environment variable */
+    {
+        uint8_t *luma = malloc(1280u * 736u * 3u / 2u + 64u);
+        HWEncoderParams mp;
+        int k;
+
+        assert(luma && (uintptr_t)luma < 0xffffffffu);
+        for (i = 0; i < 1280u * 736u * 3u / 2u + 64u; i++)
+            luma[i] = (uint8_t)(i * 13u >> 2);
+        frame_virt = (uint32_t)(uintptr_t)luma;
+        unsetenv("OPENIMP_T20_MBRC");
+        encoder = create(1280, 720, 25, 10);
+        memset(&mp, 0, sizeof(mp));
+        mp.width = 1280;
+        mp.height = 720;
+        mp.fps_num = 25;
+        mp.fps_den = 1;
+        mp.gop_length = 10;
+        mp.rc_mode = HW_RC_MODE_CBR;
+        mp.bitrate = 2000000;
+        mp.qp = 30;
+        mp.min_qp = 20;
+        mp.max_qp = 45;
+        fill_payload(3000u, 30);
+        run_qptab_words = 0;
+        assert(encode(encoder, &info) == 0);
+        assert(run_qptab_words == 0u);          /* default: off */
+        for (k = 0; k < 3; k++) {
+            mp.mb_rc = k == 1 ? HW_MBRC_OFF : HW_MBRC_ON;
+            assert(OpenIMP_T30_HelixUpdateParams(encoder, &mp) == 0);
+            run_qptab_words = 0;
+            assert(encode(encoder, &info) == 0);
+            assert(k == 1 ? run_qptab_words == 0u : run_qptab_words > 0u);
+            /* HW_MBRC_DEFAULT keeps the setting */
+            mp.mb_rc = HW_MBRC_DEFAULT;
+            assert(OpenIMP_T30_HelixUpdateParams(encoder, &mp) == 0);
+            run_qptab_words = 0;
+            assert(encode(encoder, &info) == 0);
+            assert(k == 1 ? run_qptab_words == 0u : run_qptab_words > 0u);
+        }
+        OpenIMP_T30_HelixDestroy(encoder);
+        frame_virt = 0;
+        free(luma);
+    }
+
     unsetenv("OPENIMP_T20_RC");     /* default: the OEM controller */
     encoder = create(1280, 720, 25, 10);
     reads = reg_reads;
@@ -918,9 +1192,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
     uint32_t row;
     size_t i;
 
-    buffer = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                  MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    assert(buffer != MAP_FAILED);
+    buffer = fake_rmem_map(size);
     expected = malloc(size);
     assert(expected);
     chroma = buffer + (size_t)width * aligned;
@@ -972,7 +1244,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
         assert(aligned == height || buffer[i] == 0u);
 
     free(expected);
-    munmap(buffer, size);
+    fake_rmem_unmap(buffer, size);
     OpenIMP_T30_HelixDestroy(encoder);
 }
 
@@ -1171,6 +1443,208 @@ static void test_eprc_mbrc(void)
 }
 #endif
 
+/* the chroma_qp_index_offset (and T21 second_chroma_qp_index_offset) of
+ * the PPS of the last IDR access unit (au.rbsp[1]) */
+static int32_t pps_chroma_offset(int32_t *second)
+{
+    Bits bits;
+    int32_t offset;
+
+    assert(au.types[1] == 8);
+    bits.data = au.rbsp[1];
+    bits.offset = 0;
+    assert(bits_ue(&bits) == 0u && bits_ue(&bits) == 0u);
+    (void)bits_read(&bits, 2);          /* cabac, bottom_field_pic_order */
+    assert(bits_ue(&bits) == 0u);       /* one slice group */
+    (void)bits_ue(&bits);
+    (void)bits_ue(&bits);
+    (void)bits_read(&bits, 3);          /* weighted prediction */
+    (void)bits_se(&bits);               /* pic_init_qp */
+    (void)bits_se(&bits);               /* pic_init_qs */
+    offset = bits_se(&bits);
+    *second = offset;
+    (void)bits_read(&bits, 3);
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    {
+        unsigned int list, j;
+
+        assert(bits_read(&bits, 1) == 1u);  /* transform_8x8_mode */
+        assert(bits_read(&bits, 1) == 1u);  /* pic_scaling_matrix_present */
+        for (list = 0; list < 8u; list++) {
+            if (!bits_read(&bits, 1))
+                continue;
+            {
+                int32_t last = 8, next = 8;
+
+                for (j = 0; j < (list < 6u ? 16u : 64u); j++) {
+                    if (next)
+                        next = (last + bits_se(&bits) + 256) % 256;
+                    last = next ? next : last;
+                }
+            }
+        }
+        *second = bits_se(&bits);
+    }
+#endif
+    /* rbsp_stop_one_bit, then zeros */
+    assert(bits_read(&bits, 1) == 1u);
+    while (bits.offset % 8u)
+        assert(bits_read(&bits, 1) == 0u);
+    assert(bits.offset / 8u == au.rbsp_length[1]);
+    return offset;
+}
+
+/* IMP_Encoder_SetChnROI (OpenIMP_T30_HelixSetRoi) and
+ * IMP_Encoder_SetH264TransCfg (HWEncoderParams.chroma_qp_offset): the OEM
+ * EFE ROI words in every command list (T10/T20, T21 unless
+ * OPENIMP_T21_ROI=0; T30: none), the chroma QP offset in the PPS and
+ * 0x40120 from the next IDR on (T10: neither) */
+static void test_roi_chroma(int t10)
+{
+    static const uint8_t roi[8][7] = {
+        {1, 0, 20, 2, 5, 3, 6},         /* absolute QP 20 */
+        {1, 1, (uint8_t)-5, 0, 39, 0, 1}, /* relative -5 */
+        {0},
+        {1, 1, 8, 10, 12, 20, 22},
+        {0},
+        {0, 1, 3, 1, 2, 3, 4},          /* disabled, rectangle kept */
+        {0},
+        {1, 0, 51, 7, 7, 9, 9},
+    };
+    static const uint8_t none[8][7];
+    T30HelixEncoder *encoder;
+    HWEncoderParams p;
+    PictureInfo info;
+    int32_t second;
+    int roi_hw, chroma_hw;
+    unsigned int i;
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    unsetenv("OPENIMP_T21_ROI");
+#endif
+    encoder = create(640, 360, 25, 4);
+    memset(&p, 0, sizeof(p));
+    p.width = 640;
+    p.height = 360;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.gop_length = 4;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+#if defined(PLATFORM_T20)
+    roi_hw = 1;
+    chroma_hw = !t10;
+#elif defined(PLATFORM_T21)
+    roi_hw = 1;                 /* beyond vendor; OPENIMP_T21_ROI=0: off */
+    chroma_hw = 1;
+#else
+    roi_hw = 0;
+    chroma_hw = 0;
+#endif
+    (void)t10;
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == 0 && second == 0);
+    for (i = 0; i < 10u; i++)
+        assert(list_roi[i] == 0u);
+    assert(!list_chroma_seen || list_chroma == 0u);
+    assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
+    p.chroma_qp_offset = -3;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    /* ROI from the next picture; the chroma offset waits for the IDR */
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    if (roi_hw) {
+        /* qp << 2 | rel << 1 | en per region, 6-bit QP field */
+        /* Helix_H264_RoiSanitize (src/t30/helix_roi.h) limits the QPs of
+         * the picture: absolute inside [max QP - 25, min QP + 25], the
+         * spread of all windows at most 25.  Absolute 51 (region 7) ->
+         * slice QP + 13: T21 (picture QP 28) 41, T20 (QP 20) 33. */
+        if (t10) {
+            /* T10 test picture QP 44: absolute 20 -> 26, absolute 51 kept,
+             * relative +8 lowered to +7 for the 25 spread */
+            assert(list_roi[0] == 0x1f00ef69u);
+            assert(list_roi[1] == (0x0eu << 8 | 0xcdu << 24));
+        } else {
+#if defined(PLATFORM_T20)
+            assert(list_roi[1] == (0x0eu << 8 | 0x85u << 24));
+#else
+            assert(list_roi[1] == (0x0eu << 8 | 0xa5u << 24));
+#endif
+            assert(list_roi[0] == (0x51u | (0xecu | 3u)
+                                   << 8 | 0x23u << 24));
+        }
+        assert(list_roi[2] == 0x06030502u && list_roi[3] == 0x01002700u);
+        assert(list_roi[4] == 0u && list_roi[5] == 0x16140c0au);
+        assert(list_roi[6] == 0u && list_roi[7] == 0x04030201u);
+        assert(list_roi[8] == 0u && list_roi[9] == 0x09090707u);
+    } else {
+        for (i = 0; i < 10u; i++)
+            assert(list_roi[i] == 0u);
+    }
+    assert(!list_chroma_seen || list_chroma == 0u);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && !info.idr);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == (chroma_hw ? -3 : 0));
+    assert(second == (chroma_hw ? -3 : 0));
+    assert(chroma_hw ? list_chroma_seen && list_chroma == 0x1du
+                     : !list_chroma_seen || list_chroma == 0u);
+    /* back to 0 and no regions */
+    assert(OpenIMP_T30_HelixSetRoi(encoder, none) == 0);
+    p.chroma_qp_offset = 12;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 1; i < 4u; i++) {
+        assert(encode(encoder, &info) == 0 && !info.idr);
+        assert(list_roi[0] == 0u && list_roi[2] == 0u);
+        assert(chroma_hw ? list_chroma == 0x1du : list_chroma == 0u);
+    }
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(pps_chroma_offset(&second) == (chroma_hw ? 12 : 0) &&
+           second == (chroma_hw ? 12 : 0));
+    assert(chroma_hw ? list_chroma == 0x0cu : list_chroma == 0u);
+    p.chroma_qp_offset = 0;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 0; i < 4u; i++)
+        assert(encode(encoder, &info) == 0);
+    assert(info.idr && pps_chroma_offset(&second) == 0 && second == 0);
+    OpenIMP_T30_HelixDestroy(encoder);
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    /* OPENIMP_T21_ROI=0: the regions stay out of the T21 command list */
+    setenv("OPENIMP_T21_ROI", "0", 1);
+    encoder = create(640, 360, 25, 4);
+    assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
+    assert(encode(encoder, &info) == 0 && info.idr);
+    assert(list_roi[0] == 0u && list_roi[2] == 0u && list_roi[9] == 0u);
+    OpenIMP_T30_HelixDestroy(encoder);
+    unsetenv("OPENIMP_T21_ROI");
+#endif
+}
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+int OpenIMP_T21_PpsWithChromaOffset(bs_t *bits, int offset);
+
+/* the rewritten T21 PPS with offset 0 is the stock one bit for bit */
+static void test_t21_pps_rewrite(void)
+{
+    static const uint8_t stock[] = {
+        0xee, 0x3c, 0xe1, 0x00, 0x42, 0x42, 0x00, 0x84, 0x84, 0x04, 0x4c,
+        0x52, 0x1b, 0x93, 0xc5, 0x7c, 0x9f, 0x93, 0xf9, 0x3f, 0x27, 0xc9,
+        0xe6, 0xe4, 0xc9, 0x24, 0x2c, 0x22, 0x42, 0x90, 0x9c, 0x9e, 0x4f,
+        0xaf, 0xc9, 0xfd, 0x7e, 0x4f, 0xaf, 0x27, 0x26, 0xa4, 0xc0,
+    };
+    uint8_t out[128];
+    bs_t bits;
+
+    memset(out, 0, sizeof(out));
+    bs_init(&bits, out, sizeof(out));
+    assert(OpenIMP_T21_PpsWithChromaOffset(&bits, 0) == 0);
+    assert(bs_pos(&bits) == 8 * (int)sizeof(stock));
+    assert(!memcmp(out, stock, sizeof(stock)));
+}
+#endif
+
 int main(void)
 {
     unsigned int i;
@@ -1185,7 +1659,10 @@ int main(void)
     test_dma_footprint();
     test_bottom_padding();
     test_unaligned_width_rejected();
+    test_color2grey();
+    test_roi_chroma(0);
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+    test_t21_pps_rewrite();
     test_eprc();
     test_eprc_runtime_hskip();
     test_eprc_mbrc();
@@ -1193,6 +1670,10 @@ int main(void)
 #if defined(PLATFORM_T20)
     test_t20_rate_control();
     test_t10_rate_control();
+    test_t20_superframe();
+    setenv("OPENIMP_HELIX_SOC", "t10", 1);
+    test_roi_chroma(1);
+    unsetenv("OPENIMP_HELIX_SOC");
 #endif
     /* nothing leaks; the shared bitstream buffer is kept for the process */
     for (i = 0; i < 16u; i++)

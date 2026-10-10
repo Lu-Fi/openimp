@@ -3285,6 +3285,166 @@ static uint32_t avpu_get_enc1_stream_part_offset(const ALAvpuContext *ctx)
     return (uint32_t)ctx->stream_buf_size - stream_part_size;
 }
 
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+/* ROI (IMP_Encoder_SetChnRoiAttr).  The T41 AVC EP2 buffer holds, after a
+ * 0x40-byte header, one 32-bit entry per macroblock in raster order:
+ * byte 0 = the relative QP (int8), byte 3 = 0x20.  Measured on a T41 running
+ * the vendor libimp 1.2.6 (windows of 40x20 and 10x6 macroblocks, 1080p):
+ * only byte 0 of the covered entries changes and the command words are the
+ * same with and without a window.  While no window is set the table stays as
+ * it always was (zero); the encoding thread rewrites it before the next
+ * picture when a window was set or cleared. */
+static pthread_mutex_t avpu_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void avpu_roi_warn_clamped(const char *soc, unsigned int c,
+                                  const AvpuRoiResult *r, uint32_t base_qp)
+{
+    static unsigned int warned;
+
+    c &= ~warned;
+    if (!c)
+        return;
+    warned |= c;
+    IMP_LOG_WARN("Codec", "%s ROI: requested QP delta %d..%d (picture QP %u) "
+                 "clamped (%s%s%s): H.264 allows mb_qp_delta -26..25 only, "
+                 "entries stay in -25..25 with at most 25 between the "
+                 "highest and lowest, and inside the RC min/max QP (logged "
+                 "once per cause)", soc, r->req_min, r->req_max, base_qp,
+                 (c & AVPU_ROI_CLAMP_DELTA) ? "delta limit " : "",
+                 (c & AVPU_ROI_CLAMP_RANGE) ? "min/max QP " : "",
+                 (c & AVPU_ROI_CLAMP_SPREAD) ? "spread" : "");
+}
+#endif
+
+#if defined(PLATFORM_T31)
+/* T31 ROI (beyond vendor: the T31 libimp 1.1.6 has no ROI API).  The
+ * Allegro core in the vendor library shows the mechanism (HLIL of
+ * AL_Common_Encoder_Process, encode1, SliceParamToCmdRegsEnc1,
+ * AL_GetAllocSizeEP2, AL_RoiMngr_FillBuff):
+ *
+ *   - a picture with a QP table gets eEncOptions bit 0 (AL_OPT_USE_QP_TABLE),
+ *     encode1 copies it to SliceParam+0x6c, which SliceParamToCmdRegsEnc1
+ *     packs into cmd[9] bit 25; channel option bit 0 (SliceParam+0x6b) goes
+ *     to cmd[9] bit 24 (QP table relative).  The vendor watermark path
+ *     sets both.
+ *   - the table is the EP2 buffer (cmd[0x23]): a 0x40-byte header (auto-QP
+ *     control and QP range, avpu_t40_init_ep2, left alone), then one byte
+ *     per 16x16 macroblock
+ *     in raster order: bits 5:0 QP (6-bit two's complement when relative),
+ *     bit 6 force intra, bit 7 force skip (AL_RoiMngr_FillBuff).
+ *     AL_GetAllocSizeEP2(AVC) = align128(macroblocks) + 0x40, which OpenIMP
+ *     already allocates.
+ *
+ * Measured on the T31 (sc4336p, 2560x1440): bit 25 alone = absolute table
+ * (a 0 entry is QP 0), bit 24 alone = no effect, both = relative table.
+ * OpenIMP always uses the relative table; an absolute window is written as
+ * the difference to the picture QP of the last command (cmd[3] bits 21:16),
+ * rewritten when that QP changes, so it is exact under FixQP and follows
+ * the slice QP one picture late under CBR/VBR.
+ *
+ * Validity: the hardware writes mb_qp_delta = QP(MB) - QP(previous MB),
+ * which H.264 limits to -26..+25.  src/avpu_roi.h therefore keeps every
+ * entry in -25..+25, the spread of all entries (uncovered = 0) at most 25,
+ * and picture QP + entry inside 0..51 and the RC min/max QP.  Larger
+ * requests are clamped and logged once (a decoder that checks the range,
+ * VA-API/VLC/browsers, shows broken blocks otherwise, ffmpeg hides it).
+ * The API refuses delta windows outside -26..25 like the vendor T41. */
+static int avpu_t31_roi_disabled(void)
+{
+    static int off = -1;
+
+    if (off < 0) {
+        const char *e = getenv("OPENIMP_T31_ROI");
+
+        off = e && e[0] == '0';
+    }
+    return off;
+}
+
+/* FixQP pins min_qp = max_qp to the picture QP, but the hardware takes the
+ * table entry as it is (measured: QP 10 / 51 windows under FixQP 30), so the
+ * RC range must not clamp the entries there. */
+static void avpu_t31_roi_qp_range(const ALAvpuContext *ctx, uint32_t *mn,
+                                  uint32_t *mx)
+{
+    if (ctx->rc_mode == HW_RC_MODE_FIXQP) {
+        *mn = 0u;
+        *mx = 51u;
+    } else {
+        *mn = ctx->min_qp;
+        *mx = ctx->max_qp;
+    }
+}
+
+static void avpu_t31_roi_apply(ALAvpuContext *ctx)
+{
+    uint32_t rmin, rmax;
+
+    uint32_t cols, rows, i, mb;
+    uint8_t *table;
+    int any = 0, absolute = 0;
+    AvpuRoiResult res;
+
+    if (!ctx->roi_pending || ctx->codec_hevc || !ctx->interm_buf.map)
+        return;
+    cols = (ctx->enc_w + 15u) >> 4;
+    rows = (ctx->enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (ctx->interm_ep2_size < 0x40u + mb)
+        return;
+    table = (uint8_t *)ctx->interm_buf.map + ctx->interm_ep1_size +
+            ctx->interm_wpp_size + 0x40u;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_pending = 0;
+    for (i = 0; i < 10u; i++) {
+        if (ctx->roi_win[i].enable) {
+            any = 1;
+            absolute |= ctx->roi_win[i].mode != 0;
+        }
+    }
+    /* the 0x40-byte header holds the auto-QP seed and the legal QP range
+     * (avpu_t40_init_ep2); zeroing it makes every picture QP 0 */
+    avpu_t31_roi_qp_range(ctx, &rmin, &rmax);
+    avpu_roi_fill(table, 1u, 6u, cols, rows, ctx->roi_win, 10u,
+                  ctx->roi_base_qp, rmin, rmax, 0, &res);
+    ctx->roi_table_on = any;
+    ctx->roi_absolute = absolute;
+    ctx->roi_req_min = res.req_min;
+    ctx->roi_req_max = res.req_max;
+    ctx->roi_range_clamped = (res.clamped & AVPU_ROI_CLAMP_RANGE) != 0;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    avpu_roi_warn_clamped("T31", res.clamped, &res, ctx->roi_base_qp);
+    LOG_CODEC("AVPU: T31 ROI QP table %s %ux%u macroblocks base QP %u",
+              any ? "set" : "cleared", cols, rows, ctx->roi_base_qp);
+    (void)avpu_flush_dma_buf(ctx->fd, "roi_table", &ctx->interm_buf,
+                             ctx->interm_ep1_size + ctx->interm_wpp_size +
+                             0x40u + mb);
+}
+
+/* After the command is built: an absolute window follows the picture QP. */
+static void avpu_t31_roi_track_qp(ALAvpuContext *ctx, const uint32_t *cmd)
+{
+    uint32_t qp = (cmd[0x03] >> 16) & 0x3fu;
+    int dep;
+    uint32_t rmin, rmax;
+
+    if (!ctx->roi_table_on || qp == ctx->roi_base_qp)
+        return;
+    avpu_t31_roi_qp_range(ctx, &rmin, &rmax);
+    /* the table depends on the picture QP when a window is absolute, or
+     * when its delta is (or was) cut by the QP range */
+    dep = ctx->roi_absolute || ctx->roi_range_clamped ||
+          (int)qp + ctx->roi_req_max > (int)(rmax ? rmax : 51u) ||
+          (int)qp + ctx->roi_req_min < (int)rmin ||
+          (int)qp + ctx->roi_req_max > 51 || (int)qp + ctx->roi_req_min < 0;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_base_qp = qp;
+    if (dep)
+        ctx->roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+}
+#endif
+
 #if defined(PLATFORM_T41)
 static int avpu_t41_rate_control_coupling_enabled(void)
 {
@@ -3459,6 +3619,69 @@ static uint32_t avpu_t41_advance_luma_offset(uint32_t current,
     return current >= step ? current - step : current + luma_size - step;
 }
 
+
+#if defined(PLATFORM_T41)
+/* EXPERIMENTAL, off by default: on the T41 test camera the AVPU did not
+ * react to this table in any rate-control mode (docs/ROI.md).  Without
+ * OPENIMP_T41_ROI=1 nothing here runs, the EP2 buffer keeps its size and
+ * IMP_Encoder_SetChnRoiAttr is refused. */
+static int avpu_t41_roi_experimental(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T41_ROI");
+
+        on = e && e[0] == '1';
+    }
+    return on;
+}
+
+static void avpu_t41_roi_apply(ALAvpuContext *ctx)
+{
+    uint32_t cols, rows, i, y, x, mb;
+    uint8_t *table, *ep2;
+    int any = 0;
+
+    if (!ctx->roi_pending || ctx->codec_hevc || !ctx->interm_buf.map)
+        return;
+    cols = (ctx->enc_w + 15u) >> 4;
+    rows = (ctx->enc_h + 15u) >> 4;
+    mb = cols * rows;
+    if (ctx->interm_ep2_size < 0x40u + 4u * mb)
+        return;
+    ep2 = (uint8_t *)ctx->interm_buf.map + ctx->interm_ep1_size +
+          ctx->interm_wpp_size + 0x100u;
+    table = ep2 + 0x40u;
+    pthread_mutex_lock(&avpu_roi_lock);
+    ctx->roi_pending = 0;
+    for (i = 0; i < 10u; i++)
+        any |= ctx->roi_win[i].enable != 0;
+    memset(table, 0, 4u * (size_t)mb);
+    if (any) {
+        AvpuRoiResult res;
+
+        for (i = 0; i < mb; i++)
+            table[4u * i + 3u] = 0x20u;
+        /* byte 0 of each entry: same validity rules as the T31 (the picture
+         * QP is not tracked here, so no min/max QP clamp); the vendor
+         * rounds the window size to the nearest block */
+        avpu_roi_fill(table, 4u, 8u, cols, rows, ctx->roi_win, 10u, 0u, 0u,
+                      0u, 1, &res);
+        avpu_roi_warn_clamped("T41", res.clamped, &res, 0u);
+    }
+    ctx->roi_table_on = any;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    LOG_CODEC("AVPU: ROI QP table rewritten (%s) %ux%u macroblocks ep2=0x%08x",
+              any ? "windows" : "cleared", cols, rows,
+              ctx->interm_buf.phy_addr + ctx->interm_ep1_size +
+              ctx->interm_wpp_size + 0x100u);
+    (void)avpu_flush_dma_buf(ctx->fd, "roi_table", &ctx->interm_buf,
+                             ctx->interm_ep1_size + ctx->interm_wpp_size +
+                             0x100u + ctx->interm_ep2_size);
+}
+#endif
+
 static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
                                  int stream_buf_idx, uint32_t src_phys,
                                  int is_idr)
@@ -3498,6 +3721,7 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
     if (!luma_size || !chroma_size || !map_luma_size || !map_slot_size ||
         !mv_slot_size)
         return -1;
+    avpu_t41_roi_apply(ctx);
 
     maps_base = ctx->rec_buf.phy_addr + luma_size + chroma_size;
     mv_base = maps_base + 2u * map_slot_size + 0x100u;
@@ -3576,6 +3800,14 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
 
     if (openimp_t41_build_command(slot, ctx->cl_entry_size, &params) != 0)
         return -1;
+    /* ROI: the vendor T41 1.2.6 encode1 copies the picture option
+     * AL_OPT_USE_QP_TABLE to SliceParam+0x63 and the "table relative" flag
+     * to SliceParam+0x62; SliceParamToCmdRegsEnc1 (0xe9d68) packs them into
+     * cmd[152] bit 0 and bit 3.  The builder's 0xf6 has both clear, so the
+     * AVPU never read the table.  Same mechanism as the device-tested T31
+     * (cmd[9] bits 25/24); not yet tested on a T41. */
+    if (!ctx->codec_hevc && ctx->roi_table_on)
+        ((uint32_t *)slot)[152] |= 0x00000009u;
     {
         /* OPENIMP_T41_DUMP_CMD=1: the non-zero words of the first two
          * commands on stderr, for a diff against a vendor capture. */
@@ -4311,6 +4543,12 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         cmd[0x32] = AVPU_T31_STREAM_PREFIX_BYTES;
         cmd[0x33] = avpu_get_stream_window_budget(ctx, cmd[0x31],
                                                    cmd[0x32]);
+        /* ROI: QP table in EP2 (avpu_t31_roi_apply).  cmd[9] bit 25 =
+         * use the table (vendor SliceParam+0x6c, picture option
+         * AL_OPT_USE_QP_TABLE), bit 24 = table relative (SliceParam+0x6b,
+         * channel option bit 0). */
+        if (!ctx->codec_hevc && ctx->roi_table_on)
+            cmd[0x09] |= 0x03000000u;
         if (ctx->codec_hevc)
             avpu_t31_hevc_fill_cmd(ctx, cmd, is_idr);
 #endif
@@ -7079,6 +7317,10 @@ typedef struct AL_CodecEncode AL_CodecEncode;
  * stops (with the OEM's 20 s soc_vpu wait: about one minute per round). */
 #define T30_HELIX_MAX_FAILURES 3u
 #define T30_HELIX_MAX_RESTARTS 2u
+/* A failed create (typically rmem exhausted) allocates and frees about
+ * 10 MB of rmem; the next attempt waits this long instead of coming with
+ * the next picture. */
+#define T30_HELIX_RETRY_MS 1000u
 #endif
 
 struct AL_CodecEncode {
@@ -7147,6 +7389,11 @@ struct AL_CodecEncode {
 #else
     /* JPEG quality 1..100 from iInitialQP at CreateChn (0: default 75) */
     uint32_t jpeg_quality;
+#if defined(PLATFORM_T41)
+    /* IMP_Encoder_SetJpegeQl (software JPEG), under jpeg_ql_lock */
+    int jpeg_user_tables;
+    uint8_t jpeg_tables[128];
+#endif
 #endif
     /* AL_Codec_Encode_SetJpegSkip: the caller can stand in a picture of its
      * own, so a JPEG that would wait for the busy core or for rmem fails
@@ -7154,12 +7401,22 @@ struct AL_CodecEncode {
      * Encoder thread only. */
     int jpeg_skip_allowed;
     int jpeg_skipped;
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+    /* IMP_Encoder_InsertUserData: payloads waiting for the next picture
+     * (API thread writes, encoder thread hands them to the Helix encoder) */
+    pthread_mutex_t ud_lock;
+    uint32_t ud_count;
+    uint32_t ud_len[T30_USER_DATA_MAX_CNT];
+    uint8_t ud_data[T30_USER_DATA_MAX_CNT][T30_USER_DATA_MAX_SIZE];
+#endif
 #if defined(PLATFORM_T30)
+    uint8_t helix_roi[8][7];       /* AL_Codec_Encode_SetRoi (codec_roi_lock) */
     T30HelixEncoder *t30_helix;    /* Native T30 /dev/soc_vpu encoder */
     uint32_t t30_helix_width;      /* picture size t30_helix was made for */
     uint32_t t30_helix_height;
     uint32_t t30_helix_restarts;   /* re-creations without a good picture */
     int t30_helix_stopped;         /* H.264 output given up */
+    uint64_t t30_helix_retry_ms;   /* no create before (CLOCK_MONOTONIC) */
 #endif
 #if defined(PLATFORM_T23)
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
@@ -7281,6 +7538,53 @@ static inline uint32_t codec_jpeg_quality(const AL_CodecEncode *enc)
 {
     return enc->jpeg_quality ? enc->jpeg_quality : 75u;
 }
+
+#if defined(PLATFORM_T41)
+static pthread_mutex_t jpeg_ql_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* IMP_Encoder_SetJpegeQl on T41: enable != 0 replaces the quantizers the
+ * software JPEG encoder derives from the channel quality with the caller's
+ * (luma then chroma, 64 bytes each, the same order as on T20/T21/T23);
+ * enable == 0 goes back to the channel quality.  Takes effect with the
+ * next picture. */
+int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
+                              const uint8_t tables[128])
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc || (enable && !tables))
+        return -1;
+    pthread_mutex_lock(&jpeg_ql_lock);
+    if (enable)
+        memcpy(enc->jpeg_tables, tables, sizeof(enc->jpeg_tables));
+    enc->jpeg_user_tables = enable != 0;
+    pthread_mutex_unlock(&jpeg_ql_lock);
+    return 0;
+}
+
+static int codec_encode_jpeg_t41(AL_CodecEncode *enc, HWFrameBuffer *frame,
+                                 HWStreamBuffer *stream)
+{
+    uint8_t tables[128];
+    int user;
+
+    pthread_mutex_lock(&jpeg_ql_lock);
+    user = enc->jpeg_user_tables;
+    if (user)
+        memcpy(tables, enc->jpeg_tables, sizeof(tables));
+    pthread_mutex_unlock(&jpeg_ql_lock);
+#if OPENIMP_SW_JPEG
+    return user ? HW_Encoder_Encode_NV12_JPEG_Tables(frame, stream,
+                                                     codec_jpeg_quality(enc),
+                                                     tables)
+                : HW_Encoder_Encode_NV12_JPEG(frame, stream,
+                                              codec_jpeg_quality(enc));
+#else
+    (void)frame; (void)stream;
+    return -1;
+#endif
+}
+#endif
 #endif
 
 /* The caller (p2 JPEG channel) holds a recent picture it can deliver
@@ -7813,6 +8117,93 @@ static void codec_set_error(AL_CodecEncode *enc, int err)
 
 static void codec_sync_rc_cache(AL_CodecEncode *enc);
 
+int AL_Codec_Encode_SetRoiAttr(void *codec, const void *roi_attr)
+{
+#if defined(PLATFORM_T31)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const IMPEncoderRoiAttr *attr = (const IMPEncoderRoiAttr *)roi_attr;
+    uint32_t i;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        avpu_t31_roi_disabled())
+        return -1;
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        if (!w->enable)
+            continue;
+        if (w->rect.w == 0u || w->rect.h == 0u ||
+            w->rect.x + w->rect.w > enc->avpu.enc_w ||
+            w->rect.y + w->rect.h > enc->avpu.enc_h)
+            return -1;
+        if (w->mode == IMP_ROI_QPMODE_DELTA) {
+            /* H.264 mb_qp_delta: -26..25, as the vendor T41 checks */
+            if (w->qp < -26 || w->qp > 25)
+                return -1;
+        } else if (w->mode == IMP_ROI_QPMODE_FIXED_QP) {
+            if (w->qp < 0 || w->qp > 51)
+                return -1;
+        } else {
+            return -1;
+        }
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        enc->avpu.roi_win[i].enable = w->enable ? 1u : 0u;
+        enc->avpu.roi_win[i].mode = w->mode == IMP_ROI_QPMODE_FIXED_QP;
+        enc->avpu.roi_win[i].qp = w->qp;
+        enc->avpu.roi_win[i].x = w->rect.x;
+        enc->avpu.roi_win[i].y = w->rect.y;
+        enc->avpu.roi_win[i].w = w->rect.w;
+        enc->avpu.roi_win[i].h = w->rect.h;
+    }
+    if (enc->avpu.roi_base_qp == 0u)
+        enc->avpu.roi_base_qp = enc->avpu.qp <= 51u ? enc->avpu.qp : 30u;
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#elif defined(PLATFORM_T41)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    const IMPEncoderRoiAttr *attr = (const IMPEncoderRoiAttr *)roi_attr;
+    uint32_t i;
+
+    if (enc == NULL || attr == NULL || enc->avpu.codec_hevc ||
+        !avpu_t41_roi_experimental())
+        return -1;
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        if (!w->enable)
+            continue;
+        if (w->mode != IMP_ROI_QPMODE_DELTA || w->qp < -26 || w->qp > 25 ||
+            w->rect.w == 0u || w->rect.h == 0u ||
+            w->rect.x + w->rect.w > enc->avpu.enc_w ||
+            w->rect.y + w->rect.h > enc->avpu.enc_h)
+            return -1;
+    }
+    pthread_mutex_lock(&avpu_roi_lock);
+    for (i = 0; i < IMP_ENC_ROI_WIN_COUNT; i++) {
+        const IMPEncoderRoiWin *w = &attr->st_roi[i];
+
+        enc->avpu.roi_win[i].enable = w->enable ? 1u : 0u;
+        enc->avpu.roi_win[i].qp = w->qp;
+        enc->avpu.roi_win[i].x = w->rect.x;
+        enc->avpu.roi_win[i].y = w->rect.y;
+        enc->avpu.roi_win[i].w = w->rect.w;
+        enc->avpu.roi_win[i].h = w->rect.h;
+    }
+    enc->avpu.roi_pending = 1;
+    pthread_mutex_unlock(&avpu_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)roi_attr;
+    return -1;
+#endif
+}
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 /* The Helix rate-control fields of IMPEncoderAttrRcMode that HWEncoderParams
  * has no core field for, taken as the application gave them (the encoders
@@ -7875,12 +8266,109 @@ int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops)
     return 0;
 }
 
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+/* IMP_Encoder_InsertUserData: queue one payload (SEI in front of the next
+ * picture).  -1 when max_cnt payloads are already waiting (the OEM: "no
+ * empty cache buffer, please wait") or the payload does not fit. */
+int AL_Codec_Encode_InsertUserData(void *codec, const void *data,
+                                   uint32_t size, uint32_t max_cnt,
+                                   uint32_t max_size)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    int ret = -1;
+
+    if (!enc || !data || !size || size > max_size ||
+        size > T30_USER_DATA_MAX_SIZE)
+        return -1;
+    if (max_cnt > T30_USER_DATA_MAX_CNT)
+        max_cnt = T30_USER_DATA_MAX_CNT;
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->ud_count < max_cnt) {
+        memcpy(enc->ud_data[enc->ud_count], data, size);
+        enc->ud_len[enc->ud_count] = size;
+        enc->ud_count++;
+        ret = 0;
+    }
+    pthread_mutex_unlock(&enc->ud_lock);
+    return ret;
+}
+
+/* encoder thread, before a picture: move the queue into the Helix encoder */
+static void codec_push_user_data(AL_CodecEncode *enc, T30HelixEncoder *helix)
+{
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->ud_count &&
+        OpenIMP_T30_HelixSetUserData(helix, enc->ud_count, enc->ud_len,
+                                     (const uint8_t (*)[T30_USER_DATA_MAX_SIZE])
+                                     enc->ud_data) == 0)
+        enc->ud_count = 0;
+    pthread_mutex_unlock(&enc->ud_lock);
+}
+#endif
+
 int AL_Codec_Encode_SetMbRC(void *codec, int enable)
 {
     if (codec == NULL)
         return -1;
     ((AL_CodecEncode *)codec)->hw_params.mb_rc =
         enable ? HW_MBRC_ON : HW_MBRC_OFF;
+    return 0;
+}
+
+int AL_Codec_Encode_SetColor2Grey(void *codec, int enable)
+{
+    if (codec == NULL)
+        return -1;
+    ((AL_CodecEncode *)codec)->hw_params.color2grey = enable ? 1u : 0u;
+    return 0;
+}
+
+/* The ROI tables of all channels: set on the caller's thread, copied to
+ * the encoder on the encoding thread between pictures (codec_t30_roi). */
+#if defined(PLATFORM_T30)
+static pthread_mutex_t codec_roi_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
+int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
+                           const uint8_t entry[7])
+{
+#if defined(PLATFORM_T30)
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (enc == NULL || entry == NULL || index >= 8u)
+        return -1;
+    pthread_mutex_lock(&codec_roi_lock);
+    memcpy(enc->helix_roi[index], entry, sizeof(enc->helix_roi[index]));
+    pthread_mutex_unlock(&codec_roi_lock);
+    return 0;
+#else
+    (void)codec;
+    (void)index;
+    (void)entry;
+    return -1;
+#endif
+}
+
+int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset)
+{
+    if (codec == NULL || offset < -12 || offset > 12)
+        return -1;
+    ((AL_CodecEncode *)codec)->hw_params.chroma_qp_offset = offset;
+    return 0;
+}
+
+int AL_Codec_Encode_SetSuperFrame(void *codec, uint32_t mode,
+                                  uint32_t i_bits, uint32_t p_bits)
+{
+    HWEncoderParams *hp;
+
+    if (codec == NULL ||
+        (mode != HW_SUPERFRM_NONE && mode != HW_SUPERFRM_REENCODE))
+        return -1;
+    hp = &((AL_CodecEncode *)codec)->hw_params;
+    hp->super_i_bits = i_bits;
+    hp->super_p_bits = p_bits;
+    hp->super_mode = mode;
     return 0;
 }
 #endif
@@ -8472,6 +8960,9 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     }
 
     memset(enc, 0, sizeof(AL_CodecEncode));
+#if defined(PLATFORM_T30) || defined(PLATFORM_T23)
+    pthread_mutex_init(&enc->ud_lock, NULL);
+#endif
     CODEC_STARTUP_MARKER("openimp/codec marker A2 memset returned\n");
     codec_startup_trace("openimp/codec startup: encoder memset done\n");
 
@@ -9939,20 +10430,37 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             OpenIMP_T30_HelixDestroy(enc->t30_helix);
             enc->t30_helix = NULL;
         }
-        if (!enc->t30_helix &&
-            codec_t30_helix_create(enc, width, height) != 0) {
-            codec_set_error(enc, -1);
-            return -1;
+        if (!enc->t30_helix) {
+            struct timespec ts;
+            uint64_t now_ms;
+
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            now_ms = (uint64_t)ts.tv_sec * 1000u +
+                     (uint64_t)ts.tv_nsec / 1000000u;
+            if (now_ms < enc->t30_helix_retry_ms ||
+                codec_t30_helix_create(enc, width, height) != 0) {
+                if (now_ms >= enc->t30_helix_retry_ms)
+                    enc->t30_helix_retry_ms = now_ms + T30_HELIX_RETRY_MS;
+                codec_set_error(enc, -1);
+                return -1;
+            }
         }
         {
             /* Setters run on the caller's thread and only touch hw_params;
              * hand a snapshot to the encoder here, between pictures. */
             HWEncoderParams current = enc->hw_params;
+            uint8_t roi[8][7];
 
             (void)OpenIMP_T30_HelixUpdateParams(enc->t30_helix, &current);
+            pthread_mutex_lock(&codec_roi_lock);
+            memcpy(roi, enc->helix_roi, sizeof(roi));
+            pthread_mutex_unlock(&codec_roi_lock);
+            (void)OpenIMP_T30_HelixSetRoi(enc->t30_helix,
+                                          (const uint8_t (*)[7])roi);
         }
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
+        codec_push_user_data(enc, enc->t30_helix);
         if (OpenIMP_T30_HelixEncode(enc->t30_helix,
                                     (const IMPFrameInfo *)frame,
                                     &hw_stream) != 0) {
@@ -10051,6 +10559,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             (void)OpenIMP_T30_HelixReconfigure(enc->t30_helix, &current);
             if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
                 OpenIMP_T30_HelixRequestIDR(enc->t30_helix);
+            codec_push_user_data(enc, enc->t30_helix);
             if (OpenIMP_T30_HelixEncode(enc->t30_helix,
                                         (const IMPFrameInfo *)frame,
                                         &hw_stream) != 0) {
@@ -10511,6 +11020,19 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                             enc->avpu.interm_ep1_size = avpu_get_enc1_ep1_size();
                             enc->avpu.interm_wpp_size = avpu_get_enc1_wpp_size(width, height);
                             enc->avpu.interm_ep2_size = avpu_get_enc1_ep2_size(width, height);
+#if defined(PLATFORM_T41)
+                            if (!enc->avpu.codec_hevc &&
+                                avpu_t41_roi_experimental()) {
+                                /* vendor T41 AVC: header + 4 bytes per
+                                 * macroblock (the ROI QP table) */
+                                uint32_t avc_ep2 = avpu_align_up_u32(
+                                    4u * (((width + 15u) >> 4) *
+                                          ((height + 15u) >> 4)), 128u) + 0x40u;
+
+                                if (avc_ep2 > enc->avpu.interm_ep2_size)
+                                    enc->avpu.interm_ep2_size = avc_ep2;
+                            }
+#endif
 #if defined(PLATFORM_T31) || defined(PLATFORM_T41)
                             if (enc->avpu.codec_hevc) {
                                 /* AL_GetAllocSizeEP2(HEVC) =
@@ -11355,8 +11877,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 OpenIMPProfileStamp command_profile =
                     openimp_profile_begin();
 
+#if defined(PLATFORM_T31)
+                avpu_t31_roi_apply(ctx);
+#endif
                 fill_cmd_regs_enc1(ctx, cmd, buf_idx, phys_addr, hdr_offset,
                                    is_idr, ref_phys);
+#if defined(PLATFORM_T31)
+                avpu_t31_roi_track_qp(ctx, cmd);
+#endif
                 openimp_profile_end(OPENIMP_PROFILE_COMMAND_BUILD,
                                     command_profile);
             }
@@ -11779,6 +12307,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #elif defined(PLATFORM_T23) || defined(PLATFORM_T30)
             (codec_type == IMP_ENC_TYPE_JPEG
                 ? codec_encode_jpeg_ql(enc, &hw_frame, hw_stream)
+                : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
+#elif defined(PLATFORM_T41)
+            (codec_type == IMP_ENC_TYPE_JPEG
+                ? codec_encode_jpeg_t41(enc, &hw_frame, hw_stream)
                 : HW_Encoder_Encode_Software(&hw_frame, hw_stream, codec_type)) < 0
 #else
             (codec_type == IMP_ENC_TYPE_JPEG
@@ -12604,6 +13136,7 @@ int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr)
     *(uint32_t *)(enc->codec_param + 0xb0) = enc->gop_cache.gopLength;
     enc->hw_params.gop_length = enc->gop_cache.gopLength;
     enc->avpu.gop_length = enc->gop_cache.gopLength;
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     enc->rc_attr_cache.maxGop = enc->gop_cache.gopLength;
 #elif !(defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41))

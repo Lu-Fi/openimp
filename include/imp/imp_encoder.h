@@ -391,11 +391,26 @@ typedef struct {
     };
 } IMPEncoderAttrRcMode;
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 header: a demask attribute sits between attrFrmUsed and
+ * attrDenoise (RcAttr 124, CHNAttr 172 bytes; the stock IMP_Encoder_
+ * GetChnAttr copies 172).  T21/T23/T30 have none (112 / 160). */
+typedef struct {
+    bool enable;
+    bool isAutoMode;
+    int demaskCnt;
+    int demaskThresd;
+} IMPEncoderAttrDemask;
+#endif
+
 typedef struct {
     IMPEncoderFrmRate outFrmRate;
     uint32_t maxGop;
     IMPEncoderAttrRcMode attrRcMode;
     IMPEncoderAttrFrmUsed attrFrmUsed;
+#if defined(PLATFORM_T20)
+    IMPEncoderAttrDemask attrDemask;
+#endif
     IMPEncoderAttrDenoise attrDenoise;
     IMPEncoderAttrInitHSkip attrHSkip;
 } IMPEncoderRcAttr;
@@ -485,9 +500,25 @@ typedef struct {
     IMPEncoderRcPriority rcPriority;
 } IMPEncoderSuperFrmCfg;
 
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 144 bytes, the offset at byte 140 (its
+ * IMP_Encoder_SetH264TransCfg reads 140(a1), Get clears 144 bytes) */
+typedef struct {
+    uint32_t intraTransMode;
+    uint32_t interTransMode;
+    bool bScalingListValid;
+    uint8_t interScalingList8X8[64];
+    uint8_t intraScalingList8X8[64];
+    int chroma_qp_index_offset;
+} IMPEncoderH264TransCfg;
+_Static_assert(sizeof(IMPEncoderH264TransCfg) == 144 &&
+               offsetof(IMPEncoderH264TransCfg, chroma_qp_index_offset) == 140,
+               "IMPEncoderH264TransCfg T20 ABI mismatch");
+#else
 typedef struct {
     int chroma_qp_index_offset;
 } IMPEncoderH264TransCfg;
+#endif
 
 typedef struct {
     int chroma_cr_qp_offset;
@@ -512,13 +543,24 @@ _Static_assert(sizeof(IMPEncoderSuperFrmCfg) == 0x14,
 
 _Static_assert(sizeof(IMPEncoderAttrRcMode) == 0x2c,
                "legacy IMPEncoderAttrRcMode ABI mismatch");
+#if defined(PLATFORM_T20)
+_Static_assert(sizeof(IMPEncoderRcAttr) == 124 &&
+               offsetof(IMPEncoderRcAttr, attrDemask) == 68 &&
+               offsetof(IMPEncoderRcAttr, attrDenoise) == 80 &&
+               offsetof(IMPEncoderRcAttr, attrHSkip) == 96,
+               "T20 IMPEncoderRcAttr ABI mismatch");
+#else
 _Static_assert(sizeof(IMPEncoderRcAttr) == 0x70,
                "legacy IMPEncoderRcAttr ABI mismatch");
+#endif
 _Static_assert(sizeof(IMPEncoderAttr) == 0x30,
                "legacy IMPEncoderAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderCHNAttr, rcAttr) == 0x30,
                "legacy IMPEncoderCHNAttr.rcAttr ABI mismatch");
-#if defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20)
+_Static_assert(sizeof(IMPEncoderCHNAttr) == 172,
+               "T20 IMPEncoderCHNAttr ABI mismatch");
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
 _Static_assert(sizeof(IMPEncoderCHNAttr) == 0xa0,
                "T21/T30 IMPEncoderCHNAttr ABI mismatch");
 #else
@@ -587,10 +629,27 @@ typedef struct {
     };
 } IMPEncoderAttrRcMode;
 
+/*
+ * Vendor values: 0x02/0xfe/0x04 (T31 1.1.5.2 and 1.1.6, T40 1.3.1, T41
+ * 1.2.0/1.2.5/1.2.6 - the T41 branch above already uses them). OpenIMP does
+ * not translate the field, so the value that leaves the library is the value
+ * that was stored. The default is written here:
+ *
+ *   - `codec-t40.c` sets `gop_cache.gopMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT`
+ *     for T31, T40 and T41 (`AL_Codec_Encode_Create` defaults).
+ *
+ * With the old numbers the library reported 0, which is not a value that
+ * exists in the vendor enum, and a caller comparing against the vendor
+ * constants saw a mode it could not name. With 0x02 the reported default is
+ * the vendor `DEFAULT`. raptor-hal compiles against the vendor headers, so
+ * its `switch (gopAttr.uGopCtrlMode)` in `hal_encoder.c:2259` was never
+ * comparing against OpenIMP's numbers - it is the OpenIMP-side default that
+ * changed.
+ */
 typedef enum {
-    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0,
-    IMP_ENC_GOP_CTRL_MODE_SMARTP = 1,
-    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 2,
+    IMP_ENC_GOP_CTRL_MODE_DEFAULT = 0x02,
+    IMP_ENC_GOP_CTRL_MODE_SMARTP = 0xfe,
+    IMP_ENC_GOP_CTRL_MODE_PYRAMIDAL = 0x04,
 } IMPEncoderGopCtrlMode;
 
 typedef struct {
@@ -662,8 +721,6 @@ typedef struct {
     IMPEncoderAttr encAttr;
     IMPEncoderRcAttr rcAttr;
     IMPEncoderGopAttr gopAttr;
-    uint8_t bEnableIvdc;
-    uint8_t _reserved2[3];
 } IMPEncoderChnAttr;
 
 typedef IMPEncoderChnAttr IMPEncoderCHNAttr;
@@ -674,7 +731,14 @@ _Static_assert(sizeof(IMPEncoderAttr) == 0x2c, "IMPEncoderAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, encAttr) == 0x00, "IMPEncoderChnAttr.encAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, rcAttr) == 0x2c, "IMPEncoderChnAttr.rcAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, gopAttr) == 0x58, "IMPEncoderChnAttr.gopAttr ABI mismatch");
-_Static_assert(offsetof(IMPEncoderChnAttr, bEnableIvdc) == 0x70, "IMPEncoderChnAttr.bEnableIvdc ABI mismatch");
+/* Neither vendor header of this branch has a member after gopAttr: T31 1.1.6
+ * and T40 1.3.1 both end at 112 bytes (encAttr 0x00, rcAttr 0x2c, gopAttr
+ * 0x58).  The trailing bEnableIvdc word made IMP_Encoder_GetChnAttr copy 116
+ * bytes and IMP_Encoder_SetDefaultParam clear 116 bytes into a caller's
+ * vendor-sized struct.  bEnableIvdc exists in the T41 1.2.5/1.2.6 header only
+ * (its own branch above, offset 0x78). */
+_Static_assert(sizeof(IMPEncoderChnAttr) == 0x70,
+               "T31/T40 IMPEncoderChnAttr ABI mismatch (vendor: 112 bytes)");
 #else
 /**
  * H264 CBR attributes
@@ -925,11 +989,27 @@ typedef struct {
     uint32_t        packCount;
     uint32_t        seq;
     bool            isVI;
+#if !defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     union {
         IMPEncoderStreamInfo streamInfo;
         IMPEncoderJpegInfo   jpegInfo;
     };
+#endif
 } IMPEncoderStream;
+
+/*
+ * T40 1.3.1 and T41 1.2.6 end this structure after isVI and pad it to 28
+ * bytes; only T31 1.1.6 appends the streamInfo/jpegInfo union (64 bytes).
+ * OpenIMP's own T40/T41 backend writes exactly the 28-byte prefix
+ * (P2_ENCODER_STREAM_ABI_SIZE in src/t40/openimp_p2_encoder.c), so the
+ * public type must be 28 bytes there too -- a caller compiled against the
+ * 64-byte form would hand the library 36 bytes it never touches, and would
+ * read streamInfo/jpegInfo that the library never writes.
+ */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+_Static_assert(sizeof(IMPEncoderStream) == 0x1c,
+               "T40/T41 IMPEncoderStream ABI mismatch (vendor: 28 bytes)");
+#endif
 #endif
 
 /**
@@ -954,11 +1034,25 @@ typedef IMPEncoderCHNStat IMPEncoderChnStat;
 /**
  * JPEG quality level
  */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20)
+/* T20 3.12.0 libimp: 257 bytes (Set copies and Get clears 257); the
+ * table is the first 128 bytes, the other 128 are zero */
+typedef struct {
+    bool user_ql_en;
+    uint8_t qmem_table[256];
+} IMPEncoderJpegeQl;
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 257,
+               "IMPEncoderJpegeQl T20 ABI mismatch");
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T41)
+/* T21 1.0.33 / T23 / T30 libimp: 129 bytes; T41 1.2.x has the same form */
 typedef struct {
     bool user_ql_en;
     uint8_t qmem_table[128];
 } IMPEncoderJpegeQl;
+
+_Static_assert(sizeof(IMPEncoderJpegeQl) == 129,
+               "IMPEncoderJpegeQl ABI mismatch");
 #else
 typedef struct {
     uint32_t qmaxI;                     /**< Maximum I frame quality */
@@ -1345,6 +1439,43 @@ int IMP_Encoder_DisableAllNCUDenoise(void);
 /* T21 1.0.33: run-time HSkip attribute (IDR period maxSameSceneCnt) */
 int IMP_Encoder_SetChnHSkip(int encChn, const IMPEncoderAttrHSkip *attr);
 int IMP_Encoder_GetChnHSkip(int encChn, IMPEncoderAttrHSkip *attr);
+#endif
+
+#if defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* Encoder ROI, vendor T40/T41 API (T41 1.2.6 imp_encoder.h): up to 10
+ * windows in pixels.  T41: a relative QP per window (-26..25); absolute QP
+ * is "not supported" in the vendor header and is refused.  T31 has no ROI
+ * in the vendor library: there it is an OpenIMP-only extension
+ * (docs/OPENIMP_BEYOND_VENDOR.md, docs/ROI.md) that also takes absolute QP
+ * (0..51) and relative QP -32..31. */
+#define IMP_ENC_ROI_WIN_COUNT 10
+
+typedef struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t w;
+    uint32_t h;
+} IMPEncoderRoiRect;
+
+typedef enum {
+    IMP_ROI_QPMODE_DELTA = 0,
+    IMP_ROI_QPMODE_FIXED_QP = 1,
+    IMP_ROI_QPMODE_MAX_ENUM,
+} IMPEncoderQPMode;
+
+typedef struct {
+    bool enable;
+    IMPEncoderRoiRect rect;
+    IMPEncoderQPMode mode;
+    int8_t qp;
+} IMPEncoderRoiWin;
+
+typedef struct {
+    IMPEncoderRoiWin st_roi[IMP_ENC_ROI_WIN_COUNT];
+} IMPEncoderRoiAttr;
+
+int IMP_Encoder_SetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
+int IMP_Encoder_GetChnRoiAttr(int encChn, IMPEncoderRoiAttr *roiAttr);
 #endif
 
 #ifdef __cplusplus

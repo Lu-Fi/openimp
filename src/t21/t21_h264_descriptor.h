@@ -74,6 +74,14 @@ typedef struct {
     uint32_t ctrl[2];
     uint32_t mbrc_qp_flags;
     uint32_t mbrc_regs[7];
+    /* ROI regions (H264E_T21_SliceInit, slice +752, the same encoding as
+     * T30H264SliceConfig.roi) into 0x40044..0x40068; all zero: none.  The
+     * T21 1.0.33 libimp fills them only from its eprc QP-map modes, never
+     * from IMP_Encoder_SetChnROI (see docs/T1X_ROI_CHROMA.md). */
+    uint8_t roi[8][7];
+    /* IMP_Encoder_SetH264TransCfg chroma_qp_index_offset (slice +457, the
+     * PPS value): 0x40120 = offset & 0x1f */
+    int8_t chroma_qp_offset;
     uint32_t ring_start_y, ring_start_c;
     uint32_t ring_end_y, ring_end_c;
     uint32_t *descriptor;

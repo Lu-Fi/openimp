@@ -9,13 +9,17 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 
+#include <time.h>
 #include <imp/imp_audio.h>
+#include "../audio/openimp_ao_cache.h"
 
 #define P3_SIOR(number, type) _IOC(_IOC_READ, 'P', (number), sizeof(type))
 
@@ -113,6 +117,14 @@ typedef int (*P3AgcProcess)(void *, const int16_t *const *, size_t, size_t,
                             uint8_t *);
 typedef int (*P3AgcFree)(void *);
 
+/* The OSS3 driver only offers a blocking GET_STREAM (one frame per ioctl,
+ * ~numPerFrm/rate seconds).  For IMP_AI_GetFrame(NOBLOCK) a capture thread,
+ * started on the first NOBLOCK call, feeds a bounded FIFO of whole frames;
+ * the oldest frame is dropped when the consumer falls behind.  Once running,
+ * BLOCK callers consume the same FIFO so order is preserved. */
+#define P3_CAPTURE_FRAMES 16
+#define P3_CAPTURE_RETRY_US 10000
+
 static struct {
     int fd;
     int ai_enabled;
@@ -127,6 +139,7 @@ static struct {
     int ai_gain;
     int ao_volume;
     int ao_gain;
+    openimp_ao_cache ao_cache;
     unsigned char *frame_buffer;
     size_t frame_capacity;
     int frame_outstanding;
@@ -138,6 +151,8 @@ static struct {
     P3HpfFree hpf_free;
     int16_t hpf_state[16];
     int hpf_enabled;
+    int hpf_cutoff;                 /* IMP_AI_SetHpfCoFrequency, 0 = default */
+    int effects_neo;                /* libaudioProcess-neo (has drc_create) */
     P3NsCreate ns_create;
     P3NsSetConfig ns_set_config;
     P3NsProcess ns_process;
@@ -150,7 +165,21 @@ static struct {
     P3AgcFree agc_free;
     void *agc;
     int agc_enabled;
+    /* NOBLOCK capture queue, see p3_capture_start() */
+    int cap_running;
+    int cap_stop;
+    int cap_exited;
+    int cap_alive;                  /* capture thread not yet exited */
+    int cap_error;
+    size_t cap_frame_bytes;
+    unsigned int cap_count;
+    unsigned int cap_head;
+    unsigned char *cap_data;
+    int64_t cap_time[P3_CAPTURE_FRAMES];
 } p3_audio = { .fd = -1 };
+
+static pthread_mutex_t p3_cap_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t p3_cap_cond = PTHREAD_COND_INITIALIZER;
 
 extern int64_t IMP_System_GetTimeStamp(void);
 
@@ -160,6 +189,127 @@ static int p3_audio_open(void)
         return 0;
     p3_audio.fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC);
     return p3_audio.fd >= 0 ? 0 : -1;
+}
+
+static void *p3_capture_main(void *argument)
+{
+    const size_t bytes = p3_audio.cap_frame_bytes;
+    unsigned char *chunk = argument;
+    const int fd = p3_audio.fd;
+
+    pthread_mutex_lock(&p3_cap_lock);
+    while (!p3_audio.cap_stop) {
+        P3AudioInputStream stream;
+        int result;
+#if defined(PLATFORM_T41)
+        typeof(*stream.timestamp) capture_timestamp = { 0, 0 };
+#endif
+
+        pthread_mutex_unlock(&p3_cap_lock);
+        memset(&stream, 0, sizeof(stream));
+        stream.data = chunk;
+        stream.size = (uint32_t)bytes;
+#if defined(PLATFORM_T41)
+        stream.timestamp = &capture_timestamp;
+#endif
+        result = ioctl(fd, AMIC_AI_GET_STREAM, &stream);
+        pthread_mutex_lock(&p3_cap_lock);
+        if (p3_audio.cap_stop)
+            break;
+        if (result != 0) {
+            p3_audio.cap_error = 1;
+            pthread_cond_broadcast(&p3_cap_cond);
+            pthread_mutex_unlock(&p3_cap_lock);
+            usleep(P3_CAPTURE_RETRY_US);
+            pthread_mutex_lock(&p3_cap_lock);
+            continue;
+        }
+        if (p3_audio.cap_count == P3_CAPTURE_FRAMES) {
+            p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+            p3_audio.cap_count--;
+        }
+        {
+            unsigned int slot = (p3_audio.cap_head + p3_audio.cap_count) %
+                                P3_CAPTURE_FRAMES;
+
+            memcpy(p3_audio.cap_data + (size_t)slot * bytes, chunk, bytes);
+            p3_audio.cap_time[slot] = IMP_System_GetTimeStamp();
+            p3_audio.cap_count++;
+        }
+        p3_audio.cap_error = 0;
+        pthread_cond_broadcast(&p3_cap_cond);
+    }
+    p3_audio.cap_exited = 1;
+    p3_audio.cap_alive = 0;
+    pthread_cond_broadcast(&p3_cap_cond);
+    pthread_mutex_unlock(&p3_cap_lock);
+    free(chunk);
+    return NULL;
+}
+
+static int p3_capture_start(size_t bytes)
+{
+    pthread_t thread;
+    unsigned char *chunk = malloc(bytes);
+    unsigned char *data = malloc(bytes * P3_CAPTURE_FRAMES);
+
+    if (!chunk || !data) {
+        free(chunk);
+        free(data);
+        return -1;
+    }
+    pthread_mutex_lock(&p3_cap_lock);
+    if (p3_audio.cap_alive) {
+        /* the previous thread outlived p3_capture_stop()'s 1 s wait (stuck
+         * GET_STREAM): it still owns cap_data, so refuse the restart */
+        pthread_mutex_unlock(&p3_cap_lock);
+        free(chunk);
+        free(data);
+        return -1;
+    }
+    p3_audio.cap_stop = 0;
+    p3_audio.cap_exited = 0;
+    p3_audio.cap_alive = 1;
+    p3_audio.cap_error = 0;
+    p3_audio.cap_count = 0;
+    p3_audio.cap_head = 0;
+    p3_audio.cap_frame_bytes = bytes;
+    free(p3_audio.cap_data);
+    p3_audio.cap_data = data;
+    p3_audio.cap_running = 1;
+    pthread_mutex_unlock(&p3_cap_lock);
+    if (pthread_create(&thread, NULL, p3_capture_main, chunk) != 0) {
+        pthread_mutex_lock(&p3_cap_lock);
+        p3_audio.cap_running = 0;
+        p3_audio.cap_alive = 0;
+        pthread_mutex_unlock(&p3_cap_lock);
+        free(chunk);
+        return -1;
+    }
+    pthread_detach(thread);
+    return 0;
+}
+
+/* Called with the stream already disabled where possible so a GET_STREAM in
+ * flight returns; waits at most one second for the thread. */
+static void p3_capture_stop(void)
+{
+    struct timespec deadline;
+
+    pthread_mutex_lock(&p3_cap_lock);
+    if (!p3_audio.cap_running) {
+        pthread_mutex_unlock(&p3_cap_lock);
+        return;
+    }
+    p3_audio.cap_stop = 1;
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    deadline.tv_sec += 1;
+    while (!p3_audio.cap_exited &&
+           pthread_cond_timedwait(&p3_cap_cond, &p3_cap_lock, &deadline) == 0)
+        ;
+    p3_audio.cap_running = 0;
+    p3_audio.cap_count = 0;
+    pthread_mutex_unlock(&p3_cap_lock);
 }
 
 static void p3_audio_maybe_close(void)
@@ -212,6 +362,8 @@ static int p3_effects_load(void)
     P3_EFFECT(agc_process, "audio_process_agc_process");
     P3_EFFECT(agc_free, "audio_process_agc_free");
 #undef P3_EFFECT
+    p3_audio.effects_neo =
+        dlsym(p3_audio.effects_library, "audio_process_drc_create") != NULL;
     return 0;
 }
 
@@ -292,8 +444,13 @@ int IMP_AI_Disable(int device)
     int result = 0;
 
     (void)device;
-    if (p3_audio.ai_enabled)
+    if (p3_audio.ai_enabled) {
+        pthread_mutex_lock(&p3_cap_lock);
+        p3_audio.cap_stop = p3_audio.cap_running;
+        pthread_mutex_unlock(&p3_cap_lock);
         result = ioctl(p3_audio.fd, AMIC_AI_DISABLE_STREAM, 1);
+        p3_capture_stop();
+    }
     p3_audio.ai_enabled = 0;
     p3_audio.ai_channel_enabled = 0;
     p3_audio.frame_outstanding = 0;
@@ -315,6 +472,7 @@ int IMP_AI_DisableChn(int device, int channel)
     (void)device;
     if (channel != 0)
         return -1;
+    p3_capture_stop();
     p3_audio.ai_channel_enabled = 0;
     p3_audio.frame_outstanding = 0;
     return 0;
@@ -357,9 +515,9 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
 #endif
     size_t bytes;
     unsigned int channels;
+    int64_t capture_stamp;
 
     (void)device;
-    (void)block;
     if (channel != 0 || !frame || !p3_audio.ai_channel_enabled ||
         p3_audio.frame_outstanding)
         return -1;
@@ -374,21 +532,53 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
         p3_audio.frame_buffer = buffer;
         p3_audio.frame_capacity = bytes;
     }
-    memset(&stream, 0, sizeof(stream));
-    stream.data = p3_audio.frame_buffer;
-    stream.size = (uint32_t)bytes;
+    pthread_mutex_lock(&p3_cap_lock);
+    if (!p3_audio.cap_running && block == NOBLOCK) {
+        pthread_mutex_unlock(&p3_cap_lock);
+        if (p3_capture_start(bytes) != 0)
+            return -1;
+        pthread_mutex_lock(&p3_cap_lock);
+    }
+    if (p3_audio.cap_running) {
+        int64_t stamp;
+
+        if (p3_audio.cap_frame_bytes != bytes) {
+            pthread_mutex_unlock(&p3_cap_lock);
+            return -1;
+        }
+        while (block == BLOCK && !p3_audio.cap_count &&
+               !p3_audio.cap_error && !p3_audio.cap_exited)
+            pthread_cond_wait(&p3_cap_cond, &p3_cap_lock);
+        if (!p3_audio.cap_count) {
+            pthread_mutex_unlock(&p3_cap_lock);
+            return -1;
+        }
+        memcpy(p3_audio.frame_buffer,
+               p3_audio.cap_data + (size_t)p3_audio.cap_head * bytes, bytes);
+        stamp = p3_audio.cap_time[p3_audio.cap_head];
+        p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+        p3_audio.cap_count--;
+        pthread_mutex_unlock(&p3_cap_lock);
+        capture_stamp = stamp;
+    } else {
+        pthread_mutex_unlock(&p3_cap_lock);
+        memset(&stream, 0, sizeof(stream));
+        stream.data = p3_audio.frame_buffer;
+        stream.size = (uint32_t)bytes;
 #if defined(PLATFORM_T41)
-    stream.timestamp = &capture_timestamp;
+        stream.timestamp = &capture_timestamp;
 #endif
-    if (ioctl(p3_audio.fd, AMIC_AI_GET_STREAM, &stream) != 0)
-        return -1;
+        if (ioctl(p3_audio.fd, AMIC_AI_GET_STREAM, &stream) != 0)
+            return -1;
+        capture_stamp = IMP_System_GetTimeStamp();
+    }
     p3_process_effects((int16_t *)p3_audio.frame_buffer,
                        (int)(bytes / sizeof(int16_t)));
     memset(frame, 0, sizeof(*frame));
     frame->bitwidth = p3_audio.ai_attr.bitwidth;
     frame->soundmode = p3_audio.ai_attr.soundmode;
     frame->virAddr = (uint32_t *)(void *)p3_audio.frame_buffer;
-    frame->timeStamp = IMP_System_GetTimeStamp();
+    frame->timeStamp = capture_stamp;
     frame->seq = p3_audio.sequence++;
     frame->len = (int)bytes;
     p3_audio.frame_outstanding = 1;
@@ -513,6 +703,38 @@ int IMP_AI_SetVolMute(int device, int channel, int mute)
     return p3_audio_open() == 0 ? ioctl(p3_audio.fd, AMIC_AI_SET_MUTE, &value) : -1;
 }
 
+/* libaudioProcess-neo's HPF state is a float biquad (7 floats over the
+ * 32 bytes); it designs 300 Hz at 16 kHz itself while b0 is zero.  A
+ * cut-off set with IMP_AI_SetHpfCoFrequency is written there (RBJ high
+ * pass, Q 0.7071, at the stream's rate), sine/cosine by series so libimp
+ * stays free of libm. */
+static void p3_hpf_neo_overlay(int16_t state[16], int sample_rate, int cutoff)
+{
+    double x = 2.0 * 3.14159265358979323846 * (double)cutoff /
+               (double)sample_rate;
+    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
+    float cw, alpha, a0_inv, bq[7];
+    int n;
+
+    for (n = 1; n < 24; n++) {
+        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
+        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
+        sine += term_s;
+        cosine += term_c;
+    }
+    cw = (float)cosine;
+    alpha = (float)sine / (2.0f * 0.7071f);
+    a0_inv = 1.0f / (1.0f + alpha);
+    bq[0] = ((1.0f + cw) / 2.0f) * a0_inv;
+    bq[1] = -(1.0f + cw) * a0_inv;
+    bq[2] = bq[0];
+    bq[3] = (-2.0f * cw) * a0_inv;
+    bq[4] = (1.0f - alpha) * a0_inv;
+    bq[5] = 0.0f;
+    bq[6] = 0.0f;
+    memcpy(state, bq, sizeof(bq));
+}
+
 int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
 {
     if (!attribute || p3_effects_load() != 0)
@@ -520,6 +742,11 @@ int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
     memset(p3_audio.hpf_state, 0, sizeof(p3_audio.hpf_state));
     p3_audio.hpf_create(p3_audio.hpf_state, p3_audio.hpf_state + 8,
                         0, 0, 8, 8);
+    if (p3_audio.effects_neo && p3_audio.hpf_cutoff > 0 &&
+        attribute->samplerate > 0 &&
+        (int64_t)p3_audio.hpf_cutoff * 2 < (int64_t)attribute->samplerate)
+        p3_hpf_neo_overlay(p3_audio.hpf_state, attribute->samplerate,
+                           p3_audio.hpf_cutoff);
     p3_audio.hpf_enabled = 1;
     return 0;
 }
@@ -534,7 +761,11 @@ int IMP_AI_DisableHpf(void)
 
 int IMP_AI_SetHpfCoFrequency(int frequency)
 {
-    return frequency > 0 ? 0 : -1;
+    if (frequency < 0)
+        return -1;
+    /* 0 = default cut-off (prudynt passes 0), as on T31 */
+    p3_audio.hpf_cutoff = frequency;
+    return 0;
 }
 
 int IMP_AI_EnableNs(IMPAudioIOAttr *attribute, int mode)
@@ -665,10 +896,14 @@ int IMP_AO_Enable(int device)
     return 0;
 }
 
+static void p3_ao_cache_release(void);
+
 int IMP_AO_Disable(int device)
 {
     int result = 0;
     (void)device;
+    if (p3_audio.ao_enabled)
+        p3_ao_cache_release();
     if (p3_audio.ao_enabled)
         result = ioctl(p3_audio.fd, AMIC_AO_DISABLE_STREAM, 1);
     p3_audio.ao_enabled = 0;
@@ -677,12 +912,52 @@ int IMP_AO_Disable(int device)
     return result;
 }
 
+static int64_t p3_ao_now_ns(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static unsigned p3_ao_bytes_per_sec(void)
+{
+    return (unsigned)p3_audio.ao_attr.samplerate *
+           (p3_audio.ao_attr.soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
+           (unsigned)sizeof(int16_t);
+}
+
+static int p3_ao_driver_write(void *ctx, const void *data, size_t len)
+{
+    P3AudioOutputStream stream;
+
+    (void)ctx;
+    memset(&stream, 0, sizeof(stream));
+    stream.data = (void *)(uintptr_t)data;
+    stream.size = (uint32_t)len;
+    return ioctl(p3_audio.fd, AMIC_AO_SET_STREAM, &stream);
+}
+
+static void p3_ao_cache_release(void)
+{
+    if (p3_audio.fd >= 0)
+        (void)openimp_ao_cache_release(&p3_audio.ao_cache, p3_ao_now_ns(),
+                                       p3_ao_bytes_per_sec(),
+                                       p3_ao_driver_write, NULL);
+}
+
 int IMP_AO_EnableChn(int device, int channel)
 {
     (void)device;
     if (!p3_audio.ao_enabled || channel != 0)
         return -1;
     p3_audio.ao_channel_enabled = 1;
+    /* vendor _ao_chn_enable: cache switch back to its default, filling;
+     * threshold = OPENIMP_AO_CACHE_PERIODS periods of 20 ms (no fixed
+     * period here, the driver takes any size) */
+    openimp_ao_cache_reset(&p3_audio.ao_cache,
+                           p3_ao_bytes_per_sec() / 50 *
+                               OPENIMP_AO_CACHE_PERIODS);
     return 0;
 }
 
@@ -691,6 +966,8 @@ int IMP_AO_DisableChn(int device, int channel)
     (void)device;
     if (channel != 0)
         return -1;
+    if (p3_audio.ao_channel_enabled)
+        p3_ao_cache_release();
     p3_audio.ao_channel_enabled = 0;
     return 0;
 }
@@ -698,15 +975,16 @@ int IMP_AO_DisableChn(int device, int channel)
 int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
                      IMPBlock block)
 {
-    P3AudioOutputStream stream;
     (void)device;
     (void)block;
     if (channel != 0 || !frame || !frame->virAddr || frame->len <= 0 ||
         !p3_audio.ao_channel_enabled || p3_audio.ao_paused)
         return -1;
-    stream.data = frame->virAddr;
-    stream.size = (uint32_t)frame->len;
-    return ioctl(p3_audio.fd, AMIC_AO_SET_STREAM, &stream);
+    /* cache off (default): straight to the driver as before */
+    return openimp_ao_cache_submit(&p3_audio.ao_cache, frame->virAddr,
+                                   (size_t)frame->len, p3_ao_now_ns(),
+                                   p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                   NULL);
 }
 
 int IMP_AO_SetVol(int device, int channel, int value)
@@ -763,17 +1041,23 @@ int IMP_AO_SetVolMute(int device, int channel, int mute)
 int IMP_AO_ClearChnBuf(int device, int channel)
 {
     (void)device;
-    return channel == 0 && p3_audio.fd >= 0
-               ? ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 1)
-               : -1;
+    if (channel != 0 || p3_audio.fd < 0)
+        return -1;
+    openimp_ao_cache_drop(&p3_audio.ao_cache);
+    return ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 1);
 }
 
 int IMP_AO_FlushChnBuf(int device, int channel)
 {
     (void)device;
-    return channel == 0 && p3_audio.fd >= 0
-               ? ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 1)
-               : -1;
+    if (channel != 0 || p3_audio.fd < 0)
+        return -1;
+    /* the vendor flush plays everything, also what the cache still holds */
+    if (openimp_ao_cache_release(&p3_audio.ao_cache, p3_ao_now_ns(),
+                                 p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                 NULL) != 0)
+        return -1;
+    return ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 1);
 }
 
 int IMP_AO_PauseChn(int device, int channel)
@@ -807,8 +1091,15 @@ int IMP_AO_QueryChnStat(int device, int channel, IMPAudioOChnState *status)
 
 int IMP_AO_CacheSwitch(int device, int channel, int enable)
 {
-    (void)device;
-    return channel == 0 && (enable == 0 || enable == 1) ? 0 : -1;
+    if (device != 0 || channel != 0)
+        return -1;
+    /* vendor: any value is stored (non-zero = on); before the AO device is
+     * enabled there is no channel state yet and the call only logs */
+    if (!p3_audio.ao_enabled || p3_audio.fd < 0)
+        return 0;
+    return openimp_ao_cache_set(&p3_audio.ao_cache, enable, p3_ao_now_ns(),
+                                p3_ao_bytes_per_sec(), p3_ao_driver_write,
+                                NULL) == 0 ? 0 : -1;
 }
 
 int IMP_AO_Soft_Mute(int device, int channel)

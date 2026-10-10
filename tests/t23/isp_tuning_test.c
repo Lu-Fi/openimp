@@ -43,6 +43,7 @@ ISPDevice *gISP;
 #define ioctl test_ioctl
 int test_ioctl(int fd, unsigned long nr, ...);
 #include "../../src/isp/isp_t23_tuning.c"
+#include "../fake_rmem.h"
 #undef ioctl
 
 /* ---- environment stubs ------------------------------------------------ */
@@ -61,6 +62,14 @@ int32_t set_framesource_fps(int32_t n, int32_t d)
 int32_t set_framesource_changewait_cnt(void) { changewait_calls++; return 0; }
 int IMP_ISP_SetDefaultBinPath(const char *p) { (void)p; return 0; }
 int IMP_ISP_GetDefaultBinPath(char *p) { (void)p; return 0; }
+static void (*video_drop_seen)(void);
+static int video_drop_calls;
+int openimp_video_drop_set(void (*cb)(void))
+{
+    video_drop_seen = cb;
+    video_drop_calls++;
+    return 0;
+}
 
 /* ---- recording ioctl -------------------------------------------------- */
 static int calls;
@@ -656,15 +665,24 @@ static void test_misc(void)
           ev[0] == 0x11 && ev[23] == 0x11, "ev attr");
 
     reset();
-    get_block_len = sizeof(wf);
+    get_block_len = 24;                     /* the kernel writes 24 bytes */
     {
-        T23WaitFrameAttr k = { 0, 0, 0x1122334455ull };
+        T23WaitFrameBlock k;
 
+        memset(&k, 0xee, sizeof(k));
+        k.attr.timeout = 0;
+        k.attr.cnt = 0x1122334455ull;
         memcpy(get_block, &k, sizeof(k));
     }
     set_block_len = 0;
     CHECK(IMP_ISP_Tuning_WaitFrame(&wf) == 0 && last_req.cid == 0x8000162 &&
           wf.cnt == 0x1122334455ull && wf.timeout == 33, "wait frame");
+    reset();
+    get_block_len = 24;
+    ioctl_ret = -1;                         /* timeout: count not stored */
+    wf.cnt = 7;
+    CHECK(IMP_ISP_Tuning_WaitFrame(&wf) == -1 && wf.cnt == 7,
+          "wait frame failure keeps the count");
 
     reset();
     CHECK(IMP_ISP_Tuning_SetAfWeight_Sec(buf) == 0 && last_req.dir == 1 &&
@@ -741,6 +759,23 @@ static void test_movestate(void)
           last_req.dir == 1, "mode changed: no restore");
 }
 
+static void drop_cb(void) { }
+
+/* SetVideoDrop hands the callback to the video-drop monitor */
+static void test_video_drop(void)
+{
+    reset();
+    dev.tuning_state = 1;
+    CHECK(IMP_ISP_Tuning_SetVideoDrop((void *)drop_cb) == -1 &&
+          video_drop_calls == 0, "SetVideoDrop before EnableTuning");
+    reset();
+    CHECK(IMP_ISP_Tuning_SetVideoDrop((void *)drop_cb) == 0 &&
+          video_drop_seen == drop_cb && openimp_t23_isp_video_drop() ==
+          (void *)drop_cb, "SetVideoDrop did not register the callback");
+    CHECK(IMP_ISP_Tuning_SetVideoDrop(NULL) == 0 && video_drop_seen == NULL,
+          "SetVideoDrop(NULL) did not clear the callback");
+}
+
 static void *run(void *unused)
 {
     (void)unused;
@@ -751,18 +786,18 @@ static void *run(void *unused)
     test_mask();
     test_misc();
     test_movestate();
+    test_video_drop();
     return NULL;
 }
 
 int main(void)
 {
     const size_t stack_size = 1u << 20;
-    void *stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+    void *stack = fake_rmem_map(stack_size);
     pthread_attr_t attr;
     pthread_t thread;
 
-    if (stack == MAP_FAILED || (uintptr_t)buf > 0xffffffffu) {
+    if ((uintptr_t)buf > 0xffffffffu) {
         fprintf(stderr, "needs a non-PIE x86-64 build\n");
         return 2;
     }

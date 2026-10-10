@@ -51,6 +51,9 @@ static uint8_t fs_pixels[4][640 * 368 * 3 / 2];
 static int fs_gets[4];
 static int fs_outstanding[4];
 
+int IMP_FrameSource_GetFrame(int chn, void **frame);
+int VBMGetFrame(int chn, void **frame) { return IMP_FrameSource_GetFrame(chn, frame); }
+
 int IMP_FrameSource_GetFrame(int chn, void **frame)
 {
     if (chn < 0 || chn >= 4 || fs_outstanding[chn])
@@ -83,9 +86,9 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
 }
 void VBMWakeReaders(int chn) { (void)chn; }
 int OpenIMP_T31_HwJpegActive(void) { return 0; }
-void openimp_t31_osd_apply(int group, void *frame) { (void)group; (void)frame; }
-void openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
-{ (void)group; (void)frame; (void)flags; }
+int openimp_t31_osd_apply(int group, void *frame) { (void)group; (void)frame; return 0; }
+int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
+{ (void)group; (void)frame; (void)flags; return 0; }
 
 int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
 {
@@ -326,6 +329,28 @@ int main(void)
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
               stub_released == 2, "release (%d codec releases)",
               stub_released);
+
+        /* FlushStream drops an encoded stream nobody fetched yet: back
+         * to the codec, capture frame back to the FrameSource */
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0, "JPEG before flush");
+        CHECK(IMP_Encoder_FlushStream(2) == 0, "FlushStream");
+        CHECK(stub_released == 3 && !fs_outstanding[2],
+              "unread stream not dropped by FlushStream (%d codec "
+              "releases, frame held %d)", stub_released, fs_outstanding[2]);
+        CHECK(IMP_Encoder_GetStream(2, &stream, 0) != 0,
+              "GetStream still returns the flushed stream");
+        CHECK(IMP_Encoder_ReleaseStream(2, &stream) != 0,
+              "ReleaseStream of a flushed stream succeeded");
+        /* a stream the application holds stays until ReleaseStream */
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0 &&
+              IMP_Encoder_GetStream(2, &stream, 0) == 0, "JPEG after flush");
+        CHECK(IMP_Encoder_FlushStream(2) == 0 && stub_released == 3,
+              "FlushStream released a stream the application holds");
+        CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
+              stub_released == 4 && !fs_outstanding[2],
+              "release after flush (%d codec releases)", stub_released);
+        CHECK(IMP_Encoder_FlushStream(9) != 0 && IMP_Encoder_FlushStream(-1) != 0,
+              "FlushStream accepted a bad channel");
     }
 
     if (failures) {
@@ -335,3 +360,5 @@ int main(void)
     printf("p2 JPEG source tests passed\n");
     return 0;
 }
+
+int AL_Codec_Encode_SetRoiAttr(void *c, const void *r) { (void)c; (void)r; return 0; }

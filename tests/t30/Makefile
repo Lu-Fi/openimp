@@ -78,6 +78,9 @@ t23_ring_layout_test: $(T21_RMEM_SOURCES) $(ROOT)/src/rmem_arena.h \
 t21_sinter_map_test: t21_sinter_map_test.c $(ROOT)/src/isp/isp_t21_sinter.h
 	$(CC) $(CFLAGS) -I$(ROOT)/src -o $@ t21_sinter_map_test.c
 
+t21_front_crop_test: t21_front_crop_test.c $(ROOT)/src/isp/isp_front_crop.h $(ROOT)/include/imp/imp_isp.h
+	$(CC) $(CFLAGS) -I$(ROOT)/include -I$(ROOT)/src -o $@ t21_front_crop_test.c
+
 # T20 builds the T21 userspace with PLATFORM_T20 and the T30 descriptor.
 HELIX_T20_SOURCES := $(HELIX_SOURCES) $(ROOT)/src/rc_t20/rc_t20.c \
 	$(ROOT)/src/rc_t20/rc_t20_mb.c $(ROOT)/src/rc_t10/rc_t10.c
@@ -148,9 +151,11 @@ ivs-bench: ivs_move_bench_t20
 # (fs_lifecycle_test.c), as built for T21, T20 and T23.
 FS_SOURCES := fs_lifecycle_test.c \
 	$(ROOT)/src/framesource/framesource_tseries.c \
-	$(ROOT)/src/kernel_interface.c
+	$(ROOT)/src/kernel_interface.c $(ROOT)/src/core/video_drop.c \
+	$(ROOT)/src/framesource/nv12_rotate.c
 FS_DEPS := $(FS_SOURCES) $(ROOT)/src/kernel_interface.h \
-	$(ROOT)/src/vbm_dq_step.h $(ROOT)/src/openimp_ready_event.h
+	$(ROOT)/src/vbm_dq_step.h $(ROOT)/src/openimp_ready_event.h \
+	$(ROOT)/src/video_drop.h $(ROOT)/src/vbm_delay.h
 FS_FLAGS = -Wno-unused-result '-D_Static_assert(c,m)=' -fno-pie -no-pie \
 	-I$(ROOT)/include -I$(ROOT)/src \
 	-Wl,--wrap=open,--wrap=close,--wrap=ioctl,--wrap=select
@@ -206,7 +211,7 @@ sanitize: $(FS_DEPS) $(HELIX_SOURCES) $(HELIX_T21_SOURCES) $(IVS_DEPS)
 	TSAN_OPTIONS=halt_on_error=1 ./system_tsan
 	set -e; for soc in "T30:$(HELIX_SOURCES)" \
 		"T21:$(HELIX_T21_SOURCES)" \
-		"T20 -DPLATFORM_T21:$(HELIX_SOURCES)"; do \
+		"T20 -DPLATFORM_T21:$(HELIX_T20_SOURCES)"; do \
 		defs=$${soc%%:*}; srcs=$${soc#*:}; name=$$(echo $$defs | cut -d' ' -f1); \
 		$(SAN_CC) $(HELIX_SANITIZE) -DPLATFORM_$$defs -fno-pie -no-pie \
 			-I$(ROOT)/include -I$(ROOT)/src $(INCLUDES) \
@@ -238,12 +243,44 @@ ref_ring_test_t23: ref_ring_test.c $(ROOT)/src/t21/t21_h264_descriptor.c \
 	$(CC) $(CFLAGS) -DT21_HELIX_T23_DELTAS -I$(ROOT)/src -o $@ \
 		ref_ring_test.c $(ROOT)/src/t21/t21_h264_descriptor.c
 
-check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test helix_encoder_test \
+# ISP tuning calls of T20 (T10) and T21 against a fake tuning ioctl.
+ISP_T1X_FLAGS = -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
+	-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl
+ISP_T1X_SOURCES := isp_t1x_test.c $(ROOT)/src/isp/isp_tseries.c
+
+isp_t1x_test_t20: $(ISP_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 -o $@ $(ISP_T1X_SOURCES)
+
+isp_t1x_test_t21: $(ISP_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T21 -o $@ $(ISP_T1X_SOURCES)
+
+# T31 Enable/DisableMovestate (vendor libimp logic) against a fake tuning ioctl.
+isp_t31_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T31 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c -lpthread
+
+# Encoder channel extras of T20 (T10) and T21 through the P2 API, stub codec.
+P2_T1X_SOURCES := p2_t1x_test.c $(ROOT)/src/t40/openimp_p2_encoder.c \
+	$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/t31_stream_layout.c
+P2_T1X_FLAGS = -std=gnu99 -Wno-unused-result '-D_Static_assert(c,m)=' \
+	-I$(ROOT)/include -I$(ROOT)/src -I$(ROOT)/src/t40 -no-pie
+
+p2_t1x_test_t20: $(P2_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 -o $@ $(P2_T1X_SOURCES) -lpthread
+
+p2_t1x_test_t21: $(P2_T1X_SOURCES)
+	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T21 -o $@ $(P2_T1X_SOURCES) -lpthread
+
+check: isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test p2_t1x_test_t20 p2_t1x_test_t21 rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test helix_encoder_test \
 	helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
-	t21_sinter_map_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
+	t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23
+	./isp_t1x_test_t20
+	./isp_t1x_test_t21
+	./isp_t31_movestate_test
+	./p2_t1x_test_t20
+	./p2_t1x_test_t21
 	./rmem_highwater_test
 	./ref_ring_test
 	./ref_ring_test_t23
@@ -255,6 +292,7 @@ check: rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annex
 	./t21_rmem_layout_test
 	./t23_ring_layout_test
 	./t21_sinter_map_test
+	./t21_front_crop_test
 	./helix_encoder_test_t20
 	./helix_jpeg_test_t21
 	./helix_jpeg_test_t20
@@ -285,10 +323,11 @@ rc_readback_test_t23: rc_readback_test.c $(ROOT)/src/t40/p2_rc_readback.h
 		-I$(ROOT)/src -o $@ rc_readback_test.c
 
 clean:
+	$(RM) isp_t31_movestate_test isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 		helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
-		t21_sinter_map_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
+		t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 		ivs_framework_test_t21 ivs_framework_test_t20 ivs_move_bench_t20 \
 		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 \
 		fs_lifecycle_asan_* fs_lifecycle_tsan_* helix_encoder_asan_* \

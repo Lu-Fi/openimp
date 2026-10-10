@@ -9,6 +9,15 @@
 
 typedef struct T30HelixEncoder T30HelixEncoder;
 
+/* IMP_Encoder_InsertUserData queue: up to 2 payloads of up to 1024 bytes */
+#define T30_USER_DATA_MAX_CNT  2u
+#define T30_USER_DATA_MAX_SIZE 1024u
+extern const uint8_t t30_user_data_uuid[16];
+/* Replace the pending user data (SEI payloads for the next picture). */
+int OpenIMP_T30_HelixSetUserData(T30HelixEncoder *encoder, uint32_t count,
+                                 const uint32_t *lengths,
+                                 const uint8_t (*data)[T30_USER_DATA_MAX_SIZE]);
+
 int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder,
                             const HWEncoderParams *params);
 int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
@@ -27,6 +36,13 @@ int OpenIMP_T30_HelixGetCrop(const T30HelixEncoder *encoder, int *enable,
 int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
                                   const HWEncoderParams *params);
 void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder);
+
+#if !defined(PLATFORM_T23)
+/* IMP_Encoder_SetChnROI: the eight i264e ROI table entries (helix_roi.h)
+ * for the next pictures.  Call on the encoding thread before a picture. */
+int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
+                            const uint8_t roi[8][7]);
+#endif
 
 #if defined(PLATFORM_T23)
 /* Apply changed rate-control, frame-rate, GOP and QP-bound settings

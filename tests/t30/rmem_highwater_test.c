@@ -85,6 +85,19 @@ int main(void)
         if (strstr(lines[i], "allocation of"))
             assert(line_prio[i] == LOG_ERR);
     assert(!DMA_FreePhys(a.phys_addr));
+
+    /* A second free of the same address is ignored, logged once, and does
+     * not touch the arena or the record again. */
+    {
+        size_t used_before = g_rmem_arena.used;
+        int before = count("not a live allocation");
+
+        assert(!DMA_FreePhys(a.phys_addr));
+        assert(!DMA_FreePhys(a.phys_addr));
+        assert(count("not a live allocation") == before + 1);
+        assert(g_rmem_arena.used == used_before);
+        assert(IMP_Alloc_Dump() == 0);
+    }
     puts("rmem high-water and shortage logging passed");
     return 0;
 }

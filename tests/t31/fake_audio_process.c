@@ -52,14 +52,35 @@ void audio_process_hpf_create(int16_t *y, int16_t *x, int16_t a, int16_t b,
     memset(x, 0, 2 * sizeof(*x));
 }
 
+static unsigned char hpf_last_state[32];
+
+/* the test reads what the effects code left in the HPF state */
+void fake_hpf_last_state(unsigned char out[32])
+{
+    memcpy(out, hpf_last_state, sizeof(hpf_last_state));
+}
+
+/* only the neo library has a DRC: the symbol makes this one a neo stand-in
+ * (float biquad in the state, no coefficient pointer) */
+void audio_process_drc_create(void)
+{
+}
+
 int audio_process_hpf_process(int16_t *state, int16_t *samples, int count)
 {
     const int16_t *coefficients;
+    float b0;
 
-    /* the state carries a pointer to the coefficients (see t31_hpf_setup) */
-    memcpy(&coefficients, (unsigned char *)state + 12, sizeof(coefficients));
-    if (!coefficients)
-        abort();
+    memcpy(hpf_last_state, state, sizeof(hpf_last_state));
+    memcpy(&b0, state, sizeof(b0));
+    if (b0 == 0.0f) {
+        /* the state carries a pointer to the coefficients (see
+         * t31_hpf_setup) */
+        memcpy(&coefficients, (unsigned char *)state + 12,
+               sizeof(coefficients));
+        if (!coefficients)
+            abort();
+    }
     (void)samples;
     (void)count;
     return 0;

@@ -91,12 +91,28 @@ typedef struct {
     /* 0x50: T21/T23 eprc macroblock rate control (IMP_Encoder_SetMbRC):
      * HW_MBRC_DEFAULT (OPENIMP_EPRC_MBRC), HW_MBRC_OFF, HW_MBRC_ON */
     uint32_t mb_rc;
-    uint32_t reserved[7];       /* 0x54-0x6f: Reserved */
+    /* 0x54: T20/T21/T10 IMP_Encoder_SetChnColor2Grey: 1 = code the
+     * pictures without colour from the next IDR on */
+    uint32_t color2grey;
+    /* 0x58: T20/T10 IMP_Encoder_SetSuperFrameCfg for the OEM controller:
+     * HW_SUPERFRM_DEFAULT (OEM thresholds), _NONE, _REENCODE with the
+     * I/P thresholds in bits */
+    uint32_t super_mode;
+    uint32_t super_i_bits;
+    uint32_t super_p_bits;
+    /* 0x64: T20/T21 IMP_Encoder_SetH264TransCfg chroma_qp_index_offset
+     * (-12..12): PPS and the EFE chroma QP offset from the next IDR on */
+    int32_t chroma_qp_offset;
+    uint32_t reserved[2];       /* 0x68-0x6f: Reserved */
 } HWEncoderParams;
 
 #define HW_MBRC_DEFAULT 0u
 #define HW_MBRC_OFF     1u
 #define HW_MBRC_ON      2u
+
+#define HW_SUPERFRM_DEFAULT  0u
+#define HW_SUPERFRM_NONE     1u
+#define HW_SUPERFRM_REENCODE 2u
 
 _Static_assert(sizeof(HWEncoderParams) == 0x70, "HWEncoderParams size");
 _Static_assert(offsetof(HWEncoderParams, static_time) == 0x30 &&
@@ -200,7 +216,8 @@ int HW_Encoder_Encode_Software(HWFrameBuffer *frame, HWStreamBuffer *stream, uin
 int HW_Encoder_Encode_NV12_JPEG(HWFrameBuffer *frame,
                                 HWStreamBuffer *stream,
                                 uint32_t quality);
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T41)
 #define HW_ENCODER_JPEG_USER_TABLES 1
 /* Same with the quantizers of IMP_Encoder_SetJpegeQl: tables holds the luma
  * and then the chroma table, 64 bytes each in DQT (zigzag) order. */

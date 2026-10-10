@@ -29,6 +29,7 @@
 #include <imp/imp_audio.h>
 
 #include "audio/openimp_aec.h"
+#include "audio/openimp_ao_cache.h"
 
 #if defined(PLATFORM_T23)
 /* T23 speaks the OSS3 "AMIC" /dev/dsp ABI of ingenic-sdk audio/t23/oss3
@@ -193,6 +194,7 @@ static struct {
     int ai_alc_gain;
     int ao_volume;
     int ao_gain;
+    openimp_ao_cache ao_cache;
     /* The record thread owns T31_AI_GET_STREAM; the fields below up to
      * capture_tail_time are shared with it under capture_lock. */
     pthread_t capture_thread;
@@ -206,6 +208,7 @@ static struct {
     size_t capture_limit;
     size_t capture_frame_bytes;
     int64_t capture_tail_time;
+    int64_t frame_last_ts;      /* stamp of the last frame handed out (0: none) */
     unsigned char *frame_buffer;
     size_t frame_capacity;
     int frame_outstanding;
@@ -216,7 +219,10 @@ static struct {
     T31HpfProcess hpf_process;
     T31HpfFree hpf_free;
     int16_t hpf_state[16];
+    int16_t hpf_coefficients[5];    /* designed for IMP_AI_SetHpfCoFrequency */
+    int hpf_cutoff;                 /* IMP_AI_SetHpfCoFrequency, 0 = default */
     int hpf_enabled;
+    int effects_neo;                /* libaudioProcess-neo (has drc_create) */
     T31NsCreate ns_create;
     T31NsSetConfig ns_set_config;
     T31NsProcess ns_process;
@@ -257,14 +263,13 @@ static struct {
     } stats;
     int16_t *aec_mic;               /* stats copy of the unprocessed frame */
     size_t aec_mic_capacity;
-#if defined(PLATFORM_T23)
-    /* GET_STREAM bounce buffers: whole driver fragments, up to one frame,
-     * and the reference of the same fragments (mono, like the AI) */
+    /* GET_STREAM bounce buffers: whole driver fragments (see
+     * t31_capture_start) and the reference of the same fragments (mono,
+     * like the AI) */
     unsigned char *capture_chunk;
     unsigned char *capture_ref_chunk;
     size_t capture_chunk_capacity;
     size_t capture_chunk_bytes;
-#endif
     /* SendFrame re-blocks arbitrary frame sizes into whole driver periods */
     unsigned char *ao_period;
     size_t ao_period_capacity;
@@ -537,6 +542,10 @@ static int t31_effects_load_locked(void)
     T31_EFFECT(agc_process, "audio_process_agc_process");
     T31_EFFECT(agc_free, "audio_process_agc_free");
 #undef T31_EFFECT
+    /* the original library has no DRC; the neo's HPF takes a float biquad
+     * in the state, not libimp's coefficient pointer */
+    t31_audio.effects_neo =
+        dlsym(t31_audio.effects_library, "audio_process_drc_create") != NULL;
     return 0;
 
 failure:
@@ -703,6 +712,24 @@ static size_t t31_frame_bytes(void)
     return (size_t)t31_audio.ai_attr.numPerFrm * channels * sizeof(int16_t);
 }
 
+/* Driver fragment, for capture and playback. Both kernel ABIs copy whole
+ * fragments only and keep a request that ends in a partial one waiting for
+ * good: the T23 OSS3 driver in 20 ms units (T23_FRAGMENT_10MS_UNITS), the
+ * OSS2 driver of T31/T30/T21/T20 in 10 ms units (xb_snd_dsp.c
+ * ai_copy_to_user/ao_copy_from_user, xb47xx_i2s_v12.c
+ * SND_DSP_GET_RECORD/REPLAY_FRAGMENTSIZE). */
+static size_t t31_fragment_bytes(const IMPAudioIOAttr *attribute)
+{
+#if defined(PLATFORM_T23)
+    return t23_fragment_bytes(attribute);
+#else
+    size_t channels =
+        attribute->soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U;
+
+    return (size_t)(attribute->samplerate / 100) * channels * sizeof(int16_t);
+#endif
+}
+
 static int64_t t31_bytes_to_us(size_t bytes)
 {
     unsigned int channels;
@@ -739,16 +766,13 @@ static int t31_ref_reserve(size_t capacity)
  * consumer falls behind, whole frames are dropped from the oldest end. */
 static void *t31_capture_main(void *argument)
 {
-#if defined(PLATFORM_T23)
-    /* Up to one IMP frame per GET_STREAM, like the OEM __ai_dev_read, but
-     * always whole driver fragments; the FIFO re-blocks into frames. */
+    /* Whole driver fragments per GET_STREAM (t31_capture_start); the FIFO
+     * re-blocks them into frames. */
     unsigned char *chunk = t31_audio.capture_chunk;
     unsigned char *ref_chunk = t31_audio.capture_ref_chunk;
     const size_t chunk_size = t31_audio.capture_chunk_bytes;
+#if defined(PLATFORM_T23)
     T23AudioTimeval capture_time;
-#else
-    unsigned char chunk[T31_CAPTURE_CHUNK_BYTES];
-    unsigned char ref_chunk[T31_CAPTURE_CHUNK_BYTES];
 #endif
     int with_ref;
     T31AudioInputStream stream;
@@ -779,10 +803,10 @@ static void *t31_capture_main(void *argument)
          * route was disabled under it - capture_stop is checked below) */
         size = result == 0 ? chunk_size : 0;
 #else
-        stream.size = sizeof(chunk);
+        stream.size = (uint32_t)chunk_size;
         stream.aec = with_ref ? ref_chunk : NULL;
         result = ioctl(t31_audio.ai_fd, T31_AI_GET_STREAM, &stream);
-        size = stream.size < sizeof(chunk) ? stream.size : sizeof(chunk);
+        size = stream.size < chunk_size ? stream.size : chunk_size;
 #endif
         size -= size % align;
         pthread_mutex_lock(&t31_capture_lock);
@@ -843,13 +867,26 @@ static int t31_capture_start(void)
         depth = t31_audio.ai_attr.frmNum < T31_CAPTURE_MAX_DEPTH
                     ? (size_t)t31_audio.ai_attr.frmNum
                     : T31_CAPTURE_MAX_DEPTH;
-#if defined(PLATFORM_T23)
     {
-        size_t fragment = t23_fragment_bytes(&t31_audio.ai_attr);
-        size_t chunk = frame - frame % (fragment ? fragment : 1U);
+        /* The driver only ever copies whole fragments: a GET_STREAM size
+         * that is not a fragment multiple never completes and the capture
+         * thread hangs in the driver (OSS2: 1280 bytes at 48 kHz mono =
+         * 1 x 960 + 320).  T23 reads up to one IMP frame per call, like the
+         * OEM __ai_dev_read; the OSS2 SoCs at least 40 ms worth, so a
+         * period with several ready fragments is drained in one call.
+         * Both are rounded down to whole fragments, at least one. */
+        size_t fragment = t31_fragment_bytes(&t31_audio.ai_attr);
+#if defined(PLATFORM_T23)
+        size_t target = frame;
+#else
+        size_t target = frame > T31_CAPTURE_CHUNK_BYTES
+                            ? frame : T31_CAPTURE_CHUNK_BYTES;
+#endif
+        size_t chunk;
 
         if (!fragment)
             return -1;
+        chunk = target - target % fragment;
         if (!chunk)
             chunk = fragment;
         if (chunk > t31_audio.capture_chunk_capacity) {
@@ -866,9 +903,6 @@ static int t31_capture_start(void)
         t31_audio.capture_chunk_bytes = chunk;
         capacity = frame * depth + chunk;
     }
-#else
-    capacity = frame * depth + T31_CAPTURE_CHUNK_BYTES;
-#endif
     if (capacity > t31_audio.capture_capacity) {
         void *buffer = realloc(t31_audio.capture_buffer, capacity);
         if (!buffer)
@@ -884,6 +918,7 @@ static int t31_capture_start(void)
     t31_audio.capture_limit = frame * depth;
     t31_audio.capture_frame_bytes = frame;
     t31_audio.capture_valid = 0;
+    t31_audio.frame_last_ts = 0;
     t31_audio.capture_stop = 0;
     t31_audio.capture_exited = 0;
     t31_audio.capture_error = 0;
@@ -1113,6 +1148,15 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     /* Stamp the frame's capture end, not the time it was dequeued. */
     timestamp = t31_audio.capture_tail_time -
                 t31_bytes_to_us(t31_audio.capture_valid);
+    /* The tail time is read after each driver fragment and jitters by
+     * several ms, so two chunks could stamp a frame before its predecessor.
+     * Frames are consecutive samples: never stamp earlier than the previous
+     * frame plus its duration (the sample clock catches up with the wall
+     * clock again, so this cannot run away). */
+    if (t31_audio.frame_last_ts &&
+        timestamp < t31_audio.frame_last_ts + t31_bytes_to_us(bytes))
+        timestamp = t31_audio.frame_last_ts + t31_bytes_to_us(bytes);
+    t31_audio.frame_last_ts = timestamp;
     pthread_mutex_unlock(&t31_capture_lock);
     /* echo cancellation first, like libimp's record path; EnableAec
      * checked that frames are whole 10 ms blocks of mono samples */
@@ -1251,21 +1295,120 @@ static const int16_t t31_hpf_coefficients_8k[5] = {
     3798, -7596, 3798, 7807, -3733
 };
 
-static void t31_hpf_setup(int16_t state[16], const int16_t *coefficients)
+/* tan() for 0 <= x < pi/2 from the sine and cosine series, so libimp
+ * keeps not depending on libm. */
+static void t31_sincos(double x, double *sin_out, double *cos_out)
+{
+    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
+    int n;
+
+    for (n = 1; n < 24; n++) {
+        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
+        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
+        sine += term_s;
+        cosine += term_c;
+    }
+    *sin_out = sine;
+    *cos_out = cosine;
+}
+
+static double t31_tan(double x)
+{
+    double sine, cosine;
+
+    t31_sincos(x, &sine, &cosine);
+    return sine / cosine;
+}
+
+/* libimp Hpf_gen_filter_coefficients: 2nd-order Butterworth high pass,
+ * bilinear transform, 4096 = 1.0, same float/double steps. */
+static void t31_hpf_design(int16_t coefficients[5], int sample_rate,
+                           int cutoff)
+{
+    float k = (float)t31_tan((double)((float)cutoff / (float)sample_rate) *
+                             3.14159265358979311600);
+    double ks = (double)k * 1.41421356237309514547;
+    float k2 = k * k;
+    float denominator = (float)((double)k2 + ks + 1.0);
+    float pole = (float)((double)k2 - ks + 1.0);
+    float a1 = -((k + k) * k - 2.0f);
+    int16_t b0 = (int16_t)(int)(1.0f / denominator * 4096.0f);
+
+    coefficients[0] = b0;
+    coefficients[1] = (int16_t)(-2 * b0);
+    coefficients[2] = b0;
+    coefficients[3] = (int16_t)(int)(a1 / denominator * 4096.0f);
+    coefficients[4] = (int16_t)(int)(-pole / denominator * 4096.0f);
+}
+
+/* libaudioProcess-neo's HPF state: a float biquad over the 32 bytes. It
+ * designs its own 300 Hz / 16 kHz filter while b0 is zero; with b0 set it
+ * runs what it finds, so a cut-off asked for through
+ * Set{AI,AO}HpfCoFrequency is put there (same RBJ design, Q 0.7071, at the
+ * stream's sample rate). Beyond the original library, which takes libimp's
+ * int16 coefficients through the pointer at +12. */
+static void t31_hpf_neo_overlay(int16_t state[16], int sample_rate,
+                                int cutoff)
+{
+    double sine, cosine;
+    float w0 = 2.0f * 3.14159265358979323846f * (float)cutoff /
+               (float)sample_rate;
+    float cw, alpha;
+    float a0_inv;
+    float bq[7];
+
+    t31_sincos((double)w0, &sine, &cosine);
+    cw = (float)cosine;
+    alpha = (float)sine / (2.0f * 0.7071f);
+    a0_inv = 1.0f / (1.0f + alpha);
+
+    bq[0] = ((1.0f + cw) / 2.0f) * a0_inv;
+    bq[1] = -(1.0f + cw) * a0_inv;
+    bq[2] = bq[0];
+    bq[3] = (-2.0f * cw) * a0_inv;
+    bq[4] = (1.0f - alpha) * a0_inv;
+    bq[5] = 0.0f;
+    bq[6] = 0.0f;
+    memcpy(state, bq, sizeof(bq));
+}
+
+static void t31_hpf_setup(int16_t state[16], const int16_t *coefficients,
+                          int sample_rate, int cutoff)
 {
     memset(state, 0, 16 * sizeof(int16_t));
     t31_audio.hpf_create(state + 4, state, 0, 0, 2, 4);
-    memcpy((unsigned char *)state + 12, &coefficients, sizeof(coefficients));
+    if (t31_audio.effects_neo && cutoff > 0 && sample_rate > 0 &&
+        (int64_t)cutoff * 2 < (int64_t)sample_rate)
+        t31_hpf_neo_overlay(state, sample_rate, cutoff);
+    else
+        memcpy((unsigned char *)state + 12, &coefficients,
+               sizeof(coefficients));
 }
 
 int IMP_AI_EnableHpf(IMPAudioIOAttr *attribute)
 {
+    int cutoff;
+
     if (!t31_valid_attr(attribute) || t31_effects_load() != 0)
         return -1;
     pthread_mutex_lock(&t31_ai_fx_lock);
-    t31_hpf_setup(t31_audio.hpf_state,
-                  attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
-                                                : t31_hpf_coefficients);
+    cutoff = t31_audio.hpf_cutoff;
+    /* libimp: "HPF cut-off frequency is illegal" for a negative value or
+     * one above the sample rate */
+    if (cutoff < 0 || (unsigned int)attribute->samplerate < (unsigned int)cutoff) {
+        pthread_mutex_unlock(&t31_ai_fx_lock);
+        return -1;
+    }
+    if (cutoff)
+        t31_hpf_design(t31_audio.hpf_coefficients, attribute->samplerate,
+                       cutoff);
+    else
+        memcpy(t31_audio.hpf_coefficients,
+               attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
+                                             : t31_hpf_coefficients,
+               sizeof(t31_audio.hpf_coefficients));
+    t31_hpf_setup(t31_audio.hpf_state, t31_audio.hpf_coefficients,
+                  attribute->samplerate, cutoff);
     t31_audio.hpf_enabled = 1;
     pthread_mutex_unlock(&t31_ai_fx_lock);
     return 0;
@@ -1282,13 +1425,14 @@ int IMP_AI_DisableHpf(void)
 }
 
 /* libimp stores the cut-off for the next IMP_AI_EnableHpf and always
- * returns 0 (prudynt passes 0 to mean "default"). libaudioProcess-neo's HPF
- * designs its own fixed 300 Hz filter, so the value is only recorded. */
-static int t31_hpf_cutoff;
-
+ * returns 0 (prudynt passes 0 to mean "default"). EnableHpf designs the
+ * filter for it (libimp's Hpf_gen_filter_coefficients); libaudioProcess-neo
+ * gets it as a float biquad in the state (t31_hpf_neo_overlay). */
 int IMP_AI_SetHpfCoFrequency(int frequency)
 {
-    t31_hpf_cutoff = frequency;
+    pthread_mutex_lock(&t31_ai_fx_lock);
+    t31_audio.hpf_cutoff = frequency;
+    pthread_mutex_unlock(&t31_ai_fx_lock);
     return 0;
 }
 
@@ -1592,22 +1736,9 @@ int IMP_AO_GetPubAttr(int device, IMPAudioIOAttr *attribute)
     return 0;
 }
 
-/* Playback fragment of the driver. Both kernel ABIs copy whole fragments
- * only and keep a write that ends in a partial one waiting for good: the
- * T23 OSS3 driver in 20 ms units (T23_FRAGMENT_10MS_UNITS), the OSS2 driver
- * of T31/T30/T21/T20 in 10 ms units (xb_snd_dsp.c ao_copy_from_user,
- * xb47xx_i2s_v12.c SND_DSP_GET_REPLAY_FRAGMENTSIZE). */
-static size_t t31_ao_fragment_bytes(const IMPAudioIOAttr *attribute)
-{
-#if defined(PLATFORM_T23)
-    return t23_fragment_bytes(attribute);
-#else
-    size_t channels =
-        attribute->soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U;
-
-    return (size_t)(attribute->samplerate / 100) * channels * sizeof(int16_t);
-#endif
-}
+static int64_t t31_ao_now_ns(void);
+static unsigned t31_ao_bytes_per_sec(void);
+static int t31_ao_driver_write(void *ctx, const void *data, size_t len);
 
 int IMP_AO_Enable(int device)
 {
@@ -1618,7 +1749,7 @@ int IMP_AO_Enable(int device)
     if (t31_audio.ao_enabled)
         return 0;
     {
-        size_t fragment = t31_ao_fragment_bytes(&t31_audio.ao_attr);
+        size_t fragment = t31_fragment_bytes(&t31_audio.ao_attr);
         size_t period = (size_t)t31_audio.ao_attr.numPerFrm *
                         (t31_audio.ao_attr.soundmode ==
                                  AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
@@ -1664,6 +1795,10 @@ int IMP_AO_Disable(int device)
     if (device != 0)
         return -1;
     if (t31_audio.ao_fd >= 0) {
+        /* play what the cache still holds, it would be lost on close */
+        (void)openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                       t31_ao_bytes_per_sec(),
+                                       t31_ao_driver_write, NULL);
         if (t31_audio.ao_enabled)
 #if defined(PLATFORM_T23)
             result = ioctl(t31_audio.ao_fd, T23_AO_DISABLE_STREAM, 1);
@@ -1677,6 +1812,7 @@ int IMP_AO_Disable(int device)
     t31_audio.ao_channel_enabled = 0;
     t31_audio.ao_paused = 0;
     t31_audio.ao_period_valid = 0;
+    openimp_ao_cache_drop(&t31_audio.ao_cache);
     return result;
 }
 
@@ -1685,6 +1821,10 @@ int IMP_AO_EnableChn(int device, int channel)
     if (device != 0 || channel != 0 || !t31_audio.ao_enabled)
         return -1;
     t31_audio.ao_channel_enabled = 1;
+    /* vendor _ao_chn_enable: cache switch back to its default, filling */
+    openimp_ao_cache_reset(&t31_audio.ao_cache,
+                           t31_audio.ao_period_bytes *
+                               OPENIMP_AO_CACHE_PERIODS);
     return 0;
 }
 
@@ -1692,6 +1832,10 @@ int IMP_AO_DisableChn(int device, int channel)
 {
     if (device != 0 || channel != 0)
         return -1;
+    if (t31_audio.ao_channel_enabled && t31_audio.ao_fd >= 0)
+        (void)openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                       t31_ao_bytes_per_sec(),
+                                       t31_ao_driver_write, NULL);
     t31_audio.ao_channel_enabled = 0;
     return 0;
 }
@@ -1711,43 +1855,6 @@ static struct {
 } t31_ao_fx;
 
 static pthread_mutex_t t31_ao_fx_lock = PTHREAD_MUTEX_INITIALIZER;
-
-/* tan() for 0 <= x < pi/2 from the sine and cosine series, so libimp
- * keeps not depending on libm. */
-static double t31_tan(double x)
-{
-    double sine = x, cosine = 1.0, term_s = x, term_c = 1.0;
-    int n;
-
-    for (n = 1; n < 24; n++) {
-        term_s *= -x * x / (double)((2 * n) * (2 * n + 1));
-        term_c *= -x * x / (double)((2 * n - 1) * (2 * n));
-        sine += term_s;
-        cosine += term_c;
-    }
-    return sine / cosine;
-}
-
-/* libimp Hpf_gen_filter_coefficients: 2nd-order Butterworth high pass,
- * bilinear transform, 4096 = 1.0, same float/double steps. */
-static void t31_hpf_design(int16_t coefficients[5], int sample_rate,
-                           int cutoff)
-{
-    float k = (float)t31_tan((double)((float)cutoff / (float)sample_rate) *
-                             3.14159265358979311600);
-    double ks = (double)k * 1.41421356237309514547;
-    float k2 = k * k;
-    float denominator = (float)((double)k2 + ks + 1.0);
-    float pole = (float)((double)k2 - ks + 1.0);
-    float a1 = -((k + k) * k - 2.0f);
-    int16_t b0 = (int16_t)(int)(1.0f / denominator * 4096.0f);
-
-    coefficients[0] = b0;
-    coefficients[1] = (int16_t)(-2 * b0);
-    coefficients[2] = b0;
-    coefficients[3] = (int16_t)(int)(a1 / denominator * 4096.0f);
-    coefficients[4] = (int16_t)(int)(-pole / denominator * 4096.0f);
-}
 
 /* Called with t31_ao_fx_lock held. */
 static void t31_ao_process_effects(int16_t *samples, int count)
@@ -1782,9 +1889,46 @@ void openimp_audio_set_ao_agc_mode(int mode)
     pthread_mutex_unlock(&t31_ao_fx_lock);
 }
 
+static int64_t t31_ao_now_ns(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static unsigned t31_ao_bytes_per_sec(void)
+{
+    return (unsigned)t31_audio.ao_attr.samplerate *
+           (t31_audio.ao_attr.soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
+           (unsigned)sizeof(int16_t);
+}
+
+static int t31_ao_driver_write(void *ctx, const void *data, size_t len)
+{
+    const unsigned char *bytes = data;
+
+    (void)ctx;
+    /* one period per call (held data is a multiple of it); each blocks until
+     * the driver took the whole period (OSS3: 800 ms timeout; OSS2 returns 0
+     * and the count in stream.size, a period is taken whole) */
+    while (len) {
+        T31AudioOutputStream stream;
+        size_t take = len < t31_audio.ao_period_bytes
+                          ? len : t31_audio.ao_period_bytes;
+
+        stream.data = (void *)(uintptr_t)bytes;
+        stream.size = (uint32_t)take;
+        if (ioctl(t31_audio.ao_fd, T31_AO_SET_STREAM, &stream) != 0)
+            return -1;
+        bytes += take;
+        len -= take;
+    }
+    return 0;
+}
+
 static int t31_ao_write_period(void)
 {
-    T31AudioOutputStream stream;
     int result;
 
     pthread_mutex_lock(&t31_ao_fx_lock);
@@ -1796,11 +1940,11 @@ static int t31_ao_write_period(void)
     t31_apply_ao_volume((int16_t *)(void *)t31_audio.ao_period,
                      (int)(t31_audio.ao_period_valid / sizeof(int16_t)),
                      t31_audio.ao_volume, t31_audio.ao_muted);
-    stream.data = t31_audio.ao_period;
-    stream.size = (uint32_t)t31_audio.ao_period_valid;
-    /* blocks until the driver took the whole period (OSS3: 800 ms timeout;
-     * OSS2 returns 0 and the count in stream.size, a period is taken whole) */
-    result = ioctl(t31_audio.ao_fd, T31_AO_SET_STREAM, &stream);
+    /* cache off (default): straight to the driver */
+    result = openimp_ao_cache_submit(&t31_audio.ao_cache, t31_audio.ao_period,
+                                     t31_audio.ao_period_valid,
+                                     t31_ao_now_ns(), t31_ao_bytes_per_sec(),
+                                     t31_ao_driver_write, NULL);
     t31_audio.ao_period_valid = 0;
     return result == 0 ? 0 : -1;
 }
@@ -1893,6 +2037,7 @@ int IMP_AO_ClearChnBuf(int device, int channel)
     if (device != 0 || channel != 0 || t31_audio.ao_fd < 0)
         return -1;
     t31_audio.ao_period_valid = 0;
+    openimp_ao_cache_drop(&t31_audio.ao_cache);
     return ioctl(t31_audio.ao_fd, T31_AO_CLEAR_STREAM, 1);
 }
 
@@ -1908,6 +2053,11 @@ int IMP_AO_FlushChnBuf(int device, int channel)
         if (t31_ao_write_period() != 0)
             return -1;
     }
+    /* the vendor flush plays everything, also what the cache still holds */
+    if (openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
+                                 t31_ao_bytes_per_sec(),
+                                 t31_ao_driver_write, NULL) != 0)
+        return -1;
     return ioctl(t31_audio.ao_fd, T31_AO_SYNC_STREAM, 1);
 }
 
@@ -1939,9 +2089,15 @@ int IMP_AO_QueryChnStat(int device, int channel, IMPAudioOChnState *status)
 
 int IMP_AO_CacheSwitch(int device, int channel, int enable)
 {
-    return device == 0 && channel == 0 && (enable == 0 || enable == 1)
-               ? 0
-               : -1;
+    if (device != 0 || channel != 0)
+        return -1;
+    /* vendor: any value is stored (non-zero = on); before the AO device is
+     * enabled there is no channel state yet and the call only logs */
+    if (!t31_audio.ao_enabled || t31_audio.ao_fd < 0)
+        return 0;
+    return openimp_ao_cache_set(&t31_audio.ao_cache, enable, t31_ao_now_ns(),
+                                t31_ao_bytes_per_sec(), t31_ao_driver_write,
+                                NULL) == 0 ? 0 : -1;
 }
 
 int IMP_AO_Soft_Mute(int device, int channel)
@@ -1976,7 +2132,8 @@ int IMP_AO_EnableHpf(IMPAudioIOAttr *attribute)
                attribute->samplerate == 8000 ? t31_hpf_coefficients_8k
                                              : t31_hpf_coefficients,
                sizeof(t31_ao_fx.hpf_coefficients));
-    t31_hpf_setup(t31_ao_fx.hpf_state, t31_ao_fx.hpf_coefficients);
+    t31_hpf_setup(t31_ao_fx.hpf_state, t31_ao_fx.hpf_coefficients,
+                  attribute->samplerate, cutoff);
     t31_ao_fx.sample_rate = attribute->samplerate;
     t31_ao_fx.hpf_enabled = 1;
     pthread_mutex_unlock(&t31_ao_fx_lock);

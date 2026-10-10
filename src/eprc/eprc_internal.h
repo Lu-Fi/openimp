@@ -61,4 +61,13 @@ static inline double eprc_pow2i(int32_t k)
     return pow(2.0, (double)k);
 }
 
+/* The vendor multiplies in 32 bits and lets the product wrap (MIPS mul);
+ * a random-vector picture reaches |product| > 2^31 in the picture-size
+ * control. Wrap explicitly so the result stays the vendor's without
+ * signed-overflow UB. */
+static inline int32_t eprc_mul32(int32_t a, int32_t b)
+{
+    return (int32_t)((uint32_t)a * (uint32_t)b);
+}
+
 #endif

@@ -10,8 +10,9 @@
  * own header (DQT, SOF0, DHT, SOS), so a header table that disagrees with
  * the tables loaded into the core shows up as a broken picture.
  *
- * Addresses travel in 32-bit fields: the fakes hand out MAP_32BIT memory,
- * and the binary is linked without PIE.
+ * Addresses travel in 32-bit fields: the fakes hand out memory from one
+ * fixed low window (tests/fake_rmem.h), and the binary is linked without
+ * PIE.
  */
 
 #define _GNU_SOURCE
@@ -29,6 +30,7 @@
 #include <imp/imp_common.h>
 
 #include "dma_alloc.h"
+#include "../fake_rmem.h"
 #include "t30/helix_jpeg.h"
 
 #define FAKE_FD 78
@@ -104,11 +106,7 @@ static unsigned int bursts_dropped __attribute__((unused)); /* bytes of
 
 static void *fake_map(uint32_t size)
 {
-    void *mapping = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-
-    assert(mapping != MAP_FAILED);
-    return mapping;
+    return fake_rmem_map(size);
 }
 
 static int fake_alloc(IMPDMABufferInfo *info, int size)
@@ -149,7 +147,7 @@ int DMA_FreePhys(uint32_t phys_addr)
 
     for (i = 0; i < 16u; i++)
         if ((uint32_t)(uintptr_t)allocations[i].mapping == phys_addr) {
-            munmap(allocations[i].mapping, allocations[i].size + (64u << 10));
+            fake_rmem_unmap(allocations[i].mapping, allocations[i].size + (64u << 10));
             memset(&allocations[i], 0, sizeof(allocations[i]));
             live_allocations--;
             return 0;
@@ -1022,7 +1020,7 @@ static void encode_and_check(uint32_t width, uint32_t height,
         }
     }
     free((void *)(uintptr_t)stream.virt_addr);
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 static void test_encode(void)
@@ -1111,7 +1109,7 @@ static void test_framesource_tail(void)
 #endif
     check_picture(&stream, 1920u, 1080u, 30.0);
     free((void *)(uintptr_t)stream.virt_addr);
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 #if defined(HELIX_STRIPES)
@@ -1187,7 +1185,7 @@ static void test_stripes(void)
     /* T20/T30: the 1 MiB buffer, 2 rows per job */
     encode_1080p(pixels, size, 34u, 33u);
 #endif
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 #endif
 
@@ -1289,7 +1287,7 @@ static void test_t23_shared_area(void)
     memset(&t23_area, 0, sizeof(t23_area));
     assert(live_allocations == before);
     OpenIMP_HelixJpeg_Shutdown();
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 /* A job that reached JPGC_MAX_BS completes with a truncated bitstream and
@@ -1342,7 +1340,7 @@ static void test_limit_retry(void)
     }
     OpenIMP_HelixJpeg_Shutdown();
     unsetenv("OPENIMP_HELIX_JPEG_BS_KB");
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 #endif
 
@@ -1376,7 +1374,7 @@ static void test_rmem_budget(void)
     assert(live_allocations == before);
     rmem_stats_on = 0;
     free((void *)(uintptr_t)stream.virt_addr);
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 static void test_failures(void)
@@ -1454,7 +1452,7 @@ static void test_failures(void)
     assert(releases == releases0 + 1u && live_allocations == KEPT_BUFFERS);
 #endif
     fail_runs = 0;
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 /* OPENIMP_HELIX_JPEG_PROBE_MAX_BS_KB: per-job probe buffer with the limit
@@ -1487,7 +1485,7 @@ static void test_probe(void)
     OpenIMP_HelixJpeg_Shutdown();
     assert(live_allocations < before || before == KEPT_BUFFERS);
     unsetenv("OPENIMP_HELIX_JPEG_PROBE_MAX_BS_KB");
-    munmap(pixels, size + FRAME_SLACK);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
 }
 
 #if defined(HELIX_JPEG_TEST_REFERENCE)

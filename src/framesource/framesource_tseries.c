@@ -51,6 +51,8 @@
 #include "kernel_interface.h"
 #include "vbm_dq_step.h"
 #include "imp_log_int.h"
+#include "video_drop.h"
+#include "vbm_delay.h"
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_persist.h"
 #endif
@@ -750,6 +752,8 @@ typedef struct FsChnCtx {
     int         source_chn;
     int         frame_depth;
     IMPFSChnFifoAttr fifo;
+    int         max_delay;  /* SetMaxDelay / SetChnFifoAttr, under g_fs_lock */
+    int         delay;      /* SetDelay / SetChnFifoAttr, under g_fs_lock */
     IMPFSChnAttr attr;      /* cached copy used by SnapFrame/GetChnAttr */
     int         created;
     int         running;
@@ -1172,6 +1176,32 @@ static void *frame_pooling_thread(void *arg)
 #if defined(PLATFORM_T31)
                     openimp_vbm_dq_step[chn] = VBM_DQ_STEP_NONE;
 #endif
+#if defined(PLATFORM_T20)
+                    /* tx-isp-t20 reports the fd readable and sleeps in
+                     * DQBUF, O_NONBLOCK or not, while it holds no buffer.
+                     * When a reader stops with every buffer parked in the
+                     * ready queue (and the delay FIFO), this thread slept
+                     * there for good: the idle recycle never ran, the
+                     * channel delivered nothing more (an IVS group bound
+                     * to it got no result after the FS channel had been
+                     * pulled).  Without a buffer in the driver, hand idle
+                     * frames back first and dequeue only after that. */
+                    if (VBMBuffersInDriver(chn) == 0) {
+                        if (pthread_mutex_trylock(&g_fs_lock) == 0) {
+                            if (FS_FLAG_LOAD(ctx->running) &&
+                                fs_chan_get_state(chn) == 2) {
+                                FS_STEP(chn, FS_STEP_IDLE_RECYCLE);
+                                VBMRecycleIdleFrames(chn);
+                            }
+                            pthread_mutex_unlock(&g_fs_lock);
+                        }
+                        if (VBMBuffersInDriver(chn) == 0) {
+                            FS_STEP(chn, FS_STEP_DQ_EMPTY_SLEEP);
+                            usleep(5000);
+                            break;
+                        }
+                    }
+#endif
                     FS_STEP(chn, FS_STEP_DQBUF);
                     dq_ret = VBMKernelDequeue(chn, ctx->fd, &frame);
                     fs_trace("libimp/FS: pooling dequeue ch=%d fd=%d ret=%d frame=%p\n",
@@ -1190,6 +1220,13 @@ static void *frame_pooling_thread(void *arg)
                         if (n <= 5u || n % 100u == 0u)
                             IMP_LOG_ERR("Framesource", "chn%d: DQBUF: stream not running (driver stopped it?) (#%u)",
                                         chn, n);
+                    }
+                    if (dq_ret == VBM_DQ_HELD) {
+                        /* a frame went into the delay FIFO: keep draining */
+                        no_frame_cycles = 0;
+                        drained++;
+                        openimp_video_drop_note_frame();
+                        continue;
                     }
                     if (dq_ret != 0 || frame == NULL) {
                         /* EAGAIN after at least one frame is the normal end
@@ -1216,6 +1253,7 @@ static void *frame_pooling_thread(void *arg)
                 }
                 no_frame_cycles = 0;
                 drained++;
+                openimp_video_drop_note_frame();
 
                 m = g_modules[0][chn];
                 if (m != NULL) {
@@ -1247,6 +1285,7 @@ static void *frame_pooling_thread(void *arg)
             }
             continue;
         }
+        openimp_video_drop_note_frame();
 
         m = g_modules[0][chn];
         if (m != NULL) {
@@ -1269,6 +1308,19 @@ static void *frame_pooling_thread(void *arg)
     FS_STEP(chn, FS_STEP_EXIT);
     FS_FLAG_STORE(g_fs_thread_exited[chn], 1);
     return NULL;
+}
+
+/* IMP_ISP_Tuning_SetVideoDrop (video_drop.h): every enabled channel has a
+ * capture thread that dequeues each frame, so frames are expected while
+ * one runs. */
+int openimp_fs_video_demand(void)
+{
+    int chn;
+
+    for (chn = 0; chn < FS_MAX_CHANNELS; chn++)
+        if (fs_chan_get_state(chn) == 2 && FS_FLAG_LOAD(g_fs_ctx[chn].running))
+            return 1;
+    return 0;
 }
 
 /* ---------------------------------------------------------------------
@@ -1535,6 +1587,7 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
         if (depth <= 0) {
             int s6;
             int released = 0;
+            int lists;
 
             pthread_mutex_lock(chan_lock);
             s6 = *(int32_t *)(chan + 0x1cc);
@@ -1544,14 +1597,24 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             }
 
             *(int32_t *)(chan + 0x1cc) = 0;
+            /* OpenIMP keeps the depth in the VBM pool and never allocates
+             * libimp's node lists: with none there is nothing to count, and
+             * the check below made every SetFrameDepth(chn, 0) fail and
+             * leave frame_depth set (EnableChn then sized the pool for it). */
+            lists = *(void **)(chan + 0x220) != NULL ||
+                    *(void **)(chan + 0x224) != NULL ||
+                    *(void **)(chan + 0x228) != NULL;
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x220), &released);
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x224), &released);
             fs_release_depth_list((int32_t *)(chan + 0x1d0),
                                   *(void **)(chan + 0x228), &released);
+            *(void **)(chan + 0x220) = NULL;
+            *(void **)(chan + 0x224) = NULL;
+            *(void **)(chan + 0x228) = NULL;
 
-            if (released != s6) {
+            if (lists && released != s6) {
                 imp_log_fun(6, IMP_Log_Get_Option(), 2, "Framesource",
                     "/home/user/git/proj/sdk-lv3/src/imp/framesource/framesource_tseries.c",
                     0x5a7, tag,
@@ -1579,11 +1642,16 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
         /* The fd belongs to Enable/DisableChn: check the state and use the
          * fd under g_fs_lock, or the ioctl can land on a closed (or already
          * reused) descriptor. */
+#if !defined(PLATFORM_T20)
         pthread_mutex_lock(&g_fs_lock);
         if (fs_chan_get_state(chnNum) == 2 && g_fs_ctx[chnNum].fd >= 0) {
             fs_set_depth(g_fs_ctx[chnNum].fd, depth);
         }
         pthread_mutex_unlock(&g_fs_lock);
+#endif
+        /* T20: 0x800456c5 is VIDIOC_DEFAULT_CMD_SET_BANKS (the DMA bank
+         * count of the next STREAMON), not a frame depth; libimp 3.12.0's
+         * SetFrameDepth issues no ioctl. */
         return 0;
     }
 }
@@ -1673,6 +1741,10 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
         /* No device yet. Only here: a CreateChn on an enabled channel must
          * not drop the fd DisableChn has to stop and close. */
         g_fs_ctx[chnNum].fd = -1;
+        /* libimp CreateChn: no delay FIFO */
+        g_fs_ctx[chnNum].max_delay = 0;
+        g_fs_ctx[chnNum].delay = 0;
+        memset(&g_fs_ctx[chnNum].fifo, 0, sizeof(g_fs_ctx[chnNum].fifo));
 
         IMP_FrameSource_SetFrameDepth(chnNum, 0);
         IMP_FrameSource_SetFrameDepthCopyType(chnNum, 0);
@@ -1733,7 +1805,14 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
+/* Software 90/270 rotation of a FrameSource channel: T31 (vendor
+ * SetChnRotate) and the T20/T21 userspace (T10, T20, T21; OpenIMP only,
+ * the vendor T20/T21 libimp has no rotation). */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T21)
+#define FS_SW_ROTATE 1
+#endif
+
+#if defined(FS_SW_ROTATE)
 static void fs_rotate_release(int chn);
 #endif
 
@@ -1773,44 +1852,115 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     }
 
     fs_chan_set_state(chnNum, 0);
+    VBMReleaseParked(chnNum);
     *(int32_t *)((char *)gFrameSource + 0x14) -= 1;
     g_fs_ctx[chnNum].created = 0;
     FS_FLAG_STORE(g_fs_ctx[chnNum].running, 0);
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
     fs_rotate_release(chnNum);
 #endif
     pthread_mutex_unlock(&g_fs_lock);
     return 0;
 }
 
+/*
+ * Delay FIFO (src/vbm_delay.h).  libimp (T31 1.1.6): SetMaxDelay between
+ * CreateChn and EnableChn, 0..100 frames; EnableChn then makes the pool
+ * nrVBs + maxdelay buffers and the capture holds the newest `delay`
+ * frames before the channel's readers get them; SetDelay (0..maxdelay,
+ * also while running) and GetTimedFrame use it.  OpenIMP's VBM pool has
+ * at most 32 buffers, so nrVBs + maxdelay must fit (checked at EnableChn).
+ * The default (0) changes nothing.
+ */
+#define FS_MAX_DELAY_LIBIMP 100
+#define FS_MAX_DELAY_VBM    (VBM_DELAY_MAX_FRAMES - 1)
+
 int IMP_FrameSource_SetMaxDelay(int chnNum, int max_delay)
 {
     if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
-    (void)max_delay;
+    if (max_delay < 0 || max_delay > FS_MAX_DELAY_LIBIMP) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "SetMaxDelay(%d): %d out of 0..%d", chnNum, max_delay,
+                        FS_MAX_DELAY_LIBIMP);
+        return -1;
+    }
+    if (max_delay > FS_MAX_DELAY_VBM) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "SetMaxDelay(%d): %d frames, OpenIMP holds at most %d",
+                        chnNum, max_delay, FS_MAX_DELAY_VBM);
+        return -1;
+    }
+    pthread_mutex_lock(&g_fs_lock);
+    if (fs_chan_get_state(chnNum) != 1) {
+        pthread_mutex_unlock(&g_fs_lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "SetMaxDelay(%d): only between CreateChn and EnableChn",
+                        chnNum);
+        return -1;
+    }
+    g_fs_ctx[chnNum].max_delay = max_delay;
+    if (g_fs_ctx[chnNum].delay > max_delay)
+        g_fs_ctx[chnNum].delay = max_delay;
+    pthread_mutex_unlock(&g_fs_lock);
     return 0;
 }
 
 int IMP_FrameSource_GetMaxDelay(int chnNum, int *max_delay)
 {
     if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || !max_delay) return -1;
-    *max_delay = 0;
+    pthread_mutex_lock(&g_fs_lock);
+    if (fs_chan_get_state(chnNum) == 0) {
+        pthread_mutex_unlock(&g_fs_lock);
+        return -1;
+    }
+    *max_delay = g_fs_ctx[chnNum].max_delay;
+    pthread_mutex_unlock(&g_fs_lock);
     return 0;
 }
 
 int IMP_FrameSource_SetDelay(int chnNum, int delay)
 {
+    int state;
+
     if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
-    (void)delay;
+    if (delay < 0 || delay > FS_MAX_DELAY_LIBIMP) return -1;
+    pthread_mutex_lock(&g_fs_lock);
+    state = fs_chan_get_state(chnNum);
+    if (state == 0 || delay > g_fs_ctx[chnNum].max_delay) {
+        pthread_mutex_unlock(&g_fs_lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "SetDelay(%d): %d frames needs a created channel and "
+                        "SetMaxDelay >= it (max %d)", chnNum, delay,
+                        g_fs_ctx[chnNum].max_delay);
+        return -1;
+    }
+    if (state == 2 && g_fs_ctx[chnNum].max_delay > 0 &&
+        VBMDelaySetDelay(chnNum, delay) != 0) {
+        pthread_mutex_unlock(&g_fs_lock);
+        return -1;
+    }
+    g_fs_ctx[chnNum].delay = delay;
+    pthread_mutex_unlock(&g_fs_lock);
     return 0;
 }
 
 int IMP_FrameSource_GetDelay(int chnNum, int *delay)
 {
     if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || !delay) return -1;
-    *delay = 0;
+    pthread_mutex_lock(&g_fs_lock);
+    if (fs_chan_get_state(chnNum) == 0) {
+        pthread_mutex_unlock(&g_fs_lock);
+        return -1;
+    }
+    *delay = g_fs_ctx[chnNum].delay;
+    pthread_mutex_unlock(&g_fs_lock);
     return 0;
 }
 
+/* libimp: SetMaxDelay(maxdepth), then delay = maxdepth and the type are
+ * stored.  FIFO_DATA_PRIORITY (readers get each frame at once while it is
+ * also kept for GetTimedFrame) needs shared capture buffers OpenIMP does
+ * not have: refused when it would take effect (maxdepth > 0). */
 int IMP_FrameSource_SetChnFifoAttr(int chnNum, IMPFSChnFifoAttr *attr)
 {
     int state;
@@ -1818,15 +1968,37 @@ int IMP_FrameSource_SetChnFifoAttr(int chnNum, IMPFSChnFifoAttr *attr)
     if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || attr == NULL) return -1;
     pthread_mutex_lock(&g_fs_lock);
     state = fs_chan_get_state(chnNum);
-    if (state != 1 && state != 2) {
-        pthread_mutex_unlock(&g_fs_lock);
+    pthread_mutex_unlock(&g_fs_lock);
+    fs_trace("libimp/FS: SetChnFifoAttr ch=%d state=%d maxdepth=%d type=%d\n",
+             chnNum, state, attr->maxdepth, (int)attr->type);
+    if (state != 1 && state != 2)
+        return -1;
+    if (attr->maxdepth > 0 && attr->type != FIFO_CACHE_PRIORITY) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "SetChnFifoAttr(%d): only FIFO_CACHE_PRIORITY is "
+                        "supported (type %d)", chnNum, (int)attr->type);
         return -1;
     }
+    /* No FIFO asked for (prudynt and raptor set maxdepth 0): nothing to
+     * change, at any state, as before. */
+    if (attr->maxdepth <= 0) {
+        if (attr->maxdepth < 0)
+            return -1;
+        pthread_mutex_lock(&g_fs_lock);
+        if (state == 1) {
+            g_fs_ctx[chnNum].max_delay = 0;
+            g_fs_ctx[chnNum].delay = 0;
+        }
+        g_fs_ctx[chnNum].fifo = *attr;
+        pthread_mutex_unlock(&g_fs_lock);
+        return 0;
+    }
+    if (IMP_FrameSource_SetMaxDelay(chnNum, attr->maxdepth) != 0)
+        return -1;
+    pthread_mutex_lock(&g_fs_lock);
+    g_fs_ctx[chnNum].delay = g_fs_ctx[chnNum].max_delay;
     g_fs_ctx[chnNum].fifo = *attr;
     pthread_mutex_unlock(&g_fs_lock);
-    fs_trace("libimp/FS: SetChnFifoAttr ch=%d state=%d maxdepth=%d depth=%d\n",
-             chnNum, state, attr->maxdepth, attr->depth);
-    IMP_FrameSource_SetMaxDelay(chnNum, attr->maxdepth);
     return 0;
 }
 
@@ -1940,6 +2112,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
     int requested_bufcnt;
     int bufcnt;
     int vbm_count;
+    int delay_max;
     int queued_ok;
     int initial_queued_ok;
     int frame_depth;
@@ -2036,6 +2209,19 @@ int IMP_FrameSource_EnableChn(int chnNum)
      * next object (the encoder settings block).
      */
     if (vbm_count < 1) vbm_count = 1;
+    /* Delay FIFO: libimp adds maxdelay buffers for the held frames. Only
+     * with SetMaxDelay > 0, so the pool shape above is unchanged without. */
+    delay_max = ctx->max_delay;
+    if (delay_max > 0 && vbm_count + delay_max > VBM_DELAY_MAX_FRAMES) {
+        fs_close_chn_fd(chnNum, ctx);
+        pthread_mutex_unlock(&g_fs_lock);
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "EnableChn(%d): nrVBs %d + maxdelay %d exceed %d buffers",
+                        chnNum, vbm_count, delay_max, VBM_DELAY_MAX_FRAMES);
+        return -1;
+    }
+    if (delay_max > 0)
+        vbm_count += delay_max;
     memcpy(vbm_fmt + 0x34, &vbm_count, sizeof(int));
 
     if (VBMCreatePool(chnNum, vbm_fmt, g_fs_vbm_ops, gFrameSource) < 0) {
@@ -2046,7 +2232,27 @@ int IMP_FrameSource_EnableChn(int chnNum)
         return -1;
     }
 
+    if (VBMDelayConfigure(chnNum, delay_max > 0 ? delay_max : 0,
+                          delay_max > 0 ? ctx->delay : 0) != 0) {
+        VBMDestroyPool(chnNum);
+        fs_close_chn_fd(chnNum, ctx);
+        pthread_mutex_unlock(&g_fs_lock);
+        return -1;
+    }
+
+#if defined(PLATFORM_T20)
+    /* tx-isp-t20 takes REQBUFS' count as the number of DMA banks it cycles
+     * through (vdev->reqbufs -> chan->usingbanks at STREAMON), and the bank
+     * ring stalls on the first bank without a buffer.  VBMFillPool queues
+     * exactly vbm_count buffers, so asking for more (nrVBs + frame depth)
+     * left banks that never got one: the channel delivered nrVBs frames and
+     * then nothing (GetFrame -1 for every app that calls SetFrameDepth;
+     * timps binds the encoder and never sets a depth, so it was unaffected).
+     * The frame depth is a userspace queue in libimp, not driver buffers. */
+    requested_bufcnt = vbm_count;
+#else
     requested_bufcnt = vbm_count + (frame_depth > 0 ? frame_depth : 0);
+#endif
     bufcnt = fs_set_buffer_count(ctx->fd, requested_bufcnt);
     if (bufcnt < 0) {
         fs_trace("libimp/FS: enable set-bufcnt-fail ch=%d req=%d\n", chnNum, requested_bufcnt);
@@ -2064,7 +2270,29 @@ int IMP_FrameSource_EnableChn(int chnNum)
     /* T21 folds the bank-count event into REQBUFS and has no 0x800456c5
      * command.  Later frame-channel ABIs issue the extra bank/depth ioctl.
      * Use nrVBs because it matches the pool shape configured above. */
-#if defined(PLATFORM_T21) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T20)
+    /* libimp 3.12.0 (T20) EnableChn: REQBUFS(nrVBs + maxdelay), then with
+     * a delay FIFO (maxdelay > 0) SET_BANKS(nrVBs).  The driver cycles
+     * through REQBUFS-many DMA banks and stops on a bank without a buffer
+     * until that bank gets one back; the FIFO keeps `delay` buffers until
+     * the next frame arrives, so with every buffer a bank the channel
+     * stalled for good after maxdelay + 1 frames. */
+    if (delay_max > 0) {
+        int banks = ctx->attr.nrVBs < 1 ? 1 : ctx->attr.nrVBs;
+
+        if (fs_set_depth(ctx->fd, banks) < 0) {
+            IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                            "EnableChn(%d): cannot set the bank count %d",
+                            chnNum, banks);
+            VBMDestroyPool(chnNum);
+            fs_close_chn_fd(chnNum, ctx);
+            pthread_mutex_unlock(&g_fs_lock);
+            return -1;
+        }
+    }
+    fs_trace("libimp/FS: enable banks ch=%d fd=%d buffers=%d delay=%d\n",
+             chnNum, ctx->fd, vbm_count, delay_max);
+#elif defined(PLATFORM_T21)
     fs_trace("libimp/FS: enable set-banks-via-reqbufs ch=%d fd=%d banks=%d depth=%d\n",
              chnNum, ctx->fd, vbm_count, frame_depth);
 #else
@@ -2446,11 +2674,13 @@ int IMP_FrameSource_DisableChn(int chnNum)
     fs_stop_worker(chnNum, ctx);
 #endif
     VBMFlushFrame(chnNum);
-    /* Close before the pool memory goes back to the allocator: the ISP
-     * driver drops the buffer addresses still queued in its hardware FIFO
-     * on release, and freed pool pages are handed out again. */
+    /* Close before the pool memory goes back to the allocator: freed pool
+     * pages are handed out again.  The open T23 driver waits at STREAMOFF
+     * until the MSCA consumed the queued addresses (stock drain wait), but
+     * keeps the output enabled while the input runs; the pool is parked
+     * (T21/T23, see vbm_parked in kernel_interface.c), not freed. */
     fs_close_chn_fd(chnNum, ctx);
-    VBMDestroyPool(chnNum);
+    VBMDestroyPoolParked(chnNum);
 
     fs_chan_set_state(chnNum, 1);
     pthread_mutex_unlock(&g_fs_lock);
@@ -2470,6 +2700,20 @@ int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
     return 0;
 }
 
+/* libimp 3.12.0 (T20), 1.0.33 (T21), 1.1.6 (T31) and 1.3.0 (T23) wait up to 2 s for a
+ * frame (headers: "default timeout 2s"; pthread_cond_timedwait on the depth
+ * list).  The ready queue
+ * here is filled by the capture thread, which hands frames back to the
+ * driver while nobody pulled for VBM_PULL_IDLE_MS, so the first GetFrame
+ * after a pause finds it empty: a non-blocking GetFrame failed at once for
+ * every caller that does not retry.  Polled in 5 ms steps (T20 has no
+ * frame-ready event); every attempt also keeps the pull marked active.
+ * The encoder pulls with VBMGetFrame (T31 too) and keeps its own timeout. */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || \
+    defined(PLATFORM_T31)
+#define FS_GETFRAME_TIMEOUT_MS 2000u
+#endif
+
 int IMP_FrameSource_GetFrame(int chnNum, void **frame)
 {
     if (frame == NULL || chnNum < 0 || chnNum >= FS_MAX_CHANNELS) {
@@ -2478,18 +2722,65 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
                         chnNum, (void *)frame);
         return -1;
     }
+#if defined(FS_GETFRAME_TIMEOUT_MS)
+    {
+        uint32_t start = fs_now_ms();
+
+        for (;;) {
+            if (VBMGetFrame(chnNum, frame) == 0 && *frame != NULL)
+                return 0;
+            if (fs_chan_get_state(chnNum) != 2 ||
+                !FS_FLAG_LOAD(g_fs_ctx[chnNum].running) ||
+                fs_now_ms() - start >= FS_GETFRAME_TIMEOUT_MS)
+                break;
+            usleep(5000);
+        }
+        *frame = NULL;
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "GetFrame(%d): no frame within %u ms", chnNum,
+                        FS_GETFRAME_TIMEOUT_MS);
+        return -1;
+    }
+#else
     return VBMGetFrame(chnNum, frame);
+#endif
 }
+
+/* libimp: the frame of the delay FIFO nearest to framets->ts (minus and
+ * plus are not used) is copied into framedata (NV12/NV21 packed, luma then
+ * chroma) and its record into frame.  -1 without a FIFO (SetMaxDelay 0 or
+ * channel not enabled) or when ts is older than every held frame; with
+ * block it waits up to 5 s for a frame at or after ts, otherwise returns
+ * -2 at once. */
+/* The SDK's IMPFrameInfo copied out (T31 1.1.6: 48 bytes; the T21/T30
+ * and T23 records of imp_common.h); the VBM frame record starts with it. */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#define FS_FRAME_INFO_SIZE sizeof(IMPFrameInfo)
+#else
+#define FS_FRAME_INFO_SIZE 0x30u
+#endif
 
 int IMP_FrameSource_GetTimedFrame(int chnNum, void *framets, int block,
                                   void *framedata, void *frame)
 {
-    (void)framets; (void)block; (void)framedata; (void)frame;
-    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
-    /* BLOCKED: stock timed-frame path pulls from the FIFO queue held on
-     * the channel (+0x294) with a gettimeofday-based deadline; openimp
-     * exposes VBMGetFrame which is non-blocking. */
-    return -1;
+    struct {
+        uint64_t ts;
+        uint64_t minus;
+        uint64_t plus;
+    } target;                               /* IMPFrameTimestamp */
+
+    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || framets == NULL)
+        return -1;
+    memcpy(&target, framets, sizeof(target));
+    if (fs_chan_get_state(chnNum) != 2 ||
+        __atomic_load_n(&g_fs_ctx[chnNum].max_delay, __ATOMIC_RELAXED) <= 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "GetTimedFrame(%d): no delay FIFO (SetMaxDelay before "
+                        "EnableChn)", chnNum);
+        return -1;
+    }
+    return VBMDelayGetTimedFrame(chnNum, (int64_t)target.ts, block, framedata,
+                                 frame, frame ? FS_FRAME_INFO_SIZE : 0u);
 }
 
 int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
@@ -2530,10 +2821,16 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
         return -1;
     }
 
+#if defined(FS_GETFRAME_TIMEOUT_MS)
+    /* the same 2 s wait as GetFrame (25 ms missed the first frame after
+     * an idle pause, see IMP_FrameSource_GetFrame) */
+    if (IMP_FrameSource_GetFrame(chnNum, &frame) != 0) frame = NULL;
+#else
     for (int i = 0; i < 5; i++) {
         if (VBMGetFrame(chnNum, &frame) == 0 && frame != NULL) break;
         usleep(5000);
     }
+#endif
     if (frame == NULL) return -1;
 
     if (VBMFrame_GetBuffer(frame, &src, &src_size) < 0 || src == NULL) {
@@ -2557,7 +2854,7 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
     memcpy(out_buffer, src, expected);
     info->width = width;
     info->height = height;
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
     /* A rotated channel (SetChnRotate) delivers the rotated size. */
     memcpy(&info->width, (const uint8_t *)frame + 0x08, sizeof(info->width));
     memcpy(&info->height, (const uint8_t *)frame + 0x0c, sizeof(info->height));
@@ -2585,7 +2882,7 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
+#if defined(FS_SW_ROTATE)
 /* ---------------------------------------------------------------------
  * Channel rotation (HLIL 0xa3a90 IMP_FrameSource_SetChnRotate, rotate step
  * of on_framesource_group_data_update at 0x9aa5c; docs/T31_ROTATE.md).
@@ -2600,6 +2897,14 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
  * buffer. The capture record keeps the landscape size in the vendor
  * library; here it is updated to the rotated size so consumers that read
  * the record (JPEG copy, OSD, IVS) see the geometry they get.
+ *
+ * T10/T20/T21 (OpenIMP extension, docs/T31_ROTATE.md "T10/T20/T21"): the
+ * same path. The Helix/NVPU encoder takes the picture size from the frame
+ * record and reads NV12 with pitch = width and the chroma plane after
+ * ALIGN16(height) luma lines, which is the nv12_rotate layout when both
+ * sides are multiples of 16, so SetChnRotate asks for that. The CPU is
+ * slower than T31's, so the picture size is capped (FS_ROT_T21_MAX_PIXELS,
+ * a sub stream); a main stream stays unrotated and SetChnRotate fails.
  * ------------------------------------------------------------------- */
 #include "framesource/nv12_rotate.h"
 #include "dma_alloc.h"
@@ -2609,7 +2914,9 @@ int IMP_FrameSource_DisableChnUndistort(int chnNum)
 #define FS_FRAME_PIXFMT      0x10
 #define FS_FRAME_SIZE        0x14
 #define FS_FRAME_VIRT        0x1c
+#if defined(PLATFORM_T31)
 #define FS_FRAME_ROTATE_FLAG 0x28   /* IMPFrameInfo.rotate_osdflag */
+#endif
 #define FS_FOURCC_NV12       0x3231564eu
 #define FS_FOURCC_NV21       0x3132564eu
 
@@ -2748,7 +3055,11 @@ void openimp_fs_rotate_capture(int chn, void *frame)
 
     memcpy(f + FS_FRAME_WIDTH, &ow, 4);
     memcpy(f + FS_FRAME_HEIGHT, &oh, 4);
+#if defined(FS_FRAME_ROTATE_FLAG)
     memcpy(f + FS_FRAME_ROTATE_FLAG, &flag, 4);
+#else
+    (void)flag;   /* the T21 record has no rotate_osdflag */
+#endif
 
     if (t0) {
         uint32_t dt = (uint32_t)(fs_rotate_now_us() - t0);
@@ -2772,6 +3083,29 @@ void openimp_fs_rotate_capture(int chn, void *frame)
  * called before the channel is created, with the encoder channel set to
  * the rotated size. Here it also takes effect on a running channel from
  * its next frame. */
+#if defined(PLATFORM_T21)
+/* Largest rotated picture on T10/T20/T21: 704x576 (D1). T31 rotates
+ * 1280x704 in ~9 ms on 1.5 GHz; the ~1 GHz T10/T20/T21 cores with slower
+ * DDR need about 15-20 ms per megapixel, so a 720p main stream would cost
+ * ~25 % CPU at 15 fps and 1080p ~50-60 %. OPENIMP_FS_ROTATE_MAX_PIXELS
+ * overrides the cap (tests only). */
+#define FS_ROT_T21_MAX_PIXELS (704u * 576u)
+
+static uint32_t fs_rotate_max_pixels(void)
+{
+    static uint32_t max_pixels;
+
+    if (!max_pixels) {
+        const char *e = getenv("OPENIMP_FS_ROTATE_MAX_PIXELS");
+        unsigned long v = e && e[0] ? strtoul(e, NULL, 0) : 0;
+
+        max_pixels = v && v <= 4096ul * 4096ul ? (uint32_t)v
+                                               : FS_ROT_T21_MAX_PIXELS;
+    }
+    return max_pixels;
+}
+#endif
+
 int IMP_FrameSource_SetChnRotate(int chnNum, int rotTo90, int width, int height)
 {
     FsRotate *r;
@@ -2792,6 +3126,21 @@ int IMP_FrameSource_SetChnRotate(int chnNum, int rotTo90, int width, int height)
                 chnNum, mode, width, height);
         return -1;
     }
+#if defined(PLATFORM_T21)
+    if ((width | height) & 15) {
+        fprintf(stderr, "[FS] SetChnRotate ch%d: %dx%d not rotated: width "
+                "and height must be multiples of 16 on this SoC\n",
+                chnNum, width, height);
+        return -1;
+    }
+    if ((uint32_t)width * (uint32_t)height > fs_rotate_max_pixels()) {
+        fprintf(stderr, "[FS] SetChnRotate ch%d: %dx%d not rotated: software "
+                "rotation is limited to %u pixels (sub stream) on this SoC "
+                "for CPU load; the stream stays unrotated\n",
+                chnNum, width, height, fs_rotate_max_pixels());
+        return -1;
+    }
+#endif
     __atomic_store_n(&r->cfg, FS_ROT_CFG(mode, width, height),
                      __ATOMIC_RELEASE);
     return 0;

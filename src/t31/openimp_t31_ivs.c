@@ -8,7 +8,7 @@
  * IMPFrameInfo; the OEM T20 3.12.0 libimp exports the same IMP_IVS_* and
  * move / base-move entry points with that parameter layout.
  * PLATFORM_T23 builds this file for T23:
- *   - one IVS group (0), up to 64 channels, each with its own processing
+ *   - two IVS groups (0, 1; every libimp checks group < 2), up to 64 channels, each with its own processing
  *     thread and three semaphores (process start = 0, process end = 1,
  *     result = 0);
  *   - every frame of the FrameSource channel bound to the group reaches
@@ -56,8 +56,10 @@
 #include "openimp_ivs_move_v2.h"
 #include "imp/openimp_ivs_move_ex.h"
 
-#define T31_IVS_GROUPS   1
-#define T31_IVS_CHANNELS 64
+#define T31_IVS_GROUPS   2
+/* T31 1.1.6 bounds the IVS channel with `sltiu ..,65` (CreateChn 0xc7b0c,
+ * GetResult 0xc8f70 and the other channel entry points), so 0..64 are valid. */
+#define T31_IVS_CHANNELS 65
 #define T31_IVS_RESULTS  6
 
 extern int IMP_System_GetBindbyDest(IMPCell *destination, IMPCell *source);
@@ -861,8 +863,19 @@ static void *ivs_thread(void *arg)
     return NULL;
 }
 
-/* Capture context, ivs_lock held, sem_end taken. */
-static void ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame)
+/* A foreign interface's NV12 copy, made after ivs_lock is dropped. */
+struct ivs_pending_copy {
+    struct t31_ivs_channel *c;
+    const void *src;
+    size_t size;
+    unsigned int gen;
+};
+
+/* Capture context, ivs_lock held, sem_end taken. Returns 1 when the frame
+ * still has to be copied into c->copy (and sem_start posted) by the caller
+ * outside the lock; *copy_size is the byte count. */
+static int ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame,
+                       size_t *copy_size)
 {
     IMPIVSInterface *inf = c->inf;
 
@@ -890,37 +903,41 @@ static void ivs_deliver(struct t31_ivs_channel *c, const T31IVSFrameInfo *frame)
 
                 if (!copy) {
                     sem_post(&c->sem_end);
-                    return;
+                    return 0;
                 }
                 c->copy = copy;
                 c->copy_size = size;
             }
-            memcpy(c->copy, (const void *)(uintptr_t)frame->virAddr, size);
             c->work = *frame;
             c->work.virAddr = (uint32_t)(uintptr_t)c->copy;
             c->work.phyAddr = 0;
+            *copy_size = size;
+            return 1;
         }
     }
     sem_post(&c->sem_start);
+    return 0;
 }
 
 int openimp_t31_ivs_source_active(int fs_chn)
 {
-    int source = -2;
+    int source[T31_IVS_GROUPS];
     int active = 0;
     int i;
 
     if (!__atomic_load_n(&ivs_receiving, __ATOMIC_RELAXED))
         return 0;
+    for (i = 0; i < T31_IVS_GROUPS; i++)
+        source[i] = -2;
     pthread_mutex_lock(&ivs_lock);
     for (i = 0; i < T31_IVS_CHANNELS && !active; i++) {
         struct t31_ivs_channel *c = &ivs_channels[i];
 
         if (c->state != IVS_CHN_ACTIVE || !c->enabled || c->group < 0)
             continue;
-        if (source == -2)
-            source = ivs_group_source(0);
-        active = source == fs_chn;
+        if (source[c->group] == -2)
+            source[c->group] = ivs_group_source(c->group);
+        active = source[c->group] == fs_chn;
     }
     pthread_mutex_unlock(&ivs_lock);
     return active;
@@ -929,11 +946,15 @@ int openimp_t31_ivs_source_active(int fs_chn)
 void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 {
     T31IVSFrameInfo info;
-    int source = -2;
+    struct ivs_pending_copy pend[T31_IVS_CHANNELS];
+    int npend = 0;
+    int source[T31_IVS_GROUPS];
     int i;
 
     if (!frame || !__atomic_load_n(&ivs_receiving, __ATOMIC_RELAXED))
         return;
+    for (i = 0; i < T31_IVS_GROUPS; i++)
+        source[i] = -2;
     memset(&info, 0, sizeof(info));
     memcpy(&info, frame, T31_IVS_FRAME_RECORD_BYTES);
     pthread_mutex_lock(&ivs_lock);
@@ -942,10 +963,11 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 
         if (c->state != IVS_CHN_ACTIVE || !c->enabled || c->group < 0)
             continue;
-        if (source == -2)
-            source = ivs_group_source(0);
-        if (source != fs_chn)
-            break;                  /* one group: nothing else to feed */
+        /* each group is fed by the FrameSource channel bound to it */
+        if (source[c->group] == -2)
+            source[c->group] = ivs_group_source(c->group);
+        if (source[c->group] != fs_chn)
+            continue;
         if (c->own && c->inf->preProcessSync == move_preprocess &&
             ivs_move_interval() > 1 &&
             c->interval_phase++ % ivs_move_interval() != 0)
@@ -953,21 +975,57 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame)
         c->stats.frames++;
         if (sem_trywait(&c->sem_end) != 0) {
             c->stats.dropped++;     /* still busy: drop, as the vendor */
-        } else if (ivs_stats_enabled()) {
-            uint64_t t0 = ivs_now_ns(), dt;
-
-            ivs_deliver(c, &info);
-            dt = ivs_now_ns() - t0;
-            c->stats.copy_ns += dt;
-            if (dt > c->stats.copy_max_ns)
-                c->stats.copy_max_ns = (uint32_t)dt;
         } else {
-            ivs_deliver(c, &info);
+            uint64_t t0 = ivs_stats_enabled() ? ivs_now_ns() : 0;
+            size_t size = 0;
+
+            if (ivs_deliver(c, &info, &size)) {
+                /* Reference the channel (users) so DestroyChn waits; the
+                 * copy runs outside the lock, gen is re-checked after. */
+                c->users++;
+                pend[npend].c = c;
+                pend[npend].src = (const void *)(uintptr_t)info.virAddr;
+                pend[npend].size = size;
+                pend[npend].gen = c->gen;
+                npend++;
+            }
+            if (t0) {
+                uint64_t dt = ivs_now_ns() - t0;
+
+                c->stats.copy_ns += dt;
+                if (dt > c->stats.copy_max_ns)
+                    c->stats.copy_max_ns = (uint32_t)dt;
+            }
         }
         if (ivs_stats_enabled())
             ivs_stats_report(c);
     }
     pthread_mutex_unlock(&ivs_lock);
+
+    for (i = 0; i < npend; i++) {
+        struct t31_ivs_channel *c = pend[i].c;
+        uint64_t t0 = ivs_stats_enabled() ? ivs_now_ns() : 0;
+
+        /* c->copy is ours: sem_end is held and users keeps the channel. */
+        memcpy(c->copy, pend[i].src, pend[i].size);
+        pthread_mutex_lock(&ivs_lock);
+        if (t0) {
+            uint64_t dt = ivs_now_ns() - t0;
+
+            c->stats.copy_ns += dt;
+            if (dt > c->stats.copy_max_ns)
+                c->stats.copy_max_ns = (uint32_t)dt;
+        }
+        /* A channel being destroyed gets no new frame (its thread is told
+         * to quit); semaphores are posted before users drops, so
+         * DestroyChn cannot free them underneath. */
+        if (c->state == IVS_CHN_ACTIVE && c->gen == pend[i].gen)
+            sem_post(&c->sem_start);
+        else
+            sem_post(&c->sem_end);
+        c->users--;
+        pthread_mutex_unlock(&ivs_lock);
+    }
 }
 
 static int ivs_interface_in_use(const IMPIVSInterface *inf)
@@ -1012,6 +1070,12 @@ int IMP_IVS_CreateGroup(int group)
     if (!ivs_valid_group(group))
         return ivs_fail(EINVAL);
     pthread_mutex_lock(&ivs_lock);
+    /* Vendor (0xc75c8): creating a group twice is not an error. The second
+     * call only logs "IMP_IVS_CreateGroup(%d) had been used !" at level 2
+     * (line 0x1ad) and falls through to the same `return 0`. */
+    if (ivs_groups[group])
+        IMP_TRACE_LOG("IVS", "IMP_IVS_CreateGroup(%d) had been used !",
+                      group);
     ivs_groups[group] = 1;
     pthread_mutex_unlock(&ivs_lock);
     return 0;
@@ -1025,8 +1089,15 @@ int IMP_IVS_DestroyGroup(int group)
         return ivs_fail(EINVAL);
     pthread_mutex_lock(&ivs_lock);
     if (!ivs_groups[group]) {
+        /* Vendor (0xc7858): the same is true for a group that was never
+         * created -- it logs level 2 and *returns 0*, so the stock library
+         * lets an application destroy a group twice. The message is the
+         * OEM's own copy/paste: DestroyGroup logs "IMP_IVS_CreateGroup(%d)
+         * had been not used !" (line 0x1cc). */
+        IMP_TRACE_LOG("IVS",
+                      "IMP_IVS_CreateGroup(%d) had been not used !", group);
         pthread_mutex_unlock(&ivs_lock);
-        return ivs_fail(ENOENT);
+        return 0;
     }
     for (i = 0; i < T31_IVS_CHANNELS; i++) {
         if (ivs_channels[i].state == IVS_CHN_ACTIVE &&

@@ -40,7 +40,20 @@ typedef struct {
     uint8_t mb_tune;
     uint16_t qp_table_words;
     const uint32_t *qp_table;
+    /* IMP_Encoder_SetChnROI (T10/T20; OEM H264E_T10/T20_SliceInit, slice
+     * +160/+244, i264e ROI table 7 bytes per region): enable, relative,
+     * QP (s8; relative: added to the picture QP), first/last macroblock
+     * column x0/x1 and row y0/y1 as IMP_Encoder_SetChnROI computes them.
+     * 0x40044 (regions 0..3) and 0x40048 (4..7) get one byte per region,
+     * qp << 2 | rel << 1 | en (6-bit QP field), 0x4004c + 4 * i the
+     * rectangle x0 | x1 << 8 | y0 << 16 | y1 << 24.  All zero: no ROI. */
+    uint8_t roi[8][7];
+    /* IMP_Encoder_SetH264TransCfg chroma_qp_index_offset (T20; slice +186,
+     * the PPS value): 0x40120 = offset & 0x1f.  The T10 command list has
+     * no such register (H264E_T10_SliceInit). */
+    int8_t chroma_qp_offset;
 } T30H264SliceConfig;
+
 
 int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
                              size_t *pair_count);

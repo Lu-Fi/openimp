@@ -30,6 +30,7 @@
 #include "imp/imp_framesource.h"
 #include "core/module.h"
 #include "dma_alloc.h"
+#include "../fake_rmem.h"
 
 /* ------------------------------------------------------------ helpers -- */
 
@@ -85,12 +86,7 @@ static int dma_alloc(IMPDMABufferInfo *info, int size)
         pthread_mutex_unlock(&dma_lock);
         return -1;
     }
-    p = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-    if (p == MAP_FAILED) {
-        pthread_mutex_unlock(&dma_lock);
-        return -1;
-    }
+    p = fake_rmem_map((size_t)size);
     for (i = 0; i < FAKE_DMA_MAX && dma_live[i].addr; i++)
         ;
     if (i == FAKE_DMA_MAX)
@@ -125,7 +121,7 @@ int DMA_FreePhys(uint32_t phys)
     pthread_mutex_lock(&dma_lock);
     for (i = 0; i < FAKE_DMA_MAX; i++) {
         if (dma_live[i].addr == phys) {
-            munmap((void *)(uintptr_t)phys, dma_live[i].size);
+            fake_rmem_unmap((void *)(uintptr_t)phys, dma_live[i].size);
             dma_live[i].addr = 0;
             pthread_mutex_unlock(&dma_lock);
             return 0;
@@ -188,6 +184,10 @@ static int fake_closed_streaming; /* closed while streaming */
 static int fake_inject;
 static int fake_streamoffs;
 static unsigned int fake_dqbuf_delay_us; /* time spent "in the driver" */
+/* frames the driver may still complete (-1: any number) and the capture
+ * timestamp of the last one (40 ms apart, from 40 ms) */
+static int fake_frame_budget = -1;
+static unsigned int fake_frames_done;
 
 int __real_open(const char *path, int flags, ...);
 int __real_close(int fd);
@@ -307,12 +307,17 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
 #else
             ret = fake_fail(EINVAL);
 #endif
-        } else if (!c->queued) {
+        } else if (!c->queued || fake_frame_budget == 0) {
             ret = fake_fail(EAGAIN);
         } else {
+            uint64_t ts_us;
+
+            if (fake_frame_budget > 0)
+                fake_frame_budget--;
+            ts_us = 40000ull * ++fake_frames_done;
             words[0] = (uint32_t)c->queue[0];
-            words[0x14 / 4] = 0;
-            words[0x18 / 4] = 0;
+            words[0x14 / 4] = (uint32_t)(ts_us / 1000000u);
+            words[0x18 / 4] = (uint32_t)(ts_us % 1000000u);
             memmove(&c->queue[0], &c->queue[1],
                     (size_t)(c->queued - 1) * sizeof(c->queue[0]));
             memmove(&c->queue_addr[0], &c->queue_addr[1],
@@ -346,7 +351,8 @@ int __wrap_select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *tv)
         pthread_mutex_lock(&fake_lock);
         for (fd = 0; fd < n && fd < FAKE_FDS; fd++)
             if (r && FD_ISSET(fd, r) &&
-                (!fake[fd].open || !fake[fd].streaming || fake[fd].queued))
+                (!fake[fd].open || !fake[fd].streaming ||
+                 (fake[fd].queued && fake_frame_budget != 0)))
                 ready = 1;
         pthread_mutex_unlock(&fake_lock);
         if (ready)
@@ -394,6 +400,13 @@ int DMA_RmemStats(size_t *used, size_t *size, size_t *largest_free)
 }
 void DMA_LogRmem(const char *reason) { (void)reason; }
 void DMA_RmemStreamStarted(void) {}
+static int dma_flushes;
+int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
+{
+    (void)virt_addr; (void)size; (void)dir;
+    __atomic_add_fetch(&dma_flushes, 1, __ATOMIC_RELAXED);
+    return 0;
+}
 int remove_observer_from_module(void *src, void *dst)
 {
     (void)src; (void)dst;
@@ -446,10 +459,20 @@ int32_t destroy_group(Subject *s, int32_t dev)
 static pthread_mutex_t consumer_lock = PTHREAD_MUTEX_INITIALIZER;
 static int consumer_hold_ms;
 static int consumer_frames;
+/* size of the last frame record the consumers saw (0x08/0x0c) */
+static uint32_t consumer_width, consumer_height;
 
 int32_t notify_observers(Module *module, void *frame)
 {
-    (void)module; (void)frame;
+    (void)module;
+    if (frame) {
+        uint32_t w, h;
+
+        memcpy(&w, (const uint8_t *)frame + 0x08, 4);
+        memcpy(&h, (const uint8_t *)frame + 0x0c, 4);
+        __atomic_store_n(&consumer_width, w, __ATOMIC_RELAXED);
+        __atomic_store_n(&consumer_height, h, __ATOMIC_RELAXED);
+    }
     __atomic_add_fetch(&consumer_frames, 1, __ATOMIC_RELAXED);
     if (consumer_hold_ms) {
         pthread_mutex_lock(&consumer_lock);
@@ -525,6 +548,65 @@ static void test_cycles(void)
         CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy 0");
     }
     check_clean("cycles");
+}
+
+/* The single live DMA buffer (address and size), 0 if there is not
+ * exactly one. */
+static uint32_t dma_only(uint32_t *size)
+{
+    uint32_t addr = 0;
+    int i, n = 0;
+
+    pthread_mutex_lock(&dma_lock);
+    for (i = 0; i < FAKE_DMA_MAX; i++)
+        if (dma_live[i].addr) {
+            addr = dma_live[i].addr;
+            *size = dma_live[i].size;
+            n++;
+        }
+    pthread_mutex_unlock(&dma_lock);
+    return n == 1 ? addr : 0;
+}
+
+/* T21/T20/T23 keep a disabled channel's pool memory for its next pool of the
+ * same size (rmem fragmentation on timps' idle/re-enable cycles); a pool of
+ * another size and DestroyChn free it.  Other SoCs free it at once. */
+static void test_park(void)
+{
+    IMPFSChnAttr main_attr = attr_for(1920, 1080, 2);
+    IMPFSChnAttr small_attr = attr_for(640, 360, 2);
+    uint32_t addr, size = 0, size2 = 0;
+    int i;
+
+    CHECK(IMP_FrameSource_CreateChn(0, &main_attr) == 0, "create");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable");
+    addr = dma_only(&size);
+    CHECK(addr != 0, "one pool buffer while enabled (%d)", dma_count());
+    for (i = 0; i < 5; i++) {
+        CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable (cycle %d)", i);
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
+        CHECK(dma_only(&size2) == addr && size2 == size,
+              "disabled: pool block parked (cycle %d)", i);
+#else
+        CHECK(dma_count() == 0, "disabled: pool freed (cycle %d)", i);
+#endif
+        CHECK(IMP_FrameSource_EnableChn(0) == 0, "re-enable (cycle %d)", i);
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23)
+        CHECK(dma_only(&size2) == addr && size2 == size,
+              "re-enable reuses the parked block (cycle %d)", i);
+#else
+        CHECK(dma_count() == 1, "re-enabled: one pool (cycle %d)", i);
+#endif
+    }
+    /* another size while disabled: the parked block goes, a new one comes */
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
+    CHECK(IMP_FrameSource_SetChnAttr(0, &small_attr) == 0, "set small attr");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable small");
+    CHECK(dma_only(&size2) != 0 && size2 < size,
+          "small pool: one buffer of %u bytes (was %u)", size2, size);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable small");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy");
+    check_clean("park");
 }
 
 /* A failure in any EnableChn step leaves the channel created, nothing
@@ -679,6 +761,147 @@ static void test_pull_during_disable(void)
     check_clean("pull during disable");
 }
 
+/* The delay FIFO of SetMaxDelay/SetDelay/SetChnFifoAttr/GetTimedFrame:
+ * nrVBs + maxdelay buffers, the newest `delay` frames held back, the one
+ * nearest to a timestamp copied out. */
+static unsigned int frames_done(void)
+{
+    unsigned int n;
+
+    pthread_mutex_lock(&fake_lock);
+    n = fake_frames_done;
+    pthread_mutex_unlock(&fake_lock);
+    return n;
+}
+
+/* the one open frame channel (-1 if not exactly one) */
+static int open_chan_fd(int chn)
+{
+    int fd, found = -1, n = 0;
+
+    (void)chn;
+    pthread_mutex_lock(&fake_lock);
+    for (fd = 0; fd < FAKE_FDS; fd++)
+        if (fake[fd].open) {
+            found = fd;
+            n++;
+        }
+    pthread_mutex_unlock(&fake_lock);
+    return n == 1 ? found : -1;
+}
+
+static void give_frames(int n)
+{
+    unsigned int want = frames_done() + (unsigned int)n;
+    uint64_t until = now_ms() + 2000;
+
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = n;
+    pthread_mutex_unlock(&fake_lock);
+    while (frames_done() < want && now_ms() < until)
+        sleep_ms(1);
+    sleep_ms(5);            /* the worker files the last one */
+}
+
+static void test_delay_fifo(void)
+{
+    IMPFSChnAttr a = attr_for(64, 40, 2);
+    IMPFSChnFifoAttr fifo = { 0 };
+    IMPFrameInfo info;
+    IMPFrameTimestamp ts = { 0, 0, 0 };
+    static uint8_t data[64 * 40 * 3 / 2];
+    int value = -1, fd;
+    unsigned int base, plain_bufs;
+
+    /* without SetMaxDelay nothing changes: two buffers, no FIFO */
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "create");
+    CHECK(IMP_FrameSource_GetMaxDelay(0, &value) == 0 && value == 0,
+          "default maxdelay %d", value);
+    CHECK(IMP_FrameSource_SetDelay(0, 1) != 0, "delay above maxdelay 0");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable without FIFO");
+    fd = open_chan_fd(0);
+    /* nrVBs 2 (+ a frame depth an earlier test may have left) */
+    plain_bufs = fd >= 0 ? fake[fd].reqbufs : 0;
+    CHECK(plain_bufs >= 2 && plain_bufs <= 3, "%u buffers without FIFO",
+          plain_bufs);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "GetTimedFrame without FIFO");
+    CHECK(IMP_FrameSource_SetMaxDelay(0, 2) != 0, "SetMaxDelay while enabled");
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
+
+    /* SetChnFifoAttr: DATA_PRIORITY refused, maxdepth 0 a no-op */
+    fifo.maxdepth = 2;
+    fifo.type = FIFO_DATA_PRIORITY;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) != 0,
+          "FIFO_DATA_PRIORITY accepted");
+    fifo.maxdepth = 0;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) == 0, "maxdepth 0");
+    CHECK(IMP_FrameSource_SetMaxDelay(0, 101) != 0 &&
+          IMP_FrameSource_SetMaxDelay(0, 32) != 0, "maxdelay out of range");
+    /* FIFO_CACHE_PRIORITY maxdepth 3: maxdelay 3, delay 3; delay to 2 */
+    fifo.maxdepth = 3;
+    fifo.type = FIFO_CACHE_PRIORITY;
+    CHECK(IMP_FrameSource_SetChnFifoAttr(0, &fifo) == 0, "SetChnFifoAttr");
+    CHECK(IMP_FrameSource_GetMaxDelay(0, &value) == 0 && value == 3,
+          "maxdelay %d", value);
+    CHECK(IMP_FrameSource_GetDelay(0, &value) == 0 && value == 3,
+          "delay %d", value);
+    CHECK(IMP_FrameSource_SetDelay(0, 4) != 0 &&
+          IMP_FrameSource_SetDelay(0, 2) == 0, "SetDelay");
+
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = 0;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable with FIFO");
+    fd = open_chan_fd(0);
+    CHECK(fd >= 0 && fake[fd].reqbufs == plain_bufs + 3,
+          "%u buffers, want %u + maxdelay 3", fd >= 0 ? fake[fd].reqbufs : 0,
+          plain_bufs);
+    base = frames_done();
+    give_frames(5);
+    CHECK(frames_done() == base + 5, "%u frames captured, want 5",
+          frames_done() - base);
+    /* held: the two newest (base+4, base+5); the readers got the rest */
+    ts.ts = 40000ull * (base + 5) + 1000000ull;
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -2,
+          "frame from the future: not -2");
+    ts.ts = 40000ull * (base + 3);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "frame already handed on: not -1");
+    ts.ts = 40000ull * (base + 4) + 10000;
+    memset(&info, 0, sizeof(info));
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == 0 &&
+          info.timeStamp == (int64_t)(40000ull * (base + 4)) &&
+          info.width == 64 && info.height == 40 &&
+          info.size == 64 * 40 * 3 / 2,
+          "nearest held frame: ts %lld size %u", (long long)info.timeStamp,
+          info.size);
+    ts.ts = 40000ull * (base + 5);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, NULL, &info) == 0 &&
+          info.timeStamp == (int64_t)ts.ts, "exact newest");
+    /* block: the frame comes within the wait */
+    ts.ts = 40000ull * (base + 6);
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = 1;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 1, data, &info) == 0 &&
+          info.timeStamp == (int64_t)ts.ts, "blocking GetTimedFrame");
+    /* SetDelay while running */
+    CHECK(IMP_FrameSource_SetDelay(0, 1) == 0, "SetDelay running");
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable with FIFO");
+    pthread_mutex_lock(&fake_lock);
+    fake_frame_budget = -1;
+    pthread_mutex_unlock(&fake_lock);
+    CHECK(IMP_FrameSource_GetTimedFrame(0, &ts, 0, data, &info) == -1,
+          "GetTimedFrame after disable");
+    /* the FIFO keeps working over enable cycles with frames flowing */
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "re-enable");
+    sleep_ms(20);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable again");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy");
+    check_clean("delay fifo");
+}
+
 /* SetFrameDepth from an API thread while the channel goes up and down
  * must never issue its ioctl on a closed (or reused) fd. */
 static int depth_stop;
@@ -793,6 +1016,152 @@ static void test_disable_during_dqbuf(void)
     check_clean("disable during dqbuf");
 }
 
+#if !defined(PLATFORM_T23)
+#include "framesource/nv12_rotate.h"
+
+void openimp_fs_rotate_capture(int chn, void *frame);
+
+/* Reference rotation of an NV12 frame (pitch = width, chroma after
+ * ALIGN16(height) luma lines; sizes multiples of 16 here), straight from
+ * the definitions: CW (x,y) -> (h-1-y, x), CCW (x,y) -> (y, w-1-x). */
+static void ref_rotate(const uint8_t *src, uint8_t *dst, uint32_t w,
+                       uint32_t h, int cw)
+{
+    uint32_t p, x, y;
+
+    for (p = 0; p < 2; p++) {
+        uint32_t pw = p ? w / 2 : w, ph = p ? h / 2 : h, bpp = p ? 2 : 1;
+        const uint8_t *s = src + (p ? (size_t)w * h : 0);
+        uint8_t *d = dst + (p ? (size_t)w * h : 0);
+        uint32_t dp = h;            /* output pitch: the source height */
+
+        for (y = 0; y < ph; y++)
+            for (x = 0; x < pw; x++) {
+                uint32_t dx = cw ? ph - 1 - y : y;
+                uint32_t dy = cw ? x : pw - 1 - x;
+
+                memcpy(d + (size_t)dy * dp + dx * bpp,
+                       s + (size_t)y * w + x * bpp, bpp);
+            }
+    }
+}
+
+/* T10/T20/T21 SetChnRotate: geometry gate (16-aligned, sub-stream pixel
+ * cap), the per-frame rotate on a frame record against the reference,
+ * and the size the consumers see on a running channel. */
+static void test_rotate(void)
+{
+    static const struct { uint32_t w, h; int mode; } cases[] = {
+        { 640, 368, NV12_ROT_90_CW }, { 640, 368, NV12_ROT_90_CCW },
+        { 704, 576, NV12_ROT_90_CW }, { 352, 288, NV12_ROT_90_CCW },
+        { 64, 32, NV12_ROT_90_CW },
+    };
+    IMPFSChnAttr sub_attr = attr_for(640, 368, 2);
+    uint8_t record[0x428];
+    unsigned int i;
+    int waited;
+    pthread_t thread;
+
+    /* gate: the vendor values only, even, 16-aligned, <= 704x576 */
+    CHECK(IMP_FrameSource_SetChnRotate(1, 2, 640, 360) == -1,
+          "640x360 (height not 16-aligned) must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 1, 1920, 1080) == -1,
+          "1080p main stream must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 1, 1280, 720) == -1,
+          "720p main stream must be refused");
+    CHECK(IMP_FrameSource_SetChnRotate(1, 7, 640, 368) == -1, "bad mode");
+    CHECK(IMP_FrameSource_SetChnRotate(5, 1, 640, 368) == -1, "bad channel");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 0, 1920, 1080) == 0, "rot 0");
+
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        uint32_t w = cases[i].w, h = cases[i].h, size = w * h * 3 / 2;
+        uint32_t fourcc = 0x3231564eu, ow = 0, oh = 0, virt;
+        uint8_t *buf = mmap(NULL, size, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+        uint8_t *orig = malloc(size), *want = malloc(size);
+        uint32_t k, seed = 0x1234567u + i;
+
+        if (buf == MAP_FAILED || !orig || !want)
+            abort();
+        for (k = 0; k < size; k++) {
+            seed = seed * 1103515245u + 12345u;
+            orig[k] = (uint8_t)(seed >> 16);
+        }
+        memcpy(buf, orig, size);
+        ref_rotate(orig, want, w, h, cases[i].mode == NV12_ROT_90_CW);
+        memset(record, 0, sizeof(record));
+        virt = (uint32_t)(uintptr_t)buf;
+        memcpy(record + 0x08, &w, 4);
+        memcpy(record + 0x0c, &h, 4);
+        memcpy(record + 0x10, &fourcc, 4);
+        memcpy(record + 0x14, &size, 4);
+        memcpy(record + 0x18, &virt, 4);
+        memcpy(record + 0x1c, &virt, 4);
+        CHECK(IMP_FrameSource_SetChnRotate(2, cases[i].mode, (int)w,
+                                           (int)h) == 0,
+              "%ux%u mode %d accepted", w, h, cases[i].mode);
+        openimp_fs_rotate_capture(2, record);
+        memcpy(&ow, record + 0x08, 4);
+        memcpy(&oh, record + 0x0c, 4);
+        CHECK(ow == h && oh == w, "%ux%u: record %ux%u after rotate", w, h,
+              ow, oh);
+        CHECK(memcmp(buf, want, size) == 0,
+              "%ux%u mode %d: picture differs from the reference", w, h,
+              cases[i].mode);
+        /* the record now has the rotated size: the next frame of the
+         * buffer is rotated again (it holds a new capture on a device) */
+        memcpy(buf, orig, size);
+        openimp_fs_rotate_capture(2, record);
+        CHECK(memcmp(buf, want, size) == 0, "%ux%u: second frame", w, h);
+        /* a too small buffer is left alone */
+        memcpy(buf, orig, size);
+        memcpy(record + 0x08, &w, 4);
+        memcpy(record + 0x0c, &h, 4);
+        k = size - 1;
+        memcpy(record + 0x14, &k, 4);
+        openimp_fs_rotate_capture(2, record);
+        CHECK(memcmp(buf, orig, size) == 0, "%ux%u: short buffer touched",
+              w, h);
+        munmap(buf, size);
+        free(orig);
+        free(want);
+    }
+    CHECK(IMP_FrameSource_SetChnRotate(2, 0, 0, 0) == 0, "rot off");
+    openimp_fs_rotate_capture(2, record);   /* frees the scratch */
+
+    /* running channel: the consumers get the portrait record (the
+     * puller keeps channel 0 delivering) */
+    CHECK(IMP_FrameSource_SetChnRotate(0, NV12_ROT_90_CW, 640, 368) == 0,
+          "sub stream rotate");
+    CHECK(IMP_FrameSource_CreateChn(0, &sub_attr) == 0, "create 0");
+    __atomic_store_n(&consumer_width, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&puller_stop, 0, __ATOMIC_RELAXED);
+    pthread_create(&thread, NULL, puller, NULL);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable 0");
+    for (waited = 0; waited < 2000 &&
+         !__atomic_load_n(&consumer_width, __ATOMIC_RELAXED); waited++)
+        sleep_ms(1);
+    CHECK(__atomic_load_n(&consumer_width, __ATOMIC_RELAXED) == 368 &&
+          __atomic_load_n(&consumer_height, __ATOMIC_RELAXED) == 640,
+          "consumer saw %ux%u, want 368x640",
+          __atomic_load_n(&consumer_width, __ATOMIC_RELAXED),
+          __atomic_load_n(&consumer_height, __ATOMIC_RELAXED));
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable 0");
+    __atomic_store_n(&puller_stop, 1, __ATOMIC_RELAXED);
+    pthread_join(thread, NULL);
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy 0");
+    CHECK(IMP_FrameSource_SetChnRotate(0, 0, 0, 0) == 0, "rot off 0");
+    check_clean("rotate");
+}
+#else
+/* T23 rotates in the caller (unbound YuvEncode): SetChnRotate refuses. */
+static void test_rotate(void)
+{
+    CHECK(IMP_FrameSource_SetChnRotate(1, 2, 640, 368) == -1, "T23 refuses");
+    CHECK(IMP_FrameSource_SetChnRotate(1, 0, 640, 368) == 0, "T23 rot 0");
+}
+#endif
+
 int main(void)
 {
     report = fdopen(dup(2), "w");
@@ -816,6 +1185,7 @@ int main(void)
     } while (0)
     RUN(cycles);
     RUN(enable_failures);
+    RUN(park);
     RUN(create_while_enabled);
     RUN(bad_channels);
     RUN(stale_release);
@@ -823,6 +1193,8 @@ int main(void)
     RUN(depth_during_disable);
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
+    RUN(delay_fifo);
+    RUN(rotate);
     if (failures) {
         fprintf(report, "fs_lifecycle_test: %d failure(s)\n", failures);
         return 1;
