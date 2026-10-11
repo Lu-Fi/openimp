@@ -6,14 +6,14 @@ Branch names in brackets (`claude/...`) and the tags `[-all-N]` are historic: th
 
 See also: the section "Missing / incomplete functions" below (vendor IMP/SU functions per SoC that are not fully done); [OPENIMP_BEYOND_VENDOR.md](OPENIMP_BEYOND_VENDOR.md) (integration notes for streamer authors on everything marked beyond vendor).
 
-Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx-isp-*.ko + Ingenic libimp.
+Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + a streamer application. Vendor = tx-isp-*.ko + Ingenic libimp.
 
 ## Summary
 
 - **Update 2026-10-11 (agg-36, after RC1; build and host tests of the aggregate, no soak):** T40 rate control, AVPU command lists and H.265 (device-tested on their branch), T40 ISP-drawn OSD, `Get/SetMask` and `SwitchBin` (device-tested), T40 BCSH getters from the vendor cache (host), T41 `SwitchBin`, `AutoZoom`, `SetMaskBlock`, `SetScalerLv` (host and module build), `SetbufshareChn` as the vendor (T31/T40/T41), log level `OPENIMP_LOG_LEVEL`, IVS post order, T30 gap work (317 of 334 exports), T10/T20/T21 and T23 vendor return codes. The T23 driver rows of the second T23/T31 gap pass stay as before (that driver branch is held back). The T40 open items below about CBR, H.265, `GetBrightness`, the pixel format and `P1_INNER` are fixed in agg-36. **Gap counts after this update (progress table):** T23 14 (was 15), T30 19 (was 54), T40 109 (was 120), T41 177 (was 179); T10 32, T20 30, T21 14, T31 8 unchanged.
 - **Update 2026-10-10 evening (agg-35: OpenIMP 687a68e4, open-tx-isp 6e464ac7, built 2026-10-10; soaked 2026-10-10 18:04 to 2026-10-11 08:00 on 10 cameras: clean (0 oopses, 0 unexplained reboots, 0 streamer restarts, VA-API 54/54). RC1 = this code plus docs; features that exist only in later branches (agg-36) are not in this matrix.**
 - **T40, first OpenIMP device run (cam-K, T40XP, vendor kernel driver `tx_isp_t40`, vendor libimp 1.3.0, OpenIMP via `LD_LIBRARY_PATH`, 2026-10-10; every result is OpenIMP vs vendor):** PASS/dev: `AddSensor`/`EnableSensor`; FrameSource ch0 3840x2160 and ch1 640x360 with `GetFrame` (timestamps monotonic, non-zero); H.264 on ch0 and ch1 (10 s, clean strict decode); OSD PIC and COVER (OpenIMP draws COVER on NV12, the vendor library fails with "COVER cannot support this format"); IVS move (20 s); `FrameSource_SnapFrame`; JPEG on ch1 (software JPEG since 257ba9d); ISP `GetSensorAttr`, Gamma get, CCM get, ModuleControl get, `AeScenceAttr` get/set; `GetCameraInputMode`. Fixed during the run: the stream timestamp was 0 (a5d9b03); JPEG was a grey placeholder (257ba9d).
-- **T40 open:** CBR delivers only about 20 % of the target bit rate (rate control); H.265 is not supported by OpenIMP T40 yet; `GetBrightness` returns -1; the pixel-format enum is reported as 10 (vendor 0); frame size is 16-line aligned (353280 B vs 345600 B); `P1_INNER` traces always go to stderr; JPEG at 4K not tested (out of memory in the test process, 60 MB RAM). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with timps stopped was the IR cut left open, not the library. Only the functions above are dev; the rest of T40 stays host or `?`. The combined Get/Set rows of Gamma, CCM and ModuleControl are host (Get dev, Set host), since only the Get is device-tested.
+- **T40 open:** CBR delivers only about 20 % of the target bit rate (rate control); H.265 is not supported by OpenIMP T40 yet; `GetBrightness` returns -1; the pixel-format enum is reported as 10 (vendor 0); frame size is 16-line aligned (353280 B vs 345600 B); `P1_INNER` traces always go to stderr; JPEG at 4K not tested (out of memory in the test process, 60 MB RAM). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with the streamer stopped was the IR cut left open, not the library. Only the functions above are dev; the rest of T40 stays host or `?`. The combined Get/Set rows of Gamma, CCM and ModuleControl are host (Get dev, Set host), since only the Get is device-tested.
 - **T41 audio and driver controls:** `AI_SetVolMute`, `AO_SetVolMute`, `AO_Soft_Mute`/`AO_Soft_UNMute` are a software mute as in the vendor library (the vendor uses no ioctl); API-level test only (rc 0, invalid argument -1), host in the tables, because the T41 test board has no audio hardware (no microphone, no speaker). The driver controls `FrameDrop`, `SensorRegister`, `ISP_WDR_ENABLE`/`_GET` and `AfWeight` are device-tested (`claude/t41-driver-gaps`, in agg-35). `Get/SetWdrOutputMode` has no stock handler in the driver (explained, counted as vendor no-op). `AutoZoom`, `SetMaskBlock` and `SetScalerLv` stay deferred: live MSCA reprogramming carries a hang risk.
 - **Audio on T10, T20, T21, T23, T31 (AEC device test 2026-10-10):** audio output (`IMP_AO` enable/`SendFrame`, playback of a known signal at several volumes, `SetVol`) played a signal that was recorded back; audio input (`IMP_AI` enable/`GetFrame`, `SetVol`/`SetGain`, mono 16 kHz) recorded it; `EnableAec` returns 0. The AO/AI rows and the single-call cells are dev for these five SoCs; the combined Get/Set volume and gain rows stay as they were (host where they were aud). T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike). T41: no audio hardware on the test board, the T41 AI, AO and AEC rows are `—` (the earlier T41 microphone figures were the noise floor of an unconnected input).
 - **Gap counts after this update (progress table):** T40 120 gaps (was 171; 74 by row), T41 179 gaps (was 187; 123 by row).
@@ -28,13 +28,13 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 - Encoder ROI (region QP): **T31** has an ROI that the vendor library does not have (`IMP_Encoder_SetChnRoiAttr` through the AVPU QP table, beyond vendor): device-tested, delta -10 gives 2.7x the bit rate, a relative -20 becomes -19 (clamped), 0 decoder errors in 20 VA-API checks; the night run of 2026-10-10 went through 20 phases (deltas, absolute QPs, clamp, off/on) with the stream valid in VA-API and in strict ffmpeg (`-err_detect`). Known deviation: under FixQP 42 a window of absolute 5 or relative -25 drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream stays valid). **T10/T20/T21** apply `SetChnROI` on the Helix/NVPU: device-tested (T21 by default, beyond vendor); T20/T10 absolute ROI re-tested on 2026-10-10: valid H.264, no inversion (fix S3). All ROI paths now keep the stream valid H.264: every `mb_qp_delta` lies in -25..+25 (a relative -26 or an absolute QP far from the picture QP produced broken pictures in hardware decoders such as VA-API, VLC and browsers), picture QP plus delta stays inside the rate control's min/max QP. **T23**: regions on the native Helix encoder, device-tested on 2026-10-10 (QP map shows the window, streams valid in VA-API and strict ffmpeg). **T41**: code only, off by default, not device-tested. Rules and numbers: `docs/ROI.md`, `docs/OPENIMP_BEYOND_VENDOR.md`.
 - Front crop: **T10/T20/T21/T23** device-tested on 2026-10-09 after the fixes (T23: crop off unlocks the window, a window that does not fit is dropped instead of hanging the MSCA, the lock is released with the ISP session, module parameter `fcrop_upscale_pct`; T20/T10: a window set before stream-on is kept while no downscaled channel is open, is applied at stream on and survives substream restarts (device-tested 2026-10-10); the release of the window at tuning-session close is **not verified**). **T31**: the crash is fixed (the kernel refuses a window the MSCA would have to upscale with -EINVAL; scaler steps and latch are written; module parameter `fcrop_upscale_pct`); device-tested on 2026-10-10: a valid window zooms both streams (**proven**), too-small windows are rejected without a hang, and the window survives a restart and a flip.
 - DeepSeek patches (17, reviewed, plus one corrected): struct sizes and layouts of the vendor ABI (T40/T41 encoder stream, channel attributes, frame info, sensor info, OSD attributes), encoder group bounds (6 like the vendor on T20/T21/T30/T31/T41, 8 kept on T23/T40), T31 IVS channel 64, `OSD_SetPoolSize(0)`, `GetDefaultBinPath`, idempotent IVS group create/destroy, polling-stream guards. Host tests and `make check` are green on all SoCs and the cross-builds pass; the combined agg-34 ran on the test cameras in the night 2026-10-09/10 (mandatory tests passed, streamer smoke on 9 cameras 50 of 50 without a `PollingStream` spin); not yet checked separately on cameras: OSD groups, IVS, T31 `SnapFrame` offsets and the T41 OSD size.
-- T20 day/night: the driver reported an analog gain cap of 158 in `isp-m0` while the AE stops at 128, so a streamer waiting for the cap never saw it reached and stayed in Day mode in the dark. `isp-m0` now reports the smaller of the two: device-tested on T20 on 2026-10-10 (maximum analog gain 128). The streamer needs its matching change (timps 5bc4eff) for the switch to work; day/night with both is **not yet confirmed**. On T10 (jxh42) `isp-m0` still reports 144 at boot (128 once it is set explicitly): open finding.
+- T20 day/night: the driver reported an analog gain cap of 158 in `isp-m0` while the AE stops at 128, so a streamer waiting for the cap never saw it reached and stayed in Day mode in the dark. `isp-m0` now reports the smaller of the two: device-tested on T20 on 2026-10-10 (maximum analog gain 128). The streamer needs its matching change (streamer commit 5bc4eff) for the switch to work; day/night with both is **not yet confirmed**. On T10 (jxh42) `isp-m0` still reports 144 at boot (128 once it is set explicitly): open finding.
 - Streamer smoke test on 9 cameras (night 2026-10-09/10): 50 of 50 checks passed, no `PollingStream` spin (the streamer CPU stayed normal at stream restarts).
 
 **Known issues (agg-34)**
 
 - **T41 sub-channel (ch1):** green or flat frames at each day/night switch and the exposure of channel 1 does not follow channel 0 (channel 0 is fine). T41 is experimental and not part of the first release.
-- **T20 day/night** needs the open-tx-isp fix (da9baf1e) **and** the streamer change (timps 5bc4eff); with agg-32 alone both T20 cameras stayed in Day mode in the dark. Not yet confirmed on a camera with both.
+- **T20 day/night** needs the open-tx-isp fix (da9baf1e) **and** the streamer change (streamer commit 5bc4eff); with agg-32 alone both T20 cameras stayed in Day mode in the dark. Not yet confirmed on a camera with both.
 - **T10 analog gain cap:** `isp-m0` of the jxh42 camera reports a maximum analog gain of 144 at boot (128 once set explicitly); T20 reports 128 (fixed). Open.
 - **ROI under FixQP:** with FixQP 42 an absolute 5 or relative -25 window lowers the P-frames to QP about 14 almost frame-wide (bit rate about x4); the stream is valid, but a streamer should not offer the extremes on a fixed-QP stream.
 - **T20/T10 front crop:** the release of the window at tuning-session close is not verified.
@@ -60,25 +60,25 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 **What is complete**
 
-- All five original test cameras (cam-A T31, cam-B T23, cam-C T20, cam-D T21, cam-E T10) run fully on the open kernel driver, OpenIMP and timps from flashed images; cam-F (T41) runs the same stack from the `aperto` full OTA image; no Ingenic/neo helper libraries any more, and on T23 no helixd and no vendor libimp either.
+- All five original test cameras (cam-A T31, cam-B T23, cam-C T20, cam-D T21, cam-E T10) run fully on the open kernel driver, OpenIMP and the streamer from flashed images; cam-F (T41) runs the same stack from the `aperto` full OTA image; no Ingenic/neo helper libraries any more, and on T23 no helixd and no vendor libimp either.
 - Core functions are backed by evidence: H.264 on all six SoCs (soaks up to 2 h 53 without errors), HEVC on T31, hardware JPEG/MJPEG, second stream, OSD (text, bitmap, rectangle, line), real motion detection, day/night, flip.
 - Beyond the vendor: reload/stop robustness (0 oops in 10 cycles each), smaller libimp (~0.5–0.6 MB instead of 1.0–1.3 MB), more free video memory on T21 (2.76 MB instead of ~1.2 MB), T31 module smaller than vendor, T21 controls and noise reduction take effect (the vendor ignores them), T31 AEC with −18 dB echo, reference-frame sharing on T21/T23 (~1.5 MB less video memory, on by default).
 
 **Open items from 2026-10-04** (still valid unless the release-candidate section above says otherwise)
 
 - T23: the frequent Helix frame drops had a fixed cause (a residual interrupt treated as an error by the bounded-wait kernel patch; 60 min with 0 errors after the fix); the sporadic single encode error (errno 5): 0 errors in 6 days on cam-B since the 0102 fix (syslog: 342, 32, 37 and 419 errors on 10-01..10-04, then 0 from 10-05 to 10-10); provisionally closed, still observed. The root cause of the cold-start snapshot 503 on a second channel (stale MSCA FIFOs) is fixed in the driver (`msca_fifo_rearm`, 260 cold-start cycles without a failure) and awaits its soak before it enters `next`. Real WDR is missing (dynamic ADR is lifted, no WDR sensor mode).
-- T41 (cam-F): runs the fully open stack with H.264 (main stream High 1080p ok) and H.265; AE compensation, gain/exposure caps and 2D noise reduction work through OpenIMP; DRC, DPC, defog, WDR, CCM, gamma, HLC and BLC are not supported on T41 (the driver says so). Open: crop/rotation (I2D), temper effect, ioctl hardening awaits its device test, live flip (timps does not call `SetHVFLIP` live), night column noise of the gc5603 (ISP), short IVS gaps (~1.2 s), OOM with three parallel streams and 30 MB rmem (26 MB works in the current image; the kernel command line needs an environment-partition image), `AddSensor` EBUSY after an OOM kill; day/night, AE/AWB quality, audio untested.
+- T41 (cam-F): runs the fully open stack with H.264 (main stream High 1080p ok) and H.265; AE compensation, gain/exposure caps and 2D noise reduction work through OpenIMP; DRC, DPC, defog, WDR, CCM, gamma, HLC and BLC are not supported on T41 (the driver says so). Open: crop/rotation (I2D), temper effect, ioctl hardening awaits its device test, live flip (the streamer does not call `SetHVFLIP` live), night column noise of the gc5603 (ISP), short IVS gaps (~1.2 s), OOM with three parallel streams and 30 MB rmem (26 MB works in the current image; the kernel command line needs an environment-partition image), `AddSensor` EBUSY after an OOM kill; day/night, AE/AWB quality, audio untested.
 - T10 (cam-E): AE/AWB quality and image controls only partly documented.
 - T21: a 4th module reload in one boot crashed once (under investigation); `ae_it_max_us` acts, which is beyond the vendor and kept by decision.
 - Rate control: T10/T20 run the OEM-style controller for CBR/VBR (SMART is mapped to VBR); T10/T20/T21 accept QP steps, staticTime/changePos/qualityLvl without all of them acting on every path; T31 CBR writes no filler NAL.
 - AEC: only T31 is device-tested (T23 implemented, device test open; no speaker tests on the shared test cameras). Audio output only on T31.
-- Not yet exposed by timps (static caps; on T41 AE compensation and sinter are wired, the gain/exposure caps follow): DPC strength, defog/Iridix floor, DRC strength and the scene/colour effects; the timps side is decided by the timps maintainers.
+- Not yet exposed by the streamer (static caps; on T41 AE compensation and sinter are wired, the gain/exposure caps follow): DPC strength, defog/Iridix floor, DRC strength and the scene/colour effects; the the streamer side is decided by the the streamer maintainers.
 - T30 has no device in the test campaign (it builds against a real kernel; not device-verified here); T40 has one camera (cam-K) since 2026-10-10.
 - Opt-in and not device-tested: `OPENIMP_EPRC_QP_DOWN1`, `OPENIMP_EPRC_MBRC` (ported, 0 oracle deviations, device test not finished), `OPENIMP_T23_HELIX_BSF`.
 
 Defaults in `next` that older cells may still call opt-in or pending: T20/T10 OEM rate controller on, T10 super-frame fix on, T20 I-aware P budget on for CBR, T21 vendor-identical eprc on, T31 Allegro RC core on, reference sharing on T21/T23 on, motion detection v2 on (`OPENIMP_MOTION_V2=0` = vendor algorithm), T23 vendor AE as default (`source_ae_oem=1`), `isp_mmap_pool_kb=0` on T10/T20 (+8 MB free RAM), rmem peak logging and shortfall hints.
 
-State on 2026-10-04: all test cameras run full OTA images built from thingino `aperto` (Lu-Fi forks pinned to open-tx-isp `next` 40cc77ec and OpenIMP `next` db760431) since 2026-10-04 17:39-17:47, with timps v1.9.31 and the kernel VPU/rmem patches as merged upstream; cam-F (T41) rootfs rev7 with rmem 26M. A 24 h soak has run since 17:50 (5 h so far: 0 streamer restarts, 0 encoder/VPU errors, 0 oops); the first release tag follows after it.
+State on 2026-10-04: all test cameras run full OTA images built from thingino `aperto` (Lu-Fi forks pinned to open-tx-isp `next` 40cc77ec and OpenIMP `next` db760431) since 2026-10-04 17:39-17:47, with the streamer v1.9.31 and the kernel VPU/rmem patches as merged upstream; cam-F (T41) rootfs rev7 with rmem 26M. A 24 h soak has run since 17:50 (5 h so far: 0 streamer restarts, 0 encoder/VPU errors, 0 oops); the first release tag follows after it.
 
 Not adopted: OSD edge flush, reference sharing on T10/T20/T31 (not in that SoC's encoder; the vendor has none either).
 
@@ -172,7 +172,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T23:** ✅ exposure readback live, ~45 empty CIDs wired up, unknown CIDs return -EINVAL
 - **T30:** 🔧 open-tx-isp T30 core builds against a T30 kernel and had a hardware bring-up earlier (open-tx-isp README); the T30 contributor ran the ISP + FrameSource path live (`docs/T30_STATUS.md`); not run by us (no T30 camera)
 - **T31:** ✅ reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
-- **T40:** ✅ device-tested 2026-10-10 on cam-K (T40XP; vendor kernel driver `tx_isp_t40`, vendor libimp 1.3.0 side by side, OpenIMP via `LD_LIBRARY_PATH`): `AddSensor`/`EnableSensor`, `ISP_Tuning_GetSensorAttr` and `GetCameraInputMode` run like on the vendor library (OpenIMP vs vendor); the T40 contributor's live gate in `docs/T40_STATUS.md` (2026-07-30). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with timps stopped was the IR cut left open, not the library
+- **T40:** ✅ device-tested 2026-10-10 on cam-K (T40XP; vendor kernel driver `tx_isp_t40`, vendor libimp 1.3.0 side by side, OpenIMP via `LD_LIBRARY_PATH`): `AddSensor`/`EnableSensor`, `ISP_Tuning_GetSensorAttr` and `GetCameraInputMode` run like on the vendor library (OpenIMP vs vendor); the T40 contributor's live gate in `docs/T40_STATUS.md` (2026-07-30). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with the streamer stopped was the IR cut left open, not the library
 - **T41:** ✅ runs the fully open stack from the `aperto` full OTA image (rootfs rev7, rmem 26M) since 2026-10-04; no oops; day/night and AE/AWB quality still untested
 
 ##### 2. Reload / error handling (rmmod, stop/start)
@@ -224,7 +224,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T30:** ? `SetAeComp` exported, no test result for T30
 - **T31:** ✅ device-tested: ae_comp (Y +13/−21), backlight (Y +19), highlight (Y −13) Re-tested 2026-10-10: OEM formula, luma 55 / 100 / 160 for 0 / 128 / 255; the AE is slow (about 6 s dead time, 25 to 30 s to settle), tests need at least 30 s settle
 - **T40:** — no AE compensation call in the T40 1.3.1 header set
-- **T41:** ✅ AE compensation reaches the ISP through OpenIMP (`AeScenceAttr.AeTargetComp`), device-tested: comp 2 lowers the target 65 → 1; wired in timps main. Backlight (BLC) and highlight (HLC) are not supported on T41: the driver now returns "not supported" instead of a silent success
+- **T41:** ✅ AE compensation reaches the ISP through OpenIMP (`AeScenceAttr.AeTargetComp`), device-tested: comp 2 lowers the target 65 → 1; wired in the streamer main. Backlight (BLC) and highlight (HLC) are not supported on T41: the driver now returns "not supported" instead of a silent success
 
 ##### 6. Max gain, IT max, sensor FPS
 
@@ -236,7 +236,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T30:** ? max-gain calls exported, no test result for T30
 - **T31:** ✅ EXPR setter, AE ROI, histogram edges
 - **T40:** 🔧 host: `Get/SetSensorFPS`; no max-gain call in the T40 1.3.1 header set
-- **T41:** ✅ gain and exposure caps reach the ISP through OpenIMP (`AeExprInfo`: `AeMaxAGain` linear Q10, `AeMaxIntegrationTime` in sensor lines), device-tested: 8x cap holds 6.9x; timps wiring follows
+- **T41:** ✅ gain and exposure caps reach the ISP through OpenIMP (`AeExprInfo`: `AeMaxAGain` linear Q10, `AeMaxIntegrationTime` in sensor lines), device-tested: 8x cap holds 6.9x; the streamer wiring follows
 
 ##### 7. Anti-flicker (50/60 Hz)
 
@@ -263,7 +263,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T30:** ? AWB calls exported (6 of 8 vendor names), no test result
 - **T31:** ✅ device-tested: manual R/B gains + presets 3/4/7 read back; chroma follows (Cb/Cr), auto restores
 - **T40:** ? `Get/SetAwbAttr`, `Get/SetAwbWeight` exported, no test result; `Awb_Get/SetRgbCoefft` not exported; AWB itself runs in the stock ISP firmware
-- **T41:** ✅ black-picture incident not reproducible; timps does not call any WB function on T41 (only AWB attr in libimp)
+- **T41:** ✅ black-picture incident not reproducible; the streamer does not call any WB function on T41 (only AWB attr in libimp)
 
 ##### 9. CCM / LSC (lens shading)
 
@@ -291,11 +291,11 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 
 ##### 11. IR cut / IR LED
 
-- **Vendor stack:** via GPIO through timps/Thingino
+- **Vendor stack:** via GPIO through the streamer/Thingino
 - **T10:** ✅ device-tested: daynight night/day switches ircut and ir850, ISP follows
 - **T20:** ✅ device-tested: as T10
 - **T21:** ✅ device-tested: as T10
-- **T23:** ✅ device-tested: timps auto night switches IR cut + ir850 + mono
+- **T23:** ✅ device-tested: the streamer auto night switches IR cut + ir850 + mono
 - **T30:** ? not documented
 - **T31:** ✅ device-tested: daynight night/day switches ircut + ir940 (no ir850 pin on this cam), ISP follows
 - **T40:** ? not documented
@@ -306,7 +306,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **Vendor stack:** IMP_ISP_Tuning_Set*
 - **T10:** ✅ device-tested: brightness (+150 Y), contrast, saturation, sharpness; hue cap absent
 - **T20:** ✅ defaults 0x80; sharpness works (edge energy 13/230/700); image.sharpness=128
-- **T21:** ✅+ getters lifted; sharpness/contrast readable; 2026-10-06: `SetBrightness` now acts (beyond vendor: the AE luma target is scaled by value/128, 128 = the vendor picture; imgfx Y 28.8/117.7/193.0 for 30/128/225, timps `image.brightness` live 44.5/130.8/223.9) [open-tx-isp release-t21-brightness]
+- **T21:** ✅+ getters lifted; sharpness/contrast readable; 2026-10-06: `SetBrightness` now acts (beyond vendor: the AE luma target is scaled by value/128, 128 = the vendor picture; imgfx Y 28.8/117.7/193.0 for 30/128/225, the streamer `image.brightness` live 44.5/130.8/223.9) [open-tx-isp release-t21-brightness]
 - **T23:** ✅ brightness/contrast/saturation/hue act now (they were reset on every stream start); contrast/gain feedback: driver takes the low byte like the vendor, OpenIMP remembers the gain before sending (user contrast 100 stays) (claude/t23-bcsh-aeit-fix)
 - **T30:** ? exported where the vendor has them (no hue call in the T30 vendor list), no test result
 - **T31:** ✅ defaults 0x80
@@ -359,7 +359,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T30:** ? Sinter/Temper strength exported; `SetTemperDnsCtl` exported since 2026-10-10 (cache-only like the T30 `SetTemperDnsAttr`)
 - **T31:** ✅ vendor-identical: SDNS H-S regs 0→0, 255→15 (OEM cap 16); temper 0: temporal std 4.60 vs 1.64; sinter effect small by OEM design
 - **T40:** — no Sinter/Temper/2DNR call in the T40 1.3.1 header set
-- **T41:** ⚠️ 2D noise reduction (sinter) works through OpenIMP (`Module_Ratio` index 0), device-tested: sinter 255 cuts wall noise from ~7 to ~1; wired in timps main. 3D noise reduction (temper, index 1) shows no measurable effect yet and is being checked in the driver
+- **T41:** ⚠️ 2D noise reduction (sinter) works through OpenIMP (`Module_Ratio` index 0), device-tested: sinter 255 cuts wall noise from ~7 to ~1; wired in the streamer main. 3D noise reduction (temper, index 1) shows no measurable effect yet and is being checked in the driver
 
 ##### 17. DPC (defect pixels)
 
@@ -415,11 +415,11 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T10:** — coerced to 0 ("unsupported on this SoC")
 - **T20:** — coerced to 0 ("unsupported on this SoC")
 - **T21:** — coerced to 0 ("unsupported on this SoC")
-- **T23:** ✅ sub-stream rotation 90/270 works via the native encoder; main stream above 704x576 refused (software rotation); IMP_Encoder_YuvSetCrop implemented (host-tested only, timps does not call it)
+- **T23:** ✅ sub-stream rotation 90/270 works via the native encoder; main stream above 704x576 refused (software rotation); IMP_Encoder_YuvSetCrop implemented (host-tested only, the streamer does not call it)
 - **T30:** ? no rotation call in the T30 vendor export list
 - **T31:** ✅ 704×1280 correct, 9 ms/frame @15 fps, before OSD/IVS/encoder
 - **T40:** ? no rotation call in the T40 1.3.1 header set; not checked in the FrameSource attributes
-- **T41:** ❌ open: hardware I2D path not enabled (timps build coerces 90/180/270 to 0)
+- **T41:** ❌ open: hardware I2D path not enabled (the streamer build coerces 90/180/270 to 0)
 
 
 #### Video encoder and streams
@@ -505,7 +505,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T21:** ✅ IPU OSD hook as T20; rect/line/bitmap
 - **T23:** ✅ device-tested: all 4 items, text edit
 - **T30:** ? OSD calls exported (T23 services, shared), no test result for T30
-- **T31:** ✅ IPU OSD; lines/rectangles; rotation: no OSD clamp in timps
+- **T31:** ✅ IPU OSD; lines/rectangles; rotation: no OSD clamp in the streamer
 - **T40:** ✅+ device-tested 2026-10-10 on cam-K (OpenIMP vs vendor library): PIC and COVER regions; OpenIMP draws COVER on NV12 while the vendor library fails with "COVER cannot support this format" (beyond vendor on this board). IPU OSD from the T41 path; mosaic regions are not drawn, `IMPOSDRgnAttr` shares only the 1772-byte prefix
 - **T41:** ✅ works on cam-F with the open stack (claude/t41-libimp): PIC/COVER via IPU, text/line/rect on CPU; clock, name and logo visible; kernel oops from the rmem cache flush fixed (T41 kernel expects a physical address)
 
@@ -526,7 +526,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **Vendor stack:** vendor pools
 - **2026-10-06:** `GetFrame`/`SnapFrame` wait up to 2 s like the vendor libimp on T20/T21/T23/T31 (apitest 16/16 frames); T20: `REQBUFS` = pool size and `SET_BANKS` as the vendor, the capture thread no longer sleeps in `DQBUF` without a queued buffer (apps that call `SetFrameDepth` got no frames before); `Encoder_GetFd` returns a pollable pipe; two IVS groups; T23: the pool rmem is parked at `DisableChn` as on T21 (40 streamer restarts, 0 oopses on a T23 camera)
 - **T10:** ✅ device-tested: chn0, chn1 and snapshot concurrent, 148/147 frames decoded
-- **T20:** ✅ snapshot debounce no longer polls the JPEG encoder: with 1 snapshot/s on both channels chn0 14.4 / chn1 15.0 fps (was 11.2/14.3); sub-stream height 270 is rounded to 272 with a warning (was: scaler hang) [openimp claude/openimp-t20-jpeg-align, timps claude/timps-jpeg-idle-nopoll]
+- **T20:** ✅ snapshot debounce no longer polls the JPEG encoder: with 1 snapshot/s on both channels chn0 14.4 / chn1 15.0 fps (was 11.2/14.3); sub-stream height 270 is rounded to 272 with a warning (was: scaler hang) [openimp claude/openimp-t20-jpeg-align, the streamer claude/streamer-jpeg-idle-nopoll]
 - **T21:** ✅+ pool parked/reused (release at idle broke later allocations)
 - **T23:** ✅ frames also recycled for callback pools
 - **T30:** 🔧 FrameSource ran as the source of the contributor's H.264 gate; host test `fs_lifecycle_test`; not run by us
@@ -623,19 +623,19 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T30:** ? not documented
 - **T31:** — not in this SoC's encoder (vendor has none either)
 - **T40:** ? not documented
-- **T41:** ? not wired in timps (SetbufshareChn exists in libimp); not tested
+- **T41:** ? not wired in the streamer (SetbufshareChn exists in libimp); not tested
 
 ##### 38. CPU load (documented figures)
 
 - **Vendor stack:** vendor comparison values mostly missing
-- **T10:** ✅ timps 5–9 % with 2 streams at 25 fps (17 % momentary with 1 stream)
-- **T20:** ✅ timps 2.7 % with motion; OEM AWB +4 %
+- **T10:** ✅ the streamer 5–9 % with 2 streams at 25 fps (17 % momentary with 1 stream)
+- **T20:** ✅ the streamer 2.7 % with motion; OEM AWB +4 %
 - **T21:** ✅+ lifted AWB at 0.95x vendor instructions (was 1.41x), output bit-identical; cam-D isp_fw_process -10 %
 - **T23:** ✅ ~6–7 % for 2 streams 25 fps
 - **T30:** ? not measured
 - **T31:** ✅ rotation 9 ms/frame @15 fps
 - **T40:** ? not measured
-- **T41:** ✅+ timps ~10–12 % with our libimp vs ~27 % with the vendor libimp (momentary values)
+- **T41:** ✅+ the streamer ~10–12 % with our libimp vs ~27 % with the vendor libimp (momentary values)
 
 
 #### Stability, helper libraries, telemetry
@@ -740,17 +740,17 @@ Gap work 2026-10-10 (branch claude/gaps-t1x, T10/T20/T21, vendor export check on
 
 Gap work 2026-10-10 (branch claude/gaps-t1x-impl, T10/T20/T21, vendor disassembly of libimp T21 1.0.33 and T10/T20 3.12.0, device-tested): the 3.12.0 libimp of T10 and T20 is one and the same binary. Per function: **(a/b) done**: `Encoder_Get/SetChnFrmUsedMode` (T10/T20/T21; stored like the vendor, also before CreateChn), `Encoder_GetGOPSize` (T10/T20/T21; idle channel answers 0 on T21, -1 on T20), `ISP_Tuning_SetDPStrength` (T10/T20, T21 now device-tested), `ISP_Tuning_Get/SetISPHVflip` and `Get/SetWDRAttr` (T10/T20; the WDR switch is the V4L2 control 0x98e912 with the vendor's mode cache, the HV flip uses the ISP flip pair because the open T20 driver does not serve the vendor's module-control word), `OSD_AttachToGroup` (T10/T20/T21; system_attach() splice, host test). **Stored, effect only in the closed vendor encoder (cache, classes c/d)**: `Encoder_Get/SetChangeRef`, `SetChnHSkipBlackEnhance`, `Get/SetFisheyeEnableStatus` (T10/T20/T21, vendor return codes and idle/created rules matched), `Get/SetChnDemask` and `Get/SetChnHSkip` (T10/T20). **Not worth it / not possible**: `Decoder_*` (class d: no decoder in the open stack, no user), `ChnH264Demask/Denoise/FrmUsedMode` and `ChnRcAttr` (class d: exported only by the 3.9.0 libimp, an older ABI generation than OpenIMP implements), `SetAntiFogAttr` T10/T20 (class c: the antifog Iridix preset path of the open driver hung cameras), `SetMeshShadingScale` (class c: the vendor writes an ISP register through a userspace mapping, no driver control), `SU_Base_Shutdown` (class d, unchanged). Device results with the apitest (agg-34 plus these changes, libimp from /tmp, streamer restarted, config md5 unchanged, 0 oopses): T20 148 PASS / 0 FAIL / 2 N/A / 2 SKIP, T21 155 / 0 / 2 / 2, T10 147 / 1 / 2 / 2 (the one FAIL is the pre-existing `SetSuperFrameCfg` read-back on T10). Gaps by row: T10 21 to 15, T20 20 to 14, T21 8 to 5.
 
-Gap work 2026-10-10 (branch claude/gaps-t30, T30, host and build only, no T30 camera; vendor libimp 1.0.5 disassembled and compared with T21 1.0.33 and T31 1.1.6): the T30 build now exports 317 of the 334 vendor names (was 271; export check of `build-t30.sh`, audio 68 of 68). No streamer (timps, prudynt, raptor RVD) imports any of the 63 names that were missing (prudynt has one commented-out `IMP_Encoder_SetFisheyeEnableStatus` call), so no streamer-used T30 function was open. Per function: **(a/b) done, host-tested**: `Encoder_Get/SetChnFrmUsedMode`, `Encoder_GetGOPSize`, `ISP_Tuning_SetDPStrength`, `SetAntiFogAttr`, `Get/SetAeStrategy`, `Awb_Get/SetCwfShift`, `Get/SetWDRAttr` and `Get/SetISPHVflip` (the T30 libimp has the same code as T20/T21 for these; the ISP calls use the same tuning controls with a fake-ioctl host test, whether the open T30 driver serves each control is not checked), `OSD_AttachToGroup` (same wrapper as T21); the 21 `DMIC_*` functions by compiling the T31 implementation into the T30 build (the T30 libimp disassembles like T31 apart from buffer sizing; the T30 oss2 audio driver has the same DMIC ioctls; one microphone per device on T30; host test with a fake /dev/dsp; the AEC calls are compared, not run). **Stored only (cache)**: `Encoder_Get/SetChangeRef`, `SetChnHSkipBlackEnhance`, `Get/SetFisheyeEnableStatus`, `Get/SetChnHSkip` (the IDR period is not handed to the T30 encoder) and `ISP_Tuning_SetTemperDnsCtl`; three more vendor exports that have no matrix row are exported the same way (`Encoder_SetPoolSize`, `Encoder_SetChnRcTrigLevel`, `ISP_Tuning_SetAFThreshold`). **Wishlist (c, needs a T30 device or driver work)**: `Decoder_*` (8; Helix/Radix decoding), `Encoder_Get/SetChnCrop` (the vendor crops in 16-pixel units inside its encoder; the SPS-level crop of the Helix path needs a device check), `ISP_Tuning_SetISPLDC` (an LDC ioctl sequence on the ISP node). **Not worth it (d)**: `Encoder_Enable/DisableAllNCUDenoise` (register access of T30-class chips), `Encoder_PadFrame` and `SetPadFrameAttr` (external frame injection), `Encoder_Get/SetRencFirstFrameMult` (parameter of the closed re-encode controller, no default known); these 8 names are not matrix rows. Found on the way: the T21 build returns the stored value for `GetChangeRef` of a created channel, while the same vendor code (T21 1.0.33, T30 1.0.5) fails there with "unsupport to change ref channel", and the T21 `Get/SetChnHSkip` refuse an idle channel that the vendor accepts (reported, not changed for T21). T30 gaps: 54 to 19 (11 missing, 8 cache-only), 13 functions host and 22 aud, 0 streamer-used gaps.
+Gap work 2026-10-10 (branch claude/gaps-t30, T30, host and build only, no T30 camera; vendor libimp 1.0.5 disassembled and compared with T21 1.0.33 and T31 1.1.6): the T30 build now exports 317 of the 334 vendor names (was 271; export check of `build-t30.sh`, audio 68 of 68). No known application imports any of the 63 names that were missing (one application has a commented-out `IMP_Encoder_SetFisheyeEnableStatus` call), so no application-used T30 function was open. Per function: **(a/b) done, host-tested**: `Encoder_Get/SetChnFrmUsedMode`, `Encoder_GetGOPSize`, `ISP_Tuning_SetDPStrength`, `SetAntiFogAttr`, `Get/SetAeStrategy`, `Awb_Get/SetCwfShift`, `Get/SetWDRAttr` and `Get/SetISPHVflip` (the T30 libimp has the same code as T20/T21 for these; the ISP calls use the same tuning controls with a fake-ioctl host test, whether the open T30 driver serves each control is not checked), `OSD_AttachToGroup` (same wrapper as T21); the 21 `DMIC_*` functions by compiling the T31 implementation into the T30 build (the T30 libimp disassembles like T31 apart from buffer sizing; the T30 oss2 audio driver has the same DMIC ioctls; one microphone per device on T30; host test with a fake /dev/dsp; the AEC calls are compared, not run). **Stored only (cache)**: `Encoder_Get/SetChangeRef`, `SetChnHSkipBlackEnhance`, `Get/SetFisheyeEnableStatus`, `Get/SetChnHSkip` (the IDR period is not handed to the T30 encoder) and `ISP_Tuning_SetTemperDnsCtl`; three more vendor exports that have no matrix row are exported the same way (`Encoder_SetPoolSize`, `Encoder_SetChnRcTrigLevel`, `ISP_Tuning_SetAFThreshold`). **Wishlist (c, needs a T30 device or driver work)**: `Decoder_*` (8; Helix/Radix decoding), `Encoder_Get/SetChnCrop` (the vendor crops in 16-pixel units inside its encoder; the SPS-level crop of the Helix path needs a device check), `ISP_Tuning_SetISPLDC` (an LDC ioctl sequence on the ISP node). **Not worth it (d)**: `Encoder_Enable/DisableAllNCUDenoise` (register access of T30-class chips), `Encoder_PadFrame` and `SetPadFrameAttr` (external frame injection), `Encoder_Get/SetRencFirstFrameMult` (parameter of the closed re-encode controller, no default known); these 8 names are not matrix rows. Found on the way: the T21 build returns the stored value for `GetChangeRef` of a created channel, while the same vendor code (T21 1.0.33, T30 1.0.5) fails there with "unsupport to change ref channel", and the T21 `Get/SetChnHSkip` refuse an idle channel that the vendor accepts (reported, not changed for T21). T30 gaps: 54 to 19 (11 missing, 8 cache-only), 13 functions host and 22 aud, 0 streamer-used gaps.
 
 Gap work 2026-10-10 (branch claude/gaps-t1x-c, T10/T20/T21, vendor disassembly, host tests only, the cameras were in a soak): three vendor deviations fixed. **T21 `GetChangeRef`** on a created channel returned the stored value; the vendor (T21 1.0.33 0x48d90, T30 1.0.5 identical; T10/T20 3.12.0 0x4b220 read the value) logs "unsupport to change ref channel" and returns -1, now matched. **T21 `Get/SetChnHSkip`** rejected an idle channel; the vendor (0x478f0/0x47ba0) stores without the maxHSkipType check (Set) and answers all zero (Get), now matched; T10/T20 stay -1 on an idle channel as their vendor. **T10/T20 `Get/SetChnDenoise`** read dnType back as 0 because the T20 build also defines PLATFORM_T21; T10/T20 now keep type and QPs like the 3.12.0 vendor (no two-pass encode, cell stays cache). Remaining gap rows re-checked against the disassembly: all are classes c/d (closed vendor encoder, driver control missing, 3.9.0-only names, vendor-equal defect), none is a cheap a/b item; T10 `SetMbRC` is a matched no-op (the vendor T10 controller has no macroblock part).
 
 Not re-measured in this update: T10 (not re-tested on the open stack), T41 (its fixes live in `claude/release-t41`, not in the release), the `_Sec` and `MultiCamera_` variants of T23 (the apitest exercises the base function), and every function the apitest skips on purpose. T10 uses the T20 userspace build (and the T20 SDK tuning code in the driver), so its cells mirror T20 unless the note says otherwise. T30 and T40 are tabled since 2026-10-10 (see the T30/T40 paragraph below).
 
-T30/T40 columns (added 2026-10-10, host/build evidence only; no T30 camera, T40 device results only from the cam-K run of 2026-10-10). Vendor function lists: T30 = the export list of the vendor libimp 1.0.5 (fixture `tests/t30/fixtures/t30_vendor_1.0.5_imp_exports.txt`, 334 names; headers `timps/include/T30/1.0.5/zh`); T40 = the vendor headers 1.3.1 (`timps/include/T40/1.3.1/en`; the T40 board runs vendor libimp 1.3.0). Open side: `nm -D` of `build/t30/libimp.so` built from `next` (ed7bd82, 594,232 B; `build-t30.sh` export check: 271 of 334 vendor exports, audio 68 of 68; after the gap work of 2026-10-10 on `claude/gaps-t30`: 317 of 334, audio 68 of 68) and of the T40 `libimp.so` built from `claude/t40-t41-api` (9035e30, 375,752 B). Cell rules: n.a. = not in that vendor list; miss = in the vendor list but not exported; err = exported as an ENOTSUP shim (T40, `src/t40/openimp_p3_compat.c`: all OSD, IVS, DMIC, ISP-OSD, CCM, gamma, mask, module control, sensor attr and `SnapFrame` calls; the T40 contributor's gate in `docs/T40_STATUS.md` says the same: P4 surfaces not used by the gate return ENOTSUP); host = covered by a host test of the shared code (T40: the camera-input trio in `tests/t40`, the ISP control and FrameSource delay/I2D calls in `tests/t41`, which build the shared `src/t40` code with `-DPLATFORM_T41`); ? = exported, behaviour not audited and not run on a camera. Nothing is dev on T30 (host or aud cells only come from the gap work of 2026-10-10, host tests and disassembly comparisons); the T40 dev cells come from the cam-K run of 2026-10-10; SU_* cells are ? (libsysutils is not part of the libimp build). A `?` on T30/T40 does not by itself move a row into the gap lists and the ► mark counts only cache/stub/err/miss on T30/T40. Used-by for T40: timps is binary-verified (nm of the T40 `timpsd`), the prudynt/raptor entries are the per-row source-derived ones (†) and were not re-derived for T40. Earlier finding (export coverage only): the only function raptor needed on T40 and OpenIMP lacked was `SetCameraInputMode`/`SetCameraInputSelect`; they are now implemented (9035e30, host test only, no camera) and show as host. Counted as ENOTSUP shims the streamer-used T40 gaps are many more (see below), so that earlier finding does not hold at the behaviour level. 15 vendor functions that had no row yet were added (T40: `ISP_Bypass_Bind`, `ISP_GetCameraInputMode`, `ISP_SetCameraInputSelect`, `ISP_Get/SetDrawAttr`, `ISP_Get/SetOSDAttr`, `ISP_Get/SetSingleOSDAttr`, `ISP_GetRaw`, `ISP_SetPreDqtime`, `ISP_SetScalerLv`, `ISP_Tuning_Get/SetAeSpeed`, `Get/SetFaceAwb`, `Get/SetHLDCAttr`, `GetISPBypass`, `SetFixedContraster`; T30: `ISP_Tuning_SetISPLDC`). Not tabled: names that the vendor T30 1.0.5 libimp exports without a header (24 names, for example `IMP_Alloc*`, undistort and pad-frame calls), `SU_ADC_Init` and the `IMP_LOG_*` macros.
+T30/T40 columns (added 2026-10-10, host/build evidence only; no T30 camera, T40 device results only from the cam-K run of 2026-10-10). Vendor function lists: T30 = the export list of the vendor libimp 1.0.5 (fixture `tests/t30/fixtures/t30_vendor_1.0.5_imp_exports.txt`, 334 names; headers `include/T30/1.0.5/zh`); T40 = the vendor headers 1.3.1 (`include/T40/1.3.1/en`; the T40 board runs vendor libimp 1.3.0). Open side: `nm -D` of `build/t30/libimp.so` built from `next` (ed7bd82, 594,232 B; `build-t30.sh` export check: 271 of 334 vendor exports, audio 68 of 68; after the gap work of 2026-10-10 on `claude/gaps-t30`: 317 of 334, audio 68 of 68) and of the T40 `libimp.so` built from `claude/t40-t41-api` (9035e30, 375,752 B). Cell rules: n.a. = not in that vendor list; miss = in the vendor list but not exported; err = exported as an ENOTSUP shim (T40, `src/t40/openimp_p3_compat.c`: all OSD, IVS, DMIC, ISP-OSD, CCM, gamma, mask, module control, sensor attr and `SnapFrame` calls; the T40 contributor's gate in `docs/T40_STATUS.md` says the same: P4 surfaces not used by the gate return ENOTSUP); host = covered by a host test of the shared code (T40: the camera-input trio in `tests/t40`, the ISP control and FrameSource delay/I2D calls in `tests/t41`, which build the shared `src/t40` code with `-DPLATFORM_T41`); ? = exported, behaviour not audited and not run on a camera. Nothing is dev on T30 (host or aud cells only come from the gap work of 2026-10-10, host tests and disassembly comparisons); the T40 dev cells come from the cam-K run of 2026-10-10; SU_* cells are ? (libsysutils is not part of the libimp build). A `?` on T30/T40 does not by itself move a row into the gap lists and the ► mark counts only cache/stub/err/miss on T30/T40. Used-by for T40: the application list is binary-verified for the T40 build, other entries are source-derived (†) and were not re-derived for T40. Earlier finding (export coverage only): the only function an application needed on T40 and OpenIMP lacked was `SetCameraInputMode`/`SetCameraInputSelect`; they are now implemented (9035e30, host test only, no camera) and show as host. Counted as ENOTSUP shims the application-used T40 gaps are many more (see below), so that earlier finding does not hold at the behaviour level. 15 vendor functions that had no row yet were added (T40: `ISP_Bypass_Bind`, `ISP_GetCameraInputMode`, `ISP_SetCameraInputSelect`, `ISP_Get/SetDrawAttr`, `ISP_Get/SetOSDAttr`, `ISP_Get/SetSingleOSDAttr`, `ISP_GetRaw`, `ISP_SetPreDqtime`, `ISP_SetScalerLv`, `ISP_Tuning_Get/SetAeSpeed`, `Get/SetFaceAwb`, `Get/SetHLDCAttr`, `GetISPBypass`, `SetFixedContraster`; T30: `ISP_Tuning_SetISPLDC`). Not tabled: names that the vendor T30 1.0.5 libimp exports without a header (24 names, for example `IMP_Alloc*`, undistort and pad-frame calls), `SU_ADC_Init` and the `IMP_LOG_*` macros.
 
 ### Legend
 
-What every cell code means (the same short legend is repeated above each table below). Older text in this file and in `feature-matrix.html` may use the long names in brackets (done (dev), done (?) and so on); the codes are only the short form of them. In the function tables the "Used by" column is shortened to p = prudynt, r = raptor, t = timps (a long per-SoC list is given in the numbered note instead):
+What every cell code means (the same short legend is repeated above each table below). Older text in this file and in `feature-matrix.html` may use the long names in brackets (done (dev), done (?) and so on); the codes are only the short form of them. In the function tables the "App-used" column says whether a known application calls the function (`yes`, or `yes (T21, T23)` when only some SoCs; `–` = none; the numbered note lists the details).
 
 - **dev** (done, device-tested): implemented and device-tested on that SoC (a camera run exists: apitest or imgfx PASS on 2026-10-06 or an earlier documented device test; see the note)
 - **host** (done, host tests only): implemented, host tests only (unit/layout/fake-device tests); not run on a camera yet
@@ -762,10 +762,10 @@ What every cell code means (the same short legend is repeated above each table b
 - **miss** (missing): symbol not exported by the open libimp/libsysutils
 - **n.a.** (not in vendor API): the function does not exist in that SoC's vendor API (header set of that SoC); not "unsupported"
 - **?**: cause or state not determined
-- **►**: leading mark on the function name: at least one streamer (timps/prudynt/raptor) uses it and its cell on that SoC is a gap
-- **†**: streamer usage derived from source only (no binary of that streamer was built for that SoC)
+- **►**: leading mark on the function name: at least one known application uses it and its cell on that SoC is a gap
+- **†**: application usage derived from source only (no binary of that application was built for that SoC)
 
-**Used by** (column added 2026-10-05): which streamers import the function, determined from real imports, not guesses. `timps`: `nm -D --undefined-only` of the `timpsd` binaries of the per-camera builds (one build per SoC, T20 with two identical import sets, T21 also with the vendor-stack build) incl. weak imports; the timps source has no dlsym use, so nothing is hidden behind dlsym. `prudynt`, `raptor`: T23 is binary-verified (nm of `prudynt`, `rvd`, `rad` of the T23 build, raptor-hal linked in statically); for the other SoCs the sources were run through the C preprocessor with `-DPLATFORM_Txx` and the vendor header set of that SoC and the identifiers were collected. That method reproduces the T23 binary imports exactly (19/19 prudynt, 51/51 raptor rows), so it is trusted, but a name marked **†** is **source-only** (no T10/T20/T21/T31/T41 binary of that streamer was built). Without a †, the entry is binary-verified. `–` = none of the three imports it on any SoC where the function exists. `T21: ...; T23: ...` = the set differs per SoC (only SoCs that have the function). Variants (`_Sec`, `MultiCamera_`) count for the base function. **Bold** used-by text and a leading `►` on the function name = a priority row: at least one streamer imports it and its cell on that SoC is a gap (missing, error, cache-only, stub or ?). `vendor no-op` and `done (...)` rows are not counted as priority gaps.
+**Used by** (column added 2026-10-05): whether a known application imports the function, determined from real imports, not guesses. Binary-verified for the T23 build and for the T40 build (`nm -D --undefined-only` of the applications of the per-camera builds, weak imports included, no dlsym use); for the other SoCs the application sources were run through the C preprocessor with `-DPLATFORM_Txx` and the vendor header set of that SoC and the identifiers were collected. That method reproduces the T23 binary imports exactly, so it is trusted, but an entry marked **†** is **source-only** (no binary of an application was built for that SoC). Without a †, the entry is binary-verified. `–` = no known application imports it on any SoC where the function exists. `yes (T21, T23)` = the answer differs per SoC (only SoCs that have the function; the numbered note lists them). Variants (`_Sec`, `MultiCamera_`) count for the base function. A leading `►` on the function name = a priority row: at least one known application imports it and its cell on that SoC is a gap (missing, error, cache-only, stub or ?). `vendor no-op` and `done (...)` rows are not counted as priority gaps.
 
 
 ### Progress per SoC
@@ -798,28 +798,28 @@ T40  ████▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
 T41  █▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░░░░░░░░
 ```
 
-### Streamer-relevant gaps per SoC (priority)
+### Gaps in application-used functions per SoC (priority)
 
-Gaps (cache-only, stub, error, missing, ?) of functions that at least one of timps / prudynt / raptor imports on that SoC; derived as described under "Used by" in the legend. Raptor and prudynt entries for T10/T20/T21/T30/T31/T40/T41 are source-only (no binary built); timps (T40 from the T40 `timpsd`) and T23 are binary-verified. `?` cells of T30/T40 are not counted. T40 uses the row-level used-by entries, which are not per SoC.
+Gaps (cache-only, stub, error, missing, ?) of functions that at least one known application imports on that SoC; derived as described under "Used by" in the legend. Entries for T10/T20/T21/T30/T31/T40/T41 are partly source-only (no binary built); T23 and the T40 build are binary-verified. `?` cells of T30/T40 are not counted. T40 uses the row-level entries, which are not per SoC.
 
-- **T10**: 0 (no gap in a function that a streamer imports)
-- **T20**: 0 (no gap in a function that a streamer imports)
-- **T21**: 0 (no gap in a function that a streamer imports)
-- **T23**: 0 (no gap in a function that a streamer imports)
-- **T30**: 0 (no gap in a function that a streamer imports)
-- **T31**: 0 (no gap in a function that a streamer imports)
-- **T40**: 2 (timps 0, prudynt 0, raptor 2): `DMIC_*` (error; raptor), `DMIC_DisableAecRefFrame` (error; raptor)
-- **T41**: 20 (timps 0, prudynt 4, raptor 18): `ISP_Get/SetISPBypass` (missing; prudynt), `ISP_Tuning_Get/SetModuleControl` (error; raptor), `ISP_Tuning_SetAutoZoom` (error; prudynt), `ISP_Tuning_SetMaskBlock` (error; raptor), `ISP_Tuning_SetScalerLv` (error; raptor), `Encoder_SetChnMaxPictureSize` (cache-only; raptor), `FrameSource_Get/SetChnFifoAttr` (cache-only; prudynt+raptor), `FrameSource_Get/SetDelay` (error; raptor), `FrameSource_Get/SetFrameDepth` (cache-only; prudynt+raptor), `FrameSource_Get/SetI2dAttr` (error; raptor), `FrameSource_Get/SetMaxDelay` (error; raptor), `FrameSource_Get/SetPool` (cache-only; raptor), `FrameSource_GetTimedFrame` (error; raptor), `ISP_Tuning_CreateOsdRgn` (error; raptor), `ISP_Tuning_DestroyOsdRgn` (error; raptor), `ISP_Tuning_SetOsdPoolSize` (stub; raptor), `ISP_Tuning_SetOsdRgnAttr` (error; raptor), `ISP_Tuning_ShowOsdRgn` (error; raptor), `DMIC_*` (error; raptor), `DMIC_DisableAecRefFrame` (error; raptor)
+- **T10**: 0 (no gap in a function that a known application imports)
+- **T20**: 0 (no gap in a function that a known application imports)
+- **T21**: 0 (no gap in a function that a known application imports)
+- **T23**: 0 (no gap in a function that a known application imports)
+- **T30**: 0 (no gap in a function that a known application imports)
+- **T31**: 0 (no gap in a function that a known application imports)
+- **T40**: 2: `DMIC_*` (error), `DMIC_DisableAecRefFrame` (error)
+- **T41**: 20: `ISP_Get/SetISPBypass` (missing), `ISP_Tuning_Get/SetModuleControl` (error), `ISP_Tuning_SetAutoZoom` (error), `ISP_Tuning_SetMaskBlock` (error), `ISP_Tuning_SetScalerLv` (error), `Encoder_SetChnMaxPictureSize` (cache-only), `FrameSource_Get/SetChnFifoAttr` (cache-only), `FrameSource_Get/SetDelay` (error), `FrameSource_Get/SetFrameDepth` (cache-only), `FrameSource_Get/SetI2dAttr` (error), `FrameSource_Get/SetMaxDelay` (error), `FrameSource_Get/SetPool` (cache-only), `FrameSource_GetTimedFrame` (error), `ISP_Tuning_CreateOsdRgn` (error), `ISP_Tuning_DestroyOsdRgn` (error), `ISP_Tuning_SetOsdPoolSize` (stub), `ISP_Tuning_SetOsdRgnAttr` (error), `ISP_Tuning_ShowOsdRgn` (error), `DMIC_*` (error), `DMIC_DisableAecRefFrame` (error)
 
 ### ISP tuning
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Get/SetCsccrMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| ► `ISP_Get/SetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | p† |
+| ► `ISP_Get/SetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | yes† |
 | `ISP_Get/SetInternalChnAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_LDC_Get/SetAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
@@ -833,25 +833,25 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 | `ISP_Tuning_Get/SetDrawBlock` [3] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetHLDCAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_Get/SetISPCSCAttr` [49] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | host | – |
-| `ISP_Tuning_Get/SetMask` [55] | n.a. | n.a. | n.a. | no-op | n.a. | aud | dev | n.a. | r† |
-| ► `ISP_Tuning_Get/SetModuleControl` [4] | n.a. | n.a. | host | aud | n.a. | aud | host | err | T31/T41: r† |
+| `ISP_Tuning_Get/SetMask` [55] | n.a. | n.a. | n.a. | no-op | n.a. | aud | dev | n.a. | yes† |
+| ► `ISP_Tuning_Get/SetModuleControl` [4] | n.a. | n.a. | host | aud | n.a. | aud | host | err | yes (T31/T41)† |
 | `ISP_Tuning_Get/SetStatisConfig` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_Tuning_Get/SetTmoCurve` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetAutoZoom` [6] | n.a. | n.a. | n.a. | host | n.a. | n.a. | host | err | – |
-| `ISP_Tuning_GetBrightness` [66] | aud | aud | aud | aud | ? | aud | host | aud | p† r† |
-| `ISP_Tuning_GetHVFlip` | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | miss | T23/T31: r† |
+| `ISP_Tuning_GetBrightness` [66] | aud | aud | aud | aud | ? | aud | host | aud | yes† |
+| `ISP_Tuning_GetHVFlip` | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | miss | yes (T23/T31)† |
 | `ISP_Tuning_GetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_GetMaskBlock` [7] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_SetAntiFogAttr` [8] | miss | miss | no-op | n.a. | host | n.a. | n.a. | n.a. | – |
 | ► `ISP_Tuning_SetAutoZoom` [9] | n.a. | n.a. | n.a. | host | n.a. | host | host | err | see note |
 | `ISP_Tuning_SetFixedContraster` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_SetISPLDC` | n.a. | n.a. | n.a. | n.a. | miss | n.a. | n.a. | n.a. | – |
-| ► `ISP_Tuning_SetMaskBlock` [11] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | err | T41: r† |
+| ► `ISP_Tuning_SetMaskBlock` [11] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | err | yes (T41)† |
 | `ISP_Tuning_SetMeshShadingScale` [91] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| ► `ISP_Tuning_SetScalerLv` [12] | n.a. | n.a. | n.a. | no-op | n.a. | aud | n.a. | err | r† |
+| ► `ISP_Tuning_SetScalerLv` [12] | n.a. | n.a. | n.a. | no-op | n.a. | aud | n.a. | err | yes† |
 | `ISP_Tuning_SetTemperDnsCtl` [83] | host | host | aud | n.a. | cache | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetTmoFaceae` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| ► `ISP_Tuning_SwitchBin` [13] | n.a. | n.a. | n.a. | err | n.a. | n.a. | dev | host | T41: p† |
+| ► `ISP_Tuning_SwitchBin` [13] | n.a. | n.a. | n.a. | err | n.a. | n.a. | dev | host | yes (T41)† |
 | `ISP_Tuning_WaitFrameDone` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 
@@ -864,7 +864,7 @@ Notes:
 6. `ISP_Tuning_GetAutoZoom`: T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 7. `ISP_Tuning_GetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run)
 8. `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); the open T10/T20 driver serves it through the antifog Iridix preset path that hung cameras (comment in tx-isp-core-tuning.c), so it is not exported; DefogStrength is the safe equivalent; wishlist: a driver preset that does not touch Iridix state. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked
-9. `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
+9. `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by known applications: T23, T31, T41; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 11. `ISP_Tuning_SetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 12. `ISP_Tuning_SetScalerLv`: T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 13. `ISP_Tuning_SwitchBin`: T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)
@@ -875,34 +875,34 @@ Notes:
 
 <details><summary>All 117 rows of this area (35 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
-| `ISP_AddSensor` [16] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| `ISP_AddSensor` [16] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
-| `ISP_Close` [17] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_DelSensor` [18] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_DisableSensor` [19] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_DisableTuning` [20] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_EnableSensor` [21] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `ISP_EnableTuning` [22] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `ISP_Close` [17] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_DelSensor` [18] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_DisableSensor` [19] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_DisableTuning` [20] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_EnableSensor` [21] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `ISP_EnableTuning` [22] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `ISP_Get/SetCsccrMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Get/SetDefaultBinPath` [23] | n.a. | n.a. | n.a. | dev | n.a. | dev | host | aud | r† |
-| ► `ISP_Get/SetFrameDrop` [1] | n.a. | n.a. | n.a. | dev | n.a. | dev | host | dev | T41: r† |
-| ► `ISP_Get/SetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | p† |
+| `ISP_Get/SetDefaultBinPath` [23] | n.a. | n.a. | n.a. | dev | n.a. | dev | host | aud | yes† |
+| ► `ISP_Get/SetFrameDrop` [1] | n.a. | n.a. | n.a. | dev | n.a. | dev | host | dev | yes (T41)† |
+| ► `ISP_Get/SetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | yes† |
 | `ISP_Get/SetInternalChnAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Get/SetSensorRegister` [24] | aud | aud | aud | aud | ? | aud | host | dev | r† |
-| `ISP_GetCameraInputMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | T40: r† |
+| `ISP_Get/SetSensorRegister` [24] | aud | aud | aud | aud | ? | aud | host | dev | yes† |
+| `ISP_GetCameraInputMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | yes (T40)† |
 | `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_LDC_Get/SetAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_LDC_INIT` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Open` [25] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `ISP_Open` [25] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `ISP_RAW_RwControl` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_SET_GPIO_INIT_OR_FREE` | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | miss | – |
 | `ISP_SET_GPIO_STA` | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | miss | – |
 | `ISP_SetCameraInputMode` [26] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | host | n.a. | – |
-| `ISP_SetCameraInputSelect` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | T40: r† |
+| `ISP_SetCameraInputSelect` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | yes (T40)† |
 | `ISP_SetFixedContraster` [2] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | – |
 | `ISP_SetPreDqtime` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_SetScalerLv` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
@@ -911,89 +911,89 @@ Notes:
 | `ISP_SetVicDoneCbFunc` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_StartNightMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_StreamCheck` [29] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_DisableMovestate` [30] | aud | aud | aud | no-op | ? | host | n.a. | n.a. | r† |
-| `ISP_Tuning_EnableDRC` [31] | n.a. | n.a. | n.a. | aud | n.a. | host | n.a. | n.a. | r† |
-| `ISP_Tuning_EnableDefog` [32] | n.a. | n.a. | n.a. | aud | n.a. | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_EnableMovestate` [33] | aud | aud | aud | no-op | ? | host | n.a. | n.a. | r† |
-| `ISP_Tuning_Get/SetAntiFlickerAttr` [34] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_Tuning_Get/SetBacklightComp` [35] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | p† r† t |
-| `ISP_Tuning_Get/SetBcshHue` [36] | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | aud | p† r† t |
-| `ISP_Tuning_Get/SetCCMAttr` [37] | n.a. | n.a. | n.a. | aud | n.a. | aud | host | host | T41: r† |
-| `ISP_Tuning_Get/SetColorfxMode` [38] | aud | aud | dev | n.a. | ? | n.a. | n.a. | n.a. | t |
-| `ISP_Tuning_Get/SetContrast` [39] | aud | aud | aud | aud | ? | aud | ? | aud | p† r† t |
-| `ISP_Tuning_Get/SetCsc_Attr` [40] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | r† |
-| `ISP_Tuning_Get/SetDPC_Strength` [41] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | r† t |
-| `ISP_Tuning_Get/SetDRC_Strength` [42] | n.a. | n.a. | aud | aud | n.a. | aud | n.a. | n.a. | p† r† t |
-| `ISP_Tuning_Get/SetDefog_Strength` [43] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_DisableMovestate` [30] | aud | aud | aud | no-op | ? | host | n.a. | n.a. | yes† |
+| `ISP_Tuning_EnableDRC` [31] | n.a. | n.a. | n.a. | aud | n.a. | host | n.a. | n.a. | yes† |
+| `ISP_Tuning_EnableDefog` [32] | n.a. | n.a. | n.a. | aud | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_EnableMovestate` [33] | aud | aud | aud | no-op | ? | host | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetAntiFlickerAttr` [34] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_Tuning_Get/SetBacklightComp` [35] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetBcshHue` [36] | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | aud | yes |
+| `ISP_Tuning_Get/SetCCMAttr` [37] | n.a. | n.a. | n.a. | aud | n.a. | aud | host | host | yes (T41)† |
+| `ISP_Tuning_Get/SetColorfxMode` [38] | aud | aud | dev | n.a. | ? | n.a. | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetContrast` [39] | aud | aud | aud | aud | ? | aud | ? | aud | yes |
+| `ISP_Tuning_Get/SetCsc_Attr` [40] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetDPC_Strength` [41] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetDRC_Strength` [42] | n.a. | n.a. | aud | aud | n.a. | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetDefog_Strength` [43] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | yes |
 | `ISP_Tuning_Get/SetDrawBlock` [3] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_Get/SetGamma` [45] | aud | aud | aud | dev | ? | aud | n.a. | n.a. | p† r† |
-| ► `ISP_Tuning_Get/SetGammaAttr` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | host | p† r† |
+| `ISP_Tuning_Get/SetFrontCrop` [44] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetGamma` [45] | aud | aud | aud | dev | ? | aud | n.a. | n.a. | yes† |
+| ► `ISP_Tuning_Get/SetGammaAttr` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | host | yes† |
 | `ISP_Tuning_Get/SetHLDCAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_Get/SetHVFLIP` [47] | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | aud | see note |
-| `ISP_Tuning_Get/SetHiLightDepress` [48] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_Get/SetHiLightDepress` [48] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | yes |
 | `ISP_Tuning_Get/SetISPCSCAttr` [49] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | host | – |
-| `ISP_Tuning_Get/SetISPCustomMode` [50] | n.a. | n.a. | n.a. | aud | n.a. | host | n.a. | n.a. | r† |
+| `ISP_Tuning_Get/SetISPCustomMode` [50] | n.a. | n.a. | n.a. | aud | n.a. | host | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetISPHVflip` [89] | dev | dev | n.a. | n.a. | host | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_Get/SetISPHflip` [51] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | p† t |
-| `ISP_Tuning_Get/SetISPRunningMode` [52] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `ISP_Tuning_Get/SetISPVflip` [53] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | p† t |
-| `ISP_Tuning_Get/SetIntegrationTime` [54] | aud | dev | dev | n.a. | ? | n.a. | n.a. | n.a. | t |
-| `ISP_Tuning_Get/SetMask` [55] | n.a. | n.a. | n.a. | no-op | n.a. | aud | dev | n.a. | r† |
-| `ISP_Tuning_Get/SetMaxAgain` [56] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† t |
-| `ISP_Tuning_Get/SetMaxDgain` [57] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† t |
-| ► `ISP_Tuning_Get/SetModuleControl` [4] | n.a. | n.a. | host | aud | n.a. | aud | host | err | T31/T41: r† |
+| `ISP_Tuning_Get/SetISPHflip` [51] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetISPRunningMode` [52] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `ISP_Tuning_Get/SetISPVflip` [53] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetIntegrationTime` [54] | aud | dev | dev | n.a. | ? | n.a. | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetMask` [55] | n.a. | n.a. | n.a. | no-op | n.a. | aud | dev | n.a. | yes† |
+| `ISP_Tuning_Get/SetMaxAgain` [56] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
+| `ISP_Tuning_Get/SetMaxDgain` [57] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
+| ► `ISP_Tuning_Get/SetModuleControl` [4] | n.a. | n.a. | host | aud | n.a. | aud | host | err | yes (T31/T41)† |
 | `ISP_Tuning_Get/SetModule_Ratio` [58] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | aud | – |
-| `ISP_Tuning_Get/SetSaturation` [59] | aud | aud | aud | aud | ? | aud | ? | aud | p† r† t |
+| `ISP_Tuning_Get/SetSaturation` [59] | aud | aud | aud | aud | ? | aud | ? | aud | yes |
 | `ISP_Tuning_Get/SetSensorHflip` [60] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_Get/SetSensorVflip` [61] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_Get/SetSinterDnsAttr` [62] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | p† |
+| `ISP_Tuning_Get/SetSinterDnsAttr` [62] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetStatisConfig` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `ISP_Tuning_Get/SetTemperDnsAttr` [63] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | p† |
+| `ISP_Tuning_Get/SetTemperDnsAttr` [63] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetTmoCurve` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetWDRAttr` [90] | dev | dev | n.a. | n.a. | host | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_Get/SetWdrOutputMode` [5] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | no-op | – |
-| `ISP_Tuning_Get/SetWdr_OutputMode` [64] | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | n.a. | r† |
+| `ISP_Tuning_Get/SetWdr_OutputMode` [64] | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetAutoZoom` [6] | n.a. | n.a. | n.a. | host | n.a. | n.a. | host | err | – |
-| `ISP_Tuning_GetBlcAttr` [65] | n.a. | n.a. | n.a. | no-op | n.a. | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_GetBrightness` [66] | aud | aud | aud | aud | ? | aud | host | aud | p† r† |
-| `ISP_Tuning_GetEVAttr` [67] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† t |
-| `ISP_Tuning_GetHVFlip` | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | miss | T23/T31: r† |
+| `ISP_Tuning_GetBlcAttr` [65] | n.a. | n.a. | n.a. | no-op | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_GetBrightness` [66] | aud | aud | aud | aud | ? | aud | host | aud | yes† |
+| `ISP_Tuning_GetEVAttr` [67] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
+| `ISP_Tuning_GetHVFlip` | n.a. | n.a. | n.a. | aud | n.a. | aud | ? | miss | yes (T23/T31)† |
 | `ISP_Tuning_GetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_GetMaskBlock` [7] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_GetRawDRC` [68] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | p† |
+| `ISP_Tuning_GetRawDRC` [68] | host | host | aud | n.a. | ? | n.a. | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetSceneMode` [69] | aud | aud | aud | n.a. | ? | n.a. | n.a. | n.a. | – |
 | ► `ISP_Tuning_GetSensorAttr` [70] | n.a. | n.a. | n.a. | dev | n.a. | dev | dev | host | see note |
-| `ISP_Tuning_GetSensorFPS` [71] | aud | dev | dev | dev | ? | dev | host | aud | p† r† t |
-| `ISP_Tuning_GetSharpness` [72] | aud | aud | aud | aud | ? | aud | ? | aud | p† r† |
-| `ISP_Tuning_GetTotalGain` [73] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_GetSensorFPS` [71] | aud | dev | dev | dev | ? | dev | host | aud | yes |
+| `ISP_Tuning_GetSharpness` [72] | aud | aud | aud | aud | ? | aud | ? | aud | yes† |
+| `ISP_Tuning_GetTotalGain` [73] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
 | `ISP_Tuning_SaveAllParam` [88] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetAntiFogAttr` [8] | miss | miss | no-op | n.a. | host | n.a. | n.a. | n.a. | – |
 | ► `ISP_Tuning_SetAutoZoom` [9] | n.a. | n.a. | n.a. | host | n.a. | host | host | err | see note |
-| `ISP_Tuning_SetBrightness` [74] | aud | aud | dev | aud | ? | aud | ? | aud | p† r† t |
+| `ISP_Tuning_SetBrightness` [74] | aud | aud | dev | aud | ? | aud | ? | aud | yes |
 | `ISP_Tuning_SetDPStrength` [10] | dev | dev | dev | n.a. | host | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetFWFreeze` [75] | aud | aud | aud | n.a. | ? | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetFixedContraster` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
-| `ISP_Tuning_SetISPBypass` [76] | aud | aud | aud | aud | ? | aud | ? | n.a. | p† r† |
+| `ISP_Tuning_SetISPBypass` [76] | aud | aud | aud | aud | ? | aud | ? | n.a. | yes† |
 | `ISP_Tuning_SetISPLDC` | n.a. | n.a. | n.a. | n.a. | miss | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_SetISPProcess` [77] | aud | aud | aud | n.a. | ? | n.a. | n.a. | n.a. | – |
-| ► `ISP_Tuning_SetMaskBlock` [11] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | err | T41: r† |
+| ► `ISP_Tuning_SetMaskBlock` [11] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | err | yes (T41)† |
 | `ISP_Tuning_SetMeshShadingScale` [91] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_SetRawDRC` [78] | host | host | no-op | n.a. | ? | n.a. | n.a. | n.a. | p† |
-| ► `ISP_Tuning_SetScalerLv` [12] | n.a. | n.a. | n.a. | no-op | n.a. | aud | n.a. | err | r† |
-| `ISP_Tuning_SetSceneMode` [79] | aud | aud | no-op | n.a. | ? | n.a. | n.a. | n.a. | t |
-| `ISP_Tuning_SetSensorFPS` [80] | aud | dev | dev | dev | ? | dev | host | host | p† r† t |
-| `ISP_Tuning_SetSharpness` [81] | aud | aud | no-op | aud | ? | aud | ? | aud | p† r† t |
-| `ISP_Tuning_SetSinterStrength` [82] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_SetRawDRC` [78] | host | host | no-op | n.a. | ? | n.a. | n.a. | n.a. | yes† |
+| ► `ISP_Tuning_SetScalerLv` [12] | n.a. | n.a. | n.a. | no-op | n.a. | aud | n.a. | err | yes† |
+| `ISP_Tuning_SetSceneMode` [79] | aud | aud | no-op | n.a. | ? | n.a. | n.a. | n.a. | yes |
+| `ISP_Tuning_SetSensorFPS` [80] | aud | dev | dev | dev | ? | dev | host | host | yes |
+| `ISP_Tuning_SetSharpness` [81] | aud | aud | no-op | aud | ? | aud | ? | aud | yes |
+| `ISP_Tuning_SetSinterStrength` [82] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | yes |
 | `ISP_Tuning_SetTemperDnsCtl` [83] | host | host | aud | n.a. | cache | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_SetTemperStrength` [84] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_SetTemperStrength` [84] | aud | aud | aud | aud | ? | aud | n.a. | n.a. | yes |
 | `ISP_Tuning_SetTmoFaceae` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_SetVideoDrop` [85] | host | host | host | host | ? | host | ? | host | r† |
-| ► `ISP_Tuning_SwitchBin` [13] | n.a. | n.a. | n.a. | err | n.a. | n.a. | dev | host | T41: p† |
-| `ISP_Tuning_WaitFrame` [86] | host | host | host | host | ? | aud | n.a. | n.a. | r† |
+| `ISP_Tuning_SetVideoDrop` [85] | host | host | host | host | ? | host | ? | host | yes† |
+| ► `ISP_Tuning_SwitchBin` [13] | n.a. | n.a. | n.a. | err | n.a. | n.a. | dev | host | yes (T41)† |
+| `ISP_Tuning_WaitFrame` [86] | host | host | host | host | ? | aud | n.a. | n.a. | yes† |
 | `ISP_Tuning_WaitFrameDone` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `ISP_WDR_ENABLE` [14] | n.a. | n.a. | n.a. | n.a. | n.a. | aud | host | dev | r† |
-| ► `ISP_WDR_ENABLE_GET` [15] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | r† |
+| ► `ISP_WDR_ENABLE` [14] | n.a. | n.a. | n.a. | n.a. | n.a. | aud | host | dev | yes† |
+| ► `ISP_WDR_ENABLE_GET` [15] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | yes† |
 | `ISP_WDR_ENABLE_Get` [87] | n.a. | n.a. | n.a. | n.a. | n.a. | aud | n.a. | n.a. | – |
 | `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 
@@ -1033,7 +1033,7 @@ Notes:
 44. `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)
 45. `ISP_Tuning_Get/SetGamma`: T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05
 46. `ISP_Tuning_Get/SetGammaAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
-47. `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps
+47. `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by known applications: T23/T31, T41
 48. `ISP_Tuning_Get/SetHiLightDepress`: audit: reaches the driver/kernel
 49. `ISP_Tuning_Get/SetISPCSCAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested
 50. `ISP_Tuning_Get/SetISPCustomMode`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there
@@ -1060,13 +1060,13 @@ Notes:
 7. `ISP_Tuning_GetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run)
 68. `ISP_Tuning_GetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
 69. `ISP_Tuning_GetSceneMode`: audit: reaches the driver/kernel
-70. `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
+70. `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by known applications: T23/T31, T41; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
 71. `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel
 72. `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel
 73. `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel
 88. `ISP_Tuning_SaveAllParam`: T10/T20/T21 (4 builds each) and T23/T31: declared in the SDK header, exported by none of the vendor libimp builds (nm); a vendor-stack application cannot link it either
 8. `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); the open T10/T20 driver serves it through the antifog Iridix preset path that hung cameras (comment in tx-isp-core-tuning.c), so it is not exported; DefogStrength is the safe equivalent; wishlist: a driver preset that does not touch Iridix state. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked
-9. `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
+9. `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by known applications: T23, T31, T41; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 74. `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value
 10. `ISP_Tuning_SetDPStrength`: T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl
 75. `ISP_Tuning_SetFWFreeze`: audit: reaches the driver/kernel
@@ -1095,9 +1095,9 @@ Notes:
 
 ### AE / AWB / AF
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_SetAeAlgoFunc` | n.a. | n.a. | n.a. | aud | n.a. | aud | miss | miss | – |
 | `ISP_SetAwbAlgoFunc` | n.a. | n.a. | n.a. | aud | n.a. | aud | miss | miss | – |
@@ -1126,74 +1126,74 @@ Notes:
 
 <details><summary>All 60 rows of this area (19 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_SetAeAlgoFunc` | n.a. | n.a. | n.a. | aud | n.a. | aud | miss | miss | – |
 | `ISP_SetAwbAlgoFunc` | n.a. | n.a. | n.a. | aud | n.a. | aud | miss | miss | – |
 | `ISP_Tuning_AE_Get/SetROI` [4] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | see note |
 | `ISP_Tuning_AwbSync` [1] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_Awb_Get/SetCwfShift` [5] | host | host | n.a. | n.a. | host | n.a. | n.a. | n.a. | – |
-| ► `ISP_Tuning_Awb_Get/SetRgbCoefft` [6] | aud | dev | dev | dev | ? | dev | host | host | r† |
-| `ISP_Tuning_Get/SetAeAttr` [7] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | p† r† |
-| `ISP_Tuning_Get/SetAeComp` [8] | aud | aud | n.a. | aud | ? | aud | n.a. | n.a. | p† r† t |
+| ► `ISP_Tuning_Awb_Get/SetRgbCoefft` [6] | aud | dev | dev | dev | ? | dev | host | host | yes† |
+| `ISP_Tuning_Get/SetAeAttr` [7] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetAeComp` [8] | aud | aud | n.a. | aud | ? | aud | n.a. | n.a. | yes |
 | `ISP_Tuning_Get/SetAeConvergeStep` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetAeExpList` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_Tuning_Get/SetAeExprInfo` [9] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | aud | – |
-| `ISP_Tuning_Get/SetAeHist` [10] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† |
+| `ISP_Tuning_Get/SetAeHist` [10] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetAeMin` [11] | n.a. | n.a. | dev | dev | n.a. | dev | n.a. | n.a. | see note |
 | `ISP_Tuning_Get/SetAeScenceAttr` [12] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | aud | – |
 | `ISP_Tuning_Get/SetAeSpeed` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Tuning_Get/SetAeStrategy` [13] | host | dev | dev | n.a. | host | n.a. | n.a. | n.a. | – |
-| `ISP_Tuning_Get/SetAeTargetList` [14] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_Get/SetAeWeight` [15] | aud | dev | dev | dev | ? | dev | host | host | p† r† |
-| `ISP_Tuning_Get/SetAfHist` [16] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | r† |
-| ► `ISP_Tuning_Get/SetAfWeight` [2] | n.a. | n.a. | dev | dev | n.a. | dev | host | dev | r† |
+| `ISP_Tuning_Get/SetAeTargetList` [14] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetAeWeight` [15] | aud | dev | dev | dev | ? | dev | host | host | yes† |
+| `ISP_Tuning_Get/SetAfHist` [16] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes† |
+| ► `ISP_Tuning_Get/SetAfWeight` [2] | n.a. | n.a. | dev | dev | n.a. | dev | host | dev | yes† |
 | `ISP_Tuning_Get/SetAwbAttr` [17] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ? | aud | – |
-| `ISP_Tuning_Get/SetAwbClust` [18] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
+| `ISP_Tuning_Get/SetAwbClust` [18] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetAwbConvergeStep` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_Get/SetAwbCtTrend` [19] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
+| `ISP_Tuning_Get/SetAwbCtTrend` [19] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_Get/SetAwbCtTrendOffset` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_Get/SetAwbHist` [20] | aud | dev | dev | no-op | ? | no-op | n.a. | n.a. | p† r† |
-| `ISP_Tuning_Get/SetAwbWeight` [21] | aud | dev | dev | no-op | ? | no-op | ? | aud | p† r† |
+| `ISP_Tuning_Get/SetAwbHist` [20] | aud | dev | dev | no-op | ? | no-op | n.a. | n.a. | yes† |
+| `ISP_Tuning_Get/SetAwbWeight` [21] | aud | dev | dev | no-op | ? | no-op | ? | aud | yes† |
 | `ISP_Tuning_Get/SetAwbZoneWeight` [22] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_Get/SetFaceAe` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_Tuning_Get/SetFaceAeWeiget` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetFaceAwb` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
-| `ISP_Tuning_Get/SetWB` [23] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | p† r† t |
+| `ISP_Tuning_Get/SetWB` [23] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
 | `ISP_Tuning_GetAEEvList` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetAEFlickerFlag` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_GetAE_IT_MAX` [24] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | p† |
-| `ISP_Tuning_GetAFMetrices` [25] | n.a. | n.a. | dev | dev | ? | dev | n.a. | n.a. | r† |
+| `ISP_Tuning_GetAE_IT_MAX` [24] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_GetAFMetrices` [25] | n.a. | n.a. | dev | dev | ? | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetAFMetricesInfo` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `ISP_Tuning_GetAWBCt` [26] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | see note |
 | `ISP_Tuning_GetAeAtList` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetAeBv` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetAeEvList` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetAeHist_Origin` [27] | n.a. | n.a. | n.a. | host | n.a. | aud | n.a. | n.a. | see note |
-| `ISP_Tuning_GetAeLuma` [28] | n.a. | n.a. | dev | dev | n.a. | dev | n.a. | n.a. | p† r† t |
-| `ISP_Tuning_GetAeState` [29] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
+| `ISP_Tuning_GetAeLuma` [28] | n.a. | n.a. | dev | dev | n.a. | dev | n.a. | n.a. | yes |
+| `ISP_Tuning_GetAeState` [29] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetAeStatistics` [30] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ? | aud | – |
-| `ISP_Tuning_GetAeZone` [31] | no-op | no-op | dev | dev | n.a. | dev | n.a. | n.a. | p† r† |
+| `ISP_Tuning_GetAeZone` [31] | no-op | no-op | dev | dev | n.a. | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetAfStatistics` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `ISP_Tuning_GetAfZone` [32] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | r† |
+| `ISP_Tuning_GetAfZone` [32] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | n.a. | yes† |
 | `ISP_Tuning_GetAwbGlobalStatistics` [33] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ? | aud | – |
 | `ISP_Tuning_GetAwbStatistics` [34] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | ? | aud | – |
 | `ISP_Tuning_GetAwbZone` [35] | host | dev | n.a. | dev | n.a. | dev | n.a. | n.a. | see note |
-| `ISP_Tuning_GetExpr` [36] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | r† t |
+| `ISP_Tuning_GetExpr` [36] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes |
 | `ISP_Tuning_GetFaceAeLuma` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_Tuning_GetWB_GOL_Statis` [37] | n.a. | n.a. | dev | dev | n.a. | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_GetWB_Statis` [38] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | r† |
-| `ISP_Tuning_SetAeFreeze` [39] | n.a. | n.a. | n.a. | host | n.a. | aud | n.a. | n.a. | r† |
-| `ISP_Tuning_SetAe_IT_MAX` [40] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | p† t |
-| `ISP_Tuning_SetAwbCt` [41] | n.a. | n.a. | n.a. | host | n.a. | aud | n.a. | n.a. | r† |
-| `ISP_Tuning_SetExpr` [42] | aud | aud | aud | host | ? | aud | n.a. | n.a. | T23/T31: r† |
+| `ISP_Tuning_GetWB_GOL_Statis` [37] | n.a. | n.a. | dev | dev | n.a. | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_GetWB_Statis` [38] | aud | dev | dev | dev | ? | dev | n.a. | n.a. | yes† |
+| `ISP_Tuning_SetAeFreeze` [39] | n.a. | n.a. | n.a. | host | n.a. | aud | n.a. | n.a. | yes† |
+| `ISP_Tuning_SetAe_IT_MAX` [40] | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | n.a. | yes |
+| `ISP_Tuning_SetAwbCt` [41] | n.a. | n.a. | n.a. | host | n.a. | aud | n.a. | n.a. | yes† |
+| `ISP_Tuning_SetExpr` [42] | aud | aud | aud | host | ? | aud | n.a. | n.a. | yes (T23/T31)† |
 | `ISP_Tuning_SetWB_ALGO` [3] | n.a. | n.a. | n.a. | err | n.a. | aud | n.a. | n.a. | – |
 
 Notes:
 
-4. `ISP_Tuning_AE_Get/SetROI`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T10/T20: prudynt†; T21/T23/T31: prudynt†, raptor†
+4. `ISP_Tuning_AE_Get/SetROI`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by known applications: T10/T20, T21/T23/T31†
 1. `ISP_Tuning_AwbSync`: T23: the vendor libimp 1.3.0 does not export it (only IMP_ISP_MultiCamera_Tuning_AwbSync, which sends control 0x8000011 for sensor 1 only); the stock kernel module rejects 0x8000011 in s_ctrl and g_ctrl (-1, checked in the emulator on the stock module), so the open driver's -EINVAL is the vendor behaviour (class a)
 5. `ISP_Tuning_Awb_Get/SetCwfShift`: T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl
 6. `ISP_Tuning_Awb_Get/SetRgbCoefft`: T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58
@@ -1201,7 +1201,7 @@ Notes:
 8. `ISP_Tuning_Get/SetAeComp`: audit: reaches the driver/kernel
 9. `ISP_Tuning_Get/SetAeExprInfo`: audit: reaches the driver/kernel
 10. `ISP_Tuning_Get/SetAeHist`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-11. `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†
+11. `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by known applications: T23, T31
 12. `ISP_Tuning_Get/SetAeScenceAttr`: audit: reaches the driver/kernel; T40: Get and Set device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
 13. `ISP_Tuning_Get/SetAeStrategy`: T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl
 14. `ISP_Tuning_Get/SetAeTargetList`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
@@ -1217,8 +1217,8 @@ Notes:
 23. `ISP_Tuning_Get/SetWB`: audit: reaches the driver/kernel
 24. `ISP_Tuning_GetAE_IT_MAX`: audit: reaches the driver/kernel
 25. `ISP_Tuning_GetAFMetrices`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
-26. `ISP_Tuning_GetAWBCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test; used by: T23: raptor; T31: prudynt†, raptor†
-27. `ISP_Tuning_GetAeHist_Origin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†
+26. `ISP_Tuning_GetAWBCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test; used by known applications: T23, T31
+27. `ISP_Tuning_GetAeHist_Origin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by known applications: T23, T31
 28. `ISP_Tuning_GetAeLuma`: audit: reaches the driver/kernel
 29. `ISP_Tuning_GetAeState`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 30. `ISP_Tuning_GetAeStatistics`: audit: reaches the driver/kernel
@@ -1226,7 +1226,7 @@ Notes:
 32. `ISP_Tuning_GetAfZone`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
 33. `ISP_Tuning_GetAwbGlobalStatistics`: audit: reaches the driver/kernel
 34. `ISP_Tuning_GetAwbStatistics`: audit: reaches the driver/kernel
-35. `ISP_Tuning_GetAwbZone`: T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23: stock handlers routed (agg-25), no device test; used by: T10/T20: prudynt†; T23/T31: prudynt†, raptor†
+35. `ISP_Tuning_GetAwbZone`: T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23: stock handlers routed (agg-25), no device test; used by known applications: T10/T20, T23/T31†
 36. `ISP_Tuning_GetExpr`: audit: reaches the driver/kernel
 37. `ISP_Tuning_GetWB_GOL_Statis`: audit: reaches the driver/kernel
 38. `ISP_Tuning_GetWB_Statis`: audit: reaches the driver/kernel
@@ -1240,15 +1240,15 @@ Notes:
 
 ### Encoder (and decoder)
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `Decoder_*` (8 functions) [1] | miss | miss | miss | aud | miss | n.a. | miss | miss | – |
 | `Encoder_Get/SetChangeRef` [65] | cache | cache | cache | dev | cache | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnCrop` [20] | n.a. | n.a. | n.a. | dev | miss | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnDemask` [66] | cache | cache | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/SetChnH264Demask` [67] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264Denoise` [68] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264FrmUsedMode` [69] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
@@ -1257,32 +1257,32 @@ Notes:
 | `Encoder_Get/SetChnRoiAttr` [63] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | host | – |
 | `Encoder_Get/SetChnSeiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `Encoder_Get/SetFisheyeEnableStatus` [4] | cache | cache | cache | cache | cache | cache | miss | miss | – |
-| `Encoder_Get/SetH264TransCfg` [5] | cache | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
-| `Encoder_Get/SetMbRC` [7] | no-op | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetH264TransCfg` [5] | cache | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
+| `Encoder_Get/SetMbRC` [7] | no-op | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/Setframelossthd` [8] | n.a. | n.a. | n.a. | cache | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_InputJpege` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | T23: t |
+| `Encoder_InputJpege` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | yes (T23) |
 | `Encoder_InputJpege_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetAvpuBsShare` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetAvpuBsSize` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetAvpuJpegQp` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetChnHSkipBlackEnhance` [73] | cache | cache | cache | dev | cache | n.a. | n.a. | n.a. | – |
 | `Encoder_SetChnMapRoi` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `Encoder_SetChnMaxPictureSize` [9] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | cache | T41: r† |
+| ► `Encoder_SetChnMaxPictureSize` [9] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | cache | yes (T41)† |
 | `Encoder_SetFrameRelease` [10] | n.a. | n.a. | n.a. | n.a. | n.a. | no-op | miss | miss | – |
 | `Encoder_SetIvpuBsSize` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetMultiSectionMode` [11] | n.a. | n.a. | n.a. | cache | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_SetbufshareChn` [12] | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | host | p† r† |
-| `Encoder_VbmAlloc` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_SetbufshareChn` [12] | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | host | yes† |
+| `Encoder_VbmAlloc` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_VbmAlloc_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_VbmFree` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_VbmFree` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_VbmFree_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_VbmP2V` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | – |
-| `Encoder_VbmV2P` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
-| `Encoder_YuvEncode` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_VbmV2P` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
+| `Encoder_YuvEncode` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvEncode_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_YuvExit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_YuvExit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvExit_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_YuvInit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_YuvInit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvInit_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 
 Notes:
@@ -1308,101 +1308,101 @@ Notes:
 
 <details><summary>All 92 rows of this area (38 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `Decoder_*` (8 functions) [1] | miss | miss | miss | aud | miss | n.a. | miss | miss | – |
-| `Encoder_CreateChn` [13] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_CreateGroup` [14] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_DestroyChn` [15] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_DestroyGroup` [16] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_FlushStream` [17] | host | dev | dev | dev | ? | dev | ? | host | p† r† |
+| `Encoder_CreateChn` [13] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_CreateGroup` [14] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_DestroyChn` [15] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_DestroyGroup` [16] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_FlushStream` [17] | host | dev | dev | dev | ? | dev | ? | host | yes† |
 | `Encoder_Get/SetChangeRef` [65] | cache | cache | cache | dev | cache | n.a. | n.a. | n.a. | – |
-| `Encoder_Get/SetChnAttrRcMode` [18] | aud | dev | dev | dev | ? | dev | ? | aud | r† t |
-| `Encoder_Get/SetChnColor2Grey` [19] | host | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetChnAttrRcMode` [18] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `Encoder_Get/SetChnColor2Grey` [19] | host | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/SetChnCrop` [20] | n.a. | n.a. | n.a. | dev | miss | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnDemask` [66] | cache | cache | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
-| `Encoder_Get/SetChnFrmRate` [21] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† |
+| ► `Encoder_Get/SetChnDenoise` [2] | cache | cache | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
+| `Encoder_Get/SetChnFrmRate` [21] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
 | `Encoder_Get/SetChnFrmUsedMode` [3] | dev | dev | dev | dev | host | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnGopAttr` [22] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | – |
 | `Encoder_Get/SetChnH264Demask` [67] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264Denoise` [68] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnH264FrmUsedMode` [69] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnHSkip` [70] | cache | cache | dev | dev | cache | n.a. | n.a. | n.a. | – |
-| `Encoder_Get/SetChnROI` [23] | dev | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetChnROI` [23] | dev | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/SetChnRcAttr` [71] | miss | miss | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_Get/SetChnRoiAttr` [63] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | host | – |
 | `Encoder_Get/SetChnSeiAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `Encoder_Get/SetFisheyeEnableStatus` [4] | cache | cache | cache | cache | cache | cache | miss | miss | – |
 | `Encoder_Get/SetGDRCfg` [24] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_Get/SetH264TransCfg` [5] | cache | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
-| ► `Encoder_Get/SetH265TransCfg` [6] | n.a. | n.a. | no-op | no-op | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetH264TransCfg` [5] | cache | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
+| ► `Encoder_Get/SetH265TransCfg` [6] | n.a. | n.a. | no-op | no-op | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/SetJpegeQl` [25] | host | dev | dev | dev | ? | n.a. | n.a. | host | see note |
-| `Encoder_Get/SetMaxStreamCnt` [26] | aud | dev | dev | dev | ? | dev | ? | aud | r† |
-| `Encoder_Get/SetMbRC` [7] | no-op | dev | dev | dev | ? | n.a. | n.a. | n.a. | T21: r† |
-| `Encoder_Get/SetPool` [27] | n.a. | n.a. | n.a. | dev | n.a. | dev | ? | aud | r† |
-| `Encoder_Get/SetQpgMode` [28] | n.a. | n.a. | no-op | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetMaxStreamCnt` [26] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `Encoder_Get/SetMbRC` [7] | no-op | dev | dev | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
+| `Encoder_Get/SetPool` [27] | n.a. | n.a. | n.a. | dev | n.a. | dev | ? | aud | yes† |
+| `Encoder_Get/SetQpgMode` [28] | n.a. | n.a. | no-op | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/SetStreamBufSize` [29] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | – |
-| `Encoder_Get/SetSuperFrameCfg` [30] | host | dev | host | dev | ? | n.a. | n.a. | n.a. | T21: r† |
+| `Encoder_Get/SetSuperFrameCfg` [30] | host | dev | host | dev | ? | n.a. | n.a. | n.a. | yes (T21)† |
 | `Encoder_Get/Setframelossthd` [8] | n.a. | n.a. | n.a. | cache | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_GetChnAttr` [31] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† |
-| `Encoder_GetChnAveBitrate` [32] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | t |
-| `Encoder_GetChnEncType` [33] | n.a. | n.a. | dev | dev | ? | dev | ? | aud | r† |
-| `Encoder_GetChnEvalInfo` [34] | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | n.a. | r† |
+| `Encoder_GetChnAttr` [31] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `Encoder_GetChnAveBitrate` [32] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | yes |
+| `Encoder_GetChnEncType` [33] | n.a. | n.a. | dev | dev | ? | dev | ? | aud | yes† |
+| `Encoder_GetChnEvalInfo` [34] | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | n.a. | yes† |
 | `Encoder_GetChnMaxPictureSize` [35] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_GetFd` [36] | n.a. | n.a. | dev | dev | ? | dev | ? | aud | r† |
+| `Encoder_GetFd` [36] | n.a. | n.a. | dev | dev | ? | dev | ? | aud | yes† |
 | `Encoder_GetGOPSize` [72] | dev | dev | dev | dev | host | n.a. | n.a. | n.a. | – |
-| `Encoder_GetStream` [37] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_InputJpege` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | T23: t |
+| `Encoder_GetStream` [37] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_InputJpege` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | yes (T23) |
 | `Encoder_InputJpege_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_InsertUserData` [38] | aud | dev | dev | dev | ? | n.a. | n.a. | n.a. | – |
 | `Encoder_PollingModuleStream` [39] | n.a. | n.a. | dev | aud | n.a. | dev | ? | aud | – |
-| `Encoder_PollingStream` [40] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_Query` [41] | aud | dev | dev | dev | ? | dev | ? | aud | r† t |
-| `Encoder_RegisterChn` [42] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_ReleaseStream` [43] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| `Encoder_PollingStream` [40] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_Query` [41] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `Encoder_RegisterChn` [42] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_ReleaseStream` [43] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `Encoder_RequestGDR` [44] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_RequestIDR` [45] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `Encoder_RequestIDR` [45] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `Encoder_SetAvpuBsShare` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetAvpuBsSize` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetAvpuJpegQp` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_SetChnBitRate` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | t |
+| `Encoder_SetChnBitRate` [46] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | yes |
 | `Encoder_SetChnEntropyMode` [47] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
 | `Encoder_SetChnGopLength` [48] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | – |
 | `Encoder_SetChnHSkipBlackEnhance` [73] | cache | cache | cache | dev | cache | n.a. | n.a. | n.a. | – |
 | `Encoder_SetChnInitQP` [49] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
 | `Encoder_SetChnMapRoi` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `Encoder_SetChnMaxPictureSize` [9] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | cache | T41: r† |
+| ► `Encoder_SetChnMaxPictureSize` [9] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | cache | yes (T41)† |
 | `Encoder_SetChnQp` [50] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
-| `Encoder_SetChnQpBounds` [51] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | t |
+| `Encoder_SetChnQpBounds` [51] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | yes |
 | `Encoder_SetChnQpBoundsPerFrame` [52] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | aud | – |
-| `Encoder_SetChnQpIPDelta` [53] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | t |
+| `Encoder_SetChnQpIPDelta` [53] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | yes |
 | `Encoder_SetChnResizeMode` [54] | n.a. | n.a. | n.a. | n.a. | ? | dev | ? | aud | – |
-| `Encoder_SetDefaultParam` [55] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | t |
+| `Encoder_SetDefaultParam` [55] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | ? | aud | yes |
 | `Encoder_SetFrameRelease` [10] | n.a. | n.a. | n.a. | n.a. | n.a. | no-op | miss | miss | – |
-| `Encoder_SetGOPSize` [56] | aud | aud | aud | dev | ? | n.a. | n.a. | n.a. | r† |
+| `Encoder_SetGOPSize` [56] | aud | aud | aud | dev | ? | n.a. | n.a. | n.a. | yes† |
 | `Encoder_SetIvpuBsSize` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_SetMultiSectionMode` [11] | n.a. | n.a. | n.a. | cache | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_SetbufshareChn` [12] | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | host | p† r† |
-| `Encoder_StartRecvPic` [57] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_StopRecvPic` [58] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_UnRegisterChn` [59] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `Encoder_VbmAlloc` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_SetbufshareChn` [12] | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | host | yes† |
+| `Encoder_StartRecvPic` [57] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_StopRecvPic` [58] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_UnRegisterChn` [59] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `Encoder_VbmAlloc` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_VbmAlloc_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_VbmFree` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_VbmFree` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_VbmFree_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_VbmP2V` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | – |
-| `Encoder_VbmV2P` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
-| `Encoder_YuvEncode` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_VbmV2P` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
+| `Encoder_YuvEncode` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvEncode_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_YuvExit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_YuvExit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvExit_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `Encoder_YuvGetCrop` [60] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
-| `Encoder_YuvInit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | T23: t |
+| `Encoder_YuvInit` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | yes (T23) |
 | `Encoder_YuvInit_Ex` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `Encoder_YuvRequestIDR` [61] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | t |
+| `Encoder_YuvRequestIDR` [61] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | yes |
 | `Encoder_YuvSetCrop` [62] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
 
 Notes:
@@ -1485,9 +1485,9 @@ Notes:
 
 ### Framesource
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `EmuFrameSource_*` (4 functions) [1] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FB_*` (5 functions) [2] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | n.a. | – |
@@ -1496,14 +1496,14 @@ Notes:
 | `FrameSource_ExternInject_DestroyChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ExternInject_DisableChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ExternInject_EnableChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `FrameSource_Get/SetChnFifoAttr` [3] | host | dev | dev | dev | ? | dev | host | cache | p† r† |
-| ► `FrameSource_Get/SetDelay` [4] | host | dev | dev | dev | ? | dev | host | err | T31/T41: r† |
+| ► `FrameSource_Get/SetChnFifoAttr` [3] | host | dev | dev | dev | ? | dev | host | cache | yes† |
+| ► `FrameSource_Get/SetDelay` [4] | host | dev | dev | dev | ? | dev | host | err | yes (T31/T41)† |
 | ► `FrameSource_Get/SetFrameDepth` [5] | aud | dev | dev | dev | ? | dev | ? | cache | see note |
-| ► `FrameSource_Get/SetI2dAttr` [6] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | err | r† |
-| ► `FrameSource_Get/SetMaxDelay` [7] | host | dev | dev | dev | ? | dev | host | err | T31/T41: r† |
-| ► `FrameSource_Get/SetPool` [8] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | cache | T31/T41: r† |
+| ► `FrameSource_Get/SetI2dAttr` [6] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | err | yes† |
+| ► `FrameSource_Get/SetMaxDelay` [7] | host | dev | dev | dev | ? | dev | host | err | yes (T31/T41)† |
+| ► `FrameSource_Get/SetPool` [8] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | cache | yes (T31/T41)† |
 | `FrameSource_GetFrameEx` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `FrameSource_GetTimedFrame` [9] | host | dev | dev | dev | ? | dev | host | err | r† |
+| ► `FrameSource_GetTimedFrame` [9] | host | dev | dev | dev | ? | dev | host | err | yes† |
 | `FrameSource_QueueBuffer` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ReleaseFrameEx` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_SetYuvAlign` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
@@ -1514,7 +1514,7 @@ Notes:
 2. `FB_*` (5 functions): functions: CreateGroup, DestroyGroup, DisableDev, EnableDev, GetDevInfo; class d: frame-buffer overlay for a display device; the IP cameras have no LCD/framebuffer, no streamer uses it; vendor check 2026-10-10: only the T31 1.1.5-zrt (display) libimp builds export the five functions, none of the camera builds 1.1.1-1.1.6, so the camera images have nothing to wire them to
 3. `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it
 4. `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: ENOTSUP stub (returns -1)
-5. `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps
+5. `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by known applications: T10/T20/T21/T31/T41, T23
 6. `FrameSource_Get/SetI2dAttr`: T41: ENOTSUP stub (returns -1)
 7. `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: ENOTSUP stub (returns -1)
 8. `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only
@@ -1522,40 +1522,40 @@ Notes:
 
 <details><summary>All 30 rows of this area (18 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `EmuFrameSource_*` (4 functions) [1] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FB_*` (5 functions) [2] | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | n.a. | – |
 | `FrameSource_ChnStatQuery` [10] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
-| `FrameSource_CreateChn` [11] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| `FrameSource_CreateChn` [11] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `FrameSource_DequeueBuffer` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `FrameSource_DestroyChn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `FrameSource_DisableChn` [13] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `FrameSource_EnableChn` [14] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| `FrameSource_DestroyChn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `FrameSource_DisableChn` [13] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| `FrameSource_EnableChn` [14] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `FrameSource_ExternInject_CreateChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ExternInject_DestroyChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ExternInject_DisableChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ExternInject_EnableChn` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `FrameSource_Get/SetChnAttr` [15] | aud | dev | dev | dev | ? | dev | host | aud | p† r† t |
-| ► `FrameSource_Get/SetChnFifoAttr` [3] | host | dev | dev | dev | ? | dev | host | cache | p† r† |
-| ► `FrameSource_Get/SetDelay` [4] | host | dev | dev | dev | ? | dev | host | err | T31/T41: r† |
+| `FrameSource_Get/SetChnAttr` [15] | aud | dev | dev | dev | ? | dev | host | aud | yes |
+| ► `FrameSource_Get/SetChnFifoAttr` [3] | host | dev | dev | dev | ? | dev | host | cache | yes† |
+| ► `FrameSource_Get/SetDelay` [4] | host | dev | dev | dev | ? | dev | host | err | yes (T31/T41)† |
 | `FrameSource_Get/SetDirectModeAttr` [16] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | n.a. | – |
 | ► `FrameSource_Get/SetFrameDepth` [5] | aud | dev | dev | dev | ? | dev | ? | cache | see note |
-| ► `FrameSource_Get/SetI2dAttr` [6] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | err | r† |
-| ► `FrameSource_Get/SetMaxDelay` [7] | host | dev | dev | dev | ? | dev | host | err | T31/T41: r† |
-| ► `FrameSource_Get/SetPool` [8] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | cache | T31/T41: r† |
+| ► `FrameSource_Get/SetI2dAttr` [6] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | err | yes† |
+| ► `FrameSource_Get/SetMaxDelay` [7] | host | dev | dev | dev | ? | dev | host | err | yes (T31/T41)† |
+| ► `FrameSource_Get/SetPool` [8] | n.a. | n.a. | n.a. | dev | n.a. | dev | n.a. | cache | yes (T31/T41)† |
 | `FrameSource_GetFrame` [17] | aud | dev | dev | dev | ? | dev | dev | aud | see note |
 | `FrameSource_GetFrameEx` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| ► `FrameSource_GetTimedFrame` [9] | host | dev | dev | dev | ? | dev | host | err | r† |
+| ► `FrameSource_GetTimedFrame` [9] | host | dev | dev | dev | ? | dev | host | err | yes† |
 | `FrameSource_QueueBuffer` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `FrameSource_ReleaseFrame` [18] | aud | dev | dev | dev | ? | dev | dev | aud | see note |
 | `FrameSource_ReleaseFrameEx` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `FrameSource_SetChnRotate` [19] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | t |
+| `FrameSource_SetChnRotate` [19] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | yes |
 | `FrameSource_SetSource` [20] | n.a. | n.a. | n.a. | n.a. | ? | aud | n.a. | n.a. | – |
 | `FrameSource_SetYuvAlign` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| ► `FrameSource_SnapFrame` [21] | aud | dev | dev | dev | ? | dev | dev | host | r† |
+| ► `FrameSource_SnapFrame` [21] | aud | dev | dev | dev | ? | dev | dev | host | yes† |
 
 Notes:
 
@@ -1570,13 +1570,13 @@ Notes:
 3. `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it
 4. `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: ENOTSUP stub (returns -1)
 16. `FrameSource_Get/SetDirectModeAttr`: audit: userspace implementation
-5. `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps
+5. `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by known applications: T10/T20/T21/T31/T41, T23
 6. `FrameSource_Get/SetI2dAttr`: T41: ENOTSUP stub (returns -1)
 7. `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: ENOTSUP stub (returns -1)
 8. `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only
-17. `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS
+17. `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by known applications: T10/T20/T21/T31/T41, T23; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS
 9. `FrameSource_GetTimedFrame`: T10+T20+T21+T23+T31: agg-25; T41: ENOTSUP stub (returns -1)
-18. `FrameSource_ReleaseFrame`: audit: reaches the driver/kernel; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps
+18. `FrameSource_ReleaseFrame`: audit: reaches the driver/kernel; used by known applications: T10/T20/T21/T31/T41, T23
 19. `FrameSource_SetChnRotate`: audit: userspace implementation
 20. `FrameSource_SetSource`: audit: userspace implementation
 21. `FrameSource_SnapFrame`: T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
@@ -1587,21 +1587,21 @@ Notes:
 
 All regular OSD functions (`OSD_CreateGroup`, `CreateRgn`, `RegisterRgn`, `Set/GetRgnAttr`, `Set/GetGrpRgnAttr`, `ShowRgn`, `UpdateRgnAttrData`, `Start/StopGroup` ...) are done on every SoC (OSD is device-tested on T10, T20, T21, T23, T31 and T41, see the OSD row in the matrix above); in the full list they show as done (?) because the audit tracks no per-call device test. The gap table lists the ISP-OSD variants (`*_ISP`, `ISP_Tuning_*Osd*`) that only the T23/T41 vendor API has, plus single helpers; n.a. means the function does not exist in that SoC's vendor API, not that OSD is missing.
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_Get/SetDrawAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Get/SetOSDAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Get/SetSingleOSDAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | – |
-| ► `ISP_Tuning_CreateOsdRgn` [1] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
-| ► `ISP_Tuning_DestroyOsdRgn` [2] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
+| ► `ISP_Tuning_CreateOsdRgn` [1] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
+| ► `ISP_Tuning_DestroyOsdRgn` [2] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
 | `ISP_Tuning_Get/SetOSDAttr` [3] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetOSDBlock` [4] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetOsdRgnAttr` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | miss | – |
-| ► `ISP_Tuning_SetOsdPoolSize` [5] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | stub | r† |
-| ► `ISP_Tuning_SetOsdRgnAttr` [6] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
-| ► `ISP_Tuning_ShowOsdRgn` [7] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
+| ► `ISP_Tuning_SetOsdPoolSize` [5] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | stub | yes† |
+| ► `ISP_Tuning_SetOsdRgnAttr` [6] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
+| ► `ISP_Tuning_ShowOsdRgn` [7] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
 | `OSD_AttachToGroup` [27] | host | host | host | aud | aud | aud | miss | aud | – |
 | `OSD_CreateRgn_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
 | `OSD_DestroyRgn_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
@@ -1632,49 +1632,49 @@ Notes:
 
 <details><summary>All 39 rows of this area (24 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_Get/SetDrawAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Get/SetOSDAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
 | `ISP_Get/SetSingleOSDAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | – |
-| ► `ISP_Tuning_CreateOsdRgn` [1] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
-| ► `ISP_Tuning_DestroyOsdRgn` [2] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
+| ► `ISP_Tuning_CreateOsdRgn` [1] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
+| ► `ISP_Tuning_DestroyOsdRgn` [2] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
 | `ISP_Tuning_Get/SetOSDAttr` [3] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetOSDBlock` [4] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_GetOsdRgnAttr` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | miss | – |
-| ► `ISP_Tuning_SetOsdPoolSize` [5] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | stub | r† |
-| ► `ISP_Tuning_SetOsdRgnAttr` [6] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
-| ► `ISP_Tuning_ShowOsdRgn` [7] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | r† |
+| ► `ISP_Tuning_SetOsdPoolSize` [5] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | stub | yes† |
+| ► `ISP_Tuning_SetOsdRgnAttr` [6] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
+| ► `ISP_Tuning_ShowOsdRgn` [7] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | dev | err | yes† |
 | `OSD_AttachToGroup` [27] | host | host | host | aud | aud | aud | miss | aud | – |
-| ► `OSD_CreateGroup` [9] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `OSD_CreateRgn` [10] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| ► `OSD_CreateGroup` [9] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `OSD_CreateRgn` [10] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `OSD_CreateRgn_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
-| ► `OSD_DestroyGroup` [11] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `OSD_DestroyRgn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| ► `OSD_DestroyGroup` [11] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `OSD_DestroyRgn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `OSD_DestroyRgn_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
 | `OSD_Exit_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
-| ► `OSD_Get/SetGrpRgnAttr` [13] | aud | dev | dev | dev | ? | dev | host | aud | p† r† t |
-| ► `OSD_Get/SetRgnAttr` [14] | aud | dev | dev | dev | ? | dev | host | aud | p† r† t |
+| ► `OSD_Get/SetGrpRgnAttr` [13] | aud | dev | dev | dev | ? | dev | host | aud | yes |
+| ► `OSD_Get/SetRgnAttr` [14] | aud | dev | dev | dev | ? | dev | host | aud | yes |
 | `OSD_Get/SetRgnAttr_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
 | `OSD_GetRegionLuma` [26] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `OSD_GetRgnAttr_ISPPic` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
-| ► `OSD_RegisterRgn` [15] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| ► `OSD_RegisterRgn` [15] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `OSD_RgnCreate_Query` [16] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | aud | – |
 | `OSD_RgnRegister_Query` [17] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | aud | – |
 | `OSD_SetGroupCallback` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `OSD_SetMosaic` [18] | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | aud | – |
-| `OSD_SetPoolSize` [19] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `OSD_SetPoolSize` [19] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `OSD_SetPoolSize_ISP` [8] | n.a. | n.a. | n.a. | host | n.a. | n.a. | miss | miss | – |
-| ► `OSD_SetRgnAttrWithTimestamp` [20] | aud | dev | dev | dev | ? | dev | host | aud | r† |
+| ► `OSD_SetRgnAttrWithTimestamp` [20] | aud | dev | dev | dev | ? | dev | host | aud | yes† |
 | `OSD_SetRgnAttr_PicISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
-| ► `OSD_ShowRgn` [21] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| ► `OSD_ShowRgn` [21] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 | `OSD_ShowRgn_ISP` | n.a. | n.a. | n.a. | aud | n.a. | n.a. | miss | miss | – |
-| ► `OSD_Start` [22] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `OSD_Stop` [23] | aud | dev | dev | dev | ? | dev | host | aud | r† |
-| ► `OSD_UnRegisterRgn` [24] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `OSD_UpdateRgnAttrData` [25] | aud | dev | dev | dev | ? | dev | host | aud | p† r† |
+| ► `OSD_Start` [22] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `OSD_Stop` [23] | aud | dev | dev | dev | ? | dev | host | aud | yes† |
+| ► `OSD_UnRegisterRgn` [24] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `OSD_UpdateRgnAttrData` [25] | aud | dev | dev | dev | ? | dev | host | aud | yes† |
 
 Notes:
 
@@ -1712,34 +1712,34 @@ Notes:
 
 On T40 the IVS framework is the T31/T41 code since agg-35: move detection (create/register/start/poll/result/destroy) is device-tested on cam-K (20 s, 2026-10-10), base move, `Get/SetParam` and `ReleaseData` have host tests only. The other SoCs have no IVS gap. All IVS functions are in the full list below.
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 
 <details><summary>All 17 rows of this area (0 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
-| ► `IVS_CreateBaseMoveInterface` [1] | aud | dev | dev | dev | ? | dev | host | aud | r† |
-| ► `IVS_CreateChn` [2] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_CreateGroup` [3] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_CreateMoveInterface` [4] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_DestroyBaseMoveInterface` [5] | aud | dev | dev | dev | ? | dev | host | aud | r† |
-| ► `IVS_DestroyChn` [6] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `IVS_DestroyGroup` [7] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `IVS_DestroyMoveInterface` [8] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `IVS_Get/SetParam` [9] | aud | dev | dev | dev | ? | dev | host | aud | r† t |
-| ► `IVS_GetResult` [10] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_PollingResult` [11] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_RegisterChn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_ReleaseData` [13] | aud | aud | aud | aud | ? | aud | host | aud | r† |
-| ► `IVS_ReleaseResult` [14] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_StartRecvPic` [15] | aud | dev | dev | dev | ? | dev | dev | aud | r† t |
-| ► `IVS_StopRecvPic` [16] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| ► `IVS_UnRegisterChn` [17] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
+| ► `IVS_CreateBaseMoveInterface` [1] | aud | dev | dev | dev | ? | dev | host | aud | yes† |
+| ► `IVS_CreateChn` [2] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_CreateGroup` [3] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_CreateMoveInterface` [4] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_DestroyBaseMoveInterface` [5] | aud | dev | dev | dev | ? | dev | host | aud | yes† |
+| ► `IVS_DestroyChn` [6] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_DestroyGroup` [7] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_DestroyMoveInterface` [8] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_Get/SetParam` [9] | aud | dev | dev | dev | ? | dev | host | aud | yes |
+| ► `IVS_GetResult` [10] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_PollingResult` [11] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_RegisterChn` [12] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_ReleaseData` [13] | aud | aud | aud | aud | ? | aud | host | aud | yes† |
+| ► `IVS_ReleaseResult` [14] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_StartRecvPic` [15] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_StopRecvPic` [16] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
+| ► `IVS_UnRegisterChn` [17] | aud | dev | dev | dev | ? | dev | dev | aud | yes |
 
 Notes:
 
@@ -1765,9 +1765,9 @@ Notes:
 
 ### Audio
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `AI_DisableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
 | `AI_DisableGetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
@@ -1781,8 +1781,8 @@ Notes:
 | `AO_EnableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
 | `AO_Get/SetDigitalGain` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `Audio_Select_Codec` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| ► `DMIC_*` (20 functions) [1] | n.a. | n.a. | n.a. | n.a. | aud | aud | err | err | r† |
-| ► `DMIC_DisableAecRefFrame` [2] | n.a. | n.a. | n.a. | n.a. | aud | n.a. | err | err | r† |
+| ► `DMIC_*` (20 functions) [1] | n.a. | n.a. | n.a. | n.a. | aud | aud | err | err | yes† |
+| ► `DMIC_DisableAecRefFrame` [2] | n.a. | n.a. | n.a. | n.a. | aud | n.a. | err | err | yes† |
 
 Notes:
 
@@ -1791,76 +1791,76 @@ Notes:
 
 <details><summary>All 66 rows of this area (14 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `ADEC_ReleaseDecoder` [53] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| `AENC_* / ADEC_*` (17 functions) [3] | host | dev | dev | dev | ? | dev | ? | host | r† |
+| `AENC_* / ADEC_*` (17 functions) [3] | host | dev | dev | dev | ? | dev | ? | host | yes† |
 | `AENC_ReleaseEncoder` [54] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | – |
-| `AI_Disable` [4] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_Disable` [4] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_DisableAec` [5] | aud | aud | aud | aud | ? | aud | ? | aud | see note |
-| `AI_DisableAecRefFrame` [6] | aud | aud | aud | aud | ? | aud | ? | aud | r† |
-| `AI_DisableAgc` [7] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_DisableAecRefFrame` [6] | aud | aud | aud | aud | ? | aud | ? | aud | yes† |
+| `AI_DisableAgc` [7] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_DisableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
-| `AI_DisableChn` [8] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_DisableChn` [8] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_DisableGetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `AI_DisableHpf` [9] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_DisableHpf` [9] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_DisableHs` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | – |
-| `AI_DisableNs` [10] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_Enable` [11] | dev | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_DisableNs` [10] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_Enable` [11] | dev | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_EnableAec` [12] | dev | dev | dev | dev | ? | dev | ? | aud | see note |
-| `AI_EnableAecRefFrame` [13] | aud | aud | aud | aud | ? | aud | ? | aud | r† |
-| `AI_EnableAgc` [14] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_EnableAecRefFrame` [13] | aud | aud | aud | aud | ? | aud | ? | aud | yes† |
+| `AI_EnableAgc` [14] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_EnableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
-| `AI_EnableChn` [15] | dev | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_EnableChn` [15] | dev | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_EnableGetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `AI_EnableHpf` [16] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_EnableHpf` [16] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_EnableHs` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | miss | miss | – |
-| `AI_EnableNs` [17] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_Get/SetAlcGain` [18] | n.a. | n.a. | dev | n.a. | n.a. | dev | n.a. | n.a. | t |
-| `AI_Get/SetChnParam` [19] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_EnableNs` [17] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_Get/SetAlcGain` [18] | n.a. | n.a. | dev | n.a. | n.a. | dev | n.a. | n.a. | yes |
+| `AI_Get/SetChnParam` [19] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_Get/SetDigitalGain` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
-| `AI_Get/SetGain` [20] | host | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_Get/SetPubAttr` [21] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_Get/SetVol` [22] | host | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_GetFrame` [23] | dev | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_Get/SetGain` [20] | host | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_Get/SetPubAttr` [21] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_Get/SetVol` [22] | host | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_GetFrame` [23] | dev | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_GetFrameAndRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `AI_GetFrameAndRef` [24] | aud | aud | aud | aud | ? | aud | ? | aud | r† |
-| `AI_PollingFrame` [25] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `AI_ReleaseFrame` [26] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `AI_GetFrameAndRef` [24] | aud | aud | aud | aud | ? | aud | ? | aud | yes† |
+| `AI_PollingFrame` [25] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `AI_ReleaseFrame` [26] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `AI_SetAgcMode` [27] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
-| `AI_SetHpfCoFrequency` [28] | n.a. | n.a. | n.a. | host | n.a. | host | ? | host | p† r† |
-| `AI_SetVolMute` [29] | aud | dev | dev | dev | ? | dev | ? | host | r† |
-| `AI_Set_WebrtcProfileIni_Path` [30] | n.a. | n.a. | n.a. | dev | n.a. | dev | ? | aud | r† |
-| `AO_CacheSwitch` [31] | host | host | host | dev | ? | host | ? | host | r† |
+| `AI_SetHpfCoFrequency` [28] | n.a. | n.a. | n.a. | host | n.a. | host | ? | host | yes† |
+| `AI_SetVolMute` [29] | aud | dev | dev | dev | ? | dev | ? | host | yes† |
+| `AI_Set_WebrtcProfileIni_Path` [30] | n.a. | n.a. | n.a. | dev | n.a. | dev | ? | aud | yes† |
+| `AO_CacheSwitch` [31] | host | host | host | dev | ? | host | ? | host | yes† |
 | `AO_ClearChnBuf` [32] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
 | `AO_Disable` [33] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
-| `AO_DisableAgc` [34] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
+| `AO_DisableAgc` [34] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
 | `AO_DisableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
 | `AO_DisableChn` [35] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
-| `AO_DisableHpf` [36] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
+| `AO_DisableHpf` [36] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
 | `AO_Enable` [37] | dev | dev | dev | dev | ? | dev | ? | aud | see note |
-| `AO_EnableAgc` [38] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
+| `AO_EnableAgc` [38] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
 | `AO_EnableAlgo` | n.a. | n.a. | n.a. | dev | n.a. | n.a. | n.a. | miss | – |
 | `AO_EnableChn` [39] | dev | dev | dev | dev | ? | dev | ? | aud | see note |
-| `AO_EnableHpf` [40] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
+| `AO_EnableHpf` [40] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
 | `AO_FlushChnBuf` [41] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
 | `AO_Get/SetDigitalGain` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
 | `AO_Get/SetGain` [42] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
 | `AO_Get/SetPubAttr` [43] | aud | aud | aud | dev | ? | aud | ? | aud | see note |
 | `AO_Get/SetVol` [44] | host | host | host | dev | ? | host | ? | aud | see note |
-| `AO_PauseChn` [45] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
-| `AO_QueryChnStat` [46] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
-| `AO_ResumeChn` [47] | aud | aud | aud | dev | ? | aud | ? | aud | r† |
+| `AO_PauseChn` [45] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
+| `AO_QueryChnStat` [46] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
+| `AO_ResumeChn` [47] | aud | aud | aud | dev | ? | aud | ? | aud | yes† |
 | `AO_SendFrame` [48] | dev | dev | dev | dev | ? | dev | ? | aud | see note |
-| `AO_SetHpfCoFrequency` [49] | n.a. | n.a. | n.a. | dev | n.a. | aud | ? | aud | p† r† |
-| `AO_SetVolMute` [50] | aud | aud | aud | dev | ? | aud | ? | host | p† r† |
-| `AO_Soft_Mute` [51] | aud | aud | aud | dev | ? | aud | ? | host | r† |
-| `AO_Soft_UNMute` [52] | aud | aud | aud | dev | ? | aud | ? | host | r† |
+| `AO_SetHpfCoFrequency` [49] | n.a. | n.a. | n.a. | dev | n.a. | aud | ? | aud | yes† |
+| `AO_SetVolMute` [50] | aud | aud | aud | dev | ? | aud | ? | host | yes† |
+| `AO_Soft_Mute` [51] | aud | aud | aud | dev | ? | aud | ? | host | yes† |
+| `AO_Soft_UNMute` [52] | aud | aud | aud | dev | ? | aud | ? | host | yes† |
 | `Audio_Select_Codec` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| ► `DMIC_*` (20 functions) [1] | n.a. | n.a. | n.a. | n.a. | aud | aud | err | err | r† |
-| ► `DMIC_DisableAecRefFrame` [2] | n.a. | n.a. | n.a. | n.a. | aud | n.a. | err | err | r† |
+| ► `DMIC_*` (20 functions) [1] | n.a. | n.a. | n.a. | n.a. | aud | aud | err | err | yes† |
+| ► `DMIC_DisableAecRefFrame` [2] | n.a. | n.a. | n.a. | n.a. | aud | n.a. | err | err | yes† |
 
 Notes:
 
@@ -1868,14 +1868,14 @@ Notes:
 3. `AENC_* / ADEC_*` (17 functions): functions: ClearChnBuf, CreateChn, DestroyChn, GetStream, PollingStream, RegisterDecoder, ReleaseStream, SendStream, UnRegisterDecoder, CreateChn, DestroyChn, GetStream, PollingStream, RegisterEncoder, ReleaseStream, SendFrame, UnRegisterEncoder. T10+T20+T21+T41: claude/aenc-adec-all (in agg-25): shared software codecs; device encode test open
 54. `AENC_ReleaseEncoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 4. `AI_Disable`: audit: reaches the driver/kernel
-5. `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†
+5. `AI_DisableAec`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41
 6. `AI_DisableAecRefFrame`: audit: reaches the driver/kernel
 7. `AI_DisableAgc`: audit: userspace implementation
 8. `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation
 9. `AI_DisableHpf`: audit: userspace implementation
 10. `AI_DisableNs`: audit: userspace implementation
 11. `AI_Enable`: audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
-12. `AI_EnableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
+12. `AI_EnableAec`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 13. `AI_EnableAecRefFrame`: audit: reaches the driver/kernel
 14. `AI_EnableAgc`: audit: userspace implementation
 15. `AI_EnableChn`: audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
@@ -1895,23 +1895,23 @@ Notes:
 29. `AI_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
 30. `AI_Set_WebrtcProfileIni_Path`: audit: userspace implementation
 31. `AO_CacheSwitch`: all: implemented with vendor semantics, default off (OPENIMP_AO_CACHE=1 = vendor default on); quiet device test open (audio output only on T31)
-32. `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†
-33. `AO_Disable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
+32. `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41
+33. `AO_Disable`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41
 34. `AO_DisableAgc`: audit: userspace implementation
-35. `AO_DisableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
+35. `AO_DisableChn`: audit: userspace implementation; used by known applications: T10/T20/T31, T21/T23/T41
 36. `AO_DisableHpf`: audit: userspace implementation
-37. `AO_Enable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
+37. `AO_Enable`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 38. `AO_EnableAgc`: audit: userspace implementation
-39. `AO_EnableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
+39. `AO_EnableChn`: audit: userspace implementation; used by known applications: T10/T20/T31, T21/T23/T41; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 40. `AO_EnableHpf`: audit: userspace implementation
-41. `AO_FlushChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
-42. `AO_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
-43. `AO_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
-44. `AO_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
+41. `AO_FlushChnBuf`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41
+42. `AO_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; used by known applications: T10/T20/T31, T21/T23/T41
+43. `AO_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation; used by known applications: T10/T20/T31, T21/T23/T41
+44. `AO_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; used by known applications: T10/T20/T31, T21/T23/T41; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
 45. `AO_PauseChn`: audit: userspace implementation
 46. `AO_QueryChnStat`: audit: userspace implementation
 47. `AO_ResumeChn`: audit: userspace implementation
-48. `AO_SendFrame`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
+48. `AO_SendFrame`: audit: reaches the driver/kernel; used by known applications: T10/T20/T31, T21/T23/T41; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 49. `AO_SetHpfCoFrequency`: audit: userspace implementation
 50. `AO_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
 51. `AO_Soft_Mute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
@@ -1923,9 +1923,9 @@ Notes:
 
 ### System / sysutils / log
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `Log_Get_Option` | aud | aud | aud | aud | n.a. | aud | miss | miss | – |
 | `Log_Set_Option` [64] | host | host | host | host | n.a. | host | miss | miss | – |
@@ -1949,9 +1949,9 @@ Notes:
 
 <details><summary>All 53 rows of this area (9 with a gap)</summary>
 
-*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · Used by: **p** prudynt, **r** raptor, **t** timps (a long list is given in the note).*
+*Codes: **dev** device-tested · **host** host tests only · **aud** connected per static audit, no device test · **no-op** vendor does nothing · **cache** value only stored · **stub** returns 0, no effect · **err** fails or known defect · **miss** not exported by OpenIMP · **n.a.** not in that SoC's vendor API · **?** unknown · **►** streamer uses it, gap · **†** streamer use from source only · **[n]** note below the table · App-used: **yes** a known application imports the function (per-SoC list in the note), **–** none.*
 
-| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
+| Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | App-used |
 |---|---|---|---|---|---|---|---|---|---|
 | `Log_Get_Option` | aud | aud | aud | aud | n.a. | aud | miss | miss | – |
 | `Log_Set_Option` [64] | host | host | host | host | n.a. | host | miss | miss | – |
@@ -1965,7 +1965,7 @@ Notes:
 | `SU_Base_Get/SetTime` [11] | aud | aud | aud | aud | ? | aud | ? | aud | – |
 | `SU_Base_GetDevID` [12] | aud | dev | dev | dev | ? | dev | ? | aud | – |
 | `SU_Base_GetModelNumber` [13] | aud | dev | dev | dev | ? | dev | ? | aud | – |
-| `SU_Base_GetVersion` [14] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† |
+| `SU_Base_GetVersion` [14] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
 | `SU_Base_PollingAlarm` [15] | aud | aud | aud | aud | ? | aud | ? | aud | – |
 | `SU_Base_Raw2SUTime` [16] | aud | dev | dev | dev | ? | dev | ? | aud | – |
 | `SU_Base_Reboot` [17] | aud | aud | aud | aud | ? | aud | ? | aud | – |
@@ -1993,19 +1993,19 @@ Notes:
 | `SU_Key_OpenEvent` [33] | aud | dev | dev | dev | ? | dev | ? | aud | – |
 | `SU_Key_ReadEvent` [34] | aud | aud | aud | aud | ? | aud | ? | aud | – |
 | `SU_LED_Command` [35] | aud | aud | aud | aud | ? | aud | ? | aud | – |
-| `System_Bind` [36] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `System_Exit` [37] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `System_GetBindbyDest` [38] | aud | dev | dev | dev | ? | dev | ? | aud | r† |
-| `System_GetCPUInfo` [39] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† |
-| `System_GetTimeStamp` [40] | aud | dev | dev | dev | ? | dev | ? | aud | r† t |
-| `System_GetVersion` [41] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `System_Init` [42] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
+| `System_Bind` [36] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `System_Exit` [37] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `System_GetBindbyDest` [38] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `System_GetCPUInfo` [39] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `System_GetTimeStamp` [40] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `System_GetVersion` [41] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `System_Init` [42] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
 | `System_MemPoolFree` [43] | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | n.a. | – |
 | `System_MemPoolRequest` [3] | n.a. | n.a. | n.a. | dev | n.a. | dev | miss | miss | – |
-| `System_ReadReg32` [44] | aud | dev | dev | dev | ? | dev | ? | aud | r† |
-| `System_RebaseTimeStamp` [45] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† |
-| `System_UnBind` [46] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
-| `System_WriteReg32` [47] | aud | aud | aud | aud | ? | aud | ? | aud | r† |
+| `System_ReadReg32` [44] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `System_RebaseTimeStamp` [45] | aud | dev | dev | dev | ? | dev | ? | aud | yes† |
+| `System_UnBind` [46] | aud | dev | dev | dev | ? | dev | ? | aud | yes |
+| `System_WriteReg32` [47] | aud | aud | aud | aud | ? | aud | ? | aud | yes† |
 
 Notes:
 
@@ -2065,9 +2065,9 @@ Notes:
 
 ### Notes
 
-- **T21 imgfx findings without a row of their own (2026-10-06 update):** the 2026-10-05 run found no change for Sinter/Temper strength, Sepia, Vivid and the ISP bypass bits. Sepia has worked since 2026-10-06 (beyond vendor, see `ISP_Tuning_Get/SetColorfxMode`); in the later imgfx run on a T21 camera B/W, sepia, negative, vivid, the CSC modes and the sinter/temper/DPC strengths changed the picture. Brightness, antifog and scene mode are vendor no-ops on T21 except that brightness now acts through the AE target (beyond vendor). ISP flip and `SetWB` auto gave a magenta picture in imgfx on T21 (timps' own flip path is fine): open, not a missing function; to be repeated in daylight.
+- **T21 imgfx findings without a row of their own (2026-10-06 update):** the 2026-10-05 run found no change for Sinter/Temper strength, Sepia, Vivid and the ISP bypass bits. Sepia has worked since 2026-10-06 (beyond vendor, see `ISP_Tuning_Get/SetColorfxMode`); in the later imgfx run on a T21 camera B/W, sepia, negative, vivid, the CSC modes and the sinter/temper/DPC strengths changed the picture. Brightness, antifog and scene mode are vendor no-ops on T21 except that brightness now acts through the AE target (beyond vendor). ISP flip and `SetWB` auto gave a magenta picture in imgfx on T21 (the streamer's own flip path is fine): open, not a missing function; to be repeated in daylight.
 - **OSD, behaviour rather than a missing function:** on T21 the IPU blend is ineffective for about 2 s after a wake from idle; `claude/t21-osd-first-jpeg` (in agg-26) withholds JPEG frames without a confirmed overlay, so the first snapshot after a start now has the OSD (device-tested 2026-10-05, first snapshot about 2 s later). The original stack shows the same missing first-snapshot OSD; the root cause (IPU/OSD group/clock) is not found. T21 OSD can still appear late after a start (2-3 min seen with several starts): unverified cause.
-- **IVS:** no vendor IVS function is marked missing or incomplete in the audit. (The IVS GetParam/SetParam overflow found on 2026-10-05 is in raptor-hal, not in OpenIMP.)
+- **IVS:** no vendor IVS function is marked missing or incomplete in the audit. (The IVS GetParam/SetParam overflow found on 2026-10-05 is in a streamer application, not in OpenIMP.)
 - **Not determined:** whether the T41 vendor handles `SetScalerLv`/`SetMaskBlock` (the open driver has no handler); T10 device effect of every T20/T21 fix; the _Sec/MultiCamera_ variants after the T23 fixes; vendor semantics of absolute-QP ROI under CBR on T20; T41 DMIC, ISP-OSD and I2D functions were not looked at again after the audit (all still error/missing); the T10/T20/T21 `GetChnRcAttr`-style missing encoder calls were not re-checked.
 - **Release-candidate imgfx run (2026-10-06):** it ran in the dark (night mode), so cases without a clear luma effect cannot be judged. The colour functions of T10/T20/T21/T31 must be repeated with daylight or room light before they are called dev; only the T21 brightness batch and the T21/T31 batches taken with light are used above.
 - **SU time/alarm/ADC:** apitest shows N/A on the test boards because the nodes are missing (`/dev/rtc0`, the ADC nodes); the vendor libsysutils opens the same nodes, so this is a board property, not a gap.
