@@ -2,6 +2,7 @@ CC ?= cc
 CFLAGS ?= -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function \
 	-Wno-cast-function-type
 PROJECT_DIR := ../..
+LOG_EMIT := $(PROJECT_DIR)/src/core/imp_log_emit.c
 BUILD := $(PROJECT_DIR)/build/tests
 ISP_TUNING_TEST_BIN := $(BUILD)/t23-isp-tuning-test
 ACODEC_TEST_BIN := $(BUILD)/t23-acodec-test
@@ -133,7 +134,7 @@ $(IVS_DIGEST_T23): ivs_move_digest.c $(IVS_DEPS)
 $(IVS_FRAMEWORK): ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 	$(IVS_SRC)/openimp_t31_ivs.h $(IVS_DEPS)
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) -DPLATFORM_T23 -I$(PROJECT_DIR)/include \
+	$(CC) $(LOG_EMIT) $(CFLAGS) -DPLATFORM_T23 -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -I$(IVS_SRC) ivs_framework_test.c \
 		$(IVS_SRC)/openimp_t31_ivs.c $(IVS_SRC)/openimp_t31_ivs_move.c \
 		$(IVS_SRC)/openimp_ivs_move_v2.c \
@@ -163,7 +164,7 @@ $(HELIX_DESCRIPTOR): helix_descriptor_test.c \
 $(HELIX_STREAM): helix_stream_test.c $(HELIX_NATIVE_SOURCES) \
 	$(PROJECT_DIR)/src/t30/t30_helix_encoder.h
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) $(HELIX_INCLUDES) -U_FORTIFY_SOURCE \
+	$(CC) $(LOG_EMIT) $(CFLAGS) $(HELIX_INCLUDES) -U_FORTIFY_SOURCE \
 		-D_FORTIFY_SOURCE=0 -Wno-missing-field-initializers \
 		helix_stream_test.c $(HELIX_NATIVE_SOURCES) -no-pie \
 		-Wl,--wrap=open,--wrap=close,--wrap=ioctl -lm -o "$@"
@@ -182,7 +183,7 @@ $(AUDIO_ABI): audio_abi_test.c $(PROJECT_DIR)/include/imp/imp_audio.h
 $(RMEM_LAYOUT): rmem_layout_test.c $(HELIX_NATIVE_SOURCES) \
 	$(PROJECT_DIR)/src/rmem_arena.h $(PROJECT_DIR)/src/t30/t30_helix_encoder.h
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) $(HELIX_INCLUDES) -U_FORTIFY_SOURCE \
+	$(CC) $(LOG_EMIT) $(CFLAGS) $(HELIX_INCLUDES) -U_FORTIFY_SOURCE \
 		-D_FORTIFY_SOURCE=0 -Wno-missing-field-initializers \
 		rmem_layout_test.c $(HELIX_NATIVE_SOURCES) -no-pie \
 		-Wl,--wrap=open,--wrap=close,--wrap=ioctl -lm -o "$@"
@@ -242,7 +243,7 @@ $(IVS_MOVE_V2): ivs_move_v2_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 	$(IVS_SRC)/openimp_t31_ivs.h $(IVS_DEPS) \
 	$(PROJECT_DIR)/include/imp/openimp_ivs_move_ex.h
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) -DPLATFORM_T23 -fno-pie -no-pie -I$(PROJECT_DIR)/include \
+	$(CC) $(LOG_EMIT) $(CFLAGS) -DPLATFORM_T23 -fno-pie -no-pie -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -I$(IVS_SRC) ivs_move_v2_test.c \
 		$(IVS_SRC)/openimp_t31_ivs.c $(IVS_SRC)/openimp_t31_ivs_move.c \
 		$(IVS_SRC)/openimp_ivs_move_v2.c -pthread -o "$@"
@@ -254,7 +255,7 @@ ivs-move-v2: $(IVS_MOVE_V2)
 $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O2 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter \
 		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
 		p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \

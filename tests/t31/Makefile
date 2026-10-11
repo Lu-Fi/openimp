@@ -1,6 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
+LOG_EMIT := $(PROJECT_DIR)/src/core/imp_log_emit.c
 STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-stream-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-rate-control-test
 READY_EVENT_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ready-event-test
@@ -84,7 +85,7 @@ $(VBM_DELAY_TEST_BIN): vbm_delay_test.c $(PROJECT_DIR)/src/vbm_delay.h
 $(VIDEO_DROP_TEST_BIN): video_drop_test.c $(PROJECT_DIR)/src/core/video_drop.c \
 	$(PROJECT_DIR)/src/video_drop.h
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) -D_GNU_SOURCE -DOPENIMP_VIDEO_DROP_TICK_MS=50 \
+	$(CC) $(LOG_EMIT) $(CFLAGS) -D_GNU_SOURCE -DOPENIMP_VIDEO_DROP_TICK_MS=50 \
 		-I$(PROJECT_DIR)/src video_drop_test.c \
 		$(PROJECT_DIR)/src/core/video_drop.c -pthread -o "$@"
 
@@ -94,7 +95,7 @@ $(FIXED_CONTRAST_TEST_BIN): fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tse
 	mkdir -p "$(dir $@)"
 	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
 		"-D_Static_assert(a,b)=" -DPLATFORM_T31 -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
-		fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
+		fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c $(LOG_EMIT) \
 		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o "$@"
 
 $(LOG_LIMIT_TEST_BIN): log_limit_test.c $(PROJECT_DIR)/src/trace_control.h \
@@ -323,7 +324,7 @@ clean:
 $(P2_JPEG_SOURCE_TEST_BIN): p2_jpeg_source_test.c \
 	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 p2_jpeg_source_test.c \
@@ -339,7 +340,7 @@ p2-jpeg-source: $(P2_JPEG_SOURCE_TEST_BIN)
 $(P2_RC_MODE_TEST_BIN): p2_rc_mode_test.c \
 	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 p2_rc_mode_test.c \
@@ -354,7 +355,7 @@ $(P2_RC_MODE_TEST_BIN): p2_rc_mode_test.c \
 $(P2_BUFSHARE_TEST_BIN): p2_bufshare_test.c \
 	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 p2_bufshare_test.c \

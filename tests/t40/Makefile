@@ -1,6 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
+LOG_EMIT := $(PROJECT_DIR)/src/core/imp_log_emit.c
 STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-stream-layout-test
 
 DENOISE_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-denoise-test
@@ -25,7 +26,7 @@ check: $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(C
 $(IVS_FRAMEWORK_TEST_BIN): ../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 	$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c $(IVS_SRC)/openimp_t31_ivs_abi.h
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_T40 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_T40 \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -I$(IVS_SRC) \
 		../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 		$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c -pthread -o "$@"
@@ -138,7 +139,7 @@ frame-rc:
 $(P2_BUFSHARE_TEST_BIN): ../t31/p2_bufshare_test.c \
 	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T40 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T40 \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 ../t31/p2_bufshare_test.c \

@@ -10,14 +10,31 @@
 #include <string.h>
 #include <syslog.h>
 
-#define syslog test_syslog
-static int test_syslog(int prio, const char *fmt, ...);
 #include "../../src/dma_alloc.c"
-#undef syslog
+
+/* Capturing stand-in for core/imp_log_emit.c (not linked into this test):
+ * keeps each IMP_LOG line as "[tag] message" with its priority. */
+int openimp_log_level = LOG_DEBUG;
+void imp_log_level_reload(void) {}
+void imp_log_emit(int prio, const char *tag, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
+static int test_syslog(int prio, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
 static char lines[16][256];
 static int line_prio[16];
 static int nlines;
+
+void imp_log_emit(int prio, const char *tag, const char *fmt, ...)
+{
+    char msg[256];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    test_syslog(prio, "[%s] %s", tag, msg);
+}
 
 static int test_syslog(int prio, const char *fmt, ...)
 {
@@ -48,8 +65,6 @@ int main(void)
     IMPDMABufferInfo a, b, c, big;
     size_t peak = 0;
 
-    /* the lines under test are INFO: above the default log level */
-    setenv("OPENIMP_LOG_LEVEL", "7", 1);
     g_dma_initialized = 1;
     g_rmem_supported = 1;
     g_mem_fd = open("/dev/null", O_RDWR);

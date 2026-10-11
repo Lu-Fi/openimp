@@ -1,6 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
+LOG_EMIT := $(PROJECT_DIR)/src/core/imp_log_emit.c
 COMMAND_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-command-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rate-control-test
 EP1_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-ep1-layout-test
@@ -58,7 +59,7 @@ $(JPEG_QL_TEST_BIN): ../t23/jpeg_ql_test.c $(PROJECT_DIR)/src/hw_encoder.c \
 $(IVS_FRAMEWORK_TEST_BIN): ../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 	$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c $(IVS_SRC)/openimp_t31_ivs_abi.h
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_T41 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_T41 \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -I$(IVS_SRC) \
 		../t23/ivs_framework_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 		$(IVS_SRC)/openimp_t31_ivs_move.c $(IVS_SRC)/openimp_ivs_move_v2.c -pthread -o "$@"
@@ -162,7 +163,7 @@ endif
 $(P2_BUFSHARE_TEST_BIN): ../t31/p2_bufshare_test.c \
 	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
 	mkdir -p "$(dir $@)"
-	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T41 \
+	$(CC) $(LOG_EMIT) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T41 \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 ../t31/p2_bufshare_test.c \
