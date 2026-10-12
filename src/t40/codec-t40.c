@@ -8848,6 +8848,93 @@ int AL_Codec_Encode_SetMapRoi(void *codec, const void *roi_attr)
 #endif
 }
 
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+/* IMP_Encoder_SetChnSeiAttr / GetChnSeiAttr: the user data SEI (vendor
+ * 1.3.1 AL_Codec_Encode_SetSei).  The data is copied; the encoder thread
+ * reads it under the same lock before each picture's header is built. */
+static pthread_mutex_t avpu_sei_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int AL_Codec_Encode_SetSei(void *codec, uint32_t mode, const uint8_t *uuid,
+                           const uint8_t *data, uint32_t size)
+{
+    ALAvpuContext *ctx;
+
+    if (codec == NULL || mode > 2u || size > OPENIMP_T40_SEI_USER_MAX ||
+        (mode != 0u && (uuid == NULL || data == NULL)))
+        return -1;
+    ctx = &((AL_CodecEncode *)codec)->avpu;
+    pthread_mutex_lock(&avpu_sei_lock);
+    ctx->sei_mode = mode;
+    ctx->sei_size = 0;
+    if (uuid != NULL)
+        memcpy(ctx->sei_uuid, uuid, sizeof(ctx->sei_uuid));
+    if (data != NULL && size != 0u)
+        memcpy(ctx->sei_data, data, size);
+    ctx->sei_size = size;
+    pthread_mutex_unlock(&avpu_sei_lock);
+    return 0;
+}
+
+int AL_Codec_Encode_GetSei(void *codec, uint32_t *mode, uint8_t uuid[16],
+                           uint8_t data[128], uint32_t *size)
+{
+    ALAvpuContext *ctx;
+
+    if (codec == NULL || mode == NULL || uuid == NULL || data == NULL ||
+        size == NULL)
+        return -1;
+    ctx = &((AL_CodecEncode *)codec)->avpu;
+    pthread_mutex_lock(&avpu_sei_lock);
+    *mode = ctx->sei_mode;
+    memcpy(uuid, ctx->sei_uuid, sizeof(ctx->sei_uuid));
+    memcpy(data, ctx->sei_data, sizeof(ctx->sei_data));
+    *size = ctx->sei_size;
+    pthread_mutex_unlock(&avpu_sei_lock);
+    return 0;
+}
+
+/* Between avpu_prewrite_stream_headers() and the submit: put the SEI NAL in
+ * front of the slice NAL of the access-unit copy at stream[0] (behind SPS/PPS
+ * on an IDR picture).  The hardware never reads that copy (it gets the
+ * right-aligned mirror made from the original header, and the command keeps
+ * the original header size); only the completion takes the longer header
+ * size, so the published access unit is [SPS PPS] SEI slice payload.  Skipped
+ * when the longer header would reach the mirror at +0x220-header. */
+static void avpu_insert_user_sei(ALAvpuContext *ctx, int buf_idx, int is_idr,
+                                 uint32_t header_size)
+{
+    uint8_t sei[OPENIMP_T40_SEI_MAX_NAL];
+    uint8_t uuid[16], data[128];
+    uint32_t mode, size, sei_len, new_size;
+    uint8_t *buf;
+
+    if (!ctx || header_size == 0u || buf_idx < 0 || buf_idx >= 16 ||
+        buf_idx >= ctx->stream_bufs_used || !ctx->stream_bufs[buf_idx].map)
+        return;
+    pthread_mutex_lock(&avpu_sei_lock);
+    mode = ctx->sei_mode;
+    size = ctx->sei_size;
+    memcpy(uuid, ctx->sei_uuid, sizeof(uuid));
+    memcpy(data, ctx->sei_data, sizeof(data));
+    pthread_mutex_unlock(&avpu_sei_lock);
+    if (mode == 0u || (mode == 1u && !is_idr))
+        return;
+    sei_len = openimp_t40_user_sei_build(ctx->codec_hevc ? 1 : 0, uuid, data,
+                                         size, sei, sizeof(sei));
+    if (sei_len == 0u || header_size + sei_len > 0x220u - header_size) {
+        LOG_CODEC("AVPU: user SEI skipped buf[%d] (header %u + SEI %u)",
+                  buf_idx, header_size, sei_len);
+        return;
+    }
+    buf = (uint8_t *)ctx->stream_bufs[buf_idx].map;
+    new_size = openimp_t40_sei_insert(buf, 0x220u - header_size, header_size,
+                                      sei, sei_len);
+    if (new_size == 0u)
+        return;
+    ctx->stream_header_offset_by_buf[buf_idx] = new_size;
+}
+#endif
+
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 /* The Helix rate-control fields of IMPEncoderAttrRcMode that HWEncoderParams
  * has no core field for, taken as the application gave them (the encoders
@@ -12558,6 +12645,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 ctx, buf_idx, is_idr);
             openimp_profile_end(OPENIMP_PROFILE_STREAM_HEADER,
                                 header_profile);
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+            avpu_insert_user_sei(ctx, buf_idx, is_idr, hdr_offset);
+#endif
             ctx->stream_is_idr[buf_idx] = is_idr ? 1u : 0u;
             ctx->stream_timestamp[buf_idx] = timestamp;
 #if defined(PLATFORM_T41)

@@ -63,6 +63,9 @@
 #include <imp/imp_common.h>
 #include <imp/imp_encoder.h>
 #include <imp/imp_system.h>
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#include "t40/t40_stream_layout.h"
+#endif
 
 #if defined(PLATFORM_T31)
 #include "t40/t31_stream_layout.h"
@@ -328,6 +331,10 @@ typedef struct {
 #endif
 #if defined(PLATFORM_T40)
     int fisheye;                    /* IMP_Encoder_Set/GetFisheyeEnableStatus */
+#endif
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+    uint8_t sei_uuid[16];           /* IMP_Encoder_GetChnSeiAttr hands out these */
+    uint8_t sei_data[128];
 #endif
     uint64_t next_frame_due_us;
     uint64_t output_timestamp_us;
@@ -4023,6 +4030,79 @@ int IMP_Encoder_SetChnMapRoi(int channel, IMPEncoderMapRoiAttr *attr)
         return -1;
     }
     ret = AL_Codec_Encode_SetMapRoi(ch->codec, attr);
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+#endif
+
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+/* Vendor T40 1.3.1 IMP_Encoder_Set/GetChnSeiAttr (0x6d0a8 / 0x6d3b0).  Set:
+ * channel >= 13 or not created -1; with a mode other than NONE a NULL uuid
+ * or userData is -1, a size above 128 is cut to 128 in the caller's
+ * structure (vendor warning "will be adjusted"); the codec call failing is
+ * -1.  Get: the mode, the uuid / userData pointers and the size of the
+ * channel's setting; the vendor hands back the application's own pointers,
+ * here they point at the channel's copy (the data is copied on Set, the
+ * application's buffers need not stay valid). */
+extern int AL_Codec_Encode_SetSei(void *codec, uint32_t mode,
+                                  const uint8_t *uuid, const uint8_t *data,
+                                  uint32_t size);
+extern int AL_Codec_Encode_GetSei(void *codec, uint32_t *mode, uint8_t uuid[16],
+                                  uint8_t data[128], uint32_t *size);
+
+int IMP_Encoder_SetChnSeiAttr(int channel, IMPEncoderSeiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    int ret;
+
+    if (!p2_valid_channel(channel) || !p2_channels[channel].created || !attr)
+        return -1;
+    ch = &p2_channels[channel];
+    if ((int)attr->SeiMode != IMP_ENC_SEI_MODE_NONE) {
+        if (attr->uuid == NULL || attr->userData == NULL) {
+            IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                            "The SEI is OPEN,but the uuid or userData is NULL");
+            return -1;
+        }
+        if (attr->userDataSize > OPENIMP_T40_SEI_USER_MAX)
+            attr->userDataSize = OPENIMP_T40_SEI_USER_MAX;
+    }
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC &&
+        ch->codec_type != IMP_ENC_TYPE_HEVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_SetSei(ch->codec, (uint32_t)attr->SeiMode,
+                                 attr->uuid, attr->userData,
+                                 attr->userDataSize);
+    pthread_mutex_unlock(&ch->lock);
+    return ret == 0 ? 0 : -1;
+}
+
+int IMP_Encoder_GetChnSeiAttr(int channel, IMPEncoderSeiAttr *attr)
+{
+    P2EncoderChannel *ch;
+    uint32_t mode = 0, size = 0;
+    int ret;
+
+    if (!p2_valid_channel(channel) || !p2_channels[channel].created || !attr)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (ch->codec_type != IMP_ENC_TYPE_AVC &&
+        ch->codec_type != IMP_ENC_TYPE_HEVC) {
+        pthread_mutex_unlock(&ch->lock);
+        return -1;
+    }
+    ret = AL_Codec_Encode_GetSei(ch->codec, &mode, ch->sei_uuid,
+                                 ch->sei_data, &size);
+    if (ret == 0) {
+        attr->SeiMode = (IMPEncoderSEIMode)mode;
+        attr->uuid = ch->sei_uuid;
+        attr->userData = ch->sei_data;
+        attr->userDataSize = (uint8_t)size;
+    }
     pthread_mutex_unlock(&ch->lock);
     return ret == 0 ? 0 : -1;
 }

@@ -1514,6 +1514,23 @@ typedef struct {
 } IMPEncoderMapRoiAttr;
 
 int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiAttr *pstMapRoi);
+
+/* User data SEI of an H.264 / H.265 channel (T40, vendor 1.3.1 ABI). */
+typedef enum {
+    IMP_ENC_SEI_MODE_NONE = 0x00,   /* no SEI */
+    IMP_ENC_SEI_MODE_INTRA = 0x01,  /* with every IDR picture */
+    IMP_ENC_SEI_MODE_ALL = 0x02,    /* with every picture */
+} IMPEncoderSEIMode;
+
+typedef struct {
+    IMPEncoderSEIMode SeiMode;
+    uint8_t *uuid;                  /* 16 bytes */
+    uint8_t *userData;
+    uint8_t userDataSize;           /* at most 128 */
+} IMPEncoderSeiAttr;
+
+int IMP_Encoder_SetChnSeiAttr(int encChn, IMPEncoderSeiAttr *SeiAttr);
+int IMP_Encoder_GetChnSeiAttr(int encChn, IMPEncoderSeiAttr *SeiAttr);
 #endif
 
 #ifdef __cplusplus

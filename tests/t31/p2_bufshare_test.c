@@ -216,6 +216,26 @@ int AL_Codec_Encode_SetRcQualityCap(void *c, int m, unsigned int p) { (void)c; (
 
 int AL_Codec_Encode_SetRoiAttr(void *c, const void *a) { (void)c; (void)a; return 0; }
 int AL_Codec_Encode_SetMapRoi(void *c, const void *a) { (void)c; (void)a; return 0; }
+/* SEI store of the codec (T40: IMP_Encoder_Set/GetChnSeiAttr) */
+static struct { uint32_t mode, size; uint8_t uuid[16], data[128]; int calls; } sei_codec;
+int AL_Codec_Encode_SetSei(void *c, uint32_t mode, const uint8_t *uuid,
+                           const uint8_t *data, uint32_t size)
+{
+    (void)c;
+    sei_codec.calls++;
+    sei_codec.mode = mode; sei_codec.size = size;
+    if (uuid) memcpy(sei_codec.uuid, uuid, 16);
+    if (data) memcpy(sei_codec.data, data, size);
+    return 0;
+}
+int AL_Codec_Encode_GetSei(void *c, uint32_t *mode, uint8_t uuid[16],
+                           uint8_t data[128], uint32_t *size)
+{
+    (void)c;
+    *mode = sei_codec.mode; *size = sei_codec.size;
+    memcpy(uuid, sei_codec.uuid, 16); memcpy(data, sei_codec.data, 128);
+    return 0;
+}
 int AL_Codec_Encode_SetJpegQl(void *c, int e, const uint8_t t[128])
 { (void)c; (void)e; (void)t; return 0; }
 void openimp_t23_osd_apply(int group, void *frame) { (void)group; (void)frame; }
@@ -346,6 +366,46 @@ int main(void)
               IMP_Encoder_SetFisheyeEnableStatus(P2_MAX_CHANNELS, 1) == -1 &&
               IMP_Encoder_GetFisheyeEnableStatus(0, NULL) == -1,
               "fisheye argument checks");
+    }
+#endif
+
+#if defined(PLATFORM_T40)
+    /* T40 1.3.1 Set/GetChnSeiAttr: argument checks, size cap, round trip */
+    {
+        uint8_t uuid[16], data[200], bu[16];
+        IMPEncoderSeiAttr a, g;
+
+        memset(uuid, 0xab, 16); memset(data, 0x5a, sizeof(data));
+        memset(&a, 0, sizeof(a));
+        a.SeiMode = IMP_ENC_SEI_MODE_INTRA; a.uuid = uuid; a.userData = data;
+        a.userDataSize = 20;
+        CHECK(IMP_Encoder_SetChnSeiAttr(0, &a) == -1 &&
+              IMP_Encoder_GetChnSeiAttr(0, &g) == -1, "SEI: channel not created");
+        CHECK(IMP_Encoder_CreateChn(0, &video) == 0, "video CreateChn (SEI)");
+        CHECK(IMP_Encoder_SetChnSeiAttr(-1, &a) == -1 &&
+              IMP_Encoder_SetChnSeiAttr(13, &a) == -1 &&
+              IMP_Encoder_SetChnSeiAttr(0, NULL) == -1 &&
+              IMP_Encoder_GetChnSeiAttr(0, NULL) == -1, "SEI argument checks");
+        a.uuid = NULL;
+        CHECK(IMP_Encoder_SetChnSeiAttr(0, &a) == -1 && sei_codec.calls == 0,
+              "SEI on without uuid refused");
+        a.uuid = uuid; a.userData = NULL;
+        CHECK(IMP_Encoder_SetChnSeiAttr(0, &a) == -1 && sei_codec.calls == 0,
+              "SEI on without data refused");
+        a.userData = data; a.userDataSize = 200;       /* cut to 128 */
+        CHECK(IMP_Encoder_SetChnSeiAttr(0, &a) == 0 && a.userDataSize == 128 &&
+              sei_codec.size == 128 && sei_codec.mode == 1, "size cut to 128");
+        memset(&g, 0, sizeof(g));
+        CHECK(IMP_Encoder_GetChnSeiAttr(0, &g) == 0 &&
+              g.SeiMode == IMP_ENC_SEI_MODE_INTRA && g.userDataSize == 128 &&
+              g.uuid != uuid && memcmp(g.uuid, uuid, 16) == 0 &&
+              g.userData != data && memcmp(g.userData, data, 128) == 0,
+              "SEI round trip with the channel's copy");
+        /* mode NONE needs no pointers */
+        memset(&a, 0, sizeof(a)); (void)bu;
+        CHECK(IMP_Encoder_SetChnSeiAttr(0, &a) == 0 && sei_codec.mode == 0,
+              "SEI off");
+        CHECK(IMP_Encoder_DestroyChn(0) == 0, "destroy (SEI)");
     }
 #endif
 
