@@ -8,6 +8,14 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## T40 production branch `claude/t40-prod` (2026-10-12, Eufy T40XP device run)
+
+On `claude/agg-38` (01ee551). Device run on the Eufy T40XP (vendor kernel and vendor tx-isp-t40, OpenIMP by `LD_LIBRARY_PATH`), host tests `make check` T40/T41/T31.
+
+- **T40 frame source no longer blocks in the driver when the ISP stops delivering.** The vendor tx-isp-t40 DQBUF ignores `O_NONBLOCK` and restarts its wait after a signal, so a DQBUF with nothing done never returned and the process could not be killed. OpenIMP now mirrors the vendor `frame_pooling_thread` (1.3.1, 0x8ff88): one thread per enabled channel waits in `TISP_VIDIOC_WAIT_FRAME` (interruptible) and counts the edges; a consumer dequeues only against an edge and otherwise waits with its own deadline (`IMP_FrameSource_GetFrame` 2 s like the vendor, the encoder pull 10 ms inside the `PollingStream` deadline). `DisableChn` cancels the edge thread before STREAMOFF. Device: the WDR_OPEN case (0 frames) returns from `PollingStream` and tears down cleanly, the same as the vendor libimp; 39 frames in 2 s as before. Host test `tests/t40/framesource_stall_test.c`. T41 is unchanged.
+- **Device-tested on T40:** `IMP_ISP_GetRaw` 8/16-bit (10 of 10 each, data matches the vendor capture, the stream resumes), `IMP_Encoder_Set/GetChnSeiAttr` (NONE/INTRA/ALL on H.264, INTRA on H.265, counts checked with ffprobe, decode and SSIM checked).
+- **`IMP_ISP_Tuning_GetAeExpList` stays out on T40:** OpenIMP does not export it and the streamer does not call it (the vendor call hangs this camera).
+
 ## After RC1: aggregate agg-38 (state of 2026-10-12, not released)
 
 `claude/agg-38` = agg-37 (dc20d0e) + `claude/awbstats` (with `claude/awbzone`), `claude/t31-rc-collapse`, `claude/oimp-thread-names`, `claude/t21-cpu-fix`, `claude/t40-night` (with `claude/t40-devtest`), `claude/t41-isp-handlers`, `claude/funcsearch-run4` (documentation) and the device results of `claude/funcsearch-run5`. `claude/gaps-t1x-impl` is recorded as merged without changes: all of its commits were already in agg-35/agg-36 under other SHAs. The open-tx-isp side is open-tx-isp `claude/agg-38`. Build and host tests only (`make check`, `make release-check`, strict export check of T10 to T41); no soak. Device results only where an item says so.

@@ -7,6 +7,14 @@ Last update: 2026-10-12 (aggregate agg-38, build and host tests only; before tha
 
 Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20 and cam-J a second T21.
 
+## T40 production branch `claude/t40-prod` (2026-10-12, Eufy T40XP device run)
+
+On `claude/agg-38` (01ee551). Device run on the Eufy T40XP (vendor kernel and vendor tx-isp-t40, OpenIMP by `LD_LIBRARY_PATH`), host tests `make check` T40/T41/T31.
+
+- **T40 frame source no longer blocks in the driver when the ISP stops delivering.** The vendor tx-isp-t40 DQBUF ignores `O_NONBLOCK` and restarts its wait after a signal, so a DQBUF with nothing done never returned and the process could not be killed. OpenIMP now mirrors the vendor `frame_pooling_thread` (1.3.1, 0x8ff88): one thread per enabled channel waits in `TISP_VIDIOC_WAIT_FRAME` (interruptible) and counts the edges; a consumer dequeues only against an edge and otherwise waits with its own deadline (`IMP_FrameSource_GetFrame` 2 s like the vendor, the encoder pull 10 ms inside the `PollingStream` deadline). `DisableChn` cancels the edge thread before STREAMOFF. Device: the WDR_OPEN case (0 frames) returns from `PollingStream` and tears down cleanly, the same as the vendor libimp; 39 frames in 2 s as before. Host test `tests/t40/framesource_stall_test.c`. T41 is unchanged.
+- **Device-tested on T40:** `IMP_ISP_GetRaw` 8/16-bit (10 of 10 each, data matches the vendor capture, the stream resumes), `IMP_Encoder_Set/GetChnSeiAttr` (NONE/INTRA/ALL on H.264, INTRA on H.265, counts checked with ffprobe, decode and SSIM checked).
+- **`IMP_ISP_Tuning_GetAeExpList` stays out on T40:** OpenIMP does not export it and the streamer does not call it (the vendor call hangs this camera).
+
 ## Aggregate agg-38 (2026-10-12, build and host tests only)
 
 Branches `claude/agg-38` in OpenIMP (on agg-37 dc20d0e) and open-tx-isp (on agg-37 e40d7313); timps 1.10.2 development state (v1.10.1-16) with its WebUI in the firmware. No soak and no device run of the aggregate yet; the device results below come from the topic branches.
