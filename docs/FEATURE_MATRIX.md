@@ -290,7 +290,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T23:** ✅+ oops (wait queue) fixed, night mono, bank error → block bypass, user bypass persists
 - **T30:** ? not documented
 - **T31:** ✅ 13 switches in the 4.5 h soak
-- **T40:** ? `Get/SetISPRunningMode` exported, `StartNightMode` not exported; no test result
+- **T40:** 🔧 host: `Get/SetISPRunningMode` exported; `StartNightMode` (vendor ISP-node ioctl 0xc004542e) host test, device test pending
 - **T41:** ✅ isp-m0 shows the run mode; forced switch test pending
 
 ##### 11. IR cut / IR LED
@@ -338,7 +338,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T23:** ✅+ dynamic ADR lifted from the vendor module (44/44 emulator-identical, claude/t23-adr-defog); DRC strength 0/255 visibly effective on cam-B; sc2336 has no WDR mode
 - **T30:** ? `Get/SetRawDRC` exported; `Get/SetWDRAttr` exported since 2026-10-10 (V4L2 control 0x8000169, host test), no device result
 - **T31:** ✅ WDR buffer lazy; AE1 (short frame) stub = vendor no-op without WDR sensor
-- **T40:** 🔧 host: `ISP_WDR_ENABLE`/`_GET` ioctl layout test; `ISP_WDR_OPEN`, `Get/SetWdrOutputMode` not exported
+- **T40:** 🔧 host: `ISP_WDR_ENABLE`/`_GET` ioctl layout test; `ISP_WDR_OPEN` (ioctl 0xc0045432 / WDR_ENABLE, host test, device test pending); `Get/SetWdrOutputMode` not exported
 - **T41:** ❌ WDR and DRC are not supported on T41 (the driver returns "not supported" instead of a silent success)
 
 ##### 15. Defog
@@ -786,7 +786,7 @@ Counts are per vendor function of that SoC (T23 folded: base function = one; Get
 | T23 | 436 | 283 | 17 | 103 | 0 | 12 | 5 | 0 | 16 | 0 | **21** | 212 | 92.4 % |
 | T30 | 347 | 0 | 14 | 22 | 292 | 0 | 8 | 0 | 0 | 11 | **19** | – | 10.4 % |
 | T31 | 387 | 225 | 17 | 133 | 0 | 5 | 2 | 0 | 0 | 5 | **7** | 65 | 96.9 % |
-| T40 | 398 | 58 | 92 | 0 | 175 | 0 | 2 | 0 | 21 | 50 | **73** | – | 37.7 % |
+| T40 | 398 | 58 | 96 | 0 | 175 | 0 | 2 | 0 | 21 | 46 | **69** | – | 38.7 % |
 | T41 | 445 | 9 | 61 | 213 | 0 | 2 | 8 | 1 | 26 | 125 | **160** | 227 | 63.6 % |
 
 Columns: fns = vendor functions of that SoC; dev/host/aud/?/no-op/cache/stub/err/miss = counts per cell code (codes as in the legend); gaps = cache + stub + err + miss; audit gaps = the same sum in the audit before the work of 2026-10-05; done % = (dev + host + aud) / fns.
@@ -821,11 +821,11 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|
-| `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
+| `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_Get/SetCsccrMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Get/SetISPBypass` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | p† |
 | `ISP_Get/SetInternalChnAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
+| `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_LDC_Get/SetAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_LDC_INIT` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_RAW_RwControl` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
@@ -833,7 +833,7 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 | `ISP_SET_GPIO_STA` | n.a. | n.a. | n.a. | aud | n.a. | aud | n.a. | miss | – |
 | `ISP_SetPreDqtime` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_SetVicDoneCbFunc` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_StartNightMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
+| `ISP_StartNightMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | miss | – |
 | `ISP_Tuning_Get/SetDrawBlock` [3] | n.a. | n.a. | n.a. | err | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Tuning_Get/SetHLDCAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_Tuning_Get/SetISPCSCAttr` [49] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | host | – |
@@ -857,7 +857,7 @@ Gaps (cache-only, stub, error, missing, ?) of functions that at least one of tim
 | `ISP_Tuning_SetTmoFaceae` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | ► `ISP_Tuning_SwitchBin` [13] | n.a. | n.a. | n.a. | err | n.a. | n.a. | dev | host | T41: p† |
 | `ISP_Tuning_WaitFrameDone` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | miss | – |
-| `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
+| `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | miss | – |
 
 Notes:
 
@@ -884,7 +884,7 @@ Notes:
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|
 | `ISP_AddSensor` [16] | aud | dev | dev | dev | ? | dev | dev | aud | p† r† t |
-| `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
+| `ISP_Bypass_Bind` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_Close` [17] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
 | `ISP_DelSensor` [18] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
 | `ISP_DisableSensor` [19] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
@@ -898,7 +898,7 @@ Notes:
 | `ISP_Get/SetInternalChnAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Get/SetSensorRegister` [24] | aud | aud | aud | aud | ? | aud | host | dev | r† |
 | `ISP_GetCameraInputMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | dev | n.a. | T40: r† |
-| `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | n.a. | – |
+| `ISP_GetRaw` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | n.a. | – |
 | `ISP_LDC_Get/SetAttr` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_LDC_INIT` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
 | `ISP_Open` [25] | aud | dev | dev | dev | ? | dev | ? | aud | p† r† t |
@@ -913,7 +913,7 @@ Notes:
 | `ISP_SetStreamOut` [27] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_SetSwitchgpio` [28] | n.a. | n.a. | n.a. | host | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_SetVicDoneCbFunc` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | – |
-| `ISP_StartNightMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
+| `ISP_StartNightMode` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | miss | – |
 | `ISP_StreamCheck` [29] | n.a. | n.a. | n.a. | aud | n.a. | n.a. | n.a. | n.a. | – |
 | `ISP_Tuning_DisableMovestate` [30] | aud | aud | aud | no-op | ? | host | n.a. | n.a. | r† |
 | `ISP_Tuning_EnableDRC` [31] | n.a. | n.a. | n.a. | aud | n.a. | host | n.a. | n.a. | r† |
@@ -999,7 +999,7 @@ Notes:
 | ► `ISP_WDR_ENABLE` [14] | n.a. | n.a. | n.a. | n.a. | n.a. | aud | host | dev | r† |
 | ► `ISP_WDR_ENABLE_GET` [15] | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | dev | r† |
 | `ISP_WDR_ENABLE_Get` [87] | n.a. | n.a. | n.a. | n.a. | n.a. | aud | n.a. | n.a. | – |
-| `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | miss | miss | – |
+| `ISP_WDR_OPEN` | n.a. | n.a. | n.a. | n.a. | n.a. | n.a. | host | miss | – |
 
 Notes:
 

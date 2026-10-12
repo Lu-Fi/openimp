@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <imp/imp_isp.h>
+#include "../dma_alloc.h"
 
 #include "../isp/isp_mask_rgb2yuv.h"
 
@@ -1185,6 +1186,143 @@ int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
         return errno == ENODEV ? -8 : -6;
     return 0;
 }
+
+#if defined(PLATFORM_T40)
+/*
+ * ISP node entries of vendor T40 1.3.1 that the stock kernel serves
+ * (firmware symbols tx_isp_wdr_open, tx_isp_set_bypass_bind, tx_isp_get_raw,
+ * tx_isp_start_night_mode).  The numbers carry a size of 4 but the kernel
+ * reads the block named below; the wire blocks are copied from the
+ * disassembly.  Common library checks: sensor number >= 4 is -4, no ISP
+ * device -8, NULL data -9, a failing ioctl -1 (-6 only for PreDqtime).
+ */
+#define TISP_IOCTL_START_NIGHT_MODE 0xc004542eU
+#define TISP_IOCTL_GET_RAW          0xc004542fU
+#define TISP_IOCTL_SET_BYPASS_BIND  0xc0045431U
+#define TISP_IOCTL_WDR_OPEN         0xc0045432U
+
+/* Vendor IMP_ISP_WDR_OPEN (0x8be48), attr = {rmode, imode}.  rmode 0
+ * (start in linear mode): ioctl with {u8 sensor, pad, u32 imode} (8 bytes);
+ * rmode 1 (start in WDR): the same as IMP_ISP_WDR_ENABLE(num, ENABLE), its
+ * result is ignored; any other rmode is -9. */
+int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
+{
+    unsigned char block[8];
+    uint32_t imode;
+
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    if ((uint32_t)attr->rmode == 1U) {
+        IMPISPTuningOpsMode mode = IMPISP_TUNING_OPS_MODE_ENABLE;
+
+        (void)IMP_ISP_WDR_ENABLE(num, &mode);
+        return 0;
+    }
+    if ((uint32_t)attr->rmode != 0U)
+        return -9;
+    imode = (uint32_t)attr->imode;
+    memset(block, 0, sizeof(block));
+    block[0] = (unsigned char)num;
+    memcpy(block + 4, &imode, 4);
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_WDR_OPEN, block) != 0)
+        return errno == ENODEV ? -8 : -1;
+    return 0;
+}
+
+/* Vendor IMP_ISP_Bypass_Bind (0x8bacc): three {enable, vc_index, dma_index}
+ * triples go to the kernel as 12 bytes, each triple behind a selector byte
+ * num * 3 + i. */
+int32_t IMP_ISP_Bypass_Bind(IMPVI_NUM num, IMPISPBypassAttr *attr)
+{
+    unsigned char wire[12];
+    unsigned int i;
+
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    for (i = 0; i < 3U; i++) {
+        wire[i * 4U] = (unsigned char)((unsigned int)num * 3U + i);
+        wire[i * 4U + 1U] = attr->bypass[i].enable;
+        wire[i * 4U + 2U] = attr->bypass[i].vc_index;
+        wire[i * 4U + 3U] = attr->bypass[i].dma_index;
+    }
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_BYPASS_BIND, wire) != 0)
+        return errno == ENODEV ? -8 : -1;
+    return 0;
+}
+
+/* Vendor IMP_ISP_StartNightMode (0x89834): one ioctl, the argument word is
+ * not set by the vendor (stack garbage), zero here. */
+int32_t IMP_ISP_StartNightMode(IMPVI_NUM num)
+{
+    uint32_t zero = 0;
+
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_START_NIGHT_MODE, &zero) != 0)
+        return errno == ENODEV ? -8 : -1;
+    return 0;
+}
+
+/* Vendor IMP_ISP_GetRaw (0x8a410).  Writes the sensor number into
+ * attr->sensor_id first, then: num >= 4 -4, no ISP -8, raw_bit 8 or 16
+ * (anything else -1, size = w * h, doubled for 16 bit).  A per-sensor
+ * buffer is allocated once from the DMA arena (tag "getrawbuf", failure
+ * -2) and kept; its paddr / vaddr / size go into attr->buf and the whole
+ * structure is the ioctl argument (the kernel stores the frame there).
+ * The vendor reuses the cached buffer even when a later request is larger;
+ * here a larger request replaces it. */
+typedef struct {
+    int valid;
+    IMPDMABufferInfo info;
+} p3_raw_buf;
+
+static p3_raw_buf p3_raw_bufs[4];
+static pthread_mutex_t p3_raw_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int32_t IMP_ISP_GetRaw(IMPVI_NUM num, IMPISPGETRawiConfig *attr)
+{
+    p3_raw_buf *slot;
+    uint32_t size;
+    int32_t result;
+
+    if (!attr)
+        return -9;
+    attr->sensor_id = (unsigned short)num;
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (attr->raw_bit != 8 && attr->raw_bit != 16)
+        return -1;
+    size = attr->raw_width * attr->raw_height;
+    if (attr->raw_bit == 16)
+        size *= 2U;
+    if (size == 0U)
+        return -1;
+    pthread_mutex_lock(&p3_raw_lock);
+    slot = &p3_raw_bufs[num];
+    if (slot->valid && slot->info.size < size) {
+        (void)DMA_FreePhys(slot->info.phys_addr);
+        slot->valid = 0;
+    }
+    if (!slot->valid) {
+        if (DMA_AllocDescriptor(&slot->info, (int)size, "getrawbuf") != 0) {
+            pthread_mutex_unlock(&p3_raw_lock);
+            return -2;
+        }
+        slot->valid = 1;
+    }
+    attr->buf.paddr = slot->info.phys_addr;
+    attr->buf.vaddr = slot->info.virt_addr;
+    attr->buf.buf_size = slot->info.size;
+    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_RAW, attr) != 0 ?
+             (errno == ENODEV ? -8 : -1) : 0;
+    pthread_mutex_unlock(&p3_raw_lock);
+    return result;
+}
+#endif /* PLATFORM_T40 */
 
 /*
  * CSC: the T40 wire block differs from the T41 one above (vendor T40 1.3.1
