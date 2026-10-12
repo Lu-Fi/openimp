@@ -1,7 +1,7 @@
 /* T40 frame gate (openimp_p1.c p1_edge_take): with an ISP that delivers
  * nothing, GetFrame and the encoder pull must time out without a DQBUF
- * (the vendor driver would never return from it), stale edges must not
- * open the gate, frames must flow again once edges come, and DisableChn
+ * (the vendor driver would never return from it), frames left done while
+ * nobody consumed must still be handed out, and DisableChn
  * must finish while the edge thread sleeps in WAIT_FRAME. */
 #include <assert.h>
 #include <semaphore.h>
@@ -117,14 +117,20 @@ int main(void)
     }
     assert(dq_calls == 21);
 
-    /* 3. edges whose frames the ISP never finished, then a stall: stale
-     * edges (older than three frame intervals, min 100 ms) are dropped */
-    sem_post(&isp_edge);
-    sem_post(&isp_edge);
+    /* 3. no consumer for 400 ms: the ISP fills the queued buffers and
+     * stops signalling; the done frames are still handed out afterwards,
+     * then the stall times out again without a DQBUF */
+    for (i = 0; i < 3; i++)
+        isp_frame();
     usleep(400000);
+    for (i = 0; i < 3; i++) {
+        f = NULL;
+        assert(OpenIMP_P1_GetFrameTimed(1, (void *)&f, 50) == 0 && f);
+        assert(IMP_FrameSource_ReleaseFrame(1, f) == 0);
+    }
     f = NULL;
     assert(OpenIMP_P1_GetFrameTimed(1, (void *)&f, 200) == -1 && !f);
-    assert(dq_calls == 21);
+    assert(dq_calls == 24);
 
     /* 4. teardown while the edge thread sleeps in WAIT_FRAME */
     t0 = now_s();

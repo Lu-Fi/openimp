@@ -1605,10 +1605,11 @@ static void p1_snap_wake(void)
  * waits on the count with its own deadline.  So a stalled ISP makes
  * GetFrame and PollingStream time out without entering the driver, the
  * edge thread stays in an interruptible wait (the process can be killed),
- * and DisableChn cancels it before STREAMOFF.  An edge counts at most once
- * per buffer queued to the driver and is used only while edges keep
- * coming (p1_ivs_idle_us: three frame intervals, 100..500 ms), so edges
- * of frames the ISP dropped cannot open the gate once the ISP stops.
+ * and DisableChn cancels it before STREAMOFF.  Pending edges are capped at
+ * the number of buffers queued to the driver.  They do not expire: with
+ * no consumer the ISP fills every queued buffer and then stops signalling,
+ * and those done buffers must still be dequeued later (device test
+ * 2026-10-12: an idle 300 ms made the next GetFrame fail).
  */
 static pthread_mutex_t p1_edge_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t p1_edge_cond = PTHREAD_COND_INITIALIZER;
@@ -1722,19 +1723,15 @@ static int p1_edge_take(struct openimp_fs_channel *chn, uint64_t deadline_us)
     pthread_mutex_lock(&p1_edge_mutex);
     for (;;) {
         uint64_t now = p1_monotonic_us();
-        uint64_t fresh;
         uint64_t slice;
         uint32_t enabled;
         struct timespec until;
 
         lock_p1();
         enabled = chn->enabled;
-        fresh = p1_ivs_idle_us(chn);
         unlock_p1();
         if (!enabled || !__atomic_load_n(&chn->edge_running, __ATOMIC_ACQUIRE))
             break;
-        if (chn->edge_pending && now - chn->edge_last_us > fresh)
-            chn->edge_pending = 0;      /* edges stopped: stale */
         if (chn->edge_pending) {
             chn->edge_pending--;
             result = 0;
