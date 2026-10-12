@@ -14,6 +14,7 @@
 #include <imp/imp_isp.h>
 
 #include "../isp/isp_mask_rgb2yuv.h"
+#include "../dma_alloc.h"
 
 #if defined(PLATFORM_T41)
 #define TISP_VIDIOC_DEFAULT_TUNING 0xc0105435U
@@ -1185,6 +1186,148 @@ int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
         return errno == ENODEV ? -8 : -6;
     return 0;
 }
+
+#define P3_RAW_MAX_BYTES (64U << 20)
+
+#if !defined(PLATFORM_T41)
+/*
+ * T40 1.3.1 ISP node calls (vendor disassembly, isp_tseries.c in the SDK):
+ * each takes the sensor number (>= 4 is -4), the ISP device (-8 without),
+ * the pointer (NULL is -9) and hands a small block to the ISP node.
+ *   ISP_WDR_OPEN    0xc0045432  {u8 sensor, pad[3], u32 init mode}
+ *   ISP_StartNightMode 0xc004542e  the sensor number as int
+ *   ISP_Bypass_Bind 0xc0045431  3 x {u8 slot, enable, vc_index, dma_index}
+ *   ISP_GetRaw      0xc004542f  {paddr, vaddr, size} (first 12 bytes of the
+ *                               caller's structure)
+ * A failing ioctl is -1 for all of them (vendor), ENODEV from the ISP
+ * wrapper (no ISP device) maps to -8.
+ */
+#define TISP_IOCTL_START_NIGHT_MODE 0xc004542eU
+#define TISP_IOCTL_GET_RAW          0xc004542fU
+#define TISP_IOCTL_SET_BYPASS_BIND  0xc0045431U
+#define TISP_IOCTL_WDR_OPEN         0xc0045432U
+
+static int p3_isp_node_result(void)
+{
+    return errno == ENODEV ? -8 : -1;
+}
+
+/* Vendor WDR_OPEN: run mode LINEAR (0) sends the init mode to the ISP node
+ * and remembers it, run mode WDR (1) is IMP_ISP_WDR_ENABLE(num, ENABLE)
+ * (the init mode is not sent), any other run mode is -9.  Vendor does not
+ * check the sensor number; the open library rejects >= 4 with -4. */
+static uint32_t p3_wdr_init_mode[4];
+
+int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
+{
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    if ((uint32_t)attr->rmode == (uint32_t)IMPISP_TYPE_RUN_LINEAR) {
+        struct { uint8_t sensor; uint8_t pad[3]; uint32_t mode; } blk;
+
+        memset(&blk, 0, sizeof(blk));
+        blk.sensor = (uint8_t)num;
+        blk.mode = (uint32_t)attr->imode;
+        if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_WDR_OPEN, &blk) != 0)
+            return p3_isp_node_result();
+        p3_wdr_init_mode[num] = (uint32_t)attr->imode;
+        return 0;
+    }
+    if ((uint32_t)attr->rmode == (uint32_t)IMPISP_TYPE_RUN_WDR) {
+        IMPISPTuningOpsMode on = IMPISP_TUNING_OPS_MODE_ENABLE;
+
+        (void)IMP_ISP_WDR_ENABLE(num, &on);   /* vendor ignores the result */
+        return 0;
+    }
+    return -9;
+}
+
+int32_t IMP_ISP_StartNightMode(IMPVI_NUM num)
+{
+    int32_t value = (int32_t)num;
+
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_START_NIGHT_MODE, &value) != 0)
+        return p3_isp_node_result();
+    return 0;
+}
+
+int32_t IMP_ISP_Bypass_Bind(IMPVI_NUM num, IMPISPBypassAttr *attr)
+{
+    unsigned char wire[12];
+    unsigned int i;
+
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    for (i = 0; i < 3; i++) {
+        wire[i * 4] = (unsigned char)(num * 3U + i);
+        wire[i * 4 + 1] = attr->bypass[i].enable;
+        wire[i * 4 + 2] = attr->bypass[i].vc_index;
+        wire[i * 4 + 3] = attr->bypass[i].dma_index;
+    }
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_BYPASS_BIND, wire) != 0)
+        return p3_isp_node_result();
+    return 0;
+}
+
+/* Vendor GetRaw: the library keeps one "getrawbuf" DMA buffer per sensor
+ * (sized width * height * (bits / 8)), writes {paddr, vaddr, size} into the
+ * first 12 bytes of the caller's structure and lets the ISP node fill the
+ * buffer.  The vendor reuses the cached buffer whatever the new size is;
+ * here a bigger request replaces it (a frame must not overrun the buffer).
+ * The caller reads the raw data from vaddr after the call returns 0.  The
+ * sensor number is stored into sensor_id first (as the vendor does). */
+static struct { uint32_t phys; uint32_t virt; uint32_t size; } p3_raw_buf[4];
+static pthread_mutex_t p3_raw_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int32_t IMP_ISP_GetRaw(IMPVI_NUM num, IMPISPGETRawiConfig *attr)
+{
+    IMPDMABufferInfo info;
+    uint32_t size;
+    int result = 0;
+
+    if (!attr)
+        return -9;
+    attr->sensor_id = (unsigned short)num;
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (attr->raw_bit == 8)
+        size = attr->raw_width * attr->raw_height;
+    else if (attr->raw_bit == 16)
+        size = attr->raw_width * attr->raw_height * 2U;
+    else
+        return -1;                     /* "Support 8bit or 16bit" */
+    if (size == 0 || size > P3_RAW_MAX_BYTES)
+        return -1;
+
+    pthread_mutex_lock(&p3_raw_lock);
+    if (p3_raw_buf[num].phys && p3_raw_buf[num].size < size) {
+        DMA_FreePhys(p3_raw_buf[num].phys);
+        memset(&p3_raw_buf[num], 0, sizeof(p3_raw_buf[num]));
+    }
+    if (!p3_raw_buf[num].phys) {
+        if (DMA_AllocDescriptor(&info, (int)size, "getrawbuf") != 0) {
+            pthread_mutex_unlock(&p3_raw_lock);
+            return -2;
+        }
+        p3_raw_buf[num].phys = info.phys_addr;
+        p3_raw_buf[num].virt = info.virt_addr;
+        p3_raw_buf[num].size = info.size;
+    }
+    attr->buf.paddr = p3_raw_buf[num].phys;
+    attr->buf.vaddr = p3_raw_buf[num].virt;
+    attr->buf.buf_size = p3_raw_buf[num].size;
+    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_RAW, attr) != 0)
+        result = p3_isp_node_result();
+    pthread_mutex_unlock(&p3_raw_lock);
+    return result;
+}
+#endif /* !PLATFORM_T41 */
 
 /*
  * CSC: the T40 wire block differs from the T41 one above (vendor T40 1.3.1

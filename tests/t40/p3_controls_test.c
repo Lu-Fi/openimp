@@ -16,11 +16,39 @@ int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
 int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
 int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
 
-static struct { uint32_t command; uint32_t value; int result; int err; int calls; } ispnode;
+static struct { uint32_t command; uint32_t value; int result; int err; int calls; unsigned char blob[24]; } ispnode;
+
+/* DMA allocator stand-ins for IMP_ISP_GetRaw */
+#include "../../src/dma_alloc.h"
+static int dma_allocs, dma_frees, dma_fail;
+int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
+{
+    if (dma_fail)
+        return -1;
+    memset(info, 0, sizeof(*info));
+    info->phys_addr = 0x1000U * (uint32_t)(++dma_allocs);
+    info->virt_addr = 0x70000000U + info->phys_addr;
+    info->size = (uint32_t)size;
+    (void)tag;
+    return 0;
+}
+int DMA_FreePhys(uint32_t phys)
+{
+    (void)phys;
+    dma_frees++;
+    return 0;
+}
 
 int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
 {
     ispnode.command = command;
+    switch (command) {
+    case 0xc004542eU: memcpy(ispnode.blob, argument, 4); break;
+    case 0xc0045432U: memcpy(ispnode.blob, argument, 8); break;
+    case 0xc0045431U:
+    case 0xc004542fU: memcpy(ispnode.blob, argument, 12); break;
+    default: break;
+    }
     if (command == 0xc0045430U)
         memcpy(&ispnode.value, argument, 4);
     ispnode.calls++;
@@ -449,6 +477,97 @@ int main(void)
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -6);
             ispnode.err = ENODEV;
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -8);
+            ispnode.result = 0;
+        }
+
+        /* ISP node calls of the T40 1.3.1 library: WDR_OPEN, StartNightMode,
+         * Bypass_Bind, GetRaw (vendor disassembly, error codes -4/-8/-9/-1) */
+        {
+            IMPISPWdrOpenAttr wdr;
+            IMPISPBypassAttr byp;
+            IMPISPGETRawiConfig raw;
+            uint32_t w;
+            int calls;
+
+            wdr.rmode = IMPISP_TYPE_RUN_LINEAR;
+            wdr.imode = IMPISP_TYPE_WDR_DOL;
+            ispnode.calls = 0;
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wdr) == 0);
+            assert(ispnode.command == 0xc0045432U);
+            assert(ispnode.blob[0] == 0);
+            memcpy(&w, ispnode.blob + 4, 4);
+            assert(w == (uint32_t)IMPISP_TYPE_WDR_DOL);
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, NULL) == -9);
+            assert(IMP_ISP_WDR_OPEN((IMPVI_NUM)4, &wdr) == -4);
+            wdr.rmode = (IMPISPWdrRunMode)2;
+            calls = ispnode.calls;
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wdr) == -9);
+            assert(ispnode.calls == calls);
+            wdr.rmode = IMPISP_TYPE_RUN_WDR;       /* = WDR_ENABLE, no init mode */
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wdr) == 0);
+            assert(ispnode.calls == calls + 1 && ispnode.command != 0xc0045432U);
+            wdr.rmode = IMPISP_TYPE_RUN_LINEAR;
+            ispnode.result = -1; ispnode.err = EIO;
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wdr) == -1);
+            ispnode.err = ENODEV;
+            assert(IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wdr) == -8);
+            ispnode.result = 0;
+
+            assert(IMP_ISP_StartNightMode((IMPVI_NUM)2) == 0);
+            assert(ispnode.command == 0xc004542eU);
+            memcpy(&w, ispnode.blob, 4);
+            assert(w == 2U);
+            assert(IMP_ISP_StartNightMode((IMPVI_NUM)4) == -4);
+            ispnode.result = -1; ispnode.err = EIO;
+            assert(IMP_ISP_StartNightMode(IMPVI_MAIN) == -1);
+            ispnode.result = 0;
+
+            memset(&byp, 0, sizeof(byp));
+            byp.bypass[0].enable = 1; byp.bypass[0].vc_index = 2; byp.bypass[0].dma_index = 1;
+            byp.bypass[1].enable = 0; byp.bypass[1].vc_index = 3; byp.bypass[1].dma_index = 0;
+            byp.bypass[2].enable = 1; byp.bypass[2].vc_index = 1; byp.bypass[2].dma_index = 0;
+            assert(IMP_ISP_Bypass_Bind((IMPVI_NUM)1, &byp) == 0);
+            assert(ispnode.command == 0xc0045431U);
+            {
+                static const unsigned char want[12] = {
+                    3, 1, 2, 1,   4, 0, 3, 0,   5, 1, 1, 0 };
+                assert(memcmp(ispnode.blob, want, 12) == 0);
+            }
+            assert(IMP_ISP_Bypass_Bind((IMPVI_NUM)4, &byp) == -4);
+            assert(IMP_ISP_Bypass_Bind(IMPVI_MAIN, NULL) == -9);
+            ispnode.result = -1; ispnode.err = EIO;
+            assert(IMP_ISP_Bypass_Bind(IMPVI_MAIN, &byp) == -1);
+            ispnode.result = 0;
+
+            assert(sizeof(IMPISPGETRawiConfig) == 24);
+            memset(&raw, 0, sizeof(raw));
+            raw.raw_width = 100; raw.raw_height = 50; raw.raw_bit = 12;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == -1);     /* 8 or 16 only */
+            assert(dma_allocs == 0 && raw.sensor_id == 0);
+            assert(IMP_ISP_GetRaw((IMPVI_NUM)4, &raw) == -4 && raw.sensor_id == 4);
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, NULL) == -9);
+            raw.raw_bit = 16;
+            dma_fail = 1;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == -2);
+            dma_fail = 0;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == 0);
+            assert(dma_allocs == 1 && raw.buf.buf_size == 100U * 50U * 2U);
+            assert(ispnode.command == 0xc004542fU);
+            memcpy(&w, ispnode.blob, 4);
+            assert(w == 0x1000U && raw.buf.paddr == 0x1000U);
+            memcpy(&w, ispnode.blob + 8, 4);
+            assert(w == 10000U);
+            raw.raw_bit = 8;                       /* smaller: buffer reused */
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == 0);
+            assert(dma_allocs == 1 && dma_frees == 0 && raw.buf.paddr == 0x1000U);
+            raw.raw_width = 400;                   /* bigger: replaced */
+            raw.raw_bit = 16;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == 0);
+            assert(dma_allocs == 2 && dma_frees == 1 && raw.buf.paddr == 0x2000U);
+            ispnode.result = -1; ispnode.err = EIO;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == -1);
+            ispnode.err = ENODEV;
+            assert(IMP_ISP_GetRaw(IMPVI_MAIN, &raw) == -8);
             ispnode.result = 0;
         }
 
