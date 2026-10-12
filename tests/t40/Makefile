@@ -18,7 +18,7 @@ SEI_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-sei-test
 OSD_CB_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-osd-callback-test
 DGAIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-dgain-test
 
-check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd
+check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-hold fs-stall
 	$(QUERY_TEST_BIN)
 	$(SEI_TEST_BIN)
 	$(OSD_CB_TEST_BIN)
@@ -170,6 +170,14 @@ fs-hold:
 		framesource_hold_test.c $(PROJECT_DIR)/src/openimp_profile.c -pthread \
 		-o $(PROJECT_DIR)/build/tests/t40-fs-hold-test
 	$(PROJECT_DIR)/build/tests/t40-fs-hold-test
+
+.PHONY: fs-stall
+fs-stall:
+	mkdir -p $(PROJECT_DIR)/build/tests
+	$(CC) -std=gnu99 -O2 -w -DPLATFORM_T40 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		framesource_stall_test.c $(PROJECT_DIR)/src/openimp_profile.c -pthread \
+		-o $(PROJECT_DIR)/build/tests/t40-fs-stall-test
+	$(PROJECT_DIR)/build/tests/t40-fs-stall-test
 
 .PHONY: mempool
 mempool:

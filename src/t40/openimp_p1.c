@@ -28,6 +28,10 @@
 #if defined(PLATFORM_T41) || defined(PLATFORM_T40)
 #define P1_CAPTURE_FEEDER 1
 #endif
+/* T40: consumers dequeue only after a WAIT_FRAME edge (p1_edge_take). */
+#if defined(PLATFORM_T40)
+#define P1_FRAME_GATE 1
+#endif
 #if defined(P1_CAPTURE_FEEDER)
 #include "t31/openimp_t31_ivs.h"
 #endif
@@ -307,6 +311,14 @@ struct openimp_fs_channel {
     uint64_t last_dequeue_us;       /* by a consumer other than the IVS
                                      * feeder, CLOCK_MONOTONIC */
     struct t41_snap_state snap;     /* SnapFrame frame lend */
+#endif
+#if defined(P1_FRAME_GATE)
+    pthread_t edge_thread;          /* WAIT_FRAME edges (p1_edge_thread) */
+    uint32_t edge_running;
+    uint32_t edge_stop;
+    uint32_t edge_pending;          /* under p1_edge_mutex */
+    uint64_t edge_last_us;          /* under p1_edge_mutex */
+    uint32_t edges;
 #endif
     IMPFSChnAttr attr;
     struct openimp_fs_buffer buffers[OPENIMP_FS_BUFFERS];
@@ -1575,6 +1587,175 @@ static void p1_snap_wake(void)
 #define p1_monotonic_us() 0u
 #endif
 
+#if defined(P1_FRAME_GATE)
+/*
+ * T40 frame gate.  The vendor tx-isp-t40 DQBUF ignores O_NONBLOCK and
+ * restarts its wait after a signal: with buffers queued and an ISP that
+ * delivers nothing (a sensor mode the ISP does not run, a stopped core) it
+ * never returns, and the caller can no longer be killed (the stuck thread
+ * keeps the process alive; only a STREAMOFF of the channel releases it).
+ * The vendor libimp never meets this: its frame_pooling_thread (1.3.1
+ * 0x8ff88) waits in TISP_VIDIOC_WAIT_FRAME (0xc004545a, an interruptible
+ * completion per frame channel) and dequeues only after that edge, and
+ * consumers wait for its frames with a time limit (GetFrame: 2 s
+ * pthread_cond_timedwait; encoder: sem_timedwait).
+ *
+ * Here one thread per enabled channel takes the WAIT_FRAME edges and
+ * counts them; a consumer dequeues only against a fresh edge and otherwise
+ * waits on the count with its own deadline.  So a stalled ISP makes
+ * GetFrame and PollingStream time out without entering the driver, the
+ * edge thread stays in an interruptible wait (the process can be killed),
+ * and DisableChn cancels it before STREAMOFF.  An edge counts at most once
+ * per buffer queued to the driver and is used only while edges keep
+ * coming (p1_ivs_idle_us: three frame intervals, 100..500 ms), so edges
+ * of frames the ISP dropped cannot open the gate once the ISP stops.
+ */
+static pthread_mutex_t p1_edge_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t p1_edge_cond = PTHREAD_COND_INITIALIZER;
+
+struct p1_edge_arg {
+    int channel;
+    int fd;
+};
+
+static void *p1_edge_thread(void *argument)
+{
+    struct p1_edge_arg arg = *(struct p1_edge_arg *)argument;
+    struct openimp_fs_channel *chn = &p1.channels[arg.channel];
+    int state;
+
+    free(argument);
+    openimp_thread_setname("oimp-fs-edge");
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
+    for (;;) {
+        int32_t wait_arg = -1;
+        uint32_t queued = 0;
+        uint32_t i;
+        int result;
+        int error;
+
+        /* WAIT_FRAME is an interruptible kernel wait without a timeout:
+         * DisableChn cancels the thread while it sleeps there.  Nothing is
+         * held across the call, so asynchronous cancellation is safe. */
+        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &state);
+        pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &state);
+        pthread_testcancel();
+        result = ioctl(arg.fd, TISP_VIDIOC_WAIT_FRAME, &wait_arg);
+        error = errno;
+        pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &state);
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
+        if (__atomic_load_n(&chn->edge_stop, __ATOMIC_ACQUIRE))
+            break;
+        if (result < 0) {
+            if (error != EINTR)
+                usleep(10000);
+            continue;
+        }
+        lock_p1();
+        for (i = 0; i < chn->buffer_count; i++)
+            if (chn->buffers[i].queued)
+                queued++;
+        unlock_p1();
+        pthread_mutex_lock(&p1_edge_mutex);
+        if (chn->edge_pending < queued)
+            chn->edge_pending++;
+        chn->edge_last_us = p1_monotonic_us();
+        chn->edges++;
+        pthread_cond_broadcast(&p1_edge_cond);
+        pthread_mutex_unlock(&p1_edge_mutex);
+    }
+    return NULL;
+}
+
+/* After STREAMON, outside the P1 lock. */
+static void p1_edge_start(int channel)
+{
+    struct openimp_fs_channel *chn = &p1.channels[channel];
+    struct p1_edge_arg *arg = malloc(sizeof(*arg));
+
+    if (!arg)
+        goto failed;
+    lock_p1();
+    arg->channel = channel;
+    arg->fd = chn->fd;
+    unlock_p1();
+    pthread_mutex_lock(&p1_edge_mutex);
+    chn->edge_pending = 0;
+    chn->edge_last_us = 0;
+    __atomic_store_n(&chn->edge_stop, 0, __ATOMIC_RELEASE);
+    pthread_mutex_unlock(&p1_edge_mutex);
+    if (pthread_create(&chn->edge_thread, NULL, p1_edge_thread, arg) == 0) {
+        __atomic_store_n(&chn->edge_running, 1, __ATOMIC_RELEASE);
+        return;
+    }
+    free(arg);
+failed:
+    syslog(LOG_ERR, "openimp-p1: chn=%d frame edge thread not started; "
+           "GetFrame dequeues without the WAIT_FRAME gate", channel);
+}
+
+/* Before STREAMOFF, outside the P1 lock. */
+static void p1_edge_stop(int channel)
+{
+    struct openimp_fs_channel *chn = &p1.channels[channel];
+
+    if (!__atomic_load_n(&chn->edge_running, __ATOMIC_ACQUIRE))
+        return;
+    __atomic_store_n(&chn->edge_stop, 1, __ATOMIC_RELEASE);
+    pthread_cancel(chn->edge_thread);
+    pthread_join(chn->edge_thread, NULL);
+    __atomic_store_n(&chn->edge_running, 0, __ATOMIC_RELEASE);
+    pthread_mutex_lock(&p1_edge_mutex);
+    chn->edge_pending = 0;
+    pthread_cond_broadcast(&p1_edge_cond);
+    pthread_mutex_unlock(&p1_edge_mutex);
+}
+
+/* 0: a fresh edge was taken, DQBUF will find a frame; -1: deadline passed
+ * or the channel went down. */
+static int p1_edge_take(struct openimp_fs_channel *chn, uint64_t deadline_us)
+{
+    int result = -1;
+
+    if (!__atomic_load_n(&chn->edge_running, __ATOMIC_ACQUIRE))
+        return 0;       /* no gate (thread did not start): old behaviour */
+    pthread_mutex_lock(&p1_edge_mutex);
+    for (;;) {
+        uint64_t now = p1_monotonic_us();
+        uint64_t fresh;
+        uint64_t slice;
+        uint32_t enabled;
+        struct timespec until;
+
+        lock_p1();
+        enabled = chn->enabled;
+        fresh = p1_ivs_idle_us(chn);
+        unlock_p1();
+        if (!enabled || !__atomic_load_n(&chn->edge_running, __ATOMIC_ACQUIRE))
+            break;
+        if (chn->edge_pending && now - chn->edge_last_us > fresh)
+            chn->edge_pending = 0;      /* edges stopped: stale */
+        if (chn->edge_pending) {
+            chn->edge_pending--;
+            result = 0;
+            break;
+        }
+        if (now >= deadline_us)
+            break;
+        slice = deadline_us - now;
+        if (slice > 20000u)
+            slice = 20000u;
+        clock_gettime(CLOCK_REALTIME, &until);
+        until.tv_nsec += (long)(slice * 1000u);
+        until.tv_sec += until.tv_nsec / 1000000000L;
+        until.tv_nsec %= 1000000000L;
+        (void)pthread_cond_timedwait(&p1_edge_cond, &p1_edge_mutex, &until);
+    }
+    pthread_mutex_unlock(&p1_edge_mutex);
+    return result;
+}
+#endif
+
 /* Last IMP_FrameSource_GetFrame call, CLOCK_MONOTONIC ms (wraps). */
 static uint32_t p1_reader_ms;
 
@@ -1717,6 +1898,10 @@ done:
     unlock_p1();
     if (!result)
         fs_delay_set_on(channel, 1);
+#if defined(P1_FRAME_GATE)
+    if (!result)
+        p1_edge_start(channel);
+#endif
 #if defined(P1_CAPTURE_FEEDER)
     if (!result)
         (void)pthread_once(&p1_ivs_feeder_once, p1_ivs_feeder_start);
@@ -1724,15 +1909,19 @@ done:
     return result;
 }
 
-int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
+static int p1_get_frame(int channel, IMPFrameInfo **frame, uint32_t timeout_ms)
 {
     struct openimp_fs_channel *chn;
     struct openimp_fs_buffer *buffer;
     uint32_t words[TISP_BUFFER_WORDS];
     uint32_t index;
     int attempts;
+    int dequeued = 0;
     int delay_cache = 0;
     IMPFrameInfo cache_frame;
+#if defined(P1_FRAME_GATE)
+    uint64_t deadline_us;
+#endif
     OpenIMPProfileStamp wait_profile;
 #if defined(P1_CAPTURE_FEEDER)
     int snap_taken;
@@ -1757,6 +1946,11 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     }
 
     wait_profile = openimp_profile_begin();
+#if defined(P1_FRAME_GATE)
+    deadline_us = p1_monotonic_us() + (uint64_t)timeout_ms * 1000u;
+#else
+    (void)timeout_ms;
+#endif
 
     for (attempts = 0; attempts < 1000; attempts++) {
         OpenIMPProfileStamp dqbuf_profile;
@@ -1789,10 +1983,20 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
                     any = 1;
             unlock_p1();
             if (!any) {
+#if defined(P1_FRAME_GATE)
+                if (p1_monotonic_us() >= deadline_us)
+                    break;
+#endif
                 usleep(1000);
                 continue;
             }
         }
+#if defined(P1_FRAME_GATE)
+        /* no frame-channel edge: the ISP has nothing done, and a DQBUF
+         * would sleep in the driver until one is (p1_edge_take) */
+        if (p1_edge_take(chn, deadline_us) != 0)
+            break;
+#endif
         memset(words, 0, sizeof(words));
         words[1] = TISP_BUF_TYPE_VIDEO_CAPTURE;
         words[12] = TISP_MEMORY_USERPTR;
@@ -1800,6 +2004,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
         if (record_ioctl(chn->fd, TISP_VIDIOC_DQBUF, words) >= 0) {
             openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_DQBUF,
                                 dqbuf_profile);
+            dequeued = 1;
             break;
         }
         openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_DQBUF,
@@ -1813,7 +2018,7 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
     }
     openimp_profile_count(OPENIMP_PROFILE_DQBUF_RETRIES,
                           (uint64_t)attempts);
-    if (attempts == 1000) {
+    if (!dequeued) {
         openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT, wait_profile);
         return -1;
     }
@@ -1892,6 +2097,19 @@ int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
 #endif
     openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT, wait_profile);
     return 0;
+}
+
+/* Vendor 1.3.1 GetFrame (0x976c0): pthread_cond_timedwait for 2 s. */
+int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
+{
+    return p1_get_frame(channel, frame, 2000u);
+}
+
+/* Encoder pull (PollingStream keeps its own deadline): a short wait. */
+int OpenIMP_P1_GetFrameTimed(int channel, IMPFrameInfo **frame,
+                             uint32_t timeout_ms)
+{
+    return p1_get_frame(channel, frame, timeout_ms);
 }
 
 int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
@@ -2070,6 +2288,11 @@ int IMP_FrameSource_DisableChn(int channel)
 
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS)
         return -1;
+#if defined(P1_FRAME_GATE)
+    /* the edge thread sleeps in WAIT_FRAME on this fd; a consumer that
+     * still sits in DQBUF is released by the STREAMOFF below */
+    p1_edge_stop(channel);
+#endif
     lock_p1();
     prepare_p1();
     chn = &p1.channels[channel];

@@ -1245,6 +1245,14 @@ extern int IMP_FrameSource_ReleaseFrame(int channel, void *frame);
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
 extern int VBMGetFrame(int chn, void **frame);
 #define P2_FS_TRY_FRAME(chn, frame) VBMGetFrame((chn), (frame))
+#elif defined(PLATFORM_T40)
+/* T40: the public GetFrame waits 2 s like the vendor; the poll loop below
+ * keeps its own deadline, so each pull waits at most 10 ms for a frame
+ * edge (openimp_p1.c p1_edge_take) and never enters a DQBUF that the
+ * vendor driver would not return from while the ISP delivers nothing. */
+extern int OpenIMP_P1_GetFrameTimed(int channel, void **frame,
+                                    uint32_t timeout_ms);
+#define P2_FS_TRY_FRAME(chn, frame) OpenIMP_P1_GetFrameTimed((chn), (frame), 10u)
 #else
 #define P2_FS_TRY_FRAME(chn, frame) IMP_FrameSource_GetFrame((chn), (frame))
 #endif
