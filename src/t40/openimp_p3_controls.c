@@ -1196,6 +1196,7 @@ int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
  * disassembly.  Common library checks: sensor number >= 4 is -4, no ISP
  * device -8, NULL data -9, a failing ioctl -1 (-6 only for PreDqtime).
  */
+extern int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument);
 #define TISP_IOCTL_START_NIGHT_MODE 0xc004542eU
 #define TISP_IOCTL_GET_RAW          0xc004542fU
 #define TISP_IOCTL_SET_BYPASS_BIND  0xc0045431U
@@ -1226,7 +1227,7 @@ int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
     memset(block, 0, sizeof(block));
     block[0] = (unsigned char)num;
     memcpy(block + 4, &imode, 4);
-    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_WDR_OPEN, block) != 0)
+    if (OpenIMP_P1_IspIOCtlOpened(TISP_IOCTL_WDR_OPEN, block) != 0)
         return errno == ENODEV ? -8 : -1;
     return 0;
 }
@@ -1249,7 +1250,7 @@ int32_t IMP_ISP_Bypass_Bind(IMPVI_NUM num, IMPISPBypassAttr *attr)
         wire[i * 4U + 2U] = attr->bypass[i].vc_index;
         wire[i * 4U + 3U] = attr->bypass[i].dma_index;
     }
-    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_BYPASS_BIND, wire) != 0)
+    if (OpenIMP_P1_IspIOCtlOpened(TISP_IOCTL_SET_BYPASS_BIND, wire) != 0)
         return errno == ENODEV ? -8 : -1;
     return 0;
 }
@@ -1262,7 +1263,7 @@ int32_t IMP_ISP_StartNightMode(IMPVI_NUM num)
 
     if ((uint32_t)num >= 4U)
         return -4;
-    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_START_NIGHT_MODE, &zero) != 0)
+    if (OpenIMP_P1_IspIOCtlOpened(TISP_IOCTL_START_NIGHT_MODE, &zero) != 0)
         return errno == ENODEV ? -8 : -1;
     return 0;
 }
@@ -1317,7 +1318,7 @@ int32_t IMP_ISP_GetRaw(IMPVI_NUM num, IMPISPGETRawiConfig *attr)
     attr->buf.paddr = slot->info.phys_addr;
     attr->buf.vaddr = slot->info.virt_addr;
     attr->buf.buf_size = slot->info.size;
-    result = OpenIMP_P1_IspIOCtl(TISP_IOCTL_GET_RAW, attr) != 0 ?
+    result = OpenIMP_P1_IspIOCtlOpened(TISP_IOCTL_GET_RAW, attr) != 0 ?
              (errno == ENODEV ? -8 : -1) : 0;
     pthread_mutex_unlock(&p3_raw_lock);
     return result;

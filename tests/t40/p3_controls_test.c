@@ -14,6 +14,7 @@ int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
 int OpenIMP_P1_SetDefaultBinPath(IMPVI_NUM num, const char *path);
 int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size);
 int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
+int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument);
 int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
 
 static struct { uint32_t command; uint32_t value; int result; int err; int calls;
@@ -58,6 +59,13 @@ int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
     if (ispnode.result)
         errno = ispnode.err;
     return ispnode.result;
+}
+
+/* WDR_OPEN, Bypass_Bind, StartNightMode, GetRaw need only the open ISP
+ * device (vendor: callable before AddSensor); same recorder. */
+int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument)
+{
+    return OpenIMP_P1_IspIOCtl(command, argument);
 }
 
 int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type)
