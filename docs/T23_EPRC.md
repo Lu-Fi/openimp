@@ -503,3 +503,21 @@ for CBR/VBR), T21 default.  Each run 3 min, recorded via RTSP.
 
 If 1-6 pass on both cameras, make `OPENIMP_EPRC_MBRC` default to on (the
 OEM behaviour).
+
+T21 result (cam-D, night, 2026-10-15): with MB-RC on the macroblock QP
+spreads over 14..24 like the vendor stream (off: 20/21); P-frames
+1621-1722 B against 2005-2016 B off, within scene drift; decode clean,
+no kernel messages.
+
+Scripted run for cam-B (steps 1-4 and 6; step 5 needs a T23 build of
+`tools/mbrc_preload.c`): `session-110bf918/tools/t23-mbrc-test.sh` on the
+campaign host restarts the streamer once with `OPENIMP_EPRC_MBRC=1
+OPENIMP_EPRC_MBRC_LOG=25`, analyses 21 s substream pulls in memory
+(video-track bitrate, I/P sizes, decode errors, macroblock QP histogram,
+decoded luma change), optionally switches day/night with MB-RC on, and
+restarts the streamer normally.  Expected: off = macroblock QP at the slice
+QP (one or two values), on = a spread of several QP values around it
+(SAS offsets -8..+5); 0 decode errors in all pulls; bitrate within the
+scene drift of the off runs for CBR, for SMART/VBR a lower or equal
+bitrate at similar decoded change; no kernel or Helix failures; libimp and
+the streamer configuration unchanged afterwards.
