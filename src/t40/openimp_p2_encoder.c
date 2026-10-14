@@ -2027,12 +2027,11 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
                            (uint32_t)hs->maxSameSceneCnt : 0u);
     }
     {
-        /* eprc macroblock rate control: OPENIMP_EPRC_MBRC=1 turns it on
-         * (the OEM default; off until it is device-tested), then
-         * IMP_Encoder_SetMbRC */
+        /* eprc macroblock rate control: on by default like the OEM,
+         * OPENIMP_EPRC_MBRC=0 turns it off, then IMP_Encoder_SetMbRC */
         const char *mbrc = getenv("OPENIMP_EPRC_MBRC");
 
-        ch->macroblock_rate_control = mbrc && mbrc[0] == '1';
+        ch->macroblock_rate_control = !(mbrc && mbrc[0] == '0');
         (void)AL_Codec_Encode_SetMbRC(ch->codec,
                                       ch->macroblock_rate_control);
     }

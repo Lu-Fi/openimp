@@ -271,7 +271,7 @@ set in production.
 | `OPENIMP_T41_ROI` | `1` enables the experimental T41 ROI table (not device-tested) | off | debug-only |
 | `OPENIMP_T40_ROI` | `1` enables the experimental T40 ROI table (cross-built, not device-tested) | off | debug-only |
 | `OPENIMP_T20_RC` | `0` disables the T20 OEM rate controller (needs kernel patch 0101) and falls back to the GOP controller | on (as vendor) | user-facing |
-| `OPENIMP_EPRC_MBRC` | `1` enables the eprc macroblock RC on T21/T23 (device test pending) | off | user-facing (opt-in) |
+| `OPENIMP_EPRC_MBRC` | eprc macroblock RC on T21/T23 like the vendor; `0` turns it off (on by default from `claude/t21-mbrc-default`, which applies only after its device test) | on (that branch) / off (`next`) | user-facing |
 | `OPENIMP_T10_RC` | `0` disables the T10 OEM-style rate controller | on | user-facing |
 | `OPENIMP_T10_RC_SUPERFRM` | `0` restores vendor-exact T10 VBR behaviour (super-frame fix off); only inside the OEM controller | on | user-facing |
 | `OPENIMP_T20_RC_IAWARE` | `0` = vendor P budget, `1` also for VBR/SMART; only inside the OEM controller | on for CBR | user-facing |

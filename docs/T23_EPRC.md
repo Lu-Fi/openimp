@@ -303,8 +303,9 @@ for every picture before.  The command list takes the controller's values
 when eprc runs, else the same values by picture type and width.  Checked
 in the `--mbrc` vectors (last two 'M' fields: the OEM SliceInit registers).
 
-OpenIMP switch: `OPENIMP_EPRC_MBRC=1` (the OEM behaviour) or 0/unset (the
-default until the device test: registers as before), per channel at run
+OpenIMP switch: on by default on branch `claude/t21-mbrc-default` (the OEM
+behaviour; `OPENIMP_EPRC_MBRC` unset or 1), `OPENIMP_EPRC_MBRC=0` turns it off
+(registers as before); before that branch it was off unless set to 1. Per channel at run
 time with `IMP_Encoder_SetMbRC` (HWEncoderParams.mb_rc, from the next
 picture; `IMP_Encoder_GetMbRC` returns the switch).  It needs the eprc
 controller (`OPENIMP_T23_EPRC`, `OPENIMP_T21_EPRC`); the controller

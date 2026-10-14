@@ -2321,10 +2321,11 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #if defined(HELIX_T21_SYNTAX)
     encoder->eprc_qp = -1;
     {
-        /* off until device-tested; the OEM always runs it */
+        /* on by default like the OEM (which always runs it);
+         * OPENIMP_EPRC_MBRC=0 turns it off */
         const char *mbrc = getenv("OPENIMP_EPRC_MBRC");
 
-        encoder->mbrc_on = mbrc && mbrc[0] == '1';
+        encoder->mbrc_on = !(mbrc && mbrc[0] == '0');
         mbrc = getenv("OPENIMP_EPRC_MBRC_LOG");
         encoder->mbrc_log = mbrc ? (uint32_t)strtoul(mbrc, NULL, 0) : 0u;
     }

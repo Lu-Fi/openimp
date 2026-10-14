@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t21-mbrc-default` (2026-10-14, host only, not merged)
+
+- **T21/T23 eprc macroblock rate control on by default, like the vendor** (`OPENIMP_EPRC_MBRC=0` turns it off; T30/T40/T41 unchanged). Reason: in a night recording at the same slice QP 20 the vendor T21 stream spreads the macroblock QP over 14..23 (SAS activity offsets) while OpenIMP codes every macroblock at 20/21, and its P-frames are 3.4x larger (1959 B vs 570 B at 640x360). **The default applies only after the device test**: the T21 night bitrate/QP comparison with MB-RC on, and the T23 plan in `docs/T23_EPRC.md` (steps 1-6); until then this branch is not merged. Host tests t20/t23/t30/t31 pass.
+
 ## After RC1: aggregate agg-38 (state of 2026-10-12, not released)
 
 `claude/agg-38` = agg-37 (dc20d0e) + `claude/awbstats` (with `claude/awbzone`), `claude/t31-rc-collapse`, `claude/oimp-thread-names`, `claude/t21-cpu-fix`, `claude/t40-night` (with `claude/t40-devtest`), `claude/t41-isp-handlers`, `claude/funcsearch-run4` (documentation) and the device results of `claude/funcsearch-run5`. `claude/gaps-t1x-impl` is recorded as merged without changes: all of its commits were already in agg-35/agg-36 under other SHAs. The open-tx-isp side is open-tx-isp `claude/agg-38`. Build and host tests only (`make check`, `make release-check`, strict export check of T10 to T41); no soak. Device results only where an item says so.
