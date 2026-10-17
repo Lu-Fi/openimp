@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-10-17: RC2 branch work for T40 and T41 (not in `next`)
+
+Device-tested on branches: T41 apitest 0 FAIL (`claude/rc2-t40-t41`: `GetWdrOutputMode` accepted and read back, `GetDefaultBinPath` reports the loaded bin), T41 safe-AE regulates (dark/light/step proven on two boards), T41 boot oops (stale firmware worker pointer) fixed, T40 vendor AE per frame converges in the open driver (devtest), T40 anti-flicker Set/Get fixed and on by default, Cinnado D1 T41 profile with working IR cut, PTZ and LEDs. In progress: T40 module-context inits, T40 gain level vs vendor, T41 colour cast, T41 day/night detector, PTZ homing. Full text: [docs/OPEN_STACK_CHANGELOG.md](docs/OPEN_STACK_CHANGELOG.md) (2026-10-17).
+
 ## After RC1: aggregate agg-38 (state of 2026-10-12, not released)
 
 `claude/agg-38` = agg-37 (dc20d0e) + `claude/awbstats` (with `claude/awbzone`), `claude/t31-rc-collapse`, `claude/oimp-thread-names`, `claude/t21-cpu-fix`, `claude/t40-night` (with `claude/t40-devtest`), `claude/t41-isp-handlers`, `claude/funcsearch-run4` (documentation) and the device results of `claude/funcsearch-run5`. `claude/gaps-t1x-impl` is recorded as merged without changes: all of its commits were already in agg-35/agg-36 under other SHAs. The open-tx-isp side is open-tx-isp `claude/agg-38`. Build and host tests only (`make check`, `make release-check`, strict export check of T10 to T41); no soak. Device results only where an item says so.
