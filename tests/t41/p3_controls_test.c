@@ -82,6 +82,8 @@ static struct {
 /* GetAwbStatistics: the "driver" reply, 2700 bytes */
 static unsigned char awb_reply[2700];
 
+static unsigned char ratio_shadow[128];
+
 int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument)
 {
     /* Same layout as the P3 envelope: 16 bytes on the 32-bit target. */
@@ -96,6 +98,12 @@ int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument)
     last.control = request->control;
     last.payload = request->payload;
     last.calls++;
+    if (request->control == 0x080000a4) {   /* Module_Ratio: 128-byte shadow */
+        if (request->direction)
+            memcpy((void *)request->payload, ratio_shadow, sizeof(ratio_shadow));
+        else
+            memcpy(ratio_shadow, (void *)request->payload, sizeof(ratio_shadow));
+    }
     if (request->control == 0x08000011 && request->direction)
         memcpy((void *)request->payload, awb_reply, sizeof(awb_reply));
     if (request->control == 0x08000091 && request->direction == 1) {
@@ -161,6 +169,9 @@ int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size)
         assert(last.control == (id));                                         \
         assert(last.payload == (uintptr_t)(ptr));                             \
     } while (0)
+
+int IMP_ISP_Tuning_SetDefog_Strength(uint8_t *ratio);
+int IMP_ISP_Tuning_GetDefog_Strength(uint8_t *ratio);
 
 int main(void)
 {
@@ -375,6 +386,34 @@ int main(void)
     fps.den = 0;
     assert(IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &fps) == -1);
     assert(last.calls == before);
+
+    /* Defog strength: extension over Module_Ratio index 4 (read-modify-write). */
+    {
+        uint8_t d = 200;
+        IMPISPModuleRatioAttr r2;
+
+        memset(&r2, 0, sizeof(r2));
+        r2.ratio_attr[IMP_ISP_MODULE_SINTER].en = IMPISP_TUNING_OPS_MODE_ENABLE;
+        r2.ratio_attr[IMP_ISP_MODULE_SINTER].ratio = 77;
+        assert(IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &r2) == 0);
+        assert(IMP_ISP_Tuning_GetDefog_Strength(&d) == 0 && d == 128);
+        d = 255;
+        assert(IMP_ISP_Tuning_SetDefog_Strength(&d) == 0);
+        assert(last.control == 0x080000a4 && last.direction == 0);
+        memset(&r2, 0, sizeof(r2));
+        assert(IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &r2) == 0);
+        assert(r2.ratio_attr[IMP_ISP_MODULE_DEFOG].en == IMPISP_TUNING_OPS_MODE_ENABLE);
+        assert(r2.ratio_attr[IMP_ISP_MODULE_DEFOG].ratio == 255);
+        assert(r2.ratio_attr[IMP_ISP_MODULE_SINTER].ratio == 77);   /* untouched */
+        d = 0;
+        assert(IMP_ISP_Tuning_GetDefog_Strength(&d) == 0 && d == 255);
+        d = 0;
+        assert(IMP_ISP_Tuning_SetDefog_Strength(&d) == 0);
+        d = 99;
+        assert(IMP_ISP_Tuning_GetDefog_Strength(&d) == 0 && d == 0);
+        assert(IMP_ISP_Tuning_SetDefog_Strength(NULL) == -1);
+        assert(IMP_ISP_Tuning_GetDefog_Strength(NULL) == -1);
+    }
 
     /* Invalid arguments never reach the driver. */
     before = last.calls;

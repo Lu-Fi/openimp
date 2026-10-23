@@ -2209,3 +2209,54 @@ int32_t IMP_ISP_Tuning_GetHVFlip(IMPVI_NUM num, IMPISPHVFLIPAttr *flip)
     return IMP_ISP_Tuning_GetHVFLIP(num, flip);
 }
 #endif
+
+/*
+ * IMP_ISP_Tuning_SetDefog_Strength / GetDefog_Strength (T40 and T41).
+ *
+ * Neither vendor library exports these names: T40 1.2.0/1.3.1 have no defog
+ * call at all, T41 1.0.1..1.2.5 neither, and T41 1.2.6 only has
+ * IMP_ISP_Tuning_Module_Set/GetDefog (a 728-byte parameter block, control
+ * 0x08000078).  The vendor T41 kernel's tisp_defog_api_set/get_strength are
+ * two-instruction stubs; the strength knob that really reaches the defog
+ * block is IMP_ISP_MODULE_DEFOG (index 4) of Module_Ratio.  The streamers
+ * (timps) look up the T3x single-argument symbol, so the open stack offers it
+ * here as an extension: uint8_t *ratio, 0..255, 128 neutral, applied through
+ * Module_Ratio (read-modify-write so SINTER/TEMPER/DRC/DPC stay as set).
+ * Get returns 128 while the unit is not enabled.  Main sensor only.
+ */
+int IMP_ISP_Tuning_SetDefog_Strength(uint8_t *ratio);
+int IMP_ISP_Tuning_GetDefog_Strength(uint8_t *ratio);
+
+static pthread_mutex_t p3_defog_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int IMP_ISP_Tuning_SetDefog_Strength(uint8_t *ratio)
+{
+    IMPISPModuleRatioAttr attr;
+    int result;
+
+    if (!ratio)
+        return -1;
+    pthread_mutex_lock(&p3_defog_lock);
+    result = IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &attr);
+    if (result == 0) {
+        attr.ratio_attr[IMP_ISP_MODULE_DEFOG].en = IMPISP_TUNING_OPS_MODE_ENABLE;
+        attr.ratio_attr[IMP_ISP_MODULE_DEFOG].ratio = *ratio;
+        result = IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &attr);
+    }
+    pthread_mutex_unlock(&p3_defog_lock);
+    return result;
+}
+
+int IMP_ISP_Tuning_GetDefog_Strength(uint8_t *ratio)
+{
+    IMPISPModuleRatioAttr attr;
+    int result;
+
+    if (!ratio)
+        return -1;
+    result = IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &attr);
+    if (result == 0)
+        *ratio = attr.ratio_attr[IMP_ISP_MODULE_DEFOG].en ?
+                 attr.ratio_attr[IMP_ISP_MODULE_DEFOG].ratio : 128;
+    return result;
+}
