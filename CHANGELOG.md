@@ -12,6 +12,8 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
 
 - Test pattern mode 4 on T20/T21 jxf23 (and other SOI JX sensors): the SDK sensor driver clears the test bit (reg 0x0c) in `set_analog_gain`, and the `ae_hold` gain step arrives a few frames after the bit was set, so the colour columns never stayed. Mode 4 now re-asserts the bit until it has held for 4 polls (<= 4 s). T21 PC420 (jxf23): bit stays 0x01 for 8 s, vertical column pattern in the snapshot, mode 0 restores the scene.
 
+- **T40/T41: `IMP_ISP_Tuning_SetDefog_Strength` / `GetDefog_Strength` (uint8_t *, 0..255, 128 neutral) as an extension** (not in any vendor libimp; T41 SDK 1.2.6 only has `Module_Set/GetDefog`, its kernel strength stubs return 0). Implemented over `Module_Ratio` index 4 (read-modify-write, other units untouched). Device (Vanhua T55A .32, test libimp via bind mount, defog chain on): readback 0/128/255 exact; picture, settled frames of two sweeps (night mode, ambient light): luma std 45.0 / 48.0 / 55.1, edge energy 12.8 / 17.4 / 24.0, p1 24 / 18 / 11 at 0 / 128 / 255; mean luma unchanged (98-99), no oops. `SetModule_Ratio` may return an error word although applied (set returns -2134069986 for non-neutral values, the Get reads the value back). The streamer key `image.defog_strength` is not wired on T41 in timps (reported to the timps session).
+
 ## RC2 (v2026.10.25-rc2, 2026-10-25; OpenIMP next 7c30aa99 + docs, open-tx-isp next 1bf4549d + docs)
 
 - 278 OpenIMP and 636 open-tx-isp commits since RC1 (`v2026.10.11-rc1`). The exact code runs on all 19 test cameras as image agg46; the overnight soak of 2026-10-24/25 on the T40/T41 cameras was clean.
