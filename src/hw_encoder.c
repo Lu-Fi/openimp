@@ -806,17 +806,25 @@ static void jpeg_build_huffman(const uint8_t counts[16],
     }
 }
 
-static void jpeg_write_bits(JPEGWriter *writer, uint32_t *bit_buffer,
-                            unsigned int *bit_count, JPEGHuffmanCode bits)
+/* Entropy-coded bits go out without a capacity check per byte: the MCU loop
+ * reserves JPEG_MCU_MAX_BYTES before each MCU (6 blocks of at most
+ * 64 coefficients x 27 bits, every byte possibly 0xff-stuffed = 2592 bytes).
+ * The caller checks writer->failed once per MCU. */
+#define JPEG_MCU_MAX_BYTES 4096u
+
+static inline void jpeg_write_bits(JPEGWriter *writer, uint32_t *bit_buffer,
+                                   unsigned int *bit_count,
+                                   JPEGHuffmanCode bits)
 {
     *bit_count += bits.size;
     *bit_buffer |= (uint32_t)bits.code << (24u - *bit_count);
     while (*bit_count >= 8u) {
         uint8_t value = (uint8_t)(*bit_buffer >> 16);
+        uint8_t *out = writer->data + writer->size;
 
-        jpeg_writer_byte(writer, value);
-        if (value == 0xffu)
-            jpeg_writer_byte(writer, 0);
+        *out = value;
+        writer->size += 1u + (value == 0xffu);
+        out[1] = 0;     /* the stuffed zero after 0xff (else overwritten) */
         *bit_buffer <<= 8;
         *bit_count -= 8u;
     }
@@ -1146,6 +1154,8 @@ int HW_Encoder_Encode_NV12_JPEG(HWFrameBuffer *frame,
         for (x = 0; x < width; x += 16u) {
             unsigned int block_y, block_x;
 
+            if (jpeg_writer_reserve(&writer, JPEG_MCU_MAX_BYTES) != 0)
+                break;
             for (block_y = 0; block_y < 2; block_y++) {
                 for (block_x = 0; block_x < 2; block_x++) {
                     int32_t block[64];
@@ -1233,6 +1243,11 @@ int HW_Encoder_Encode_NV12_JPEG(HWFrameBuffer *frame,
     {
         JPEGHuffmanCode fill = {0x7f, 7};
 
+        (void)jpeg_writer_reserve(&writer, 16u);
+        if (writer.failed) {
+            free(writer.data);
+            return -1;
+        }
         jpeg_write_bits(&writer, &bit_buffer, &bit_count, fill);
     }
     jpeg_writer_byte(&writer, 0xff);
