@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Post-RC2 (2026-10-25)
+
+- Test pattern mode 4 on T20/T21 jxf23 (and other SOI JX sensors): the SDK sensor driver clears the test bit (reg 0x0c) in `set_analog_gain`, and the `ae_hold` gain step arrives a few frames after the bit was set, so the colour columns never stayed. Mode 4 now re-asserts the bit until it has held for 4 polls (<= 4 s). T21 PC420 (jxf23): bit stays 0x01 for 8 s, vertical column pattern in the snapshot, mode 0 restores the scene.
+
 ## RC2 (v2026.10.25-rc2, 2026-10-25; OpenIMP next 7c30aa99 + docs, open-tx-isp next 1bf4549d + docs)
 
 - 278 OpenIMP and 636 open-tx-isp commits since RC1 (`v2026.10.11-rc1`). The exact code runs on all 19 test cameras as image agg46; the overnight soak of 2026-10-24/25 on the T40/T41 cameras was clean.

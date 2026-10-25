@@ -49,8 +49,8 @@ struct tp_sensor_entry {
 /* SmartSens SC*: 0x4501 bit3 = test pattern (incremental ramp), checked on sc2336 (T23), sc4336p (T31),
  * sc5336 (T41, 0xc4 -> 0xcc), sc830ai (T40, 0xc4 -> 0xcc) by I2C; sc1a4t same family, not checked.
  * SOI JX-*: 0x0c bit0 = test mode (Ingenic SDK jxh42.c: "0x41 test mode, 0x40 DVP output").  Device T20 .107
- * jxf23: vertical colour columns, but the T20/T21 jxf23 drivers rewrite 0x0c in set_analog_gain, so the
- * pattern ends at the next AE gain step (hold AE / fixed gain, or Set(4) again).
+ * jxf23: vertical colour columns, but the T20/T21 jxf23 drivers rewrite 0x0c in set_analog_gain: the pattern
+ * ends at the next AE gain step, so mode 4 re-asserts the bit after the ae_hold gain step (T21 .24 checked).
  * GalaxyCore gc5603 (T41 .32): 0x008c bit0 (0x10 -> 0x11) = test pattern (colour bars / chart, tiled by the
  * scaler), no vendor source: found on the device by I2C, candidate from the GalaxyCore family convention
  * (0x008c), chip id 0x03f0/0x03f1 = 0x5603. */
@@ -62,7 +62,7 @@ static const struct tp_sensor_entry tp_sensor_tab[] = {
     { "sc830ai", 0x3107, 0x3108, 0xc143, 0x4501, 0x08, "ramp" },
     { "gc5603",  0x03f0, 0x03f1, 0x5603, 0x008c, 0x01, "colour bars" },
     { "sc1a4t",  0x3107, 0x3108, 0xda4d, 0x4501, 0x08, "ramp (unverified)" },
-    { "jxf23",   0x000a, 0x000b, 0x0f23, 0x000c, 0x01, "colour columns (AE gain step clears it)" },
+    { "jxf23",   0x000a, 0x000b, 0x0f23, 0x000c, 0x01, "colour columns (vertical stripes in IR mode)" },
     { "jxf22",   0x000a, 0x000b, 0x0f22, 0x000c, 0x01, "test mode (unverified)" },
     { "jxh42",   0x000a, 0x000b, 0xa042, 0x000c, 0x01, "test mode (unverified)" },
 };
@@ -141,6 +141,32 @@ eio:
     return -1;
 }
 
+/* SOI JX-* drivers (T20/T21 SDK) rewrite 0x0c in set_analog_gain, which clears the test bit.  With ae_hold the
+ * hold lowers the gain asynchronously (a few frames after tp_hold), and that one gain step lands AFTER the bit
+ * was set (T21 jxf23 .24: bit read back 0 one second later, picture normal).  Re-assert the bit until it
+ * has stayed for a few polls, then the gain is settled (the hold pins it, no further steps). */
+static void tp_sensor_keep(const struct tp_sensor_entry *e)
+{
+    int i, stable = 0;
+    char name[32];
+
+    if (strncmp(e->name, "jx", 2) != 0 || !tp_hold_ae)
+        return;
+    for (i = 0; i < 40 && stable < 4; i++) {
+        uint32_t v = 0;
+
+        usleep(100 * 1000);
+        if (openimp_tp_sensor_reg(0, e->reg, &v, name) != 0)
+            return;
+        if (v & e->mask) {
+            stable++;
+            continue;
+        }
+        stable = 0;
+        (void)tp_sensor_bit(e, 1);
+    }
+}
+
 VIS int OpenIMP_TestPattern_SensorInfo(char name[32], uint32_t *reg, uint32_t *mask, const char **desc)
 {
     char n[32];
@@ -177,6 +203,7 @@ static int tp_sensor_switch(const OpenIMPTestPatternParams *p)
         }
         tp_sensor_cur = e;
         tp_sensor_active = 1;
+        tp_sensor_keep(e);
         return 0;
     }
     if (tp_sensor_active) {
