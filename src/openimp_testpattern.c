@@ -217,6 +217,95 @@ static int tp_sensor_switch(const OpenIMPTestPatternParams *p)
     return 0;
 }
 
+/* ---- mode 5: ISP-middle picture (MDNS reference buffer).  Platform hooks (T23: src/isp/isp_t23_tuning.c);
+ * absent elsewhere -> ENOTSUP.  _on locates and validates the buffer, saves the weight registers and
+ * returns the geometry (Y plane stride*h, chroma plane stride*h/2 behind it); _put holds the weights at
+ * maximum and copies one NV12 picture (pitch = stride, chroma directly after h rows) into the buffer
+ * (returns -1 when the geometry changed); _off restores the weights. */
+int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride) __attribute__((weak));
+int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h) __attribute__((weak));
+void openimp_tp_ispmid_off(void) __attribute__((weak));
+
+int openimp_tp_ispmid_v;                 /* 1 while mode 5 runs (frame path: one relaxed load) */
+static pthread_mutex_t mid_lock = PTHREAD_MUTEX_INITIALIZER;   /* tick vs Set/off only */
+static uint8_t *mid_cache;
+static uint32_t mid_w, mid_h, mid_stride, mid_logo;
+static uint64_t mid_frames;
+
+static void mid_free(void)
+{
+    free(mid_cache);
+    mid_cache = NULL;
+}
+
+/* mid_lock held */
+static int mid_build(uint32_t logo)
+{
+    uint32_t w, h, st;
+
+    if (!openimp_tp_ispmid_on || openimp_tp_ispmid_on(&w, &h, &st) != 0)
+        return -1;
+    mid_free();
+    mid_cache = calloc(1, (size_t)st * h * 3u / 2u);
+    if (!mid_cache) {
+        openimp_tp_ispmid_off();
+        errno = ENOMEM;
+        return -1;
+    }
+    openimp_testpattern_nv12_logo(mid_cache, mid_cache + (size_t)st * h, w, h, st, logo);
+    mid_w = w; mid_h = h; mid_stride = st; mid_logo = logo;
+    return 0;
+}
+
+/* set_lock held.  on (logo >= 0): start or re-start; off: restore.  Errors keep errno of the hook. */
+static int mid_switch(int on, uint32_t logo)
+{
+    int ret = 0, err = 0;
+
+    if (on && !openimp_tp_ispmid_on) {
+        errno = ENOTSUP;
+        return -1;
+    }
+    pthread_mutex_lock(&mid_lock);
+    if (on) {
+        if (openimp_tp_ispmid_v && openimp_tp_ispmid_off)
+            openimp_tp_ispmid_off();
+        openimp_tp_ispmid_v = 0;
+        if (mid_build(logo) != 0) {
+            ret = -1;
+            err = errno;
+        } else {
+            __atomic_store_n(&openimp_tp_ispmid_v, 1, __ATOMIC_RELEASE);
+            mid_frames = 0;
+        }
+    } else if (openimp_tp_ispmid_v) {
+        __atomic_store_n(&openimp_tp_ispmid_v, 0, __ATOMIC_RELEASE);
+        if (openimp_tp_ispmid_off)
+            openimp_tp_ispmid_off();
+        mid_free();
+    }
+    pthread_mutex_unlock(&mid_lock);
+    errno = err;
+    return ret;
+}
+
+/* Frame path (channel 0 only, kernel_interface.c): refresh weights + picture once per frame. */
+void openimp_tp_ispmid_tick(void)
+{
+    pthread_mutex_lock(&mid_lock);
+    if (__atomic_load_n(&openimp_tp_ispmid_v, __ATOMIC_ACQUIRE) && mid_cache) {
+        if (openimp_tp_ispmid_put(mid_cache, mid_stride, mid_h) != 0 && mid_build(mid_logo) != 0) {
+            /* buffer layout changed and cannot be followed: leave the mode */
+            __atomic_store_n(&openimp_tp_ispmid_v, 0, __ATOMIC_RELEASE);
+            openimp_tp_ispmid_off();
+            mid_free();
+        } else {
+            mid_frames++;
+        }
+    }
+    pthread_mutex_unlock(&mid_lock);
+}
+
 /* ---- optional control socket (OPENIMP_TEST_PATTERN_CTL=<path>): lets tools/testpattern/tpctl drive the
  * pattern of a running process (timps, roitest) from outside.  One datagram per command:
  *   get
@@ -350,7 +439,7 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
 {
     OpenIMPTestPatternParams n;
 
-    if (mode < 0 || mode > 4)
+    if (mode < 0 || mode > 5)
         goto inval;
     pthread_mutex_lock(&set_lock);
     n = slot[__atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)];
@@ -387,8 +476,20 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
             errno = err;
             return -1;
         }
-    } else if (mode != 4 && tp_sensor_active) {
+    } else if (tp_sensor_active) {
         (void)tp_sensor_switch(NULL);    /* the new frame mode applies regardless */
+    }
+    if (mode == 5) {
+        int err;
+
+        if (mid_switch(1, n.logo) != 0) {
+            err = errno;
+            pthread_mutex_unlock(&set_lock);
+            errno = err;
+            return -1;
+        }
+    } else if (openimp_tp_ispmid_v) {
+        (void)mid_switch(0, 0);
     }
     slot[1 - __atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)] = n;
     __atomic_store_n(&slot_idx, 1 - slot_idx, __ATOMIC_RELEASE);
@@ -396,7 +497,7 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
     stats.objects_shown = 0;
     stats.objects_active = 0;
     __atomic_add_fetch(&epoch, 1, __ATOMIC_RELEASE);
-    __atomic_store_n(&openimp_tp_mode_v, mode == 4 ? 0 : mode, __ATOMIC_RELEASE);
+    __atomic_store_n(&openimp_tp_mode_v, mode >= 4 ? 0 : mode, __ATOMIC_RELEASE);
     pthread_mutex_unlock(&set_lock);
     return 0;
 inval:
@@ -417,9 +518,9 @@ VIS int OpenIMP_TestPattern_Get(OpenIMPTestPatternState *s)
     memset(&f, 0, sizeof f);
     f.size = (uint32_t)sizeof f;
     f.abi = OPENIMP_TESTPATTERN_ABI;
-    f.mode = tp_sensor_active ? 4 : __atomic_load_n(&openimp_tp_mode_v, __ATOMIC_ACQUIRE);
+    f.mode = tp_sensor_active ? 4 : openimp_tp_ispmid_v ? 5 : __atomic_load_n(&openimp_tp_mode_v, __ATOMIC_ACQUIRE);
     f.params = slot[__atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)];
-    f.frames = __atomic_load_n(&frames, __ATOMIC_RELAXED);
+    f.frames = openimp_tp_ispmid_v ? mid_frames : __atomic_load_n(&frames, __ATOMIC_RELAXED);
     f.objects_shown = stats.objects_shown;
     f.objects_active = stats.objects_active;
     memcpy(s, &f, sz < sizeof f ? sz : sizeof f);

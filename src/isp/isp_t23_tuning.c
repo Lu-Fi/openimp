@@ -31,6 +31,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 
 #include "isp_tseries_dev.h"
 
@@ -48,6 +49,7 @@ typedef struct {
 
 #include "imp_log_fun.h"
 #include "video_drop.h"
+#include "dma_alloc.h"
 int IMP_Encoder_RequestIDR(int encChn);
 int32_t set_framesource_fps(int32_t fps_num, int32_t fps_den);
 int32_t set_framesource_changewait_cnt(void);
@@ -1901,6 +1903,113 @@ int IMP_ISP_Tuning_GetNCUAlloc(void)
     ISPDevice *isp = gISP;
 
     return isp ? (int)(intptr_t)isp->sensor_alloc[0] : 0;
+}
+
+/* --- Test pattern mode 5: picture into the ISP's MDNS reference frame ----- */
+/* The T23 ISP core (0x13300000) has no register ioctl; like the vendor (EnableTuning keeps /dev/mem open)
+ * the two register pages 0x7000/0x8000 are mapped through gISP->mem_fd.  Registers (open-tx-isp
+ * tx_isp_t23_mdns_writers.inc, device probes P-A..P-C 2026-10-25): 0x7820 Y reference, 0x7824 stride,
+ * 0x7828 chroma reference (= Y + stride * h), 0x799c luma / 0x7a6c chroma reference weights
+ * (f_max | f_min << 8 | b_max << 16 | b_min << 24; the reference weight is min(f_min, b_max) / 255).
+ * The driver rewrites the weights on every gain step, so the frame path writes them again each frame. */
+#define MID_PAGE 0x13307000u
+#define MID_MAP  0x2000u
+#define MID_REG_Y   0x7820u
+#define MID_REG_YST 0x7824u
+#define MID_REG_C   0x7828u
+#define MID_REG_WY  0x799cu
+#define MID_REG_WC  0x7a6cu
+#define MID_WEIGHT_MAX 0x00ffffffu
+
+static volatile uint32_t *mid_regs;      /* page 0x7000 base: register r at (r - 0x7000) / 4 */
+static uint32_t mid_save_y, mid_save_c;
+static uint8_t *mid_ybuf;                /* virtual address of the Y reference plane */
+static uint32_t mid_yphys, mid_cphys, mid_stride, mid_h;
+
+static inline volatile uint32_t *mid_reg(uint32_t r)
+{
+    return mid_regs + ((r - 0x7000u) >> 2);
+}
+
+/* Locate and validate the reference planes from the registers + the AddSensor NCU buffer. */
+static int mid_geometry(uint32_t *yphys, uint32_t *cphys, uint32_t *stride, uint32_t *h, uint8_t **yvirt)
+{
+    ISPDevice *isp = gISP;
+    const IMPDMABufferInfo *ncu = isp ? (const IMPDMABufferInfo *)isp->sensor_alloc[0] : NULL;
+    uint32_t y = *mid_reg(MID_REG_Y), c = *mid_reg(MID_REG_C), st = *mid_reg(MID_REG_YST);
+    uint32_t hh;
+
+    if (ncu == NULL || ncu->virt_addr == 0 || st == 0 || c <= y || (c - y) % st != 0) {
+        errno = EIO;
+        return -1;
+    }
+    hh = (c - y) / st;
+    if (hh < 16 || hh > 4320 || st < 64 || st > 8192 || y < ncu->phys_addr ||
+        (uint64_t)c + (uint64_t)st * hh / 2u > (uint64_t)ncu->phys_addr + ncu->size) {
+        errno = EIO;
+        return -1;
+    }
+    *yphys = y; *cphys = c; *stride = st; *h = hh;
+    *yvirt = (uint8_t *)(uintptr_t)ncu->virt_addr + (y - ncu->phys_addr);
+    return 0;
+}
+
+int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride)
+{
+    ISPDevice *isp = gISP;
+    void *m;
+
+    if (isp == NULL || isp->mem_fd <= 0 || isp->sensor_alloc[0] == NULL) {
+        errno = ENODEV;
+        return -1;
+    }
+    if (mid_regs == NULL) {
+        m = mmap(NULL, MID_MAP, PROT_READ | PROT_WRITE, MAP_SHARED, isp->mem_fd, MID_PAGE);
+        if (m == MAP_FAILED) {
+            errno = ENODEV;
+            return -1;
+        }
+        mid_regs = (volatile uint32_t *)m;
+    }
+    if (mid_geometry(&mid_yphys, &mid_cphys, &mid_stride, &mid_h, &mid_ybuf) != 0) {
+        int err = errno;
+
+        munmap((void *)mid_regs, MID_MAP);
+        mid_regs = NULL;
+        errno = err;
+        return -1;
+    }
+    mid_save_y = *mid_reg(MID_REG_WY);
+    mid_save_c = *mid_reg(MID_REG_WC);
+    *w = *stride = mid_stride;
+    *h = mid_h;
+    return 0;
+}
+
+int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h)
+{
+    uint32_t y, c, st, hh;
+    uint8_t *yv;
+
+    if (mid_regs == NULL)
+        return -1;
+    *mid_reg(MID_REG_WY) = MID_WEIGHT_MAX;
+    *mid_reg(MID_REG_WC) = MID_WEIGHT_MAX;
+    if (mid_geometry(&y, &c, &st, &hh, &yv) != 0 || st != stride || hh != h || y != mid_yphys)
+        return -1;
+    memcpy(yv, nv12, (size_t)st * hh * 3u / 2u);    /* chroma plane is contiguous behind Y */
+    (void)DMA_RmemFlushCache(yv, st * hh * 3u / 2u, 1 /* WBACK */);
+    return 0;
+}
+
+void openimp_tp_ispmid_off(void)
+{
+    if (mid_regs == NULL)
+        return;
+    *mid_reg(MID_REG_WY) = mid_save_y;
+    *mid_reg(MID_REG_WC) = mid_save_c;
+    munmap((void *)mid_regs, MID_MAP);
+    mid_regs = NULL;
 }
 
 /* The tuning daemon's video-drop callback: called when the frames stop

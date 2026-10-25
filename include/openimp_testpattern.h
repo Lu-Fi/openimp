@@ -24,10 +24,19 @@
  *           AE/AWB to the state before mode 4.  -1 with
  *           errno ENOTSUP when the sensor has no table entry, EIO when the
  *           register access fails (sensor not running).
+ *   mode 5  ISP-middle test picture (T23): the pattern (same generator as mode 1) is written
+ *           into the ISP's MDNS (temporal-NR) reference frame buffer every frame, and OpenIMP
+ *           holds the MDNS reference weight (luma 0x799c and chroma 0x7a6c) at maximum, so the
+ *           picture enters the ISP behind the demosaic/colour/gamma stages and runs through
+ *           MDNS, BCSH, scaler, encoder (not through BLC..CSC; for those use mode 4).  Sensor
+ *           frames are not replaced, the sensor keeps running.  Leaving the mode restores the
+ *           weight registers.  -1 with errno ENOTSUP on SoCs/builds without it, ENODEV when
+ *           the ISP is not running (no sensor added / tuning not enabled), EIO when the MDNS
+ *           buffer layout is not the expected one.
  *
  * OpenIMP_TestPattern_Set may be called at any time, also while streaming;
  * the next frame uses the new state.  Environment OPENIMP_TEST_PATTERN=0..3
- * is only the start value (0..3; mode 4 needs a running sensor, use Set).
+ * is only the start value (0..3; modes 4 and 5 need a running sensor, use Set).
  * A build that has this API exports the constant OpenIMP_Cap_TestPattern (1).
  *
  * ABI: the structs start with a size field (the caller sets sizeof of ITS
@@ -51,6 +60,7 @@ extern "C" {
 #define OPENIMP_TP_MOVING  2
 #define OPENIMP_TP_MOTION  3
 #define OPENIMP_TP_SENSOR  4
+#define OPENIMP_TP_ISP_MID 5
 
 #define OPENIMP_TP_LOGO_NONE 0
 #define OPENIMP_TP_LOGO_OPENIMP 1       /* default: OpenIMP banner (dot grid + lettering) */

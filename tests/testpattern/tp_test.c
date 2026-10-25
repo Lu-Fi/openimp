@@ -56,6 +56,42 @@ int openimp_tp_sensor_hold(int on, int ae, int awb)
     return 0;
 }
 
+/* fake MDNS reference buffer + weight registers for mode 5 */
+#define MW 640
+#define MH 368
+static uint8_t mid_buf[MW * MH * 3 / 2];
+static uint32_t mid_wy = 0x00dc14ff, mid_wc = 0x00dc14ff, mid_geom_ok = 1, mid_on_n, mid_off_n;
+static int mid_running;
+
+int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride)
+{
+    if (!mid_geom_ok) {
+        errno = EIO;
+        return -1;
+    }
+    *w = *stride = MW;
+    *h = MH;
+    mid_on_n++;
+    mid_running = 1;
+    return 0;
+}
+
+int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h)
+{
+    if (!mid_running || stride != MW || h != MH)
+        return -1;
+    mid_wy = mid_wc = 0x00ffffff;
+    memcpy(mid_buf, nv12, sizeof mid_buf);
+    return 0;
+}
+
+void openimp_tp_ispmid_off(void)
+{
+    mid_off_n++;
+    mid_running = 0;
+    mid_wy = mid_wc = 0x00dc14ff;
+}
+
 static int render(struct openimp_tp_chan *ch, int want3)
 {
     memset(buf, 0, sizeof buf);
@@ -231,6 +267,44 @@ int main(void)
         assert(OpenIMP_TestPattern_Set(4, NULL) == -1 && errno == EIO && fake_writes == 0);
         fake_fail = 0;
         assert(OpenIMP_TestPattern_Set(0, NULL) == 0);
+    }
+    /* mode 5: ISP-middle picture; weights held while on, restored after, frames not replaced */
+    {
+        OpenIMPTestPatternState st;
+
+        assert(OpenIMP_TestPattern_Set(0, NULL) == 0);
+        assert(!openimp_tp_ispmid_active());
+        openimp_tp_ispmid_tick();                      /* off: no effect */
+        assert(mid_wy == 0x00dc14ff && mid_buf[0] == 0);
+        mid_geom_ok = 0;
+        errno = 0;
+        assert(OpenIMP_TestPattern_Set(5, NULL) == -1 && errno == EIO && !openimp_tp_ispmid_active());
+        mid_geom_ok = 1;
+        assert(OpenIMP_TestPattern_Set(5, NULL) == 0 && openimp_tp_ispmid_active());
+        assert(openimp_testpattern_mode() == 0);       /* sensor frames are not replaced */
+        openimp_tp_ispmid_tick();
+        assert(mid_wy == 0x00ffffff && mid_wc == 0x00ffffff);
+        {   /* the written reference is the mode 1 picture at the buffer geometry */
+            static uint8_t ref[MW * MH * 3 / 2];
+            OpenIMPTestPatternState g;
+
+            g.size = sizeof g;
+            assert(OpenIMP_TestPattern_Get(&g) == 0);
+            openimp_testpattern_nv12_logo(ref, ref + MW * MH, MW, MH, MW, g.params.logo);
+            assert(memcmp(ref, mid_buf, sizeof ref) == 0);
+        }
+        st.size = sizeof st;
+        assert(OpenIMP_TestPattern_Get(&st) == 0 && st.mode == 5 && st.frames == 1);
+        assert(OpenIMP_TestPattern_Set(2, NULL) == 0);   /* leaving restores the weights */
+        assert(!openimp_tp_ispmid_active() && mid_wy == 0x00dc14ff && mid_off_n == 1);
+        assert(OpenIMP_TestPattern_Set(5, NULL) == 0 && OpenIMP_TestPattern_Set(5, NULL) == 0);   /* re-start while on */
+        assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && mid_wy == 0x00dc14ff && !openimp_tp_ispmid_active());
+        for (int i = 0; i < 5; i++) {                  /* on/off cycles */
+            assert(OpenIMP_TestPattern_Set(5, NULL) == 0);
+            openimp_tp_ispmid_tick();
+            assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && mid_wy == 0x00dc14ff);
+        }
+        assert(mid_on_n == mid_off_n && !mid_running);
     }
     puts("tp_test: ok");
     return 0;

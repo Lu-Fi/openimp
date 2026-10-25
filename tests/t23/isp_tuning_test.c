@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #define PLATFORM_T23 1
 /* Replace isp_tseries_dev.h: the 32-bit layout asserts do not hold on the
@@ -70,6 +71,8 @@ int openimp_video_drop_set(void (*cb)(void))
     video_drop_calls++;
     return 0;
 }
+
+int DMA_RmemFlushCache(void *virt, uint32_t size, int dir) { (void)virt; (void)size; (void)dir; return 0; }
 
 /* ---- recording ioctl -------------------------------------------------- */
 static int calls;
@@ -776,6 +779,69 @@ static void test_video_drop(void)
           "SetVideoDrop(NULL) did not clear the callback");
 }
 
+/* test pattern mode 5 platform hooks: a file stands in for /dev/mem (registers at offset 0x13307000),
+ * a fake_rmem block for the AddSensor NCU buffer */
+static void test_ispmid(void)
+{
+    enum { W = 320, H = 192, ST = 320, SZ = ST * H * 3 / 2 };
+    static ISPDevice dev;
+    IMPDMABufferInfo ncu;
+    uint8_t *mem = fake_rmem_map(2 * SZ);
+    FILE *f = tmpfile();
+    uint32_t w, h, st, *reg;
+    uint8_t pic[SZ];
+    int fd;
+
+    CHECK(f != NULL && mem != NULL, "ispmid: setup");
+    if (!f || !mem)
+        return;
+    fd = fileno(f);
+    CHECK(ftruncate(fd, 0x13309000) == 0, "ispmid: ftruncate");
+    reg = mmap(NULL, 0x2000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x13307000);
+    CHECK(reg != MAP_FAILED, "ispmid: map regs");
+    memset(&ncu, 0, sizeof ncu);
+    ncu.virt_addr = (uint32_t)(uintptr_t)mem;
+    ncu.phys_addr = 0x3000000;
+    ncu.size = 2 * SZ;
+#define R(r) reg[((r) - 0x7000) / 4]
+    /* no ISP: ENODEV */
+    gISP = NULL;
+    errno = 0;
+    CHECK(openimp_tp_ispmid_on(&w, &h, &st) == -1 && errno == ENODEV, "ispmid: no ISP");
+    dev.mem_fd = fd;
+    dev.sensor_alloc[0] = &ncu;
+    gISP = &dev;
+    /* registers not programmed: EIO, nothing mapped afterwards */
+    errno = 0;
+    CHECK(openimp_tp_ispmid_on(&w, &h, &st) == -1 && errno == EIO && mid_regs == NULL, "ispmid: unprogrammed");
+    R(0x7820) = 0x3000000 + 0x100;
+    R(0x7824) = ST;
+    R(0x7828) = 0x3000000 + 0x100 + ST * H;
+    R(0x799c) = 0x00dc14ff;
+    R(0x7a6c) = 0x00dc14ff;
+    CHECK(openimp_tp_ispmid_on(&w, &h, &st) == 0 && w == W && h == H && st == ST, "ispmid: geometry %u %u %u", w, h, st);
+    memset(pic, 0x5a, sizeof pic);
+    CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0, "ispmid: put");
+    CHECK(R(0x799c) == 0x00ffffff && R(0x7a6c) == 0x00ffffff, "ispmid: weights held");
+    CHECK(mem[0x100] == 0x5a && mem[0x100 + SZ - 1] == 0x5a && mem[0xff] == 0 && mem[0x100 + SZ] == 0,
+          "ispmid: Y+C written, nothing outside");
+    CHECK(openimp_tp_ispmid_put(pic, ST, H + 16) == -1, "ispmid: size mismatch refused");
+    R(0x799c) = 0x00dc14ff;                    /* the driver overwrote it at a gain step */
+    CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0x00ffffff, "ispmid: re-asserted");
+    R(0x7828) = 0x3000000 + 0x100 + ST * H + 64;   /* layout changed under us */
+    CHECK(openimp_tp_ispmid_put(pic, ST, H) == -1, "ispmid: layout change refused");
+    R(0x7828) = 0x3000000 + 0x100 + ST * H;
+    openimp_tp_ispmid_off();
+    CHECK(R(0x799c) == 0x00dc14ff && R(0x7a6c) == 0x00dc14ff && mid_regs == NULL, "ispmid: restored");
+    /* Y plane outside the buffer */
+    R(0x7820) = 0x2000000; R(0x7828) = 0x2000000 + ST * H;
+    errno = 0;
+    CHECK(openimp_tp_ispmid_on(&w, &h, &st) == -1 && errno == EIO, "ispmid: outside buffer");
+#undef R
+    gISP = NULL;
+    fclose(f);
+}
+
 static void *run(void *unused)
 {
     (void)unused;
@@ -787,6 +853,7 @@ static void *run(void *unused)
     test_misc();
     test_movestate();
     test_video_drop();
+    test_ispmid();
     return NULL;
 }
 

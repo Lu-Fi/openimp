@@ -2550,6 +2550,8 @@ static int vbm_get_frame(int chn, void **frame) {
 
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
     defined(PLATFORM_T21) || defined(PLATFORM_T30)
+    if (chn == 0 && openimp_tp_ispmid_active())
+        openimp_tp_ispmid_tick();       /* mode 5: MDNS reference picture + weights, once per frame */
     if (openimp_testpattern_mode() != 0 && openimp_testpattern_mode() != 3)
         vbm_test_pattern_fill(chn, (VBMFrame *)*frame, 0);
     else if (__atomic_load_n(&openimp_tp_cache_live, __ATOMIC_RELAXED))

@@ -9,6 +9,15 @@ extern int openimp_tp_mode_v;
 /* number of channels holding a rendered static pattern (openimp_tp_release) */
 extern int openimp_tp_cache_live;
 
+/* mode 5 (ISP-middle picture, T23): 1 while running; the frame path of channel 0 then calls
+ * openimp_tp_ispmid_tick() once per frame (rewrites weights + MDNS reference picture) */
+extern int openimp_tp_ispmid_v;
+void openimp_tp_ispmid_tick(void);
+static inline int openimp_tp_ispmid_active(void)
+{
+    return __atomic_load_n(&openimp_tp_ispmid_v, __ATOMIC_RELAXED);
+}
+
 /* 0 = off, 1 = static pattern, 2 = + moving element, 3 = motion detection test */
 static inline int openimp_testpattern_mode(void)
 {
