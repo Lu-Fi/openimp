@@ -36,7 +36,7 @@ rmem buffer OpenIMP allocates in `IMP_ISP_AddSensor` ("ncubuf", programmed throu
 Mode 5 locates it from the ISP core registers (`0x7820` Y reference, `0x7824` stride, `0x7828` chroma
 reference = Y + stride x height; the layout is validated against the allocation, otherwise `EIO`),
 saves the weight registers, and from the capture path of channel 0 (`VBMGetFrame`, once per frame)
-(1) writes the weights `0x799c` / `0x7a6c` = `0x00FFFFFF` (reference weight = f_min = b_max = 1.0)
+(1) holds the weights: it sets the open-tx-isp module parameter `mdns_ref_hold` = 1 once (the driver then writes `0x799c` / `0x7a6c` = `0x00FFFFFF` itself, also on its gain-step rewrite); without that parameter it writes `0x799c` / `0x7a6c` = `0x00FFFFFF` every frame (reference weight = f_min = b_max = 1.0)
 and (2) copies the pattern (`logo` parameter as in mode 1, no counter) into Y and chroma plane, with a
 cache write-back. With weight 1.0 the output is the injected picture and becomes the next reference,
 so the picture sustains itself between writes. Leaving the mode (`Set(0..4)`) restores the saved

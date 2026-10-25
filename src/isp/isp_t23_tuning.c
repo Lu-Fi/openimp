@@ -24,6 +24,8 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -1911,7 +1913,10 @@ int IMP_ISP_Tuning_GetNCUAlloc(void)
  * tx_isp_t23_mdns_writers.inc, device probes P-A..P-C 2026-10-25): 0x7820 Y reference, 0x7824 stride,
  * 0x7828 chroma reference (= Y + stride * h), 0x799c luma / 0x7a6c chroma reference weights
  * (f_max | f_min << 8 | b_max << 16 | b_min << 24; the reference weight is min(f_min, b_max) / 255).
- * The driver rewrites the weights on every gain step, so the frame path writes them again each frame. */
+ * The driver rewrites the weights on every gain step.  The open-tx-isp driver has the module parameter
+ * mdns_ref_hold (bitmask, default 0) that keeps the weight words (and, with bit 1/2, the fake/mv and r words
+ * of the same blocks) at maximum while set; the mode then sets it once and writes no register.  Without the
+ * parameter (older driver, vendor driver) the frame path writes the two weight words again each frame. */
 #define MID_PAGE 0x13307000u
 #define MID_MAP  0x2000u
 #define MID_REG_Y   0x7820u
@@ -1920,8 +1925,11 @@ int IMP_ISP_Tuning_GetNCUAlloc(void)
 #define MID_REG_WY  0x799cu
 #define MID_REG_WC  0x7a6cu
 #define MID_WEIGHT_MAX 0x00ffffffu
+#define MID_HOLD_VALUE "1"
 
 static volatile uint32_t *mid_regs;      /* page 0x7000 base: register r at (r - 0x7000) / 4 */
+static const char *mid_hold_path = "/sys/module/tx_isp_t23/parameters/mdns_ref_hold";
+static int mid_hold_set;                 /* the driver holds the weights: no per-frame register writes */
 static uint32_t mid_save_y, mid_save_c;
 static uint8_t *mid_ybuf;                /* virtual address of the Y reference plane */
 static uint32_t mid_yphys, mid_cphys, mid_stride, mid_h;
@@ -1929,6 +1937,19 @@ static uint32_t mid_yphys, mid_cphys, mid_stride, mid_h;
 static inline volatile uint32_t *mid_reg(uint32_t r)
 {
     return mid_regs + ((r - 0x7000u) >> 2);
+}
+
+/* Write the driver's hold parameter; 0 on success, -1 if it does not exist or is not writable. */
+static int mid_hold(const char *v)
+{
+    int fd = open(mid_hold_path, O_WRONLY);
+    ssize_t n;
+
+    if (fd < 0)
+        return -1;
+    n = write(fd, v, strlen(v));
+    close(fd);
+    return n == (ssize_t)strlen(v) ? 0 : -1;
 }
 
 /* Locate and validate the reference planes from the registers + the AddSensor NCU buffer. */
@@ -1981,6 +2002,7 @@ int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride)
     }
     mid_save_y = *mid_reg(MID_REG_WY);
     mid_save_c = *mid_reg(MID_REG_WC);
+    mid_hold_set = mid_hold(MID_HOLD_VALUE) == 0;
     *w = *stride = mid_stride;
     *h = mid_h;
     return 0;
@@ -1993,8 +2015,10 @@ int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h)
 
     if (mid_regs == NULL)
         return -1;
-    *mid_reg(MID_REG_WY) = MID_WEIGHT_MAX;
-    *mid_reg(MID_REG_WC) = MID_WEIGHT_MAX;
+    if (!mid_hold_set) {
+        *mid_reg(MID_REG_WY) = MID_WEIGHT_MAX;
+        *mid_reg(MID_REG_WC) = MID_WEIGHT_MAX;
+    }
     if (mid_geometry(&y, &c, &st, &hh, &yv) != 0 || st != stride || hh != h || y != mid_yphys)
         return -1;
     memcpy(yv, nv12, (size_t)st * hh * 3u / 2u);    /* chroma plane is contiguous behind Y */
@@ -2006,8 +2030,13 @@ void openimp_tp_ispmid_off(void)
 {
     if (mid_regs == NULL)
         return;
-    *mid_reg(MID_REG_WY) = mid_save_y;
-    *mid_reg(MID_REG_WC) = mid_save_c;
+    if (mid_hold_set) {
+        (void)mid_hold("0");             /* the driver writes its computed weights again */
+        mid_hold_set = 0;
+    } else {
+        *mid_reg(MID_REG_WY) = mid_save_y;
+        *mid_reg(MID_REG_WC) = mid_save_c;
+    }
     munmap((void *)mid_regs, MID_MAP);
     mid_regs = NULL;
 }

@@ -796,6 +796,7 @@ static void test_ispmid(void)
     if (!f || !mem)
         return;
     fd = fileno(f);
+    mid_hold_path = "/nonexistent/mdns_ref_hold";   /* parameter missing: register fallback */
     CHECK(ftruncate(fd, 0x13309000) == 0, "ispmid: ftruncate");
     reg = mmap(NULL, 0x2000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x13307000);
     CHECK(reg != MAP_FAILED, "ispmid: map regs");
@@ -833,6 +834,30 @@ static void test_ispmid(void)
     R(0x7828) = 0x3000000 + 0x100 + ST * H;
     openimp_tp_ispmid_off();
     CHECK(R(0x799c) == 0x00dc14ff && R(0x7a6c) == 0x00dc14ff && mid_regs == NULL, "ispmid: restored");
+    /* driver with mdns_ref_hold: the parameter is set once, no weight register is written by the frame path */
+    {
+        char hp[] = "/tmp/openimp_ispmid_hold_XXXXXX";
+        char buf[8] = "";
+        int hfd = mkstemp(hp);
+
+        CHECK(hfd >= 0, "ispmid: hold file");
+        if (hfd >= 0) {
+            mid_hold_path = hp;
+            R(0x799c) = 0x00dc14ff; R(0x7a6c) = 0x00dc14ff;
+            CHECK(openimp_tp_ispmid_on(&w, &h, &st) == 0 && mid_hold_set, "ispmid: hold on");
+            CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '1', "ispmid: hold param written");
+            CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0x00dc14ff &&
+                  R(0x7a6c) == 0x00dc14ff, "ispmid: hold: no register write");
+            openimp_tp_ispmid_off();
+            memset(buf, 0, sizeof buf);
+            CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '0' && !mid_hold_set,
+                  "ispmid: hold released");
+            CHECK(R(0x799c) == 0x00dc14ff, "ispmid: hold: registers untouched on off");
+            close(hfd);
+            unlink(hp);
+            mid_hold_path = "/nonexistent/mdns_ref_hold";   /* parameter missing: register fallback above */
+        }
+    }
     /* Y plane outside the buffer */
     R(0x7820) = 0x2000000; R(0x7828) = 0x2000000 + ST * H;
     errno = 0;
