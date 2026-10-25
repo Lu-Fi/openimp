@@ -1878,7 +1878,9 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     uint32_t index;
     int attempts;
     int delay_cache = 0;
+#if defined(PLATFORM_T41)
     uint32_t stale_drops = 0;
+#endif
     IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
 #if defined(P1_CAPTURE_FEEDER)
@@ -1905,7 +1907,9 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
 
     wait_profile = openimp_profile_begin();
 
+#if defined(PLATFORM_T41)
 again:
+#endif
     for (attempts = 0; attempts < max_attempts; attempts++) {
         OpenIMPProfileStamp dqbuf_profile;
 
