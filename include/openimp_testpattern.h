@@ -128,6 +128,13 @@ int OpenIMP_TestPattern_Get(OpenIMPTestPatternState *s);
 
 extern const int OpenIMP_Cap_TestPattern;   /* 1 */
 
+/* Which modes can be used here, without switching anything: returns 1 when mode works on this
+ * build, SoC and (mode 4) running sensor, 0 when not (unknown mode: 0 with errno EINVAL).
+ * Modes 0-3: always 1; mode 4: the running sensor has a test pattern table entry (0 while no sensor
+ * runs); mode 5: the platform has the ISP-middle hooks (T23 so far).  Since 2026-10-25; detect the
+ * function with dlsym or a weak reference on older builds. */
+int OpenIMP_TestPattern_Supported(int mode);
+
 /* Sensor test pattern of the running sensor (mode 4): fills name (sensor name
  * as registered, NUL terminated), reg/mask and a short description of the
  * pattern ("ramp", "colour bars").  Returns 0, or -1 with errno ENOTSUP (no

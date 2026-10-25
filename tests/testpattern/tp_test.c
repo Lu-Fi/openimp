@@ -248,8 +248,13 @@ int main(void)
         fake_regs[0x008c] = 0x10;
         assert(OpenIMP_TestPattern_Set(4, NULL) == 0 && fake_regs[0x008c] == 0x11);
         assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && fake_regs[0x008c] == 0x10);
+        assert(OpenIMP_TestPattern_Supported(4) == 1);
         /* unknown sensor: ENOTSUP, state unchanged */
         snprintf(fake_name, sizeof fake_name, "gc9999");
+        assert(OpenIMP_TestPattern_Supported(4) == 0);
+        assert(OpenIMP_TestPattern_Supported(1) == 1 && OpenIMP_TestPattern_Supported(5) == 1);
+        errno = 0;
+        assert(OpenIMP_TestPattern_Supported(9) == 0 && errno == EINVAL);
         assert(OpenIMP_TestPattern_Set(1, NULL) == 0);
         errno = 0;
         assert(OpenIMP_TestPattern_Set(4, NULL) == -1 && errno == ENOTSUP && openimp_testpattern_mode() == 1);

@@ -572,3 +572,26 @@ void openimp_tp_release(struct openimp_tp_chan *c)
     c->cache = NULL;
     __atomic_sub_fetch(&openimp_tp_cache_live, 1, __ATOMIC_RELAXED);
 }
+
+/* Up-front capability query (no switching, no register write): 1 = the mode can be used on this
+ * build/SoC/sensor now, 0 = not.  Mode 4 needs a table entry for the running sensor, mode 5 the
+ * ISP-middle hooks of the platform (T23 only so far). */
+VIS int OpenIMP_TestPattern_Supported(int mode)
+{
+    char name[32];
+
+    switch (mode) {
+    case OPENIMP_TP_OFF:
+    case OPENIMP_TP_PATTERN:
+    case OPENIMP_TP_MOVING:
+    case OPENIMP_TP_MOTION:
+        return 1;
+    case OPENIMP_TP_SENSOR:
+        return tp_sensor_lookup(name) != NULL;
+    case OPENIMP_TP_ISP_MID:
+        return openimp_tp_ispmid_on != NULL;
+    default:
+        errno = EINVAL;
+        return 0;
+    }
+}

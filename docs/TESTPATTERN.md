@@ -73,6 +73,9 @@ OpenIMP_TestPattern_Set(OPENIMP_TP_OFF, NULL);
   Set restarts the frame counter, the object clock and the frames/objects counters.
 - `OpenIMP_TestPattern_Get(state)`: `state->size` must be set. Returns the mode, the active
   parameters, frames replaced since the last Set, mode 3 objects shown and visible now.
+- `OpenIMP_TestPattern_Supported(mode)`: 1 when the mode can be used here (build, SoC, running
+  sensor for mode 4, ISP-middle hooks for mode 5 = T23 so far), 0 when not; nothing is switched.
+  For greying out UI switches up front. Unknown mode: 0 with `EINVAL`.
 - `OpenIMP_TestPattern_SensorInfo(name, reg, mask, desc)`: sensor name, test pattern register,
   mask and a short description of the running sensor (mode 4).
 - ABI: both structs start with a `size` field set by the caller. New fields are only appended;
