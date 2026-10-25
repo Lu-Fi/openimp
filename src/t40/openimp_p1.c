@@ -1878,6 +1878,7 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     uint32_t index;
     int attempts;
     int delay_cache = 0;
+    uint32_t stale_drops = 0;
     IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
 #if defined(P1_CAPTURE_FEEDER)
@@ -1904,6 +1905,7 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
 
     wait_profile = openimp_profile_begin();
 
+again:
     for (attempts = 0; attempts < max_attempts; attempts++) {
         OpenIMPProfileStamp dqbuf_profile;
 
@@ -1979,6 +1981,37 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
         return -1;
     }
     buffer = &chn->buffers[index];
+#if defined(PLATFORM_T41)
+    /* A completed buffer nobody dequeued for a long time (stream kept
+     * alive without a consumer) is a stale picture: requeue it and take
+     * the next, at most one pass over the queue (t41_frame_is_stale). */
+    if (stale_drops < chn->buffer_count && words[6] < 1000000U) {
+        struct timespec raw;
+        int64_t age_us;
+        uint32_t interval_us = 33333u;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &raw);
+        age_us = ((int64_t)raw.tv_sec - (int64_t)words[5]) * 1000000 +
+                 ((int64_t)raw.tv_nsec / 1000 - (int64_t)words[6]);
+        if (chn->attr.outFrmRateNum > 0 && chn->attr.outFrmRateDen > 0)
+            interval_us = 1000000u * (uint32_t)chn->attr.outFrmRateDen /
+                          (uint32_t)chn->attr.outFrmRateNum;
+        if (t41_frame_is_stale(age_us, interval_us)) {
+            uint32_t qwords[TISP_BUFFER_WORDS];
+
+            fill_qbuf(qwords, index, buffer->physical, buffer->size);
+            if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, qwords) >= 0) {
+                stale_drops++;
+                if (stale_drops == 1u)
+                    syslog(LOG_INFO, "openimp-p1: chn%d: dropped stale "
+                           "capture buffers (first %lld ms old)", channel,
+                           (long long)(age_us / 1000));
+                unlock_p1();
+                goto again;
+            }
+        }
+    }
+#endif
     buffer->queued = 0;
     if (openimp_testpattern_mode() != 0)   /* EnableChn admits NV12 only */
         p1_test_pattern_fill(chn, buffer, channel);

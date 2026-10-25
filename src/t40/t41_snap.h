@@ -55,6 +55,24 @@ static inline int t41_snap_finish(struct t41_snap_state *s)
     return requeue;
 }
 
+/*
+ * A buffer the driver completed long ago and nobody dequeued.  With the
+ * stream kept running (fs_keepalive) and no consumer, every capture buffer
+ * fills once and stays "done": the first DQBUF after the idle period hands
+ * out the oldest of them, a picture minutes old (day colours in a night
+ * scene).  age_us = now - the buffer's completion time; interval_us = the
+ * channel's frame interval.  Such a buffer is requeued and the next one
+ * taken; a negative age (clock skew) is never stale.
+ */
+static inline int t41_frame_is_stale(int64_t age_us, uint32_t interval_us)
+{
+    int64_t limit = (int64_t)interval_us * 6;
+
+    if (limit < 300000)
+        limit = 300000;
+    return age_us > limit;
+}
+
 static inline uint32_t t41_snap_align16(uint32_t v)
 {
     return (v + 15u) & ~15u;

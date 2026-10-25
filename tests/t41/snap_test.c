@@ -68,8 +68,21 @@ static void copy(void)
     free(dst);
 }
 
+static void stale(void)
+{
+    assert(!t41_frame_is_stale(0, 33333));
+    assert(!t41_frame_is_stale(-5000000, 33333));
+    assert(!t41_frame_is_stale(299999, 33333));
+    assert(t41_frame_is_stale(300001, 33333));
+    assert(t41_frame_is_stale(120000000, 33333));   /* minutes old */
+    /* slow channel (5 fps): six intervals */
+    assert(!t41_frame_is_stale(1100000, 200000));
+    assert(t41_frame_is_stale(1300000, 200000));
+}
+
 int main(void)
 {
+    stale();
     lend();
     copy();
     puts("T41 SnapFrame tests passed");
