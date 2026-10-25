@@ -6,6 +6,72 @@
 #include "t40_ep1.h"
 #include "t40_lambda.h"
 
+/* floor(sqrt(x)) in 1..0xfffe, as the vendor's bisection (x = 0 -> 1). */
+static uint32_t t41_lda_isqrt(uint32_t x)
+{
+    uint32_t lo = 1u, hi = 0xffffu;
+
+    while (lo + 1u != hi) {
+        uint32_t mid = (lo + hi) >> 1;
+
+        if (x < mid * mid)
+            hi = mid;
+        else
+            lo = mid;
+    }
+    return lo;
+}
+
+/* round(16 * 2^(qp/3)) for qp 0..51, exact in integers:
+ * 16 * 2^(qp/3) = 2^(4 + qp/3) * {1, 2^(1/3), 2^(2/3)}. */
+static uint32_t t41_lda_qp_scale(unsigned int qp)
+{
+    /* 2^(r/3) in Q30 for r = 0, 1, 2 */
+    static const uint64_t cube_root2_q30[3] = {
+        1073741824ull, 1352829926ull, 1704458901ull,
+    };
+    uint64_t v = cube_root2_q30[qp % 3u] << (4u + qp / 3u);
+
+    return (uint32_t)((v + (1ull << 29)) >> 30);
+}
+
+int openimp_t41_update_ep1_lambda_fixqp(void *ep1, size_t size, int intra,
+                                        int full_weight)
+{
+    uint8_t *out = (uint8_t *)ep1;
+    uint32_t weight_a = intra ? 51u : 90u;
+    const uint32_t weight_b = 90u;
+    unsigned int qp;
+
+    if (!out || size < 52u * 4u)
+        return -1;
+    for (qp = 0u; qp < 52u; ++qp) {
+        uint32_t scale = t41_lda_qp_scale(qp);
+        uint32_t wa = weight_a;
+        uint32_t wb = weight_b;
+        uint32_t a, b;
+
+        if (!full_weight) {
+            /* clip((qp - 12) / 6, 2, 4) in Q12, C division */
+            int32_t f = ((int32_t)qp * 4096 - 49152) / 6;
+
+            if (f > 16394)
+                f = 16394;
+            if (f < 8192)
+                f = 8192;
+            wa = ((uint32_t)f * weight_a) >> 12;
+            wb = ((uint32_t)f * weight_b) >> 12;
+        }
+        a = t41_lda_isqrt(scale * wa);
+        b = t41_lda_isqrt(scale * wb);
+        out[qp * 4u + 0u] = (uint8_t)a;
+        out[qp * 4u + 1u] = (uint8_t)(a >> 8);
+        out[qp * 4u + 2u] = (uint8_t)b;
+        out[qp * 4u + 3u] = (uint8_t)(b >> 8);
+    }
+    return 0;
+}
+
 int32_t AL_AVC_GenerateHwScalingList(void *scaling, int32_t scratch);
 int32_t AL_AVC_WriteEncHwScalingList(void *scaling, void *scratch,
                                      uint32_t *output);

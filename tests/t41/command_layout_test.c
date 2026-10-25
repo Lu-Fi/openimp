@@ -158,6 +158,65 @@ static void test_sub_first_p_oracle(void)
     }
 }
 
+/* Vendor libimp 1.2.6 FixQP P picture (capture .32, 1280x720 QP 30,
+ * picture 19): no HWRC words and no EP3 pointer. */
+static void test_fixqp_p_oracle(void)
+{
+    const OpenIMPT41CommandParams params = {
+        .width = 1280, .height = 720, .bitrate = 2000000,
+        .fps_num = 15, .fps_den = 1,
+        .min_qp = 30, .picture_qp = 30, .max_qp = 30,
+        .rate_control_qp = 30,
+        .picture_number = 19, .is_idr = 0,
+        .source_y = 0x03009a00, .source_uv = 0x030eaa00,
+        .reference_y = 0x02c15500, .reference_uv = 0x02d14500,
+        .reference_map_luma = 0x02d93d00,
+        .reference_map_chroma = 0x02d95500,
+        .reference_luma_offset = 0x000d2000,
+        .reference_chroma_offset = 0x00069000,
+        .reconstruction_y = 0x02c15500,
+        .reconstruction_uv = 0x02d14500,
+        .reconstruction_map_luma = 0x02d96100,
+        .reconstruction_map_chroma = 0x02d97900,
+        .reconstruction_luma_offset = 0x000c3000,
+        .reconstruction_chroma_offset = 0x00061800,
+        .stream_buffer = 0x02e49600,
+        .stream_part_offset = 0x0006ea80,
+        .ep2 = 0x0315b200, .ep1 = 0x02dd0b00,
+        .mv_previous = 0x02d98600, .mv_current = 0x02db4900,
+        .no_hwrc = 1,
+    };
+    /* cmd[152] is 0xff in the capture because roitest had called
+     * SetChnRoiAttr (QP table bits 0/3); the builder writes 0xf6. */
+    static const ExpectedWord expected[] = {
+        {0, 0x80700400}, {1, 0x0059009f}, {2, 0x00010006},
+        {3, 0x40000d50}, {5, 0x00000e0f}, {8, 0x00000026},
+        {9, 0x00000024}, {11, 0x00000024}, {12, 0x00000022},
+        {13, 0xffffffff},
+        {24, 0x111e0000}, {25, 0x00083f1f}, {27, 0x0002c44f},
+        {29, 0x00000c80}, {32, 0x8002c04f}, {33, 0x12000000},
+        {34, 0x0004f000}, {40, 0x03009a00}, {42, 0x030eaa00},
+        {52, 0x00000500}, {53, 0x00000500},
+        {66, 0x02c15500}, {68, 0x02d14500},
+        {72, 0x02d93d00}, {74, 0x02d95500},
+        {108, 0x000d2000}, {109, 0x00069000},
+        {110, 0x000ff000}, {111, 0x0007f800},
+        {112, 0x02c15500}, {114, 0x02d14500},
+        {118, 0x02d96100}, {120, 0x02d97900},
+        {124, 0x000c3000}, {125, 0x00061800},
+        {126, 0x000ff000}, {127, 0x0007f800},
+        {128, 0x02001400}, {129, 0x02001400}, {130, 0x00000200},
+        {136, 0x02e49600}, {139, 0x0006ea80}, {140, 0x00000220},
+        {141, 0x0006e860}, {152, 0x000000f6}, {153, 0x0000203b},
+        {154, 0x0315b200}, {156, 0x02dd0b00},
+        {158, 0x02d98600}, {160, 0x02db4900},
+        {512, 0x000a0c80}, {513, 0x111e0d06},
+        {515, 0x0004f000}, {516, 0x00000e0f},
+    };
+
+    assert_command(&params, expected, sizeof(expected) / sizeof(expected[0]));
+}
+
 static void test_builder_validation(void)
 {
     uint32_t slot[OPENIMP_T41_CL_SLOT_SIZE / sizeof(uint32_t)];
@@ -748,6 +807,7 @@ int main(void)
 
     test_main_idr_oracle();
     test_sub_first_p_oracle();
+    test_fixqp_p_oracle();
     test_builder_validation();
     test_hevc_command();
     test_encoding_status_oracle();

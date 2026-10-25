@@ -23,6 +23,7 @@
  *   idr               RequestIDR
  *   run:LABEL:SECS    capture LABEL.h264 + LABEL.csv (t_ms,bytes,idr), print stats
  *   sleep:S
+ *   grab:N            N consecutive frame-source luma planes -> OUTDIR/grab.y
  *   edge              argument/channel edge cases of all RC calls (return codes only)
  * Stop the streamer first.  Output files go to OUTDIR (camera /tmp is RAM).
  */
@@ -346,6 +347,28 @@ static void defaults(void)
         }
 }
 
+/* grab:N - N consecutive frame-source luma planes (encoder keeps running) into OUTDIR/grab.y */
+static void grab(int n)
+{
+    char p[300]; FILE *f; int i, ok = 0, r;
+    snprintf(p, sizeof p, "%s/grab.y", outdir);
+    f = fopen(p, "wb");
+    r = IMP_FrameSource_SetFrameDepth(0, 2);
+    printf("[OP] SetFrameDepth 2 -> ret=0x%08x\n", (unsigned)r);
+    sleep(1);
+    for (i = 0; f && i < n; i++) {
+        IMPFrameInfo *fr = NULL;
+        if (IMP_FrameSource_GetFrame(0, &fr) || !fr) break;
+        fwrite((void *)(uintptr_t)fr->virAddr, 1, (size_t)fr->width * fr->height, f);
+        if (!i) printf("[G] grab %ux%u size=%u\n", fr->width, fr->height, fr->size);
+        IMP_FrameSource_ReleaseFrame(0, fr);
+        ok++;
+    }
+    if (f) fclose(f);
+    IMP_FrameSource_SetFrameDepth(0, 0);
+    printf("[R] grab frames=%d\n", ok);
+}
+
 static void edge(void)
 {
     static const int bad[] = { 8, 100, 5 };
@@ -510,6 +533,7 @@ int main(int argc, char **argv)
             op_run(lab, atoi(p + 1));
         } else if (sscanf(op, "sleep:%d", &a) == 1) sleep(a);
         else if (!strcmp(op, "edge")) edge();
+        else if (sscanf(op, "grab:%d", &a) == 1) grab(a);
         else if (!strcmp(op, "defaults")) defaults();
         else printf("[E] unknown op %s\n", op);
     }

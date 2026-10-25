@@ -2204,6 +2204,18 @@ int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
         return -1;
     }
     P2_STARTUP_MARKER("openimp/P2 marker C8 codec create returned\n");
+#if defined(PLATFORM_T41)
+    /* the codec parameters carry only the IDR distance; hand over the GOP
+     * attribute as SetChnGopAttr does, so the FixQP lambda knows
+     * uGopLength (t41_lda_period) */
+    if (attr->gopAttr.uGopLength) {
+        IMPEncoderGopAttr eff = attr->gopAttr;
+
+        eff.gopLength = (uint16_t)t40_vendor_gop_length(
+            attr->gopAttr.uGopLength, attr->gopAttr.uMaxSameSenceCnt);
+        (void)AL_Codec_Encode_SetGopParam(ch->codec, &eff);
+    }
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20)
     /* The codec parameter block has no room for the Helix rate-control
      * extras (staticTime, changePos, qualityLvl, QP steps, iBiasLvl, SMART):

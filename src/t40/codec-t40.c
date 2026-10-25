@@ -4092,6 +4092,23 @@ static uint32_t avpu_t41_log2_ctb(const ALAvpuContext *ctx)
                                   : OPENIMP_T41_LOG2_CTB_AVC;
 }
 
+/* T41 AVC FixQP: the vendor libimp 1.2.6 lambda (EP1 capture, 2026-10-25:
+ * at the same QP its P pictures were 37..65 % smaller than with the
+ * default table).  OPENIMP_T41_FIXQP_LDA=0 keeps the default table. */
+static int avpu_t41_fixqp_lda(const ALAvpuContext *ctx)
+{
+    static int on = -1;
+
+    if (ctx->rc_mode != HW_RC_MODE_FIXQP || ctx->codec_hevc)
+        return 0;
+    if (on < 0) {
+        const char *value = getenv("OPENIMP_T41_FIXQP_LDA");
+
+        on = !(value && value[0] == '0');
+    }
+    return on;
+}
+
 static int avpu_t41_prepare_picture(ALAvpuContext *ctx, int is_idr)
 {
     void *ep3_cpu;
@@ -4238,7 +4255,21 @@ static int avpu_t41_prepare_picture(ALAvpuContext *ctx, int is_idr)
     }
     ctx->t41_hwrc_bitrate = bitrate;
 
-    if (openimp_t41_update_ep1_lambda_codec(
+    if (avpu_t41_fixqp_lda(ctx)) {
+        /* FixQP: the vendor's dynamic lambda (constant-QP channels resolve
+         * AUTO_LDA to it); full weight for the IDR and for every
+         * uGopLength-th picture after it. */
+        uint32_t picture = is_idr ? 0u
+                                  : ctx->frame_number - ctx->idr_frame_number;
+        uint32_t period = ctx->t41_lda_period ? ctx->t41_lda_period
+                                              : ctx->gop_length;
+        int full = is_idr || (period && (picture % period) == 0u);
+
+        if (openimp_t41_update_ep1_lambda_fixqp(
+                ctx->interm_buf.map, ctx->interm_buf.size, is_idr,
+                full) != 0)
+            return -1;
+    } else if (openimp_t41_update_ep1_lambda_codec(
             ctx->interm_buf.map, ctx->interm_buf.size,
             is_idr ? 2u : 1u, ctx->codec_hevc) != 0)
         return -1;
@@ -4500,6 +4531,19 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
     params.mv_current = mv_base + current_slot * mv_slot_size;
     params.ep3 = ctx->rec_trace_buf.phy_addr +
                  (is_idr ? 2u : 1u) * AVPU_T40_EP3_SLOT_SIZE;
+    /* FixQP without the hardware rate controller, as the vendor libimp
+     * 1.2.6 (capture: cmd[176..182] zero).  OPENIMP_T41_FIXQP_HWRC=1 keeps
+     * the old HWRC words for comparisons. */
+    if (ctx->rc_mode == HW_RC_MODE_FIXQP) {
+        static int keep_hwrc = -1;
+
+        if (keep_hwrc < 0) {
+            const char *value = getenv("OPENIMP_T41_FIXQP_HWRC");
+
+            keep_hwrc = value && value[0] == '1';
+        }
+        params.no_hwrc = keep_hwrc ? 0u : 1u;
+    }
     if (ctx->codec_hevc) {
         params.codec_hevc = 1u;
         /* HWRC follows the cu_qp_delta flag of the PPS in force. */
@@ -9112,6 +9156,11 @@ static void avpu_sync_runtime_encode_state(AL_CodecEncode *enc)
     enc->avpu.t31_qp_pb_delta = enc->rc_pb_delta;
 #endif
     enc->avpu.gop_length = enc->gop_cache.gopLength ? enc->gop_cache.gopLength : enc->hw_params.gop_length;
+#if defined(PLATFORM_T41)
+    enc->avpu.t41_lda_period = enc->gop_cache.uMaxSameSenceCnt > 1u
+        ? enc->avpu.gop_length / enc->gop_cache.uMaxSameSenceCnt
+        : enc->avpu.gop_length;
+#endif
     enc->avpu.format_word = *(uint32_t *)(enc->codec_param + 0x10);
 #if defined(PLATFORM_T41)
     enc->avpu.t41_qp_i_set = enc->t41_qp_i_set;
@@ -14482,6 +14531,12 @@ int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr)
     *(uint32_t *)(enc->codec_param + 0xb0) = enc->gop_cache.gopLength;
     enc->hw_params.gop_length = enc->gop_cache.gopLength;
     enc->avpu.gop_length = enc->gop_cache.gopLength;
+#if defined(PLATFORM_T41)
+    /* gopLength is the IDR distance (uGopLength * uMaxSameSenceCnt) */
+    enc->avpu.t41_lda_period = enc->gop_cache.uMaxSameSenceCnt > 1u
+        ? enc->gop_cache.gopLength / enc->gop_cache.uMaxSameSenceCnt
+        : enc->gop_cache.gopLength;
+#endif
 
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     enc->rc_attr_cache.maxGop = enc->gop_cache.gopLength;

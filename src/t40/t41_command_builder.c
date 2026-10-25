@@ -231,7 +231,7 @@ static int openimp_t41_params_are_valid(
         !params->reconstruction_map_luma ||
         !params->reconstruction_map_chroma ||
         !params->stream_buffer || !params->ep2 || !params->ep1 ||
-        !params->mv_current || !params->ep3 ||
+        !params->mv_current || (!params->ep3 && !params->no_hwrc) ||
         params->stream_part_offset <= OPENIMP_T41_STREAM_PAYLOAD_OFFSET)
         return 0;
 
@@ -290,7 +290,7 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
         return -1;
 
     hevc = params->codec_hevc != 0u;
-    hwrc = !hevc || !params->hevc_no_hwrc;
+    hwrc = !params->no_hwrc && (!hevc || !params->hevc_no_hwrc);
     log2_ctb = hevc ? OPENIMP_T41_LOG2_CTB_HEVC : OPENIMP_T41_LOG2_CTB_AVC;
     ctb = 1u << log2_ctb;
     width_8 = (params->width + 7u) >> 3;
@@ -435,7 +435,11 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
                    (((uint32_t)target >> 7) & 0xffffu);
         cmd[181] = 1u;
     }
-    cmd[182] = params->ep3;
+    /* FixQP capture (libimp 1.2.6, 1280x720 QP 30, P pictures 20..23):
+     * cmd[176..182] all zero (the HWRC words made no measurable size
+     * difference at FixQP on the device, 2026-10-25; kept for parity). */
+    if (!params->no_hwrc)
+        cmd[182] = params->ep3;
 
     /* PrepareCommand copies the inline entropy (Enc2) block for AVC only;
      * the HEVC core writes the final CABAC stream itself. */

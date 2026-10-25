@@ -63,6 +63,11 @@ typedef struct OpenIMPT41CommandParams {
     uint32_t hevc_no_hwrc;
     uint32_t hevc_no_tmvp;
     uint32_t hevc_cabac_init_idc0;
+
+    /* FixQP (both codecs): the vendor libimp 1.2.6 runs FixQP without the
+     * hardware rate controller - cmd[176..181] and the EP3 pointer
+     * cmd[182] stay zero (ep3 may then be 0). */
+    uint32_t no_hwrc;
 } OpenIMPT41CommandParams;
 
 #define OPENIMP_T41_STREAM_PAYLOAD_OFFSET 0x0220u

@@ -287,6 +287,10 @@ typedef struct ALAvpuContext {
     uint32_t t41_payload_size_by_buf[16];
     uint32_t t41_rate_control_qp;
     uint32_t t41_rate_control_qp_by_buf[16];
+    /* FixQP lambda: uGopLength (the IDR distance divided by the
+     * same-scene count); every picture at a multiple of it since the IDR
+     * gets the full-weight lambda (openimp_t41_update_ep1_lambda_fixqp). */
+    uint32_t t41_lda_period;
     /* SetChnQpBoundsPerFrame: the I-picture window (the P window is
      * min_qp/max_qp); t41_qp_i_set 0 = I uses the P window. */
     uint32_t t41_qp_i_set;

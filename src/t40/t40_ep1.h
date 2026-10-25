@@ -17,6 +17,13 @@ int openimp_t41_update_ep1_lambda(void *ep1, size_t size,
                                   unsigned int picture_type);
 /* The same T41 layout with the AVC (hevc = 0) or HEVC default table;
  * T41 AL_GetLambda selects HEVC_NEW_DEFAULT_LDA_TABLE for codec 1. */
+/* T41 FixQP (vendor libimp 1.2.6 runs AL_GetLambda in its dynamic mode
+ * when the channel is constant-QP): lanes = isqrt(L(qp) * w) with
+ * L(qp) = round(16 * 2^(qp/3)); I pictures w = 51 / 90, P pictures 90 / 90
+ * times clip((qp - 12) / 6, 2, 4) unless full_weight (IDR and every
+ * uGopLength-th P since the IDR).  Returns 0, or -1 for a bad buffer. */
+int openimp_t41_update_ep1_lambda_fixqp(void *ep1, size_t size, int intra,
+                                        int full_weight);
 int openimp_t41_update_ep1_lambda_codec(void *ep1, size_t size,
                                         unsigned int picture_type,
                                         unsigned int hevc);
