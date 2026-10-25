@@ -19,7 +19,8 @@ Header: `include/openimp_testpattern.h` (ABI 1). Detect support with the symbol
 | 2 | moving | pattern + black square bouncing at `step` px/frame + 16 bit frame counter (top left, 16x16 cells, MSB first) | as mode 1, plus drops, duplicates, reordering, smearing, rate control behaviour under a changing frame |
 | 3 | motion test | flat grey with +-1 LSB noise, logo, frame counter, objects of given size, contrast and speed (one built-in object or a script) | as mode 2, and the pattern also reaches **IVS** (motion detection input); the objects have a known time and place |
 | 4 | sensor pattern | the sensor outputs its own built-in test pattern; frames are not replaced | **through the whole ISP** (BLC, WB, CCM, gamma, NR, scaler, encoder), pattern content depends on the sensor |
-| 5 (planned) | ISP input / RAW | known Bayer picture from DDR or the Apical test generator | through the whole ISP with a known picture; not implemented in the API yet (see status table) |
+| 5 | ISP-middle picture (T23) | OpenIMP writes the mode 1 pattern at the ISP's native size into the ISP's MDNS (temporal NR) reference frame buffer every frame and holds the MDNS reference weights (luma `0x799c`, chroma `0x7a6c`) at maximum; sensor frames are not replaced | **behind the ISP front half**: MDNS, BCSH, scaler, encoder, then the OSD; not BLC..CSC (use mode 4 for those). Sharpening acts before the injection point. ENOTSUP on other SoCs |
+| 6 (planned) | ISP input / RAW | known Bayer picture from DDR or the Apical test generator | through the whole ISP with a known picture; not implemented in the API yet (see status table) |
 
 Modes 1-3 replace each captured NV12 frame on the way to the encoder (T20-T31 in the capture
 path of `kernel_interface.c`, mode 3 before IVS; T40/T41 in the FrameSource path before the IVS
@@ -27,6 +28,29 @@ feeder), so the sensor and the ISP keep running and only provide the clock. The 
 decides the picture size, every channel gets its own counter. Mode 4 does not touch frames: it
 sets a test pattern bit in the sensor (register table per sensor, written through the ISP sensor
 register ioctl; the chip ID is read first and the write is verified by a readback).
+
+### Mode 5 details (T23)
+
+The T23 ISP reads one full-size NV12 reference picture per frame (previous denoised frame) from the
+rmem buffer OpenIMP allocates in `IMP_ISP_AddSensor` ("ncubuf", programmed through `TX_ISP_SET_BUF`).
+Mode 5 locates it from the ISP core registers (`0x7820` Y reference, `0x7824` stride, `0x7828` chroma
+reference = Y + stride x height; the layout is validated against the allocation, otherwise `EIO`),
+saves the weight registers, and from the capture path of channel 0 (`VBMGetFrame`, once per frame)
+(1) writes the weights `0x799c` / `0x7a6c` = `0x00FFFFFF` (reference weight = f_min = b_max = 1.0)
+and (2) copies the pattern (`logo` parameter as in mode 1, no counter) into Y and chroma plane, with a
+cache write-back. With weight 1.0 the output is the injected picture and becomes the next reference,
+so the picture sustains itself between writes. Leaving the mode (`Set(0..4)`) restores the saved
+weights; `ENODEV` when the ISP is not running. There is no register ioctl for the ISP core on T23, the
+registers are mapped through the `/dev/mem` file descriptor that `IMP_ISP_EnableTuning` already holds
+(the same fd the vendor library keeps for its ISP mapping); no new device access is added. The
+driver rewrites the weights on gain steps, so a small share of frames (3 % on the device) is blended
+with the live scene; a frame-rate-independent refresh thread would remove them (not done).
+`tpctl set 5`, `OpenIMP_TestPattern_Set(OPENIMP_TP_ISP_MID, NULL)`.
+
+Measured (T23 .30, 1280x720 H.264, ideal = mode 1 picture, rows 0-639, SSIM ffmpeg): live scene
+alone Y 0.42 / U 0.86 / V 0.86; mode 5 Y 0.943 mean (0.958 median; 3 % of the frames dip to 0.4 when
+the driver rewrote the weights) / U 0.868 / V 0.893. Luma works; the chroma weights `0x7a6c` did not
+visibly purify chroma (see open points). Pictures stay local.
 
 ## API
 
@@ -163,6 +187,7 @@ test, ❓ open.
 | Mode 2 moving | ✅ | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 3 motion test | ✅ (objects shown) | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 4 sensor pattern | 🔧 (jxh42) | ✅ (jxf23) | ✅ (jxf23, sensor exposure hold) | ✅ (sc2336p) | 🔧 | 🔧 (register by hand ✅) | ⏳ (sc830ai) | ✅ gc5603 (colour bars, 72 s stable) / 🔧 sc5336 |
+| Mode 5 ISP-middle picture | ❌ | ❌ | 🔧 | ✅ (luma, sc1a4t .30; chroma partly) | ❌ | 🔧 | 🔧 | 🔧 |
 | Own picture before the ISP | 🔧 Apical TPG | ✅ Apical TPG + VIC colour bars (register level, not in the API yet) | ❌ | ❌ | 🔧 Apical TPG | ❌ (VIC bars, CSI, mux tested: no) | ❓ | ⏳ RAW from DDR (v3 module pending) |
 
 Notes:

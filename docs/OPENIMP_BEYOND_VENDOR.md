@@ -286,6 +286,8 @@ Complete description (modes 0-4, API, tpctl, host tools, per-SoC status table, l
 
 For streamers and test setups: `#include "openimp_testpattern.h"`, `OpenIMP_TestPattern_Set(mode, &params)` replaces the encoder/IVS input by a synthetic picture (1 pattern with the OpenIMP logo in the middle, 2 moving square + frame counter, 3 motion test with object size/contrast/speed or script), `OpenIMP_TestPattern_Get` reads the state back; switchable while streaming, no lock in the frame path. Detect: symbol `OpenIMP_Cap_TestPattern` (absent on vendor libimp, use `dlsym`/weak). Status: T23 device-tested (switching during one stream); other SoCs build + host test. Outside a streamer: `OPENIMP_TEST_PATTERN_CTL=<socket>` and `tools/testpattern/tpctl`.
 
+Mode 5 (T23): known picture **inside** the ISP. `OpenIMP_TestPattern_Set(5, NULL)` writes the pattern into the ISP's temporal-NR reference frame every frame and holds the reference weight at 1.0, so streamers can test their own chain behind the ISP front half (MDNS, BCSH, scaler, encoder, OSD) with a known input, with no driver change and no RAW access; sensor frames keep flowing. Complements mode 4 (sensor pattern = whole ISP, fixed content). The vendor library has no equivalent. Status: T23 device-tested (luma SSIM 0.94-0.96 vs the ideal picture, chroma partly); other SoCs return ENOTSUP.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**
