@@ -96,7 +96,7 @@ From the streamer function audit; the first three items are device-tested on T10
 
 - **`IMP_Encoder_Query` on T10/T20/T21/T23/T31** reports the real channel state (picture in the encoder, finished stream waiting with its byte length, `work_done`) instead of a constant block.
 - **`IMP_Encoder_SetJpegeQl` on T10/T20/T21** applies the quantisation tables to the JPEG encoder (apitest "JPEG size follows SetJpegeQl live": table 2 gives 86-118 kB, table 90 gives 4-8 kB per picture).
-- **`IMP_System_GetCPUInfo` on T21/T23/T31** reads the variant from the SoC registers (soc id, CPPSR, sub-type word) with the vendor decoding, falling back to the old constant when /dev/mem is not readable.
+- **`IMP_System_GetCPUInfo` on T21/T23/T31** reads the variant from the SoC registers (soc id, CPPSR, sub-type word; CPPSR is a clock-module part register that tells full from "-L" parts, not an MXU flag; the T21N has CU2 but reserved MXU2 instructions) with the vendor decoding, falling back to the old constant when /dev/mem is not readable.
 - **T10/T20/T21 `SetAe_IT_MAX`, `SetBacklightComp`, T10/T20 `SetBcshHue`, `GetAeLuma`** now act (beyond vendor, needs open-tx-isp `claude/streamer-real-funcs`; see docs/OPENIMP_BEYOND_VENDOR.md). Device test pending (module change).
 
 ## After RC1: aggregate agg-38 (state of 2026-10-12, not released)
