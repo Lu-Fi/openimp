@@ -3138,6 +3138,21 @@ static int avpu_t31_hevc_hwrc_enabled(const ALAvpuContext *ctx)
 #else
         enabled = avpu_t31_env_flag(AVPU_HEVC_ENV("HWRC"), 1);
 #endif
+#if defined(PLATFORM_T41)
+    /* T41 FixQP: the vendor 1.2.6 PPS keeps cu_qp_delta_enabled_flag 1
+     * (capture 2026-10-25); with 0 the stream did not decode (the core
+     * still codes cu_qp_delta).  OPENIMP_T41_HEVC_FIXQP_CUQPD=0 = old. */
+    if (enabled && ctx && ctx->rc_mode == HW_RC_MODE_FIXQP) {
+        static int fixqp = -1;
+
+        if (fixqp < 0) {
+            const char *value = getenv("OPENIMP_T41_HEVC_FIXQP_CUQPD");
+
+            fixqp = !(value && value[0] == '0');
+        }
+        return fixqp;
+    }
+#endif
     return enabled && ctx && ctx->rc_mode != HW_RC_MODE_FIXQP;
 }
 
@@ -4092,14 +4107,16 @@ static uint32_t avpu_t41_log2_ctb(const ALAvpuContext *ctx)
                                   : OPENIMP_T41_LOG2_CTB_AVC;
 }
 
-/* T41 AVC FixQP: the vendor libimp 1.2.6 lambda (EP1 capture, 2026-10-25:
- * at the same QP its P pictures were 37..65 % smaller than with the
- * default table).  OPENIMP_T41_FIXQP_LDA=0 keeps the default table. */
+/* T41 FixQP (H.264 and H.265): the vendor libimp 1.2.6 lambda (EP1
+ * capture, 2026-10-25: at the same QP its AVC P pictures were 37..65 %
+ * smaller than with the default table; its AL_GetLambda runs the same
+ * dynamic formula for HEVC, captured bit-exact for both codecs).
+ * OPENIMP_T41_FIXQP_LDA=0 keeps the default tables. */
 static int avpu_t41_fixqp_lda(const ALAvpuContext *ctx)
 {
     static int on = -1;
 
-    if (ctx->rc_mode != HW_RC_MODE_FIXQP || ctx->codec_hevc)
+    if (ctx->rc_mode != HW_RC_MODE_FIXQP)
         return 0;
     if (on < 0) {
         const char *value = getenv("OPENIMP_T41_FIXQP_LDA");
