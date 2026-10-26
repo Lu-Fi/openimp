@@ -73,11 +73,11 @@ print("pushed:", out.strip().splitlines()[-2:] if out.strip() else out)
 res = []
 for c in cases:
     envx = ""
-    if ":" in c:                     # case:ENVVAR  -> run with ENVVAR=1 (e.g. process:APITEST_PROCESS_BYPASS)
-        c, envx = c.split(":", 1); envx = envx + "=1 "
     area = "cases"
     if c.startswith("area:"):        # area:audio -> the whole area (all [A] lines of IMP_ functions reported)
         area = c[5:]; c = area
+    elif ":" in c:                   # case:ENVVAR  -> run with ENVVAR=1 (e.g. process:APITEST_PROCESS_BYPASS)
+        c, envx = c.split(":", 1); envx = envx + "=1 "
     cmd = "cd /tmp/at; " + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] IMP_(ISP_Tuning|ISP_Get|ISP_Set|Log|ISP_[A-Z]|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
     out, rc = sh(cmd, 300, 90)
     open(os.path.join(outdir, c + ".log"), "w").write(out)
