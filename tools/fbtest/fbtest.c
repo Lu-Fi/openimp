@@ -1,9 +1,10 @@
 /* fbtest - device proof of the fallback frame (OpenIMP_FrameSource_SetFallback), T41.
  *   fbtest SENSOR ADDR W H STREAM_REG OUTDIR
  * One H.264 channel with a consumer thread.  Sensor frames are stopped and
+ * (env FBTEST_ON / FBTEST_OFF override the on/off values 1/0, gc5603: 0x09/0x08)
  * restarted by writing STREAM_REG (SmartSens 0x0100, bit 0) through
  * IMP_ISP_SetSensorRegister; the library, modules and the encoder stay up.
- *   1 real           4 s
+ *   1 real           4 s   (default state of the fallback is printed: enabled=1 since 26.10.)
  *   2 off, no fb     4 s   (control: nothing arrives)
  *   3 resume         4 s
  *   4 off, fb on     9 s   (message frames after the dwell time)
@@ -81,7 +82,8 @@ static const char *outdir;
 static void sensor_stream(int on, uint32_t reg)
 {
     IMPISPSensorRegister r; int rc;
-    r.addr = reg; r.value = on ? 1 : 0;
+    const char *ev = getenv(on ? "FBTEST_ON" : "FBTEST_OFF");  /* GalaxyCore gc5603: 0x0100 = 0x09 on / 0x08 off */
+    r.addr = reg; r.value = ev ? (uint32_t)strtoul(ev, NULL, 0) : (on ? 1 : 0);
     rc = IMP_ISP_SetSensorRegister(IMPVI_MAIN, &r);
     printf("[S] %lld sensor stream %s (reg 0x%x) rc=%d\n", (long long)now_ms(), on ? "ON" : "OFF", reg, rc);
 }
@@ -141,6 +143,7 @@ int main(int argc, char **argv)
     CK(IMP_Encoder_StartRecvPic(0), "StartRecvPic");
     pthread_create(&tc, NULL, consumer, NULL);
     phase(1, "real frames", 4);
+    if (OpenIMP_FrameSource_SetFallback) printf("[F] control: SetFallback(0,0) rc=%d (phase 1 shows the default state)\n", OpenIMP_FrameSource_SetFallback(0, 0));
     sensor_stream(0, reg);
     phase(2, "sensor off, fallback off (control)", 4);
     sensor_stream(1, reg);
