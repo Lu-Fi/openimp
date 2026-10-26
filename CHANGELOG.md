@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-113` (2026-10-26)
+
+- **T31 IMP_ISP_GetSensorRegister** clears the value field of the request before the ioctl (the stock library leaves
+  it uninitialised), so a kernel that does not fill it yields 0 instead of stack contents. The wrong sc2336 chip id
+  (0x0404 instead of 0xcb3a, issue #113) was the open T31 driver not forwarding the register events to the sensor
+  (fixed in open-tx-isp `claude/issue-113`). T10/T20/T21/T23/T40/T41 already read the right chip ids.
+
 ## Branch `claude/status-data` (2026-10-26)
 
 - **Status data instead of a hand-written matrix:** the feature matrix source moved to `docs/status/features.yaml` (45 features x 10 SoCs:

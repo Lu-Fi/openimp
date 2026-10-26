@@ -552,6 +552,11 @@ int IMP_ISP_GetSensorRegister(uint32_t arg1, uint32_t *arg2)
         var_48.size = 0;
         var_48.reg = (int32_t)arg1;
         var_48.zero0 = 0;
+        /* Not set by the stock library either; cleared so that a kernel that
+         * does not fill the value (issue #113: open T31 driver before the
+         * fix) yields 0 instead of stack contents. */
+        var_48.val = 0;
+        var_48.zero1 = 0;
         result = ioctl(gISP_1->fd, 0xc0385650, &var_48);
         if (result != 0) {
             puts("sorry,g_register failed!");
