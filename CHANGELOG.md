@@ -8,6 +8,20 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t40-3a-noconsumer` (2026-10-26)
+
+- **T40: AE/AWB/day-night keep running with no stream client.** The open driver's frame 3A meters completed frames;
+  with the FrameSource kept open and nobody pulling (timps `general.fs_keepalive=1`, no client) all capture buffers
+  filled after 4 frames, the MSCA stalled and the AE froze (.184 stock: 0 AE samples / 10 s, `core_isr_frame_deliver_count`
+  stuck at 4, mode "day" at IT 1919 / gain 1x in a dark cellar). The vendor capture thread keeps dequeueing. The P1 frame
+  feeder (the IVS feeder thread) now also recycles the idle 3A channel (lowest enabled channel, normally ch0; quiet as soon
+  as a consumer dequeues for three frame intervals) through GetFrame/ReleaseFrame at the channel rate, so the driver keeps
+  its `frame_3a_interval` rate. `OPENIMP_3A_FEED=0` switches it off. T41 needs no change (its AE runs from the per-frame
+  AE statistics IRQ without a consumer). Device proof .184 (no client): 6.7 AE samples/s (20 fps / interval 3), timps
+  boot check found night 8 s after its day switch, EV follows the IR on/off steps within 2 s; with a client ch0/ch1
+  20/20 fps unchanged; 0 oops. Cost: feeder + DQBUF worker 5.9 % of one CPU at 4K 20 fps (mostly ioctl time).
+  Host test `tests/t41/snap_test.c` (`t40_3a_feed_channel`).
+
 ## Branch `claude/t41-isp-osd` (2026-10-26)
 
 - **T41 ISP-drawn OSD:** `IMP_ISP_Tuning_SetOsdPoolSize/CreateOsdRgn/SetOsdRgnAttr/GetOsdRgnAttr/ShowOsdRgn/DestroyOsdRgn`,

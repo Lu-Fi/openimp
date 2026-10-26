@@ -1638,6 +1638,10 @@ static void fill_qbuf(uint32_t *words, uint32_t index, uint32_t physical,
  * intervals, so it is quiet while an encoder consumes the channel; the
  * driver hands each buffer to one DQBUF only, so it never shares a buffer
  * with the encoder, and the IVS sees every frame either of them takes.
+ * T40: the same thread also recycles the idle 3A channel (T40-3A-NOCONSUMER,
+ * 2026-10-26): without it a stream kept open with no client stalled the MSCA
+ * after four frames and the driver's frame AE/AWB/day-night froze (.184:
+ * 0 AE samples per 10 s).
  */
 #define P1_IVS_POLL_US    20000u
 
@@ -2065,6 +2069,22 @@ static uint64_t p1_ivs_idle_us(const struct openimp_fs_channel *chn)
     return idle;
 }
 
+#if defined(PLATFORM_T40)
+/* T40 3A feed (t40_3a_feed_channel, t41_snap.h): default on,
+ * OPENIMP_3A_FEED=0 switches it off. */
+static int p1_3a_feed_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_3A_FEED");
+
+        on = !(e && e[0] == '0' && !e[1]);
+    }
+    return on;
+}
+#endif
+
 static void *p1_ivs_feeder(void *arg)
 {
     (void)arg;
@@ -2073,7 +2093,13 @@ static void *p1_ivs_feeder(void *arg)
     for (;;) {
         int channel;
         int fed = 0;
+        uint32_t enabled_mask = 0;
 
+        lock_p1();
+        for (channel = 0; channel < OPENIMP_FS_CHANNELS; channel++)
+            if (p1.channels[channel].enabled)
+                enabled_mask |= 1u << channel;
+        unlock_p1();
         for (channel = 0; channel < OPENIMP_FS_CHANNELS; channel++) {
             IMPFrameInfo *frame = NULL;
             int due;
@@ -2083,8 +2109,20 @@ static void *p1_ivs_feeder(void *arg)
                   p1_monotonic_us() - p1.channels[channel].last_dequeue_us >=
                       p1_ivs_idle_us(&p1.channels[channel]);
             unlock_p1();
-            if (!due || !openimp_t31_ivs_source_active(channel))
+            if (!due)
                 continue;
+#if defined(PLATFORM_T40)
+            /* idle 3A channel: recycle its frames so the ISP keeps
+             * completing frames and the driver's frame 3A keeps metering */
+            if (!(p1_3a_feed_on() &&
+                  t40_3a_feed_channel(channel, enabled_mask)) &&
+                !openimp_t31_ivs_source_active(channel))
+                continue;
+#else
+            (void)enabled_mask;
+            if (!openimp_t31_ivs_source_active(channel))
+                continue;
+#endif
             /* GetFrame waits for the next frame: one frame per pass, at
              * the channel's rate */
             if (IMP_FrameSource_GetFrame(channel, &frame) == 0 && frame) {

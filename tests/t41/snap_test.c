@@ -87,8 +87,21 @@ static void stale(void)
     assert(!t40_buffer_is_stale(1000, 2000, 4, 50000));            /* clock skew */
 }
 
+static void feed3a(void)
+{
+    assert(!t40_3a_feed_channel(0, 0));             /* nothing enabled */
+    assert(t40_3a_feed_channel(0, 0x7));            /* ch0 meters */
+    assert(!t40_3a_feed_channel(1, 0x7));
+    assert(!t40_3a_feed_channel(2, 0x7));
+    assert(t40_3a_feed_channel(1, 0x6));            /* ch0 off: ch1 */
+    assert(!t40_3a_feed_channel(1, 0x5));           /* ch1 off */
+    assert(!t40_3a_feed_channel(-1, 0xff));
+    assert(!t40_3a_feed_channel(32, 0xffffffffu));
+}
+
 int main(void)
 {
+    feed3a();
     stale();
     lend();
     copy();

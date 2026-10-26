@@ -92,6 +92,29 @@ static inline int t40_buffer_is_stale(int64_t now_us, int64_t queued_us,
                               interval_us);
 }
 
+/*
+ * T40 3A feed: the driver's frame 3A (AE/AWB/day-night) samples completed
+ * frames, and the frame channels complete a frame only into a buffer queued
+ * to the driver.  A stream kept open without a consumer (timps
+ * fs_keepalive=1, no client) fills every buffer, the MSCA stalls and the AE
+ * freezes.  The vendor capture thread keeps dequeueing (drop-oldest).  The
+ * feeder therefore recycles the frames of ONE idle channel - the 3A channel,
+ * the lowest enabled one (the driver meters channel 0 and falls back to
+ * channel 1 only while channel 0 is idle) - at the channel's frame rate.
+ * enabled_mask: bit n = channel n enabled.  Returns 1 if channel is it.
+ */
+static inline int t40_3a_feed_channel(int channel, uint32_t enabled_mask)
+{
+    int c;
+
+    if (channel < 0 || channel >= 32 || !(enabled_mask & (1u << channel)))
+        return 0;
+    for (c = 0; c < channel; c++)
+        if (enabled_mask & (1u << c))
+            return 0;
+    return 1;
+}
+
 static inline uint32_t t41_snap_align16(uint32_t v)
 {
     return (v + 15u) & ~15u;
