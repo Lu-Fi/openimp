@@ -452,7 +452,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -544,7 +544,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_DelSensor": {
@@ -621,7 +621,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -698,7 +698,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -775,7 +775,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -852,7 +852,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -929,7 +929,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -959,7 +959,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "err"
    },
    "used": {
     "T23": [
@@ -981,7 +981,10 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation"
+   "note": "audit: reaches the driver/kernel; userspace implementation",
+   "ref": {
+    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, then IMP_ISP_AddSensor returns -1 (issue 116)"
+   }
   },
   "ISP_Get/SetFrameDrop": {
    "area": "ISP tuning",
@@ -1025,7 +1028,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "err"
    },
    "used": {
     "T41": [
@@ -1037,6 +1040,9 @@
     "T33": [
      "p†"
     ]
+   },
+   "ref": {
+    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: ISP_GetISPBypass: ret=0 bypass 0; ISP_SetISPBypass: ret=-4095 rt: same value (0) written (set ret -4095), read back 0, frames flow"
    }
   },
   "ISP_Get/SetInternalChnAttr": {
@@ -1255,7 +1261,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -1780,7 +1786,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "host"
+    "T41": "rt"
    },
    "used": {
     "T41": [
@@ -1793,7 +1799,10 @@
      "r†"
     ]
    },
-   "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)"
+   "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+   "ref": {
+    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_Get/SetColorfxMode": {
    "area": "ISP tuning",
@@ -2137,7 +2146,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "host"
+    "T41": "err"
    },
    "used": {
     "T40": [
@@ -2157,7 +2166,10 @@
      "r†"
     ]
    },
-   "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)"
+   "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+   "ref": {
+    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: ISP_Tuning_GetGammaAttr: ret=0 type 0 g[0]=0 g[64]=2879 g[128]=4095; ISP_Tuning_SetGammaAttr: ret=0 same value written (set ret 0), read back equal; user curve x^0.3 Y 97.5 vs linear Y 97.6 (base 95.8): NO PICTURE EFFECT; picture  restored (Y 97.7)"
+   }
   },
   "ISP_Tuning_Get/SetHLDCAttr": {
    "area": "ISP tuning",
@@ -2692,7 +2704,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "host"
+    "T41": "dev"
    },
    "used": {
     "T31": [
@@ -2708,7 +2720,10 @@
      "r†"
     ]
    },
-   "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)"
+   "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+   "ref": {
+    "T41": "apitest rc3-cases 2026-10-26 .34"
+   }
   },
   "ISP_Tuning_Get/SetModule_Ratio": {
    "area": "ISP tuning",
@@ -3911,7 +3926,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "rt"
    },
    "used": {
     "T23": [
@@ -3930,7 +3945,10 @@
      "r†"
     ]
    },
-   "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk"
+   "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "ref": {
+    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetSceneMode": {
    "area": "ISP tuning",
@@ -4329,7 +4347,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "host"
+    "T41": "rt"
    },
    "used": {
     "T41": [
@@ -4342,7 +4360,10 @@
      "p†"
     ]
    },
-   "note": "T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested) T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)"
+   "note": "T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested) T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)",
+   "ref": {
+    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_WaitFrame": {
    "area": "ISP tuning",
@@ -4466,7 +4487,10 @@
      "r†"
     ]
    },
-   "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)"
+   "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
+   "ref": {
+    "T41": "apitest rc3-cases 2026-10-26 .34"
+   }
   },
   "ISP_WDR_ENABLE_Get": {
    "area": "ISP tuning",
@@ -4613,7 +4637,7 @@
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "dev",
-    "T41": "host"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -4643,7 +4667,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58",
    "ref": {
-    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAeAttr": {
@@ -9292,7 +9317,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9388,7 +9413,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9465,7 +9490,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9542,7 +9567,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9801,7 +9826,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -9952,7 +9977,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -17165,7 +17190,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17510,7 +17535,7 @@
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest agg47-cases 2026-10-26 .184",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
   "System_MemPoolFree": {
