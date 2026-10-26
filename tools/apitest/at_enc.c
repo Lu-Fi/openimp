@@ -43,7 +43,7 @@ static const char *cname[] = { "H264", "H265", "JPEG" };
  * before the next picture and the getters show it from then on (audit T41_RCPARAMS_1024: vendor
  * GetChnAttrRcMode right after SetChnQpBoundsPerFrame still returned the old window).  OpenIMP keeps the
  * same deferred read-back (rb_hold), so the read-back is checked after two more pictures. */
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)   /* the T40 build uses the T41 API family */
 # define RB_SETTLE(chn, codec) pull((chn), (codec), 2, 0, 0, &si, 1500)
 /* T41 vendor read-back of the GOP length: the IDR distance uGopLength * uMaxSameSenceCnt */
 # define GOP_RB(len, same) ((len) * ((same) > 1 ? (same) : 1))
@@ -583,7 +583,7 @@ static void live_common(int chn, int codec)
             CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB(25, g2->uMaxSameSenceCnt), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
         }
         NEED(IMP_Encoder_SetChnGopAttr) {
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
             /* restore the created length: the read-back is the product, the setter takes the length */
             if (g->uMaxSameSenceCnt > 1)
                 g->uGopLength /= g->uMaxSameSenceCnt;
