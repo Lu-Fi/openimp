@@ -28,13 +28,14 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd
+.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
 	$(YUV_T40_TEST_BIN)
 	$(MAKE) audio-ext
 	$(MAKE) fs-inject
+	$(MAKE) bin-path
 	$(MAKE) p3-controls
 	$(MAKE) isp-osd
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
@@ -252,6 +253,19 @@ audio-ext: audio_ext_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/build/tests/t41-audio-ext-test
 
 # ExternInject channels, Dequeue/QueueBuffer, consumer hooks, Emu stubs
+# issue 116: SetDefaultBinPath -> AddSensor sends the record the driver copies
+bin-path: bin_path_test.c $(PROJECT_DIR)/src/t40/openimp_p1.c
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	for soc in T40 T41; do \
+		$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_$$soc \
+			'-D_Static_assert(c,m)=' -no-pie \
+			-I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include bin_path_test.c \
+			$(PROJECT_DIR)/src/openimp_testpattern.c \
+			$(PROJECT_DIR)/src/core/imp_log_emit.c -lpthread \
+			-o "$(PROJECT_DIR)/build/tests/bin-path-test-$$soc" && \
+		"$(PROJECT_DIR)/build/tests/bin-path-test-$$soc" || exit 1; \
+	done
+
 fs-inject: fs_inject_test.c $(PROJECT_DIR)/src/t40/t4x_fs_inject.c
 	mkdir -p "$(PROJECT_DIR)/build/tests"
 	for soc in T40 T41; do \

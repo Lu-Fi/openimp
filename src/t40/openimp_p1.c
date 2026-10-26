@@ -229,9 +229,16 @@ struct tisp_buf_info {
     uint32_t size;
 };
 
+/* TISP_VIDIOC_SET_DEFAULT_BIN_PATH record.  The T40 driver takes 68 bytes;
+ * the T41 driver copies 132 ({vinum, path[128]}, tx_isp_set_default_bin_path
+ * in the T41 1.2.5 tx-isp-t41.ko), whatever the command number says. */
 struct tisp_bin_path {
     int32_t vinum;
+#if defined(PLATFORM_T41)
+    char path[128];
+#else
     char path[64];
+#endif
 };
 
 struct tisp_pix_format {

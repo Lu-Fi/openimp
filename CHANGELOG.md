@@ -8,6 +8,17 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-116` (2026-10-26)
+
+- **T41 IMP_ISP_SetDefaultBinPath before IMP_ISP_AddSensor** (issue #116): the bin path record OpenIMP sends with
+  TISP_VIDIOC_SET_DEFAULT_BIN_PATH (0xc004542a) after REGISTER_SENSOR is now the 132-byte T41 layout
+  `{vinum, path[128]}` the T41 driver copies (stock `tx_isp_set_default_bin_path`, T41 1.2.5 tx-isp-t41.ko); it was
+  the 68-byte T40 record. AddSensor failed (-1) because the open T41 driver refused the ioctl (fixed in open-tx-isp
+  `claude/issue-116`); with both, the driver loads the given file instead of `/etc/sensor/<sensor>-t41.bin`
+  (QEMU T41: `/tmp/at/alt.bin` loaded, a missing file fails AddSensor; cam .34 with the fixed driver: apitest
+  binpath PASS, AddSensor 0 instead of -1). Paths up to 127 characters on T41.
+  Host test `tests/t41/bin_path_test.c` (T40 and T41 record, ioctl order, length bound, driver refusal).
+
 ## Branch `claude/issue-113` (2026-10-26)
 
 - **T31 IMP_ISP_GetSensorRegister** clears the value field of the request before the ioctl (the stock library leaves
