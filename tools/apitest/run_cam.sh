@@ -21,6 +21,7 @@ TAG=${TAG:-agg47}
 OUT=${3:-$S/audit/apitest-evidence/$(date +%m%d)-$SOC-$IP}
 AREAS=${AREAS:-sys,fs,enc,osd,ivs,audio,isp,su,cases}
 T40_MASK=${T40_MASK:-cdff}
+[ "$AREAS" = cases ] && NODEV=${NODEV:-1} NOIMG=${NOIMG:-1}      # a cases-only run touches nothing else
 lc=$(echo "$SOC" | tr A-Z a-z)
 export SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-/run/user/1000/ssh-cam.sock}
 SSH=${SSH_CMD:-"ssh -o ServerAliveInterval=3 -o ServerAliveCountMax=3 -o ConnectTimeout=8 -o BatchMode=yes root@$IP"}
