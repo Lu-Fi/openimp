@@ -237,13 +237,6 @@ static void ai_flow(int dev)
 #if HAS_IMP_Audio_Select_Codec
     rep(FN(IMP_Audio_Select_Codec), 0, V_SKIP, "switches the codec routing of the board");
 #endif
-    /* AEC needs the speaker path */
-    rep(FN(IMP_AI_EnableAec), 0, V_SKIP, "AEC needs the speaker (AO) path; not run without explicit OK");
-    rep(FN(IMP_AI_DisableAec), 0, V_SKIP, "see EnableAec");
-    rep(FN(IMP_AI_EnableAecRefFrame), 0, V_SKIP, "see EnableAec");
-    rep(FN(IMP_AI_DisableAecRefFrame), 0, V_SKIP, "see EnableAec");
-    rep(FN(IMP_AI_GetFrameAndRef), 0, V_SKIP, "see EnableAec");
-
     /* AENC / ADEC: software G.711A round trip of a real microphone frame */
     NEED(IMP_AENC_CreateChn) {
         IMPAudioEncChnAttr ea;
@@ -305,42 +298,52 @@ static void ai_flow(int dev)
     gfree(attr); gfree(got);
 }
 
-/* AO: return codes only.  Nothing is sent to the speaker (no SendFrame). */
+/* AO / AEC: SILENCE ONLY (user decision 2026-10-26): muted, volume at the minimum, only zero-filled PCM frames (a few), return codes and round trips. */
 static void ao_flow(void)
 {
     G(IMPAudioIOAttr, attr);
     G(IMPAudioIOAttr, got);
     int r, ao = 0;
 
-    if (!getenv("APITEST_AO") || !atoi(getenv("APITEST_AO"))) {      /* AO/AEC calls only with APITEST_AO=1 (no-sound rule: default off) */
-        rep(LBL("AO functions"), 0, V_SKIP, "AO off by default (APITEST_AO=1 enables the muted return-code checks)");
+    if (getenv("APITEST_AO") && !atoi(getenv("APITEST_AO"))) {      /* APITEST_AO=0 skips all AO/AEC calls */
+        rep(LBL("AO functions"), 0, V_SKIP, "APITEST_AO=0");
         gfree(attr); gfree(got);
         return;
     }
-    rep(FN(IMP_AO_SendFrame), 0, V_SKIP, "never called: nothing is played");
     attr->samplerate = AUDIO_SAMPLE_RATE_16000; attr->bitwidth = AUDIO_BIT_WIDTH_16; attr->soundmode = AUDIO_SOUND_MODE_MONO;
     attr->frmNum = 10; attr->numPerFrm = 640; attr->chnCnt = 1;
     NEED(IMP_AO_SetPubAttr) { r = IMP_AO_SetPubAttr(ao, attr); gchk(attr); RET0(IMP_AO_SetPubAttr, r, "dev %d 16 kHz mono", ao); if (r) goto out; }
     NEED(IMP_AO_GetPubAttr) { r = IMP_AO_GetPubAttr(ao, got); gchk(got); CHECK(IMP_AO_GetPubAttr, r, got->samplerate == AUDIO_SAMPLE_RATE_16000, "rate %d mode %d", got->samplerate, got->soundmode); }
     NEED(IMP_AO_Enable) { r = IMP_AO_Enable(ao); RET0(IMP_AO_Enable, r, "dev %d", ao); if (r) goto out; }
     NEED(IMP_AO_EnableChn) { r = IMP_AO_EnableChn(ao, 0); RET0(IMP_AO_EnableChn, r, "chn 0"); }
-    NEED(IMP_AO_SetVolMute) { r = IMP_AO_SetVolMute(ao, 0, 1); RET0(IMP_AO_SetVolMute, r, "mute on (kept muted for the AO tests)"); }
+    NEED(IMP_AO_SetVolMute) { r = IMP_AO_SetVolMute(ao, 0, 1); RET0(IMP_AO_SetVolMute, r, "rt: mute on (kept muted for all AO tests)"); }
     NEED(IMP_AO_SetVol) {
-        G(int, v); int was = 0, r2;
+        G(int, v); int was = 0, r2, r3;
         NEED(IMP_AO_GetVol) { IMP_AO_GetVol(ao, 0, v); was = *v; }
-        r2 = IMP_AO_SetVol(ao, 0, 40);
+        r2 = IMP_AO_SetVol(ao, 0, -30);          /* the minimum of the vendor range [-30, 120] (= mute); it stays there, the original is NOT restored while sound could follow */
         r = IMP_AO_GetVol ? IMP_AO_GetVol(ao, 0, v) : -1; gchk(v);
-        CHECK(IMP_AO_SetVol, r2, r == 0 && *v == 40, "set 40, read back %d (was %d)", *v, was);
+        r3 = IMP_AO_SetVol(ao, 0, -29);
+        if (r3 == 0) IMP_AO_SetVol(ao, 0, -30);
+        CHECK(IMP_AO_SetVol, r2 | r3, r == 0 && *v == -30, "rt: set the minimum -30, read back %d (was %d), -29 accepted; volume left at the minimum", *v, was);
         if (IMP_AO_GetVol) rep(FN(IMP_AO_GetVol), r, r == 0 ? V_PASS : V_FAIL, "%d", *v);
-        IMP_AO_SetVol(ao, 0, was);
         gfree(v);
+    }
+    NEED(IMP_AO_SendFrame) {
+        /* a few zero-filled PCM frames: silence */
+        static uint32_t zbuf[1280 / 4];
+        IMPAudioFrame zf; int k, rs = 0;
+
+        memset(&zf, 0, sizeof(zf)); memset(zbuf, 0, sizeof(zbuf));
+        zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zbuf; zf.len = 1280;
+        for (k = 0; k < 3; k++) rs |= IMP_AO_SendFrame(ao, 0, &zf, BLOCK);
+        rep(FN(IMP_AO_SendFrame), rs, rs == 0 ? V_PASS : V_FAIL, "rt: 3 zero-filled frames of 1280 bytes (silence), muted, volume minimum");
     }
     NEED(IMP_AO_SetGain) {
         G(int, g); int was = 0, r2;
         NEED(IMP_AO_GetGain) { IMP_AO_GetGain(ao, 0, g); was = *g; }
-        r2 = IMP_AO_SetGain(ao, 0, 10);
+        r2 = IMP_AO_SetGain(ao, 0, was);
         r = IMP_AO_GetGain ? IMP_AO_GetGain(ao, 0, g) : -1; gchk(g);
-        CHECK(IMP_AO_SetGain, r2, r == 0 && *g == 10, "set 10, read back %d (was %d)", *g, was);
+        CHECK(IMP_AO_SetGain, r2, r == 0 && *g == was, "rt: same value written, read back %d (was %d)", *g, was);
         if (IMP_AO_GetGain) rep(FN(IMP_AO_GetGain), r, r == 0 ? V_PASS : V_FAIL, "%d", *g);
         IMP_AO_SetGain(ao, 0, was);
         gfree(g);
@@ -349,9 +352,9 @@ static void ao_flow(void)
     NEED(IMP_AO_SetDigitalGain) {
         G(int, g); int was = 0, r2;
         NEED(IMP_AO_GetDigitalGain) { IMP_AO_GetDigitalGain(ao, 0, g); was = *g; }
-        r2 = IMP_AO_SetDigitalGain(ao, 0, 5);
+        r2 = IMP_AO_SetDigitalGain(ao, 0, was);
         r = IMP_AO_GetDigitalGain ? IMP_AO_GetDigitalGain(ao, 0, g) : -1; gchk(g);
-        CHECK(IMP_AO_SetDigitalGain, r2, r == 0 && *g == 5, "set 5, read back %d (was %d)", *g, was);
+        CHECK(IMP_AO_SetDigitalGain, r2, r == 0 && *g == was, "rt: same value written, read back %d (was %d)", *g, was);
         if (IMP_AO_GetDigitalGain) rep(FN(IMP_AO_GetDigitalGain), r, r == 0 ? V_PASS : V_FAIL, "%d", *g);
         IMP_AO_SetDigitalGain(ao, 0, was);
         gfree(g);
@@ -388,6 +391,41 @@ static void ao_flow(void)
     NEED(IMP_AO_EnableAlgo) {
         r = IMP_AO_EnableAlgo(ao, 0); RET0(IMP_AO_EnableAlgo, r, "");
         NEED(IMP_AO_DisableAlgo) { r = IMP_AO_DisableAlgo(ao, 0); RET0(IMP_AO_DisableAlgo, r, ""); }
+    }
+#endif
+    /* AEC round trip with the muted AO as reference: silence only */
+#if HAS_IMP_AI_EnableAec
+    NEED(IMP_AI_EnableAec) NEED(IMP_AI_SetPubAttr) NEED(IMP_AI_Enable) NEED(IMP_AI_EnableChn) {
+        int adev = aidev(), r2, r3, r4 = 0, k, got = 0;
+        G(IMPAudioFrame, fr); G(IMPAudioFrame, ref);
+        static uint32_t zb[1280 / 4];
+        IMPAudioFrame zf;
+
+        memset(&zf, 0, sizeof(zf)); zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zb; zf.len = 1280;
+        r = IMP_AI_SetPubAttr(adev, attr);
+        if (r == 0) r = IMP_AI_Enable(adev);
+        if (r == 0) r = IMP_AI_EnableChn(adev, 0);
+        if (r == 0) {
+            r2 = IMP_AI_EnableAec(adev, 0, ao, 0);
+            rep(FN(IMP_AI_EnableAec), r2, r2 == 0 ? V_PASS : V_FAIL, "rt: AI dev %d chn 0 with the muted AO dev %d chn 0 as reference", adev, ao);
+            for (k = 0; k < 3; k++) IMP_AO_SendFrame(ao, 0, &zf, BLOCK);
+#if HAS_IMP_AI_GetFrameAndRef
+            NEED(IMP_AI_GetFrameAndRef) {
+                r3 = IMP_AI_GetFrameAndRef(adev, 0, fr, ref, BLOCK); gchk(fr); gchk(ref);
+                got = (r3 == 0 && fr->len > 0);
+                rep(FN(IMP_AI_GetFrameAndRef), r3, got ? V_PASS : V_FAIL, "rt: frame %d bytes, reference %d bytes (AO sends only zeros)", fr->len, ref->len);
+                if (r3 == 0) IMP_AI_ReleaseFrame(adev, 0, fr);
+            }
+#endif
+#if HAS_IMP_AI_EnableAecRefFrame
+            NEED(IMP_AI_EnableAecRefFrame) { r4 = IMP_AI_EnableAecRefFrame(adev, 0, ao, 0); RET0(IMP_AI_EnableAecRefFrame, r4, "rt: reference frame on"); }
+            NEED(IMP_AI_DisableAecRefFrame) { r4 = IMP_AI_DisableAecRefFrame(adev, 0, ao, 0); RET0(IMP_AI_DisableAecRefFrame, r4, "rt: reference frame off"); }
+#endif
+            NEED(IMP_AI_DisableAec) { r4 = IMP_AI_DisableAec(adev, 0); RET0(IMP_AI_DisableAec, r4, "rt: AEC off"); }
+            IMP_AI_DisableChn(adev, 0); IMP_AI_Disable(adev);
+        } else
+            rep(FN(IMP_AI_EnableAec), r, V_FAIL, "AI enable for the AEC test failed");
+        gfree(fr); gfree(ref);
     }
 #endif
     NEED(IMP_AO_DisableChn) { r = IMP_AO_DisableChn(ao, 0); RET0(IMP_AO_DisableChn, r, "chn 0"); }
