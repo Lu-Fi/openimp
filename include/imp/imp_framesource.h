@@ -251,6 +251,41 @@ int IMP_FrameSource_GetTimedFrame(int chnNum, void *framets, int block,
                                    void *framedata, void *frame);
 int IMP_FrameSource_SetFrameOffset(int chnNum, int offset);
 
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* T40 1.3.1 / T41 1.2.6: frames without the depth queue, external frame
+ * injection (an NV12 channel the application fills), YUV alignment. */
+typedef enum {
+    FRAME_ALIGN_8BYTE,
+    FRAME_ALIGN_16BYTE,
+    FRAME_ALIGN_32BYTE,
+} FSChannelYuvAlign;
+
+struct yuvaliparm {
+    FSChannelYuvAlign w;
+    FSChannelYuvAlign h;
+};
+
+typedef struct {
+    int32_t enable;
+    struct yuvaliparm param;
+} IMPFrameAlign;
+
+int IMP_FrameSource_GetFrameEx(int chnNum, IMPFrameInfo **frame);
+int IMP_FrameSource_ReleaseFrameEx(int chnNum, IMPFrameInfo *pframe);
+int IMP_FrameSource_SetYuvAlign(int chnNum, IMPFrameAlign *param);
+int IMP_FrameSource_ExternInject_CreateChn(int chnNum, IMPFSChnAttr *chnAttr);
+int IMP_FrameSource_ExternInject_DestroyChn(int chnNum);
+int IMP_FrameSource_ExternInject_EnableChn(int chnNum);
+int IMP_FrameSource_ExternInject_DisableChn(int chnNum);
+int IMP_FrameSource_DequeueBuffer(int chnNum, IMPFrameInfo **frame);
+int IMP_FrameSource_QueueBuffer(int chnNum, const IMPFrameInfo *frame);
+int IMP_EmuFrameSource_GetChnAttr(uint32_t chn_num, IMPFSChnAttr *chn_attr);
+int IMP_EmuFrameSource_EnableChn(uint32_t chn_num);
+int IMP_EmuFrameSource_DisableChn(uint32_t chn_num);
+int IMP_EmuFrameSource_CreateChn(uint32_t chn_num, IMPFSChnAttr *chn_attr);
+int IMP_EmuFrameSource_DestroyChn(uint32_t chn_num);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

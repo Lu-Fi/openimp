@@ -28,12 +28,13 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute audio-ext
+.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
 	$(YUV_T40_TEST_BIN)
 	$(MAKE) audio-ext
+	$(MAKE) fs-inject
 	$(MAKE) p3-controls
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
@@ -233,6 +234,19 @@ audio-ext: audio_ext_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 		$(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl \
 		-o "$(PROJECT_DIR)/build/tests/t41-audio-ext-test"
 	$(PROJECT_DIR)/build/tests/t41-audio-ext-test
+
+# ExternInject channels, Dequeue/QueueBuffer, consumer hooks, Emu stubs
+fs-inject: fs_inject_test.c $(PROJECT_DIR)/src/t40/t4x_fs_inject.c
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	for soc in T40 T41; do \
+		$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_$$soc \
+			'-D_Static_assert(c,m)=' \
+			-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src fs_inject_test.c \
+			$(PROJECT_DIR)/src/t40/t4x_fs_inject.c \
+			$(PROJECT_DIR)/src/core/imp_log_emit.c -no-pie -pthread \
+			-o "$(PROJECT_DIR)/build/tests/fs-inject-test-$$soc" && \
+		"$(PROJECT_DIR)/build/tests/fs-inject-test-$$soc" || exit 1; \
+	done
 
 # software-mute IMP_AO_SendFrame from two threads
 p3-ao-mute: p3_ao_mute_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c

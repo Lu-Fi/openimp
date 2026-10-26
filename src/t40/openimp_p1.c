@@ -1377,6 +1377,19 @@ int IMP_FrameSource_SetI2dAttr(int channel, IMPFSI2DAttr *attr)
     return 0;
 }
 
+/* t4x_fs_inject.c: IMP_FrameSource_ExternInject_* channels (weak: the host
+ * tests link P1 without it) */
+extern int OpenIMP_FSInject_Active(int channel) __attribute__((weak));
+extern int OpenIMP_FSInject_GetFrame(int channel, IMPFrameInfo **frame,
+                                     uint32_t wait_ms) __attribute__((weak));
+extern int OpenIMP_FSInject_ReleaseFrame(int channel, IMPFrameInfo *frame)
+    __attribute__((weak));
+
+static int p1_inject(int channel)
+{
+    return OpenIMP_FSInject_Active && OpenIMP_FSInject_Active(channel);
+}
+
 int FrameSourceInit(void)
 {
     lock_p1();
@@ -1394,6 +1407,11 @@ int IMP_FrameSource_CreateChn(int channel, IMPFSChnAttr *attr)
 
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !attr)
         return -1;
+    if (p1_inject(channel)) {
+        IMP_LOG_ERR("Framesource", "CreateChn(%d): the channel is an "
+                    "ExternInject channel\n", channel);
+        return -1;
+    }
     lock_p1();
     prepare_p1();
     chn = &p1.channels[channel];
@@ -2302,6 +2320,11 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     int snap_taken;
 #endif
 
+    if (frame && p1_inject(channel))
+        /* an injected channel: the frames the application queued; the
+         * 1000-attempt GetFrame waits up to 1 s like a sensor channel */
+        return OpenIMP_FSInject_GetFrame(channel, frame,
+                                         max_attempts > 1 ? 1000u : 0u);
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !frame)
         return -1;
     *frame = NULL;
@@ -2631,6 +2654,8 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     uint32_t index;
     int result;
 
+    if (frame && p1_inject(channel))
+        return OpenIMP_FSInject_ReleaseFrame(channel, frame) == 1 ? 0 : -1;
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !frame)
         return -1;
     lock_p1();
@@ -2856,6 +2881,95 @@ int IMP_FrameSource_DisableChn(int channel)
     unlock_p1();
     fs_delay_free(channel);
     return result;
+}
+
+/* t4x_fs_inject.c asks before it takes a channel number */
+int OpenIMP_P1_ChannelCreated(int channel);
+int OpenIMP_P1_ChannelCreated(int channel)
+{
+    int created;
+
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS)
+        return 0;
+    lock_p1();
+    prepare_p1();
+    created = p1.channels[channel].created != 0;
+    unlock_p1();
+    return created;
+}
+
+/*
+ * IMP_FrameSource_GetFrameEx / ReleaseFrameEx (vendor T40 1.3.1 0x7a24,
+ * T41 1.2.5 0x7058 / 0x7690): a frame straight from the frame channel
+ * (DQBUF on /dev/framechanN, QBUF to give it back), without the depth
+ * queue GetFrame needs on the vendor stack.  OpenIMP's GetFrame and
+ * ReleaseFrame already work that way (no SetFrameDepth needed), so the Ex
+ * calls are the same with the vendor's channel limit (chnNum < 7).
+ */
+int IMP_FrameSource_GetFrameEx(int chnNum, IMPFrameInfo **frame)
+{
+    if (chnNum < 0 || chnNum >= 7 || !frame)
+        return -1;
+    return IMP_FrameSource_GetFrame(chnNum, frame);
+}
+
+int IMP_FrameSource_ReleaseFrameEx(int chnNum, IMPFrameInfo *pframe)
+{
+    if (chnNum < 0 || chnNum >= 7 || !pframe)
+        return -1;
+    return IMP_FrameSource_ReleaseFrame(chnNum, pframe);
+}
+
+/*
+ * IMP_FrameSource_SetYuvAlign (vendor T41 1.2.5 0x5018): chnNum >= 7 is
+ * 0x80010001, a channel that was not created 0x80010008, else the 12-byte
+ * parameter is kept and EnableChn hands it to the frame channel
+ * (TISP_VIDIOC_SET_YUVALIGN), which pads width/height to 8/16/32.  The
+ * open-tx-isp frame channel has no such ioctl, so OpenIMP accepts a request
+ * the channel geometry already meets (or enable 0) and refuses one that
+ * would need padding (-1, errno ENOTSUP) instead of pretending.
+ */
+/* vendor imp_framesource.h IMPFrameAlign (enable, align w, align h) */
+typedef struct {
+    int32_t enable;
+    struct {
+        int32_t w;
+        int32_t h;
+    } param;
+} IMPFrameAlign;
+
+int IMP_FrameSource_SetYuvAlign(int chnNum, IMPFrameAlign *param)
+{
+    static const uint32_t step[3] = { 8u, 16u, 32u };
+    struct openimp_fs_channel *chn;
+    uint32_t w, h;
+
+    if (chnNum < 0 || chnNum >= 7)
+        return (int)0x80010001u;
+    if (chnNum >= OPENIMP_FS_CHANNELS || !param)
+        return (int)0x80010008u;
+    lock_p1();
+    prepare_p1();
+    chn = &p1.channels[chnNum];
+    if (!chn->created) {
+        unlock_p1();
+        return (int)0x80010008u;
+    }
+    w = (uint32_t)chn->attr.picWidth;
+    h = (uint32_t)chn->attr.picHeight;
+    unlock_p1();
+    if (!param->enable)
+        return 0;
+    if ((uint32_t)param->param.w > 2u || (uint32_t)param->param.h > 2u)
+        return -1;
+    if ((w % step[param->param.w]) || (h % step[param->param.h])) {
+        IMP_LOG_ERR("Framesource", "SetYuvAlign(%d): %ux%u would need "
+                    "padding to %u/%u, which the frame channel cannot do\n",
+                    chnNum, w, h, step[param->param.w], step[param->param.h]);
+        errno = ENOTSUP;
+        return -1;
+    }
+    return 0;
 }
 
 int IMP_FrameSource_DestroyChn(int channel)
