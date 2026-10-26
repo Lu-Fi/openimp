@@ -137,6 +137,7 @@ void t_osd(void);
 void t_ivs(void);
 void t_audio(void);
 void t_isp(void);
+void t_cases(void);        /* targeted cases for functions without a case (at_cases.c) */
 void t_isp_rt(void);       /* generated Get/Set same-value round trips (gen_rt.py) */
 void t_su(void);
 void t_system_exit(int ret);

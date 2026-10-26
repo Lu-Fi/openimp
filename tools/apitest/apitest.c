@@ -208,7 +208,7 @@ int main(int argc, char **argv)
     if (argc == 2 && !strcmp(argv[1], "--list")) { list_fns(0); return 0; }
     if (argc < 5) {
         fprintf(stderr, "apitest (%s) usage: %s sensor i2c_addr sensor_w sensor_h [areas]   |   %s --list\n"
-                "  areas: sys,fs,enc,osd,ivs,audio,isp,su (comma list, default all)\n", SOC, argv[0], argv[0]);
+                "  areas: sys,fs,enc,osd,ivs,audio,isp,su,cases (comma list, default all)\n", SOC, argv[0], argv[0]);
         return 2;
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -290,6 +290,7 @@ int main(int argc, char **argv)
     if (want(areas, "audio")) t_audio();
     if (want(areas, "isp")) { t_isp(); t_isp_rt(); }
     if (want(areas, "su")) t_su();
+    if (want(areas, "cases")) t_cases();
     rep_area("teardown");
     t_fs_post();
     t_system_exit(0);
