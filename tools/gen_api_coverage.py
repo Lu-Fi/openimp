@@ -264,6 +264,37 @@ class Model:
             res[s] = (used, unused, nobu, uunk, unk)
         return res
 
+    ACTIONS = [("implement", "implement"), ("enotsup", "documented ENOTSUP"), ("n.a.", "not applicable")]
+
+    def action(self, f, s):
+        """suggested action for a backlog item: evidence 'action' override, else derived from the cell and the note"""
+        a = self.ev["functions"][f["name"]].get("action", {}).get(s)
+        if a:
+            return a
+        n = f["note"]
+        c = f["cells"][s]
+        if re.search(r"cannot link it either|declared in the SDK header, exported by (?:none|no vendor)", n):
+            return "n.a."
+        if c in ("err", "stub") and re.search(r"ENOTSUP|EOPNOTSUPP|not supported", n):
+            return "enotsup"
+        return "implement"
+
+    def backlog(self):
+        """per SoC: {area: {action: [functions]}} of missing / partial / unknown functions that no streamer calls"""
+        res = {}
+        for s in self.socs:
+            d = {}
+            for f in self.funcs:
+                c = f["cells"][s]
+                if c == "n.a." or self.users(f, s) or not (c in GAP or c in UNK or c == "nob"):
+                    continue
+                d.setdefault(f["area"], {}).setdefault(self.action(f, s), []).append(f)
+            res[s] = d
+        return res
+
+    def backlog_count(self, d):
+        return sum(len(l) for a in d.values() for l in a.values())
+
     # ------------------------------------------------------------ markdown
     def cellmd(self, f, s):
         c = f["cells"][s]
@@ -328,6 +359,31 @@ class Model:
             o.append("- **%s:** %d streamer-used gap%s%s; %d further gaps no streamer calls%s" % (
                 s, len(used), "" if len(used) == 1 else "s", (": " + top) if used else "", len(unused), ut))
         o.append("")
+        o.append("### Long-term backlog")
+        o.append("")
+        o.append("Completeness list, separate from the streamer priorities: every vendor function of the SoC that is missing, "
+                 "partial (cache-only, stub, error) or of unknown state (?) and that **no streamer calls today** (for T32/T33: "
+                 "every vendor function no streamer calls, as there is no build yet). Grouped by area with the suggested action: "
+                 "implement, documented ENOTSUP (the open driver answers like a vendor stack without the feature) or not applicable "
+                 "(declared in a header but exported by no vendor library). Default action derived from the evidence note; "
+                 "override per function with `action` in `docs/api_evidence.json`.")
+        o.append("")
+        bl = self.backlog()
+        for s in socs:
+            d = bl[s]
+            o.append("<details><summary><b>%s</b>: %d functions</summary>" % (s, self.backlog_count(d)))
+            o.append("")
+            for a in AREAS:
+                if a not in d:
+                    continue
+                parts = []
+                for key, lab in self.ACTIONS:
+                    if key in d[a]:
+                        parts.append("%s (%d): %s" % (lab, len(d[a][key]), ", ".join("`%s`" % f["name"] for f in d[a][key])))
+                o.append("- **%s:** %s" % (AREA_TITLE.get(a, a), "; ".join(parts)))
+            o.append("")
+            o.append("</details>")
+            o.append("")
         o.append("### Legend")
         o.append("")
         for c in ("dev", "dev+", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
@@ -458,12 +514,34 @@ class Model:
             out.append('<details class="prio"%s><summary><b>%s</b> %s</summary>%s</details>' % (" open" if used else "", s, head, body))
         return "".join(out)
 
+    def html_backlog(self):
+        bl = self.backlog()
+        out = []
+        for s in self.socs:
+            d = bl[s]
+            n = self.backlog_count(d)
+            inner = ""
+            for a in AREAS:
+                if a not in d:
+                    continue
+                inner += "<h4>%s <span class='small'>(%d)</span></h4>" % (esc(AREA_TITLE.get(a, a)), sum(len(x) for x in d[a].values()))
+                for key, lab in self.ACTIONS:
+                    if key in d[a]:
+                        inner += "<p class='small'><b>%s</b> (%d): %s</p>" % (esc(lab), len(d[a][key]), ", ".join(
+                            "<code title='%s'>%s</code>" % (esc(CELL[f["cells"][s]][3]), esc(f["name"])) for f in d[a][key]))
+            out.append('<details class="prio"><summary><b>%s</b> &mdash; %d functions no streamer calls today</summary>%s</details>' % (s, n, inner or "<p class='small'>none</p>"))
+        return "".join(out)
+
     def html_top(self):
         return ('<section class="card" id="priorities"><h2>Priorities for streamers</h2>'
                 '<p class="small">Gaps in functions that timps, prudynt or raptor call, per SoC, sorted by the number of streamers '
                 '(p prudynt, r raptor, t timps; &dagger; source only). Below the table: how much of the vendor API each area covers.</p>'
                 + self.html_priorities() +
-                '<h3>API coverage at a glance</h3>'
+                '</section><section class="card" id="backlog"><h2>Long-term backlog</h2>'
+                '<p class="small">Separate from the streamer priorities: vendor functions that are missing, partial or of unknown state and '
+                'that no streamer calls today, per SoC, grouped by area with the suggested action (implement / documented ENOTSUP / '
+                'not applicable). For T32/T33 (no build yet) all vendor functions no streamer calls.</p>' + self.html_backlog() +
+                '</section><section class="card"><h3>API coverage at a glance</h3>'
                 '<p class="small">Works (device-tested or vendor no-op) / functions that exist in the SoC\'s vendor API; functions the '
                 'vendor API does not have are not counted. Click an area for the full function table.</p>'
                 + self.html_summary() + '</section>')
