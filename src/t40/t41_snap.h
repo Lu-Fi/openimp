@@ -73,6 +73,25 @@ static inline int t41_frame_is_stale(int64_t age_us, uint32_t interval_us)
     return age_us > limit;
 }
 
+/*
+ * T40: the frame-channel DQBUF has no completion time (wire words 5/6 are 0),
+ * so the age is bounded from the QBUF time instead.  The driver fills the
+ * queued buffers in order, one per frame: a buffer is done at the latest
+ * buffer_count frame intervals after its QBUF.  A buffer queued longer ago
+ * than that plus the t41_frame_is_stale limit completed more than the limit
+ * ago.  queued_us 0 = unknown (never stale).
+ */
+static inline int t40_buffer_is_stale(int64_t now_us, int64_t queued_us,
+                                      uint32_t buffer_count,
+                                      uint32_t interval_us)
+{
+    if (!queued_us)
+        return 0;
+    return t41_frame_is_stale(now_us - queued_us -
+                              (int64_t)buffer_count * interval_us,
+                              interval_us);
+}
+
 static inline uint32_t t41_snap_align16(uint32_t v)
 {
     return (v + 15u) & ~15u;

@@ -78,6 +78,13 @@ static void stale(void)
     /* slow channel (5 fps): six intervals */
     assert(!t41_frame_is_stale(1100000, 200000));
     assert(t41_frame_is_stale(1300000, 200000));
+    /* T40: queued-age bound = buffer_count intervals + the limit */
+    assert(!t40_buffer_is_stale(10000000, 0, 4, 50000));           /* unknown */
+    assert(!t40_buffer_is_stale(10000000, 9900000, 4, 50000));     /* 0.1 s */
+    assert(!t40_buffer_is_stale(10000000, 9500001, 4, 50000));     /* 0.5 s: 4*50 ms + 300 ms */
+    assert(t40_buffer_is_stale(10000000, 9499999, 4, 50000));
+    assert(t40_buffer_is_stale(100000000, 5000000, 4, 50000));     /* minutes */
+    assert(!t40_buffer_is_stale(1000, 2000, 4, 50000));            /* clock skew */
 }
 
 int main(void)

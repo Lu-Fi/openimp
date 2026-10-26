@@ -290,10 +290,26 @@ struct openimp_fs_buffer {
     void *virtual_address;
     uint32_t size;
     uint32_t queued;
+#if defined(PLATFORM_T40)
+    int64_t queued_us;              /* CLOCK_MONOTONIC_RAW of the QBUF */
+#endif
     IMPFrameInfo frame;
     uint32_t i2d_physical;          /* I2D output paired with this buffer */
     void *i2d_virtual;
 };
+
+static inline void p1_mark_queued(struct openimp_fs_buffer *b)
+{
+    b->queued = 1;
+#if defined(PLATFORM_T40)
+    {
+        struct timespec raw;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &raw);
+        b->queued_us = (int64_t)raw.tv_sec * 1000000 + raw.tv_nsec / 1000;
+    }
+#endif
+}
 
 struct openimp_fs_channel {
     int fd;
@@ -1823,7 +1839,7 @@ int IMP_FrameSource_EnableChn(int channel)
         if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words) < 0)
             goto done;
         trace_p1("P1_INNER QBUF_END\n");
-        buffer->queued = 1;
+        p1_mark_queued(buffer);
     }
     if (p1_i2d_arm(chn, channel, capture_tag) < 0)
         goto done;
@@ -1878,7 +1894,7 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     uint32_t index;
     int attempts;
     int delay_cache = 0;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     uint32_t stale_drops = 0;
 #endif
     IMPFrameInfo cache_frame;
@@ -1907,7 +1923,7 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
 
     wait_profile = openimp_profile_begin();
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
 again:
 #endif
     for (attempts = 0; attempts < max_attempts; attempts++) {
@@ -2016,6 +2032,44 @@ again:
         }
     }
 #endif
+#if defined(PLATFORM_T40)
+    /* T40: the frame-channel DQBUF carries no completion time (wire words
+     * 5/6 are 0).  The driver fills the queued buffers in order, one per
+     * frame, so a buffer is done at the latest buffer_count frame intervals
+     * after its QBUF.  One that was queued longer ago than that plus the
+     * t41_frame_is_stale limit therefore completed more than the limit ago
+     * (stream kept alive without a consumer): requeue it, at most one pass
+     * over the queue.  A requeued buffer is fresh again (stamp = now). */
+    if (stale_drops < chn->buffer_count && buffer->queued_us) {
+        struct timespec raw;
+        int64_t now_us;
+        uint32_t interval_us = 33333u;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &raw);
+        now_us = (int64_t)raw.tv_sec * 1000000 + raw.tv_nsec / 1000;
+        if (chn->attr.outFrmRateNum > 0 && chn->attr.outFrmRateDen > 0)
+            interval_us = 1000000u * (uint32_t)chn->attr.outFrmRateDen /
+                          (uint32_t)chn->attr.outFrmRateNum;
+        if (t40_buffer_is_stale(now_us, buffer->queued_us,
+                                chn->buffer_count, interval_us)) {
+            uint32_t qwords[TISP_BUFFER_WORDS];
+
+            fill_qbuf(qwords, index, buffer->physical, buffer->size);
+            if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, qwords) >= 0) {
+                int64_t queued_ago_ms = (now_us - buffer->queued_us) / 1000;
+
+                p1_mark_queued(buffer);
+                stale_drops++;
+                if (stale_drops == 1u)
+                    syslog(LOG_INFO, "openimp-p1: chn%d: dropped stale "
+                           "capture buffers (queued %lld ms ago)", channel,
+                           (long long)queued_ago_ms);
+                unlock_p1();
+                goto again;
+            }
+        }
+    }
+#endif
     buffer->queued = 0;
     if (openimp_testpattern_mode() != 0)   /* EnableChn admits NV12 only */
         p1_test_pattern_fill(chn, buffer, channel);
@@ -2045,7 +2099,7 @@ again:
                        channel, chn->i2d_errors, strerror(errno));
             fill_qbuf(words, index, buffer->physical, buffer->size);
             if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words) >= 0)
-                buffer->queued = 1;
+                p1_mark_queued(buffer);
             unlock_p1();
             openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT,
                                 wait_profile);
@@ -2179,7 +2233,7 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     fill_qbuf(words, index, buffer->physical, buffer->size);
     result = record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words);
     if (result >= 0)
-        buffer->queued = 1;
+        p1_mark_queued(buffer);
     unlock_p1();
     return result < 0 ? result : 0;
 }
@@ -2297,7 +2351,7 @@ int IMP_FrameSource_SnapFrame(int channel, int fmt, int width, int height,
         fill_qbuf(words, (uint32_t)record.index, buffer->physical,
                   buffer->size);
         if (record_ioctl(chn->fd, TISP_VIDIOC_QBUF, words) >= 0)
-            buffer->queued = 1;
+            p1_mark_queued(buffer);
     }
     unlock_p1();
     pthread_mutex_unlock(&p1_snap_serial[channel]);
