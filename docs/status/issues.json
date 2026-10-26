@@ -1,0 +1,1593 @@
+{
+ "_comment": "Cache of the public GitHub issues of Lu-Fi/openimp (refresh: python3 tools/status_data.py --refresh-issues). Read by the matrix generators; do not edit by hand.",
+ "issues": [
+  {
+   "number": 2,
+   "title": "T31 + SC2336: AE limit-cycles between anti-flicker IT steps (analog gain has no usable authority)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/2",
+   "labels": [],
+   "created": "2026-10-19T18:27:32Z",
+   "closed": null
+  },
+  {
+   "number": 3,
+   "title": "[T10] Backlog: Encoder (and decoder) API, 15 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/3",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:57:31Z",
+   "closed": null
+  },
+  {
+   "number": 4,
+   "title": "[T10] Backlog: System / sysutils / log API, 3 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/4",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:57:37Z",
+   "closed": null
+  },
+  {
+   "number": 5,
+   "title": "[T20] Backlog: Encoder (and decoder) API, 14 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/5",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:57:43Z",
+   "closed": null
+  },
+  {
+   "number": 6,
+   "title": "[T20] Backlog: System / sysutils / log API, 3 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/6",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:57:49Z",
+   "closed": null
+  },
+  {
+   "number": 7,
+   "title": "[T21] Backlog: Encoder (and decoder) API, 7 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/7",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T21",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:57:54Z",
+   "closed": null
+  },
+  {
+   "number": 8,
+   "title": "[T21] Backlog: System / sysutils / log API, 3 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/8",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T21",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:00Z",
+   "closed": null
+  },
+  {
+   "number": 9,
+   "title": "[T23] Backlog: ISP tuning API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/9",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:06Z",
+   "closed": null
+  },
+  {
+   "number": 10,
+   "title": "[T23] Backlog: AE / AWB / AF API, 1 function that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/10",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:11Z",
+   "closed": null
+  },
+  {
+   "number": 11,
+   "title": "[T23] Backlog: Encoder (and decoder) API, 8 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/11",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:17Z",
+   "closed": null
+  },
+  {
+   "number": 12,
+   "title": "[T23] Backlog: OSD API, 5 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/12",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:22Z",
+   "closed": null
+  },
+  {
+   "number": 13,
+   "title": "[T23] Backlog: System / sysutils / log API, 14 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/13",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:28Z",
+   "closed": null
+  },
+  {
+   "number": 14,
+   "title": "[T30] ISP tuning: audit of 41 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/14",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:34Z",
+   "closed": null
+  },
+  {
+   "number": 15,
+   "title": "[T30] AE / AWB / AF: audit of 11 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/15",
+   "labels": [
+    "area:AE-AWB",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:40Z",
+   "closed": null
+  },
+  {
+   "number": 16,
+   "title": "[T30] Encoder (and decoder): audit of 21 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/16",
+   "labels": [
+    "area:Encoder",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:45Z",
+   "closed": null
+  },
+  {
+   "number": 17,
+   "title": "[T30] FrameSource: audit of 8 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/17",
+   "labels": [
+    "area:FrameSource",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:51Z",
+   "closed": null
+  },
+  {
+   "number": 18,
+   "title": "[T30] OSD: audit of 14 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/18",
+   "labels": [
+    "area:OSD",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:58:57Z",
+   "closed": null
+  },
+  {
+   "number": 19,
+   "title": "[T30] IVS: audit of 17 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/19",
+   "labels": [
+    "area:IVS",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:02Z",
+   "closed": null
+  },
+  {
+   "number": 20,
+   "title": "[T30] Audio: audit of 33 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/20",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:08Z",
+   "closed": null
+  },
+  {
+   "number": 21,
+   "title": "[T30] System / sysutils / log: audit of 12 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/21",
+   "labels": [
+    "area:System",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:14Z",
+   "closed": null
+  },
+  {
+   "number": 22,
+   "title": "[T30] Backlog: ISP tuning API, 5 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/22",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:20Z",
+   "closed": null
+  },
+  {
+   "number": 23,
+   "title": "[T30] Backlog: AE / AWB / AF API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/23",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:25Z",
+   "closed": null
+  },
+  {
+   "number": 24,
+   "title": "[T30] Backlog: Encoder (and decoder) API, 20 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/24",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:31Z",
+   "closed": null
+  },
+  {
+   "number": 25,
+   "title": "[T30] Backlog: FrameSource API, 6 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/25",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:37Z",
+   "closed": null
+  },
+  {
+   "number": 26,
+   "title": "[T30] Backlog: Audio API, 12 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/26",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:42Z",
+   "closed": null
+  },
+  {
+   "number": 27,
+   "title": "[T30] Backlog: System / sysutils / log API, 35 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/27",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:48Z",
+   "closed": null
+  },
+  {
+   "number": 28,
+   "title": "[T31] Backlog: Encoder (and decoder) API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/28",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:54Z",
+   "closed": null
+  },
+  {
+   "number": 29,
+   "title": "[T31] Backlog: FrameSource API, 3 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/29",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-26T15:59:59Z",
+   "closed": null
+  },
+  {
+   "number": 30,
+   "title": "[T31] Backlog: System / sysutils / log API, 14 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/30",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:05Z",
+   "closed": null
+  },
+  {
+   "number": 31,
+   "title": "[T32] ISP tuning: 36 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/31",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:12Z",
+   "closed": null
+  },
+  {
+   "number": 32,
+   "title": "[T32] AE / AWB / AF: 4 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/32",
+   "labels": [
+    "area:AE-AWB",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:18Z",
+   "closed": null
+  },
+  {
+   "number": 33,
+   "title": "[T32] Encoder (and decoder): 25 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/33",
+   "labels": [
+    "area:Encoder",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:23Z",
+   "closed": null
+  },
+  {
+   "number": 34,
+   "title": "[T32] FrameSource: 15 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/34",
+   "labels": [
+    "area:FrameSource",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:29Z",
+   "closed": null
+  },
+  {
+   "number": 35,
+   "title": "[T32] OSD: 19 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/35",
+   "labels": [
+    "area:OSD",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:35Z",
+   "closed": null
+  },
+  {
+   "number": 36,
+   "title": "[T32] IVS: 17 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/36",
+   "labels": [
+    "area:IVS",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:40Z",
+   "closed": null
+  },
+  {
+   "number": 37,
+   "title": "[T32] Audio: 50 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/37",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:46Z",
+   "closed": null
+  },
+  {
+   "number": 38,
+   "title": "[T32] System / sysutils / log: 12 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/38",
+   "labels": [
+    "area:System",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:52Z",
+   "closed": null
+  },
+  {
+   "number": 39,
+   "title": "[T32] Backlog: ISP tuning API, 56 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/39",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:00:58Z",
+   "closed": null
+  },
+  {
+   "number": 40,
+   "title": "[T32] Backlog: AE / AWB / AF API, 27 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/40",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:03Z",
+   "closed": null
+  },
+  {
+   "number": 41,
+   "title": "[T32] Backlog: Encoder (and decoder) API, 73 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/41",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:09Z",
+   "closed": null
+  },
+  {
+   "number": 42,
+   "title": "[T32] Backlog: FrameSource API, 25 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/42",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:15Z",
+   "closed": null
+  },
+  {
+   "number": 43,
+   "title": "[T32] Backlog: OSD API, 20 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/43",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:20Z",
+   "closed": null
+  },
+  {
+   "number": 44,
+   "title": "[T32] Backlog: Audio API, 25 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/44",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:26Z",
+   "closed": null
+  },
+  {
+   "number": 45,
+   "title": "[T32] Backlog: System / sysutils / log API, 90 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/45",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:31Z",
+   "closed": null
+  },
+  {
+   "number": 46,
+   "title": "[T33] ISP tuning: 36 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/46",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:37Z",
+   "closed": null
+  },
+  {
+   "number": 47,
+   "title": "[T33] AE / AWB / AF: 4 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/47",
+   "labels": [
+    "area:AE-AWB",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:42Z",
+   "closed": null
+  },
+  {
+   "number": 48,
+   "title": "[T33] Encoder (and decoder): 25 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/48",
+   "labels": [
+    "area:Encoder",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:48Z",
+   "closed": null
+  },
+  {
+   "number": 49,
+   "title": "[T33] FrameSource: 15 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/49",
+   "labels": [
+    "area:FrameSource",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:01:54Z",
+   "closed": null
+  },
+  {
+   "number": 50,
+   "title": "[T33] OSD: 19 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/50",
+   "labels": [
+    "area:OSD",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:00Z",
+   "closed": null
+  },
+  {
+   "number": 51,
+   "title": "[T33] IVS: 17 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/51",
+   "labels": [
+    "area:IVS",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:06Z",
+   "closed": null
+  },
+  {
+   "number": 52,
+   "title": "[T33] Audio: 50 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/52",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:12Z",
+   "closed": null
+  },
+  {
+   "number": 53,
+   "title": "[T33] System / sysutils / log: 12 vendor functions the first OpenIMP build has to provide",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/53",
+   "labels": [
+    "area:System",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:17Z",
+   "closed": null
+  },
+  {
+   "number": 54,
+   "title": "[T33] Backlog: ISP tuning API, 59 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/54",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:23Z",
+   "closed": null
+  },
+  {
+   "number": 55,
+   "title": "[T33] Backlog: AE / AWB / AF API, 27 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/55",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:29Z",
+   "closed": null
+  },
+  {
+   "number": 56,
+   "title": "[T33] Backlog: Encoder (and decoder) API, 78 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/56",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:34Z",
+   "closed": null
+  },
+  {
+   "number": 57,
+   "title": "[T33] Backlog: FrameSource API, 27 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/57",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:40Z",
+   "closed": null
+  },
+  {
+   "number": 58,
+   "title": "[T33] Backlog: OSD API, 20 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/58",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:46Z",
+   "closed": null
+  },
+  {
+   "number": 59,
+   "title": "[T33] Backlog: Audio API, 25 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/59",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:51Z",
+   "closed": null
+  },
+  {
+   "number": 60,
+   "title": "[T33] Backlog: System / sysutils / log API, 88 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/60",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:02:57Z",
+   "closed": null
+  },
+  {
+   "number": 61,
+   "title": "[T40] Audio: 2 streamer-used API gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/61",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:02Z",
+   "closed": null
+  },
+  {
+   "number": 62,
+   "title": "[T40] ISP tuning: audit of 2 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/62",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:08Z",
+   "closed": null
+  },
+  {
+   "number": 63,
+   "title": "[T40] Audio: audit of 16 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/63",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:13Z",
+   "closed": null
+  },
+  {
+   "number": 64,
+   "title": "[T40] System / sysutils / log: audit of 1 streamer-used functions of unknown state",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/64",
+   "labels": [
+    "area:System",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:19Z",
+   "closed": null
+  },
+  {
+   "number": 65,
+   "title": "[T40] Backlog: AE / AWB / AF API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/65",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:25Z",
+   "closed": null
+  },
+  {
+   "number": 66,
+   "title": "[T40] Backlog: Encoder (and decoder) API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/66",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:31Z",
+   "closed": null
+  },
+  {
+   "number": 67,
+   "title": "[T40] Backlog: FrameSource API, 1 function that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/67",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:37Z",
+   "closed": null
+  },
+  {
+   "number": 68,
+   "title": "[T40] Backlog: OSD API, 1 function that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/68",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:43Z",
+   "closed": null
+  },
+  {
+   "number": 69,
+   "title": "[T40] Backlog: Audio API, 12 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/69",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:49Z",
+   "closed": null
+  },
+  {
+   "number": 70,
+   "title": "[T40] Backlog: System / sysutils / log API, 26 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/70",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:03:55Z",
+   "closed": null
+  },
+  {
+   "number": 71,
+   "title": "[T41] Encoder (and decoder): 4 streamer-used API gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/71",
+   "labels": [
+    "area:Encoder",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:00Z",
+   "closed": null
+  },
+  {
+   "number": 72,
+   "title": "[T41] FrameSource: 2 streamer-used API gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/72",
+   "labels": [
+    "area:FrameSource",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:06Z",
+   "closed": null
+  },
+  {
+   "number": 73,
+   "title": "[T41] OSD: 5 streamer-used API gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/73",
+   "labels": [
+    "area:OSD",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:12Z",
+   "closed": null
+  },
+  {
+   "number": 74,
+   "title": "[T41] Audio: 2 streamer-used API gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/74",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:18Z",
+   "closed": null
+  },
+  {
+   "number": 75,
+   "title": "[T41] Backlog: ISP tuning API, 12 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/75",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:23Z",
+   "closed": null
+  },
+  {
+   "number": 76,
+   "title": "[T41] Backlog: AE / AWB / AF API, 11 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/76",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:29Z",
+   "closed": null
+  },
+  {
+   "number": 77,
+   "title": "[T41] Backlog: Encoder (and decoder) API, 9 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/77",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:35Z",
+   "closed": null
+  },
+  {
+   "number": 78,
+   "title": "[T41] Backlog: FrameSource API, 1 function that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/78",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:40Z",
+   "closed": null
+  },
+  {
+   "number": 79,
+   "title": "[T41] Backlog: OSD API, 2 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/79",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:46Z",
+   "closed": null
+  },
+  {
+   "number": 80,
+   "title": "[T41] Backlog: System / sysutils / log API, 6 functions that no streamer calls",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/80",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:04:52Z",
+   "closed": null
+  },
+  {
+   "number": 81,
+   "title": "[T40] tisp event thread wakes every millisecond (system CPU)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/81",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:04:57Z",
+   "closed": null
+  },
+  {
+   "number": 82,
+   "title": "[T40] AE/AWB from the hardware statistics interrupts like the vendor",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/82",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:03Z",
+   "closed": null
+  },
+  {
+   "number": 83,
+   "title": "[T40] BCSH: take all words of the user CSC mode 4 and the user CCM",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/83",
+   "labels": [
+    "area:ISP",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:09Z",
+   "closed": null
+  },
+  {
+   "number": 84,
+   "title": "[T40] One full vendor-vs-open comparison pass (chart, day, night, CPU)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/84",
+   "labels": [
+    "area:Docs",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:15Z",
+   "closed": null
+  },
+  {
+   "number": 85,
+   "title": "[T40] Remaining lifted OEM chains to clean C (module size toward the vendor)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/85",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:21Z",
+   "closed": null
+  },
+  {
+   "number": 86,
+   "title": "[T40] Remaining %hi(.bss+N) inline asm (36 lines): latent layout hazards",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/86",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:05:27Z",
+   "closed": null
+  },
+  {
+   "number": 87,
+   "title": "[T40] tests/t40/bcsh_dn_host no longer builds",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/87",
+   "labels": [
+    "area:Docs",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:05:33Z",
+   "closed": null
+  },
+  {
+   "number": 88,
+   "title": "[T40] Unplanned reboot while inserting a temporary test build (observe)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/88",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:05:39Z",
+   "closed": null
+  },
+  {
+   "number": 89,
+   "title": "[T40] Verify the stale-first-snapshot fix (frame timestamps)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/89",
+   "labels": [
+    "area:FrameSource",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:45Z",
+   "closed": null
+  },
+  {
+   "number": 90,
+   "title": "[T41] AE API gaps: zones, histogram thresholds, FaceAe/AeSpeed/AeExpList",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/90",
+   "labels": [
+    "area:AE-AWB",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:05:51Z",
+   "closed": null
+  },
+  {
+   "number": 91,
+   "title": "[T41] P-frames 37-65 % larger than the vendor at the same FixQP",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/91",
+   "labels": [
+    "area:Encoder",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:05:57Z",
+   "closed": null
+  },
+  {
+   "number": 92,
+   "title": "[T31] isp_memopt=1 as the default: firmware pin and a second board check",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/92",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:03Z",
+   "closed": null
+  },
+  {
+   "number": 93,
+   "title": "[T31] Long-term stability: evidence for the AE-zone stack fix (>= 5 days)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/93",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:06:08Z",
+   "closed": null
+  },
+  {
+   "number": 94,
+   "title": "[T31] T31L watchdog reboot after 52 h without a kernel trace",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/94",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:06:14Z",
+   "closed": null
+  },
+  {
+   "number": 95,
+   "title": "[T31] AE slow after a brightness step: device proof and vendor A/B missing",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/95",
+   "labels": [
+    "area:AE-AWB",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:19Z",
+   "closed": null
+  },
+  {
+   "number": 96,
+   "title": "[T41] Unexplained reboot during a userland JPEG benchmark in /tmp (suspected OOM)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/96",
+   "labels": [
+    "area:System",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:06:25Z",
+   "closed": null
+  },
+  {
+   "number": 97,
+   "title": "[T32] Bring-up: driver stages S1-S3 in QEMU, next S4 (MSCA curves, tisp/3A, stream-on register list)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/97",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T32",
+    "type:wip"
+   ],
+   "created": "2026-10-26T16:06:31Z",
+   "closed": null
+  },
+  {
+   "number": 98,
+   "title": "[T33] Desk work (documentation), then the firmware profile",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/98",
+   "labels": [
+    "area:Docs",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:37Z",
+   "closed": null
+  },
+  {
+   "number": 99,
+   "title": "[T32/T33] Full support: OpenIMP build and every matrix cell",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/99",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:43Z",
+   "closed": null
+  },
+  {
+   "number": 100,
+   "title": "[T30] Verify on real hardware (no T30 camera yet)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/100",
+   "labels": [
+    "area:Docs",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:49Z",
+   "closed": null
+  },
+  {
+   "number": 101,
+   "title": "[T40] Audio output / AEC / output algorithms: device tests (sound tests are paused)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/101",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:06:55Z",
+   "closed": null
+  },
+  {
+   "number": 102,
+   "title": "Colour calibration with a colour-checker fixture (CCM and neutral AWB per sensor)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/102",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T10",
+    "soc:T20",
+    "soc:T21",
+    "soc:T23",
+    "soc:T31",
+    "soc:T40",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:07:00Z",
+   "closed": null
+  },
+  {
+   "number": 103,
+   "title": "Test pattern modes 5/6 for more SoCs (ISP-middle injection, RAW before the ISP)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/103",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T10",
+    "soc:T20",
+    "soc:T21",
+    "soc:T30",
+    "soc:T31",
+    "soc:T40",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T16:07:06Z",
+   "closed": null
+  },
+  {
+   "number": 104,
+   "title": "[T31] Linux 7.2: build breaks on cpu_has_mxu_v2, warning patches, s_stream pairing",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/104",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:07:12Z",
+   "closed": null
+  },
+  {
+   "number": 105,
+   "title": "ISP bypass of CCM/BCSH shows no visible picture effect (T21, T23, T31, T41)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/105",
+   "labels": [
+    "area:ISP",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T21",
+    "soc:T23",
+    "soc:T31",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:10:59Z",
+   "closed": null
+  },
+  {
+   "number": 106,
+   "title": "ISP bypass of defog/DPC/denoise/LSC blocks shows no visible effect (T21, T23, T31, T41)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/106",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T21",
+    "soc:T23",
+    "soc:T31",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T16:11:05Z",
+   "closed": null
+  }
+ ]
+}

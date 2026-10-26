@@ -47,15 +47,21 @@ features:
     T30:
       sym: 🔧
       text: open-tx-isp T30 core builds against a T30 kernel and had a hardware bring-up earlier (open-tx-isp README); the T30 contributor ran the ISP + FrameSource path live (`docs/T30_STATUS.md`); not run by us (no T30 camera)
+      issues:
+      - 100
     T31:
       sym: ✅
       text: reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
     T32:
       sym: 🔧
       text: 'QEMU only, no camera: open-tx-isp `driver/t32` reaches AddSensor to EnableTuning in the QEMU T32 image (stages S1-S3), driven by the vendor libimp 2.2.0; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      issues:
+      - 97
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
+      issues:
+      - 98
     T40:
       sym: ✅
       text: '2026-10-24 (Eufy .184, agg43c): the oops at every `S95timps start` is fixed: a stack overflow in `tx_isp_core_ops_s_ctrl` (the antiflicker SET copied 8 bytes over a 4-byte OEM stack slot and smashed the saved register of the caller, BadVA 0x4890) and in `video_s_stream` (`255a46ff`, `f981c6a2`); the IQ bin path now comes from the registered sensor name (`91f41ac7`); with the SDK patch for the Eufy sc830ai 2-lane mode the camera streams 1080p20 from the 4K sensor continuously and survives a second timps start (open-tx-isp next 2c29ce79; the sensor patch itself is firmware-side). Earlier (history): device-tested 2026-10-10 on cam-K (T40XP; vendor kernel driver `tx_isp_t40`, vendor libimp 1.3.0 side by side, OpenIMP via `LD_LIBRARY_PATH`): `AddSensor`/`EnableSensor`, `ISP_Tuning_GetSensorAttr` and `GetCameraInputMode` run like on the vendor library (OpenIMP vs vendor); the T40 contributor''s live gate in `docs/T40_STATUS.md` (2026-07-30). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with timps stopped was the IR cut left open, not the library. Open driver (`tx_isp_t40`, Eufy sc830ai 4K) since 2026-10-12: devtest 24/35 results with 0 failures, 300 s and 10-min stream runs, 0 oops (2026-10-15..19)'
@@ -155,6 +161,8 @@ features:
     T31:
       sym: ✅
       text: '2026-10-21: the AE minimum EV step is now as in the OEM (a ratio between 1 and 1+s is raised to 1+s; the old clamp made the AE converge at 0.4 % per frame, `.25` shed-door finding), merged in next (`5336ad24`, host test `t31_ae_step_host_test`); the device re-check of the shed door brightness jump (90th percentile 255 for 30 s) is still open. Earlier (history): reference SoC; 2 h 53 soak without errors'
+      issues:
+      - 95
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -164,9 +172,13 @@ features:
     T40:
       sym: ✅
       text: '2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): the vendor AE per frame now runs by default (`enable_core_ops_cb=1`, the old default 0 never triggered the OEM core ISR), IT limit from the sensor attribute (2241), target 118, two gain steps at a large error, 9 %/5 % gain bands against a limit cycle, ISP digital gain up to 4x through the OEM GIB entry: day luma 119 against the vendor 122 (before 108), 100 -> 255 light step settles in under 1 s (vendor 1.5 s, before 11.1 s), luma at the dark step 124 against the vendor 105 (before 63). Earlier (history): A/B against the vendor stack, Eufy .184, 2026-10-24 (next 2c29ce79 code, image agg43c with `enable_core_ops_cb=0`, i.e. without the per-frame vendor AE of the line above): day luma 108 against 122, the AE reacts in 4.8 s / settles in 11.1 s against 0.5 s / 2.9 s for the vendor, and at the light step (255 -> 100) the luma drops 107 -> 63 (vendor 122 -> 105). `claude/t40-quality` (local branch, not in next) fixes the default (`enable_core_ops_cb=1`, own AE tick, IT limit from the sensor attribute 2241, target 118): day luma 127, AE back in under 1 s, 105 -> 69 at the dark step (sensor gain at its 32x limit, the vendor adds up to 4x ISP digital gain which does not act in this pipeline yet) - still ⚠️. Earlier (history): vendor AE per frame runs on the open driver (`enable_core_ops_cb=1`, the module line of the timps-t40-v2 bundle; default 0): zone mean 44 = target 44, converges 2-3 frames after the first allocation, IT on the anti-flicker ladder, no oops (`fable/t40-3a-perframe`, in next); 2026-10-19 the AE clamps IT and gains to the sensor limits like the OEM, 12/12 samples 19.9-20.4 fps under timps (was 11.6 fps, `claude/t40-ae-maxint`). Restrictions: the open gain is 4-5x higher than the vendor''s in the same scene (wiki changelog 2026-10-17, open); low light (gain instead of IT at the 2241 cap) not shown yet'
+      issues:
+      - 82
     T41:
       sym: ✅
       text: 'A/B against the vendor stack on the same camera and scene, 2026-10-24 (light 255 -> 100 -> 255, one run per stack, deltas below 5 % are noise): `claude/t41-ab-fixes3` (now in next) settles in 33.1 / 31.2 s on .32 and 33.3 s on .34 against the vendor 34.0 / 34.2 s and 33.4 s, the final exposure/gain pairs are identical to the vendor, the luma step is 136 -> 111 against the vendor 135 -> 111 (before the EV-unit fix the open stack held 103 -> 99 at a 24 % darker picture), the peak EV during the dark step was 45-63 % below the vendor in the first run (agg4t). Earlier (history): the vendor AE (63 functions translated from the SDK `tx-isp-t41.ko` H20250310a) runs per frame and is the default since 2026-10-19 (`t41_vendor_ae=1`): .32 gc5603 converges in about 1 s, .34 sc5336 light off 0.4 s, light on 1.8-2.5 s, 0 guard faults (2026-10-18); 16.6 h soak clean. Before: the frozen-exposure bug of the safe AE (duplicate knot in the sc5336 bin) fixed 2026-10-17'
+      issues:
+      - 90
 - n: 5
   title: AE compensation, backlight, highlight
   group: Exposure (AE)
@@ -202,6 +214,8 @@ features:
     T41:
       sym: ✅
       text: 'AE compensation reaches the ISP through OpenIMP (`AeScenceAttr.AeTargetComp`), device-tested: comp 2 lowers the target 65 → 1; wired in timps main. Backlight (BLC) and highlight (HLC) are not supported on T41: the driver now returns "not supported" instead of a silent success; measured on the earlier AE (2026-10-10), not re-measured with the vendor AE default'
+      issues:
+      - 90
 - n: 6
   title: Max gain, IT max, sensor FPS
   group: Exposure (AE)
@@ -307,6 +321,8 @@ features:
     T41:
       sym: ✅
       text: 'A/B 2026-10-24 (agg4x, lamp scene): colour temperature 3968 K / 2988 K against the vendor 4054 K / 2981 K (.32 / .34), day saturation like the vendor (see #12). Open: grey balance on one patch (.34 lower cabinet 9.6 % channel deviation against 1.7 % for the vendor; .32 15 % against 13 %), colour 20 s after a night-to-day return on .32 (saturation 35 against the day level 66 once settled; the vendor does not return on its own). Earlier (history): the colour temperature follows the light on both cameras (.32: 2604/4048/5728 K, .34: 2408/3452/5084 K at 2700/4000/6500 K), whites neutral within 1-3 codes after the OEM CLM LUT (2026-10-18, `t41_clm=1` and `t41_tone_trigger=1` default since 2026-10-19). Open: gray 5000 K fallback at night, daylight check of the Cinnado cast (not reproduced under the lamp) Update 2026-10-24, evening: colour accuracy measured with a 24-patch chart on both T41 cameras: open and vendor differ by less than frame-to-frame noise (dE00 .32: vendor 6.6-6.8, open 6.8-7.0; .34: open 4.7-5.5, vendor 5.1-5.5); the worst patches are the same on both (bin calibration limit), no difference in WB, BLC, BCSH or TOP enables was found. Vendor parity, symbol unchanged.'
+      issues:
+      - 102
 - n: 9
   title: CCM / LSC (lens shading)
   group: Colour and image quality
@@ -321,6 +337,8 @@ features:
     T21:
       sym: ✅+
       text: CT-controlled CCM/LSC lifted; colour blotches gone (chroma sigma 30→6)
+      issues:
+      - 105
     T23:
       sym: ✅
       text: 'CCM follows the IQ bank (as vendor); daylight with vendor AE neutral (sun, 2026-10-04: R/G 0.94, B/G 0.93, no green or blue cast). Green cast fixed earlier (WB gains reset on every stream start, claude/t23-day-color); blue AWB flip with vendor AE fixed (GIB black level cleared by the stream-enable write, claude/t23-ae-awb-flip); LSC flip locked'
@@ -330,6 +348,8 @@ features:
     T31:
       sym: ✅
       text: CCM follows day/night (regs 0x5004-0x5018 differ), LSC LUT loaded and follows mode + flip; per-CT sweep not testable on a fixed scene
+      issues:
+      - 105
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -342,6 +362,9 @@ features:
     T41:
       sym: ✅
       text: '2026-10-24: the CCM, gamma and BCSH inputs of the per-frame tone worker now use the same EV unit as the vendor (`af9b3519`, in next); day saturation and grey balance are at the vendor level in the A/B (#12). Earlier (history): `Get/SetCCMAttr`, gamma, CSC presets 0-4 and ModuleControl device-tested on cam-F (`claude/t41-tuning`, in next); the CCM follows colour temperature and EV through the per-frame tone worker (CCM word changes with the CT, default on since 2026-10-19); the old "not supported" answer is gone Update 2026-10-24, evening: the CCM path is identical to the vendor (CT/EV interpolation of the bin matrix reproduces the vendor matrix within 3 LSB, same saturation transform); chart-measured vendor parity, symbol unchanged.'
+      issues:
+      - 102
+      - 105
 - n: 10
   title: Day/night switching (ISP side)
   group: Colour and image quality
@@ -429,6 +452,8 @@ features:
     T23:
       sym: ✅
       text: 'brightness/contrast/saturation/hue act now (they were reset on every stream start); contrast/gain feedback: driver takes the low byte like the vendor, OpenIMP remembers the gain before sending (user contrast 100 stays) (claude/t23-bcsh-aeit-fix)'
+      issues:
+      - 105
     T30:
       sym: 🔧
       text: '2026-10-25: reaches the driver in QEMU (T30 image, sc4236 model; reload/controls clean after six driver fixes), no T30 camera. Earlier: ? exported where the vendor has them (no hue call in the T30 vendor list), no test result'
@@ -444,9 +469,13 @@ features:
     T40:
       sym: ✅
       text: '2026-10-25 (open-tx-isp next 6d63667b): the OEM rounding of `tisp_simple_intp_int8` (used by DMSC, YSP sharpening, SDNS, CDNS, LCE and ~230 other places) is fixed, so the computed DMSC block is bit-exact with the vendor day dump at the vendor gain; DMSC now follows the gain by day as the vendor does (`t40_dmsc_day_follow`, default 1): day edge energy +17 % (4.22 -> 4.95, about vendor level), chart chroma 1.05, dE00 5.4. Day colour after night -> day fixed: the night bank bypassed AWB1 and re-enabling it while the pipe runs randomly broke the colour (7/15 bad on stock); `t40_dn_keep_awb1` (default 1) keeps AWB1 on through the night: 0/32 bad (Eufy .184, test module; dark+IR night not yet re-checked). Earlier: ⚠️ Update 2026-10-24, evening: the vendor A/B of the evening (same scene) still shows a softer open picture: day edge energy 5.5 against 6.8, highlights compressed (p99 216 against 234), saturation 44 against 39. The AE EV fan-out (merged `claude/t40-quality3`: defog, ADR, CCM and BCSH follow the AE exposure value like the OEM) improved the day chart (dE00 5.4 -> 4.7). Older text: 2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): YSP is switched on through the bin gate (`t40_ysp_on=1`): day edge energy 3.76 against the vendor 5.23 (-28 %, before 2.89), day noise 1.20 against 1.90 (lower, i.e. softer), luma 119 / saturation 57 against 122 / 51. The sharpness gap (YSP strength/tables at this gain, possibly a vendor YSP register diff) is open, so the cell stays ⚠️; the open saturation cast of #8 is gone. Earlier (history): A/B 2026-10-24: contrast (luma std) 43 against the vendor 51 and edge energy -45 % (softer picture, YSP stage is off with `t40_force_bypass` bit 17; `claude/t40-quality` 49 and -35 %); the open saturation of 162 is the AWB cast of #8. Earlier (history): `Brightness`, `Contrast`, `Saturation` device-tested only on the vendor kernel driver (Eufy 2026-10-11, getters from the vendor cache); on the open driver the EV-dependent BCSH strength entries are partly unresolved lift code (STREAMER_FUNC_AUDIT 2026-10-17) and no effect test exists; `BcshHue` host (getter from the vendor cache, device re-test pending)'
+      issues:
+      - 83
     T41:
       sym: ✅
       text: 'A/B 2026-10-24 (agg4x): after the EV-unit fix in the tone worker (`af9b3519`: gamma/CCM/BCSH/ADR/TMO get the vendor EV scale) day luma 138 / saturation 66 against the vendor 135 / 63 on .32 and 129 / 40 against 130 / 41 on .34 (before: 103 / 45, i.e. -24 % / -28 %), contrast 46 against 48 and 52 against 54, edge energy -5 % / equal. 2026-10-23 on .32: contrast 0 -> flat, 128 -> luma std 47, 200 -> 72, 255 -> 89 (night scene, saturation not checkable); the contrast path is the native BCSH write, the OEM frame-down callback (`t41_isr_counts[52]`) is not registered in the native build (counter 0 by design) and not needed. Earlier (history): brightness 255 → Y 211, contrast 0 → flat grey, saturation 0/255 chroma 0.1/7.1 (dark scene) [claude/t41-matrix-fixes]'
+      issues:
+      - 105
 - n: 13
   title: Mirror / flip
   group: Colour and image quality
@@ -531,9 +560,13 @@ features:
     T21:
       sym: ✅+
       text: lifted, IRQ 21 registered (40/40 emulator)
+      issues:
+      - 106
     T23:
       sym: ✅+
       text: lifted incl. tisp_defog_soft_process (emulator-identical), IRQ 20 + process running on cam-B, defog strength works; 0xc bit 11 follows the bank like stock
+      issues:
+      - 106
     T30:
       sym: '?'
       text: '`SetAntiFogAttr` exported since 2026-10-10 (control 0x8000163, host test), no device result'
@@ -554,6 +587,8 @@ features:
       text: |-
         2026-10-25: `IMP_ISP_Tuning_Set/GetDefog_Strength` (beyond vendor: the T41 1.2.6 SDK has no strength call and its kernel strength stubs return 0) drive `Module_Ratio` index 4; device-tested on .32 gc5603: read-back of 0/128/255 exact, luma std 45.0/48.0/55.1, edge energy 12.8/17.4/24.0, p1 24/18/11, mean luma unchanged (98-99), no oops. The set call returns an error word for non-neutral values although it applies them (documented). No streamer key yet.
           Earlier: ✅ 2026-10-24 (third pass): the defog diamond lattice is fixed and defog is **on by default** (`t41_defog=1`, open-tx-isp `cfdd1420`/`091e1fa2`, user decision 2026-10-24). Root cause: the translated defog chain read its constant tables from the rodata image of the vendor-AE translation (15760 B) instead of the rodata of the reference module it was translated from (14784 B); the tables sit at different offsets, so `defog_count_weight35abc` scaled garbage into the curve and weight-table registers and the saturated-weight zone showed as a bright diamond at every block corner. Now the defog registers 0xc000..0xc28c on .32 (gc5603, 2880x1620, bright light) are identical to the vendor dump (0 differences, before 64); diamond metric -0.7 on / -0.9 off (before +8..+18); contrast std +7.5 %, Laplacian +10 % with defog on; `defog_irqs == frames`, no oops. `Module_Ratio` index 4 acts (0..255). **Not tested:** the strength sweep (`SetDefog_Strength`, the OpenIMP branch `claude/t4x-defog-strength` is not merged; a timps control does not exist) and a haze scene; the API ratio sweep of 2026-10-23 stays the only strength evidence. Earlier (history): The OEM defog chain is translated and runs per frame (`bbd103fb`, `defog_irqs == defog_frames` about 25/s, no storm), the module accepts the defog ratio of `Module_Ratio` index 4 (the old -EOPNOTSUPP answer is gone). Device test on .32 (2026-10-23, `imgfx_t41` ratio sweep, same scene, no brightness shift): block luma std 15.5 / 16.3 / 16.8 / 23.2 at ratio 0 / 64 / 128 / 255, so the effect is measurable at 255 and small below 128; `SetModule_Ratio` returned an error word for 0/64/255 although the value was applied (return-code quirk, open). **Default is OFF since 2026-10-24** (`t41_defog=0`, `af9b3519`): the defog stage left diamond artefacts in the picture in the A/B runs. The timps `image.defog_strength` control still says "not supported"; `IMP_ISP_Tuning_SetDefog_Strength` for T40/T41 (`claude/t4x-defog-strength`, host tests only, vendor has no such call) and the haze scene test are not merged, so the cell is 🔧 and not ✅. T40: no defog call in the vendor library.
+      issues:
+      - 106
 - n: 16
   title: Noise reduction (2DNR/3DNR, Sinter, Temper)
   group: Colour and image quality
@@ -568,15 +603,21 @@ features:
     T21:
       sym: ✅+
       text: 2DNR/gain tracking repaired; Sinter/Temper strength now takes effect (vendor ignores it) [-all-13]
+      issues:
+      - 106
     T23:
       sym: ✅
       text: 'gain index now log2 (before: noise reduction too strong from 2x), Sinter non-compounding, sharpness/DPC follow the bank'
+      issues:
+      - 106
     T30:
       sym: '?'
       text: Sinter/Temper strength exported; `SetTemperDnsCtl` exported since 2026-10-10 (cache-only like the T30 `SetTemperDnsAttr`)
     T31:
       sym: ✅
       text: '2026-10-24: `isp_memopt=1` showed vertical noise stripes at night (left image quarter, column bands 2.5-3.5 against 1.3-1.8; temporal column stripe 0.161 against the vendor 0.103) because the MDNS stride was 0; the OEM memopt tuning patch applied at bin load (`e603e17c`, `claude/t31-memopt-mdns`, in next) brings it to the vendor level on .25 (noise 1.18 against 1.20, stripe 0.099 against 0.103, 10 min soak clean); night luma stays 8 % below the vendor (no ISP digital gain), edge energy +19 %. Earlier (history): vendor-identical: SDNS H-S regs 0→0, 255→15 (OEM cap 16); temper 0: temporal std 4.60 vs 1.64; sinter effect small by OEM design'
+      issues:
+      - 106
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -589,6 +630,8 @@ features:
     T41:
       sym: ✅
       text: '2026-10-24 (third pass): the night softness seen in the A/B (night edge energy -30 % on .32) was **not noise reduction**: with the (then disabled) defog block off the open picture had lifted blacks and every detail band was about 1.4x weaker (percentile 1/99 41/184 against the vendor 9/208). Night noise stays lower than the vendor with and without defog (dY 2.18 / 2.93 against 3.15); the fine bands (sigma 1-2) reach the vendor level with defog on, so NR does not smear detail. Ruled out: tone EV units, gamma (night bank strength 255 at every EV). With defog now on by default the night flatness is gone from the cause list; a final night re-measure against the vendor with the fixed defog is still to be taken, 3D noise reduction (temper) strength stays unmeasured. Earlier (history): A/B 2026-10-24 (agg4x): day noise in the steady state like the vendor (1.62 against 1.74 on .32, 2.91 against 2.97 on .34), night noise 2.68 against 4.26 on .32 (better) and 1.39 against 1.17 on .34 (+19 %); the +53 % day noise seen on .34 in the first run was a measurement artefact (first snapshot after idle is dark). 3D noise reduction (temper) stays unmeasured. Earlier (history): 2D noise reduction (sinter) works through OpenIMP (`Module_Ratio` index 0), device-tested: sinter 255 cuts wall noise from ~7 to ~1; wired in timps main. 3D noise reduction (temper, index 1) shows no measurable effect yet and is being checked in the driver; MDNS/YSP/CDNS blocks run in the per-frame tone worker, on by default since 2026-10-19'
+      issues:
+      - 106
 - n: 17
   title: DPC (defect pixels)
   group: Colour and image quality
@@ -603,15 +646,21 @@ features:
     T21:
       sym: ✅+
       text: m1 thresholds scaled like OEM T23; impulses 3857/3841/3498 [all-17]
+      issues:
+      - 106
     T23:
       sym: ✅
       text: follows the IQ bank as vendor, less night noise
+      issues:
+      - 106
     T30:
       sym: '?'
       text: '`SetDPStrength` exported since 2026-10-10 (DPC ratio control, host test), no device result'
     T31:
       sym: ✅
       text: 'vendor-identical: m1/m3 thresholds 0→(d1000,f5), 255→(d5,f1191); impulses −6 % (defect pixels only)'
+      issues:
+      - 106
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -624,6 +673,8 @@ features:
     T41:
       sym: ✅
       text: '2026-10-24 (third pass): true-dark test on .32 (camera boxed, IR LED and white LED off, manual AE 32x / 30000 us, 12 frames per setting, stock modules): DPC on leaves 0-0.5 isolated peaks per frame (>=24) and no persistent hot pixel, **module bypassed 332 peaks (>=24), 55.5 (>=48), 5.4 (>=96), 4 persistent**; default (unit disabled) = ratio 128 = ratio 255 = even ratio 0 within noise (the ratio only shifts thresholds, floor 5), so the default is the vendor default 128 (code: with `en=0` the driver uses effective ratio 128, as the stock `tisp_s_dpc_ratio`). The earlier bright-scene difference between default and ratio 128 was scene/AE noise. Equivalence to the vendor by code (decompiled formula), not an A/B (no vendor image on the camera). Tool: `tests/t41/dpcscan.c`. timps does not expose the control. Earlier (history): 2026-10-24 on .32 (gc5603, open stack, full-size 2880x1620 frames, manual AE, scene mean Y about 52, not fully black; `tests/t41/dpcscan.c` counts pixels brighter than all 8 neighbours, d>=24 / d>=48): default 91/15, DPC bypass 189/26, ratio 0 195/36, ratio 128 45/6, ratio 255 54/8, i.e. DPC on halves the isolated-peak count (2.1-4x fewer), ratio 255 about equal to 128; the API returns 0 with readback (default 128, vendor default 128). Open: the default (unit disabled) and an explicit ratio 128 differ in run 1 (91 against 45 peaks) but lie within the noise in run 2 (AE/order effect); a re-test in a fully dark slot with more frames is running, so the cell stays ⚠️ until it is decided. The formulas are the decompiled stock `tisp_s_dpc_ratio`, equivalence to the vendor by code, not measured (no vendor image). Earlier (history): the DPC ratio unit of `Module_Ratio` is implemented in the driver (long-bank thresholds scaled from the pristine table, `6fcf5502`) and the tone worker interpolates the DPC gain per frame; no device measurement of the effect (host/build only)'
+      issues:
+      - 106
 - n: 18
   title: Scene mode / colour effects (B/W, negative, sepia, vivid)
   group: Colour and image quality
@@ -786,12 +837,16 @@ features:
     T30:
       sym: 🔧
       text: Helix H.264 (High profile, CABAC, 1080p main + 640x360 sub, 25 fps) in `docs/T30_STATUS.md`, decoded without errors by the T30 contributor on a T30X camera; host tests for the descriptor/encoder/level code; not run by us
+      issues:
+      - 100
     T31:
       sym: ✅
       text: soak 2 h 53, 260,648 frames, 1030/1030 snapshots, 0 errors
     T32:
       sym: 🔧
       text: 'QEMU only, no camera: H.264 bound and encoded in the QEMU T32 image with the vendor libimp (stage S3), not with OpenIMP; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      issues:
+      - 97
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -864,12 +919,16 @@ features:
     T32:
       sym: 🔧
       text: 'QEMU only, no camera: JPEG bound in the QEMU T32 image with the vendor libimp (stage S3), not with OpenIMP; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      issues:
+      - 97
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
     T40:
       sym: ✅
       text: 'software baseline JPEG (SSIM 0.9996 vs the vendor library, about 1.7 fps at 4K); open driver 2026-10-19: JPEG of ch1 decodes with 0 errors in all six I2D variants (300 frames each), pitch after I2D fixed (2918162), range/colour as the vendor (the ISP delivers full range BT.709, `claude/jpeg-range`); an encoder failure returns an error instead of a grey JPEG (b5ba1c3)'
+      issues:
+      - 89
     T41:
       sym: ✅
       text: '1080p + 640x360 snapshots ok on cam-F with the open driver (claude/t41-gc5603-fix); MJPEG and the grey-JPEG TODO (T40/T41) not re-checked; 2026-10-19: JPEG after I2D 90/270 uses the I2D pitch (2918162), range/colour as the vendor (no defect)'
@@ -947,6 +1006,8 @@ features:
     T41:
       sym: ✅
       text: 'bitrate 400/1200/3000 → 518/1195/2777 kbit/s (30 s each) [claude/t41-cbr-overshoot]; CappedVBR/CappedQuality real (vendor Allegro core with the PSNR cap, marker `OpenIMP_Cap_CappedRc`) [claude/capped-rc-t4x]; plain VBR on the same core and AVC slice-header QP = command QP (VBR/capped AVC streams did not decode before): VBR 300/400 → 291, 800/1600 → 829, CappedVBR 38 dB at 3000/4000 → 1696 (VBR 2981), all streams decode, SSIM 0.97-0.99 vs FixQP 12 of the same pictures; CBR/FixQP unchanged [claude/capped-rc-followup]. T40 same code, host test only'
+      issues:
+      - 91
   extra: '- **T40 on the device (2026-10-19, Eufy, open driver, live scene):** mean rate at or below the maximum in all modes: CBR 800 -> 800, FixQP 30 -> 191, VBR 300/400 -> 289, VBR 800/1600 -> 755, VBR 3000/4000 -> 2824, CappedVBR 38 dB 3000/4000 -> 195 (SSIM 0.949 vs 0.970 for plain VBR), CappedQuality 38 -> 247 kbit/s, 0 decode errors; 1 s peaks above the maximum are IDR frames (CBR the same). CappedQuality 50 dB is not conclusive (scene changed). CBR 2000 on a static scene gives 1605 kbit/s (QP minimum clamp). The T40 cell stays ⚠️ (one board, CBR deficit seen earlier on cam-K not re-measured there).'
 - n: 27
   title: RC parameters (QP steps, staticTime, changePos, qualityLvl, I bias)
@@ -1082,6 +1143,8 @@ features:
     T32:
       sym: 🔧
       text: 'QEMU only, no camera: FrameSource channels 0-2 enabled in the QEMU T32 image with the vendor libimp; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      issues:
+      - 97
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1158,6 +1221,8 @@ features:
     T40:
       sym: 🔧
       text: 'not RC2-relevant, sound tests pending (user decision 2026-10-24/25: no speaker or playback tests before RC2). Older text: AO exported, no test result'
+      issues:
+      - 101
     T41:
       sym: —
       text: no audio hardware on the T41 test board (no microphone, no speaker); the software mute (`SetVolMute`, `Soft_Mute`/`UNMute`) is an API-level test only (rc 0, invalid argument -1)
@@ -1193,6 +1258,8 @@ features:
     T40:
       sym: 🔧
       text: 'not RC2-relevant, sound tests pending (user decision 2026-10-24/25: no speaker or playback tests before RC2). Older text: AEC calls: see the audio function table, no test result'
+      issues:
+      - 101
     T41:
       sym: —
       text: no audio hardware on the T41 test board (no microphone, no speaker), so AEC cannot be measured there
@@ -1264,6 +1331,8 @@ features:
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening (user decision, accepted): the loaded module is 1445 KB (xz 404 KB) against the vendor 1005 KB (xz 230 KB) after the bring-up parameters and the legacy debug proc were switched off by default (-27 KB xz). The difference is lifted chains, duplicate code paths and diagnostics; reducing it further is planned with the clean C rewrite of the lifted chains after RC2. Older text: 2026-10-24: with the `-Os` + gc build (`9e3222c6`) and the placeholder-buffer fixes the loaded module is 2173 kB against the vendor 764 kB (A/B on .184; was 3015 KB file on 2026-10-19); still 2.8 times the vendor. Earlier (history): open `tx_isp_t40` 3015 KB file / 484 KB xz / 5267 KB RAM vs the vendor module 980 / 230 / 746 KB (size audit 2026-10-19): still built `-O0` without gc; a `-Os` + gc trial gives 1084 KB / 1946 KB RAM (queued, must be re-proven on the camera)'
+      issues:
+      - 85
     T41:
       sym: ✅
       text: '2026-10-24 (third pass): size work in open-tx-isp next (`2b4740a6`): `TX_ISP_T41_BRINGUP_PARAMS` and the new `TX_ISP_T41_TMO_SELFTEST` default to `n`; stripped module file **836 KB against the vendor 778 KB** (was 885 KB), xz 297 against 226 KB (was 314), RAM -34 KB (loaded 712736 against 755456 B on .34). The remaining +58 KB (+7 %) is function the vendor module does not have (native AWB/ADR/LCE/TMO/mdns 147 KB raw, lifted tisp, translated vendor-AE, translated defog chain); parity would need about 70 KB xz less text, i.e. dropping features. **Accepted for RC2 (user decision 2026-10-24).** Check on .34: 5 reload cycles with the new module, 0 oops/warn, AE equal to the stock module. Scripts that read the bring-up parameters (`tools/rawchart/t41_isr_stages.sh`) need a build with `TX_ISP_T41_BRINGUP_PARAMS=y`. Earlier (history): 2026-10-24 A/B: `tx_isp_t41` loaded 746 kB against the vendor module 568 kB (+31 %); the .ko file is 906 KB (2026-10-23 RC2 run, with the MXU3 TMO and load-statistics code) against the vendor 779 KB. The 798 KB figure below is the size of 2026-10-19. Earlier (history): `tx_isp_t41` 798 KB file vs the vendor module 779 KB (2026-10-19, open-tx-isp next 6bc6ebfe: generated vendor-AE code 284 -> 98 KB text, host A/B harness identical; was 1004 KB). Still ~2 % larger than the vendor; RAM/xz to be re-measured.'
@@ -1290,6 +1359,8 @@ features:
     T31:
       sym: ✅
       text: drift per reload 460→45 KB
+      issues:
+      - 92
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -1302,6 +1373,8 @@ features:
     T41:
       sym: ✅
       text: 'rmem 26 MB in the current image (was 30): stream buffers sized like the vendor (1080p 0.95 MB), capture buffers from the bottom and the rest from the top so idle/restart cycles no longer fragment rmem; 5 idle/restart cycles clean. OOM with three parallel streams and `AddSensor` EBUSY after an OOM kill are still open'
+      issues:
+      - 96
 - n: 37
   title: Reference-frame sharing (BUF_SHARE_CFG)
   group: Memory, size, load
@@ -1369,6 +1442,8 @@ features:
     T40:
       sym: ✅
       text: timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured
+      issues:
+      - 81
     T41:
       sym: ✅
       text: '2026-10-24 (third pass): the ''system CPU'' column of the A/B (/proc/stat delta, open 7.6 % against the vendor 2.2 % on .32) is **not comparable**: both kernels use `NO_HZ_FULL` + `VIRT_CPU_ACCOUNTING_GEN`, and the vendor ISP kernel thread `isp_fw_process` alone shows 8.8 % of one core in its stime while /proc/stat reports 0.6 % system time. Ground truth with one SCHED_IDLE spinner per CPU (free-CPU iterations, 20 s, stream running, same camera .32, same kernel image config): **open 23435 against vendor 22540, i.e. the open stack leaves about 4 % more CPU free** (idle baseline with the streamer stopped: open 25682, vendor 24254; the vendor module keeps working without a client). Open .34: 22216. The per-frame tone worker costs 2.9-3.3 ms (TMO map on MXU3 1.5-1.8 ms, ADR 0.8 ms), AWB 0.8-2.1 ms, ISR 0.27 ms per frame. Optional (not default) `t41_tmo_map_interval=2` + `t41_adr_interval=2` save about 1.1 ms per frame (about 2 % free CPU) with a static picture unchanged (SSIM 0.95, not tested in light steps). Limits: one series per stack, vendor and open runs 30 min apart. Earlier (history): 2026-10-24 A/B against the vendor stack (60 s windows, 4 windows on the open stack): timpsd 0.2 % against 0.3 %, but the system CPU on .32 is 7.6 % (windows 0.8-12 %, tick bursts) against 2.2 % for the vendor, on .34 5.3 % against 5.0 %; ISP interrupts are 25-45 % below the vendor (128-133 against 179 per s on .32, 133 against 231 on .34). The older timps figure (~10-12 % against ~27 % with the vendor libimp) is a user-space number only; the cell is lowered because the total system load on .32 is above the vendor. Earlier (history): timps ~10–12 % with our libimp vs ~27 % with the vendor libimp (momentary values)'
@@ -1465,6 +1540,9 @@ features:
     T31:
       sym: ⚠️
       text: 'RC2 (2026-10-25): stays ⚠️: the .33 hung on the old agg43 image and the multi-day run of the .29 on the current code ends on 2026-10-29. Update 2026-10-24, evening: the reboot of 2026-10-17 was analysed from the log host: a fault inside the slab allocator during a fork, preceded by ''scheduling while atomic'', then no further kernel output; it is the only unexplained reboot of that camera in 4.7 days, no other BUG in all logs since 09-25. Likely a kernel stack overflow on the fork/page-fault stack; one contribution of ours (the AWB statistics hard IRQ copied 225 AE zones = 900 B onto the stack) is removed. Cause not proven; the cell turns ✅ after a clean run of at least 5 days with this driver. Older text: 2026-10-22/23: `.26` ran 22 h with the picture fix clean (no restart, luma 75-121 day/night) and the agg43 fleet soak (23.10., 18.4 h, 111 rounds) had 0 restarts, 0 oops and snapshots always 200 on every T31 camera; the Wintergarten reboot analysis stays open. Earlier (history): 4.5 h soak ok; 2026-10-06: H.264 stall after JPEG teardown fixed (5c2ccef, agg-29). 2026-10-17: the Wintergarten T31 rebooted after 4.7 days with a preempt-count underflow (suspected IRQ stack overflow, analysis in T31_ATOMIC_1017; fix patch untested, `motor.ko` also suspected)'
+      issues:
+      - 93
+      - 94
     T32:
       sym: '?'
       text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
@@ -1474,6 +1552,8 @@ features:
     T40:
       sym: ✅
       text: 'RC2 (2026-10-24 22:45 to 2026-10-25 10:00): overnight soak of the Eufy .184 (agg43e: open-tx-isp e5030fd4, OpenIMP f55f620f; ~10.8 h, snapshots always 200, 0 oops, no streamer restart, VMalloc flat; `audit/logs1024/soak-agg4z.log`), the first overnight soak of the T40 stack; the RC2 fleet image agg46 runs the same code line. Known remaining items below stay open but did not occur. Earlier: ⚠️ 2026-10-24: the boot-time oops of agg43b (bind, #1) is fixed; the Eufy ran the whole A/B session (open stack, 0 oops, unchanged PID). The agg43 fleet soak of 2026-10-23 did not include the Eufy (no network until the WLAN fix), so there is still no overnight soak of the T40 stack. Earlier (history): open driver: 300 s regression and 10-min ch0+ch1 timps runs clean, 10/10 restart cycles (2026-10-18), the oops at every day/night thread start fixed 2026-10-19 (AWB statistics); no overnight soak with the current stack. Open: MemFree about -0.5 MB over 10 sessions; aicwf-SDIO "rxbuff list is empty" storms with hangs in about half of the runs on 2026-10-17 (suspected memory pressure, not closed in the TODO)'
+      issues:
+      - 88
     T41:
       sym: ✅
       text: 'RC2 (2026-10-24 22:45 to 2026-10-25 10:00): overnight soak of the .32 (Vanhua T55A/gc5603) and .34 (Cinnado T41NQ/sc5336) on agg4z (open-tx-isp c41e18d2, OpenIMP f55f620f; ~11 h, 0 oops, 0 `encoder dead`, snapshots always 200, no streamer restart, day/night followed; `audit/logs1024/soak-agg4z.log`). The load-related reboots of 2026-10-24 (1080p+360p at 8 Mbit/s) did not recur in this run; the RC2 fleet image agg46 runs the same code line. Earlier: ⚠️ 2026-10-24 (third pass): **open stability issue under load**: .34 rebooted twice running 1080p + 360p at 25 fps 8000 kbit/s on the open stack (11:47 with the buffer-share test, 11:58 without it; the first with a load-statistics test module loaded) and .32 once (about 10:27, during a CBR run while another test reloaded the module); the cause is not named (load-related, not caused by the buffer sharing), the driver-side investigation is running. The cell stays ⚠️. 2026-10-23: agg43 fleet soak, 111 rounds over 18.4 h (00:35-18:57), .32 and .34 included: 0 restarts, 0 oops, 0 `encoder dead`, snapshots always 200; the RC2 run on .32 added 9 reboots without a hang. The soak ran agg43, not the agg4x code that is now in next, so a new soak is due. New open points: .34 reported night for the whole 18 h, .32 booted into night in a bright room twice on agg4u/agg4w (see #10). Earlier (history): 16.6 h overnight soak on .32 with the current defaults clean (2026-10-18 15:02 to 10-19 07:39, 0 BUG/oops, streamer without restart); 30 min and 10-restart tests clean. Open: `AddSensor` sporadically fails at boot (`tisp_top_init` -16), OOM with three parallel streams, the module-reload heap bug (#2), a "scheduling while atomic" in the SDK `motor.ko` on .34 (2026-10-18)'
@@ -1619,4 +1699,1762 @@ features:
       sym: ✅+
       text: '2026-10-24 ROI also works under FixQP (beyond the vendor: the vendor library shows no ROI effect under FixQP on T41, capture of libimp 1.2.6). Cause of the old limit: the vendor pins the QP range word EP2 header +0x10 (max<<24 | min<<16 | 0x302) to QP..QP under FixQP (0x1e1e0302 at QP 30) and the AVPU clamps every macroblock QP to it. `avpu_t41_roi_apply` opens the range to 0x33000302 while a window or map is active and restores the pinned word afterwards (the HWRC words are not needed). Device (.32, 1280x720 15 fps FixQP 30, window 384x240 at 448,240): window -20 raises P-frames from 222 to 2364 B and the bit rate from 431 to 977 kbit/s, window +20 gives window SSIM 0.79 against 0.93 away from it, whole frame -20 gives 19 Mbit/s, `SetChnMapRoi` -20 432 -> 1023 kbit/s and +20 window SSIM 0.75 against 0.98; ROI off restores the stream (IDR 84578 against 84573 B base). CBR/VBR: path unchanged, on by default (2026-10-18: whole frame -20 doubles the bit rate, a +20 window drops its SSIM 0.97 to 0.73; vendor CBR +20: window SSIM 0.84 against 0.98 away). `OPENIMP_T41_ROI=0` refuses the call. Not clean: an open-stack CBR re-run was confounded by a scene change and .32 rebooted once during a further CBR run while another job reloaded the module on the same camera (cause unknown). Earlier (history): `Encoder_Get/SetChnRoiAttr` (AVC) through the AVPU QP table with cmd[152] bits 0 and 3 as the vendor sets them; **on by default for CBR/VBR** (device-tested 2026-10-18 on Cinnado .34 and Vanhua .32: whole frame -20 doubles the bit rate, a +20 window drops its SSIM 0.97 to 0.73); (then) under FixQP the AVPU ignored the table (cause found 2026-10-24, see above); `OPENIMP_T41_ROI=0` refuses the call; `SetChnMapRoi` rides on the same switch (not device-tested)'
   extra: '- **Rules (all SoCs with ROI):** window deltas -25..+25; spread of all deltas at most 25; picture QP plus delta inside 0..51 and the rate control''s min/max QP; requests beyond that are clamped with a one-time warning (`SetChnRoiAttr` returns -1 for a delta outside -26..25 or an absolute QP outside 0..51)'
-api_links: []
+api_links:
+- soc: T10
+  issues:
+  - 3
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetChangeRef
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetChnDemask
+  - Encoder_Get/SetChnH264Demask
+  - Encoder_Get/SetChnH264Denoise
+  - Encoder_Get/SetChnH264FrmUsedMode
+  - Encoder_Get/SetChnHSkip
+  - Encoder_Get/SetChnRcAttr
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_Get/SetH264TransCfg
+  - Encoder_PadFrame
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetPadFrameAttr
+- soc: T10
+  issues:
+  - 4
+  functions:
+  - Phys_to_Virt
+  - Sp_Alloc
+  - Virt_to_Phys
+- soc: T20
+  issues:
+  - 5
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetChangeRef
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetChnDemask
+  - Encoder_Get/SetChnH264Demask
+  - Encoder_Get/SetChnH264Denoise
+  - Encoder_Get/SetChnH264FrmUsedMode
+  - Encoder_Get/SetChnHSkip
+  - Encoder_Get/SetChnRcAttr
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_PadFrame
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetPadFrameAttr
+- soc: T20
+  issues:
+  - 6
+  functions:
+  - Phys_to_Virt
+  - Sp_Alloc
+  - Virt_to_Phys
+- soc: T21
+  issues:
+  - 7
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_PadFrame
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetPadFrameAttr
+- soc: T21
+  issues:
+  - 8
+  functions:
+  - Phys_to_Virt
+  - Sp_Alloc
+  - Virt_to_Phys
+- soc: T23
+  issues:
+  - 9
+  functions:
+  - ISP_Tuning_Get/SetDrawBlock
+  - ISP_Tuning_SwitchBin
+- soc: T23
+  issues:
+  - 10
+  functions:
+  - ISP_Tuning_SetWB_ALGO
+- soc: T23
+  issues:
+  - 11
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_Get/Setframelossthd
+  - Encoder_PadFrame
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetMultiSectionMode
+  - Encoder_SetPadFrameAttr
+  - Encoder_SetRdBufShare
+- soc: T23
+  issues:
+  - 12
+  functions:
+  - ISP_Tuning_Get/SetOSDAttr
+  - ISP_Tuning_Get/SetOSDBlock
+  - OSD_Alloc
+  - OSD_Init_ISP
+  - OSD_UpdateRgnAttrData_ISP
+- soc: T23
+  issues:
+  - 13
+  functions:
+  - ISPOSD_Alloc
+  - MemPool_GetById
+  - MemPool_InitPool
+  - Phys_to_Virt
+  - PoolAlloc
+  - PoolAlloc_Dump
+  - PoolAlloc_Get_Attr
+  - PoolAlloc_Set_Attr
+  - PoolFlushCache
+  - PoolFree
+  - PoolPhys_to_Virt
+  - PoolVirt_to_Phys
+  - Sp_Alloc
+  - Virt_to_Phys
+- soc: T30
+  issues:
+  - 14
+  functions:
+  - ISP_AddSensor
+  - ISP_Close
+  - ISP_DelSensor
+  - ISP_DisableSensor
+  - ISP_DisableTuning
+  - ISP_EnableSensor
+  - ISP_EnableTuning
+  - ISP_Open
+  - ISP_Tuning_Get/SetAntiFlickerAttr
+  - ISP_Tuning_Get/SetContrast
+  - ISP_Tuning_Get/SetHiLightDepress
+  - ISP_Tuning_Get/SetISPRunningMode
+  - ISP_Tuning_Get/SetMaxAgain
+  - ISP_Tuning_Get/SetMaxDgain
+  - ISP_Tuning_Get/SetSaturation
+  - ISP_Tuning_GetEVAttr
+  - ISP_Tuning_GetSensorFPS
+  - ISP_Tuning_GetTotalGain
+  - ISP_Tuning_SetBrightness
+  - ISP_Tuning_SetSensorFPS
+  - ISP_Tuning_SetSharpness
+  - ISP_Tuning_SetSinterStrength
+  - ISP_Tuning_SetTemperStrength
+  - ISP_Tuning_Get/SetGamma
+  - ISP_Tuning_Get/SetISPHflip
+  - ISP_Tuning_Get/SetISPVflip
+  - ISP_Tuning_GetBrightness
+  - ISP_Tuning_GetSharpness
+  - ISP_Tuning_SetISPBypass
+  - ISP_Get/SetSensorRegister
+  - ISP_Tuning_DisableMovestate
+  - ISP_Tuning_EnableMovestate
+  - ISP_Tuning_Get/SetColorfxMode
+  - ISP_Tuning_Get/SetIntegrationTime
+  - ISP_Tuning_Get/SetSinterDnsAttr
+  - ISP_Tuning_Get/SetTemperDnsAttr
+  - ISP_Tuning_GetRawDRC
+  - ISP_Tuning_SetRawDRC
+  - ISP_Tuning_SetSceneMode
+  - ISP_Tuning_SetVideoDrop
+  - ISP_Tuning_WaitFrame
+- soc: T30
+  issues:
+  - 15
+  functions:
+  - ISP_Tuning_Get/SetAeComp
+  - ISP_Tuning_Get/SetWB
+  - ISP_Tuning_Get/SetAeHist
+  - ISP_Tuning_Get/SetAeWeight
+  - ISP_Tuning_Get/SetAwbHist
+  - ISP_Tuning_Get/SetAwbWeight
+  - ISP_Tuning_GetExpr
+  - ISP_Tuning_Awb_Get/SetRgbCoefft
+  - ISP_Tuning_Get/SetAfHist
+  - ISP_Tuning_GetAFMetrices
+  - ISP_Tuning_GetWB_Statis
+- soc: T30
+  issues:
+  - 16
+  functions:
+  - Encoder_CreateChn
+  - Encoder_CreateGroup
+  - Encoder_DestroyChn
+  - Encoder_DestroyGroup
+  - Encoder_GetStream
+  - Encoder_PollingStream
+  - Encoder_RegisterChn
+  - Encoder_ReleaseStream
+  - Encoder_RequestIDR
+  - Encoder_StartRecvPic
+  - Encoder_StopRecvPic
+  - Encoder_UnRegisterChn
+  - Encoder_FlushStream
+  - Encoder_Get/SetChnAttrRcMode
+  - Encoder_Get/SetChnFrmRate
+  - Encoder_GetChnAttr
+  - Encoder_Query
+  - Encoder_Get/SetMaxStreamCnt
+  - Encoder_GetChnEncType
+  - Encoder_GetFd
+  - Encoder_SetGOPSize
+- soc: T30
+  issues:
+  - 17
+  functions:
+  - FrameSource_CreateChn
+  - FrameSource_DestroyChn
+  - FrameSource_DisableChn
+  - FrameSource_EnableChn
+  - FrameSource_Get/SetChnAttr
+  - FrameSource_Get/SetChnFifoAttr
+  - FrameSource_GetTimedFrame
+  - FrameSource_SnapFrame
+- soc: T30
+  issues:
+  - 18
+  functions:
+  - OSD_CreateGroup
+  - OSD_CreateRgn
+  - OSD_DestroyGroup
+  - OSD_DestroyRgn
+  - OSD_Get/SetGrpRgnAttr
+  - OSD_Get/SetRgnAttr
+  - OSD_RegisterRgn
+  - OSD_SetPoolSize
+  - OSD_ShowRgn
+  - OSD_Start
+  - OSD_UnRegisterRgn
+  - OSD_UpdateRgnAttrData
+  - OSD_SetRgnAttrWithTimestamp
+  - OSD_Stop
+- soc: T30
+  issues:
+  - 19
+  functions:
+  - IVS_DestroyChn
+  - IVS_DestroyGroup
+  - IVS_DestroyMoveInterface
+  - IVS_StopRecvPic
+  - IVS_UnRegisterChn
+  - IVS_CreateChn
+  - IVS_CreateGroup
+  - IVS_CreateMoveInterface
+  - IVS_Get/SetParam
+  - IVS_GetResult
+  - IVS_PollingResult
+  - IVS_RegisterChn
+  - IVS_ReleaseResult
+  - IVS_StartRecvPic
+  - IVS_CreateBaseMoveInterface
+  - IVS_DestroyBaseMoveInterface
+  - IVS_ReleaseData
+- soc: T30
+  issues:
+  - 20
+  functions:
+  - AI_Disable
+  - AI_DisableAgc
+  - AI_DisableChn
+  - AI_DisableHpf
+  - AI_DisableNs
+  - AI_Enable
+  - AI_EnableAgc
+  - AI_EnableChn
+  - AI_EnableHpf
+  - AI_EnableNs
+  - AI_Get/SetChnParam
+  - AI_Get/SetGain
+  - AI_Get/SetPubAttr
+  - AI_Get/SetVol
+  - AI_GetFrame
+  - AI_PollingFrame
+  - AI_ReleaseFrame
+  - AO_SetVolMute
+  - AENC_* / ADEC_*
+  - AI_DisableAecRefFrame
+  - AI_EnableAecRefFrame
+  - AI_GetFrameAndRef
+  - AI_SetVolMute
+  - AO_CacheSwitch
+  - AO_DisableAgc
+  - AO_DisableHpf
+  - AO_EnableAgc
+  - AO_EnableHpf
+  - AO_PauseChn
+  - AO_QueryChnStat
+  - AO_ResumeChn
+  - AO_Soft_Mute
+  - AO_Soft_UNMute
+- soc: T30
+  issues:
+  - 21
+  functions:
+  - System_Bind
+  - System_Exit
+  - System_GetVersion
+  - System_Init
+  - System_UnBind
+  - SU_Base_GetVersion
+  - System_GetCPUInfo
+  - System_GetTimeStamp
+  - System_RebaseTimeStamp
+  - System_GetBindbyDest
+  - System_ReadReg32
+  - System_WriteReg32
+- soc: T30
+  issues:
+  - 22
+  functions:
+  - ISP_Tuning_GetSceneMode
+  - ISP_Tuning_SetFWFreeze
+  - ISP_Tuning_SetISPLDC
+  - ISP_Tuning_SetISPProcess
+  - ISP_Tuning_SetTemperDnsCtl
+- soc: T30
+  issues:
+  - 23
+  functions:
+  - ISP_Tuning_AE_Get/SetROI
+  - ISP_Tuning_SetExpr
+- soc: T30
+  issues:
+  - 24
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetChangeRef
+  - Encoder_Get/SetChnColor2Grey
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetChnDenoise
+  - Encoder_Get/SetChnHSkip
+  - Encoder_Get/SetChnROI
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_Get/SetH264TransCfg
+  - Encoder_Get/SetH265TransCfg
+  - Encoder_Get/SetJpegeQl
+  - Encoder_Get/SetMbRC
+  - Encoder_Get/SetQpgMode
+  - Encoder_Get/SetSuperFrameCfg
+  - Encoder_InsertUserData
+  - Encoder_PadFrame
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetChnResizeMode
+  - Encoder_SetPadFrameAttr
+- soc: T30
+  issues:
+  - 25
+  functions:
+  - FrameSource_Get/SetDelay
+  - FrameSource_Get/SetFrameDepth
+  - FrameSource_Get/SetMaxDelay
+  - FrameSource_GetFrame
+  - FrameSource_ReleaseFrame
+  - FrameSource_SetSource
+- soc: T30
+  issues:
+  - 26
+  functions:
+  - AI_DisableAec
+  - AI_EnableAec
+  - AO_ClearChnBuf
+  - AO_Disable
+  - AO_DisableChn
+  - AO_Enable
+  - AO_EnableChn
+  - AO_FlushChnBuf
+  - AO_Get/SetGain
+  - AO_Get/SetPubAttr
+  - AO_Get/SetVol
+  - AO_SendFrame
+- soc: T30
+  issues:
+  - 27
+  functions:
+  - Phys_to_Virt
+  - Sp_Alloc
+  - SU_ADC_DisableChn
+  - SU_ADC_EnableChn
+  - SU_ADC_Exit
+  - SU_ADC_GetChnValue
+  - SU_Base_DisableAlarm
+  - SU_Base_EnableAlarm
+  - SU_Base_Get/SetAlarm
+  - SU_Base_Get/SetTime
+  - SU_Base_GetDevID
+  - SU_Base_GetModelNumber
+  - SU_Base_PollingAlarm
+  - SU_Base_Raw2SUTime
+  - SU_Base_Reboot
+  - SU_Base_Suspend
+  - SU_Base_SUTime2Raw
+  - SU_CIPHER_ConfigHandle
+  - SU_CIPHER_CreateHandle
+  - SU_CIPHER_Decrypt
+  - SU_CIPHER_DestroyHandle
+  - SU_CIPHER_Encrypt
+  - SU_CIPHER_Exit
+  - SU_CIPHER_Init
+  - SU_Key_CloseEvent
+  - SU_Key_DisableEvent
+  - SU_Key_EnableEvent
+  - SU_Key_OpenEvent
+  - SU_Key_ReadEvent
+  - SU_LED_Command
+  - Virt_to_Phys
+  - SU_Battery_GetCapacity
+  - SU_Battery_GetEvent
+  - SU_Battery_GetStatus
+  - SU_Battery_GetVoltageUV
+- soc: T31
+  issues:
+  - 28
+  functions:
+  - Encoder_ClearPoolId
+  - Encoder_Get/SetFisheyeEnableStatus
+- soc: T31
+  issues:
+  - 29
+  functions:
+  - FB_*
+  - FrameSource_ClearPoolId
+  - FrameSource_SetFrameDepthCopyType
+- soc: T31
+  issues:
+  - 30
+  functions:
+  - MemPool_GetById
+  - MemPool_InitPool
+  - MemPool_Release
+  - Phys_to_Virt
+  - PoolAlloc
+  - PoolAlloc_Dump
+  - PoolAlloc_Get_Attr
+  - PoolAlloc_Set_Attr
+  - PoolFlushCache
+  - PoolFree
+  - PoolPhys_to_Virt
+  - PoolVirt_to_Phys
+  - Sp_Alloc
+  - Virt_to_Phys
+- soc: T32
+  issues:
+  - 31
+  functions:
+  - ISP_AddSensor
+  - ISP_Close
+  - ISP_DelSensor
+  - ISP_DisableSensor
+  - ISP_DisableTuning
+  - ISP_EnableSensor
+  - ISP_EnableTuning
+  - ISP_Open
+  - ISP_Tuning_Get/SetAntiFlickerAttr
+  - ISP_Tuning_Get/SetBcshHue
+  - ISP_Tuning_Get/SetContrast
+  - ISP_Tuning_Get/SetISPRunningMode
+  - ISP_Tuning_Get/SetSaturation
+  - ISP_Tuning_GetSensorFPS
+  - ISP_Tuning_SetBrightness
+  - ISP_Tuning_SetSensorFPS
+  - ISP_Tuning_SetSharpness
+  - ISP_Tuning_Get/SetGammaAttr
+  - ISP_Tuning_Get/SetHVFLIP
+  - ISP_Tuning_GetBrightness
+  - ISP_Tuning_GetSensorAttr
+  - ISP_Tuning_GetSharpness
+  - ISP_Tuning_SetAutoZoom
+  - ISP_Get/SetDefaultBinPath
+  - ISP_Get/SetFrameDrop
+  - ISP_Get/SetISPBypass
+  - ISP_Get/SetSensorRegister
+  - ISP_GetCameraInputMode
+  - ISP_Tuning_Get/SetCCMAttr
+  - ISP_Tuning_Get/SetModuleControl
+  - ISP_Tuning_SetMaskBlock
+  - ISP_Tuning_SetScalerLv
+  - ISP_Tuning_SetVideoDrop
+  - ISP_Tuning_SwitchBin
+  - ISP_WDR_ENABLE
+  - ISP_WDR_ENABLE_GET
+- soc: T32
+  issues:
+  - 32
+  functions:
+  - ISP_Tuning_Get/SetAeWeight
+  - ISP_Tuning_Get/SetAwbWeight
+  - ISP_Tuning_Get/SetAfWeight
+  - ISP_Tuning_GetAwbStatistics
+- soc: T32
+  issues:
+  - 33
+  functions:
+  - Encoder_CreateChn
+  - Encoder_CreateGroup
+  - Encoder_DestroyChn
+  - Encoder_DestroyGroup
+  - Encoder_GetStream
+  - Encoder_PollingStream
+  - Encoder_RegisterChn
+  - Encoder_ReleaseStream
+  - Encoder_RequestIDR
+  - Encoder_StartRecvPic
+  - Encoder_StopRecvPic
+  - Encoder_UnRegisterChn
+  - Encoder_FlushStream
+  - Encoder_Get/SetChnAttrRcMode
+  - Encoder_Get/SetChnFrmRate
+  - Encoder_GetChnAttr
+  - Encoder_Query
+  - Encoder_Get/SetMaxStreamCnt
+  - Encoder_Get/SetPool
+  - Encoder_GetChnEncType
+  - Encoder_GetFd
+  - Encoder_SetChnBitRate
+  - Encoder_SetChnMaxPictureSize
+  - Encoder_SetChnQpBounds
+  - Encoder_SetDefaultParam
+- soc: T32
+  issues:
+  - 34
+  functions:
+  - FrameSource_CreateChn
+  - FrameSource_DestroyChn
+  - FrameSource_DisableChn
+  - FrameSource_EnableChn
+  - FrameSource_Get/SetChnAttr
+  - FrameSource_Get/SetChnFifoAttr
+  - FrameSource_Get/SetFrameDepth
+  - FrameSource_Get/SetDelay
+  - FrameSource_Get/SetI2dAttr
+  - FrameSource_Get/SetMaxDelay
+  - FrameSource_Get/SetPool
+  - FrameSource_GetFrame
+  - FrameSource_GetTimedFrame
+  - FrameSource_ReleaseFrame
+  - FrameSource_SnapFrame
+- soc: T32
+  issues:
+  - 35
+  functions:
+  - OSD_CreateGroup
+  - OSD_CreateRgn
+  - OSD_DestroyGroup
+  - OSD_DestroyRgn
+  - OSD_Get/SetGrpRgnAttr
+  - OSD_Get/SetRgnAttr
+  - OSD_RegisterRgn
+  - OSD_SetPoolSize
+  - OSD_ShowRgn
+  - OSD_Start
+  - OSD_UnRegisterRgn
+  - OSD_UpdateRgnAttrData
+  - ISP_Tuning_CreateOsdRgn
+  - ISP_Tuning_DestroyOsdRgn
+  - ISP_Tuning_SetOsdPoolSize
+  - ISP_Tuning_SetOsdRgnAttr
+  - ISP_Tuning_ShowOsdRgn
+  - OSD_SetRgnAttrWithTimestamp
+  - OSD_Stop
+- soc: T32
+  issues:
+  - 36
+  functions:
+  - IVS_DestroyChn
+  - IVS_DestroyGroup
+  - IVS_DestroyMoveInterface
+  - IVS_StopRecvPic
+  - IVS_UnRegisterChn
+  - IVS_CreateChn
+  - IVS_CreateGroup
+  - IVS_CreateMoveInterface
+  - IVS_Get/SetParam
+  - IVS_GetResult
+  - IVS_PollingResult
+  - IVS_RegisterChn
+  - IVS_ReleaseResult
+  - IVS_StartRecvPic
+  - IVS_CreateBaseMoveInterface
+  - IVS_DestroyBaseMoveInterface
+  - IVS_ReleaseData
+- soc: T32
+  issues:
+  - 37
+  functions:
+  - AI_Disable
+  - AI_DisableAgc
+  - AI_DisableChn
+  - AI_DisableHpf
+  - AI_DisableNs
+  - AI_Enable
+  - AI_EnableAgc
+  - AI_EnableChn
+  - AI_EnableHpf
+  - AI_EnableNs
+  - AI_Get/SetChnParam
+  - AI_Get/SetGain
+  - AI_Get/SetPubAttr
+  - AI_Get/SetVol
+  - AI_GetFrame
+  - AI_PollingFrame
+  - AI_ReleaseFrame
+  - AO_Disable
+  - AO_DisableChn
+  - AO_Enable
+  - AO_EnableChn
+  - AO_FlushChnBuf
+  - AO_Get/SetGain
+  - AO_Get/SetPubAttr
+  - AO_Get/SetVol
+  - AO_SendFrame
+  - AI_DisableAec
+  - AI_EnableAec
+  - AI_SetHpfCoFrequency
+  - AO_ClearChnBuf
+  - AO_SetHpfCoFrequency
+  - AO_SetVolMute
+  - AENC_* / ADEC_*
+  - AI_DisableAecRefFrame
+  - AI_EnableAecRefFrame
+  - AI_GetFrameAndRef
+  - AI_Set_WebrtcProfileIni_Path
+  - AI_SetVolMute
+  - AO_CacheSwitch
+  - AO_DisableAgc
+  - AO_DisableHpf
+  - AO_EnableAgc
+  - AO_EnableHpf
+  - AO_PauseChn
+  - AO_QueryChnStat
+  - AO_ResumeChn
+  - AO_Soft_Mute
+  - AO_Soft_UNMute
+  - DMIC_*
+  - DMIC_DisableAecRefFrame
+- soc: T32
+  issues:
+  - 38
+  functions:
+  - System_Bind
+  - System_Exit
+  - System_GetVersion
+  - System_Init
+  - System_UnBind
+  - SU_Base_GetVersion
+  - System_GetCPUInfo
+  - System_GetTimeStamp
+  - System_RebaseTimeStamp
+  - System_GetBindbyDest
+  - System_ReadReg32
+  - System_WriteReg32
+- soc: T32
+  issues:
+  - 39
+  functions:
+  - ISP_AddSensor_Free
+  - ISP_AddSensor_Process
+  - ISP_Get/SetCsccrMode
+  - ISP_Get/SetInternalChnAttr
+  - ISP_GET_DriverMode
+  - ISP_GetFrameDropOnce
+  - ISP_GPIOSwitchConfig
+  - ISP_GPIOSwitchTrigger
+  - ISP_HB_GetAttr
+  - ISP_HB_SetAttr
+  - ISP_LDC_Get/SetAttr
+  - ISP_LDC_GetMode
+  - ISP_LDC_INIT
+  - ISP_LDC_OfflineCreateJob
+  - ISP_LDC_OfflineCreateJobExt
+  - ISP_LDC_OfflineDestroyJob
+  - ISP_LDC_OfflineInit
+  - ISP_LDC_OfflineSubmitTask
+  - ISP_LDC_OfflineUpdateLutToJob
+  - ISP_LDC_OnlineGetFunc
+  - ISP_LDC_OnlineGetLut
+  - ISP_LDC_OnlineGetLutBufMode
+  - ISP_LDC_OnlineGetState
+  - ISP_LDC_OnlineGetStrength
+  - ISP_LDC_OnlineInit
+  - ISP_LDC_OnlineSetLut
+  - ISP_LDC_OnlineSetLutBufMode
+  - ISP_LDC_OnlineSetState
+  - ISP_LDC_OnlineSetStrength
+  - ISP_LDC_SetMode
+  - ISP_OneShotDisable
+  - ISP_OneShotDropCnt
+  - ISP_OneShotEnable
+  - ISP_OneShotTick
+  - ISP_OSD_Alloc
+  - ISP_PM_GetMode
+  - ISP_PM_SetMode
+  - ISP_PM_SetOneByOneCallback
+  - ISP_PM_WaitAllDone
+  - ISP_SetCameraInputMode
+  - ISP_SetFrameDropOnce
+  - ISP_StartNightMode
+  - ISP_Tuning_Get/SetDrawBlock
+  - ISP_Tuning_Get/SetISPCSCAttr
+  - ISP_Tuning_Get/SetModule_Ratio
+  - ISP_Tuning_Get/SetStatisConfig
+  - ISP_Tuning_Get/SetWdrOutputMode
+  - ISP_Tuning_GetAutoZoom
+  - ISP_Tuning_GetBcshRGBOffsetAttr
+  - ISP_Tuning_GetMaskBlock
+  - ISP_Tuning_GetMultiSensorEffect
+  - ISP_Tuning_SetBcshRGBOffsetAttr
+  - ISP_Tuning_SetMultiSensorEffect
+  - ISP_Tuning_SetTmoFaceae
+  - ISP_Tuning_WaitFrameDone
+  - ISP_WDR_OPEN
+- soc: T32
+  issues:
+  - 40
+  functions:
+  - ISP_SetAeAlgoFunc
+  - ISP_SetAwbAlgoFunc
+  - ISP_Tuning_Get/SetAeExpList
+  - ISP_Tuning_Get/SetAeExprInfo
+  - ISP_Tuning_Get/SetAwbAttr
+  - ISP_Tuning_Get/SetAwbCtTrendOffset
+  - ISP_Tuning_Get/SetFaceAe
+  - ISP_Tuning_Get/SetFaceAeWeiget
+  - ISP_Tuning_Get/SetFaceAwb
+  - ISP_Tuning_GetAEFlickerFlag
+  - ISP_Tuning_GetAeLightCompensation
+  - ISP_Tuning_GetAeOnlyReadAttr
+  - ISP_Tuning_GetAeStartAttr
+  - ISP_Tuning_GetAeStatistics
+  - ISP_Tuning_GetAeTargetAttr
+  - ISP_Tuning_GetAFMetricesInfo
+  - ISP_Tuning_GetAfStatistics
+  - ISP_Tuning_GetAwbGlobalStatistics
+  - ISP_Tuning_GetAwbOnlyReadAttr
+  - ISP_Tuning_GetFaceAeLuma
+  - ISP_Tuning_GetMultiSensorAeEffect
+  - ISP_Tuning_GetMultiSensorAWBEffect
+  - ISP_Tuning_SetAeLightCompensation
+  - ISP_Tuning_SetAeStartAttr
+  - ISP_Tuning_SetAeTargetAttr
+  - ISP_Tuning_SetMultiSensorAeEffect
+  - ISP_Tuning_SetMultiSensorAWBEffect
+- soc: T32
+  issues:
+  - 41
+  functions:
+  - Encoder_ClearPoolId
+  - Encoder_Get/SetChangeRef
+  - Encoder_Get/SetChnColor2Grey
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetChnDenoise
+  - Encoder_Get/SetChnFrmUsedMode
+  - Encoder_Get/SetChnHSkip
+  - Encoder_Get/SetChnROI
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_Get/SetGDRCfg
+  - Encoder_Get/SetH264TransCfg
+  - Encoder_Get/SetH265TransCfg
+  - Encoder_Get/SetMbRC
+  - Encoder_Get/SetQpgMode
+  - Encoder_Get/SetSuperFrameCfg
+  - Encoder_GetGOPSize
+  - Encoder_GetH264Vui
+  - Encoder_GetH265Vui
+  - Encoder_GetJpegQp
+  - Encoder_GetMotionQuality
+  - Encoder_GetPskipCfg
+  - Encoder_GetSrdCfg
+  - Encoder_InputJpege
+  - Encoder_InputJpege_Ex
+  - Encoder_InsertUserData
+  - Encoder_KernEnc_GetStatus
+  - Encoder_KernEnc_GetStream
+  - Encoder_KernEnc_Release
+  - Encoder_KernEnc_Stop
+  - Encoder_MappingTransform
+  - Encoder_MultiProcessExit
+  - Encoder_MultiProcessInit
+  - Encoder_PadFrame
+  - Encoder_RequestGDR
+  - Encoder_RequestPskip
+  - Encoder_SetAutoVui
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnMapRoi
+  - Encoder_SetChnQpBoundsPerFrame
+  - Encoder_SetChnQpgAI
+  - Encoder_SetChnQpgAI_Yuv
+  - Encoder_SetChnQpgAIEnable
+  - Encoder_SetChnQpgAIEnable_Yuv
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetChnResizeMode
+  - Encoder_SetGOPSize
+  - Encoder_SetH264Vui
+  - Encoder_SetH265Vui
+  - Encoder_SetIvpuBsSize
+  - Encoder_SetJpegBsSize
+  - Encoder_SetJpegMultiSectionMode
+  - Encoder_SetJpegQp
+  - Encoder_SetMotionQuality
+  - Encoder_SetMotionQuality_Yuv
+  - Encoder_SetMotionQualityEnable
+  - Encoder_SetMotionQualityEnable_Yuv
+  - Encoder_SetMultiSectionMode
+  - Encoder_SetPadFrameAttr
+  - Encoder_SetPskipCfg
+  - Encoder_SetRdBufShare
+  - Encoder_SetSrdCfg
+  - Encoder_VbmAlloc
+  - Encoder_VbmAlloc_Ex
+  - Encoder_VbmFree
+  - Encoder_VbmFree_Ex
+  - Encoder_VbmP2V
+  - Encoder_VbmV2P
+  - Encoder_YuvEncode
+  - Encoder_YuvEncode_Ex
+  - Encoder_YuvExit
+  - Encoder_YuvExit_Ex
+  - Encoder_YuvInit
+  - Encoder_YuvInit_Ex
+- soc: T32
+  issues:
+  - 42
+  functions:
+  - FrameSource_ClearPoolId
+  - FrameSource_CreateJoint
+  - FrameSource_DequeueBuffer
+  - FrameSource_DestroyJoint
+  - FrameSource_ExternInject_CreateChn
+  - FrameSource_ExternInject_DestroyChn
+  - FrameSource_ExternInject_DisableChn
+  - FrameSource_ExternInject_EnableChn
+  - FrameSource_GetChnAttr_Expand
+  - FrameSource_GetDirectMode
+  - FrameSource_GetFrameEx
+  - FrameSource_GetJointByHandler
+  - FrameSource_PM_Resume
+  - FrameSource_PM_Suspend
+  - FrameSource_QueueBuffer
+  - FrameSource_ReleaseFrameEx
+  - FrameSource_SetChnAttr_Expand
+  - FrameSource_SetDirectMode
+  - FrameSource_SetFrameDepthCopyType
+  - FrameSource_SetIvdcMemLine
+  - FrameSource_SetJointBackground
+  - FrameSource_SetYuvAlign
+  - FrameSource_SnapRaw_End
+  - FrameSource_SnapRaw_Start
+  - FrameSource_UpdateChnLut
+- soc: T32
+  issues:
+  - 43
+  functions:
+  - ISP_Tuning_Get/SetOSDAttr
+  - ISP_Tuning_Get/SetOSDBlock
+  - ISP_Tuning_GetOsdRgnAttr
+  - OSD_Alloc
+  - OSD_AttachToGroup
+  - OSD_CreateRgn_ISP
+  - OSD_DestroyRgn_ISP
+  - OSD_DetachToGroup
+  - OSD_Exit_ISP
+  - OSD_Get/SetRgnAttr_ISP
+  - OSD_GetRgnAttr_ISPPic
+  - OSD_Init_ISP
+  - OSD_RgnCreate_Query
+  - OSD_RgnRegister_Query
+  - OSD_SetGroupCallback
+  - OSD_SetMosaic
+  - OSD_SetPoolSize_ISP
+  - OSD_SetRgnAttr_PicISP
+  - OSD_ShowRgn_ISP
+  - OSD_UpdateRgnAttrData_ISP
+- soc: T32
+  issues:
+  - 44
+  functions:
+  - AI_DisableAlgo
+  - AI_DisableDrcAndEq
+  - AI_DisableGetRaw
+  - AI_DisableHs
+  - AI_DisableLpf
+  - AI_EnableAlgo
+  - AI_EnableDrcAndEq
+  - AI_EnableGetRaw
+  - AI_EnableHs
+  - AI_EnableLpf
+  - AI_Get/SetDigitalGain
+  - AI_GetAlgoOrder
+  - AI_GetFrameAndRaw
+  - AI_SetAlgoOrder
+  - AI_SetLpfCoFrequency
+  - AO_DisableAlgo
+  - AO_DisableDrcAndEq
+  - AO_DisableNs
+  - AO_EnableAlgo
+  - AO_EnableDrcAndEq
+  - AO_EnableNs
+  - AO_Get/SetDigitalGain
+  - AO_GetAlgoOrder
+  - AO_SetAlgoOrder
+  - Audio_Select_Codec
+- soc: T32
+  issues:
+  - 45
+  functions:
+  - alloc_init
+  - alloc_unit
+  - Buf_Alloc
+  - Buf_CreatePool
+  - Buf_DestroyPool
+  - Buf_Free
+  - Buf_Paddr2Vaddr
+  - Buf_Vaddr2Paddr
+  - create_units
+  - destroy_units
+  - DQbuffer
+  - free_unit
+  - ISPOSD_Alloc
+  - MemPool_GetById
+  - MemPool_InitPool
+  - MemPool_Release
+  - Phys_to_Virt
+  - PoolAlloc
+  - PoolAlloc_Dump
+  - PoolAlloc_Get_Attr
+  - PoolAlloc_Set_Attr
+  - PoolFlushCache
+  - PoolFree
+  - PoolPhys_to_Virt
+  - PoolVirt_to_Phys
+  - Sp_Alloc
+  - SU_ADC_DisableChn
+  - SU_ADC_EnableChn
+  - SU_ADC_Exit
+  - SU_ADC_GetChnValue
+  - SU_ADC_Init
+  - SU_Base_CtlPwrDown
+  - SU_Base_DisableAlarm
+  - SU_Base_DisableAlarmTimeMs
+  - SU_Base_EnableAlarm
+  - SU_Base_EnableAlarmTimeMs
+  - SU_Base_Get/SetAlarm
+  - SU_Base_Get/SetTime
+  - SU_Base_GetAlarmTimeMs
+  - SU_Base_GetDevID
+  - SU_Base_GetModelNumber
+  - SU_Base_GetTimeMs
+  - SU_Base_GetWakeupCount
+  - SU_Base_GetWkupMode
+  - SU_Base_PollingAlarm
+  - SU_Base_Raw2SUTime
+  - SU_Base_Reboot
+  - SU_Base_SetAlarmTimeMs
+  - SU_Base_SetWkupMode
+  - SU_Base_Shutdown
+  - SU_Base_Suspend
+  - SU_Base_SUTime2Raw
+  - SU_CIPHER_ConfigHandle
+  - SU_CIPHER_CreateHandle
+  - SU_CIPHER_Decrypt
+  - SU_CIPHER_DES_Exit
+  - SU_CIPHER_DES_Init
+  - SU_CIPHER_DES_Test
+  - SU_CIPHER_DestroyHandle
+  - SU_CIPHER_Encrypt
+  - SU_CIPHER_Exit
+  - SU_CIPHER_Free_Buffer
+  - SU_CIPHER_Init
+  - SU_CIPHER_Malloc_Buffer
+  - SU_Key_CloseEvent
+  - SU_Key_DisableEvent
+  - SU_Key_EnableEvent
+  - SU_Key_OpenEvent
+  - SU_Key_ReadEvent
+  - SU_LED_Command
+  - SU_PM_AddThreadListen
+  - SU_PM_DeInit
+  - SU_PM_DelThreadListen
+  - SU_PM_DumpList
+  - SU_PM_EventSend
+  - SU_PM_Get_CPUOnlineNums
+  - SU_PM_GetEvent
+  - SU_PM_GetListenLockNums
+  - SU_PM_Init
+  - SU_PM_InitListenLock
+  - SU_PM_ReleaseWakeLock
+  - SU_PM_RequestWakeLock
+  - SU_PM_Set_CPUOnline
+  - SU_PM_Sleep
+  - SU_PM_TheadSuspend
+  - SU_PM_ThreadResume
+  - SU_PM_WaitThreadSuspend
+  - System_MemPoolFree
+  - System_MemPoolRequest
+  - Virt_to_Phys
+- soc: T33
+  issues:
+  - 46
+  functions:
+  - ISP_AddSensor
+  - ISP_Close
+  - ISP_DelSensor
+  - ISP_DisableSensor
+  - ISP_DisableTuning
+  - ISP_EnableSensor
+  - ISP_EnableTuning
+  - ISP_Open
+  - ISP_Tuning_Get/SetAntiFlickerAttr
+  - ISP_Tuning_Get/SetBcshHue
+  - ISP_Tuning_Get/SetContrast
+  - ISP_Tuning_Get/SetISPRunningMode
+  - ISP_Tuning_Get/SetSaturation
+  - ISP_Tuning_GetSensorFPS
+  - ISP_Tuning_SetBrightness
+  - ISP_Tuning_SetSensorFPS
+  - ISP_Tuning_SetSharpness
+  - ISP_Tuning_Get/SetGammaAttr
+  - ISP_Tuning_Get/SetHVFLIP
+  - ISP_Tuning_GetBrightness
+  - ISP_Tuning_GetSensorAttr
+  - ISP_Tuning_GetSharpness
+  - ISP_Tuning_SetAutoZoom
+  - ISP_Get/SetDefaultBinPath
+  - ISP_Get/SetFrameDrop
+  - ISP_Get/SetISPBypass
+  - ISP_Get/SetSensorRegister
+  - ISP_GetCameraInputMode
+  - ISP_Tuning_Get/SetCCMAttr
+  - ISP_Tuning_Get/SetModuleControl
+  - ISP_Tuning_SetMaskBlock
+  - ISP_Tuning_SetScalerLv
+  - ISP_Tuning_SetVideoDrop
+  - ISP_Tuning_SwitchBin
+  - ISP_WDR_ENABLE
+  - ISP_WDR_ENABLE_GET
+- soc: T33
+  issues:
+  - 47
+  functions:
+  - ISP_Tuning_Get/SetAeWeight
+  - ISP_Tuning_Get/SetAwbWeight
+  - ISP_Tuning_Get/SetAfWeight
+  - ISP_Tuning_GetAwbStatistics
+- soc: T33
+  issues:
+  - 48
+  functions:
+  - Encoder_CreateChn
+  - Encoder_CreateGroup
+  - Encoder_DestroyChn
+  - Encoder_DestroyGroup
+  - Encoder_GetStream
+  - Encoder_PollingStream
+  - Encoder_RegisterChn
+  - Encoder_ReleaseStream
+  - Encoder_RequestIDR
+  - Encoder_StartRecvPic
+  - Encoder_StopRecvPic
+  - Encoder_UnRegisterChn
+  - Encoder_FlushStream
+  - Encoder_Get/SetChnAttrRcMode
+  - Encoder_Get/SetChnFrmRate
+  - Encoder_GetChnAttr
+  - Encoder_Query
+  - Encoder_Get/SetMaxStreamCnt
+  - Encoder_Get/SetPool
+  - Encoder_GetChnEncType
+  - Encoder_GetFd
+  - Encoder_SetChnBitRate
+  - Encoder_SetChnMaxPictureSize
+  - Encoder_SetChnQpBounds
+  - Encoder_SetDefaultParam
+- soc: T33
+  issues:
+  - 49
+  functions:
+  - FrameSource_CreateChn
+  - FrameSource_DestroyChn
+  - FrameSource_DisableChn
+  - FrameSource_EnableChn
+  - FrameSource_Get/SetChnAttr
+  - FrameSource_Get/SetChnFifoAttr
+  - FrameSource_Get/SetFrameDepth
+  - FrameSource_Get/SetDelay
+  - FrameSource_Get/SetI2dAttr
+  - FrameSource_Get/SetMaxDelay
+  - FrameSource_Get/SetPool
+  - FrameSource_GetFrame
+  - FrameSource_GetTimedFrame
+  - FrameSource_ReleaseFrame
+  - FrameSource_SnapFrame
+- soc: T33
+  issues:
+  - 50
+  functions:
+  - OSD_CreateGroup
+  - OSD_CreateRgn
+  - OSD_DestroyGroup
+  - OSD_DestroyRgn
+  - OSD_Get/SetGrpRgnAttr
+  - OSD_Get/SetRgnAttr
+  - OSD_RegisterRgn
+  - OSD_SetPoolSize
+  - OSD_ShowRgn
+  - OSD_Start
+  - OSD_UnRegisterRgn
+  - OSD_UpdateRgnAttrData
+  - ISP_Tuning_CreateOsdRgn
+  - ISP_Tuning_DestroyOsdRgn
+  - ISP_Tuning_SetOsdPoolSize
+  - ISP_Tuning_SetOsdRgnAttr
+  - ISP_Tuning_ShowOsdRgn
+  - OSD_SetRgnAttrWithTimestamp
+  - OSD_Stop
+- soc: T33
+  issues:
+  - 51
+  functions:
+  - IVS_DestroyChn
+  - IVS_DestroyGroup
+  - IVS_DestroyMoveInterface
+  - IVS_StopRecvPic
+  - IVS_UnRegisterChn
+  - IVS_CreateChn
+  - IVS_CreateGroup
+  - IVS_CreateMoveInterface
+  - IVS_Get/SetParam
+  - IVS_GetResult
+  - IVS_PollingResult
+  - IVS_RegisterChn
+  - IVS_ReleaseResult
+  - IVS_StartRecvPic
+  - IVS_CreateBaseMoveInterface
+  - IVS_DestroyBaseMoveInterface
+  - IVS_ReleaseData
+- soc: T33
+  issues:
+  - 52
+  functions:
+  - AI_Disable
+  - AI_DisableAgc
+  - AI_DisableChn
+  - AI_DisableHpf
+  - AI_DisableNs
+  - AI_Enable
+  - AI_EnableAgc
+  - AI_EnableChn
+  - AI_EnableHpf
+  - AI_EnableNs
+  - AI_Get/SetChnParam
+  - AI_Get/SetGain
+  - AI_Get/SetPubAttr
+  - AI_Get/SetVol
+  - AI_GetFrame
+  - AI_PollingFrame
+  - AI_ReleaseFrame
+  - AO_Disable
+  - AO_DisableChn
+  - AO_Enable
+  - AO_EnableChn
+  - AO_FlushChnBuf
+  - AO_Get/SetGain
+  - AO_Get/SetPubAttr
+  - AO_Get/SetVol
+  - AO_SendFrame
+  - AI_DisableAec
+  - AI_EnableAec
+  - AI_SetHpfCoFrequency
+  - AO_ClearChnBuf
+  - AO_SetHpfCoFrequency
+  - AO_SetVolMute
+  - AENC_* / ADEC_*
+  - AI_DisableAecRefFrame
+  - AI_EnableAecRefFrame
+  - AI_GetFrameAndRef
+  - AI_Set_WebrtcProfileIni_Path
+  - AI_SetVolMute
+  - AO_CacheSwitch
+  - AO_DisableAgc
+  - AO_DisableHpf
+  - AO_EnableAgc
+  - AO_EnableHpf
+  - AO_PauseChn
+  - AO_QueryChnStat
+  - AO_ResumeChn
+  - AO_Soft_Mute
+  - AO_Soft_UNMute
+  - DMIC_*
+  - DMIC_DisableAecRefFrame
+- soc: T33
+  issues:
+  - 53
+  functions:
+  - System_Bind
+  - System_Exit
+  - System_GetVersion
+  - System_Init
+  - System_UnBind
+  - SU_Base_GetVersion
+  - System_GetCPUInfo
+  - System_GetTimeStamp
+  - System_RebaseTimeStamp
+  - System_GetBindbyDest
+  - System_ReadReg32
+  - System_WriteReg32
+- soc: T33
+  issues:
+  - 54
+  functions:
+  - ISP_AddSensor_Free
+  - ISP_AddSensor_Process
+  - ISP_Get/SetCsccrMode
+  - ISP_Get/SetInternalChnAttr
+  - ISP_GET_DriverMode
+  - ISP_GetFrameDropOnce
+  - ISP_GPIOSwitchConfig
+  - ISP_GPIOSwitchTrigger
+  - ISP_HB_GetAttr
+  - ISP_HB_SetAttr
+  - ISP_LDC_Get/SetAttr
+  - ISP_LDC_GetMode
+  - ISP_LDC_INIT
+  - ISP_LDC_OfflineCreateJob
+  - ISP_LDC_OfflineCreateJobExt
+  - ISP_LDC_OfflineDestroyJob
+  - ISP_LDC_OfflineInit
+  - ISP_LDC_OfflineSubmitTask
+  - ISP_LDC_OfflineUpdateLutToJob
+  - ISP_LDC_OnlineGetFunc
+  - ISP_LDC_OnlineGetLut
+  - ISP_LDC_OnlineGetLutBufMode
+  - ISP_LDC_OnlineGetState
+  - ISP_LDC_OnlineGetStrength
+  - ISP_LDC_OnlineInit
+  - ISP_LDC_OnlineSetLut
+  - ISP_LDC_OnlineSetLutBufMode
+  - ISP_LDC_OnlineSetState
+  - ISP_LDC_OnlineSetStrength
+  - ISP_LDC_SetMode
+  - ISP_OneShotDisable
+  - ISP_OneShotDropCnt
+  - ISP_OneShotEnable
+  - ISP_OneShotTick
+  - ISP_OSD_Alloc
+  - ISP_PM_GetMode
+  - ISP_PM_SetMode
+  - ISP_PM_SetOneByOneCallback
+  - ISP_PM_WaitAllDone
+  - ISP_RawCaptureGuardBegin
+  - ISP_RawCaptureGuardEnd
+  - ISP_SetCameraInputMode
+  - ISP_SetFrameDropOnce
+  - ISP_StartNightMode
+  - ISP_Tuning_Get/SetDrawBlock
+  - ISP_Tuning_Get/SetISPCSCAttr
+  - ISP_Tuning_Get/SetModule_Ratio
+  - ISP_Tuning_Get/SetStatisConfig
+  - ISP_Tuning_Get/SetWdrOutputMode
+  - ISP_Tuning_GetAutoZoom
+  - ISP_Tuning_GetBcshRGBOffsetAttr
+  - ISP_Tuning_GetISPRunningModeWithFd
+  - ISP_Tuning_GetMaskBlock
+  - ISP_Tuning_GetMultiSensorEffect
+  - ISP_Tuning_SetBcshRGBOffsetAttr
+  - ISP_Tuning_SetMultiSensorEffect
+  - ISP_Tuning_SetTmoFaceae
+  - ISP_Tuning_WaitFrameDone
+  - ISP_WDR_OPEN
+- soc: T33
+  issues:
+  - 55
+  functions:
+  - ISP_SetAeAlgoFunc
+  - ISP_SetAwbAlgoFunc
+  - ISP_Tuning_Get/SetAeExpList
+  - ISP_Tuning_Get/SetAeExprInfo
+  - ISP_Tuning_Get/SetAwbAttr
+  - ISP_Tuning_Get/SetAwbCtTrendOffset
+  - ISP_Tuning_Get/SetFaceAe
+  - ISP_Tuning_Get/SetFaceAeWeiget
+  - ISP_Tuning_Get/SetFaceAwb
+  - ISP_Tuning_GetAEFlickerFlag
+  - ISP_Tuning_GetAeLightCompensation
+  - ISP_Tuning_GetAeOnlyReadAttr
+  - ISP_Tuning_GetAeStartAttr
+  - ISP_Tuning_GetAeStatistics
+  - ISP_Tuning_GetAeTargetAttr
+  - ISP_Tuning_GetAFMetricesInfo
+  - ISP_Tuning_GetAfStatistics
+  - ISP_Tuning_GetAwbGlobalStatistics
+  - ISP_Tuning_GetAwbOnlyReadAttr
+  - ISP_Tuning_GetFaceAeLuma
+  - ISP_Tuning_GetMultiSensorAeEffect
+  - ISP_Tuning_GetMultiSensorAWBEffect
+  - ISP_Tuning_SetAeLightCompensation
+  - ISP_Tuning_SetAeStartAttr
+  - ISP_Tuning_SetAeTargetAttr
+  - ISP_Tuning_SetMultiSensorAeEffect
+  - ISP_Tuning_SetMultiSensorAWBEffect
+- soc: T33
+  issues:
+  - 56
+  functions:
+  - Decoder_*
+  - Encoder_ClearPoolId
+  - Encoder_Get/SetChangeRef
+  - Encoder_Get/SetChnColor2Grey
+  - Encoder_Get/SetChnCrop
+  - Encoder_Get/SetChnDenoise
+  - Encoder_Get/SetChnFrmUsedMode
+  - Encoder_Get/SetChnHSkip
+  - Encoder_Get/SetChnROI
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_Get/SetGDRCfg
+  - Encoder_Get/SetH264TransCfg
+  - Encoder_Get/SetH265TransCfg
+  - Encoder_Get/SetMbRC
+  - Encoder_Get/SetQpgMode
+  - Encoder_Get/SetSuperFrameCfg
+  - Encoder_GetChnRfcDropFrameLines
+  - Encoder_GetChnRfcRatio
+  - Encoder_GetGOPSize
+  - Encoder_GetH264Vui
+  - Encoder_GetH265Vui
+  - Encoder_GetJpegQp
+  - Encoder_GetMotionQuality
+  - Encoder_GetPskipCfg
+  - Encoder_GetSrdCfg
+  - Encoder_InputJpege
+  - Encoder_InputJpege_Ex
+  - Encoder_InsertUserData
+  - Encoder_KernEnc_GetStatus
+  - Encoder_KernEnc_GetStream
+  - Encoder_KernEnc_Release
+  - Encoder_KernEnc_Stop
+  - Encoder_MappingTransform
+  - Encoder_MultiProcessExit
+  - Encoder_MultiProcessInit
+  - Encoder_PadFrame
+  - Encoder_RequestGDR
+  - Encoder_RequestPskip
+  - Encoder_SetAutoVui
+  - Encoder_SetChnHSkipBlackEnhance
+  - Encoder_SetChnMapRoi
+  - Encoder_SetChnQpBoundsPerFrame
+  - Encoder_SetChnQpgAI
+  - Encoder_SetChnQpgAI_Yuv
+  - Encoder_SetChnQpgAIEnable
+  - Encoder_SetChnQpgAIEnable_Yuv
+  - Encoder_SetChnRcTrigLevel
+  - Encoder_SetChnResizeMode
+  - Encoder_SetChnRfcDropFrameLines
+  - Encoder_SetChnRfcRatio
+  - Encoder_SetGOPSize
+  - Encoder_SetH264Vui
+  - Encoder_SetH265Vui
+  - Encoder_SetIvpuBsSize
+  - Encoder_SetJpegBsSize
+  - Encoder_SetJpegMultiSectionMode
+  - Encoder_SetJpegQp
+  - Encoder_SetMotionQuality
+  - Encoder_SetMotionQuality_Yuv
+  - Encoder_SetMotionQualityEnable
+  - Encoder_SetMotionQualityEnable_Yuv
+  - Encoder_SetMultiSectionMode
+  - Encoder_SetPadFrameAttr
+  - Encoder_SetPskipCfg
+  - Encoder_SetRdBufShare
+  - Encoder_SetSrdCfg
+  - Encoder_VbmAlloc
+  - Encoder_VbmAlloc_Ex
+  - Encoder_VbmFree
+  - Encoder_VbmFree_Ex
+  - Encoder_VbmP2V
+  - Encoder_VbmV2P
+  - Encoder_YuvEncode
+  - Encoder_YuvEncode_Ex
+  - Encoder_YuvExit
+  - Encoder_YuvExit_Ex
+  - Encoder_YuvInit
+  - Encoder_YuvInit_Ex
+- soc: T33
+  issues:
+  - 57
+  functions:
+  - FrameSource_ClearPoolId
+  - FrameSource_CreateChn_Ext
+  - FrameSource_CreateJoint
+  - FrameSource_DequeueBuffer
+  - FrameSource_DestroyJoint
+  - FrameSource_ExternInject_CreateChn
+  - FrameSource_ExternInject_DestroyChn
+  - FrameSource_ExternInject_DisableChn
+  - FrameSource_ExternInject_EnableChn
+  - FrameSource_GetChnAttr_Expand
+  - FrameSource_GetDirectMode
+  - FrameSource_GetFrameEx
+  - FrameSource_GetJointByHandler
+  - FrameSource_PM_Resume
+  - FrameSource_PM_Suspend
+  - FrameSource_QueueBuffer
+  - FrameSource_ReleaseFrameEx
+  - FrameSource_SetChnAttr_Expand
+  - FrameSource_SetDirectMode
+  - FrameSource_SetFrameDepthCopyType
+  - FrameSource_SetIvdcMemLine
+  - FrameSource_SetJointBackground
+  - FrameSource_SetSubStreamOnlineMode
+  - FrameSource_SetYuvAlign
+  - FrameSource_SnapRaw_End
+  - FrameSource_SnapRaw_Start
+  - FrameSource_UpdateChnLut
+- soc: T33
+  issues:
+  - 58
+  functions:
+  - ISP_Tuning_Get/SetOSDAttr
+  - ISP_Tuning_Get/SetOSDBlock
+  - ISP_Tuning_GetOsdRgnAttr
+  - OSD_Alloc
+  - OSD_AttachToGroup
+  - OSD_CreateRgn_ISP
+  - OSD_DestroyRgn_ISP
+  - OSD_DetachToGroup
+  - OSD_Exit_ISP
+  - OSD_Get/SetRgnAttr_ISP
+  - OSD_GetRgnAttr_ISPPic
+  - OSD_Init_ISP
+  - OSD_RgnCreate_Query
+  - OSD_RgnRegister_Query
+  - OSD_SetGroupCallback
+  - OSD_SetMosaic
+  - OSD_SetPoolSize_ISP
+  - OSD_SetRgnAttr_PicISP
+  - OSD_ShowRgn_ISP
+  - OSD_UpdateRgnAttrData_ISP
+- soc: T33
+  issues:
+  - 59
+  functions:
+  - AI_DisableAlgo
+  - AI_DisableDrcAndEq
+  - AI_DisableGetRaw
+  - AI_DisableHs
+  - AI_DisableLpf
+  - AI_EnableAlgo
+  - AI_EnableDrcAndEq
+  - AI_EnableGetRaw
+  - AI_EnableHs
+  - AI_EnableLpf
+  - AI_Get/SetDigitalGain
+  - AI_GetAlgoOrder
+  - AI_GetFrameAndRaw
+  - AI_SetAlgoOrder
+  - AI_SetLpfCoFrequency
+  - AO_DisableAlgo
+  - AO_DisableDrcAndEq
+  - AO_DisableNs
+  - AO_EnableAlgo
+  - AO_EnableDrcAndEq
+  - AO_EnableNs
+  - AO_Get/SetDigitalGain
+  - AO_GetAlgoOrder
+  - AO_SetAlgoOrder
+  - Audio_Select_Codec
+- soc: T33
+  issues:
+  - 60
+  functions:
+  - alloc_init
+  - alloc_unit
+  - Buf_Alloc
+  - Buf_CreatePool
+  - Buf_DestroyPool
+  - Buf_Free
+  - Buf_Paddr2Vaddr
+  - Buf_Vaddr2Paddr
+  - create_units
+  - destroy_units
+  - DQbuffer
+  - free_unit
+  - ISPOSD_Alloc
+  - MemPool_GetById
+  - MemPool_InitPool
+  - MemPool_Release
+  - Phys_to_Virt
+  - PoolAlloc
+  - PoolAlloc_Dump
+  - PoolAlloc_Get_Attr
+  - PoolAlloc_Set_Attr
+  - PoolFlushCache
+  - PoolFree
+  - PoolPhys_to_Virt
+  - PoolVirt_to_Phys
+  - Sp_Alloc
+  - SU_ADC_DisableChn
+  - SU_ADC_EnableChn
+  - SU_ADC_Exit
+  - SU_ADC_GetChnValue
+  - SU_ADC_Init
+  - SU_Base_CtlPwrDown
+  - SU_Base_DisableAlarm
+  - SU_Base_DisableAlarmTimeMs
+  - SU_Base_EnableAlarm
+  - SU_Base_EnableAlarmTimeMs
+  - SU_Base_Get/SetAlarm
+  - SU_Base_Get/SetTime
+  - SU_Base_GetAlarmTimeMs
+  - SU_Base_GetDevID
+  - SU_Base_GetModelNumber
+  - SU_Base_GetTimeMs
+  - SU_Base_GetWakeupCount
+  - SU_Base_GetWkupMode
+  - SU_Base_PollingAlarm
+  - SU_Base_Raw2SUTime
+  - SU_Base_Reboot
+  - SU_Base_SetAlarmTimeMs
+  - SU_Base_SetWkupMode
+  - SU_Base_Shutdown
+  - SU_Base_Suspend
+  - SU_Base_SUTime2Raw
+  - SU_CIPHER_ConfigHandle
+  - SU_CIPHER_CreateHandle
+  - SU_CIPHER_Decrypt
+  - SU_CIPHER_DES_Exit
+  - SU_CIPHER_DES_Init
+  - SU_CIPHER_DES_Test
+  - SU_CIPHER_DestroyHandle
+  - SU_CIPHER_Encrypt
+  - SU_CIPHER_Exit
+  - SU_CIPHER_Init
+  - SU_Key_CloseEvent
+  - SU_Key_DisableEvent
+  - SU_Key_EnableEvent
+  - SU_Key_OpenEvent
+  - SU_Key_ReadEvent
+  - SU_LED_Command
+  - SU_PM_AddThreadListen
+  - SU_PM_DeInit
+  - SU_PM_DelThreadListen
+  - SU_PM_DumpList
+  - SU_PM_EventSend
+  - SU_PM_Get_CPUOnlineNums
+  - SU_PM_GetEvent
+  - SU_PM_GetListenLockNums
+  - SU_PM_Init
+  - SU_PM_InitListenLock
+  - SU_PM_ReleaseWakeLock
+  - SU_PM_RequestWakeLock
+  - SU_PM_Set_CPUOnline
+  - SU_PM_Sleep
+  - SU_PM_TheadSuspend
+  - SU_PM_ThreadResume
+  - SU_PM_WaitThreadSuspend
+  - System_MemPoolFree
+  - System_MemPoolRequest
+  - Virt_to_Phys
+- soc: T40
+  issues:
+  - 61
+  functions:
+  - DMIC_*
+  - DMIC_DisableAecRefFrame
+- soc: T40
+  issues:
+  - 62
+  functions:
+  - ISP_Tuning_SetISPBypass
+  - ISP_Tuning_SetVideoDrop
+- soc: T40
+  issues:
+  - 63
+  functions:
+  - AO_SetHpfCoFrequency
+  - AO_SetVolMute
+  - AENC_* / ADEC_*
+  - AI_DisableAecRefFrame
+  - AI_EnableAecRefFrame
+  - AI_GetFrameAndRef
+  - AO_CacheSwitch
+  - AO_DisableAgc
+  - AO_DisableHpf
+  - AO_EnableAgc
+  - AO_EnableHpf
+  - AO_PauseChn
+  - AO_QueryChnStat
+  - AO_ResumeChn
+  - AO_Soft_Mute
+  - AO_Soft_UNMute
+- soc: T40
+  issues:
+  - 64
+  functions:
+  - System_WriteReg32
+- soc: T40
+  issues:
+  - 65
+  functions:
+  - ISP_SetAeAlgoFunc
+  - ISP_SetAwbAlgoFunc
+- soc: T40
+  issues:
+  - 66
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetFisheyeEnableStatus
+- soc: T40
+  issues:
+  - 67
+  functions:
+  - EmuFrameSource_*
+- soc: T40
+  issues:
+  - 68
+  functions:
+  - OSD_Init_ISP
+- soc: T40
+  issues:
+  - 69
+  functions:
+  - AI_DisableAec
+  - AI_EnableAec
+  - AO_ClearChnBuf
+  - AO_Disable
+  - AO_DisableChn
+  - AO_Enable
+  - AO_EnableChn
+  - AO_FlushChnBuf
+  - AO_Get/SetGain
+  - AO_Get/SetPubAttr
+  - AO_Get/SetVol
+  - AO_SendFrame
+- soc: T40
+  issues:
+  - 70
+  functions:
+  - SU_ADC_DisableChn
+  - SU_ADC_EnableChn
+  - SU_ADC_Exit
+  - SU_ADC_GetChnValue
+  - SU_ADC_Init
+  - SU_Base_DisableAlarm
+  - SU_Base_EnableAlarm
+  - SU_Base_Get/SetAlarm
+  - SU_Base_Get/SetTime
+  - SU_Base_PollingAlarm
+  - SU_Base_Reboot
+  - SU_Base_Suspend
+  - SU_CIPHER_ConfigHandle
+  - SU_CIPHER_CreateHandle
+  - SU_CIPHER_Decrypt
+  - SU_CIPHER_DES_Exit
+  - SU_CIPHER_DES_Init
+  - SU_CIPHER_DES_Test
+  - SU_CIPHER_DestroyHandle
+  - SU_CIPHER_Encrypt
+  - SU_CIPHER_Exit
+  - SU_CIPHER_Init
+  - SU_Key_DisableEvent
+  - SU_Key_EnableEvent
+  - SU_Key_ReadEvent
+  - SU_LED_Command
+- soc: T41
+  issues:
+  - 71
+  functions:
+  - Encoder_Get/SetChnFrmRate
+  - Encoder_SetChnBitRate
+  - Encoder_SetChnQpBounds
+  - Encoder_SetChnMaxPictureSize
+- soc: T41
+  issues:
+  - 72
+  functions:
+  - FrameSource_Get/SetFrameDepth
+  - FrameSource_Get/SetPool
+- soc: T41
+  issues:
+  - 73
+  functions:
+  - ISP_Tuning_CreateOsdRgn
+  - ISP_Tuning_DestroyOsdRgn
+  - ISP_Tuning_SetOsdRgnAttr
+  - ISP_Tuning_ShowOsdRgn
+  - ISP_Tuning_SetOsdPoolSize
+- soc: T41
+  issues:
+  - 74
+  functions:
+  - DMIC_*
+  - DMIC_DisableAecRefFrame
+- soc: T41
+  issues:
+  - 75
+  functions:
+  - ISP_Get/SetCsccrMode
+  - ISP_Get/SetInternalChnAttr
+  - ISP_LDC_Get/SetAttr
+  - ISP_LDC_INIT
+  - ISP_RAW_RwControl
+  - ISP_SET_GPIO_INIT_OR_FREE
+  - ISP_SET_GPIO_STA
+  - ISP_SetVicDoneCbFunc
+  - ISP_StartNightMode
+  - ISP_Tuning_Get/SetDrawBlock
+  - ISP_Tuning_SetTmoFaceae
+  - ISP_WDR_OPEN
+- soc: T41
+  issues:
+  - 76
+  functions:
+  - ISP_SetAeAlgoFunc
+  - ISP_SetAwbAlgoFunc
+  - ISP_Tuning_Get/SetAeConvergeStep
+  - ISP_Tuning_Get/SetAeExpList
+  - ISP_Tuning_Get/SetFaceAe
+  - ISP_Tuning_Get/SetFaceAeWeiget
+  - ISP_Tuning_GetAeBv
+  - ISP_Tuning_GetAEFlickerFlag
+  - ISP_Tuning_GetAFMetricesInfo
+  - ISP_Tuning_GetAfStatistics
+  - ISP_Tuning_GetFaceAeLuma
+- soc: T41
+  issues:
+  - 77
+  functions:
+  - Decoder_*
+  - Encoder_Get/SetChnGopAttr
+  - Encoder_Get/SetChnRoiAttr
+  - Encoder_Get/SetChnSeiAttr
+  - Encoder_Get/SetFisheyeEnableStatus
+  - Encoder_SetAvpuBsSize
+  - Encoder_SetChnGopLength
+  - Encoder_SetChnMapRoi
+  - Encoder_SetFrameRelease
+- soc: T41
+  issues:
+  - 78
+  functions:
+  - EmuFrameSource_*
+- soc: T41
+  issues:
+  - 79
+  functions:
+  - OSD_Get/SetRgnAttr_ISP
+  - OSD_GetRegionLuma
+- soc: T41
+  issues:
+  - 80
+  functions:
+  - SU_ADC_Init
+  - SU_Base_SetWkupMode
+  - SU_Battery_GetCapacity
+  - SU_Battery_GetEvent
+  - SU_Battery_GetStatus
+  - SU_Battery_GetVoltageUV
