@@ -11,6 +11,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
 ## Branch `claude/jpeg-reuse-mark` (2026-10-26)
 
 - **`OpenIMP_Encoder_StreamIsReused(chn, &stream)`** (beyond vendor, `openimp/openimp_encoder_telemetry.h`): a JPEG that OpenIMP delivers again because the encoder was busy (or rmem short) carries the current time stamp; the query returns 1 for such a stand-in, 0 for a freshly encoded picture, -1 for a stream that is not the one held. Wish of the timps session. No change to `IMPEncoderStream`/packs; host test in `tests/t31/p2_jpeg_source_test.c`.
+- **Device proof (T21 PC420 .24, `tools/jpegreuse`):** the reuse path only exists where a JPEG can be skipped (Helix JPEG on T20/T21/T30 with the shared bitstream buffer, T31 hardware JPEG); T40/T41 encode every JPEG in software and never re-deliver one, so there is nothing to mark there. New debug variable `OPENIMP_HELIX_JPEG_BUSY_WAIT_MS` (default 200) forces the path. With 0 and with 25 ms, 20 s at 1080p next to a running H.264 channel: 482 JPEG, 477 reused / 5 fresh; every `reused=1` picture byte-identical to the one before (hash) with a new, rising time stamp, every `reused=0` picture different, all valid JPEG, 0 query errors, 0 oops, timps restarted afterwards.
 
 ## Post-RC2 (2026-10-25/26)
 

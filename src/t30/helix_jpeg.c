@@ -627,6 +627,7 @@ static struct {
     uint32_t pictures;
     uint32_t jobs;
     uint32_t rmem_reserve;
+    uint32_t busy_wait_ms;     /* OPENIMP_HELIX_JPEG_BUSY_WAIT_MS */
     int stats;                 /* OPENIMP_HELIX_JPEG_STATS=1 */
     int max_bs;                /* JPGC_MAX_BS limits the core */
     uint32_t bs_limit;         /* bitstream buffer cap with max_bs */
@@ -754,6 +755,11 @@ static int helix_jpeg_open_locked(void)
         if (DMA_RmemStats(NULL, &total, NULL) == 0 &&
             total / 16u > reserve)
             reserve = (uint32_t)(total / 16u);
+        /* how long a JPEG that may be skipped waits for the VPU before the
+         * channel re-delivers its last picture (0 = never wait) */
+        helix_jpeg.busy_wait_ms = helix_env_uint(
+            "OPENIMP_HELIX_JPEG_BUSY_WAIT_MS", HELIX_JPEG_BUSY_WAIT_MS, 0u,
+            5000u);
         helix_jpeg.rmem_reserve = helix_env_uint(
             "OPENIMP_HELIX_JPEG_RMEM_RESERVE_KB", reserve >> 10, 0u,
             65536u) << 10;
@@ -2019,7 +2025,7 @@ int OpenIMP_HelixJpeg_EncodeEx(const HelixJpegFrame *frame,
 
         int locked = may_skip
             ? OpenIMP_HelixBitstream_LockTimeout(need, &helix_jpeg.job,
-                                                 HELIX_JPEG_BUSY_WAIT_MS)
+                                                 helix_jpeg.busy_wait_ms)
             : OpenIMP_HelixBitstream_Lock(need, &helix_jpeg.job);
 
         if (locked != 0) {

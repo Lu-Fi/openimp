@@ -298,6 +298,7 @@ set in production.
 
 | Variable | Purpose | Default | Class |
 |---|---|---|---|
+| `OPENIMP_HELIX_JPEG_BUSY_WAIT_MS` | Helix JPEG (T20/T21/T30): how long a JPEG that may be replaced by the channel's last picture waits for the VPU before it is skipped (0 = never wait). Used to force the reuse path for `OpenIMP_Encoder_StreamIsReused` tests | 200 | debug-only |
 | `OPENIMP_IVS_VENDOR_ORDER` | `1` posts the IVS result before the channel-free semaphore as the vendor does (a frame fed right after the result is dropped as busy) | off | user-facing (opt-in) |
 | `OPENIMP_SU_SHUTDOWN` | `SU_Base_Shutdown`: unset or `reboot` = sync, then SIGTERM to init (busybox reboots); `poweroff` = SIGUSR2 (busybox powers off, opt-in); `vendor` = vendor behaviour (sync, SIGCHLD, which busybox init ignores, opt-in) | `reboot` | user-facing |
 | `OPENIMP_REF_SHARE` | `0` disables the T21/T23 reference ring | on | user-facing |
