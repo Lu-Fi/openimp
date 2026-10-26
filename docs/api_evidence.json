@@ -6309,7 +6309,7 @@
    "cells": {
     "T10": "cache",
     "T20": "cache",
-    "T21": "err",
+    "T21": "dev",
     "T23": "dev",
     "T30": "cache",
     "T31": "n.a.",
@@ -6320,7 +6320,7 @@
    },
    "note": "T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test",
    "ref": {
-    "T21": "FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChangeRef: ret=-1 ChangeRef = 0; Encoder_SetChangeRef: ret=0 ChangeRef set 1, read back 0",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30"
    }
   },
@@ -6455,9 +6455,9 @@
   "Encoder_Get/SetChnDenoise": {
    "area": "Encoder",
    "cells": {
-    "T10": "err",
-    "T20": "err",
-    "T21": "err",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
     "T23": "dev",
     "T30": "?",
     "T31": "n.a.",
@@ -6473,9 +6473,9 @@
    },
    "note": "T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first",
    "ref": {
-    "T10": "FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3",
-    "T20": "FAIL apitest agg47 2026-10-26 192.168.10.107: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3",
-    "T21": "FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3",
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30"
    }
   },
@@ -6663,7 +6663,7 @@
     "T10": "dev",
     "T20": "dev",
     "T21": "dev",
-    "T23": "err",
+    "T23": "dev",
     "T30": "?",
     "T31": "n.a.",
     "T32": "nob",
@@ -6684,7 +6684,7 @@
     "T10": "apitest agg47 2026-10-26 192.168.10.31",
     "T20": "apitest agg47 2026-10-26 192.168.10.107",
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "FAIL apitest agg47 2026-10-26 192.168.10.30: Encoder_GetChnROI: ret=0 enabled 1; Encoder_SetChnROI: ret=0 roi 0 (64,64)-(319,255) dQP -4, read back en 1 (64,64)-(304,240) qp -4"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
    }
   },
   "Encoder_Get/SetChnRcAttr": {
@@ -7017,7 +7017,7 @@
   "Encoder_Get/SetSuperFrameCfg": {
    "area": "Encoder",
    "cells": {
-    "T10": "err",
+    "T10": "dev",
     "T20": "dev",
     "T21": "host",
     "T23": "dev",
@@ -7035,7 +7035,7 @@
    },
    "note": "T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release",
    "ref": {
-    "T10": "FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetSuperFrameCfg: ret=0 initial mode 2 I 19660800 P 14043429; Encoder_SetSuperFrameCfg: ret=-1 mode 1 I 400000 P 200000, read back mode 2 I 19660800 P 14043429 prio 0",
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
     "T20": "apitest agg47 2026-10-26 192.168.10.107",
     "T23": "apitest agg47 2026-10-26 192.168.10.30"
    }
@@ -7396,7 +7396,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -7404,7 +7404,8 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_InputJpege_Ex": {
@@ -7419,7 +7420,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_InsertUserData": {
@@ -7904,7 +7908,10 @@
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_SetChnBitRate": {
@@ -8298,7 +8305,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_SetMultiSectionMode": {
@@ -8594,8 +8604,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8603,7 +8613,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_VbmAlloc_Ex": {
@@ -8618,7 +8630,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_VbmFree": {
@@ -8632,8 +8647,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8641,7 +8656,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_VbmFree_Ex": {
@@ -8656,7 +8673,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_VbmP2V": {
@@ -8670,11 +8690,13 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_VbmV2P": {
@@ -8688,8 +8710,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8697,7 +8719,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_YuvEncode": {
@@ -8711,8 +8735,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8720,7 +8744,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_YuvEncode_Ex": {
@@ -8735,7 +8761,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_YuvExit": {
@@ -8749,8 +8778,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8758,7 +8787,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_YuvExit_Ex": {
@@ -8773,7 +8804,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_YuvGetCrop": {
@@ -8806,8 +8840,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -8815,7 +8849,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "Encoder_YuvInit_Ex": {
@@ -8830,7 +8866,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Encoder_YuvRequestIDR": {
@@ -9013,8 +9052,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_DestroyChn": {
@@ -9259,8 +9302,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_ExternInject_DestroyChn": {
@@ -9274,8 +9321,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_ExternInject_DisableChn": {
@@ -9289,8 +9340,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_ExternInject_EnableChn": {
@@ -9304,8 +9359,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_Get/SetChnAttr": {
@@ -9739,8 +9798,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
+   },
+   "ref": {
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "FrameSource_GetTimedFrame": {
@@ -9811,8 +9874,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "FrameSource_ReleaseFrame": {
@@ -9878,8 +9945,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
+   },
+   "ref": {
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "FrameSource_SetChnRotate": {
@@ -9934,7 +10005,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "FrameSource_SnapFrame": {
@@ -10117,9 +10191,12 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
    },
-   "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged)."
+   "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+   }
   },
   "ISP_Tuning_Get/SetOSDBlock": {
    "area": "OSD",
@@ -10133,9 +10210,12 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
    },
-   "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged)."
+   "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+   }
   },
   "ISP_Tuning_GetOsdRgnAttr": {
    "area": "OSD",
@@ -10149,7 +10229,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "ISP_Tuning_SetOsdPoolSize": {
@@ -10433,7 +10516,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "OSD_DestroyGroup": {
@@ -10602,7 +10688,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "OSD_Exit_ISP": {
@@ -10617,7 +10706,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "OSD_Get/SetGrpRgnAttr": {
@@ -10817,7 +10909,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "OSD_RegisterRgn": {
@@ -10951,10 +11046,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "miss"
+    "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "OSD_SetMosaic": {
@@ -11067,9 +11163,12 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "host"
    },
-   "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)"
+   "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)",
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+   }
   },
   "OSD_SetRgnAttrWithTimestamp": {
    "area": "OSD",
@@ -11140,7 +11239,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "OSD_ShowRgn": {
@@ -11232,7 +11334,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "aud"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
    }
   },
   "OSD_Start": {
@@ -13003,10 +13108,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_DisableChn": {
@@ -13098,7 +13204,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_DisableHpf": {
@@ -13189,11 +13298,13 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_DisableNs": {
@@ -13534,10 +13645,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_EnableChn": {
@@ -13629,7 +13741,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_EnableHpf": {
@@ -13720,11 +13835,13 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "dev",
+    "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_EnableNs": {
@@ -13921,10 +14038,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "miss"
+    "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_Get/SetGain": {
@@ -14247,7 +14365,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
   "AI_GetFrameAndRef": {
@@ -14828,7 +14949,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "AO_DisableChn": {
@@ -15049,7 +15173,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "AO_EnableChn": {
@@ -15222,7 +15349,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "AO_Get/SetGain": {
@@ -15797,7 +15927,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "miss"
+    "T41": "host"
+   },
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "DMIC_*": {
@@ -15879,8 +16012,12 @@
     "T31": "aud",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "Log_Set_Option": {
@@ -15894,8 +16031,12 @@
     "T31": "host",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "miss",
-    "T41": "miss"
+    "T40": "host",
+    "T41": "host"
+   },
+   "ref": {
+    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
    }
   },
   "SU_ADC_DisableChn": {
@@ -19618,9 +19759,12 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "?",
-    "T41": "miss"
+    "T41": "aud"
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+   }
   },
   "OSD_UpdateRgnAttrData_ISP": {
    "area": "OSD",

@@ -857,59 +857,59 @@ Per area and SoC: functions that work (device-tested or vendor no-op) / function
 
 - **ISP tuning:** T10 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T20 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T21 32/66 ✅ · 34 🔧 · 0 gaps · 0 ? · T23 40/97 ✅ · 54 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 34/87 ✅ · 53 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 43/71 ✅ · 25 🔧 · 1 gaps · 2 ? · T41 42/78 ✅ · 20 🔧 · 16 gaps · 0 ?
 - **AE / AWB / AF:** T10 16/27 ✅ · 11 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 28/29 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 42/51 ✅ · 8 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 40/49 ✅ · 9 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 17/29 ✅ · 6 🔧 · 6 gaps · 0 ? · T41 22/39 ✅ · 2 🔧 · 15 gaps · 0 ?
-- **Encoder:** T10 34/70 ✅ · 0 🔧 · 35 gaps · 1 ? · T20 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T21 45/67 ✅ · 2 🔧 · 20 gaps · 0 ? · T23 70/90 ✅ · 1 🔧 · 15 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 41/45 ✅ · 1 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 37/59 ✅ · 3 🔧 · 19 gaps · 0 ? · T41 31/74 ✅ · 2 🔧 · 41 gaps · 0 ?
-- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 20/33 ✅ · 0 🔧 · 13 gaps · 0 ? · T41 18/36 ✅ · 0 🔧 · 18 gaps · 0 ?
-- **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 20/42 ✅ · 0 🔧 · 22 gaps · 0 ?
+- **Encoder:** T10 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T20 40/70 ✅ · 0 🔧 · 29 gaps · 1 ? · T21 49/67 ✅ · 2 🔧 · 16 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 41/45 ✅ · 1 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 44/59 ✅ · 3 🔧 · 12 gaps · 0 ? · T41 40/74 ✅ · 9 🔧 · 25 gaps · 0 ?
+- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 20/36 ✅ · 7 🔧 · 9 gaps · 0 ?
+- **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 21/42 ✅ · 13 🔧 · 8 gaps · 0 ?
 - **IVS:** T10 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **Audio:** T10 31/68 ✅ · 37 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 74/77 ✅ · 3 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 53/96 ✅ · 43 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 26/99 ✅ · 2 🔧 · 24 gaps · 47 ? · T41 24/107 ✅ · 47 🔧 · 36 gaps · 0 ?
-- **System:** T10 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 18/50 ✅ · 1 🔧 · 3 gaps · 28 ? · T41 16/55 ✅ · 31 🔧 · 8 gaps · 0 ?
-- **All areas:** T10 182/333 ✅ · 112 🔧 · 35 gaps · 4 ? · T20 209/333 ✅ · 89 🔧 · 31 gaps · 4 ? · T21 218/333 ✅ · 92 🔧 · 20 gaps · 3 ? · T23 302/457 ✅ · 111 🔧 · 23 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 242/406 ✅ · 140 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 206/402 ✅ · 52 🔧 · 66 gaps · 78 ? · T41 191/449 ✅ · 102 🔧 · 156 gaps · 0 ?
+- **Audio:** T10 31/68 ✅ · 37 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 74/77 ✅ · 3 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 53/96 ✅ · 43 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 28/99 ✅ · 2 🔧 · 22 gaps · 47 ? · T41 33/107 ✅ · 52 🔧 · 22 gaps · 0 ?
+- **System:** T10 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 18/50 ✅ · 3 🔧 · 1 gaps · 28 ? · T41 16/55 ✅ · 33 🔧 · 6 gaps · 0 ?
+- **All areas:** T10 186/333 ✅ · 112 🔧 · 31 gaps · 4 ? · T20 211/333 ✅ · 89 🔧 · 29 gaps · 4 ? · T21 222/333 ✅ · 92 🔧 · 16 gaps · 3 ? · T23 304/457 ✅ · 111 🔧 · 21 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 242/406 ✅ · 140 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 217/402 ✅ · 60 🔧 · 47 gaps · 78 ? · T41 212/449 ✅ · 136 🔧 · 101 gaps · 0 ?
 
 ### Priorities for streamers
 
 Gaps (error, missing, stub, cache-only) in functions that at least one streamer (p prudynt, r raptor, t timps; † = source only, no binary checked) calls, sorted by the number of streamers; functions of unknown state (?) that a streamer calls are listed as a separate tier (audit pending). Gaps in functions no streamer calls follow as a count (lower priority). T32/T33 have no OpenIMP build yet: their line counts the vendor functions the streamers call and that the first build has to provide.
 
-- **T10:** 0 streamer-used gaps; 16 further gaps no streamer calls
-- **T20:** 0 streamer-used gaps; 14 further gaps no streamer calls
-- **T21:** 1 streamer-used gap: `Encoder_Get/SetChnDenoise` (err; r†); 8 further gaps no streamer calls
-- **T23:** 0 streamer-used gaps; 10 further gaps no streamer calls
+- **T10:** 0 streamer-used gaps; 14 further gaps no streamer calls
+- **T20:** 0 streamer-used gaps; 13 further gaps no streamer calls
+- **T21:** 0 streamer-used gaps; 7 further gaps no streamer calls
+- **T23:** 0 streamer-used gaps; 9 further gaps no streamer calls
 - **T30:** 0 streamer-used gaps; 10 further gaps no streamer calls; 157 streamer-used functions are of unknown state (audit pending), e.g. `AI_Disable`, `AI_DisableAgc`, `AI_DisableChn`, `AI_DisableHpf`, `AI_DisableNs`, `AI_Enable`
 - **T31:** 0 streamer-used gaps; 2 further gaps no streamer calls
 - **T32:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T33:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
-- **T40:** 5 streamer-used gaps: `ISP_Tuning_SetSensorFPS` (err; p† r† t), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_Get/SetMaxStreamCnt` (err; r†), `ISP_Tuning_Awb_Get/SetRgbCoefft` (err; r†); 27 further gaps no streamer calls; 19 streamer-used functions are of unknown state (audit pending), e.g. `AO_SetHpfCoFrequency`, `AO_SetVolMute`, `ISP_Tuning_SetISPBypass`, `AENC_* / ADEC_*`, `AI_DisableAecRefFrame`, `AI_EnableAecRefFrame`
-- **T41:** 13 streamer-used gaps: `Encoder_Get/SetChnFrmRate` (err; p† r†), `FrameSource_Get/SetFrameDepth` (cache; p† r†), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_SetChnBitRate` (err; t), `Encoder_SetChnQpBounds` (err; t), `ISP_Tuning_CreateOsdRgn` (err; r†), `ISP_Tuning_DestroyOsdRgn` (err; r†), `ISP_Tuning_SetOsdRgnAttr` (err; r†), `ISP_Tuning_ShowOsdRgn` (err; r†), `Encoder_SetChnMaxPictureSize` (cache; r†), `FrameSource_Get/SetPool` (cache; r†), `ISP_Tuning_SetOsdPoolSize` (stub; r†); 92 further gaps no streamer calls
+- **T40:** 5 streamer-used gaps: `ISP_Tuning_SetSensorFPS` (err; p† r† t), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_Get/SetMaxStreamCnt` (err; r†), `ISP_Tuning_Awb_Get/SetRgbCoefft` (err; r†); 8 further gaps no streamer calls; 19 streamer-used functions are of unknown state (audit pending), e.g. `AO_SetHpfCoFrequency`, `AO_SetVolMute`, `ISP_Tuning_SetISPBypass`, `AENC_* / ADEC_*`, `AI_DisableAecRefFrame`, `AI_EnableAecRefFrame`
+- **T41:** 13 streamer-used gaps: `Encoder_Get/SetChnFrmRate` (err; p† r†), `FrameSource_Get/SetFrameDepth` (cache; p† r†), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_SetChnBitRate` (err; t), `Encoder_SetChnQpBounds` (err; t), `ISP_Tuning_CreateOsdRgn` (err; r†), `ISP_Tuning_DestroyOsdRgn` (err; r†), `ISP_Tuning_SetOsdRgnAttr` (err; r†), `ISP_Tuning_ShowOsdRgn` (err; r†), `Encoder_SetChnMaxPictureSize` (cache; r†), `FrameSource_Get/SetPool` (cache; r†), `ISP_Tuning_SetOsdPoolSize` (stub; r†); 41 further gaps no streamer calls
 
 ### Long-term backlog
 
 Completeness list, separate from the streamer priorities: every vendor function of the SoC that is missing, partial (cache-only, stub, error) or of unknown state (?) and that **no streamer calls today** (for T32/T33: every vendor function no streamer calls, as there is no build yet). Grouped by area with the suggested action: implement, documented ENOTSUP (the open driver answers like a vendor stack without the feature) or not applicable (declared in a header but exported by no vendor library). Default action derived from the evidence note; override per function with `action` in `docs/api_evidence.json`.
 
-<details><summary><b>T10</b>: 20 functions</summary>
+<details><summary><b>T10</b>: 18 functions</summary>
 
-- **Encoder (and decoder):** implement (17): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnDenoise`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/SetH264TransCfg`, `Encoder_Get/SetSuperFrameCfg`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
+- **Encoder (and decoder):** implement (15): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/SetH264TransCfg`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
 - **System / sysutils / log:** implement (3): `Phys_to_Virt`, `Sp_Alloc`, `Virt_to_Phys`
 
 </details>
 
-<details><summary><b>T20</b>: 18 functions</summary>
+<details><summary><b>T20</b>: 17 functions</summary>
 
-- **Encoder (and decoder):** implement (15): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnDenoise`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
+- **Encoder (and decoder):** implement (14): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
 - **System / sysutils / log:** implement (3): `Phys_to_Virt`, `Sp_Alloc`, `Virt_to_Phys`
 
 </details>
 
-<details><summary><b>T21</b>: 11 functions</summary>
+<details><summary><b>T21</b>: 10 functions</summary>
 
-- **Encoder (and decoder):** implement (8): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
+- **Encoder (and decoder):** implement (7): `Decoder_*`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
 - **System / sysutils / log:** implement (3): `Phys_to_Virt`, `Sp_Alloc`, `Virt_to_Phys`
 
 </details>
 
-<details><summary><b>T23</b>: 31 functions</summary>
+<details><summary><b>T23</b>: 30 functions</summary>
 
 - **ISP tuning:** implement (2): `ISP_Tuning_Get/SetDrawBlock`, `ISP_Tuning_SwitchBin`
 - **AE / AWB / AF:** implement (1): `ISP_Tuning_SetWB_ALGO`
-- **Encoder (and decoder):** implement (9): `Decoder_*`, `Encoder_Get/SetChnROI`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/Setframelossthd`, `Encoder_PadFrame`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetMultiSectionMode`, `Encoder_SetPadFrameAttr`, `Encoder_SetRdBufShare`
+- **Encoder (and decoder):** implement (8): `Decoder_*`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/Setframelossthd`, `Encoder_PadFrame`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetMultiSectionMode`, `Encoder_SetPadFrameAttr`, `Encoder_SetRdBufShare`
 - **OSD:** implement (5): `ISP_Tuning_Get/SetOSDAttr`, `ISP_Tuning_Get/SetOSDBlock`, `OSD_Alloc`, `OSD_Init_ISP`, `OSD_UpdateRgnAttrData_ISP`
 - **System / sysutils / log:** implement (14): `ISPOSD_Alloc`, `MemPool_GetById`, `MemPool_InitPool`, `Phys_to_Virt`, `PoolAlloc`, `PoolAlloc_Dump`, `PoolAlloc_Get_Attr`, `PoolAlloc_Set_Attr`, `PoolFlushCache`, `PoolFree`, `PoolPhys_to_Virt`, `PoolVirt_to_Phys`, `Sp_Alloc`, `Virt_to_Phys`
 
@@ -958,26 +958,25 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T40</b>: 65 functions</summary>
+<details><summary><b>T40</b>: 46 functions</summary>
 
 - **AE / AWB / AF:** implement (4): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`
-- **Encoder (and decoder):** implement (9): `Decoder_*`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_VbmAlloc`, `Encoder_VbmFree`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvExit`, `Encoder_YuvInit`
-- **FrameSource:** implement (9): `EmuFrameSource_*`, `FrameSource_DequeueBuffer`, `FrameSource_ExternInject_CreateChn`, `FrameSource_ExternInject_DestroyChn`, `FrameSource_ExternInject_DisableChn`, `FrameSource_ExternInject_EnableChn`, `FrameSource_GetFrameEx`, `FrameSource_QueueBuffer`, `FrameSource_ReleaseFrameEx`
+- **Encoder (and decoder):** implement (2): `Decoder_*`, `Encoder_Get/SetFisheyeEnableStatus`
+- **FrameSource:** implement (1): `EmuFrameSource_*`
 - **OSD:** implement (1): `OSD_Init_ISP`
-- **Audio:** implement (14): `AI_DisableAec`, `AI_DisableHs`, `AI_EnableAec`, `AI_EnableHs`, `AO_ClearChnBuf`, `AO_Disable`, `AO_DisableChn`, `AO_Enable`, `AO_EnableChn`, `AO_FlushChnBuf`, `AO_Get/SetGain`, `AO_Get/SetPubAttr`, `AO_Get/SetVol`, `AO_SendFrame`
-- **System / sysutils / log:** implement (28): `Log_Get_Option`, `Log_Set_Option`, `SU_ADC_DisableChn`, `SU_ADC_EnableChn`, `SU_ADC_Exit`, `SU_ADC_GetChnValue`, `SU_ADC_Init`, `SU_Base_DisableAlarm`, `SU_Base_EnableAlarm`, `SU_Base_Get/SetAlarm`, `SU_Base_Get/SetTime`, `SU_Base_PollingAlarm`, `SU_Base_Reboot`, `SU_Base_Suspend`, `SU_CIPHER_ConfigHandle`, `SU_CIPHER_CreateHandle`, `SU_CIPHER_Decrypt`, `SU_CIPHER_DES_Exit`, `SU_CIPHER_DES_Init`, `SU_CIPHER_DES_Test`, `SU_CIPHER_DestroyHandle`, `SU_CIPHER_Encrypt`, `SU_CIPHER_Exit`, `SU_CIPHER_Init`, `SU_Key_DisableEvent`, `SU_Key_EnableEvent`, `SU_Key_ReadEvent`, `SU_LED_Command`
+- **Audio:** implement (12): `AI_DisableAec`, `AI_EnableAec`, `AO_ClearChnBuf`, `AO_Disable`, `AO_DisableChn`, `AO_Enable`, `AO_EnableChn`, `AO_FlushChnBuf`, `AO_Get/SetGain`, `AO_Get/SetPubAttr`, `AO_Get/SetVol`, `AO_SendFrame`
+- **System / sysutils / log:** implement (26): `SU_ADC_DisableChn`, `SU_ADC_EnableChn`, `SU_ADC_Exit`, `SU_ADC_GetChnValue`, `SU_ADC_Init`, `SU_Base_DisableAlarm`, `SU_Base_EnableAlarm`, `SU_Base_Get/SetAlarm`, `SU_Base_Get/SetTime`, `SU_Base_PollingAlarm`, `SU_Base_Reboot`, `SU_Base_Suspend`, `SU_CIPHER_ConfigHandle`, `SU_CIPHER_CreateHandle`, `SU_CIPHER_Decrypt`, `SU_CIPHER_DES_Exit`, `SU_CIPHER_DES_Init`, `SU_CIPHER_DES_Test`, `SU_CIPHER_DestroyHandle`, `SU_CIPHER_Encrypt`, `SU_CIPHER_Exit`, `SU_CIPHER_Init`, `SU_Key_DisableEvent`, `SU_Key_EnableEvent`, `SU_Key_ReadEvent`, `SU_LED_Command`
 
 </details>
 
-<details><summary><b>T41</b>: 92 functions</summary>
+<details><summary><b>T41</b>: 41 functions</summary>
 
 - **ISP tuning:** implement (12): `ISP_Get/SetCsccrMode`, `ISP_Get/SetInternalChnAttr`, `ISP_LDC_Get/SetAttr`, `ISP_LDC_INIT`, `ISP_RAW_RwControl`, `ISP_SET_GPIO_INIT_OR_FREE`, `ISP_SET_GPIO_STA`, `ISP_SetVicDoneCbFunc`, `ISP_StartNightMode`, `ISP_Tuning_Get/SetDrawBlock`, `ISP_Tuning_SetTmoFaceae`, `ISP_WDR_OPEN`
 - **AE / AWB / AF:** implement (11): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_Get/SetAeConvergeStep`, `ISP_Tuning_Get/SetAeExpList`, `ISP_Tuning_Get/SetFaceAe`, `ISP_Tuning_Get/SetFaceAeWeiget`, `ISP_Tuning_GetAeBv`, `ISP_Tuning_GetAEFlickerFlag`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`, `ISP_Tuning_GetFaceAeLuma`
-- **Encoder (and decoder):** implement (25): `Decoder_*`, `Encoder_Get/SetChnGopAttr`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetChnSeiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_InputJpege`, `Encoder_InputJpege_Ex`, `Encoder_SetAvpuBsSize`, `Encoder_SetAvpuJpegQp`, `Encoder_SetChnGopLength`, `Encoder_SetChnMapRoi`, `Encoder_SetFrameRelease`, `Encoder_SetIvpuBsSize`, `Encoder_VbmAlloc`, `Encoder_VbmAlloc_Ex`, `Encoder_VbmFree`, `Encoder_VbmFree_Ex`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvEncode_Ex`, `Encoder_YuvExit`, `Encoder_YuvExit_Ex`, `Encoder_YuvInit`, `Encoder_YuvInit_Ex`
-- **FrameSource:** implement (10): `EmuFrameSource_*`, `FrameSource_DequeueBuffer`, `FrameSource_ExternInject_CreateChn`, `FrameSource_ExternInject_DestroyChn`, `FrameSource_ExternInject_DisableChn`, `FrameSource_ExternInject_EnableChn`, `FrameSource_GetFrameEx`, `FrameSource_QueueBuffer`, `FrameSource_ReleaseFrameEx`, `FrameSource_SetYuvAlign`
-- **OSD:** implement (13): `ISP_Tuning_Get/SetOSDAttr`, `ISP_Tuning_Get/SetOSDBlock`, `ISP_Tuning_GetOsdRgnAttr`, `OSD_CreateRgn_ISP`, `OSD_DestroyRgn_ISP`, `OSD_Exit_ISP`, `OSD_Get/SetRgnAttr_ISP`, `OSD_GetRgnAttr_ISPPic`, `OSD_Init_ISP`, `OSD_SetGroupCallback`, `OSD_SetPoolSize_ISP`, `OSD_SetRgnAttr_PicISP`, `OSD_ShowRgn_ISP`; not applicable (1): `OSD_GetRegionLuma`
-- **Audio:** implement (12): `AI_DisableAlgo`, `AI_DisableGetRaw`, `AI_DisableHs`, `AI_EnableAlgo`, `AI_EnableGetRaw`, `AI_EnableHs`, `AI_Get/SetDigitalGain`, `AI_GetFrameAndRaw`, `AO_DisableAlgo`, `AO_EnableAlgo`, `AO_Get/SetDigitalGain`, `Audio_Select_Codec`
-- **System / sysutils / log:** implement (4): `Log_Get_Option`, `Log_Set_Option`, `SU_ADC_Init`, `SU_Base_SetWkupMode`; not applicable (4): `SU_Battery_GetCapacity`, `SU_Battery_GetEvent`, `SU_Battery_GetStatus`, `SU_Battery_GetVoltageUV`
+- **Encoder (and decoder):** implement (9): `Decoder_*`, `Encoder_Get/SetChnGopAttr`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetChnSeiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_SetAvpuBsSize`, `Encoder_SetChnGopLength`, `Encoder_SetChnMapRoi`, `Encoder_SetFrameRelease`
+- **FrameSource:** implement (1): `EmuFrameSource_*`
+- **OSD:** implement (1): `OSD_Get/SetRgnAttr_ISP`; not applicable (1): `OSD_GetRegionLuma`
+- **System / sysutils / log:** implement (2): `SU_ADC_Init`, `SU_Base_SetWkupMode`; not applicable (4): `SU_Battery_GetCapacity`, `SU_Battery_GetEvent`, `SU_Battery_GetStatus`, `SU_Battery_GetVoltageUV`
 
 </details>
 
@@ -1399,7 +1398,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### Encoder (and decoder)
 
-131 rows (76 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+131 rows (60 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1410,12 +1409,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_DestroyGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_FlushStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `Encoder_Get/SetChangeRef` | ⚠c | ⚠c | ❌e | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
+| `Encoder_Get/SetChangeRef` | ⚠c | ⚠c | ✅ | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnAttrRcMode` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `Encoder_Get/SetChnColor2Grey` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetChnCrop` | ❌ | ❌ | ❌ | ✅ | ❌ | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnDemask` | ⚠c | ⚠c | · | · | · | · | · | · | · | · | – |
-| `Encoder_Get/SetChnDenoise` | ❌e | ❌e | ❌e | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_Get/SetChnDenoise` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetChnFrmRate` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ❌e | p† r† |
 | `Encoder_Get/SetChnFrmUsedMode` | ✅ | ✅ | ✅ | ✅ | 🔧h | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnGopAttr` | · | · | · | · | · | ✅ | · | · | ✅ | ❌e | – |
@@ -1424,7 +1423,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_Get/SetChnH264FrmUsedMode` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnHSkip` | ⚠c | ⚠c | ✅ | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnRcAttr` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
-| `Encoder_Get/SetChnROI` | ✅ | ✅ | ✅+ | ❌e | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_Get/SetChnROI` | ✅ | ✅ | ✅+ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetChnRoiAttr` | · | · | · | · | · | · | · | · | ✅ | ⚠c | – |
 | `Encoder_Get/SetChnSeiAttr` | · | · | · | · | · | · | · | · | 🔧h | ❌ | – |
 | `Encoder_Get/SetFisheyeEnableStatus` | ⚠c | ⚠c | ⚠c | ⚠c | ⚠c | ⚠c | 📋 | 📋 | ⚠c | ❌ | – |
@@ -1438,7 +1437,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `Encoder_Get/SetQpgMode` | · | · | ✅○ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetStreamBufSize` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | – |
-| `Encoder_Get/SetSuperFrameCfg` | ❌e | ✅ | 🔧h | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_Get/SetSuperFrameCfg` | ✅ | ✅ | 🔧h | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_GetChnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `Encoder_GetChnAveBitrate` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `Encoder_GetChnEncType` | · | · | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
@@ -1455,8 +1454,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_GetPskipCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetSrdCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_InputJpege` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | t |
-| `Encoder_InputJpege_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `Encoder_InputJpege` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ✅ | t |
+| `Encoder_InputJpege_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
 | `Encoder_InsertUserData` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | – |
 | `Encoder_KernEnc_GetStatus` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_KernEnc_GetStream` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1477,7 +1476,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetAutoVui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetAvpuBsShare` | · | · | · | · | · | · | · | · | · | 🔧h | – |
 | `Encoder_SetAvpuBsSize` | · | · | · | · | · | · | · | · | · | ❌ | – |
-| `Encoder_SetAvpuJpegQp` | · | · | · | · | · | · | · | · | · | ❌ | – |
+| `Encoder_SetAvpuJpegQp` | · | · | · | · | · | · | · | · | · | ✅ | – |
 | `Encoder_SetbufshareChn` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | p† r† |
 | `Encoder_SetChnBitRate` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ❌e | t t† |
 | `Encoder_SetChnEntropyMode` | · | · | · | · | · | ✅ | · | · | · | · | – |
@@ -1503,7 +1502,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetGOPSize` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_SetH264Vui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetH265Vui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_SetIvpuBsSize` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `Encoder_SetIvpuBsSize` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
 | `Encoder_SetJpegBsSize` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetJpegMultiSectionMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetJpegQp` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1519,35 +1518,35 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_StartRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_StopRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_UnRegisterChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_VbmAlloc` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_VbmAlloc_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `Encoder_VbmFree` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_VbmFree_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `Encoder_VbmP2V` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `Encoder_VbmV2P` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_YuvEncode` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_YuvEncode_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `Encoder_YuvExit` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_YuvExit_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `Encoder_VbmAlloc` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_VbmAlloc_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
+| `Encoder_VbmFree` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_VbmFree_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
+| `Encoder_VbmP2V` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
+| `Encoder_VbmV2P` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_YuvEncode` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_YuvEncode_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
+| `Encoder_YuvExit` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_YuvExit_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
 | `Encoder_YuvGetCrop` | · | · | · | ✅ | · | · | · | · | · | · | – |
-| `Encoder_YuvInit` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
-| `Encoder_YuvInit_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `Encoder_YuvInit` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | t |
+| `Encoder_YuvInit_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
 | `Encoder_YuvRequestIDR` | · | · | · | ✅ | · | · | · | · | · | · | t |
 | `Encoder_YuvSetCrop` | · | · | · | ✅ | · | · | · | · | · | · | – |
 
-<details><summary>Notes and references (80)</summary>
+<details><summary>Notes and references (88)</summary>
 
 - `Encoder_CreateChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_CreateGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_DestroyChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_DestroyGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_FlushStream`: all: drops the encoded stream nobody fetched (agg-25) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `Encoder_Get/SetChangeRef`: T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T21: FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChangeRef: ret=-1 ChangeRef = 0; Encoder_SetChangeRef: ret=0 ChangeRef set 1, read back 0. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChangeRef`: T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
 - `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnCrop`: audit: userspace implementation; T10/T20/T21: the vendor libimp exports it without a header (i264e_set_param, x/y/w/h multiples of 16); OpenIMP does not (miss, found by `make export-check` 2026-10-11, a link shim is an open question) T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnDemask`: T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c) T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c)
-- `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T10: FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T20: FAIL apitest agg47 2026-10-26 192.168.10.107: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T21: FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnFrmRate: ret=0 15/1; Encoder_SetChnFrmRate: ret=0 set 10/1, read back 15/1.
 - `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnGopAttr`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnGopAttr: ret=0 mode 0x2 length 60 (created 30) maxSameSence 2; Encoder_SetChnGopAttr: ret=0 restore attr, length 60.
@@ -1556,7 +1555,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_Get/SetChnH264FrmUsedMode`: T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask
 - `Encoder_Get/SetChnHSkip`: T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnRcAttr`: T10/T20 (class d): 3.9.0-only call (IMPEncoderRcAttr of that SDK generation), see Encoder_Get/SetChnH264Demask T10/T20 (class d): 3.9.0-only call (IMPEncoderRcAttr of that SDK generation), see Encoder_Get/SetChnH264Demask
-- `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: FAIL apitest agg47 2026-10-26 192.168.10.30: Encoder_GetChnROI: ret=0 enabled 1; Encoder_SetChnROI: ret=0 roi 0 (64,64)-(319,255) dQP -4, read back en 1 (64,64)-(304,240) qp -4.
+- `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnRoiAttr`: not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md) T40: apitest agg47 2026-10-26 192.168.10.184.
 - `Encoder_Get/SetFisheyeEnableStatus`: T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code
 - `Encoder_Get/Setframelossthd`: T23: kept for getter only (documented in source); class d: the vendor re-encodes oversized frames at a higher QP inside its closed encoder; the Helix session has no such hook (would need a re-encode path in the encoder, low value); vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 validates and stores the threshold for the closed encoder; T31 1.1.6 exports no frame-loss function (n.a.) T23: kept for getter only (documented in source); class d: the vendor re-encodes oversized frames at a higher QP inside its closed encoder; the Helix session has no such hook (would need a re-encode path in the encoder, low value); vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 validates and stores the threshold for the closed encoder; T31 1.1.6 exports no frame-loss function (n.a.)
@@ -1569,7 +1568,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_Get/SetPool`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_Get/SetQpgMode`: T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetStreamBufSize`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `Encoder_Get/SetSuperFrameCfg`: T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release T10: FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetSuperFrameCfg: ret=0 initial mode 2 I 19660800 P 14043429; Encoder_SetSuperFrameCfg: ret=-1 mode 1 I 400000 P 200000, read back mode 2 I 19660800 P 14043429 prio 0. T20: apitest agg47 2026-10-26 192.168.10.107. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetSuperFrameCfg`: T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_GetChnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_GetChnAveBitrate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
 - `Encoder_GetChnEncType`: audit: userspace implementation T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
@@ -1578,7 +1577,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_GetFd`: audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_GetGOPSize`: T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_GetStream`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `Encoder_InputJpege`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_InputJpege`: T23: apitest agg47 2026-10-26 192.168.10.30. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_InputJpege_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `Encoder_InsertUserData`: audit: userspace implementation; T20/T21/T23: emits a user_data_unregistered SEI (OEM UUID) in front of the next picture, found in the next 30 frames (apitest PASS); T10 shares the T20 build, not re-tested T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_PollingModuleStream`: audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS) T21: apitest agg47 2026-10-26 192.168.10.24. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
 - `Encoder_PollingStream`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
@@ -1588,6 +1588,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_RequestGDR`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_RequestIDR`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_SetAvpuBsShare`: T41: exported by the OpenIMP build (corrected 2026-10-26 from miss).
+- `Encoder_SetAvpuJpegQp`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_SetbufshareChn`: vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_SetChnBitRate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 400 kbit/s, read back 512.
 - `Encoder_SetChnEntropyMode`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
@@ -1603,18 +1604,24 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_SetDefaultParam`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_SetFrameRelease`: T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
 - `Encoder_SetGOPSize`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_SetIvpuBsSize`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `Encoder_SetMultiSectionMode`: T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.) T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.)
 - `Encoder_StartRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_StopRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_UnRegisterChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `Encoder_VbmAlloc`: T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_VbmFree`: T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_VbmP2V`: T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_VbmV2P`: T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_YuvEncode`: T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_YuvExit`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_VbmAlloc`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_VbmAlloc_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `Encoder_VbmFree`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_VbmFree_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `Encoder_VbmP2V`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_VbmV2P`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_YuvEncode`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_YuvEncode_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `Encoder_YuvExit`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_YuvExit_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `Encoder_YuvGetCrop`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
-- `Encoder_YuvInit`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvInit`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_YuvInit_Ex`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_YuvSetCrop`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
 
@@ -1622,7 +1629,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### FrameSource
 
-48 rows (28 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+48 rows (19 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1633,15 +1640,15 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_CreateChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_CreateChn_Ext` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `FrameSource_CreateJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_DequeueBuffer` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `FrameSource_DequeueBuffer` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `FrameSource_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_DestroyJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_DisableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `FrameSource_ExternInject_CreateChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_ExternInject_DestroyChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_ExternInject_DisableChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_ExternInject_EnableChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `FrameSource_ExternInject_CreateChn` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
+| `FrameSource_ExternInject_DestroyChn` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
+| `FrameSource_ExternInject_DisableChn` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
+| `FrameSource_ExternInject_EnableChn` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `FrameSource_Get/SetChnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_Get/SetChnFifoAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `FrameSource_Get/SetDelay` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
@@ -1653,14 +1660,14 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_GetChnAttr_Expand` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetDirectMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
-| `FrameSource_GetFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `FrameSource_GetFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `FrameSource_GetJointByHandler` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetTimedFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_PM_Resume` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_PM_Suspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_QueueBuffer` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `FrameSource_QueueBuffer` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `FrameSource_ReleaseFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
-| `FrameSource_ReleaseFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `FrameSource_ReleaseFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `FrameSource_SetChnAttr_Expand` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_SetChnRotate` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `FrameSource_SetDirectMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1669,19 +1676,24 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_SetJointBackground` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_SetSource` | · | · | · | · | ? | 🔧a | · | · | · | · | – |
 | `FrameSource_SetSubStreamOnlineMode` | · | · | · | · | · | · | · | 📋 | · | · | – |
-| `FrameSource_SetYuvAlign` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `FrameSource_SetYuvAlign` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧a | – |
 | `FrameSource_SnapFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_SnapRaw_End` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_SnapRaw_Start` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_UpdateChnLut` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 
-<details><summary>Notes and references (19)</summary>
+<details><summary>Notes and references (28)</summary>
 
 - `FrameSource_ChnStatQuery`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
 - `FrameSource_CreateChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_DequeueBuffer`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `FrameSource_DestroyChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_DisableChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_EnableChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_ExternInject_CreateChn`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `FrameSource_ExternInject_DestroyChn`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `FrameSource_ExternInject_DisableChn`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `FrameSource_ExternInject_EnableChn`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `FrameSource_Get/SetChnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
@@ -1691,17 +1703,21 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_GetFrameEx`: T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_GetTimedFrame`: T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_QueueBuffer`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `FrameSource_ReleaseFrame`: audit: reaches the driver/kernel; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_ReleaseFrameEx`: T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `FrameSource_SetChnRotate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
 - `FrameSource_SetSource`: audit: userspace implementation
+- `FrameSource_SetYuvAlign`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
 - `FrameSource_SnapFrame`: T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 
 </details>
 
 ### OSD
 
-43 rows (35 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+43 rows (26 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1710,9 +1726,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Get/SetSingleOSDAttr` | · | · | · | · | · | · | · | · | ✅ | · | – |
 | `ISP_Tuning_CreateOsdRgn` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
 | `ISP_Tuning_DestroyOsdRgn` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
-| `ISP_Tuning_Get/SetOSDAttr` | · | · | · | ❌e | · | · | 📋 | 📋 | · | ❌ | – |
-| `ISP_Tuning_Get/SetOSDBlock` | · | · | · | ❌e | · | · | 📋 | 📋 | · | ❌ | – |
-| `ISP_Tuning_GetOsdRgnAttr` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌ | – |
+| `ISP_Tuning_Get/SetOSDAttr` | · | · | · | ❌e | · | · | 📋 | 📋 | · | 🔧h | – |
+| `ISP_Tuning_Get/SetOSDBlock` | · | · | · | ❌e | · | · | 📋 | 📋 | · | 🔧h | – |
+| `ISP_Tuning_GetOsdRgnAttr` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | 🔧h | – |
 | `ISP_Tuning_SetOsdPoolSize` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ⚠s | r† |
 | `ISP_Tuning_SetOsdRgnAttr` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
 | `ISP_Tuning_ShowOsdRgn` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
@@ -1720,61 +1736,69 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `OSD_AttachToGroup` | 🔧h | 🔧h | 🔧h | 🔧a | 🔧a | 🔧a | 📋 | 📋 | 🔧h | ✅ | – |
 | `OSD_CreateGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_CreateRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_CreateRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `OSD_CreateRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_DestroyGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_DestroyRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_DestroyRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `OSD_DestroyRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_DetachToGroup` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `OSD_Exit_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `OSD_Exit_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `OSD_Get/SetGrpRgnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_Get/SetRgnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_Get/SetRgnAttr_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_GetRegionLuma` | · | · | · | · | · | · | · | · | · | ❌ | – |
-| `OSD_GetRgnAttr_ISPPic` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_Init_ISP` | · | · | · | ? | · | · | 📋 | 📋 | ? | ❌ | – |
+| `OSD_GetRgnAttr_ISPPic` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
+| `OSD_Init_ISP` | · | · | · | ? | · | · | 📋 | 📋 | ? | 🔧a | – |
 | `OSD_RegisterRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_RgnCreate_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `OSD_RgnRegister_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
-| `OSD_SetGroupCallback` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ❌ | – |
+| `OSD_SetGroupCallback` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `OSD_SetMosaic` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `OSD_SetPoolSize` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_SetPoolSize_ISP` | · | · | · | 🔧h | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_SetRgnAttr_PicISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `OSD_SetPoolSize_ISP` | · | · | · | 🔧h | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
+| `OSD_SetRgnAttr_PicISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_SetRgnAttrWithTimestamp` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `OSD_ShowRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_ShowRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `OSD_ShowRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_Start` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_Stop` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `OSD_UnRegisterRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_UpdateRgnAttrData` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `OSD_UpdateRgnAttrData_ISP` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 
-<details><summary>Notes and references (28)</summary>
+<details><summary>Notes and references (36)</summary>
 
 - `ISP_Tuning_CreateOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `ISP_Tuning_DestroyOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
-- `ISP_Tuning_Get/SetOSDAttr`: T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
-- `ISP_Tuning_Get/SetOSDBlock`: T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
+- `ISP_Tuning_Get/SetOSDAttr`: T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `ISP_Tuning_Get/SetOSDBlock`: T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `ISP_Tuning_GetOsdRgnAttr`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `ISP_Tuning_SetOsdPoolSize`: T41: 2 insns, returns ? T41: 2 insns, returns ?
 - `ISP_Tuning_SetOsdRgnAttr`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `ISP_Tuning_ShowOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `OSD_AttachToGroup`: T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_CreateGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_CreateRgn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_CreateRgn_ISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
 - `OSD_DestroyGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_DestroyRgn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_DestroyRgn_ISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
+- `OSD_Exit_ISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `OSD_Get/SetGrpRgnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_Get/SetRgnAttr`: audit: reaches the driver/kernel; userspace implementation; T40: the PIC/COVER test uses the set path; Get not checked, so host T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_GetRegionLuma`: T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either
+- `OSD_GetRgnAttr_ISPPic`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
+- `OSD_Init_ISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
 - `OSD_RegisterRgn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_RgnCreate_Query`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_RgnRegister_Query`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `OSD_SetGroupCallback`: T40: apitest agg47 2026-10-26 192.168.10.184.
+- `OSD_SetGroupCallback`: T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_SetMosaic`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_SetPoolSize`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `OSD_SetPoolSize_ISP`: T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)
+- `OSD_SetPoolSize_ISP`: T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `OSD_SetRgnAttr_PicISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
 - `OSD_SetRgnAttrWithTimestamp`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_ShowRgn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_ShowRgn_ISP`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet.
 - `OSD_Start`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_Stop`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_UnRegisterRgn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
@@ -1830,7 +1854,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### Audio
 
-79 rows (60 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+79 rows (48 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1841,35 +1865,35 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AI_DisableAec` | ✅r | ✅r | 🔧a | ✅r | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_DisableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AI_DisableAgc` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
+| `AI_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ✅ | – |
 | `AI_DisableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_DisableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_DisableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `AI_DisableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ✅ | – |
 | `AI_DisableHpf` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_DisableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `AI_DisableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `AI_DisableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_DisableNs` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_Enable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableAec` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_EnableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AI_EnableAgc` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
+| `AI_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ✅ | – |
 | `AI_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_EnableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `AI_EnableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ✅ | – |
 | `AI_EnableHpf` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_EnableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
+| `AI_EnableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `AI_EnableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_EnableNs` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_Get/SetAlcGain` | · | · | ✅ | · | · | ✅ | · | · | · | · | t |
 | `AI_Get/SetChnParam` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ❌ | – |
+| `AI_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `AI_Get/SetGain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_Get/SetPubAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_Get/SetVol` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_GetAlgoOrder` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `AI_GetFrameAndRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `AI_GetFrameAndRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ✅ | – |
 | `AI_GetFrameAndRef` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AI_PollingFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_ReleaseFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
@@ -1883,20 +1907,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AO_ClearChnBuf` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AO_Disable` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_DisableAgc` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AO_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
+| `AO_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | 🔧h | – |
 | `AO_DisableChn` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_DisableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_DisableHpf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AO_DisableNs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_Enable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_EnableAgc` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AO_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
+| `AO_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | 🔧h | – |
 | `AO_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_EnableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_EnableHpf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AO_EnableNs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_FlushChnBuf` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AO_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `AO_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `AO_Get/SetGain` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_Get/SetPubAttr` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_Get/SetVol` | 🔧h | 🔧h | 🔧h | ✅ | ? | 🔧h | 📋 | 📋 | ? | 🔧a | p† r† t t† |
@@ -1910,11 +1934,11 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AO_SetVolMute` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧h | p† r† |
 | `AO_Soft_Mute` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧h | r† |
 | `AO_Soft_UNMute` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧h | r† |
-| `Audio_Select_Codec` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
+| `Audio_Select_Codec` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
 | `DMIC_*` | · | · | · | · | 🔧a | 🔧a | 📋 | 📋 | ❌e | ❌e | r† |
 | `DMIC_DisableAecRefFrame` | · | · | · | · | 🔧a | · | 📋 | 📋 | ❌e | ❌e | r† |
 
-<details><summary>Notes and references (57)</summary>
+<details><summary>Notes and references (64)</summary>
 
 - `ADEC_ReleaseDecoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 - `AENC_ReleaseEncoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
@@ -1922,27 +1946,30 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AI_DisableAecRefFrame`: audit: reaches the driver/kernel
 - `AI_DisableAgc`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `AI_DisableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_DisableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_DisableGetRaw`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_DisableHpf`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `AI_DisableHs`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_DisableHs`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_DisableNs`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_Enable`: audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_EnableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 - `AI_EnableAecRefFrame`: audit: reaches the driver/kernel
 - `AI_EnableAgc`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `AI_EnableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_EnableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_EnableChn`: audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_EnableGetRaw`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_EnableHpf`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `AI_EnableHs`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_EnableHs`: T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_EnableNs`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_Get/SetAlcGain`: audit: reaches the driver/kernel; userspace implementation T21: apitest agg47 2026-10-26 192.168.10.24. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `AI_Get/SetChnParam`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `AI_Get/SetDigitalGain`: T40: apitest agg47 2026-10-26 192.168.10.184.
+- `AI_Get/SetDigitalGain`: T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_GetFrame`: audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_GetFrameAndRaw`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_GetFrameAndRef`: audit: reaches the driver/kernel; userspace implementation
 - `AI_PollingFrame`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_ReleaseFrame`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
@@ -1954,13 +1981,16 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_Disable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_DisableAgc`: audit: userspace implementation
+- `AO_DisableAlgo`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `AO_DisableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_DisableHpf`: audit: userspace implementation
 - `AO_Enable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 - `AO_EnableAgc`: audit: userspace implementation
+- `AO_EnableAlgo`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `AO_EnableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 - `AO_EnableHpf`: audit: userspace implementation
 - `AO_FlushChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
+- `AO_Get/SetDigitalGain`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `AO_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
 - `AO_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
 - `AO_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
@@ -1972,13 +2002,14 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `AO_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
 - `AO_Soft_Mute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
 - `AO_Soft_UNMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
+- `Audio_Select_Codec`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `DMIC_DisableAecRefFrame`: T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host
 
 </details>
 
 ### System / sysutils / log
 
-108 rows (66 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+108 rows (64 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1995,8 +2026,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `DQbuffer` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `free_unit` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISPOSD_Alloc` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
-| `Log_Get_Option` | 🔧a | 🔧a | 🔧a | 🔧a | · | 🔧a | · | · | ❌ | ❌ | – |
-| `Log_Set_Option` | 🔧h | 🔧h | 🔧h | 🔧h | · | 🔧h | · | · | ❌ | ❌ | – |
+| `Log_Get_Option` | 🔧a | 🔧a | 🔧a | 🔧a | · | 🔧a | · | · | 🔧h | 🔧h | – |
+| `Log_Set_Option` | 🔧h | 🔧h | 🔧h | 🔧h | · | 🔧h | · | · | 🔧h | 🔧h | – |
 | `MemPool_GetById` | · | · | · | ? | · | ? | 📋 | 📋 | · | · | – |
 | `MemPool_InitPool` | · | · | · | ? | · | ? | 📋 | 📋 | · | · | – |
 | `MemPool_Release` | · | · | · | · | · | ? | 📋 | 📋 | · | · | – |
@@ -2091,8 +2122,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `System_WriteReg32` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `Virt_to_Phys` | ? | ? | ? | ? | ? | ? | 📋 | 📋 | · | · | – |
 
-<details><summary>Notes and references (51)</summary>
+<details><summary>Notes and references (53)</summary>
 
+- `Log_Get_Option`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
+- `Log_Set_Option`: T40: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet. T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
 - `SU_ADC_DisableChn`: T20+T21+T23+T31: apitest N/A on the test boards, no ADC node (/dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0; the vendor libsysutils opens the same nodes)
 - `SU_ADC_EnableChn`: T20+T21+T23+T31: apitest N/A on the test boards, no ADC node (/dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0; the vendor libsysutils opens the same nodes)
 - `SU_ADC_Exit`: T20+T21+T23+T31: apitest N/A on the test boards, no ADC node (/dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0; the vendor libsysutils opens the same nodes)

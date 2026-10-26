@@ -30,7 +30,7 @@
 #define BR_UNIT 1
 #ifdef ENC_NEW
 # define BR_SET_UNIT 1000      /* IMP_Encoder_SetChnBitRate: bit/s */
-# define YUV_BITRATE 512000    /* IMPEncoderYuvIn: bit/s */
+# define YUV_BITRATE 512       /* IMPEncoderYuvIn.targetBitrate/maxBitrate: kbit/s (vendor T41 1.2.6 YuvInit multiplies both by 1000) */
 #else
 # define BR_SET_UNIT 1
 # define YUV_BITRATE BITRATE
