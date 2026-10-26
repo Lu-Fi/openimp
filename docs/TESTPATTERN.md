@@ -185,7 +185,7 @@ The same generator serves as the fallback picture when the ISP stops delivering 
 (`include/openimp_fallback.h`, `src/openimp_fb_logic.h`): pattern and logo as in mode 1, a black band
 with the text NO SENSOR SIGNAL (5x7 font scaled to 80 % of the width), the 16 bit frame counter of
 mode 2 (top left, 16x16 px cells) and a 32x32 blinking square (top right, toggles every 4 frames), so a
-viewer sees both the cause and that the stream is alive. It is switched by `OPENIMP_FALLBACK_FRAME=1` or
+viewer sees both the cause and that the stream is alive. It is ON by default on T40/T41 since 26.10. (user decision); `OPENIMP_FALLBACK_FRAME=0` or
 `OpenIMP_FrameSource_SetFallback(chn, on)`, independently of the test pattern modes. Description,
 limits and the device result: OPENIMP_BEYOND_VENDOR.md section 6.2. Host test: `make -C tests/fallback check`.
 Device tool: `tools/fbtest` (stops and restarts the sensor stream through `IMP_ISP_SetSensorRegister`).

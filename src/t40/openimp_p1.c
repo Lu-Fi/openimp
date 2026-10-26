@@ -1671,7 +1671,7 @@ static void p1_fb_init_locked(void)
         return;
     p1_fb_ready = 1;
     e = getenv("OPENIMP_FALLBACK_FRAME");
-    on = e && e[0] == '1' && !e[1];
+    on = !(e && e[0] == '0' && !e[1]);   /* default ON since 26.10. (user decision) */
     e = getenv("OPENIMP_FALLBACK_TIMEOUT_MS");
     ms = e ? openimp_fb_clamp_timeout(strtol(e, NULL, 0))
            : OPENIMP_FB_TIMEOUT_MS_DEFAULT;
