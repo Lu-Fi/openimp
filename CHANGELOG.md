@@ -11,6 +11,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
 ## Branch `claude/matrix-html-v2` (2026-10-26)
 
 - **Feature matrix HTML v2** (`tools/gen_feature_matrix_html.py`, docs only): compact symbols-only table (SoC columns, sticky header and first column, RC2/chg badges), tag chips per feature (derived from the matrix sections), filters for SoC, status, tags, text search and "only changes since RC1", hover tooltip with the first sentence of a cell, click/Enter side panel with the full detail text (feature name: all SoCs), counts per SoC and RC1 comparison in a collapsible block, long update paragraphs and the Summary moved into a collapsible History section. Cell symbol counts and RC1 change counts identical to the previous HTML.
+- **Feature matrix HTML v2.1:** always-visible legend bar (symbol and badge texts from the matrix legend, also shown as tooltips on hover/focus); badges now compare three states (RC1 tag, RC2 tag, current file): `RC2` = improved between RC1 and RC2, `new` = improved after the RC2 tag (in next, not released), `changed` = changed without improving (other symbol or new text); filters "only changed since RC1" / "since RC2".
 
 ## Branch `claude/fallback-frame` (2026-10-26)
 

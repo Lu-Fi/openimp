@@ -104,7 +104,9 @@ td.mc .sym{margin:0}td.mc:hover{filter:brightness(.94)}td.mc:focus-visible,.fnam
 td.mc.dim{opacity:.3}td.mc.sel{box-shadow:inset 0 0 0 2px var(--accent)}tr.selr th{box-shadow:inset 3px 0 0 var(--accent)}
 td.mc i.rc2{font-style:normal;margin-left:3px;padding:0 4px;font-size:.6rem}
 i.rc2{display:inline-block;padding:0 5px;border-radius:8px;background:var(--accent);color:var(--bg);font-size:.66rem;font-weight:700;font-style:normal;vertical-align:middle}
-i.rc2.chg{background:var(--muted)}
+i.rc2.chg{background:var(--muted)}i.rc2.nw{background:#d9822b;color:#fff}
+.lgbar{display:flex;flex-wrap:wrap;gap:4px 6px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 8px;margin:0 0 8px;font-size:.78rem}
+.lgi{border:1px solid var(--line);border-radius:8px;padding:1px 7px;cursor:help;display:inline-flex;align-items:center;gap:4px}.lgi:focus-visible{outline:2px solid var(--accent)}
 .num{display:inline-block;min-width:1.6rem;color:var(--muted);font-size:.74rem}
 .fname{background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left;border-bottom:1px dotted var(--muted)}
 .tags{margin-left:6px}
@@ -510,17 +512,25 @@ def parse_details(blocks):
     return res, groups
 
 
-def load_baseline(path=None):
-    """Matrix symbols of the baseline tag -> BASE {title: {soc: symbol}} (empty if unavailable)."""
-    BASE.clear()
+BASE2 = {}         # same for the RC2 tag
+TXT1, TXT2 = {}, {}    # feature number -> {soc: detail text without the symbol} at RC1 / RC2
+BASE2_TAG = "v2026.10.25-rc2"
+BASE2_LABEL = "RC2"
+LEGEND = {}        # symbol -> (label, description) from the Legend bullets of the md
+
+
+def load_state(src, is_path, syms, txts):
+    """Matrix symbols and detail texts of a baseline (git tag or file) -> syms {title: {soc: sym}}, txts {n: {soc: text}}."""
+    syms.clear()
+    txts.clear()
     try:
-        if path:
-            md = open(path, encoding="utf-8").read()
+        if is_path:
+            md = open(src, encoding="utf-8").read()
         else:
-            md = subprocess.run(["git", "-C", ROOT, "show", "%s:docs/FEATURE_MATRIX.md" % BASE_TAG],
+            md = subprocess.run(["git", "-C", ROOT, "show", "%s:docs/FEATURE_MATRIX.md" % src],
                                 check=True, capture_output=True, text=True).stdout
     except (OSError, subprocess.CalledProcessError) as e:
-        sys.stderr.write("warning: no baseline matrix (%s); nothing is marked as new\n" % e)
+        sys.stderr.write("warning: no baseline matrix %s (%s); nothing is marked for it\n" % (src, e))
         return
     socs = None
     for ln in md.split("\n"):
@@ -531,14 +541,30 @@ def load_baseline(path=None):
             socs = r[2:]
         elif socs and re.fullmatch(r"\d+", r[0] or "x"):
             m = re.match(r"^\[(.*)\]\(#.*\)$", r[1])
-            BASE[m.group(1) if m else r[1]] = {
+            syms[m.group(1) if m else r[1]] = {
                 soc: norm_sym(v.strip()) for soc, v in zip(socs, r[2:])}
+    blocks = parse_blocks(re.sub(r"<!--.*?-->", "", md, flags=re.S).split("\n"))
+    mi = next((k for k, (t, d) in enumerate(blocks) if t == "h" and d[1] == "Matrix details"), None)
+    if mi is None:
+        return
+    mj = next((k for k in range(mi + 1, len(blocks)) if blocks[k][0] == "h" and blocks[k][1][0] <= 3), len(blocks))
+    det, _ = parse_details(blocks[mi + 1:mj])
+    for n, dd in det.items():
+        txts[n] = {soc: SYM_RE.sub("", t, count=1).strip() for soc, t in dd["cells"].items()}
 
 
-def classify(old, new):
-    """None (same / no baseline), 'new' (better than the baseline) or 'chg'."""
-    if old is None or old == new:
+def load_baseline(path=None, path2=None):
+    load_state(path or BASE_TAG, bool(path), BASE, TXT1)
+    load_state(path2 or BASE2_TAG, bool(path2), BASE2, TXT2)
+
+
+def classify(old, new, otxt=None, ntxt=None):
+    """None (same / no baseline), 'new' (better than the baseline) or 'chg' (symbol changed without
+    improving, or the same symbol with a changed detail text)."""
+    if old is None:
         return None
+    if old == new:
+        return "chg" if (otxt is not None and otxt != ntxt) else None
     if old == "—":
         return "new"
     if new == "—":
@@ -550,7 +576,7 @@ MX_JS = r"""(function(){
 var D=JSON.parse(document.getElementById('mxdata').textContent),R=D.rows;
 var $=function(s,e){return (e||document).querySelector(s)},$$=function(s,e){return [].slice.call((e||document).querySelectorAll(s))};
 var tbl=$('#mx'),rows=$$('tbody tr[data-n]',tbl),grps=$$('tbody tr.grp',tbl),pn=$('#pn'),pnb=$('#pnb'),tip=$('#tip');
-var F={q:'',soc:{},sym:{},tag:{},rc2:false},last=null,cur=null;
+var F={q:'',soc:{},sym:{},tag:{},r1:false,r2:false},last=null,cur=null;
 function any(o){for(var k in o)if(o[k])return true;return false}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var SS={'⚠':'⚠️'};function ss(s){return SS[s]||s}
@@ -566,7 +592,7 @@ function apply(){
     cs.forEach(function(td){var s=td.getAttribute('data-sym'),v=vis.indexOf(td.getAttribute('data-soc'))>=0;
       var hit=sy&&F.sym[s]&&v;td.classList.toggle('dim',sy&&!F.sym[s]);if(hit)m=true});
     if(ok&&sy&&!m)ok=false;
-    if(ok&&F.rc2&&tr.getAttribute('data-rc2')!=='1')ok=false;
+    if(ok&&F.r1&&tr.getAttribute('data-r1')!=='1')ok=false;if(ok&&F.r2&&tr.getAttribute('data-r2')!=='1')ok=false;
     tr.hidden=!ok;if(ok)n++;
   });
   var g=null,a=false;
@@ -582,13 +608,15 @@ function tagBtns(){$$('[data-ftag]').forEach(function(b){b.setAttribute('aria-pr
 $$('[data-ftag]').forEach(function(b){b.onclick=function(){var k=b.getAttribute('data-ftag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
 $$('.tag',tbl).forEach(function(b){b.onclick=function(e){e.stopPropagation();var k=b.getAttribute('data-tag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
 $('#mxq').oninput=function(){F.q=this.value.trim();apply()};
-var rc=$('#mxrc2');if(rc)rc.onchange=function(){F.rc2=this.checked;apply()};
-$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},rc2:false};$('#mxq').value='';if(rc)rc.checked=false;
+var r1=$('#mxr1'),r2=$('#mxr2');if(r1)r1.onchange=function(){F.r1=this.checked;apply()};if(r2)r2.onchange=function(){F.r2=this.checked;apply()};
+$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},r1:false,r2:false};$('#mxq').value='';if(r1)r1.checked=false;if(r2)r2.checked=false;
   $$('[aria-pressed="true"]').forEach(function(b){b.setAttribute('aria-pressed','false')});tagBtns();apply()};
 /* tooltip */
 function showTip(td){
   var tr=td.parentNode,r=R[tr.getAttribute('data-n')],s=td.getAttribute('data-soc'),c=r.c[s];
-  tip.innerHTML='<b>#'+tr.getAttribute('data-n')+' '+esc(r.t)+' / '+s+' '+esc(ss(c.s))+'</b>'+(c.k?' <i class="rc2'+(c.k==='new'?'':' chg')+'">'+(c.k==='new'?'RC2':'chg')+'</i>':'')+
+  var lg=D.leg[c.s],bd=c.k?'<i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'">'+D.bl[c.k]+'</i> ':'';
+  tip.innerHTML='<b>#'+tr.getAttribute('data-n')+' '+esc(r.t)+' / '+s+'</b>'+
+   '<div><b>'+esc(ss(c.s))+'</b> '+(lg?esc(lg[0])+': '+esc(lg[1]):'')+'</div>'+(c.k?'<div>'+bd+esc(c.bt)+'</div>':'')+
    '<div>'+(c.q?esc(c.q):'<i>no detail text</i>')+'</div><div class="small">click or Enter: full detail</div>';
   tip.hidden=false;var b=td.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
   var x=Math.min(Math.max(8,b.left+b.width/2-w/2),innerWidth-w-8),y=b.bottom+6;if(y+h>innerHeight-8)y=Math.max(8,b.top-h-6);
@@ -602,7 +630,7 @@ tbl.addEventListener('focusout',hideTip);
 /* panel */
 function block(r,s,full){
   var c=r.c[s];
-  var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+(c.k==='new'?'':' chg')+'">'+(c.k==='new'?'RC2':'chg')+'</i> <span class="small">'+D.base+': '+esc(ss(c.o))+' &rarr; '+esc(ss(c.s))+'</span>':'')+'</h4>';
+  var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'" title="'+esc(c.bt)+'">'+D.bl[c.k]+'</i> <span class="small">'+esc(c.bt)+'</span>':'')+'</h4>';
   h+=c.h?'<div class="tx">'+c.h+'</div>':'<p class="small">No detail text for this cell.</p>';
   (c.x||[]).forEach(function(x){h+='<div class="tx"><b>'+x[0]+':</b> '+x[1]+'</div>'});
   return h+'</section>';
@@ -681,14 +709,54 @@ def json_js(o):
     return json.dumps(o, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/").replace("<!--", "<\\!--")
 
 
+BADGE_TXT = {"rc2": "RC2", "new": "new", "chg": "changed"}
+BADGE_CLS = {"rc2": "", "new": " nw", "chg": " chg"}
+BADGE_SHORT = {"rc2": "improved between RC1 and RC2", "new": "improved after the RC2 tag (in next, not released)",
+               "chg": "cell changed, not improved"}
+BADGE_DESC = {
+    "rc2": "RC2: improved between RC1 (%s) and RC2 (%s); included in the RC2 release" % (BASE_TAG, BASE2_TAG),
+    "new": "new: improved after the RC2 tag (%s); in next, not yet released" % BASE2_TAG,
+    "chg": "changed: the cell changed (other symbol without improvement, or new text) but did not improve",
+}
+
+
+def badge_tip(kind, o1, o2, sym, k1, k2):
+    t = BADGE_DESC[kind]
+    if kind == "new":
+        t += " (%s at %s, now %s)" % (SYM_SHOW.get(o2, o2), BASE2_LABEL, SYM_SHOW.get(sym, sym))
+    elif kind == "rc2":
+        t += " (%s at %s, now %s)" % (SYM_SHOW.get(o1, o1), BASE_LABEL, SYM_SHOW.get(sym, sym))
+    else:
+        parts = []
+        for lab, o, k in ((BASE_LABEL, o1, k1), (BASE2_LABEL, o2, k2)):
+            if k:
+                parts.append("%s %s, now %s" % (lab, SYM_SHOW.get(o, o), SYM_SHOW.get(sym, sym)) if o != sym
+                             else "%s: same symbol %s, new text" % (lab, SYM_SHOW.get(sym, sym)))
+        t += " (" + "; ".join(parts) + ")"
+    return t
+
+
+def legend_bar():
+    items = []
+    for sym in SYM_ORDER:
+        if sym in LEGEND:
+            lab, desc = LEGEND[sym]
+            items.append('<span class="lgi %s" tabindex="0" title="%s"><b>%s</b> %s</span>' % (
+                SYM.get(sym, ("s-na",))[0], esc(desc), esc(SYM_SHOW.get(sym, sym)), esc(lab)))
+    for k in ("rc2", "new", "chg"):
+        items.append('<span class="lgi" tabindex="0" title="%s"><i class="rc2%s">%s</i> %s</span>' % (
+            esc(BADGE_DESC[k]), BADGE_CLS[k], BADGE_TXT[k], esc(BADGE_SHORT[k])))
+    return '<div class="lgbar" id="lgbar">%s</div>' % "".join(items)
+
+
 def render_matrix(rows, details, groups_info):
     head = rows[0]
     socs = head[2:]
     mism = []
-    cnt = {soc: [0, 0] for soc in socs}      # [improved, otherwise changed]
+    cnt = {soc: [0, 0, 0, 0] for soc in socs}      # [RC2 badge, new badge, changed badge, improved since RC1 (RC2+new)]
     symcnt = {soc: {} for soc in socs}
     trs, data = [], {}
-    grp, nchg_rows, nrows = "", 0, 0
+    grp, nchg_rows, nchg2_rows, nrows = "", 0, 0, 0
     th = ('<th scope="col" class="fh">Feature</th>'
           + "".join('<th scope="col" data-soc="%s">%s</th>' % (esc(s), esc(s)) for s in socs))
     for r in rows[1:]:
@@ -703,10 +771,10 @@ def render_matrix(rows, details, groups_info):
         tags = NUM_TAGS.get(n, []) if n in NUM_REPLACE else GROUP_TAGS.get(grp, []) + NUM_TAGS.get(n, [])
         tags = list(tags)
         base = BASE.get(title, {})
-        cells, tds, changed, plus = {}, [], 0, False
+        base2 = BASE2.get(title, {})
+        cells, tds, changed, changed2, plus = {}, [], 0, 0, False
         for soc, sym in zip(socs, r[2:]):
             sym = norm_sym(sym.strip())
-            kind = classify(base.get(soc), sym)
             cls, ttl = SYM.get(sym, ("s-unk", "unknown"))
             symcnt[soc][sym] = symcnt[soc].get(sym, 0) + 1
             plus = plus or sym == "✅+"
@@ -717,35 +785,53 @@ def render_matrix(rows, details, groups_info):
                     mism.append((n, soc, sym, mm.group(1)))
                 txt = txt[mm.end():]
             extras = [(lab, SYM_RE.sub("", t, count=1)) for lab, t in d["extra_cells"].get(soc, [])]
+            ntxt = txt.strip()
+            k1 = classify(base.get(soc), sym, TXT1.get(n, {}).get(soc) if n in TXT1 else None, ntxt)
+            k2 = classify(base2.get(soc), sym, TXT2.get(n, {}).get(soc) if n in TXT2 else None, ntxt)
+            if k2 == "new":
+                kind = "new"
+            elif k1 == "new":
+                kind = "rc2"
+            elif k1 or k2:
+                kind = "chg"
+            else:
+                kind = None
             pt = plain(txt)
             c = {"s": sym, "h": inline(txt), "q": short(pt) if pt else "",
                  "p": (pt + " " + " ".join(plain(t) for _, t in extras)).strip().lower()}
             if extras:
                 c["x"] = [[inline(lab), inline(t)] for lab, t in extras]
             badge = ""
+            tip = ""
             if kind:
                 changed += 1
-                cnt[soc][0 if kind == "new" else 1] += 1
+                changed2 += 1 if k2 else 0
+                cnt[soc][{"rc2": 0, "new": 1, "chg": 2}[kind]] += 1
+                cnt[soc][3] += 1 if k1 == "new" else 0
+                tip = badge_tip(kind, base.get(soc), base2.get(soc), sym, k1, k2)
                 c["k"] = kind
-                c["o"] = base[soc]
-                badge = '<i class="rc2%s">%s</i>' % ("" if kind == "new" else " chg",
-                                                    "RC2" if kind == "new" else "chg")
+                c["o"] = base.get(soc, "")
+                c["bt"] = tip
+                badge = '<i class="rc2%s">%s</i>' % (BADGE_CLS[kind], BADGE_TXT[kind])
             cells[soc] = c
-            tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s>'
+            lg = LEGEND.get(sym)
+            aria = "%s: %s%s%s" % (soc, lg[0] if lg else sym, "; " + tip if tip else "", "")
+            tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s aria-label="%s">'
                        '<span class="sym">%s</span>%s</td>' % (
-                           cls, " new" if kind == "new" else "", esc(soc), esc(sym),
-                           ' data-rc2="%s"' % kind if kind else "", esc(SYM_SHOW.get(sym, sym)), badge))
+                           cls, " new" if k1 == "new" else "", esc(soc), esc(sym),
+                           ' data-rc2="%s"' % kind if kind else "", esc(aria), esc(SYM_SHOW.get(sym, sym)), badge))
         if plus:
             tags.append("beyond-vendor")
         tags = [t for t in TAG_ORDER if t in tags]
         slg = slug(d["title"]) if d.get("extra") else ""
         data[n] = {"t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
         chips = "".join('<button type="button" class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t)) for t in tags)
-        trs.append('<tr id="r-%d" data-n="%d" data-rc2="%d"><th scope="row"><span class="num">%d</span>'
+        trs.append('<tr id="r-%d" data-n="%d" data-r1="%d" data-r2="%d"><th scope="row"><span class="num">%d</span>'
                    '<button type="button" class="fname" data-row="%d">%s</button><span class="tags">%s</span></th>%s</tr>'
-                   % (n, n, 1 if changed else 0, n, n, inline(title), chips, "".join(tds)))
+                   % (n, n, 1 if changed else 0, 1 if changed2 else 0, n, n, inline(title), chips, "".join(tds)))
         nrows += 1
         nchg_rows += 1 if changed else 0
+        nchg2_rows += 1 if changed2 else 0
     for m in mism:
         sys.stderr.write("warning: row %d %s: table symbol %s, detail symbol %s\n" % m)
     alltags = [t for t in TAG_ORDER if any(t in v["tags"] for v in data.values())]
@@ -761,8 +847,9 @@ def render_matrix(rows, details, groups_info):
            + chipgrp("SoC", socs, "data-fsoc")
            + chipgrp("Status", allsyms, "data-fsym", lambda x: SYM_SHOW.get(x, x))
            + chipgrp("Tags", alltags, "data-ftag")
-           + ('<div class="fg"><label><input type="checkbox" id="mxrc2"> only changes since %s</label></div>' % BASE_LABEL
-              if BASE else "") + '</div>')
+           + ('<div class="fg"><label><input type="checkbox" id="mxr1"> only changed since %s</label> '
+              '<label><input type="checkbox" id="mxr2"> only changed since %s (new in <code>next</code>)</label></div>'
+              % (BASE_LABEL, BASE2_LABEL) if BASE else "") + '</div>')
     # counts per SoC (+ comparison with the baseline)
     hd = "".join("<th>%s</th>" % esc(x) for x in socs)
     body = ""
@@ -770,14 +857,18 @@ def render_matrix(rows, details, groups_info):
         body += "<tr><td>%s</td>%s</tr>" % (esc(SYM_SHOW.get(s, s)), "".join(
             "<td>%d</td>" % symcnt[x].get(s, 0) for x in socs))
     if BASE:
-        c1 = "".join("<td><b>%d</b></td>" % cnt[x][0] for x in socs)
-        c2 = "".join("<td>%d</td>" % cnt[x][1] for x in socs)
-        body += ('<tr class="sep"><td>new or improved since %s <i class="rc2">RC2</i></td>%s</tr>'
-                 '<tr><td>otherwise changed <i class="rc2 chg">chg</i></td>%s</tr>' % (BASE_LABEL, c1, c2))
+        def crow(label, badge, i):
+            return "<tr%s><td>%s</td>%s</tr>" % (' class="sep"' if i == 0 else "", label, "".join(
+                "<td>%s</td>" % (("<b>%d</b>" if i == 0 else "%d") % cnt[x][i]) for x in socs))
+        body += crow('improved since %s, in %s <i class="rc2">RC2</i>' % (BASE_LABEL, BASE2_LABEL), "", 0)
+        body += crow('improved since %s, only in <code>next</code> <i class="rc2 nw">new</i>' % BASE2_LABEL, "", 1)
+        body += crow('changed without improvement <i class="rc2 chg">changed</i>', "", 2)
+        body += crow('total improved since %s' % BASE_LABEL, "", 3)
         MATRIX_COUNTS.clear()
         MATRIX_COUNTS.update(cnt)
-    sumline = ("%d of %d features have at least one cell new or changed since %s (baseline: matrix at tag "
-               "<code>%s</code>)" % (nchg_rows, nrows, BASE_LABEL, BASE_TAG)) if BASE else "cells per symbol"
+    sumline = ("%d of %d features have a badge on at least one cell (%s = tag <code>%s</code>, %s = tag <code>%s</code>); "
+               "%d features have a cell changed since %s" % (nchg_rows, nrows, BASE_LABEL, BASE_TAG, BASE2_LABEL,
+                                                             BASE2_TAG, nchg2_rows, BASE2_LABEL)) if BASE else "cells per symbol"
     bar = ('<details class="rc2bar"><summary>Counts per SoC and %s comparison</summary><p class="small">%s</p>'
            '<table><thead><tr><th></th>%s</tr></thead><tbody>%s</tbody></table></details>'
            % (BASE_LABEL, sumline, hd, body))
@@ -787,8 +878,8 @@ def render_matrix(rows, details, groups_info):
     table = ('<div class="mwrap" id="mwrap"><table class="mx" id="mx"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>'
              % (th, "".join(trs)))
     script = '<script type="application/json" id="mxdata">%s</script><script>%s</script>' % (
-        json_js({"socs": socs, "rows": data, "base": BASE_LABEL}), MX_JS)
-    return bar + ctl + table + panel + script
+        json_js({"socs": socs, "rows": data, "base": BASE_LABEL, "leg": LEGEND, "bl": BADGE_TXT, "bd": BADGE_DESC}), MX_JS)
+    return legend_bar() + bar + ctl + table + panel + script
 
 
 # ---------------------------------------------------------------- main render
@@ -849,7 +940,7 @@ def render(md):
             close_card()
             in_legend = False
             if lvl == 2:
-                dst[0] = hist if text == "Summary" else out
+                dst[0] = hist if text in ("Summary", "Legend") else out
             if lvl == 1:
                 W("<h1>%s</h1>" % inline(text))
             elif lvl == 2:
@@ -899,6 +990,12 @@ def render(md):
             continue
         if typ in ("ul", "ol"):
             if in_legend:
+                for _, _, t in d:
+                    mm = SYM_RE.match(t)
+                    if mm and norm_sym(mm.group(1)) not in LEGEND:
+                        rest = plain(t[mm.end():])
+                        lab, _, desc = rest.partition(": ")
+                        LEGEND[norm_sym(mm.group(1))] = (lab, desc or lab)
                 cls = "card legend" if not in_card else "legend"
                 W('<div class="%s">%s</div>' % (cls, "".join(legend_item(t) for _, _, t in d)))
             elif sub.startswith("Streamer-relevant gaps") and render_streamer_gaps(d):
@@ -967,8 +1064,8 @@ def main():
     open(dst, "w", encoding="utf-8").write(page)
     print("wrote %s (%d bytes)" % (dst, len(page.encode())))
     if MATRIX_COUNTS:
-        print("changes since %s (new/improved, otherwise changed): %s" % (BASE_TAG, ", ".join(
-            "%s %d/%d" % (k, v[0], v[1]) for k, v in MATRIX_COUNTS.items())))
+        print("cells per SoC: improved since %s total/RC2 badge/new badge/changed badge: %s" % (BASE_TAG, ", ".join(
+            "%s %d/%d/%d/%d" % (k, v[3], v[0], v[1], v[2]) for k, v in MATRIX_COUNTS.items())))
 
 
 if __name__ == "__main__":
