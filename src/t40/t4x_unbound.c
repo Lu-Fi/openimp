@@ -127,3 +127,87 @@ int IMP_Encoder_InputJpege(uint8_t *src, uint8_t *dst, int src_w, int src_h,
     return 0;
 }
 #endif
+
+/* ---- IMP_Decoder ------------------------------------------------------- */
+/*
+ * IMP_Decoder_* (vendor T40 1.3.1 / T41 imp_decoder.h: "only support JPEG
+ * decode for now", hardware JPEG decoder; in the export union of the vendor
+ * T40/T41 builds, not in the T41 1.2.6 libimp.so).  OpenIMP has no JPEG
+ * decoder on T40/T41 (T23 runs the OEM one in its Helix helper): every call
+ * fails with -1 and errno ENOTSUP, so an application sees the missing
+ * feature at CreateChn instead of failing to link.
+ */
+#include <errno.h>
+
+static int t4x_decoder_unsupported(const char *function)
+{
+    IMP_LOG_LIMITED(LOG_ERR, "Decoder", "%s: no JPEG decoder in OpenIMP on "
+                    "this SoC", function);
+    errno = ENOTSUP;
+    return -1;
+}
+
+int IMP_Decoder_CreateChn(int decChn, const void *attr);
+int IMP_Decoder_CreateChn(int decChn, const void *attr)
+{
+    (void)decChn;
+    (void)attr;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_DestroyChn(int decChn);
+int IMP_Decoder_DestroyChn(int decChn)
+{
+    (void)decChn;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_StartRecvPic(int decChn);
+int IMP_Decoder_StartRecvPic(int decChn)
+{
+    (void)decChn;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_StopRecvPic(int decChn);
+int IMP_Decoder_StopRecvPic(int decChn)
+{
+    (void)decChn;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_SendStreamTimeout(int decChn, void *stream,
+                                  uint32_t timeoutMsec);
+int IMP_Decoder_SendStreamTimeout(int decChn, void *stream,
+                                  uint32_t timeoutMsec)
+{
+    (void)decChn;
+    (void)stream;
+    (void)timeoutMsec;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_PollingFrame(int decChn, uint32_t timeoutMsec);
+int IMP_Decoder_PollingFrame(int decChn, uint32_t timeoutMsec)
+{
+    (void)decChn;
+    (void)timeoutMsec;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_GetFrame(int decChn, void **frame);
+int IMP_Decoder_GetFrame(int decChn, void **frame)
+{
+    (void)decChn;
+    if (frame)
+        *frame = NULL;
+    return t4x_decoder_unsupported(__func__);
+}
+
+int IMP_Decoder_ReleaseFrame(int decChn, void *frame);
+int IMP_Decoder_ReleaseFrame(int decChn, void *frame)
+{
+    (void)decChn;
+    (void)frame;
+    return t4x_decoder_unsupported(__func__);
+}

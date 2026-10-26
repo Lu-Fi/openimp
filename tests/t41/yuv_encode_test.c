@@ -534,6 +534,18 @@ int main(void)
         p2_ivpu_bs_size = 0;
     }
 #endif
+    /* IMP_Decoder_*: ENOTSUP (no JPEG decoder on T40/T41) */
+    {
+        extern int IMP_Decoder_CreateChn(int decChn, const void *attr);
+        extern int IMP_Decoder_GetFrame(int decChn, void **frame);
+        void *df = (void *)1;
+
+        errno = 0;
+        CHECK(IMP_Decoder_CreateChn(0, NULL) == -1 && errno == ENOTSUP,
+              "decoder ENOTSUP");
+        CHECK(IMP_Decoder_GetFrame(0, &df) == -1 && df == NULL,
+              "decoder frame");
+    }
     CHECK(rmem_live == 0, "rmem leak %d", rmem_live);
     if (failures) {
         fprintf(stderr, "yuv_encode_test: %d failure(s)\n", failures);
