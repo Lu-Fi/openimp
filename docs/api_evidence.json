@@ -3784,7 +3784,7 @@
     "T10": "aud",
     "T20": "aud",
     "T21": "rt",
-    "T23": "aud",
+    "T23": "err",
     "T30": "?",
     "T31": "aud",
     "T32": "n.a.",
@@ -3825,7 +3825,8 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-    "T21": "apitest rc3-cases 2026-10-26 .24 (API round trip, no visible effect expected)"
+    "T21": "apitest rc3-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T23": "FAIL apitest rc3-cases 2026-10-27 .30: ret=-1 rt: bypass DISABLE (= ISP processing on, the running state) written (ret -1), frames flow"
    }
   },
   "ISP_Tuning_SetISPLDC": {
@@ -10450,7 +10451,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10475,7 +10476,10 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)"
+   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "ref": {
+    "T23": "apitest rc3-cases 2026-10-27 .30"
+   }
   },
   "ISP_Tuning_DestroyOsdRgn": {
    "area": "OSD",
@@ -10483,7 +10487,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10508,7 +10512,10 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)"
+   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "ref": {
+    "T23": "apitest rc3-cases 2026-10-27 .30"
+   }
   },
   "ISP_Tuning_Get/SetOSDAttr": {
    "area": "OSD",
@@ -10572,7 +10579,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10597,7 +10604,10 @@
      "r†"
     ]
    },
-   "note": "T41: 2 insns, returns ? T41: 2 insns, returns ?"
+   "note": "T41: 2 insns, returns ? T41: 2 insns, returns ?",
+   "ref": {
+    "T23": "apitest rc3-cases 2026-10-27 .30"
+   }
   },
   "ISP_Tuning_SetOsdRgnAttr": {
    "area": "OSD",
@@ -10605,7 +10615,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "err",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10630,7 +10640,11 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)"
+   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "ref": {
+    "T23": "FAIL apitest rc3-cases 2026-10-27 .30: ret=0 white 256x128 ARGB picture at (64,64): region luma 116.0 -> 116.3 (NOT VISIBLE)",
+    "T41": "FAIL apitest rc3-cases 2026-10-27 .34: ret=0 black 256x128 ARGB picture at (64,64): region luma 156.3 -> 158.6 (NOT VISIBLE)"
+   }
   },
   "ISP_Tuning_ShowOsdRgn": {
    "area": "OSD",
@@ -10638,7 +10652,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10663,7 +10677,10 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)"
+   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "ref": {
+    "T23": "apitest rc3-cases 2026-10-27 .30"
+   }
   },
   "OSD_AttachToGroup": {
    "area": "OSD",
