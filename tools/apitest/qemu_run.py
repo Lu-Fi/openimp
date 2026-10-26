@@ -3,7 +3,7 @@ import functools, builtins
 print = functools.partial(builtins.print, flush=True)
 """qemu_run.py - run apitest cases inside our QEMU (rule: every new case runs in QEMU first, per SoC, before any camera).
 
-  qemu_run.py PORT SOC SENSOR I2C W H BINARY [case ...] [--outdir D]
+  qemu_run.py PORT SOC SENSOR I2C W H BINARY|auto [case ...] [--outdir D]
 
 Console driver for a QEMU guest booted with a root shell on tcp PORT (boot-t2x.sh / run-t4x.sh, see $S/qemu/README-*.md).  Pushes BINARY
 (gzip+base64 over the console), stops the streamer, then per case: `APITEST_CASES=<case> apitest ... cases`, followed by a health check
@@ -19,6 +19,8 @@ if "--outdir" in a:
     i = a.index("--outdir"); outdir = a[i + 1]; del a[i:i + 2]
 port, soc, sensor, i2c, W, H, binary = a[:7]
 cases = a[7:]
+if binary == "auto":     # the per-SoC build of tools/apitest/build.sh
+    binary = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build", "apitest_" + soc.lower())
 os.makedirs(outdir, exist_ok=True)
 s = socket.create_connection(("127.0.0.1", int(port))); s.settimeout(0.5)
 
@@ -79,7 +81,7 @@ for c in cases:
     if rc is None or re.search(r"Kernel panic|Oops|Unable to handle|Restarting system", out):
         res.append((c, "CRASH", out[-300:])); print("QEMU %s %s: CRASH (guest hung/rebooted/oopsed)" % (soc, c)); break
     hc, hrc = sh("cd /tmp/at; ./apitest %s %s %s %s fs 2>&1 | grep -cE 'EnableChn.*FAIL|GetFrame.*FAIL'; dmesg | grep -cE 'Oops|BUG:|Unable to handle|unaligned'; true" % (sensor, i2c, W, H), 200, 60)
-    nums = re.findall(r"^(\d+)\s*$", hc, re.M)
+    nums = re.findall(r"^(?:.*# )?(\d+)\s*$", re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", hc), re.M)
     healthy = hrc == 0 and nums[:2] == ["0", "0"]
     fails = [l for l in out.splitlines() if l.startswith("[A]") and " FAIL " in l]
     open(os.path.join(outdir, c + ".health"), "w").write(hc)

@@ -1,3 +1,4 @@
+#ifdef APITEST_T40   /* T40 only: the former tests/t40/devtest/t40_devtest.c, run as `apitest ... t40dev [mask]` */
 /* T40 device API test: one process, one ISP/sensor session, many functions.
  * Prints "RES <function> <PASS|PART|FAIL> <evidence>" lines on stdout.
  * Build: mipsel toolchain with -I<T40 1.3.1 headers>, link -limp (OpenIMP or
@@ -426,7 +427,7 @@ static IMPEncoderChnAttr eattr;
 static int fs_made, grp_made, chn_made, bound, fs_on, recv_on;
 static IMPCell csrc, cdst;
 
-int main(int argc, char **argv)
+int t40dev_main(int argc, char **argv)
 {
     unsigned mask = argc > 1 ? (unsigned)strtoul(argv[1], 0, 16) : 0xffu;
     int r, i, depth;
@@ -1710,3 +1711,5 @@ down:
     (void)t; (void)hevc_mode; (void)depth; (void)st; (void)u8o; (void)u8;
     return 0;
 }
+
+#endif /* APITEST_T40 */

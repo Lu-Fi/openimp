@@ -2,6 +2,7 @@
 """Turn the logs of one device run into per-function results for docs/api_evidence.json.
 
 Inputs (any combination):
+  --report FILE    apitest --json report (one JSON per run: function -> PASS|FAIL|RT|NA|SKIP + detail)
   --apitest FILE   tools/apitest output:   [A] IMP_x_y ret=N PASS|FAIL|N/A|SKIP <detail>
   --devtest FILE   tests/t40/devtest:      RES <Area_Func> PASS|PART|FAIL <detail>   (T40)
   --imgfx FILE     tools/imgfx (IMGFX_STATS=1): [R] <case> set=N get=<readback> | ST Y=.. U=.. V=.. H=.. G=..
@@ -795,6 +796,16 @@ def parse_apitest(path, acc):
         acc.add(fn, v, ("ret=%s %s" % (ret, det)).strip(), "apitest")
 
 
+def parse_report(path, acc):
+    """apitest --json report: {"funcs":[{"fn","area","ret","v":"PASS|FAIL|RT|NA|SKIP","detail"}]} (same verdicts as the [A] lines)"""
+    try:
+        rep = json.load(open(path))
+    except ValueError:
+        return                          # truncated by a watchdog kill: the .log fallback covers it
+    for e in rep.get("funcs", []):
+        acc.add(e["fn"], e["v"], ("ret=%s %s" % (e["ret"], e["detail"])).strip(), "apitest")
+
+
 def parse_devtest(path, acc):
     for l in open(path, errors="replace"):
         m = re.match(r"RES (\S+) (PASS|PART|FAIL)(?: (.*))?$", l.rstrip("\n"))
@@ -878,13 +889,14 @@ def main():
     ap.add_argument("--image", default="")
     ap.add_argument("--date", default="")
     ap.add_argument("--apitest")
+    ap.add_argument("--report", help="apitest --json report (instead of --apitest)")
     ap.add_argument("--devtest")
     ap.add_argument("--imgfx")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     acc = Acc(load_keys())
     cases = {}
-    for f, fn in ((a.apitest, parse_apitest), (a.devtest, parse_devtest), (a.imgfx, lambda p, ac: parse_imgfx(p, ac, cases))):
+    for f, fn in ((a.report, parse_report), (a.apitest, parse_apitest), (a.devtest, parse_devtest), (a.imgfx, lambda p, ac: parse_imgfx(p, ac, cases))):
         if f and os.path.exists(f):
             fn(f, acc)
     res = acc.result()

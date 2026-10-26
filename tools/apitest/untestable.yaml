@@ -1,0 +1,61 @@
+# Vendor functions that apitest does not test, with the reason (checked by tools/apitest/check_coverage.py, part of `make check`).
+# Every function of tools/export-check/vendor-<SoC>.txt needs a test case in tools/apitest (a source token) or an entry here.
+# match: fnmatch patterns over the vendor name (as listed in vendor-<SoC>.txt); socs: list or "all" (default all).
+# category: sound | reboot | power | hardware | wedges-isp | no-signature | own-topology | not-in-soc-api | backlog
+#   backlog = testable in principle, no case yet (counted and printed by the checker; to be turned into cases or re-classified)
+entries:
+  - match: ["IMP_LOG", "IMP_LOG_*"]
+    category: no-signature
+    reason: "header macros / enum constants (log levels and options), not functions"
+  - match: ["IMP_DMIC_*"]
+    category: sound
+    reason: "digital microphone path, board has none / no sound tests on the test cameras (microphone-only rule covers AI only)"
+  - match: ["IMP_AI_IMPDBG_*", "IMP_AO_IMPDBG_*", "IMP_AI_DisableDrc", "IMP_AI_EnableDrc", "IMP_AO_DisableDrc", "IMP_AO_EnableDrc", "IMP_AI_GetRawSwitch", "IMP_AI_SetAECLeadAI", "IMP_DMIC_SetAECLeadDMIC"]
+    category: sound
+    reason: "audio debug / DRC / AEC lead switches of the audio path (speaker or AEC reference needed)"
+  - match: ["IMP_Audio_*"]
+    category: sound
+    reason: "T10/T20 legacy IMP_Audio_Play/Record/codec helpers: play or record through the board audio path (no sound tests)"
+  - match: ["IMP_Decoder_*"]
+    category: own-topology
+    reason: "hardware decoder channel needs a bitstream source and its own frame sink (no case yet for decode)"
+  - match: ["IMP_EmuFrameSource_*"]
+    category: own-topology
+    reason: "emulated frame source (injects frames instead of the sensor), own topology"
+  - match: ["IMP_FB_*"]
+    category: hardware
+    reason: "framebuffer / display device, cameras have no display"
+  - match: ["IMP_ISP_Tuning_*_Sec", "IMP_ISP_*_Sec", "IMP_OSD_*_ISP_Sec", "IMP_ISPOSD_Alloc", "IMP_OSD_Alloc", "IMP_ISP_StreamCheck", "IMP_ISP_SetStreamOut"]
+    socs: [T23]
+    category: own-topology
+    reason: "T23 second-sensor (secondary camera) variants of the ISP API; the test cameras have one sensor"
+  - match: ["IMP_ISP_MultiCamera*", "IMP_ISP_Bypass_Bind"]
+    category: own-topology
+    reason: "multi-camera / bypass-bind topology, test cameras have one sensor"
+  - match: ["IMP_ISP_SET_GPIO_*", "IMP_ISP_SetVicDoneCbFunc", "IMP_ISP_RAW_RwControl", "IMP_ISP_SetCameraInputMode", "IMP_ISP_GetCameraInputMode", "IMP_ISP_SetCameraInputSelect", "IMP_ISP_SetPreDqtime"]
+    category: hardware
+    reason: "sensor GPIO / VIC callback / RAW read-write / camera input select: change the sensor interface itself"
+  - match: ["IMP_ISP_SetAeAlgoFunc*", "IMP_ISP_SetAwbAlgoFunc*"]
+    category: own-topology
+    reason: "replaces the ISP 3A algorithm with a user callback set; needs a custom algorithm library"
+  - match: ["IMP_ISP_LDC_*", "IMP_ISP_SetCsccrMode", "IMP_ISP_Tuning_SetISPLDC", "IMP_ISP_Tuning_SetHLDCAttr", "IMP_ISP_Tuning_GetHLDCAttr", "IMP_ISP_Tuning_SetISPHLDCAttr", "IMP_ISP_Tuning_GetISPHLDCAttr"]
+    category: wedges-isp
+    reason: "lens distortion correction / CSC-CR mode reprogram the ISP back end with tables the test cameras do not have"
+  - match: ["IMP_ISP_Tuning_GetOsdRgnAttr", "IMP_ISP_Tuning_SetOsdRgnAttr", "IMP_ISP_Tuning_CreateOsdRgn", "IMP_ISP_Tuning_DestroyOsdRgn", "IMP_ISP_Tuning_ShowOsdRgn", "IMP_ISP_Tuning_SetOsdPoolSize", "IMP_OSD_*_ISP", "IMP_OSD_*ISPPic", "IMP_OSD_SetRgnAttr_PicISP", "IMP_ISP_Tuning_GetOSD*", "IMP_ISP_Tuning_SetOSD*", "IMP_ISP_Tuning_GetDrawBlock", "IMP_ISP_Tuning_SetDrawBlock", "IMP_ISP_GetOSDAttr", "IMP_ISP_SetOSDAttr", "IMP_ISP_GetSingleOSDAttr", "IMP_ISP_SetSingleOSDAttr"]
+    category: backlog
+    reason: "ISP-stage OSD (regions drawn by the ISP): case planned (tests/t41/devtest/isp_osd_devtest.c exists), open issue 73 on T41"
+  - match: ["IMP_ISP_Tuning_GetFaceAeWeiget", "IMP_ISP_Tuning_SetFaceAeWeiget", "IMP_ISP_Tuning_SetTmoFaceae", "IMP_ISP_Tuning_GetFaceAwb", "IMP_ISP_Tuning_SetFaceAwb", "IMP_ISP_Tuning_GetAEEvList", "IMP_ISP_Tuning_SetAeExpList", "IMP_ISP_Tuning_GetAeExpList"]
+    category: backlog
+    reason: "face-AE / AE list: needs a face rectangle or a vendor exposure list; Eufy GetAeExpList crashes (see T40 notes); issue 90"
+  - match: ["IMP_Encoder_*NCUDenoise", "IMP_Encoder_PadFrame", "IMP_Encoder_SetPadFrameAttr", "IMP_Encoder_SetChnRcTrigLevel", "IMP_Encoder_SetPoolSize", "IMP_Encoder_*Rence*", "IMP_Encoder_*PoolId", "IMP_Encoder_DiscardInitialFrame", "IMP_Encoder_GetStream_Impl", "IMP_Encoder_GroupWhichChnRegisted", "IMP_Encoder_SetRdBufShare", "IMP_Encoder_GetChnH264Demask", "IMP_Encoder_SetChnH264Demask", "IMP_Encoder_GetChnH264Denoise", "IMP_Encoder_SetChnH264Denoise", "IMP_Encoder_GetChnH264FrmUsedMode", "IMP_Encoder_SetChnH264FrmUsedMode", "IMP_Encoder_GetChnRcAttr", "IMP_Encoder_SetChnRcAttr"]
+    category: backlog
+    reason: "older-SoC encoder helpers without a case (the equivalent T31/T41 calls are tested); to be covered"
+  - match: ["IMP_FrameSource_ClearPoolId", "IMP_FrameSource_CloseNCUInfo", "IMP_FrameSource_DisableChnUndistort", "IMP_FrameSource_EnableChnUndistort", "IMP_FrameSource_SetChnCallback", "IMP_FrameSource_SetFrameDepthCopyType", "IMP_FrameSource_SetFrameOffset", "IMP_ISP_Tuning_GetNCUAlloc", "IMP_ISP_Tuning_GetNCUInfo"]
+    category: backlog
+    reason: "FrameSource / NCU helpers without a case yet"
+  - match: ["IMP_Alloc", "IMP_Alloc_*", "IMP_Free", "IMP_Sp_Alloc", "IMP_Phys_to_Virt", "IMP_Virt_to_Phys", "IMP_PoolAlloc*", "IMP_PoolFree", "IMP_PoolFlushCache", "IMP_PoolPhys_to_Virt", "IMP_PoolVirt_to_Phys", "IMP_FlushCache", "IMP_MemPool_*", "IMP_Mem_Get_Info", "IMP_OSD_MemPoolRequest", "IMP_OSD_ResizeRGB_Pic"]
+    category: backlog
+    reason: "physical memory allocator helpers: round trip (alloc, phys/virt conversion, free) not written yet"
+  - match: ["IMP_ISP_GetFrameDrop_Sec", "IMP_ISP_Tuning_AE_SetROI", "IMP_ISP_Tuning_SetAFThreshold", "IMP_ISP_Tuning_SetAeStrategy", "IMP_ISP_Tuning_SetAe_IT_MAX", "IMP_ISP_Tuning_GetEvStart", "IMP_ISP_Tuning_SetEvStart", "IMP_ISP_Tuning_SetFixedContraster", "IMP_ISP_SetFixedContraster", "IMP_ISP_Tuning_SetShading", "IMP_ISP_Tuning_SetContrast_internal", "IMP_ISP_Tuning_SetSharpness_internal", "IMP_ISP_Tuning_GetSensorHflip", "IMP_ISP_Tuning_GetSensorVflip", "IMP_ISP_Tuning_SetSensorHflip", "IMP_ISP_Tuning_SetSensorVflip", "IMP_ISP_SetScalerLv", "IMP_ISP_Set/GetSensorRegister"]
+    category: backlog
+    reason: "ISP tuning calls without a case yet (setters whose getter is tested, internal helpers)"

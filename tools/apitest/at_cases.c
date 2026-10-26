@@ -16,12 +16,12 @@
 #include <unistd.h>
 #include "apitest.h"
 
-typedef struct { double y, u, v, c, h; int ok; } Fst;
+typedef struct { double y, u, v, c, h, sd; int ok; } Fst;
 
 /* mean Y/U/V, chroma magnitude and detail energy of 2 frames of FS ch1 (after a settle time and 3 dropped frames) */
 static Fst fst(int settle_ms)
 {
-    Fst s = { 0, 0, 0, 0, 0, 0 };
+    Fst s = { 0, 0, 0, 0, 0, 0, 0 };
     int k, f;
 
     if (!IMP_FrameSource_GetFrame) return s;
@@ -34,7 +34,7 @@ static Fst fst(int settle_ms)
         IMPFrameInfo *fr = NULL;
         const unsigned char *y, *uv;
         int w, h, i, j, n = 0;
-        double sy = 0, su = 0, sv = 0, sc = 0, lap = 0;
+        double sy = 0, su = 0, sv = 0, sc = 0, lap = 0, sy2 = 0;
 
         if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) continue;
         y = (const unsigned char *)(uintptr_t)fr->virAddr; w = fr->width; h = fr->height;
@@ -43,18 +43,18 @@ static Fst fst(int settle_ms)
         for (j = 1; j < h - 1; j += 2)
             for (i = 1; i < w - 1; i += 2) {
                 int l = 4 * y[(size_t)j * w + i] - y[(size_t)j * w + i - 1] - y[(size_t)j * w + i + 1] - y[(size_t)(j - 1) * w + i] - y[(size_t)(j + 1) * w + i];
-                sy += y[(size_t)j * w + i]; lap += l < 0 ? -l : l; n++;
+                sy += y[(size_t)j * w + i]; sy2 += (double)y[(size_t)j * w + i] * y[(size_t)j * w + i]; lap += l < 0 ? -l : l; n++;
             }
         for (j = 0; j < h / 2; j++)
             for (i = 0; i < w / 2; i++) {
                 int u = uv[(size_t)j * w + 2 * i], v = uv[(size_t)j * w + 2 * i + 1];
                 su += u; sv += v; sc += (abs(u - 128) + abs(v - 128)) / 2.0;
             }
-        s.y += sy / n; s.h += lap / n; s.u += su / ((double)w * h / 4); s.v += sv / ((double)w * h / 4); s.c += sc / ((double)w * h / 4);
+        s.y += sy / n; s.sd += sqrt(sy2 / n - (sy / n) * (sy / n)); s.h += lap / n; s.u += su / ((double)w * h / 4); s.v += sv / ((double)w * h / 4); s.c += sc / ((double)w * h / 4);
         s.ok++;
         IMP_FrameSource_ReleaseFrame(1, fr);
     }
-    if (s.ok) { s.y /= s.ok; s.u /= s.ok; s.v /= s.ok; s.c /= s.ok; s.h /= s.ok; }
+    if (s.ok) { s.sd /= s.ok; s.y /= s.ok; s.u /= s.ok; s.v /= s.ok; s.c /= s.ok; s.h /= s.ok; }
     return s;
 }
 
@@ -600,7 +600,469 @@ static void cs_framedrop(void)
 static void cs_framedrop(void) {}
 #endif
 
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx); default all */
+
+/* =================================================================================================== RC3 cases (claude/rc3-cases)
+ * Streamer-used functions of the RC3 gate that had no case or only a Get: same-value round trips (+ effect where one is expected). */
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetGammaAttr && HAS_IMP_ISP_Tuning_SetGammaAttr
+static void cs_gamma(void)
+{
+    NEED(IMP_ISP_Tuning_GetGammaAttr) NEED(IMP_ISP_Tuning_SetGammaAttr) {
+        G(IMPISPGammaAttr, o); G(IMPISPGammaAttr, b); G(IMPISPGammaAttr, u);
+        int r1 = IMP_ISP_Tuning_GetGammaAttr(IMPVI_MAIN, o), r2, r3, r4, k, ms, eff;
+        Fst base, steep, lin, back;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetGammaAttr), r1, r1 == 0 ? V_PASS : V_FAIL, "type %d g[0]=%u g[64]=%u g[128]=%u", (int)o->Curve_type, o->gamma[0], o->gamma[64], o->gamma[128]);
+        r2 = IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, o); r3 = IMP_ISP_Tuning_GetGammaAttr(IMPVI_MAIN, b); gchk(b);
+        base = fst(800);
+        /* effect: user curve x^0.3 (bright) vs x^1.0 (linear = dark); the module is not bypassed */
+        u->Curve_type = IMP_ISP_GAMMA_CURVE_USER;
+        for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(pow(k / 128.0, 0.3) * 4095 + 0.5);
+        r4 = IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); steep = fst(1500);
+        for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(k * 4095 / 128);
+        IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); lin = fst(1500);
+        IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, o); back = recover(base.y, &ms);
+        eff = steep.ok && lin.ok && steep.y > lin.y * 1.15 + 3;
+        rep(FN(IMP_ISP_Tuning_SetGammaAttr), r2 | r4, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && ms >= 0 && eff) ? V_PASS : V_FAIL,
+            "same value written (set ret %d), read back %s; user curve x^0.3 Y %.1f vs linear Y %.1f (base %.1f): %s; picture %s restored (Y %.1f)", r2,
+            !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT", steep.y, lin.y, base.y, eff ? "effect" : "NO PICTURE EFFECT", ms >= 0 ? "" : "NOT", back.y);
+        gfree(o); gfree(b); gfree(u);
+    }
+}
+#else
+static void cs_gamma(void) {}
+#endif
+
+#if HAS_IMP_ISP_Tuning_GetModuleControl && HAS_IMP_ISP_Tuning_SetModuleControl
+static void cs_modctl(void)
+{
+    NEED(IMP_ISP_Tuning_GetModuleControl) NEED(IMP_ISP_Tuning_SetModuleControl) {
+        G(IMPISPModuleCtl, o); G(IMPISPModuleCtl, b); G(IMPISPModuleCtl, m); G(IMPISPModuleCtl, c);
+        int r1 = IMP_ISP_Tuning_GetModuleControl(V0 o), r2, r3, r4, r5, ms;
+        Fst base, off, back;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetModuleControl), r1, r1 == 0 ? V_PASS : V_FAIL, "key 0x%08x", o->key);
+        r2 = IMP_ISP_Tuning_SetModuleControl(V0 o); r3 = IMP_ISP_Tuning_GetModuleControl(V0 b); gchk(b);
+        base = fst(800);
+        /* effect: bypass the gamma module (the picture goes dark: the linear sensor data without the gamma curve), restored afterwards */
+        *m = *o; m->bitBypassGAMMA = 1;
+        r4 = IMP_ISP_Tuning_SetModuleControl(V0 m); r5 = IMP_ISP_Tuning_GetModuleControl(V0 c); off = fst(1500);
+        IMP_ISP_Tuning_SetModuleControl(V0 o); back = recover(base.y, &ms);
+        rep(FN(IMP_ISP_Tuning_SetModuleControl), r2 | r4, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && r5 == 0 && c->bitBypassGAMMA && off.ok && off.y < base.y * 0.85 && ms >= 0) ? V_PASS : V_FAIL,
+            "same value written (set ret %d), read back %s; gamma bypass bit read back %d, Y %.1f -> %.1f; picture %s restored (Y %.1f)", r2,
+            !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT", (int)c->bitBypassGAMMA, base.y, off.y, ms >= 0 ? "" : "NOT", back.y);
+        gfree(o); gfree(b); gfree(m); gfree(c);
+    }
+}
+#else
+static void cs_modctl(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetCCMAttr && HAS_IMP_ISP_Tuning_SetCCMAttr
+static void cs_ccm(void)
+{
+    NEED(IMP_ISP_Tuning_GetCCMAttr) NEED(IMP_ISP_Tuning_SetCCMAttr) {
+        G(IMPISPCCMAttr, o); G(IMPISPCCMAttr, b);
+        int r1 = IMP_ISP_Tuning_GetCCMAttr(IMPVI_MAIN, o), r2, r3;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetCCMAttr), r1, r1 == 0 ? V_PASS : V_FAIL, "manual %d sat %d m0 %.3f m4 %.3f m8 %.3f", (int)o->ManualEn, (int)o->SatEn, o->ColorMatrix[0], o->ColorMatrix[4], o->ColorMatrix[8]);
+        r2 = IMP_ISP_Tuning_SetCCMAttr(IMPVI_MAIN, o); usleep(700000); r3 = IMP_ISP_Tuning_GetCCMAttr(IMPVI_MAIN, b); gchk(b);
+        rep(FN(IMP_ISP_Tuning_SetCCMAttr), r2, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && flow()) ? V_PASS : V_FAIL,
+            "rt: same value written (set ret %d), read back %s, frames flow (colour effect of a manual matrix: see imgfx ccm-*, issue 105)", r2, !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT");
+        gfree(o); gfree(b);
+    }
+}
+#else
+static void cs_ccm(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft && HAS_IMP_ISP_Tuning_Awb_SetRgbCoefft
+static void cs_rgbcoef(void)
+{
+    NEED(IMP_ISP_Tuning_Awb_GetRgbCoefft) NEED(IMP_ISP_Tuning_Awb_SetRgbCoefft) {
+        G(IMPISPCoefftWb, o); G(IMPISPCoefftWb, b); G(IMPISPCoefftWb, a);
+        int r1 = IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_MAIN, o), r2, r3, r4, ms;
+        Fst base, x, back;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_Awb_GetRgbCoefft), r1, r1 == 0 ? V_PASS : V_FAIL, "r %u g %u b %u", o->rgb_coefft_wb_r, o->rgb_coefft_wb_g, o->rgb_coefft_wb_b);
+        r2 = IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, o); r3 = IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_MAIN, b); gchk(b);
+        base = fst(800);
+        *a = *o; a->rgb_coefft_wb_r = (unsigned short)(o->rgb_coefft_wb_r * 3 / 2);
+        r4 = IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, a); x = fst(1000);
+        IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, o); back = recover(base.y, &ms);
+        {
+            int eff = x.ok && base.ok && dabs(x.v - base.v) > 1.5;
+            rep(FN(IMP_ISP_Tuning_Awb_SetRgbCoefft), r2 | r4, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%ssame value written (set ret %d), read back %s; R x1.5: V %.2f -> %.2f (AWB may pull it back); picture %s restored (Y %.1f)", RTMSG(eff), r2,
+                !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT", base.v, x.v, ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(o); gfree(b); gfree(a);
+    }
+}
+#else
+static void cs_rgbcoef(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetISPBypass && HAS_IMP_ISP_SetISPBypass
+static void cs_ispbypass(void)
+{
+    NEED(IMP_ISP_GetISPBypass) NEED(IMP_ISP_SetISPBypass) {
+        IMPISPTuningOpsMode o = IMPISP_TUNING_OPS_MODE_DISABLE, b = IMPISP_TUNING_OPS_MODE_ENABLE;
+        int r1 = IMP_ISP_GetISPBypass(IMPVI_MAIN, &o), r2, r3;
+
+        rep(FN(IMP_ISP_GetISPBypass), r1, r1 == 0 ? V_PASS : V_FAIL, "bypass %d", (int)o);
+        r2 = IMP_ISP_SetISPBypass(IMPVI_MAIN, &o); usleep(700000); r3 = IMP_ISP_GetISPBypass(IMPVI_MAIN, &b);
+        rep(FN(IMP_ISP_SetISPBypass), r2, (r2 == 0 && r3 == 0 && b == o && flow()) ? V_PASS : V_FAIL, "rt: same value (%d) written (set ret %d), read back %d, frames flow", (int)o, r2, (int)b);
+    }
+}
+#else
+static void cs_ispbypass(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetDefaultBinPath && HAS_IMP_ISP_SetDefaultBinPath
+static void cs_binpath(void)
+{
+    NEED(IMP_ISP_GetDefaultBinPath) NEED(IMP_ISP_SetDefaultBinPath) {
+        char *o = (char *)gnew(128), *b = (char *)gnew(128);
+        int r1 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, o), r2 = -99, r3 = -99;
+
+        gchk(o);
+        rep(FN(IMP_ISP_GetDefaultBinPath), r1, r1 == 0 ? V_PASS : V_FAIL, "\"%.100s\"", o);
+        if (r1 == 0 && o[0]) {
+            r2 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, o); r3 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, b); gchk(b);
+            rep(FN(IMP_ISP_SetDefaultBinPath), r2, (r2 == 0 && r3 == 0 && !strcmp(o, b) && flow()) ? V_PASS : V_FAIL, "rt: same path written (set ret %d), read back %s, frames flow", r2, !strcmp(o, b) ? "equal" : "DIFFERENT");
+        } else
+            rep(FN(IMP_ISP_SetDefaultBinPath), r1, V_SKIP, "no default bin path stored, nothing to write back");
+        gfree(o); gfree(b);
+    }
+}
+#else
+static void cs_binpath(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
+static void cs_switchbin(void)
+{
+    NEED(IMP_ISP_Tuning_SwitchBin) NEED(IMP_ISP_GetDefaultBinPath) {
+        char *p = (char *)gnew(128);
+        G(IMPISPBinAttr, a);
+        int r1 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, p), r2, ms;
+        Fst base, back;
+        struct stat st;
+
+        if (r1 != 0 || !p[0] || stat(p, &st) != 0) {
+            rep(FN(IMP_ISP_Tuning_SwitchBin), r1, V_SKIP, "no usable current bin file (\"%.80s\")", p);
+        } else {
+            base = fst(800);
+            a->enable = IMPISP_TUNING_OPS_MODE_ENABLE; snprintf(a->bname, sizeof(a->bname), "%s", p);
+            r2 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a); back = recover(base.y, &ms);
+            rep(FN(IMP_ISP_Tuning_SwitchBin), r2, (r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL, "rt: the bin file in use (%.60s) switched to itself (ret %d), picture %s same (Y %.1f -> %.1f), frames flow", p, r2, ms >= 0 ? "" : "NOT", base.y, back.y);
+        }
+        gfree(p); gfree(a);
+    }
+}
+#else
+static void cs_switchbin(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetScalerLv
+static void cs_scalerlv(void)
+{
+    NEED(IMP_ISP_Tuning_SetScalerLv) {
+        G(IMPISPScalerLvAttr, a);
+        int r1, r2, r3, ms;
+        Fst lo, hi, back, base;
+
+        base = fst(800);
+        a->chx = 1; a->mode = IMPISP_SCALER_FITTING_CRUVE; a->level = 0;
+        r1 = IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, a); lo = fst(1200);
+        a->level = 128;
+        r2 = IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, a); hi = fst(1200);
+        a->level = 64;      /* no getter: the middle of the 0..128 range */
+        r3 = IMP_ISP_Tuning_SetScalerLv(IMPVI_MAIN, a); back = recover(base.y, &ms);
+        {
+            int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+            rep(FN(IMP_ISP_Tuning_SetScalerLv), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && lo.ok && hi.ok && lo.y > 5 && hi.y > 5 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sch1 level 0/128/64 accepted, detail H %.3f at 0 vs %.3f at 128, Y %.1f/%.1f, picture %s alive (Y %.1f)", RTMSG(eff), lo.h, hi.h, lo.y, hi.y, ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_scalerlv(void) {}
+#endif
+
+
+/* ---- shape "Set(value) / Get(&value)" pairs: same-value round trip, a changed value read back, restore; optional effect (mode 1 luma std-dev, 2 mean luma, 3 chroma V-U shift) */
+#ifdef PLATFORM_T41
+# define SETU(f, T, v) ({ T t_ = (v); f(IMPVI_MAIN, &t_); })
+#else
+# define SETU(f, T, v) f(v)
+#endif
+static double eff_metric(int mode, const Fst *a, const Fst *b)
+{
+    switch (mode) {
+    case 1: return dabs(a->sd - b->sd) / (a->sd + b->sd + 1) * 2;
+    case 2: return dabs(a->y - b->y) / (a->y + b->y + 1) * 2;
+    case 3: return dabs((a->v - a->u) - (b->v - b->u)) / 16.0;
+    }
+    return 0;
+}
+#define PAIR_CASE(CS, GETF, SETF, T, GETC, SETC, ALT, MODE, LOV, HIV) \
+static void CS(void) \
+{ \
+    NEED(GETF) NEED(SETF) { \
+        T o = (T)0, b = (T)0, c = (T)0, alt; \
+        int r1 = GETC(o), r2, r3, r4, r5, f, ms, r6 = 0, eff = 0; \
+        Fst base, lo, hi, back; \
+        rep(FN(GETF), r1, r1 == 0 ? V_PASS : V_FAIL, "value %u", (unsigned)o); \
+        base = fst(600); \
+        r2 = SETC(o); usleep(500000); r3 = GETC(b); \
+        alt = (T)(ALT); r4 = SETC(alt); usleep(800000); r5 = GETC(c); f = flow(); \
+        if (MODE) { r6 = SETC((T)(LOV)); lo = fst(1200); r6 |= SETC((T)(HIV)); hi = fst(1200); eff = lo.ok && hi.ok && eff_metric(MODE, &lo, &hi) > 0.03; } \
+        SETC(o); back = recover(base.y, &ms); \
+        rep(FN(SETF), r2 | r4 | r6, (r2 == 0 && r3 == 0 && b == o && r4 == 0 && r5 == 0 && c == alt && f && flow() && ms >= 0) ? V_PASS : V_FAIL, \
+            "%ssame value %u written, read back %u; %u written, read back %u, frames flow %d; restored%s", (MODE && !eff) ? "rt: " : "", (unsigned)o, (unsigned)b, (unsigned)alt, (unsigned)c, f, \
+            MODE ? (eff ? ", effect measured" : ", no measurable picture effect in this scene") : ""); \
+    } \
+}
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetContrast && HAS_IMP_ISP_Tuning_SetContrast
+# define GC_CT(v) IMP_ISP_Tuning_GetContrast(&v)
+# define SC_CT(v) IMP_ISP_Tuning_SetContrast(v)
+PAIR_CASE(cs_contrast, IMP_ISP_Tuning_GetContrast, IMP_ISP_Tuning_SetContrast, unsigned char, GC_CT, SC_CT, (o >= 128 ? o - 40 : o + 40), 1, 30, 230)
+#else
+static void cs_contrast(void) {}
+#endif
+#if HAS_IMP_ISP_Tuning_GetBcshHue && HAS_IMP_ISP_Tuning_SetBcshHue
+# ifdef PLATFORM_T41
+#  define GC_HUE(v) IMP_ISP_Tuning_GetBcshHue(IMPVI_MAIN, &v)
+#  define SC_HUE(v) ({ unsigned char t_ = (v); IMP_ISP_Tuning_SetBcshHue(IMPVI_MAIN, &t_); })
+# else
+#  define GC_HUE(v) IMP_ISP_Tuning_GetBcshHue(&v)
+#  define SC_HUE(v) IMP_ISP_Tuning_SetBcshHue(v)
+# endif
+PAIR_CASE(cs_hue, IMP_ISP_Tuning_GetBcshHue, IMP_ISP_Tuning_SetBcshHue, unsigned char, GC_HUE, SC_HUE, (o >= 128 ? o - 40 : o + 40), 3, 40, 215)
+#else
+static void cs_hue(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetAeComp && HAS_IMP_ISP_Tuning_SetAeComp
+# define GC_AEC(v) IMP_ISP_Tuning_GetAeComp(&v)
+# define SC_AEC(v) IMP_ISP_Tuning_SetAeComp(v)
+PAIR_CASE(cs_aecomp, IMP_ISP_Tuning_GetAeComp, IMP_ISP_Tuning_SetAeComp, int, GC_AEC, SC_AEC, (o >= 128 ? o - 20 : o + 20), 2, 80, 180)
+#else
+static void cs_aecomp(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetBacklightComp && HAS_IMP_ISP_Tuning_SetBacklightComp
+# define GC_BLC(v) IMP_ISP_Tuning_GetBacklightComp(&v)
+# define SC_BLC(v) IMP_ISP_Tuning_SetBacklightComp(v)
+PAIR_CASE(cs_backlight, IMP_ISP_Tuning_GetBacklightComp, IMP_ISP_Tuning_SetBacklightComp, uint32_t, GC_BLC, SC_BLC, (o == 5 ? 4 : 5), 2, 1, 10)
+#else
+static void cs_backlight(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetDPC_Strength && HAS_IMP_ISP_Tuning_SetDPC_Strength
+# define GC_DPC(v) IMP_ISP_Tuning_GetDPC_Strength(&v)
+# define SC_DPC(v) IMP_ISP_Tuning_SetDPC_Strength(v)
+PAIR_CASE(cs_dpc, IMP_ISP_Tuning_GetDPC_Strength, IMP_ISP_Tuning_SetDPC_Strength, unsigned int, GC_DPC, SC_DPC, (o >= 128 ? o - 30 : o + 30), 0, 0, 0)
+#else
+static void cs_dpc(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetISPCustomMode && HAS_IMP_ISP_Tuning_SetISPCustomMode
+# define GC_CUS(v) IMP_ISP_Tuning_GetISPCustomMode(&v)
+# define SC_CUS(v) IMP_ISP_Tuning_SetISPCustomMode(v)
+PAIR_CASE(cs_custom, IMP_ISP_Tuning_GetISPCustomMode, IMP_ISP_Tuning_SetISPCustomMode, IMPISPTuningOpsMode, GC_CUS, SC_CUS, o, 0, 0, 0)
+#else
+static void cs_custom(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_WDR_ENABLE && HAS_IMP_ISP_WDR_ENABLE_Get
+# define GC_WDR(v) IMP_ISP_WDR_ENABLE_Get(&v)
+# define SC_WDR(v) IMP_ISP_WDR_ENABLE(v)
+PAIR_CASE(cs_wdr, IMP_ISP_WDR_ENABLE_Get, IMP_ISP_WDR_ENABLE, IMPISPTuningOpsMode, GC_WDR, SC_WDR, o, 0, 0, 0)
+#else
+static void cs_wdr(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetWdr_OutputMode && HAS_IMP_ISP_Tuning_SetWdr_OutputMode
+static void cs_wdrout(void)
+{
+    NEED(IMP_ISP_Tuning_GetWdr_OutputMode) NEED(IMP_ISP_Tuning_SetWdr_OutputMode) {
+        IMPISPWdrOutputMode o = 0, b = 0;
+        int r1 = IMP_ISP_Tuning_GetWdr_OutputMode(&o), r2, r3;
+
+        rep(FN(IMP_ISP_Tuning_GetWdr_OutputMode), r1, r1 == 0 ? V_PASS : V_FAIL, "mode %d", (int)o);
+        r2 = IMP_ISP_Tuning_SetWdr_OutputMode(&o); usleep(500000); r3 = IMP_ISP_Tuning_GetWdr_OutputMode(&b);
+        rep(FN(IMP_ISP_Tuning_SetWdr_OutputMode), r2, (r2 == 0 && r3 == 0 && b == o && flow()) ? V_PASS : V_FAIL, "rt: same mode %d written (ret %d), read back %d, frames flow", (int)o, r2, (int)b);
+    }
+}
+#else
+static void cs_wdrout(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetISPHflip && HAS_IMP_ISP_Tuning_SetISPHflip && HAS_IMP_ISP_Tuning_GetISPVflip && HAS_IMP_ISP_Tuning_SetISPVflip
+static void cs_ispflip(void)
+{
+    NEED(IMP_ISP_Tuning_GetISPHflip) NEED(IMP_ISP_Tuning_SetISPHflip) NEED(IMP_ISP_Tuning_GetISPVflip) NEED(IMP_ISP_Tuning_SetISPVflip) {
+        IMPISPTuningOpsMode h = 0, v = 0, h2 = 0, v2 = 0, h3 = 0, v3 = 0;
+        int r1 = IMP_ISP_Tuning_GetISPHflip(&h), r2 = IMP_ISP_Tuning_GetISPVflip(&v), r3, r4, r5, r6, r7, r8, f;
+
+        rep(FN(IMP_ISP_Tuning_GetISPHflip), r1, r1 == 0 ? V_PASS : V_FAIL, "hflip %d", (int)h);
+        rep(FN(IMP_ISP_Tuning_GetISPVflip), r2, r2 == 0 ? V_PASS : V_FAIL, "vflip %d", (int)v);
+        r3 = IMP_ISP_Tuning_SetISPHflip(h); r4 = IMP_ISP_Tuning_SetISPVflip(v); usleep(700000);
+        IMP_ISP_Tuning_GetISPHflip(&h2); IMP_ISP_Tuning_GetISPVflip(&v2);
+        rep(FN(IMP_ISP_Tuning_SetISPHflip), r3, (r3 == 0 && h2 == h && flow()) ? V_PASS : V_FAIL, "rt: same value %d written (ret %d), read back %d, frames flow", (int)h, r3, (int)h2);
+        rep(FN(IMP_ISP_Tuning_SetISPVflip), r4, (r4 == 0 && v2 == v && flow()) ? V_PASS : V_FAIL, "rt: same value %d written (ret %d), read back %d, frames flow", (int)v, r4, (int)v2);
+        /* toggled and back (the picture mirrors twice: measured by imgfx isp-hflip/isp-vflip) */
+        r5 = IMP_ISP_Tuning_SetISPHflip(!h); r6 = IMP_ISP_Tuning_SetISPVflip(!v); usleep(900000);
+        IMP_ISP_Tuning_GetISPHflip(&h3); IMP_ISP_Tuning_GetISPVflip(&v3); f = flow();
+        r7 = IMP_ISP_Tuning_SetISPHflip(h); r8 = IMP_ISP_Tuning_SetISPVflip(v); usleep(900000);
+        rep(LBL("IMP_ISP_Tuning_Set/GetISPHflip+Vflip(toggle)"), r5 | r6 | r7 | r8, (!(r5 | r6 | r7 | r8) && h3 == !h && v3 == !v && f && flow()) ? V_PASS : V_FAIL,
+            "toggled h %d->%d v %d->%d (read back), frames flow, restored", (int)h, (int)h3, (int)v, (int)v3);
+    }
+}
+#else
+static void cs_ispflip(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetHVFlip && HAS_IMP_ISP_Tuning_SetHVFLIP
+static void cs_hvflip(void)
+{
+    NEED(IMP_ISP_Tuning_GetHVFlip) NEED(IMP_ISP_Tuning_SetHVFLIP) {
+        IMPISPHVFLIP o = 0, b = 0, c = 0;
+        int r1 = IMP_ISP_Tuning_GetHVFlip(&o), r2, r3, r4, r5, f;
+
+        rep(FN(IMP_ISP_Tuning_GetHVFlip), r1, r1 == 0 ? V_PASS : V_FAIL, "hvflip %d", (int)o);
+        r2 = IMP_ISP_Tuning_SetHVFLIP(o); usleep(700000); r3 = IMP_ISP_Tuning_GetHVFlip(&b);
+        r4 = IMP_ISP_Tuning_SetHVFLIP(o == IMPISP_FLIP_NORMAL_MODE ? IMPISP_FLIP_HV_MODE : IMPISP_FLIP_NORMAL_MODE); usleep(1200000); r5 = IMP_ISP_Tuning_GetHVFlip(&c); f = flow();
+        IMP_ISP_Tuning_SetHVFLIP(o); usleep(1200000);
+        rep(FN(IMP_ISP_Tuning_SetHVFLIP), r2 | r4, (r2 == 0 && r3 == 0 && b == o && r4 == 0 && r5 == 0 && c != o && f && flow()) ? V_PASS : V_FAIL,
+            "rt: same mode %d written, read back %d; changed, read back %d, frames flow %d; restored", (int)o, (int)b, (int)c, f);
+    }
+}
+#else
+static void cs_hvflip(void) {}
+#endif
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetISPBypass
+static void cs_ispbypass_old(void)
+{
+    NEED(IMP_ISP_Tuning_SetISPBypass) {
+        /* the old API has no getter: DISABLE = the ISP is not bypassed (the state the camera is in); ENABLE (the bypass itself) is never written here */
+        int r = IMP_ISP_Tuning_SetISPBypass(IMPISP_TUNING_OPS_MODE_DISABLE);
+
+        usleep(700000);
+        rep(FN(IMP_ISP_Tuning_SetISPBypass), r, (r == 0 && flow()) ? V_PASS : V_FAIL, "rt: bypass DISABLE (= ISP processing on, the running state) written (ret %d), frames flow", r);
+    }
+}
+#else
+static void cs_ispbypass_old(void) {}
+#endif
+#if !defined(PLATFORM_T41) && (HAS_IMP_ISP_Tuning_GetGamma && HAS_IMP_ISP_Tuning_SetGamma)
+static void cs_gamma_old(void)
+{
+    NEED(IMP_ISP_Tuning_GetGamma) NEED(IMP_ISP_Tuning_SetGamma) {
+        G(IMPISPGamma, o); G(IMPISPGamma, b); G(IMPISPGamma, u);
+        int r1 = IMP_ISP_Tuning_GetGamma(o), r2, r3, r4, r5, k, ms, eff, nz = 0;
+        Fst base, steep, lin, back;
+
+        gchk(o);
+        for (k = 0; k < 129; k++) if (o->gamma[k]) nz++;
+        rep(FN(IMP_ISP_Tuning_GetGamma), r1, (r1 == 0 && nz > 100) ? V_PASS : V_FAIL, "g[0]=%u g[64]=%u g[128]=%u (%d of 129 points non-zero)", o->gamma[0], o->gamma[64], o->gamma[128], nz);
+        if (nz <= 100) { gfree(o); gfree(b); gfree(u); return; }       /* nothing to restore from: do not touch the curve */
+        r2 = IMP_ISP_Tuning_SetGamma(o); r3 = IMP_ISP_Tuning_GetGamma(b); gchk(b);
+        base = fst(800);
+        for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(pow(k / 128.0, 0.3) * 4095 + 0.5);
+        r4 = IMP_ISP_Tuning_SetGamma(u); steep = fst(1500); r5 = IMP_ISP_Tuning_GetGamma(b);
+        {
+            int same = !memcmp(u, b, sizeof(*u));
+            for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(k * 4095 / 128);
+            IMP_ISP_Tuning_SetGamma(u); lin = fst(1500);
+            IMP_ISP_Tuning_SetGamma(o); back = recover(base.y, &ms);
+            eff = steep.ok && lin.ok && steep.y > lin.y * 1.15 + 3;
+            rep(FN(IMP_ISP_Tuning_SetGamma), r2 | r4, (r2 == 0 && r3 == 0 && r4 == 0 && r5 == 0 && same && ms >= 0 && eff) ? V_PASS : V_FAIL,
+                "same value written (ret %d); curve x^0.3 written, read back %s; Y %.1f vs linear Y %.1f (base %.1f): %s; picture %s restored (Y %.1f)", r2, same ? "equal" : "DIFFERENT",
+                steep.y, lin.y, base.y, eff ? "effect" : "NO PICTURE EFFECT", ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(o); gfree(b); gfree(u);
+    }
+}
+#else
+static void cs_gamma_old(void) {}
+#endif
+
+
+#if HAS_IMP_ISP_Tuning_GetCsc_Attr && HAS_IMP_ISP_Tuning_SetCsc_Attr
+static void cs_csc(void)
+{
+    NEED(IMP_ISP_Tuning_GetCsc_Attr) NEED(IMP_ISP_Tuning_SetCsc_Attr) {
+        G(IMPISPCscAttr, o); G(IMPISPCscAttr, b); G(IMPISPCscAttr, a);
+        int r1 = IMP_ISP_Tuning_GetCsc_Attr(V0 o), r2, r3, r4, r5, ms;
+        Fst base, full, clip, back;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetCsc_Attr), r1, r1 == 0 ? V_PASS : V_FAIL, "mode %d coef[0] %d", (int)o->mode, o->csc_par.csc_coef[0]);
+        r2 = IMP_ISP_Tuning_SetCsc_Attr(V0 o); usleep(600000); r3 = IMP_ISP_Tuning_GetCsc_Attr(V0 b); gchk(b);
+        base = fst(600);
+        *a = *o; a->mode = ISP_CSC_CG_BT601_FULL;
+        r4 = IMP_ISP_Tuning_SetCsc_Attr(V0 a); full = fst(1200);
+        a->mode = ISP_CSC_CG_BT601_CLIP;
+        r5 = IMP_ISP_Tuning_SetCsc_Attr(V0 a); clip = fst(1200);
+        IMP_ISP_Tuning_SetCsc_Attr(V0 o); back = recover(base.y, &ms);
+        {
+            int eff = full.ok && clip.ok && eff_metric(1, &full, &clip) > 0.03;
+            rep(FN(IMP_ISP_Tuning_SetCsc_Attr), r2 | r4 | r5, (r2 == 0 && r3 == 0 && o->mode == b->mode && r4 == 0 && r5 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%ssame value written (ret %d), mode read back %d; BT601 full sd %.1f vs clip sd %.1f; picture %s restored (Y %.1f)", RTMSG(eff), r2, (int)b->mode, full.sd, clip.sd, ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(o); gfree(b); gfree(a);
+    }
+}
+#else
+static void cs_csc(void) {}
+#endif
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAwbCt && HAS_IMP_ISP_Tuning_GetAWBCt
+static void cs_awbct(void)
+{
+    NEED(IMP_ISP_Tuning_SetAwbCt) NEED(IMP_ISP_Tuning_GetAWBCt) {
+        unsigned int o = 0, b = 0;
+        int r1 = IMP_ISP_Tuning_GetAWBCt(&o), r2, r3, ms;
+        Fst base, back;
+
+        base = fst(600);
+        r2 = IMP_ISP_Tuning_SetAwbCt(&o); usleep(800000); r3 = IMP_ISP_Tuning_GetAWBCt(&b); back = recover(base.y, &ms);
+        rep(FN(IMP_ISP_Tuning_SetAwbCt), r2, (r1 == 0 && r2 == 0 && r3 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL, "rt: current colour temperature %u K written (ret %d), now %u K, picture %s same (Y %.1f -> %.1f), frames flow", o, r2, b, ms >= 0 ? "" : "NOT", base.y, back.y);
+    }
+}
+#else
+static void cs_awbct(void) {}
+#endif
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetScalerLv
+static void cs_scalerlv_old(void)
+{
+    NEED(IMP_ISP_Tuning_SetScalerLv) {
+        G(IMPISPScalerLv, a);
+        int r1, r2, r3, ms;
+        Fst lo, hi, back, base;
+
+        base = fst(800);
+        a->channel = 1; a->method = 0; a->level = 0;
+        r1 = IMP_ISP_Tuning_SetScalerLv(a); lo = fst(1200);
+        a->level = 128;
+        r2 = IMP_ISP_Tuning_SetScalerLv(a); hi = fst(1200);
+        a->level = 64;      /* no getter: the middle of the 0..128 range */
+        r3 = IMP_ISP_Tuning_SetScalerLv(a); back = recover(base.y, &ms);
+        {
+            int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+            rep(FN(IMP_ISP_Tuning_SetScalerLv), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && lo.ok && hi.ok && lo.y > 5 && hi.y > 5 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sch1 level 0/128/64 accepted, detail H %.3f at 0 vs %.3f at 128, Y %.1f/%.1f, picture %s alive (Y %.1f)", RTMSG(eff), lo.h, hi.h, lo.y, hi.y, ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_scalerlv_old(void) {}
+#endif
+
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -609,6 +1071,14 @@ static int cs_on(const char *n)
     if (!e) return 1;
     for (p = e; (p = strstr(p, n)); p += l) if ((p == e || p[-1] == ',') && (p[l] == ',' || !p[l])) return 1;
     return 0;
+}
+
+void cases_list(void)
+{
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "rgbcoef", "ispbypass", "binpath", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    unsigned i;
+
+    for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
 }
 
 void t_cases(void)
@@ -634,5 +1104,28 @@ void t_cases(void)
     if (cs_on("inttime")) cs_inttime();    wdog("cases", 90);
     if (cs_on("scene")) cs_scene();      wdog("cases", 90);
     if (cs_on("colorfx")) cs_colorfx();    wdog("cases", 90);
+    if (cs_on("gamma")) cs_gamma();      wdog("cases", 90);
+    if (cs_on("modctl")) cs_modctl();     wdog("cases", 90);
+    if (cs_on("ccm")) cs_ccm();        wdog("cases", 60);
+    if (cs_on("rgbcoef")) cs_rgbcoef();    wdog("cases", 90);
+    if (cs_on("ispbypass")) cs_ispbypass();  wdog("cases", 60);
+    if (cs_on("binpath")) cs_binpath();    wdog("cases", 60);
+    if (cs_on("switchbin")) cs_switchbin();  wdog("cases", 90);
+    if (cs_on("scalerlv")) cs_scalerlv();   wdog("cases", 90);
+    if (cs_on("contrast")) cs_contrast();   wdog("cases", 90);
+    if (cs_on("hue")) cs_hue();        wdog("cases", 90);
+    if (cs_on("aecomp")) cs_aecomp();     wdog("cases", 90);
+    if (cs_on("backlight")) cs_backlight();  wdog("cases", 90);
+    if (cs_on("dpc")) cs_dpc();        wdog("cases", 60);
+    if (cs_on("custom")) cs_custom();     wdog("cases", 60);
+    if (cs_on("wdr")) cs_wdr();        wdog("cases", 60);
+    if (cs_on("wdrout")) cs_wdrout();     wdog("cases", 60);
+    if (cs_on("ispflip")) cs_ispflip();    wdog("cases", 60);
+    if (cs_on("hvflip")) cs_hvflip();     wdog("cases", 60);
+    if (cs_on("ispbypass_old")) cs_ispbypass_old(); wdog("cases", 60);
+    if (cs_on("gamma_old")) cs_gamma_old();  wdog("cases", 90);
+    if (cs_on("csc")) cs_csc();        wdog("cases", 90);
+    if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
+    if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
     wdog("cases", 60);
 }

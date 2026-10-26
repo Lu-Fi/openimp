@@ -1,5 +1,9 @@
 # imgfx - one picture per image-changing IMP function (OpenIMP libimp)
 
+**Folded into apitest (2026-10-26):** the source is `tools/apitest/at_picture.c`, there is no `imgfx_<soc>` binary any more. Run it as
+`apitest_<soc> SENSOR I2C W H picture OUTDIR [case-filter]` (the options and output below are unchanged; `apitest_<soc> ... picture`
+replaces `imgfx_<soc> ...`). `imgfx_collage.py` stays here.
+
 Device test for T10, T20, T21, T23, T31, T41. It sets one function at a time,
 waits (300 ms + 3 frames, longer for AE/AWB cases), saves the 640x360 channel-1
 frame as raw NV12, prints one result line and restores the value it read

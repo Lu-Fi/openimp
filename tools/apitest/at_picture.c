@@ -1,3 +1,7 @@
+#include <stdio.h>
+#if defined(APITEST_T40)   /* no picture cases on T40: its image functions are covered by area t40dev */
+int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr, "picture: not built for T40 (use area t40dev)\n"); return 2; }
+#else
 /* imgfx - device test: one picture per image-changing IMP function/case.
  *
  *   imgfx SENSOR I2C_ADDR W H OUTDIR [case-filter]
@@ -1600,7 +1604,7 @@ static int match(const char *name, const char *filter)
     return !filter || strstr(name, filter) != NULL;
 }
 
-int main(int argc, char **argv)
+int picture_main(int argc, char **argv)
 {
     IMPFSChnAttr fs0, fs1;
     const char *filter;
@@ -1717,3 +1721,5 @@ int main(int argc, char **argv)
     if (sum) fclose(sum);
     return rc;
 }
+
+#endif /* APITEST_T40 */

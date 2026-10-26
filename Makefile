@@ -68,6 +68,7 @@ check:
 status-check:
 	python3 tools/status_data.py --check
 	python3 tools/gen_feature_matrix_html.py --check
+	python3 tools/apitest/check_coverage.py
 
 # Host only (needs the soak sampler logs and the camera STATUS files, not CI): daily soak summary, then regenerate the matrix
 status-soak:

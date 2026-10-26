@@ -3,6 +3,10 @@
  *   apitest SENSOR I2C_ADDR W H [areas]       areas = comma list of
  *                                              sys,fs,enc,osd,ivs,audio,isp,su (default all)
  *   apitest --list                            vendor functions this build exercises
+ *   apitest --areas | --cases                 area names / case names (area "cases", APITEST_CASES=a,b)
+ *   apitest [--json FILE] SENSOR I2C W H ...  also write the run as one JSON report (function -> verdict + detail)
+ *   apitest SENSOR I2C W H picture OUTDIR [filter]   the picture (former imgfx) cases; env IMGFX_STATS=1 ...
+ *   apitest SENSOR I2C W H t40dev [mask]             T40 only: the former t40_devtest phases
  *
  * One line per function:   [A] <function> ret=<r> <PASS|FAIL|N/A|SKIP> <reason>
  * "FAIL OVERWRITE" = the function wrote outside the vendor struct of this SoC
@@ -117,6 +121,34 @@ static void count(int v)
     }
 }
 
+/* ---- JSON report (--json FILE): one entry per reported line */
+static FILE *g_jf;
+static int g_jn;
+static void jstr(const char *s)
+{
+    fputc('"', g_jf);
+    for (; *s; s++) {
+        if (*s == '"' || *s == '\\') { fputc('\\', g_jf); fputc(*s, g_jf); }
+        else if ((unsigned char)*s < 32) fprintf(g_jf, "\\u%04x", *s);
+        else fputc(*s, g_jf);
+    }
+    fputc('"', g_jf);
+}
+static void jrep(const char *fn, long ret, int v, const char *msg)
+{
+    static const char *vs[] = { "PASS", "FAIL", "NA", "SKIP" };
+    const char *vv = vs[v];
+
+    if (!g_jf) return;
+    if (v == V_PASS && !strncmp(msg, "rt:", 3)) vv = "RT";
+    fprintf(g_jf, "%s{\"fn\":", g_jn++ ? ",\n" : "");
+    jstr(fn);
+    fprintf(g_jf, ",\"area\":"); jstr(g_area ? g_area : "");
+    fprintf(g_jf, ",\"ret\":%ld,\"v\":\"%s\",\"detail\":", ret, vv); jstr(msg);
+    fputc('}', g_jf);
+    fflush(g_jf);
+}
+
 void rep(const char *fn, long ret, int v, const char *fmt, ...)
 {
     static const char *vs[] = { "PASS", "FAIL", "N/A", "SKIP" };
@@ -133,6 +165,7 @@ void rep(const char *fn, long ret, int v, const char *fmt, ...)
         printf("[A] %s ret=%ld %s %s\n", fn, ret, vs[v], msg);
     }
     fflush(stdout);
+    jrep(fn, ret, v, msg);
     note(fn, v);
     count(v);
     g_last = fn;
@@ -143,6 +176,7 @@ void rep_na(const char *fn)
 {
     printf("[A] %s ret=- N/A not exported by this libimp\n", fn);
     fflush(stdout);
+    jrep(fn, 0, V_NA, "not exported by this libimp");
     note(fn, V_NA);
     count(V_NA);
     g_last = fn;
@@ -157,6 +191,12 @@ int64_t now_us(void)
     return (int64_t)t.tv_sec * 1000000 + t.tv_nsec / 1000;
 }
 
+static int g_jfd = -1;
+static void jclose(void)
+{
+    if (g_jf) { fprintf(g_jf, "\n]}\n"); fclose(g_jf); g_jf = NULL; }
+}
+
 static void on_alarm(int sig)
 {
     static const char m[] = "\n[E] watchdog: no progress for 60 s, last function: ";
@@ -164,6 +204,7 @@ static void on_alarm(int sig)
     if (write(1, m, sizeof(m) - 1) < 0) _exit(3);
     if (write(1, g_last, strlen(g_last)) < 0) _exit(3);
     if (write(1, "\n", 1) < 0) _exit(3);
+    if (g_jfd >= 0 && write(g_jfd, "\n],\"watchdog\":true}\n", 19) < 0) _exit(3);
     _exit(3);
 }
 
@@ -202,13 +243,42 @@ static int want(const char *areas, const char *a)
 
 int main(int argc, char **argv)
 {
-    const char *areas = argc > 5 ? argv[5] : NULL;
+    const char *areas;
+    const char *jpath = NULL;
     int ret, i, tested = 0, na_only = 0;
 
+    /* global options anywhere before the positional arguments: --json FILE */
+    for (i = 1; i < argc; i++)
+        if (!strcmp(argv[i], "--json") && i + 1 < argc) {
+            jpath = argv[i + 1];
+            memmove(&argv[i], &argv[i + 2], sizeof(char *) * (argc - i - 1));
+            argc -= 2;
+            break;
+        }
+    areas = argc > 5 ? argv[5] : NULL;
     if (argc == 2 && !strcmp(argv[1], "--list")) { list_fns(0); return 0; }
+    if (argc == 2 && !strcmp(argv[1], "--areas")) {
+        puts("sys\nfs\nenc\nosd\nivs\naudio\nisp\nsu\ncases\npicture\n"
+#ifdef APITEST_T40
+             "t40dev\n"
+#endif
+             );
+        return 0;
+    }
+    if (argc == 2 && !strcmp(argv[1], "--cases")) { cases_list(); return 0; }
+    if (argc >= 6 && !strcmp(argv[5], "picture")) {      /* former imgfx: sensor i2c w h OUTDIR [filter] */
+        char *pa[8] = { argv[0], argv[1], argv[2], argv[3], argv[4], argc > 6 ? argv[6] : (char *)"/tmp/at/img", argc > 7 ? argv[7] : NULL, NULL };
+        return picture_main(argc > 7 ? 7 : 6, pa);
+    }
+#ifdef APITEST_T40
+    if (argc >= 6 && !strcmp(argv[5], "t40dev")) {        /* former t40_devtest: [phase mask in hex] */
+        char *pa[3] = { argv[0], argc > 6 ? argv[6] : NULL, NULL };
+        return t40dev_main(argc > 6 ? 2 : 1, pa);
+    }
+#endif
     if (argc < 5) {
         fprintf(stderr, "apitest (%s) usage: %s sensor i2c_addr sensor_w sensor_h [areas]   |   %s --list\n"
-                "  areas: sys,fs,enc,osd,ivs,audio,isp,su,cases (comma list, default all)\n", SOC, argv[0], argv[0]);
+                "  areas: sys,fs,enc,osd,ivs,audio,isp,su,cases (comma list, default all); picture OUTDIR [filter]; --areas --cases --json FILE\n", SOC, argv[0], argv[0]);
         return 2;
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -225,6 +295,11 @@ int main(int argc, char **argv)
     g_sensor.i2c.addr = (int)strtol(argv[2], NULL, 0);
     g_sensor.rst_gpio = g_sensor.pwdn_gpio = g_sensor.power_gpio = -1;
 
+    if (jpath && (g_jf = fopen(jpath, "w"))) {
+        g_jfd = fileno(g_jf);
+        fprintf(g_jf, "{\"tool\":\"apitest\",\"soc\":\"%s\",\"sensor\":\"%s\",\"areas\":\"%s\",\"funcs\":[\n", SOC, argv[1], areas ? areas : "all");
+        atexit(jclose);
+    }
     printf("[T] apitest %s sensor %s %dx%d areas %s\n", SOC, argv[1], g_sw, g_sh, areas ? areas : "all");
 
     if (!IMP_ISP_Open || !IMP_System_Init) { printf("[E] libimp does not export IMP_ISP_Open / IMP_System_Init (not linked?)\n"); return 1; }

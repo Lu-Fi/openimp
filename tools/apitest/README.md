@@ -1,4 +1,11 @@
-# apitest - every non-image vendor IMP/SU function, per SoC (OpenIMP libimp)
+# apitest - ONE device test app per SoC for every vendor IMP/SU function (OpenIMP libimp)
+
+One source, one binary `apitest_<soc>`, one CLI: areas `sys,fs,enc,osd,ivs,audio,isp,su,cases`, `picture` (the former imgfx cases,
+`apitest_<soc> SENSOR I2C W H picture OUTDIR [filter]`), `t40dev` (T40 only, the former t40_devtest), `--list` (functions), `--areas`,
+`--cases` (case names of area cases), `--json FILE` (one JSON report of the run: function -> PASS/FAIL/RT/NA/SKIP + detail + area;
+`results2json.py --report` and `merge_evidence.py` consume it). Completeness: `check_coverage.py` (part of `make check`) requires
+every vendor function of every gate SoC (`tools/export-check/vendor-<SoC>.txt`) to have a case here or an entry with a reason in
+`untestable.yaml` (categories sound, reboot, power, hardware, wedges-isp, no-signature, own-topology, not-in-soc-api, backlog).
 
 Device test for T10, T20, T21, T23, T31 and T41, sibling of `tools/imgfx` (which
 covers the image-changing ISP functions). It calls the vendor API of the SoC

@@ -1,6 +1,6 @@
 #!/bin/bash
-# run_cam.sh IP SOC [outdir]  -  device API run on ONE camera: apitest (all safe areas), imgfx (statistics
-# only, no picture leaves the camera), T40: t40_devtest.  Restores the camera (streamer restarted, /tmp clean).
+# run_cam.sh IP SOC [outdir]  -  device API run on ONE camera: apitest (all safe areas), area picture (former imgfx, statistics
+# only, no picture leaves the camera), T40: area t40dev (former t40_devtest) - ONE binary apitest_<soc>.  Restores the camera (streamer restarted, /tmp clean).
 #
 #   build first:  tools/apitest/build.sh            (binaries in tools/apitest/build, or BIN=<dir>)
 #   example:      tools/apitest/run_cam.sh 192.168.10.34 T41
@@ -57,10 +57,10 @@ restore() {
     cam 'ps | grep -c "[t]imps\|[p]rudynt\|[r]aptor\|[r]vd"' >> "$OUT/restore.txt" 2>&1; fi
   cam 'dmesg | grep -cE "Oops|unaligned access|Unable to handle|BUG:|Kernel panic"; uptime' > "$OUT/after.txt" 2>&1
 }
-fin() { restore; st "$SOC $IP done, free (streamer restarted, /tmp/at removed, out $OUT)"; }
+fin() { restore; st "$SOC $IP planned test: done, free (streamer restarted, /tmp/at removed, out $OUT)"; }
 trap fin EXIT
 
-st "$SOC $IP start (cam-$NN.lock held for the whole run, ~10 min): apitest $AREAS + imgfx stats$([ $SOC = T40 ] && echo " + t40_devtest $T40_MASK"), streamer stopped then restarted, no sound, no flash/reboot/modules"
+st "$SOC $IP planned test: start (cam-$NN.lock held for the whole run, ~10 min): apitest $AREAS + imgfx stats$([ $SOC = T40 ] && echo " + t40_devtest $T40_MASK"), streamer stopped then restarted, no sound, no flash/reboot/modules"
 cam 'uname -m; free | head -2; df /tmp | tail -1; ls /etc/init.d | grep -E "timps|prudynt|raptor|rvd"; for f in /proc/jz/sensor/*/name /proc/jz/sensor/name; do [ -r $f ] && echo "sensor $f: $(cat $f)"; done; md5sum /usr/lib/libimp.so 2>/dev/null; ls -l /usr/lib/libimp.so; cat /etc/os-release 2>/dev/null | head -4; cat /etc/thingino-build 2>/dev/null | head -3; lsmod | head -20; dmesg | grep -cE "Oops|unaligned access|Unable to handle|BUG:|Kernel panic"; echo preflight-ok' > "$OUT/before.txt" 2>&1; grep -q preflight-ok "$OUT/before.txt" || { echo "ssh failed"; exit 6; }
 grep -qi "$SENSOR" "$OUT/before.txt" || echo "NOTE: sensor $SENSOR not seen in the camera's /proc/jz/sensor (table value used; override with SENSOR= I2C= W= H=)" | tee -a "$OUT/before.txt"
 STREAMER=$(grep -oE "^S[0-9]+(timps|prudynt|raptor|rvd)[A-Za-z0-9_-]*" "$OUT/before.txt" | grep -v -E "motion|onvif|webui" | head -1)
@@ -69,21 +69,20 @@ echo "streamer: ${STREAMER:-none found}" | tee -a "$OUT/before.txt"
 cam 'dmesg -c > /dev/null; [ -n "'"$STREAMER"'" ] && '"$STREAMER"' stop > /dev/null 2>&1; sleep 3; mkdir -p /tmp/at'
 copy() { cat "$1" | cam "cat > /tmp/at/$2; chmod 755 /tmp/at/$2"; }
 copy "$BIN/apitest_$lc" apitest
-[ -x "$BIN/imgfx_$lc" ] && copy "$BIN/imgfx_$lc" imgfx
-[ "$SOC" = T40 ] && copy "$BIN/t40_devtest" t40_devtest
 
 # run NAME CMD  -  output streamed to the host, remote PID recorded for the cleanup, host watchdog 20 min
 run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
   timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=0 $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
   echo "   rc=$? lines=$(wc -l < "$OUT/$name.log")" >> "$OUT/run.log"; }
-run apitest ./apitest "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
-if [ -z "$NOIMG" ] && [ -x "$BIN/imgfx_$lc" ]; then
-  [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./imgfx "$SENSOR" "$I2C" "$W" "$H" /tmp/at/img
+run apitest ./apitest --json /tmp/at/apitest.json "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
+cam "cat /tmp/at/apitest.json" > "$OUT/apitest.json" 2>/dev/null
+if [ -z "$NOIMG" ] && [ "$SOC" != T40 ]; then
+  [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./apitest "$SENSOR" "$I2C" "$W" "$H" picture /tmp/at/img
 fi
-[ "$SOC" = T40 ] && [ -z "$NODEV" ] && run devtest ./t40_devtest "$T40_MASK"
+[ "$SOC" = T40 ] && [ -z "$NODEV" ] && run devtest ./apitest "$SENSOR" "$I2C" "$W" "$H" t40dev "$T40_MASK"
 cam 'dmesg | tail -n 40' > "$OUT/dmesg-tail.txt" 2>&1
 
 python3 "$D/results2json.py" --soc "$SOC" --ip "$IP" --image "$TAG" --date "$(date +%F)" --out "$OUT/result.json" \
-  --apitest "$OUT/apitest.log" $([ -s "$OUT/imgfx.log" ] && echo --imgfx "$OUT/imgfx.log") $([ -s "$OUT/devtest.log" ] && echo --devtest "$OUT/devtest.log")
+  --apitest "$OUT/apitest.log" $([ -s "$OUT/apitest.json" ] && echo --report "$OUT/apitest.json") $([ -s "$OUT/imgfx.log" ] && echo --imgfx "$OUT/imgfx.log") $([ -s "$OUT/devtest.log" ] && echo --devtest "$OUT/devtest.log")
 grep -hE "^\[T\] summary|^\[E\]" "$OUT/apitest.log" | tail -3
 echo "FAIL lines:"; grep -hE "^\[A\] .* FAIL" "$OUT/apitest.log" | head -40
