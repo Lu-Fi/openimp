@@ -2087,7 +2087,7 @@
    "area": "ISP tuning",
    "cells": {
     "T10": "dev",
-    "T20": "aud",
+    "T20": "dev",
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
@@ -2131,7 +2131,8 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T20": "apitest issue-121 2026-10-27 .107 (open-tx-isp b4d8eae0): Get returns the active curve (128/129 points, was all 0); same curve written back: luma unchanged; x^0.3 vs linear Y 131.6 vs 42.3"
    }
   },
   "ISP_Tuning_Get/SetGammaAttr": {
