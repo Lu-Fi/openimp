@@ -74,8 +74,8 @@ struct t23_osd_region {
 struct t23_osd_group {
     int created;
     int started;
-#if defined(PLATFORM_T40)
-    /* T40 IMP_OSD_SetGroupCallback: called with every frame after the
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+    /* T40/T41 IMP_OSD_SetGroupCallback: called with every frame after the
      * group was drawn into it (vendor osd_update) */
     int (*callback)(int group, IMPFrameInfo *frame);
 #endif
@@ -711,12 +711,12 @@ int IMP_OSD_SetPoolSize(int size)
  * OSD lock, so it may call OSD functions. */
 void openimp_t23_osd_apply(int group, void *frame)
 {
-#if defined(PLATFORM_T40)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     int (*callback)(int, IMPFrameInfo *) = NULL;
 #endif
 
     osd_apply_draw(group, frame);
-#if defined(PLATFORM_T40)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     if (!frame || !valid_group(group))
         return;
     pthread_mutex_lock(&osd_lock);
@@ -728,13 +728,20 @@ void openimp_t23_osd_apply(int group, void *frame)
 #endif
 }
 
-#if defined(PLATFORM_T40)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
 /* Vendor T40 1.3.1 IMP_OSD_SetGroupCallback (0xbda40): group < 6 and
  * created (-1 otherwise), the callback (NULL clears it) is stored in the
- * group, 0.  Header: after CreateGroup, before FrameSource_EnableChn. */
+ * group, 0.  Header: after CreateGroup, before FrameSource_EnableChn.
+ * T41 1.2.6 (osd.c 0x5b50): the same with group < 4 (the stock check is
+ * signed "< 4" only; a negative group is refused here as well). */
+#if defined(PLATFORM_T41)
+#define OSD_CALLBACK_GROUPS 4
+#else
+#define OSD_CALLBACK_GROUPS 6
+#endif
 int IMP_OSD_SetGroupCallback(int grpNum, int (*callback)(int group_index, IMPFrameInfo *frame))
 {
-    if (grpNum < 0 || grpNum >= 6)
+    if (grpNum < 0 || grpNum >= OSD_CALLBACK_GROUPS)
         return -1;
     pthread_mutex_lock(&osd_lock);
     if (!osd_groups[grpNum].created) {

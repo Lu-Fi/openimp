@@ -172,6 +172,12 @@ do
         -o "$output_dir/$source.o"
 done
 
+# ISP-drawn OSD (IMP_ISP_Tuning_*OsdRgn, IMP_OSD_*_ISP, Set/GetOSDAttr/Block):
+# the T40 region code with the T41 notify path (vendor T41 header types)
+"$compiler" $strict_flags -I"$T41_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t40/openimp_t40_isp_osd.c" \
+    -o "$output_dir/openimp_t41_isp_osd.o"
+
 for source in codec al_avpu device_pool fifo hw_encoder
 do
     source_path="$project_dir/src/$source.c"
@@ -205,6 +211,7 @@ done
     "$output_dir/audio_ext.o" \
     "$output_dir/openimp_audio_enc_dec.o" \
     "$output_dir/openimp_p3_compat.o" \
+    "$output_dir/openimp_t41_isp_osd.o" \
     "$output_dir/t41_osd.o" \
     "$output_dir/t41_ivs.o" \
     "$output_dir/t41_ivs_move.o" \

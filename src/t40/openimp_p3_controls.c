@@ -2001,7 +2001,7 @@ int32_t IMP_ISP_GetDefaultBinPath(IMPVI_NUM num, char *path)
     return -1;
 }
 
-#if !defined(PLATFORM_T40)   /* T40: src/t40/openimp_t40_isp_osd.c */
+#if !defined(PLATFORM_T40) && !defined(PLATFORM_T41)   /* T40/T41: src/t40/openimp_t40_isp_osd.c */
 int IMP_ISP_Tuning_SetOsdPoolSize(int size)
 {
     return size >= 0 ? 0 : -1;

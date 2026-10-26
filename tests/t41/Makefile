@@ -28,7 +28,7 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject
+.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
@@ -36,6 +36,7 @@ check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(MAKE) audio-ext
 	$(MAKE) fs-inject
 	$(MAKE) p3-controls
+	$(MAKE) isp-osd
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
 	$(MAKE) p3-ao-mute
@@ -181,6 +182,21 @@ $(RMEM_FIT_T40_TEST_BIN): rmem_fit_test.c $(PROJECT_DIR)/src/t40/openimp_p2_dma.
 
 # ISP tuning pass-through (vendor control IDs and envelope).  Needs the
 # vendor T41 1.2.0 headers; skipped when T41_HEADERS is not set.
+ISP_OSD_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-isp-osd-test
+
+# ISP-drawn OSD region table and the 0x080000a1/0x080000a2 driver controls
+# (vendor T41 libimp 1.2.6).  Needs the vendor T41 headers; skipped without.
+isp-osd:
+ifneq ($(T41_HEADERS),)
+	mkdir -p "$(dir $(ISP_OSD_TEST_BIN))"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -I$(T41_HEADERS) \
+		-I$(PROJECT_DIR)/src isp_osd_test.c $(PROJECT_DIR)/src/t40/openimp_t40_isp_osd.c \
+		-pthread -o "$(ISP_OSD_TEST_BIN)"
+	$(ISP_OSD_TEST_BIN)
+else
+	@echo "t41 isp osd test skipped (set T41_HEADERS)"
+endif
+
 p3-controls:
 ifneq ($(T41_HEADERS),)
 	mkdir -p "$(dir $(P3_CONTROLS_TEST_BIN))"

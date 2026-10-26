@@ -8,6 +8,21 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t41-isp-osd` (2026-10-26)
+
+- **T41 ISP-drawn OSD:** `IMP_ISP_Tuning_SetOsdPoolSize/CreateOsdRgn/SetOsdRgnAttr/GetOsdRgnAttr/ShowOsdRgn/DestroyOsdRgn`,
+  the `IMP_OSD_*_ISP` calls behind them (`Init/Exit/SetPoolSize/CreateRgn/DestroyRgn/SetRgnAttr_PicISP/GetRgnAttr_ISPPic/
+  ShowRgn`) and `IMP_ISP_Tuning_Set/GetOSDAttr`, `Set/GetOSDBlock` (controls 0x080000a1 / 0x080000a2, vendor return
+  codes -4087/-4084/-4091/-4090). The T40 region code (`src/t40/openimp_t40_isp_osd.c`) is shared; T41 differences
+  from the vendor 1.2.6 isp_osd.c: chn 0/1, `IMPIspOsdAttrAsm` 36 bytes with `pic.pinum`, OsdnotifyIsp sends
+  SetOSDAttr + SetOSDBlock per region on sensor 0. Before, the four Tuning region calls returned ENOTSUP and the
+  rest did not exist (raptor-hal's T41 ISP OSD failed). Needs open-tx-isp `claude/t41-isp-osd`.
+  `IMP_OSD_SetGroupCallback` is now also exported on T41 (groups 0..3, the IPU group OSD callback as on T40).
+  Device proof .34 / .32 with `tests/t41/devtest/isp_osd_devtest.c` (raptor-hal sequence): ch0 NV12 + JPEG exact
+  colours, move/update/two regions/hide/destroy, fps unchanged, 0 oops; the hardware draws into the main stream only
+  (not ch1). Bitmaps with the bytes B,G,R,A need `IMP_ISP_ARGB_TYPE_ARGB`; raptor-hal's `BGRA` shows only the blue/
+  white parts (alpha from byte 0). Host test `tests/t41/isp_osd_test.c`.
+
 ## Branch `claude/t40-ae-api` (2026-10-26)
 
 - T40: the AE tuning calls are served by the open driver's frame AE (open-tx-isp `claude/t40-ae-api`); the T40 libimp

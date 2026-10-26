@@ -31,6 +31,23 @@
  *    pool size instead, so a pool size set after IMP_System_Init still works.
  *  - A created region without a picture is not sent to the driver (the
  *    vendor sends it with a meaningless physical address).
+ *
+ * T41 (vendor libimp 1.2.6 src/imp/osd/isp_osd.c, same file built with
+ * PLATFORM_T41): the region table, pool, picture copy, overlap check and
+ * show logic are the same as T40, with these differences:
+ *  - "chn" is 0 or 1 (vendor: MAXSUPCHNMUN 1, the check is chn < 2; the
+ *    vendor allocates one channel table, so chn 1 writes past it - here
+ *    both have their own table).  The picture is checked against the
+ *    frame-source channel chn; the ISP draws it in the main stream (MSCA
+ *    output 0) coordinates, before the outputs are scaled.
+ *  - IMPIspOsdAttrAsm is { type, IMPISPOSDSingleAttr { IMPISPOSDAttr
+ *    chnOSDAttr, IMPISPOSDBlockAttr pic } } (36 bytes); the handle must
+ *    equal pic.pinum.
+ *  - OsdnotifyIsp sends each region as two tuning controls on sensor 0:
+ *    IMP_ISP_Tuning_SetOSDAttr (0x080000a1, the 12-byte picture format)
+ *    and IMP_ISP_Tuning_SetOSDBlock (0x080000a2, the 20-byte block with the
+ *    physical picture address).  open-tx-isp T41 stores both and writes the
+ *    MSCA OSD registers with the next frame's shadow commit.
  */
 
 #include <errno.h>
@@ -50,15 +67,32 @@
 #define TISP_VIDIOC_DEFAULT_TUNING 0xc0105436U
 #endif
 #define TISP_CID_SINGLE_OSD_ATTR 0x080000a2 /* IMP_ISP_Set/GetSingleOSDAttr */
+#define TISP_CID_OSD_ATTR 0x080000a1        /* T41 IMP_ISP_Tuning_Set/GetOSDAttr */
+#define TISP_CID_OSD_BLOCK 0x080000a2       /* T41 IMP_ISP_Tuning_Set/GetOSDBlock */
 
+#if defined(PLATFORM_T41)
+#define ISP_OSD_CHANNELS 2                  /* vendor chn < 2 */
+typedef IMPISPOSDBlockAttr IspOsdPic;
+#define RGN_PICNUM(a) ((a)->stsinglepicAttr.pic.pinum)
+#else
 #define ISP_OSD_CHANNELS 6                  /* MAXISPCHNMUN */
+typedef IMPISPOSDPicAttr IspOsdPic;
+#define RGN_PICNUM(a) ((a)->stsinglepicAttr.pic_num)
+#endif
 #define ISP_OSD_REGIONS 8                   /* MAXISPOSDPIC */
 #define ISP_OSD_DEFAULT_POOL 128            /* vendor .data default */
 
 #if UINTPTR_MAX == 0xffffffffu
+#if defined(PLATFORM_T41)
+/* The driver copies 12 and 20 bytes. */
+_Static_assert(sizeof(IMPISPOSDAttr) == 12, "IMPISPOSDAttr");
+_Static_assert(sizeof(IMPISPOSDBlockAttr) == 20, "IMPISPOSDBlockAttr");
+_Static_assert(sizeof(IMPIspOsdAttrAsm) == 36, "IMPIspOsdAttrAsm");
+#else
 /* The driver copies 44 bytes; the library keeps 48-byte attributes. */
 _Static_assert(sizeof(IMPISPSingleOSDAttr) == 44, "IMPISPSingleOSDAttr");
 _Static_assert(sizeof(IMPIspOsdAttrAsm) == 48, "IMPIspOsdAttrAsm");
+#endif
 #endif
 
 extern int OpenIMP_P1_TuningIOCtl(uint32_t command, void *argument);
@@ -119,6 +153,46 @@ static int isp_osd_ioctl(int num, int direction, int control, void *payload)
     return OpenIMP_P1_TuningIOCtl(TISP_VIDIOC_DEFAULT_TUNING, &request);
 }
 
+#if defined(PLATFORM_T41)
+extern int OpenIMP_P1_TuningEnabled(void);
+
+/* Vendor T41 1.2.6 IMP_ISP_Tuning_Set/GetOSDAttr (isp_tseries 0x16a28) and
+ * Set/GetOSDBlock (0x173c4): pointer pass-through of the 12-byte
+ * IMPISPOSDAttr / 20-byte IMPISPOSDBlockAttr, controls 0x080000a1 /
+ * 0x080000a2.  Vendor return codes: NULL -4087, sensor >= 2 -4084, tuning
+ * not enabled -4091, failed ioctl -4090. */
+static int32_t isp_osd_tuning(IMPVI_NUM num, int direction, int control,
+                              void *attr)
+{
+    if (!attr)
+        return -4087;
+    if ((unsigned)num >= 2U)
+        return -4084;
+    if (!OpenIMP_P1_TuningEnabled())
+        return -4091;
+    return isp_osd_ioctl(num, direction, control, attr) ? -4090 : 0;
+}
+
+int32_t IMP_ISP_Tuning_SetOSDAttr(IMPVI_NUM num, IMPISPOSDAttr *attr)
+{
+    return isp_osd_tuning(num, 0, TISP_CID_OSD_ATTR, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetOSDAttr(IMPVI_NUM num, IMPISPOSDAttr *attr)
+{
+    return isp_osd_tuning(num, 1, TISP_CID_OSD_ATTR, attr);
+}
+
+int32_t IMP_ISP_Tuning_SetOSDBlock(IMPVI_NUM num, IMPISPOSDBlockAttr *attr)
+{
+    return isp_osd_tuning(num, 0, TISP_CID_OSD_BLOCK, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetOSDBlock(IMPVI_NUM num, IMPISPOSDBlockAttr *attr)
+{
+    return isp_osd_tuning(num, 1, TISP_CID_OSD_BLOCK, attr);
+}
+#else
 /* Vendor IMP_ISP_SetSingleOSDAttr / GetSingleOSDAttr: sensor 0..3, pointer
  * pass-through of the 44-byte attribute; a failed ioctl is -6. */
 int32_t IMP_ISP_SetSingleOSDAttr(IMPVI_NUM num, IMPISPSingleOSDAttr *attr)
@@ -138,8 +212,9 @@ int32_t IMP_ISP_GetSingleOSDAttr(IMPVI_NUM num, IMPISPSingleOSDAttr *attr)
         return -9;
     return isp_osd_ioctl(num, 1, TISP_CID_SINGLE_OSD_ATTR, attr) ? -6 : 0;
 }
+#endif
 
-static int rects_cross(const IMPISPOSDPicAttr *a, const IMPISPOSDPicAttr *b)
+static int rects_cross(const IspOsdPic *a, const IspOsdPic *b)
 {
     /* vendor iscrossrect(): 16-bit max/min of the two rectangles */
     uint16_t l = a->osd_left > b->osd_left ? a->osd_left : b->osd_left;
@@ -180,12 +255,12 @@ static void isp_osd_adjust(int chn)
     int n = isp_osd_busy(chn, list), i, j;
 
     for (i = 0; i < n; i++) {
-        IMPISPOSDPicAttr *a = &list[i]->attr.stsinglepicAttr.pic;
+        IspOsdPic *a = &list[i]->attr.stsinglepicAttr.pic;
 
         if (!a->osd_enable)
             continue;
         for (j = i + 1; j < n; j++) {
-            IMPISPOSDPicAttr *b = &list[j]->attr.stsinglepicAttr.pic;
+            IspOsdPic *b = &list[j]->attr.stsinglepicAttr.pic;
 
             if (b->osd_enable && rects_cross(a, b)) {
                 fprintf(stderr, "openimp-isposd: chn%d region %d overlaps an "
@@ -207,16 +282,34 @@ static void isp_osd_notify(int chn)
 
     for (i = 0; i < n; i++) {
         IspOsdRegion *r = list[i];
-        IMPISPSingleOSDAttr single;
         int handle = (int)(r - isp_osd.rgn[chn]);
+#if defined(PLATFORM_T41)
+        IMPISPOSDSingleAttr single;
 
-        if (r->attr.stsinglepicAttr.pic_num != handle || !r->phys)
+        if (RGN_PICNUM(&r->attr) != handle || !r->phys)
+            continue;
+        single = r->attr.stsinglepicAttr;
+        single.pic.osd_image = (char *)(uintptr_t)r->phys;
+        if (IMP_ISP_Tuning_SetOSDAttr((IMPVI_NUM)r->num,
+                                      &single.chnOSDAttr) < 0) {
+            fprintf(stderr, "openimp-isposd: IMP_ISP_Tuning_SetOSDAttr err "
+                    "(chn%d handle%d)\n", chn, handle);
+            continue;
+        }
+        if (IMP_ISP_Tuning_SetOSDBlock((IMPVI_NUM)r->num, &single.pic) < 0)
+            fprintf(stderr, "openimp-isposd: IMP_ISP_Tuning_SetOSDBlock err "
+                    "(chn%d handle%d)\n", chn, handle);
+#else
+        IMPISPSingleOSDAttr single;
+
+        if (RGN_PICNUM(&r->attr) != handle || !r->phys)
             continue;
         single = r->attr.stsinglepicAttr;
         single.pic.osd_image = (char *)(uintptr_t)r->phys;
         if (IMP_ISP_SetSingleOSDAttr((IMPVI_NUM)r->num, &single) < 0)
             fprintf(stderr, "openimp-isposd: IMP_ISP_SetSingleOSDAttr err "
                     "(chn%d handle%d)\n", chn, handle);
+#endif
     }
 }
 
@@ -265,7 +358,11 @@ int IMP_OSD_CreateRgn_ISP(int chn, IMPIspOsdAttrAsm *attr)
     memset(r, 0, sizeof(*r));
     r->created = 1;
     r->seq = ++isp_osd.seq;
+#if defined(PLATFORM_T41)
+    r->num = 0;                     /* one ISP, one OSD bank */
+#else
     r->num = chn / 3;
+#endif
     pthread_mutex_unlock(&isp_osd.lock);
     return handle;
 }
@@ -274,7 +371,7 @@ int IMP_OSD_SetRgnAttr_PicISP(int chn, int handle, IMPIspOsdAttrAsm *attr)
 {
     IMPFSChnAttr fs;
     IspOsdRegion *r;
-    const IMPISPOSDPicAttr *pic;
+    const IspOsdPic *pic;
     uint32_t size;
     IMPDMABufferInfo info;
     void *virt;
@@ -447,6 +544,7 @@ int IMP_ISP_Tuning_DestroyOsdRgn(int chn, int handle)
     return IMP_OSD_DestroyRgn_ISP(chn, handle);
 }
 
+#if !defined(PLATFORM_T41)
 /* T40 IMP_ISP_GetRaw (vendor 1.3.1 0x8a410): writes the sensor number into
  * attr->sensor_id, num < 4 (-4), ISP device open (-8), raw_bit 8 (w*h bytes)
  * or 16 (w*h*2) else -1; one rmem buffer per sensor (the 148-byte IMP_Alloc
@@ -504,3 +602,4 @@ int32_t IMP_ISP_GetRaw(IMPVI_NUM num, IMPISPGETRawiConfig *attr)
     pthread_mutex_unlock(&isp_raw_lock);
     return 0;
 }
+#endif /* !PLATFORM_T41 */
