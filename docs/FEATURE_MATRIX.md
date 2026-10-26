@@ -17,7 +17,8 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 Rules (machine-readable: `docs/status/release.yaml`). **RC3:** every vendor function that a streamer (timps, prudynt, raptor) calls works on T10, T20, T21, T23, T31, T40, T41 (API matrix cell dev, dev+, run, rt or vendor no-op). **Release 1:** RC3 is green and the release image ran at least 14 days on the fleet with at least 1 camera per SoC, 0 unplanned reboots and 0 oops; a new image or any reset restarts the counter; planned flashes and tests count as planned only when the camera STATUS log marks them so.
 
 - **RC3: 🔴 RED** (1370 of 1787 streamer-function cells work, 417 missing)
-- **Release 1: 🔴 RED** (0 of 7 SoCs reached 14 stable days; image agg47, soak as of 2026-10-26 19:23)
+- **Release 1: 🔴 RED** (0 of 7 SoCs reached 14 stable days; image –, soak as of 2026-10-26 19:23)
+  - Not started: the 14-day counter starts when RC3 is published (tag pending) and runs only on the image built from that tag.
 
 ### RC3: streamer functions that work
 
@@ -47,20 +48,17 @@ Stable days = days since the later of: the image first ran on the camera, its la
 
 | SoC | cameras | best stable days | progress | unplanned reboots | oops |
 |---|---|--:|---|--:|--:|
-| T10 | .31 | 0.1/14 | `░░░░░░░░░░░░░░░░░░░░` | 2 | 0 |
-| T20 | .107 .163 | 0.2/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
-| T21 | .24 | 0.2/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
-| T23 | .23 .28 .30 .124 | 0.2/14 | `░░░░░░░░░░░░░░░░░░░░` | 1 | 0 |
-| T31 | .21 .25 .26 .29 .33 .145 .151 .224 | 0.2/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
-| T40 | .184 | 0.1/14 | `░░░░░░░░░░░░░░░░░░░░` | 1 | 0 |
-| T41 | .32 .34 | 0.2/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T10 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T20 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T21 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T23 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T31 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T40 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T41 | – | 0.0/14 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 
 Reset events of the release image (flashes of the image itself are not listed):
 
-- T10: 2026-10-26 17:32 .31 UNPLANNED reboot: recovery reboot (pipeline wedged after apitest cases)
-- T10: 2026-10-26 17:38 .31 UNPLANNED reboot: recovery reboot (SetISPProcess(0) wedge, bisect)
-- T23: 2026-10-26 18:11 .28 UNPLANNED reboot: no STATUS entry (boot time derived from uptime, seen 2026-10-26 19:23)
-- T40: 2026-10-26 16:12 .184 UNPLANNED reboot: recovery reboot (tx_isp_t40 refcount stuck after apitest oopses)
+- none
 
 Open items: milestones [RC3](https://github.com/Lu-Fi/openimp/milestones) and Release 1; tracking issue [#107](https://github.com/Lu-Fi/openimp/issues/107). The soak data is refreshed daily on the host with `python3 tools/status_soak.py` (see its header), then this page is regenerated.
 

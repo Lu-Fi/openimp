@@ -86,7 +86,11 @@ class Gates:
     # ------------------------------------------------------------ Release 1
     def _r1(self):
         self.r1 = {}
-        cams = self.soak["cameras"] if self.soak else []
+        g = next(g for g in self.rel["gates"] if g["id"] == "release1")
+        self.r1_tag, self.r1_image = g.get("rc3_tag"), g.get("release_image")
+        # counting starts only after RC3 is published, and only on the image built from the RC3 tag
+        self.r1_started = bool(self.r1_tag and self.r1_image and self.soak and self.soak.get("image") == self.r1_image)
+        cams = self.soak["cameras"] if self.r1_started else []
         for s in self.socs:
             cs = [c for c in cams if c["soc"] == s]
             best = max([c["stable_days"] for c in cs], default=0.0)
@@ -134,7 +138,10 @@ class Gates:
         asof = self.soak["asof"] if self.soak else "no soak data"
         o.append("- **Release 1: %s %s** (%d of %d SoCs reached %d stable days; image %s, soak as of %s)" % (
             "🟢" if self.r1_ok else "🔴", self.verdict(self.r1_ok), nsoc, len(self.socs), self.min_days,
-            self.soak["image"] if self.soak else "–", asof))
+            self.r1_image or "–", asof))
+        if not self.r1_started:
+            o.append("  - Not started: the %d-day counter starts when RC3 is published (tag%s) and runs only on the image built "
+                     "from that tag." % (self.min_days, " " + self.r1_tag if self.r1_tag else " pending"))
         o += ["", "### RC3: streamer functions that work", "",
               "Per SoC: vendor functions that at least one streamer calls (a Get/Set row counts two, a wildcard row its vendor names) "
               "and that work. The list below names the missing ones with their issues (milestone RC3).", "",
@@ -215,8 +222,10 @@ class Gates:
             h.append('<details class="prio"><summary><b>%s</b> %d missing (%d rows)</summary><ul class="pl">%s</ul></details>' % (
                 s, v["total"] - v["ok"], len(v["missing"]), "".join(li)))
         asof = self.soak["asof"] if self.soak else "no soak data"
-        h.append(head(self.r1_ok, "Release 1", "Image %s, soak as of %s. Stable days = since the later of: image first ran, last unplanned reboot, "
-                      "last oops (best camera per SoC). Milestone Release 1." % (esc(self.soak["image"] if self.soak else "-"), esc(asof))))
+        h.append(head(self.r1_ok, "Release 1", ("Not started: the %d-day counter starts when RC3 is published and runs only on the image "
+                      "built from the RC3 tag. " % self.min_days if not self.r1_started else "") +
+                      "Image %s, soak as of %s. Stable days = since the later of: image first ran, last unplanned reboot, "
+                      "last oops (best camera per SoC). Milestone Release 1." % (esc(self.r1_image or "-"), esc(asof))))
         rows = []
         for s in self.socs:
             v = self.r1[s]
