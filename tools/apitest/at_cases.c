@@ -734,7 +734,7 @@ void t_binpath_pre(void)
 {
     const char *want = getenv("APITEST_CASES");
 
-    if (want && !strstr(want, "binpath")) return;
+    if (!want || !strstr(want, "binpath")) return;      /* opt-in: with the current driver AddSensor fails afterwards (issue 116) */
     NEED(IMP_ISP_GetDefaultBinPath) NEED(IMP_ISP_SetDefaultBinPath) {
         char *o = (char *)gnew(128), *b = (char *)gnew(128), *p = (char *)gnew(128);
         struct stat st;
