@@ -15,7 +15,9 @@
  *           1000 WDR_OPEN LINEAR before AddSensor (run it on its own)
  *           4000 wip cells ISP (AE scene/caps, SensorFPS, CCM/LSC, flip modes, WDR/DRC, NR ratio, mask, getters)
  *           8000 encoder telemetry (Query histogram, telemetry, AveBitrate; 10000 adds the sensor flip modes to 4000)
- *           2000 GetRaw, one 8-bit sensor frame (about 8 MB rmem; on its own, last) */
+ *           2000 GetRaw, one 8-bit sensor frame (about 8 MB rmem; on its own, last)
+ *           1000000 AE API on the open frame AE (ExprInfo layout/manual/freeze/min gain, statistics,
+ *                   histThresh, target comp, weights, speed, face AE, antiflicker) */
 #include <errno.h>
 #include <poll.h>
 #include <pthread.h>
@@ -119,6 +121,31 @@ static void drain_stale(void)
         if (IMP_FrameSource_GetFrame(CH, &f) == 0 && f)
             IMP_FrameSource_ReleaseFrame(CH, f);
     }
+}
+
+/* Optional picture proof: T40_SNAPDIR=<dir> writes a 320x180 grey PGM of the sub stream per tag. */
+static void snap(const char *tag)
+{
+    const char *dir = getenv("T40_SNAPDIR");
+    IMPFrameInfo *f = NULL;
+    char path[256];
+    FILE *o;
+    unsigned x, y;
+
+    if (!dir || IMP_FrameSource_GetFrame(CH, &f) != 0 || !f)
+        return;
+    snprintf(path, sizeof path, "%s/%s.pgm", dir, tag);
+    o = fopen(path, "wb");
+    if (o) {
+        const uint8_t *Y = (const uint8_t *)(uintptr_t)f->virAddr;
+        unsigned sx = f->width / 320 ? f->width / 320 : 1, sy = f->height / 180 ? f->height / 180 : 1;
+        fprintf(o, "P5\n320 180\n255\n");
+        for (y = 0; y < 180; y++)
+            for (x = 0; x < 320; x++)
+                fputc(Y[(y * sy) * f->width + x * sx], o);
+        fclose(o);
+    }
+    IMP_FrameSource_ReleaseFrame(CH, f);
 }
 
 static struct pm grab(int settle_ms)
@@ -1399,6 +1426,154 @@ int main(int argc, char **argv)
               R("W19_Mask", (!rs && !rg && mg.mask_chx[CH][0].mask_en && fabs_d(y1 - 235) < 40 && fabs_d(o1 - o0) < 12 && fabs_d(y3 - y0) < 25) ? "PASS" : "FAIL",
                 "cover in the sub stream (ch1): region Y %.1f -> %.1f (covered), outside %.1f -> %.1f, after disable %.1f; set/get rc %d/%d", y0, y1, o0, o1, y3, rs, rg); }
         }
+    }
+
+    /* ===== phase 0x1000000: AE API on the open frame AE (2026-10-26, T40-AE-API) ===== */
+    if (mask & 0x1000000) {
+        static unsigned char exb[sizeof(IMPISPAEExprInfo) + 32];
+        static IMPISPAEStatisInfo st0, st1;
+        IMPISPAEExprInfo e0, e1, eg; IMPISPAEScenceAttr sa, sg; IMPISPAEWeightAttr w0, w1, wg;
+        IMPISPStatisConfig sc0, sc1; IMPISPAeSpeedAttr sp0, sp1, spg; IMPISPFaceAttr fa, fg;
+        IMPISPAntiflickerAttr af0, af1;
+        struct pm p0, p1, p2; int rs, rg, k, ok;
+        unsigned long long sum; unsigned nz, h5, zmin, zmax, i2;
+
+        usleep(2000000);
+        /* A1 GetAeExprInfo: 220 bytes (canary), EV fields */
+        memset(exb, 0xa5, sizeof exb);
+        rg = IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, (IMPISPAEExprInfo *)exb);
+        memcpy(&e0, exb, sizeof e0);
+        for (ok = 1, k = sizeof(IMPISPAEExprInfo); k < (int)sizeof exb; k++) if (exb[k] != 0xa5) ok = 0;
+        { double ev = (double)e0.AeIntegrationTime * e0.AeAGain / 1024.0 * (e0.AeIspDGain ? e0.AeIspDGain : 1024) / 1024.0;
+          double l2 = e0.ExposureValue ? __builtin_log2(e0.ExposureValue) * 65536.0 : 0;
+          R("A1_AeExprInfo_layout", (!rg && ok && e0.ExposureValue && fabs_d(e0.ExposureValue - ev) <= ev * 0.02 + 2 && fabs_d(e0.EVLog2 - l2) < 70000) ? "PASS" : "FAIL",
+            "rc=%d canary %s; IT %u AG %u IspDG %u -> EV %u (calc %.0f) EVLog2 %u (calc %.0f) maxIT %u minAG %u maxAG %u", rg, ok ? "intact" : "OVERWRITTEN",
+            e0.AeIntegrationTime, e0.AeAGain, e0.AeIspDGain, e0.ExposureValue, ev, e0.EVLog2, l2, e0.AeMaxIntegrationTime, e0.AeMinAGain, e0.AeMaxAGain); }
+
+        /* A2 GetAeStatistics: hist sums to the frame, 5-bin sums to 65535, zones vary */
+        memset(&st0, 0, sizeof st0);
+        rg = IMP_ISP_Tuning_GetAeStatistics(IMPVI_MAIN, &st0);
+        for (sum = 0, nz = 0, i2 = 0; i2 < 256; i2++) { sum += st0.ae_hist_256bin[i2]; if (st0.ae_hist_256bin[i2]) nz++; }
+        for (h5 = 0, i2 = 0; i2 < 5; i2++) h5 += st0.ae_hist_5bin[i2];
+        for (zmin = ~0u, zmax = 0, i2 = 0; i2 < 225; i2++) { unsigned v = ((uint32_t *)st0.ae_statis.statis)[i2]; if (v < zmin) zmin = v; if (v > zmax) zmax = v; }
+        R("A2_GetAeStatistics", (!rg && sum == 3840ull * 2160ull && nz > 20 && h5 == 65535 && zmax > zmin + 10) ? "PASS" : "FAIL",
+          "rc=%d hist256 sum=%llu (3840x2160=%u) nonzero=%u hist5=%u,%u,%u,%u,%u (sum %u) zones min %u max %u [7][7]=%u", rg, sum, 3840u * 2160u, nz,
+          st0.ae_hist_5bin[0], st0.ae_hist_5bin[1], st0.ae_hist_5bin[2], st0.ae_hist_5bin[3], st0.ae_hist_5bin[4], h5, zmin, zmax, st0.ae_statis.statis[7][7]);
+        /* A3 StatisConfig histThresh moves the 5-bin limits */
+        memset(&sc0, 0, sizeof sc0); rg = IMP_ISP_Tuning_GetStatisConfig(IMPVI_MAIN, &sc0);
+        sc1 = sc0; sc1.ae.ae_sta_en = IMPISP_TUNING_OPS_MODE_ENABLE;
+        sc1.ae.histThresh[0] = 32; sc1.ae.histThresh[1] = 64; sc1.ae.histThresh[2] = 96; sc1.ae.histThresh[3] = 128;
+        rs = IMP_ISP_Tuning_SetStatisConfig(IMPVI_MAIN, &sc1);
+        usleep(500000); memset(&st1, 0, sizeof st1); IMP_ISP_Tuning_GetAeStatistics(IMPVI_MAIN, &st1);
+        { unsigned long long b4 = 0, tot = 0; unsigned exp4;
+          for (i2 = 0; i2 < 256; i2++) { tot += st1.ae_hist_256bin[i2]; if (i2 >= 128) b4 += st1.ae_hist_256bin[i2]; }
+          exp4 = tot ? (unsigned)(b4 * 65535ull / tot) : 0;
+          R("A3_StatisConfig_histThresh", (!rg && !rs && abs((int)st1.ae_hist_5bin[4] - (int)exp4) < 700) ? "PASS" : "FAIL",
+            "get rc=%d thresh %u/%u/%u/%u, set 32/64/96/128 rc=%d: hist5[4]=%u (from hist256 %u), before %u", rg, sc0.ae.histThresh[0], sc0.ae.histThresh[1],
+            sc0.ae.histThresh[2], sc0.ae.histThresh[3], rs, st1.ae_hist_5bin[4], exp4, st0.ae_hist_5bin[4]); }
+        IMP_ISP_Tuning_SetStatisConfig(IMPVI_MAIN, &sc0);
+
+        /* A4 AeTargetComp follows (vendor factor), scene attr read-only fields */
+        p0 = grab(3000); snap("A0_base");
+        memset(&sa, 0, sizeof sa); sa.AeTargetCompEn = TISP_AE_SCENCE_GLOBAL_ENABLE; sa.AeTargetComp = 64;
+        rs = IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+        p1 = grab(5000); snap("A4_comp64"); memset(&sg, 0, sizeof sg); rg = IMP_ISP_Tuning_GetAeScenceAttr(IMPVI_MAIN, &sg); ae_line("A4 comp64");
+        sa.AeTargetComp = 160; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+        p2 = grab(5000); snap("A4_comp160"); ae_line("A4 comp160");
+        R("A4_AeTargetComp", (!rs && !rg && sg.AeTargetCompEn == TISP_AE_SCENCE_GLOBAL_ENABLE && sg.AeTargetComp == 64 && p1.y < p0.y * 0.75 && p2.y > p0.y + 5) ? "PASS" : "FAIL",
+          "Y base %.1f, comp64 %.1f (readback en%d comp %u target %u luma %u ae_mean %u stable %d), comp160 %.1f", p0.y, p1.y, sg.AeTargetCompEn, sg.AeTargetComp,
+          sg.target, sg.luma, sg.ae_mean, sg.stable, p2.y);
+        sa.AeTargetCompEn = IMP_ISP_AE_SCENCE_DISABLE; sa.AeTargetComp = 0; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+        p0 = grab(5000);
+        memset(&sg, 0, sizeof sg); IMP_ISP_Tuning_GetAeScenceAttr(IMPVI_MAIN, &sg);
+        printf("  A4 DISABLE -> comp %u en %d Y %.1f\n", sg.AeTargetComp, sg.AeTargetCompEn, p0.y);
+
+        /* A5 manual exposure, freeze */
+        memset(&e0, 0, sizeof e0); IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &e0);
+        p0 = grab(500);
+        e1 = e0; e1.AeIntegrationTimeMode = IMPISP_TUNING_OPS_TYPE_MANUAL; e1.AeIntegrationTime = e0.AeIntegrationTime / 2 ? e0.AeIntegrationTime / 2 : 1;
+        e1.AeAGainManualMode = IMPISP_TUNING_OPS_TYPE_MANUAL; e1.AeAGain = e0.AeAGain;
+        rs = IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &e1);
+        p1 = grab(3000); snap("A5_manualIT2"); memset(&eg, 0, sizeof eg); rg = IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &eg); ae_line("A5 manual IT/2");
+        R("A5_AeManualExposure", (!rs && !rg && eg.AeIntegrationTimeMode == IMPISP_TUNING_OPS_TYPE_MANUAL && abs((int)eg.AeIntegrationTime - (int)e1.AeIntegrationTime) <= 2 &&
+          eg.AeAGain <= e0.AeAGain * 1.2 + 64 && eg.AeAGain + 64 >= e0.AeAGain * 0.85 && p1.y < p0.y * 0.8) ? "PASS" : "FAIL",
+          "IT %u AG %u -> manual IT %u AG %u: set rc=%d readback mode %d/%d IT %u AG %u; Y %.1f -> %.1f", e0.AeIntegrationTime, e0.AeAGain, e1.AeIntegrationTime, e1.AeAGain,
+          rs, eg.AeIntegrationTimeMode, eg.AeAGainManualMode, eg.AeIntegrationTime, eg.AeAGain, p0.y, p1.y);
+        e1 = e0; e1.AeMode = IMPISP_TUNING_OPS_TYPE_MANUAL;   /* freeze at the auto state */
+        rs = IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &e1);
+        p0 = grab(3000);
+        memset(&sa, 0, sizeof sa); sa.AeTargetCompEn = TISP_AE_SCENCE_GLOBAL_ENABLE; sa.AeTargetComp = 64; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+        p1 = grab(4000); memset(&eg, 0, sizeof eg); IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &eg);
+        e1.AeMode = IMPISP_TUNING_OPS_TYPE_AUTO; IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &e1);
+        p2 = grab(4000);
+        R("A5_AeFreeze", (!rs && eg.AeMode == IMPISP_TUNING_OPS_TYPE_MANUAL && fabs_d(p1.y - p0.y) < 4 && p2.y < p1.y - 10) ? "PASS" : "FAIL",
+          "freeze rc=%d readback AeMode %d; comp 64 while frozen Y %.1f -> %.1f, unfrozen %.1f", rs, eg.AeMode, p0.y, p1.y, p2.y);
+        sa.AeTargetCompEn = IMP_ISP_AE_SCENCE_DISABLE; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+        /* A6 minimum analog gain */
+        e1 = e0; e1.AeMinAGainMode = IMPISP_TUNING_OPS_TYPE_MANUAL; e1.AeMinAGain = 8192;
+        rs = IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &e1);
+        p1 = grab(4000); memset(&eg, 0, sizeof eg); IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &eg); ae_line("A6 minAG 8x");
+        R("A6_AeMinAGain", (!rs && eg.AeMinAGainMode == IMPISP_TUNING_OPS_TYPE_MANUAL && eg.AeAGain >= 7000 && eg.AeMinAGain >= 7000) ? "PASS" : "FAIL",
+          "min AG 8x: set rc=%d readback mode %d min %u, AG %u IT %u (before AG %u IT %u)", rs, eg.AeMinAGainMode, eg.AeMinAGain, eg.AeAGain, eg.AeIntegrationTime, e0.AeAGain, e0.AeIntegrationTime);
+        e1 = e0; IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &e1);
+        p0 = grab(5000);
+
+        /* A7 AE weights: meter the top rows only vs the bottom rows only */
+        memset(&w0, 0, sizeof w0); IMP_ISP_Tuning_GetAeWeight(IMPVI_MAIN, &w0);
+        w1 = w0; w1.roi_enable = IMPISP_TUNING_OPS_MODE_ENABLE;
+        for (k = 0; k < 225; k++) ((unsigned char *)w1.ae_roi.weight)[k] = k < 45 ? 8 : 0;
+        rs = IMP_ISP_Tuning_SetAeWeight(IMPVI_MAIN, &w1);
+        p1 = grab(5000); snap("A7_weight_top"); memset(&wg, 0, sizeof wg); rg = IMP_ISP_Tuning_GetAeWeight(IMPVI_MAIN, &wg); ae_line("A7 top");
+        for (k = 0; k < 225; k++) ((unsigned char *)w1.ae_roi.weight)[k] = k >= 180 ? 8 : 0;
+        IMP_ISP_Tuning_SetAeWeight(IMPVI_MAIN, &w1);
+        p2 = grab(5000); snap("A7_weight_bottom"); ae_line("A7 bottom");
+        R("A7_AeWeight", (!rs && !rg && wg.ae_roi.weight[0][0] == 8 && wg.ae_roi.weight[14][14] == 0 && fabs_d(p1.y - p2.y) > 6) ? "PASS" : "FAIL",
+          "set rc=%d get rc=%d readback [0][0]=%u [14][14]=%u; Y base %.1f, top-metered %.1f, bottom-metered %.1f (scene: top/bottom brightness differ)",
+          rs, rg, wg.ae_roi.weight[0][0], wg.ae_roi.weight[14][14], p0.y, p1.y, p2.y);
+        w0.roi_enable = IMPISP_TUNING_OPS_MODE_DISABLE; w0.weight_enable = IMPISP_TUNING_OPS_MODE_DISABLE; IMP_ISP_Tuning_SetAeWeight(IMPVI_MAIN, &w0);
+        p0 = grab(5000);
+
+        /* A8 AE speed */
+        memset(&sp0, 0, sizeof sp0); rg = IMP_ISP_Tuning_GetAeSpeed(IMPVI_MAIN, &sp0);
+        { double ys, yf, yb;
+          sp1.step_s = 16; sp1.step_d = 16; rs = IMP_ISP_Tuning_SetAeSpeed(IMPVI_MAIN, &sp1);
+          memset(&spg, 0, sizeof spg); IMP_ISP_Tuning_GetAeSpeed(IMPVI_MAIN, &spg);
+          yb = grab(2000).y;
+          memset(&sa, 0, sizeof sa); sa.AeTargetCompEn = TISP_AE_SCENCE_GLOBAL_ENABLE; sa.AeTargetComp = 64; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+          ys = grab(1200).y;
+          sa.AeTargetCompEn = IMP_ISP_AE_SCENCE_DISABLE; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+          sp1.step_s = 1024; sp1.step_d = 1024; IMP_ISP_Tuning_SetAeSpeed(IMPVI_MAIN, &sp1);
+          yb = grab(6000).y;
+          sa.AeTargetCompEn = TISP_AE_SCENCE_GLOBAL_ENABLE; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+          yf = grab(1200).y;
+          R("A8_AeSpeed", (!rg && !rs && spg.step_s == 16 && spg.step_d == 16 && (yb - yf) > (yb - ys) + 8) ? "PASS" : "FAIL",
+            "default %u/%u; set 16/16 rc=%d readback %u/%u; Y drop 1.2 s after comp 64: slow %.1f, fast(1024) %.1f (base %.1f)", sp0.step_s, sp0.step_d, rs,
+            spg.step_s, spg.step_d, yb - ys, yb - yf, yb);
+          sa.AeTargetCompEn = IMP_ISP_AE_SCENCE_DISABLE; IMP_ISP_Tuning_SetAeScenceAttr(IMPVI_MAIN, &sa);
+          IMP_ISP_Tuning_SetAeSpeed(IMPVI_MAIN, &sp0); }
+        p0 = grab(5000);
+
+        /* A9 face AE: centre rectangle to target 200 */
+        memset(&fa, 0, sizeof fa); fa.enable = IMPISP_TUNING_OPS_MODE_ENABLE; fa.left = 1536; fa.top = 864; fa.right = 2304; fa.bottom = 1296; fa.target = 200;
+        rs = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &fa);
+        p1 = grab(5000); snap("A9_face200"); memset(&fg, 0, sizeof fg); rg = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &fg); ae_line("A9 face");
+        R("A9_FaceAe", (!rs && !rg && fg.enable == fa.enable && fg.right == 2304 && fg.target == 200 && p1.y > p0.y + 10) ? "PASS" : "FAIL",
+          "set rc=%d get rc=%d readback en%d %u,%u-%u,%u target %u; Y %.1f -> %.1f", rs, rg, fg.enable, fg.left, fg.top, fg.right, fg.bottom, fg.target, p0.y, p1.y);
+        fa.enable = IMPISP_TUNING_OPS_MODE_DISABLE; IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &fa);
+        p0 = grab(4000);
+
+        /* A10 antiflicker: integration time in whole half mains periods (2250 lines x 20 fps: 450 @50 Hz, 375 @60 Hz) */
+        memset(&af0, 0, sizeof af0); rg = IMP_ISP_Tuning_GetAntiFlickerAttr(IMPVI_MAIN, &af0);
+        { unsigned it50, it60;
+          af1.mode = IMPISP_ANTIFLICKER_NORMAL_MODE; af1.freq = 50; rs = IMP_ISP_Tuning_SetAntiFlickerAttr(IMPVI_MAIN, &af1);
+          grab(3000); memset(&eg, 0, sizeof eg); IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &eg); it50 = eg.AeIntegrationTime;
+          af1.freq = 60; IMP_ISP_Tuning_SetAntiFlickerAttr(IMPVI_MAIN, &af1);
+          grab(3000); memset(&eg, 0, sizeof eg); IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &eg); it60 = eg.AeIntegrationTime;
+          R("A10_AntiFlicker_AE", (!rg && !rs && it50 && it50 % 450 == 0 && it60 && it60 % 375 == 0) ? "PASS" : "FAIL",
+            "attr before mode %d freq %u; NORMAL 50 Hz: IT %u (%%450=%u), 60 Hz: IT %u (%%375=%u), max IT %u", af0.mode, af0.freq, it50, it50 % 450, it60, it60 % 375,
+            eg.AeMaxIntegrationTime);
+          IMP_ISP_Tuning_SetAntiFlickerAttr(IMPVI_MAIN, &af0); }
+        p0 = grab(3000); snap("A10_restored"); ae_line("A done");
     }
 
     /* ===== phase 0x8000: encoder telemetry (#44) ===== */
