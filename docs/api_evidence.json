@@ -959,7 +959,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "err"
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -983,7 +983,7 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, then IMP_ISP_AddSensor returns -1 (issue 116)"
+    "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads"
    }
   },
   "ISP_Get/SetFrameDrop": {
@@ -1042,7 +1042,7 @@
     ]
    },
    "ref": {
-    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: ISP_GetISPBypass: ret=0 bypass 0; ISP_SetISPBypass: ret=-4095 rt: same value (0) written (set ret -4095), read back 0, frames flow"
+    "T41": "apitest issue-115 2026-10-26 .34: ioctl served now (was -4095): Get ret=0, Set same value ret=0, frames flow; Bypass 1 ret 0 but no picture change (open gap)"
    }
   },
   "ISP_Get/SetInternalChnAttr": {
@@ -1068,7 +1068,7 @@
     "T21": "rt",
     "T23": "rt",
     "T30": "?",
-    "T31": "err",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "rt",
@@ -1112,7 +1112,7 @@
     "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
     "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
-    "T31": "FAIL apitest agg47-cases 2026-10-26 .26: ISP_GetSensorRegister: ret=0 chip id regs 0x3107/0x3108 = 0x0404 (sc2336 expects 0xcb3a); ISP_SetSensorRegister: ret=0 rt: same value 0x04 written to the read-only id reg 0x3107, read back 0x3107, frames flow",
+    "T31": "apitest issue-113 2026-10-26 .26 (open-tx-isp 3e9a5d2c + OpenIMP 662b0d8c): chip id 0xcb3a read, same-value write round trip PASS; QEMU T31 equal",
     "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
@@ -2146,7 +2146,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "err"
+    "T41": "dev"
    },
    "used": {
     "T40": [
@@ -2168,7 +2168,7 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
-    "T41": "FAIL apitest rc3-cases 2026-10-26 .34: ISP_Tuning_GetGammaAttr: ret=0 type 0 g[0]=0 g[64]=2879 g[128]=4095; ISP_Tuning_SetGammaAttr: ret=0 same value written (set ret 0), read back equal; user curve x^0.3 Y 97.5 vs linear Y 97.6 (base 95.8): NO PICTURE EFFECT; picture  restored (Y 97.7)"
+    "T41": "apitest issue-114 2026-10-26 .34: Set ret=0, read back equal; user curve x^0.3 Y 129.7 vs linear Y 67.3 (base 95.6): visible effect"
    }
   },
   "ISP_Tuning_Get/SetHLDCAttr": {
