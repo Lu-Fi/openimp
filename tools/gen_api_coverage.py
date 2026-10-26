@@ -14,7 +14,7 @@ Outputs: the generated section "API coverage per function" of docs/FEATURE_MATRI
 `python3 tools/gen_api_coverage.py --write`, also done by tools/gen_feature_matrix_html.py) and the HTML parts
 used by tools/gen_feature_matrix_html.py.  Consistency problems are printed as warnings (exit status 1 with --check).
 
-Usage: gen_api_coverage.py [--write] [--check] [--refresh-exports [BUILD_DIR]]
+Usage: gen_api_coverage.py [--write] [--check] [--refresh-exports [BUILD_DIR]] [--refresh-run OUT_DIR SOAK_LOG]
 """
 import html
 import json
@@ -29,6 +29,7 @@ MD = os.path.join(ROOT, "docs", "FEATURE_MATRIX.md")
 EVID = os.path.join(ROOT, "docs", "api_evidence.json")
 EXPO = os.path.join(ROOT, "docs", "api_exports.json")
 WIP = os.path.join(ROOT, "docs", "matrix_wip.json")
+RUN = os.path.join(ROOT, "docs", "api_run.json")
 VEND = os.path.join(ROOT, "tools", "export-check")
 HEAD = "API coverage per function"
 
@@ -40,6 +41,7 @@ CELL = {
     "dev": ("s-ok", "✅", "✅", "works, device-tested"),
     "dev+": ("s-plus", "✅+", "✅+", "works, device-tested, better than the vendor"),
     "no-op": ("s-ok", "✅○", "✅ no-op", "vendor no-op, OpenIMP matches that"),
+    "run": ("s-ok", "✅r", "✅ run", "works: called by the streamer on fleet cameras of this SoC that passed the fleet soak (not an individual device test; see the reference)"),
     "host": ("s-wip", "🔧h", "🔧 host", "implemented, host tests only (no camera run yet)"),
     "aud": ("s-wip", "🔧a", "🔧 aud", "really connected per static audit, no device test tracked"),
     "cache": ("s-bug", "⚠c", "⚠ cache", "value only stored and read back, nothing applied"),
@@ -50,8 +52,8 @@ CELL = {
     "?": ("s-unk", "?", "?", "state not determined"),
     "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC yet (planned)"),
 }
-OK, WIPC, GAP, UNK = {"dev", "dev+", "no-op"}, {"host", "aud"}, {"cache", "stub", "err", "miss"}, {"?"}
-LEVEL = {"dev", "host", "aud", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
+OK, WIPC, GAP, UNK = {"dev", "dev+", "run", "no-op"}, {"host", "aud"}, {"cache", "stub", "err", "miss"}, {"?"}
+LEVEL = {"dev", "run", "host", "aud", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
 SEV = {"err": 0, "miss": 0, "cache": 1, "stub": 1, "?": 2}
 
 
@@ -73,6 +75,7 @@ class Model:
         for s in self.socs:
             p = os.path.join(VEND, "vendor-%s.txt" % s)
             self.vendor[s] = {re.sub(r"^IMP_", "", x.strip()) for x in open(p) if x.strip()} if os.path.exists(p) else set()
+        self.run = json.load(open(RUN, encoding="utf-8")) if os.path.exists(RUN) else {"socs": {}}
         md_text = open(MD, encoding="utf-8").read() if md_text is None else md_text
         self.matrix = self._matrix_syms(md_text)
         self.warnings = []
@@ -152,6 +155,14 @@ class Model:
                 covered |= set(self.expand(name))
             for s in self.socs:
                 c = e["cells"][s]
+                rs = self.run["socs"].get(s)
+                if rs and c in ("host", "aud", "?") and "*" not in name and not name.startswith("SU_") or (
+                        rs and c in ("host", "aud", "?") and name.startswith("SU_")):
+                    ex = self.expand(name)
+                    if all(x in rs["calls"] for x in ex):
+                        c = "run"
+                        f["ref"][s] = "called by %s on the fleet %s (%s), soak %s; not an individual device test" % (
+                            self.run["streamer"], ", ".join(rs["clean"]), s, self.run["soak"]["image"])
                 if c == "aud":
                     for feat, sym in links.get((name, s), []):
                         if sym in ("✅", "✅+"):
@@ -223,24 +234,15 @@ class Model:
         return r
 
     def summary_text(self, st):
-        """'14/14 ✅' or '18/35 (+9 🔧, 8 gaps)'"""
+        """'14/14 works' style: works/total and the other classes, zeros included"""
         if st["total"] == 0:
             return ""
         if st["nob"]:
             return "0/%d (no OpenIMP build yet)" % st["total"]
-        extra = []
-        if st["wip"]:
-            extra.append("+%d 🔧" % st["wip"])
-        if st["gap"]:
-            extra.append("%d gap%s" % (st["gap"], "" if st["gap"] == 1 else "s"))
-        if st["unk"]:
-            extra.append("%d ?" % st["unk"])
+        t = "%d/%d ✅ · %d 🔧 · %d gaps · %d ?" % (st["ok"], st["total"], st["wip"], st["gap"], st["unk"])
         if st["ws"]:
-            extra.append("%d 🚧" % st["ws"])
-        base = "%d/%d" % (st["ok"], st["total"])
-        if not extra and st["ok"] == st["total"]:
-            return base + " ✅"
-        return base + (" (" + ", ".join(extra) + ")" if extra else "")
+            t += " · %d 🚧" % st["ws"]
+        return t
 
     def priorities(self):
         """per SoC: (streamer-used gaps, gaps nobody uses, no-build functions streamers call, streamer-used unknown, unknown unused)"""
@@ -386,7 +388,7 @@ class Model:
             o.append("")
         o.append("### Legend")
         o.append("")
-        for c in ("dev", "dev+", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
+        for c in ("dev", "dev+", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
             o.append("- `%s` %s" % (CELL[c][1], CELL[c][3]))
         o.append("- `🚧` appended to a symbol: work in progress, from `docs/matrix_wip.json` (branch and start date there)")
         o.append("")
@@ -456,18 +458,9 @@ class Model:
                     cls, big, small = "s-plan", "0/%d" % st["total"], "no build"
                 else:
                     big = "%d/%d" % (st["ok"], st["total"])
-                    ex = []
-                    if st["wip"]:
-                        ex.append("+%d 🔧" % st["wip"])
-                    if st["gap"]:
-                        ex.append("%d gap" % st["gap"])
-                    if st["unk"]:
-                        ex.append("%d ?" % st["unk"])
-                    if st["ws"]:
-                        ex.append("%d 🚧" % st["ws"])
-                    small = " · ".join(ex)
+                    small = "%d✅ %d🔧 %d⚠ %d?" % (st["ok"], st["wip"], st["gap"], st["unk"]) + (" %d🚧" % st["ws"] if st["ws"] else "")
                     if st["ok"] == st["total"]:
-                        cls, small = "s-ok", "✅"
+                        cls = "s-ok"
                     elif st["gap"] + st["unk"] == 0:
                         cls = "s-wip"
                     elif st["gap"] > 0.25 * st["total"]:
@@ -553,7 +546,7 @@ class Model:
                  'Legend: %s. A construction sign (&#128679;) marks work in progress (docs/matrix_wip.json).</p>' % (
                      esc(self.ev["asof"]), " &middot; ".join(
                          '<span class="sym %s">%s</span> %s' % (CELL[c][0], esc(CELL[c][2] or "&middot;"), esc(CELL[c][3]))
-                         for c in ("dev", "dev+", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
+                         for c in ("dev", "dev+", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
         o.append('<div class="mxctl"><div class="fg"><span class="fl">Rows</span>'
                  '<label><input type="checkbox" id="apg"> only gaps / unknown</label> '
                  '<label><input type="checkbox" id="apu"> only streamer-used</label> '
@@ -677,6 +670,59 @@ def refresh_exports(build_dir):
     print("wrote %s (%s)" % (EXPO, ", ".join("%s %d" % (k, len(v)) for k, v in res.items())))
 
 
+FLEET_SOC = (("t10", "T10"), ("t20", "T20"), ("t21", "T21"), ("t23", "T23"), ("t30", "T30"), ("t31", "T31"), ("t40", "T40"), ("t41", "T41"))
+
+
+def refresh_run(out_dir, soak_log, nm="nm"):
+    """docs/api_run.json: IMP_/SU_ names the timpsd of every fleet camera imports (nm -D --undefined-only), per SoC,
+    with the soak verdict of each camera (clean = 0 oops, 0 encoder-dead, every snapshot 200, timpsd always running)."""
+    stat = {}
+    for ln in open(soak_log):
+        m = re.match(r"(\S+ \S+) \.(\d+) up=(\d+) pid=(\S+) snap=(\d+) oops=(\d+) encdead=(\d+)", ln)
+        if not m:
+            continue
+        d = stat.setdefault(m.group(2), {"n": 0, "bad": 0, "oops": 0, "enc": 0})
+        d["n"] += 1
+        d["bad"] += (m.group(4) == "none" or m.group(5) != "200")
+        d["oops"] = max(d["oops"], int(m.group(6)))
+        d["enc"] = max(d["enc"], int(m.group(7)))
+    res = {"streamer": "timps", "soak": {"image": "agg46", "log": "audit/logs1025/soak-agg46.log (main session scratch)",
+                                         "window": "2026-10-25 11:38 - 2026-10-26 10:00", "samples": max(d["n"] for d in stat.values())},
+           "cameras": [], "socs": {}}
+    for d in sorted(os.listdir(out_dir)):
+        m = re.search(r"agg46-192\.168\.10\.(\d+)$", d)
+        exe = os.path.join(out_dir, d, "target", "usr", "bin", "timpsd")
+        if not m or not os.path.exists(exe):
+            continue
+        ip = m.group(1)
+        soc = next(v for k, v in FLEET_SOC if "_%s" % k in d.split("-agg46")[0] or "_%sx" % k in d or "_%sn" % k in d)
+        out = subprocess.run([nm, "-D", "--undefined-only", exe], capture_output=True, text=True, check=True).stdout
+        calls = {re.sub(r"^IMP_", "", x.split()[-1]) for x in out.splitlines() if re.match(r"^\s*(?:w|U)?\s*(?:IMP_|SU_)", x) or x.split()[-1:] and x.split()[-1].startswith(("IMP_", "SU_"))}
+        st = stat.get(ip, {"n": 0, "bad": 0, "oops": 0, "enc": 0})
+        why = []
+        if st["oops"]:
+            why.append("%d oops" % st["oops"])
+        if st["enc"]:
+            why.append("encoder dead (%d)" % st["enc"])
+        if st["bad"]:
+            why.append("%d samples without a streamer or snapshot" % st["bad"])
+        if not st["n"]:
+            why.append("not in the soak log")
+        res["cameras"].append({"ip": "." + ip, "soc": soc, "dir": d, "calls": len(calls), "clean": not why, "issues": why})
+        r = res["socs"].setdefault(soc, {"cameras": [], "clean": [], "calls": set()})
+        r["cameras"].append("." + ip)
+        if not why:
+            r["clean"].append("." + ip)
+            r["calls"] |= calls
+    for soc, r in list(res["socs"].items()):
+        r["calls"] = sorted(r["calls"])
+        if not r["clean"]:
+            del res["socs"][soc]
+    json.dump(res, open(RUN, "w"), indent=1)
+    print("wrote %s: %s" % (RUN, ", ".join("%s %d calls from %s" % (k, len(v["calls"]), "+".join(v["clean"])) for k, v in res["socs"].items())))
+    print("cameras not clean: %s" % "; ".join("%s %s (%s)" % (c["ip"], c["soc"], ", ".join(c["issues"])) for c in res["cameras"] if not c["clean"]))
+
+
 def print_counts(m):
     print("API coverage: %d rows; works/total per SoC (device-tested or vendor no-op / vendor functions):" % len(m.funcs))
     for s in m.socs:
@@ -691,6 +737,9 @@ def main():
     if "--refresh-exports" in a:
         k = a.index("--refresh-exports")
         refresh_exports(a[k + 1] if len(a) > k + 1 else os.path.join(ROOT, "build"))
+    if "--refresh-run" in a:
+        k = a.index("--refresh-run")
+        refresh_run(a[k + 1], a[k + 2])
     m, changed = update_md(write="--check" not in a)
     for w in m.warnings:
         sys.stderr.write("warning: %s\n" % w)

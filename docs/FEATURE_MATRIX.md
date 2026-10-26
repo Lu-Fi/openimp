@@ -855,15 +855,15 @@ As of: 2026-10-26. One row per vendor IMP/SU function (a Get/Set row counts as t
 
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
-- **ISP tuning:** T10 5/67 (+62 🔧) · T20 27/67 (+40 🔧) · T21 30/66 (+36 🔧) · T23 36/97 (+58 🔧, 3 gaps) · T30 0/67 (+6 🔧, 2 gaps, 59 ?) · T31 30/87 (+57 🔧) · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 39/71 (+30 🔧, 2 ?) · T41 36/78 (+26 🔧, 16 gaps)
-- **AE / AWB / AF:** T10 1/27 (+26 🔧) · T20 22/27 (+5 🔧) · T21 28/29 (+1 🔧) · T23 39/51 (+11 🔧, 1 gap) · T30 0/26 (+4 🔧, 22 ?) · T31 39/49 (+10 🔧) · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 11/29 (+16 🔧, 2 gaps) · T41 20/39 (+4 🔧, 15 gaps)
-- **Encoder:** T10 7/70 (+29 🔧, 33 gaps, 1 ?) · T20 37/70 (+1 🔧, 31 gaps, 1 ?) · T21 46/67 (+3 🔧, 18 gaps) · T23 72/90 (+1 🔧, 13 gaps, 4 ?) · T30 0/67 (+3 🔧, 19 gaps, 45 ?) · T31 40/45 (+2 🔧, 2 gaps, 1 ?) · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 35/59 (+4 🔧, 17 gaps, 3 ?) · T41 27/74 (+13 🔧, 34 gaps)
-- **FrameSource:** T10 0/18 (+18 🔧) · T20 18/18 ✅ · T21 18/18 ✅ · T23 22/22 ✅ · T30 0/19 (19 ?) · T31 22/30 (+1 🔧, 5 gaps, 2 ?) · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 9/33 (+11 🔧, 13 gaps) · T41 10/36 (+8 🔧, 18 gaps)
-- **OSD:** T10 0/17 (+17 🔧) · T20 16/17 (+1 🔧) · T21 16/17 (+1 🔧) · T23 19/42 (+16 🔧, 4 gaps, 3 ?) · T30 0/17 (+1 🔧, 16 ?) · T31 16/17 (+1 🔧) · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 17/43 (+25 🔧, 1 ?) · T41 15/42 (+5 🔧, 22 gaps)
-- **IVS:** T10 0/18 (+18 🔧) · T20 17/18 (+1 🔧) · T21 17/18 (+1 🔧) · T23 17/18 (+1 🔧) · T30 0/18 (18 ?) · T31 17/18 (+1 🔧) · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 13/18 (+5 🔧) · T41 18/18 ✅
-- **Audio:** T10 7/68 (+61 🔧) · T20 43/68 (+25 🔧) · T21 45/70 (+25 🔧) · T23 72/77 (+5 🔧) · T30 0/90 (+22 🔧, 68 ?) · T31 47/96 (+49 🔧) · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 0/99 (+4 🔧, 24 gaps, 71 ?) · T41 0/107 (+71 🔧, 36 gaps)
-- **System:** T10 0/48 (+45 🔧, 3 ?) · T20 17/48 (+28 🔧, 3 ?) · T21 17/48 (+28 🔧, 3 ?) · T23 18/60 (+28 🔧, 14 ?) · T30 0/50 (+1 🔧, 49 ?) · T31 19/64 (+31 🔧, 14 ?) · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 11/50 (+1 🔧, 3 gaps, 35 ?) · T41 6/55 (+41 🔧, 8 gaps)
-- **All areas:** T10 20/333 (+276 🔧, 33 gaps, 4 ?) · T20 197/333 (+101 🔧, 31 gaps, 4 ?) · T21 217/333 (+95 🔧, 18 gaps, 3 ?) · T23 295/457 (+120 🔧, 21 gaps, 21 ?) · T30 0/354 (+37 🔧, 21 gaps, 296 ?) · T31 230/406 (+152 🔧, 7 gaps, 17 ?) · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 135/402 (+96 🔧, 59 gaps, 112 ?) · T41 132/449 (+168 🔧, 149 gaps)
+- **ISP tuning:** T10 26/67 ✅ · 41 🔧 · 0 gaps · 0 ? · T20 32/67 ✅ · 35 🔧 · 0 gaps · 0 ? · T21 32/66 ✅ · 34 🔧 · 0 gaps · 0 ? · T23 40/97 ✅ · 54 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 34/87 ✅ · 53 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 39/71 ✅ · 30 🔧 · 0 gaps · 2 ? · T41 36/78 ✅ · 26 🔧 · 16 gaps · 0 ?
+- **AE / AWB / AF:** T10 4/27 ✅ · 23 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 28/29 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 40/51 ✅ · 10 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 40/49 ✅ · 9 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 11/29 ✅ · 16 🔧 · 2 gaps · 0 ? · T41 20/39 ✅ · 4 🔧 · 15 gaps · 0 ?
+- **Encoder:** T10 22/70 ✅ · 14 🔧 · 33 gaps · 1 ? · T20 37/70 ✅ · 1 🔧 · 31 gaps · 1 ? · T21 46/67 ✅ · 3 🔧 · 18 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 40/45 ✅ · 2 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 35/59 ✅ · 4 🔧 · 17 gaps · 3 ? · T41 27/74 ✅ · 13 🔧 · 34 gaps · 0 ?
+- **FrameSource:** T10 4/18 ✅ · 14 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 9/33 ✅ · 11 🔧 · 13 gaps · 0 ? · T41 10/36 ✅ · 8 🔧 · 18 gaps · 0 ?
+- **OSD:** T10 9/17 ✅ · 8 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 17/43 ✅ · 25 🔧 · 0 gaps · 1 ? · T41 15/42 ✅ · 5 🔧 · 22 gaps · 0 ?
+- **IVS:** T10 15/18 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 13/18 ✅ · 5 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **Audio:** T10 22/68 ✅ · 46 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 73/77 ✅ · 4 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 52/96 ✅ · 44 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 0/99 ✅ · 4 🔧 · 24 gaps · 71 ? · T41 0/107 ✅ · 71 🔧 · 36 gaps · 0 ?
+- **System:** T10 6/48 ✅ · 39 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 11/50 ✅ · 1 🔧 · 3 gaps · 35 ? · T41 6/55 ✅ · 41 🔧 · 8 gaps · 0 ?
+- **All areas:** T10 108/333 ✅ · 188 🔧 · 33 gaps · 4 ? · T20 207/333 ✅ · 91 🔧 · 31 gaps · 4 ? · T21 219/333 ✅ · 93 🔧 · 18 gaps · 3 ? · T23 301/457 ✅ · 114 🔧 · 21 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 240/406 ✅ · 142 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 135/402 ✅ · 96 🔧 · 59 gaps · 112 ? · T41 132/449 ✅ · 168 🔧 · 149 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -985,6 +985,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 - `✅` works, device-tested
 - `✅+` works, device-tested, better than the vendor
+- `✅r` works: called by the streamer on fleet cameras of this SoC that passed the fleet soak (not an individual device test; see the reference)
 - `✅○` vendor no-op, OpenIMP matches that
 - `🔧h` implemented, host tests only (no camera run yet)
 - `🔧a` really connected per static audit, no device test tracked
@@ -1003,16 +1004,16 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ISP_AddSensor` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_AddSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_AddSensor_Free` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_AddSensor_Process` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Bypass_Bind` | · | · | · | · | · | · | · | · | ✅ | · | – |
-| `ISP_Close` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DelSensor` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DisableSensor` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DisableTuning` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_EnableSensor` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_EnableTuning` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Close` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DelSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DisableSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DisableTuning` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_EnableSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_EnableTuning` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Get/SetCsccrMode` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Get/SetDefaultBinPath` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | 🔧h | 🔧a | r† |
 | `ISP_Get/SetFrameDrop` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
@@ -1051,7 +1052,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_OneShotDropCnt` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_OneShotEnable` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_OneShotTick` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Open` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Open` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_OSD_Alloc` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_PM_GetMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_PM_SetMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1094,12 +1095,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Get/SetHiLightDepress` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetHLDCAttr` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_Get/SetHVFLIP` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | 🔧h | ✅ | r† t t† |
-| `ISP_Tuning_Get/SetIntegrationTime` | 🔧a | ✅ | ✅ | · | ? | · | · | · | · | · | t |
+| `ISP_Tuning_Get/SetIntegrationTime` | ✅r | ✅ | ✅ | · | ? | · | · | · | · | · | t |
 | `ISP_Tuning_Get/SetISPCSCAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | 🔧h | – |
 | `ISP_Tuning_Get/SetISPCustomMode` | · | · | · | 🔧a | · | 🔧h | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetISPHflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
 | `ISP_Tuning_Get/SetISPHVflip` | ✅ | ✅ | · | · | 🔧h | · | · | · | · | · | – |
-| `ISP_Tuning_Get/SetISPRunningMode` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetISPRunningMode` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetISPVflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
 | `ISP_Tuning_Get/SetMask` | · | · | · | ✅○ | · | 🔧a | · | · | ✅ | · | r† |
 | `ISP_Tuning_Get/SetMaxAgain` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
@@ -1120,7 +1121,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetBlcAttr` | · | · | · | ✅○ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_GetBrightness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `ISP_Tuning_GetEVAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_GetEVAttr` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_GetHVFlip` | · | · | · | 🔧a | · | 🔧a | · | · | 🔧h | ✅ | r† |
 | `ISP_Tuning_GetISPBypass` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_GetISPRunningModeWithFd` | · | · | · | · | · | · | · | 📋 | · | · | – |
@@ -1129,14 +1130,14 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetRawDRC` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_GetSceneMode` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
 | `ISP_Tuning_GetSensorAttr` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | 🔧h | r† t t† |
-| `ISP_Tuning_GetSensorFPS` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_GetSensorFPS` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_GetSharpness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `ISP_Tuning_GetTotalGain` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_GetTotalGain` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_SaveAllParam` | · | · | · | · | · | · | · | · | · | · | – |
 | `ISP_Tuning_SetAntiFogAttr` | 🔧h | 🔧h | ✅○ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_SetAutoZoom` | · | · | · | 🔧h | · | 🔧h | 📋 | 📋 | 🔧h | 🔧h | p† r r† |
 | `ISP_Tuning_SetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Tuning_SetBrightness` | 🔧a | 🔧a | ✅+ | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_SetBrightness` | ✅r | ✅r | ✅+ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_SetDPStrength` | ✅ | ✅ | ✅ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_SetFixedContraster` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_SetFWFreeze` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
@@ -1148,12 +1149,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_SetMultiSensorEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetRawDRC` | 🔧h | 🔧h | ✅○ | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_SetScalerLv` | · | · | · | ✅○ | · | 🔧a | 📋 | 📋 | · | 🔧h | r† |
-| `ISP_Tuning_SetSceneMode` | 🔧a | 🔧a | ✅○ | · | ? | · | · | · | · | · | t |
-| `ISP_Tuning_SetSensorFPS` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | p† r† t t† |
-| `ISP_Tuning_SetSharpness` | 🔧a | 🔧a | ✅○ | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_SetSinterStrength` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_SetSceneMode` | ✅r | ✅r | ✅○ | · | ? | · | · | · | · | · | t |
+| `ISP_Tuning_SetSensorFPS` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | p† r† t t† |
+| `ISP_Tuning_SetSharpness` | ✅r | ✅r | ✅○ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_SetSinterStrength` | ✅r | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
 | `ISP_Tuning_SetTemperDnsCtl` | 🔧h | 🔧h | 🔧a | · | ⚠c | · | · | · | · | · | – |
-| `ISP_Tuning_SetTemperStrength` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_SetTemperStrength` | ✅r | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
 | `ISP_Tuning_SetTmoFaceae` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_SetVideoDrop` | 🔧h | 🔧h | 🔧h | 🔧h | ? | 🔧h | 📋 | 📋 | ? | 🔧h | r† |
 | `ISP_Tuning_SwitchBin` | · | · | · | ❌e | · | · | 📋 | 📋 | ✅ | 🔧h | p† |
@@ -1166,17 +1167,17 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 <details><summary>Notes and references (91)</summary>
 
-- `ISP_AddSensor`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_Close`: audit: userspace implementation T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DelSensor`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DisableSensor`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DisableTuning`: audit: userspace implementation T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_EnableSensor`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_EnableTuning`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_AddSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_Close`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_DelSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_DisableSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_DisableTuning`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_EnableSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_EnableTuning`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
 - `ISP_Get/SetDefaultBinPath`: audit: reaches the driver/kernel; userspace implementation
 - `ISP_Get/SetFrameDrop`: T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused)
 - `ISP_Get/SetSensorRegister`: T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was "There isn't sensor!"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35)
-- `ISP_Open`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_Open`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
 - `ISP_SetCameraInputMode`: audit: reaches the driver/kernel
 - `ISP_SetFixedContraster`: T23: driver routes 0x8000102 (agg-25), apitest PASS 2026-10-10; T31: the argument is the IMPISPFixedContrastAttr pointer (not a mode): with the tuning session open it goes to the driver as control 0x8000102 like the vendor (apitest PASS 2026-10-10, host test tests/t31/fixed_contrast_test.c); the open T31 driver handler dropped the 3 bytes before, it now calls tisp_set_bcsh_fixed_contrast like the stock s_ctrl (open-tx-isp claude/gaps-t23-t31-drv; mode, y low and the fixed value reach the BCSH MJPEG range; only matters for the MJPEG path); module build only, device test of the effect pending; Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
 - `ISP_SetStreamOut`: audit: reaches the driver/kernel
@@ -1202,12 +1203,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetGammaAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
 - `ISP_Tuning_Get/SetHiLightDepress`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T41: device-tested through main-matrix feature #13 (Mirror / flip).
-- `ISP_Tuning_Get/SetIntegrationTime`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetIntegrationTime`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_Get/SetISPCSCAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested
 - `ISP_Tuning_Get/SetISPCustomMode`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there
 - `ISP_Tuning_Get/SetISPHflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetISPHVflip`: T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device
-- `ISP_Tuning_Get/SetISPRunningMode`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #10 (Day/night switching (ISP side)).
+- `ISP_Tuning_Get/SetISPRunningMode`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #10 (Day/night switching (ISP side)).
 - `ISP_Tuning_Get/SetISPVflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetMask`: T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)
 - `ISP_Tuning_Get/SetMaxAgain`: audit: reaches the driver/kernel
@@ -1225,18 +1226,18 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_GetAutoZoom`: T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 - `ISP_Tuning_GetBlcAttr`: T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS
 - `ISP_Tuning_GetBrightness`: audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_GetEVAttr`: audit: reaches the driver/kernel
+- `ISP_Tuning_GetEVAttr`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_GetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run)
 - `ISP_Tuning_GetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
 - `ISP_Tuning_GetSceneMode`: audit: reaches the driver/kernel
 - `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
-- `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #6 (Max gain, IT max, sensor FPS).
+- `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #6 (Max gain, IT max, sensor FPS).
 - `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel
+- `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_SaveAllParam`: T10/T20/T21 (4 builds each) and T23/T31: declared in the SDK header, exported by none of the vendor libimp builds (nm); a vendor-stack application cannot link it either
 - `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked
 - `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
-- `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
 - `ISP_Tuning_SetDPStrength`: T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl
 - `ISP_Tuning_SetFWFreeze`: audit: reaches the driver/kernel
 - `ISP_Tuning_SetISPBypass`: audit: reaches the driver/kernel
@@ -1245,12 +1246,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_SetMeshShadingScale`: T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending
 - `ISP_Tuning_SetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)
 - `ISP_Tuning_SetScalerLv`: T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
-- `ISP_Tuning_SetSceneMode`: T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design)
-- `ISP_Tuning_SetSensorFPS`: T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F
-- `ISP_Tuning_SetSharpness`: T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_SetSinterStrength`: audit: reaches the driver/kernel
+- `ISP_Tuning_SetSceneMode`: T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test.
+- `ISP_Tuning_SetSensorFPS`: T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `ISP_Tuning_SetSharpness`: T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_SetSinterStrength`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetTemperDnsCtl`: T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test
-- `ISP_Tuning_SetTemperStrength`: audit: reaches the driver/kernel
+- `ISP_Tuning_SetTemperStrength`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetVideoDrop`: all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule
 - `ISP_Tuning_SwitchBin`: T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested) T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)
 - `ISP_Tuning_WaitFrame`: T10+T20+T21: waits for the frame end (agg-25; T20 ms, not jiffies); T23: stock 24-byte block, driver routed (agg-25), no device test
@@ -1297,7 +1298,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Get/SetFaceAe` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `ISP_Tuning_Get/SetFaceAeWeiget` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_Get/SetFaceAwb` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | · | – |
-| `ISP_Tuning_Get/SetWB` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetWB` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_GetAE_IT_MAX` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† |
 | `ISP_Tuning_GetAeAtList` | · | · | · | · | · | · | · | · | · | ✅ | – |
 | `ISP_Tuning_GetAeBv` | · | · | · | · | · | · | · | · | · | ❌ | – |
@@ -1322,13 +1323,13 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetAwbOnlyReadAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetAwbStatistics` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | t t† |
 | `ISP_Tuning_GetAwbZone` | 🔧h | ✅ | · | ✅ | · | ✅ | · | · | · | · | p† r† t |
-| `ISP_Tuning_GetExpr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† t |
+| `ISP_Tuning_GetExpr` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† t |
 | `ISP_Tuning_GetFaceAeLuma` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_GetMultiSensorAeEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetMultiSensorAWBEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetWB_GOL_Statis` | · | · | ✅ | ✅ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_GetWB_Statis` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_SetAe_IT_MAX` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | p† t |
+| `ISP_Tuning_SetAe_IT_MAX` | · | · | · | ✅r | · | ✅r | · | · | · | · | p† t |
 | `ISP_Tuning_SetAeFreeze` | · | · | · | 🔧h | · | 🔧a | · | · | · | · | r† |
 | `ISP_Tuning_SetAeLightCompensation` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetAeStartAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1362,7 +1363,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetAwbHist`: T23+T31: stock driver also no-op (OEM-same)
 - `ISP_Tuning_Get/SetAwbWeight`: T23+T31: stock driver also no-op (OEM-same) T41: device-tested through main-matrix feature #8 (White balance (AWB, presets, manual)).
 - `ISP_Tuning_Get/SetAwbZoneWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test
-- `ISP_Tuning_Get/SetWB`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetWB`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_GetAE_IT_MAX`: audit: reaches the driver/kernel
 - `ISP_Tuning_GetAeHist_Origin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†
 - `ISP_Tuning_GetAeLuma`: audit: reaches the driver/kernel
@@ -1375,10 +1376,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_GetAwbGlobalStatistics`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #8 (White balance (AWB, presets, manual)).
 - `ISP_Tuning_GetAwbStatistics`: T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)
 - `ISP_Tuning_GetAwbZone`: T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23/T31: vendor 1.1.x ABI `(IMPISPAWBZone *)`, 675-byte block with the stock scaling (`claude/awbzone`, device-tested 2026-10-12 on both), 0 only with fresh statistics (driver `-EAGAIN` otherwise, needs open-tx-isp `claude/awbzone`), capability symbol `OpenIMP_Cap_AwbZone`; T40/T41: no vendor `GetAwbZone` (`GetAwbStatistics`); used by: T10/T20: prudynt†; T23/T31: prudynt†, raptor†, timps 1.10.2 (night colour trigger)
-- `ISP_Tuning_GetExpr`: audit: reaches the driver/kernel
+- `ISP_Tuning_GetExpr`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_GetWB_GOL_Statis`: audit: reaches the driver/kernel
 - `ISP_Tuning_GetWB_Statis`: audit: reaches the driver/kernel
-- `ISP_Tuning_SetAe_IT_MAX`: audit: reaches the driver/kernel
+- `ISP_Tuning_SetAe_IT_MAX`: audit: reaches the driver/kernel T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetAeFreeze`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 - `ISP_Tuning_SetAwbCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test
 - `ISP_Tuning_SetExpr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
@@ -1394,13 +1395,13 @@ Completeness list, separate from the streamer priorities: every vendor function 
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `Decoder_*` | ❌ | ❌ | ❌ | ❌e | ❌ | · | · | 📋 | ❌ | ❌ | – |
 | `Encoder_ClearPoolId` | · | · | · | · | · | ? | 📋 | 📋 | · | · | – |
-| `Encoder_CreateChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_CreateGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_DestroyChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_DestroyGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_FlushStream` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | p† r† |
 | `Encoder_Get/SetChangeRef` | ⚠c | ⚠c | ⚠c | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
-| `Encoder_Get/SetChnAttrRcMode` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `Encoder_Get/SetChnAttrRcMode` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `Encoder_Get/SetChnColor2Grey` | 🔧h | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetChnCrop` | ❌ | ❌ | ❌ | ✅ | ❌ | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnDemask` | ⚠c | ⚠c | · | · | · | · | · | · | · | · | – |
@@ -1443,7 +1444,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_GetMotionQuality` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetPskipCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetSrdCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_GetStream` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_GetStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_InputJpege` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | t |
 | `Encoder_InputJpege_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `Encoder_InsertUserData` | 🔧a | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | – |
@@ -1456,12 +1457,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_MultiProcessInit` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_PadFrame` | ❌ | ❌ | ❌ | ? | ❌ | · | 📋 | 📋 | · | · | – |
 | `Encoder_PollingModuleStream` | · | · | ✅ | 🔧a | · | ✅ | · | · | ✅ | 🔧a | – |
-| `Encoder_PollingStream` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_Query` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
-| `Encoder_RegisterChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_ReleaseStream` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_PollingStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_Query` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
+| `Encoder_RegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_ReleaseStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_RequestGDR` | · | · | · | ✅ | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_RequestIDR` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_RequestIDR` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_RequestPskip` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetAutoVui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetAvpuBsShare` | · | · | · | · | · | · | · | · | · | 🔧h | – |
@@ -1505,9 +1506,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetPskipCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetRdBufShare` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetSrdCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_StartRecvPic` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_StopRecvPic` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_UnRegisterChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_StartRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_StopRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_UnRegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_VbmAlloc` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
 | `Encoder_VbmAlloc_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `Encoder_VbmFree` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
@@ -1526,13 +1527,13 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 <details><summary>Notes and references (72)</summary>
 
-- `Encoder_CreateChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_CreateGroup`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_DestroyChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_DestroyGroup`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_CreateChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_CreateGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_DestroyChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_FlushStream`: all: drops the encoded stream nobody fetched (agg-25)
 - `Encoder_Get/SetChangeRef`: T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test
-- `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
+- `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
 - `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25)
 - `Encoder_Get/SetChnCrop`: audit: userspace implementation; T10/T20/T21: the vendor libimp exports it without a header (i264e_set_param, x/y/w/h multiples of 16); OpenIMP does not (miss, found by `make export-check` 2026-10-11, a link shim is an open question)
 - `Encoder_Get/SetChnDemask`: T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c) T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c)
@@ -1566,15 +1567,15 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_GetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25)
 - `Encoder_GetFd`: audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_GetGOPSize`: T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test
-- `Encoder_GetStream`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_GetStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_InsertUserData`: audit: userspace implementation; T20/T21/T23: emits a user_data_unregistered SEI (OEM UUID) in front of the next picture, found in the next 30 frames (apitest PASS); T10 shares the T20 build, not re-tested
 - `Encoder_PollingModuleStream`: audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS)
-- `Encoder_PollingStream`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_Query`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_RegisterChn`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_ReleaseStream`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_PollingStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_Query`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_RegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_ReleaseStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_RequestGDR`: audit: userspace implementation
-- `Encoder_RequestIDR`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_RequestIDR`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_SetAvpuBsShare`: T41: exported by the OpenIMP build (corrected 2026-10-26 from miss).
 - `Encoder_SetbufshareChn`: vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only
 - `Encoder_SetChnBitRate`: audit: userspace implementation T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
@@ -1592,9 +1593,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_SetFrameRelease`: T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)
 - `Encoder_SetGOPSize`: audit: reaches the driver/kernel; userspace implementation
 - `Encoder_SetMultiSectionMode`: T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.) T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.)
-- `Encoder_StartRecvPic`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_StopRecvPic`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_UnRegisterChn`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_StartRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_StopRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_UnRegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `Encoder_YuvGetCrop`: audit: reaches the driver/kernel
 - `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel
 - `Encoder_YuvSetCrop`: audit: reaches the driver/kernel
@@ -1611,14 +1612,14 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FB_*` | · | · | · | · | · | ❌ | · | · | · | · | – |
 | `FrameSource_ChnStatQuery` | · | · | · | · | · | ✅ | · | · | · | · | – |
 | `FrameSource_ClearPoolId` | · | · | · | · | · | ? | 📋 | 📋 | · | · | – |
-| `FrameSource_CreateChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_CreateChn_Ext` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `FrameSource_CreateJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_DequeueBuffer` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_DestroyChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_DestroyJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_DisableChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `FrameSource_EnableChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_DisableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_EnableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_ExternInject_CreateChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_ExternInject_DestroyChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_ExternInject_DisableChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
@@ -1659,10 +1660,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 <details><summary>Notes and references (19)</summary>
 
 - `FrameSource_ChnStatQuery`: audit: userspace implementation
-- `FrameSource_CreateChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_DestroyChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_DisableChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_EnableChn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
+- `FrameSource_CreateChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
+- `FrameSource_DestroyChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
+- `FrameSource_DisableChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
+- `FrameSource_EnableChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
 - `FrameSource_Get/SetChnAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
 - `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it
 - `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)
@@ -1699,11 +1700,11 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_ShowOsdRgn` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
 | `OSD_Alloc` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 | `OSD_AttachToGroup` | 🔧h | 🔧h | 🔧h | 🔧a | 🔧a | 🔧a | 📋 | 📋 | 🔧h | ✅ | – |
-| `OSD_CreateGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_CreateRgn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_CreateRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_CreateRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_DestroyGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_DestroyRgn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_DestroyRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_DestroyRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_DetachToGroup` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `OSD_Exit_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
@@ -1713,20 +1714,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `OSD_GetRegionLuma` | · | · | · | · | · | · | · | · | · | ❌ | – |
 | `OSD_GetRgnAttr_ISPPic` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_Init_ISP` | · | · | · | ? | · | · | 📋 | 📋 | ? | ❌ | – |
-| `OSD_RegisterRgn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_RegisterRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_RgnCreate_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_RgnRegister_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
 | `OSD_SetGroupCallback` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_SetMosaic` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
-| `OSD_SetPoolSize` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† t t† |
+| `OSD_SetPoolSize` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† t t† |
 | `OSD_SetPoolSize_ISP` | · | · | · | 🔧h | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_SetRgnAttr_PicISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_SetRgnAttrWithTimestamp` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧a | r† |
-| `OSD_ShowRgn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_ShowRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_ShowRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_Start` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_Start` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_Stop` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `OSD_UnRegisterRgn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_UnRegisterRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_UpdateRgnAttrData` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† |
 | `OSD_UpdateRgnAttrData_ISP` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 
@@ -1740,24 +1741,24 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_SetOsdRgnAttr`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `ISP_Tuning_ShowOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `OSD_AttachToGroup`: T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_CreateGroup`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_CreateRgn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_DestroyGroup`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_DestroyRgn`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_CreateGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_CreateRgn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_DestroyRgn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_Get/SetGrpRgnAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_Get/SetRgnAttr`: audit: reaches the driver/kernel; userspace implementation; T40: the PIC/COVER test uses the set path; Get not checked, so host T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_GetRegionLuma`: T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either
-- `OSD_RegisterRgn`: audit: reaches the driver/kernel; userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_RegisterRgn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_RgnCreate_Query`: audit: userspace implementation
 - `OSD_RgnRegister_Query`: audit: userspace implementation
 - `OSD_SetMosaic`: audit: userspace implementation
-- `OSD_SetPoolSize`: audit: userspace implementation
+- `OSD_SetPoolSize`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `OSD_SetPoolSize_ISP`: T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)
 - `OSD_SetRgnAttrWithTimestamp`: audit: reaches the driver/kernel
-- `OSD_ShowRgn`: audit: reaches the driver/kernel; userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_Start`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_ShowRgn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_Start`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_Stop`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_UnRegisterRgn`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_UnRegisterRgn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 - `OSD_UpdateRgnAttrData`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
 
 </details>
@@ -1769,42 +1770,42 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `IVS_CreateBaseMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_CreateChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_CreateGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_CreateMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateMoveInterface` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `IVS_DestroyBaseMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_DestroyChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_DestroyGroup` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_DestroyMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_Get/SetParam` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
-| `IVS_GetResult` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_PollingResult` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_RegisterChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_DestroyMoveInterface` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_Get/SetParam` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
+| `IVS_GetResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_PollingResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_RegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `IVS_ReleaseData` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_ReleaseResult` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_StartRecvPic` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_StopRecvPic` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_UnRegisterChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_ReleaseResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_StartRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_StopRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_UnRegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 
 <details><summary>Notes and references (17)</summary>
 
 - `IVS_CreateBaseMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateChn`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateGroup`: audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21 T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_CreateChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_CreateGroup`: audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21 T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_CreateMoveInterface`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
 - `IVS_DestroyBaseMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyChn`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyGroup`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_Get/SetParam`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_GetResult`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_PollingResult`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_RegisterChn`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_DestroyChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_DestroyMoveInterface`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_Get/SetParam`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_GetResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_PollingResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_RegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
 - `IVS_ReleaseData`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_ReleaseResult`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_StartRecvPic`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_StopRecvPic`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_UnRegisterChn`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_ReleaseResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_StartRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_StopRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_UnRegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
 
 </details>
 
@@ -1817,30 +1818,30 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ADEC_ReleaseDecoder` | · | · | · | · | · | · | · | · | · | · | – |
 | `AENC_* / ADEC_*` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧h | r† |
 | `AENC_ReleaseEncoder` | · | · | · | · | · | · | · | · | · | · | – |
-| `AI_Disable` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_DisableAec` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† t t† |
+| `AI_Disable` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableAec` | ✅r | ✅r | 🔧a | ✅r | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_DisableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_DisableAgc` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableAgc` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_DisableChn` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_DisableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_DisableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_DisableHpf` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableHpf` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_DisableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `AI_DisableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_DisableNs` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableNs` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_Enable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_EnableAec` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_EnableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_EnableAgc` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableAgc` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
 | `AI_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_EnableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_EnableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_EnableHpf` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableHpf` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_EnableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `AI_EnableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_EnableNs` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableNs` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_Get/SetAlcGain` | · | · | ✅ | · | · | ✅ | · | · | · | · | t |
 | `AI_Get/SetChnParam` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
@@ -1851,8 +1852,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AI_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_GetFrameAndRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `AI_GetFrameAndRef` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_PollingFrame` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_ReleaseFrame` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_PollingFrame` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_ReleaseFrame` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AI_Set_WebrtcProfileIni_Path` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ? | 🔧a | r† |
 | `AI_SetAgcMode` | · | · | · | · | · | ✅ | · | · | · | · | – |
 | `AI_SetAlgoOrder` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1860,11 +1861,11 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AI_SetLpfCoFrequency` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_SetVolMute` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧h | r† |
 | `AO_CacheSwitch` | 🔧h | 🔧h | 🔧h | ✅ | ? | 🔧h | 📋 | 📋 | ? | 🔧h | r† |
-| `AO_ClearChnBuf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† t t† |
-| `AO_Disable` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AO_ClearChnBuf` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
+| `AO_Disable` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_DisableAgc` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AO_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
-| `AO_DisableChn` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AO_DisableChn` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_DisableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_DisableHpf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AO_DisableNs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1875,7 +1876,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AO_EnableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AO_EnableHpf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `AO_EnableNs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AO_FlushChnBuf` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AO_FlushChnBuf` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `AO_Get/SetGain` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
 | `AO_Get/SetPubAttr` | 🔧a | 🔧a | 🔧a | ✅ | ? | 🔧a | 📋 | 📋 | ? | 🔧a | p† r† t t† |
@@ -1898,20 +1899,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 - `ADEC_ReleaseDecoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 - `AENC_ReleaseEncoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
-- `AI_Disable`: audit: reaches the driver/kernel
-- `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†
+- `AI_Disable`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AI_DisableAecRefFrame`: audit: reaches the driver/kernel
-- `AI_DisableAgc`: audit: userspace implementation
-- `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation
-- `AI_DisableHpf`: audit: userspace implementation
-- `AI_DisableNs`: audit: userspace implementation
+- `AI_DisableAgc`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_DisableHpf`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_DisableNs`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `AI_Enable`: audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 - `AI_EnableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 - `AI_EnableAecRefFrame`: audit: reaches the driver/kernel
-- `AI_EnableAgc`: audit: userspace implementation
+- `AI_EnableAgc`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `AI_EnableChn`: audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
-- `AI_EnableHpf`: audit: userspace implementation
-- `AI_EnableNs`: audit: userspace implementation
+- `AI_EnableHpf`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_EnableNs`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `AI_Get/SetAlcGain`: audit: reaches the driver/kernel; userspace implementation
 - `AI_Get/SetChnParam`: audit: userspace implementation
 - `AI_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike)
@@ -1919,23 +1920,23 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `AI_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
 - `AI_GetFrame`: audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 - `AI_GetFrameAndRef`: audit: reaches the driver/kernel; userspace implementation
-- `AI_PollingFrame`: audit: userspace implementation
-- `AI_ReleaseFrame`: audit: userspace implementation
+- `AI_PollingFrame`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_ReleaseFrame`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `AI_Set_WebrtcProfileIni_Path`: audit: userspace implementation
 - `AI_SetAgcMode`: audit: userspace implementation
 - `AI_SetHpfCoFrequency`: T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)
 - `AI_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
 - `AO_CacheSwitch`: all: implemented with vendor semantics, default off (OPENIMP_AO_CACHE=1 = vendor default on); quiet device test open (audio output only on T31)
-- `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†
-- `AO_Disable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
+- `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
+- `AO_Disable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_DisableAgc`: audit: userspace implementation
-- `AO_DisableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
+- `AO_DisableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_DisableHpf`: audit: userspace implementation
 - `AO_Enable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 - `AO_EnableAgc`: audit: userspace implementation
 - `AO_EnableChn`: audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only
 - `AO_EnableHpf`: audit: userspace implementation
-- `AO_FlushChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
+- `AO_FlushChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
 - `AO_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†
 - `AO_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
@@ -2051,18 +2052,18 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `SU_PM_TheadSuspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_PM_ThreadResume` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_PM_WaitThreadSuspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `System_Bind` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `System_Exit` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Bind` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Exit` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `System_GetBindbyDest` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
 | `System_GetCPUInfo` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† |
-| `System_GetTimeStamp` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `System_GetVersion` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `System_Init` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_GetTimeStamp` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `System_GetVersion` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Init` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `System_MemPoolFree` | · | · | · | · | · | ✅ | 📋 | 📋 | · | · | – |
 | `System_MemPoolRequest` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | 🔧a | – |
 | `System_ReadReg32` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
 | `System_RebaseTimeStamp` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† |
-| `System_UnBind` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_UnBind` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `System_WriteReg32` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `Virt_to_Phys` | ? | ? | ? | ? | ? | ? | 📋 | 📋 | · | · | – |
 
@@ -2106,18 +2107,18 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `SU_Key_OpenEvent`: audit: sysfs/ioctl/syscall path
 - `SU_Key_ReadEvent`: audit: sysfs/ioctl/syscall path
 - `SU_LED_Command`: audit: sysfs/ioctl/syscall path
-- `System_Bind`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `System_Exit`: audit: reaches the driver/kernel; userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `System_Bind`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `System_Exit`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `System_GetBindbyDest`: audit: userspace implementation
 - `System_GetCPUInfo`: audit: reaches the driver/kernel; userspace implementation
-- `System_GetTimeStamp`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `System_GetVersion`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `System_Init`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #22 (H.264).
+- `System_GetTimeStamp`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `System_GetVersion`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `System_Init`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `System_MemPoolFree`: T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)
 - `System_MemPoolRequest`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T41: exported by the OpenIMP build (corrected 2026-10-26 from miss).
 - `System_ReadReg32`: audit: reaches the driver/kernel
 - `System_RebaseTimeStamp`: audit: userspace implementation
-- `System_UnBind`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `System_UnBind`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
 - `System_WriteReg32`: audit: reaches the driver/kernel
 
 </details>
