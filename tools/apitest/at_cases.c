@@ -1209,6 +1209,7 @@ static void cs_isposd(void)
         base = region_y(cx0, cy0, cx1, cy1);
         dark = base < 140;
         for (k = 0; k < PWD * PHT; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+        { int (*oinit)(void) = (int (*)(void))dsym("IMP_OSD_Init_ISP"); if (oinit) oinit(); }      /* T23: the ISP OSD module needs its init first */
         rp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);
         rep(FN(IMP_ISP_Tuning_SetOsdPoolSize), rp, rp == 0 ? V_PASS : V_FAIL, "512 KB");
         h = IMP_ISP_Tuning_CreateOsdRgn(0, NULL);
@@ -1234,6 +1235,7 @@ static void cs_isposd(void)
             rep(FN(IMP_ISP_Tuning_ShowOsdRgn), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
             rep(FN(IMP_ISP_Tuning_DestroyOsdRgn), rd, (rd == 0 && flow()) ? V_PASS : V_FAIL, "handle %d destroyed, frames flow", h);
         }
+        { void (*oexit)(void) = (void (*)(void))dsym("IMP_OSD_Exit_ISP"); if (oexit) oexit(); }
         free(pic); free(a);
     }
 }
