@@ -1241,6 +1241,34 @@ static void cs_isposd(void)
 static void cs_isposd(void) {}
 #endif
 
+
+/* SetAutoZoom without a getter (T31): ch1 scaler at its own size + a crop to the upper-left quarter (zoom 2x), then back to the full picture */
+#if HAS_IMP_ISP_Tuning_SetAutoZoom && !HAS_IMP_ISP_Tuning_GetAutoZoom && !defined(PLATFORM_T41)
+static void cs_autozoom_set(void)
+{
+    NEED(IMP_ISP_Tuning_SetAutoZoom) {
+        G(IMPISPAutoZoom, a);
+        int r1, r2, ms;
+        Fst base, zoom, back;
+
+        base = fst(800);
+        a->chan = 1; a->scaler_enable = 1; a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
+        a->crop_enable = 1; a->crop_left = 0; a->crop_top = 0; a->crop_width = SUB_W / 2; a->crop_height = SUB_H / 2;
+        r1 = IMP_ISP_Tuning_SetAutoZoom(a); zoom = fst(1500);
+        a->crop_enable = 0;
+        r2 = IMP_ISP_Tuning_SetAutoZoom(a); back = recover(base.y, &ms);
+        {
+            int eff = zoom.ok && base.ok && dabs(zoom.h - base.h) > 0.1 * base.h;
+            rep(FN(IMP_ISP_Tuning_SetAutoZoom), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sch1 crop to the upper-left quarter (ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f, frames flow", RTMSG(eff), r1, r2, base.h, zoom.h, back.h);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_autozoom_set(void) {}
+#endif
+
 /* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
 static int cs_on(const char *n)
 {
@@ -1254,7 +1282,7 @@ static int cs_on(const char *n)
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1309,6 +1337,7 @@ void t_cases(void)
     if (cs_on("aeroi")) cs_aeroi();      wdog("cases", 60);
     if (cs_on("rawdrc")) cs_rawdrc();     wdog("cases", 60);
     if (cs_on("isposd")) cs_isposd();     wdog("cases", 90);
+    if (cs_on("autozoom_set")) cs_autozoom_set(); wdog("cases", 90);
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
