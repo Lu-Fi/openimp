@@ -447,9 +447,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -539,9 +539,9 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -616,9 +616,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -693,9 +693,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -770,9 +770,9 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -847,9 +847,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -924,9 +924,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -1256,9 +1256,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -1852,7 +1852,7 @@
    "cells": {
     "T10": "dev",
     "T20": "dev",
-    "T21": "aud",
+    "T21": "dev",
     "T23": "dev",
     "T30": "?",
     "T31": "dev",
@@ -1919,7 +1919,8 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47 2026-10-26 .34",
+    "T21": "apitest rc3-cases 2026-10-26 .24"
    }
   },
   "ISP_Tuning_Get/SetCsc_Attr": {
@@ -1928,7 +1929,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "n.a.",
     "T31": "dev",
     "T32": "n.a.",
@@ -1946,7 +1947,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T23": "apitest rc3-cases 2026-10-26 .30 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_Get/SetDPC_Strength": {
@@ -2096,7 +2098,7 @@
    "area": "ISP tuning",
    "cells": {
     "T10": "dev",
-    "T20": "aud",
+    "T20": "err",
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
@@ -2140,7 +2142,8 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T20": "FAIL apitest rc3-cases 2026-10-26 .107: ISP_Tuning_GetGamma: ret=0 g[0]=0 g[64]=0 g[128]=0 (0 of 129 points non-zero)"
    }
   },
   "ISP_Tuning_Get/SetGammaAttr": {
@@ -2315,7 +2318,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "err",
     "T30": "n.a.",
     "T31": "err",
     "T32": "n.a.",
@@ -2333,7 +2336,8 @@
    },
    "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there",
    "ref": {
-    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ISP_Tuning_GetISPCustomMode: ret=0 value 0; ISP_Tuning_SetISPCustomMode: ret=-1 same value 0 written, read back 0; 0 written, read back 0, frames flow 1; restored"
+    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ISP_Tuning_GetISPCustomMode: ret=0 value 0; ISP_Tuning_SetISPCustomMode: ret=-1 same value 0 written, read back 0; 0 written, read back 0, frames flow 1; restored",
+    "T23": "FAIL apitest rc3-cases 2026-10-26 .30: ISP_Tuning_GetISPCustomMode: ret=0 value 4294967295; ISP_Tuning_SetISPCustomMode: ret=-1 same value 4294967295 written, read back 4294967295; 4294967295 written, read back 4294967295, frames flow 1; restored"
    }
   },
   "ISP_Tuning_Get/SetISPHVflip": {
@@ -3226,7 +3230,7 @@
    },
    "ref": {
     "T40": "apitest agg47 2026-10-26 .184",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
@@ -3268,8 +3272,8 @@
    "area": "ISP tuning",
    "cells": {
     "T10": "dev",
-    "T20": "host",
-    "T21": "aud",
+    "T20": "dev",
+    "T21": "dev",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -3294,7 +3298,9 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24"
    }
   },
   "ISP_Tuning_GetSceneMode": {
@@ -3776,7 +3782,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "rt",
     "T23": "aud",
     "T30": "?",
     "T31": "aud",
@@ -3817,7 +3823,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-26 .24 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_SetISPLDC": {
@@ -3910,7 +3917,7 @@
    "area": "ISP tuning",
    "cells": {
     "T10": "dev",
-    "T20": "host",
+    "T20": "rt",
     "T21": "no-op",
     "T23": "n.a.",
     "T30": "?",
@@ -3936,7 +3943,8 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_SetScalerLv": {
@@ -4739,7 +4747,7 @@
    "area": "AE / AWB / AF",
    "cells": {
     "T10": "dev",
-    "T20": "aud",
+    "T20": "dev",
     "T21": "n.a.",
     "T23": "dev",
     "T30": "?",
@@ -4780,7 +4788,8 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T20": "apitest rc3-cases 2026-10-26 .107"
    }
   },
   "ISP_Tuning_Get/SetAeConvergeStep": {
@@ -6166,7 +6175,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "rt",
     "T30": "n.a.",
     "T31": "rt",
     "T32": "n.a.",
@@ -6184,7 +6193,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test",
    "ref": {
-    "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
+    "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest rc3-cases 2026-10-26 .30 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_SetExpr": {
@@ -9353,9 +9363,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -9449,9 +9459,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -9526,9 +9536,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -9603,9 +9613,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -9862,9 +9872,9 @@
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -10013,9 +10023,9 @@
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -17226,9 +17236,9 @@
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
@@ -17571,9 +17581,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24",
-    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T23": "apitest rc3-cases 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
