@@ -308,6 +308,7 @@ int main(int argc, char **argv)
 #ifdef PLATFORM_T41
     ret = IMP_ISP_Open();
     rep(FN(IMP_ISP_Open), ret, ret < 0 ? V_FAIL : V_PASS, "");
+    if (ret >= 0) t_binpath_pre();
     if (ret >= 0) { ret = IMP_ISP_AddSensor(IMPVI_MAIN, &g_sensor); RET0(IMP_ISP_AddSensor, ret, "sensor %s", g_sensor.name); }
     if (ret >= 0) { ret = IMP_ISP_EnableSensor(IMPVI_MAIN, &g_sensor); RET0(IMP_ISP_EnableSensor, ret, ""); }
 #else

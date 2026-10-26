@@ -678,21 +678,26 @@ static void cs_ccm(void)
 static void cs_ccm(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft && HAS_IMP_ISP_Tuning_Awb_SetRgbCoefft
+#ifdef PLATFORM_T41
+# define RGBC IMPISPCoefftWb
+#else
+# define RGBC IMPISPCOEFFTWB
+#endif
+#if HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft && HAS_IMP_ISP_Tuning_Awb_SetRgbCoefft
 static void cs_rgbcoef(void)
 {
     NEED(IMP_ISP_Tuning_Awb_GetRgbCoefft) NEED(IMP_ISP_Tuning_Awb_SetRgbCoefft) {
-        G(IMPISPCoefftWb, o); G(IMPISPCoefftWb, b); G(IMPISPCoefftWb, a);
-        int r1 = IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_MAIN, o), r2, r3, r4, ms;
+        G(RGBC, o); G(RGBC, b); G(RGBC, a);
+        int r1 = IMP_ISP_Tuning_Awb_GetRgbCoefft(V0 o), r2, r3, r4, ms;
         Fst base, x, back;
 
         gchk(o);
         rep(FN(IMP_ISP_Tuning_Awb_GetRgbCoefft), r1, r1 == 0 ? V_PASS : V_FAIL, "r %u g %u b %u", o->rgb_coefft_wb_r, o->rgb_coefft_wb_g, o->rgb_coefft_wb_b);
-        r2 = IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, o); r3 = IMP_ISP_Tuning_Awb_GetRgbCoefft(IMPVI_MAIN, b); gchk(b);
+        r2 = IMP_ISP_Tuning_Awb_SetRgbCoefft(V0 o); r3 = IMP_ISP_Tuning_Awb_GetRgbCoefft(V0 b); gchk(b);
         base = fst(800);
         *a = *o; a->rgb_coefft_wb_r = (unsigned short)(o->rgb_coefft_wb_r * 3 / 2);
-        r4 = IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, a); x = fst(1000);
-        IMP_ISP_Tuning_Awb_SetRgbCoefft(IMPVI_MAIN, o); back = recover(base.y, &ms);
+        r4 = IMP_ISP_Tuning_Awb_SetRgbCoefft(V0 a); x = fst(1000);
+        IMP_ISP_Tuning_Awb_SetRgbCoefft(V0 o); back = recover(base.y, &ms);
         {
             int eff = x.ok && base.ok && dabs(x.v - base.v) > 1.5;
             rep(FN(IMP_ISP_Tuning_Awb_SetRgbCoefft), r2 | r4, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && ms >= 0 && flow()) ? V_PASS : V_FAIL,
@@ -722,25 +727,37 @@ static void cs_ispbypass(void)
 static void cs_ispbypass(void) {}
 #endif
 
+/* IMP_ISP_Set/GetDefaultBinPath: the vendor requires the call BEFORE IMP_ISP_AddSensor (attention note of the header); called from main()
+ * between ISP_Open and AddSensor.  Writes the bin file the sensor loads by default (only if it exists), reads it back. */
 #if defined(PLATFORM_T41) && HAS_IMP_ISP_GetDefaultBinPath && HAS_IMP_ISP_SetDefaultBinPath
-static void cs_binpath(void)
+void t_binpath_pre(void)
 {
+    const char *want = getenv("APITEST_CASES");
+
+    if (want && !strstr(want, "binpath")) return;
     NEED(IMP_ISP_GetDefaultBinPath) NEED(IMP_ISP_SetDefaultBinPath) {
-        char *o = (char *)gnew(128), *b = (char *)gnew(128);
+        char *o = (char *)gnew(128), *b = (char *)gnew(128), *p = (char *)gnew(128);
+        struct stat st;
         int r1 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, o), r2 = -99, r3 = -99;
 
+#ifdef APITEST_T40
+        snprintf(p, 128, "/etc/sensor/%s-t40.bin", g_sensor.name);
+#else
+        snprintf(p, 128, "/etc/sensor/%s-t41.bin", g_sensor.name);
+#endif
         gchk(o);
-        rep(FN(IMP_ISP_GetDefaultBinPath), r1, r1 == 0 ? V_PASS : V_FAIL, "\"%.100s\"", o);
-        if (r1 == 0 && o[0]) {
-            r2 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, o); r3 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, b); gchk(b);
-            rep(FN(IMP_ISP_SetDefaultBinPath), r2, (r2 == 0 && r3 == 0 && !strcmp(o, b) && flow()) ? V_PASS : V_FAIL, "rt: same path written (set ret %d), read back %s, frames flow", r2, !strcmp(o, b) ? "equal" : "DIFFERENT");
-        } else
-            rep(FN(IMP_ISP_SetDefaultBinPath), r1, V_SKIP, "no default bin path stored, nothing to write back");
-        gfree(o); gfree(b);
+        rep(FN(IMP_ISP_GetDefaultBinPath), r1, r1 == 0 ? V_PASS : V_NA, "before AddSensor: \"%.100s\" (empty = none stored)", o);
+        if (stat(p, &st) != 0) {
+            rep(FN(IMP_ISP_SetDefaultBinPath), 0, V_SKIP, "%s does not exist", p);
+        } else {
+            r2 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, p); r3 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, b); gchk(b);
+            rep(FN(IMP_ISP_SetDefaultBinPath), r2, (r2 == 0 && r3 == 0 && !strcmp(p, b)) ? V_PASS : V_FAIL, "rt: the sensor's own bin file %s written before AddSensor (ret %d), read back %s", p, r2, !strcmp(p, b) ? "equal" : "DIFFERENT");
+        }
+        gfree(o); gfree(b); gfree(p);
     }
 }
 #else
-static void cs_binpath(void) {}
+void t_binpath_pre(void) {}
 #endif
 
 #if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
@@ -1062,6 +1079,97 @@ static void cs_scalerlv_old(void)
 static void cs_scalerlv_old(void) {}
 #endif
 
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_WDR_ENABLE && HAS_IMP_ISP_WDR_ENABLE_GET
+static void cs_wdr_t41(void)
+{
+    NEED(IMP_ISP_WDR_ENABLE_GET) NEED(IMP_ISP_WDR_ENABLE) {
+        IMPISPTuningOpsMode o = IMPISP_TUNING_OPS_MODE_DISABLE, b = IMPISP_TUNING_OPS_MODE_ENABLE;
+        int r1 = IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &o), r2, r3;
+
+        rep(FN(IMP_ISP_WDR_ENABLE_GET), r1, r1 == 0 ? V_PASS : V_FAIL, "wdr %d", (int)o);
+        r2 = IMP_ISP_WDR_ENABLE(IMPVI_MAIN, &o); usleep(700000); r3 = IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &b);
+        rep(FN(IMP_ISP_WDR_ENABLE), r2, (r2 == 0 && r3 == 0 && b == o && flow()) ? V_PASS : V_FAIL, "rt: same value (%d) written (ret %d), read back %d, frames flow", (int)o, r2, (int)b);
+    }
+}
+#else
+static void cs_wdr_t41(void) {}
+#endif
+
+#if defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetISPBypass && HAS_IMP_ISP_Tuning_GetISPBypass
+static void cs_bypass_t40(void)
+{
+    NEED(IMP_ISP_Tuning_GetISPBypass) NEED(IMP_ISP_Tuning_SetISPBypass) {
+        IMPISPTuningOpsMode o = IMPISP_TUNING_OPS_MODE_DISABLE, b = IMPISP_TUNING_OPS_MODE_ENABLE;
+        int r1 = IMP_ISP_Tuning_GetISPBypass(IMPVI_MAIN, &o), r2, r3;
+
+        rep(FN(IMP_ISP_Tuning_GetISPBypass), r1, r1 == 0 ? V_PASS : V_FAIL, "bypass %d", (int)o);
+        r2 = IMP_ISP_Tuning_SetISPBypass(IMPVI_MAIN, &o); usleep(700000); r3 = IMP_ISP_Tuning_GetISPBypass(IMPVI_MAIN, &b);
+        rep(FN(IMP_ISP_Tuning_SetISPBypass), r2, (r2 == 0 && r3 == 0 && b == o && flow()) ? V_PASS : V_FAIL, "rt: same value (%d) written (ret %d), read back %d, frames flow", (int)o, r2, (int)b);
+    }
+}
+#else
+static void cs_bypass_t40(void) {}
+#endif
+
+#if defined(APITEST_T40) && HAS_IMP_ISP_SetCameraInputSelect
+static void cs_camsel(void)
+{
+    NEED(IMP_ISP_SetCameraInputSelect) {
+        int r = IMP_ISP_SetCameraInputSelect(IMPVI_MAIN);
+
+        usleep(700000);
+        rep(FN(IMP_ISP_SetCameraInputSelect), r, (r == 0 && flow()) ? V_PASS : V_FAIL, "rt: input IMPVI_MAIN selected again (the only sensor) (ret %d), frames flow", r);
+    }
+}
+#else
+static void cs_camsel(void) {}
+#endif
+
+
+#if (defined(PLATFORM_T10) || defined(PLATFORM_T20)) && HAS_IMP_ISP_Tuning_AE_GetROI && HAS_IMP_ISP_Tuning_AE_SetROI
+static void cs_aeroi(void)
+{
+    NEED(IMP_ISP_Tuning_AE_GetROI) NEED(IMP_ISP_Tuning_AE_SetROI) {
+        IMPISPAERoi o, b, c, a;
+        int r1, r2, r3, r4, r5, ms;
+        Fst base, back;
+
+        memset(&o, 0, sizeof(o)); memset(&b, 0, sizeof(b)); memset(&c, 0, sizeof(c));
+        r1 = IMP_ISP_Tuning_AE_GetROI(&o);
+        rep(FN(IMP_ISP_Tuning_AE_GetROI), r1, r1 == 0 ? V_PASS : V_FAIL, "roi 0x%08x (%u,%u)-(%u,%u)", o.value, o.startx, o.starty, o.endx, o.endy);
+        base = fst(600);
+        r2 = IMP_ISP_Tuning_AE_SetROI(&o); usleep(500000); r3 = IMP_ISP_Tuning_AE_GetROI(&b);
+        a = o; a.startx = 64; a.starty = 64; a.endx = 192; a.endy = 192;
+        r4 = IMP_ISP_Tuning_AE_SetROI(&a); usleep(800000); r5 = IMP_ISP_Tuning_AE_GetROI(&c);
+        IMP_ISP_Tuning_AE_SetROI(&o); back = recover(base.y, &ms);
+        rep(FN(IMP_ISP_Tuning_AE_SetROI), r2 | r4, (r2 == 0 && r3 == 0 && b.value == o.value && r4 == 0 && r5 == 0 && c.value == a.value && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+            "rt: same roi 0x%08x written, read back 0x%08x; centre window 0x%08x written, read back 0x%08x; restored, picture %s same (Y %.1f -> %.1f)", o.value, b.value, a.value, c.value, ms >= 0 ? "" : "NOT", base.y, back.y);
+    }
+}
+#else
+static void cs_aeroi(void) {}
+#endif
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetRawDRC && HAS_IMP_ISP_Tuning_SetRawDRC
+static void cs_rawdrc(void)
+{
+    NEED(IMP_ISP_Tuning_GetRawDRC) NEED(IMP_ISP_Tuning_SetRawDRC) {
+        G(IMPISPDrcAttr, o); G(IMPISPDrcAttr, b);
+        int r1 = IMP_ISP_Tuning_GetRawDRC(o), r2, r3;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetRawDRC), r1, r1 == 0 ? V_PASS : V_FAIL, "mode %d strength %u slope %u/%u black %u white %u", (int)o->mode, o->drc_strength, o->slop_max, o->slop_min, o->black_level, o->white_level);
+        r2 = IMP_ISP_Tuning_SetRawDRC(o); usleep(700000); r3 = IMP_ISP_Tuning_GetRawDRC(b); gchk(b);
+        rep(FN(IMP_ISP_Tuning_SetRawDRC), r2, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && flow()) ? V_PASS : V_FAIL,
+            "rt: same value written (set ret %d), read back %s, frames flow (the off/manual modes can black the picture on some SoCs: not written, see imgfx rawdrc-*)", r2, !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT");
+        gfree(o); gfree(b);
+    }
+}
+#else
+static void cs_rawdrc(void) {}
+#endif
+
 /* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
 static int cs_on(const char *n)
 {
@@ -1075,7 +1183,7 @@ static int cs_on(const char *n)
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "rgbcoef", "ispbypass", "binpath", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1109,7 +1217,6 @@ void t_cases(void)
     if (cs_on("ccm")) cs_ccm();        wdog("cases", 60);
     if (cs_on("rgbcoef")) cs_rgbcoef();    wdog("cases", 90);
     if (cs_on("ispbypass")) cs_ispbypass();  wdog("cases", 60);
-    if (cs_on("binpath")) cs_binpath();    wdog("cases", 60);
     if (cs_on("switchbin")) cs_switchbin();  wdog("cases", 90);
     if (cs_on("scalerlv")) cs_scalerlv();   wdog("cases", 90);
     if (cs_on("contrast")) cs_contrast();   wdog("cases", 90);
@@ -1124,6 +1231,11 @@ void t_cases(void)
     if (cs_on("hvflip")) cs_hvflip();     wdog("cases", 60);
     if (cs_on("ispbypass_old")) cs_ispbypass_old(); wdog("cases", 60);
     if (cs_on("gamma_old")) cs_gamma_old();  wdog("cases", 90);
+    if (cs_on("wdr_t41")) cs_wdr_t41();   wdog("cases", 60);
+    if (cs_on("bypass_t40")) cs_bypass_t40(); wdog("cases", 60);
+    if (cs_on("camsel")) cs_camsel();     wdog("cases", 60);
+    if (cs_on("aeroi")) cs_aeroi();      wdog("cases", 60);
+    if (cs_on("rawdrc")) cs_rawdrc();     wdog("cases", 60);
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);

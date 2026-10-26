@@ -140,6 +140,7 @@ void t_ivs(void);
 void t_audio(void);
 void t_isp(void);
 void t_cases(void);
+void t_binpath_pre(void);  /* IMP_ISP_Set/GetDefaultBinPath, between ISP_Open and AddSensor (T41 family) */
 void cases_list(void);     /* names of the cases of area "cases" */
 int picture_main(int argc, char **argv);   /* former imgfx (at_picture.c) */
 int t40dev_main(int argc, char **argv);    /* former t40_devtest (at_t40dev.c, T40 only) */        /* targeted cases for functions without a case (at_cases.c) */
