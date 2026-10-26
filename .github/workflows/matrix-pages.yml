@@ -1,0 +1,53 @@
+# Regenerates the feature matrix from docs/FEATURE_MATRIX.md, docs/api_evidence.json,
+# docs/api_exports.json and docs/matrix_wip.json on every push to next and publishes
+# it with GitHub Pages (index.html = feature-matrix.html).
+name: feature-matrix pages
+
+on:
+  push:
+    branches: [next]
+    paths:
+      - 'docs/**'
+      - 'tools/gen_feature_matrix_html.py'
+      - 'tools/gen_api_coverage.py'
+      - 'tools/export-check/**'
+      - '.github/workflows/matrix-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the generator compares with the RC tags
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate
+        run: |
+          python3 tools/gen_feature_matrix_html.py
+          mkdir -p _site
+          cp docs/feature-matrix.html _site/index.html
+          cp docs/feature-matrix.html _site/feature-matrix.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
