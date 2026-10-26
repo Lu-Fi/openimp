@@ -4,12 +4,20 @@
 #include "apitest.h"
 
 /* getter with a guarded out struct: PASS = ret 0 and guards intact; the reason shows fields */
+static int skipfn(const char *n)       /* APITEST_SKIPFN=a,b: functions known to oops the driver (FAIL recorded by hand) */
+{
+    const char *e = getenv("APITEST_SKIPFN"), *p;
+    size_t l = strlen(n);
+    if (!e) return 0;
+    for (p = e; (p = strstr(p, n)); p += l) if ((p == e || p[-1] == ',') && (p[l] == ',' || !p[l])) return 1;
+    return 0;
+}
 #define ISPGET(f, T, ...) \
-    NEED(f) { G(T, p); int r_ = f(V0 p); gchk(p); \
+    NEED(f) if (skipfn(#f)) rep(FN(f), 0, V_SKIP, "APITEST_SKIPFN: oopses the driver"); else { G(T, p); int r_ = f(V0 p); gchk(p); \
         rep(FN(f), r_, r_ == 0 ? V_PASS : V_FAIL, __VA_ARGS__); gfree(p); }
 /* getter of a single scalar */
 #define ISPGETU(f, T, ...) \
-    NEED(f) { G(T, p); int r_ = f(V0 p); gchk(p); \
+    NEED(f) if (skipfn(#f)) rep(FN(f), 0, V_SKIP, "APITEST_SKIPFN: oopses the driver"); else { G(T, p); int r_ = f(V0 p); gchk(p); \
         rep(FN(f), r_, r_ == 0 ? V_PASS : V_FAIL, __VA_ARGS__); gfree(p); }
 
 void t_isp(void)
@@ -194,7 +202,10 @@ void t_isp(void)
 #if HAS_IMP_ISP_Tuning_GetWB_GOL_Statis
     ISPGET(IMP_ISP_Tuning_GetWB_GOL_Statis, IMPISPWB, "rgain %u bgain %u", p->rgain, p->bgain)
 #endif
-#if HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft
+#if defined(APITEST_T40)
+    /* oopses the T40 driver (agg47 open-tx-isp 8d3504c8, cid 0x0800009b, epc c03d1920, 2026-10-26): recorded as a FAIL by hand */
+    rep(LBL("IMP_ISP_Tuning_Awb_GetRgbCoefft"), 0, V_SKIP, "not called: oopses the T40 driver (cid 0x0800009b)");
+#elif HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft
 # ifdef PLATFORM_T41
     ISPGET(IMP_ISP_Tuning_Awb_GetRgbCoefft, IMPISPCoefftWb, "r %u g %u b %u", p->rgb_coefft_wb_r, p->rgb_coefft_wb_g, p->rgb_coefft_wb_b)
 # else

@@ -84,6 +84,9 @@ static void fs_attrs(void)
     memset(&fs0, 0, sizeof(fs0));
     fs0.picWidth = g_sw; fs0.picHeight = g_sh; fs0.pixFmt = PIX_FMT_NV12;
     fs0.outFrmRateNum = 15; fs0.outFrmRateDen = 1; fs0.nrVBs = 2;
+#ifdef APITEST_T40
+    if (getenv("APITEST_CH0_SCALE")) { fs0.scaler.enable = 1; fs0.scaler.outwidth = g_sw; fs0.scaler.outheight = g_sh; }   /* ch0 scaled from the native sensor size, as t40_devtest */
+#endif
     fs0.type = FS_PHY_CHANNEL;
     fs1 = fs0;
     fs1.picWidth = SUB_W; fs1.picHeight = SUB_H; fs1.nrVBs = 3;

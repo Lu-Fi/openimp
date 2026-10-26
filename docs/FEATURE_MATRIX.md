@@ -855,38 +855,38 @@ As of: 2026-10-26. One row per vendor IMP/SU function (a Get/Set row counts as t
 
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
-- **ISP tuning:** T10 26/67 ✅ · 41 🔧 · 0 gaps · 0 ? · T20 32/67 ✅ · 35 🔧 · 0 gaps · 0 ? · T21 32/66 ✅ · 34 🔧 · 0 gaps · 0 ? · T23 40/97 ✅ · 54 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 34/87 ✅ · 53 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 39/71 ✅ · 30 🔧 · 0 gaps · 2 ? · T41 36/78 ✅ · 26 🔧 · 16 gaps · 0 ?
-- **AE / AWB / AF:** T10 4/27 ✅ · 23 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 28/29 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 40/51 ✅ · 10 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 40/49 ✅ · 9 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 11/29 ✅ · 16 🔧 · 2 gaps · 0 ? · T41 20/39 ✅ · 4 🔧 · 15 gaps · 0 ?
-- **Encoder:** T10 22/70 ✅ · 14 🔧 · 33 gaps · 1 ? · T20 37/70 ✅ · 1 🔧 · 31 gaps · 1 ? · T21 46/67 ✅ · 3 🔧 · 18 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 40/45 ✅ · 2 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 35/59 ✅ · 4 🔧 · 17 gaps · 3 ? · T41 27/74 ✅ · 13 🔧 · 34 gaps · 0 ?
-- **FrameSource:** T10 4/18 ✅ · 14 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 9/33 ✅ · 11 🔧 · 13 gaps · 0 ? · T41 10/36 ✅ · 8 🔧 · 18 gaps · 0 ?
-- **OSD:** T10 9/17 ✅ · 8 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 17/43 ✅ · 25 🔧 · 0 gaps · 1 ? · T41 15/42 ✅ · 5 🔧 · 22 gaps · 0 ?
-- **IVS:** T10 15/18 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 13/18 ✅ · 5 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **Audio:** T10 22/68 ✅ · 46 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 73/77 ✅ · 4 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 52/96 ✅ · 44 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 0/99 ✅ · 4 🔧 · 24 gaps · 71 ? · T41 0/107 ✅ · 71 🔧 · 36 gaps · 0 ?
-- **System:** T10 6/48 ✅ · 39 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 11/50 ✅ · 1 🔧 · 3 gaps · 35 ? · T41 6/55 ✅ · 41 🔧 · 8 gaps · 0 ?
-- **All areas:** T10 108/333 ✅ · 188 🔧 · 33 gaps · 4 ? · T20 207/333 ✅ · 91 🔧 · 31 gaps · 4 ? · T21 219/333 ✅ · 93 🔧 · 18 gaps · 3 ? · T23 301/457 ✅ · 114 🔧 · 21 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 240/406 ✅ · 142 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 135/402 ✅ · 96 🔧 · 59 gaps · 112 ? · T41 132/449 ✅ · 168 🔧 · 149 gaps · 0 ?
+- **ISP tuning:** T10 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T20 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T21 32/66 ✅ · 34 🔧 · 0 gaps · 0 ? · T23 40/97 ✅ · 54 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 34/87 ✅ · 53 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 43/71 ✅ · 25 🔧 · 1 gaps · 2 ? · T41 42/78 ✅ · 20 🔧 · 16 gaps · 0 ?
+- **AE / AWB / AF:** T10 16/27 ✅ · 11 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 28/29 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 42/51 ✅ · 8 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 40/49 ✅ · 9 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 17/29 ✅ · 6 🔧 · 6 gaps · 0 ? · T41 22/39 ✅ · 2 🔧 · 15 gaps · 0 ?
+- **Encoder:** T10 34/70 ✅ · 0 🔧 · 35 gaps · 1 ? · T20 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T21 45/67 ✅ · 2 🔧 · 20 gaps · 0 ? · T23 70/90 ✅ · 1 🔧 · 15 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 41/45 ✅ · 1 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 37/59 ✅ · 3 🔧 · 19 gaps · 0 ? · T41 31/74 ✅ · 2 🔧 · 41 gaps · 0 ?
+- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 20/33 ✅ · 0 🔧 · 13 gaps · 0 ? · T41 18/36 ✅ · 0 🔧 · 18 gaps · 0 ?
+- **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 20/42 ✅ · 0 🔧 · 22 gaps · 0 ?
+- **IVS:** T10 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **Audio:** T10 31/68 ✅ · 37 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 74/77 ✅ · 3 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 53/96 ✅ · 43 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 26/99 ✅ · 2 🔧 · 24 gaps · 47 ? · T41 24/107 ✅ · 47 🔧 · 36 gaps · 0 ?
+- **System:** T10 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 18/50 ✅ · 1 🔧 · 3 gaps · 28 ? · T41 16/55 ✅ · 31 🔧 · 8 gaps · 0 ?
+- **All areas:** T10 182/333 ✅ · 112 🔧 · 35 gaps · 4 ? · T20 209/333 ✅ · 89 🔧 · 31 gaps · 4 ? · T21 218/333 ✅ · 92 🔧 · 20 gaps · 3 ? · T23 302/457 ✅ · 111 🔧 · 23 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 242/406 ✅ · 140 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 206/402 ✅ · 52 🔧 · 66 gaps · 78 ? · T41 191/449 ✅ · 102 🔧 · 156 gaps · 0 ?
 
 ### Priorities for streamers
 
 Gaps (error, missing, stub, cache-only) in functions that at least one streamer (p prudynt, r raptor, t timps; † = source only, no binary checked) calls, sorted by the number of streamers; functions of unknown state (?) that a streamer calls are listed as a separate tier (audit pending). Gaps in functions no streamer calls follow as a count (lower priority). T32/T33 have no OpenIMP build yet: their line counts the vendor functions the streamers call and that the first build has to provide.
 
-- **T10:** 0 streamer-used gaps; 15 further gaps no streamer calls
+- **T10:** 0 streamer-used gaps; 16 further gaps no streamer calls
 - **T20:** 0 streamer-used gaps; 14 further gaps no streamer calls
-- **T21:** 0 streamer-used gaps; 8 further gaps no streamer calls
-- **T23:** 0 streamer-used gaps; 9 further gaps no streamer calls
+- **T21:** 1 streamer-used gap: `Encoder_Get/SetChnDenoise` (err; r†); 8 further gaps no streamer calls
+- **T23:** 0 streamer-used gaps; 10 further gaps no streamer calls
 - **T30:** 0 streamer-used gaps; 10 further gaps no streamer calls; 157 streamer-used functions are of unknown state (audit pending), e.g. `AI_Disable`, `AI_DisableAgc`, `AI_DisableChn`, `AI_DisableHpf`, `AI_DisableNs`, `AI_Enable`
 - **T31:** 0 streamer-used gaps; 2 further gaps no streamer calls
 - **T32:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T33:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
-- **T40:** 2 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†); 25 further gaps no streamer calls; 40 streamer-used functions are of unknown state (audit pending), e.g. `AI_Disable`, `AI_DisableAgc`, `AI_DisableChn`, `AI_DisableHpf`, `AI_DisableNs`, `AI_Enable`
-- **T41:** 10 streamer-used gaps: `FrameSource_Get/SetFrameDepth` (cache; p† r†), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `ISP_Tuning_CreateOsdRgn` (err; r†), `ISP_Tuning_DestroyOsdRgn` (err; r†), `ISP_Tuning_SetOsdRgnAttr` (err; r†), `ISP_Tuning_ShowOsdRgn` (err; r†), `Encoder_SetChnMaxPictureSize` (cache; r†), `FrameSource_Get/SetPool` (cache; r†), `ISP_Tuning_SetOsdPoolSize` (stub; r†); 90 further gaps no streamer calls
+- **T40:** 5 streamer-used gaps: `ISP_Tuning_SetSensorFPS` (err; p† r† t), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_Get/SetMaxStreamCnt` (err; r†), `ISP_Tuning_Awb_Get/SetRgbCoefft` (err; r†); 27 further gaps no streamer calls; 19 streamer-used functions are of unknown state (audit pending), e.g. `AO_SetHpfCoFrequency`, `AO_SetVolMute`, `ISP_Tuning_SetISPBypass`, `AENC_* / ADEC_*`, `AI_DisableAecRefFrame`, `AI_EnableAecRefFrame`
+- **T41:** 13 streamer-used gaps: `Encoder_Get/SetChnFrmRate` (err; p† r†), `FrameSource_Get/SetFrameDepth` (cache; p† r†), `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `Encoder_SetChnBitRate` (err; t), `Encoder_SetChnQpBounds` (err; t), `ISP_Tuning_CreateOsdRgn` (err; r†), `ISP_Tuning_DestroyOsdRgn` (err; r†), `ISP_Tuning_SetOsdRgnAttr` (err; r†), `ISP_Tuning_ShowOsdRgn` (err; r†), `Encoder_SetChnMaxPictureSize` (cache; r†), `FrameSource_Get/SetPool` (cache; r†), `ISP_Tuning_SetOsdPoolSize` (stub; r†); 92 further gaps no streamer calls
 
 ### Long-term backlog
 
 Completeness list, separate from the streamer priorities: every vendor function of the SoC that is missing, partial (cache-only, stub, error) or of unknown state (?) and that **no streamer calls today** (for T32/T33: every vendor function no streamer calls, as there is no build yet). Grouped by area with the suggested action: implement, documented ENOTSUP (the open driver answers like a vendor stack without the feature) or not applicable (declared in a header but exported by no vendor library). Default action derived from the evidence note; override per function with `action` in `docs/api_evidence.json`.
 
-<details><summary><b>T10</b>: 19 functions</summary>
+<details><summary><b>T10</b>: 20 functions</summary>
 
-- **Encoder (and decoder):** implement (16): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnDenoise`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/SetH264TransCfg`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
+- **Encoder (and decoder):** implement (17): `Decoder_*`, `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDemask`, `Encoder_Get/SetChnDenoise`, `Encoder_Get/SetChnH264Demask`, `Encoder_Get/SetChnH264Denoise`, `Encoder_Get/SetChnH264FrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnRcAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/SetH264TransCfg`, `Encoder_Get/SetSuperFrameCfg`, `Encoder_PadFrame`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetPadFrameAttr`
 - **System / sysutils / log:** implement (3): `Phys_to_Virt`, `Sp_Alloc`, `Virt_to_Phys`
 
 </details>
@@ -905,11 +905,11 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T23</b>: 30 functions</summary>
+<details><summary><b>T23</b>: 31 functions</summary>
 
 - **ISP tuning:** implement (2): `ISP_Tuning_Get/SetDrawBlock`, `ISP_Tuning_SwitchBin`
 - **AE / AWB / AF:** implement (1): `ISP_Tuning_SetWB_ALGO`
-- **Encoder (and decoder):** implement (8): `Decoder_*`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/Setframelossthd`, `Encoder_PadFrame`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetMultiSectionMode`, `Encoder_SetPadFrameAttr`, `Encoder_SetRdBufShare`
+- **Encoder (and decoder):** implement (9): `Decoder_*`, `Encoder_Get/SetChnROI`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/Setframelossthd`, `Encoder_PadFrame`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetMultiSectionMode`, `Encoder_SetPadFrameAttr`, `Encoder_SetRdBufShare`
 - **OSD:** implement (5): `ISP_Tuning_Get/SetOSDAttr`, `ISP_Tuning_Get/SetOSDBlock`, `OSD_Alloc`, `OSD_Init_ISP`, `OSD_UpdateRgnAttrData_ISP`
 - **System / sysutils / log:** implement (14): `ISPOSD_Alloc`, `MemPool_GetById`, `MemPool_InitPool`, `Phys_to_Virt`, `PoolAlloc`, `PoolAlloc_Dump`, `PoolAlloc_Get_Attr`, `PoolAlloc_Set_Attr`, `PoolFlushCache`, `PoolFree`, `PoolPhys_to_Virt`, `PoolVirt_to_Phys`, `Sp_Alloc`, `Virt_to_Phys`
 
@@ -958,22 +958,22 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T40</b>: 71 functions</summary>
+<details><summary><b>T40</b>: 65 functions</summary>
 
-- **AE / AWB / AF:** implement (2): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`
-- **Encoder (and decoder):** implement (11): `Decoder_*`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_SetChnResizeMode`, `Encoder_VbmAlloc`, `Encoder_VbmFree`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvExit`, `Encoder_YuvInit`
+- **AE / AWB / AF:** implement (4): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`
+- **Encoder (and decoder):** implement (9): `Decoder_*`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_VbmAlloc`, `Encoder_VbmFree`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvExit`, `Encoder_YuvInit`
 - **FrameSource:** implement (9): `EmuFrameSource_*`, `FrameSource_DequeueBuffer`, `FrameSource_ExternInject_CreateChn`, `FrameSource_ExternInject_DestroyChn`, `FrameSource_ExternInject_DisableChn`, `FrameSource_ExternInject_EnableChn`, `FrameSource_GetFrameEx`, `FrameSource_QueueBuffer`, `FrameSource_ReleaseFrameEx`
 - **OSD:** implement (1): `OSD_Init_ISP`
 - **Audio:** implement (14): `AI_DisableAec`, `AI_DisableHs`, `AI_EnableAec`, `AI_EnableHs`, `AO_ClearChnBuf`, `AO_Disable`, `AO_DisableChn`, `AO_Enable`, `AO_EnableChn`, `AO_FlushChnBuf`, `AO_Get/SetGain`, `AO_Get/SetPubAttr`, `AO_Get/SetVol`, `AO_SendFrame`
-- **System / sysutils / log:** implement (34): `Log_Get_Option`, `Log_Set_Option`, `SU_ADC_DisableChn`, `SU_ADC_EnableChn`, `SU_ADC_Exit`, `SU_ADC_GetChnValue`, `SU_ADC_Init`, `SU_Base_DisableAlarm`, `SU_Base_EnableAlarm`, `SU_Base_Get/SetAlarm`, `SU_Base_Get/SetTime`, `SU_Base_GetDevID`, `SU_Base_GetModelNumber`, `SU_Base_PollingAlarm`, `SU_Base_Raw2SUTime`, `SU_Base_Reboot`, `SU_Base_Suspend`, `SU_Base_SUTime2Raw`, `SU_CIPHER_ConfigHandle`, `SU_CIPHER_CreateHandle`, `SU_CIPHER_Decrypt`, `SU_CIPHER_DES_Exit`, `SU_CIPHER_DES_Init`, `SU_CIPHER_DES_Test`, `SU_CIPHER_DestroyHandle`, `SU_CIPHER_Encrypt`, `SU_CIPHER_Exit`, `SU_CIPHER_Init`, `SU_Key_CloseEvent`, `SU_Key_DisableEvent`, `SU_Key_EnableEvent`, `SU_Key_OpenEvent`, `SU_Key_ReadEvent`, `SU_LED_Command`
+- **System / sysutils / log:** implement (28): `Log_Get_Option`, `Log_Set_Option`, `SU_ADC_DisableChn`, `SU_ADC_EnableChn`, `SU_ADC_Exit`, `SU_ADC_GetChnValue`, `SU_ADC_Init`, `SU_Base_DisableAlarm`, `SU_Base_EnableAlarm`, `SU_Base_Get/SetAlarm`, `SU_Base_Get/SetTime`, `SU_Base_PollingAlarm`, `SU_Base_Reboot`, `SU_Base_Suspend`, `SU_CIPHER_ConfigHandle`, `SU_CIPHER_CreateHandle`, `SU_CIPHER_Decrypt`, `SU_CIPHER_DES_Exit`, `SU_CIPHER_DES_Init`, `SU_CIPHER_DES_Test`, `SU_CIPHER_DestroyHandle`, `SU_CIPHER_Encrypt`, `SU_CIPHER_Exit`, `SU_CIPHER_Init`, `SU_Key_DisableEvent`, `SU_Key_EnableEvent`, `SU_Key_ReadEvent`, `SU_LED_Command`
 
 </details>
 
-<details><summary><b>T41</b>: 90 functions</summary>
+<details><summary><b>T41</b>: 92 functions</summary>
 
 - **ISP tuning:** implement (12): `ISP_Get/SetCsccrMode`, `ISP_Get/SetInternalChnAttr`, `ISP_LDC_Get/SetAttr`, `ISP_LDC_INIT`, `ISP_RAW_RwControl`, `ISP_SET_GPIO_INIT_OR_FREE`, `ISP_SET_GPIO_STA`, `ISP_SetVicDoneCbFunc`, `ISP_StartNightMode`, `ISP_Tuning_Get/SetDrawBlock`, `ISP_Tuning_SetTmoFaceae`, `ISP_WDR_OPEN`
 - **AE / AWB / AF:** implement (11): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_Get/SetAeConvergeStep`, `ISP_Tuning_Get/SetAeExpList`, `ISP_Tuning_Get/SetFaceAe`, `ISP_Tuning_Get/SetFaceAeWeiget`, `ISP_Tuning_GetAeBv`, `ISP_Tuning_GetAEFlickerFlag`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`, `ISP_Tuning_GetFaceAeLuma`
-- **Encoder (and decoder):** implement (23): `Decoder_*`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetChnSeiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_InputJpege`, `Encoder_InputJpege_Ex`, `Encoder_SetAvpuBsSize`, `Encoder_SetAvpuJpegQp`, `Encoder_SetChnMapRoi`, `Encoder_SetFrameRelease`, `Encoder_SetIvpuBsSize`, `Encoder_VbmAlloc`, `Encoder_VbmAlloc_Ex`, `Encoder_VbmFree`, `Encoder_VbmFree_Ex`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvEncode_Ex`, `Encoder_YuvExit`, `Encoder_YuvExit_Ex`, `Encoder_YuvInit`, `Encoder_YuvInit_Ex`
+- **Encoder (and decoder):** implement (25): `Decoder_*`, `Encoder_Get/SetChnGopAttr`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetChnSeiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_InputJpege`, `Encoder_InputJpege_Ex`, `Encoder_SetAvpuBsSize`, `Encoder_SetAvpuJpegQp`, `Encoder_SetChnGopLength`, `Encoder_SetChnMapRoi`, `Encoder_SetFrameRelease`, `Encoder_SetIvpuBsSize`, `Encoder_VbmAlloc`, `Encoder_VbmAlloc_Ex`, `Encoder_VbmFree`, `Encoder_VbmFree_Ex`, `Encoder_VbmP2V`, `Encoder_VbmV2P`, `Encoder_YuvEncode`, `Encoder_YuvEncode_Ex`, `Encoder_YuvExit`, `Encoder_YuvExit_Ex`, `Encoder_YuvInit`, `Encoder_YuvInit_Ex`
 - **FrameSource:** implement (10): `EmuFrameSource_*`, `FrameSource_DequeueBuffer`, `FrameSource_ExternInject_CreateChn`, `FrameSource_ExternInject_DestroyChn`, `FrameSource_ExternInject_DisableChn`, `FrameSource_ExternInject_EnableChn`, `FrameSource_GetFrameEx`, `FrameSource_QueueBuffer`, `FrameSource_ReleaseFrameEx`, `FrameSource_SetYuvAlign`
 - **OSD:** implement (13): `ISP_Tuning_Get/SetOSDAttr`, `ISP_Tuning_Get/SetOSDBlock`, `ISP_Tuning_GetOsdRgnAttr`, `OSD_CreateRgn_ISP`, `OSD_DestroyRgn_ISP`, `OSD_Exit_ISP`, `OSD_Get/SetRgnAttr_ISP`, `OSD_GetRgnAttr_ISPPic`, `OSD_Init_ISP`, `OSD_SetGroupCallback`, `OSD_SetPoolSize_ISP`, `OSD_SetRgnAttr_PicISP`, `OSD_ShowRgn_ISP`; not applicable (1): `OSD_GetRegionLuma`
 - **Audio:** implement (12): `AI_DisableAlgo`, `AI_DisableGetRaw`, `AI_DisableHs`, `AI_EnableAlgo`, `AI_EnableGetRaw`, `AI_EnableHs`, `AI_Get/SetDigitalGain`, `AI_GetFrameAndRaw`, `AO_DisableAlgo`, `AO_EnableAlgo`, `AO_Get/SetDigitalGain`, `Audio_Select_Codec`
@@ -1004,16 +1004,16 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ISP_AddSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_AddSensor` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_AddSensor_Free` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_AddSensor_Process` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Bypass_Bind` | · | · | · | · | · | · | · | · | ✅ | · | – |
-| `ISP_Close` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DelSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DisableSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_DisableTuning` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_EnableSensor` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_EnableTuning` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Close` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DelSensor` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DisableSensor` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_DisableTuning` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_EnableSensor` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_EnableTuning` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Get/SetCsccrMode` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Get/SetDefaultBinPath` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | 🔧h | 🔧a | r† |
 | `ISP_Get/SetFrameDrop` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
@@ -1052,7 +1052,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_OneShotDropCnt` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_OneShotEnable` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_OneShotTick` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Open` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Open` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_OSD_Alloc` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_PM_GetMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_PM_SetMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1078,7 +1078,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_EnableDefog` | · | · | · | 🔧a | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_EnableDRC` | · | · | · | 🔧a | · | 🔧h | · | · | · | · | r† |
 | `ISP_Tuning_EnableMovestate` | 🔧a | 🔧a | 🔧a | ✅○ | ? | 🔧h | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetAntiFlickerAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetAntiFlickerAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetBacklightComp` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetBcshHue` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetCCMAttr` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | ✅ | 🔧h | r† |
@@ -1096,24 +1096,24 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Get/SetHLDCAttr` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_Get/SetHVFLIP` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | 🔧h | ✅ | r† t t† |
 | `ISP_Tuning_Get/SetIntegrationTime` | ✅r | ✅ | ✅ | · | ? | · | · | · | · | · | t |
-| `ISP_Tuning_Get/SetISPCSCAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | 🔧h | – |
+| `ISP_Tuning_Get/SetISPCSCAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_Get/SetISPCustomMode` | · | · | · | 🔧a | · | 🔧h | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetISPHflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
 | `ISP_Tuning_Get/SetISPHVflip` | ✅ | ✅ | · | · | 🔧h | · | · | · | · | · | – |
-| `ISP_Tuning_Get/SetISPRunningMode` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetISPRunningMode` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetISPVflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
 | `ISP_Tuning_Get/SetMask` | · | · | · | ✅○ | · | 🔧a | · | · | ✅ | · | r† |
-| `ISP_Tuning_Get/SetMaxAgain` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
-| `ISP_Tuning_Get/SetMaxDgain` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetMaxAgain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetMaxDgain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetModule_Ratio` | · | · | · | · | · | · | 📋 | 📋 | ✅ | 🔧a | – |
 | `ISP_Tuning_Get/SetModuleControl` | · | · | 🔧h | 🔧a | · | 🔧a | 📋 | 📋 | ✅ | 🔧h | r† |
 | `ISP_Tuning_Get/SetSaturation` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetSensorHflip` | · | · | · | 🔧a | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetSensorVflip` | · | · | · | 🔧a | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetSinterDnsAttr` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
-| `ISP_Tuning_Get/SetStatisConfig` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ✅ | – |
+| `ISP_Tuning_Get/SetStatisConfig` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_Get/SetTemperDnsAttr` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
-| `ISP_Tuning_Get/SetTmoCurve` | · | · | · | · | · | · | · | · | · | 🔧h | – |
+| `ISP_Tuning_Get/SetTmoCurve` | · | · | · | · | · | · | · | · | · | ✅ | – |
 | `ISP_Tuning_Get/SetWdr_OutputMode` | · | · | · | · | · | 🔧h | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetWDRAttr` | ✅ | ✅ | · | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetWdrOutputMode` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅○ | – |
@@ -1121,20 +1121,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetBlcAttr` | · | · | · | ✅○ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_GetBrightness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `ISP_Tuning_GetEVAttr` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
-| `ISP_Tuning_GetHVFlip` | · | · | · | 🔧a | · | 🔧a | · | · | 🔧h | ✅ | r† |
+| `ISP_Tuning_GetEVAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_GetHVFlip` | · | · | · | 🔧a | · | 🔧a | · | · | ✅ | ✅ | r† |
 | `ISP_Tuning_GetISPBypass` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_GetISPRunningModeWithFd` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `ISP_Tuning_GetMaskBlock` | · | · | · | 🔧h | · | · | 📋 | 📋 | · | 🔧h | – |
 | `ISP_Tuning_GetMultiSensorEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetRawDRC` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_GetSceneMode` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
-| `ISP_Tuning_GetSensorAttr` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | 🔧h | r† t t† |
-| `ISP_Tuning_GetSensorFPS` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_GetSensorAttr` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `ISP_Tuning_GetSensorFPS` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_GetSharpness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `ISP_Tuning_GetTotalGain` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_GetTotalGain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_SaveAllParam` | · | · | · | · | · | · | · | · | · | · | – |
-| `ISP_Tuning_SetAntiFogAttr` | 🔧h | 🔧h | ✅○ | · | 🔧h | · | · | · | · | · | – |
+| `ISP_Tuning_SetAntiFogAttr` | ✅ | ✅ | ✅○ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_SetAutoZoom` | · | · | · | 🔧h | · | 🔧h | 📋 | 📋 | 🔧h | 🔧h | p† r r† |
 | `ISP_Tuning_SetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetBrightness` | ✅r | ✅r | ✅+ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
@@ -1150,7 +1150,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_SetRawDRC` | 🔧h | 🔧h | ✅○ | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_SetScalerLv` | · | · | · | ✅○ | · | 🔧a | 📋 | 📋 | · | 🔧h | r† |
 | `ISP_Tuning_SetSceneMode` | ✅r | ✅r | ✅○ | · | ? | · | · | · | · | · | t |
-| `ISP_Tuning_SetSensorFPS` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | p† r† t t† |
+| `ISP_Tuning_SetSensorFPS` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ❌e | ✅ | p† r† t t† |
 | `ISP_Tuning_SetSharpness` | ✅r | ✅r | ✅○ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_SetSinterStrength` | ✅r | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
 | `ISP_Tuning_SetTemperDnsCtl` | 🔧h | 🔧h | 🔧a | · | ⚠c | · | · | · | · | · | – |
@@ -1165,19 +1165,19 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_WDR_ENABLE_Get` | · | · | · | · | · | 🔧a | · | · | · | · | – |
 | `ISP_WDR_OPEN` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 
-<details><summary>Notes and references (91)</summary>
+<details><summary>Notes and references (94)</summary>
 
-- `ISP_AddSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_Close`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DelSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DisableSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_DisableTuning`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_EnableSensor`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
-- `ISP_EnableTuning`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_AddSensor`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Close`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_DelSensor`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_DisableSensor`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_DisableTuning`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_EnableSensor`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_EnableTuning`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Get/SetDefaultBinPath`: audit: reaches the driver/kernel; userspace implementation
 - `ISP_Get/SetFrameDrop`: T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused)
 - `ISP_Get/SetSensorRegister`: T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was "There isn't sensor!"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35)
-- `ISP_Open`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #1 (ISP core / sensor bring-up).
+- `ISP_Open`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_SetCameraInputMode`: audit: reaches the driver/kernel
 - `ISP_SetFixedContraster`: T23: driver routes 0x8000102 (agg-25), apitest PASS 2026-10-10; T31: the argument is the IMPISPFixedContrastAttr pointer (not a mode): with the tuning session open it goes to the driver as control 0x8000102 like the vendor (apitest PASS 2026-10-10, host test tests/t31/fixed_contrast_test.c); the open T31 driver handler dropped the 3 bytes before, it now calls tisp_set_bcsh_fixed_contrast like the stock s_ctrl (open-tx-isp claude/gaps-t23-t31-drv; mode, y low and the fixed value reach the BCSH MJPEG range; only matters for the MJPEG path); module build only, device test of the effect pending; Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
 - `ISP_SetStreamOut`: audit: reaches the driver/kernel
@@ -1187,7 +1187,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_EnableDefog`: T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera
 - `ISP_Tuning_EnableDRC`: T31: wired to the driver (agg-25)
 - `ISP_Tuning_EnableMovestate`: T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control
-- `ISP_Tuning_Get/SetAntiFlickerAttr`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #7 (Anti-flicker (50/60 Hz)).
+- `ISP_Tuning_Get/SetAntiFlickerAttr`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetBacklightComp`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetBcshHue`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
 - `ISP_Tuning_Get/SetCCMAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
@@ -1204,41 +1204,44 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetHiLightDepress`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T41: device-tested through main-matrix feature #13 (Mirror / flip).
 - `ISP_Tuning_Get/SetIntegrationTime`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `ISP_Tuning_Get/SetISPCSCAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested
+- `ISP_Tuning_Get/SetISPCSCAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetISPCustomMode`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there
 - `ISP_Tuning_Get/SetISPHflip`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetISPHVflip`: T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device
-- `ISP_Tuning_Get/SetISPRunningMode`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #10 (Day/night switching (ISP side)).
+- `ISP_Tuning_Get/SetISPHVflip`: T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107.
+- `ISP_Tuning_Get/SetISPRunningMode`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetISPVflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetMask`: T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)
-- `ISP_Tuning_Get/SetMaxAgain`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetMaxDgain`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetMaxAgain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetMaxDgain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetModule_Ratio`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetModuleControl`: T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
 - `ISP_Tuning_Get/SetSaturation`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
 - `ISP_Tuning_Get/SetSensorHflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSensorVflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSinterDnsAttr`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
+- `ISP_Tuning_Get/SetStatisConfig`: T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetTemperDnsAttr`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
+- `ISP_Tuning_Get/SetTmoCurve`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetWdr_OutputMode`: T31: reaches the WDR tool block (agg-25)
-- `ISP_Tuning_Get/SetWDRAttr`: T10/T20 3.12.0: V4L2 control 0x98e912 with the vendor's mode cache (an unchanged mode returns 0 without the driver). apitest PASS on T10 and T20 for Get and Set of the current mode; switching WDR on was not run: the driver refuses (-EPERM) without a WDR frame buffer, as the stock module; T30 1.0.5: V4L2 control 0x8000169 with the vendor's mode cache (an unchanged mode returns 0 without the driver; a failed Get returns the cached mode with the error); host test with a fake ioctl; whether the open T30 driver serves the control is not checked
+- `ISP_Tuning_Get/SetWDRAttr`: T10/T20 3.12.0: V4L2 control 0x98e912 with the vendor's mode cache (an unchanged mode returns 0 without the driver). apitest PASS on T10 and T20 for Get and Set of the current mode; switching WDR on was not run: the driver refuses (-EPERM) without a WDR frame buffer, as the stock module; T30 1.0.5: V4L2 control 0x8000169 with the vendor's mode cache (an unchanged mode returns 0 without the driver; a failed Get returns the cached mode with the error); host test with a fake ioctl; whether the open T30 driver serves the control is not checked T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107.
 - `ISP_Tuning_Get/SetWdrOutputMode`: T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17)
 - `ISP_Tuning_GetAutoZoom`: T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
-- `ISP_Tuning_GetBlcAttr`: T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS
+- `ISP_Tuning_GetBlcAttr`: T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_GetBrightness`: audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_GetEVAttr`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `ISP_Tuning_GetEVAttr`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetHVFlip`: T40: apitest agg47 2026-10-26 192.168.10.184.
 - `ISP_Tuning_GetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run)
 - `ISP_Tuning_GetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
 - `ISP_Tuning_GetSceneMode`: audit: reaches the driver/kernel
-- `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
-- `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #6 (Max gain, IT max, sensor FPS).
+- `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_SaveAllParam`: T10/T20/T21 (4 builds each) and T23/T31: declared in the SDK header, exported by none of the vendor libimp builds (nm); a vendor-stack application cannot link it either
-- `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked
+- `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24.
 - `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 - `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_SetDPStrength`: T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl
+- `ISP_Tuning_SetDPStrength`: T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24.
 - `ISP_Tuning_SetFWFreeze`: audit: reaches the driver/kernel
 - `ISP_Tuning_SetISPBypass`: audit: reaches the driver/kernel
 - `ISP_Tuning_SetISPProcess`: audit: reaches the driver/kernel
@@ -1247,7 +1250,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_SetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)
 - `ISP_Tuning_SetScalerLv`: T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 - `ISP_Tuning_SetSceneMode`: T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test.
-- `ISP_Tuning_SetSensorFPS`: T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `ISP_Tuning_SetSensorFPS`: T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: FAIL apitest agg47 2026-10-26 192.168.10.184: ret=-1 same 20/1 written, read back 20/1. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_SetSharpness`: T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
 - `ISP_Tuning_SetSinterStrength`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetTemperDnsCtl`: T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test
@@ -1271,30 +1274,30 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_SetAwbAlgoFunc` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | ❌ | ❌ | – |
 | `ISP_Tuning_AE_Get/SetROI` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Awb_Get/SetCwfShift` | 🔧h | 🔧h | · | · | 🔧h | · | · | · | · | · | – |
-| `ISP_Tuning_Awb_Get/SetRgbCoefft` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | 🔧h | 🔧h | r† |
+| `ISP_Tuning_Awb_Get/SetRgbCoefft` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | ❌e | 🔧h | r† |
 | `ISP_Tuning_AwbSync` | · | · | · | · | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetAeAttr` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetAeComp` | 🔧a | 🔧a | · | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetAeConvergeStep` | · | · | · | · | · | · | · | · | · | ⚠c | – |
 | `ISP_Tuning_Get/SetAeExpList` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `ISP_Tuning_Get/SetAeExprInfo` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
-| `ISP_Tuning_Get/SetAeHist` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† |
+| `ISP_Tuning_Get/SetAeHist` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetAeMin` | · | · | ✅ | ✅ | · | ✅ | · | · | · | · | p p† r† |
 | `ISP_Tuning_Get/SetAeScenceAttr` | · | · | · | · | · | · | · | · | ✅ | ✅ | – |
-| `ISP_Tuning_Get/SetAeSpeed` | · | · | · | · | · | · | · | · | 🔧h | · | – |
+| `ISP_Tuning_Get/SetAeSpeed` | · | · | · | · | · | · | · | · | ✅ | · | – |
 | `ISP_Tuning_Get/SetAeStrategy` | 🔧h | ✅ | ✅ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetAeTargetList` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetAeWeight` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧h | p† r† |
-| `ISP_Tuning_Get/SetAfHist` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetAfWeight` | · | · | ✅ | ✅ | · | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
+| `ISP_Tuning_Get/SetAeWeight` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `ISP_Tuning_Get/SetAfHist` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
+| `ISP_Tuning_Get/SetAfWeight` | · | · | ✅ | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `ISP_Tuning_Get/SetAwbAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_Get/SetAwbClust` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetAwbConvergeStep` | · | · | · | · | · | · | · | · | · | ✅ | – |
 | `ISP_Tuning_Get/SetAwbCtTrend` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetAwbCtTrendOffset` | · | · | · | · | · | · | 📋 | 📋 | · | ✅ | – |
-| `ISP_Tuning_Get/SetAwbHist` | 🔧a | ✅ | ✅ | ✅○ | ? | ✅○ | · | · | · | · | p† r† |
-| `ISP_Tuning_Get/SetAwbWeight` | 🔧a | ✅ | ✅ | ✅○ | ? | ✅○ | 📋 | 📋 | ✅ | ✅ | p† r† |
-| `ISP_Tuning_Get/SetAwbZoneWeight` | · | · | · | 🔧h | · | · | · | · | · | · | – |
+| `ISP_Tuning_Get/SetAwbHist` | ✅ | ✅ | ✅ | ✅○ | ? | ✅○ | · | · | · | · | p† r† |
+| `ISP_Tuning_Get/SetAwbWeight` | ✅ | ✅ | ✅ | ✅○ | ? | ✅○ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `ISP_Tuning_Get/SetAwbZoneWeight` | · | · | · | ✅ | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetFaceAe` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `ISP_Tuning_Get/SetFaceAeWeiget` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_Get/SetFaceAwb` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | · | – |
@@ -1315,20 +1318,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetAeTargetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetAeZone` | ✅○ | ✅○ | ✅ | ✅ | · | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_GetAFMetrices` | · | · | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_GetAFMetricesInfo` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `ISP_Tuning_GetAfStatistics` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `ISP_Tuning_GetAFMetricesInfo` | · | · | · | · | · | · | 📋 | 📋 | ❌e | ❌ | – |
+| `ISP_Tuning_GetAfStatistics` | · | · | · | · | · | · | 📋 | 📋 | ❌e | ❌ | – |
 | `ISP_Tuning_GetAfZone` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_GetAWBCt` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† r r† |
 | `ISP_Tuning_GetAwbGlobalStatistics` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_GetAwbOnlyReadAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetAwbStatistics` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | t t† |
-| `ISP_Tuning_GetAwbZone` | 🔧h | ✅ | · | ✅ | · | ✅ | · | · | · | · | p† r† t |
-| `ISP_Tuning_GetExpr` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† t |
+| `ISP_Tuning_GetAwbZone` | ✅ | ✅ | · | ✅ | · | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_GetExpr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† t |
 | `ISP_Tuning_GetFaceAeLuma` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_GetMultiSensorAeEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetMultiSensorAWBEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetWB_GOL_Statis` | · | · | ✅ | ✅ | · | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_GetWB_Statis` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
+| `ISP_Tuning_GetWB_Statis` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_SetAe_IT_MAX` | · | · | · | ✅r | · | ✅r | · | · | · | · | p† t |
 | `ISP_Tuning_SetAeFreeze` | · | · | · | 🔧h | · | 🔧a | · | · | · | · | r† |
 | `ISP_Tuning_SetAeLightCompensation` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1340,45 +1343,52 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_SetMultiSensorAWBEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetWB_ALGO` | · | · | · | ❌e | · | 🔧a | · | · | · | · | – |
 
-<details><summary>Notes and references (42)</summary>
+<details><summary>Notes and references (49)</summary>
 
 - `ISP_Tuning_AE_Get/SetROI`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T10/T20: prudynt†; T21/T23/T31: prudynt†, raptor†
 - `ISP_Tuning_Awb_Get/SetCwfShift`: T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl
-- `ISP_Tuning_Awb_Get/SetRgbCoefft`: T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58
+- `ISP_Tuning_Awb_Get/SetRgbCoefft`: T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58 T40: FAIL apitest agg47 2026-10-26 192.168.10.184: Awb_GetRgbCoefft (cid 0x0800009b) oopses the T40 driver (Unable to handle kernel paging request, epc c03d1920).
 - `ISP_Tuning_AwbSync`: T23: the vendor libimp 1.3.0 does not export it (only IMP_ISP_MultiCamera_Tuning_AwbSync, which sends control 0x8000011 for sensor 1 only); the stock kernel module rejects 0x8000011 in s_ctrl and g_ctrl (-1, checked in the emulator on the stock module), so the open driver's -EINVAL is the vendor behaviour (class a)
 - `ISP_Tuning_Get/SetAeAttr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 - `ISP_Tuning_Get/SetAeComp`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetAeExprInfo`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #4 (AE control).
-- `ISP_Tuning_Get/SetAeHist`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-- `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†
+- `ISP_Tuning_Get/SetAeHist`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor† T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetAeScenceAttr`: audit: reaches the driver/kernel; T40: Get and Set device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T41: device-tested through main-matrix feature #4 (AE control).
+- `ISP_Tuning_Get/SetAeSpeed`: T40: apitest agg47 2026-10-26 192.168.10.184.
 - `ISP_Tuning_Get/SetAeStrategy`: T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl
-- `ISP_Tuning_Get/SetAeTargetList`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-- `ISP_Tuning_Get/SetAeWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; T41: driver claude/t41-connect (agg-25); host tests 58/58
-- `ISP_Tuning_Get/SetAfHist`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
-- `ISP_Tuning_Get/SetAfWeight`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
+- `ISP_Tuning_Get/SetAeTargetList`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAeWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; T41: driver claude/t41-connect (agg-25); host tests 58/58 T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_Get/SetAfHist`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAfWeight`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetAwbAttr`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #8 (White balance (AWB, presets, manual)).
-- `ISP_Tuning_Get/SetAwbClust`: T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only
-- `ISP_Tuning_Get/SetAwbCtTrend`: T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only
-- `ISP_Tuning_Get/SetAwbHist`: T23+T31: stock driver also no-op (OEM-same)
-- `ISP_Tuning_Get/SetAwbWeight`: T23+T31: stock driver also no-op (OEM-same) T41: device-tested through main-matrix feature #8 (White balance (AWB, presets, manual)).
-- `ISP_Tuning_Get/SetAwbZoneWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test
+- `ISP_Tuning_Get/SetAwbClust`: T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAwbConvergeStep`: T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_Get/SetAwbCtTrend`: T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAwbCtTrendOffset`: T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_Get/SetAwbHist`: T23+T31: stock driver also no-op (OEM-same) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetAwbWeight`: T23+T31: stock driver also no-op (OEM-same) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_Get/SetAwbZoneWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test T23: apitest agg47 2026-10-26 192.168.10.30.
 - `ISP_Tuning_Get/SetWB`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `ISP_Tuning_GetAE_IT_MAX`: audit: reaches the driver/kernel
+- `ISP_Tuning_GetAE_IT_MAX`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAeAtList`: T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_GetAeEvList`: T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_GetAeHist_Origin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†
-- `ISP_Tuning_GetAeLuma`: audit: reaches the driver/kernel
-- `ISP_Tuning_GetAeState`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-- `ISP_Tuning_GetAeStatistics`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #4 (AE control).
-- `ISP_Tuning_GetAeZone`: T10+T20: the stock T10/T20 kernel module does not serve cid 0x800002f; -1 as on the vendor stack (apitest N/A)
-- `ISP_Tuning_GetAFMetrices`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
-- `ISP_Tuning_GetAfZone`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost
-- `ISP_Tuning_GetAWBCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test; used by: T23: raptor; T31: prudynt†, raptor†
-- `ISP_Tuning_GetAwbGlobalStatistics`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #8 (White balance (AWB, presets, manual)).
-- `ISP_Tuning_GetAwbStatistics`: T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)
-- `ISP_Tuning_GetAwbZone`: T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23/T31: vendor 1.1.x ABI `(IMPISPAWBZone *)`, 675-byte block with the stock scaling (`claude/awbzone`, device-tested 2026-10-12 on both), 0 only with fresh statistics (driver `-EAGAIN` otherwise, needs open-tx-isp `claude/awbzone`), capability symbol `OpenIMP_Cap_AwbZone`; T40/T41: no vendor `GetAwbZone` (`GetAwbStatistics`); used by: T10/T20: prudynt†; T23/T31: prudynt†, raptor†, timps 1.10.2 (night colour trigger)
-- `ISP_Tuning_GetExpr`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `ISP_Tuning_GetWB_GOL_Statis`: audit: reaches the driver/kernel
-- `ISP_Tuning_GetWB_Statis`: audit: reaches the driver/kernel
+- `ISP_Tuning_GetAeLuma`: audit: reaches the driver/kernel T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAeState`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAeStatistics`: audit: reaches the driver/kernel T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_GetAeZone`: T10+T20: the stock T10/T20 kernel module does not serve cid 0x800002f; -1 as on the vendor stack (apitest N/A) T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAFMetrices`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAFMetricesInfo`: T40: FAIL apitest agg47 2026-10-26 192.168.10.184: GetAFMetricesInfo oopses the T40 driver (null deref at 0x4, epc c03b49d4).
+- `ISP_Tuning_GetAfStatistics`: T40: FAIL apitest agg47 2026-10-26 192.168.10.184: GetAfStatistics oopses the T40 driver (null deref, epc 801bf570).
+- `ISP_Tuning_GetAfZone`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAWBCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test; used by: T23: raptor; T31: prudynt†, raptor† T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetAwbGlobalStatistics`: audit: reaches the driver/kernel T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_GetAwbStatistics`: T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger) T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_GetAwbZone`: T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23/T31: vendor 1.1.x ABI `(IMPISPAWBZone *)`, 675-byte block with the stock scaling (`claude/awbzone`, device-tested 2026-10-12 on both), 0 only with fresh statistics (driver `-EAGAIN` otherwise, needs open-tx-isp `claude/awbzone`), capability symbol `OpenIMP_Cap_AwbZone`; T40/T41: no vendor `GetAwbZone` (`GetAwbStatistics`); used by: T10/T20: prudynt†; T23/T31: prudynt†, raptor†, timps 1.10.2 (night colour trigger) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetExpr`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetWB_GOL_Statis`: audit: reaches the driver/kernel T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_GetWB_Statis`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_SetAe_IT_MAX`: audit: reaches the driver/kernel T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetAeFreeze`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 - `ISP_Tuning_SetAwbCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test
@@ -1389,47 +1399,47 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### Encoder (and decoder)
 
-131 rows (72 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+131 rows (76 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `Decoder_*` | ❌ | ❌ | ❌ | ❌e | ❌ | · | · | 📋 | ❌ | ❌ | – |
 | `Encoder_ClearPoolId` | · | · | · | · | · | ? | 📋 | 📋 | · | · | – |
-| `Encoder_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_FlushStream` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | p† r† |
-| `Encoder_Get/SetChangeRef` | ⚠c | ⚠c | ⚠c | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
-| `Encoder_Get/SetChnAttrRcMode` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `Encoder_Get/SetChnColor2Grey` | 🔧h | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_CreateChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_CreateGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_DestroyGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_FlushStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `Encoder_Get/SetChangeRef` | ⚠c | ⚠c | ❌e | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
+| `Encoder_Get/SetChnAttrRcMode` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `Encoder_Get/SetChnColor2Grey` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetChnCrop` | ❌ | ❌ | ❌ | ✅ | ❌ | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnDemask` | ⚠c | ⚠c | · | · | · | · | · | · | · | · | – |
-| `Encoder_Get/SetChnDenoise` | ⚠c | ⚠c | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_Get/SetChnFrmRate` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `Encoder_Get/SetChnDenoise` | ❌e | ❌e | ❌e | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_Get/SetChnFrmRate` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ❌e | p† r† |
 | `Encoder_Get/SetChnFrmUsedMode` | ✅ | ✅ | ✅ | ✅ | 🔧h | · | 📋 | 📋 | · | · | – |
-| `Encoder_Get/SetChnGopAttr` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | – |
+| `Encoder_Get/SetChnGopAttr` | · | · | · | · | · | ✅ | · | · | ✅ | ❌e | – |
 | `Encoder_Get/SetChnH264Demask` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnH264Denoise` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnH264FrmUsedMode` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnHSkip` | ⚠c | ⚠c | ✅ | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetChnRcAttr` | ❌ | ❌ | · | · | · | · | · | · | · | · | – |
-| `Encoder_Get/SetChnROI` | ✅ | ✅ | ✅+ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_Get/SetChnRoiAttr` | · | · | · | · | · | · | · | · | ? | ⚠c | – |
+| `Encoder_Get/SetChnROI` | ✅ | ✅ | ✅+ | ❌e | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_Get/SetChnRoiAttr` | · | · | · | · | · | · | · | · | ✅ | ⚠c | – |
 | `Encoder_Get/SetChnSeiAttr` | · | · | · | · | · | · | · | · | 🔧h | ❌ | – |
 | `Encoder_Get/SetFisheyeEnableStatus` | ⚠c | ⚠c | ⚠c | ⚠c | ⚠c | ⚠c | 📋 | 📋 | ⚠c | ❌ | – |
 | `Encoder_Get/Setframelossthd` | · | · | · | ⚠c | · | · | · | · | · | · | – |
 | `Encoder_Get/SetGDRCfg` | · | · | · | ✅ | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_Get/SetH264TransCfg` | ⚠c | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_Get/SetH265TransCfg` | · | · | ✅○ | ✅○ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_Get/SetJpegeQl` | 🔧h | ✅ | ✅ | ✅ | ? | · | · | · | · | 🔧h | – |
-| `Encoder_Get/SetMaxStreamCnt` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
+| `Encoder_Get/SetJpegeQl` | ✅ | ✅ | ✅ | ✅ | ? | · | · | · | · | ✅ | – |
+| `Encoder_Get/SetMaxStreamCnt` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ❌e | ✅ | r† |
 | `Encoder_Get/SetMbRC` | ✅○ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
+| `Encoder_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `Encoder_Get/SetQpgMode` | · | · | ✅○ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_Get/SetStreamBufSize` | · | · | · | · | · | ✅ | · | · | ✅ | 🔧a | – |
-| `Encoder_Get/SetSuperFrameCfg` | 🔧h | ✅ | 🔧h | ✅ | ? | · | 📋 | 📋 | · | · | r† |
-| `Encoder_GetChnAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `Encoder_Get/SetStreamBufSize` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | – |
+| `Encoder_Get/SetSuperFrameCfg` | ❌e | ✅ | 🔧h | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_GetChnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `Encoder_GetChnAveBitrate` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `Encoder_GetChnEncType` | · | · | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `Encoder_GetChnEvalInfo` | · | · | · | · | · | 🔧h | · | · | · | · | r† |
@@ -1444,10 +1454,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_GetMotionQuality` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetPskipCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_GetSrdCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_GetStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_GetStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_InputJpege` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | t |
 | `Encoder_InputJpege_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `Encoder_InsertUserData` | 🔧a | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | – |
+| `Encoder_InsertUserData` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | – |
 | `Encoder_KernEnc_GetStatus` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_KernEnc_GetStream` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_KernEnc_Release` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1457,27 +1467,27 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_MultiProcessInit` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_PadFrame` | ❌ | ❌ | ❌ | ? | ❌ | · | 📋 | 📋 | · | · | – |
 | `Encoder_PollingModuleStream` | · | · | ✅ | 🔧a | · | ✅ | · | · | ✅ | 🔧a | – |
-| `Encoder_PollingStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_Query` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
-| `Encoder_RegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_ReleaseStream` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_PollingStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_Query` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `Encoder_RegisterChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_ReleaseStream` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_RequestGDR` | · | · | · | ✅ | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_RequestIDR` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_RequestIDR` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_RequestPskip` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetAutoVui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetAvpuBsShare` | · | · | · | · | · | · | · | · | · | 🔧h | – |
 | `Encoder_SetAvpuBsSize` | · | · | · | · | · | · | · | · | · | ❌ | – |
 | `Encoder_SetAvpuJpegQp` | · | · | · | · | · | · | · | · | · | ❌ | – |
-| `Encoder_SetbufshareChn` | · | · | · | · | · | 🔧h | · | · | ✅ | 🔧h | p† r† |
-| `Encoder_SetChnBitRate` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ✅ | t t† |
+| `Encoder_SetbufshareChn` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | p† r† |
+| `Encoder_SetChnBitRate` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ❌e | t t† |
 | `Encoder_SetChnEntropyMode` | · | · | · | · | · | ✅ | · | · | · | · | – |
-| `Encoder_SetChnGopLength` | · | · | · | · | · | ✅ | · | · | ✅ | ✅ | – |
+| `Encoder_SetChnGopLength` | · | · | · | · | · | ✅ | · | · | ✅ | ❌e | – |
 | `Encoder_SetChnHSkipBlackEnhance` | ⚠c | ⚠c | ⚠c | ✅ | ⚠c | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetChnInitQP` | · | · | · | ✅ | · | · | · | · | · | · | – |
 | `Encoder_SetChnMapRoi` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ⚠c | – |
 | `Encoder_SetChnMaxPictureSize` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ⚠c | r† |
 | `Encoder_SetChnQp` | · | · | · | · | · | ✅ | · | · | · | · | – |
-| `Encoder_SetChnQpBounds` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ✅ | t t† |
+| `Encoder_SetChnQpBounds` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ❌e | t t† |
 | `Encoder_SetChnQpBoundsPerFrame` | · | · | · | · | · | · | 📋 | 📋 | · | ✅ | – |
 | `Encoder_SetChnQpgAI` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetChnQpgAI_Yuv` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -1485,12 +1495,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetChnQpgAIEnable_Yuv` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetChnQpIPDelta` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `Encoder_SetChnRcTrigLevel` | ? | ? | ❌ | ? | ? | · | 📋 | 📋 | · | · | – |
-| `Encoder_SetChnResizeMode` | · | · | · | · | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `Encoder_SetChnResizeMode` | · | · | · | · | ? | ✅ | 📋 | 📋 | ✅ | ✅ | – |
 | `Encoder_SetChnRfcDropFrameLines` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `Encoder_SetChnRfcRatio` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `Encoder_SetDefaultParam` | · | · | · | · | · | ✅ | 📋 | 📋 | ✅ | ✅ | t t† |
 | `Encoder_SetFrameRelease` | · | · | · | · | · | ✅○ | · | · | ✅○ | ❌ | – |
-| `Encoder_SetGOPSize` | 🔧a | 🔧a | 🔧a | ✅ | ? | · | 📋 | 📋 | · | · | r† |
+| `Encoder_SetGOPSize` | ✅ | ✅ | ✅ | ✅ | ? | · | 📋 | 📋 | · | · | r† |
 | `Encoder_SetH264Vui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetH265Vui` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetIvpuBsSize` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
@@ -1506,9 +1516,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetPskipCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetRdBufShare` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 | `Encoder_SetSrdCfg` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `Encoder_StartRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_StopRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `Encoder_UnRegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_StartRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_StopRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `Encoder_UnRegisterChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `Encoder_VbmAlloc` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
 | `Encoder_VbmAlloc_Ex` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `Encoder_VbmFree` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | t |
@@ -1525,80 +1535,88 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_YuvRequestIDR` | · | · | · | ✅ | · | · | · | · | · | · | t |
 | `Encoder_YuvSetCrop` | · | · | · | ✅ | · | · | · | · | · | · | – |
 
-<details><summary>Notes and references (72)</summary>
+<details><summary>Notes and references (80)</summary>
 
-- `Encoder_CreateChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_CreateGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_DestroyChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_FlushStream`: all: drops the encoded stream nobody fetched (agg-25)
-- `Encoder_Get/SetChangeRef`: T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test
-- `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
-- `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25)
-- `Encoder_Get/SetChnCrop`: audit: userspace implementation; T10/T20/T21: the vendor libimp exports it without a header (i264e_set_param, x/y/w/h multiples of 16); OpenIMP does not (miss, found by `make export-check` 2026-10-11, a link shim is an open question)
+- `Encoder_CreateChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_CreateGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_DestroyChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_DestroyGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_FlushStream`: all: drops the encoded stream nobody fetched (agg-25) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Get/SetChangeRef`: T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs "unsupport to change ref channel" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs "unsupport to change ref channel"); host test T21: FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChangeRef: ret=-1 ChangeRef = 0; Encoder_SetChangeRef: ret=0 ChangeRef set 1, read back 0. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChnAttrRcMode`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
+- `Encoder_Get/SetChnColor2Grey`: T10+T20+T21: codes grey pictures (agg-25) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChnCrop`: audit: userspace implementation; T10/T20/T21: the vendor libimp exports it without a header (i264e_set_param, x/y/w/h multiples of 16); OpenIMP does not (miss, found by `make export-check` 2026-10-11, a link shim is an open question) T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnDemask`: T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c) T10/T20 3.12.0 (0x49160/0x492d8): three words stored in rcAttr.attrDemask without a created check, as the vendor (apitest PASS on T10, T20); the vendor also pokes an i264e flag word, the Helix path has no demask stage (class c)
-- `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first
-- `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test
-- `Encoder_Get/SetChnGopAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_Get/SetChnDenoise`: T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T10: FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T20: FAIL apitest agg47 2026-10-26 192.168.10.107: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T21: FAIL apitest agg47 2026-10-26 192.168.10.24: Encoder_GetChnDenoise: ret=0 initial en 0 type 0 0/0; Encoder_SetChnDenoise: ret=0 en type 1 IQp 2 PQp 3, read back en 0 type 0 2/3. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChnFrmRate`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnFrmRate: ret=0 15/1; Encoder_SetChnFrmRate: ret=0 set 10/1, read back 15/1.
+- `Encoder_Get/SetChnFrmUsedMode`: T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetChnGopAttr`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnGopAttr: ret=0 mode 0x2 length 60 (created 30) maxSameSence 2; Encoder_SetChnGopAttr: ret=0 restore attr, length 60.
 - `Encoder_Get/SetChnH264Demask`: T10/T20 (class d, 2026-10-10): only the 3.9.0 libimp exports the H264-named variants; 3.12.0 and the header of OpenIMP use ChnDemask/ChnDenoise/ChnFrmUsedMode, and the 3.9.0 IMPEncoderRcAttr/CHNAttr layout differs from the one OpenIMP implements, so these calls would be dead code (an app built for 3.9.0 breaks on the structures first) T10/T20 (class d, 2026-10-10): only the 3.9.0 libimp exports the H264-named variants; 3.12.0 and the header of OpenIMP use ChnDemask/ChnDenoise/ChnFrmUsedMode, and the 3.9.0 IMPEncoderRcAttr/CHNAttr layout differs from the one OpenIMP implements, so these calls would be dead code (an app built for 3.9.0 breaks on the structures first)
 - `Encoder_Get/SetChnH264Denoise`: T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask
 - `Encoder_Get/SetChnH264FrmUsedMode`: T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask T10/T20 (class d): 3.9.0-only name, see Encoder_Get/SetChnH264Demask
-- `Encoder_Get/SetChnHSkip`: T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1)
+- `Encoder_Get/SetChnHSkip`: T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetChnRcAttr`: T10/T20 (class d): 3.9.0-only call (IMPEncoderRcAttr of that SDK generation), see Encoder_Get/SetChnH264Demask T10/T20 (class d): 3.9.0-only call (IMPEncoderRcAttr of that SDK generation), see Encoder_Get/SetChnH264Demask
-- `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md
-- `Encoder_Get/SetChnRoiAttr`: not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md)
+- `Encoder_Get/SetChnROI`: T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: FAIL apitest agg47 2026-10-26 192.168.10.30: Encoder_GetChnROI: ret=0 enabled 1; Encoder_SetChnROI: ret=0 roi 0 (64,64)-(319,255) dQP -4, read back en 1 (64,64)-(304,240) qp -4.
+- `Encoder_Get/SetChnRoiAttr`: not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md) T40: apitest agg47 2026-10-26 192.168.10.184.
 - `Encoder_Get/SetFisheyeEnableStatus`: T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code
 - `Encoder_Get/Setframelossthd`: T23: kept for getter only (documented in source); class d: the vendor re-encodes oversized frames at a higher QP inside its closed encoder; the Helix session has no such hook (would need a re-encode path in the encoder, low value); vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 validates and stores the threshold for the closed encoder; T31 1.1.6 exports no frame-loss function (n.a.) T23: kept for getter only (documented in source); class d: the vendor re-encodes oversized frames at a higher QP inside its closed encoder; the Helix session has no such hook (would need a re-encode path in the encoder, low value); vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 validates and stores the threshold for the closed encoder; T31 1.1.6 exports no frame-loss function (n.a.)
-- `Encoder_Get/SetGDRCfg`: audit: userspace implementation
-- `Encoder_Get/SetH264TransCfg`: T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested
+- `Encoder_Get/SetGDRCfg`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetH264TransCfg`: T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_Get/SetH265TransCfg`: T21+T23: checked and dropped like the vendor libimp, Get returns zeros (T23 vendor 1.3.0: channel below 9 and non-NULL return 0, nothing stored, Get zero-fills the 8 bytes; matched 2026-10-10, device-tested on a T23 camera)
-- `Encoder_Get/SetJpegeQl`: T10+T20+T21: reaches the running codec live (host test; apitest 2026-10-06: marker check and live change PASS on T20/T21); T41: live and at CreateChn (host)
-- `Encoder_Get/SetMaxStreamCnt`: audit: userspace implementation
-- `Encoder_Get/SetMbRC`: T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25) T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25)
-- `Encoder_Get/SetPool`: audit: userspace implementation
-- `Encoder_Get/SetQpgMode`: T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release
-- `Encoder_Get/SetStreamBufSize`: audit: userspace implementation
-- `Encoder_Get/SetSuperFrameCfg`: T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release
-- `Encoder_GetChnAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_GetChnAveBitrate`: audit: userspace implementation
-- `Encoder_GetChnEncType`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_Get/SetJpegeQl`: T10+T20+T21: reaches the running codec live (host test; apitest 2026-10-06: marker check and live change PASS on T20/T21); T41: live and at CreateChn (host) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Get/SetMaxStreamCnt`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: FAIL apitest agg47 2026-10-26 192.168.10.184: Encoder_GetMaxStreamCnt: ret=0 2; Encoder_SetMaxStreamCnt: ret=0 refused on a created channel (before CreateChn only): ret 0, count stays 3 (was 2). T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Get/SetMbRC`: T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25) T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetPool`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Get/SetQpgMode`: T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_Get/SetStreamBufSize`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Get/SetSuperFrameCfg`: T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release T10: FAIL apitest agg47 2026-10-26 192.168.10.31: Encoder_GetSuperFrameCfg: ret=0 initial mode 2 I 19660800 P 14043429; Encoder_SetSuperFrameCfg: ret=-1 mode 1 I 400000 P 200000, read back mode 2 I 19660800 P 14043429 prio 0. T20: apitest agg47 2026-10-26 192.168.10.107. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_GetChnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_GetChnAveBitrate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `Encoder_GetChnEncType`: audit: userspace implementation T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_GetChnEvalInfo`: T31: claude/t23-enc-rest (not in agg-25)
-- `Encoder_GetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25)
-- `Encoder_GetFd`: audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_GetGOPSize`: T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test
-- `Encoder_GetStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_InsertUserData`: audit: userspace implementation; T20/T21/T23: emits a user_data_unregistered SEI (OEM UUID) in front of the next picture, found in the next 30 frames (apitest PASS); T10 shares the T20 build, not re-tested
-- `Encoder_PollingModuleStream`: audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS)
-- `Encoder_PollingStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_Query`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_RegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_ReleaseStream`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_RequestGDR`: audit: userspace implementation
-- `Encoder_RequestIDR`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `Encoder_GetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25) T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_GetFd`: audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_GetGOPSize`: T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_GetStream`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_InputJpege`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_InsertUserData`: audit: userspace implementation; T20/T21/T23: emits a user_data_unregistered SEI (OEM UUID) in front of the next picture, found in the next 30 frames (apitest PASS); T10 shares the T20 build, not re-tested T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_PollingModuleStream`: audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS) T21: apitest agg47 2026-10-26 192.168.10.24. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
+- `Encoder_PollingStream`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_Query`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_RegisterChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_ReleaseStream`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_RequestGDR`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_RequestIDR`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `Encoder_SetAvpuBsShare`: T41: exported by the OpenIMP build (corrected 2026-10-26 from miss).
-- `Encoder_SetbufshareChn`: vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only
-- `Encoder_SetChnBitRate`: audit: userspace implementation T41: device-tested through main-matrix feature #26 (Rate-control mode (CBR/VBR/FixQP/Capped*/SMART)).
-- `Encoder_SetChnEntropyMode`: audit: userspace implementation
-- `Encoder_SetChnGopLength`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_SetChnHSkipBlackEnhance`: T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test
-- `Encoder_SetChnInitQP`: audit: userspace implementation
-- `Encoder_SetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only)
-- `Encoder_SetChnQp`: audit: userspace implementation
-- `Encoder_SetChnQpBounds`: audit: userspace implementation T41: device-tested through main-matrix feature #27 (RC parameters (QP steps, staticTime, changePos, qualityLvl, I bias)).
-- `Encoder_SetChnQpBoundsPerFrame`: audit: userspace implementation T41: device-tested through main-matrix feature #27 (RC parameters (QP steps, staticTime, changePos, qualityLvl, I bias)).
-- `Encoder_SetChnQpIPDelta`: audit: userspace implementation
-- `Encoder_SetChnResizeMode`: audit: userspace implementation
-- `Encoder_SetDefaultParam`: audit: userspace implementation T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_SetFrameRelease`: T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)
-- `Encoder_SetGOPSize`: audit: reaches the driver/kernel; userspace implementation
+- `Encoder_SetbufshareChn`: vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_SetChnBitRate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 400 kbit/s, read back 512.
+- `Encoder_SetChnEntropyMode`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `Encoder_SetChnGopLength`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 25, read back 60.
+- `Encoder_SetChnHSkipBlackEnhance`: T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_SetChnInitQP`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_SetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_SetChnQp`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `Encoder_SetChnQpBounds`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 22..44, read back 20..45.
+- `Encoder_SetChnQpBoundsPerFrame`: audit: userspace implementation T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_SetChnQpIPDelta`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `Encoder_SetChnResizeMode`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_SetDefaultParam`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_SetFrameRelease`: T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
+- `Encoder_SetGOPSize`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `Encoder_SetMultiSectionMode`: T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.) T23: kept for getter only (documented in source); class d: slice/section split of the vendor i264e encoder, the Helix session cannot be given it; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T23 1.3.0 range-checks the arguments and stores them in the global block the closed i264e reads; T31 1.1.6 exports no multi-section function (n.a.)
-- `Encoder_StartRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_StopRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_UnRegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `Encoder_YuvGetCrop`: audit: reaches the driver/kernel
-- `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel
-- `Encoder_YuvSetCrop`: audit: reaches the driver/kernel
+- `Encoder_StartRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_StopRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_UnRegisterChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `Encoder_VbmAlloc`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_VbmFree`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_VbmP2V`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_VbmV2P`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvEncode`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvExit`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvGetCrop`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvInit`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvRequestIDR`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
+- `Encoder_YuvSetCrop`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
 
 </details>
 
@@ -1612,36 +1630,36 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FB_*` | · | · | · | · | · | ❌ | · | · | · | · | – |
 | `FrameSource_ChnStatQuery` | · | · | · | · | · | ✅ | · | · | · | · | – |
 | `FrameSource_ClearPoolId` | · | · | · | · | · | ? | 📋 | 📋 | · | · | – |
-| `FrameSource_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_CreateChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_CreateChn_Ext` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `FrameSource_CreateJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_DequeueBuffer` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_DestroyJoint` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_DisableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `FrameSource_EnableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_DisableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `FrameSource_ExternInject_CreateChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_ExternInject_DestroyChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_ExternInject_DisableChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_ExternInject_EnableChn` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_Get/SetChnAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
-| `FrameSource_Get/SetChnFifoAttr` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧h | p† r† |
-| `FrameSource_Get/SetDelay` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧h | r† |
+| `FrameSource_Get/SetChnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `FrameSource_Get/SetChnFifoAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `FrameSource_Get/SetDelay` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_Get/SetDirectModeAttr` | · | · | · | ✅ | · | · | · | · | · | · | – |
-| `FrameSource_Get/SetFrameDepth` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ⚠c | p p† r r† t |
-| `FrameSource_Get/SetI2dAttr` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ✅ | r† |
-| `FrameSource_Get/SetMaxDelay` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧h | r† |
+| `FrameSource_Get/SetFrameDepth` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ⚠c | p p† r r† t |
+| `FrameSource_Get/SetI2dAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | r† |
+| `FrameSource_Get/SetMaxDelay` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | · | ⚠c | r† |
 | `FrameSource_GetChnAttr_Expand` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetDirectMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_GetFrame` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
+| `FrameSource_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
 | `FrameSource_GetFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_GetJointByHandler` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `FrameSource_GetTimedFrame` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧h | r† |
+| `FrameSource_GetTimedFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_PM_Resume` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_PM_Suspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_QueueBuffer` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
-| `FrameSource_ReleaseFrame` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
+| `FrameSource_ReleaseFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
 | `FrameSource_ReleaseFrameEx` | · | · | · | · | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `FrameSource_SetChnAttr_Expand` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_SetChnRotate` | · | · | · | · | · | ✅ | · | · | · | · | t |
@@ -1652,32 +1670,32 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_SetSource` | · | · | · | · | ? | 🔧a | · | · | · | · | – |
 | `FrameSource_SetSubStreamOnlineMode` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `FrameSource_SetYuvAlign` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `FrameSource_SnapFrame` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧h | r† |
+| `FrameSource_SnapFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_SnapRaw_End` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_SnapRaw_Start` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_UpdateChnLut` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 
 <details><summary>Notes and references (19)</summary>
 
-- `FrameSource_ChnStatQuery`: audit: userspace implementation
-- `FrameSource_CreateChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_DestroyChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_DisableChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_EnableChn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_Get/SetChnAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it
-- `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)
-- `FrameSource_Get/SetDirectModeAttr`: audit: userspace implementation
-- `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps
-- `FrameSource_Get/SetI2dAttr`: T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1
-- `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)
-- `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only
-- `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_GetTimedFrame`: T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)
-- `FrameSource_ReleaseFrame`: audit: reaches the driver/kernel; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps T41: device-tested through main-matrix feature #30 (Frame source / VBM pool).
-- `FrameSource_SetChnRotate`: audit: userspace implementation
+- `FrameSource_ChnStatQuery`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `FrameSource_CreateChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_DestroyChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_DisableChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_EnableChn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetChnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetChnFifoAttr`: T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetDirectModeAttr`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30.
+- `FrameSource_Get/SetFrameDepth`: T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
+- `FrameSource_Get/SetI2dAttr`: T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_GetTimedFrame`: T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_ReleaseFrame`: audit: reaches the driver/kernel; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `FrameSource_SetChnRotate`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
 - `FrameSource_SetSource`: audit: userspace implementation
-- `FrameSource_SnapFrame`: T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)
+- `FrameSource_SnapFrame`: T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 
 </details>
 
@@ -1700,38 +1718,38 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_ShowOsdRgn` | · | · | · | 🔧a | · | · | 📋 | 📋 | ✅ | ❌e | r† |
 | `OSD_Alloc` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 | `OSD_AttachToGroup` | 🔧h | 🔧h | 🔧h | 🔧a | 🔧a | 🔧a | 📋 | 📋 | 🔧h | ✅ | – |
-| `OSD_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_CreateRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_CreateGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_CreateRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_CreateRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_DestroyRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_DestroyGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_DestroyRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_DestroyRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_DetachToGroup` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `OSD_Exit_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_Get/SetGrpRgnAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
-| `OSD_Get/SetRgnAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
+| `OSD_Get/SetGrpRgnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_Get/SetRgnAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_Get/SetRgnAttr_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_GetRegionLuma` | · | · | · | · | · | · | · | · | · | ❌ | – |
 | `OSD_GetRgnAttr_ISPPic` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_Init_ISP` | · | · | · | ? | · | · | 📋 | 📋 | ? | ❌ | – |
-| `OSD_RegisterRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_RgnCreate_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
-| `OSD_RgnRegister_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
-| `OSD_SetGroupCallback` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_SetMosaic` | · | · | · | ✅ | · | · | 📋 | 📋 | 🔧h | 🔧a | – |
-| `OSD_SetPoolSize` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† t t† |
+| `OSD_RegisterRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_RgnCreate_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
+| `OSD_RgnRegister_Query` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
+| `OSD_SetGroupCallback` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ❌ | – |
+| `OSD_SetMosaic` | · | · | · | ✅ | · | · | 📋 | 📋 | ✅ | ✅ | – |
+| `OSD_SetPoolSize` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_SetPoolSize_ISP` | · | · | · | 🔧h | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `OSD_SetRgnAttr_PicISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_SetRgnAttrWithTimestamp` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | 🔧a | r† |
-| `OSD_ShowRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_SetRgnAttrWithTimestamp` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `OSD_ShowRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `OSD_ShowRgn_ISP` | · | · | · | 🔧a | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `OSD_Start` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_Stop` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `OSD_UnRegisterRgn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `OSD_UpdateRgnAttrData` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† |
+| `OSD_Start` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_Stop` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `OSD_UnRegisterRgn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `OSD_UpdateRgnAttrData` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `OSD_UpdateRgnAttrData_ISP` | · | · | · | ? | · | · | 📋 | 📋 | · | · | – |
 
-<details><summary>Notes and references (27)</summary>
+<details><summary>Notes and references (28)</summary>
 
 - `ISP_Tuning_CreateOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `ISP_Tuning_DestroyOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
@@ -1741,25 +1759,26 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_SetOsdRgnAttr`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `ISP_Tuning_ShowOsdRgn`: T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)
 - `OSD_AttachToGroup`: T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_CreateGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_CreateRgn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_DestroyRgn`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_Get/SetGrpRgnAttr`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_Get/SetRgnAttr`: audit: reaches the driver/kernel; userspace implementation; T40: the PIC/COVER test uses the set path; Get not checked, so host T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_CreateGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_CreateRgn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_DestroyGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_DestroyRgn`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_Get/SetGrpRgnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_Get/SetRgnAttr`: audit: reaches the driver/kernel; userspace implementation; T40: the PIC/COVER test uses the set path; Get not checked, so host T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_GetRegionLuma`: T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either T23: declared in the 1.1.x/1.3.0 headers but exported by none of the 8 vendor libimp builds (nm); a vendor-stack application cannot link it either
-- `OSD_RegisterRgn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_RgnCreate_Query`: audit: userspace implementation
-- `OSD_RgnRegister_Query`: audit: userspace implementation
-- `OSD_SetMosaic`: audit: userspace implementation
-- `OSD_SetPoolSize`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `OSD_RegisterRgn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_RgnCreate_Query`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_RgnRegister_Query`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_SetGroupCallback`: T40: apitest agg47 2026-10-26 192.168.10.184.
+- `OSD_SetMosaic`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_SetPoolSize`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `OSD_SetPoolSize_ISP`: T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)
-- `OSD_SetRgnAttrWithTimestamp`: audit: reaches the driver/kernel
-- `OSD_ShowRgn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_Start`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_Stop`: audit: userspace implementation T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_UnRegisterRgn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
-- `OSD_UpdateRgnAttrData`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #28 (OSD: text, bitmap, rectangle, line, cover).
+- `OSD_SetRgnAttrWithTimestamp`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_ShowRgn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_Start`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_Stop`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_UnRegisterRgn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `OSD_UpdateRgnAttrData`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 
 </details>
 
@@ -1769,97 +1788,97 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `IVS_CreateBaseMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_CreateChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_CreateGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_CreateMoveInterface` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_DestroyBaseMoveInterface` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_DestroyChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_DestroyGroup` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_DestroyMoveInterface` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_Get/SetParam` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | 🔧h | ✅ | r† t t† |
-| `IVS_GetResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_PollingResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_RegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateBaseMoveInterface` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `IVS_CreateChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_CreateMoveInterface` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_DestroyBaseMoveInterface` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `IVS_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_DestroyGroup` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_DestroyMoveInterface` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_Get/SetParam` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_GetResult` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_PollingResult` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_RegisterChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `IVS_ReleaseData` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | 🔧h | ✅ | r† |
-| `IVS_ReleaseResult` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_StartRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `IVS_StopRecvPic` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `IVS_UnRegisterChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_ReleaseResult` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_StartRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `IVS_StopRecvPic` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `IVS_UnRegisterChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 
 <details><summary>Notes and references (17)</summary>
 
-- `IVS_CreateBaseMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateGroup`: audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21 T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_CreateMoveInterface`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyBaseMoveInterface`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyGroup`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_DestroyMoveInterface`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_Get/SetParam`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_GetResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_PollingResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_RegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_CreateBaseMoveInterface`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_CreateChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_CreateGroup`: audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21 T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_CreateMoveInterface`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_DestroyBaseMoveInterface`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_DestroyChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_DestroyGroup`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_DestroyMoveInterface`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_Get/SetParam`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_GetResult`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_PollingResult`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_RegisterChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `IVS_ReleaseData`: audit: userspace implementation T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_ReleaseResult`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_StartRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_StopRecvPic`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
-- `IVS_UnRegisterChn`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #29 (IVS / motion detection).
+- `IVS_ReleaseResult`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_StartRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_StopRecvPic`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `IVS_UnRegisterChn`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 
 </details>
 
 ### Audio
 
-79 rows (62 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+79 rows (60 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `ADEC_ReleaseDecoder` | · | · | · | · | · | · | · | · | · | · | – |
 | `AENC_* / ADEC_*` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧h | r† |
 | `AENC_ReleaseEncoder` | · | · | · | · | · | · | · | · | · | · | – |
-| `AI_Disable` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_Disable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_DisableAec` | ✅r | ✅r | 🔧a | ✅r | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_DisableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_DisableAgc` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableAgc` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_DisableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_DisableChn` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_DisableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_DisableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_DisableHpf` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableHpf` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_DisableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `AI_DisableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_DisableNs` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_Enable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_DisableNs` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_Enable` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableAec` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AI_EnableAecRefFrame` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_EnableAgc` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableAgc` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableAlgo` | · | · | · | ✅ | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableChn` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableDrcAndEq` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `AI_EnableGetRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
-| `AI_EnableHpf` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableHpf` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_EnableHs` | · | · | · | ✅ | · | · | 📋 | 📋 | ❌ | ❌ | – |
 | `AI_EnableLpf` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_EnableNs` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_EnableNs` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_Get/SetAlcGain` | · | · | ✅ | · | · | ✅ | · | · | · | · | t |
-| `AI_Get/SetChnParam` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
-| `AI_Get/SetGain` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_Get/SetPubAttr` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_Get/SetVol` | 🔧h | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_Get/SetChnParam` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_Get/SetDigitalGain` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ❌ | – |
+| `AI_Get/SetGain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_Get/SetPubAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_Get/SetVol` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_GetAlgoOrder` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
+| `AI_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `AI_GetFrameAndRaw` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `AI_GetFrameAndRef` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
-| `AI_PollingFrame` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_ReleaseFrame` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† t t† |
-| `AI_Set_WebrtcProfileIni_Path` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ? | 🔧a | r† |
+| `AI_PollingFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_ReleaseFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `AI_Set_WebrtcProfileIni_Path` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `AI_SetAgcMode` | · | · | · | · | · | ✅ | · | · | · | · | – |
 | `AI_SetAlgoOrder` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_SetHpfCoFrequency` | · | · | · | 🔧h | · | 🔧h | 📋 | 📋 | ? | 🔧h | p† r† |
+| `AI_SetHpfCoFrequency` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `AI_SetLpfCoFrequency` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `AI_SetVolMute` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧h | r† |
+| `AI_SetVolMute` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
 | `AO_CacheSwitch` | 🔧h | 🔧h | 🔧h | ✅ | ? | 🔧h | 📋 | 📋 | ? | 🔧h | r† |
 | `AO_ClearChnBuf` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | r† t t† |
 | `AO_Disable` | ✅r | ✅r | 🔧a | ✅ | ? | ✅r | 📋 | 📋 | ? | 🔧a | p† r† t t† |
@@ -1895,37 +1914,42 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `DMIC_*` | · | · | · | · | 🔧a | 🔧a | 📋 | 📋 | ❌e | ❌e | r† |
 | `DMIC_DisableAecRefFrame` | · | · | · | · | 🔧a | · | 📋 | 📋 | ❌e | ❌e | r† |
 
-<details><summary>Notes and references (52)</summary>
+<details><summary>Notes and references (57)</summary>
 
 - `ADEC_ReleaseDecoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 - `AENC_ReleaseEncoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
-- `AI_Disable`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
+- `AI_Disable`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_DisableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AI_DisableAecRefFrame`: audit: reaches the driver/kernel
-- `AI_DisableAgc`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_DisableHpf`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_DisableNs`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_Enable`: audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
+- `AI_DisableAgc`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_DisableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_DisableChn`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_DisableHpf`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_DisableHs`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_DisableNs`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Enable`: audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_EnableAec`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
 - `AI_EnableAecRefFrame`: audit: reaches the driver/kernel
-- `AI_EnableAgc`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_EnableChn`: audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
-- `AI_EnableHpf`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_EnableNs`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_Get/SetAlcGain`: audit: reaches the driver/kernel; userspace implementation
-- `AI_Get/SetChnParam`: audit: userspace implementation
-- `AI_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike)
-- `AI_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation
-- `AI_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)
-- `AI_GetFrame`: audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)
+- `AI_EnableAgc`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_EnableAlgo`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_EnableChn`: audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_EnableHpf`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_EnableHs`: T23: apitest agg47 2026-10-26 192.168.10.30.
+- `AI_EnableNs`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Get/SetAlcGain`: audit: reaches the driver/kernel; userspace implementation T21: apitest agg47 2026-10-26 192.168.10.24. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `AI_Get/SetChnParam`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Get/SetDigitalGain`: T40: apitest agg47 2026-10-26 192.168.10.184.
+- `AI_Get/SetGain`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Get/SetPubAttr`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Get/SetVol`: audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_GetFrame`: audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AI_GetFrameAndRef`: audit: reaches the driver/kernel; userspace implementation
-- `AI_PollingFrame`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_ReleaseFrame`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
-- `AI_Set_WebrtcProfileIni_Path`: audit: userspace implementation
-- `AI_SetAgcMode`: audit: userspace implementation
-- `AI_SetHpfCoFrequency`: T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)
-- `AI_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware
+- `AI_PollingFrame`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_ReleaseFrame`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_Set_WebrtcProfileIni_Path`: audit: userspace implementation T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_SetAgcMode`: audit: userspace implementation T31: apitest agg47 2026-10-26 192.168.10.26.
+- `AI_SetHpfCoFrequency`: T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras) T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `AI_SetVolMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `AO_CacheSwitch`: all: implemented with vendor semantics, default off (OPENIMP_AO_CACHE=1 = vendor default on); quiet device test open (audio output only on T31)
 - `AO_ClearChnBuf`: audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `AO_Disable`: audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor† T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
@@ -1999,20 +2023,20 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `SU_Base_Get/SetAlarm` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_Base_Get/SetTime` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_Base_GetAlarmTimeMs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `SU_Base_GetDevID` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
-| `SU_Base_GetModelNumber` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `SU_Base_GetDevID` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | – |
+| `SU_Base_GetModelNumber` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | – |
 | `SU_Base_GetTimeMs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `SU_Base_GetVersion` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | p† r† |
+| `SU_Base_GetVersion` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `SU_Base_GetWakeupCount` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_Base_GetWkupMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_Base_PollingAlarm` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
-| `SU_Base_Raw2SUTime` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `SU_Base_Raw2SUTime` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | – |
 | `SU_Base_Reboot` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_Base_SetAlarmTimeMs` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_Base_SetWkupMode` | · | · | · | · | · | · | 📋 | 📋 | · | ❌e | – |
 | `SU_Base_Shutdown` | 🔧h | 🔧h | 🔧h | 🔧h | 🔧h | 🔧h | 📋 | 📋 | 🔧h | 🔧h | – |
 | `SU_Base_Suspend` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
-| `SU_Base_SUTime2Raw` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `SU_Base_SUTime2Raw` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | – |
 | `SU_Battery_GetCapacity` | · | · | · | · | ? | · | · | · | · | ❌ | – |
 | `SU_Battery_GetEvent` | · | · | · | · | ? | · | · | · | · | ❌ | – |
 | `SU_Battery_GetStatus` | · | · | · | · | ? | · | · | · | · | ❌ | – |
@@ -2029,10 +2053,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `SU_CIPHER_Free_Buffer` | · | · | · | · | · | · | 📋 | · | · | · | – |
 | `SU_CIPHER_Init` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_CIPHER_Malloc_Buffer` | · | · | · | · | · | · | 📋 | · | · | · | – |
-| `SU_Key_CloseEvent` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `SU_Key_CloseEvent` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | – |
 | `SU_Key_DisableEvent` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_Key_EnableEvent` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
-| `SU_Key_OpenEvent` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ? | 🔧a | – |
+| `SU_Key_OpenEvent` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | – |
 | `SU_Key_ReadEvent` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_LED_Command` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | – |
 | `SU_PM_AddThreadListen` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
@@ -2052,18 +2076,18 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `SU_PM_TheadSuspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_PM_ThreadResume` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `SU_PM_WaitThreadSuspend` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `System_Bind` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `System_Exit` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `System_GetBindbyDest` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
-| `System_GetCPUInfo` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† |
-| `System_GetTimeStamp` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
-| `System_GetVersion` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `System_Init` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Bind` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Exit` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_GetBindbyDest` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `System_GetCPUInfo` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `System_GetTimeStamp` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
+| `System_GetVersion` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_Init` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `System_MemPoolFree` | · | · | · | · | · | ✅ | 📋 | 📋 | · | · | – |
-| `System_MemPoolRequest` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | 🔧a | – |
-| `System_ReadReg32` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | r† |
-| `System_RebaseTimeStamp` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | 🔧a | p† r† |
-| `System_UnBind` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `System_MemPoolRequest` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | – |
+| `System_ReadReg32` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
+| `System_RebaseTimeStamp` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `System_UnBind` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `System_WriteReg32` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ? | 🔧a | r† |
 | `Virt_to_Phys` | ? | ? | ? | ? | ? | ? | 📋 | 📋 | · | · | – |
 
@@ -2077,16 +2101,16 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `SU_Base_EnableAlarm`: T20+T21+T23+T31: apitest N/A on the test boards, no /dev/rtc0 (the vendor libsysutils opens the same node)
 - `SU_Base_Get/SetAlarm`: T20+T21+T23+T31: apitest N/A on the test boards, no /dev/rtc0 (the vendor libsysutils opens the same node)
 - `SU_Base_Get/SetTime`: T20+T21+T23+T31: apitest N/A on the test boards, no /dev/rtc0 (the vendor libsysutils opens the same node)
-- `SU_Base_GetDevID`: audit: sysfs/ioctl/syscall path
-- `SU_Base_GetModelNumber`: audit: sysfs/ioctl/syscall path
-- `SU_Base_GetVersion`: audit: sysfs/ioctl/syscall path
+- `SU_Base_GetDevID`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `SU_Base_GetModelNumber`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `SU_Base_GetVersion`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `SU_Base_PollingAlarm`: T20+T21+T23+T31: apitest N/A on the test boards, no /dev/rtc0 (the vendor libsysutils opens the same node)
-- `SU_Base_Raw2SUTime`: audit: sysfs/ioctl/syscall path
+- `SU_Base_Raw2SUTime`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `SU_Base_Reboot`: audit: sysfs/ioctl/syscall path
 - `SU_Base_SetWkupMode`: T41: writes the mode number to /sys/power/state; neo PR #1 covers related struct overflows, unmerged T41: writes the mode number to /sys/power/state; neo PR #1 covers related struct overflows, unmerged
 - `SU_Base_Shutdown`: agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD
 - `SU_Base_Suspend`: audit: sysfs/ioctl/syscall path
-- `SU_Base_SUTime2Raw`: audit: sysfs/ioctl/syscall path
+- `SU_Base_SUTime2Raw`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `SU_Battery_GetCapacity`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs) T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
 - `SU_Battery_GetEvent`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs) T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
 - `SU_Battery_GetStatus`: T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs) T10 (4 builds, 3.9.0/3.12.0), T20 (4 builds, 3.9.0/3.12.0), T21 (4 builds, 1.0.33), T23 (8 builds) and T31 (28 builds): declared in the SDK header, exported by no vendor libsysutils (nm of every build); a vendor-stack application cannot link it either; OpenIMP/libsysutils match that (no battery driver on these SoCs)
@@ -2101,24 +2125,24 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `SU_CIPHER_Encrypt`: audit: sysfs/ioctl/syscall path
 - `SU_CIPHER_Exit`: audit: sysfs/ioctl/syscall path
 - `SU_CIPHER_Init`: audit: sysfs/ioctl/syscall path
-- `SU_Key_CloseEvent`: audit: sysfs/ioctl/syscall path
+- `SU_Key_CloseEvent`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
 - `SU_Key_DisableEvent`: audit: sysfs/ioctl/syscall path
 - `SU_Key_EnableEvent`: audit: sysfs/ioctl/syscall path
-- `SU_Key_OpenEvent`: audit: sysfs/ioctl/syscall path
+- `SU_Key_OpenEvent`: audit: sysfs/ioctl/syscall path T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
 - `SU_Key_ReadEvent`: audit: sysfs/ioctl/syscall path
 - `SU_LED_Command`: audit: sysfs/ioctl/syscall path
-- `System_Bind`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `System_Exit`: audit: reaches the driver/kernel; userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `System_GetBindbyDest`: audit: userspace implementation
-- `System_GetCPUInfo`: audit: reaches the driver/kernel; userspace implementation
-- `System_GetTimeStamp`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `System_GetVersion`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `System_Init`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
-- `System_MemPoolFree`: T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)
-- `System_MemPoolRequest`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T41: exported by the OpenIMP build (corrected 2026-10-26 from miss).
-- `System_ReadReg32`: audit: reaches the driver/kernel
-- `System_RebaseTimeStamp`: audit: userspace implementation
-- `System_UnBind`: audit: userspace implementation T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #22 (H.264).
+- `System_Bind`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_Exit`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_GetBindbyDest`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_GetCPUInfo`: audit: reaches the driver/kernel; userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_GetTimeStamp`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_GetVersion`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_Init`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_MemPoolFree`: T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T31: apitest agg47 2026-10-26 192.168.10.26.
+- `System_MemPoolRequest`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T41: apitest agg47 2026-10-26 192.168.10.34. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184.
+- `System_ReadReg32`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_RebaseTimeStamp`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
+- `System_UnBind`: audit: userspace implementation T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest agg47 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `System_WriteReg32`: audit: reaches the driver/kernel
 
 </details>
@@ -2153,3 +2177,4 @@ T30/T40 columns (added 2026-10-10, host/build evidence only; no T30 camera, T40 
 - **Not determined:** whether the T41 vendor handles `SetScalerLv`/`SetMaskBlock` (the open driver has no handler); T10 device effect of every T20/T21 fix; the _Sec/MultiCamera_ variants after the T23 fixes; vendor semantics of absolute-QP ROI under CBR on T20; T41 DMIC, ISP-OSD and I2D functions were not looked at again after the audit (all still error/missing); the T10/T20/T21 `GetChnRcAttr`-style missing encoder calls were not re-checked.
 - **Release-candidate imgfx run (2026-10-06):** it ran in the dark (night mode), so cases without a clear luma effect cannot be judged. The colour functions of T10/T20/T21/T31 must be repeated with daylight or room light before they are called dev; only the T21 brightness batch and the T21/T31 batches taken with light are used above.
 - **SU time/alarm/ADC:** apitest shows N/A on the test boards because the nodes are missing (`/dev/rtc0`, the ADC nodes); the vendor libsysutils opens the same nodes, so this is a board property, not a gap.
+- **Device API run on agg47 (2026-10-26, `tools/apitest`, reference text "apitest agg47 2026-10-26 <ip>" in the row):** one camera per SoC (T10 .31, T20 .107, T21 .24, T23 .30, T31 .26, T40 .184, T41 .34) with the apitest (all non-image functions, microphone only, no AO call), imgfx statistics (in-memory picture measurement) and, on T40, the t40_devtest PASS lines. Images: .31 .107 .24 .30 .26 = open-tx-isp 3a3a0506 + OpenIMP b511f82f; .184 and .34 = open-tx-isp 8d3504c8 + OpenIMP 9f2e8497. PASS promoted aud/host/? cells to dev; FAIL set err (each is a release-gate item); cells that record a cache/stub were not promoted. T40 .184: GetAfStatistics, GetAFMetricesInfo and Awb_GetRgbCoefft oops the T40 driver (not called in the run, FAIL recorded). T40/T41 functions of OpenIMP 9f2e8497 that `docs/api_exports.json` does not list yet were not merged (export list refresh pending).

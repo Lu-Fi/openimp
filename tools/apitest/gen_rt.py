@@ -11,7 +11,7 @@ SETS = [("T10", "T10/3.12.0/zh"), ("T20", "T20/3.12.0/zh"), ("T21", "T21/1.0.33/
 COND = {"T40": "defined(APITEST_T40)", "T41": "(defined(PLATFORM_T41) && !defined(APITEST_T40))"}
 # never round-tripped: hangs/oopses seen, hardware writes, mode switches, things that are not plain configuration
 SKIP = re.compile(r"AeExpList|SensorRegister|Reg|Bin|GPIO|Process|Freeze|Raw|Mask|Draw|OSD|Osd|HVFlip|HVFLIP|Hflip|Vflip|"
-                  r"CustomMode|Bypass|Module|Wdr|WDR|FaceAe|FaceAwb|FrameDrop|VideoDrop|Alarm|Sensor|CameraInput|StreamOut|Switch|"
+                  r"CustomMode|Bypass|Module|Wdr|WDR|FaceAe|FaceAwb|FrameDrop|VideoDrop|Alarm|Sensor|_Sec|CameraInput|StreamOut|Switch|"
                   r"RunningMode|AutoZoom|FrontCrop|WB$|Defog|Movestate|AeAlgo|AwbAlgo|Scaler|Ldc|LDC|DPC|Dpc|Hldc|HLDC|Expr|AeAttr|IntegrationTime|AwbAttr|AeScenceAttr|^WB|CCM|Csc|Gamma|Bcsh|Brightness|Contrast|Saturation|Sharpness|Sinter|Temper")
 mine = open(os.path.join(HERE, "at_isp.c")).read()
 pairs = {}

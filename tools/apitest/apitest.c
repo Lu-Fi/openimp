@@ -253,7 +253,7 @@ int main(int argc, char **argv)
     /* as the vendor samples (sample-common.c): the FrameSource channels run at
      * the sensor rate, their outFrmRate (15/1 here) does not drop frames */
 #if defined(APITEST_T40)
-    { uint32_t sn = 15, sd = 1; ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &sn, &sd) : -1; }
+    { uint32_t sn = 15, sd = 1; ret = (IMP_ISP_Tuning_SetSensorFPS && !getenv("APITEST_KEEP_FPS")) ? IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &sn, &sd) : -1; }
 #elif defined(PLATFORM_T41)
     { IMPISPSensorFps sf = { 15, 1 }; ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &sf) : -1; }
 #else

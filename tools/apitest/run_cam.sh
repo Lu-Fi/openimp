@@ -74,13 +74,13 @@ copy "$BIN/apitest_$lc" apitest
 
 # run NAME CMD  -  output streamed to the host, remote PID recorded for the cleanup, host watchdog 20 min
 run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
-  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=0 $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
+  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=0 $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
   echo "   rc=$? lines=$(wc -l < "$OUT/$name.log")" >> "$OUT/run.log"; }
 run apitest ./apitest "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
 if [ -z "$NOIMG" ] && [ -x "$BIN/imgfx_$lc" ]; then
   [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./imgfx "$SENSOR" "$I2C" "$W" "$H" /tmp/at/img
 fi
-[ "$SOC" = T40 ] && run devtest ./t40_devtest "$T40_MASK"
+[ "$SOC" = T40 ] && [ -z "$NODEV" ] && run devtest ./t40_devtest "$T40_MASK"
 cam 'dmesg | tail -n 40' > "$OUT/dmesg-tail.txt" 2>&1
 
 python3 "$D/results2json.py" --soc "$SOC" --ip "$IP" --image "$TAG" --date "$(date +%F)" --out "$OUT/result.json" \
