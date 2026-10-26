@@ -152,7 +152,7 @@ ivs-bench: ivs_move_bench_t20
 FS_SOURCES := fs_lifecycle_test.c \
 	$(ROOT)/src/framesource/framesource_tseries.c \
 	$(ROOT)/src/kernel_interface.c $(ROOT)/src/openimp_testpattern.c $(ROOT)/src/core/video_drop.c \
-	$(ROOT)/src/framesource/nv12_rotate.c
+	$(ROOT)/src/framesource/nv12_rotate.c $(ROOT)/src/core/openimp_mxu2.c
 FS_DEPS := $(FS_SOURCES) $(ROOT)/src/kernel_interface.h \
 	$(ROOT)/src/vbm_dq_step.h $(ROOT)/src/openimp_ready_event.h \
 	$(ROOT)/src/video_drop.h $(ROOT)/src/vbm_delay.h
