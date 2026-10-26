@@ -160,12 +160,16 @@ $(STREAM_LAYOUT_TEST_BIN): stream_layout_test.c \
 
 $(NV12_ROTATE_TEST_BIN): nv12_rotate_test.c \
 	$(PROJECT_DIR)/src/framesource/nv12_rotate.c \
-	$(PROJECT_DIR)/src/framesource/nv12_rotate.h
+	$(PROJECT_DIR)/src/framesource/nv12_rotate.h \
+	$(PROJECT_DIR)/src/framesource/nv12_rotate_mxu2_gen.h \
+	$(PROJECT_DIR)/src/core/openimp_mxu2.c \
+	$(PROJECT_DIR)/src/core/openimp_mxu2.h
 	mkdir -p "$(dir $@)"
-	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src \
+	$(CC) $(CFLAGS) -D_GNU_SOURCE -I$(PROJECT_DIR)/src \
 		nv12_rotate_test.c \
 		$(PROJECT_DIR)/src/framesource/nv12_rotate.c \
-		-o "$@"
+		$(PROJECT_DIR)/src/core/openimp_mxu2.c \
+		-o "$@" -lpthread
 
 $(RATE_CONTROL_TEST_BIN): rate_control_test.c \
 	$(PROJECT_DIR)/src/t40/t31_rate_control.c \

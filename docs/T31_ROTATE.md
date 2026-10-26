@@ -64,8 +64,8 @@ and IVS bound to that channel also see the rotated picture.
 
 ## OpenIMP implementation (T31)
 
-- `src/framesource/nv12_rotate.c` is plain C with no MXU. It covers all
-  three modes:
+- `src/framesource/nv12_rotate.c` is plain C, plus an MXU2 path (see
+  "MXU2 path" below). The C code covers all three modes:
   - 90/270: the plane is walked in 32x32 tiles. A tile's source and
     destination lines fit in the 32 KB L1 D-cache. Inside a tile, luma goes
     through 4x4 byte transposes (four `lw`, 24 ALU ops, four `sw` per 16
@@ -115,7 +115,59 @@ Limits:
 - IVS reads with stride = width. A rotated width that is not a multiple of
   16 (360) needs IVS on another channel.
 
-## Cost (software, T31 at 1.4 GHz, not measured on the device yet)
+## MXU2 path (T10/T20/T31, 2026-10-26)
+
+`nv12_rotate` has an MXU2 path next to the C code, chosen once per process:
+
+- The first rotation calls `nv12_rotate_get_impl()`, which runs
+  `nv12_rotate_selftest()` under a SIGILL guard (`src/core/openimp_mxu2.c`):
+  a pseudo-random frame is rotated by both paths in all modes over four
+  sizes (with and without partial blocks) and compared byte for byte,
+  padding included. Pass = MXU2, otherwise C. `OPENIMP_MXU=0` keeps C.
+  The decision is logged once (`[MXU] nv12_rotate: ...`).
+- Which parts grant MXU2 to a user process (device-checked): T31X, T20X,
+  T10L yes. T31L no: the kernel answers the first MXU2 instruction of a
+  task with SIGILL, so the library stays on C. T21 (MXU2 opcodes reserved)
+  and T23 (no MXU) do not have it.
+- 90/270: 16x16 luma / 8x8 CbCr-pair blocks, four (three) rounds of the
+  same perfect shuffle, one SHUFV per output register (64 SHUFV, 16 loads,
+  16 stores per 256 luma pixels). `tools/gen_nv12_rotate_mxu2.py` writes
+  `nv12_rotate_mxu2_gen.h` and checks the register schedule against a model
+  of SHUFV. Two block rows form a band, so each destination row gets 32
+  contiguous bytes, a whole cache line; aligned lines are allocated with
+  `PREF 30` right before both blocks overwrite them. Bands are anchored at
+  destination column 0 (CW: source bottom, CCW: source top) to keep those
+  lines aligned. Rows and columns outside whole blocks go through the C
+  code.
+- 180: one byte- (pair-) reversing SHUFV per 16 bytes; the source row is
+  prefetched front to back first and the destination written front to back.
+- SHUFV semantics (device-checked): the 32 source bytes are interleaved,
+  op[2i] = vt[i], op[2i+1] = vs[i]; vd[k] = 0 if vr[k] bit 7, else
+  op[vr[k] & 31]. `lu1q`/`su1q` accept any alignment.
+
+The rotation is bound by memory traffic: on T31X a 1280x1056-byte copy
+runs at 1.4 ms front to back with `PREF 30`, 2.5-2.7 ms without, and about
+7 ms when either side runs back to front.
+
+Device numbers (heap buffers, microbench, every result bit-exact):
+
+| SoC | size | CCW C / MXU2 | CW C / MXU2 | 180 C / MXU2 |
+|---|---|---|---|---|
+| T31X | 640x360 | 1.69 / 1.12 ms | 2.65 / 1.62 ms | 1.84 / 0.77 ms |
+| T31X | 704x576 | 2.74 / 1.69 ms | 4.36 / 2.25 ms | 3.20 / 1.39 ms |
+| T31X | 1280x704 | 7.35 / 4.47 ms | 9.77 / 6.05 ms | 6.92 / 3.27 ms |
+| T31X | 1920x1080 | 21.1 / 14.2 ms | 32.8 / 16.3 ms | 16.0 / 8.4 ms |
+| T20X | 704x576 | 4.19 / 2.26 ms | 6.39 / 3.30 ms | 4.10 / 2.37 ms |
+| T20X | 640x368 | 2.47 / 1.70 ms | 3.94 / 2.12 ms | 2.69 / 1.21 ms |
+| T10L | 640x368 | 3.52 / 1.96 ms | 4.98 / 2.90 ms | 3.24 / 1.66 ms |
+
+Under timps on T31X (video0 1280x704, `video0.rotation = 270` = CW,
+15 fps, `OPENIMP_FS_ROTATE_STATS=1`, 30 s per run): rotate alone 9.2 ->
+5.5 ms per frame, whole capture hook 10.8 -> 7.0 ms; thread `FS(0)-tick`
+16.3 -> 10.6 % of a core, timpsd 16.8 -> 11.1 %. Stream 704x1280, no
+decode errors, no oops.
+
+## Cost (software C path, T31 at 1.4 GHz, estimate before the device numbers above)
 
 Each frame costs one rotate pass (about 2.5 instructions per luma pixel
 plus about 4 per CbCr pair). It also costs one linear copy of

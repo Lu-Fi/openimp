@@ -3,7 +3,9 @@
  * geometries, plus round trips. Padding outside the picture must stay
  * untouched. */
 #include "framesource/nv12_rotate.h"
+#include "core/openimp_mxu2.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,6 +120,35 @@ static void test_round_trip(uint32_t w, uint32_t h)
     free(s); free(t); free(u); free(v);
 }
 
+static int selftest_sigill(void)
+{
+    raise(SIGILL);
+    return 1;
+}
+
+static int selftest_ok(void) { return 1; }
+
+/* Runtime selection: selftest result, SIGILL guard, OPENIMP_MXU=0. The
+ * host build runs the MXU2 kernels through the lane model. */
+static void test_select(void)
+{
+    CHECK(nv12_rotate_selftest() == 1, "model selftest passes");
+    CHECK(nv12_rotate_set_impl(-1) == 1, "selection picks MXU2 (model)");
+    openimp_mxu2_model_fault = 1;
+    CHECK(nv12_rotate_selftest() == 0, "selftest catches a wrong SHUFV");
+    CHECK(nv12_rotate_set_impl(-1) == 0, "mismatch falls back to C");
+    openimp_mxu2_model_fault = 0;
+    CHECK(openimp_mxu2_select("sigill", selftest_sigill) == 0,
+          "SIGILL falls back to C");
+    CHECK(openimp_mxu2_select("again", selftest_ok) == 1,
+          "guard reusable after SIGILL");
+    setenv("OPENIMP_MXU", "0", 1);
+    CHECK(nv12_rotate_set_impl(-1) == 0, "OPENIMP_MXU=0 keeps C");
+    CHECK(openimp_mxu2_select("env", selftest_ok) == 0, "env applies to all");
+    unsetenv("OPENIMP_MXU");
+    CHECK(nv12_rotate_set_impl(-1) == 1, "back to MXU2 without env");
+}
+
 int main(void)
 {
     static const uint32_t dims[][2] = {
@@ -129,15 +160,22 @@ int main(void)
                                  NV12_ROT_90_CW, NV12_ROT_180 };
     size_t i, m;
     uint32_t ow, oh;
+    int impl;
 
-    for (i = 0; i < sizeof(dims) / sizeof(dims[0]); i++)
-        for (m = 0; m < 4; m++)
-            test_case(dims[i][0], dims[i][1], modes[m], 0);
-    /* unaligned buffers take the scalar path */
-    test_case(64, 36, NV12_ROT_90_CW, 1);
-    test_case(64, 36, NV12_ROT_180, 2);
-    test_round_trip(640, 360);
-    test_round_trip(96, 64);
+    test_select();
+    /* every case on the C path and on the MXU2 path (lane model) */
+    for (impl = 0; impl < 2; impl++) {
+        nv12_rotate_set_impl(impl);
+        for (i = 0; i < sizeof(dims) / sizeof(dims[0]); i++)
+            for (m = 0; m < 4; m++)
+                test_case(dims[i][0], dims[i][1], modes[m], 0);
+        /* unaligned buffers: scalar (C) or unaligned vector loads (MXU2) */
+        test_case(64, 36, NV12_ROT_90_CW, 1);
+        test_case(64, 36, NV12_ROT_180, 2);
+        test_case(80, 48, NV12_ROT_90_CCW, 3);
+        test_round_trip(640, 360);
+        test_round_trip(96, 64);
+    }
 
     CHECK(nv12_rotate_out_dims(NV12_ROT_90_CW, 1920, 1080, &ow, &oh) == 0 &&
           ow == 1080 && oh == 1920, "CW dims");

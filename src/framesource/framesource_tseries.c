@@ -2949,6 +2949,7 @@ typedef struct {
     int      warned;
     uint32_t stats_frames;
     uint64_t stats_us;
+    uint64_t stats_rot_us;  /* nv12_rotate() alone, without flush + copy */
     uint32_t stats_max_us;
     uint32_t stats_total;
 } FsRotate;
@@ -2993,7 +2994,7 @@ void openimp_fs_rotate_capture(int chn, void *frame)
     FsRotate *r;
     int mode;
     uint32_t cfg, w, h, ow, oh, fw, fh, pixfmt, size, virt, need, flag = 1;
-    uint64_t t0 = 0;
+    uint64_t t0 = 0, t1 = 0;
 
     if (chn < 0 || chn >= FS_MAX_CHANNELS || !f)
         return;
@@ -3050,8 +3051,9 @@ void openimp_fs_rotate_capture(int chn, void *frame)
         }
         r->scratch = p;
         r->scratch_size = need;
-        fprintf(stderr, "[FS] rotate ch%d: %ux%u -> %ux%u mode %d (software)\n",
-                chn, w, h, ow, oh, mode);
+        fprintf(stderr, "[FS] rotate ch%d: %ux%u -> %ux%u mode %d (software, %s)\n",
+                chn, w, h, ow, oh, mode,
+                nv12_rotate_get_impl() == 1 ? "MXU2" : "C");
     }
     if (fs_rotate_stats())
         t0 = fs_rotate_now_us();
@@ -3060,6 +3062,8 @@ void openimp_fs_rotate_capture(int chn, void *frame)
      * write the rotated picture back before OSD (IPU) / AVPU DMA read it. */
     (void)DMA_RmemFlushCache((void *)(uintptr_t)virt, need, 2);
     nv12_rotate((const uint8_t *)(uintptr_t)virt, r->scratch, w, h, mode);
+    if (t0)
+        t1 = fs_rotate_now_us();
     memcpy((void *)(uintptr_t)virt, r->scratch, need);
     (void)DMA_RmemFlushCache((void *)(uintptr_t)virt, need, 1);
 
@@ -3075,15 +3079,19 @@ void openimp_fs_rotate_capture(int chn, void *frame)
         uint32_t dt = (uint32_t)(fs_rotate_now_us() - t0);
 
         r->stats_us += dt;
+        r->stats_rot_us += t1 - t0;
         if (dt > r->stats_max_us)
             r->stats_max_us = dt;
         /* first frame at once, then every 100 frames */
         if (++r->stats_frames == 100u || r->stats_total++ == 0u) {
-            fprintf(stderr, "[FS] rotate ch%d %ux%u mode %d: avg %u us max %u us /frame\n",
+            fprintf(stderr, "[FS] rotate ch%d %ux%u mode %d: avg %u us (rotate %u us, %s) "
+                    "max %u us /frame\n",
                     chn, w, h, mode, (uint32_t)(r->stats_us / r->stats_frames),
-                    r->stats_max_us);
+                    (uint32_t)(r->stats_rot_us / r->stats_frames),
+                    nv12_rotate_get_impl() == 1 ? "MXU2" : "C", r->stats_max_us);
             r->stats_frames = 0;
             r->stats_us = 0;
+            r->stats_rot_us = 0;
             r->stats_max_us = 0;
         }
     }

@@ -4,7 +4,8 @@
  * The vendor libimp rotates in software (nv12_left_rotate_90 /
  * nv12_right_rotate_90, 32x32 blocks); see docs/T31_ROTATE.md. This is a
  * portable plain-C version: 32x32 tiles, 4x4 byte (luma) and 2x2 pair
- * (chroma) transposes in 32-bit registers.
+ * (chroma) transposes in 32-bit registers, plus an MXU2 path (16x16 /
+ * 8x8 blocks) selected at run time where the CPU grants MXU2.
  *
  * Buffers use the OpenIMP T31 NV12 layout, the one the AVPU source words
  * are built from: luma pitch = ALIGN16(width), ALIGN16(height) luma lines,
@@ -58,5 +59,13 @@ void nv12_rotate_plane(const uint8_t *src, uint32_t src_stride,
  * width and height must be even. Returns 0, or -1 for bad arguments. */
 int nv12_rotate(const uint8_t *src, uint8_t *dst, uint32_t width,
                 uint32_t height, int mode);
+
+/* Implementation in use: 0 plain C, 1 MXU2. The first rotation selects it
+ * (bit-exact selftest under a SIGILL guard, OPENIMP_MXU=0 keeps C).
+ * set_impl(-1) runs the selection now; 0/1 force a path (tests, bench). */
+int nv12_rotate_get_impl(void);
+int nv12_rotate_set_impl(int impl);
+/* MXU2 vs C on a small pseudo-random frame, all modes: 1 = bit-exact */
+int nv12_rotate_selftest(void);
 
 #endif

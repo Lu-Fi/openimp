@@ -276,6 +276,7 @@ force; `OPENIMP_MOTION_V2=0` (or `features = 0` via `SetConfigEx`) is the vendor
 | One startup warning when pools plus fixed buffers exceed video memory | all | silent failure later | Read the warning to size your stream set | early-morning changelog |
 | Real AEC (WebRTC AECM): `EnableAec` returns an error when it cannot run (vendor: fake success / flag only) | T31 (loopback: echo -18 dB, ERLE 44 dB) | n/a | Check the return of `IMP_AI_EnableAec` (EnableAec) | `claude/aec`; `OPENIMP_AEC_STATS=1` diagnostics |
 | Software rotation `SetChnRotate` 90/270 (vendor-equivalent tiles) | T31 | earlier -1 | Rotation usable before OSD/IVS/encoder | `claude/t31-rotate` |
+| Software rotation through MXU2 where the CPU grants it to user processes: 16x16 block transposes in vector registers, whole-line destination allocation; selected after a bit-exact selftest against the C path (SIGILL caught), `OPENIMP_MXU=0` keeps C. 1.5-2.4x faster rotation, under timps 1280x704 rotation 270 at 15 fps the frame-source thread drops from 16.3 to 10.6 % of a core | T31X, T20X, T10L (T31L: kernel refuses MXU2 for user processes, C used) | vendor rotates in plain C (T31 only) | Rotated streams cost about a third less CPU; nothing to configure | T31X .21, T20X .107, T10L .31, T31L .26 (fallback); `claude/mxu-simd` |
 | T31 OSD drawn by the IPU, default on | T31 | `OPENIMP_T31_OSD=0` disables | OSD also in HW-JPEG snapshots; timps about 8 % CPU | cam-A |
 | T20/T21 OSD via IPU hook | T20, T21 | vendor path never drew | OSD regions work | `claude/t20-osd` |
 | Frame source / VBM pool of a disabled channel parked for the next pool (as on T21) instead of being freed: the open T23 driver keeps a stopped MSCA output enabled while the input runs, so a freed pool could be handed to another allocation while the hardware still writes into it (`OPENIMP_VBM_PARK=0` frees at once) | T23 | internal | on | Stream start/stop cycles are safe; no workaround | 40 streamer restarts with every snapshot OK, 0 oopses | a T23 camera, `claude/release-t23-vbm`, release candidate (2026-10-06) |
@@ -301,6 +302,7 @@ set in production.
 | `OPENIMP_REF_SHARE` | `0` disables the T21/T23 reference ring | on | user-facing |
 | `OPENIMP_T31_HW_JPEG` | `0` selects the software JPEG encoder on T31 | on | user-facing |
 | `OPENIMP_T31_OSD` | `0` disables the IPU OSD backend on T31 | on | user-facing |
+| `OPENIMP_MXU` | `0` (or `off`) keeps every MXU2 kernel on its C reference (today: `nv12_rotate`); otherwise each kernel runs a bit-exact selftest once and uses MXU2 when it passes | on | user-facing |
 | `OPENIMP_T31_ROI` | `0` refuses `IMP_Encoder_SetChnRoiAttr` on T31 | on | user-facing |
 | `OPENIMP_T21_ROI` | `0` switches the T21 encoder ROI programming off | on | user-facing |
 | `OPENIMP_T41_ROI` | `0` refuses the T41 ROI calls (default on, all rate-control modes) | on | debug-only |
