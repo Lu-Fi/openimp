@@ -52,7 +52,7 @@ CELL = {
     "stub": ("s-bug", "⚠s", "⚠ stub", "returns 0 without any effect"),
     "err": ("s-miss", "❌e", "❌ err", "exported but fails or has a known defect"),
     "miss": ("s-miss", "❌", "❌ miss", "not exported by OpenIMP"),
-    "n.a.": ("s-na", "·", "", "not in that SoC's vendor API (not a gap)"),
+    "n.a.": ("s-na", "·", "–", "function does not exist on this SoC (not in that SoC's vendor API; not a gap)"),
     "?": ("s-unk", "?", "?", "state not determined"),
     "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC yet (planned)"),
 }
@@ -74,6 +74,8 @@ class Model:
         self.ev = json.load(open(EVID, encoding="utf-8"))
         self.socs = self.ev["socs"]
         self.exports = json.load(open(EXPO, encoding="utf-8")) if os.path.exists(EXPO) else {}
+        up = os.path.join(sd.SDIR, "untested.json")
+        self.untested = json.load(open(up, encoding="utf-8")).get("socs", {}) if os.path.exists(up) else {}
         self.sdata = sd.load_features()
         self.issues = sd.load_issues()
         self.wip = sd.wip_items(self.sdata, self.issues)
@@ -440,18 +442,60 @@ class Model:
         return "\n".join(o)
 
     # ------------------------------------------------------------ html
+    WHY_ICON = {"nocase": ("∅", "no test case yet"), "unclear": ("≈", "test ran, result unclear"), "notrun": ("↷", "not run on this SoC")}
+
+    def why(self, f, soc):
+        """(code, text) for an implemented, not device-tested cell (host/aud): why is it untested."""
+        u = self.untested.get(soc)
+        if not u:
+            return ("notrun", "not run on this SoC (no device run of the apitest/imgfx tests on %s yet: no camera or not scheduled)" % soc)
+        names = self.expand(f["name"]) if "*" not in f["name"] else [f["name"]]
+        hits = [u["funcs"][n] for n in [f["name"]] + names if n in u["funcs"]]
+        if not hits:
+            return ("nocase", "no test case yet (apitest, imgfx and devtest have no case for this function)")
+        v, det = sorted(hits, key=lambda x: {"PART": 0, "SKIP": 1, "NA": 2}.get(x[0], 3))[0]
+        if v == "PART":
+            return ("unclear", "test ran, result unclear (PART: %s)" % (det or "no detail"))
+        return ("notrun", "not run on this SoC (%s%s)" % ("skipped" if v == "SKIP" else "not applicable in the test", ": " + det if det else ""))
+
+    VENDOR_SRC = {"T32": "vendor libimp 2.2.0 / SDK 2.0.0", "T33": "vendor libimp 2.2.0 / SDK 2.0.0"}
+
+    def cell_text(self, f, soc):
+        """Lines explaining one API cell: state, why untested, evidence, issue (the note is added by the page script)."""
+        c = f["cells"][soc]
+        if c == "n.a.":
+            return ["%s: function does not exist on this SoC" % soc,
+                    "Not in the %s vendor API (%s; tools/export-check/vendor-%s.txt)" % (
+                        soc, self.VENDOR_SRC.get(soc, "union of the vendor libimp versions held"), soc)], None
+        L = ["%s: %s" % (soc, CELL[c][3])]
+        wy = None
+        if c in WIPC:
+            wy = self.why(f, soc)
+            L.append("Untested: " + wy[1])
+        if f["ref"].get(soc):
+            L.append("Evidence: " + f["ref"][soc])
+        for i in self.func_issues.get((f["name"], soc), []):
+            L.append("Issue #%d (%s): %s" % (i["number"], i.get("state", ""), i.get("title", "")))
+        for w in f["wip"].get(soc, []):
+            L.append("Work in progress: %s (since %s)" % (w.get("branch", ""), w.get("since", "")))
+        return L, wy
+
     def _cellhtml(self, f, s):
         c = f["cells"][s]
         cls, _, lab, desc = CELL[c]
-        tip = "%s: %s" % (s, desc)
-        if f["ref"].get(s):
-            tip += " | " + f["ref"][s]
-        w = f["wip"].get(s)
-        sign = ""
-        if w:
-            tip += " | work in progress: " + "; ".join("%s (since %s)" % (x.get("branch", ""), x.get("since", "")) for x in w)
-            sign = " 🚧"
-        return '<td class="c %s" title="%s" data-code="%s">%s%s</td>' % (cls, esc(tip), c, esc(lab), sign)
+        L, wy = self.cell_text(f, s)
+        sign = " 🚧" if f["wip"].get(s) else ""
+        icon = ""
+        attr = ""
+        if wy:
+            ic, t = self.WHY_ICON[wy[0]]
+            icon = ' <span class="why" title="%s">%s</span>' % (esc(t), ic)
+            attr = ' data-why="%s"' % wy[0]
+        il = self.func_issues.get((f["name"], s), [])
+        if il:
+            attr += ' data-issue="%d|%s"' % (il[0]["number"], esc(il[0].get("url", "")))
+        return '<td class="c %s" title="%s" data-code="%s" data-soc="%s"%s tabindex="0">%s%s%s</td>' % (
+            cls, esc("\n".join(L)), c, s, attr, esc(lab), icon, sign)
 
     def html_summary(self):
         socs = self.socs
@@ -468,7 +512,10 @@ class Model:
                     cls, big, small = "s-plan", "0/%d" % st["total"], "no build"
                 else:
                     big = "%d/%d" % (st["ok"], st["total"])
-                    small = "%d✅ %d🔧 %d⚠ %d?" % (st["ok"], st["wip"], st["gap"], st["unk"]) + (" %d🚧" % st["ws"] if st["ws"] else "")
+                    def fl(n, sym, state):
+                        return ('<span class="flt" role="button" tabindex="0" data-area="%s" data-soc="%s" data-state="%s" title="show these rows">%d%s</span>'
+                                % ("" if a == "all" else slugify(a), s, state, n, sym)) if n else "%d%s" % (n, sym)
+                    small = "%s %s %s %s" % (fl(st["ok"], "✅", "works"), fl(st["wip"], "🔧", "untested"), fl(st["gap"], "⚠", "gap"), fl(st["unk"], "?", "unknown")) + (" %d🚧" % st["ws"] if st["ws"] else "")
                     if st["ok"] == st["total"]:
                         cls = "s-ok"
                     elif st["gap"] + st["unk"] == 0:
@@ -479,7 +526,7 @@ class Model:
                         cls = "s-bug"
                 tip = "%s %s: %d work (device-tested, API round trip or vendor no-op; %d of them round trip only), %d implemented not device-tested, %d gaps, %d unknown, of %d vendor functions" % (
                     s, a, st["ok"], st["rt"], st["wip"], st["gap"], st["unk"], st["total"])
-                tds.append('<td class="c %s" title="%s"><b>%s</b><br><small>%s</small></td>' % (cls, esc(tip), big, esc(small)))
+                tds.append('<td class="c %s" title="%s"><b>%s</b><br><small>%s</small></td>' % (cls, esc(tip), big, small))
             rows.append('<tr%s><td>%s</td>%s</tr>' % (' class="sep"' if a == "all" else "",
                         "<b>All areas</b>" if a == "all" else '<a href="#api-%s">%s</a>' % (slugify(a), esc(a)), "".join(tds)))
         th = "".join("<th>%s</th>" % s for s in socs)
@@ -560,7 +607,18 @@ class Model:
         o.append('<div class="mxctl"><div class="fg"><span class="fl">Rows</span>'
                  '<label><input type="checkbox" id="apg"> only gaps / unknown</label> '
                  '<label><input type="checkbox" id="apu"> only streamer-used</label> '
-                 '<input id="apq" type="search" placeholder="Filter by function name" aria-label="Filter by function name"></div></div>')
+                 '<input id="apq" type="search" placeholder="Filter by function name" aria-label="Filter by function name"></div>'
+                 '<div class="fg"><span class="fl">State</span>%s</div>'
+                 '<div class="fg"><span class="fl">SoC</span>%s</div>'
+                 '<div class="fg"><span class="fl">Area</span>%s</div>'
+                 '<div class="fg"><button type="button" class="chip" id="apreset">Reset filters</button> <span class="small" id="apn" aria-live="polite"></span>'
+                 ' <span class="small">States combine with SoC and area: a row shows if one selected SoC (all if none) has a selected state. Icons: '
+                 '&empty; no test case yet &middot; &asymp; test ran, result unclear &middot; &#8631; not run on this SoC.</span></div></div>'
+                 % ("".join('<button type="button" class="chip" data-apst="%s" aria-pressed="false">%s</button>' % (k, l) for k, l in (
+                        ("works", "works (dev / run / rt)"), ("untested", "implemented, not device-tested"), ("gap", "gap"),
+                        ("unknown", "unknown"), ("na", "n.a."), ("nob", "no build"))),
+                    "".join('<button type="button" class="chip" data-apsoc="%s" aria-pressed="false">%s</button>' % (x, x) for x in socs),
+                    "".join('<button type="button" class="chip" data-aparea="%s" aria-pressed="false">%s</button>' % (slugify(a), esc(a)) for a in AREAS)))
         for a in AREAS:
             fs = self.area_funcs(a)
             ngap = sum(1 for f in fs if any(f["cells"][s] in GAP | UNK for s in socs))
@@ -583,8 +641,9 @@ class Model:
                     det.append("<p class='small'>Used by (per SoC): %s</p>" % esc("; ".join(per)))
                 cells = "".join(self._cellhtml(f, s) for s in socs)
                 name = ('<button type="button" class="fname" data-fn>%s</button>' % esc(f["name"])) if det else esc(f["name"])
-                trs.append('<tr data-gap="%d" data-used="%d" data-n="%s"><td>%s</td>%s<td class="c small">%s</td></tr>' % (
-                    1 if gap else 0, 1 if us else 0, esc(f["name"].lower()), name, cells, esc(self.ulabel(us))))
+                trs.append('<tr data-gap="%d" data-used="%d" data-n="%s"%s><td>%s</td>%s<td class="c small">%s</td></tr>' % (
+                    1 if gap else 0, 1 if us else 0, esc(f["name"].lower()),
+                    (' data-note="%s"' % esc(f["note"])) if f["note"] else "", name, cells, esc(self.ulabel(us))))
                 if det:
                     trs.append('<tr class="det" hidden><td colspan="%d">%s</td></tr>' % (len(socs) + 2, "".join(det)))
             th = "".join("<th>%s</th>" % s for s in socs)
@@ -628,12 +687,47 @@ def esc_md(s):
 
 API_JS = r"""(function(){
 var t=document.getElementById('api-coverage');if(!t)return;
-function $$(s){return [].slice.call(document.querySelectorAll(s))}
+function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}
+var ST={works:['dev','dev+','run','no-op','rt'],untested:['host','aud'],gap:['cache','stub','err','miss'],unknown:['?'],na:['n.a.'],nob:['nob']};
+var sel={st:{},soc:{},area:{}};
+function any(o){return Object.keys(o).some(function(k){return o[k]})}
 function ap(){var g=document.getElementById('apg').checked,u=document.getElementById('apu').checked,q=document.getElementById('apq').value.trim().toLowerCase();
- $$('table.apit tbody tr[data-n]').forEach(function(tr){var ok=true;if(g&&tr.getAttribute('data-gap')!=='1')ok=false;if(u&&tr.getAttribute('data-used')!=='1')ok=false;
-  if(q&&tr.getAttribute('data-n').indexOf(q)<0)ok=false;tr.hidden=!ok;var d=tr.nextElementSibling;if(d&&d.classList.contains('det')&&!ok)d.hidden=true})}
+ var socs=Object.keys(sel.soc).filter(function(k){return sel.soc[k]}),sts=Object.keys(sel.st).filter(function(k){return sel.st[k]}),n=0;
+ $$('table.apit').forEach(function(tb){var det=tb.closest('details'),aid=det.id.replace('api-',''),ah=any(sel.area)&&!sel.area[aid],cnt=0;
+  $$('tbody tr[data-n]',tb).forEach(function(tr){var ok=!ah;
+   if(g&&tr.getAttribute('data-gap')!=='1')ok=false;if(u&&tr.getAttribute('data-used')!=='1')ok=false;
+   if(q&&tr.getAttribute('data-n').indexOf(q)<0)ok=false;
+   var cells=$$('td.c[data-soc]',tr);
+   if(ok&&sts.length){ok=cells.some(function(c){return (!socs.length||socs.indexOf(c.getAttribute('data-soc'))>=0)&&sts.some(function(s){return ST[s].indexOf(c.getAttribute('data-code'))>=0})})}
+   cells.forEach(function(c){var m=sts.length&&(!socs.length||socs.indexOf(c.getAttribute('data-soc'))>=0)&&sts.some(function(s){return ST[s].indexOf(c.getAttribute('data-code'))>=0});c.classList.toggle('dim',!!sts.length&&!m)});
+   tr.hidden=!ok;var d=tr.nextElementSibling;while(d&&(d.classList.contains('det')||d.classList.contains('cdet'))){if(!ok)d.hidden=true;d=d.nextElementSibling}
+   if(ok)cnt++});
+  n+=cnt;det.hidden=ah;if(any(sel.area)&&!ah)det.open=true});
+ document.getElementById('apn').textContent=(sts.length||socs.length||any(sel.area)||q||g||u)?n+' rows':''}
+function chips(attr,key,dk){$$('['+attr+']').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute(attr);sel[key][k]=!sel[key][k];b.setAttribute('aria-pressed',sel[key][k]?'true':'false');ap()})})}
+chips('data-apst','st');chips('data-apsoc','soc');chips('data-aparea','area');
+function setf(area,soc,state){sel={st:{},soc:{},area:{}};$$('.chip[data-apst],.chip[data-apsoc],.chip[data-aparea]').forEach(function(b){b.setAttribute('aria-pressed','false')});
+ function on(attr,key,k){if(!k)return;sel[key][k]=true;var b=document.querySelector('['+attr+'="'+k+'"]');if(b)b.setAttribute('aria-pressed','true')}
+ on('data-apst','st',state);on('data-apsoc','soc',soc);on('data-aparea','area',area);ap();
+ var d=document.getElementById(area?'api-'+area:'api-isp-tuning');var c=document.getElementById('apq');(c.closest('.mxctl')||c).scrollIntoView({block:'start'})}
+document.addEventListener('click',function(e){var f=e.target.closest('.flt');if(f)setf(f.getAttribute('data-area'),f.getAttribute('data-soc'),f.getAttribute('data-state'))});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){var f=e.target.closest&&e.target.closest('.flt');if(f){e.preventDefault();setf(f.getAttribute('data-area'),f.getAttribute('data-soc'),f.getAttribute('data-state'))}}});
+document.getElementById('apreset').addEventListener('click',function(){setf('','','');document.getElementById('apq').value='';document.getElementById('apg').checked=false;document.getElementById('apu').checked=false;ap()});
 ['apg','apu','apq'].forEach(function(i){document.getElementById(i).addEventListener('input',ap)});
-$$('table.apit').forEach(function(tb){tb.addEventListener('click',function(e){var b=e.target.closest('[data-fn]');if(!b)return;var d=b.closest('tr').nextElementSibling;if(d&&d.classList.contains('det'))d.hidden=!d.hidden})});
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+$$('table.apit').forEach(function(tb){
+ tb.addEventListener('mouseover',function(e){var c=e.target.closest('td.c[data-code]');if(!c||c.getAttribute('data-n'))return;c.setAttribute('data-n','1');
+  var n=c.parentNode.getAttribute('data-note');if(n)c.title+='\nNote: '+n});
+ tb.addEventListener('click',function(e){var b=e.target.closest('[data-fn]');
+  if(b){var d=b.closest('tr').nextElementSibling;if(d&&d.classList.contains('det'))d.hidden=!d.hidden;return}
+  var c=e.target.closest('td.c[data-code]');if(!c)return;var tr=c.parentNode,nx=tr.nextElementSibling;
+  while(nx&&nx.classList.contains('det')){nx=nx.nextElementSibling}
+  if(nx&&nx.classList.contains('cdet')){var same=nx.getAttribute('data-soc')===c.getAttribute('data-soc');nx.remove();if(same)return}
+  var lines=c.title.split('\n'),n=tr.getAttribute('data-note');if(n&&lines.join().indexOf('Note: ')<0)lines.push('Note: '+n);
+  var h=lines.map(function(l){return '<div>'+esc(l)+'</div>'}).join(''),iss=c.getAttribute('data-issue');
+  if(iss){var p=iss.split('|');h+='<div><a href="'+esc(p[1])+'">Issue #'+esc(p[0])+'</a></div>'}
+  var r=document.createElement('tr');r.className='cdet';r.setAttribute('data-soc',c.getAttribute('data-soc'));
+  r.innerHTML='<td colspan="'+tr.children.length+'">'+h+'</td>';tr.parentNode.insertBefore(r,nx)})});
 })();
 """
 
@@ -647,6 +741,9 @@ table.apit td.c{white-space:nowrap;font-size:.74rem;padding:3px 4px;text-align:c
 table.apit tr.det p{margin:.2rem 0}#apq{font:inherit;font-size:.85rem;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
 .apx{border-top:1px solid var(--line);margin-top:8px;padding-top:6px}.apx ul{margin:.2rem 0;padding-left:1.2rem;font-size:.8rem;columns:2 16rem}
 .wipmark{font-size:.8em;margin-left:3px}
+td.c.s-na{opacity:.45}td.c.dim{opacity:.18}td.c[data-code]{cursor:pointer}td.c .why{font-size:.8em;opacity:.8;cursor:help}
+tr.cdet td{background:var(--head);font-size:.8rem;padding:6px 10px;text-align:left;white-space:normal}tr.cdet div{margin:.1rem 0}
+.flt{cursor:pointer;border-bottom:1px dotted var(--muted);white-space:nowrap}.flt:hover,.flt:focus-visible{background:var(--head);outline:none}
 """
 
 

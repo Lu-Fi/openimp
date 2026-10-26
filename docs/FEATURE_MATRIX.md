@@ -986,7 +986,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `⚠s` returns 0 without any effect
 - `❌e` exported but fails or has a known defect
 - `❌` not exported by OpenIMP
-- `·` not in that SoC's vendor API (not a gap)
+- `·` function does not exist on this SoC (not in that SoC's vendor API; not a gap)
 - `?` state not determined
 - `📋` no OpenIMP build for this SoC yet (planned)
 - `🚧` appended to a symbol: work in progress, from the public GitHub issues labelled `type:wip` (`docs/status/issues.json`)

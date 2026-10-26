@@ -16,6 +16,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
   data and that the generated Markdown is current. `docs/api_evidence.json` stays the API source (machine-written by the apitest tools).
   Gaps, bugs and progress are tracked as public GitHub issues; `docs/matrix_wip.json` is replaced by the issue state
   (`docs/status/issues.json`, open issue labelled `type:wip` = construction sign). Counts unchanged.
+- **API tables:** every cell explains itself (hover and click: state, evidence, note, issue); `n.a.` cells show a faint "–" with the reason; "implemented, not
+  device-tested" cells give the reason (no test case yet / test ran, result unclear / not run on this SoC; `docs/status/untested.json`, built by
+  `tools/status_untested.py`); state, SoC and area filters, and the summary numbers apply them.
 
 ## Branch `claude/gate-1026` (2026-10-26)
 
