@@ -450,8 +450,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -542,8 +542,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -619,8 +619,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -696,8 +696,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -773,8 +773,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -850,8 +850,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -927,8 +927,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -1259,8 +1259,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -1336,13 +1336,16 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "rt",
     "T41": "n.a."
    },
    "used": {
     "T40": [
      "r†"
     ]
+   },
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_SetFixedContraster": {
@@ -1698,7 +1701,7 @@
     "T21": "n.a.",
     "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1718,7 +1721,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetBcshHue": {
@@ -1732,7 +1736,7 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "used": {
@@ -1770,8 +1774,9 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34",
+    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_Get/SetCCMAttr": {
@@ -1913,7 +1918,7 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
     "T41": "apitest agg47 2026-10-26 .34"
    }
   },
@@ -1925,7 +1930,7 @@
     "T21": "n.a.",
     "T23": "aud",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1939,7 +1944,10 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T31": "apitest rc3-cases 2026-10-26 .26"
+   }
   },
   "ISP_Tuning_Get/SetDPC_Strength": {
    "area": "ISP tuning",
@@ -1949,7 +1957,7 @@
     "T21": "n.a.",
     "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1967,7 +1975,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetDRC_Strength": {
@@ -2131,7 +2140,7 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetGammaAttr": {
@@ -2308,7 +2317,7 @@
     "T21": "n.a.",
     "T23": "aud",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "err",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2322,7 +2331,10 @@
      "r†"
     ]
    },
-   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there"
+   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there",
+   "ref": {
+    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ISP_Tuning_GetISPCustomMode: ret=0 value 0; ISP_Tuning_SetISPCustomMode: ret=-1 same value 0 written, read back 0; 0 written, read back 0, frames flow 1; restored"
+   }
   },
   "ISP_Tuning_Get/SetISPHVflip": {
    "area": "ISP tuning",
@@ -2352,7 +2364,7 @@
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2389,7 +2401,8 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_Get/SetISPRunningMode": {
@@ -2477,7 +2490,7 @@
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2514,7 +2527,8 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_Get/SetIntegrationTime": {
@@ -2700,7 +2714,7 @@
     "T21": "host",
     "T23": "aud",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
@@ -2722,7 +2736,8 @@
    },
    "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetModule_Ratio": {
@@ -3002,7 +3017,7 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "err",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -3013,7 +3028,10 @@
      "r†"
     ]
    },
-   "note": "T31: reaches the WDR tool block (agg-25)"
+   "note": "T31: reaches the WDR tool block (agg-25)",
+   "ref": {
+    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ISP_Tuning_GetWdr_OutputMode: ret=-1 mode 0; ISP_Tuning_SetWdr_OutputMode: ret=0 rt: same mode 0 written (ret 0), read back 0, frames flow"
+   }
   },
   "ISP_Tuning_GetAutoZoom": {
    "area": "ISP tuning",
@@ -3192,7 +3210,7 @@
     "T21": "n.a.",
     "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "dev",
@@ -3208,7 +3226,8 @@
    },
    "ref": {
     "T40": "apitest agg47 2026-10-26 .184",
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetISPBypass": {
@@ -3222,8 +3241,11 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "dev",
     "T41": "n.a."
+   },
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-26 .184"
    }
   },
   "ISP_Tuning_GetMaskBlock": {
@@ -3760,7 +3782,7 @@
     "T31": "aud",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "?",
+    "T40": "rt",
     "T41": "n.a."
    },
    "used": {
@@ -3793,7 +3815,10 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetISPLDC": {
    "area": "ISP tuning",
@@ -3922,7 +3947,7 @@
     "T21": "n.a.",
     "T23": "no-op",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
@@ -3947,7 +3972,8 @@
    },
    "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
-    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SetSceneMode": {
@@ -4434,10 +4460,10 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "used": {
@@ -4457,7 +4483,11 @@
      "r†"
     ]
    },
-   "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)"
+   "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-26 .26"
+   }
   },
   "ISP_WDR_ENABLE_GET": {
    "area": "ISP tuning",
@@ -4470,7 +4500,7 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "used": {
@@ -4489,7 +4519,8 @@
    },
    "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
    "ref": {
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34",
+    "T40": "apitest rc3-cases 2026-10-26 .184"
    }
   },
   "ISP_WDR_ENABLE_Get": {
@@ -4500,13 +4531,16 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T31": "apitest rc3-cases 2026-10-26 .26"
+   }
   },
   "ISP_WDR_OPEN": {
    "area": "ISP tuning",
@@ -4742,7 +4776,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAeConvergeStep": {
@@ -6130,7 +6164,7 @@
     "T21": "n.a.",
     "T23": "host",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -6144,7 +6178,10 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test"
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test",
+   "ref": {
+    "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetExpr": {
    "area": "AE / AWB / AF",
@@ -9315,8 +9352,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -9411,8 +9448,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -9488,8 +9525,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -9565,8 +9602,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -9824,8 +9861,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -9975,8 +10012,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -17188,8 +17225,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
@@ -17533,8 +17570,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest agg47-cases 2026-10-26 .184",
+    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T40": "apitest rc3-cases 2026-10-26 .184",
     "T41": "apitest rc3-cases 2026-10-26 .34"
    }
   },
