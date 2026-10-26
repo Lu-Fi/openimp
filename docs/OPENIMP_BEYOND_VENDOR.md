@@ -125,6 +125,19 @@ Rules, tables and numbers: `docs/ROI.md`.
 | **T40 manual CCM applies the full 3x3 matrix** (2026-10-25): `IMP_ISP_Tuning_SetCCMAttr` with ManualEn sets all 9 coefficients and keeps SatEn; the vendor 1.3.1 firmware copies only the R->R coefficient into its CT matrices and clears SatEn, so a manual CCM has almost no effect there | T40 | a caller that relied on the vendor ignoring 8 of 9 coefficients gets the full matrix |
 | T41 TMO map computed with MXU3 code (`t41_tmo_map_impl=2`), bit-exact with the C map; lowers the kernel load of the per-frame tone worker | T41 | none (kernel) | on | Nothing | `t41_tmo_map_impl=0` selects the C map | .32, .34, open-tx-isp next (`92996ea6`, `2c30af59`) |
 
+### 2.x T40 AE tuning calls (open-tx-isp frame AE, 2026-10-26)
+
+Vendor semantics where the vendor defines them (statistics arithmetic, AeTargetComp factor, ExprInfo layout).
+Beyond or different from the vendor:
+- Invalid input is refused with an error (vendor kernel ignores it and returns 0): ScenceAttr modes > 3, HLC/BLC
+  strength > 10, comp > 255; ExprInfo mode words > 1, manual/min/max gains below 1x, min AG above max AG;
+  AeWeight values > 8; AeSpeed 0 or > 1024; FaceAe with an empty rectangle or target > 255.
+- AeSpeed: 128 is the default AE speed, the value scales the step size (16 = 1/8x, 1024 = 8x; very fast values
+  overshoot). The Eufy OEM module had no speed control; SDK 1.3.1 feeds step_s/step_d into its own AE.
+- FaceAe target 0 keeps the AE target; HLC/BLC act as zone weighting of the metered luma.
+- GetAeStatistics answers -1/EAGAIN before the first statistics of the stream (vendor: zeros).
+- AeExpList and AeStartEv are stored and read back but do not steer the frame AE.
+
 ## 3. JPEG / snapshot
 
 | Feature | SoC | API / env | Default | How a streamer uses it | Detect / disable | Status / branch |

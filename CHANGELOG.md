@@ -8,6 +8,15 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t40-ae-api` (2026-10-26)
+
+- T40: the AE tuning calls are served by the open driver's frame AE (open-tx-isp `claude/t40-ae-api`); the T40 libimp
+  already passes them 1:1, no library change. New devtest phase `0x1000000` (AE API cells, PGM snapshots with
+  `T40_SNAPDIR`) and `tests/t40/devtest/t40_aetune` (sends the AE tuning ioctls beside a running streamer).
+  .184: GetAeStatistics sum 8294400 / 5-bin 65535 / zones vary, ExprInfo 220 bytes (no overrun), comp, HLC/BLC,
+  manual/freeze/min gain, weights, speed, face AE and antiflicker act on the exposure. Details:
+  open-tx-isp CHANGELOG 2026-10-26 (7).
+
 ## Branch `claude/t4x-api-gaps` (2026-10-26)
 
 - **`IMP_Decoder_*` on T40/T41:** exported with -1 and errno ENOTSUP (the vendor decoder is the hardware JPEG decoder, OpenIMP has none on these SoCs), so an application finds out at CreateChn instead of failing to link; host-checked in `tests/t41/yuv_encode_test.c`.
