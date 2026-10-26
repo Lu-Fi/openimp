@@ -40,6 +40,7 @@ STREAMERS = {"p": "prudynt", "r": "raptor", "t": "timps"}
 CELL = {
     "dev": ("s-ok", "✅", "✅", "works, device-tested"),
     "dev+": ("s-plus", "✅+", "✅+", "works, device-tested, better than the vendor"),
+    "rt": ("s-ok", "✅rt", "✅ rt", "API round trip on device, no visible effect expected"),
     "no-op": ("s-ok", "✅○", "✅ no-op", "vendor no-op, OpenIMP matches that"),
     "run": ("s-ok", "✅r", "✅ run", "works: called by the streamer on fleet cameras of this SoC that passed the fleet soak (not an individual device test; see the reference)"),
     "host": ("s-wip", "🔧h", "🔧 host", "implemented, host tests only (no camera run yet)"),
@@ -52,8 +53,8 @@ CELL = {
     "?": ("s-unk", "?", "?", "state not determined"),
     "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC yet (planned)"),
 }
-OK, WIPC, GAP, UNK = {"dev", "dev+", "run", "no-op"}, {"host", "aud"}, {"cache", "stub", "err", "miss"}, {"?"}
-LEVEL = {"dev", "run", "host", "aud", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
+OK, WIPC, GAP, UNK = {"dev", "dev+", "run", "no-op", "rt"}, {"host", "aud"}, {"cache", "stub", "err", "miss"}, {"?"}
+LEVEL = {"dev", "rt", "run", "host", "aud", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
 SEV = {"err": 0, "miss": 0, "cache": 1, "stub": 1, "?": 2}
 
 
@@ -212,7 +213,7 @@ class Model:
 
     def stat(self, funcs, soc):
         """weights: total, ok, wip, gap, unk, nob, number of construction-sign functions"""
-        r = dict(total=0, ok=0, wip=0, gap=0, unk=0, nob=0, ws=0)
+        r = dict(rt=0, total=0, ok=0, wip=0, gap=0, unk=0, nob=0, ws=0)
         for f in funcs:
             w = f["w"][soc]
             if not w:
@@ -221,6 +222,8 @@ class Model:
             r["total"] += w
             if c in OK:
                 r["ok"] += w
+                if c == "rt":
+                    r["rt"] += w
             elif c in WIPC:
                 r["wip"] += w
             elif c in GAP:
@@ -388,7 +391,7 @@ class Model:
             o.append("")
         o.append("### Legend")
         o.append("")
-        for c in ("dev", "dev+", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
+        for c in ("dev", "dev+", "rt", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
             o.append("- `%s` %s" % (CELL[c][1], CELL[c][3]))
         o.append("- `🚧` appended to a symbol: work in progress, from `docs/matrix_wip.json` (branch and start date there)")
         o.append("")
@@ -468,7 +471,7 @@ class Model:
                     else:
                         cls = "s-bug"
                 tip = "%s %s: %d work (device-tested or vendor no-op), %d implemented not device-tested, %d gaps, %d unknown, of %d vendor functions" % (
-                    s, a, st["ok"], st["wip"], st["gap"], st["unk"], st["total"])
+                    s, a, st["ok"], st["rt"], st["wip"], st["gap"], st["unk"], st["total"])
                 tds.append('<td class="c %s" title="%s"><b>%s</b><br><small>%s</small></td>' % (cls, esc(tip), big, esc(small)))
             rows.append('<tr%s><td>%s</td>%s</tr>' % (' class="sep"' if a == "all" else "",
                         "<b>All areas</b>" if a == "all" else '<a href="#api-%s">%s</a>' % (slugify(a), esc(a)), "".join(tds)))
@@ -546,7 +549,7 @@ class Model:
                  'Legend: %s. A construction sign (&#128679;) marks work in progress (docs/matrix_wip.json).</p>' % (
                      esc(self.ev["asof"]), " &middot; ".join(
                          '<span class="sym %s">%s</span> %s' % (CELL[c][0], esc(CELL[c][2] or "&middot;"), esc(CELL[c][3]))
-                         for c in ("dev", "dev+", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
+                         for c in ("dev", "dev+", "rt", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
         o.append('<div class="mxctl"><div class="fg"><span class="fl">Rows</span>'
                  '<label><input type="checkbox" id="apg"> only gaps / unknown</label> '
                  '<label><input type="checkbox" id="apu"> only streamer-used</label> '
@@ -727,8 +730,8 @@ def print_counts(m):
     print("API coverage: %d rows; works/total per SoC (device-tested or vendor no-op / vendor functions):" % len(m.funcs))
     for s in m.socs:
         st = m.stat(m.funcs, s)
-        print("  %s: %d/%d works, %d implemented not device-tested, %d gaps, %d unknown%s%s" % (
-            s, st["ok"], st["total"], st["wip"], st["gap"], st["unk"],
+        print("  %s: %d/%d works (%d of them rt = API round trip only), %d implemented not device-tested, %d gaps, %d unknown%s%s" % (
+            s, st["ok"], st["total"], st["rt"], st["wip"], st["gap"], st["unk"],
             ", %d no-build" % st["nob"] if st["nob"] else "", ", %d in progress" % st["ws"] if st["ws"] else ""))
 
 

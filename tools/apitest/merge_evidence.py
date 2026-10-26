@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Merge device-run results (results2json.py) into docs/api_evidence.json.
-PASS -> cell dev (dev+/no-op/err-free cells keep their symbol; a miss cell of an exported function and an err cell written by this tool from an earlier FAIL of the same tag become dev), FAIL -> err, PART/SKIP/NA -> unchanged (listed).
+RT -> cell rt (API round trip on device, only over aud/host/?/run/miss); PASS -> cell dev (dev+/no-op/err-free cells keep their symbol; a miss cell of an exported function and an err cell written by this tool from an earlier FAIL of the same tag become dev), FAIL -> err, PART/SKIP/NA -> unchanged (listed).
 The reference text goes to the per-SoC "ref" of the function row.  Overrides (JSON): {"ignore": {SOC: [key..]},
 "fail": {SOC: {key: detail}}, "pass_only": [SOC..]} (pass_only: take only PASS results of that file, e.g. a starved devtest run).
 Usage: merge_evidence.py [--tag agg47] [--dry] SOC=result.json[:pass_only] ... [--overrides f.json]"""
@@ -38,7 +38,7 @@ for spec in files:
             continue
         cells = F[k]["cells"]
         cur = cells.get(soc)
-        if not exported(soc, k) and v["v"] in ("PASS", "FAIL"):
+        if not exported(soc, k) and v["v"] in ("PASS", "FAIL", "RT"):
             report["skipped"].append((soc, k, v["v"], "not in docs/api_exports.json (export list older than the flashed libimp)")); continue
         if cur in ("n.a.", "nob", None):
             report["skipped"].append((soc, k, v["v"], "cell is %s" % cur)); continue
@@ -55,6 +55,12 @@ for spec in files:
             elif cur in ("cache", "stub", "err"):
                 report["kept"].append((soc, k, "PASS", cur)); print("KEPT-GAP", soc, k, cur, "(PASS, but the cell records a known defect/stub: review)")
             if cur in ("aud", "host", "?", "run", "dev", "dev+", "no-op", "miss") or cells[soc] == "dev": F[k].setdefault("ref", {})[soc] = ref
+        elif v["v"] == "RT":
+            if cur in ("aud", "host", "?", "run", "miss"):
+                cells[soc] = "rt"; report["dev"].append((soc, k, cur))
+                F[k].setdefault("ref", {})[soc] = ref + " (API round trip, no visible effect expected)"
+            else:
+                report["kept"].append((soc, k, "RT", cur))
         elif v["v"] == "FAIL" and mode != "pass_only":
             if cur != "miss":
                 cells[soc] = "err"; report["err"].append((soc, k, v["detail"]))

@@ -1497,31 +1497,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
-    "T30": "n.a.",
-    "T31": "host",
-    "T32": "n.a.",
-    "T33": "n.a.",
-    "T40": "n.a.",
-    "T41": "n.a."
-   },
-   "used": {
-    "T23": [
-     "r†"
-    ],
-    "T31": [
-     "r†"
-    ]
-   },
-   "note": "T31: wired to the driver (agg-25)"
-  },
-  "ISP_Tuning_EnableDefog": {
-   "area": "ISP tuning",
-   "cells": {
-    "T10": "n.a.",
-    "T20": "n.a.",
-    "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "dev",
     "T32": "n.a.",
@@ -1537,7 +1513,39 @@
      "r†"
     ]
    },
-   "note": "T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera"
+   "note": "T31: wired to the driver (agg-25)",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
+  },
+  "ISP_Tuning_EnableDefog": {
+   "area": "ISP tuning",
+   "cells": {
+    "T10": "n.a.",
+    "T20": "n.a.",
+    "T21": "n.a.",
+    "T23": "dev",
+    "T30": "n.a.",
+    "T31": "dev",
+    "T32": "n.a.",
+    "T33": "n.a.",
+    "T40": "n.a.",
+    "T41": "n.a."
+   },
+   "used": {
+    "T23": [
+     "r†"
+    ],
+    "T31": [
+     "r†"
+    ]
+   },
+   "note": "T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_EnableMovestate": {
    "area": "ISP tuning",
@@ -1658,7 +1666,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "aud",
     "T32": "n.a.",
@@ -1678,7 +1686,10 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+   }
   },
   "ISP_Tuning_Get/SetBcshHue": {
    "area": "ISP tuning",
@@ -1686,13 +1697,13 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -1726,7 +1737,12 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_Get/SetCCMAttr": {
    "area": "ISP tuning",
@@ -1791,16 +1807,16 @@
   "ISP_Tuning_Get/SetContrast": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "aud",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -1854,7 +1870,14 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_Get/SetCsc_Attr": {
    "area": "ISP tuning",
@@ -1886,7 +1909,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "aud",
     "T32": "n.a.",
@@ -1904,17 +1927,20 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+   }
   },
   "ISP_Tuning_Get/SetDRC_Strength": {
    "area": "ISP tuning",
    "cells": {
     "T10": "n.a.",
     "T20": "n.a.",
-    "T21": "aud",
-    "T23": "aud",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1937,7 +1963,12 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetDefog_Strength": {
    "area": "ISP tuning",
@@ -1945,9 +1976,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1965,7 +1996,11 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetDrawBlock": {
    "area": "ISP tuning",
@@ -2005,17 +2040,20 @@
      "r†"
     ]
    },
-   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)"
+   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)",
+   "ref": {
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetGamma": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "dev",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2050,7 +2088,13 @@
    "note": "T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05",
    "better": [
     "T23"
-   ]
+   ],
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetGammaAttr": {
    "area": "ISP tuning",
@@ -2113,7 +2157,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T23": [
@@ -2135,15 +2179,18 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps"
+   "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps",
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_Get/SetHiLightDepress": {
    "area": "ISP tuning",
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
     "T31": "aud",
     "T32": "n.a.",
@@ -2183,7 +2230,11 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+   }
   },
   "ISP_Tuning_Get/SetISPCSCAttr": {
    "area": "ISP tuning",
@@ -2252,10 +2303,10 @@
   "ISP_Tuning_Get/SetISPHflip": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
     "T31": "aud",
     "T32": "n.a.",
@@ -2289,7 +2340,13 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+   }
   },
   "ISP_Tuning_Get/SetISPRunningMode": {
    "area": "ISP tuning",
@@ -2371,10 +2428,10 @@
   "ISP_Tuning_Get/SetISPVflip": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
     "T31": "aud",
     "T32": "n.a.",
@@ -2408,7 +2465,13 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+   }
   },
   "ISP_Tuning_Get/SetIntegrationTime": {
    "area": "ISP tuning",
@@ -2448,7 +2511,7 @@
     "T21": "n.a.",
     "T23": "no-op",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "dev",
@@ -2465,7 +2528,10 @@
      "r†"
     ]
    },
-   "note": "T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)"
+   "note": "T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)",
+   "ref": {
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetMaxAgain": {
    "area": "ISP tuning",
@@ -2626,16 +2692,16 @@
   "ISP_Tuning_Get/SetSaturation": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "rt",
+    "T20": "dev",
+    "T21": "rt",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -2689,7 +2755,15 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24 (API round trip, no visible effect expected)",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_Get/SetSensorHflip": {
    "area": "ISP tuning",
@@ -2923,16 +2997,16 @@
   "ISP_Tuning_GetBrightness": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -2976,7 +3050,15 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested)"
+   "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested)",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_GetEVAttr": {
    "area": "ISP tuning",
@@ -3039,7 +3121,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "aud",
     "T32": "n.a.",
@@ -3056,7 +3138,8 @@
     ]
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30"
    }
   },
   "ISP_Tuning_GetISPBypass": {
@@ -3093,7 +3176,7 @@
   "ISP_Tuning_GetRawDRC": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
+    "T10": "dev",
     "T20": "host",
     "T21": "aud",
     "T23": "n.a.",
@@ -3118,7 +3201,10 @@
      "p†"
     ]
    },
-   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build"
+   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+   }
   },
   "ISP_Tuning_GetSceneMode": {
    "area": "ISP tuning",
@@ -3258,12 +3344,12 @@
   "ISP_Tuning_GetSharpness": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
@@ -3311,7 +3397,14 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_GetTotalGain": {
    "area": "ISP tuning",
@@ -3444,16 +3537,16 @@
   "ISP_Tuning_SetBrightness": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "dev",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "aud"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -3510,7 +3603,15 @@
    "note": "T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value",
    "better": [
     "T21"
-   ]
+   ],
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_SetDPStrength": {
    "area": "ISP tuning",
@@ -3653,7 +3754,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "dev"
    },
    "used": {
     "T41": [
@@ -3666,12 +3767,15 @@
      "r†"
     ]
    },
-   "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk"
+   "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "ref": {
+    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+   }
   },
   "ISP_Tuning_SetMeshShadingScale": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
+    "T10": "dev",
     "T20": "host",
     "T21": "n.a.",
     "T23": "n.a.",
@@ -3682,12 +3786,15 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending"
+   "note": "T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+   }
   },
   "ISP_Tuning_SetRawDRC": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
+    "T10": "dev",
     "T20": "host",
     "T21": "no-op",
     "T23": "n.a.",
@@ -3712,7 +3819,10 @@
      "p†"
     ]
    },
-   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)"
+   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+   }
   },
   "ISP_Tuning_SetScalerLv": {
    "area": "ISP tuning",
@@ -3857,12 +3967,12 @@
   "ISP_Tuning_SetSharpness": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "no-op",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
@@ -3920,17 +4030,24 @@
      "t†"
     ]
    },
-   "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)"
+   "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T20": "apitest agg47 2026-10-26 192.168.10.107",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_SetSinterStrength": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -3968,7 +4085,13 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_SetTemperDnsCtl": {
    "area": "ISP tuning",
@@ -3989,7 +4112,7 @@
   "ISP_Tuning_SetTemperStrength": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "aud",
     "T21": "aud",
     "T23": "aud",
@@ -4032,7 +4155,10 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+   }
   },
   "ISP_Tuning_SetTmoFaceae": {
    "area": "ISP tuning",
@@ -4441,12 +4567,12 @@
   "ISP_Tuning_Get/SetAeComp": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "aud",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -4479,7 +4605,12 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47 2026-10-26 192.168.10.31",
+    "T23": "apitest agg47 2026-10-26 192.168.10.30",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_Get/SetAeConvergeStep": {
    "area": "AE / AWB / AF",
@@ -5879,10 +6010,10 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "dev",
     "T23": "host",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -5896,7 +6027,11 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified"
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
+   "ref": {
+    "T21": "apitest agg47 2026-10-26 192.168.10.24",
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "ISP_Tuning_SetWB_ALGO": {
    "area": "AE / AWB / AF",
@@ -5906,13 +6041,16 @@
     "T21": "n.a.",
     "T23": "err",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged)."
+   "note": "T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
+   "ref": {
+    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+   }
   },
   "Decoder_*": {
    "area": "Encoder",

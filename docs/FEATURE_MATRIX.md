@@ -855,15 +855,15 @@ As of: 2026-10-26. One row per vendor IMP/SU function (a Get/Set row counts as t
 
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
-- **ISP tuning:** T10 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T20 33/67 ✅ · 34 🔧 · 0 gaps · 0 ? · T21 32/66 ✅ · 34 🔧 · 0 gaps · 0 ? · T23 40/97 ✅ · 54 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 34/87 ✅ · 53 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 44/71 ✅ · 25 🔧 · 0 gaps · 2 ? · T41 42/78 ✅ · 20 🔧 · 16 gaps · 0 ?
-- **AE / AWB / AF:** T10 16/27 ✅ · 11 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 28/29 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 42/51 ✅ · 8 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 40/49 ✅ · 9 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 21/29 ✅ · 6 🔧 · 2 gaps · 0 ? · T41 22/39 ✅ · 2 🔧 · 15 gaps · 0 ?
+- **ISP tuning:** T10 48/67 ✅ · 19 🔧 · 0 gaps · 0 ? · T20 43/67 ✅ · 24 🔧 · 0 gaps · 0 ? · T21 46/66 ✅ · 20 🔧 · 0 gaps · 0 ? · T23 65/97 ✅ · 29 🔧 · 3 gaps · 0 ? · T30 0/67 ✅ · 6 🔧 · 2 gaps · 59 ? · T31 51/87 ✅ · 36 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 44/71 ✅ · 25 🔧 · 0 gaps · 2 ? · T41 43/78 ✅ · 19 🔧 · 16 gaps · 0 ?
+- **AE / AWB / AF:** T10 18/27 ✅ · 9 🔧 · 0 gaps · 0 ? · T20 22/27 ✅ · 5 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 44/51 ✅ · 6 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 44/49 ✅ · 5 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 21/29 ✅ · 6 🔧 · 2 gaps · 0 ? · T41 22/39 ✅ · 2 🔧 · 15 gaps · 0 ?
 - **Encoder:** T10 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T20 40/70 ✅ · 0 🔧 · 29 gaps · 1 ? · T21 49/67 ✅ · 2 🔧 · 16 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 41/45 ✅ · 1 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 46/59 ✅ · 3 🔧 · 10 gaps · 0 ? · T41 40/74 ✅ · 9 🔧 · 25 gaps · 0 ?
 - **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 20/36 ✅ · 7 🔧 · 9 gaps · 0 ?
 - **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 19/42 ✅ · 16 🔧 · 4 gaps · 3 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 21/42 ✅ · 13 🔧 · 8 gaps · 0 ?
 - **IVS:** T10 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 17/18 ✅ · 1 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 31/68 ✅ · 37 🔧 · 0 gaps · 0 ? · T20 48/68 ✅ · 20 🔧 · 0 gaps · 0 ? · T21 45/70 ✅ · 25 🔧 · 0 gaps · 0 ? · T23 74/77 ✅ · 3 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 53/96 ✅ · 43 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 28/99 ✅ · 2 🔧 · 22 gaps · 47 ? · T41 33/107 ✅ · 52 🔧 · 22 gaps · 0 ?
 - **System:** T10 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T20 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T21 17/48 ✅ · 28 🔧 · 0 gaps · 3 ? · T23 18/60 ✅ · 28 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 19/64 ✅ · 31 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 18/50 ✅ · 3 🔧 · 1 gaps · 28 ? · T41 16/55 ✅ · 33 🔧 · 6 gaps · 0 ?
-- **All areas:** T10 186/333 ✅ · 112 🔧 · 31 gaps · 4 ? · T20 211/333 ✅ · 89 🔧 · 29 gaps · 4 ? · T21 222/333 ✅ · 92 🔧 · 16 gaps · 3 ? · T23 304/457 ✅ · 111 🔧 · 21 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 242/406 ✅ · 140 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 224/402 ✅ · 60 🔧 · 40 gaps · 78 ? · T41 212/449 ✅ · 136 🔧 · 101 gaps · 0 ?
+- **All areas:** T10 203/333 ✅ · 95 🔧 · 31 gaps · 4 ? · T20 221/333 ✅ · 79 🔧 · 29 gaps · 4 ? · T21 237/333 ✅ · 77 🔧 · 16 gaps · 3 ? · T23 331/457 ✅ · 84 🔧 · 21 gaps · 21 ? · T30 0/354 ✅ · 37 🔧 · 21 gaps · 296 ? · T31 263/406 ✅ · 119 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 224/402 ✅ · 60 🔧 · 40 gaps · 78 ? · T41 213/449 ✅ · 135 🔧 · 101 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -984,6 +984,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 - `✅` works, device-tested
 - `✅+` works, device-tested, better than the vendor
+- `✅rt` API round trip on device, no visible effect expected
 - `✅r` works: called by the streamer on fleet cameras of this SoC that passed the fleet soak (not an individual device test; see the reference)
 - `✅○` vendor no-op, OpenIMP matches that
 - `🔧h` implemented, host tests only (no camera run yet)
@@ -1074,39 +1075,39 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_StartNightMode` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ❌ | – |
 | `ISP_StreamCheck` | · | · | · | 🔧a | · | · | · | · | · | · | – |
 | `ISP_Tuning_DisableMovestate` | 🔧a | 🔧a | 🔧a | ✅○ | ? | 🔧h | · | · | · | · | r† |
-| `ISP_Tuning_EnableDefog` | · | · | · | 🔧a | · | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_EnableDRC` | · | · | · | 🔧a | · | 🔧h | · | · | · | · | r† |
+| `ISP_Tuning_EnableDefog` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
+| `ISP_Tuning_EnableDRC` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_EnableMovestate` | 🔧a | 🔧a | 🔧a | ✅○ | ? | 🔧h | · | · | · | · | r† |
 | `ISP_Tuning_Get/SetAntiFlickerAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_Get/SetBacklightComp` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | p† r† t |
-| `ISP_Tuning_Get/SetBcshHue` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetBacklightComp` | · | · | · | ✅ | · | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetBcshHue` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | 🔧h | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetCCMAttr` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | ✅ | 🔧h | r† |
 | `ISP_Tuning_Get/SetColorfxMode` | 🔧a | 🔧a | ✅+ | · | ? | · | · | · | · | · | t |
-| `ISP_Tuning_Get/SetContrast` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetContrast` | ✅ | ✅ | 🔧a | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetCsc_Attr` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetDefog_Strength` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | p† r† t |
-| `ISP_Tuning_Get/SetDPC_Strength` | · | · | · | 🔧a | · | 🔧a | · | · | · | · | r† t |
+| `ISP_Tuning_Get/SetDefog_Strength` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetDPC_Strength` | · | · | · | ✅ | · | 🔧a | · | · | · | · | r† t |
 | `ISP_Tuning_Get/SetDrawBlock` | · | · | · | ❌e | · | · | 📋 | 📋 | · | ❌ | – |
-| `ISP_Tuning_Get/SetDRC_Strength` | · | · | 🔧a | 🔧a | · | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetDRC_Strength` | · | · | ✅ | ✅ | · | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetFrontCrop` | · | · | · | ✅ | · | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetGamma` | 🔧a | 🔧a | 🔧a | ✅+ | ? | 🔧a | · | · | · | · | p† r† |
+| `ISP_Tuning_Get/SetGamma` | ✅ | 🔧a | ✅ | ✅+ | ? | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetGammaAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | 🔧h | p† r† |
-| `ISP_Tuning_Get/SetHiLightDepress` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetHiLightDepress` | 🔧a | 🔧a | ✅ | ✅ | ? | 🔧a | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetHLDCAttr` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_Get/SetHVFLIP` | · | · | · | 🔧a | · | 🔧a | 📋 | 📋 | 🔧h | ✅ | r† t t† |
 | `ISP_Tuning_Get/SetIntegrationTime` | ✅r | ✅ | ✅ | · | ? | · | · | · | · | · | t |
 | `ISP_Tuning_Get/SetISPCSCAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_Get/SetISPCustomMode` | · | · | · | 🔧a | · | 🔧h | · | · | · | · | r† |
-| `ISP_Tuning_Get/SetISPHflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
+| `ISP_Tuning_Get/SetISPHflip` | ✅ | ✅ | ✅ | ✅ | ? | 🔧a | · | · | · | · | p† t |
 | `ISP_Tuning_Get/SetISPHVflip` | ✅ | ✅ | · | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetISPRunningMode` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_Get/SetISPVflip` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | · | · | p† t |
-| `ISP_Tuning_Get/SetMask` | · | · | · | ✅○ | · | 🔧a | · | · | ✅ | · | r† |
+| `ISP_Tuning_Get/SetISPVflip` | ✅ | ✅ | ✅ | ✅ | ? | 🔧a | · | · | · | · | p† t |
+| `ISP_Tuning_Get/SetMask` | · | · | · | ✅○ | · | ✅ | · | · | ✅ | · | r† |
 | `ISP_Tuning_Get/SetMaxAgain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetMaxDgain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetModule_Ratio` | · | · | · | · | · | · | 📋 | 📋 | ✅ | 🔧a | – |
 | `ISP_Tuning_Get/SetModuleControl` | · | · | 🔧h | 🔧a | · | 🔧a | 📋 | 📋 | ✅ | 🔧h | r† |
-| `ISP_Tuning_Get/SetSaturation` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_Get/SetSaturation` | ✅rt | ✅ | ✅rt | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_Get/SetSensorHflip` | · | · | · | 🔧a | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetSensorVflip` | · | · | · | 🔧a | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetSinterDnsAttr` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
@@ -1119,41 +1120,41 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_GetAutoZoom` | · | · | · | 🔧h | · | · | 📋 | 📋 | 🔧h | 🔧h | – |
 | `ISP_Tuning_GetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_GetBlcAttr` | · | · | · | ✅○ | · | ✅ | · | · | · | · | r† |
-| `ISP_Tuning_GetBrightness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `ISP_Tuning_GetBrightness` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `ISP_Tuning_GetEVAttr` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
-| `ISP_Tuning_GetHVFlip` | · | · | · | 🔧a | · | 🔧a | · | · | ✅ | ✅ | r† |
+| `ISP_Tuning_GetHVFlip` | · | · | · | ✅ | · | 🔧a | · | · | ✅ | ✅ | r† |
 | `ISP_Tuning_GetISPBypass` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_GetISPRunningModeWithFd` | · | · | · | · | · | · | · | 📋 | · | · | – |
 | `ISP_Tuning_GetMaskBlock` | · | · | · | 🔧h | · | · | 📋 | 📋 | · | 🔧h | – |
 | `ISP_Tuning_GetMultiSensorEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Tuning_GetRawDRC` | 🔧h | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
+| `ISP_Tuning_GetRawDRC` | ✅ | 🔧h | 🔧a | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_GetSceneMode` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
 | `ISP_Tuning_GetSensorAttr` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | ✅ | ✅ | r† t t† |
 | `ISP_Tuning_GetSensorFPS` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_GetSharpness` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | 📋 | 📋 | ✅ | ✅ | p† r† |
+| `ISP_Tuning_GetSharpness` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `ISP_Tuning_GetTotalGain` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_SaveAllParam` | · | · | · | · | · | · | · | · | · | · | – |
 | `ISP_Tuning_SetAntiFogAttr` | ✅ | ✅ | ✅○ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_SetAutoZoom` | · | · | · | 🔧h | · | 🔧h | 📋 | 📋 | 🔧h | 🔧h | p† r r† |
 | `ISP_Tuning_SetBcshRGBOffsetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Tuning_SetBrightness` | ✅r | ✅r | ✅+ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_SetBrightness` | ✅ | ✅ | ✅+ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
 | `ISP_Tuning_SetDPStrength` | ✅ | ✅ | ✅ | · | 🔧h | · | · | · | · | · | – |
 | `ISP_Tuning_SetFixedContraster` | · | · | · | · | · | · | · | · | 🔧h | · | – |
 | `ISP_Tuning_SetFWFreeze` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
 | `ISP_Tuning_SetISPBypass` | 🔧a | 🔧a | 🔧a | 🔧a | ? | 🔧a | · | · | ? | · | p† r† |
 | `ISP_Tuning_SetISPLDC` | · | · | · | · | ❌ | · | · | · | · | · | – |
 | `ISP_Tuning_SetISPProcess` | 🔧a | 🔧a | 🔧a | · | ? | · | · | · | · | · | – |
-| `ISP_Tuning_SetMaskBlock` | · | · | · | 🔧h | · | · | 📋 | 📋 | · | 🔧h | r† |
-| `ISP_Tuning_SetMeshShadingScale` | 🔧h | 🔧h | · | · | · | · | · | · | · | · | – |
+| `ISP_Tuning_SetMaskBlock` | · | · | · | 🔧h | · | · | 📋 | 📋 | · | ✅ | r† |
+| `ISP_Tuning_SetMeshShadingScale` | ✅ | 🔧h | · | · | · | · | · | · | · | · | – |
 | `ISP_Tuning_SetMultiSensorEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Tuning_SetRawDRC` | 🔧h | 🔧h | ✅○ | · | ? | · | · | · | · | · | p† |
+| `ISP_Tuning_SetRawDRC` | ✅ | 🔧h | ✅○ | · | ? | · | · | · | · | · | p† |
 | `ISP_Tuning_SetScalerLv` | · | · | · | ✅○ | · | 🔧a | 📋 | 📋 | · | 🔧h | r† |
 | `ISP_Tuning_SetSceneMode` | ✅r | ✅r | ✅○ | · | ? | · | · | · | · | · | t |
 | `ISP_Tuning_SetSensorFPS` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_SetSharpness` | ✅r | ✅r | ✅○ | ✅r | ? | ✅r | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
-| `ISP_Tuning_SetSinterStrength` | ✅r | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
+| `ISP_Tuning_SetSharpness` | ✅ | ✅ | ✅○ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p† r† t t† |
+| `ISP_Tuning_SetSinterStrength` | ✅ | ✅r | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_SetTemperDnsCtl` | 🔧h | 🔧h | 🔧a | · | ⚠c | · | · | · | · | · | – |
-| `ISP_Tuning_SetTemperStrength` | ✅r | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
+| `ISP_Tuning_SetTemperStrength` | ✅ | ✅r | ✅r | ✅r | ? | ✅r | · | · | · | · | p† r† t |
 | `ISP_Tuning_SetTmoFaceae` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_SetVideoDrop` | 🔧h | 🔧h | 🔧h | 🔧h | ? | 🔧h | 📋 | 📋 | ? | 🔧h | r† |
 | `ISP_Tuning_SwitchBin` | · | · | · | ❌e | · | · | 📋 | 📋 | ✅ | 🔧h | p† |
@@ -1183,38 +1184,38 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_SetSwitchgpio`: T23: ioctl (claude/t23t31-cacheonly, not in agg-25)
 - `ISP_StreamCheck`: audit: reaches the driver/kernel
 - `ISP_Tuning_DisableMovestate`: T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control
-- `ISP_Tuning_EnableDefog`: T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera
-- `ISP_Tuning_EnableDRC`: T31: wired to the driver (agg-25)
+- `ISP_Tuning_EnableDefog`: T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_EnableDRC`: T31: wired to the driver (agg-25) T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_EnableMovestate`: T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control
 - `ISP_Tuning_Get/SetAntiFlickerAttr`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `ISP_Tuning_Get/SetBacklightComp`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetBcshHue`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_Get/SetBacklightComp`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
+- `ISP_Tuning_Get/SetBcshHue`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetCCMAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
 - `ISP_Tuning_Get/SetColorfxMode`: T21: B/W, negative and vivid change the picture (imgfx); SEPIA works (beyond vendor, was -1): CCM saturation 0 plus a tinted CSC matrix, dU/dV +10/+9 and +17/+19 in two runs; T10/T20 re-test pending (RC imgfx ran in the dark)
-- `ISP_Tuning_Get/SetContrast`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_Get/SetContrast`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetCsc_Attr`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetDefog_Strength`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetDPC_Strength`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetDefog_Strength`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetDPC_Strength`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 192.168.10.30.
 - `ISP_Tuning_Get/SetDrawBlock`: T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
-- `ISP_Tuning_Get/SetDRC_Strength`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)
-- `ISP_Tuning_Get/SetGamma`: T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05
+- `ISP_Tuning_Get/SetDRC_Strength`: audit: reaches the driver/kernel T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetFrontCrop`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified) T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_Get/SetGamma`: T23: applied at once (beyond stock); curve test, falling curve rejected, restore ok on cam-B 2026-10-05 T10: apitest agg47 2026-10-26 192.168.10.31. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetGammaAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
-- `ISP_Tuning_Get/SetHiLightDepress`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T41: device-tested through main-matrix feature #13 (Mirror / flip).
+- `ISP_Tuning_Get/SetHiLightDepress`: audit: reaches the driver/kernel T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `ISP_Tuning_Get/SetHVFLIP`: audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetIntegrationTime`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_Get/SetISPCSCAttr`: T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetISPCustomMode`: T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there
-- `ISP_Tuning_Get/SetISPHflip`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetISPHflip`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `ISP_Tuning_Get/SetISPHVflip`: T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107.
 - `ISP_Tuning_Get/SetISPRunningMode`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `ISP_Tuning_Get/SetISPVflip`: audit: reaches the driver/kernel
-- `ISP_Tuning_Get/SetMask`: T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)
+- `ISP_Tuning_Get/SetISPVflip`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30.
+- `ISP_Tuning_Get/SetMask`: T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1) T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetMaxAgain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetMaxDgain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetModule_Ratio`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetModuleControl`: T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)
-- `ISP_Tuning_Get/SetSaturation`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_Get/SetSaturation`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31 (API round trip, no visible effect expected). T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24 (API round trip, no visible effect expected). T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_Get/SetSensorHflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSensorVflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSinterDnsAttr`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
@@ -1226,34 +1227,34 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetWdrOutputMode`: T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17)
 - `ISP_Tuning_GetAutoZoom`: T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 - `ISP_Tuning_GetBlcAttr`: T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS T31: apitest agg47 2026-10-26 192.168.10.26.
-- `ISP_Tuning_GetBrightness`: audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_GetBrightness`: audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_GetEVAttr`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
-- `ISP_Tuning_GetHVFlip`: T40: apitest agg47 2026-10-26 192.168.10.184.
+- `ISP_Tuning_GetHVFlip`: T40: apitest agg47 2026-10-26 192.168.10.184. T23: apitest agg47 2026-10-26 192.168.10.30.
 - `ISP_Tuning_GetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run)
-- `ISP_Tuning_GetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build
+- `ISP_Tuning_GetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build T10: apitest agg47 2026-10-26 192.168.10.31.
 - `ISP_Tuning_GetSceneMode`: audit: reaches the driver/kernel
 - `ISP_Tuning_GetSensorAttr`: T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_GetSensorFPS`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_GetSharpness`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
 - `ISP_Tuning_GetTotalGain`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_SaveAllParam`: T10/T20/T21 (4 builds each) and T23/T31: declared in the SDK header, exported by none of the vendor libimp builds (nm); a vendor-stack application cannot link it either
 - `ISP_Tuning_SetAntiFogAttr`: T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24.
 - `ISP_Tuning_SetAutoZoom`: T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
-- `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_SetBrightness`: T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: apitest agg47 2026-10-26 192.168.10.34.
 - `ISP_Tuning_SetDPStrength`: T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24.
 - `ISP_Tuning_SetFWFreeze`: audit: reaches the driver/kernel
 - `ISP_Tuning_SetISPBypass`: audit: reaches the driver/kernel
 - `ISP_Tuning_SetISPProcess`: audit: reaches the driver/kernel
-- `ISP_Tuning_SetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
-- `ISP_Tuning_SetMeshShadingScale`: T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending
-- `ISP_Tuning_SetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)
+- `ISP_Tuning_SetMaskBlock`: T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T41: apitest agg47 2026-10-26 192.168.10.34.
+- `ISP_Tuning_SetMeshShadingScale`: T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10: apitest agg47 2026-10-26 192.168.10.31.
+- `ISP_Tuning_SetRawDRC`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T10: apitest agg47 2026-10-26 192.168.10.31.
 - `ISP_Tuning_SetScalerLv`: T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk
 - `ISP_Tuning_SetSceneMode`: T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test.
 - `ISP_Tuning_SetSensorFPS`: T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T40: gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS. T41: apitest agg47 2026-10-26 192.168.10.34.
-- `ISP_Tuning_SetSharpness`: T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
-- `ISP_Tuning_SetSinterStrength`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
+- `ISP_Tuning_SetSharpness`: T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified) T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T41: device-tested through main-matrix feature #12 (Brightness / contrast / saturation / sharpness / hue).
+- `ISP_Tuning_SetSinterStrength`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test.
 - `ISP_Tuning_SetTemperDnsCtl`: T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test
-- `ISP_Tuning_SetTemperStrength`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
+- `ISP_Tuning_SetTemperStrength`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T20: called by timps on the fleet .107, .163 (T20), soak agg46; not an individual device test. T21: called by timps on the fleet .24 (T21), soak agg46; not an individual device test. T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetVideoDrop`: all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule
 - `ISP_Tuning_SwitchBin`: T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested) T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)
 - `ISP_Tuning_WaitFrame`: T10+T20+T21: waits for the frame end (agg-25; T20 ms, not jiffies); T23: stock 24-byte block, driver routed (agg-25), no device test
@@ -1276,7 +1277,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Awb_Get/SetRgbCoefft` | 🔧a | ✅ | ✅ | ✅ | ? | ✅ | · | · | ✅ | 🔧h | r† |
 | `ISP_Tuning_AwbSync` | · | · | · | · | · | · | · | · | · | · | – |
 | `ISP_Tuning_Get/SetAeAttr` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† r† |
-| `ISP_Tuning_Get/SetAeComp` | 🔧a | 🔧a | · | 🔧a | ? | 🔧a | · | · | · | · | p† r† t |
+| `ISP_Tuning_Get/SetAeComp` | ✅ | 🔧a | · | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetAeConvergeStep` | · | · | · | · | · | · | · | · | · | ⚠c | – |
 | `ISP_Tuning_Get/SetAeExpList` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
 | `ISP_Tuning_Get/SetAeExprInfo` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
@@ -1337,10 +1338,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_SetAeStartAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetAeTargetAttr` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetAwbCt` | · | · | · | 🔧h | · | 🔧a | · | · | · | · | r† |
-| `ISP_Tuning_SetExpr` | 🔧a | 🔧a | 🔧a | 🔧h | ? | 🔧a | · | · | · | · | r† |
+| `ISP_Tuning_SetExpr` | 🔧a | 🔧a | ✅ | 🔧h | ? | ✅ | · | · | · | · | r† |
 | `ISP_Tuning_SetMultiSensorAeEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetMultiSensorAWBEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
-| `ISP_Tuning_SetWB_ALGO` | · | · | · | ❌e | · | 🔧a | · | · | · | · | – |
+| `ISP_Tuning_SetWB_ALGO` | · | · | · | ❌e | · | ✅ | · | · | · | · | – |
 
 <details><summary>Notes and references (49)</summary>
 
@@ -1349,7 +1350,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Awb_Get/SetRgbCoefft`: T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58 T40: gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS.
 - `ISP_Tuning_AwbSync`: T23: the vendor libimp 1.3.0 does not export it (only IMP_ISP_MultiCamera_Tuning_AwbSync, which sends control 0x8000011 for sensor 1 only); the stock kernel module rejects 0x8000011 in s_ctrl and g_ctrl (-1, checked in the emulator on the stock module), so the open driver's -EINVAL is the vendor behaviour (class a)
 - `ISP_Tuning_Get/SetAeAttr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-- `ISP_Tuning_Get/SetAeComp`: audit: reaches the driver/kernel
+- `ISP_Tuning_Get/SetAeComp`: audit: reaches the driver/kernel T10: apitest agg47 2026-10-26 192.168.10.31. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetAeExprInfo`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #4 (AE control).
 - `ISP_Tuning_Get/SetAeHist`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T10: apitest agg47 2026-10-26 192.168.10.31. T20: apitest agg47 2026-10-26 192.168.10.107. T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
 - `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor† T21: apitest agg47 2026-10-26 192.168.10.24. T23: apitest agg47 2026-10-26 192.168.10.30. T31: apitest agg47 2026-10-26 192.168.10.26.
@@ -1391,8 +1392,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_SetAe_IT_MAX`: audit: reaches the driver/kernel T23: called by timps on the fleet .124, .28, .30, .23 (T23), soak agg46; not an individual device test. T31: called by timps on the fleet .145, .151, .25, .26, .29, .33, .21, .224 (T31), soak agg46; not an individual device test.
 - `ISP_Tuning_SetAeFreeze`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 - `ISP_Tuning_SetAwbCt`: T23: stock handlers routed (open-tx-isp agg-25), no device test
-- `ISP_Tuning_SetExpr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
-- `ISP_Tuning_SetWB_ALGO`: T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).
+- `ISP_Tuning_SetExpr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T21: apitest agg47 2026-10-26 192.168.10.24. T31: apitest agg47 2026-10-26 192.168.10.26.
+- `ISP_Tuning_SetWB_ALGO`: T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T31: apitest agg47 2026-10-26 192.168.10.26.
 
 </details>
 
