@@ -128,6 +128,15 @@
 #else
 #define P2_MAX_CHANNELS 8
 #endif
+/* T40/T41: hidden slots behind the public channels for the unbound
+ * encoder (IMP_Encoder_YuvInit); the vendor creates a standalone codec there
+ * as well, no public channel number is used up. */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#define P2_YUV_SLOTS 4
+#else
+#define P2_YUV_SLOTS 0
+#endif
+#define P2_ALL_CHANNELS (P2_MAX_CHANNELS + P2_YUV_SLOTS)
 #define P2_MAX_BINDS 16
 #define P2_MAX_PUBLIC_PACKS 16
 /*
@@ -359,6 +368,7 @@ typedef struct {
     int closing;                    /* teardown waits: refuse new polls */
     pthread_cond_t poll_idle;       /* signalled when in_poll drops to 0 */
     pthread_mutex_t poll_serial;    /* one PollingStream encodes at a time */
+    int yuv_claimed;                /* hidden slot held by IMP_Encoder_YuvInit */
     pthread_mutex_t lock;
 #if defined(PLATFORM_T41)
     /* vendor: RC setters only store a pending value that the encoder
@@ -444,7 +454,7 @@ static uint32_t p2_fill_t31_packs(P2EncoderChannel *channel,
 
 static int p2_initialized;
 static int p2_groups[P2_MAX_GROUPS];
-static P2EncoderChannel p2_channels[P2_MAX_CHANNELS];
+static P2EncoderChannel p2_channels[P2_ALL_CHANNELS];
 static P2Bind p2_binds[P2_MAX_BINDS];
 static pthread_mutex_t p2_state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t p2_core_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -1364,6 +1374,7 @@ static int p2_valid_channel_at(int channel, const char *function)
 #define P2_T41_ERR_CHN   ((int)0x80040001u)
 #define P2_T41_ERR_NOCHN ((int)0x80040008u)
 #define P2_T41_ERR_PARAM ((int)0x80040010u)
+#define P2_T41_ERR_PARAM_2 ((int)0x80040002u)
 
 static int p2_t41_chn_check(int channel)
 {
@@ -1871,7 +1882,7 @@ int EncoderInit(void)
         memset(p2_groups, 0, sizeof(p2_groups));
         memset(p2_channels, 0, sizeof(p2_channels));
         memset(p2_binds, 0, sizeof(p2_binds));
-        for (i = 0; i < P2_MAX_CHANNELS; i++) {
+        for (i = 0; i < P2_ALL_CHANNELS; i++) {
             p2_channels[i].group = -1;
             p2_channels[i].source_channel = -1;
             p2_channels[i].max_stream_count = P2_DEFAULT_STREAM_COUNT;
@@ -1896,11 +1907,11 @@ int EncoderExit(void)
 
     if (!p2_initialized)
         return 0;
-    for (i = P2_MAX_CHANNELS - 1; i >= 0; i--)
+    for (i = P2_ALL_CHANNELS - 1; i >= 0; i--)
         if (p2_channels[i].created)
             return -1;
     pthread_mutex_lock(&p2_state_lock);
-    for (i = 0; i < P2_MAX_CHANNELS; i++) {
+    for (i = 0; i < P2_ALL_CHANNELS; i++) {
         pthread_cond_destroy(&p2_channels[i].jpeg_frame_ready);
         pthread_mutex_destroy(&p2_channels[i].lock);
     }
@@ -2131,15 +2142,23 @@ static void p2_normalise_rc_qps(IMPEncoderRcAttr *rc)
 }
 #endif
 
+static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr);
+
 int IMP_Encoder_CreateChn(int channel, IMPEncoderCHNAttr *attr)
+{
+    P2_STARTUP_MARKER("openimp/P2 marker C0 CreateChn entry\n");
+    if (!p2_valid_channel(channel) || p2_null_arg(__func__, attr))
+        return -1;
+    return p2_create_chn(channel, attr);
+}
+
+/* channel: a public channel or a hidden unbound-encoder slot (P2_YUV_SLOTS) */
+static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 {
     P2EncoderChannel *ch;
     unsigned char params[P2_PARAM_SIZE];
     int hw_rc_mode;
 
-    P2_STARTUP_MARKER("openimp/P2 marker C0 CreateChn entry\n");
-    if (!p2_valid_channel(channel) || p2_null_arg(__func__, attr))
-        return -1;
 #if !defined(PLATFORM_T31) && !defined(PLATFORM_T40) && \
     !defined(PLATFORM_T41)
     if (p2_attr_codec_type(attr) == IMP_ENC_TYPE_HEVC) {
@@ -2589,12 +2608,19 @@ static void p2_wait_poll_idle(P2EncoderChannel *ch)
     ch->closing--;
 }
 
+static int p2_destroy_chn(int channel);
+
 int IMP_Encoder_DestroyChn(int channel)
+{
+    if (!p2_valid_channel(channel))
+        return -1;
+    return p2_destroy_chn(channel);
+}
+
+static int p2_destroy_chn(int channel)
 {
     P2EncoderChannel *ch;
 
-    if (!p2_valid_channel(channel))
-        return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
     if (ch->evt_open && !ch->registered) {
@@ -6218,5 +6244,539 @@ int openimp_t23_p2_call(int channel, OpenIMPT23P2Fn fn, void *arg)
     ret = fn(&view, arg);
     pthread_mutex_unlock(&ch->lock);
     return ret;
+}
+#endif
+
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/*
+ * Unbound ("input YUV") encoder, vendor T40 1.3.1 / T41 1.2.6
+ * IMP_Encoder_YuvInit/YuvEncode/YuvExit (disassembly of the static
+ * libimp.a, T41 1.2.5 imp_encoder.c.o 0xb7d0..0xbd54):
+ *
+ *  - YuvInit refuses a width that is not a multiple of 16 or a height that
+ *    is not a multiple of 8 (-1), mallocs a codec parameter block, fills it
+ *    from IMPEncoderYuvIn (rates in kbit/s * 1000, JPEG: initQp for every
+ *    QP) and creates a standalone AL codec; no encoder channel is used.
+ *  - YuvEncode builds an NV12 frame record from the caller's IMPFrameInfo
+ *    (phyAddr/virAddr; width/height of the handle), runs Process, waits for
+ *    the stream, copies every NAL section to encOut->outAddr (the caller's
+ *    buffer; the vendor checks no capacity) and returns the AU length in
+ *    encOut->outLen.
+ *  - YuvExit destroys the codec and frees the handle; NULL is -1.
+ *
+ * OpenIMP runs the same codec (codec-t40.c) through a hidden encoder slot
+ * behind the public channels, so rate control, GOP and the AVPU/JPEG
+ * backends are exactly those of a bound channel.  Beyond the vendor: a
+ * non-zero encOut->outLen on entry is taken as the capacity of outAddr and
+ * an AU that does not fit fails instead of overrunning the buffer; a frame
+ * whose chroma plane follows a luma plane of exactly width * height bytes
+ * (height not a multiple of 16) is restaged into the 16-line layout the
+ * AVPU reads; a frame outside rmem is copied into rmem.
+ */
+#define P2_YUV_MAGIC 0x59555645u        /* "EVUY" */
+
+/* t4x_unbound.c (weak: the encoder host tests link without it) */
+extern void *IMP_Encoder_VbmAlloc(uint32_t size, uint32_t align)
+    __attribute__((weak));
+extern void IMP_Encoder_VbmFree(void *vaddr) __attribute__((weak));
+extern intptr_t IMP_Encoder_VbmV2P(intptr_t vaddr) __attribute__((weak));
+extern intptr_t IMP_Encoder_VbmP2V(intptr_t paddr) __attribute__((weak));
+#if defined(PLATFORM_T41)
+extern int IMP_Encoder_InputJpege(uint8_t *src, uint8_t *dst, int src_w,
+                                  int src_h, int q, int *stream_length)
+    __attribute__((weak));
+#endif
+
+typedef struct {
+    uint32_t magic;
+    int slot;                           /* p2_channels index */
+    uint32_t width;
+    uint32_t height;
+    int codec_type;
+    void *staging;                      /* rmem copy, see p2_yuv_source */
+    uint32_t staging_phys;
+    uint32_t staging_size;
+} P2YuvEncoder;
+
+static pthread_mutex_t p2_yuv_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static int p2_yuv_claim_slot(void)
+{
+    int slot;
+
+    pthread_mutex_lock(&p2_yuv_lock);
+    for (slot = P2_MAX_CHANNELS; slot < P2_ALL_CHANNELS; slot++) {
+        P2EncoderChannel *ch = &p2_channels[slot];
+
+        pthread_mutex_lock(&ch->lock);
+        if (!ch->created && !ch->yuv_claimed) {
+            ch->yuv_claimed = 1;
+            pthread_mutex_unlock(&ch->lock);
+            pthread_mutex_unlock(&p2_yuv_lock);
+            return slot;
+        }
+        pthread_mutex_unlock(&ch->lock);
+    }
+    pthread_mutex_unlock(&p2_yuv_lock);
+    return -1;
+}
+
+static void p2_yuv_release_slot(int slot)
+{
+    P2EncoderChannel *ch = &p2_channels[slot];
+
+    pthread_mutex_lock(&ch->lock);
+    ch->yuv_claimed = 0;
+    pthread_mutex_unlock(&ch->lock);
+}
+
+/* IMPEncoderYuvIn -> the channel attribute a bound channel would get */
+static int p2_yuv_attr(IMPEncoderCHNAttr *attr, int width, int height,
+                       const IMPEncoderYuvIn *in)
+{
+    IMPEncoderProfile profile;
+    IMPEncoderRcMode mode = in->mode;
+    int fps = in->frameRate ? in->frameRate : 25;
+    int gop = in->gopLength ? in->gopLength : fps;
+    int init_qp = in->initQp;
+
+    switch (in->type) {
+    case IMP_ENC_TYPE_AVC:
+        profile = IMP_ENC_PROFILE_AVC_MAIN;     /* vendor: profile 77 */
+        break;
+    case IMP_ENC_TYPE_HEVC:
+        profile = IMP_ENC_PROFILE_HEVC_MAIN;
+        break;
+    case IMP_ENC_TYPE_JPEG:
+        profile = IMP_ENC_PROFILE_JPEG;
+        mode = IMP_ENC_RC_MODE_FIXQP;
+        break;
+    default:
+        IMP_LOG_ERR("Encoder", "YuvInit: unsupported encode type %d\n",
+                    (int)in->type);
+        return -1;
+    }
+    if (IMP_Encoder_SetDefaultParam(attr, profile, mode, width, height, fps, 1,
+                                    gop, 2, init_qp,
+                                    (int)in->targetBitrate) != 0)
+        return -1;
+    switch (attr->rcAttr.attrRcMode.rcMode) {
+    case IMP_ENC_RC_MODE_FIXQP:
+        if (in->type != IMP_ENC_TYPE_JPEG) {
+            attr->rcAttr.attrRcMode.attrFixQp.iInitialQP =
+                (int16_t)(init_qp > 0 ? init_qp : 30);
+        }
+        break;
+    case IMP_ENC_RC_MODE_CBR: {
+        IMPEncoderAttrCbr *cbr = &attr->rcAttr.attrRcMode.attrCbr;
+
+        if (in->minQp)
+            cbr->iMinQP = (int16_t)in->minQp;
+        if (in->maxQp)
+            cbr->iMaxQP = (int16_t)in->maxQp;
+        if (in->maxPictureSize)
+            cbr->uMaxPictureSize = in->maxPictureSize;
+        break;
+    }
+    default: {
+        IMPEncoderAttrVbr *vbr = &attr->rcAttr.attrRcMode.attrVbr;
+
+        /* vendor: maxBitrate 0 -> the target (sw 16(s1)) */
+        vbr->uMaxBitRate = in->maxBitrate ? in->maxBitrate : in->targetBitrate;
+        if (in->minQp)
+            vbr->iMinQP = (int16_t)in->minQp;
+        if (in->maxQp)
+            vbr->iMaxQP = (int16_t)in->maxQp;
+        if (in->maxPictureSize)
+            vbr->uMaxPictureSize = in->maxPictureSize;
+        break;
+    }
+    }
+    return 0;
+}
+
+int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight,
+                        IMPEncoderYuvIn *encIn)
+{
+    IMPEncoderCHNAttr attr;
+    P2YuvEncoder *encoder;
+    int slot;
+
+    if (!h || !encIn || inWidth <= 0 || inHeight <= 0 ||
+        (inWidth & 0xf) || (inHeight & 0x7)) {
+        IMP_LOG_ERR("Encoder", "YuvInit: width %d must be a multiple of 16, "
+                    "height %d of 8\n", inWidth, inHeight);
+        return -1;
+    }
+#if defined(PLATFORM_T41)
+    /* vendor: IMP_Get_Info on userBuf_vaddr, failing for a buffer that is
+     * not reserved memory (the stream itself is still copied to outAddr) */
+    if (encIn->useUserBuf &&
+        IMP_Encoder_VbmV2P((intptr_t)encIn->userBuf_vaddr) == 0) {
+        IMP_LOG_ERR("Encoder", "YuvInit: userBuf 0x%08x is not VBM memory\n",
+                    (unsigned int)encIn->userBuf_vaddr);
+        return -1;
+    }
+#endif
+    if (p2_yuv_attr(&attr, inWidth, inHeight, encIn) != 0)
+        return -1;
+    encoder = calloc(1, sizeof(*encoder));
+    if (!encoder)
+        return -1;
+    EncoderInit();
+    slot = p2_yuv_claim_slot();
+    if (slot < 0) {
+        IMP_LOG_ERR("Encoder", "YuvInit: all %d unbound encoders in use\n",
+                    P2_YUV_SLOTS);
+        free(encoder);
+        return -1;
+    }
+    if (p2_create_chn(slot, &attr) != 0) {
+        IMP_LOG_ERR("Encoder", "YuvInit: codec create %dx%d failed\n",
+                    inWidth, inHeight);
+        p2_yuv_release_slot(slot);
+        free(encoder);
+        return -1;
+    }
+    encoder->magic = P2_YUV_MAGIC;
+    encoder->slot = slot;
+    encoder->width = (uint32_t)inWidth;
+    encoder->height = (uint32_t)inHeight;
+    encoder->codec_type = (int)encIn->type;
+    *h = encoder;
+    return 0;
+}
+
+static P2YuvEncoder *p2_yuv_handle(void *h, const char *function)
+{
+    P2YuvEncoder *encoder = h;
+
+    if (!encoder || encoder->magic != P2_YUV_MAGIC ||
+        encoder->slot < P2_MAX_CHANNELS || encoder->slot >= P2_ALL_CHANNELS) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder", "%s: invalid handle %p",
+                        function, h);
+        return NULL;
+    }
+    return encoder;
+}
+
+/* The physical NV12 frame the codec reads: the caller's frame in place
+ * when it is rmem in the AVPU layout (chroma after ALIGN16(height) luma
+ * lines), else an rmem copy in that layout. */
+static int p2_yuv_source(P2YuvEncoder *encoder, const IMPFrameInfo *frame,
+                         uint32_t *physical, uint32_t *virt, uint32_t *size)
+{
+    uint32_t width = encoder->width;
+    uint32_t height = encoder->height;
+    uint32_t lines = (height + 15u) & ~15u;
+    uint32_t aligned_size = width * lines * 3u / 2u;
+    uint32_t packed_size = width * height * 3u / 2u;
+    uint8_t *src = (uint8_t *)(uintptr_t)frame->virAddr;
+    uint32_t phys = frame->phyAddr;
+    int packed;
+
+    if (!src && phys)
+        src = (uint8_t *)IMP_Encoder_VbmP2V((intptr_t)phys);
+    if (!phys && src)
+        phys = (uint32_t)IMP_Encoder_VbmV2P((intptr_t)src);
+    /* chroma right after width * height luma bytes (the vendor InputJpege
+     * layout, what timps' rotate hands over) unless the frame is big
+     * enough for the 16-line layout */
+    packed = lines != height && frame->size && frame->size < aligned_size;
+    if (phys && src && !packed) {
+        (void)DMA_RmemFlushCache(src, aligned_size, 1);
+        *physical = phys;
+        *virt = (uint32_t)(uintptr_t)src;
+        *size = aligned_size;
+        return 0;
+    }
+    if (!src)
+        return -1;
+    if (!encoder->staging) {
+        encoder->staging = IMP_Encoder_VbmAlloc(aligned_size, 4096);
+        if (!encoder->staging)
+            return -1;
+        encoder->staging_phys =
+            (uint32_t)IMP_Encoder_VbmV2P((intptr_t)encoder->staging);
+        encoder->staging_size = aligned_size;
+    }
+    memcpy(encoder->staging, src, (size_t)width * height);
+    memset((uint8_t *)encoder->staging + (size_t)width * height,
+           0x10, (size_t)width * (lines - height));
+    memcpy((uint8_t *)encoder->staging + (size_t)width * lines,
+           src + (packed ? (size_t)width * height : (size_t)width * lines),
+           (size_t)width * height / 2u);
+    memset((uint8_t *)encoder->staging + (size_t)width * lines +
+               (size_t)width * height / 2u,
+           0x80, (size_t)width * (lines - height) / 2u);
+    (void)packed_size;
+    (void)DMA_RmemFlushCache(encoder->staging, aligned_size, 1);
+    *physical = encoder->staging_phys;
+    *virt = (uint32_t)(uintptr_t)encoder->staging;
+    *size = aligned_size;
+    return 0;
+}
+
+int IMP_Encoder_YuvEncode(void *h, IMPFrameInfo frame,
+                          IMPEncoderYuvOut *encOut)
+{
+    P2YuvEncoder *encoder = p2_yuv_handle(h, __func__);
+    P2EncoderChannel *ch;
+    P2HWStream *raw;
+    void *stream = NULL;
+    void *user = NULL;
+    uint32_t physical, virt, size;
+    uint32_t capacity;
+    uint64_t deadline_us;
+    int core_locked = 0;
+    int result = -1;
+
+    if (!encoder || !encOut || !encOut->outAddr)
+        return -1;
+    capacity = encOut->outLen;
+    ch = &p2_channels[encoder->slot];
+    pthread_mutex_lock(&ch->poll_serial);
+    if (p2_yuv_source(encoder, &frame, &physical, &virt, &size) != 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "YuvEncode: frame phys 0x%08x virt 0x%08x unusable",
+                        (unsigned int)frame.phyAddr,
+                        (unsigned int)frame.virAddr);
+        goto out;
+    }
+    memset(&ch->synthetic_frame, 0, sizeof(ch->synthetic_frame));
+    ch->synthetic_frame.index = -1;
+    ch->synthetic_frame.pool_index = -1;
+    ch->synthetic_frame.width = encoder->width;
+    ch->synthetic_frame.height = encoder->height;
+    ch->synthetic_frame.pixel_format = 0x3231564eu;     /* NV12 */
+    ch->synthetic_frame.size = size;
+    ch->synthetic_frame.physical_address = physical;
+    ch->synthetic_frame.virtual_address = virt;
+    ch->synthetic_frame.timestamp = frame.timeStamp;
+    if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
+        pthread_mutex_lock(&p2_core_lock);
+        core_locked = 1;
+    }
+    if (AL_Codec_Encode_Process(ch->codec, &ch->synthetic_frame,
+                                &ch->synthetic_frame) != 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder", "YuvEncode: encode failed");
+        goto out;
+    }
+    deadline_us = p2_monotonic_us() + 2000000u;
+    for (;;) {
+        int got = AL_Codec_Encode_GetStream(ch->codec, &stream, &user);
+
+        if (got == 0)
+            break;
+        if (got > 0 || p2_monotonic_us() >= deadline_us) {
+            IMP_LOG_LIMITED(LOG_ERR, "Encoder", "YuvEncode: no stream");
+            stream = NULL;
+            goto out;
+        }
+        usleep(1000);
+    }
+    raw = stream;
+    if (!raw || !raw->virt_addr || !raw->length)
+        goto out;
+    if (capacity && raw->length > capacity) {
+        IMP_LOG_LIMITED(LOG_ERR, "Encoder",
+                        "YuvEncode: AU of %u bytes does not fit outLen %u",
+                        (unsigned int)raw->length, (unsigned int)capacity);
+        goto out;
+    }
+    memcpy(encOut->outAddr, (const void *)(uintptr_t)raw->virt_addr,
+           raw->length);
+    encOut->outLen = raw->length;
+    result = 0;
+out:
+    if (stream)
+        AL_Codec_Encode_ReleaseStream(ch->codec, stream, user);
+    if (core_locked)
+        pthread_mutex_unlock(&p2_core_lock);
+    pthread_mutex_unlock(&ch->poll_serial);
+    if (result != 0)
+        encOut->outLen = 0;
+    return result;
+}
+
+int IMP_Encoder_YuvExit(void *h)
+{
+    P2YuvEncoder *encoder = p2_yuv_handle(h, __func__);
+    P2EncoderChannel *ch;
+    int slot;
+
+    if (!encoder)
+        return -1;
+    slot = encoder->slot;
+    ch = &p2_channels[slot];
+    pthread_mutex_lock(&ch->poll_serial);
+    (void)p2_destroy_chn(slot);
+    pthread_mutex_unlock(&ch->poll_serial);
+    p2_yuv_release_slot(slot);
+    if (encoder->staging)
+        IMP_Encoder_VbmFree(encoder->staging);
+    encoder->magic = 0;
+    free(encoder);
+    return 0;
+}
+
+#endif
+
+#if defined(PLATFORM_T41)
+/*
+ * T41 1.2.6 extras.
+ *
+ * IMP_Encoder_SetIvpuBsSize (vendor 0x4b10): 0 is 0x80040002, a call after
+ * EncoderInit (IMP_System_Init) is 0x80040040, else the size is kept for the
+ * IVPU bitstream buffer.  OpenIMP's InputJpege encodes on the CPU straight
+ * into dst, so the size only bounds the JPEG it hands back (an image that
+ * would not fit the vendor's IVPU buffer fails there as well).
+ */
+static uint32_t p2_ivpu_bs_size;
+
+int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize)
+{
+    if (!ivpuBsSize)
+        return (int)0x80040002u;
+    if (p2_initialized)
+        return (int)0x80040040u;
+    p2_ivpu_bs_size = ivpuBsSize;
+    return 0;
+}
+
+/*
+ * IMP_Encoder_SetAvpuJpegQp (vendor 0xb5dc): channel >= 8 is 0x80040001,
+ * a QP above 100 is 0x80040002, a channel that was not created is
+ * 0x80040008, a channel that is not JPEG 0x80040002; else the QP is the
+ * JPEG quality from the next picture on.
+ */
+int IMP_Encoder_SetAvpuJpegQp(int encChn, int jpegQp)
+{
+    P2EncoderChannel *ch;
+    int result;
+
+    if (encChn < 0 || encChn >= P2_MAX_CHANNELS)
+        return P2_T41_ERR_CHN;
+    if ((unsigned int)jpegQp > 100u)
+        return P2_T41_ERR_PARAM_2;
+    ch = &p2_channels[encChn];
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->created || !ch->codec) {
+        pthread_mutex_unlock(&ch->lock);
+        return P2_T41_ERR_NOCHN;
+    }
+    if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
+        pthread_mutex_unlock(&ch->lock);
+        return P2_T41_ERR_PARAM_2;
+    }
+    result = AL_Codec_Encode_SetJpegQuality(ch->codec, jpegQp) == 0 ? 0 :
+             P2_T41_ERR_PARAM_2;
+    if (result == 0)
+        ch->attr.rcAttr.attrRcMode.attrFixQp.iInitialQP = (int16_t)jpegQp;
+    pthread_mutex_unlock(&ch->lock);
+    return result;
+}
+
+/* InputJpege lives in t41_input_jpege.c (software JPEG, hw_encoder.h) */
+uint32_t OpenIMP_P2_IvpuBsSize(void)
+{
+    return p2_ivpu_bs_size;
+}
+
+/*
+ * The _Ex calls are the vendor's "secondary process" variants: a second
+ * process reaches the encoder of the process that ran IMP_System_Init via
+ * the vendor's message queue (msgget/msgsnd in imp_video_common.c).  OpenIMP
+ * has no such server: the AVPU and the rmem allocator belong to one process.
+ * In the process that owns the encoder (EncoderInit ran) they are the plain
+ * calls; in any other process they fail (-1 / NULL, errno ENOTSUP) instead
+ * of driving the hardware or the allocator behind the owner's back.
+ */
+static int p2_ex_owner(const char *function)
+{
+    if (p2_initialized)
+        return 1;
+    IMP_LOG_LIMITED(LOG_ERR, "Encoder", "%s: secondary-process access is not "
+                    "supported by OpenIMP (no encoder in this process)",
+                    function);
+    errno = ENOTSUP;
+    return 0;
+}
+
+#define P2_YUV_EX_HANDLES 8
+static void *p2_yuv_ex[P2_YUV_EX_HANDLES];
+
+int IMP_Encoder_YuvInit_Ex(int *h, int inWidth, int inHeight,
+                           IMPEncoderYuvIn *encIn)
+{
+    void *handle = NULL;
+    int i;
+
+    if (!h || !p2_ex_owner(__func__))
+        return -1;
+    if (IMP_Encoder_YuvInit(&handle, inWidth, inHeight, encIn) != 0)
+        return -1;
+    pthread_mutex_lock(&p2_yuv_lock);
+    for (i = 0; i < P2_YUV_EX_HANDLES; i++)
+        if (!p2_yuv_ex[i]) {
+            p2_yuv_ex[i] = handle;
+            break;
+        }
+    pthread_mutex_unlock(&p2_yuv_lock);
+    if (i == P2_YUV_EX_HANDLES) {
+        IMP_Encoder_YuvExit(handle);
+        return -1;
+    }
+    *h = i;
+    return 0;
+}
+
+static void *p2_yuv_ex_handle(int h)
+{
+    return h >= 0 && h < P2_YUV_EX_HANDLES ? p2_yuv_ex[h] : NULL;
+}
+
+int IMP_Encoder_YuvEncode_Ex(int h, IMPFrameInfo frame,
+                             IMPEncoderYuvOut *encOut)
+{
+    if (!p2_ex_owner(__func__))
+        return -1;
+    return IMP_Encoder_YuvEncode(p2_yuv_ex_handle(h), frame, encOut);
+}
+
+int IMP_Encoder_YuvExit_Ex(int h)
+{
+    void *handle;
+
+    if (!p2_ex_owner(__func__))
+        return -1;
+    pthread_mutex_lock(&p2_yuv_lock);
+    handle = p2_yuv_ex_handle(h);
+    if (handle)
+        p2_yuv_ex[h] = NULL;
+    pthread_mutex_unlock(&p2_yuv_lock);
+    return IMP_Encoder_YuvExit(handle);
+}
+
+void *IMP_Encoder_VbmAlloc_Ex(uint32_t size, uint32_t align)
+{
+    return p2_ex_owner(__func__) ? IMP_Encoder_VbmAlloc(size, align) : NULL;
+}
+
+void IMP_Encoder_VbmFree_Ex(void *vaddr)
+{
+    if (p2_ex_owner(__func__))
+        IMP_Encoder_VbmFree(vaddr);
+}
+
+/* vendor _Ex doc: height a multiple of 16 */
+int IMP_Encoder_InputJpege_Ex(uint8_t *src, uint8_t *dst, int src_w,
+                              int src_h, int q, int *stream_length)
+{
+    if (stream_length)
+        *stream_length = 0;
+    if (!p2_ex_owner(__func__) || (src_h & 0xf))
+        return -1;
+    return IMP_Encoder_InputJpege(src, dst, src_w, src_h, q, stream_length);
 }
 #endif

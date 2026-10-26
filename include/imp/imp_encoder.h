@@ -1449,6 +1449,57 @@ int IMP_Encoder_SetPoolSize(int size);
 int IMP_Encoder_SetRdBufShare(int encChn, int enable);
 int IMP_Encoder_EnableAllNCUDenoise(void);
 int IMP_Encoder_DisableAllNCUDenoise(void);
+#elif defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* T40 1.3.1 / T41 1.2.6 unbound ("input YUV") encoder: frames the caller
+ * produced (NV12 in rmem, e.g. from IMP_Encoder_VbmAlloc) are encoded
+ * synchronously into the caller's buffer outAddr; outLen returns the
+ * access-unit length. */
+typedef struct {
+    void *outAddr;                  /**< Caller's output buffer */
+    uint32_t outLen;                /**< Out: AU length (in: capacity, OpenIMP) */
+} IMPEncoderYuvOut;
+
+typedef struct {
+    IMPEncoderEncType type;         /**< AVC, HEVC or JPEG */
+    IMPEncoderRcMode mode;          /**< Rate-control mode */
+    uint16_t frameRate;             /**< Frames per second */
+    uint16_t gopLength;             /**< GOP length */
+    uint32_t targetBitrate;         /**< kbit/s */
+    uint32_t maxBitrate;            /**< kbit/s */
+    int16_t initQp;                 /**< Initial QP (JPEG: the QP) */
+    uint16_t minQp;
+    uint16_t maxQp;
+    uint32_t maxPictureSize;        /**< kbit */
+#if defined(PLATFORM_T41)
+    bool useUserBuf;                /**< Stream buffer from userBuf_vaddr */
+    uint32_t userBuf_vaddr;         /**< rmem (VbmAlloc) address */
+#endif
+} IMPEncoderYuvIn;
+
+int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight,
+                        IMPEncoderYuvIn *encIn);
+int IMP_Encoder_YuvEncode(void *h, IMPFrameInfo frame,
+                          IMPEncoderYuvOut *encOut);
+int IMP_Encoder_YuvExit(void *h);
+void *IMP_Encoder_VbmAlloc(uint32_t size, uint32_t align);
+void IMP_Encoder_VbmFree(void *vaddr);
+intptr_t IMP_Encoder_VbmV2P(intptr_t vaddr);
+intptr_t IMP_Encoder_VbmP2V(intptr_t paddr);
+#if defined(PLATFORM_T41)
+int IMP_Encoder_YuvInit_Ex(int *h, int inWidth, int inHeight,
+                           IMPEncoderYuvIn *encIn);
+int IMP_Encoder_YuvEncode_Ex(int h, IMPFrameInfo frame,
+                             IMPEncoderYuvOut *encOut);
+int IMP_Encoder_YuvExit_Ex(int h);
+void *IMP_Encoder_VbmAlloc_Ex(uint32_t size, uint32_t align);
+void IMP_Encoder_VbmFree_Ex(void *vaddr);
+int IMP_Encoder_InputJpege(uint8_t *src, uint8_t *dst, int src_w, int src_h,
+                           int q, int *stream_length);
+int IMP_Encoder_InputJpege_Ex(uint8_t *src, uint8_t *dst, int src_w,
+                              int src_h, int q, int *stream_length);
+int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize);
+int IMP_Encoder_SetAvpuJpegQp(int encChn, int jpegQp);
+#endif
 #endif
 
 #if (defined(PLATFORM_T21) || defined(PLATFORM_T30)) && !defined(PLATFORM_T23)

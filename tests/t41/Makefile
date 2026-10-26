@@ -26,9 +26,13 @@ TEST_BINS := $(IVS_FRAMEWORK_TEST_BIN) $(CORE_LEASE_TEST_BIN) $(COMMAND_TEST_BIN
 P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
+YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
+YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
 .PHONY: check clean p3-controls p3-ao-mute
 
-check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN)
+check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
+	$(YUV_TEST_BIN)
+	$(YUV_T40_TEST_BIN)
 	$(MAKE) p3-controls
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
@@ -198,6 +202,25 @@ $(P2_BUFSHARE_TEST_BIN): ../t31/p2_bufshare_test.c \
 		$(PROJECT_DIR)/src/openimp_profile.c \
 		$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
 		-no-pie -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o $@
+
+# unbound encoder (IMP_Encoder_Yuv*, Vbm*, InputJpege, _Ex) on a stub codec
+YUV_DEPS := yuv_encode_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
+	$(PROJECT_DIR)/src/t40/t4x_unbound.c $(PROJECT_DIR)/include/imp/imp_encoder.h
+YUV_FLAGS := -std=gnu99 -O1 -g -Wall -Wextra -Werror -Wno-unused-function \
+	'-D_Static_assert(c,m)=' -Wno-unused-result \
+	-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/src/t40
+YUV_LIBS := $(PROJECT_DIR)/src/openimp_profile.c \
+	$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
+	$(PROJECT_DIR)/src/core/imp_log_emit.c -no-pie -lpthread -lm
+$(YUV_TEST_BIN): $(YUV_DEPS)
+	mkdir -p "$(dir $@)"
+	$(CC) $(YUV_FLAGS) -DPLATFORM_T41 yuv_encode_test.c \
+		$(PROJECT_DIR)/src/t40/t4x_unbound.c $(PROJECT_DIR)/src/hw_encoder.c \
+		$(YUV_LIBS) -o $@
+$(YUV_T40_TEST_BIN): $(YUV_DEPS)
+	mkdir -p "$(dir $@)"
+	$(CC) $(YUV_FLAGS) -DPLATFORM_T40 yuv_encode_test.c \
+		$(PROJECT_DIR)/src/t40/t4x_unbound.c $(YUV_LIBS) -o $@
 
 # software-mute IMP_AO_SendFrame from two threads
 p3-ao-mute: p3_ao_mute_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
