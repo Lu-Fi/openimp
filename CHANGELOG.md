@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/apitest-evidence` (2026-10-26)
+
+- **Device API test tools in the repo (`tools/apitest`, `tools/imgfx`):** the apitest (every non-image vendor IMP/SU function, PASS/FAIL/N-A/SKIP per function, guard arenas against struct overwrites) and imgfx (one image-changing ISP function at a time) sources moved from the session directory into the repo; T40 build added (T41 API family with the T40 1.3.1 headers: sensor FPS/register calls of the T40 signature, declared-function guards in the T41 statistics block); generated same-value Get/Set round trips for the ISP pairs not yet round-tripped (`at_isp_rt.c`, `gen_rt.py`); imgfx `IMGFX_STATS=1` (in-memory picture statistics instead of files); `run_cam.sh` per-camera runner (cam lock, streamer stop/restart, no sound) and `results2json.py` (logs to per-function results for `docs/api_evidence.json`; apitest, imgfx and the T40 devtest `RES` lines).
+
 ## Branch `claude/t40-3a-noconsumer` (2026-10-26)
 
 - **T40: AE/AWB/day-night keep running with no stream client.** The open driver's frame 3A meters completed frames;
