@@ -1,7 +1,7 @@
 # Regenerates the feature matrix from docs/status/ (features.yaml, history.md, issues.json),
 # docs/api_evidence.json and docs/api_exports.json on every push to next and publishes
-# it with GitHub Pages (index.html = feature-matrix.html).  issues.json is refreshed by the
-# status-issues workflow and by tools/status_data.py --refresh-issues.
+# it with GitHub Pages (index.html = feature-matrix.html).  The issue cache issues.json is refreshed
+# from the public GitHub issues at build time (tools/status_data.py --refresh-issues).
 name: feature-matrix pages
 
 on:
@@ -14,10 +14,15 @@ on:
       - 'tools/gen_api_coverage.py'
       - 'tools/export-check/**'
       - '.github/workflows/matrix-pages.yml'
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
+  issues: read
   pages: write
   id-token: write
 
@@ -37,6 +42,10 @@ jobs:
           python-version: '3.12'
       - name: Install PyYAML
         run: pip install pyyaml
+      - name: Refresh the issue cache (state of the public issues)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/status_data.py --refresh-issues
       - name: Validate status data
         run: python3 tools/status_data.py --check
       - name: Generate

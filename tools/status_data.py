@@ -161,9 +161,21 @@ def wip_items(data, issues):
         for n in lk.get("issues") or []:
             i = issues.get(n)
             if i and is_wip(i):
-                items.append({"soc": lk["soc"], "function": lk["function"], "branch": "#%d" % n,
-                              "since": (i.get("created") or "")[:10], "note": i.get("title", ""), "url": i.get("url", "")})
+                for fn in lk.get("functions") or []:
+                    items.append({"soc": lk["soc"], "function": fn, "branch": "#%d" % n,
+                                  "since": (i.get("created") or "")[:10], "note": i.get("title", ""), "url": i.get("url", "")})
     return items
+
+
+def func_issue_links(data, issues):
+    """{(API row name, soc): [issue dict ...]} from the api_links section."""
+    res = {}
+    for lk in data.get("api_links") or []:
+        for n in lk.get("issues") or []:
+            if n in issues:
+                for fn in lk.get("functions") or []:
+                    res.setdefault((fn, lk["soc"]), []).append(dict(issues[n], number=n))
+    return res
 
 
 # ------------------------------------------------------------------ validate
@@ -226,14 +238,15 @@ def validate(data=None, hist=None, issues=None, functions=None):
     for lk in data.get("api_links") or []:
         if lk.get("soc") not in SOCS:
             E.append("api_links: unknown SoC %s" % lk.get("soc"))
-        if functions is not None and lk.get("function") not in functions:
-            E.append("api_links: unknown function %s" % lk.get("function"))
+        for fn in lk.get("functions") or []:
+            if functions is not None and fn not in functions:
+                E.append("api_links %s: unknown function %s" % (lk.get("soc"), fn))
         for i in lk.get("issues") or []:
             if i not in issues:
-                E.append("api_links %s %s: issue #%s is not in docs/status/issues.json" % (lk.get("function"), lk.get("soc"), i))
+                E.append("api_links %s: issue #%s is not in docs/status/issues.json" % (lk.get("soc"), i))
     for n, i in issues.items():
         for lab in i.get("labels", []):
-            if lab not in LABELS and not lab.startswith(("good first", "help wanted")):
+            if lab not in LABELS and lab.startswith(("soc:", "area:", "type:", "prio:", "repo:")):
                 E.append("issues.json: #%d has the unknown label %s" % (n, lab))
     return E
 

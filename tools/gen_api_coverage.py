@@ -78,6 +78,7 @@ class Model:
         self.issues = sd.load_issues()
         self.wip = sd.wip_items(self.sdata, self.issues)
         self.cell_issues = sd.cell_issue_links(self.sdata, self.issues)
+        self.func_issues = sd.func_issue_links(self.sdata, self.issues)
         self.vendor = {}
         for s in self.socs:
             p = os.path.join(VEND, "vendor-%s.txt" % s)
@@ -573,6 +574,8 @@ class Model:
                 for s in socs:
                     if f["ref"].get(s):
                         det.append("<p><b>%s:</b> %s</p>" % (s, esc(f["ref"][s])))
+                    for i in self.func_issues.get((f["name"], s), []):
+                        det.append('<p><b>%s:</b> issue <a href="%s">#%d</a> (%s): %s</p>' % (s, esc(i.get("url", "")), i["number"], esc(i.get("state", "")), esc(i.get("title", ""))))
                     for w in f["wip"].get(s, []):
                         det.append("<p><b>%s &#128679;</b> %s %s</p>" % (s, ('<a href="%s">%s</a>' % (esc(w["url"]), esc(w.get("branch", "")))) if w.get("url") else esc(w.get("branch", "")), esc("since " + w.get("since", "") + (": " + w["note"] if w.get("note") else ""))))
                 per = [s + ": " + self.ulabel(self.users(f, s)) for s in socs if self.users(f, s)]

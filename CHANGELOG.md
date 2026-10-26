@@ -8,6 +8,15 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/status-data` (2026-10-26)
+
+- **Status data instead of a hand-written matrix:** the feature matrix source moved to `docs/status/features.yaml` (45 features x 10 SoCs:
+  symbol, detail text, issue numbers, evidence) and `docs/status/history.md` (the update log, verbatim); `docs/FEATURE_MATRIX.md` and
+  `docs/feature-matrix.html` are generated from them (`tools/gen_feature_matrix_html.py`, `tools/status_data.py`). `make check` validates the
+  data and that the generated Markdown is current. `docs/api_evidence.json` stays the API source (machine-written by the apitest tools).
+  Gaps, bugs and progress are tracked as public GitHub issues; `docs/matrix_wip.json` is replaced by the issue state
+  (`docs/status/issues.json`, open issue labelled `type:wip` = construction sign). Counts unchanged.
+
 ## Branch `claude/gate-1026` (2026-10-26)
 
 - **T40 SetMaxStreamCnt on a created channel** fails and keeps the count, like the T40 1.3.1 libimp (channel index
