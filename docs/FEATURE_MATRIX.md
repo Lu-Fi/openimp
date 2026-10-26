@@ -1,6 +1,6 @@
 # Open stack vs vendor stack: feature matrix
 
-<!-- docs/feature-matrix.html is generated from this file: python3 tools/gen_feature_matrix_html.py (stdlib only; do not edit the HTML by hand, regenerate after every change here) -->
+<!-- docs/feature-matrix.html and this file are generated: python3 tools/gen_feature_matrix_html.py from docs/status/features.yaml, docs/status/history.md and docs/api_evidence.json (do not edit by hand; edit the data files, regenerate after every change) -->
 
 As of: 2026-10-25, RC2 (v2026.10.25-rc2 = OpenIMP next 7c30aa99 plus documentation, open-tx-isp next 1bf4549d plus documentation; this code runs on all 19 test cameras as image agg46 since 2026-10-25; the soak of 2026-10-24/25 on the T40/T41 cameras was clean); before that 2026-10-24, evening (T40 reload/quality/cells/CSC/night merges, T41 RC parameters rounds 3-4 and colour check, T31 front crop; OpenIMP next f55f620f, open-tx-isp next e5030fd4; soak of this state running); before that 2026-10-24, third pass (T41 defog fix and default on, NR/DPC/module size/CPU load/buffer sharing/RC parameters; OpenIMP next 518df91, open-tx-isp next 091e1fa2); before that 2026-10-24, second pass (T41 reload/WDR/crop/telemetry/ROI/DPC, T40 AE/AWB/day-night from the merged quality branch, T31 MXU2 AWB); before that 2026-10-24 (T40/T41/T31 updated from the A/B runs against the vendor stack and the merges since 2026-10-19, see the first Summary entry; T40/T41 columns re-evaluated row by row against the newest device evidence, see the first Summary entry; T40/T41 I2D, JPEG pitch, OSD after I2D, T40 PTS and device tests: see the #20-#29 entries marked 2026-10-19), before that 2026-10-12 (T40 night branch, see the first update below), 2026-10-11 aggregate agg-36 after RC1 (OpenIMP and open-tx-isp `claude/agg-36`; build and host tests, no soak yet; device results only where a cell says so). Before that: RC1 v2026.10.11-rc1: openimp fe9307c (agg-35 687a68e4 + docs), open-tx-isp 191be6c5 (agg-35 6e464ac7 + docs); overnight soak clean. Detail: 2026-10-10 evening (release candidate agg-35, see the update paragraph in the summary; before that agg-34: OpenIMP `agg-34` 2a1b1cd and open-tx-isp `agg-34` b15ef235 on top of `next`, mandatory device tests of the night 2026-10-09/10 included; the per-cell details below are a chronological test log, newest results win). Camera mapping of the older sections: cam-A = T31, cam-B = T23, cam-C = T20, cam-D = T21, cam-E = T10, cam-F = T41; cam-G and cam-H are further T23 cameras (other sensors) that run the same stack. The agg-32 soak has its own letters (see the changelog). Addendum 2026-10-10 afternoon: front crop vs flip, AeComp T20/T31, agg-34.1 (T31 WDR statistics ring, regression fix, T21/T23/T20/T10 not affected), T41 experimental notes; T20/T21 encoder ROI QA flake is timing only (ROI applies at the next IDR).
 
@@ -224,7 +224,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T40:** ✅ 2026-10-25 (RC2): the boot guard (`S10isp-guard`, optional package in upstream thingino `aperto`, default off) is SoC-independent shell logic; checked by a dry run (user decision 2026-10-25); no T40 boot loop occurred in any test run. Earlier: not documented
 - **T41:** —
 
-
 #### Exposure (AE)
 
 ##### 4. AE control
@@ -282,7 +281,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T33:** 📋 planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)
 - **T40:** ✅ 2026-10-24: the Antiflicker SET oops that every `S95timps start` hit once the tuning object existed (`image.anti_flicker = 2` -> 60 Hz overwrote a saved register in `tx_isp_core_ops_s_ctrl`) is fixed (`255a46ff`), the SET goes through to the AE ladder. Earlier (history): `Get/SetAntiFlickerAttr` hand-translated after the OEM and device-tested on the Eufy open driver (`t40_allow_antiflick` default 1, 50/60 Hz): IT ladder 469/938/1406/1875 at 25 fps, AE on the lattice (open-tx-isp wiki changelog 2026-10-17); the Get-after-Set oops of the RC2 run (2026-10-17) is fixed; the T40 devtests of 2026-10-19 ran with `t40_antiflick_hz=50`
 - **T41:** ✅ device-tested: off/50/60 Hz readback in isp-m0, AE integration time follows (2092/1575/1750 lines); 2026-10-18 `GetAntiFlickerAttr` on .34 under timps: mode 1, 50 Hz (RC2_T41_SMALL_1018)
-
 
 #### Colour and image quality
 
@@ -484,7 +482,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T40:** ✅ hardware I2D (same path as T41, vendor 1.3.1 `i2d_resourcedeal`; `/dev/i2d` present), device-tested 2026-10-19 on the Eufy T40XP (open driver): `SetI2dAttr` on ch1 returns 0 for rotate 90/180/270, flip and mirror; all six variants give H.264 + JPEG with 0 decode errors (300 frames each), 90/270 deliver 360x640, orientation correct (SSIM 0.94 against the transformed unrotated picture with the OSD in the frame, wrong orientation 0.38), OSD upright at 16,16 of the output; ch0 without I2D unchanged; 300 s regression 6001 frames, 0 oops [claude/i2d-t4x, in next 30f88d5]
 - **T41:** ✅ hardware I2D (`/dev/i2d`, built-in kernel driver, vendor 1.2.6 semantics: `i2d_enable` + rotate 90/180/270 or flip/mirror, applied at `EnableChn`, `picWidth/picHeight` stay the capture size, 90/270 delivers picHeight x picWidth, the encoder is created with that size). Device test 2026-10-18 on Cinnado .34 (sc5336): 1920x1080, 1280x720 and 640x360 at 90/270, 180, flip, mirror, flip+mirror via the CreateChn attribute: all correctly oriented, streams decode without errors, 90° vs transposed unrotated picture SSIM 0.97; 25 fps with and without I2D (501/501 frames in 20 s), system CPU 1-7 % with and without (no measurable cost). Frame w/h must be 8 aligned (vendor rule), 90/270 width 16 aligned: the sc5336 full 2880x1620 is refused (1620 % 8). The block needs a 32-aligned output pitch (360/720 wide outputs use pitch 384/736; encoder, IVS and SnapFrame read it). SnapFrame on an I2D channel: host only [claude/i2d-t4x]
 
-
 #### Video encoder and streams
 - **Follow-ups (2026-10-19, in next):** JPEG snapshots after I2D 90/270 were striped (software JPEG read the frame with stride = width, the I2D pitch is 32-aligned): fixed for the on-demand snapshot and the JPEG fan-out copy (2918162, ac48882), device-tested on T41 .34 (90/270/180/0 clean) and confirmed by the streamer on 90/270 JPEG + H.264 + OSD; T40 JPEG after I2D device-tested on the Eufy (JPEG decodes in all six variants). OSD after I2D: see #28.
 
@@ -623,7 +620,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T40:** ✅ ch0 3840x2160 and ch1 640x360 `GetFrame`/`ReleaseFrame` device-tested on cam-K 2026-10-10 (timestamps monotonic, non-zero; OpenIMP vs vendor library); frame size 16-line aligned (353280 B vs 345600 B); open driver 2026-10-18/19: ch0 and ch1 6001/6001 frames in 300 s, 0 gaps above 0.2 s in the 10-min timps run
 - **T41:** ✅ device-tested: concurrent streams ok
 
-
 #### Audio (documentation only, no tests)
 
 ##### 31. Audio input (AI)
@@ -667,7 +663,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T33:** 📋 planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)
 - **T40:** 🔧 not RC2-relevant, sound tests pending (user decision 2026-10-24/25: no speaker or playback tests before RC2). Older text: AEC calls: see the audio function table, no test result
 - **T41:** — no audio hardware on the T41 test board (no microphone, no speaker), so AEC cannot be measured there
-
 
 #### Memory, size, load
 - **Note (2026-10-10):** T41 `?`: the microphone shows no response to playback, so ERLE is not measurable. AECM does not cancel stationary far-end signals (pure tones), as known. On T21 a microphone gain above 0 drives the noise floor up to -11..-32 dBFS (hardware, open and vendor stack alike).
@@ -741,7 +736,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T33:** 📋 planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)
 - **T40:** ✅ timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured
 - **T41:** ✅ 2026-10-24 (third pass): the 'system CPU' column of the A/B (/proc/stat delta, open 7.6 % against the vendor 2.2 % on .32) is **not comparable**: both kernels use `NO_HZ_FULL` + `VIRT_CPU_ACCOUNTING_GEN`, and the vendor ISP kernel thread `isp_fw_process` alone shows 8.8 % of one core in its stime while /proc/stat reports 0.6 % system time. Ground truth with one SCHED_IDLE spinner per CPU (free-CPU iterations, 20 s, stream running, same camera .32, same kernel image config): **open 23435 against vendor 22540, i.e. the open stack leaves about 4 % more CPU free** (idle baseline with the streamer stopped: open 25682, vendor 24254; the vendor module keeps working without a client). Open .34: 22216. The per-frame tone worker costs 2.9-3.3 ms (TMO map on MXU3 1.5-1.8 ms, ADR 0.8 ms), AWB 0.8-2.1 ms, ISR 0.27 ms per frame. Optional (not default) `t41_tmo_map_interval=2` + `t41_adr_interval=2` save about 1.1 ms per frame (about 2 % free CPU) with a static picture unchanged (SSIM 0.95, not tested in light steps). Limits: one series per stack, vendor and open runs 30 min apart. Earlier (history): 2026-10-24 A/B against the vendor stack (60 s windows, 4 windows on the open stack): timpsd 0.2 % against 0.3 %, but the system CPU on .32 is 7.6 % (windows 0.8-12 %, tick bursts) against 2.2 % for the vendor, on .34 5.3 % against 5.0 %; ISP interrupts are 25-45 % below the vendor (128-133 against 179 per s on .32, 133 against 231 on .34). The older timps figure (~10-12 % against ~27 % with the vendor libimp) is a user-space number only; the cell is lowered because the total system load on .32 is above the vendor. Earlier (history): timps ~10–12 % with our libimp vs ~27 % with the vendor libimp (momentary values)
-
 
 #### Stability, helper libraries, telemetry
 
@@ -829,7 +823,6 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 - **T40:** ✅ Update 2026-10-24, evening: `Encoder_Query` `work_done`/`leftPics` follow the codec activity (busy in 17.5 % of the samples at 20 fps = 8.7 ms per frame, before always idle), `OpenIMP_Encoder_GetTelemetry` counts 139 frames = consumer count at 20.02 fps / 2099 kbit/s, `GetChnAveBitrate` 1920 against 2033 kbit/s measured. Older text: host (night 2026-10-12): `Encoder_Query` with the vendor 1.3.1 field semantics (`leftStreamBytes`/`curPacks` always 0, `leftStreamFrames` 1 while a finished stream waits for `GetStream`, `work_done`); OpenIMP encodes on demand, so `leftPics` is 0; `Encoder_GetChnEvalInfo`, `GetChnAveBitrate` exported, no test result
 - **T41:** ✅ 2026-10-24 on .34, beyond the vendor (OpenIMP next): `IMP_Encoder_Query` now reports real values (before: 397 samples in 4 s, all `leftPics=1`, `work_done=0` from the poll state, inert). After: `work_done` 0 in 192 of 496 samples (38.7 %), which matches the measured encode time (25.85 ms average, 66.7 ms maximum), `leftPics` mirrors it, a polled-not-fetched stream shows frames=1 / bytes=6873 / packs=1 and after `GetStream` 0. New beyond-vendor `OpenIMP_Encoder_GetTelemetry` (consumer-side counters: 75 frames / 1401684 bytes in 5 s = 15.02 fps, 2073 kbit/s). The T41 1.2.0 vendor SDK has only `Encoder_Query` with the 6-word `IMPEncoderChnStat`; `GetChnEvalInfo` and `GetChnAveBitrate` are not in the T41 headers. Not covered: queue depth (OpenIMP encodes on demand, there is no input queue), a stalled consumer shows 0, no vendor A/B (no vendor module/library at hand). The `t41_isr_counts` slots 36 and 52 stay 0 in the native build by design (2026-10-23); per-IRQ run times need the `TX_ISP_LOAD_STATS=y` build. Earlier (history): 2026-10-23: `t41_isr_counts` slots 36 and 52 stay 0 in the native build by design (the OEM frame-down callbacks are registered only in the lifted branch; the native LSC/BCSH paths write immediately), so these counters are no telemetry for the native build; per-IRQ run times need the `TX_ISP_LOAD_STATS=y` build (`t41_isr_us`, `t41_isr_max_us`). The T41 diagnostics branch `claude/t41-gaps` is not merged. Earlier (history): isp-m0 shows AE/AWB/anti-flicker/flip; encoder rc readback ok; query counters stayed 0 under load; other /proc/jz/isp nodes unreadable
 
-
 ##### 45. Encoder ROI (region QP)
 
 - **Vendor stack:** `IMP_Encoder_SetChnROI` (T10/T20/T21/T23), `IMP_Encoder_Set/GetChnRoiAttr` (T40/T41); no ROI API in the T31 library
@@ -847,7 +840,7 @@ Per feature: the vendor-stack behaviour and the full per-SoC cell text (chronolo
 
 ## API coverage per function
 
-<!-- GENERATED by tools/gen_api_coverage.py from docs/api_evidence.json, docs/api_exports.json, docs/matrix_wip.json and tools/export-check/vendor-*.txt. Do not edit this section by hand: edit the JSON files and run python3 tools/gen_feature_matrix_html.py -->
+<!-- GENERATED by tools/gen_api_coverage.py from docs/api_evidence.json, docs/api_exports.json, docs/status/issues.json and tools/export-check/vendor-*.txt. Do not edit this section by hand: edit the data files and run python3 tools/gen_feature_matrix_html.py -->
 
 As of: 2026-10-26. One row per vendor IMP/SU function (a Get/Set row counts as two functions, a wildcard row as the vendor names it covers). Only functions that exist in a SoC's vendor API count for that SoC; a function that is not in that SoC's vendor API is shown as `·` and is never a gap. Evidence lives in `docs/api_evidence.json` (level per function and SoC, reference, streamer use); the exports of the OpenIMP builds in `docs/api_exports.json` (nm of `libimp.so`) are cross-checked on every run.
 
@@ -996,7 +989,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `·` not in that SoC's vendor API (not a gap)
 - `?` state not determined
 - `📋` no OpenIMP build for this SoC yet (planned)
-- `🚧` appended to a symbol: work in progress, from `docs/matrix_wip.json` (branch and start date there)
+- `🚧` appended to a symbol: work in progress, from the public GitHub issues labelled `type:wip` (`docs/status/issues.json`)
 
 ### ISP tuning
 

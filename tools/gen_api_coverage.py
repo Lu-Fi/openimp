@@ -5,14 +5,15 @@ Inputs (all committed):
   docs/api_evidence.json     evidence level per function and SoC (hand-maintained, machine-readable)
   docs/api_exports.json      exported IMP_* names of the OpenIMP libimp.so per SoC (nm of the builds; refresh
                              with --refresh-exports, T10 uses the T20 build)
-  docs/matrix_wip.json       work in progress (shown as the construction sign), maintained by the main session
+  docs/status/features.yaml  hand-written part of the main matrix (symbols, texts, issue links); see tools/status_data.py
+  docs/status/issues.json    cache of the public GitHub issues (open issue with label type:wip = construction sign)
   tools/export-check/vendor-T*.txt   vendor export lists per SoC (T32/T33: vendor libimp 2.2.0 / SDK 2.0.0)
-  docs/FEATURE_MATRIX.md     main matrix symbols (feature links: a function whose evidence is only "audited"
-                             counts as device-tested while the linked main-matrix feature cell is supported)
+                             main matrix symbols come from features.yaml (feature links: a function whose evidence is only
+                             "audited" counts as device-tested while the linked main-matrix feature cell is supported)
 
-Outputs: the generated section "API coverage per function" of docs/FEATURE_MATRIX.md (rewritten by
-`python3 tools/gen_api_coverage.py --write`, also done by tools/gen_feature_matrix_html.py) and the HTML parts
-used by tools/gen_feature_matrix_html.py.  Consistency problems are printed as warnings (exit status 1 with --check).
+Outputs: docs/FEATURE_MATRIX.md (generated head from docs/status + the section "API coverage per function";
+written by this script and by tools/gen_feature_matrix_html.py) and the HTML parts used by
+tools/gen_feature_matrix_html.py.  Consistency problems are printed as warnings (exit status 1 with --check).
 
 Usage: gen_api_coverage.py [--write] [--check] [--refresh-exports [BUILD_DIR]] [--refresh-run OUT_DIR SOAK_LOG]
 """
@@ -23,12 +24,14 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import status_data as sd
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MD = os.path.join(ROOT, "docs", "FEATURE_MATRIX.md")
 EVID = os.path.join(ROOT, "docs", "api_evidence.json")
 EXPO = os.path.join(ROOT, "docs", "api_exports.json")
-WIP = os.path.join(ROOT, "docs", "matrix_wip.json")
 RUN = os.path.join(ROOT, "docs", "api_run.json")
 VEND = os.path.join(ROOT, "tools", "export-check")
 HEAD = "API coverage per function"
@@ -71,13 +74,16 @@ class Model:
         self.ev = json.load(open(EVID, encoding="utf-8"))
         self.socs = self.ev["socs"]
         self.exports = json.load(open(EXPO, encoding="utf-8")) if os.path.exists(EXPO) else {}
-        self.wip = json.load(open(WIP, encoding="utf-8")).get("items", []) if os.path.exists(WIP) else []
+        self.sdata = sd.load_features()
+        self.issues = sd.load_issues()
+        self.wip = sd.wip_items(self.sdata, self.issues)
+        self.cell_issues = sd.cell_issue_links(self.sdata, self.issues)
         self.vendor = {}
         for s in self.socs:
             p = os.path.join(VEND, "vendor-%s.txt" % s)
             self.vendor[s] = {re.sub(r"^IMP_", "", x.strip()) for x in open(p) if x.strip()} if os.path.exists(p) else set()
         self.run = json.load(open(RUN, encoding="utf-8")) if os.path.exists(RUN) else {"socs": {}}
-        md_text = open(MD, encoding="utf-8").read() if md_text is None else md_text
+        md_text = sd.render_head(self.sdata, sd.load_history()) if md_text is None else md_text
         self.matrix = self._matrix_syms(md_text)
         self.warnings = []
         self.funcs = []
@@ -135,16 +141,16 @@ class Model:
         for w in self.wip:
             if w.get("function"):
                 if w["function"] not in self.ev["functions"]:
-                    W.append("matrix_wip.json: unknown function %s" % w["function"])
+                    W.append("status data: wip item for an unknown function %s" % w["function"])
                 wipf.setdefault((w["function"], w["soc"]), []).append(w)
             elif w.get("feature") is not None:
                 if w["feature"] not in titles:
-                    W.append("matrix_wip.json: unknown feature %s" % w["feature"])
+                    W.append("status data: wip item for an unknown feature %s" % w["feature"])
                 wipfeat.setdefault((w["feature"], w["soc"]), []).append(w)
             else:
                 W.append("matrix_wip.json: item without function or feature: %s" % w)
             if w["soc"] not in self.socs:
-                W.append("matrix_wip.json: unknown SoC %s" % w["soc"])
+                W.append("status data: wip item for an unknown SoC %s" % w["soc"])
         self.wipfeat = wipfeat
         covered = set()
         for name, e in self.ev["functions"].items():
@@ -316,8 +322,8 @@ class Model:
         o.append("## " + HEAD)
         o.append("")
         o.append("<!-- GENERATED by tools/gen_api_coverage.py from docs/api_evidence.json, docs/api_exports.json, "
-                 "docs/matrix_wip.json and tools/export-check/vendor-*.txt. Do not edit this section by hand: edit the "
-                 "JSON files and run python3 tools/gen_feature_matrix_html.py -->")
+                 "docs/status/issues.json and tools/export-check/vendor-*.txt. Do not edit this section by hand: edit the "
+                 "data files and run python3 tools/gen_feature_matrix_html.py -->")
         o.append("")
         o.append("As of: %s. One row per vendor IMP/SU function (a Get/Set row counts as two functions, a wildcard row as the "
                  "vendor names it covers). Only functions that exist in a SoC's vendor API count for that SoC; a function that "
@@ -393,7 +399,7 @@ class Model:
         o.append("")
         for c in ("dev", "dev+", "rt", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"):
             o.append("- `%s` %s" % (CELL[c][1], CELL[c][3]))
-        o.append("- `🚧` appended to a symbol: work in progress, from `docs/matrix_wip.json` (branch and start date there)")
+        o.append("- `🚧` appended to a symbol: work in progress, from the public GitHub issues labelled `type:wip` (`docs/status/issues.json`)")
         o.append("")
         for a in AREAS:
             fs = self.area_funcs(a)
@@ -546,7 +552,7 @@ class Model:
         socs = self.socs
         o = ['<h2 id="api-coverage">%s</h2>' % HEAD]
         o.append('<p class="meta">As of %s. One row per vendor function; click a function name for its note and evidence. '
-                 'Legend: %s. A construction sign (&#128679;) marks work in progress (docs/matrix_wip.json).</p>' % (
+                 'Legend: %s. A construction sign (&#128679;) marks work in progress (open GitHub issue labelled type:wip, docs/status/issues.json).</p>' % (
                      esc(self.ev["asof"]), " &middot; ".join(
                          '<span class="sym %s">%s</span> %s' % (CELL[c][0], esc(CELL[c][2] or "&middot;"), esc(CELL[c][3]))
                          for c in ("dev", "dev+", "rt", "run", "no-op", "host", "aud", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
@@ -568,7 +574,7 @@ class Model:
                     if f["ref"].get(s):
                         det.append("<p><b>%s:</b> %s</p>" % (s, esc(f["ref"][s])))
                     for w in f["wip"].get(s, []):
-                        det.append("<p><b>%s &#128679;</b> %s %s</p>" % (s, esc(w.get("branch", "")), esc("since " + w.get("since", ""))))
+                        det.append("<p><b>%s &#128679;</b> %s %s</p>" % (s, ('<a href="%s">%s</a>' % (esc(w["url"]), esc(w.get("branch", "")))) if w.get("url") else esc(w.get("branch", "")), esc("since " + w.get("since", "") + (": " + w["note"] if w.get("note") else ""))))
                 per = [s + ": " + self.ulabel(self.users(f, s)) for s in socs if self.users(f, s)]
                 if per:
                     det.append("<p class='small'>Used by (per SoC): %s</p>" % esc("; ".join(per)))
@@ -643,16 +649,12 @@ table.apit tr.det p{margin:.2rem 0}#apq{font:inherit;font-size:.85rem;padding:3p
 
 # ------------------------------------------------------------------ md update / cli
 def update_md(md_path=MD, write=True):
-    text = open(md_path, encoding="utf-8").read()
-    m = Model(text)
-    new = m.md()
-    k = text.find("\n## " + HEAD)
-    if k < 0:
-        k = text.find("\n## Missing / incomplete functions")
-    if k < 0:
-        raise SystemExit("gen_api_coverage: no API coverage section found in %s" % md_path)
-    out = text[:k + 1] + new
-    changed = out != text
+    """Regenerate docs/FEATURE_MATRIX.md: head from docs/status (features.yaml, history.md) + the API section."""
+    head = sd.render_head(sd.load_features(), sd.load_history())
+    m = Model(head)
+    out = head + m.md()
+    old = open(md_path, encoding="utf-8").read() if os.path.exists(md_path) else ""
+    changed = out != old
     if changed and write:
         open(md_path, "w", encoding="utf-8").write(out)
     return m, changed

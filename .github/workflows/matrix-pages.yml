@@ -1,6 +1,7 @@
-# Regenerates the feature matrix from docs/FEATURE_MATRIX.md, docs/api_evidence.json,
-# docs/api_exports.json and docs/matrix_wip.json on every push to next and publishes
-# it with GitHub Pages (index.html = feature-matrix.html).
+# Regenerates the feature matrix from docs/status/ (features.yaml, history.md, issues.json),
+# docs/api_evidence.json and docs/api_exports.json on every push to next and publishes
+# it with GitHub Pages (index.html = feature-matrix.html).  issues.json is refreshed by the
+# status-issues workflow and by tools/status_data.py --refresh-issues.
 name: feature-matrix pages
 
 on:
@@ -8,6 +9,7 @@ on:
     branches: [next]
     paths:
       - 'docs/**'
+      - 'tools/status_data.py'
       - 'tools/gen_feature_matrix_html.py'
       - 'tools/gen_api_coverage.py'
       - 'tools/export-check/**'
@@ -33,6 +35,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Validate status data
+        run: python3 tools/status_data.py --check
       - name: Generate
         run: |
           python3 tools/gen_feature_matrix_html.py

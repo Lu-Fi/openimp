@@ -48,6 +48,7 @@ t41:
 	./build-t41.sh
 
 check:
+	$(MAKE) status-check
 	$(MAKE) -f tests/core/su_base_shutdown.mk check
 	$(MAKE) -C tests/eprc check
 	$(MAKE) -C tests/rc_t20 check
@@ -63,6 +64,13 @@ check:
 	$(MAKE) -C tests/device check
 
 # Built libimp.so exports vs vendor export lists vs streamer-used IMP_ names (tools/export-check/README.md)
+# Status data (docs/status/*): schema validation + FEATURE_MATRIX.md is what the data produces (needs PyYAML)
+status-check:
+	python3 tools/status_data.py --check
+	python3 tools/gen_feature_matrix_html.py --check
+
+.PHONY: status-check
+
 export-check:
 	./tools/export-check.sh
 

@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""Generate docs/feature-matrix.html from docs/FEATURE_MATRIX.md.
+"""Generate docs/FEATURE_MATRIX.md and docs/feature-matrix.html from the status data.
 
-    python3 tools/gen_feature_matrix_html.py [--baseline old.md] [in.md [out.html]]
+    python3 tools/gen_feature_matrix_html.py [--check] [--baseline old.md] [in.md [out.html]]
+
+Inputs: docs/status/features.yaml, docs/status/history.md, docs/status/issues.json (see tools/status_data.py)
+and docs/api_evidence.json / docs/api_exports.json (see tools/gen_api_coverage.py).  The Markdown is written
+first (head from the status data + the generated API section), the HTML is rendered from it.  With --check
+nothing is written: exit status 1 if docs/FEATURE_MATRIX.md is not what the data produces, or on warnings.
+With explicit in.md the HTML is rendered from that Markdown file only (baseline tags etc.).
 
 Python 3 standard library only (no markdown module): the small subset of
 Markdown used by FEATURE_MATRIX.md is parsed here (headings, paragraphs,
@@ -651,7 +657,8 @@ function block(r,s,full){
   var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'" title="'+esc(c.bt)+'">'+D.bl[c.k]+'</i> <span class="small">'+esc(c.bt)+'</span>':'')+'</h4>';
   h+=c.h?'<div class="tx">'+c.h+'</div>':'<p class="small">No detail text for this cell.</p>';
   (c.x||[]).forEach(function(x){h+='<div class="tx"><b>'+x[0]+':</b> '+x[1]+'</div>'});
-  (c.w||[]).forEach(function(w){h+='<div class="tx">&#128679; <b>in progress:</b> '+esc(w[0])+' (since '+esc(w[1])+')'+(w[2]?' &ndash; '+esc(w[2]):'')+'</div>'});
+  (c.w||[]).forEach(function(w){h+='<div class="tx">&#128679; <b>in progress:</b> '+(w[3]?'<a href="'+esc(w[3])+'">'+esc(w[0])+'</a>':esc(w[0]))+' (since '+esc(w[1])+')'+(w[2]?' &ndash; '+esc(w[2]):'')+'</div>'});
+  (c.i||[]).forEach(function(i){h+='<div class="tx">Issue <a href="'+esc(i[3])+'">#'+i[0]+'</a> ('+esc(i[2])+'): '+esc(i[1])+'</div>'});
   h+=apiSec(r.n,s,full);
   return h+'</section>';
 }
@@ -766,8 +773,8 @@ def legend_bar():
     for k in ("rc2", "new", "chg"):
         items.append('<span class="lgi" tabindex="0" title="%s"><i class="rc2%s">%s</i> %s</span>' % (
             esc(BADGE_DESC[k]), BADGE_CLS[k], BADGE_TXT[k], esc(BADGE_SHORT[k])))
-    items.append('<span class="lgi" tabindex="0" title="%s"><b>&#128679;</b> in progress (branch)</span>' % esc(
-        "work in progress: a branch is running; from docs/matrix_wip.json, maintained by the main session; hover the sign for branch and start date"))
+    items.append('<span class="lgi" tabindex="0" title="%s"><b>&#128679;</b> in progress (issue)</span>' % esc(
+        "work in progress: a branch is running; an open GitHub issue labelled type:wip; hover the sign for the issue and start date"))
     return '<div class="lgbar" id="lgbar">%s</div>' % "".join(items)
 
 
@@ -826,9 +833,12 @@ def render_matrix(rows, details, groups_info):
                 c["x"] = [[inline(lab), inline(t)] for lab, t in extras]
             wm = ""
             if wl:
-                c["w"] = [[w.get("branch", ""), w.get("since", ""), w.get("note", "")] for w in wl]
+                c["w"] = [[w.get("branch", ""), w.get("since", ""), w.get("note", ""), w.get("url", "")] for w in wl]
                 wm = ' <span class="wipm" title="%s">&#128679;</span>' % esc("work in progress: " + "; ".join(
                     "%s (since %s)" % (w.get("branch", ""), w.get("since", "")) for w in wl))
+            il = API.cell_issues.get((n, soc), []) if API else []
+            if il:
+                c["i"] = [[i["number"], i.get("title", ""), i.get("state", ""), i.get("url", "")] for i in il]
             badge = ""
             tip = ""
             if kind:
@@ -1082,13 +1092,20 @@ def main():
         k = args.index("--baseline")
         base_file = args[k + 1]
         del args[k:k + 2]
+    check = "--check" in args
+    if check:
+        args.remove("--check")
     src = args[0] if args else SRC
     dst = args[1] if len(args) > 1 else DST
     load_baseline(base_file)
     global API
     if os.path.abspath(src) == os.path.abspath(SRC):
-        API, changed = api.update_md()       # regenerate the API coverage section of the markdown first
-        print("%s: API coverage section %s" % (SRC, "regenerated" if changed else "up to date"))
+        API, changed = api.update_md(write=not check)       # regenerate FEATURE_MATRIX.md from the status data first
+        print("%s: %s" % (SRC, ("out of date" if check else "regenerated") if changed else "up to date"))
+        if check:
+            for w in API.warnings:
+                sys.stderr.write("warning: %s\n" % w)
+            sys.exit(1 if (changed or API.warnings) else 0)
     else:
         API = api.Model(open(src, encoding="utf-8").read())
     for w in API.warnings:
@@ -1104,7 +1121,7 @@ def main():
     page = ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
             "<title>%s</title>\n<style>%s</style></head><body><main>\n%s\n"
-            "<p class=\"small\">Generated from FEATURE_MATRIX.md by tools/gen_feature_matrix_html.py; "
+            "<p class=\"small\">Generated from docs/status/ and docs/api_evidence.json by tools/gen_feature_matrix_html.py; "
             "do not edit by hand.</p></main></body></html>\n" % (esc(title), CSS, body))
     open(dst, "w", encoding="utf-8").write(page)
     print("wrote %s (%d bytes)" % (dst, len(page.encode())))
