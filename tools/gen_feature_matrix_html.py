@@ -34,6 +34,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gen_api_coverage as api
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "docs", "FEATURE_MATRIX.md")
@@ -44,7 +47,7 @@ MATRIX_COUNTS = {}
 BASE = {}          # feature title -> {soc: symbol} at the baseline
 RANK = {"?": 0, "❌": 1, "📋": 2, "🔧": 3, "⚠": 4, "✅": 5, "✅+": 6}
 
-CSS = r"""
+CSS = api.API_CSS + r"""
 :root{--bg:#f6f7f9;--fg:#1c2128;--muted:#5b6573;--card:#fff;--line:#d9dee5;--head:#eef1f5;--accent:#2457c5;
 --ok:#e3f4e8;--plus:#cdeed8;--bug:#fde8c8;--wip:#dfe8fb;--plan:#ebe4f7;--miss:#fbdada;--na:#eceff2;--unk:#f4f4f4;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--fg:#e6e9ee;--muted:#9aa4b2;--card:#1c2027;--line:#333a45;--head:#232932;--accent:#8fb2ff;
@@ -131,6 +134,7 @@ i.rc2.chg{background:var(--muted)}i.rc2.nw{background:#d9822b;color:#fff}
 @media (min-width:801px){body.pnopen main{margin-right:min(520px,46vw)}}
 @media (max-width:800px){#pn{top:auto;left:0;width:auto;height:68vh;border-left:0;border-top:1px solid var(--line);border-radius:12px 12px 0 0}
  table.mx th:first-child,table.mx td:first-child{min-width:150px;max-width:150px;font-size:.76rem}.tags{display:none}.mwrap{max-height:70vh}main{padding:10px}}
+.wipm{font-size:.8em;margin-left:2px}
 details.hist{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 14px;margin:1.4rem 0}details.hist>summary{font-size:1.05rem;font-weight:700}
 """
 
@@ -473,7 +477,8 @@ def render_streamer_gaps(items):
 
 
 # ---------------------------------------------------------------- matrix
-SOCS = ["T10", "T20", "T21", "T23", "T30", "T31", "T40", "T41"]
+SOCS = ["T10", "T20", "T21", "T23", "T30", "T31", "T32", "T33", "T40", "T41"]
+API = None         # gen_api_coverage.Model, set in main()
 
 
 def parse_details(blocks):
@@ -628,18 +633,33 @@ tbl.addEventListener('mouseleave',hideTip);
 tbl.addEventListener('focusin',function(e){var td=e.target.closest&&e.target.closest('td.mc');if(td)showTip(td);else hideTip()});
 tbl.addEventListener('focusout',hideTip);
 /* panel */
+function apiSec(n,s,full){
+  var A=D.api,fa=(A.fa||{})[n]||[],h='';
+  fa.forEach(function(a){var d=(A.areas[a]||{})[s];if(!d)return;
+    var tot=d.ok.length+d.wip.length+d.gap.length+d.unk.length+d.nob;
+    h+='<div class="apx"><b>API: '+esc(a)+' on '+s+'</b> ';
+    if(!tot){h+='<span class="small">no function of this area in the '+s+' vendor API</span></div>';return}
+    if(d.nob){h+='<span class="small">no OpenIMP build for '+s+' yet: '+d.nob+' vendor functions to provide</span></div>';return}
+    h+='<span class="small">'+d.ok.length+'/'+tot+' work'+(d.wip.length?', '+d.wip.length+' implemented not device-tested':'')+(d.gap.length?', '+d.gap.length+' gaps':'')+(d.unk.length?', '+d.unk.length+' unknown':'')+(d.ws.length?', '+d.ws.length+' in progress':'')+'</span>';
+    if(full){
+      var L=function(t,l,o){return l.length?'<details'+(o?' open':'')+'><summary>'+t+' ('+l.length+')</summary><ul>'+l.map(function(x){return '<li><code>'+esc(x)+'</code></li>'}).join('')+'</ul></details>':''};
+      h+=L('Missing / gaps',d.gap,true)+L('Unknown state',d.unk,false)+L('Implemented, not device-tested',d.wip,false)+L('Works',d.ok,false)}
+    h+='</div>'});
+  return h}
 function block(r,s,full){
   var c=r.c[s];
   var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'" title="'+esc(c.bt)+'">'+D.bl[c.k]+'</i> <span class="small">'+esc(c.bt)+'</span>':'')+'</h4>';
   h+=c.h?'<div class="tx">'+c.h+'</div>':'<p class="small">No detail text for this cell.</p>';
   (c.x||[]).forEach(function(x){h+='<div class="tx"><b>'+x[0]+':</b> '+x[1]+'</div>'});
+  (c.w||[]).forEach(function(w){h+='<div class="tx">&#128679; <b>in progress:</b> '+esc(w[0])+' (since '+esc(w[1])+')'+(w[2]?' &ndash; '+esc(w[2]):'')+'</div>'});
+  h+=apiSec(r.n,s,full);
   return h+'</section>';
 }
 function head(n,r){return (r.v?'<p class="vs"><b>Vendor stack:</b> '+r.v+'</p>':'')+'<p class="small">'+r.tags.map(esc).join(' &middot; ')+(r.l?' &middot; <a href="#'+r.l+'">full section (additional text)</a>':'')+'</p>'}
 function openPanel(html,title){pnb.innerHTML=html;$('#pnt').textContent=title;pn.hidden=false;document.body.classList.add('pnopen');pnb.scrollTop=0;pn.scrollTop=0;hideTip();$('#pnx').focus()}
 function mark(td){$$('td.sel',tbl).forEach(function(e){e.classList.remove('sel')});$$('tr.selr',tbl).forEach(function(e){e.classList.remove('selr')});if(td&&td.classList)td.classList.add('sel')}
 function openCell(td){last=td;var n=td.parentNode.getAttribute('data-n'),r=R[n],s=td.getAttribute('data-soc');mark(td);
-  openPanel(head(n,r)+'<p><button type="button" class="chip" data-allrow="'+n+'">Show all SoCs of this feature</button></p>'+block(r,s),'#'+n+' '+r.t+' / '+s);cur=null}
+  openPanel(head(n,r)+'<p><button type="button" class="chip" data-allrow="'+n+'">Show all SoCs of this feature</button></p>'+block(r,s,true),'#'+n+' '+r.t+' / '+s);cur=null}
 function openRow(n,btn){last=btn||last;var r=R[n];mark(null);$('#r-'+n).classList.add('selr');
   openPanel(head(n,r)+D.socs.map(function(s){return block(r,s)}).join(''),'#'+n+' '+r.t+' (all SoCs)')}
 function closePanel(){if(pn.hidden)return;pn.hidden=true;document.body.classList.remove('pnopen');mark(null);$$('tr.selr',tbl).forEach(function(e){e.classList.remove('selr')});if(last&&document.body.contains(last))last.focus()}
@@ -746,6 +766,8 @@ def legend_bar():
     for k in ("rc2", "new", "chg"):
         items.append('<span class="lgi" tabindex="0" title="%s"><i class="rc2%s">%s</i> %s</span>' % (
             esc(BADGE_DESC[k]), BADGE_CLS[k], BADGE_TXT[k], esc(BADGE_SHORT[k])))
+    items.append('<span class="lgi" tabindex="0" title="%s"><b>&#128679;</b> in progress (branch)</span>' % esc(
+        "work in progress: a branch is running; from docs/matrix_wip.json, maintained by the main session; hover the sign for branch and start date"))
     return '<div class="lgbar" id="lgbar">%s</div>' % "".join(items)
 
 
@@ -797,10 +819,16 @@ def render_matrix(rows, details, groups_info):
             else:
                 kind = None
             pt = plain(txt)
+            wl = API.wipfeat.get((n, soc), []) if API else []
             c = {"s": sym, "h": inline(txt), "q": short(pt) if pt else "",
                  "p": (pt + " " + " ".join(plain(t) for _, t in extras)).strip().lower()}
             if extras:
                 c["x"] = [[inline(lab), inline(t)] for lab, t in extras]
+            wm = ""
+            if wl:
+                c["w"] = [[w.get("branch", ""), w.get("since", ""), w.get("note", "")] for w in wl]
+                wm = ' <span class="wipm" title="%s">&#128679;</span>' % esc("work in progress: " + "; ".join(
+                    "%s (since %s)" % (w.get("branch", ""), w.get("since", "")) for w in wl))
             badge = ""
             tip = ""
             if kind:
@@ -819,12 +847,12 @@ def render_matrix(rows, details, groups_info):
             tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s aria-label="%s">'
                        '<span class="sym">%s</span>%s</td>' % (
                            cls, " new" if k1 == "new" else "", esc(soc), esc(sym),
-                           ' data-rc2="%s"' % kind if kind else "", esc(aria), esc(SYM_SHOW.get(sym, sym)), badge))
+                           ' data-rc2="%s"' % kind if kind else "", esc(aria), esc(SYM_SHOW.get(sym, sym)), badge + wm))
         if plus:
             tags.append("beyond-vendor")
         tags = [t for t in TAG_ORDER if t in tags]
         slg = slug(d["title"]) if d.get("extra") else ""
-        data[n] = {"t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
+        data[n] = {"n": n, "t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
         chips = "".join('<button type="button" class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t)) for t in tags)
         trs.append('<tr id="r-%d" data-n="%d" data-r1="%d" data-r2="%d"><th scope="row"><span class="num">%d</span>'
                    '<button type="button" class="fname" data-row="%d">%s</button><span class="tags">%s</span></th>%s</tr>'
@@ -878,7 +906,8 @@ def render_matrix(rows, details, groups_info):
     table = ('<div class="mwrap" id="mwrap"><table class="mx" id="mx"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>'
              % (th, "".join(trs)))
     script = '<script type="application/json" id="mxdata">%s</script><script>%s</script>' % (
-        json_js({"socs": socs, "rows": data, "base": BASE_LABEL, "leg": LEGEND, "bl": BADGE_TXT, "bd": BADGE_DESC}), MX_JS)
+        json_js({"socs": socs, "rows": data, "base": BASE_LABEL, "leg": LEGEND, "bl": BADGE_TXT, "bd": BADGE_DESC,
+                 "api": API.api_json() if API else {"areas": {}, "fa": {}}}), MX_JS)
     return legend_bar() + bar + ctl + table + panel + script
 
 
@@ -946,6 +975,8 @@ def render(md):
             elif lvl == 2:
                 section = text
                 sub = ""
+                if text == "Matrix" and API is not None:
+                    W(API.html_top())
                 W('<h2 id="%s">%s</h2>' % (uid(text), inline(text)))
                 if text in ("Summary",):
                     W('<div class="card">')
@@ -1022,6 +1053,8 @@ def render(md):
         else:
             W('<p class="meta">%s</p>' % inline(d))
     close_card()
+    if API is not None:
+        out.append(API.html_section())
     if hist:
         out.append('<details class="hist" id="history"><summary>History (update log, long notes)</summary>%s</details>'
                    % "\n".join(hist))
@@ -1052,8 +1085,20 @@ def main():
     src = args[0] if args else SRC
     dst = args[1] if len(args) > 1 else DST
     load_baseline(base_file)
+    global API
+    if os.path.abspath(src) == os.path.abspath(SRC):
+        API, changed = api.update_md()       # regenerate the API coverage section of the markdown first
+        print("%s: API coverage section %s" % (SRC, "regenerated" if changed else "up to date"))
+    else:
+        API = api.Model(open(src, encoding="utf-8").read())
+    for w in API.warnings:
+        sys.stderr.write("warning: %s\n" % w)
+    api.print_counts(API)
     md = open(src, encoding="utf-8").read()
     md = re.sub(r"<!--.*?-->", "", md, flags=re.S)
+    k = md.find("\n## " + api.HEAD)
+    if k >= 0:
+        md = md[:k + 1]       # the section is rendered from the model
     body = render(md)
     title = re.search(r"^#\s+(.*)$", md, re.M).group(1)
     page = ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8">\n'

@@ -1,0 +1,9 @@
+{
+ "_comment": "Work in progress, maintained by the main session; shown as a construction sign on the matching main-matrix cell (feature) or API function cell (function). Item: {soc, feature (main-matrix row number) OR function (row name in api_evidence.json), branch, since (YYYY-MM-DD), note}. Remove the item when the work is merged or dropped.",
+ "items": [
+  {"soc": "T32", "feature": 1, "branch": "open-tx-isp claude/t32-s3", "since": "2026-10-25", "note": "driver/t32 stages S1-S3 in QEMU (AddSensor to EnableTuning, FrameSource ch0-2, JPEG/H.264 with the vendor libimp)"},
+  {"soc": "T32", "feature": 22, "branch": "open-tx-isp claude/t32-s3", "since": "2026-10-25", "note": "H.264 bound in QEMU with the vendor libimp"},
+  {"soc": "T32", "feature": 24, "branch": "open-tx-isp claude/t32-s3", "since": "2026-10-25", "note": "JPEG bound in QEMU with the vendor libimp"},
+  {"soc": "T32", "feature": 30, "branch": "open-tx-isp claude/t32-s3", "since": "2026-10-25", "note": "FrameSource ch0-2 in QEMU with the vendor libimp"}
+ ]
+}
