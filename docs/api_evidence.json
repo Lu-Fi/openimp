@@ -446,13 +446,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -538,13 +538,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_DelSensor": {
@@ -615,13 +615,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -692,13 +692,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -769,13 +769,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -846,13 +846,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -923,13 +923,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -1238,13 +1238,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -1515,8 +1515,8 @@
    },
    "note": "T31: wired to the driver (agg-25)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_EnableDefog": {
@@ -1543,8 +1543,8 @@
    },
    "note": "T31: takes the enable flag like the vendor (the stub always wrote 1); imgfx A/B against the old library on the T31 camera",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_EnableMovestate": {
@@ -1651,13 +1651,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetBacklightComp": {
@@ -1688,7 +1688,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetBcshHue": {
@@ -1739,9 +1739,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetCCMAttr": {
@@ -1872,11 +1872,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetCsc_Attr": {
@@ -1929,7 +1929,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetDRC_Strength": {
@@ -1965,9 +1965,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetDefog_Strength": {
@@ -1998,8 +1998,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetDrawBlock": {
@@ -2042,7 +2042,7 @@
    },
    "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); agg-34: the crop crash is fixed (guard against windows the MSCA would upscale); device-tested on 2026-10-10: a valid window zooms both streams (proven), a too-small window is refused with -EINVAL without a hang, the window survives a restart and a flip, hence dev; T23: dev after the 2026-10-09 crop fixes (crop off, lock release, window that does not fit is dropped); T10/T20/T21 crop device-tested but not a vendor call there (T20/T10: a window set before stream-on is applied and survives substream restarts; the release of the window at tuning-session close is not verified)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetGamma": {
@@ -2090,10 +2090,10 @@
     "T23"
    ],
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetGammaAttr": {
@@ -2181,7 +2181,7 @@
    },
    "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps",
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetHiLightDepress": {
@@ -2232,8 +2232,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetISPCSCAttr": {
@@ -2252,8 +2252,8 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetISPCustomMode": {
@@ -2296,8 +2296,8 @@
    },
    "note": "T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107"
    }
   },
   "ISP_Tuning_Get/SetISPHflip": {
@@ -2342,10 +2342,10 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetISPRunningMode": {
@@ -2416,13 +2416,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetISPVflip": {
@@ -2467,10 +2467,10 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetIntegrationTime": {
@@ -2530,7 +2530,7 @@
    },
    "note": "T23: stock tx-isp-t23.ko leaves 0x80000e5 unhandled (-1)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetMaxAgain": {
@@ -2581,11 +2581,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetMaxDgain": {
@@ -2636,11 +2636,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetModuleControl": {
@@ -2757,12 +2757,12 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31 (API round trip, no visible effect expected)",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24 (API round trip, no visible effect expected)",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetSensorHflip": {
@@ -2842,8 +2842,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetTemperDnsAttr": {
@@ -2891,7 +2891,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetWDRAttr": {
@@ -2910,8 +2910,8 @@
    },
    "note": "T10/T20 3.12.0: V4L2 control 0x98e912 with the vendor's mode cache (an unchanged mode returns 0 without the driver). apitest PASS on T10 and T20 for Get and Set of the current mode; switching WDR on was not run: the driver refuses (-EPERM) without a WDR frame buffer, as the stock module; T30 1.0.5: V4L2 control 0x8000169 with the vendor's mode cache (an unchanged mode returns 0 without the driver; a failed Get returns the cached mode with the error); host test with a fake ioctl; whether the open T30 driver serves the control is not checked",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107"
    }
   },
   "ISP_Tuning_Get/SetWdrOutputMode": {
@@ -2991,7 +2991,7 @@
    },
    "note": "T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetBrightness": {
@@ -3052,12 +3052,12 @@
    },
    "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetEVAttr": {
@@ -3108,11 +3108,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetHVFlip": {
@@ -3138,8 +3138,8 @@
     ]
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_GetISPBypass": {
@@ -3203,7 +3203,7 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+    "T10": "apitest agg47 2026-10-26 .31"
    }
   },
   "ISP_Tuning_GetSceneMode": {
@@ -3258,10 +3258,10 @@
    },
    "note": "T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetSensorFPS": {
@@ -3332,13 +3332,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetSharpness": {
@@ -3399,11 +3399,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetTotalGain": {
@@ -3454,11 +3454,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SaveAllParam": {
@@ -3493,9 +3493,9 @@
    },
    "note": "T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24"
    }
   },
   "ISP_Tuning_SetAutoZoom": {
@@ -3605,12 +3605,12 @@
     "T21"
    ],
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_SetDPStrength": {
@@ -3629,9 +3629,9 @@
    },
    "note": "T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24"
    }
   },
   "ISP_Tuning_SetFWFreeze": {
@@ -3769,7 +3769,7 @@
    },
    "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_SetMeshShadingScale": {
@@ -3788,7 +3788,7 @@
    },
    "note": "T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+    "T10": "apitest agg47 2026-10-26 .31"
    }
   },
   "ISP_Tuning_SetRawDRC": {
@@ -3821,7 +3821,7 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+    "T10": "apitest agg47 2026-10-26 .31"
    }
   },
   "ISP_Tuning_SetScalerLv": {
@@ -3955,13 +3955,13 @@
    },
    "note": "T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_SetSharpness": {
@@ -4032,11 +4032,11 @@
    },
    "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SetSinterStrength": {
@@ -4087,10 +4087,10 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SetTemperDnsCtl": {
@@ -4157,7 +4157,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31"
+    "T10": "apitest agg47 2026-10-26 .31"
    }
   },
   "ISP_Tuning_SetTmoFaceae": {
@@ -4607,9 +4607,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAeConvergeStep": {
@@ -4700,11 +4700,11 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAeMin": {
@@ -4732,9 +4732,9 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAeScenceAttr": {
@@ -4768,7 +4768,7 @@
     "T41": "n.a."
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "ISP_Tuning_Get/SetAeStrategy": {
@@ -4811,8 +4811,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAeWeight": {
@@ -4873,13 +4873,13 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; T41: driver claude/t41-connect (agg-25); host tests 58/58",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAfHist": {
@@ -4918,11 +4918,11 @@
    },
    "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAfWeight": {
@@ -4964,11 +4964,11 @@
    },
    "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAwbAttr": {
@@ -5011,8 +5011,8 @@
    },
    "note": "T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbConvergeStep": {
@@ -5030,7 +5030,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAwbCtTrend": {
@@ -5057,8 +5057,8 @@
    },
    "note": "T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbCtTrendOffset": {
@@ -5076,7 +5076,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAwbHist": {
@@ -5121,11 +5121,11 @@
    },
    "note": "T23+T31: stock driver also no-op (OEM-same)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbWeight": {
@@ -5186,13 +5186,13 @@
    },
    "note": "T23+T31: stock driver also no-op (OEM-same)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_Get/SetAwbZoneWeight": {
@@ -5211,7 +5211,7 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "ISP_Tuning_Get/SetFaceAe": {
@@ -5361,8 +5361,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAFMetrices": {
@@ -5395,9 +5395,9 @@
    },
    "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAFMetricesInfo": {
@@ -5443,8 +5443,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; used by: T23: raptor; T31: prudynt†, raptor†",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAeAtList": {
@@ -5462,7 +5462,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetAeBv": {
@@ -5495,7 +5495,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetAeHist_Origin": {
@@ -5556,9 +5556,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAeState": {
@@ -5585,8 +5585,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAeStatistics": {
@@ -5605,8 +5605,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetAeZone": {
@@ -5647,9 +5647,9 @@
    },
    "note": "T10+T20: the stock T10/T20 kernel module does not serve cid 0x800002f; -1 as on the vendor stack (apitest N/A)",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAfStatistics": {
@@ -5694,8 +5694,8 @@
    },
    "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetAwbGlobalStatistics": {
@@ -5714,8 +5714,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetAwbStatistics": {
@@ -5748,8 +5748,8 @@
    },
    "note": "T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Tuning_GetAwbZone": {
@@ -5786,10 +5786,10 @@
    },
    "note": "T10+T20: vendor T20 ids/ABI (agg-25); T10 shares the build; T23/T31: vendor 1.1.x ABI `(IMPISPAWBZone *)`, 675-byte block with the stock scaling (`claude/awbzone`, device-tested 2026-10-12 on both), 0 only with fresh statistics (driver `-EAGAIN` otherwise, needs open-tx-isp `claude/awbzone`), capability symbol `OpenIMP_Cap_AwbZone`; T40/T41: no vendor `GetAwbZone` (`GetAwbStatistics`); used by: T10/T20: prudynt†; T23/T31: prudynt†, raptor†, timps 1.10.2 (night colour trigger)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetExpr": {
@@ -5834,11 +5834,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetFaceAeLuma": {
@@ -5883,9 +5883,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_GetWB_Statis": {
@@ -5924,11 +5924,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SetAeFreeze": {
@@ -6029,8 +6029,8 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "ISP_Tuning_SetWB_ALGO": {
@@ -6049,7 +6049,7 @@
    },
    "note": "T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x800000c accepted like stock (open-tx-isp claude/gaps-t23-t31-drv): mode 0..2 stored in the AWB light-source flag, other modes logged, always returns 0; the four AWB threshold registers are not rewritten, because the AWB of the open driver runs on the wide thresholds that stock mode 1 writes and has no IQ-threshold window to switch to, so the call has no effect (class d); host build only, device test pending; T31: the driver has tisp_s_awb_algo (connected per static audit); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "Decoder_*": {
@@ -6135,13 +6135,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_CreateGroup": {
@@ -6212,13 +6212,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_DestroyChn": {
@@ -6289,13 +6289,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_DestroyGroup": {
@@ -6366,13 +6366,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_FlushStream": {
@@ -6433,13 +6433,13 @@
    },
    "note": "all: drops the encoded stream nobody fetched (agg-25)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Get/SetChangeRef": {
@@ -6458,8 +6458,8 @@
    },
    "note": "T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnAttrRcMode": {
@@ -6520,12 +6520,12 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "Encoder_Get/SetChnColor2Grey": {
@@ -6549,10 +6549,10 @@
    },
    "note": "T10+T20+T21: codes grey pictures (agg-25)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnCrop": {
@@ -6571,7 +6571,7 @@
    },
    "note": "audit: userspace implementation; T10/T20/T21: the vendor libimp exports it without a header (i264e_set_param, x/y/w/h multiples of 16); OpenIMP does not (miss, found by `make export-check` 2026-10-11, a link shim is an open question)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnDemask": {
@@ -6611,10 +6611,10 @@
    },
    "note": "T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first T21: done as the vendor: libimp 1.0.33 clears the denoise type at init (channel_i264e_encoder_init picks encoder mode 4 from get_cpu_id() 11..14, i264e_validate_parameters keeps denoise only for mode 1), so on the vendor T21 dnType reads back 0 and the encoder runs one Helix job per picture; dnType >= 3 with enable set at CreateChn is -1; IQp/PQp are kept. OpenIMP T21 does the same (2026-10-10: PC420 vendor stack vs open stack, readback equal, size and fps equal, ffmpeg decode clean). T10/T20 (vendor 3.12.0 has no such gate): type, IQp and PQp stored and read back as the vendor (2026-10-10: the T20 build also defines PLATFORM_T21 and read dnType back as 0 like T21; fixed, host test `p2_t1x_test_t20`; apitest roundtrip PASS on T20), not applied; the vendor encodes every frame twice with attrDenoise.enable set at CreateChn and dnType 1/2, a first pass at slice QP dnIQp (I) / dnPQp (P; type 2 forces slice type I) before the normal pass (i264e_reconfig_dn_set, i264e_slice_write). Not built: the pass-1 job needs a trace on a T20 camera, stability first",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnFrmRate": {
@@ -6675,13 +6675,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnFrmRate: ret=0 15/1; Encoder_SetChnFrmRate: ret=0 set 10/1, read back 15/1"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "FAIL apitest agg47 2026-10-26 .34: Encoder_GetChnFrmRate: ret=0 15/1; Encoder_SetChnFrmRate: ret=0 set 10/1, read back 15/1"
    }
   },
   "Encoder_Get/SetChnFrmUsedMode": {
@@ -6700,10 +6700,10 @@
    },
    "note": "T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnGopAttr": {
@@ -6722,9 +6722,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnGopAttr: ret=0 mode 0x2 length 60 (created 30) maxSameSence 2; Encoder_SetChnGopAttr: ret=0 restore attr, length 60"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "FAIL apitest agg47 2026-10-26 .34: Encoder_GetChnGopAttr: ret=0 mode 0x2 length 60 (created 30) maxSameSence 2; Encoder_SetChnGopAttr: ret=0 restore attr, length 60"
    }
   },
   "Encoder_Get/SetChnH264Demask": {
@@ -6791,8 +6791,8 @@
    },
    "note": "T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1)",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnROI": {
@@ -6819,10 +6819,10 @@
     "T21"
    ],
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetChnRcAttr": {
@@ -6857,7 +6857,7 @@
    },
    "note": "not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md)",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "Encoder_Get/SetChnSeiAttr": {
@@ -6907,7 +6907,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetH264TransCfg": {
@@ -6931,9 +6931,9 @@
    },
    "note": "T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested",
    "ref": {
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetH265TransCfg": {
@@ -6973,11 +6973,11 @@
    },
    "note": "T10+T20+T21: reaches the running codec live (host test; apitest 2026-10-06: marker check and live change PASS on T20/T21); T41: live and at CreateChn (host)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Get/SetMaxStreamCnt": {
@@ -7028,13 +7028,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Get/SetMbRC": {
@@ -7058,10 +7058,10 @@
    },
    "note": "T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25) T10 (2026-10-10, from the disassembly notes in docs/T20_RC.md, not device-tested): the vendor library is the T20 build, but its T10 rate controller has no macroblock part, so the call is stored and read back and changes nothing, as in OpenIMP (src/rc_t10; matched, no-op); T20: switches the macroblock QP table (agg-25)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetPool": {
@@ -7100,10 +7100,10 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Get/SetQpgMode": {
@@ -7127,8 +7127,8 @@
    },
    "note": "T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/SetStreamBufSize": {
@@ -7147,9 +7147,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Get/SetSuperFrameCfg": {
@@ -7173,9 +7173,9 @@
    },
    "note": "T10+T20: reaches the rate control (T20 apitest PASS); T21: mode DISCARD refused (the Helix eprc has no frame discard), the software modes follow after the release",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_Get/Setframelossthd": {
@@ -7252,13 +7252,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_GetChnAveBitrate": {
@@ -7282,7 +7282,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "Encoder_GetChnEncType": {
@@ -7327,11 +7327,11 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_GetChnEvalInfo": {
@@ -7371,7 +7371,7 @@
    },
    "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_GetFd": {
@@ -7416,11 +7416,11 @@
    },
    "note": "audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_GetGOPSize": {
@@ -7439,10 +7439,10 @@
    },
    "note": "T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_GetStream": {
@@ -7513,13 +7513,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_InputJpege": {
@@ -7542,8 +7542,8 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_InputJpege_Ex": {
@@ -7580,10 +7580,10 @@
    },
    "note": "audit: userspace implementation; T20/T21/T23: emits a user_data_unregistered SEI (OEM UUID) in front of the next picture, found in the next 30 frames (apitest PASS); T10 shares the T20 build, not re-tested",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_PollingModuleStream": {
@@ -7602,9 +7602,9 @@
    },
    "note": "audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS)",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "Encoder_PollingStream": {
@@ -7675,13 +7675,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_Query": {
@@ -7742,13 +7742,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_RegisterChn": {
@@ -7819,13 +7819,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_ReleaseStream": {
@@ -7896,13 +7896,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_RequestGDR": {
@@ -7921,7 +7921,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_RequestIDR": {
@@ -7992,13 +7992,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_SetAvpuBsShare": {
@@ -8049,7 +8049,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_SetChnBitRate": {
@@ -8085,9 +8085,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 400 kbit/s, read back 512"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "FAIL apitest agg47 2026-10-26 .34: ret=0 400 kbit/s, read back 512"
    }
   },
   "Encoder_SetChnEntropyMode": {
@@ -8106,7 +8106,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "Encoder_SetChnGopLength": {
@@ -8125,9 +8125,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 25, read back 60"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "FAIL apitest agg47 2026-10-26 .34: ret=0 25, read back 60"
    }
   },
   "Encoder_SetChnHSkipBlackEnhance": {
@@ -8146,7 +8146,7 @@
    },
    "note": "T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test T10/T20/T21: returns 0, stores the flag of a created channel (the vendor pushes it to i264e param 10, read only by the HSkip code; class c); apitest PASS on T10, T20, T21; T30 1.0.5: the flag is kept for a created channel, 0 for an idle one (as T21); host test",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_SetChnInitQP": {
@@ -8165,7 +8165,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_SetChnMapRoi": {
@@ -8210,7 +8210,7 @@
    },
    "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_SetChnQp": {
@@ -8229,7 +8229,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "Encoder_SetChnQpBounds": {
@@ -8265,9 +8265,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 22..44, read back 20..45"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "FAIL apitest agg47 2026-10-26 .34: ret=0 22..44, read back 20..45"
    }
   },
   "Encoder_SetChnQpBoundsPerFrame": {
@@ -8286,7 +8286,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_SetChnQpIPDelta": {
@@ -8310,7 +8310,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "Encoder_SetChnResizeMode": {
@@ -8329,9 +8329,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_SetDefaultParam": {
@@ -8367,9 +8367,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_SetFrameRelease": {
@@ -8388,8 +8388,8 @@
    },
    "note": "T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "Encoder_SetGOPSize": {
@@ -8425,10 +8425,10 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_SetIvpuBsSize": {
@@ -8495,9 +8495,9 @@
    },
    "note": "vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_StartRecvPic": {
@@ -8568,13 +8568,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_StopRecvPic": {
@@ -8645,13 +8645,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_UnRegisterChn": {
@@ -8722,13 +8722,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_VbmAlloc": {
@@ -8751,9 +8751,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_VbmAlloc_Ex": {
@@ -8794,9 +8794,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_VbmFree_Ex": {
@@ -8832,9 +8832,9 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_VbmV2P": {
@@ -8857,9 +8857,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_YuvEncode": {
@@ -8882,9 +8882,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_YuvEncode_Ex": {
@@ -8925,9 +8925,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_YuvExit_Ex": {
@@ -8964,7 +8964,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_YuvInit": {
@@ -8987,9 +8987,9 @@
     ]
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "Encoder_YuvInit_Ex": {
@@ -9031,7 +9031,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "Encoder_YuvSetCrop": {
@@ -9050,7 +9050,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "EmuFrameSource_*": {
@@ -9099,7 +9099,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "FrameSource_CreateChn": {
@@ -9170,13 +9170,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9266,13 +9266,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9343,13 +9343,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9420,13 +9420,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9573,13 +9573,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetChnFifoAttr": {
@@ -9640,13 +9640,13 @@
    },
    "note": "T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetDelay": {
@@ -9679,13 +9679,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -9704,7 +9704,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30"
+    "T23": "apitest agg47 2026-10-26 .30"
    }
   },
   "FrameSource_Get/SetFrameDepth": {
@@ -9758,12 +9758,12 @@
    },
    "note": "T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
   "FrameSource_Get/SetI2dAttr": {
@@ -9796,8 +9796,8 @@
    },
    "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetMaxDelay": {
@@ -9830,13 +9830,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -9869,8 +9869,8 @@
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "FrameSource_GetFrame": {
@@ -9916,13 +9916,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_GetFrameEx": {
@@ -9940,8 +9940,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_GetTimedFrame": {
@@ -9992,13 +9992,13 @@
    },
    "note": "T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_QueueBuffer": {
@@ -10063,13 +10063,13 @@
    },
    "note": "audit: reaches the driver/kernel; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_ReleaseFrameEx": {
@@ -10087,8 +10087,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "FrameSource_SetChnRotate": {
@@ -10112,7 +10112,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "FrameSource_SetSource": {
@@ -10197,13 +10197,13 @@
    },
    "note": "T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ISP_Get/SetDrawAttr": {
@@ -10556,13 +10556,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_CreateRgn": {
@@ -10633,13 +10633,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_CreateRgn_ISP": {
@@ -10728,13 +10728,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_DestroyRgn": {
@@ -10805,13 +10805,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_DestroyRgn_ISP": {
@@ -10918,13 +10918,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_Get/SetRgnAttr": {
@@ -10995,13 +10995,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; T40: the PIC/COVER test uses the set path; Get not checked, so host",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_Get/SetRgnAttr_ISP": {
@@ -11121,13 +11121,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_RgnCreate_Query": {
@@ -11146,9 +11146,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_RgnRegister_Query": {
@@ -11167,9 +11167,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_SetGroupCallback": {
@@ -11187,8 +11187,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_SetMosaic": {
@@ -11207,9 +11207,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_SetPoolSize": {
@@ -11280,13 +11280,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_SetPoolSize_ISP": {
@@ -11356,13 +11356,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_SetRgnAttr_PicISP": {
@@ -11451,13 +11451,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_ShowRgn_ISP": {
@@ -11546,13 +11546,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_Stop": {
@@ -11603,13 +11603,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_UnRegisterRgn": {
@@ -11680,13 +11680,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "OSD_UpdateRgnAttrData": {
@@ -11747,13 +11747,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_CreateBaseMoveInterface": {
@@ -11804,13 +11804,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_CreateChn": {
@@ -11871,13 +11871,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_CreateGroup": {
@@ -11938,13 +11938,13 @@
    },
    "note": "audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_CreateMoveInterface": {
@@ -12005,13 +12005,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_DestroyBaseMoveInterface": {
@@ -12062,13 +12062,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_DestroyChn": {
@@ -12139,13 +12139,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_DestroyGroup": {
@@ -12216,13 +12216,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_DestroyMoveInterface": {
@@ -12293,13 +12293,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_Get/SetParam": {
@@ -12360,13 +12360,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_GetResult": {
@@ -12427,13 +12427,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_PollingResult": {
@@ -12494,13 +12494,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_RegisterChn": {
@@ -12561,13 +12561,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_ReleaseData": {
@@ -12676,13 +12676,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_StartRecvPic": {
@@ -12743,13 +12743,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_StopRecvPic": {
@@ -12820,13 +12820,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "IVS_UnRegisterChn": {
@@ -12897,13 +12897,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "ADEC_ReleaseDecoder": {
@@ -13053,13 +13053,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableAec": {
@@ -13225,13 +13225,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableAlgo": {
@@ -13249,8 +13249,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableChn": {
@@ -13321,13 +13321,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableGetRaw": {
@@ -13345,7 +13345,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableHpf": {
@@ -13416,13 +13416,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableHs": {
@@ -13440,9 +13440,9 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_DisableNs": {
@@ -13513,13 +13513,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Enable": {
@@ -13590,13 +13590,13 @@
    },
    "note": "audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableAec": {
@@ -13762,13 +13762,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableAlgo": {
@@ -13786,8 +13786,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableChn": {
@@ -13858,13 +13858,13 @@
    },
    "note": "audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableGetRaw": {
@@ -13882,7 +13882,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableHpf": {
@@ -13953,13 +13953,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableHs": {
@@ -13977,9 +13977,9 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_EnableNs": {
@@ -14050,13 +14050,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Get/SetAlcGain": {
@@ -14083,8 +14083,8 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "AI_Get/SetChnParam": {
@@ -14155,13 +14155,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Get/SetDigitalGain": {
@@ -14179,8 +14179,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Get/SetGain": {
@@ -14251,13 +14251,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Get/SetPubAttr": {
@@ -14328,13 +14328,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Get/SetVol": {
@@ -14405,13 +14405,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_GetFrame": {
@@ -14482,13 +14482,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_GetFrameAndRaw": {
@@ -14506,7 +14506,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_GetFrameAndRef": {
@@ -14625,13 +14625,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_ReleaseFrame": {
@@ -14702,13 +14702,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_SetAgcMode": {
@@ -14727,7 +14727,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "AI_SetHpfCoFrequency": {
@@ -14772,10 +14772,10 @@
    },
    "note": "T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_SetVolMute": {
@@ -14826,13 +14826,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AI_Set_WebrtcProfileIni_Path": {
@@ -14871,10 +14871,10 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "AO_CacheSwitch": {
@@ -16321,13 +16321,13 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "SU_Base_GetModelNumber": {
@@ -16346,13 +16346,13 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "SU_Base_GetVersion": {
@@ -16413,13 +16413,13 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "SU_Base_PollingAlarm": {
@@ -16454,13 +16454,13 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "SU_Base_Reboot": {
@@ -16495,13 +16495,13 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "SU_Base_SetWkupMode": {
@@ -16792,12 +16792,12 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184"
    }
   },
   "SU_Key_DisableEvent": {
@@ -16848,12 +16848,12 @@
    },
    "note": "audit: sysfs/ioctl/syscall path",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest agg47 2026-10-26 .184"
    }
   },
   "SU_Key_ReadEvent": {
@@ -16956,13 +16956,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_Exit": {
@@ -17033,13 +17033,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17090,13 +17090,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_GetCPUInfo": {
@@ -17157,13 +17157,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_GetTimeStamp": {
@@ -17224,13 +17224,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_GetVersion": {
@@ -17301,13 +17301,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_Init": {
@@ -17378,13 +17378,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_MemPoolFree": {
@@ -17403,7 +17403,7 @@
    },
    "note": "T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 192.168.10.26"
+    "T31": "apitest agg47 2026-10-26 .26"
    }
   },
   "System_MemPoolRequest": {
@@ -17421,10 +17421,10 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 192.168.10.34",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
+    "T41": "apitest agg47 2026-10-26 .34",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
   },
@@ -17476,13 +17476,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_RebaseTimeStamp": {
@@ -17543,13 +17543,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_UnBind": {
@@ -17620,13 +17620,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 192.168.10.31",
-    "T20": "apitest agg47 2026-10-26 192.168.10.107",
-    "T21": "apitest agg47 2026-10-26 192.168.10.24",
-    "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
-    "T41": "apitest agg47 2026-10-26 192.168.10.34"
+    "T10": "apitest agg47 2026-10-26 .31",
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T41": "apitest agg47 2026-10-26 .34"
    }
   },
   "System_WriteReg32": {

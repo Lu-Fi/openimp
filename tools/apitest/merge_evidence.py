@@ -32,7 +32,7 @@ for spec in files:
     path, _, mode = rest.partition(":")
     r = json.load(open(path))
     ign = set(ov.get("ignore", {}).get(soc, []))
-    ref = "apitest %s %s %s" % (tag, r.get("date", ""), r.get("ip", ""))
+    ref = "apitest %s %s %s" % (tag, r.get("date", ""), "." + r.get("ip", "").rsplit(".", 1)[-1] if r.get("ip") else "")  # public docs: no full LAN addresses
     for k, v in sorted(r["funcs"].items()):
         if k in ign or k not in F:
             continue

@@ -10,7 +10,7 @@
   {
    "ip": ".124",
    "soc": "T23",
-   "dir": "cinnado_d1_t23n_sc2336_atbm6012bx-agg46-192.168.10.124",
+   "dir": "cinnado_d1_t23n_sc2336_atbm6012bx-agg46-.124",
    "calls": 136,
    "clean": true,
    "issues": []
@@ -18,7 +18,7 @@
   {
    "ip": ".145",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.145",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.145",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -26,7 +26,7 @@
   {
    "ip": ".151",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.151",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.151",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -34,7 +34,7 @@
   {
    "ip": ".25",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.25",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.25",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -42,7 +42,7 @@
   {
    "ip": ".26",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.26",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.26",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -50,7 +50,7 @@
   {
    "ip": ".29",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.29",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.29",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -58,7 +58,7 @@
   {
    "ip": ".33",
    "soc": "T31",
-   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-192.168.10.33",
+   "dir": "cinnado_d1_t31l_sc2336_atbm6031-agg46-.33",
    "calls": 119,
    "clean": true,
    "issues": []
@@ -66,7 +66,7 @@
   {
    "ip": ".34",
    "soc": "T41",
-   "dir": "cinnado_d1_t41nq_sc5336_atbm6132bu-agg46-192.168.10.34",
+   "dir": "cinnado_d1_t41nq_sc5336_atbm6132bu-agg46-.34",
    "calls": 100,
    "clean": false,
    "issues": [
@@ -76,7 +76,7 @@
   {
    "ip": ".184",
    "soc": "T40",
-   "dir": "eufy_t8416_t40xp_sc830_aic8800d40-agg46-192.168.10.184",
+   "dir": "eufy_t8416_t40xp_sc830_aic8800d40-agg46-.184",
    "calls": 95,
    "clean": false,
    "issues": [
@@ -87,7 +87,7 @@
   {
    "ip": ".28",
    "soc": "T23",
-   "dir": "galayou_y4_t23n_sc2336_atbm6062-agg46-192.168.10.28",
+   "dir": "galayou_y4_t23n_sc2336_atbm6062-agg46-.28",
    "calls": 124,
    "clean": true,
    "issues": []
@@ -95,7 +95,7 @@
   {
    "ip": ".30",
    "soc": "T23",
-   "dir": "jooan_a6m_t23n_sc1a4t_atbm6012bx-agg46-192.168.10.30",
+   "dir": "jooan_a6m_t23n_sc1a4t_atbm6012bx-agg46-.30",
    "calls": 113,
    "clean": true,
    "issues": []
@@ -103,7 +103,7 @@
   {
    "ip": ".31",
    "soc": "T10",
-   "dir": "secuplug_sp1_t10l_jxh42_mt7601-agg46-192.168.10.31",
+   "dir": "secuplug_sp1_t10l_jxh42_mt7601-agg46-.31",
    "calls": 118,
    "clean": true,
    "issues": []
@@ -111,7 +111,7 @@
   {
    "ip": ".23",
    "soc": "T23",
-   "dir": "tplink_tapo_c500_t23n_sc2336p_atbm6012bx-agg46-192.168.10.23",
+   "dir": "tplink_tapo_c500_t23n_sc2336p_atbm6012bx-agg46-.23",
    "calls": 113,
    "clean": true,
    "issues": []
@@ -119,7 +119,7 @@
   {
    "ip": ".32",
    "soc": "T41",
-   "dir": "vanhua_t55a_t41lq_gc5603_eth-agg46-192.168.10.32",
+   "dir": "vanhua_t55a_t41lq_gc5603_eth-agg46-.32",
    "calls": 99,
    "clean": false,
    "issues": [
@@ -130,7 +130,7 @@
   {
    "ip": ".24",
    "soc": "T21",
-   "dir": "victure_pc420_t21n_jxf23_eth+rtl8188ftv-agg46-192.168.10.24",
+   "dir": "victure_pc420_t21n_jxf23_eth+rtl8188ftv-agg46-.24",
    "calls": 109,
    "clean": true,
    "issues": []
@@ -138,7 +138,7 @@
   {
    "ip": ".21",
    "soc": "T31",
-   "dir": "wuuk_y0510_t31x_sc4336p_ssv6158-agg46-192.168.10.21",
+   "dir": "wuuk_y0510_t31x_sc4336p_ssv6158-agg46-.21",
    "calls": 132,
    "clean": true,
    "issues": []
@@ -146,7 +146,7 @@
   {
    "ip": ".224",
    "soc": "T31",
-   "dir": "wuuk_y0510_t31x_sc4336p_ssv6158-agg46-192.168.10.224",
+   "dir": "wuuk_y0510_t31x_sc4336p_ssv6158-agg46-.224",
    "calls": 132,
    "clean": true,
    "issues": []
@@ -154,7 +154,7 @@
   {
    "ip": ".107",
    "soc": "T20",
-   "dir": "wyze_cam2_t20x_jxf23_rtl8189ftv-agg46-192.168.10.107",
+   "dir": "wyze_cam2_t20x_jxf23_rtl8189ftv-agg46-.107",
    "calls": 121,
    "clean": true,
    "issues": []
@@ -162,7 +162,7 @@
   {
    "ip": ".163",
    "soc": "T20",
-   "dir": "wyze_campan1_t20x_jxf22_rtl8189etv-agg46-192.168.10.163",
+   "dir": "wyze_campan1_t20x_jxf22_rtl8189etv-agg46-.163",
    "calls": 121,
    "clean": true,
    "issues": []
