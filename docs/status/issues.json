@@ -8,7 +8,8 @@
    "url": "https://github.com/Lu-Fi/openimp/issues/2",
    "labels": [],
    "created": "2026-10-19T18:27:32Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 3,
@@ -23,7 +24,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:57:31Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 4,
@@ -38,7 +40,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:57:37Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 5,
@@ -53,7 +56,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:57:43Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 6,
@@ -68,7 +72,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:57:49Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 7,
@@ -83,7 +88,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:57:54Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 8,
@@ -98,7 +104,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:00Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 9,
@@ -113,7 +120,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:06Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 10,
@@ -128,7 +136,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:11Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 11,
@@ -143,7 +152,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:17Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 12,
@@ -158,7 +168,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:22Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 13,
@@ -173,7 +184,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:28Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 14,
@@ -188,7 +200,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:34Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 15,
@@ -203,7 +216,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:40Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 16,
@@ -218,7 +232,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:45Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 17,
@@ -233,7 +248,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:51Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 18,
@@ -248,7 +264,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:58:57Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 19,
@@ -263,7 +280,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:02Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 20,
@@ -278,7 +296,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:08Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 21,
@@ -293,7 +312,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:14Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 22,
@@ -308,7 +328,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:20Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 23,
@@ -323,7 +344,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:25Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 24,
@@ -338,7 +360,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:31Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 25,
@@ -353,7 +376,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:37Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 26,
@@ -368,7 +392,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:42Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 27,
@@ -383,7 +408,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:48Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 28,
@@ -398,7 +424,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:54Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 29,
@@ -413,7 +440,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T15:59:59Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 30,
@@ -428,7 +456,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:05Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 31,
@@ -443,7 +472,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:12Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 32,
@@ -458,7 +488,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:18Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 33,
@@ -473,7 +504,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:23Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 34,
@@ -488,7 +520,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:29Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 35,
@@ -503,7 +536,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:35Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 36,
@@ -518,7 +552,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:40Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 37,
@@ -533,7 +568,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:46Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 38,
@@ -548,7 +584,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:52Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 39,
@@ -563,7 +600,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:00:58Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 40,
@@ -578,7 +616,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:03Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 41,
@@ -593,7 +632,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:09Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 42,
@@ -608,7 +648,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:15Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 43,
@@ -623,7 +664,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:20Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 44,
@@ -638,7 +680,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:26Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 45,
@@ -653,7 +696,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:31Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 46,
@@ -668,7 +712,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:37Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 47,
@@ -683,7 +728,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:42Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 48,
@@ -698,7 +744,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:48Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 49,
@@ -713,7 +760,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:01:54Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 50,
@@ -728,7 +776,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:00Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 51,
@@ -743,7 +792,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:06Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 52,
@@ -758,7 +808,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:12Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 53,
@@ -773,7 +824,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:17Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 54,
@@ -788,7 +840,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:23Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 55,
@@ -803,7 +856,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:29Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 56,
@@ -818,7 +872,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:34Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 57,
@@ -833,7 +888,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:40Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 58,
@@ -848,7 +904,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:46Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 59,
@@ -863,7 +920,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:51Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 60,
@@ -878,7 +936,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:02:57Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 61,
@@ -893,7 +952,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:02Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 62,
@@ -908,7 +968,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:08Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 63,
@@ -923,7 +984,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:13Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 64,
@@ -938,7 +1000,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:19Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 65,
@@ -953,7 +1016,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:25Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 66,
@@ -968,7 +1032,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:31Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 67,
@@ -983,7 +1048,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:37Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 68,
@@ -998,7 +1064,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:43Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 69,
@@ -1013,7 +1080,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:49Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 70,
@@ -1028,7 +1096,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:55Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 71,
@@ -1043,7 +1112,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:00Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 72,
@@ -1058,7 +1128,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:06Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 73,
@@ -1073,7 +1144,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:12Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 74,
@@ -1088,7 +1160,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:18Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 75,
@@ -1103,7 +1176,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:23Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 76,
@@ -1118,7 +1192,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:29Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 77,
@@ -1133,7 +1208,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:35Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 78,
@@ -1148,7 +1224,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:40Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 79,
@@ -1163,7 +1240,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:46Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 80,
@@ -1178,7 +1256,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:52Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 81,
@@ -1193,7 +1272,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:04:57Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 82,
@@ -1208,7 +1288,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:03Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 83,
@@ -1223,7 +1304,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:09Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 84,
@@ -1238,7 +1320,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:15Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 85,
@@ -1253,7 +1336,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:21Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 86,
@@ -1268,7 +1352,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:27Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 87,
@@ -1283,7 +1368,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:33Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 88,
@@ -1298,7 +1384,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:39Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 89,
@@ -1313,7 +1400,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:45Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 90,
@@ -1328,7 +1416,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:51Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 91,
@@ -1343,7 +1432,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:57Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 92,
@@ -1358,7 +1448,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:03Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 93,
@@ -1373,7 +1464,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:06:08Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 94,
@@ -1388,7 +1480,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:06:14Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 95,
@@ -1403,7 +1496,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:19Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 96,
@@ -1418,7 +1512,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:06:25Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 97,
@@ -1433,7 +1528,8 @@
     "type:wip"
    ],
    "created": "2026-10-26T16:06:31Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 98,
@@ -1448,7 +1544,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:37Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 99,
@@ -1464,7 +1561,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:43Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 100,
@@ -1479,7 +1577,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:49Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 101,
@@ -1494,7 +1593,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:55Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 102,
@@ -1515,7 +1615,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:07:00Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 103,
@@ -1536,7 +1637,8 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:07:06Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 104,
@@ -1551,7 +1653,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:07:12Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
   },
   {
    "number": 105,
@@ -1569,7 +1672,8 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:10:59Z",
-   "closed": null
+   "closed": null,
+   "milestone": "RC3"
   },
   {
    "number": 106,
@@ -1587,7 +1691,20 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:11:05Z",
-   "closed": null
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 107,
+   "title": "Release 1: 14-day fleet soak on the release image",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/107",
+   "labels": [
+    "prio:release-gate"
+   ],
+   "created": "2026-10-26T18:29:05Z",
+   "closed": null,
+   "milestone": "Release 1"
   }
  ]
 }

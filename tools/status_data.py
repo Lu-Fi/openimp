@@ -36,6 +36,8 @@ SDIR = os.path.join(ROOT, "docs", "status")
 FEATURES = os.path.join(SDIR, "features.yaml")
 HISTORY = os.path.join(SDIR, "history.md")
 ISSUES = os.path.join(SDIR, "issues.json")
+RELEASE = os.path.join(SDIR, "release.yaml")
+SOAK = os.path.join(SDIR, "soak.json")
 REPO = "Lu-Fi/openimp"
 
 SOCS = ["T10", "T20", "T21", "T23", "T30", "T31", "T32", "T33", "T40", "T41"]
@@ -64,6 +66,11 @@ def slug_anchor(heading):
 def load_features(path=FEATURES):
     with open(path, encoding="utf-8") as f:
         return yaml.load(f, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))
+
+
+def load_release(path=RELEASE):
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def load_history(path=HISTORY):
@@ -251,6 +258,79 @@ def validate(data=None, hist=None, issues=None, functions=None):
     return E
 
 
+def validate_release(rel=None, soak=None):
+    """Problems in docs/status/release.yaml and docs/status/soak.json (empty list = ok)."""
+    E = []
+    try:
+        rel = rel if rel is not None else load_release()
+    except (OSError, yaml.YAMLError) as e:
+        return ["release.yaml: %s" % e]
+    for k in ("version", "socs", "fleet", "gates"):
+        if k not in rel:
+            E.append("release.yaml: missing key %s" % k)
+    if E:
+        return E
+    socs = rel["socs"]
+    for s in socs:
+        if s not in SOCS:
+            E.append("release.yaml: unknown SoC %s" % s)
+    for cam, s in rel["fleet"].items():
+        if not re.fullmatch(r"\.\d{1,3}", str(cam)):
+            E.append("release.yaml: fleet camera %r must be the '.N' shorthand (no full LAN address)" % cam)
+        if s not in socs:
+            E.append("release.yaml: fleet camera %s has SoC %s that is not a gate SoC" % (cam, s))
+    for s in socs:
+        if s not in rel["fleet"].values():
+            E.append("release.yaml: gate SoC %s has no camera in the fleet" % s)
+    ids, gids = set(), set()
+    for g in rel["gates"]:
+        gids.add(g.get("id"))
+        for k in ("id", "title", "milestone", "rules"):
+            if k not in g:
+                E.append("release.yaml: gate %s: missing %s" % (g.get("id"), k))
+        for r in g.get("rules", []):
+            if r.get("id") in ids:
+                E.append("release.yaml: duplicate rule id %s" % r.get("id"))
+            ids.add(r.get("id"))
+            if not r.get("text"):
+                E.append("release.yaml: rule %s has no text" % r.get("id"))
+            for k in ("min_stable_days", "min_cameras_per_soc", "max_unplanned_reboots", "max_oops"):
+                if k in r and (not isinstance(r[k], int) or r[k] < 0):
+                    E.append("release.yaml: rule %s: %s must be a non-negative integer" % (r.get("id"), k))
+    rc3 = next((x for x in rel["gates"] if x.get("id") == "rc3"), None)
+    if not rc3 or not rc3.get("works_cells"):
+        E.append("release.yaml: gate rc3 with works_cells missing")
+    r1 = next((x for x in rel["gates"] if x.get("id") == "release1"), None)
+    if not r1:
+        E.append("release.yaml: gate release1 missing")
+    else:
+        have = {k for r in r1.get("rules", []) for k in r}
+        for k in ("min_stable_days", "min_cameras_per_soc", "max_unplanned_reboots", "max_oops", "planned_marker"):
+            if k not in have:
+                E.append("release.yaml: gate release1: threshold %s missing" % k)
+        if r1.get("requires") not in gids:
+            E.append("release.yaml: gate release1: requires an existing gate")
+    if soak is None and os.path.exists(SOAK):
+        try:
+            soak = json.load(open(SOAK, encoding="utf-8"))
+        except ValueError as e:
+            return E + ["soak.json: %s" % e]
+    if soak is not None:
+        for k in ("image", "asof", "cameras", "days"):
+            if k not in soak:
+                E.append("soak.json: missing key %s" % k)
+        for c in soak.get("cameras", []):
+            w = "soak.json %s" % c.get("camera")
+            for k in ("camera", "soc", "image", "first_seen", "uptime_s", "unplanned_reboots", "oops", "last_reset", "stable_days", "events"):
+                if k not in c:
+                    E.append("%s: missing %s" % (w, k))
+            if rel["fleet"].get(c.get("camera")) != c.get("soc"):
+                E.append("%s: camera/SoC does not match release.yaml fleet" % w)
+            if re.search(r"192\.168\.|\b10\.\d+\.\d+\.\d+", json.dumps(c)):
+                E.append("%s: contains a full LAN address (use the .N shorthand)" % w)
+    return E
+
+
 # ------------------------------------------------------------------ gh
 def gh(*args):
     return subprocess.run(["gh"] + list(args), check=True, capture_output=True, text=True).stdout
@@ -268,7 +348,8 @@ def refresh_issues(path=ISSUES):
                 continue
             res.append({"number": i["number"], "title": i["title"], "state": i["state"], "url": i["html_url"],
                         "labels": sorted(l["name"] for l in i["labels"]), "created": i["created_at"],
-                        "closed": i.get("closed_at")})
+                        "closed": i.get("closed_at"),
+                        "milestone": (i.get("milestone") or {}).get("title")})
     res.sort(key=lambda x: x["number"])
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"_comment": "Cache of the public GitHub issues of %s (refresh: python3 tools/status_data.py "
@@ -290,7 +371,7 @@ def main():
     ev = os.path.join(ROOT, "docs", "api_evidence.json")
     if os.path.exists(ev):
         funcs = set(json.load(open(ev, encoding="utf-8")).get("functions", {}))
-    E = validate(functions=funcs)
+    E = validate(functions=funcs) + validate_release()
     for e in E:
         sys.stderr.write("status_data: %s\n" % e)
     if E:

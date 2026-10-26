@@ -69,7 +69,12 @@ status-check:
 	python3 tools/status_data.py --check
 	python3 tools/gen_feature_matrix_html.py --check
 
-.PHONY: status-check
+# Host only (needs the soak sampler logs and the camera STATUS files, not CI): daily soak summary, then regenerate the matrix
+status-soak:
+	python3 tools/status_soak.py
+	python3 tools/gen_feature_matrix_html.py
+
+.PHONY: status-check status-soak
 
 export-check:
 	./tools/export-check.sh

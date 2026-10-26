@@ -26,6 +26,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import status_data as sd
+import release_gates as rg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -583,7 +584,7 @@ class Model:
         return "".join(out)
 
     def html_top(self):
-        return ('<section class="card" id="priorities"><h2>Priorities for streamers</h2>'
+        return (rg.Gates(self).html() + '<section class="card" id="priorities"><h2>Priorities for streamers</h2>'
                 '<p class="small">Gaps in functions that timps, prudynt or raptor call, per SoC, sorted by the number of streamers '
                 '(p prudynt, r raptor, t timps; &dagger; source only). Below the table: how much of the vendor API each area covers.</p>'
                 + self.html_priorities() +
@@ -752,6 +753,9 @@ def update_md(md_path=MD, write=True):
     """Regenerate docs/FEATURE_MATRIX.md: head from docs/status (features.yaml, history.md) + the API section."""
     head = sd.render_head(sd.load_features(), sd.load_history())
     m = Model(head)
+    k = head.find("\n## Summary")
+    gates = rg.Gates(m).md()
+    head = head[:k + 1] + gates + "\n" + head[k + 1:] if k >= 0 else head
     out = head + m.md()
     old = open(md_path, encoding="utf-8").read() if os.path.exists(md_path) else ""
     changed = out != old

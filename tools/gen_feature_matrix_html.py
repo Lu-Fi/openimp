@@ -979,7 +979,7 @@ def render(md):
             close_card()
             in_legend = False
             if lvl == 2:
-                dst[0] = hist if text in ("Summary", "Legend") else out
+                dst[0] = hist if text in ("Summary", "Legend") else ([] if text == "Release gates" else out)
             if lvl == 1:
                 W("<h1>%s</h1>" % inline(text))
             elif lvl == 2:

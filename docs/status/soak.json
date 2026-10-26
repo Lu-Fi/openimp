@@ -1,0 +1,668 @@
+{
+ "_comment": "Daily soak summary per fleet camera. Written by tools/status_soak.py on the host from the soak sampler logs and the camera STATUS files (not in CI); read by tools/release_gates.py. Do not edit by hand. Rules: docs/status/release.yaml.",
+ "image": "agg47",
+ "asof": "2026-10-26 19:23",
+ "sources": {
+  "sampler_logs": [
+   "logs1026/soak-agg47.log"
+  ],
+  "status": "cam-N.STATUS (coordinator log)"
+ },
+ "cameras": [
+  {
+   "camera": ".21",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:03",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19256,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 14:01",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 14:03",
+   "stable_days": 0.22,
+   "events": [
+    {
+     "time": "2026-10-26 14:01",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".23",
+   "soc": "T23",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:35",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20955,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:33",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:35",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:33",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".24",
+   "soc": "T21",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:33",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 21083,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:31",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:33",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:31",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".25",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:44",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20415,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:42",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:44",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:42",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".26",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:47",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20271,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:44",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:47",
+   "stable_days": 0.23,
+   "events": [
+    {
+     "time": "2026-10-26 13:44",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".28",
+   "soc": "T23",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:37",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 4315,
+   "unplanned_reboots": 1,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 18:11",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-26 19:23)"
+   },
+   "stable_since": "2026-10-26 18:11",
+   "stable_days": 0.05,
+   "events": [
+    {
+     "time": "2026-10-26 13:35",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-10-26 18:11",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-26 19:23)"
+    }
+   ]
+  },
+  {
+   "camera": ".29",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:49",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20105,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:47",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:49",
+   "stable_days": 0.23,
+   "events": [
+    {
+     "time": "2026-10-26 13:47",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".30",
+   "soc": "T23",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:39",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20703,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:37",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:39",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:37",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".31",
+   "soc": "T10",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:27",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 6309,
+   "unplanned_reboots": 2,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 17:38",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "recovery reboot (SetISPProcess(0) wedge, bisect)"
+   },
+   "stable_since": "2026-10-26 17:38",
+   "stable_days": 0.07,
+   "events": [
+    {
+     "time": "2026-10-26 13:25",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-10-26 17:32",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "recovery reboot (pipeline wedged after apitest cases)"
+    },
+    {
+     "time": "2026-10-26 17:38",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "recovery reboot (SetISPProcess(0) wedge, bisect)"
+    }
+   ]
+  },
+  {
+   "camera": ".32",
+   "soc": "T41",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:10",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 18885,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 14:06",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 14:10",
+   "stable_days": 0.22,
+   "events": [
+    {
+     "time": "2026-10-26 14:06",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".33",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:52",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19960,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:49",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:52",
+   "stable_days": 0.23,
+   "events": [
+    {
+     "time": "2026-10-26 13:49",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".34",
+   "soc": "T41",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:13",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 18715,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 14:10",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 14:13",
+   "stable_days": 0.22,
+   "events": [
+    {
+     "time": "2026-10-26 14:10",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".107",
+   "soc": "T20",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:31",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 21233,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:27",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:31",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:27",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".124",
+   "soc": "T23",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:42",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 20555,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:40",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:42",
+   "stable_days": 0.24,
+   "events": [
+    {
+     "time": "2026-10-26 13:40",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".145",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:06",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19113,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 14:04",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 14:06",
+   "stable_days": 0.22,
+   "events": [
+    {
+     "time": "2026-10-26 14:04",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".151",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:54",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19815,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:52",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:54",
+   "stable_days": 0.23,
+   "events": [
+    {
+     "time": "2026-10-26 13:52",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".163",
+   "soc": "T20",
+   "image": "agg47",
+   "first_seen": "2026-10-26 13:58",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19599,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:55",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 13:58",
+   "stable_days": 0.23,
+   "events": [
+    {
+     "time": "2026-10-26 13:55",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  },
+  {
+   "camera": ".184",
+   "soc": "T40",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:30",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 11465,
+   "unplanned_reboots": 1,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 16:12",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "recovery reboot (tx_isp_t40 refcount stuck after apitest oopses)"
+   },
+   "stable_since": "2026-10-26 16:12",
+   "stable_days": 0.13,
+   "events": [
+    {
+     "time": "2026-10-26 14:13",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-10-26 16:12",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "recovery reboot (tx_isp_t40 refcount stuck after apitest oopses)"
+    }
+   ]
+  },
+  {
+   "camera": ".224",
+   "soc": "T31",
+   "image": "agg47",
+   "first_seen": "2026-10-26 14:01",
+   "last_sample": "2026-10-26 19:23",
+   "online": true,
+   "uptime_s": 19435,
+   "unplanned_reboots": 0,
+   "oops": 0,
+   "last_reset": {
+    "time": "2026-10-26 13:58",
+    "kind": "flash",
+    "planned": true,
+    "reason": "image agg47 flashed (full OTA)"
+   },
+   "stable_since": "2026-10-26 14:01",
+   "stable_days": 0.22,
+   "events": [
+    {
+     "time": "2026-10-26 13:58",
+     "kind": "flash",
+     "planned": true,
+     "reason": "image agg47 flashed (full OTA)"
+    }
+   ]
+  }
+ ],
+ "days": {
+  "2026-10-26": {
+   ".21": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19256,
+    "max_oops": 0
+   },
+   ".23": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20955,
+    "max_oops": 0
+   },
+   ".24": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 21083,
+    "max_oops": 0
+   },
+   ".25": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20415,
+    "max_oops": 0
+   },
+   ".26": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20271,
+    "max_oops": 0
+   },
+   ".28": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 4315,
+    "max_oops": 0
+   },
+   ".29": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20105,
+    "max_oops": 0
+   },
+   ".30": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20703,
+    "max_oops": 0
+   },
+   ".31": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 6309,
+    "max_oops": 0
+   },
+   ".32": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 18885,
+    "max_oops": 0
+   },
+   ".33": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19960,
+    "max_oops": 0
+   },
+   ".34": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 18715,
+    "max_oops": 0
+   },
+   ".107": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 21233,
+    "max_oops": 0
+   },
+   ".124": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 20555,
+    "max_oops": 0
+   },
+   ".145": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19113,
+    "max_oops": 0
+   },
+   ".151": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19815,
+    "max_oops": 0
+   },
+   ".163": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19599,
+    "max_oops": 0
+   },
+   ".184": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 11465,
+    "max_oops": 0
+   },
+   ".224": {
+    "samples": 1,
+    "offline": 0,
+    "max_uptime_s": 19435,
+    "max_oops": 0
+   }
+  }
+ }
+}
