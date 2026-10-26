@@ -14,12 +14,16 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
   with the FrameSource kept open and nobody pulling (timps `general.fs_keepalive=1`, no client) all capture buffers
   filled after 4 frames, the MSCA stalled and the AE froze (.184 stock: 0 AE samples / 10 s, `core_isr_frame_deliver_count`
   stuck at 4, mode "day" at IT 1919 / gain 1x in a dark cellar). The vendor capture thread keeps dequeueing. The P1 frame
-  feeder (the IVS feeder thread) now also recycles the idle 3A channel (lowest enabled channel, normally ch0; quiet as soon
-  as a consumer dequeues for three frame intervals) through GetFrame/ReleaseFrame at the channel rate, so the driver keeps
-  its `frame_3a_interval` rate. `OPENIMP_3A_FEED=0` switches it off. T41 needs no change (its AE runs from the per-frame
-  AE statistics IRQ without a consumer). Device proof .184 (no client): 6.7 AE samples/s (20 fps / interval 3), timps
-  boot check found night 8 s after its day switch, EV follows the IR on/off steps within 2 s; with a client ch0/ch1
-  20/20 fps unchanged; 0 oops. Cost: feeder + DQBUF worker 5.9 % of one CPU at 4K 20 fps (mostly ioctl time).
+  feeder (the IVS feeder thread) now also recycles the idle 3A channel (lowest enabled channel, normally ch0; quiet as
+  soon as a consumer dequeues for three frame intervals): paced at the channel's frame interval with a single,
+  non-waiting DQBUF (the ring is full of completed frames), so the driver keeps its `frame_3a_interval` rate.
+  `OPENIMP_3A_FEED=0` off, `=hi` feeds the highest enabled channel, `OPENIMP_3A_FEED_DIV=n` every n-th interval.
+  T41 needs no change (its AE runs from the per-frame AE statistics IRQ without a consumer).
+  Device proof .184 (aeapi4 driver = next, no client): 6.75 AE samples/s (20 fps / interval 3); light 255 -> 40: EV at
+  max in 2 s, auto night after 9 s; 40 -> 255: EV 5034 -> 2503 in 2 s; day -> light off: EV max in 2 s, auto night
+  after 9 s; with a client ch0/ch1 301/301 frames in 15 s (20 fps, unchanged); 0 oops. timpsd CPU (20 s window, % of one
+  CPU): feed off 0.15 %, paced feed 0.65 % (ch0) / 0.45 % (ch1 360p); the first version (blocking GetFrame per frame) cost
+  5.65 % / 5.0 %: the cost was the frame channel's 1 ms wait polling, not the resolution.
   Host test `tests/t41/snap_test.c` (`t40_3a_feed_channel`).
 
 ## Branch `claude/t41-isp-osd` (2026-10-26)

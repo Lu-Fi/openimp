@@ -2070,18 +2070,35 @@ static uint64_t p1_ivs_idle_us(const struct openimp_fs_channel *chn)
 }
 
 #if defined(PLATFORM_T40)
-/* T40 3A feed (t40_3a_feed_channel, t41_snap.h): default on,
- * OPENIMP_3A_FEED=0 switches it off. */
-static int p1_3a_feed_on(void)
-{
-    static int on = -1;
+static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_attempts);
 
-    if (on < 0) {
+/* T40 3A feed (t40_3a_feed_channel, t41_snap.h): default on.
+ * OPENIMP_3A_FEED=0 off, =hi feeds the highest enabled channel instead of
+ * the lowest; OPENIMP_3A_FEED_DIV=n recycles only every n-th frame interval. */
+static int p1_3a_feed_mode(void)       /* 0 off, 1 lowest, 2 highest */
+{
+    static int mode = -1;
+
+    if (mode < 0) {
         const char *e = getenv("OPENIMP_3A_FEED");
 
-        on = !(e && e[0] == '0' && !e[1]);
+        mode = !e ? 1 : (e[0] == '0' && !e[1]) ? 0 :
+               (e[0] == 'h' && e[1] == 'i') ? 2 : 1;
     }
-    return on;
+    return mode;
+}
+
+static uint32_t p1_3a_feed_div(void)
+{
+    static int div = -1;
+
+    if (div < 0) {
+        const char *e = getenv("OPENIMP_3A_FEED_DIV");
+        long v = e ? strtol(e, NULL, 0) : 1;
+
+        div = v < 1 ? 1 : v > 30 ? 30 : (int)v;
+    }
+    return (uint32_t)div;
 }
 #endif
 
@@ -2114,10 +2131,36 @@ static void *p1_ivs_feeder(void *arg)
 #if defined(PLATFORM_T40)
             /* idle 3A channel: recycle its frames so the ISP keeps
              * completing frames and the driver's frame 3A keeps metering */
-            if (!(p1_3a_feed_on() &&
-                  t40_3a_feed_channel(channel, enabled_mask)) &&
-                !openimp_t31_ivs_source_active(channel))
+            if (!openimp_t31_ivs_source_active(channel)) {
+                /* paced, never waiting: one frame per frame interval
+                 * (times OPENIMP_3A_FEED_DIV).  The ring is full of
+                 * completed frames, so the single DQBUF attempt finds one
+                 * at once; a GetFrame that waits for the next frame costs
+                 * ~5 % of a CPU in the frame channel's 1 ms wait polls
+                 * (.184 4K/360p alike), the paced one ~0.3 %. */
+                static uint64_t next_us[OPENIMP_FS_CHANNELS];
+                int mode = p1_3a_feed_mode();
+                uint64_t now = p1_monotonic_us();
+                uint64_t iv = 50000u;
+                const struct openimp_fs_channel *c = &p1.channels[channel];
+                int pick = !mode ? 0 : mode == 2 ?
+                    (enabled_mask & (1u << channel)) &&
+                        !(enabled_mask >> (channel + 1)) :
+                    t40_3a_feed_channel(channel, enabled_mask);
+
+                if (!pick || now < next_us[channel])
+                    continue;
+                if (c->attr.outFrmRateNum > 0 && c->attr.outFrmRateDen > 0)
+                    iv = 1000000ull * (uint32_t)c->attr.outFrmRateDen /
+                         (uint32_t)c->attr.outFrmRateNum;
+                /* advance from the due time (the 20 ms feeder poll would
+                 * otherwise round every interval up) */
+                next_us[channel] = (next_us[channel] && now - next_us[channel] < iv ?
+                                    next_us[channel] : now) + p1_3a_feed_div() * iv;
+                if (p1_get_frame_attempts(channel, &frame, 1) == 0 && frame)
+                    (void)IMP_FrameSource_ReleaseFrame(channel, frame);
                 continue;
+            }
 #else
             (void)enabled_mask;
             if (!openimp_t31_ivs_source_active(channel))
