@@ -2522,7 +2522,7 @@
    "cells": {
     "T10": "dev",
     "T20": "dev",
-    "T21": "err",
+    "T21": "dev",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -2549,7 +2549,7 @@
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ISP_Tuning_GetIntegrationTime: ret=0 mode 0 it 0 max 0; read back manual 30 lines: NO; ISP_Tuning_SetIntegrationTime: ret=0 (gain caps pinned to 1) 30 lines Y 3.5 -> 240 lines Y 31.3 via SetExpr manual (AE out of the loop; GetExpr after 30 lines: 30); AE overrides IntegrationTime alone; picture  res"
+    "T21": "apitest issue-110 2026-10-27 .24 (open-tx-isp 28b26d20, stock libimp): Get mode/it/max 0/1350/2246, manual 30 read back; Set 30->240 lines Y 16.1->78.9; QEMU T21 equal (beyond vendor: stock T21 ignores the block)"
    }
   },
   "ISP_Tuning_Get/SetMask": {
@@ -4370,7 +4370,7 @@
    "cells": {
     "T10": "dev",
     "T20": "dev",
-    "T21": "err",
+    "T21": "dev",
     "T23": "dev",
     "T30": "?",
     "T31": "dev",
@@ -4403,7 +4403,7 @@
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ret=0 two waits ret 0/0, frame count 0 -> 0",
+    "T21": "apitest issue-110 2026-10-27 .24 (open-tx-isp 28b26d20): frame count 49->50, -ETIMEDOUT on timeout; QEMU 96->97",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26"
    }
