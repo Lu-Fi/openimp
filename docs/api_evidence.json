@@ -446,7 +446,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -538,7 +538,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -615,7 +615,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -692,7 +692,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -769,7 +769,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -846,7 +846,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -923,7 +923,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -1255,7 +1255,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -4590,7 +4590,7 @@
   "ISP_Tuning_AE_Get/SetROI": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "aud",
+    "T10": "rt",
     "T20": "dev",
     "T21": "dev",
     "T23": "dev",
@@ -4621,7 +4621,10 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T10/T20: prudynt†; T21/T23/T31: prudynt†, raptor†"
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T10/T20: prudynt†; T21/T23/T31: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_AwbSync": {
    "area": "AE / AWB / AF",
@@ -4662,7 +4665,7 @@
   "ISP_Tuning_Awb_Get/SetRgbCoefft": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "dev",
     "T21": "dev",
     "T23": "dev",
@@ -4702,7 +4705,8 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58",
    "ref": {
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-26 .34",
+    "T10": "apitest rc3-cases 2026-10-26 .31"
    }
   },
   "ISP_Tuning_Get/SetAeAttr": {
@@ -9348,7 +9352,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -9444,7 +9448,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -9521,7 +9525,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -9598,7 +9602,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -9857,7 +9861,7 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -10008,7 +10012,7 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -17221,7 +17225,7 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
@@ -17566,7 +17570,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
