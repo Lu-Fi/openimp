@@ -451,7 +451,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -543,7 +543,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -620,7 +620,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -697,7 +697,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -774,7 +774,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -851,7 +851,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -928,7 +928,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -1243,7 +1243,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -1648,7 +1648,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -2201,7 +2201,7 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -2364,7 +2364,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -2768,7 +2768,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -3174,7 +3174,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -3251,7 +3251,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -3788,7 +3788,7 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
+    "T40": "dev",
     "T41": "dev"
    },
    "used": {
@@ -3850,7 +3850,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "FAIL apitest agg47 2026-10-26 192.168.10.184: ret=-1 same 20/1 written, read back 20/1",
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -4378,7 +4378,7 @@
     "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "err",
+    "T40": "dev",
     "T41": "host"
    },
    "used": {
@@ -4409,7 +4409,7 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; T41: driver claude/t41-connect (agg-25); host tests 58/58",
    "ref": {
-    "T40": "FAIL apitest agg47 2026-10-26 192.168.10.184: Awb_GetRgbCoefft (cid 0x0800009b) oopses the T40 driver (Unable to handle kernel paging request, epc c03d1920)"
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
    }
   },
   "ISP_Tuning_Get/SetAeAttr": {
@@ -4637,7 +4637,7 @@
     "T41": "n.a."
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "ISP_Tuning_Get/SetAeStrategy": {
@@ -4747,7 +4747,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -4836,7 +4836,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -5060,7 +5060,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -5280,11 +5280,11 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
+    "T40": "dev",
     "T41": "miss"
    },
    "ref": {
-    "T40": "FAIL apitest agg47 2026-10-26 192.168.10.184: GetAFMetricesInfo oopses the T40 driver (null deref at 0x4, epc c03b49d4)"
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
    }
   },
   "ISP_Tuning_GetAWBCt": {
@@ -5474,7 +5474,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -5532,11 +5532,11 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
+    "T40": "dev",
     "T41": "miss"
    },
    "ref": {
-    "T40": "FAIL apitest agg47 2026-10-26 192.168.10.184: GetAfStatistics oopses the T40 driver (null deref, epc 801bf570)"
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
    }
   },
   "ISP_Tuning_GetAfZone": {
@@ -5583,7 +5583,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -5617,7 +5617,7 @@
    },
    "note": "T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6002,7 +6002,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6079,7 +6079,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6156,7 +6156,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6233,7 +6233,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6300,7 +6300,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6387,7 +6387,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "Encoder_Get/SetChnColor2Grey": {
@@ -6542,7 +6542,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnFrmRate: ret=0 15/1; Encoder_SetChnFrmRate: ret=0 set 10/1, read back 15/1"
    }
   },
@@ -6585,7 +6585,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: Encoder_GetChnGopAttr: ret=0 mode 0x2 length 60 (created 30) maxSameSence 2; Encoder_SetChnGopAttr: ret=0 restore attr, length 60"
    }
   },
@@ -6719,7 +6719,7 @@
    },
    "note": "not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md)",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "Encoder_Get/SetChnSeiAttr": {
@@ -6853,7 +6853,7 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
+    "T40": "dev",
     "T41": "dev"
    },
    "used": {
@@ -6895,7 +6895,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "FAIL apitest agg47 2026-10-26 192.168.10.184: Encoder_GetMaxStreamCnt: ret=0 2; Encoder_SetMaxStreamCnt: ret=0 refused on a created channel (before CreateChn only): ret 0, count stays 3 (was 2)",
+    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -6964,7 +6964,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7010,7 +7010,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7119,7 +7119,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7192,7 +7192,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7281,7 +7281,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7380,7 +7380,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7466,7 +7466,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "Encoder_PollingStream": {
@@ -7542,7 +7542,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7609,7 +7609,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7686,7 +7686,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7763,7 +7763,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7859,7 +7859,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -7948,7 +7948,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 400 kbit/s, read back 512"
    }
   },
@@ -7988,7 +7988,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 25, read back 60"
    }
   },
@@ -8128,7 +8128,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "FAIL apitest agg47 2026-10-26 192.168.10.34: ret=0 22..44, read back 20..45"
    }
   },
@@ -8192,7 +8192,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8230,7 +8230,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8251,7 +8251,7 @@
    "note": "T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "Encoder_SetGOPSize": {
@@ -8358,7 +8358,7 @@
    "note": "vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only",
    "ref": {
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8435,7 +8435,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8512,7 +8512,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8589,7 +8589,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8614,7 +8614,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8657,7 +8657,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8695,7 +8695,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8720,7 +8720,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8745,7 +8745,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8788,7 +8788,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -8850,7 +8850,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9037,7 +9037,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9133,7 +9133,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9210,7 +9210,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9287,7 +9287,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9440,7 +9440,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9507,7 +9507,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9546,7 +9546,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9625,7 +9625,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    }
   },
   "FrameSource_Get/SetI2dAttr": {
@@ -9658,7 +9658,7 @@
    },
    "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1",
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9697,7 +9697,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9783,7 +9783,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9802,7 +9802,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9859,7 +9859,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9930,7 +9930,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -9949,7 +9949,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -10064,7 +10064,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -16823,7 +16823,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -16900,7 +16900,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -16957,7 +16957,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17024,7 +17024,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17091,7 +17091,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17168,7 +17168,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17245,7 +17245,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17286,7 +17286,7 @@
     "T41": "apitest agg47 2026-10-26 192.168.10.34",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184"
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184"
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
   },
@@ -17343,7 +17343,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17410,7 +17410,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
@@ -17487,7 +17487,7 @@
     "T21": "apitest agg47 2026-10-26 192.168.10.24",
     "T23": "apitest agg47 2026-10-26 192.168.10.30",
     "T31": "apitest agg47 2026-10-26 192.168.10.26",
-    "T40": "apitest agg47 2026-10-26 192.168.10.184",
+    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 192.168.10.184",
     "T41": "apitest agg47 2026-10-26 192.168.10.34"
    }
   },
