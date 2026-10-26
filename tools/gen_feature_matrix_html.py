@@ -28,6 +28,7 @@ Special handling:
     per SoC is shown above the table.  Without a baseline nothing is marked.
 """
 import html
+import json
 import os
 import re
 import subprocess
@@ -60,7 +61,7 @@ h3{font-size:1rem;margin:1.1rem 0 .4rem}h4{font-size:.92rem;margin:.9rem 0 .3rem
 .card ul{margin:.3rem 0 0;padding-left:1.1rem}.card li{margin:.25rem 0}
 .legend{display:flex;flex-wrap:wrap;gap:8px}
 .legend span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:.85rem}
-.legend small{color:var(--muted)}
+.legend small{color:var(--muted)}.legend span{font-size:.78rem;padding:1px 7px}.legend small{display:none}
 .wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);max-width:100%}
 table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-size:.8rem}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;text-align:left}
@@ -88,6 +89,47 @@ td.new{box-shadow:inset 3px 0 0 var(--accent)}
 .rc2bar table{width:auto;table-layout:auto;margin:.4rem 0}.rc2bar th,.rc2bar td{position:static;width:auto;font-weight:400;text-align:center;padding:3px 10px}
 .rc2bar td:first-child,.rc2bar th:first-child{text-align:left;font-weight:600}
 body.rc2only tr[data-rc2="0"],body.rc2only tr.grp.empty{display:none}
+table.mx{table-layout:auto;width:max-content;min-width:100%;font-size:.82rem}
+table.mx th,table.mx td{padding:3px 6px;vertical-align:middle}
+table.mx th:first-child,table.mx td:first-child{width:auto;min-width:300px;max-width:520px;font-weight:400}
+table.mx thead th{text-align:center;position:sticky;top:0}
+table.mx thead th.fh{text-align:left}
+table.mx tbody th{position:sticky;left:0;z-index:2;background:var(--card);text-align:left}
+table.mx thead th:first-child{z-index:5}
+table.mx td.mc{padding:2px 4px}table.mx tr.grp td{padding:2px 8px;font-size:.78rem}
+.mwrap{max-height:76vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.mwrap .wrap{border:0}
+td.mc{text-align:center;white-space:nowrap;cursor:pointer;min-width:52px;outline-offset:-2px}
+td.mc .sym{margin:0}td.mc:hover{filter:brightness(.94)}td.mc:focus-visible,.fname:focus-visible,.tag:focus-visible,.chip:focus-visible{outline:2px solid var(--accent)}
+td.mc.dim{opacity:.3}td.mc.sel{box-shadow:inset 0 0 0 2px var(--accent)}tr.selr th{box-shadow:inset 3px 0 0 var(--accent)}
+td.mc i.rc2{font-style:normal;margin-left:3px;padding:0 4px;font-size:.6rem}
+i.rc2{display:inline-block;padding:0 5px;border-radius:8px;background:var(--accent);color:var(--bg);font-size:.66rem;font-weight:700;font-style:normal;vertical-align:middle}
+i.rc2.chg{background:var(--muted)}
+.num{display:inline-block;min-width:1.6rem;color:var(--muted);font-size:.74rem}
+.fname{background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left;border-bottom:1px dotted var(--muted)}
+.tags{margin-left:6px}
+.tag{background:var(--head);border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:.64rem;padding:0 5px;margin:1px 3px 0 0;cursor:pointer}
+.tag.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.mxctl{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 10px;margin:0 0 8px}
+.fg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 5px;margin:3px 0}.fl{font-size:.74rem;color:var(--muted);min-width:3.2rem}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--fg);font:inherit;font-size:.78rem;padding:1px 8px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+#mxq{font:inherit;font-size:.85rem;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:min(280px,100%)}
+.rc2bar{margin:0 0 8px;padding:6px 12px}.rc2bar summary{cursor:pointer;font-weight:600;font-size:.85rem}
+.rc2bar table{font-size:.78rem}.rc2bar tr.sep td{border-top:2px solid var(--line)}
+#tip{position:fixed;z-index:50;max-width:min(380px,calc(100vw - 16px));background:var(--fg);color:var(--bg);border-radius:8px;padding:6px 9px;font-size:.78rem;pointer-events:none;box-shadow:0 4px 14px #0005}
+#tip .small{color:inherit;opacity:.7}#tip div{margin-top:2px}
+#pn{position:fixed;z-index:40;top:0;right:0;bottom:0;width:min(520px,46vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-6px 0 20px #0003;overflow:auto;padding:10px 14px}
+#pn[hidden]{display:none}
+.pnh{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;position:sticky;top:-10px;background:var(--card);padding:6px 0;margin-top:-10px;border-bottom:1px solid var(--line)}
+.pnh h3{margin:.2rem 0;font-size:.98rem}
+#pnx{font-size:1.5rem;line-height:1;background:none;border:1px solid var(--line);border-radius:8px;color:var(--fg);cursor:pointer;padding:0 9px}
+.cd{border-top:1px solid var(--line);padding:6px 0}.cd h4{margin:.2rem 0}.cd .tx{font-size:.84rem;margin:.3rem 0}
+@media (max-width:1150px){table.mx th:first-child,table.mx td:first-child{min-width:210px;max-width:230px}.tags{display:block;margin-left:1.6rem}td.mc{min-width:46px}}
+@media (min-width:801px){body.pnopen main{margin-right:min(520px,46vw)}}
+@media (max-width:800px){#pn{top:auto;left:0;width:auto;height:68vh;border-left:0;border-top:1px solid var(--line);border-radius:12px 12px 0 0}
+ table.mx th:first-child,table.mx td:first-child{min-width:150px;max-width:150px;font-size:.76rem}.tags{display:none}.mwrap{max-height:70vh}main{padding:10px}}
+details.hist{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 14px;margin:1.4rem 0}details.hist>summary{font-size:1.05rem;font-weight:700}
 """
 
 # status symbol -> (css class, title)
@@ -309,8 +351,8 @@ def legend_item(text):
     head, rest = mm.group(1), mm.group(2)
     if ": " in rest and not rest.lstrip().startswith("("):
         a, b = rest.split(": ", 1)
-        return '<span class="%s">%s%s <small>%s</small></span>' % (
-            cls, "<b>%s</b>" % inline(head) if not head.startswith("**") else inline(head),
+        return '<span class="%s" title="%s">%s%s <small>%s</small></span>' % (
+            cls, esc(re.sub(r"[*`]", "", b)), "<b>%s</b>" % inline(head) if not head.startswith("**") else inline(head),
             inline(a), inline(b))
     return '<span class="%s">%s%s</span>' % (cls, inline(head), inline(rest))
 
@@ -504,88 +546,261 @@ def classify(old, new):
     return "new" if RANK.get(new, 0) > RANK.get(old, 0) else "chg"
 
 
-RC2_JS = ("<script>function rc2f(on){document.body.classList.toggle('rc2only',on);"
-          "var g=null,any=false;document.querySelectorAll('tr.grp,tr[data-rc2]').forEach(function(r){"
-          "if(r.classList.contains('grp')){if(g)g.classList.toggle('empty',!any);g=r;any=false}"
-          "else if(r.getAttribute('data-rc2')==='1')any=true});if(g)g.classList.toggle('empty',!any)}"
-          "</script>")
+MX_JS = r"""(function(){
+var D=JSON.parse(document.getElementById('mxdata').textContent),R=D.rows;
+var $=function(s,e){return (e||document).querySelector(s)},$$=function(s,e){return [].slice.call((e||document).querySelectorAll(s))};
+var tbl=$('#mx'),rows=$$('tbody tr[data-n]',tbl),grps=$$('tbody tr.grp',tbl),pn=$('#pn'),pnb=$('#pnb'),tip=$('#tip');
+var F={q:'',soc:{},sym:{},tag:{},rc2:false},last=null,cur=null;
+function any(o){for(var k in o)if(o[k])return true;return false}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var SS={'⚠':'⚠️'};function ss(s){return SS[s]||s}
+function apply(){
+  var vis=any(F.soc)?D.socs.filter(function(s){return F.soc[s]}):D.socs,q=F.q.toLowerCase(),n=0,sy=any(F.sym);
+  $$('[data-soc]',tbl).forEach(function(e){e.style.display=vis.indexOf(e.getAttribute('data-soc'))<0?'none':''});
+  rows.forEach(function(tr){
+    var r=R[tr.getAttribute('data-n')],ok=true,cs=$$('td.mc',tr);
+    if(q){var h=('#'+tr.getAttribute('data-n')+' '+r.t+' '+r.tags.join(' ')).toLowerCase();
+      if(h.indexOf(q)<0){var f=false;D.socs.forEach(function(s){if(r.c[s].p.indexOf(q)>=0||r.v.toLowerCase().indexOf(q)>=0)f=true});ok=f}}
+    if(ok&&any(F.tag)){var f2=false;r.tags.forEach(function(t){if(F.tag[t])f2=true});ok=f2}
+    var m=false;
+    cs.forEach(function(td){var s=td.getAttribute('data-sym'),v=vis.indexOf(td.getAttribute('data-soc'))>=0;
+      var hit=sy&&F.sym[s]&&v;td.classList.toggle('dim',sy&&!F.sym[s]);if(hit)m=true});
+    if(ok&&sy&&!m)ok=false;
+    if(ok&&F.rc2&&tr.getAttribute('data-rc2')!=='1')ok=false;
+    tr.hidden=!ok;if(ok)n++;
+  });
+  var g=null,a=false;
+  $$('tbody tr',tbl).forEach(function(tr){if(tr.classList.contains('grp')){if(g)g.hidden=!a;g=tr;a=false}else if(!tr.hidden)a=true});
+  if(g)g.hidden=!a;
+  $('#mxn').textContent=n+' of '+rows.length+' features';
+}
+function tog(map,btn,key){map[key]=!map[key];btn.setAttribute('aria-pressed',map[key]?'true':'false');apply()}
+$$('[data-fsoc]').forEach(function(b){b.onclick=function(){tog(F.soc,b,b.getAttribute('data-fsoc'))}});
+$$('[data-fsym]').forEach(function(b){b.onclick=function(){tog(F.sym,b,b.getAttribute('data-fsym'))}});
+function tagBtns(){$$('[data-ftag]').forEach(function(b){b.setAttribute('aria-pressed',F.tag[b.getAttribute('data-ftag')]?'true':'false')});
+  $$('.tag',tbl).forEach(function(b){b.classList.toggle('on',!!F.tag[b.getAttribute('data-tag')])})}
+$$('[data-ftag]').forEach(function(b){b.onclick=function(){var k=b.getAttribute('data-ftag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
+$$('.tag',tbl).forEach(function(b){b.onclick=function(e){e.stopPropagation();var k=b.getAttribute('data-tag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
+$('#mxq').oninput=function(){F.q=this.value.trim();apply()};
+var rc=$('#mxrc2');if(rc)rc.onchange=function(){F.rc2=this.checked;apply()};
+$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},rc2:false};$('#mxq').value='';if(rc)rc.checked=false;
+  $$('[aria-pressed="true"]').forEach(function(b){b.setAttribute('aria-pressed','false')});tagBtns();apply()};
+/* tooltip */
+function showTip(td){
+  var tr=td.parentNode,r=R[tr.getAttribute('data-n')],s=td.getAttribute('data-soc'),c=r.c[s];
+  tip.innerHTML='<b>#'+tr.getAttribute('data-n')+' '+esc(r.t)+' / '+s+' '+esc(ss(c.s))+'</b>'+(c.k?' <i class="rc2'+(c.k==='new'?'':' chg')+'">'+(c.k==='new'?'RC2':'chg')+'</i>':'')+
+   '<div>'+(c.q?esc(c.q):'<i>no detail text</i>')+'</div><div class="small">click or Enter: full detail</div>';
+  tip.hidden=false;var b=td.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+  var x=Math.min(Math.max(8,b.left+b.width/2-w/2),innerWidth-w-8),y=b.bottom+6;if(y+h>innerHeight-8)y=Math.max(8,b.top-h-6);
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+function hideTip(){tip.hidden=true}
+tbl.addEventListener('mouseover',function(e){var td=e.target.closest&&e.target.closest('td.mc');if(td&&!(pn.contains(td)))showTip(td);else hideTip()});
+tbl.addEventListener('mouseleave',hideTip);
+tbl.addEventListener('focusin',function(e){var td=e.target.closest&&e.target.closest('td.mc');if(td)showTip(td);else hideTip()});
+tbl.addEventListener('focusout',hideTip);
+/* panel */
+function block(r,s,full){
+  var c=r.c[s];
+  var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+(c.k==='new'?'':' chg')+'">'+(c.k==='new'?'RC2':'chg')+'</i> <span class="small">'+D.base+': '+esc(ss(c.o))+' &rarr; '+esc(ss(c.s))+'</span>':'')+'</h4>';
+  h+=c.h?'<div class="tx">'+c.h+'</div>':'<p class="small">No detail text for this cell.</p>';
+  (c.x||[]).forEach(function(x){h+='<div class="tx"><b>'+x[0]+':</b> '+x[1]+'</div>'});
+  return h+'</section>';
+}
+function head(n,r){return (r.v?'<p class="vs"><b>Vendor stack:</b> '+r.v+'</p>':'')+'<p class="small">'+r.tags.map(esc).join(' &middot; ')+(r.l?' &middot; <a href="#'+r.l+'">full section (additional text)</a>':'')+'</p>'}
+function openPanel(html,title){pnb.innerHTML=html;$('#pnt').textContent=title;pn.hidden=false;document.body.classList.add('pnopen');pnb.scrollTop=0;pn.scrollTop=0;hideTip();$('#pnx').focus()}
+function mark(td){$$('td.sel',tbl).forEach(function(e){e.classList.remove('sel')});$$('tr.selr',tbl).forEach(function(e){e.classList.remove('selr')});if(td&&td.classList)td.classList.add('sel')}
+function openCell(td){last=td;var n=td.parentNode.getAttribute('data-n'),r=R[n],s=td.getAttribute('data-soc');mark(td);
+  openPanel(head(n,r)+'<p><button type="button" class="chip" data-allrow="'+n+'">Show all SoCs of this feature</button></p>'+block(r,s),'#'+n+' '+r.t+' / '+s);cur=null}
+function openRow(n,btn){last=btn||last;var r=R[n];mark(null);$('#r-'+n).classList.add('selr');
+  openPanel(head(n,r)+D.socs.map(function(s){return block(r,s)}).join(''),'#'+n+' '+r.t+' (all SoCs)')}
+function closePanel(){if(pn.hidden)return;pn.hidden=true;document.body.classList.remove('pnopen');mark(null);$$('tr.selr',tbl).forEach(function(e){e.classList.remove('selr')});if(last&&document.body.contains(last))last.focus()}
+$('#pnx').onclick=closePanel;
+pn.addEventListener('click',function(e){var b=e.target.closest('[data-allrow]');if(b)openRow(b.getAttribute('data-allrow'),last);
+  var a=e.target.closest('a[href^="#"]');if(a&&innerWidth<800)closePanel()});
+tbl.addEventListener('click',function(e){
+  var f=e.target.closest('.fname');if(f){openRow(f.getAttribute('data-row'),f);return}
+  var td=e.target.closest('td.mc');if(td)openCell(td)});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){if(!pn.hidden){closePanel();e.preventDefault()}else hideTip();return}
+  var td=document.activeElement;if(!td||!td.classList||!td.classList.contains('mc'))return;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();openCell(td);return}
+  var tr=td.parentNode,i=D.socs.indexOf(td.getAttribute('data-soc')),nx=null;
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var cs=$$('td.mc',tr).filter(function(x){return x.style.display!=='none'});var k=cs.indexOf(td)+(e.key==='ArrowRight'?1:-1);nx=cs[k]}
+  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){var o=tr;do{o=e.key==='ArrowDown'?o.nextElementSibling:o.previousElementSibling}while(o&&(o.hidden||!o.hasAttribute('data-n')));
+    if(o)nx=$('td.mc[data-soc="'+td.getAttribute('data-soc')+'"]',o)}
+  if(nx){e.preventDefault();nx.focus();nx.scrollIntoView({block:'nearest',inline:'nearest'})}});
+/* links into collapsed <details> */
+function openHash(){var h=location.hash.slice(1);if(!h)return;var el=document.getElementById(h);if(!el)return;
+  for(var p=el;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView()}
+addEventListener('hashchange',openHash);openHash();
+apply();
+})();
+"""
+
+
+# ---- compact matrix (v2): symbols only, details in a side panel -------------
+# Tags per feature, derived from the section ("####" group) of the matrix table
+# plus a few per-number additions.  "beyond-vendor" is derived from the cells
+# (a feature with at least one ✅+ cell).  Nothing here makes a claim about a SoC.
+GROUP_TAGS = {
+    "ISP core and image pipeline": ["ISP"],
+    "Exposure (AE)": ["ISP"],
+    "Colour and image quality": ["ISP"],
+    "Video encoder and streams": ["encoder"],
+    "Audio (documentation only, no tests)": ["audio"],
+    "Memory, size, load": ["footprint"],
+    "Stability, helper libraries, telemetry": ["stability"],
+    "Region of interest": ["encoder"],
+}
+NUM_TAGS = {2: ["stability"], 3: ["stability"], 28: ["OSD"], 29: ["IVS"], 39: ["encoder"],
+            40: ["encoder"], 41: ["stability"], 42: ["API"], 43: ["API"], 44: ["API"]}
+NUM_REPLACE = {28, 29}      # the group tag is replaced, not extended
+TAG_ORDER = ["ISP", "encoder", "audio", "OSD", "IVS", "footprint", "stability", "API", "beyond-vendor"]
+SYM_ORDER = ["✅+", "✅", "⚠", "🔧", "📋", "❌", "?", "—"]
+SYM_SHOW = {"⚠": "⚠️"}
+
+
+def plain(s):
+    """Markdown -> plain text for tooltips and search."""
+    s = re.sub(r"\[([^\]]+)\]\([^)\s]+\)", r"\1", s)
+    s = re.sub(r"[`*]", "", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def short(s, lim=200):
+    """First sentence of a plain text, at most ~lim characters."""
+    m = re.search(r"(?<=[a-z0-9\)])[.!?](?=\s+[A-Z(])", s)
+    t = s[:m.start() + 1] if m else s
+    if len(t) > lim:
+        t = t[:lim].rsplit(" ", 1)[0].rstrip(",;:(") + " ..."
+    return t
+
+
+def json_js(o):
+    return json.dumps(o, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/").replace("<!--", "<\\!--")
 
 
 def render_matrix(rows, details, groups_info):
     head = rows[0]
     socs = head[2:]
-    th = "<th>Feature</th><th>Vendor stack</th>" + "".join("<th>%s</th>" % esc(s) for s in socs)
-    trs = []
     mism = []
     cnt = {soc: [0, 0] for soc in socs}      # [improved, otherwise changed]
+    symcnt = {soc: {} for soc in socs}
+    trs, data = [], {}
+    grp, nchg_rows, nrows = "", 0, 0
+    th = ('<th scope="col" class="fh">Feature</th>'
+          + "".join('<th scope="col" data-soc="%s">%s</th>' % (esc(s), esc(s)) for s in socs))
     for r in rows[1:]:
         if not r[0].strip() and r[1].startswith("**"):
-            trs.append('<tr class="grp"><td colspan="%d">%s</td></tr>'
-                       % (len(head) - 1, inline(r[1].strip("*"))))
+            grp = r[1].strip("*")
+            trs.append('<tr class="grp"><td colspan="%d">%s</td></tr>' % (len(head) - 1, inline(grp)))
             continue
         n = int(r[0])
         m = re.match(r"^\[(.*)\]\(#(.*)\)$", r[1])
-        title, anchor = (m.group(1), m.group(2)) if m else (r[1], "")
-        d = details.get(n, {"vendor": "", "cells": {}, "extra_cells": {}})
-        if not d.get("extra"):
-            anchor = "r-%d" % n   # no detail block: link to the row itself
-        tds = ['<td><a href="#%s">%s</a></td>' % (esc(anchor), inline(title)),
-               '<td class="vend">%s</td>' % inline(d["vendor"])]
+        title = m.group(1) if m else r[1]
+        d = details.get(n, {"vendor": "", "cells": {}, "extra_cells": {}, "extra": []})
+        tags = NUM_TAGS.get(n, []) if n in NUM_REPLACE else GROUP_TAGS.get(grp, []) + NUM_TAGS.get(n, [])
+        tags = list(tags)
         base = BASE.get(title, {})
-        changed = 0
+        cells, tds, changed, plus = {}, [], 0, False
         for soc, sym in zip(socs, r[2:]):
             sym = norm_sym(sym.strip())
             kind = classify(base.get(soc), sym)
             cls, ttl = SYM.get(sym, ("s-unk", "unknown"))
+            symcnt[soc][sym] = symcnt[soc].get(sym, 0) + 1
+            plus = plus or sym == "✅+"
             txt = d["cells"].get(soc, "")
             mm = SYM_RE.match(txt)
             if mm:
                 if norm_sym(mm.group(1)) != sym:
                     mism.append((n, soc, sym, mm.group(1)))
                 txt = txt[mm.end():]
-            body = '<span class="sym" title="%s">%s</span><span class="txt">%s</span>' % (
-                ttl, esc(sym), inline(txt))
-            for lab, t in d["extra_cells"].get(soc, []):
-                t = SYM_RE.sub("", t, count=1)
-                body += '<br><span class="txt"><b>%s:</b> %s</span>' % (inline(lab), inline(t))
-            extra = ""
+            extras = [(lab, SYM_RE.sub("", t, count=1)) for lab, t in d["extra_cells"].get(soc, [])]
+            pt = plain(txt)
+            c = {"s": sym, "h": inline(txt), "q": short(pt) if pt else "",
+                 "p": (pt + " " + " ".join(plain(t) for _, t in extras)).strip().lower()}
+            if extras:
+                c["x"] = [[inline(lab), inline(t)] for lab, t in extras]
+            badge = ""
             if kind:
                 changed += 1
                 cnt[soc][0 if kind == "new" else 1] += 1
-                lab = "RC2" if kind == "new" else "chg"
-                extra = " new" if kind == "new" else ""
-                body = ('<span class="rc2%s" title="%s at %s, now %s">%s</span>' % (
-                    "" if kind == "new" else " chg", esc(base[soc]), BASE_LABEL, esc(sym), lab)) + body
-            tds.append('<td class="cellc %s%s" data-sym="%s"%s>%s</td>' % (
-                cls, extra, esc(sym), ' data-rc2="%s"' % kind if kind else "", body))
-        trs.append('<tr id="r-%d" data-rc2="%d">%s</tr>' % (n, 1 if changed else 0, "".join(tds)))
+                c["k"] = kind
+                c["o"] = base[soc]
+                badge = '<i class="rc2%s">%s</i>' % ("" if kind == "new" else " chg",
+                                                    "RC2" if kind == "new" else "chg")
+            cells[soc] = c
+            tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s>'
+                       '<span class="sym">%s</span>%s</td>' % (
+                           cls, " new" if kind == "new" else "", esc(soc), esc(sym),
+                           ' data-rc2="%s"' % kind if kind else "", esc(SYM_SHOW.get(sym, sym)), badge))
+        if plus:
+            tags.append("beyond-vendor")
+        tags = [t for t in TAG_ORDER if t in tags]
+        slg = slug(d["title"]) if d.get("extra") else ""
+        data[n] = {"t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
+        chips = "".join('<button type="button" class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t)) for t in tags)
+        trs.append('<tr id="r-%d" data-n="%d" data-rc2="%d"><th scope="row"><span class="num">%d</span>'
+                   '<button type="button" class="fname" data-row="%d">%s</button><span class="tags">%s</span></th>%s</tr>'
+                   % (n, n, 1 if changed else 0, n, n, inline(title), chips, "".join(tds)))
+        nrows += 1
+        nchg_rows += 1 if changed else 0
     for m in mism:
         sys.stderr.write("warning: row %d %s: table symbol %s, detail symbol %s\n" % m)
-    bar = ""
+    alltags = [t for t in TAG_ORDER if any(t in v["tags"] for v in data.values())]
+    allsyms = [s for s in SYM_ORDER if any(s in symcnt[x] for x in socs)]
+
+    def chipgrp(label, items, attr, show=lambda x: x):
+        return ('<div class="fg"><span class="fl">%s</span>%s</div>' % (label, "".join(
+            '<button type="button" class="chip" %s="%s" aria-pressed="false">%s</button>'
+            % (attr, esc(x), esc(show(x))) for x in items)))
+    ctl = ('<div class="mxctl"><div class="fg"><input id="mxq" type="search" placeholder="Search features and details" '
+           'aria-label="Search features and details"><span id="mxn" class="small" aria-live="polite"></span>'
+           '<button type="button" id="mxreset" class="chip">Reset filters</button></div>'
+           + chipgrp("SoC", socs, "data-fsoc")
+           + chipgrp("Status", allsyms, "data-fsym", lambda x: SYM_SHOW.get(x, x))
+           + chipgrp("Tags", alltags, "data-ftag")
+           + ('<div class="fg"><label><input type="checkbox" id="mxrc2"> only changes since %s</label></div>' % BASE_LABEL
+              if BASE else "") + '</div>')
+    # counts per SoC (+ comparison with the baseline)
+    hd = "".join("<th>%s</th>" % esc(x) for x in socs)
+    body = ""
+    for s in allsyms:
+        body += "<tr><td>%s</td>%s</tr>" % (esc(SYM_SHOW.get(s, s)), "".join(
+            "<td>%d</td>" % symcnt[x].get(s, 0) for x in socs))
     if BASE:
-        hd = "".join("<th>%s</th>" % esc(x) for x in socs)
         c1 = "".join("<td><b>%d</b></td>" % cnt[x][0] for x in socs)
         c2 = "".join("<td>%d</td>" % cnt[x][1] for x in socs)
-        nrows = sum(1 for t in trs if 'data-rc2="1"' in t.split(">", 1)[0])
-        bar = ('<div class="rc2bar"><label><input type="checkbox" onchange="rc2f(this.checked)"> '
-               'only changes since %s</label> <span class="small">(%d of %d features have at least one '
-               'changed cell; baseline: matrix at tag <code>%s</code>)</span>'
-               '<table><thead><tr><th>cells</th>%s</tr></thead><tbody>'
-               '<tr><td>new or improved since %s <span class="rc2">RC2</span></td>%s</tr>'
-               '<tr><td>otherwise changed <span class="rc2 chg">chg</span></td>%s</tr>'
-               '</tbody></table></div>%s'
-               % (BASE_LABEL, nrows, len(trs) - sum(1 for t in trs if 'class="grp"' in t), BASE_TAG,
-                  hd, BASE_LABEL, c1, c2, RC2_JS))
+        body += ('<tr class="sep"><td>new or improved since %s <i class="rc2">RC2</i></td>%s</tr>'
+                 '<tr><td>otherwise changed <i class="rc2 chg">chg</i></td>%s</tr>' % (BASE_LABEL, c1, c2))
         MATRIX_COUNTS.clear()
         MATRIX_COUNTS.update(cnt)
-    return bar + table_wrap("<table><thead><tr>%s</tr></thead><tbody>%s</tbody></table>"
-                            % (th, "".join(trs)))
+    sumline = ("%d of %d features have at least one cell new or changed since %s (baseline: matrix at tag "
+               "<code>%s</code>)" % (nchg_rows, nrows, BASE_LABEL, BASE_TAG)) if BASE else "cells per symbol"
+    bar = ('<details class="rc2bar"><summary>Counts per SoC and %s comparison</summary><p class="small">%s</p>'
+           '<table><thead><tr><th></th>%s</tr></thead><tbody>%s</tbody></table></details>'
+           % (BASE_LABEL, sumline, hd, body))
+    panel = ('<aside id="pn" role="dialog" aria-modal="false" aria-labelledby="pnt" hidden>'
+             '<div class="pnh"><h3 id="pnt"></h3><button type="button" id="pnx" aria-label="Close (Esc)">&times;</button></div>'
+             '<div id="pnb"></div></aside><div id="tip" role="tooltip" hidden></div>')
+    table = ('<div class="mwrap" id="mwrap"><table class="mx" id="mx"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>'
+             % (th, "".join(trs)))
+    script = '<script type="application/json" id="mxdata">%s</script><script>%s</script>' % (
+        json_js({"socs": socs, "rows": data, "base": BASE_LABEL}), MX_JS)
+    return bar + ctl + table + panel + script
 
 
 # ---------------------------------------------------------------- main render
 def render(md):
     blocks = parse_blocks(md.split("\n"))
-    out = []
+    out, hist = [], []
+    dst = [out]
+    npara = 0
+
+    def W(x):
+        dst[0].append(x)
+
     # split the matrix-details range off
     mi = next(k for k, (t, d) in enumerate(blocks) if t == "h" and d[1] == "Matrix details")
     mj = next((k for k in range(mi + 1, len(blocks))
@@ -603,7 +818,7 @@ def render(md):
     def close_card():
         nonlocal in_card
         if in_card:
-            out.append("</div>")
+            W("</div>")
             in_card = False
 
     k = 0
@@ -612,8 +827,8 @@ def render(md):
         k += 1
         if k - 1 == mi:   # matrix details: render extras only
             close_card()
-            out.append("<h3>Matrix details</h3>")
-            out.append('<p class="meta">Per feature: the vendor-stack behaviour and the full per-SoC cell '
+            W("<h3>Matrix details</h3>")
+            W('<p class="meta">Per feature: the vendor-stack behaviour and the full per-SoC cell '
                        'text (chronological test log, newest results win) are in the table above; '
                        'additional text per feature follows here.</p>')
             grp = ""
@@ -623,9 +838,9 @@ def render(md):
                     continue
                 if dd["group"] != grp:
                     grp = dd["group"]
-                    out.append("<h4>%s</h4>" % inline(grp))
+                    W("<h4>%s</h4>" % inline(grp))
                 inner = "".join(render_block(t, x) for t, x in dd["extra"])
-                out.append('<details id="%s"><summary>%s</summary>%s</details>'
+                W('<details id="%s"><summary>%s</summary>%s</details>'
                            % (slug(dd["title"]), inline(dd["title"]), inner))
             k = mj
             continue
@@ -633,70 +848,86 @@ def render(md):
             lvl, text = d
             close_card()
             in_legend = False
+            if lvl == 2:
+                dst[0] = hist if text == "Summary" else out
             if lvl == 1:
-                out.append("<h1>%s</h1>" % inline(text))
+                W("<h1>%s</h1>" % inline(text))
             elif lvl == 2:
                 section = text
                 sub = ""
-                out.append('<h2 id="%s">%s</h2>' % (uid(text), inline(text)))
+                W('<h2 id="%s">%s</h2>' % (uid(text), inline(text)))
                 if text in ("Summary",):
-                    out.append('<div class="card">')
+                    W('<div class="card">')
                     in_card = True
                 if text == "Legend":
                     in_legend = True
             elif lvl == 3:
                 sub = text
-                out.append('<h3 id="%s">%s</h3>' % (uid(text), inline(text)))
+                W('<h3 id="%s">%s</h3>' % (uid(text), inline(text)))
                 if text == "Notes":
-                    out.append('<div class="card">')
+                    W('<div class="card">')
                     in_card = True
                 if text == "Legend":
                     in_legend = True
             else:
-                out.append("<h4>%s</h4>" % inline(text))
+                W("<h4>%s</h4>" % inline(text))
             continue
         if typ == "rawopen":
-            out.append('<details class="full"><summary>%s</summary>%s' % (inline(d or ""), FILTER))
+            W('<details class="full"><summary>%s</summary>%s' % (inline(d or ""), FILTER))
             in_full = True
             continue
         if typ == "rawclose":
-            out.append("</details>")
+            W("</details>")
             in_full = False
             continue
         if typ == "table":
             rows, aligns = d
             if section == "Matrix" and rows[0][:2] == ["#", "Feature"]:
-                out.append(render_matrix(rows, details, None))
+                W(render_matrix(rows, details, None))
             elif rows[0][0] == "Vendor function":
                 cnt, gaps, h = render_func_table(rows, aligns)
-                out.append(h)
+                W(h)
             elif rows[0][0] == "SoC" and "fns" in rows[0]:
-                out.append(render_progress(rows, aligns))
+                W(render_progress(rows, aligns))
             else:
-                out.append(render_generic_table(rows, aligns))
+                W(render_generic_table(rows, aligns))
             continue
         if typ == "code":
             if sub == "Progress per SoC":
                 continue   # ASCII bars: replaced by the bar column of the table
-            out.append("<pre>%s</pre>" % esc(d))
+            W("<pre>%s</pre>" % esc(d))
             continue
         if typ in ("ul", "ol"):
             if in_legend:
                 cls = "card legend" if not in_card else "legend"
-                out.append('<div class="%s">%s</div>' % (cls, "".join(legend_item(t) for _, _, t in d)))
+                W('<div class="%s">%s</div>' % (cls, "".join(legend_item(t) for _, _, t in d)))
             elif sub.startswith("Streamer-relevant gaps") and render_streamer_gaps(d):
-                out.append(render_streamer_gaps(d))
+                W(render_streamer_gaps(d))
             else:
-                out.append(render_list(typ, d))
+                W(render_list(typ, d))
             continue
         # paragraph
+        npara += 1
+        if section == "" and npara == 1:      # "As of" line: short version visible, the rest in History
+            cut = d.find(";")
+            if cut > 0:
+                head_ = d[:cut] + (")" if d[:cut].count("(") > d[:cut].count(")") else "")
+                W('<p class="meta">%s (full history below)</p>' % inline(head_))
+                hist.insert(0, '<p class="small">%s</p>' % inline(d))
+                continue
+        if (len(d) > 350 or (section == "" and len(d) > 120)) and dst[0] is out and not in_full:
+            hist.append('<p class="small">%s</p>' % inline(d))
+            continue
         if in_card:
-            out.append('<p class="small" style="margin:.6rem 0 0">%s</p>' % inline(d))
+            W('<p class="small" style="margin:.6rem 0 0">%s</p>' % inline(d))
         elif in_full:
-            out.append('<p class="small">%s</p>' % inline(d))
+            W('<p class="small">%s</p>' % inline(d))
         else:
-            out.append('<p class="meta">%s</p>' % inline(d))
+            W('<p class="meta">%s</p>' % inline(d))
     close_card()
+    if hist:
+        out.append('<details class="hist" id="history"><summary>History (update log, long notes)</summary>%s</details>'
+                   % "\n".join(hist))
     return "\n".join(out)
 
 
