@@ -1174,7 +1174,7 @@ static void cs_rawdrc(void) {}
 
 /* ---- ISP-drawn OSD (raptor-hal sequence): pool, create, set attr (ARGB picture), show/hide, destroy; the picture must appear in the frame */
 #if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
-static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch1 (640x360 coordinates), 2 frames */
+static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch0 (sensor size coordinates), 2 frames */
 {
     double acc = 0; int n = 0, f, i, j;
 
@@ -1182,14 +1182,14 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
     for (f = 0; f < 4; f++) {
         IMPFrameInfo *fr = NULL;
         const unsigned char *y;
-        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) continue;
+        if (IMP_FrameSource_GetFrame(0, &fr) < 0 || !fr) continue;
         y = (const unsigned char *)(uintptr_t)fr->virAddr;
         if (f >= 2 && y && x1 <= fr->width && y1 <= fr->height) {
             double s = 0; int c = 0;
             for (j = y0; j < y1; j++) for (i = x0; i < x1; i++) { s += y[(size_t)j * fr->width + i]; c++; }
             acc += s / c; n++;
         }
-        IMP_FrameSource_ReleaseFrame(1, fr);
+        IMP_FrameSource_ReleaseFrame(0, fr);
     }
     return n ? acc / n : -1;
 }
@@ -1201,7 +1201,7 @@ static void cs_isposd(void)
         uint8_t *pic = (uint8_t *)malloc(PWD * PHT * 4);
         IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
         int rp, h, rs, rsh, rhide, rd = -99, k, x0 = 64, y0 = 64;
-        int cx0 = x0 * 640 / g_sw + 4, cy0 = y0 * 360 / g_sh + 4, cx1 = (x0 + PWD) * 640 / g_sw - 4, cy1 = (y0 + PHT) * 360 / g_sh - 4;
+        int cx0 = x0 + 4, cy0 = y0 + 4, cx1 = x0 + PWD - 4, cy1 = y0 + PHT - 4;
         double base, shown, hidden;
         int dark;
 
@@ -1219,6 +1219,10 @@ static void cs_isposd(void)
         a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888;
         a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_BGRA;
         a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        
+#ifdef PLATFORM_T23
+        a->stsinglepicAttr.chx = 0;
+#endif
         a->stsinglepicAttr.pic.pinum = (uint8_t)h; a->stsinglepicAttr.pic.osd_enable = 1;
         a->stsinglepicAttr.pic.osd_left = x0; a->stsinglepicAttr.pic.osd_top = y0;
         a->stsinglepicAttr.pic.osd_width = PWD; a->stsinglepicAttr.pic.osd_height = PHT;

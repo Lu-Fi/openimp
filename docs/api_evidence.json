@@ -448,11 +448,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -540,11 +540,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_DelSensor": {
@@ -617,11 +617,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -694,11 +694,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -771,11 +771,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -848,11 +848,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -925,11 +925,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -1257,11 +1257,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -1915,8 +1915,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T41": "apitest agg47 2026-10-26 .34",
@@ -2014,7 +2014,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26"
    }
@@ -2139,8 +2139,8 @@
     "T23"
    ],
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T20": "FAIL apitest rc3-cases 2026-10-26 .107: ISP_Tuning_GetGamma: ret=0 g[0]=0 g[64]=0 g[128]=0 (0 of 129 points non-zero)"
@@ -2285,7 +2285,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
@@ -2356,7 +2356,7 @@
    },
    "note": "T10/T20 3.12.0: apitest PASS on T10 and T20 (set both flips, read back, restore). The vendor sends one module-control word (0x80000e2 through the 0xc00c56c6 ioctl), which the open T20 driver does not serve; OpenIMP uses the ISPHflip/ISPVflip pair (V4L2 flip controls) instead; T30 1.0.5 (2026-10-10): the same pair of flip controls as T20 (the vendor sends the module-control word 0x80000e2, which the open drivers do not serve); host test with a fake tuning ioctl, no T30 device",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107"
    }
   },
@@ -2402,9 +2402,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
    }
@@ -2528,9 +2528,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
    }
@@ -2829,7 +2829,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31 (API round trip, no visible effect expected)",
-    "T20": "apitest agg47 2026-10-26 .107",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26",
@@ -3143,9 +3143,9 @@
    },
    "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26",
     "T41": "apitest agg47 2026-10-26 .34"
@@ -3298,7 +3298,7 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-26 .24"
    }
@@ -3321,7 +3321,7 @@
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "apitest agg47-cases 2026-10-26 .24"
+    "T21": "apitest rc3-cases 2026-10-27 .24"
    }
   },
   "ISP_Tuning_GetSensorAttr": {
@@ -3501,9 +3501,9 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26"
    }
@@ -3595,8 +3595,8 @@
    },
    "note": "T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked T21: exported like the vendor libimp; control 0x8000163 is accepted by the OEM kernel without effect; T10/T20 (class c, 2026-10-10): the vendor sends control 0x98e903 (CUSTOM_ANTI_FOG); agg-37: exported; the open driver (`claude/agg37-drv`) serves the control with a safe preset that does not touch the Iridix state that hung cameras earlier (DefogStrength remains the alternative); host test only, device test pending. T21: apitest PASS (ret 0); T30 1.0.5: the enum goes out as control 0x8000163, the same code as T21; host test with a fake ioctl, driver behaviour on T30 not checked",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24"
    }
   },
@@ -3608,7 +3608,7 @@
     "T21": "n.a.",
     "T23": "err",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "err",
     "T32": "nob",
     "T33": "nob",
     "T40": "rt",
@@ -3638,7 +3638,8 @@
    "ref": {
     "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=0 rt: same value written (set ret 0), read back equal",
     "T41": "FAIL apitest agg47-cases 2026-10-26 .34: ret=0 rt: same value written (set ret 0), read back DIFFERENT",
-    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
+    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ret=-1 rt: ch1 crop to the upper-left quarter (ret -1) and back (ret 0): detail H 4.232 -> 4.288 -> 4.294, frames flow"
    }
   },
   "ISP_Tuning_SetBrightness": {
@@ -3712,9 +3713,9 @@
     "T21"
    ],
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26",
     "T41": "apitest agg47 2026-10-26 .34"
@@ -3736,7 +3737,7 @@
    },
    "note": "T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24"
    }
@@ -3910,7 +3911,7 @@
    },
    "note": "T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending T10/T20 (class c): the vendor writes bits 2..4 of an ISP lens-shading register through a userspace mapping (3.12.0 0x62930); agg-37: exported, driver control 0x80000a3 (mesh-scale field of register 0x380) in `claude/agg37-drv`; host test only, device test pending",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31"
+    "T10": "apitest rc3-cases 2026-10-26 .31"
    }
   },
   "ISP_Tuning_SetRawDRC": {
@@ -3943,7 +3944,7 @@
    },
    "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build; T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)"
    }
   },
@@ -4164,9 +4165,9 @@
    },
    "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26"
    }
@@ -4219,8 +4220,8 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26"
    }
@@ -4294,7 +4295,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31"
+    "T10": "apitest rc3-cases 2026-10-26 .31"
    }
   },
   "ISP_Tuning_SetTmoFaceae": {
@@ -4786,7 +4787,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3-cases 2026-10-26 .26",
     "T20": "apitest rc3-cases 2026-10-26 .107"
@@ -6020,7 +6021,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26"
    }
@@ -6221,7 +6222,7 @@
    },
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T31": "apitest agg47 2026-10-26 .26"
    }
   },
@@ -9364,11 +9365,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9460,11 +9461,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9537,11 +9538,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9614,11 +9615,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9873,11 +9874,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -10024,11 +10025,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -13245,28 +13246,28 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableAec": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "aud",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -13299,21 +13300,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AI_DisableAecRefFrame": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "aud",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -13347,7 +13356,15 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AI_DisableAgc": {
    "area": "Audio",
@@ -13417,13 +13434,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableAlgo": {
@@ -13442,7 +13459,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableChn": {
@@ -13513,13 +13530,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableGetRaw": {
@@ -13537,7 +13554,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableHpf": {
@@ -13608,13 +13625,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableHs": {
@@ -13633,8 +13650,8 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_DisableNs": {
@@ -13705,13 +13722,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Enable": {
@@ -13782,13 +13799,13 @@
    },
    "note": "audit: reaches the driver/kernel; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableAec": {
@@ -13802,8 +13819,8 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -13836,21 +13853,25 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
+   }
   },
   "AI_EnableAecRefFrame": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "aud",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -13884,7 +13905,15 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AI_EnableAgc": {
    "area": "Audio",
@@ -13954,13 +13983,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableAlgo": {
@@ -13979,7 +14008,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableChn": {
@@ -14050,13 +14079,13 @@
    },
    "note": "audit: userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableGetRaw": {
@@ -14074,7 +14103,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableHpf": {
@@ -14145,13 +14174,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableHs": {
@@ -14170,8 +14199,8 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_EnableNs": {
@@ -14242,13 +14271,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Get/SetAlcGain": {
@@ -14275,8 +14304,8 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T21": "apitest rc3-cases 2026-10-27 .24",
+    "T31": "apitest rc3-cases 2026-10-27 .26"
    }
   },
   "AI_Get/SetChnParam": {
@@ -14347,13 +14376,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Get/SetDigitalGain": {
@@ -14371,8 +14400,8 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Get/SetGain": {
@@ -14443,13 +14472,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked); T21: a microphone gain above 0 drives the noise floor up (hardware, open and vendor stack alike)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Get/SetPubAttr": {
@@ -14520,13 +14549,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Get/SetVol": {
@@ -14597,13 +14626,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_GetFrame": {
@@ -14674,13 +14703,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_GetFrameAndRaw": {
@@ -14698,22 +14727,22 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_GetFrameAndRef": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "aud",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -14747,7 +14776,15 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation"
+   "note": "audit: reaches the driver/kernel; userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AI_PollingFrame": {
    "area": "Audio",
@@ -14817,13 +14854,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_ReleaseFrame": {
@@ -14894,13 +14931,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_SetAgcMode": {
@@ -14919,7 +14956,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest rc3-cases 2026-10-27 .26"
    }
   },
   "AI_SetHpfCoFrequency": {
@@ -14965,9 +15002,9 @@
    "note": "T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_SetVolMute": {
@@ -15018,13 +15055,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T10": "apitest rc3-cases 2026-10-26 .31",
+    "T20": "apitest rc3-cases 2026-10-26 .107",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AI_Set_WebrtcProfileIni_Path": {
@@ -15064,24 +15101,24 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "AO_CacheSwitch": {
    "area": "Audio",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "host",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "host",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "host"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15115,21 +15152,29 @@
      "r†"
     ]
    },
-   "note": "all: implemented with vendor semantics, default off (OPENIMP_AO_CACHE=1 = vendor default on); quiet device test open (audio output only on T31)"
+   "note": "all: implemented with vendor semantics, default off (OPENIMP_AO_CACHE=1 = vendor default on); quiet device test open (audio output only on T31)",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_ClearChnBuf": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15162,21 +15207,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Disable": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15217,21 +15270,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_DisableAgc": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15265,7 +15326,15 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_DisableAlgo": {
    "area": "Audio",
@@ -15279,25 +15348,25 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "rt"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
    }
   },
   "AO_DisableChn": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15338,21 +15407,29 @@
      "t†"
     ]
    },
-   "note": "audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†"
+   "note": "audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_DisableHpf": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15386,7 +15463,15 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Enable": {
    "area": "Audio",
@@ -15399,8 +15484,8 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15441,21 +15526,25 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
+   }
   },
   "AO_EnableAgc": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15489,7 +15578,15 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_EnableAlgo": {
    "area": "Audio",
@@ -15503,10 +15600,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "rt"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
    }
   },
   "AO_EnableChn": {
@@ -15520,8 +15617,8 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15562,21 +15659,25 @@
      "t†"
     ]
    },
-   "note": "audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only"
+   "note": "audit: userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
+   }
   },
   "AO_EnableHpf": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15610,21 +15711,29 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_FlushChnBuf": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15665,7 +15774,15 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Get/SetDigitalGain": {
    "area": "Audio",
@@ -15678,26 +15795,27 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
-    "T41": "host"
+    "T40": "rt",
+    "T41": "rt"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)"
    }
   },
   "AO_Get/SetGain": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15738,21 +15856,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†"
+   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Get/SetPubAttr": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15793,21 +15919,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†"
+   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Get/SetVol": {
    "area": "Audio",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "host",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "host",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15848,21 +15982,29 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)"
+   "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked)",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_PauseChn": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15896,21 +16038,29 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_QueryChnStat": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15944,21 +16094,29 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_ResumeChn": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -15992,7 +16150,15 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_SendFrame": {
    "area": "Audio",
@@ -16005,8 +16171,8 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -16047,7 +16213,11 @@
      "t†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only"
+   "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (known signal played at several volumes and recorded back; AEC test); T41: no audio hardware on the test board (no microphone, no speaker), results are API-level only",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)"
+   }
   },
   "AO_SetHpfCoFrequency": {
    "area": "Audio",
@@ -16057,11 +16227,11 @@
     "T21": "n.a.",
     "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T23": [
@@ -16089,21 +16259,26 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_SetVolMute": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "host"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -16147,21 +16322,29 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware"
+   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Soft_Mute": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "host"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -16195,21 +16378,29 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware"
+   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "AO_Soft_UNMute": {
    "area": "Audio",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "host"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -16243,7 +16434,15 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware"
+   "note": "audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware",
+   "ref": {
+    "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
+    "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
+    "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+   }
   },
   "Audio_Select_Codec": {
    "area": "Audio",
@@ -17237,11 +17436,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17582,11 +17781,11 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-26 .24",
+    "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
-    "T40": "apitest rc3-cases 2026-10-26 .184",
-    "T41": "apitest rc3-cases 2026-10-26 .34"
+    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T40": "apitest rc3-cases 2026-10-27 .184",
+    "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
   "System_MemPoolFree": {
