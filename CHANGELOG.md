@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/jpeg-reuse-mark` (2026-10-26)
+
+- **`OpenIMP_Encoder_StreamIsReused(chn, &stream)`** (beyond vendor, `openimp/openimp_encoder_telemetry.h`): a JPEG that OpenIMP delivers again because the encoder was busy (or rmem short) carries the current time stamp; the query returns 1 for such a stand-in, 0 for a freshly encoded picture, -1 for a stream that is not the one held. Wish of the timps session. No change to `IMPEncoderStream`/packs; host test in `tests/t31/p2_jpeg_source_test.c`.
+
 ## Post-RC2 (2026-10-25/26)
 
 ## Post-RC2 (2026-10-26)

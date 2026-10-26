@@ -10,6 +10,7 @@
 #define OPENIMP_ENCODER_TELEMETRY_H
 
 #include <stdint.h>
+#include <imp/imp_encoder.h>
 
 #define OPENIMP_ENCODER_TELEMETRY_VERSION 1
 
@@ -29,5 +30,15 @@ typedef struct {
 } OpenIMPEncoderTelemetry;
 
 int OpenIMP_Encoder_GetTelemetry(int encChn, OpenIMPEncoderTelemetry *t);
+
+/* Beyond vendor: tells whether a JPEG stream is a stand-in.  When the JPEG
+ * encoder is busy (or rmem is short) OpenIMP delivers the channel's last
+ * picture (at most 5 s old) again, stamped with the CURRENT frame time.
+ * Between IMP_Encoder_GetStream() and IMP_Encoder_ReleaseStream() call this
+ * with the channel and the stream just got: 1 = reused old picture, 0 = a
+ * freshly encoded one, -1 = bad channel / not the stream currently held.
+ * The IMPEncoderStream layout is untouched (vendor ABI).  Weak-symbol
+ * detectable (a vendor libimp does not export it). */
+int OpenIMP_Encoder_StreamIsReused(int encChn, const IMPEncoderStream *stream);
 
 #endif

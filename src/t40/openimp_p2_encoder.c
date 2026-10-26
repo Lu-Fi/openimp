@@ -3705,6 +3705,24 @@ int IMP_Encoder_Query(int channel, IMPEncoderCHNStat *stat)
 /* OpenIMP extension (beyond vendor): cumulative per-channel encoder
  * telemetry since CreateChn, counted when a stream is handed out by
  * GetStream.  Not in any vendor SDK; weak-linkable by streamers. */
+int OpenIMP_Encoder_StreamIsReused(int channel, const IMPEncoderStream *stream)
+{
+    P2EncoderChannel *ch;
+    int reused;
+
+    if (!p2_valid_channel(channel) || !stream)
+        return -1;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    if (!ch->raw_stream || !ch->raw_stream_out ||
+        stream->pack != ch->packs)
+        reused = -1;
+    else
+        reused = ch->raw_stream == &ch->jpeg_reuse;
+    pthread_mutex_unlock(&ch->lock);
+    return reused;
+}
+
 int OpenIMP_Encoder_GetTelemetry(int channel, OpenIMPEncoderTelemetry *t)
 {
     P2EncoderChannel *ch;

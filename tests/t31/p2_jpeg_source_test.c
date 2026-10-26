@@ -19,6 +19,7 @@
 
 #include <imp/imp_encoder.h>
 #include <imp/imp_system.h>
+#include <openimp/openimp_encoder_telemetry.h>
 #include "dma_alloc.h"
 
 static int failures;
@@ -317,8 +318,12 @@ int main(void)
               stream.packCount == 1 &&
               !strcmp((const char *)(uintptr_t)stream.virAddr, "JPEG#1"),
               "first JPEG content");
+        CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == 0,
+              "fresh JPEG reported as reused");
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0,
               "first JPEG release");
+        CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == -1,
+              "released stream still answers");
         CHECK(!fs_outstanding[2], "capture frame of the first JPEG held");
         /* the codec skips the next one: JPEG#1 again, frame returned */
         CHECK(IMP_Encoder_PollingStream(2, 200) == 0,
@@ -328,6 +333,11 @@ int main(void)
               stream.packCount == 1 && stream.streamSize == 7 &&
               !strcmp((const char *)(uintptr_t)stream.virAddr, "JPEG#1"),
               "reused JPEG content");
+        CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == 1,
+              "reused JPEG not marked");
+        CHECK(OpenIMP_Encoder_StreamIsReused(9, &stream) == -1 &&
+              OpenIMP_Encoder_StreamIsReused(2, NULL) == -1,
+              "bad arguments accepted");
         CHECK(!fs_outstanding[2], "capture frame of the skipped JPEG held");
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
               stub_released == 1, "reused JPEG release (%d codec "
@@ -336,7 +346,8 @@ int main(void)
         stub_busy = 0;
         CHECK(IMP_Encoder_PollingStream(2, 200) == 0 &&
               IMP_Encoder_GetStream(2, &stream, 0) == 0 &&
-              !strcmp((const char *)(uintptr_t)stream.virAddr, "JPEG#2"),
+              !strcmp((const char *)(uintptr_t)stream.virAddr, "JPEG#2") &&
+              OpenIMP_Encoder_StreamIsReused(2, &stream) == 0,
               "JPEG after the skip");
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
               stub_released == 2, "release (%d codec releases)",
