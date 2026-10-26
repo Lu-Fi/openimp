@@ -615,6 +615,7 @@ void t_cases(void)
 {
     rep_area("cases");
     wdog("cases", 60);
+    { int i; for (i = 0; i < 25 && !flow(); i++) usleep(200000); }      /* warm-up: wait for the first frames (T40 at 1080p starts slowly) */
     if (cs_on("sensorreg")) cs_sensorreg();  wdog("cases", 60);
     if (cs_on("log")) cs_log();        wdog("cases", 60);
     if (cs_on("waitframe")) cs_waitframe();  wdog("cases", 60);

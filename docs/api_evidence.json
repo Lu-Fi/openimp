@@ -451,7 +451,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -543,7 +543,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -620,7 +620,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -697,7 +697,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -774,7 +774,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -851,7 +851,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -928,7 +928,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -994,7 +994,7 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "used": {
@@ -1008,7 +1008,10 @@
      "r†"
     ]
    },
-   "note": "T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused)"
+   "note": "T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused)",
+   "ref": {
+    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Get/SetISPBypass": {
    "area": "ISP tuning",
@@ -1062,7 +1065,7 @@
     "T31": "err",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "used": {
@@ -1103,7 +1106,8 @@
     "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
     "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
-    "T31": "FAIL apitest agg47-cases 2026-10-26 .26: ISP_GetSensorRegister: ret=0 chip id regs 0x3107/0x3108 = 0x0404 (sc2336 expects 0xcb3a); ISP_SetSensorRegister: ret=0 rt: same value 0x04 written to the read-only id reg 0x3107, read back 0x3107, frames flow"
+    "T31": "FAIL apitest agg47-cases 2026-10-26 .26: ISP_GetSensorRegister: ret=0 chip id regs 0x3107/0x3108 = 0x0404 (sc2336 expects 0xcb3a); ISP_SetSensorRegister: ret=0 rt: same value 0x04 written to the read-only id reg 0x3107, read back 0x3107, frames flow",
+    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_GetCameraInputMode": {
@@ -1250,7 +1254,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -3007,13 +3011,14 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
     "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=-1 read",
-    "T41": "apitest agg47-cases 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34",
+    "T40": "apitest agg47-cases 2026-10-26 .184"
    }
   },
   "ISP_Tuning_GetBlcAttr": {
@@ -3563,7 +3568,7 @@
     "T31": "host",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "err"
    },
    "used": {
@@ -3589,7 +3594,8 @@
    "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
     "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=0 rt: same value written (set ret 0), read back equal",
-    "T41": "FAIL apitest agg47-cases 2026-10-26 .34: ret=0 rt: same value written (set ret 0), read back DIFFERENT"
+    "T41": "FAIL apitest agg47-cases 2026-10-26 .34: ret=0 rt: same value written (set ret 0), read back DIFFERENT",
+    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_SetBrightness": {
@@ -4265,7 +4271,7 @@
     "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
+    "T40": "rt",
     "T41": "rt"
    },
    "used": {
@@ -4307,7 +4313,8 @@
     "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
     "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
-    "T41": "apitest agg47-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+    "T41": "apitest agg47-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
+    "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_SwitchBin": {
@@ -9284,7 +9291,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -9380,7 +9387,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -9457,7 +9464,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -9534,7 +9541,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -9793,7 +9800,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -9944,7 +9951,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -16259,11 +16266,11 @@
     "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "ref": {
-    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34",
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
@@ -16283,11 +16290,11 @@
     "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "ref": {
-    "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34",
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
@@ -17157,7 +17164,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
@@ -17502,7 +17509,7 @@
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
     "T31": "apitest agg47-cases 2026-10-26 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg47-cases 2026-10-26 .184",
     "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
