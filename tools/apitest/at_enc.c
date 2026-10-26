@@ -632,9 +632,9 @@ static void live_common(int chn, int codec)
                 rep(FN(IMP_Encoder_SetChnROI), r, V_NA, "enabling a region is refused: no macroblock QP map in this SoC's OpenIMP encoder");
                 rep(FN(IMP_Encoder_GetChnROI), r2, V_NA, "nothing to read back (SetChnROI refused)");
             } else {
-            /* T10/T20/T21 vendor (T20 3.12.0 0x4899c/0x48c3c, T21 1.0.33): Set stores the corners /16 (truncating) as
+            /* T10/T20/T21 vendor (T20 3.12.0 0x4899c/0x48c3c, T21 1.0.33, T23 1.3.0 0x53ea0/0x54164: sra 4 in Set, sll 4 in Get): Set stores the corners /16 (truncating) as
              * macroblock bytes and Get returns them x16, so the read-back is the rect rounded down to 16 */
-#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23)
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p0.y == 64 && g->rect.p1.x == 304 && g->rect.p1.y == 240 && g->s32Qp == -4,
 #else
             CHECK(IMP_Encoder_SetChnROI, r, r2 == 0 && g->bEnable && g->rect.p0.x == 64 && g->rect.p1.x == 319 && g->s32Qp == -4,
@@ -747,8 +747,8 @@ static void live_old(int chn, int codec)
 
         r3 = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, o) : -1; gchk(o);
         memset(&n, 0, sizeof(n));
-#if defined(PLATFORM_T20)
-        n.superFrmMode = IMP_RC_SUPERFRM_REENCODE; n.superIFrmBitsThr = 400000; n.superPFrmBitsThr = 200000; n.superBFrmBitsThr = 100000;   /* T20 has no discard */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T10)
+        n.superFrmMode = IMP_RC_SUPERFRM_REENCODE; n.superIFrmBitsThr = 400000; n.superPFrmBitsThr = 200000; n.superBFrmBitsThr = 100000;   /* T10/T20: the OEM i264e has re-encode only, no discard */
 #else
         n.superFrmMode = IMP_RC_SUPERFRM_DISCARD; n.superIFrmBitsThr = 400000; n.superPFrmBitsThr = 200000; n.superBFrmBitsThr = 100000;
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
@@ -775,8 +775,16 @@ static void live_old(int chn, int codec)
         memset(&n, 0, sizeof(n)); n.enable = true; n.dnType = 1; n.dnIQp = 2; n.dnPQp = 3;
         r2 = IMP_Encoder_SetChnDenoise(chn, &n);
         r = IMP_Encoder_GetChnDenoise ? IMP_Encoder_GetChnDenoise(chn, g) : -1; gchk(g);
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+        /* vendor T10/T20 3.12.0, T21 1.0.33 (i264e_reconfig_dn_set): the CreateChn enable switch stays as created
+         * (the test channel is created with denoise off), so dnType is forced to 0, IQp/PQp are kept and Get leaves
+         * .enable of the caller's struct untouched */
+        CHECK(IMP_Encoder_SetChnDenoise, r2, r == 0 && !g->enable && g->dnType == 0 && g->dnIQp == 2 && g->dnPQp == 3,
+              "en type 1 IQp 2 PQp 3 on a channel created with denoise off (vendor: type forced 0, QPs kept), read back en %d type %d %d/%d", g->enable, g->dnType, g->dnIQp, g->dnPQp);
+#else
         CHECK(IMP_Encoder_SetChnDenoise, r2, r == 0 && g->enable && g->dnType == 1 && g->dnIQp == 2 && g->dnPQp == 3,
               "en type 1 IQp 2 PQp 3, read back en %d type %d %d/%d", g->enable, g->dnType, g->dnIQp, g->dnPQp);
+#endif
         rep(FN(IMP_Encoder_GetChnDenoise), r3, r3 == 0 ? V_PASS : V_FAIL, "initial en %d type %d %d/%d", o->enable, o->dnType, o->dnIQp, o->dnPQp);
         IMP_Encoder_SetChnDenoise(chn, o);
         gfree(g); gfree(o);
@@ -833,13 +841,13 @@ static void live_old(int chn, int codec)
     RT_INT(IMP_Encoder_SetMbRC, IMP_Encoder_GetMbRC, 1, "MbRC")
 # endif
 # if HAS_IMP_Encoder_SetChangeRef
-#  ifdef PLATFORM_T23
-    /* stock T23 1.3.0: the getter has no read-back and fails on a created channel */
+#  if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+    /* stock T23 1.3.0 and T21 1.0.33 (0x48ecc): the getter has no read-back and fails on a created channel */
     NEED(IMP_Encoder_SetChangeRef) {
         int r2 = IMP_Encoder_SetChangeRef(chn, 1);
         int g = 0, r3 = IMP_Encoder_GetChangeRef ? IMP_Encoder_GetChangeRef(chn, &g) : -1;
-        RET0(IMP_Encoder_SetChangeRef, r2, "ChangeRef set 1 (T23 stock: no read-back)");
-        rep(FN(IMP_Encoder_GetChangeRef), r3, r3 == -1 ? V_PASS : V_FAIL, "stock T23 getter fails on a created channel: ret %d", r3);
+        RET0(IMP_Encoder_SetChangeRef, r2, "ChangeRef set 1 (T21/T23 stock: no read-back)");
+        rep(FN(IMP_Encoder_GetChangeRef), r3, r3 == -1 ? V_PASS : V_FAIL, "stock T21/T23 getter fails on a created channel: ret %d", r3);
         IMP_Encoder_SetChangeRef(chn, 0);
     }
 #  else
