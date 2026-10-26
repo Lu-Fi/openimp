@@ -1255,14 +1255,14 @@ static void cs_autozoom_set(void)
 
         base = fst(800);
         a->chan = 1; a->scaler_enable = 1; a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
-        a->crop_enable = 1; a->crop_left = 0; a->crop_top = 0; a->crop_width = SUB_W / 2; a->crop_height = SUB_H / 2;
+        a->crop_enable = 1; a->crop_left = (g_sw / 4) & ~1; a->crop_top = (g_sh / 4) & ~1; a->crop_width = (g_sw / 2) & ~1; a->crop_height = (g_sh / 2) & ~1;      /* centre crop in sensor coordinates */
         r1 = IMP_ISP_Tuning_SetAutoZoom(a); zoom = fst(1500);
         a->crop_enable = 0;
         r2 = IMP_ISP_Tuning_SetAutoZoom(a); back = recover(base.y, &ms);
         {
             int eff = zoom.ok && base.ok && dabs(zoom.h - base.h) > 0.1 * base.h;
             rep(FN(IMP_ISP_Tuning_SetAutoZoom), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
-                "%sch1 crop to the upper-left quarter (ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f, frames flow", RTMSG(eff), r1, r2, base.h, zoom.h, back.h);
+                "%sch1 centre crop (half size, ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f, frames flow", RTMSG(eff), r1, r2, base.h, zoom.h, back.h);
         }
         gfree(a);
     }
