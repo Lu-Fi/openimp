@@ -312,8 +312,8 @@ static void ao_flow(void)
     G(IMPAudioIOAttr, got);
     int r, ao = 0;
 
-    if (getenv("APITEST_AO") && !atoi(getenv("APITEST_AO"))) {
-        rep(LBL("AO functions"), 0, V_SKIP, "APITEST_AO=0");
+    if (!getenv("APITEST_AO") || !atoi(getenv("APITEST_AO"))) {      /* AO/AEC calls only with APITEST_AO=1 (no-sound rule: default off) */
+        rep(LBL("AO functions"), 0, V_SKIP, "AO off by default (APITEST_AO=1 enables the muted return-code checks)");
         gfree(attr); gfree(got);
         return;
     }
