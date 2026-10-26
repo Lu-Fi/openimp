@@ -1170,6 +1170,76 @@ static void cs_rawdrc(void)
 static void cs_rawdrc(void) {}
 #endif
 
+
+/* ---- ISP-drawn OSD (raptor-hal sequence): pool, create, set attr (ARGB picture), show/hide, destroy; the picture must appear in the frame */
+#if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch1 (640x360 coordinates), 2 frames */
+{
+    double acc = 0; int n = 0, f, i, j;
+
+    usleep(700000);
+    for (f = 0; f < 4; f++) {
+        IMPFrameInfo *fr = NULL;
+        const unsigned char *y;
+        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) continue;
+        y = (const unsigned char *)(uintptr_t)fr->virAddr;
+        if (f >= 2 && y && x1 <= fr->width && y1 <= fr->height) {
+            double s = 0; int c = 0;
+            for (j = y0; j < y1; j++) for (i = x0; i < x1; i++) { s += y[(size_t)j * fr->width + i]; c++; }
+            acc += s / c; n++;
+        }
+        IMP_FrameSource_ReleaseFrame(1, fr);
+    }
+    return n ? acc / n : -1;
+}
+
+static void cs_isposd(void)
+{
+    NEED(IMP_ISP_Tuning_CreateOsdRgn) NEED(IMP_ISP_Tuning_SetOsdRgnAttr) NEED(IMP_ISP_Tuning_ShowOsdRgn) NEED(IMP_ISP_Tuning_DestroyOsdRgn) NEED(IMP_ISP_Tuning_SetOsdPoolSize) {
+        enum { PWD = 256, PHT = 128 };
+        uint8_t *pic = (uint8_t *)malloc(PWD * PHT * 4);
+        IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
+        int rp, h, rs, rsh, rhide, rd = -99, k, x0 = 64, y0 = 64;
+        int cx0 = x0 * 640 / g_sw + 4, cy0 = y0 * 360 / g_sh + 4, cx1 = (x0 + PWD) * 640 / g_sw - 4, cy1 = (y0 + PHT) * 360 / g_sh - 4;
+        double base, shown, hidden;
+        int dark;
+
+        if (!pic || !a || cx1 <= cx0 + 2 || cy1 <= cy0 + 2) { rep(FN(IMP_ISP_Tuning_CreateOsdRgn), 0, V_SKIP, "no memory or sensor too small for the test picture"); free(pic); free(a); return; }
+        base = region_y(cx0, cy0, cx1, cy1);
+        dark = base < 140;
+        for (k = 0; k < PWD * PHT; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+        rp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);
+        rep(FN(IMP_ISP_Tuning_SetOsdPoolSize), rp, rp == 0 ? V_PASS : V_FAIL, "512 KB");
+        h = IMP_ISP_Tuning_CreateOsdRgn(0, NULL);
+        rep(FN(IMP_ISP_Tuning_CreateOsdRgn), h, h >= 0 ? V_PASS : V_FAIL, "handle %d", h);
+        if (h < 0) { free(pic); free(a); return; }
+        a->type = ISP_OSD_REG_PIC;
+        a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888;
+        a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_BGRA;
+        a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        a->stsinglepicAttr.pic.pinum = (uint8_t)h; a->stsinglepicAttr.pic.osd_enable = 1;
+        a->stsinglepicAttr.pic.osd_left = x0; a->stsinglepicAttr.pic.osd_top = y0;
+        a->stsinglepicAttr.pic.osd_width = PWD; a->stsinglepicAttr.pic.osd_height = PHT;
+        a->stsinglepicAttr.pic.osd_image = (char *)pic; a->stsinglepicAttr.pic.osd_stride = PWD * 4;
+        rs = IMP_ISP_Tuning_SetOsdRgnAttr(0, h, a);
+        rsh = IMP_ISP_Tuning_ShowOsdRgn(0, h, 1);
+        shown = region_y(cx0, cy0, cx1, cy1);
+        rhide = IMP_ISP_Tuning_ShowOsdRgn(0, h, 0);
+        hidden = region_y(cx0, cy0, cx1, cy1);
+        rd = IMP_ISP_Tuning_DestroyOsdRgn(0, h);
+        {
+            int appears = dark ? shown > base + 40 : shown < base - 40, gone = dabs(hidden - base) < 20;
+            rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s 256x128 ARGB picture at (64,64): region luma %.1f -> %.1f (%s)", dark ? "white" : "black", base, shown, appears ? "visible" : "NOT VISIBLE");
+            rep(FN(IMP_ISP_Tuning_ShowOsdRgn), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
+            rep(FN(IMP_ISP_Tuning_DestroyOsdRgn), rd, (rd == 0 && flow()) ? V_PASS : V_FAIL, "handle %d destroyed, frames flow", h);
+        }
+        free(pic); free(a);
+    }
+}
+#else
+static void cs_isposd(void) {}
+#endif
+
 /* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
 static int cs_on(const char *n)
 {
@@ -1183,7 +1253,7 @@ static int cs_on(const char *n)
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1236,6 +1306,7 @@ void t_cases(void)
     if (cs_on("camsel")) cs_camsel();     wdog("cases", 60);
     if (cs_on("aeroi")) cs_aeroi();      wdog("cases", 60);
     if (cs_on("rawdrc")) cs_rawdrc();     wdog("cases", 60);
+    if (cs_on("isposd")) cs_isposd();     wdog("cases", 90);
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
