@@ -2306,9 +2306,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2322,7 +2322,11 @@
      "r†"
     ]
    },
-   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there"
+   "note": "T31: wired to driver 0x80000e3 / 0x80000e7 (agg-25); T10/T20/T21 crop device-tested but not a vendor call there",
+   "ref": {
+    "T31": "apitest issue-117 2026-10-27 .26 (open-tx-isp a6b4ab2e): Set of the value read (DISABLE) 0, was -1; ENABLE without a *-cust-t31.bin stays -1 like the vendor; QEMU equal",
+    "T23": "apitest issue-122 2026-10-27 .30 (open-tx-isp a6b4ab2e): Get 0 (was 0xffffffff), Set same value 0 (was -1); QEMU equal"
+   }
   },
   "ISP_Tuning_Get/SetISPHVflip": {
    "area": "ISP tuning",
@@ -3002,7 +3006,7 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -3013,7 +3017,10 @@
      "r†"
     ]
    },
-   "note": "T31: reaches the WDR tool block (agg-25)"
+   "note": "T31: reaches the WDR tool block (agg-25)",
+   "ref": {
+    "T31": "apitest issue-118 2026-10-27 .26 (open-tx-isp a6b4ab2e): after WDR_ENABLE(0) Get 0 mode 0 (was -1), Get/Set same value PASS; QEMU equal"
+   }
   },
   "ISP_Tuning_GetAutoZoom": {
    "area": "ISP tuning",
