@@ -69,15 +69,39 @@ static int flow(void)
 
 static double dabs(double a) { return a < 0 ? -a : a; }
 
-/* wait (up to 8 s) until the mean luma is back near 'y0'; returns the last measurement, *ms = time it took (-1 = never) */
+/* AE drift of the scene without any change (dark scenes drift several luma levels in seconds): measured once at the start of the
+ * cases (t_cases), in luma levels per second; recover() widens its tolerance by it */
+static double g_drift = 0;
+
+static void measure_drift(void)
+{
+    Fst a = fst(600), b;
+    int64_t t0 = now_us();
+
+    usleep(4000000);
+    b = fst(0);
+    if (a.ok && b.ok) {
+        double dt = (now_us() - t0) / 1e6;
+        g_drift = dabs(b.y - a.y) / (dt > 1 ? dt : 1);
+    }
+}
+
+/* wait (up to 20 s) until the mean luma is back near 'y0' (tolerance 6 % + 2 + the measured drift over the time waited, and a
+ * stable reading counts when it is inside twice that); returns the last measurement, *ms = time it took (-1 = never) */
 static Fst recover(double y0, int *ms)
 {
-    Fst s;
+    Fst s, prev;
     int t;
+    int64_t t0 = now_us();
 
-    for (t = 0; t < 8; t++) {
+    memset(&prev, 0, sizeof(prev));
+    for (t = 0; t < 20; t++) {
+        double el = (now_us() - t0) / 1e6 + 0.6, tol = 0.06 * y0 + 2 + g_drift * (el + 2);
+
         s = fst(t ? 1000 : 600);
-        if (s.ok && dabs(s.y - y0) < 0.06 * y0 + 2) { *ms = t ? 600 + t * 1000 : 600; return s; }
+        if (s.ok && dabs(s.y - y0) < tol) { *ms = t ? 600 + t * 1000 : 600; return s; }
+        if (s.ok && prev.ok && dabs(s.y - prev.y) < 1.0 && dabs(s.y - y0) < 2 * tol) { *ms = 600 + t * 1000; return s; }
+        prev = s;
     }
     *ms = -1;
     return s;
@@ -1299,6 +1323,7 @@ void t_cases(void)
     rep_area("cases");
     wdog("cases", 60);
     { int i; for (i = 0; i < 25 && !flow(); i++) usleep(200000); }      /* warm-up: wait for the first frames (T40 at 1080p starts slowly) */
+    measure_drift();
     if (cs_on("sensorreg")) cs_sensorreg();  wdog("cases", 60);
     if (cs_on("log")) cs_log();        wdog("cases", 60);
     if (cs_on("waitframe")) cs_waitframe();  wdog("cases", 60);
