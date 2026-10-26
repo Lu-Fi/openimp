@@ -1,5 +1,7 @@
 /* T23 1.3.0 audio extras on top of the shared AI/AO implementation
- * (src/t31/openimp_t31_audio.c):
+ * (src/t31/openimp_t31_audio.c; T40/T41: src/t40/openimp_p3_audio.c, which
+ * provides the same hooks; the T41 1.2.5/1.2.6 ai.c/ao.c run the same
+ * EnableAlgo/EnableHs code as the T23 OEM, T40 1.3.1 has only EnableHs):
  *
  *  - IMP_AI_EnableAlgo/DisableAlgo, IMP_AO_EnableAlgo/DisableAlgo: as in the
  *    OEM ai.c/ao.c, read the WebRTC profile (webrtc_profile.ini in the
@@ -30,6 +32,12 @@
 
 extern const char *openimp_t23_audio_profile(void);
 extern void openimp_audio_set_ao_agc_mode(int mode);
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+extern void openimp_p3_set_ai_agc_mode(int mode);
+#define IMP_AI_SetAgcMode(mode) openimp_p3_set_ai_agc_mode(mode)
+#endif
+
+#if !defined(PLATFORM_T40)
 
 /* ---- webrtc_profile.ini ---------------------------------------------- */
 
@@ -241,6 +249,8 @@ int IMP_AO_DisableAlgo(int device, int channel)
     return 0;
 }
 
+#endif /* !PLATFORM_T40 */
+
 /* ---- howling suppression --------------------------------------------- */
 
 typedef void *(*T23HsCreate)(int sample_rate);
@@ -325,6 +335,7 @@ void openimp_t23_ai_pre_effects(int16_t *samples, int count, int sample_rate)
 }
 
 /* ---- IMPDBG ----------------------------------------------------------- */
+#if !defined(PLATFORM_T40) && !defined(PLATFORM_T41)
 
 int IMP_AI_IMPDBG_Init(void)
 {
@@ -345,3 +356,4 @@ int IMP_AO_IMPDBG_DeInit(void)
 {
     return 0;
 }
+#endif

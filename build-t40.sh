@@ -100,6 +100,11 @@ done
     -c "$project_dir/src/core/imp_log_emit.c" \
     -o "$output_dir/core_imp_log_emit.o"
 
+# IMP_Log_Get/Set_Option and imp_log_fun (vendor: libalog.so), as on T31
+"$compiler" $strict_flags $repo_includes \
+    -c "$project_dir/src/core/imp_log.c" \
+    -o "$output_dir/core_imp_log.o"
+
 # IMP_ISP_Tuning_SetVideoDrop monitor
 "$compiler" $strict_flags $repo_includes \
     -c "$project_dir/src/core/video_drop.c" \
@@ -116,6 +121,11 @@ done
 
 # AENC/ADEC: the shared src/audio module (the repo imp_audio.h matches the
 # vendor T40 AENC/ADEC ABI; G.726 at 32 kbit/s like the vendor).
+# IMP_A[IO]_EnableAlgo (T41), IMP_AI_EnableHs: the T23 code on the P3 hooks
+"$compiler" $strict_flags $repo_includes \
+    -c "$project_dir/src/t23/openimp_t23_audio_ext.c" \
+    -o "$output_dir/audio_ext.o"
+
 for source in openimp_audio_codec openimp_audio_enc_dec
 do
     "$compiler" $strict_flags $repo_includes \
@@ -153,6 +163,7 @@ done
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
     "$output_dir/core_imp_log_emit.o" \
+    "$output_dir/core_imp_log.o" \
     "$output_dir/core_video_drop.o" \
     "$output_dir/core_su_base_shutdown.o" \
     "$output_dir/openimp_profile.o" \
@@ -165,6 +176,7 @@ done
     "$output_dir/openimp_p3_controls.o" \
     "$output_dir/openimp_p3_audio.o" \
     "$output_dir/openimp_audio_codec.o" \
+    "$output_dir/audio_ext.o" \
     "$output_dir/openimp_audio_enc_dec.o" \
     "$output_dir/openimp_p3_compat.o" \
     "$output_dir/openimp_t40_isp_osd.o" \

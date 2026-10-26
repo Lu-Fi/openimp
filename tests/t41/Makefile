@@ -28,11 +28,12 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute
+.PHONY: check clean p3-controls p3-ao-mute audio-ext
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
 	$(YUV_T40_TEST_BIN)
+	$(MAKE) audio-ext
 	$(MAKE) p3-controls
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
@@ -222,10 +223,21 @@ $(YUV_T40_TEST_BIN): $(YUV_DEPS)
 	$(CC) $(YUV_FLAGS) -DPLATFORM_T40 yuv_encode_test.c \
 		$(PROJECT_DIR)/src/t40/t4x_unbound.c $(YUV_LIBS) -o $@
 
+# T41 audio extras: GetFrameAndRaw, Select_Codec, digital gain, EnableAlgo, Hs
+audio-ext: audio_ext_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
+	$(PROJECT_DIR)/src/t23/openimp_t23_audio_ext.c
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T41 \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src audio_ext_test.c \
+		$(PROJECT_DIR)/src/t23/openimp_t23_audio_ext.c \
+		$(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl \
+		-o "$(PROJECT_DIR)/build/tests/t41-audio-ext-test"
+	$(PROJECT_DIR)/build/tests/t41-audio-ext-test
+
 # software-mute IMP_AO_SendFrame from two threads
 p3-ao-mute: p3_ao_mute_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
 	mkdir -p "$(PROJECT_DIR)/build/tests"
 	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T41 \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
-		p3_ao_mute_test.c -pthread -ldl -o "$(PROJECT_DIR)/build/tests/t41-p3-ao-mute-test"
+		p3_ao_mute_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -o "$(PROJECT_DIR)/build/tests/t41-p3-ao-mute-test"
 	$(PROJECT_DIR)/build/tests/t41-p3-ao-mute-test

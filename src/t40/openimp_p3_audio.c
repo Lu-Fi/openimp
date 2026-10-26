@@ -174,6 +174,10 @@ static struct {
     P3AgcFree agc_free;
     void *agc;
     int agc_enabled;
+    int agc_mode;                   /* webrtc_profile.ini set_mode (2 default) */
+    unsigned char *raw_buffer;      /* IMP_AI_GetFrameAndRaw: before effects */
+    size_t raw_capacity;
+    int raw_enabled;                /* IMP_AI_EnableGetRaw */
     /* NOBLOCK capture queue, see p3_capture_start() */
     int cap_running;
     int cap_stop;
@@ -521,8 +525,24 @@ int IMP_AI_PollingFrame(int device, int channel, unsigned int timeout_ms)
                : -1;
 }
 
+/* src/t23/openimp_t23_audio_ext.c (weak: host tests link without it) */
+extern void openimp_t23_ai_pre_effects(int16_t *samples, int count,
+                                       int sample_rate) __attribute__((weak));
+
+static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
+                           IMPAudioFrame *raw, IMPBlock block);
+
 int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
                     IMPBlock block)
+{
+    (void)device;
+    return p3_ai_get_frame(channel, frame, NULL, block);
+}
+
+/* raw: also hand out the frame as captured, before howling suppression,
+ * HPF, NS, AGC and the software mute (IMP_AI_GetFrameAndRaw) */
+static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
+                           IMPAudioFrame *raw, IMPBlock block)
 {
     P3AudioInputStream stream;
 #if defined(PLATFORM_T41)
@@ -532,7 +552,6 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     unsigned int channels;
     int64_t capture_stamp;
 
-    (void)device;
     if (channel != 0 || !frame || !p3_audio.ai_channel_enabled ||
         p3_audio.frame_outstanding)
         return -1;
@@ -587,6 +606,22 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
             return -1;
         capture_stamp = IMP_System_GetTimeStamp();
     }
+    if (raw) {
+        if (bytes > p3_audio.raw_capacity) {
+            void *buffer = realloc(p3_audio.raw_buffer, bytes);
+
+            if (!buffer)
+                return -1;
+            p3_audio.raw_buffer = buffer;
+            p3_audio.raw_capacity = bytes;
+        }
+        memcpy(p3_audio.raw_buffer, p3_audio.frame_buffer, bytes);
+    }
+    /* IMP_AI_EnableHs: howling suppression ahead of the other effects */
+    if (openimp_t23_ai_pre_effects)
+        openimp_t23_ai_pre_effects((int16_t *)p3_audio.frame_buffer,
+                                   (int)(bytes / sizeof(int16_t)),
+                                   p3_audio.ai_attr.samplerate);
     p3_process_effects((int16_t *)p3_audio.frame_buffer,
                        (int)(bytes / sizeof(int16_t)));
     if (p3_audio.ai_mute)
@@ -598,6 +633,10 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     frame->timeStamp = capture_stamp;
     frame->seq = p3_audio.sequence++;
     frame->len = (int)bytes;
+    if (raw) {
+        *raw = *frame;
+        raw->virAddr = (uint32_t *)(void *)p3_audio.raw_buffer;
+    }
     p3_audio.frame_outstanding = 1;
     return 0;
 }
@@ -888,7 +927,8 @@ int IMP_AI_EnableAgc(IMPAudioIOAttr *attribute, IMPAudioAgcConfig configuration)
     config.target_level_dbfs = (int16_t)configuration.TargetLevelDbfs;
     config.compression_gain_db = (int16_t)configuration.CompressionGaindB;
     config.limiter_enable = 1;
-    if (p3_audio.agc_set_config(p3_audio.agc, 0, 255, 2,
+    if (p3_audio.agc_set_config(p3_audio.agc, 0, 255,
+                                p3_audio.agc_mode ? p3_audio.agc_mode : 2,
                                 attribute->samplerate, config) != 0)
         return -1;
     p3_audio.agc_enabled = 1;
@@ -1096,8 +1136,10 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
                                    NULL);
 }
 
-#if !defined(PLATFORM_T41)
-/* T40 IMP_AI/AO_Set/GetDigitalGain (vendor 1.3.1 0xa4508/0xa46e4 and
+/* T40 and T41 IMP_AI/AO_Set/GetDigitalGain (T41 1.2.5 ai.c.o 0x74d0 /
+ * ao.c.o 0x444c: the same checks, clamp and ioctls as T40; the volume record
+ * carries channel+1, i.e. 1, like OpenIMP's p3_set_volume)
+ * (T40 vendor 1.3.1 0xa4508/0xa46e4 and
  * 0xaa168/0xaa3a4): the digital gain is the raw codec register value
  * 0..255 (0.5 dB steps; the header: -97..30 dB), clamped like the vendor.
  * AI: device < 2 and channel 0 (-1), ioctl AMIC_AI_SET_VOLUME (0x400c505b,
@@ -1150,7 +1192,6 @@ int IMP_AO_GetDigitalGain(int device, int channel, int *dgain)
     *dgain = p3_audio.ao_dgain;
     return 0;
 }
-#endif
 
 int IMP_AO_SetVol(int device, int channel, int value)
 {
@@ -1304,3 +1345,87 @@ int IMP_AO_DisableAgc(void)
 {
     return IMP_AI_DisableAgc();
 }
+
+/* ---- T41 1.2.6 audio extras -------------------------------------------- */
+
+/* hooks for src/t23/openimp_t23_audio_ext.c (IMP_A[IO]_EnableAlgo and
+ * IMP_AI_EnableHs, shared with T23): the webrtc_profile.ini directory and the
+ * AGC mode it names.  The T40/T41 AO AGC is the AI one (IMP_AO_EnableAgc),
+ * so both modes land in the same field. */
+const char *openimp_t23_audio_profile(void);
+const char *openimp_t23_audio_profile(void)
+{
+    return p3_audio.aec_profile[0] ? p3_audio.aec_profile : NULL;
+}
+
+void openimp_audio_set_ao_agc_mode(int mode);
+void openimp_audio_set_ao_agc_mode(int mode)
+{
+    p3_audio.agc_mode = mode;
+}
+
+void openimp_p3_set_ai_agc_mode(int mode);
+void openimp_p3_set_ai_agc_mode(int mode)
+{
+    p3_audio.agc_mode = mode;
+}
+
+#if defined(PLATFORM_T41)
+/* T41 1.2.6 IMP_AI_EnableGetRaw / DisableGetRaw (0x97e74 / 0x97fd0):
+ * device >= 2 or channel > 0 is -1, else a per-channel flag; no other
+ * state is checked.  IMP_AI_GetFrameAndRaw (0x9868c): device >= 2,
+ * channel > 0, device or channel not enabled, raw not enabled: -1; else the
+ * frame as GetFrame and the same capture before the effects.  One
+ * IMP_AI_ReleaseFrame of frm releases both. */
+int IMP_AI_EnableGetRaw(int device, int channel)
+{
+    if (device >= 2 || channel > 0)
+        return -1;
+    p3_audio.raw_enabled = 1;
+    return 0;
+}
+
+int IMP_AI_DisableGetRaw(int device, int channel)
+{
+    if (device >= 2 || channel > 0)
+        return -1;
+    p3_audio.raw_enabled = 0;
+    return 0;
+}
+
+int IMP_AI_GetFrameAndRaw(int device, int channel, IMPAudioFrame *frame,
+                          IMPAudioFrame *raw, IMPBlock block)
+{
+    if (device >= 2 || channel > 0 || !p3_audio.ai_enabled ||
+        !p3_audio.ai_channel_enabled || !frame || !raw)
+        return -1;
+    if (!p3_audio.raw_enabled) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "%s: call IMP_AI_EnableGetRaw first",
+                        __func__);
+        return -1;
+    }
+    return p3_ai_get_frame(channel, frame, raw, block);
+}
+
+/* T41 1.2.6 IMP_Audio_Select_Codec (0x9c6bc): device >= 2, channel > 0,
+ * device or channel not enabled: -1; else ioctl 0x4004504a (_IOW('P', 74,
+ * int)) with SELECT_INTERNAL (0) / SELECT_EXTERNAL (1); a failing ioctl is
+ * -1. */
+#define AMIC_SELECT_CODEC P3_SIOR(74, int)
+_Static_assert(AMIC_SELECT_CODEC == 0x4004504aUL,
+               "T41 select-codec ioctl mismatch");
+
+int IMP_Audio_Select_Codec(int device, int channel, int codec)
+{
+    if (device >= 2 || channel > 0 || !p3_audio.ai_enabled ||
+        !p3_audio.ai_channel_enabled || p3_audio.fd < 0)
+        return -1;
+    if (ioctl(p3_audio.fd, AMIC_SELECT_CODEC, &codec) != 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "%s: select codec %d failed",
+                        __func__, codec);
+        return -1;
+    }
+    return 0;
+}
+#endif
+
