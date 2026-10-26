@@ -30,6 +30,7 @@ report = {"dev": [], "err": [], "kept": [], "skipped": []}
 for spec in files:
     soc, rest = spec.split("=", 1)
     path, _, mode = rest.partition(":")
+    qemu = mode == "qemu"          # SOC=result.json:qemu - SoC without a camera: PASS/RT from a QEMU run set the cell to "qemu"
     r = json.load(open(path))
     ign = set(ov.get("ignore", {}).get(soc, []))
     ref = "apitest %s %s %s" % (tag, r.get("date", ""), "." + r.get("ip", "").rsplit(".", 1)[-1] if r.get("ip") else "")  # public docs: no full LAN addresses
@@ -42,6 +43,13 @@ for spec in files:
             report["skipped"].append((soc, k, v["v"], "not in docs/api_exports.json (export list older than the flashed libimp)")); continue
         if cur in ("n.a.", "nob", None):
             report["skipped"].append((soc, k, v["v"], "cell is %s" % cur)); continue
+        if qemu:
+            if v["v"] in ("PASS", "RT") and cur in ("aud", "host", "?", "run", "miss"):
+                cells[soc] = "qemu"; report["dev"].append((soc, k, cur))
+                F[k].setdefault("ref", {})[soc] = "apitest %s %s QEMU (no camera)" % (tag, r.get("date", ""))
+            else:
+                report["kept"].append((soc, k, v["v"], cur))
+            continue
         if v["v"] == "PASS":
             if cur in ("aud", "host", "?", "run"):
                 cells[soc] = "dev"; report["dev"].append((soc, k, cur))

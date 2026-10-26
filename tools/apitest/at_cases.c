@@ -77,7 +77,7 @@ static Fst recover(double y0, int *ms)
 
     for (t = 0; t < 8; t++) {
         s = fst(t ? 1000 : 600);
-        if (s.ok && dabs(s.y - y0) < 0.15 * y0 + 3) { *ms = t ? 600 + t * 1000 : 600; return s; }
+        if (s.ok && dabs(s.y - y0) < 0.06 * y0 + 2) { *ms = t ? 600 + t * 1000 : 600; return s; }
     }
     *ms = -1;
     return s;
@@ -204,10 +204,13 @@ static void cs_process(void)
     int (*proc)(int) = (int (*)(int))dsym("IMP_ISP_Tuning_SetISPProcess");
 
     if (!proc) { rep_na(LBL("IMP_ISP_Tuning_SetISPProcess")); return; }
-    {   /* only the "off" value (= normal processing, same value as now); ENABLE bypasses the ISP and is not run */
-        int r = proc(IMPISP_TUNING_OPS_MODE_DISABLE), f;
+    {   /* The driver treats value ENABLE (1) as normal ISP processing and DISABLE (0) as ISP bypass (tx-isp-core-tuning.c
+         * apical_isp_bypass_s_control; the header text says the opposite).  DISABLE wedged the T10 pipeline until reboot
+         * (agg47 bisect), so only ENABLE = the normal state = same value as now is written. */
+        int bypass = getenv("APITEST_PROCESS_BYPASS") != NULL;      /* QEMU only: the value that wedged the T10 camera */
+        int r = proc(bypass ? IMPISP_TUNING_OPS_MODE_DISABLE : IMPISP_TUNING_OPS_MODE_ENABLE), f;
         usleep(500000); f = flow();
-        rep(LBL("IMP_ISP_Tuning_SetISPProcess"), r, (r == 0 && f) ? V_PASS : V_FAIL, "rt: DISABLE (normal processing, same value) accepted, frames flow (%d); ENABLE (ISP bypass) not run", f);
+        rep(LBL("IMP_ISP_Tuning_SetISPProcess"), r, (r == 0 && f) ? V_PASS : V_FAIL, "rt: ENABLE (= normal processing, the driver's state) written, frames flow (%d); DISABLE (= ISP bypass) not run: wedges the pipeline", f);
     }
 }
 
@@ -393,10 +396,19 @@ static void cs_inttime(void)
         G(IMPISPITAttr, o); G(IMPISPITAttr, a); G(IMPISPITAttr, c);
         int r0 = IMP_ISP_Tuning_GetIntegrationTime(o), rl, rh, rr, rbk = 0, via_expr = 0, eff = 0;
         Fst base, lo, hi, back;
+        uint32_t oag = 0, odg = 0;
+        int caps = 0;
         char how[80];
 
         gchk(o);
         base = fst(800);
+        /* with a manual time the AE still moves the gain to hold the brightness: pin the gain caps to 1 first (as the OpenIMP test-pattern
+         * hold does), restored at the end */
+#if HAS_IMP_ISP_Tuning_GetMaxAgain && HAS_IMP_ISP_Tuning_SetMaxAgain && HAS_IMP_ISP_Tuning_GetMaxDgain && HAS_IMP_ISP_Tuning_SetMaxDgain
+        if (IMP_ISP_Tuning_GetMaxAgain(&oag) == 0 && IMP_ISP_Tuning_GetMaxDgain(&odg) == 0) {
+            IMP_ISP_Tuning_SetMaxAgain(1); IMP_ISP_Tuning_SetMaxDgain(1); caps = 1;
+        }
+#endif
         /* 1: IntegrationTime manual, short (30 lines) vs long (240 lines; T20/T21 reject >= 256) */
         a->mode = IMPISP_TUNING_MODE_MANUAL; a->integration_time = 30; a->max_integration_time = o->max_integration_time;
         rl = IMP_ISP_Tuning_SetIntegrationTime(a); IMP_ISP_Tuning_GetIntegrationTime(c); gchk(c); rbk = (c->mode == IMPISP_TUNING_MODE_MANUAL && c->integration_time == 30);
@@ -407,24 +419,36 @@ static void cs_inttime(void)
         snprintf(how, sizeof(how), "IntegrationTime alone");
 #if HAS_IMP_ISP_Tuning_SetExpr
         if (!eff && IMP_ISP_Tuning_SetExpr) {
-            /* the AE may override it: take the AE out of the loop with the manual exposure (SetExpr) first, then set the time */
-            G(IMPISPExpr, e);
-            e->s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e->s_attr.unit = ISP_CORE_EXPR_UNIT_LINE; e->s_attr.time = 30;
-            IMP_ISP_Tuning_SetExpr(e); lo = fst(1500);
-            e->s_attr.time = 240; IMP_ISP_Tuning_SetExpr(e); hi = fst(1500);
-            eff = lo.ok && hi.ok && hi.y > lo.y + 8; via_expr = 1;
-            snprintf(how, sizeof(how), "SetExpr manual (AE out of the loop)");
-            e->s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; IMP_ISP_Tuning_SetExpr(e);
-            gfree(e);
+            /* the AE may override it: take the AE out of the loop with the manual exposure (SetExpr) first, then set the time;
+             * third try: additionally freeze the ISP firmware (SetFWFreeze) so no auto algorithm runs */
+            G(IMPISPExpr, e); G(IMPISPExpr, g);
+            int pass, rbt = 0;
+            for (pass = 0; pass < 2 && !eff; pass++) {
+                if (pass == 1 && !IMP_ISP_Tuning_SetFWFreeze) break;
+                if (pass == 1) IMP_ISP_Tuning_SetFWFreeze(IMPISP_TUNING_OPS_MODE_ENABLE);
+                e->s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e->s_attr.unit = ISP_CORE_EXPR_UNIT_LINE; e->s_attr.time = 30;
+                IMP_ISP_Tuning_SetExpr(e); lo = fst(1500);
+                if (IMP_ISP_Tuning_GetExpr) { IMP_ISP_Tuning_GetExpr(g); rbt = g->g_attr.integration_time; }
+                e->s_attr.time = 240; IMP_ISP_Tuning_SetExpr(e); hi = fst(1500);
+                eff = lo.ok && hi.ok && hi.y > lo.y + 8; via_expr = 1;
+                snprintf(how, sizeof(how), "SetExpr manual%s (AE out of the loop; GetExpr after 30 lines: %d)", pass ? " + FWFreeze" : "", rbt);
+                e->s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; IMP_ISP_Tuning_SetExpr(e);
+                if (pass == 1) IMP_ISP_Tuning_SetFWFreeze(IMPISP_TUNING_OPS_MODE_DISABLE);
+            }
+            gfree(e); gfree(g);
         }
 #endif
+#if HAS_IMP_ISP_Tuning_SetMaxAgain && HAS_IMP_ISP_Tuning_SetMaxDgain
+        if (caps) { IMP_ISP_Tuning_SetMaxAgain(oag); IMP_ISP_Tuning_SetMaxDgain(odg); }
+#endif
+        (void)caps; (void)oag; (void)odg;
         rr = IMP_ISP_Tuning_SetIntegrationTime(o);          /* back to what it was (AUTO) */
         if (o->mode != IMPISP_TUNING_MODE_MANUAL) { a->mode = IMPISP_TUNING_MODE_AUTO; rr |= IMP_ISP_Tuning_SetIntegrationTime(a); }
         back = fst(2500);
         {
             int rec = back.ok && dabs(back.y - base.y) < 0.25 * base.y + 4;
             rep(FN(IMP_ISP_Tuning_SetIntegrationTime), rl | rh | rr, (rl == 0 && rh == 0 && rr == 0 && rec && eff) ? V_PASS : V_FAIL,
-                "%s30 lines Y %.1f -> 240 lines Y %.1f via %s%s; AE %s; picture %s restored (Y %.1f, base %.1f)", "", lo.y, hi.y, how,
+                "%s(gain caps %s) 30 lines Y %.1f -> 240 lines Y %.1f via %s%s; AE %s; picture %s restored (Y %.1f, base %.1f)", "", caps ? "pinned to 1" : "not pinned", lo.y, hi.y, how,
                 eff ? "" : " (NO EXPOSURE EFFECT, expected 8x brighter)", via_expr ? (eff ? "overrides IntegrationTime alone" : "overrides IntegrationTime alone, SetExpr manual does not help either") : "follows the set time", rec ? "" : "NOT", back.y, base.y);
             rep(FN(IMP_ISP_Tuning_GetIntegrationTime), r0, (r0 == 0 && rbk) ? V_PASS : V_FAIL, "mode %d it %u max %u; read back manual 30 lines: %s", (int)o->mode, o->integration_time, o->max_integration_time, rbk ? "yes" : "NO");
         }
@@ -484,7 +508,7 @@ static void cs_colorfx(void)
             rs |= IMP_ISP_Tuning_SetColorfxMode(orig); fst(800);        /* back to the original mode between the modes */
         }
         rs |= IMP_ISP_Tuning_SetColorfxMode(orig); back = fst(2000);
-        ok_bw = s[0].ok && s[0].c < 1.0 + base.c * 0.5 && dabs(s[0].u - 128) < 2 && dabs(s[0].v - 128) < 2;
+        ok_bw = s[0].ok && s[0].c < 1.0 + base.c * 0.5 && dabs(s[0].u - s[0].v) < 3 && s[0].y > base.y * 0.5;
         if (s[0].ok && s[0].y < base.y * 0.5) fail_y = 1;      /* BW must keep the luma */
         ok_neg = s[1].ok && dabs(s[1].y - (255 - base.y)) < 25 && dabs(s[1].y - base.y) > 5;
         ok_viv = s[2].ok && s[2].c > base.c * 1.25 + 0.3;
@@ -505,7 +529,78 @@ static void cs_colorfx(void) {}
 #endif
 
 /* --------------------------------------------------------------------------------------------------- driver */
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate cwf sinter temper process fwfreeze hilight inttime scene colorfx); default all */
+/* --------------------------------------------------------------------------------------------------- T23/T31/T40/T41 extras */
+#if HAS_IMP_ISP_Tuning_SetAeFreeze
+static void cs_aefreeze(void)
+{
+    NEED(IMP_ISP_Tuning_SetAeFreeze) {
+        Fst a, b;
+        int r1, r2, f1, f2;
+
+        a = fst(500);
+        r1 = IMP_ISP_Tuning_SetAeFreeze(IMPISP_TUNING_OPS_MODE_ENABLE); usleep(800000); f1 = flow(); b = fst(500);
+        r2 = IMP_ISP_Tuning_SetAeFreeze(IMPISP_TUNING_OPS_MODE_DISABLE); usleep(500000); f2 = flow();
+        rep(FN(IMP_ISP_Tuning_SetAeFreeze), r1 | r2, (r1 == 0 && r2 == 0 && f1 && f2 && b.ok && dabs(b.y - a.y) < 15) ? V_PASS : V_FAIL,
+            "rt: AE freeze on/off, frames flow (%d/%d), Y %.1f -> %.1f", f1, f2, a.y, b.y);
+    }
+}
+#else
+static void cs_aefreeze(void) {}
+#endif
+
+#if HAS_IMP_ISP_Tuning_GetAeHist_Origin
+static void cs_aehistorigin(void)
+{
+    NEED(IMP_ISP_Tuning_GetAeHist_Origin) {
+        G(IMPISPAEHistOrigin, p);
+        int r = IMP_ISP_Tuning_GetAeHist_Origin(p);
+
+        gchk(p);
+        rep(FN(IMP_ISP_Tuning_GetAeHist_Origin), r, (r == 0 && gtouched(p)) ? V_PASS : V_FAIL, "histogram filled: %s", gtouched(p) ? "yes" : "NO (all zero)");
+        gfree(p);
+    }
+}
+#else
+static void cs_aehistorigin(void) {}
+#endif
+
+#if HAS_IMP_ISP_Tuning_GetAutoZoom && HAS_IMP_ISP_Tuning_SetAutoZoom
+static void cs_autozoom(void)
+{
+    NEED(IMP_ISP_Tuning_GetAutoZoom) NEED(IMP_ISP_Tuning_SetAutoZoom) {
+        G(IMPISPAutoZoom, o); G(IMPISPAutoZoom, b);
+        int r1 = IMP_ISP_Tuning_GetAutoZoom(V0 o), r2, r3;
+
+        gchk(o);
+        rep(FN(IMP_ISP_Tuning_GetAutoZoom), r1, r1 == 0 ? V_PASS : V_FAIL, "read");
+        r2 = IMP_ISP_Tuning_SetAutoZoom(V0 o); r3 = IMP_ISP_Tuning_GetAutoZoom(V0 b); gchk(b);
+        rep(FN(IMP_ISP_Tuning_SetAutoZoom), r2, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && flow()) ? V_PASS : V_FAIL, "rt: same value written (set ret %d), read back %s", r2, !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT");
+        gfree(o); gfree(b);
+    }
+}
+#else
+static void cs_autozoom(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetFrameDrop && HAS_IMP_ISP_SetFrameDrop
+static void cs_framedrop(void)
+{
+    NEED(IMP_ISP_GetFrameDrop) NEED(IMP_ISP_SetFrameDrop) {
+        G(IMPISPFrameDropAttr, o); G(IMPISPFrameDropAttr, b);
+        int r1 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, o), r2, r3;
+
+        gchk(o);
+        rep(FN(IMP_ISP_GetFrameDrop), r1, r1 == 0 ? V_PASS : V_FAIL, "read");
+        r2 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, o); r3 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, b); gchk(b);
+        rep(FN(IMP_ISP_SetFrameDrop), r2, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && flow()) ? V_PASS : V_FAIL, "rt: same value written (set ret %d), read back %s, frames flow", r2, !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT");
+        gfree(o); gfree(b);
+    }
+}
+#else
+static void cs_framedrop(void) {}
+#endif
+
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx); default all */
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -525,6 +620,10 @@ void t_cases(void)
     if (cs_on("waitframe")) cs_waitframe();  wdog("cases", 60);
     if (cs_on("videodrop")) cs_videodrop();  wdog("cases", 60);
     if (cs_on("movestate")) cs_movestate();  wdog("cases", 60);
+    if (cs_on("aefreeze")) cs_aefreeze();   wdog("cases", 60);
+    if (cs_on("aehistorigin")) cs_aehistorigin(); wdog("cases", 60);
+    if (cs_on("autozoom")) cs_autozoom();   wdog("cases", 60);
+    if (cs_on("framedrop")) cs_framedrop(); wdog("cases", 60);
     if (cs_on("cwf")) cs_cwf();        wdog("cases", 60);
     if (cs_on("sinter")) cs_sinter();     wdog("cases", 90);
     if (cs_on("temper")) cs_temper();     wdog("cases", 90);

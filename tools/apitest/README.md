@@ -44,6 +44,7 @@ AO return-code checks.
 | ivs | Group/Chn create/register/start/stop, move interface (Create/Destroy, PollingResult, GetResult, ReleaseResult, Get/SetParam), base-move interface |
 | audio | AI only on the microphone: Pub attr, Enable/EnableChn, ChnParam, PollingFrame/GetFrame/ReleaseFrame (rms, timestamps), Vol/VolMute/Gain/AlcGain/DigitalGain, Ns, Hpf (+cut-off), Agc (+mode), Algo/Hs, GetFrameAndRaw (T41); AENC/ADEC G.711A software round trip of a real mic frame. AO: return codes only (muted, `IMP_AO_SendFrame` is never called, nothing is played). AEC functions are `SKIP` (speaker path) |
 | isp | non-image getters and round trips: sensor attr/register, FPS, running mode, anti-flicker, max again/dgain, Expr, total gain, EV, integration time, WB / WB statistics, AWB cluster/ct/trend, AE luma/min/state/attr/targets/hist/zone/weight, AF hist/zone/metrics/weight, AWB hist/zone, blc, frame drop, default bin path; T41: statistics/exposure-info/convergence getters |
+| cases | targeted cases for functions that had no case (`at_cases.c`, `APITEST_CASES=a,b` selects, names in the file): Enable/DisableMovestate, Get/SetSinter/TemperDnsAttr (+ effect check), SetTemperDnsCtl, SetISPProcess (ENABLE only), SetFWFreeze, SetAeFreeze, GetAeHist_Origin, Get/SetAutoZoom, Get/SetFrameDrop, WaitFrame(Done), SetVideoDrop, Awb Cwf shift, sensor chip-id read/write-back, Log option, and the re-checks HiLightDepress (0..10), IntegrationTime (gain caps pinned), SceneMode, ColorfxMode (AUTO between modes). Each restores the original value and checks the picture recovered |
 | su | libsysutils (dlopen): GetModelNumber, GetVersion, GetDevID, Get/SetTime (same value), SUTime2Raw/Raw2SUTime, Set/Get/DisableAlarm, ADC, battery (where the SDK has it), Key open/close. Never called: Shutdown, Reboot, Suspend, EnableAlarm, PollingAlarm, LED, cipher |
 
 ## On-camera commands (binary = this directory, libimp = the camera's own)
@@ -94,3 +95,18 @@ Y/U/V, detail energy, 8x8 luma grid; no picture is written or leaves the camera;
 on T40 `t40_devtest` (phases `T40_MASK`, default `cdff`), then removes `/tmp/at`, restarts the streamer, checks dmesg and
 writes `result.json` (per evidence function key: PASS / FAIL / PART / SKIP / NA with the detail line). It refuses to run
 while `audit/ab-t41/USER_IN_CELLAR` exists. Not done, by design: speaker/AO/AEC, flash, reboot, module load/unload, light.
+
+## Rule: every new case runs in QEMU first (user decision 2026-10-26)
+
+A new case never goes to a camera before it ran in our QEMU for that SoC (`$S/qemu`, READMEs `README-T2x.md`, `README-T31.md`, `README-T40.md`,
+`README-T30.md`; images = agg47 flash copies, never the originals; free ports, own monitor socket, kill by PID):
+
+    tools/apitest/qemu_run.py PORT SOC SENSOR I2C W H build/apitest_<soc> [case ...] --outdir D
+
+It pushes the binary over the console (gzip+base64), stops the streamer and runs one case per `APITEST_CASES=<case> apitest ... cases`, each
+followed by a health check (plain `fs` area: a fresh FrameSource EnableChn must work and frames must flow; dmesg without Oops).  QEMU proves
+return codes, set/get round trips, oops/crash and that frames still flow afterwards; it cannot prove picture effects.  A camera then proves only
+the picture effects, and only for cases that were QEMU-safe.  Anything that crashes the guest or stops the frame flow in QEMU is a bug and
+never runs on a camera.  A SoC without a camera (T30) gets evidence level `qemu` (matrix 🔧+, "API round trip in QEMU, no camera").
+History: `IMP_ISP_Tuning_SetISPProcess(DISABLE)` (= ISP bypass for this driver) wedged the T10 camera until reboot (agg47-cases); the case now
+writes ENABLE only (`APITEST_PROCESS_BYPASS=1` runs the wedging value, QEMU only).

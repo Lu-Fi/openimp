@@ -790,6 +790,8 @@ def parse_apitest(path, acc):
             continue
         fn, ret, v, det = m.group(1), m.group(2), m.group(3), (m.group(4) or "")
         v = {"N/A": "NA"}.get(v, v)
+        if v == "PASS" and re.search(r"(^|\s)rt: ", det):
+            v = "RT"                  # at_cases.c: call + readback ok, no picture/state effect expected or measurable
         acc.add(fn, v, ("ret=%s %s" % (ret, det)).strip(), "apitest")
 
 

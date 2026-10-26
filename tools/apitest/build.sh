@@ -12,7 +12,7 @@ OUT=${OUT:-$D/build}
 mkdir -p "$OUT"
 SRC="$D/apitest.c $D/at_sys.c $D/at_enc.c $D/at_osd_ivs.c $D/at_audio.c $D/at_isp.c $D/at_isp_rt.c $D/at_cases.c $D/at_su.c"
 build() { # soc headerdir camdir defs
-  local soc=$1 inc=$HDR/$2 cam=$(ls -d $TO/$3-$GEN-* 2>/dev/null | head -1) defs=$4
+  local soc=$1 inc=$HDR/$2 cam=$(ls -d $TO/$3-$GEN-* $TO/$3 2>/dev/null | head -1) defs=$4
   local lc=$(echo $soc | tr A-Z a-z)
   [ -d "$cam" ] || { echo "FAIL $soc: no thingino-out tree $3-$GEN-*"; return; }
   local cc=$cam/host/bin/mipsel-linux-gcc
@@ -20,6 +20,7 @@ build() { # soc headerdir camdir defs
   local f="-O2 -Wall -Wno-unused-function -Wno-address -Wno-format-zero-length -Wno-dangling-else $defs -I$inc -I$inc/imp"
   nice $cc $f -I"$D" -o "$OUT/apitest_$lc" $SRC $l && echo "OK apitest_$lc" || echo "FAIL apitest_$lc"
   [ "$soc" = T40 ] && { nice $cc -O2 -Wall -Wno-unused-function -I$inc -I$inc/imp -I"$D/../../include" -o "$OUT/t40_devtest" "$D/../../tests/t40/devtest/t40_devtest.c" $l -lpthread && echo "OK t40_devtest" || echo "FAIL t40_devtest"; return; }
+  [ "$soc" = T30 ] && return
   nice $cc $f -o "$OUT/imgfx_$lc" "$D/../imgfx/imgfx.c" $l && echo "OK imgfx_$lc" || echo "FAIL imgfx_$lc"
 }
 ARGS=("$@")
@@ -28,6 +29,7 @@ w T10 && build T10 T10/3.12.0/zh secuplug_sp1_t10l_jxh42_mt7601 -DPLATFORM_T10
 w T20 && build T20 T20/3.12.0/zh wyze_cam2_t20x_jxf23_rtl8189ftv -DPLATFORM_T20
 w T21 && build T21 T21/1.0.33/zh "victure_pc420_t21n_jxf23_eth+rtl8188ftv" -DPLATFORM_T21
 w T23 && build T23 T23/1.3.0/zh jooan_a6m_t23n_sc1a4t_atbm6012bx -DPLATFORM_T23
+w T30 && build T30 T30/1.0.5/zh qemu_t30x-t30qemu -DPLATFORM_T30
 w T31 && build T31 T31/1.1.6/en wuuk_y0510_t31x_sc4336p_ssv6158 -DPLATFORM_T31
 w T40 && build T40 T40/1.3.1/en eufy_t8416_t40xp_sc830_aic8800d40 "-DPLATFORM_T41 -DAPITEST_T40"
 w T41 && build T41 T41/1.2.6/zh vanhua_t55a_t41lq_gc5603_eth "-DPLATFORM_T41"

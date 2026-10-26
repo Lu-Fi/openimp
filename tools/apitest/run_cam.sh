@@ -19,7 +19,7 @@ BIN=${BIN:-$D/build}
 IP=$1; SOC=$(echo "$2" | tr a-z A-Z); NN=${IP##*.}
 TAG=${TAG:-agg47}
 OUT=${3:-$S/audit/apitest-evidence/$(date +%m%d)-$SOC-$IP}
-AREAS=${AREAS:-sys,fs,enc,osd,ivs,audio,isp,su}
+AREAS=${AREAS:-sys,fs,enc,osd,ivs,audio,isp,su,cases}
 T40_MASK=${T40_MASK:-cdff}
 lc=$(echo "$SOC" | tr A-Z a-z)
 export SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-/run/user/1000/ssh-cam.sock}

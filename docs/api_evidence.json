@@ -446,13 +446,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -538,13 +538,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_DelSensor": {
@@ -615,13 +615,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -692,13 +692,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -769,13 +769,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -846,13 +846,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -923,13 +923,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -1054,12 +1054,12 @@
   "ISP_Get/SetSensorRegister": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
+    "T23": "rt",
     "T30": "?",
-    "T31": "aud",
+    "T31": "err",
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
@@ -1097,7 +1097,14 @@
      "r†"
     ]
    },
-   "note": "T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was \"There isn't sensor!\"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35)"
+   "note": "T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was \"There isn't sensor!\"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35)",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
+    "T31": "FAIL apitest agg47-cases 2026-10-26 .26: ISP_GetSensorRegister: ret=0 chip id regs 0x3107/0x3108 = 0x0404 (sc2336 expects 0xcb3a); ISP_SetSensorRegister: ret=0 rt: same value 0x04 written to the read-only id reg 0x3107, read back 0x3107, frames flow"
+   }
   },
   "ISP_GetCameraInputMode": {
    "area": "ISP tuning",
@@ -1238,13 +1245,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -1458,12 +1465,12 @@
   "ISP_Tuning_DisableMovestate": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "err",
+    "T20": "err",
+    "T21": "rt",
     "T23": "no-op",
-    "T30": "?",
-    "T31": "host",
+    "T30": "qemu",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1489,7 +1496,14 @@
      "r†"
     ]
    },
-   "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control"
+   "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control",
+   "ref": {
+    "T10": "FAIL apitest agg47-cases 2026-10-26 .31: ret=-1 rt: disabled again, frames flow (1)",
+    "T20": "FAIL apitest agg47-cases 2026-10-26 .107: ret=-1 rt: disabled again, frames flow (1)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
+    "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+   }
   },
   "ISP_Tuning_EnableDRC": {
    "area": "ISP tuning",
@@ -1550,12 +1564,12 @@
   "ISP_Tuning_EnableMovestate": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "err",
+    "T20": "err",
+    "T21": "rt",
     "T23": "no-op",
     "T30": "?",
-    "T31": "host",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -1581,7 +1595,13 @@
      "r†"
     ]
    },
-   "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control"
+   "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control",
+   "ref": {
+    "T10": "FAIL apitest agg47-cases 2026-10-26 .31: ret=-1 rt: enabled, frames flow before/after (1/1); ISP state is internal",
+    "T20": "FAIL apitest agg47-cases 2026-10-26 .107: ret=-1 rt: enabled, frames flow before/after (1/1); ISP state is internal",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_Get/SetAntiFlickerAttr": {
    "area": "ISP tuning",
@@ -1774,8 +1794,8 @@
   "ISP_Tuning_Get/SetColorfxMode": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "dev",
     "T23": "n.a.",
     "T30": "?",
@@ -1802,7 +1822,12 @@
    "note": "T21: B/W, negative and vivid change the picture (imgfx); SEPIA works (beyond vendor, was -1): CCM saturation 0 plus a tinted CSC matrix, dU/dV +10/+9 and +17/+19 in two runs; T10/T20 re-test pending (RC imgfx ran in the dark)",
    "better": [
     "T21"
-   ]
+   ],
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24"
+   }
   },
   "ISP_Tuning_Get/SetContrast": {
    "area": "ISP tuning",
@@ -2187,12 +2212,12 @@
   "ISP_Tuning_Get/SetHiLightDepress": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -2232,8 +2257,11 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T31": "apitest agg47-cases 2026-10-26 .26"
    }
   },
   "ISP_Tuning_Get/SetISPCSCAttr": {
@@ -2476,9 +2504,9 @@
   "ISP_Tuning_Get/SetIntegrationTime": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
+    "T10": "dev",
     "T20": "dev",
-    "T21": "dev",
+    "T21": "err",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -2501,7 +2529,12 @@
      "t"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ISP_Tuning_GetIntegrationTime: ret=0 mode 0 it 0 max 0; read back manual 30 lines: NO; ISP_Tuning_SetIntegrationTime: ret=0 (gain caps pinned to 1) 30 lines Y 3.5 -> 240 lines Y 31.3 via SetExpr manual (AE out of the loop; GetExpr after 30 lines: 30); AE overrides IntegrationTime alone; picture  res"
+   }
   },
   "ISP_Tuning_Get/SetMask": {
    "area": "ISP tuning",
@@ -2800,11 +2833,11 @@
   "ISP_Tuning_Get/SetSinterDnsAttr": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
     "T23": "n.a.",
-    "T30": "?",
+    "T30": "qemu",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
@@ -2825,7 +2858,13 @@
      "p†"
     ]
    },
-   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build"
+   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+   }
   },
   "ISP_Tuning_Get/SetStatisConfig": {
    "area": "ISP tuning",
@@ -2849,11 +2888,11 @@
   "ISP_Tuning_Get/SetTemperDnsAttr": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
     "T23": "n.a.",
-    "T30": "?",
+    "T30": "qemu",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
@@ -2874,7 +2913,13 @@
      "p†"
     ]
    },
-   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build"
+   "note": "T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+   }
   },
   "ISP_Tuning_Get/SetTmoCurve": {
    "area": "ISP tuning",
@@ -2957,15 +3002,19 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "err",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "host"
+    "T41": "dev"
    },
-   "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk"
+   "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "ref": {
+    "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=-1 read",
+    "T41": "apitest agg47-cases 2026-10-26 .34"
+   }
   },
   "ISP_Tuning_GetBlcAttr": {
    "area": "ISP tuning",
@@ -3209,9 +3258,9 @@
   "ISP_Tuning_GetSceneMode": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -3220,7 +3269,12 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24"
+   }
   },
   "ISP_Tuning_GetSensorAttr": {
    "area": "ISP tuning",
@@ -3504,13 +3558,13 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "err",
     "T30": "n.a.",
     "T31": "host",
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "host"
+    "T41": "err"
    },
    "used": {
     "T23": [
@@ -3532,7 +3586,11 @@
      "r†"
     ]
    },
-   "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk"
+   "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "ref": {
+    "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=0 rt: same value written (set ret 0), read back equal",
+    "T41": "FAIL apitest agg47-cases 2026-10-26 .34: ret=0 rt: same value written (set ret 0), read back DIFFERENT"
+   }
   },
   "ISP_Tuning_SetBrightness": {
    "area": "ISP tuning",
@@ -3637,9 +3695,9 @@
   "ISP_Tuning_SetFWFreeze": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -3648,7 +3706,12 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetFixedContraster": {
    "area": "ISP tuning",
@@ -3729,18 +3792,24 @@
   "ISP_Tuning_SetISPProcess": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "n.a.",
-    "T30": "?",
+    "T30": "qemu",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+   }
   },
   "ISP_Tuning_SetMaskBlock": {
    "area": "ISP tuning",
@@ -3860,9 +3929,9 @@
   "ISP_Tuning_SetSceneMode": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "no-op",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "err",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -3885,7 +3954,12 @@
      "t"
     ]
    },
-   "note": "T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design)"
+   "note": "T21: vendor kernel no-op (imgfx: no picture change, same on the vendor stack by design)",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ret=0 readback ok; base Y113.7 H19.59 C31.8; mode 8: Y101.8 H19.28 C31.3, back to mode 0 NOT RECOVERED (Y101.2 after 8 s); mode 13: Y101.2 H19.24 C31.4, back to mode 0 NOT RECOVERED (Y101.2 after 8 s); mode 11: Y101.2 H19.21 C31.4, back to mode 0 NOT RECOVERED (Y101.2 after 8 s)"
+   }
   },
   "ISP_Tuning_SetSensorFPS": {
    "area": "ISP tuning",
@@ -4096,9 +4170,9 @@
   "ISP_Tuning_SetTemperDnsCtl": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "aud",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
     "T23": "n.a.",
     "T30": "cache",
     "T31": "n.a.",
@@ -4107,7 +4181,12 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test"
+   "note": "T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetTemperStrength": {
    "area": "ISP tuning",
@@ -4178,16 +4257,16 @@
   "ISP_Tuning_SetVideoDrop": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "host",
-    "T23": "host",
+    "T10": "rt",
+    "T20": "rt",
+    "T21": "rt",
+    "T23": "rt",
     "T30": "?",
-    "T31": "host",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
     "T40": "?",
-    "T41": "host"
+    "T41": "rt"
    },
    "used": {
     "T10": [
@@ -4221,7 +4300,15 @@
      "r†"
     ]
    },
-   "note": "all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule"
+   "note": "all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
+    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
+    "T41": "apitest agg47-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SwitchBin": {
    "area": "ISP tuning",
@@ -4253,12 +4340,12 @@
   "ISP_Tuning_WaitFrame": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "host",
-    "T23": "host",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "err",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -4284,7 +4371,14 @@
      "r†"
     ]
    },
-   "note": "T10+T20+T21: waits for the frame end (agg-25; T20 ms, not jiffies); T23: stock 24-byte block, driver routed (agg-25), no device test"
+   "note": "T10+T20+T21: waits for the frame end (agg-25; T20 ms, not jiffies); T23: stock 24-byte block, driver routed (agg-25), no device test",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ret=0 two waits ret 0/0, frame count 0 -> 0",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26"
+   }
   },
   "ISP_Tuning_WaitFrameDone": {
    "area": "ISP tuning",
@@ -4298,7 +4392,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "host"
+    "T41": "err"
+   },
+   "ref": {
+    "T41": "FAIL apitest agg47-cases 2026-10-26 .34: ret=-1 two waits ret -1/-1, frame count 0 -> 0"
    }
   },
   "ISP_WDR_ENABLE": {
@@ -4480,8 +4577,8 @@
   "ISP_Tuning_Awb_Get/SetCwfShift": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "host",
-    "T20": "host",
+    "T10": "rt",
+    "T20": "rt",
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "host",
@@ -4491,7 +4588,11 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl"
+   "note": "T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl",
+   "ref": {
+    "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_Awb_Get/SetRgbCoefft": {
    "area": "AE / AWB / AF",
@@ -5504,9 +5605,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -5521,7 +5622,11 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†"
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†",
+   "ref": {
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26"
+   }
   },
   "ISP_Tuning_GetAeLuma": {
    "area": "AE / AWB / AF",
@@ -5937,9 +6042,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "rt",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -5953,7 +6058,11 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified"
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
+   "ref": {
+    "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
+    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_SetAe_IT_MAX": {
    "area": "AE / AWB / AF",
@@ -9170,13 +9279,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9266,13 +9375,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9343,13 +9452,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9420,13 +9529,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9679,13 +9788,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -9830,13 +9939,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -16142,39 +16251,49 @@
   "Log_Get_Option": {
    "area": "System",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "host",
-    "T41": "host"
+    "T41": "dev"
    },
    "ref": {
     "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "apitest agg47-cases 2026-10-26 .34",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26"
    }
   },
   "Log_Set_Option": {
    "area": "System",
    "cells": {
-    "T10": "host",
-    "T20": "host",
-    "T21": "host",
-    "T23": "host",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "host",
-    "T41": "host"
+    "T41": "dev"
    },
    "ref": {
     "T40": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "apitest agg47-cases 2026-10-26 .34",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26"
    }
   },
   "SU_ADC_DisableChn": {
@@ -17033,13 +17152,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17378,13 +17497,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T10": "apitest agg47-cases 2026-10-26 .31",
+    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T21": "apitest agg47-cases 2026-10-26 .24",
+    "T23": "apitest agg47-cases 2026-10-26 .30",
+    "T31": "apitest agg47-cases 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47-cases 2026-10-26 .34"
    }
   },
   "System_MemPoolFree": {
