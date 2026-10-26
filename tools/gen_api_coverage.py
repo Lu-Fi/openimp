@@ -470,7 +470,7 @@ class Model:
                         cls = "s-miss"
                     else:
                         cls = "s-bug"
-                tip = "%s %s: %d work (device-tested or vendor no-op), %d implemented not device-tested, %d gaps, %d unknown, of %d vendor functions" % (
+                tip = "%s %s: %d work (device-tested, API round trip or vendor no-op; %d of them round trip only), %d implemented not device-tested, %d gaps, %d unknown, of %d vendor functions" % (
                     s, a, st["ok"], st["rt"], st["wip"], st["gap"], st["unk"], st["total"])
                 tds.append('<td class="c %s" title="%s"><b>%s</b><br><small>%s</small></td>' % (cls, esc(tip), big, esc(small)))
             rows.append('<tr%s><td>%s</td>%s</tr>' % (' class="sep"' if a == "all" else "",
