@@ -15,6 +15,9 @@ import base64, gzip, os, re, socket, sys, time
 
 a = sys.argv[1:]
 outdir = "."
+nopush = "--nopush" in a           # the binary is already in the guest (/tmp/at/apitest from an earlier push)
+if nopush:
+    a.remove("--nopush")
 if "--outdir" in a:
     i = a.index("--outdir"); outdir = a[i + 1]; del a[i:i + 2]
 port, soc, sensor, i2c, W, H, binary = a[:7]
@@ -56,9 +59,9 @@ def sh(cmd, maxt=300, idle=60):
 
 s.sendall(b"\x03\n"); rd(1, 3)
 sh("stty -echo; mkdir -p /tmp/at; /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 2; dmesg -c >/dev/null; free | head -2", 60, 5)
-data = base64.b64encode(gzip.compress(open(binary, "rb").read(), 9)).decode()
+data = base64.b64encode(gzip.compress(open(binary, "rb").read(), 9)).decode() if not nopush else ""
 pace = float(os.environ.get("QR_PACE", "0.03"))
-for attempt in range(3):
+for attempt in range(0 if nopush else 3):
     s.sendall(b": > /tmp/at/b.b64\n"); rd(0.3, 2)
     for i in range(0, len(data), 150):
         s.sendall(("echo %s >> /tmp/at/b.b64\n" % data[i:i + 150]).encode()); rd(pace, 1)
@@ -68,7 +71,7 @@ for attempt in range(3):
         break
     print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:] , len(data) + (len(data) + 149) // 150))
     pace *= 3
-out, rc = sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/apitest && chmod 755 /tmp/at/apitest && rm /tmp/at/b.b64; ls -l /tmp/at/apitest", 120, 10)
+out, rc = sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/apitest && chmod 755 /tmp/at/apitest && rm /tmp/at/b.b64; ls -l /tmp/at/apitest", 120, 10) if not nopush else sh("ls -l /tmp/at/apitest", 20, 5)
 print("pushed:", out.strip().splitlines()[-2:] if out.strip() else out)
 res = []
 for c in cases:

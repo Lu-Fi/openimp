@@ -791,6 +791,8 @@ def parse_apitest(path, acc):
             continue
         fn, ret, v, det = m.group(1), m.group(2), m.group(3), (m.group(4) or "")
         v = {"N/A": "NA"}.get(v, v)
+        if v == "PASS" and re.match(r"IMP_(AO_|AI_\w*Aec|AI_GetFrameAndRef)", fn):
+            v = "RT"                  # silence-only AO/AEC runs (user decision 2026-10-26): return codes and round trips, no audible effect
         if v == "PASS" and re.search(r"(^|\s)rt: ", det):
             v = "RT"                  # at_cases.c: call + readback ok, no picture/state effect expected or measurable
         acc.add(fn, v, ("ret=%s %s" % (ret, det)).strip(), "apitest")
@@ -803,6 +805,8 @@ def parse_report(path, acc):
     except ValueError:
         return                          # truncated by a watchdog kill: the .log fallback covers it
     for e in rep.get("funcs", []):
+        if e["v"] == "PASS" and re.match(r"IMP_(AO_|AI_\w*Aec|AI_GetFrameAndRef)", e["fn"]):
+            e["v"] = "RT"             # silence-only AO/AEC (see parse_apitest)
         acc.add(e["fn"], e["v"], ("ret=%s %s" % (e["ret"], e["detail"])).strip(), "apitest")
 
 
