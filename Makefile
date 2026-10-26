@@ -21,7 +21,7 @@ ifdef OPENIMP_T23_HELIX_BRIDGE
 export OPENIMP_T23_HELIX_BRIDGE
 endif
 
-.PHONY: all t20 t21 t23 t30 t31 t40 t41 check export-check release-check clean install
+.PHONY: all t20 t21 t23 t30 t31 t40 t41 check export-check release-check clean install apitest
 
 all:
 	./build-for-device.sh $(PLATFORM)
@@ -62,6 +62,15 @@ check:
 	$(MAKE) -C tests/testpattern check
 	$(MAKE) -C tests/fallback check
 	$(MAKE) -C tests/device check
+
+# Device test app (tools/apitest): make apitest PLATFORM=T31 TOOLCHAIN_PREFIX=<host/bin/mipsel-linux> APITEST_HEADERS=<ingenic-headers root>
+# [DESTDIR=<dir>] builds build/<soc>/openimp-apitest against the libimp built before (T10: PLATFORM=T20 APITEST_SOC=T10) and, with
+# DESTDIR set, installs it as $(DESTDIR)$(PREFIX)/bin/openimp-apitest.  See tools/apitest/README.md.
+apitest:
+	PLATFORM=$(PLATFORM) APITEST_SOC=$(APITEST_SOC) TOOLCHAIN_PREFIX=$(TOOLCHAIN_PREFIX) APITEST_HEADERS=$(APITEST_HEADERS) tools/apitest/build-device.sh
+ifneq ($(DESTDIR),)
+	install -D -m 755 "build/$(shell printf '%s' '$(PLATFORM)' | tr '[:upper:]' '[:lower:]')/openimp-apitest" "$(DESTDIR)$(PREFIX)/bin/openimp-apitest"
+endif
 
 # Built libimp.so exports vs vendor export lists vs streamer-used IMP_ names (tools/export-check/README.md)
 # Status data (docs/status/*): schema validation + FEATURE_MATRIX.md is what the data produces (needs PyYAML)

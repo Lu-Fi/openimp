@@ -117,3 +117,18 @@ the picture effects, and only for cases that were QEMU-safe.  Anything that cras
 never runs on a camera.  A SoC without a camera (T30) gets evidence level `qemu` (matrix 🔧+, "API round trip in QEMU, no camera").
 History: `IMP_ISP_Tuning_SetISPProcess(DISABLE)` (= ISP bypass for this driver) wedged the T10 camera until reboot (agg47-cases); the case now
 writes ENABLE only (`APITEST_PROCESS_BYPASS=1` runs the wedging value, QEMU only).
+
+## On the camera (thingino package `openimp`, option `BR2_PACKAGE_OPENIMP_APITEST`)
+
+`make apitest PLATFORM=<SoC> TOOLCHAIN_PREFIX=<host/bin/mipsel-linux> APITEST_HEADERS=<ingenic-headers> [DESTDIR=<dir>]` builds
+`build/<soc>/openimp-apitest` against the libimp just built (`tools/apitest/build-device.sh`; T10: `PLATFORM=T20 APITEST_SOC=T10`) and,
+with `DESTDIR`, installs it as `$(DESTDIR)$(PREFIX)/bin/openimp-apitest`. In thingino: enable *OpenIMP device test app* (default off),
+build, flash, then on the camera (streamer stopped, nothing else using the ISP, no sound is played, nothing is written to flash):
+
+    /etc/init.d/S95timps stop            # or the streamer of the image
+    openimp-apitest --json /tmp/apitest.json SENSOR I2C_ADDR W H sys,fs,enc,osd,ivs,audio,isp,su,cases
+    # export APITEST_AO=0 first: no speaker call at all
+    scp root@CAMERA:/tmp/apitest.json .  # then rm /tmp/apitest.json, restart the streamer
+
+The sensor arguments are those of the table above (see `/proc/jz/sensor/name`). Send `apitest.json` (one report: function ->
+PASS/FAIL/RT/NA/SKIP + detail) with the issue or pull request; `results2json.py --report` and `merge_evidence.py` consume it.
