@@ -8,6 +8,18 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/gate-1026` (2026-10-26)
+
+- **T40 SetMaxStreamCnt on a created channel** fails and keeps the count, like the T40 1.3.1 libimp (channel index
+  >= 0 -> -1) and T31/T41 already did (host check in the shared bufshare test).
+- **apitest, T41 encoder read-back:** the T41 RC/GOP/frame-rate setters store a pending value that the vendor encoder
+  applies before the next picture (OpenIMP: deferred read-back since 0b89cc9b), and GetChnGopAttr reports the IDR
+  distance uGopLength x uMaxSameSenceCnt. The test now reads back after two pictures and expects the product; the
+  2026-10-26 FAILs on .34 (FrmRate 15/1, BitRate 512, GopLength 60, QpBounds 20..45) were the immediate read-back,
+  not a regression (output rate 10.0 fps after SetChnFrmRate 10/1 in the same run). Re-run .34: all PASS.
+- **apitest, T40:** Awb_GetRgbCoefft is called again (driver fix on open-tx-isp `claude/gate-1026`; older T40 drivers:
+  `APITEST_SKIPFN=IMP_ISP_Tuning_Awb_GetRgbCoefft`).
+
 ## Branch `claude/gate-1026-enc` (2026-10-26)
 
 - **Release-gate encoder FAILs of the agg47 apitest closed as vendor-equal (test expectations corrected, no library change):** vendor libimp disassembly (T10 3.12.0, T21 1.0.33, T23 1.3.0 from `weak-imports/vendor-libs`) and the device runs agree. `SetChnDenoise` T10/T20/T21: the CreateChn enable switch stays as created, so on a channel created with denoise off the type is forced to 0, IQp/PQp are kept and Get leaves `.enable` untouched (T21 additionally keeps type 0 whatever was created, mode 4). `SetSuperFrameCfg` T10: re-encode only like T20 (the test sent DISCARD, which the OEM i264e parameter 13 path of this encoder does not take). `Get/SetChangeRef` T21: 1.0.33 `GetChangeRef` fails on a created channel (logs "unsupport to change ref channel"), Set returns 0. `SetChnROI` T23: 1.3.0 stores the corners `sra 4` and returns them `sll 4` like T10/T20/T21, so (64,64)-(319,255) reads back (64,64)-(304,240). PASS lines on T10 .31, T20 .107, T21 .24, T23 .30 (`1026b-*-enc` runs, enc area, 96/96/101/126 PASS, 0 FAIL).

@@ -4257,9 +4257,10 @@ int IMP_Encoder_SetMaxStreamCnt(int channel, int count)
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
-#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
     /* Stock: the count is taken when the channel is created; on a created
-     * channel the call logs an error and fails (any codec, JPEG included). */
+     * channel the call logs an error and fails (any codec, JPEG included;
+     * T40 1.3.1 libimp: channel index >= 0 -> -1, count unchanged). */
     if (ch->created) {
         pthread_mutex_unlock(&ch->lock);
         return -1;

@@ -381,6 +381,11 @@ int main(void)
         CHECK(IMP_Encoder_SetMaxStreamCnt(4, 3) == 0 &&
               IMP_Encoder_CreateChn(4, &video) == 0 && stub_stream_count == 3,
               "a set count wins (%d)", stub_stream_count);
+        /* vendor (T31 1.1.6, T40 1.3.1, T41): the count is fixed at CreateChn,
+         * a created channel refuses the call and keeps its count */
+        CHECK(IMP_Encoder_SetMaxStreamCnt(4, 2) == -1 &&
+              IMP_Encoder_GetMaxStreamCnt(4, &c) == 0 && c == 3,
+              "SetMaxStreamCnt on a created channel refused (count %d)", c);
         CHECK(IMP_Encoder_DestroyChn(4) == 0, "destroy 4 (count 3)");
         stub_bs_fit = 0;
         CHECK(IMP_Encoder_CreateChn(4, &video) == (int)0x80048008u &&

@@ -202,10 +202,9 @@ void t_isp(void)
 #if HAS_IMP_ISP_Tuning_GetWB_GOL_Statis
     ISPGET(IMP_ISP_Tuning_GetWB_GOL_Statis, IMPISPWB, "rgain %u bgain %u", p->rgain, p->bgain)
 #endif
-#if defined(APITEST_T40)
-    /* oopses the T40 driver (agg47 open-tx-isp 8d3504c8, cid 0x0800009b, epc c03d1920, 2026-10-26): recorded as a FAIL by hand */
-    rep(LBL("IMP_ISP_Tuning_Awb_GetRgbCoefft"), 0, V_SKIP, "not called: oopses the T40 driver (cid 0x0800009b)");
-#elif HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft
+/* T40: oopsed the driver up to open-tx-isp 8d3504c8 (agg47, cid 0x0800009b, epc c03d1920); fixed on
+ * claude/gate-1026 - on older T40 drivers run with APITEST_SKIPFN=IMP_ISP_Tuning_Awb_GetRgbCoefft */
+#if HAS_IMP_ISP_Tuning_Awb_GetRgbCoefft
 # ifdef PLATFORM_T41
     ISPGET(IMP_ISP_Tuning_Awb_GetRgbCoefft, IMPISPCoefftWb, "r %u g %u b %u", p->rgb_coefft_wb_r, p->rgb_coefft_wb_g, p->rgb_coefft_wb_b)
 # else

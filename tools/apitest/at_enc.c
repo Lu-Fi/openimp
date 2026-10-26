@@ -39,6 +39,19 @@
 
 static const char *cname[] = { "H264", "H265", "JPEG" };
 
+/* T41 vendor libimp: the RC/GOP/frame-rate setters only store a pending value; the encoder applies it
+ * before the next picture and the getters show it from then on (audit T41_RCPARAMS_1024: vendor
+ * GetChnAttrRcMode right after SetChnQpBoundsPerFrame still returned the old window).  OpenIMP keeps the
+ * same deferred read-back (rb_hold), so the read-back is checked after two more pictures. */
+#if defined(PLATFORM_T41)
+# define RB_SETTLE(chn, codec) pull((chn), (codec), 2, 0, 0, &si, 1500)
+/* T41 vendor read-back of the GOP length: the IDR distance uGopLength * uMaxSameSenceCnt */
+# define GOP_RB(len, same) ((len) * ((same) > 1 ? (same) : 1))
+#else
+# define RB_SETTLE(chn, codec) do { } while (0)
+# define GOP_RB(len, same) (len)
+#endif
+
 /* quiet-after-first reporting: first=1 prints the line, later calls print only failures */
 #define QR0(f, r, first, ...) do { if ((first) || (r) != 0) RET0(f, r, __VA_ARGS__); } while (0)
 
@@ -484,6 +497,7 @@ static void live_common(int chn, int codec)
         int64_t t0, t1;
 
         r = IMP_Encoder_SetChnFrmRate(chn, &nf);
+        RB_SETTLE(chn, codec);
         NEED(IMP_Encoder_GetChnFrmRate) {
             r2 = IMP_Encoder_GetChnFrmRate(chn, f);
             gchk(f);
@@ -514,6 +528,7 @@ static void live_common(int chn, int codec)
 
             *rc_bitrate(rc, codec) = want;
             r2 = IMP_Encoder_SetChnAttrRcMode(chn, rc);
+            RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
             CHECK(IMP_Encoder_SetChnAttrRcMode, r2, r == 0 && *rc_bitrate(rc2, codec) == want, "bitrate 384 kbit/s, read back %u", *rc_bitrate(rc2, codec));
             *rc_bitrate(rc, codec) = (uint32_t)BITRATE;
@@ -526,6 +541,7 @@ static void live_common(int chn, int codec)
             G(IMPEncoderAttrRcMode, rc2);
             int r2 = IMP_Encoder_SetChnBitRate(chn, 400 * BR_SET_UNIT, 400 * BR_SET_UNIT);
 
+            RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
             CHECK(IMP_Encoder_SetChnBitRate, r2, r == 0 && *rc_bitrate(rc2, codec) == (uint32_t)(400 * BR_UNIT), "400 kbit/s, read back %u", *rc_bitrate(rc2, codec));
             IMP_Encoder_SetChnBitRate(chn, 512 * BR_SET_UNIT, 512 * BR_SET_UNIT);
@@ -557,15 +573,24 @@ static void live_common(int chn, int codec)
         G(IMPEncoderGopAttr, g2);
         int r2;
 
+        RB_SETTLE(chn, codec);   /* pending values of the RC tests above */
         r = IMP_Encoder_GetChnGopAttr(chn, g); gchk(g);
-        CHECK(IMP_Encoder_GetChnGopAttr, r, g->uGopLength == EGOP, "mode 0x%x length %u (created %d) maxSameSence %u", (unsigned)g->uGopCtrlMode, g->uGopLength, EGOP, g->uMaxSameSenceCnt);
+        CHECK(IMP_Encoder_GetChnGopAttr, r, g->uGopLength == GOP_RB(EGOP, g->uMaxSameSenceCnt), "mode 0x%x length %u (created %d) maxSameSence %u", (unsigned)g->uGopCtrlMode, g->uGopLength, EGOP, g->uMaxSameSenceCnt);
         NEED(IMP_Encoder_SetChnGopLength) {
             r2 = IMP_Encoder_SetChnGopLength(chn, 25);
+            RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnGopAttr(chn, g2); gchk(g2);
-            CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == 25, "25, read back %u", g2->uGopLength);
+            CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB(25, g2->uMaxSameSenceCnt), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
         }
         NEED(IMP_Encoder_SetChnGopAttr) {
+#if defined(PLATFORM_T41)
+            /* restore the created length: the read-back is the product, the setter takes the length */
+            if (g->uMaxSameSenceCnt > 1)
+                g->uGopLength /= g->uMaxSameSenceCnt;
+#endif
             r2 = IMP_Encoder_SetChnGopAttr(chn, g);
+            RB_SETTLE(chn, codec);
+            g->uGopLength = GOP_RB(g->uGopLength, g->uMaxSameSenceCnt);
             r = IMP_Encoder_GetChnGopAttr(chn, g2); gchk(g2);
             CHECK(IMP_Encoder_SetChnGopAttr, r2, r == 0 && g2->uGopLength == g->uGopLength && g2->uGopCtrlMode == g->uGopCtrlMode, "restore attr, length %u", g2->uGopLength);
         }
@@ -576,6 +601,7 @@ static void live_common(int chn, int codec)
 #if HAS_IMP_Encoder_SetChnQpBounds
     NEED(IMP_Encoder_SetChnQpBounds) {
         r = IMP_Encoder_SetChnQpBounds(chn, 22, 44);
+        RB_SETTLE(chn, codec);
 #if !defined(PLATFORM_T41)
         {
             G(IMPEncoderAttrRcMode, rc);
