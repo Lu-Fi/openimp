@@ -291,6 +291,14 @@ For streamers and test setups: `#include "openimp_testpattern.h"`, `OpenIMP_Test
 
 Mode 5 (T23): known picture **inside** the ISP. `OpenIMP_TestPattern_Set(5, NULL)` writes the pattern into the ISP's temporal-NR reference frame every frame and holds the reference weight at 1.0, so streamers can test their own chain behind the ISP front half (MDNS, BCSH, scaler, encoder, OSD) with a known input, with no driver change and no RAW access; sensor frames keep flowing. Complements mode 4 (sensor pattern = whole ISP, fixed content). The vendor library has no equivalent. Status: T23 device-tested (luma SSIM 0.94-0.96 vs the ideal picture, chroma partly); other SoCs return ENOTSUP.
 
+### 6.2 Fallback frame when the sensor stops (extension, T40/T41, default OFF)
+
+Without frames from the ISP (sensor cable, sensor or ISP stall) the vendor library simply delivers nothing: the encoder starves and every stream stops. With the fallback armed, OpenIMP generates NV12 frames itself at the channel rate when no real frame has arrived for 2 s while a consumer waits: the test pattern with a black band "NO SENSOR SIGNAL", a 16 bit frame counter (top left) and a blinking square (top right). Encoder, JPEG and streamers stay up on a live stream; the first real frame switches back (time stamps stay monotonic). The library logs `no sensor signal for 2000 ms (error 67, ...)` and `sensor signal is back ... (N generated)`.
+
+- Arm: `OPENIMP_FALLBACK_FRAME=1` (all channels) or `OpenIMP_FrameSource_SetFallback(chn, on)` at any time; `OpenIMP_FrameSource_GetFallback(chn, &state)` reads enabled/active/error (`ENOLINK` = 67 while synthetic)/generated/activations/age of the last real frame. Dwell time `OPENIMP_FALLBACK_TIMEOUT_MS` (200..60000, default 2000). Detect with the symbol `OpenIMP_Cap_FallbackFrame`. Header `openimp_fallback.h`. Default OFF: the vendor has no such behaviour; the default is the user's decision.
+- Cost/limits: a buffer of its own (about 1.5 x width x height) is taken from video memory only while the fallback runs; with the fallback armed a worker thread per channel performs the blocking frame dequeue so that `GetFrame` can time out (T41 frame channel DQBUF blocks in the kernel); not armed = vendor code path unchanged. Channels with the I2D pass (rotation/flip), IVS and SnapFrame get no synthetic frames. T20-T31 not covered.
+- Status: T41 (sc5336, 1280x720 H.264, sensor stream stopped/started through `IMP_ISP_SetSensorRegister`): 4 s real 15.0 fps, stopped without fallback 0 frames (control), armed: fallback after 2.0 s at 15.0 fps (105 frames in 9 s incl. the dwell time, counter in the pictures consecutive without gaps), real frames back at 15.0 fps, switch off while active works, 0 oops; T40 builds (host test of the state machine and the picture in `make check`, `tests/fallback`).
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**
@@ -298,6 +306,7 @@ set in production.
 
 | Variable | Purpose | Default | Class |
 |---|---|---|---|
+| `OPENIMP_FALLBACK_FRAME` (`_TIMEOUT_MS`) | `1` arms the fallback frame on every FrameSource channel (T40/T41, section 6.2); dwell time without a real frame in ms, 200..60000 | off, 2000 | user-facing (opt-in) |
 | `OPENIMP_HELIX_JPEG_BUSY_WAIT_MS` | Helix JPEG (T20/T21/T30): how long a JPEG that may be replaced by the channel's last picture waits for the VPU before it is skipped (0 = never wait). Used to force the reuse path for `OpenIMP_Encoder_StreamIsReused` tests | 200 | debug-only |
 | `OPENIMP_IVS_VENDOR_ORDER` | `1` posts the IVS result before the channel-free semaphore as the vendor does (a frame fed right after the result is dropped as busy) | off | user-facing (opt-in) |
 | `OPENIMP_SU_SHUTDOWN` | `SU_Base_Shutdown`: unset or `reboot` = sync, then SIGTERM to init (busybox reboots); `poweroff` = SIGUSR2 (busybox powers off, opt-in); `vendor` = vendor behaviour (sync, SIGCHLD, which busybox init ignores, opt-in) | `reboot` | user-facing |

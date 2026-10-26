@@ -38,6 +38,9 @@
 #include "t40/p1_i2d.h"
 #include "openimp_testpattern_rt.h"
 #endif
+#include "openimp_fb_logic.h"
+#include <openimp_fallback.h>
+#include "imp_log_int.h"
 
 #define OPENIMP_P1_MAGIC        0x50315434U /* "P1T4" */
 #define OPENIMP_FS_CHANNELS     4
@@ -1634,6 +1637,398 @@ static uint64_t p1_monotonic_us(void)
     return (uint64_t)now.tv_sec * 1000000u + (uint64_t)now.tv_nsec / 1000u;
 }
 
+/* ---- fallback frame (include/openimp_fallback.h) ----
+ * No frame from the ISP for a while although a consumer waits: GetFrame
+ * delivers a synthetic NV12 frame (test pattern + "NO SENSOR SIGNAL") at the
+ * channel rate from a buffer of its own, and the first real frame ends it.
+ * State and buffer are per channel and guarded by the P1 lock; the picture
+ * is rendered with the lock dropped (one fallback frame out at a time). */
+struct p1_fb_buf {
+    uint32_t phys;
+    void *virt;
+    uint32_t size, pitch, lines;
+    int out;                        /* the consumer holds the frame */
+    int msg;                        /* message picture rendered */
+    int alloc_failed;
+    IMPFrameInfo frame;
+};
+
+const int OpenIMP_Cap_FallbackFrame __attribute__((visibility("default"))) = 1;
+
+static OpenIMPFb p1_fb[OPENIMP_FS_CHANNELS];
+static struct p1_fb_buf p1_fbb[OPENIMP_FS_CHANNELS];
+static int p1_fb_ready;
+/* time stamp of the last synthetic frame: real frames after a fallback stay above it */
+static int64_t p1_fb_ts_floor[OPENIMP_FS_CHANNELS];
+
+static void p1_fb_init_locked(void)
+{
+    const char *e;
+    uint32_t on, ms;
+    int i;
+
+    if (p1_fb_ready)
+        return;
+    p1_fb_ready = 1;
+    e = getenv("OPENIMP_FALLBACK_FRAME");
+    on = e && e[0] == '1' && !e[1];
+    e = getenv("OPENIMP_FALLBACK_TIMEOUT_MS");
+    ms = e ? openimp_fb_clamp_timeout(strtol(e, NULL, 0))
+           : OPENIMP_FB_TIMEOUT_MS_DEFAULT;
+    for (i = 0; i < OPENIMP_FS_CHANNELS; i++) {
+        openimp_fb_init(&p1_fb[i], on);
+        p1_fb[i].timeout_ms = ms;
+    }
+}
+
+/* Frees the fallback buffer unless the consumer still holds the frame (its
+ * ReleaseFrame frees it then). */
+static void p1_fb_free_locked(int channel)
+{
+    struct p1_fb_buf *b = &p1_fbb[channel];
+
+    if (b->out || !b->phys)
+        return;
+    (void)DMA_FreePhys(b->phys);
+    memset(b, 0, sizeof(*b));
+}
+
+/* A real frame arrived (P1 lock held).  Returns the number of synthetic
+ * frames of the fallback it ends, or -1 when none was active. */
+static int p1_fb_real_locked(int channel)
+{
+    OpenIMPFb *f = &p1_fb[channel];
+
+    p1_fb_init_locked();
+    if (!openimp_fb_real(f, p1_monotonic_us()))
+        return -1;
+    p1_fb_free_locked(channel);
+    return (int)f->generated;
+}
+
+static void p1_fb_log_back(int channel, int generated)
+{
+    IMP_LOG_WARN("FrameSource", "channel %d: sensor signal is back, "
+                 "fallback frames stopped (%d generated)", channel, generated);
+}
+
+static int p1_fb_frame(int channel, IMPFrameInfo **frame)
+{
+    struct openimp_fs_channel *chn = &p1.channels[channel];
+    OpenIMPFb *f = &p1_fb[channel];
+    struct p1_fb_buf *b = &p1_fbb[channel];
+    int spin;
+
+    for (spin = 0; spin < 2; spin++) {
+        uint64_t interval_us = 40000u, wait_us;
+        uint32_t w = 0, h = 0, pitch, lines, n = 0, size = 0;
+        int d, entered, render_msg, last_errno = 0;
+
+        lock_p1();
+        p1_fb_init_locked();
+        if (!chn->enabled || chn->i2d_on) {
+            unlock_p1();
+            return -1;
+        }
+        if (chn->attr.outFrmRateNum > 0 && chn->attr.outFrmRateDen > 0)
+            interval_us = 1000000ull * (uint32_t)chn->attr.outFrmRateDen /
+                          (uint32_t)chn->attr.outFrmRateNum;
+        d = openimp_fb_quiet(f, p1_monotonic_us(), interval_us, &wait_us,
+                             &entered);
+        last_errno = p1.last_errno;
+        if (entered) {
+            b->msg = 0;
+            b->alloc_failed = 0;
+        }
+        if (d == OPENIMP_FB_GEN) {
+            w = (uint32_t)chn->attr.picWidth;
+            h = (uint32_t)chn->attr.picHeight;
+            pitch = (w + 15u) & ~15u;
+            lines = (h + 15u) & ~15u;
+            size = pitch * lines + pitch * (h / 2u);
+            if (chn->buffer_count && chn->buffers[0].size > size)
+                size = chn->buffers[0].size;
+            if (b->out) {
+                d = OPENIMP_FB_NO;      /* the previous one is still out */
+            } else if (!b->phys) {
+                if (b->alloc_failed ||
+                    dma_alloc(size, "fallback", &b->phys, &b->virt) < 0) {
+                    b->phys = 0;
+                    d = OPENIMP_FB_NO;
+                } else {
+                    b->size = size;
+                    b->pitch = pitch;
+                    b->lines = lines;
+                    b->msg = 0;
+                }
+            }
+        }
+        render_msg = !b->msg;
+        if (d == OPENIMP_FB_GEN) {
+            n = f->counter++;
+            b->out = 1;
+            b->msg = 1;
+        }
+        unlock_p1();
+        if (entered)
+            IMP_LOG_ERR("FrameSource", "channel %d: no sensor signal for "
+                        "%u ms (error %d, last driver errno %d), delivering "
+                        "fallback frames", channel, f->timeout_ms,
+                        OPENIMP_FALLBACK_ERR_NO_SIGNAL, last_errno);
+        if (d == OPENIMP_FB_NO && !b->phys && !b->alloc_failed &&
+            f->active) {
+            b->alloc_failed = 1;
+            IMP_LOG_ERR("FrameSource", "channel %d: no video memory for the "
+                        "fallback frame (%u bytes), no frames", channel, size);
+        }
+        if (d == OPENIMP_FB_WAIT) {
+            usleep(wait_us > 200000u ? 200000u : (useconds_t)wait_us);
+            continue;
+        }
+        if (d != OPENIMP_FB_GEN)
+            return -1;
+
+        if (render_msg) {
+            openimp_fb_render_message(b->virt, w, h, b->pitch, b->lines);
+            (void)DMA_RmemFlushCache(b->virt, b->size, 1 /* WBACK */);
+        }
+        openimp_fb_render_tick(b->virt, w, h, b->pitch, b->lines, n);
+        if (!render_msg) {
+            (void)DMA_RmemFlushCache(b->virt, 32u * b->pitch, 1);
+            (void)DMA_RmemFlushCache((uint8_t *)b->virt + (size_t)b->pitch * b->lines,
+                                     16u * b->pitch, 1);
+        }
+        lock_p1();
+        if (!chn->enabled) {
+            b->out = 0;
+            p1_fb_free_locked(channel);
+            unlock_p1();
+            return -1;
+        }
+        memset(&b->frame, 0, sizeof(b->frame));
+        b->frame.index = 0x7fff;            /* no capture buffer; see ReleaseFrame */
+        b->frame.pool_idx = channel;
+        b->frame.width = w;
+        b->frame.height = h;
+#if defined(PLATFORM_T41)
+        b->frame.pixfmt = (uint32_t)chn->attr.pixFmt;
+        b->frame.direct_phyAddr = b->phys;
+#else
+        b->frame.pixfmt = 0;
+#endif
+        b->frame.size = b->size;
+        b->frame.phyAddr = b->phys;
+        b->frame.virAddr = (uint32_t)(uintptr_t)b->virt;
+        b->frame.pool = chn;
+        b->frame.timeStamp = IMP_System_GetTimeStamp();
+        if (b->frame.timeStamp <= p1_fb_ts_floor[channel])
+            b->frame.timeStamp = p1_fb_ts_floor[channel] + 1;
+        p1_fb_ts_floor[channel] = b->frame.timeStamp;
+#if defined(P1_CAPTURE_FEEDER)
+        chn->last_dequeue_us = p1_monotonic_us();
+#endif
+        *frame = &b->frame;
+        unlock_p1();
+        return 0;
+    }
+    return -1;
+}
+
+int OpenIMP_FrameSource_SetFallback(int channel, int on)
+{
+    int generated = -1;
+
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS) {
+        errno = EINVAL;
+        return -1;
+    }
+    lock_p1();
+    prepare_p1();
+    p1_fb_init_locked();
+    p1_fb[channel].enabled = on != 0;
+    if (!on && p1_fb[channel].active) {
+        generated = (int)p1_fb[channel].generated;
+        p1_fb[channel].active = 0;
+        p1_fb_free_locked(channel);
+    }
+    unlock_p1();
+    if (generated >= 0)
+        IMP_LOG_WARN("FrameSource", "channel %d: fallback frames switched off "
+                     "(%d generated)", channel, generated);
+    return 0;
+}
+
+int OpenIMP_FrameSource_GetFallback(int channel, OpenIMPFallbackState *state)
+{
+    OpenIMPFallbackState s;
+    uint64_t now = p1_monotonic_us();
+
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !state ||
+        state->size < sizeof(uint32_t)) {
+        errno = EINVAL;
+        return -1;
+    }
+    memset(&s, 0, sizeof(s));
+    s.size = sizeof(s);
+    lock_p1();
+    prepare_p1();
+    p1_fb_init_locked();
+    s.enabled = p1_fb[channel].enabled;
+    s.active = p1_fb[channel].active;
+    s.error = s.active ? OPENIMP_FALLBACK_ERR_NO_SIGNAL : 0;
+    s.timeout_ms = p1_fb[channel].timeout_ms;
+    s.generated = p1_fb[channel].generated;
+    s.activations = p1_fb[channel].activations;
+    s.last_real_age_ms = p1_fb[channel].last_real_us && now > p1_fb[channel].last_real_us
+        ? (uint32_t)((now - p1_fb[channel].last_real_us) / 1000u) : 0u;
+    unlock_p1();
+    memcpy(state, &s, state->size < sizeof(s) ? state->size : sizeof(s));
+    return 0;
+}
+
+/* ---- DQBUF with a time limit (fallback frame only) ----
+ * The T41 frame channel implements a blocking DQBUF: with the sensor
+ * stopped the consumer sleeps in the kernel and never gets back to GetFrame.
+ * With the fallback armed, one worker thread per channel does the blocking
+ * DQBUF and GetFrame waits for its result with a time limit; there is at
+ * most one DQBUF outstanding, and a result is kept for the next GetFrame.
+ * Without the fallback nothing of this runs.  DisableChn ends the worker
+ * (STREAMOFF wakes its DQBUF); a result of an older epoch is dropped. */
+struct p1_dqw {
+    pthread_mutex_t mu;
+    pthread_cond_t cv;
+    int started, want, done, rc, err, fd;
+    uint32_t epoch;
+    uint32_t words[TISP_BUFFER_WORDS];
+};
+static struct p1_dqw p1_dqw[OPENIMP_FS_CHANNELS] = {
+    [0 ... OPENIMP_FS_CHANNELS - 1] = {
+        PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0, 0, 0, 0, 0, -1, 0, {0} }
+};
+
+struct p1_dqw_arg { int channel; uint32_t epoch; };
+
+static void *p1_dqw_main(void *arg)
+{
+    struct p1_dqw_arg a = *(struct p1_dqw_arg *)arg;
+    struct p1_dqw *w = &p1_dqw[a.channel];
+    uint32_t words[TISP_BUFFER_WORDS];
+
+    free(arg);
+    openimp_thread_setnamef("oimp-fsdq-%d", a.channel);
+    pthread_mutex_lock(&w->mu);
+    for (;;) {
+        int rc, err, fd;
+
+        while (w->epoch == a.epoch && !w->want)
+            pthread_cond_wait(&w->cv, &w->mu);
+        if (w->epoch != a.epoch)
+            break;
+        memcpy(words, w->words, sizeof(words));
+        fd = w->fd;
+        pthread_mutex_unlock(&w->mu);
+        rc = ioctl(fd, TISP_VIDIOC_DQBUF, words);
+        err = rc < 0 ? errno : 0;
+        pthread_mutex_lock(&w->mu);
+        if (w->epoch != a.epoch)
+            break;                  /* the channel was disabled meanwhile */
+        memcpy(w->words, words, sizeof(words));
+        w->rc = rc;
+        w->err = err;
+        w->want = 0;
+        w->done = 1;
+        pthread_cond_broadcast(&w->cv);
+    }
+    pthread_mutex_unlock(&w->mu);
+    return NULL;
+}
+
+/* DQBUF with a limit.  0: words filled; -1 with errno EAGAIN: nothing yet
+ * (the request stays outstanding); other errno: the ioctl failed. */
+static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us)
+{
+    struct p1_dqw *w = &p1_dqw[channel];
+    struct timespec until;
+    int rc;
+
+    pthread_mutex_lock(&w->mu);
+    if (!w->started) {
+        struct p1_dqw_arg *arg = malloc(sizeof(*arg));
+        pthread_t th;
+        pthread_attr_t at;
+
+        if (!arg) {
+            pthread_mutex_unlock(&w->mu);
+            errno = ENOMEM;
+            return -1;
+        }
+        arg->channel = channel;
+        arg->epoch = w->epoch;
+        pthread_attr_init(&at);
+        pthread_attr_setdetachstate(&at, PTHREAD_CREATE_DETACHED);
+        pthread_attr_setstacksize(&at, 64u * 1024u);
+        if (pthread_create(&th, &at, p1_dqw_main, arg) != 0) {
+            pthread_attr_destroy(&at);
+            free(arg);
+            pthread_mutex_unlock(&w->mu);
+            errno = EAGAIN;
+            return -1;
+        }
+        pthread_attr_destroy(&at);
+        w->started = 1;
+        w->want = w->done = 0;
+    }
+    if (!w->want && !w->done) {
+        memcpy(w->words, words, sizeof(w->words));
+        w->fd = fd;
+        w->want = 1;
+        pthread_cond_broadcast(&w->cv);
+    }
+    clock_gettime(CLOCK_REALTIME, &until);
+    until.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
+    until.tv_sec += (time_t)(wait_us / 1000000u) + until.tv_nsec / 1000000000L;
+    until.tv_nsec %= 1000000000L;
+    while (!w->done) {
+        if (pthread_cond_timedwait(&w->cv, &w->mu, &until) != 0)
+            break;
+    }
+    if (!w->done) {
+        pthread_mutex_unlock(&w->mu);
+        errno = EAGAIN;
+        return -1;
+    }
+    memcpy(words, w->words, sizeof(w->words));
+    rc = w->rc;
+    w->done = 0;
+    if (rc < 0)
+        errno = w->err;
+    pthread_mutex_unlock(&w->mu);
+    return rc;
+}
+
+/* Once a worker exists it keeps doing the channel's DQBUF until DisableChn (a
+ * result it holds must not be lost when the fallback is switched off). */
+static int p1_dq_use_worker(int channel)
+{
+    return __atomic_load_n(&p1_fb[channel].enabled, __ATOMIC_RELAXED) ||
+           __atomic_load_n(&p1_dqw[channel].started, __ATOMIC_RELAXED);
+}
+
+/* The channel stops streaming: the worker ends once its DQBUF returns. */
+static void p1_dqw_stop(int channel)
+{
+    struct p1_dqw *w = &p1_dqw[channel];
+
+    pthread_mutex_lock(&w->mu);
+    if (w->started) {
+        w->epoch++;
+        w->started = 0;
+        w->want = w->done = 0;
+        pthread_cond_broadcast(&w->cv);
+    }
+    pthread_mutex_unlock(&w->mu);
+}
+
 /* No consumer for three frame intervals (100..500 ms): the channel is
  * idle and the feeder takes over at the full frame rate, so the move
  * algorithm (one result per skipFrameCnt frames) keeps the rate the
@@ -1849,6 +2244,8 @@ int IMP_FrameSource_EnableChn(int channel)
         goto done;
     trace_p1("P1_INNER STREAMON_END\n");
     chn->enabled = 1;
+    p1_fb_init_locked();
+    openimp_fb_arm(&p1_fb[channel], p1_monotonic_us());
 #if defined(P1_CAPTURE_FEEDER)
     chn->last_dequeue_us = p1_monotonic_us();
 #endif
@@ -1899,6 +2296,8 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
 #endif
     IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
+    int probed = 0;                 /* a DQBUF was tried and found nothing */
+    int fb_back = -1;               /* synthetic frames of a fallback this frame ends */
 #if defined(P1_CAPTURE_FEEDER)
     int snap_taken;
 #endif
@@ -1913,6 +2312,11 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
         unlock_p1();
         return -1;
     }
+    p1_fb_init_locked();
+    if (!p1_in_ivs_feeder)
+        openimp_fb_poll(&p1_fb[channel], p1_monotonic_us());
+    if (p1_fb[channel].active)
+        max_attempts = 1;           /* one probe, then the next fallback frame */
     unlock_p1();
     {
         uint32_t now_ms = p1_now_ms();
@@ -1962,21 +2366,32 @@ again:
                 continue;
             }
         }
+        probed = 1;
         memset(words, 0, sizeof(words));
         words[1] = TISP_BUF_TYPE_VIDEO_CAPTURE;
         words[12] = TISP_MEMORY_USERPTR;
         dqbuf_profile = openimp_profile_begin();
-        if (record_ioctl(chn->fd, TISP_VIDIOC_DQBUF, words) >= 0) {
+        if (p1_dq_use_worker(channel)
+                ? p1_dqbuf_timed(channel, chn->fd, words,
+                                 max_attempts * 1000u) >= 0
+                : record_ioctl(chn->fd, TISP_VIDIOC_DQBUF, words) >= 0) {
             openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_DQBUF,
                                 dqbuf_profile);
             break;
         }
         openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_DQBUF,
                             dqbuf_profile);
-        if (errno != EAGAIN && errno != ENODATA && errno != EINTR) {
+        if (errno != EAGAIN && errno != ENODATA && errno != EINTR &&
+            !p1_dq_use_worker(channel)) {
             openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT,
                                 wait_profile);
             return -1;
+        }
+        /* with the fallback armed any DQBUF failure counts as "no frame":
+         * a stopped sensor may answer with another errno */
+        if (p1_dq_use_worker(channel) && errno == EAGAIN) {
+            attempts = max_attempts;    /* the timed wait used the whole budget */
+            break;
         }
         if (attempts + 1 < max_attempts)
             usleep(1000);
@@ -1985,6 +2400,8 @@ again:
                           (uint64_t)attempts);
     if (attempts == max_attempts) {
         openimp_profile_end(OPENIMP_PROFILE_FRAME_SOURCE_WAIT, wait_profile);
+        if (probed && !p1_in_ivs_feeder && p1_fb_frame(channel, frame) == 0)
+            return 0;
         return -1;
     }
     index = words[0];
@@ -2071,6 +2488,7 @@ again:
     }
 #endif
     buffer->queued = 0;
+    fb_back = p1_fb_real_locked(channel);
     if (openimp_testpattern_mode() != 0)   /* EnableChn admits NV12 only */
         p1_test_pattern_fill(chn, buffer, channel);
     if (openimp_testpattern_mode() != 1 && openimp_testpattern_mode() != 2 &&
@@ -2148,6 +2566,11 @@ again:
 #else
     buffer->frame.timeStamp = IMP_System_GetTimeStamp();
 #endif
+    if (p1_fb_ts_floor[channel]) {
+        if (buffer->frame.timeStamp <= p1_fb_ts_floor[channel])
+            buffer->frame.timeStamp = p1_fb_ts_floor[channel] + 1;
+        p1_fb_ts_floor[channel] = buffer->frame.timeStamp;
+    }
     chn->frames_dequeued++;
     /* vendor: the cache exists only with a max delay (SetMaxDelay); a bare
      * SetChnFifoAttr must not make every GetFrame copy a frame */
@@ -2162,6 +2585,8 @@ again:
     *frame = &buffer->frame;
     cache_frame = buffer->frame;
     unlock_p1();
+    if (fb_back >= 0)
+        p1_fb_log_back(channel, fb_back);
     if (delay_cache > 0)
         fs_delay_store(channel, (uint32_t)delay_cache, &cache_frame,
                        (const void *)(uintptr_t)cache_frame.virAddr,
@@ -2206,12 +2631,23 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     uint32_t index;
     int result;
 
-    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !frame ||
-        frame->index < 0)
+    if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || !frame)
         return -1;
-    index = (uint32_t)frame->index;
     lock_p1();
     prepare_p1();
+    /* a fallback frame (p1_fb_frame) has no capture buffer to requeue */
+    if (frame == &p1_fbb[channel].frame && p1_fbb[channel].out) {
+        p1_fbb[channel].out = 0;
+        if (!p1.channels[channel].enabled || !p1_fb[channel].active)
+            p1_fb_free_locked(channel);
+        unlock_p1();
+        return 0;
+    }
+    if (frame->index < 0) {
+        unlock_p1();
+        return -1;
+    }
+    index = (uint32_t)frame->index;
     chn = &p1.channels[channel];
     if (!chn->enabled || index >= chn->buffer_count) {
         unlock_p1();
@@ -2412,6 +2848,10 @@ int IMP_FrameSource_DisableChn(int channel)
         }
     }
     chn->enabled = 0;
+    p1_dqw_stop(channel);
+    p1_fb_init_locked();
+    openimp_fb_disarm(&p1_fb[channel]);
+    p1_fb_free_locked(channel);
     result = release_capture_queue(chn);
     unlock_p1();
     fs_delay_free(channel);

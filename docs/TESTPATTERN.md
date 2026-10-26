@@ -179,6 +179,17 @@ bars stay unchanged outside the box, `logo_box()` gives the mask rectangle for e
 Cost: +3.8 KB `.rodata`; about +8 KB of the xz compressed `libimp.so` (including the hook and the
 control socket). The per-frame cost with the pattern off is one integer compare.
 
+## Fallback frame ("no sensor signal", T40/T41, default off)
+
+The same generator serves as the fallback picture when the ISP stops delivering frames
+(`include/openimp_fallback.h`, `src/openimp_fb_logic.h`): pattern and logo as in mode 1, a black band
+with the text NO SENSOR SIGNAL (5x7 font scaled to 80 % of the width), the 16 bit frame counter of
+mode 2 (top left, 16x16 px cells) and a 32x32 blinking square (top right, toggles every 4 frames), so a
+viewer sees both the cause and that the stream is alive. It is switched by `OPENIMP_FALLBACK_FRAME=1` or
+`OpenIMP_FrameSource_SetFallback(chn, on)`, independently of the test pattern modes. Description,
+limits and the device result: OPENIMP_BEYOND_VENDOR.md section 6.2. Host test: `make -C tests/fallback check`.
+Device tool: `tools/fbtest` (stops and restarts the sensor stream through `IMP_ISP_SetSensorRegister`).
+
 ## Status per SoC
 
 Legend: ✅ device-tested, 🔧 implemented, untested, ⏳ in progress, ❌ not possible per hardware

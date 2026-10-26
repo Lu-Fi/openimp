@@ -11,6 +11,7 @@
         OpenIMP_Tuning_*;
         OpenIMP_Cap_*;
         OpenIMP_TestPattern_*;
+        OpenIMP_FrameSource_*;
         FrameSourceInit;
         EncoderInit;
         EncoderExit;
