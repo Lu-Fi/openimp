@@ -21,6 +21,7 @@ TAG=${TAG:-agg47}
 OUT=${3:-$S/audit/apitest-evidence/$(date +%m%d)-$SOC-$IP}
 AREAS=${AREAS:-sys,fs,enc,osd,ivs,audio,isp,su,cases}
 T40_MASK=${T40_MASK:-cdff}
+[ "$AREAS" = cases ] || [ "$AREAS" = audio ] && NODEV=${NODEV:-1} NOIMG=${NOIMG:-1}      # a cases-only run touches nothing else
 lc=$(echo "$SOC" | tr A-Z a-z)
 export SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-/run/user/1000/ssh-cam.sock}
 SSH=${SSH_CMD:-"ssh -o ServerAliveInterval=3 -o ServerAliveCountMax=3 -o ConnectTimeout=8 -o BatchMode=yes root@$IP"}
@@ -57,10 +58,11 @@ restore() {
     cam 'ps | grep -c "[t]imps\|[p]rudynt\|[r]aptor\|[r]vd"' >> "$OUT/restore.txt" 2>&1; fi
   cam 'dmesg | grep -cE "Oops|unaligned access|Unable to handle|BUG:|Kernel panic"; uptime' > "$OUT/after.txt" 2>&1
 }
-fin() { restore; st "$SOC $IP planned test: done, free (streamer restarted, /tmp/at removed, out $OUT)"; }
+fin() { restore; st "$SOC $IP ${NOTE:-planned test}: done, free (streamer restarted, /tmp/at removed, out $OUT)"; }
 trap fin EXIT
 
-st "$SOC $IP planned test: start (cam-$NN.lock held for the whole run, ~10 min): apitest $AREAS + imgfx stats$([ $SOC = T40 ] && echo " + t40_devtest $T40_MASK"), streamer stopped then restarted, no sound, no flash/reboot/modules"
+NOTE="planned test"; [ "$AREAS" = audio ] && NOTE="planned test: AO/AEC silence only (muted, volume minimum, zero PCM frames)"
+st "$SOC $IP $NOTE: start (cam-$NN.lock held for the whole run, ~10 min): apitest $AREAS + imgfx stats$([ $SOC = T40 ] && echo " + t40_devtest $T40_MASK"), streamer stopped then restarted, no audible output, no flash/reboot/modules"
 cam 'uname -m; free | head -2; df /tmp | tail -1; ls /etc/init.d | grep -E "timps|prudynt|raptor|rvd"; for f in /proc/jz/sensor/*/name /proc/jz/sensor/name; do [ -r $f ] && echo "sensor $f: $(cat $f)"; done; md5sum /usr/lib/libimp.so 2>/dev/null; ls -l /usr/lib/libimp.so; cat /etc/os-release 2>/dev/null | head -4; cat /etc/thingino-build 2>/dev/null | head -3; lsmod | head -20; dmesg | grep -cE "Oops|unaligned access|Unable to handle|BUG:|Kernel panic"; echo preflight-ok' > "$OUT/before.txt" 2>&1; grep -q preflight-ok "$OUT/before.txt" || { echo "ssh failed"; exit 6; }
 grep -qi "$SENSOR" "$OUT/before.txt" || echo "NOTE: sensor $SENSOR not seen in the camera's /proc/jz/sensor (table value used; override with SENSOR= I2C= W= H=)" | tee -a "$OUT/before.txt"
 STREAMER=$(grep -oE "^S[0-9]+(timps|prudynt|raptor|rvd)[A-Za-z0-9_-]*" "$OUT/before.txt" | grep -v -E "motion|onvif|webui" | head -1)
@@ -72,7 +74,7 @@ copy "$BIN/apitest_$lc" apitest
 
 # run NAME CMD  -  output streamed to the host, remote PID recorded for the cleanup, host watchdog 20 min
 run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
-  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=0 $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
+  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=$([ "$AREAS" = audio ] && echo 1 || echo 0) $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
   echo "   rc=$? lines=$(wc -l < "$OUT/$name.log")" >> "$OUT/run.log"; }
 run apitest ./apitest --json /tmp/at/apitest.json "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
 cam "cat /tmp/at/apitest.json" > "$OUT/apitest.json" 2>/dev/null

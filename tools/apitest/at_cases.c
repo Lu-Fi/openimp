@@ -1119,7 +1119,8 @@ static void cs_camsel(void)
         int r = IMP_ISP_SetCameraInputSelect(IMPVI_MAIN);
 
         usleep(700000);
-        rep(FN(IMP_ISP_SetCameraInputSelect), r, (r == 0 && flow()) ? V_PASS : V_FAIL, "rt: input IMPVI_MAIN selected again (the only sensor) (ret %d), frames flow", r);
+        /* vendor (libimp disassembly, src/t40/openimp_p1.c): -10 unless SetCameraInputMode selected the dual-sensor "select" mode; a single-sensor camera is never in it */
+        rep(FN(IMP_ISP_SetCameraInputSelect), r, ((r == 0 || r == -10) && flow()) ? V_PASS : V_FAIL, "rt: input IMPVI_MAIN (ret %d%s), frames flow", r, r == -10 ? " = the vendor's error when the camera input mode is not 'select' (single sensor)" : "");
     }
 }
 #else
@@ -1173,7 +1174,7 @@ static void cs_rawdrc(void) {}
 
 /* ---- ISP-drawn OSD (raptor-hal sequence): pool, create, set attr (ARGB picture), show/hide, destroy; the picture must appear in the frame */
 #if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
-static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch1 (640x360 coordinates), 2 frames */
+static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch0 (sensor size coordinates), 2 frames */
 {
     double acc = 0; int n = 0, f, i, j;
 
@@ -1181,14 +1182,14 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
     for (f = 0; f < 4; f++) {
         IMPFrameInfo *fr = NULL;
         const unsigned char *y;
-        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) continue;
+        if (IMP_FrameSource_GetFrame(0, &fr) < 0 || !fr) continue;
         y = (const unsigned char *)(uintptr_t)fr->virAddr;
         if (f >= 2 && y && x1 <= fr->width && y1 <= fr->height) {
             double s = 0; int c = 0;
             for (j = y0; j < y1; j++) for (i = x0; i < x1; i++) { s += y[(size_t)j * fr->width + i]; c++; }
             acc += s / c; n++;
         }
-        IMP_FrameSource_ReleaseFrame(1, fr);
+        IMP_FrameSource_ReleaseFrame(0, fr);
     }
     return n ? acc / n : -1;
 }
@@ -1200,7 +1201,7 @@ static void cs_isposd(void)
         uint8_t *pic = (uint8_t *)malloc(PWD * PHT * 4);
         IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
         int rp, h, rs, rsh, rhide, rd = -99, k, x0 = 64, y0 = 64;
-        int cx0 = x0 * 640 / g_sw + 4, cy0 = y0 * 360 / g_sh + 4, cx1 = (x0 + PWD) * 640 / g_sw - 4, cy1 = (y0 + PHT) * 360 / g_sh - 4;
+        int cx0 = x0 + 4, cy0 = y0 + 4, cx1 = x0 + PWD - 4, cy1 = y0 + PHT - 4;
         double base, shown, hidden;
         int dark;
 
@@ -1208,6 +1209,7 @@ static void cs_isposd(void)
         base = region_y(cx0, cy0, cx1, cy1);
         dark = base < 140;
         for (k = 0; k < PWD * PHT; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+        { int (*oinit)(void) = (int (*)(void))dsym("IMP_OSD_Init_ISP"); if (oinit) oinit(); }      /* T23: the ISP OSD module needs its init first */
         rp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);
         rep(FN(IMP_ISP_Tuning_SetOsdPoolSize), rp, rp == 0 ? V_PASS : V_FAIL, "512 KB");
         h = IMP_ISP_Tuning_CreateOsdRgn(0, NULL);
@@ -1217,6 +1219,10 @@ static void cs_isposd(void)
         a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888;
         a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_BGRA;
         a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        
+#ifdef PLATFORM_T23
+        a->stsinglepicAttr.chx = 0;
+#endif
         a->stsinglepicAttr.pic.pinum = (uint8_t)h; a->stsinglepicAttr.pic.osd_enable = 1;
         a->stsinglepicAttr.pic.osd_left = x0; a->stsinglepicAttr.pic.osd_top = y0;
         a->stsinglepicAttr.pic.osd_width = PWD; a->stsinglepicAttr.pic.osd_height = PHT;
@@ -1233,11 +1239,40 @@ static void cs_isposd(void)
             rep(FN(IMP_ISP_Tuning_ShowOsdRgn), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
             rep(FN(IMP_ISP_Tuning_DestroyOsdRgn), rd, (rd == 0 && flow()) ? V_PASS : V_FAIL, "handle %d destroyed, frames flow", h);
         }
+        { void (*oexit)(void) = (void (*)(void))dsym("IMP_OSD_Exit_ISP"); if (oexit) oexit(); }
         free(pic); free(a);
     }
 }
 #else
 static void cs_isposd(void) {}
+#endif
+
+
+/* SetAutoZoom without a getter (T31): ch1 scaler at its own size + a crop to the upper-left quarter (zoom 2x), then back to the full picture */
+#if HAS_IMP_ISP_Tuning_SetAutoZoom && !HAS_IMP_ISP_Tuning_GetAutoZoom && !defined(PLATFORM_T41)
+static void cs_autozoom_set(void)
+{
+    NEED(IMP_ISP_Tuning_SetAutoZoom) {
+        G(IMPISPAutoZoom, a);
+        int r1, r2, ms;
+        Fst base, zoom, back;
+
+        base = fst(800);
+        a->chan = 1; a->scaler_enable = 1; a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
+        a->crop_enable = 1; a->crop_left = (g_sw / 4) & ~1; a->crop_top = (g_sh / 4) & ~1; a->crop_width = (g_sw / 2) & ~1; a->crop_height = (g_sh / 2) & ~1;      /* centre crop in sensor coordinates */
+        r1 = IMP_ISP_Tuning_SetAutoZoom(a); zoom = fst(1500);
+        a->crop_enable = 0;
+        r2 = IMP_ISP_Tuning_SetAutoZoom(a); back = recover(base.y, &ms);
+        {
+            int eff = zoom.ok && base.ok && dabs(zoom.h - base.h) > 0.1 * base.h;
+            rep(FN(IMP_ISP_Tuning_SetAutoZoom), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sch1 centre crop (half size, ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f, frames flow", RTMSG(eff), r1, r2, base.h, zoom.h, back.h);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_autozoom_set(void) {}
 #endif
 
 /* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
@@ -1253,7 +1288,7 @@ static int cs_on(const char *n)
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1299,7 +1334,8 @@ void t_cases(void)
     if (cs_on("wdrout")) cs_wdrout();     wdog("cases", 60);
     if (cs_on("ispflip")) cs_ispflip();    wdog("cases", 60);
     if (cs_on("hvflip")) cs_hvflip();     wdog("cases", 60);
-    if (cs_on("ispbypass_old")) cs_ispbypass_old(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("ispbypass_old")) cs_ispbypass_old();   /* explicit only: wedges the frame flow in QEMU (issue) */
+    wdog("cases", 60);
     if (cs_on("gamma_old")) cs_gamma_old();  wdog("cases", 90);
     if (cs_on("wdr_t41")) cs_wdr_t41();   wdog("cases", 60);
     if (cs_on("bypass_t40")) cs_bypass_t40(); wdog("cases", 60);
@@ -1307,6 +1343,7 @@ void t_cases(void)
     if (cs_on("aeroi")) cs_aeroi();      wdog("cases", 60);
     if (cs_on("rawdrc")) cs_rawdrc();     wdog("cases", 60);
     if (cs_on("isposd")) cs_isposd();     wdog("cases", 90);
+    if (cs_on("autozoom_set")) cs_autozoom_set(); wdog("cases", 90);
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);

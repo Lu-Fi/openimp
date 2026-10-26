@@ -59,3 +59,12 @@ entries:
   - match: ["IMP_ISP_GetFrameDrop_Sec", "IMP_ISP_Tuning_AE_SetROI", "IMP_ISP_Tuning_SetAFThreshold", "IMP_ISP_Tuning_SetAeStrategy", "IMP_ISP_Tuning_SetAe_IT_MAX", "IMP_ISP_Tuning_GetEvStart", "IMP_ISP_Tuning_SetEvStart", "IMP_ISP_Tuning_SetFixedContraster", "IMP_ISP_SetFixedContraster", "IMP_ISP_Tuning_SetShading", "IMP_ISP_Tuning_SetContrast_internal", "IMP_ISP_Tuning_SetSharpness_internal", "IMP_ISP_Tuning_GetSensorHflip", "IMP_ISP_Tuning_GetSensorVflip", "IMP_ISP_Tuning_SetSensorHflip", "IMP_ISP_Tuning_SetSensorVflip", "IMP_ISP_SetScalerLv", "IMP_ISP_Set/GetSensorRegister"]
     category: backlog
     reason: "ISP tuning calls without a case yet (setters whose getter is tested, internal helpers)"
+  - match: ["IMP_System_WriteReg32"]
+    category: hardware
+    reason: "writes a physical hardware register; no register is known that is provably safe to write back on every SoC (apitest only reads: SKIP)"
+  - match: ["IMP_IVS_ReleaseData"]
+    category: own-topology
+    reason: "releases frame data owned by a custom IVS algorithm (IMPIVSInterface ProcessAsync); apitest has no custom algorithm"
+  - match: ["IMP_AO_*", "IMP_AI_EnableAec*", "IMP_AI_DisableAec*", "IMP_AI_GetFrameAndRef", "IMP_AENC_*", "IMP_ADEC_*"]
+    category: sound
+    reason: "audio output / AEC / speaker path: no AO or AEC call at all until the user decides (no-sound rule, decision of 2026-10-26); AI microphone calls are tested"
