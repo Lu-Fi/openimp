@@ -43,7 +43,8 @@ static volatile unsigned frames;
 static volatile int64_t last_ts, ts_back, ts_first, ts_last;
 static FILE *volatile out;
 static volatile size_t out_bytes;
-#define OUT_CAP (1500u * 1024u)
+static unsigned out_cap_bytes = 1500u * 1024u;   /* env FBTEST_CAP_KB (small boards: /tmp is RAM) */
+#define OUT_CAP out_cap_bytes
 
 static int64_t now_ms(void){ struct timespec t; clock_gettime(CLOCK_MONOTONIC,&t); return (int64_t)t.tv_sec*1000+t.tv_nsec/1000000; }
 
@@ -114,6 +115,7 @@ int main(int argc, char **argv)
     IMPCell fs = { DEV_ID_FS, 0, 0 }, enc = { DEV_ID_ENC, 0, 0 };
     pthread_t tc;
     if (argc < 7) return 2;
+    if (getenv("FBTEST_CAP_KB")) out_cap_bytes = (unsigned)atoi(getenv("FBTEST_CAP_KB")) * 1024u;
     W = atoi(argv[3]); H = atoi(argv[4]); reg = (uint32_t)strtoul(argv[5], NULL, 0); outdir = argv[6];
     setvbuf(stdout, NULL, _IOLBF, 0);
     printf("[I] fallback API %s\n", OpenIMP_FrameSource_SetFallback ? "present" : "ABSENT");
