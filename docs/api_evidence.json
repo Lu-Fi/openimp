@@ -449,7 +449,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -541,7 +541,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -618,7 +618,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -695,7 +695,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -772,7 +772,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -849,7 +849,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -926,7 +926,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -1258,7 +1258,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -9366,7 +9366,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -9462,7 +9462,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -9539,7 +9539,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -9616,7 +9616,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -9875,7 +9875,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -10026,7 +10026,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13249,7 +13249,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13261,7 +13261,7 @@
     "T10": "rt",
     "T20": "rt",
     "T21": "rt",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "?",
     "T31": "rt",
     "T32": "nob",
@@ -13307,7 +13307,8 @@
     "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
     "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
     "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)"
    }
   },
   "AI_DisableAecRefFrame": {
@@ -13316,7 +13317,7 @@
     "T10": "rt",
     "T20": "rt",
     "T21": "rt",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "?",
     "T31": "rt",
     "T32": "nob",
@@ -13363,7 +13364,8 @@
     "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
     "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
     "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)"
    }
   },
   "AI_DisableAgc": {
@@ -13437,7 +13439,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13458,7 +13460,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
@@ -13533,7 +13535,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13628,7 +13630,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13649,7 +13651,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
    }
@@ -13725,7 +13727,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13802,7 +13804,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -13865,7 +13867,7 @@
     "T10": "rt",
     "T20": "rt",
     "T21": "rt",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "?",
     "T31": "rt",
     "T32": "nob",
@@ -13912,7 +13914,8 @@
     "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
     "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
     "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)"
    }
   },
   "AI_EnableAgc": {
@@ -13986,7 +13989,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14007,7 +14010,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T41": "apitest rc3-cases 2026-10-27 .34"
    }
   },
@@ -14082,7 +14085,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14177,7 +14180,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14198,7 +14201,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
    }
@@ -14274,7 +14277,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14379,7 +14382,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14475,7 +14478,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14552,7 +14555,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14629,7 +14632,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14706,7 +14709,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14736,7 +14739,7 @@
     "T10": "rt",
     "T20": "rt",
     "T21": "rt",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "?",
     "T31": "rt",
     "T32": "nob",
@@ -14783,7 +14786,8 @@
     "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
     "T40": "apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected)",
     "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)"
+    "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)"
    }
   },
   "AI_PollingFrame": {
@@ -14857,7 +14861,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -14934,7 +14938,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -15001,7 +15005,7 @@
    },
    "note": "T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -15058,7 +15062,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -15100,7 +15104,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -17437,7 +17441,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"
@@ -17782,7 +17786,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-26 .30",
+    "T23": "apitest rc3-cases 2026-10-27 .30",
     "T31": "apitest rc3-cases 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest rc3-cases 2026-10-27 .34"

@@ -8,6 +8,21 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/rc3-cases` (2026-10-26/27)
+
+- **One device test app:** `tools/imgfx` and `tests/t40/devtest/t40_devtest.c` are folded into apitest (areas `picture` and `t40dev`); one source, one
+  binary `apitest_<soc>`, one CLI (`--list`, `--areas`, `--cases`, `--json FILE`). The JSON report (function -> PASS/FAIL/RT/NA/SKIP + detail) is read by
+  `results2json.py --report` and `merge_evidence.py`. `run_cam.sh` and `qemu_run.py` (`auto`, `area:NAME`, `--nopush`) use the per-SoC build.
+- **Completeness check:** `tools/apitest/check_coverage.py` (in `make status-check`): every vendor function of the seven gate SoCs has a case or an entry with
+  category and reason in `tools/apitest/untestable.yaml`.
+- **`make apitest`** (`tools/apitest/build-device.sh`) builds and installs `openimp-apitest` for the thingino package option `BR2_PACKAGE_OPENIMP_APITEST`.
+- **RC3 cases** (every case ran in QEMU of its SoC first): gamma/module control/CCM/RGB coefficients/ISP bypass/bin switch/scaler level (T41), contrast, hue,
+  AE compensation, backlight, DPC, custom mode, WDR, flips, CSC, AWB CT, gamma, raw DRC, AE ROI, camera input select, ISP OSD, AutoZoom without getter.
+  Audio: AO/AEC with silence only (muted, volume minimum, zero PCM frames; user decision 2026-10-26), counted as rt.
+- Findings (issues): 114 T41 gamma curve without picture effect, 115 T41 SetISPBypass -4095, 116 T41 AddSensor fails after SetDefaultBinPath,
+  117/118 T31 CustomMode / Wdr_OutputMode, 119 SetISPBypass(DISABLE) wedges the frame flow in QEMU (T31, T20, T10), 121 T20 GetGamma zeros,
+  122 T23 GetISPCustomMode, 124 T31 AutoZoom crop, 126 T23 SetISPBypass.
+
 ## Branch `claude/status-data` (2026-10-26)
 
 - **Status data instead of a hand-written matrix:** the feature matrix source moved to `docs/status/features.yaml` (45 features x 10 SoCs:
