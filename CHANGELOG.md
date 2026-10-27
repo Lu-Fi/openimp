@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-125` (2026-10-27)
+
+- **T41 IMP_ISP_SetISPBypass** (issue #125) sends ioctl 0x80085418 as soon as the ISP device is open, like the
+  vendor: the header requires the call before IMP_ISP_AddSensor, and the sensor-enabled ioctl path dropped it there
+  (it returned 0 and only remembered the value). The open-tx-isp T41 driver (`claude/issue-125`) refuses the real
+  bypass (value != 0) until its VIC capture path works; a refused value returns -1 (errno in syslog, was
+  -4095) and is not remembered.
 ## Branch `claude/t41-fs-pool` (2026-10-27, issue 72)
 
 - **T41 IMP_FrameSource_SetPool / GetPool: real media memory pools** like the vendor 1.2.5/1.2.6.
