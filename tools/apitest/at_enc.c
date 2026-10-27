@@ -806,6 +806,26 @@ static void live_old(int chn, int codec)
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
 #endif
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
+#if defined(PLATFORM_T21)
+        /* T21: the Helix eprc controller has no super-frame control: mode NONE (thresholds stored) is the supported setting, any other
+         * mode is refused with -1 and leaves the stored configuration untouched */
+        {
+            IMPEncoderSuperFrmCfg bad; int rb, rg;
+
+            memset(&bad, 0, sizeof(bad)); bad.superFrmMode = IMP_RC_SUPERFRM_DISCARD; bad.superIFrmBitsThr = 1; bad.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
+            n.superFrmMode = IMP_RC_SUPERFRM_NONE;
+            r2 = IMP_Encoder_SetSuperFrameCfg(chn, &n);
+            r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
+            rb = IMP_Encoder_SetSuperFrameCfg(chn, &bad);
+            { IMPEncoderSuperFrmCfg *g2 = (IMPEncoderSuperFrmCfg *)gnew(sizeof(*g2));
+              rg = IMP_Encoder_GetSuperFrameCfg(chn, g2); gchk(g2);
+              CHECK(IMP_Encoder_SetSuperFrameCfg, r2, r == 0 && rb != 0 && rg == 0 && g->superFrmMode == IMP_RC_SUPERFRM_NONE && g->superIFrmBitsThr == n.superIFrmBitsThr && g->rcPriority == n.rcPriority &&
+                    g2->superFrmMode == IMP_RC_SUPERFRM_NONE && g2->superIFrmBitsThr == n.superIFrmBitsThr,
+                    "mode NONE I %u P %u prio %d stored and read back; mode DISCARD refused (ret %d), stored config unchanged (mode %d I %u)",
+                    n.superIFrmBitsThr, n.superPFrmBitsThr, (int)g->rcPriority, rb, (int)g2->superFrmMode, g2->superIFrmBitsThr);
+              gfree(g2); }
+        }
+#else
         r2 = IMP_Encoder_SetSuperFrameCfg(chn, &n);
         r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
         if (r2 != 0 && REFUSES_UNSUPPORTED)
@@ -813,6 +833,7 @@ static void live_old(int chn, int codec)
         else
         CHECK(IMP_Encoder_SetSuperFrameCfg, r2, r == 0 && g->superFrmMode == n.superFrmMode && g->superIFrmBitsThr == n.superIFrmBitsThr && g->rcPriority == n.rcPriority,
               "mode %d I %u P %u, read back mode %d I %u P %u prio %d", (int)n.superFrmMode, n.superIFrmBitsThr, n.superPFrmBitsThr, (int)g->superFrmMode, g->superIFrmBitsThr, g->superPFrmBitsThr, (int)g->rcPriority);
+#endif
         rep(FN(IMP_Encoder_GetSuperFrameCfg), r3, r3 == 0 ? V_PASS : V_FAIL, "initial mode %d I %u P %u", (int)o->superFrmMode, o->superIFrmBitsThr, o->superPFrmBitsThr);
         IMP_Encoder_SetSuperFrameCfg(chn, o);
         gfree(g); gfree(o);

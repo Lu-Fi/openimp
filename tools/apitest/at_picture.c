@@ -543,23 +543,31 @@ static int c_expr(int ph, int arg, char *info, size_t n)
     IMPISPExpr e, cur;
     int r;
 
+    static uint32_t oag, odg; static int caps; static int rca, rcd; uint32_t nag = 0, ndg = 0;
     if (!HAVE(IMP_ISP_Tuning_SetExpr)) return CASE_NA;
     if (ph) {
         memset(&e, 0, sizeof(e));
         e.s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; e.s_attr.unit = ISP_CORE_EXPR_UNIT_US;
         e.s_attr.time = old.g_attr.integration_time;
         IMP_ISP_Tuning_SetExpr(&e);
+        if (caps) { IMP_ISP_Tuning_SetMaxAgain(oag); IMP_ISP_Tuning_SetMaxDgain(odg); caps = 0; }
         return 0;
     }
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetExpr(&old);
+    /* with a manual time the AE still moves the gain to hold the brightness: pin the gain caps to 1 for the case (restored in the end phase) */
+    if (HAVE(IMP_ISP_Tuning_GetMaxAgain) && HAVE(IMP_ISP_Tuning_SetMaxAgain) && HAVE(IMP_ISP_Tuning_GetMaxDgain) && HAVE(IMP_ISP_Tuning_SetMaxDgain) &&
+        IMP_ISP_Tuning_GetMaxAgain(&oag) == 0 && IMP_ISP_Tuning_GetMaxDgain(&odg) == 0) {
+        rca = IMP_ISP_Tuning_SetMaxAgain(1); rcd = IMP_ISP_Tuning_SetMaxDgain(1); caps = 1; usleep(300000);
+    }
     memset(&e, 0, sizeof(e));
     e.s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e.s_attr.unit = ISP_CORE_EXPR_UNIT_US;
     e.s_attr.time = (uint16_t)arg;
     r = IMP_ISP_Tuning_SetExpr(&e);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetExpr(&cur);
-    snprintf(info, n, "mode %d it=%u lines (min %u max %u, %u us/line) was it=%u mode %d", cur.g_attr.mode,
+    if (caps) { IMP_ISP_Tuning_GetMaxAgain(&nag); IMP_ISP_Tuning_GetMaxDgain(&ndg); }
+    snprintf(info, n, "mode %d it=%u lines (min %u max %u, %u us/line) was it=%u mode %d; gain caps %u/%u -> set 1/1 ret %d/%d read %u/%u", cur.g_attr.mode,
              cur.g_attr.integration_time, cur.g_attr.integration_time_min, cur.g_attr.integration_time_max,
-             cur.g_attr.one_line_expr_in_us, old.g_attr.integration_time, old.g_attr.mode);
+             cur.g_attr.one_line_expr_in_us, old.g_attr.integration_time, old.g_attr.mode, oag, odg, rca, rcd, nag, ndg);
     return r;
 }
 

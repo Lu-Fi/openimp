@@ -231,7 +231,13 @@ def rule_exp(c, lo):
     if not ((it < oi) if lo else (it > oi)):
         return Q("integration time readback %d vs %d not ordered" % (it, oi))
     d = (o["Y"] - c.st["Y"]) if lo else (c.st["Y"] - o["Y"])
-    return ("PASS", "it %d lines, Y long-short %+.0f" % (it, d), keys) if d > 15 else Q("Y long-short only %+.1f: no picture effect" % d)
+    if d > 15:
+        return ("PASS", "it %d lines, Y long-short %+.0f" % (it, d), keys)
+    # the AE keeps the brightness with the gain (manual time only): the short exposure then shows as a much softer, noisier picture
+    hl, hs = (o["H"], c.st["H"]) if lo else (c.st["H"], o["H"])
+    if hs > 0 and hl / hs > 1.5 and "again=" not in c.info:
+        return ("PASS", "it %d lines, Y held by the AE gain (long-short %+.1f), detail long/short %.2f" % (it, d, hl / hs), keys)
+    return Q("Y long-short only %+.1f: no picture effect" % d)
 
 
 def rule_again(c, lo):

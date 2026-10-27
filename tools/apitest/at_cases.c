@@ -1351,28 +1351,99 @@ static void cs_isposd(void) {}
 #endif
 
 
+#if defined(PLATFORM_T23)
+/* nx x ny grid of mean luma of one ch1 frame, normalised to its own mean (where the picture content sits, independent of the exposure) */
+static int grid_grab(double *g, int nx, int ny, int settle_ms)
+{
+    IMPFrameInfo *fr = NULL;
+    int k, i, j, w, h, ok = 0;
+    const unsigned char *y;
+    double mean = 0;
+
+    usleep(settle_ms * 1000);
+    for (k = 0; k < 4; k++)
+        if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) { if (k < 3) { IMP_FrameSource_ReleaseFrame(1, fr); fr = NULL; } }
+    if (!fr) return 0;
+    y = (const unsigned char *)(uintptr_t)fr->virAddr; w = fr->width; h = fr->height;
+    if (y && w >= 64 && h >= 48) {
+        for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) {
+            int x0 = i * w / nx, x1 = (i + 1) * w / nx, y0 = j * h / ny, y1 = (j + 1) * h / ny, xx, yy, n = 0; double sum = 0;
+            for (yy = y0; yy < y1; yy += 2) for (xx = x0; xx < x1; xx += 2) { sum += y[(size_t)yy * w + xx]; n++; }
+            g[j * nx + i] = n ? sum / n : 0; mean += g[j * nx + i];
+        }
+        mean /= nx * ny;
+        if (mean > 1) { for (i = 0; i < nx * ny; i++) g[i] /= mean; ok = 1; }
+    }
+    IMP_FrameSource_ReleaseFrame(1, fr);
+    return ok;
+}
+
+static double grid_dist(const double *a, const double *b, int n)
+{
+    double d = 0; int i;
+    for (i = 0; i < n; i++) d += fabs(a[i] - b[i]);
+    return d / n;
+}
+#endif
+
 /* SetAutoZoom without a getter (T31): ch1 scaler at its own size + a crop to the upper-left quarter (zoom 2x), then back to the full picture */
-#if HAS_IMP_ISP_Tuning_SetAutoZoom && !HAS_IMP_ISP_Tuning_GetAutoZoom && !defined(PLATFORM_T41)
+#if HAS_IMP_ISP_Tuning_SetAutoZoom && (!HAS_IMP_ISP_Tuning_GetAutoZoom || defined(PLATFORM_T23)) && !defined(PLATFORM_T41)
 static void cs_autozoom_set(void)
 {
     NEED(IMP_ISP_Tuning_SetAutoZoom) {
         G(IMPISPAutoZoom, a);
         int r1, r2, ms;
         Fst base, zoom, back;
+#if defined(PLATFORM_T23)
+        double b16[192], zg[48], kg[48], e_full[48], e_ctr[48], e_tl[48];
+        int gb, gz, gk, i, j;
+#endif
 
         base = fst(800);
+#if defined(PLATFORM_T23)
+        gb = grid_grab(b16, 16, 12, 100);
+#endif
         a->chan = 1; a->scaler_enable = 1; a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
         /* ePTZ: the crop window is cut out of the SCALED picture and its size is the channel's output size (the driver refuses a size change):
          * scale ch1 to 2x its size, crop the centre in the channel's own size = 2x zoom */
         a->scaler_outwidth = SUB_W * 2; a->scaler_outheight = SUB_H * 2;
         a->crop_enable = 1; a->crop_left = SUB_W / 2; a->crop_top = SUB_H / 2; a->crop_width = SUB_W; a->crop_height = SUB_H;
+#if defined(PLATFORM_T23)
+        /* T23 (stock autozoom control): the window is in SENSOR coordinates (inside the picture, >= 64x64, even) and the scaler output must not
+         * exceed it: centre half of the sensor picture, scaled to the channel size = zoom on the centre */
+        a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
+        a->crop_left = (g_sw / 4) & ~1; a->crop_top = (g_sh / 4) & ~1; a->crop_width = (g_sw / 2) & ~1; a->crop_height = (g_sh / 2) & ~1;
+#endif
         r1 = IMP_ISP_Tuning_SetAutoZoom(a); zoom = fst(1500);
+#if defined(PLATFORM_T23)
+        gz = grid_grab(zg, 8, 6, 100);
+#endif
         a->crop_enable = 0; a->scaler_outwidth = SUB_W; a->scaler_outheight = SUB_H;
         r2 = IMP_ISP_Tuning_SetAutoZoom(a); back = recover(base.y, &ms);
+#if defined(PLATFORM_T23)
+        gk = grid_grab(kg, 8, 6, 300);
+        for (j = 0; j < 6; j++) for (i = 0; i < 8; i++) {
+            const double *c = &b16[0];
+            e_full[j * 8 + i] = (c[(2 * j) * 16 + 2 * i] + c[(2 * j) * 16 + 2 * i + 1] + c[(2 * j + 1) * 16 + 2 * i] + c[(2 * j + 1) * 16 + 2 * i + 1]) / 4;
+            e_ctr[j * 8 + i] = c[(j + 3) * 16 + i + 4];
+            e_tl[j * 8 + i] = c[j * 16 + i];
+        }
+#endif
         {
             int eff = zoom.ok && base.ok && dabs(zoom.h - base.h) > 0.1 * base.h;
+#if defined(PLATFORM_T23)
+            /* where the content sits (grids normalised to their mean): the zoomed picture is the centre of the base, the picture after the
+             * back-Set is the whole base again (not a corner) */
+            double dz_c = gb && gz ? grid_dist(zg, e_ctr, 48) : 99, dz_f = gb && gz ? grid_dist(zg, e_full, 48) : 99;
+            double dk_f = gb && gk ? grid_dist(kg, e_full, 48) : 99, dk_t = gb && gk ? grid_dist(kg, e_tl, 48) : 99, dk_c = gb && gk ? grid_dist(kg, e_ctr, 48) : 99;
+            int pos = dz_c < dz_f && dk_f < dk_t && dk_f < dk_c;
+            rep(FN(IMP_ISP_Tuning_SetAutoZoom), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow() && pos) ? V_PASS : V_FAIL,
+                "%sch1 zoom (centre half of the sensor picture, scaler = channel size, ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f; layout distance zoom-picture to base centre %.3f / whole %.3f, back-picture to whole %.3f / top-left corner %.3f / centre %.3f (%s), frames flow",
+                RTMSG(eff), r1, r2, base.h, zoom.h, back.h, dz_c, dz_f, dk_f, dk_t, dk_c, pos ? "zoom shows the centre, back shows the whole picture" : "WRONG picture area");
+#else
             rep(FN(IMP_ISP_Tuning_SetAutoZoom), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
                 "%sch1 2x zoom (scaler 2x, centre crop in the channel size, ret %d) and back (ret %d): detail H %.3f -> %.3f -> %.3f, frames flow", RTMSG(eff), r1, r2, base.h, zoom.h, back.h);
+#endif
         }
         gfree(a);
     }
