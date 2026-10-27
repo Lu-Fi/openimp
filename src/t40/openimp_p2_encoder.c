@@ -1346,6 +1346,19 @@ extern int VBMGetFrame(int chn, void **frame);
 #elif defined(PLATFORM_T40)
 extern int OpenIMP_T40_FrameSource_TryGetFrame(int channel, void **frame);
 #define P2_FS_TRY_FRAME(chn, frame) OpenIMP_T40_FrameSource_TryGetFrame((chn), (frame))
+#elif defined(PLATFORM_T41)
+/* The encoder is a consumer of the capture queue: it does not go through the
+ * application frame depth of IMP_FrameSource_GetFrame (weak: host tests stub
+ * only IMP_FrameSource_GetFrame). */
+extern int OpenIMP_FrameSource_ConsumerGetFrame(int channel, void **frame)
+    __attribute__((weak));
+static inline int p2_fs_try_frame(int chn, void **frame)
+{
+    return OpenIMP_FrameSource_ConsumerGetFrame
+        ? OpenIMP_FrameSource_ConsumerGetFrame(chn, frame)
+        : IMP_FrameSource_GetFrame(chn, frame);
+}
+#define P2_FS_TRY_FRAME(chn, frame) p2_fs_try_frame((chn), (frame))
 #else
 #define P2_FS_TRY_FRAME(chn, frame) IMP_FrameSource_GetFrame((chn), (frame))
 #endif
