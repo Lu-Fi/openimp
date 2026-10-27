@@ -119,6 +119,45 @@ static void *dsym(const char *n) { return dlsym(RTLD_DEFAULT, n); }
 # define NOT_T41(...)
 #endif
 
+/* ------------------------------------------------------------------------------------------- SetExpr manual time */
+#if HAS_IMP_ISP_Tuning_SetExpr && HAS_IMP_ISP_Tuning_GetExpr && (defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21))
+/* SetExpr(MANUAL) in lines and in microseconds must reach the exposure (GetExpr reads the integration time back);
+ * T10/T20: the driver took no time in lines and refused microseconds without the sensor's line time (issue 130) */
+static void cs_expr(void)
+{
+    NEED(IMP_ISP_Tuning_SetExpr) NEED(IMP_ISP_Tuning_GetExpr) {
+        G(IMPISPExpr, e); G(IMPISPExpr, g);
+        int r0 = IMP_ISP_Tuning_GetExpr(g), rl, ru, ra, gl, gu, it_l = -1, it_u = -1, lmax, line_us, want_u, ms;
+        Fst base = fst(800), lo, hi, back;
+
+        lmax = g->g_attr.integration_time_max; line_us = g->g_attr.one_line_expr_in_us;
+        memset(e, 0, sizeof(*e));
+        e->s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e->s_attr.unit = ISP_CORE_EXPR_UNIT_LINE; e->s_attr.time = 30;
+        rl = IMP_ISP_Tuning_SetExpr(e); lo = fst(1500);
+        e->s_attr.time = 240; rl |= IMP_ISP_Tuning_SetExpr(e); hi = fst(1500);
+        gl = IMP_ISP_Tuning_GetExpr(g); if (gl == 0) it_l = g->g_attr.integration_time;
+        e->s_attr.unit = ISP_CORE_EXPR_UNIT_US; e->s_attr.time = 10000;
+        ru = IMP_ISP_Tuning_SetExpr(e); usleep(600000);
+        gu = IMP_ISP_Tuning_GetExpr(g); if (gu == 0) it_u = g->g_attr.integration_time;
+        e->s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; ra = IMP_ISP_Tuning_SetExpr(e);
+        back = recover(base.y, &ms);
+        want_u = line_us > 0 ? 10000 / line_us : -1;
+        {
+            int ok_l = rl == 0 && gl == 0 && (it_l == 240 || (lmax > 0 && lmax < 240 && it_l == lmax));
+            /* the reported line time is whole microseconds: allow its rounding (up to 1/line_us relative) */
+            int ok_u = ru == 0 && gu == 0 && want_u > 0 && it_u >= want_u * line_us / (line_us + 1) && it_u <= want_u * (line_us + 1) / line_us + 1;
+            int eff = lo.ok && hi.ok && hi.y > lo.y * 1.5;
+
+            rep(LBL("IMP_ISP_Tuning_SetExpr(manual lines)"), rl | gl, ok_l && r0 == 0 ? V_PASS : V_FAIL, "%s240 lines -> GetExpr %d (max %d); Y %.1f at 30 lines, %.1f at 240", RTMSG(eff), it_l, lmax, lo.y, hi.y);
+            rep(LBL("IMP_ISP_Tuning_SetExpr(manual us)"), ru | gu, ok_u ? V_PASS : V_FAIL, "10000 us -> GetExpr %d lines (line %d us, expected ~%d); AUTO ret %d, picture %s restored (Y %.1f, base %.1f)", it_u, line_us, want_u, ra, ms >= 0 ? "" : "NOT", back.y, base.y);
+        }
+        gfree(e); gfree(g);
+    }
+}
+#else
+static void cs_expr(void) {}
+#endif
+
 /* --------------------------------------------------------------------------------------------------- Movestate */
 #if HAS_IMP_ISP_Tuning_EnableMovestate && HAS_IMP_ISP_Tuning_DisableMovestate
 static void cs_movestate(void)
@@ -1986,7 +2025,7 @@ void t_dmic(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2014,6 +2053,7 @@ void t_cases(void)
     if (cs_on("fwfreeze")) cs_fwfreeze();   wdog("cases", 60);
     if (cs_on("hilight")) cs_hilight();    wdog("cases", 90);
     if (cs_on("inttime")) cs_inttime();    wdog("cases", 90);
+    if (cs_on("expr")) cs_expr();       wdog("cases", 90);
     if (cs_on("scene")) cs_scene();      wdog("cases", 90);
     if (cs_on("colorfx")) cs_colorfx();    wdog("cases", 90);
     if (cs_on("gamma")) cs_gamma();      wdog("cases", 90);
