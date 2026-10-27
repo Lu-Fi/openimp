@@ -225,6 +225,18 @@ int AL_Codec_Encode_SetMaxPictureSizeT41(void *c, uint32_t a, uint32_t b, int d)
 int AL_Codec_Encode_SetRcOptionsT41(void *c, uint32_t a) { (void)c; (void)a; return 0; }
 #endif
 int AL_Codec_Encode_SetRcParam(void *c, void *p) { (void)c; (void)p; return 0; }
+#if defined(PLATFORM_T31)
+/* IMP_Encoder_GetChnEvalInfo: the codec's record of the dequeued stream */
+int AL_Codec_Encode_GetEvalInfo(void *codec, void *stream, void *out)
+{
+    unsigned int i;
+
+    (void)codec; (void)stream;
+    for (i = 0; i < 36; i++)
+        ((uint8_t *)out)[i] = (uint8_t)(0xa0 + i);
+    return 0;
+}
+#endif
 int AL_Codec_Encode_SetRcQualityCap(void *c, int m, unsigned int p) { (void)c; (void)m; (void)p; return 0; }
 
 /* ---- test ---- */
@@ -320,6 +332,24 @@ int main(void)
               "first JPEG content");
         CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == 0,
               "fresh JPEG reported as reused");
+#if defined(PLATFORM_T31)
+        /* GetChnEvalInfo of a JPEG channel: 8 bytes, the quality factor
+         * (iInitialQP 30) as int16 first, the rest zero; bytes behind them
+         * are not touched */
+        {
+            uint8_t ev[40];
+
+            memset(ev, 0xee, sizeof(ev));
+            CHECK(IMP_Encoder_GetChnEvalInfo(2, ev) == 0 && ev[0] == 30 &&
+                  ev[1] == 0 && !ev[2] && !ev[3] && !ev[4] && !ev[5] &&
+                  !ev[6] && !ev[7] && ev[8] == 0xee,
+                  "JPEG eval info %02x %02x %02x ... %02x", ev[0], ev[1],
+                  ev[2], ev[8]);
+            CHECK(IMP_Encoder_GetChnEvalInfo(9, ev) != 0 &&
+                  IMP_Encoder_GetChnEvalInfo(2, NULL) != 0,
+                  "bad GetChnEvalInfo arguments accepted");
+        }
+#endif
         CHECK(IMP_Encoder_ReleaseStream(2, &stream) == 0,
               "first JPEG release");
         CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == -1,
@@ -375,6 +405,31 @@ int main(void)
         CHECK(IMP_Encoder_FlushStream(9) != 0 && IMP_Encoder_FlushStream(-1) != 0,
               "FlushStream accepted a bad channel");
     }
+
+#if defined(PLATFORM_T31)
+    /* AVC channel: the codec's 36-byte record of the stream that was just
+     * dequeued, byte for byte; all zero before the first stream */
+    {
+        uint8_t ev[36];
+        unsigned int k;
+        int ok = 1;
+
+        stub_streams = 1;
+        CHECK(setup(4, 4, 1, 0) == 0, "AVC channel setup");
+        memset(ev, 0xee, sizeof(ev));
+        CHECK(IMP_Encoder_GetChnEvalInfo(4, ev) == 0, "eval info before a stream");
+        for (k = 0; k < 36; k++)
+            ok &= ev[k] == 0;
+        CHECK(ok, "eval info before the first stream is not zero");
+        CHECK(IMP_Encoder_PollingStream(4, 200) == 0, "AVC poll");
+        memset(ev, 0xee, sizeof(ev));
+        CHECK(IMP_Encoder_GetChnEvalInfo(4, ev) == 0, "eval info after a stream");
+        ok = 1;
+        for (k = 0; k < 36; k++)
+            ok &= ev[k] == (uint8_t)(0xa0 + k);
+        CHECK(ok, "AVC eval info differs from the codec record");
+    }
+#endif
 
     if (failures) {
         fprintf(stderr, "p2 JPEG source: %d check(s) failed\n", failures);

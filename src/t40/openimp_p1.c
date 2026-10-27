@@ -306,6 +306,7 @@ struct openimp_fs_buffer {
     IMPFrameInfo frame;
     uint32_t i2d_physical;          /* I2D output paired with this buffer */
     void *i2d_virtual;
+    uint32_t app_held;              /* T41: handed out by IMP_FrameSource_GetFrame (counts against the frame depth) */
 };
 
 static inline void p1_mark_queued(struct openimp_fs_buffer *b)
@@ -333,6 +334,7 @@ struct openimp_fs_channel {
     uint32_t buffer_count;
     uint32_t sizeimage;
     uint32_t frames_dequeued;
+    uint32_t app_held;              /* T41: frames the application holds (GetFrame .. ReleaseFrame) */
 #if defined(P1_CAPTURE_FEEDER)
     uint64_t last_dequeue_us;       /* by a consumer other than the IVS
                                      * feeder, CLOCK_MONOTONIC */
@@ -490,6 +492,7 @@ static int free_capture_buffers(struct openimp_fs_channel *chn)
     chn->buffer_count = 0;
     chn->sizeimage = 0;
     chn->i2d_on = 0;
+    chn->app_held = 0;
     return 0;
 }
 
@@ -1125,6 +1128,9 @@ int IMP_FrameSource_GetDelay(int channel, int *cnt)
 
 extern int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame);
 extern int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame);
+#if defined(PLATFORM_T41)
+static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_attempts);
+#endif
 
 static uint64_t fs_mono_us(void)
 {
@@ -1228,7 +1234,11 @@ int IMP_FrameSource_GetTimedFrame(int channel, IMPFrameTimestamp *framets,
         if (fs_mono_us() > deadline)
             return FS_ERR_TIMEOUT;
         /* pull one frame: GetFrame feeds the cache */
+#if defined(PLATFORM_T41)
+        if (p1_get_frame_attempts(channel, &pull, 1000) == 0 && pull)
+#else
         if (IMP_FrameSource_GetFrame(channel, &pull) == 0 && pull)
+#endif
             (void)IMP_FrameSource_ReleaseFrame(channel, pull);
         else
             usleep(2000);
@@ -2175,7 +2185,11 @@ static void *p1_ivs_feeder(void *arg)
 #endif
             /* GetFrame waits for the next frame: one frame per pass, at
              * the channel's rate */
+#if defined(PLATFORM_T41)
+            if (p1_get_frame_attempts(channel, &frame, 1000) == 0 && frame) {
+#else
             if (IMP_FrameSource_GetFrame(channel, &frame) == 0 && frame) {
+#endif
                 (void)IMP_FrameSource_ReleaseFrame(channel, frame);
                 fed = 1;
             }
@@ -2714,10 +2728,76 @@ again:
     return 0;
 }
 
+#if defined(PLATFORM_T41)
+/*
+ * T41: IMP_FrameSource_GetFrame follows the frame depth of the vendor libimp
+ * 1.2.5 (disassembled GetFrame / SetFrameDepth / on_framesource_group_data_update):
+ *  - depth 0 (SetFrameDepth never called with a positive value): ret 0 and
+ *    *frame is not touched - there is no depth queue to read from;
+ *  - depth N: the application can hold N frames (GetFrame .. ReleaseFrame);
+ *    with N held the call waits for a ReleaseFrame, 2 s at the most, then
+ *    0x80012000 (IMP_ERR_FS_OVERTIME), as the vendor waits 2 s for a frame
+ *    that cannot arrive without a free node.
+ * OpenIMP's own consumers (encoder, IVS feeder, SnapFrame, GetTimedFrame) pull
+ * from the capture queue through OpenIMP_FrameSource_ConsumerGetFrame, which is
+ * not bound to the depth, and GetFrameEx stays the depth-less direct call.
+ * Not like the vendor: the capture queue is shared with those consumers and
+ * keeps the oldest frames when nobody pulls (the vendor depth queue replaces
+ * its oldest waiting frame).
+ */
+int OpenIMP_FrameSource_ConsumerGetFrame(int channel, IMPFrameInfo **frame)
+{
+    return p1_get_frame_attempts(channel, frame, 1000);
+}
+
+int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
+{
+    struct openimp_fs_channel *chn;
+    uint64_t deadline = 0;
+    uint32_t depth;
+    int ret;
+
+    if (channel < 0 || channel >= 7)
+        return FS_ERR_CHN;
+    if (channel >= OPENIMP_FS_CHANNELS || !frame)
+        return FS_ERR_PARAM;
+    chn = &p1.channels[channel];
+    for (;;) {
+        int held;
+
+        lock_p1();
+        prepare_p1();
+        depth = chn->depth;
+        held = chn->app_held >= depth;
+        unlock_p1();
+        if (depth == 0)
+            return 0;
+        if (!held)
+            break;
+        if (!deadline)
+            deadline = fs_mono_us() + FS_TIMED_WAIT_US;
+        else if (fs_mono_us() > deadline)
+            return FS_ERR_TIMEOUT;
+        usleep(2000);
+    }
+    ret = p1_get_frame_attempts(channel, frame, 1000);
+    if (ret == 0 && *frame && (*frame)->index >= 0) {
+        lock_p1();
+        if ((uint32_t)(*frame)->index < chn->buffer_count &&
+            !chn->buffers[(*frame)->index].app_held) {
+            chn->buffers[(*frame)->index].app_held = 1;
+            chn->app_held++;
+        }
+        unlock_p1();
+    }
+    return ret;
+}
+#else
 int IMP_FrameSource_GetFrame(int channel, IMPFrameInfo **frame)
 {
     return p1_get_frame_attempts(channel, frame, 1000);
 }
+#endif
 
 #if defined(PLATFORM_T40)
 /* One queue probe; the encoder owns retry timing. */
@@ -2770,6 +2850,11 @@ int IMP_FrameSource_ReleaseFrame(int channel, IMPFrameInfo *frame)
     if (buffer->queued || frame != &buffer->frame) {
         unlock_p1();
         return -1;
+    }
+    if (buffer->app_held) {
+        buffer->app_held = 0;
+        if (chn->app_held)
+            chn->app_held--;
     }
 #if defined(P1_CAPTURE_FEEDER)
     /* SnapFrame is still copying this frame: requeued when it is done. */
@@ -2865,7 +2950,11 @@ int IMP_FrameSource_SnapFrame(int channel, int fmt, int width, int height,
         {
             IMPFrameInfo *frame = NULL;
 
+#if defined(PLATFORM_T41)
+            if (p1_get_frame_attempts(channel, &frame, 1000) == 0 && frame)
+#else
             if (IMP_FrameSource_GetFrame(channel, &frame) == 0 && frame)
+#endif
                 (void)IMP_FrameSource_ReleaseFrame(channel, frame);
         }
         pthread_mutex_lock(&p1_snap_mutex);
@@ -2998,7 +3087,11 @@ int IMP_FrameSource_GetFrameEx(int chnNum, IMPFrameInfo **frame)
 {
     if (chnNum < 0 || chnNum >= 7 || !frame)
         return -1;
+#if defined(PLATFORM_T41)
+    return p1_get_frame_attempts(chnNum, frame, 1000);
+#else
     return IMP_FrameSource_GetFrame(chnNum, frame);
+#endif
 }
 
 int IMP_FrameSource_ReleaseFrameEx(int chnNum, IMPFrameInfo *pframe)

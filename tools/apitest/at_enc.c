@@ -806,6 +806,26 @@ static void live_old(int chn, int codec)
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
 #endif
         n.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
+#if defined(PLATFORM_T21)
+        /* T21: the Helix eprc controller has no super-frame control: mode NONE (thresholds stored) is the supported setting, any other
+         * mode is refused with -1 and leaves the stored configuration untouched */
+        {
+            IMPEncoderSuperFrmCfg bad; int rb, rg;
+
+            memset(&bad, 0, sizeof(bad)); bad.superFrmMode = IMP_RC_SUPERFRM_DISCARD; bad.superIFrmBitsThr = 1; bad.rcPriority = IMP_RC_PRIORITY_BITRATE_FIRST;
+            n.superFrmMode = IMP_RC_SUPERFRM_NONE;
+            r2 = IMP_Encoder_SetSuperFrameCfg(chn, &n);
+            r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
+            rb = IMP_Encoder_SetSuperFrameCfg(chn, &bad);
+            { IMPEncoderSuperFrmCfg *g2 = (IMPEncoderSuperFrmCfg *)gnew(sizeof(*g2));
+              rg = IMP_Encoder_GetSuperFrameCfg(chn, g2); gchk(g2);
+              CHECK(IMP_Encoder_SetSuperFrameCfg, r2, r == 0 && rb != 0 && rg == 0 && g->superFrmMode == IMP_RC_SUPERFRM_NONE && g->superIFrmBitsThr == n.superIFrmBitsThr && g->rcPriority == n.rcPriority &&
+                    g2->superFrmMode == IMP_RC_SUPERFRM_NONE && g2->superIFrmBitsThr == n.superIFrmBitsThr,
+                    "mode NONE I %u P %u prio %d stored and read back; mode DISCARD refused (ret %d), stored config unchanged (mode %d I %u)",
+                    n.superIFrmBitsThr, n.superPFrmBitsThr, (int)g->rcPriority, rb, (int)g2->superFrmMode, g2->superIFrmBitsThr);
+              gfree(g2); }
+        }
+#else
         r2 = IMP_Encoder_SetSuperFrameCfg(chn, &n);
         r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
         if (r2 != 0 && REFUSES_UNSUPPORTED)
@@ -813,6 +833,7 @@ static void live_old(int chn, int codec)
         else
         CHECK(IMP_Encoder_SetSuperFrameCfg, r2, r == 0 && g->superFrmMode == n.superFrmMode && g->superIFrmBitsThr == n.superIFrmBitsThr && g->rcPriority == n.rcPriority,
               "mode %d I %u P %u, read back mode %d I %u P %u prio %d", (int)n.superFrmMode, n.superIFrmBitsThr, n.superPFrmBitsThr, (int)g->superFrmMode, g->superIFrmBitsThr, g->superPFrmBitsThr, (int)g->rcPriority);
+#endif
         rep(FN(IMP_Encoder_GetSuperFrameCfg), r3, r3 == 0 ? V_PASS : V_FAIL, "initial mode %d I %u P %u", (int)o->superFrmMode, o->superIFrmBitsThr, o->superPFrmBitsThr);
         IMP_Encoder_SetSuperFrameCfg(chn, o);
         gfree(g); gfree(o);
@@ -1144,7 +1165,29 @@ static void live_misc(int chn, int codec)
                 r = IMP_Encoder_GetChnEvalInfo(chn, info); e = errno;
                 gchk(info);
                 if (r < 0 && e == ENOTSUP) rep(FN(IMP_Encoder_GetChnEvalInfo), r, V_NA, "ENOTSUP: eval info not provided by this libimp");
+# if defined(PLATFORM_T31)
+                else {
+                    /* vendor record (36 bytes, 8 for JPEG): six hardware counters, then int16 slice QP, min QP, max QP (bytes 24, 26, 28) */
+                    const uint8_t *b = (const uint8_t *)info;
+                    uint32_t w[6]; int16_t q[3]; int i;
+
+                    for (i = 0; i < 6; i++) memcpy(&w[i], b + 4 * i, 4);
+                    for (i = 0; i < 3; i++) memcpy(&q[i], b + 24 + 2 * i, 2);
+                    if (codec == CODEC_JPEG) {      /* JPEG record: 8 bytes, int16 quality factor first, rest zero */
+                        int16_t ql; uint8_t z = 0;
+                        memcpy(&ql, b, 2);
+                        for (i = 2; i < 8; i++) z |= b[i];
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && ql >= 1 && ql <= 100 && !z,
+                              "JPEG record (8 bytes): ret %d, quality factor %d, remaining bytes %s", r, ql, z ? "NOT zero" : "zero");
+                    } else if (codec == CODEC_H264) {
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info) && q[0] >= 1 && q[0] <= 51 && q[1] >= 0 && q[1] <= q[2] && q[2] <= 51 && q[1] <= q[0] && q[0] <= q[2],
+                              "ret %d, record: counters %u %u %u %u %u %u, slice QP %d, min QP %d, max QP %d", r, w[0], w[1], w[2], w[3], w[4], w[5], q[0], q[1], q[2]);
+                    } else
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info), "ret %d, 36 bytes written (this codec's counters are not filled): counters %u %u %u %u %u %u, QP %d/%d/%d", r, w[0], w[1], w[2], w[3], w[4], w[5], q[0], q[1], q[2]);
+                }
+# else
                 else CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r >= 0, "ret %d, info buffer %s (4 KB guarded)", r, gtouched(info) ? "written" : "untouched");
+# endif
                 gfree(info);
             }
 # endif

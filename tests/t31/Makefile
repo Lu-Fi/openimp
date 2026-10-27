@@ -37,6 +37,7 @@ VIDEO_DROP_TEST_BIN := $(PROJECT_DIR)/build/tests/video-drop-test
 VBM_DELAY_TEST_BIN := $(PROJECT_DIR)/build/tests/vbm-delay-test
 ROI_CLAMP_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-roi-clamp-test
 FIXED_CONTRAST_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-fixed-contrast-test
+EVAL_INFO_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-eval-info-test
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -47,7 +48,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
-	$(FIXED_CONTRAST_TEST_BIN)
+	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(AL_RC_OVERLOAD_TEST_BIN)
@@ -76,6 +77,12 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(VIDEO_DROP_TEST_BIN)
 	$(VBM_DELAY_TEST_BIN)
 	$(FIXED_CONTRAST_TEST_BIN)
+	$(EVAL_INFO_TEST_BIN)
+
+# IMP_Encoder_GetChnEvalInfo record layout (vendor 36 bytes)
+$(EVAL_INFO_TEST_BIN): eval_info_test.c $(PROJECT_DIR)/src/t40/t31_eval_info.h
+	mkdir -p "$(dir $@)"
+	$(CC) -std=c99 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/src/t40 eval_info_test.c -o "$@"
 
 # FrameSource delay FIFO helpers (SetMaxDelay/SetDelay/GetTimedFrame)
 $(VBM_DELAY_TEST_BIN): vbm_delay_test.c $(PROJECT_DIR)/src/vbm_delay.h
@@ -328,7 +335,7 @@ clean:
 		$(AI_LIFECYCLE_TEST_BIN)-asan $(AI_LIFECYCLE_TEST_BIN)-tsan \
 		$(FAKE_AUDIO_PROCESS) \
 		$(OSD_DRAW_TEST_BIN) $(OSD_THICK_BENCH_BIN) \
-		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN)
+		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(EVAL_INFO_TEST_BIN)
 
 # A JPEG channel that is the only one on its framesource (timps' jpeg.*
 # channel) gets frames from PollingStream (p2_jpeg_frames_from_fanout), and

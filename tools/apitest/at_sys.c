@@ -150,6 +150,8 @@ void t_fs_pre(void)
     RET0(IMP_FrameSource_EnableChn, r, "ch0");
     r = IMP_FrameSource_EnableChn(1);
     RET0(IMP_FrameSource_EnableChn, r, "ch1");
+    /* the application can read frames (GetFrame) only with a frame depth on the vendor stacks (T41 OpenIMP follows that) */
+    if (IMP_FrameSource_SetFrameDepth) { IMP_FrameSource_SetFrameDepth(0, 2); IMP_FrameSource_SetFrameDepth(1, 2); }
     sleep(3);       /* AE/AWB settle */
 }
 
@@ -379,6 +381,33 @@ void t_fs(void)
     rep(FN(IMP_FrameSource_SetYuvAlign), 0, V_SKIP, "changes the frame stride of the running pipeline");
 #endif
 
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+    /* T41 vendor libimp 1.2.5 (disassembled GetFrame/SetFrameDepth): depth 0 -> GetFrame returns 0 and does not touch *frame; depth N ->
+     * N frames can be held, the (N+1)th GetFrame waits 2 s and fails with 0x80012000 (IMP_ERR_FS_OVERTIME); a ReleaseFrame frees a slot */
+    NEED(IMP_FrameSource_SetFrameDepth) NEED(IMP_FrameSource_GetFrame) NEED(IMP_FrameSource_ReleaseFrame) {
+        IMPFrameInfo **pf = (IMPFrameInfo **)gnew(sizeof(IMPFrameInfo *));
+        IMPFrameInfo *f1 = NULL, *f2 = NULL, *f4 = NULL;
+        int rs0, r0, r1, r2, r3, r4, rr1, rr2, rr4, ok0, ok1, ok2, ok3, ok4;
+        int64_t t0, dt;
+
+        rs0 = IMP_FrameSource_SetFrameDepth(1, 0);
+        *pf = NULL; r0 = IMP_FrameSource_GetFrame(1, pf); gchk(pf); ok0 = rs0 == 0 && r0 == 0 && *pf == NULL;
+        r = IMP_FrameSource_SetFrameDepth(1, 2);
+        *pf = NULL; r1 = IMP_FrameSource_GetFrame(1, pf); f1 = *pf; ok1 = r == 0 && r1 == 0 && f1;
+        *pf = NULL; r2 = IMP_FrameSource_GetFrame(1, pf); f2 = *pf; ok2 = r2 == 0 && f2 && f2 != f1;
+        *pf = NULL; t0 = now_us(); r3 = IMP_FrameSource_GetFrame(1, pf); dt = now_us() - t0; gchk(pf);
+        ok3 = r3 == (int)0x80012000 && *pf == NULL && dt > 1500000 && dt < 3500000;
+        rr1 = f1 ? IMP_FrameSource_ReleaseFrame(1, f1) : -1;
+        *pf = NULL; r4 = IMP_FrameSource_GetFrame(1, pf); f4 = *pf; ok4 = rr1 == 0 && r4 == 0 && f4;
+        rr2 = f2 ? IMP_FrameSource_ReleaseFrame(1, f2) : -1;
+        rr4 = f4 ? IMP_FrameSource_ReleaseFrame(1, f4) : -1;
+        IMP_FrameSource_SetFrameDepth(1, 2);
+        gfree(pf);
+        rep(FN(IMP_FrameSource_SetFrameDepth), r3, (ok0 && ok1 && ok2 && ok3 && ok4 && rr2 == 0 && rr4 == 0) ? V_PASS : V_FAIL,
+            "depth semantics as the vendor: depth 0 -> GetFrame ret %d, frame %s; depth 2 -> 2 frames held (%d/%d), third: ret 0x%x after %lld ms; after a Release the next works (%d)",
+            r0, ok0 ? "untouched" : "CHANGED", r1, r2, (unsigned)r3, (long long)(dt / 1000), r4);
+    }
+#endif
     /* disable / enable cycle: frames must come back */
     NEED(IMP_FrameSource_SetFrameDepth) { IMP_FrameSource_SetFrameDepth(1, 0); }
     r = IMP_FrameSource_DisableChn(1);

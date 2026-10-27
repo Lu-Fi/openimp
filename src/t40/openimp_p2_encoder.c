@@ -309,6 +309,9 @@ typedef struct {
     IMPEncoderRoiAttr roi_attr;     /* IMP_Encoder_SetChnRoiAttr */
 #endif
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
+#if defined(PLATFORM_T31)
+    uint8_t eval_info[36];          /* IMP_Encoder_GetChnEvalInfo record (under lock) */
+#endif
     IMPEncoderJpegeQl jpeg_quality;
     uint32_t sequence;
     uint32_t stream_buf_size;
@@ -1316,6 +1319,10 @@ extern int AL_Codec_Encode_SetGopLength(void *codec, int length);
 extern int AL_Codec_Encode_Destroy(void *codec);
 extern int AL_Codec_Encode_Process(void *codec, void *frame, void *user_data);
 extern int AL_Codec_Encode_GetStream(void *codec, void **stream, void **user_data);
+#if defined(PLATFORM_T31)
+extern int AL_Codec_Encode_GetEvalInfo(void *codec, void *stream, void *out36)
+    __attribute__((weak));
+#endif
 extern int AL_Codec_Encode_ReleaseStream(void *codec, void *stream, void *user_data);
 extern int AL_Codec_Encode_RequestIDR(void *codec);
 extern int AL_Codec_Encode_SetJpegSkip(void *codec, int allow);
@@ -1339,6 +1346,19 @@ extern int VBMGetFrame(int chn, void **frame);
 #elif defined(PLATFORM_T40)
 extern int OpenIMP_T40_FrameSource_TryGetFrame(int channel, void **frame);
 #define P2_FS_TRY_FRAME(chn, frame) OpenIMP_T40_FrameSource_TryGetFrame((chn), (frame))
+#elif defined(PLATFORM_T41)
+/* The encoder is a consumer of the capture queue: it does not go through the
+ * application frame depth of IMP_FrameSource_GetFrame (weak: host tests stub
+ * only IMP_FrameSource_GetFrame). */
+extern int OpenIMP_FrameSource_ConsumerGetFrame(int channel, void **frame)
+    __attribute__((weak));
+static inline int p2_fs_try_frame(int chn, void **frame)
+{
+    return OpenIMP_FrameSource_ConsumerGetFrame
+        ? OpenIMP_FrameSource_ConsumerGetFrame(chn, frame)
+        : IMP_FrameSource_GetFrame(chn, frame);
+}
+#define P2_FS_TRY_FRAME(chn, frame) p2_fs_try_frame((chn), (frame))
 #else
 #define P2_FS_TRY_FRAME(chn, frame) IMP_FrameSource_GetFrame((chn), (frame))
 #endif
@@ -2492,6 +2512,9 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 #endif
 #endif
     ch->created = 1;
+#if defined(PLATFORM_T31)
+    memset(ch->eval_info, 0, sizeof(ch->eval_info));
+#endif
     ch->tel_frames = ch->tel_bytes = ch->tel_idr = ch->tel_enc_us_sum = 0;
     ch->tel_enc_us_last = ch->tel_enc_us_max = ch->tel_last_len = 0;
     ch->tel_first_len = 0;
@@ -3295,6 +3318,22 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     pthread_mutex_lock(&ch->lock);
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         p2_jpeg_keep_last(ch, (const P2HWStream *)stream);
+#if defined(PLATFORM_T31)
+    /* GetChnEvalInfo record: AVC = the completion statistics of this
+     * picture; JPEG = the quality factor in the first int16 (vendor). */
+    if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
+        int16_t q = ch->attr.rcAttr.attrRcMode.attrFixQp.iInitialQP;
+
+        memset(ch->eval_info, 0, sizeof(ch->eval_info));
+        memcpy(ch->eval_info, &q, sizeof(q));
+    } else {
+        uint8_t rec[36];
+
+        if (AL_Codec_Encode_GetEvalInfo &&
+            AL_Codec_Encode_GetEvalInfo(ch->codec, stream, rec) == 0)
+            memcpy(ch->eval_info, rec, sizeof(rec));
+    }
+#endif
     ch->source_frame = frame ? frame : &ch->synthetic_frame;
     ch->raw_stream = stream;
     ch->raw_stream_out = 0;
@@ -5104,8 +5143,25 @@ int IMP_Encoder_GetChnEvalInfo(int channel, void *info)
     if (!p2_valid_channel(channel) || !info ||
         !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T31)
+    /* Vendor T31 1.1.6: 0, the channel's 36-byte record (8 bytes for a
+     * JPEG channel), refreshed with every stream the encoder finishes.
+     * Same bytes as the vendor: six counters (intra, skip, CU8x8..CU32x32
+     * style hardware counts), then int16 slice QP, min QP, max QP. */
+    {
+        P2EncoderChannel *ch = &p2_channels[channel];
+        size_t n = ch->codec_type == IMP_ENC_TYPE_JPEG ? 8 : 36;
+
+        memset(info, 0, n);
+        pthread_mutex_lock(&ch->lock);
+        memcpy(info, ch->eval_info, n);
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
+#else
     errno = ENOTSUP;
     return -1;
+#endif
 }
 
 /* Not ch->lock: that is held across encoder work on other threads. */

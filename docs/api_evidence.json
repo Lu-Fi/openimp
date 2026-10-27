@@ -3046,7 +3046,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "err",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -3056,7 +3056,7 @@
    },
    "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
-    "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=-1 read",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
     "T40": "apitest agg47-cases 2026-10-26 .184"
    }
@@ -3610,7 +3610,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "err",
+    "T23": "rt",
     "T30": "n.a.",
     "T31": "dev",
     "T32": "nob",
@@ -3640,7 +3640,7 @@
    },
    "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
    "ref": {
-    "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=0 rt: same value written (set ret 0), read back equal",
+    "T23": "apitest rc3gaps2 2026-10-27 .30 (API round trip, no visible effect expected)",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
     "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
@@ -6028,7 +6028,7 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
@@ -6210,7 +6210,7 @@
     "T10": "aud",
     "T20": "aud",
     "T21": "dev",
-    "T23": "host",
+    "T23": "dev",
     "T30": "?",
     "T31": "dev",
     "T32": "n.a.",
@@ -6229,7 +6229,8 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest agg47 2026-10-26 .26",
+    "T23": "apitest rc3gaps2 2026-10-27 .30"
    }
   },
   "ISP_Tuning_SetWB_ALGO": {
@@ -6336,11 +6337,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_CreateGroup": {
@@ -6413,11 +6414,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_DestroyChn": {
@@ -6490,11 +6491,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_DestroyGroup": {
@@ -6567,11 +6568,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_FlushStream": {
@@ -6634,11 +6635,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetChangeRef": {
@@ -6657,7 +6658,7 @@
    },
    "note": "T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test T10/T20: stored and read back with the vendor return codes (SetChangeRef -1 on an idle channel, GetChangeRef -1 on an idle channel; apitest PASS on T10, T20); T21 (2026-10-10, host test): SetChangeRef -1 on an idle channel; GetChangeRef answers 0 on an idle channel and, as the vendor (T21 1.0.33 and T30 1.0.5, same code), logs \"unsupport to change ref channel\" and returns -1 on every created channel without writing the value (it used to return the stored value); the vendor passes it to the i264e reference code (param 12), which only the HSkip reference modes read; the Helix path codes no HSkip structure (class c). Disassembly: T21 1.0.33 0x48bd4/0x48d90, T20 3.12.0 0x4b05c/0x4b220; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test; T30 1.0.5 (same vendor code as T21): SetChangeRef stores the flag of a created channel (-1 for an idle one); GetChangeRef is 0 for an idle channel and -1 for a created one (the vendor logs \"unsupport to change ref channel\"); host test",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -6721,11 +6722,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetChnColor2Grey": {
@@ -6751,7 +6752,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -6813,7 +6814,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -6877,11 +6878,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetChnFrmUsedMode": {
@@ -6902,7 +6903,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -6922,9 +6923,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetChnH264Demask": {
@@ -6991,7 +6992,7 @@
    },
    "note": "T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1) T10/T20 3.12.0 (0x49dc8/0x4a078): needs a created channel, skipType up to maxHSkipType, six words stored (apitest PASS on T10, T20); unlike T21 the IDR period is not applied (the OEM pushes it to i264e param 9; class c); T30 1.0.5: the six words are stored, also for an idle channel, which reads back as zeros as in the vendor (up to maxHSkipType, 0 until CreateChn); unlike T21 the IDR period is not handed to the encoder on T30 (the CreateChn path does not do it either), so it stays a cache until a T30 device run; host test; T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1); T21 (2026-10-10, host test; T21 1.0.33 0x478f0/0x47ba0): an idle (not yet created) channel is accepted as the vendor does, SetChnHSkip stores the six words without the maxHSkipType check and without reaching the encoder, GetChnHSkip answers all zero with 0 (both used to be -1)",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7021,7 +7022,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7132,7 +7133,7 @@
    "note": "T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested T10: no chroma-offset register, stays 0; T20: chroma QP offset via PPS + reg 0x40120 (claude/t1x-roi), verified on a camera, no colour shift; T21: chroma QP offset, PPS rewrite; not device-tested",
    "ref": {
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7175,9 +7176,9 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetMaxStreamCnt": {
@@ -7230,11 +7231,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetMbRC": {
@@ -7260,7 +7261,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7301,9 +7302,9 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetQpgMode": {
@@ -7327,7 +7328,7 @@
    },
    "note": "T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7347,9 +7348,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Get/SetSuperFrameCfg": {
@@ -7357,7 +7358,7 @@
    "cells": {
     "T10": "dev",
     "T20": "dev",
-    "T21": "host",
+    "T21": "dev",
     "T23": "dev",
     "T30": "?",
     "T31": "n.a.",
@@ -7375,7 +7376,8 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T23": "apitest agg47 2026-10-26 .30"
+    "T23": "apitest agg47 2026-10-26 .30",
+    "T21": "apitest rc3gaps2 2026-10-27 .24"
    }
   },
   "Encoder_Get/Setframelossthd": {
@@ -7454,11 +7456,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_GetChnAveBitrate": {
@@ -7482,7 +7484,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
    }
   },
   "Encoder_GetChnEncType": {
@@ -7527,11 +7529,11 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_GetChnEvalInfo": {
@@ -7542,7 +7544,7 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "n.a.",
-    "T31": "host",
+    "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
@@ -7553,7 +7555,10 @@
      "r†"
     ]
    },
-   "note": "T31: claude/t23-enc-rest (not in agg-25)"
+   "note": "T31: claude/t23-enc-rest (not in agg-25)",
+   "ref": {
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
+   }
   },
   "Encoder_GetChnMaxPictureSize": {
    "area": "Encoder",
@@ -7616,11 +7621,11 @@
    },
    "note": "audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_GetGOPSize": {
@@ -7641,7 +7646,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7715,11 +7720,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_InputJpege": {
@@ -7743,7 +7748,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_InputJpege_Ex": {
@@ -7782,7 +7787,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -7802,8 +7807,8 @@
    },
    "note": "audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS)",
    "ref": {
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
@@ -7877,11 +7882,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_Query": {
@@ -7944,11 +7949,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_RegisterChn": {
@@ -8021,11 +8026,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_ReleaseStream": {
@@ -8098,11 +8103,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_RequestGDR": {
@@ -8194,11 +8199,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetAvpuBsShare": {
@@ -8249,7 +8254,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnBitRate": {
@@ -8285,9 +8290,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnEntropyMode": {
@@ -8306,7 +8311,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
    }
   },
   "Encoder_SetChnGopLength": {
@@ -8325,9 +8330,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnHSkipBlackEnhance": {
@@ -8411,7 +8416,7 @@
    "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only)",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34: SetChnMaxPictureSize(I,P) limits the biggest picture to the set size (H.264 8355 -> 4036 B, H.265 6127 -> 2876 B at a limit of 33/24 kbit)"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnQp": {
@@ -8430,7 +8435,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
    }
   },
   "Encoder_SetChnQpBounds": {
@@ -8466,9 +8471,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnQpBoundsPerFrame": {
@@ -8487,7 +8492,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetChnQpIPDelta": {
@@ -8511,7 +8516,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
    }
   },
   "Encoder_SetChnResizeMode": {
@@ -8530,9 +8535,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetDefaultParam": {
@@ -8568,9 +8573,9 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_SetFrameRelease": {
@@ -8589,7 +8594,7 @@
    },
    "note": "T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
@@ -8628,7 +8633,7 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30"
    }
   },
@@ -8696,9 +8701,9 @@
    },
    "note": "vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_StartRecvPic": {
@@ -8771,11 +8776,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_StopRecvPic": {
@@ -8848,11 +8853,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_UnRegisterChn": {
@@ -8925,11 +8930,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_VbmAlloc": {
@@ -8954,7 +8959,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_VbmAlloc_Ex": {
@@ -8997,7 +9002,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_VbmFree_Ex": {
@@ -9035,7 +9040,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_VbmV2P": {
@@ -9060,7 +9065,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_YuvEncode": {
@@ -9085,7 +9090,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_YuvEncode_Ex": {
@@ -9128,7 +9133,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_YuvExit_Ex": {
@@ -9190,7 +9195,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "Encoder_YuvInit_Ex": {
@@ -9780,7 +9785,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetChnFifoAttr": {
@@ -9847,7 +9852,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetDelay": {
@@ -9920,7 +9925,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "cache"
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -9957,7 +9962,7 @@
      "r†"
     ]
    },
-   "note": "T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: depth stored, GetFrame ignores it (T41 p1); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps",
+   "note": "T41: GetFrame follows the frame depth as the vendor (not the shared capture queue); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: GetFrame follows the frame depth as the vendor (not the shared capture queue); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps",
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
@@ -9965,7 +9970,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "value stored and read back (.34, 2026-10-27); depth semantics (frames held / dropped) not yet proven against the vendor"
+    "T41": "apitest rc3gaps2 libimp swap 2026-10-27 .34 (depth semantics of the vendor 1.2.5 GetFrame: depth 0 -> no frame, N held, third waits 2 s -> 0x80012000)"
    }
   },
   "FrameSource_Get/SetI2dAttr": {
@@ -9999,7 +10004,7 @@
    "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1",
    "ref": {
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetMaxDelay": {
@@ -10124,7 +10129,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_GetFrameEx": {
@@ -10143,7 +10148,7 @@
    },
    "ref": {
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_GetTimedFrame": {
@@ -10200,7 +10205,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_QueueBuffer": {
@@ -10271,7 +10276,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_ReleaseFrameEx": {
@@ -10290,7 +10295,7 @@
    },
    "ref": {
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_SetChnRotate": {
@@ -10405,7 +10410,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_Get/SetDrawAttr": {
@@ -17552,11 +17557,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_GetCPUInfo": {
@@ -18082,11 +18087,11 @@
    "ref": {
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_WriteReg32": {
