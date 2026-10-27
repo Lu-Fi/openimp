@@ -16540,11 +16540,11 @@
     "T21": "n.a.",
     "T23": "n.a.",
     "T30": "aud",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
-    "T41": "err"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T30": [
@@ -16565,7 +16565,13 @@
     "T33": [
      "r†"
     ]
-   }
+   },
+   "ref": {
+    "T31": "apitest dmic 2026-10-27 .26 + QEMU T31: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
+    "T40": "apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
+    "T41": "apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board"
+   },
+   "note": "vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board"
   },
   "DMIC_DisableAecRefFrame": {
    "area": "Audio",
@@ -16578,8 +16584,8 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
-    "T41": "err"
+    "T40": "rt",
+    "T41": "rt"
    },
    "used": {
     "T30": [
@@ -16598,7 +16604,11 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host"
+   "note": "vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board",
+   "ref": {
+    "T40": "apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
+    "T41": "apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board"
+   }
   },
   "Log_Get_Option": {
    "area": "System",

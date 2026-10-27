@@ -328,6 +328,15 @@ Without frames from the ISP (sensor cable, sensor or ISP stall) the vendor libra
 - Cost/limits: a buffer of its own (about 1.5 x width x height) is taken from video memory only while the fallback runs; with the fallback on (default) a worker thread per channel performs the blocking frame dequeue so that `GetFrame` can time out (T41 frame channel DQBUF blocks in the kernel); switched off (`=0`) = vendor code path unchanged. Channels with the I2D pass (rotation/flip), IVS and SnapFrame get no synthetic frames. T20-T31 not covered.
 - Status: T41 (sc5336, 1280x720 H.264, sensor stream stopped/started through `IMP_ISP_SetSensorRegister`): 4 s real 15.0 fps, stopped without fallback 0 frames (control), armed: fallback after 2.0 s at 15.0 fps (105 frames in 9 s incl. the dwell time, counter in the pictures consecutive without gaps), real frames back at 15.0 fps, switch off while active works, 0 oops; T40 builds (host test of the state machine and the picture in `make check`, `tests/fallback`).
 
+### 6.3 IMP_DMIC_Enable on a board without a DMIC route (T40/T41)
+
+The ingenic-sdk audio module sets the DMIC route up only with the module parameter `dmic_enable=1` (default 0). Without it the vendor
+library still sends its first DMIC ioctl (SET_PARAM 0x73) and the driver dereferences the missing route: kernel oops, the calling process
+dies in D state and `/dev/dsp` stays locked (reproduced in QEMU T41 with the vendor call sequence). OpenIMP reads
+`/sys/module/audio/parameters/dmic_enable` first and returns -1 from `IMP_DMIC_Enable` when it is 0, so a streamer that probes the DMIC
+gets the normal "no device" answer and the audio path keeps working. (Streamer-visible: none, the return code is what the vendor
+returns on a healthy driver without the device.) Status: QEMU T40/T41 and cameras .184 (T40) and .34 (T41), apitest `dmic`, no oops.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

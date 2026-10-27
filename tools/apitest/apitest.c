@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     areas = argc > 5 ? argv[5] : NULL;
     if (argc == 2 && !strcmp(argv[1], "--list")) { list_fns(0); return 0; }
     if (argc == 2 && !strcmp(argv[1], "--areas")) {
-        puts("sys\nfs\nenc\nosd\nivs\naudio\nisp\nsu\ncases\npicture\n"
+        puts("sys\nfs\nenc\nosd\nivs\naudio\nisp\nsu\ncases\ndmic\npicture\n"
 #ifdef APITEST_T40
              "t40dev\n"
 #endif
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
 #endif
     if (argc < 5) {
         fprintf(stderr, "apitest (%s) usage: %s sensor i2c_addr sensor_w sensor_h [areas]   |   %s --list\n"
-                "  areas: sys,fs,enc,osd,ivs,audio,isp,su,cases (comma list, default all); picture OUTDIR [filter]; --areas --cases --json FILE\n", SOC, argv[0], argv[0]);
+                "  areas: sys,fs,enc,osd,ivs,audio,isp,su,cases,dmic (comma list, default all); picture OUTDIR [filter]; --areas --cases --json FILE\n", SOC, argv[0], argv[0]);
         return 2;
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -302,6 +302,11 @@ int main(int argc, char **argv)
     }
     printf("[T] apitest %s sensor %s %dx%d areas %s\n", SOC, argv[1], g_sw, g_sh, areas ? areas : "all");
 
+    if (areas && !strcmp(areas, "dmic")) {      /* IMP_DMIC_*: no ISP / sensor needed (area dmic = the case of area cases) */
+        rep_area("dmic");
+        t_dmic();
+        goto summary;
+    }
     if (!IMP_ISP_Open || !IMP_System_Init) { printf("[E] libimp does not export IMP_ISP_Open / IMP_System_Init (not linked?)\n"); return 1; }
     rep_area("isp-init");
     ret = 0;
@@ -371,6 +376,7 @@ int main(int argc, char **argv)
     t_fs_post();
     t_system_exit(0);
 
+summary:
     for (i = 0; i < g_nfn; i++) { if (g_fn[i].tested) tested++; else na_only++; }
     printf("[T] summary %s: PASS %d FAIL %d N/A %d SKIP %d, OVERWRITE %d\n", SOC, g_pass, g_fail, g_na, g_skip, g_overwrites);
     printf("[T] functions: %d reported, %d exercised (PASS/FAIL), %d only N/A or SKIP\n", g_nfn, tested, na_only);

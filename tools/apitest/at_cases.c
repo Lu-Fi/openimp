@@ -1632,7 +1632,7 @@ static void cs_aeexplist(void)
 static void cs_aeexplist(void) {}
 #endif
 
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist); default all */
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist dmic); default all */
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -1743,9 +1743,149 @@ static void cs_stalesnap(void)
 static void cs_stalesnap(void) {}
 #endif
 
+/* ---- dmic: IMP_DMIC_* at API level (T31/T40/T41).  Round trips and argument validation need no DMIC hardware;
+ * the stream functions are exercised for real only when Enable succeeds (a DMIC board), otherwise they must
+ * fail cleanly (-1, no hang) like the vendor library without the device.  Nothing is played; capture only. */
+#if defined(HAS_IMP_DMIC_SetUserInfo) && defined(HAS_IMP_DMIC_Enable) && defined(HAS_IMP_DMIC_PollingFrame)
+#define DM_REP(f, r, ok, ...) do { char dm_[200]; snprintf(dm_, sizeof dm_, __VA_ARGS__); \
+    rep(FN(f), (long)(r), (ok) ? V_PASS : V_FAIL, "rt: API round trip, no DMIC hardware on the test board; %s", dm_); } while (0)
+
+void t_dmic(void)
+{
+    G(IMPDmicAttr, at); G(IMPDmicAttr, ag); G(IMPDmicChnParam, cp); G(IMPDmicChnParam, cg);
+    G(IMPDmicChnFrame, fr);
+    int *iv = (int *)gnew(sizeof(int));
+    int r, ok, hw, v, gain_ok = 1;
+    long t0;
+
+    if (!IMP_DMIC_Enable) { rep_na(FN(IMP_DMIC_Enable)); return; }
+    wdog("cases", 90);
+    /* --- SetUserInfo */
+    ok = IMP_DMIC_SetUserInfo(1, 0, 0) == -1 && IMP_DMIC_SetUserInfo(0, 4, 1) == -1 && IMP_DMIC_SetUserInfo(0, -1, 1) == -1;
+    r = IMP_DMIC_SetUserInfo(0, 2, 1);
+    ok = ok && r == 0 && IMP_DMIC_SetUserInfo(0, 0, 0) == 0;
+    DM_REP(IMP_DMIC_SetUserInfo, r, ok, "dev 1 / aec id 4 / aec id -1 rejected, (0,2,1) and (0,0,0) accepted");
+
+    /* --- SetPubAttr / GetPubAttr */
+    memset(at, 0, sizeof *at);
+    at->samplerate = (IMPDmicSampleRate)16000; at->bitwidth = DMIC_BIT_WIDTH_16; at->soundmode = DMIC_SOUND_MODE_MONO;
+    at->frmNum = 4; at->numPerFrm = 160; at->chnCnt = 2;
+    ok = IMP_DMIC_SetPubAttr(0, NULL) == -1 && IMP_DMIC_SetPubAttr(1, at) == -1;
+    at->chnCnt = 0; ok = ok && IMP_DMIC_SetPubAttr(0, at) == -1;
+    at->chnCnt = 5; ok = ok && IMP_DMIC_SetPubAttr(0, at) == -1;
+    at->chnCnt = 2; at->numPerFrm = 100; ok = ok && IMP_DMIC_SetPubAttr(0, at) == -1;   /* 6.25 ms: not a multiple of 10 ms */
+    at->numPerFrm = 160;
+    r = IMP_DMIC_SetPubAttr(0, at);
+    ok = ok && r == 0;
+    DM_REP(IMP_DMIC_SetPubAttr, r, ok, "NULL / dev 1 / chnCnt 0 and 5 / 6.25 ms frame rejected, 16 kHz 160x2 accepted");
+    ok = IMP_DMIC_GetPubAttr(0, NULL) == -1 && IMP_DMIC_GetPubAttr(1, ag) == -1;
+    r = IMP_DMIC_GetPubAttr(0, ag);
+    ok = ok && r == 0 && ag->samplerate == at->samplerate && ag->bitwidth == at->bitwidth && ag->soundmode == at->soundmode &&
+         ag->frmNum == at->frmNum && ag->numPerFrm == at->numPerFrm && ag->chnCnt == at->chnCnt;
+    { int rate; for (rate = 8000; rate <= 48000; rate *= 2) { if (rate == 32000) rate = 48000;
+        at->samplerate = (IMPDmicSampleRate)rate; at->numPerFrm = rate / 50;       /* 20 ms */
+        ok = ok && IMP_DMIC_SetPubAttr(0, at) == 0 && IMP_DMIC_GetPubAttr(0, ag) == 0 && (int)ag->samplerate == rate && ag->numPerFrm == rate / 50; } }
+    at->samplerate = (IMPDmicSampleRate)16000; at->numPerFrm = 160; at->chnCnt = 2;
+    ok = ok && IMP_DMIC_SetPubAttr(0, at) == 0;
+    DM_REP(IMP_DMIC_GetPubAttr, r, ok, "all fields read back; 8000/16000/48000 Hz round trip");
+
+    /* --- SetChnParam / GetChnParam (before Enable) */
+    cp->usrFrmDepth = 3; cp->Rev = 0;
+    ok = IMP_DMIC_SetChnParam(0, 0, NULL) == -1 && IMP_DMIC_SetChnParam(1, 0, cp) == -1 && IMP_DMIC_SetChnParam(0, 1, cp) == -1;
+    cp->usrFrmDepth = 1; ok = ok && IMP_DMIC_SetChnParam(0, 0, cp) == -1;
+    cp->usrFrmDepth = at->frmNum + 1; ok = ok && IMP_DMIC_SetChnParam(0, 0, cp) == -1;
+    cp->usrFrmDepth = 3;
+    r = IMP_DMIC_SetChnParam(0, 0, cp);
+    ok = ok && r == 0;
+    DM_REP(IMP_DMIC_SetChnParam, r, ok, "NULL / dev 1 / chn 1 / depth 1 and frmNum+1 rejected, depth 3 accepted");
+    r = IMP_DMIC_GetChnParam(0, 0, cg);      /* the channel parameters are readable once the device is enabled */
+    ok = IMP_DMIC_GetChnParam(0, 0, NULL) == -1 && IMP_DMIC_GetChnParam(1, 0, cg) == -1 && r == -1;
+    DM_REP(IMP_DMIC_GetChnParam, r, ok, "NULL / dev 1 rejected, -1 while the device is not enabled (checked again after Enable)");
+
+    /* --- volume (software, no device needed) */
+    ok = IMP_DMIC_SetVol(1, 0, 60) == -1 && IMP_DMIC_SetVol(0, 1, 60) == -1;
+    r = IMP_DMIC_SetVol(0, 0, -100);
+    ok = ok && r == 0 && IMP_DMIC_GetVol(0, 0, iv) == 0 && *iv == -30;
+    ok = ok && IMP_DMIC_SetVol(0, 0, 200) == 0 && IMP_DMIC_GetVol(0, 0, iv) == 0 && *iv == 120;
+    ok = ok && IMP_DMIC_SetVol(0, 0, 60) == 0 && IMP_DMIC_GetVol(0, 0, iv) == 0 && *iv == 60;
+    DM_REP(IMP_DMIC_SetVol, r, ok, "-100 -> -30, 200 -> 120, 60 -> 60 (clamp -30..120), dev 1 / chn 1 rejected");
+    ok = IMP_DMIC_GetVol(0, 0, NULL) == -1 && IMP_DMIC_GetVol(1, 0, iv) == -1;
+    r = IMP_DMIC_GetVol(0, 0, iv);
+    ok = ok && r == 0 && *iv == 60;
+    DM_REP(IMP_DMIC_GetVol, r, ok, "NULL / dev 1 rejected, value %d read back", *iv);
+
+    /* --- calls that need the enabled device must fail cleanly before Enable */
+    ok = IMP_DMIC_EnableChn(0, 0) == -1 && IMP_DMIC_DisableChn(0, 0) == -1;
+    ok = ok && IMP_DMIC_GetFrame(0, 0, fr, NOBLOCK) == -1 && IMP_DMIC_ReleaseFrame(0, 0, fr) == -1;
+    ok = ok && IMP_DMIC_EnableAec(0, 0, 0, 0) == -1 && IMP_DMIC_DisableAec(0, 0) == -1;
+    ok = ok && IMP_DMIC_Enable(1) == -1 && IMP_DMIC_Disable(1) == -1 && IMP_DMIC_EnableChn(1, 0) == -1;
+    ok = ok && IMP_DMIC_SetGain(0, 0, 10) == -1 && IMP_DMIC_GetGain(0, 0, NULL) == -1;
+    t0 = (long)(now_us() / 1000);
+    r = IMP_DMIC_PollingFrame(0, 0, 300);       /* libimp polls up to 5 s; this one honours the timeout */
+    ok = ok && r != 0 && (long)(now_us() / 1000) - t0 < 4000;
+    DM_REP(IMP_DMIC_PollingFrame, r, ok, "not enabled: -1 (%ld ms), dev 1 and chn 1 rejected", (long)(now_us() / 1000) - t0);
+    DM_REP(IMP_DMIC_ReleaseFrame, -1, ok, "not enabled: -1");
+    DM_REP(IMP_DMIC_GetFrame, -1, ok, "not enabled: -1, no hang");
+    DM_REP(IMP_DMIC_EnableChn, -1, ok, "not enabled: -1");
+    DM_REP(IMP_DMIC_DisableChn, -1, ok, "not enabled: -1");
+    DM_REP(IMP_DMIC_EnableAec, -1, ok, "not enabled: -1");
+    DM_REP(IMP_DMIC_DisableAec, -1, ok, "not enabled: -1");
+#ifdef HAS_IMP_DMIC_GetFrameAndRef
+    { G(IMPDmicFrame, rf); r = IMP_DMIC_GetFrameAndRef(0, 0, fr, rf, NOBLOCK); DM_REP(IMP_DMIC_GetFrameAndRef, r, r == -1, "not enabled: -1"); gfree(rf); }
+#endif
+    r = IMP_DMIC_EnableAecRefFrame(0, 0, 0, 0);
+    DM_REP(IMP_DMIC_EnableAecRefFrame, r, r == -1, "not enabled: -1");
+#ifdef HAS_IMP_DMIC_DisableAecRefFrame
+    NEED(IMP_DMIC_DisableAecRefFrame) { r = IMP_DMIC_DisableAecRefFrame(0, 0, 0, 0); DM_REP(IMP_DMIC_DisableAecRefFrame, r, r == -1, "not enabled: -1"); }
+#endif
+
+    /* --- Enable: a DMIC board enables, a board without the device must fail cleanly */
+    wdog("cases", 60);
+    r = IMP_DMIC_Enable(0);
+    hw = r == 0;
+    DM_REP(IMP_DMIC_Enable, r, r == 0 || r == -1, "%s", hw ? "enabled (DMIC device present)" : "-1 without the DMIC device, returns immediately");
+    ok = 1;
+    if (hw) {
+        int n, got = 0;
+        ok = IMP_DMIC_GetChnParam(0, 0, cg) == 0 && cg->usrFrmDepth == 3;
+        ok = ok && IMP_DMIC_SetGain(0, 0, 40) == 0 && IMP_DMIC_GetGain(0, 0, iv) == 0 && *iv == 31;   /* clamped */
+        ok = ok && IMP_DMIC_SetGain(0, 0, 5) == 0 && IMP_DMIC_GetGain(0, 0, iv) == 0 && *iv == 5;
+        gain_ok = ok;
+        ok = ok && IMP_DMIC_EnableChn(0, 0) == 0;
+        for (n = 0; ok && n < 5; n++) {
+            if (IMP_DMIC_PollingFrame(0, 0, 2000) != 0) { ok = 0; break; }
+            if (IMP_DMIC_GetFrame(0, 0, fr, BLOCK) != 0) { ok = 0; break; }
+            ok = ok && fr->rawFrame.virAddr && fr->rawFrame.len == 160 * 2 * 2;
+            IMP_DMIC_ReleaseFrame(0, 0, fr);
+            got++;
+        }
+        v = IMP_DMIC_DisableChn(0, 0);
+        ok = ok && v == 0 && IMP_DMIC_Disable(0) == 0;
+        printf("[D] dmic hardware flow: %d frames, %s\n", got, ok ? "ok" : "FAILED");
+        if (!ok) rep(LBL("dmic hardware flow"), -1, V_FAIL, "stream flow failed after %d frames", got);
+    } else {
+        ok = IMP_DMIC_GetFrame(0, 0, fr, NOBLOCK) == -1 && IMP_DMIC_EnableChn(0, 0) == -1 && IMP_DMIC_Disable(0) == 0 &&
+             IMP_DMIC_Disable(0) == 0;
+        if (!ok) rep(LBL("dmic no-device cleanup"), -1, V_FAIL, "calls after a failed Enable misbehave");
+    }
+    /* after a (failed) Enable the attributes are intact */
+    r = IMP_DMIC_GetPubAttr(0, ag);
+    if (r != 0 || ag->samplerate != at->samplerate || ag->chnCnt != at->chnCnt) rep(LBL("dmic attr after enable"), r, V_FAIL, "attributes changed");
+    r = IMP_DMIC_SetGain(0, 0, 7);
+    DM_REP(IMP_DMIC_SetGain, r, r == -1 && gain_ok, "device not enabled: -1%s", hw ? "; on the DMIC board 40 -> 31 clamped and 5 read back" : "");
+    r = IMP_DMIC_GetGain(0, 0, iv);
+    DM_REP(IMP_DMIC_GetGain, r, IMP_DMIC_GetGain(0, 0, NULL) == -1 && r == 0, "NULL rejected, stored value %d", *iv);
+    DM_REP(IMP_DMIC_Disable, 0, IMP_DMIC_Disable(0) == 0, "Disable on a disabled device: 0 (libimp: success)");
+    (void)v;
+    gfree(at); gfree(ag); gfree(cp); gfree(cg); gfree(fr); gfree(iv);
+}
+#else
+void t_dmic(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1810,5 +1950,6 @@ void t_cases(void)
     if (cs_on("aestats")) cs_aestats();    wdog("cases", 60);
     if (cs_on("faceae")) cs_faceae();      wdog("cases", 90);
     if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
+    if (cs_on("dmic")) t_dmic();        wdog("cases", 60);
     wdog("cases", 60);
 }

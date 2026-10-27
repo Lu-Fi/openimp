@@ -29,28 +29,9 @@
         return NULL;                                                          \
     }
 
-P3_UNSUPPORTED(IMP_DMIC_Disable)
-P3_UNSUPPORTED(IMP_DMIC_DisableAec)
-P3_UNSUPPORTED(IMP_DMIC_DisableAecRefFrame)
-P3_UNSUPPORTED(IMP_DMIC_DisableChn)
-P3_UNSUPPORTED(IMP_DMIC_Enable)
-P3_UNSUPPORTED(IMP_DMIC_EnableAec)
-P3_UNSUPPORTED(IMP_DMIC_EnableAecRefFrame)
-P3_UNSUPPORTED(IMP_DMIC_EnableChn)
-P3_UNSUPPORTED(IMP_DMIC_GetChnParam)
-P3_UNSUPPORTED(IMP_DMIC_GetFrame)
-P3_UNSUPPORTED(IMP_DMIC_GetFrameAndRef)
-P3_UNSUPPORTED(IMP_DMIC_GetGain)
-P3_UNSUPPORTED(IMP_DMIC_GetPubAttr)
-P3_UNSUPPORTED(IMP_DMIC_GetVol)
-P3_UNSUPPORTED(IMP_DMIC_PollingFrame)
-P3_UNSUPPORTED(IMP_DMIC_ReleaseFrame)
-P3_UNSUPPORTED(IMP_DMIC_SetChnParam)
-P3_UNSUPPORTED(IMP_DMIC_SetGain)
-P3_UNSUPPORTED(IMP_DMIC_SetPubAttr)
-P3_UNSUPPORTED(IMP_DMIC_SetUserInfo)
-P3_UNSUPPORTED(IMP_DMIC_SetVol)
 
+
+/* IMP_DMIC_*: src/t31/openimp_t31_dmic.c (OSS3 variant on T40/T41). */
 
 /* T40 IMP_ISP_Tuning_Get/SetMask: openimp_p3_controls.c (no T41 export,
  * the vendor T41 has SetMaskBlock instead).  T40/T41 ISP-drawn OSD:
