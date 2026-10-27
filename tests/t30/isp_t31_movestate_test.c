@@ -1,6 +1,8 @@
 /*
- * T31 IMP_ISP_Tuning_Enable/DisableMovestate (vendor libimp 1.1.x logic):
- * src/isp/isp_tseries.c with PLATFORM_T31 against a fake tuning ioctl.
+ * T31 IMP_ISP_Tuning_Enable/DisableMovestate (vendor libimp 1.1.x logic),
+ * also built for T10/T20 (vendor libimp 3.12.0, same logic on the
+ * SYSTEM_TAB block): src/isp/isp_tseries.c with PLATFORM_T31 or
+ * PLATFORM_T20 against a fake tuning ioctl.
  *  - -1 without tuning; 0 once past the checks;
  *  - Enable reads the 0x70-byte AE block of CID 0x800002c, then sends a
  *    block with the day or night limits (byte positions of the vendor) and
@@ -35,6 +37,11 @@ static int idr_calls, idr_chn = -1;
 int openimp_video_drop_set(void (*cb)(void)) { (void)cb; return 0; }
 int IMP_Encoder_RequestIDR(int chn) { idr_calls++; idr_chn = chn; return 0; }
 
+#if defined(PLATFORM_T20)
+#define TEST_NAME "isp_t20_movestate_test"
+#else
+#define TEST_NAME "isp_t31_movestate_test"
+#endif
 #define TUNING_FD 77
 #define TUNING_IOCTL 0xc00c56c6UL
 
@@ -76,7 +83,15 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         int32_t *w = (int32_t *)req;
 
         if (w[0] == 1)
+#if defined(PLATFORM_T20)
+            /* T20 day/night get: the result goes through control->value,
+             * a 32-bit pointer to a local next to the request (on a 64-bit
+             * host the upper half is the request's own) */
+            *(int32_t *)(((uintptr_t)w & ~(uintptr_t)0xffffffffu) |
+                         (uint32_t)w[2]) = running_mode;
+#else
             w[2] = running_mode;
+#endif
         else
             running_mode = w[2];
         return 0;
@@ -145,9 +160,9 @@ int main(void)
     CHECK(sets == 3 && idr_calls == 2);
 
     if (failures) {
-        fprintf(stderr, "isp_t31_movestate_test: %d failure(s)\n", failures);
+        fprintf(stderr, "%s: %d failure(s)\n", TEST_NAME, failures);
         return 1;
     }
-    printf("isp_t31_movestate_test: ok\n");
+    printf("%s: ok\n", TEST_NAME);
     return 0;
 }

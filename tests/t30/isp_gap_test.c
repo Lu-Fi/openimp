@@ -24,6 +24,9 @@ void imp_log_fun(int level, int option, int type, ...) { (void)level; (void)opti
 void *IMP_Alloc(void *info, int size, const char *owner) { (void)info; (void)size; (void)owner; return NULL; }
 int DMA_FreePhys(uint32_t phys) { (void)phys; return 0; }
 int openimp_video_drop_set(void (*cb)(void)) { (void)cb; return 0; }
+#if defined(PLATFORM_T20)
+int IMP_Encoder_RequestIDR(int chn) { (void)chn; return 0; }  /* DisableMovestate */
+#endif
 
 #if defined(PLATFORM_T30)
 #define WDR_CID 0x8000169      /* T30 1.0.5 */
