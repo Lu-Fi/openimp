@@ -2923,7 +2923,7 @@
    },
    "ref": {
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226"
    }
   },
   "ISP_Tuning_Get/SetTemperDnsAttr": {
@@ -4826,7 +4826,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "rt"
+   },
+   "ref": {
+    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): mode on/off with the calibration list reads back, frames flow, mode 7 refused"
    }
   },
   "ISP_Tuning_Get/SetAeExprInfo": {
@@ -5413,7 +5416,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "miss"
+    "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): target 40 Y 98.2->88.4, target 180 ->105.8, off restores; Get returns the request (beyond vendor)"
    }
   },
   "ISP_Tuning_Get/SetFaceAeWeiget": {
@@ -5797,7 +5803,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226"
    }
   },
   "ISP_Tuning_GetAeZone": {

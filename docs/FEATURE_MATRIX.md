@@ -901,14 +901,14 @@ As of: 2026-10-26. One row per vendor IMP/SU function (a Get/Set row counts as t
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
 - **ISP tuning:** T10 66/67 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 65/67 ✅ · 2 🔧 · 0 gaps · 0 ? · T21 64/66 ✅ · 2 🔧 · 0 gaps · 0 ? · T23 77/97 ✅ · 16 🔧 · 4 gaps · 0 ? · T30 0/67 ✅ · 12 🔧 · 2 gaps · 53 ? · T31 82/87 ✅ · 5 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 60/71 ✅ · 11 🔧 · 0 gaps · 0 ? · T41 57/78 ✅ · 3 🔧 · 18 gaps · 0 ?
-- **AE / AWB / AF:** T10 24/27 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 26/27 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 48/51 ✅ · 2 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 47/49 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 21/29 ✅ · 6 🔧 · 2 gaps · 0 ? · T41 24/39 ✅ · 0 🔧 · 15 gaps · 0 ?
+- **AE / AWB / AF:** T10 24/27 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 26/27 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 48/51 ✅ · 2 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 47/49 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 21/29 ✅ · 6 🔧 · 2 gaps · 0 ? · T41 28/39 ✅ · 0 🔧 · 11 gaps · 0 ?
 - **Encoder:** T10 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T20 40/70 ✅ · 0 🔧 · 29 gaps · 1 ? · T21 51/67 ✅ · 0 🔧 · 16 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 42/45 ✅ · 0 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 46/59 ✅ · 3 🔧 · 10 gaps · 0 ? · T41 48/74 ✅ · 9 🔧 · 17 gaps · 0 ?
 - **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 22/36 ✅ · 7 🔧 · 7 gaps · 0 ?
 - **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 36/42 ✅ · 4 🔧 · 0 gaps · 2 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 26/42 ✅ · 13 🔧 · 3 gaps · 0 ?
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 74/96 ✅ · 22 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 77/99 ✅ · 0 🔧 · 22 gaps · 0 ? · T41 84/107 ✅ · 1 🔧 · 22 gaps · 0 ?
 - **System:** T10 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T20 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T21 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T23 21/60 ✅ · 25 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 22/64 ✅ · 28 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 21/50 ✅ · 1 🔧 · 1 gaps · 27 ? · T41 19/55 ✅ · 30 🔧 · 6 gaps · 0 ?
-- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 323/406 ✅ · 59 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 293/402 ✅ · 41 🔧 · 40 gaps · 28 ? · T41 298/449 ✅ · 63 🔧 · 88 gaps · 0 ?
+- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 323/406 ✅ · 59 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 293/402 ✅ · 41 🔧 · 40 gaps · 28 ? · T41 302/449 ✅ · 63 🔧 · 84 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -923,7 +923,7 @@ Gaps (error, missing, stub, cache-only) in functions that at least one streamer 
 - **T32:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T33:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T40:** 2 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†); 6 further gaps no streamer calls
-- **T41:** 4 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `ISP_Get/SetISPBypass` (err; p†), `FrameSource_Get/SetPool` (cache; r†); 39 further gaps no streamer calls
+- **T41:** 4 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `ISP_Get/SetISPBypass` (err; p†), `FrameSource_Get/SetPool` (cache; r†); 37 further gaps no streamer calls
 
 ### Long-term backlog
 
@@ -1013,10 +1013,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T41</b>: 39 functions</summary>
+<details><summary><b>T41</b>: 37 functions</summary>
 
 - **ISP tuning:** implement (12): `ISP_Get/SetCsccrMode`, `ISP_Get/SetInternalChnAttr`, `ISP_LDC_Get/SetAttr`, `ISP_LDC_INIT`, `ISP_RAW_RwControl`, `ISP_SET_GPIO_INIT_OR_FREE`, `ISP_SET_GPIO_STA`, `ISP_SetVicDoneCbFunc`, `ISP_StartNightMode`, `ISP_Tuning_Get/SetDrawBlock`, `ISP_Tuning_SetTmoFaceae`, `ISP_WDR_OPEN`
-- **AE / AWB / AF:** implement (11): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_Get/SetAeConvergeStep`, `ISP_Tuning_Get/SetAeExpList`, `ISP_Tuning_Get/SetFaceAe`, `ISP_Tuning_Get/SetFaceAeWeiget`, `ISP_Tuning_GetAeBv`, `ISP_Tuning_GetAEFlickerFlag`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`, `ISP_Tuning_GetFaceAeLuma`
+- **AE / AWB / AF:** implement (9): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_Get/SetAeConvergeStep`, `ISP_Tuning_Get/SetFaceAeWeiget`, `ISP_Tuning_GetAeBv`, `ISP_Tuning_GetAEFlickerFlag`, `ISP_Tuning_GetAFMetricesInfo`, `ISP_Tuning_GetAfStatistics`, `ISP_Tuning_GetFaceAeLuma`
 - **Encoder (and decoder):** implement (7): `Decoder_*`, `Encoder_Get/SetChnRoiAttr`, `Encoder_Get/SetChnSeiAttr`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_SetAvpuBsSize`, `Encoder_SetChnMapRoi`, `Encoder_SetFrameRelease`
 - **FrameSource:** implement (1): `EmuFrameSource_*`
 - **OSD:** implement (1): `OSD_Get/SetRgnAttr_ISP`; not applicable (1): `OSD_GetRegionLuma`
@@ -1266,7 +1266,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetSensorHflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSensorVflip`: audit: reaches the driver/kernel
 - `ISP_Tuning_Get/SetSinterDnsAttr`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build T10: apitest agg47-cases 2026-10-26 .31. T20: apitest agg47-cases 2026-10-26 .107. T21: apitest agg47-cases 2026-10-26 .24. T30: apitest agg47-cases 2026-10-26 QEMU (no camera).
-- `ISP_Tuning_Get/SetStatisConfig`: T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest next+ko/libimp swap 2026-10-27 .34.
+- `ISP_Tuning_Get/SetStatisConfig`: T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226.
 - `ISP_Tuning_Get/SetTemperDnsAttr`: T10+T20: reach the driver (agg-25, T20 vendor layout); T10 shares the build T10: apitest agg47-cases 2026-10-26 .31. T20: apitest agg47-cases 2026-10-26 .107. T21: apitest agg47-cases 2026-10-26 .24. T30: apitest agg47-cases 2026-10-26 QEMU (no camera).
 - `ISP_Tuning_Get/SetTmoCurve`: T41: apitest next+ko/libimp swap 2026-10-27 .34.
 - `ISP_Tuning_Get/SetWdr_OutputMode`: T31: reaches the WDR tool block (agg-25) T31: apitest issue-118 2026-10-27 .26 (open-tx-isp a6b4ab2e): after WDR_ENABLE(0) Get 0 mode 0 (was -1), Get/Set same value PASS; QEMU equal.
@@ -1315,7 +1315,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### AE / AWB / AF
 
-72 rows (25 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+72 rows (23 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1328,7 +1328,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Get/SetAeAttr` | · | · | · | ✅ | · | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetAeComp` | ✅ | ✅ | · | ✅ | ? | ✅ | · | · | · | · | p† r† t |
 | `ISP_Tuning_Get/SetAeConvergeStep` | · | · | · | · | · | · | · | · | · | ⚠c | – |
-| `ISP_Tuning_Get/SetAeExpList` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `ISP_Tuning_Get/SetAeExpList` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ✅rt | – |
 | `ISP_Tuning_Get/SetAeExprInfo` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | – |
 | `ISP_Tuning_Get/SetAeHist` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetAeMin` | · | · | ✅ | ✅ | · | ✅ | · | · | · | · | p p† r† |
@@ -1347,7 +1347,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_Get/SetAwbHist` | ✅ | ✅ | ✅ | ✅○ | ? | ✅○ | · | · | · | · | p† r† |
 | `ISP_Tuning_Get/SetAwbWeight` | ✅ | ✅ | ✅ | ✅○ | ? | ✅○ | 📋 | 📋 | ✅ | ✅ | p† r† |
 | `ISP_Tuning_Get/SetAwbZoneWeight` | · | · | · | ✅ | · | · | · | · | · | · | – |
-| `ISP_Tuning_Get/SetFaceAe` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ❌ | – |
+| `ISP_Tuning_Get/SetFaceAe` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | ✅ | – |
 | `ISP_Tuning_Get/SetFaceAeWeiget` | · | · | · | · | · | · | 📋 | 📋 | · | ❌ | – |
 | `ISP_Tuning_Get/SetFaceAwb` | · | · | · | · | · | · | 📋 | 📋 | 🔧h | · | – |
 | `ISP_Tuning_Get/SetWB` | ✅r | ✅ | ✅ | ✅ | ? | ✅ | · | · | · | · | p† r† t |
@@ -1392,7 +1392,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Tuning_SetMultiSensorAWBEffect` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `ISP_Tuning_SetWB_ALGO` | · | · | · | ❌e | · | ✅ | · | · | · | · | – |
 
-<details><summary>Notes and references (49)</summary>
+<details><summary>Notes and references (51)</summary>
 
 - `ISP_Tuning_AE_Get/SetROI`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T10/T20: prudynt†; T21/T23/T31: prudynt†, raptor† T10: apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected).
 - `ISP_Tuning_Awb_Get/SetCwfShift`: T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl T10: apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected). T20: apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected).
@@ -1400,6 +1400,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_AwbSync`: T23: the vendor libimp 1.3.0 does not export it (only IMP_ISP_MultiCamera_Tuning_AwbSync, which sends control 0x8000011 for sensor 1 only); the stock kernel module rejects 0x8000011 in s_ctrl and g_ctrl (-1, checked in the emulator on the stock module), so the open driver's -EINVAL is the vendor behaviour (class a)
 - `ISP_Tuning_Get/SetAeAttr`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified
 - `ISP_Tuning_Get/SetAeComp`: audit: reaches the driver/kernel T10: apitest rc3-cases 2026-10-26 .31. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T20: apitest rc3-cases 2026-10-26 .107.
+- `ISP_Tuning_Get/SetAeExpList`: T41: apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): mode on/off with the calibration list reads back, frames flow, mode 7 refused.
 - `ISP_Tuning_Get/SetAeExprInfo`: audit: reaches the driver/kernel T41: device-tested through main-matrix feature #4 (AE control).
 - `ISP_Tuning_Get/SetAeHist`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_Get/SetAeMin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor† T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
@@ -1418,6 +1419,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_Get/SetAwbHist`: T23+T31: stock driver also no-op (OEM-same) T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_Get/SetAwbWeight`: T23+T31: stock driver also no-op (OEM-same) T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest next+ko/libimp swap 2026-10-27 .34.
 - `ISP_Tuning_Get/SetAwbZoneWeight`: T23: stock handlers routed (open-tx-isp agg-25), no device test T23: apitest agg47 2026-10-26 .30.
+- `ISP_Tuning_Get/SetFaceAe`: T41: apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): target 40 Y 98.2->88.4, target 180 ->105.8, off restores; Get returns the request (beyond vendor).
 - `ISP_Tuning_Get/SetWB`: audit: reaches the driver/kernel T10: called by timps on the fleet .31 (T10), soak agg46; not an individual device test.
 - `ISP_Tuning_GetAE_IT_MAX`: audit: reaches the driver/kernel T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_GetAeAtList`: T41: apitest next+ko/libimp swap 2026-10-27 .34.
@@ -1425,7 +1427,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_Tuning_GetAeHist_Origin`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor† T23: apitest agg47-cases 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_GetAeLuma`: audit: reaches the driver/kernel T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_GetAeState`: T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
-- `ISP_Tuning_GetAeStatistics`: audit: reaches the driver/kernel T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest next+ko/libimp swap 2026-10-27 .34.
+- `ISP_Tuning_GetAeStatistics`: audit: reaches the driver/kernel T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226.
 - `ISP_Tuning_GetAeZone`: T10+T20: the stock T10/T20 kernel module does not serve cid 0x800002f; -1 as on the vendor stack (apitest N/A) T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_GetAFMetrices`: T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
 - `ISP_Tuning_GetAFMetricesInfo`: T40: gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS.
