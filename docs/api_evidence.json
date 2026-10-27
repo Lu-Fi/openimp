@@ -2569,7 +2569,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31",
-    "T20": "apitest agg47-cases 2026-10-26 .107",
+    "T20": "apitest inttime 2026-10-27 .107, night (open-tx-isp 4e961167, #128): 30 -> 240 lines Y 5.6 -> 37.3, readback 30/240; AE no longer overrides the manual time",
     "T21": "apitest issue-110 2026-10-27 .24 (open-tx-isp 28b26d20, stock libimp): Get mode/it/max 0/1350/2246, manual 30 read back; Set 30->240 lines Y 16.1->78.9; QEMU T21 equal (beyond vendor: stock T21 ignores the block)"
    }
   },
@@ -3995,7 +3995,7 @@
    "cells": {
     "T10": "dev",
     "T20": "dev",
-    "T21": "err",
+    "T21": "no-op",
     "T23": "n.a.",
     "T30": "?",
     "T31": "n.a.",
@@ -4022,7 +4022,7 @@
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31",
     "T20": "apitest agg47-cases 2026-10-26 .107",
-    "T21": "FAIL apitest agg47-cases 2026-10-26 .24: ret=0 readback ok; base Y113.7 H19.59 C31.8; mode 8: Y101.8 H19.28 C31.3, back to mode 0 NOT RECOVERED (Y101.2 after 8 s); mode 13: Y101.2 H19.24 C31.4, back to mode 0 NOT RECOVERED (Y101.2 after 8 s); mode 11: Y101.2 H19.21 C31.4, back to mode 0 NOT RECOVERED (Y101.2 after 8 s)"
+    "T21": "apitest scene 2026-10-27 .24 (#120): ret 0, NIGHT/AUTO no picture change on the open and the stock stack (stock oem-t21 handler returns 0 without effect)"
    }
   },
   "ISP_Tuning_SetSensorFPS": {
