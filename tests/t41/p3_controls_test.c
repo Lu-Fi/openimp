@@ -61,6 +61,12 @@ int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument)
     return isp.result;
 }
 
+/* the opened-device path (bypass is sent before AddSensor) shares the fixture */
+int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument)
+{
+    return OpenIMP_P1_IspIOCtl(command, argument);
+}
+
 int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type)
 {
     memset(name, 0, 32);
@@ -596,11 +602,11 @@ int main(void)
           assert(blk[0] == 1 && blk[1] == 0); }
         got = (IMPISPTuningOpsMode)7;
         assert(IMP_ISP_GetISPBypass(IMPVI_MAIN, &got) == 0 && got == en);
-        /* a refusing kernel: vendor -4095, value kept */
+        /* a refusing kernel (real bypass not supported): -1, value kept */
         en = IMPISP_TUNING_OPS_MODE_DISABLE;
         isp.result = -1;
         isp.err = ENOTTY;
-        assert(IMP_ISP_SetISPBypass(IMPVI_MAIN, &en) == -4095);
+        assert(IMP_ISP_SetISPBypass(IMPVI_MAIN, &en) == -1);
         assert(IMP_ISP_GetISPBypass(IMPVI_MAIN, &got) == 0 &&
                got == IMPISP_TUNING_OPS_MODE_ENABLE);
         /* ISP not up (ENODEV): remembered like the vendor without an ISP device */

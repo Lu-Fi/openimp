@@ -126,6 +126,7 @@ int32_t IMP_ISP_Tuning_GetSensorAttr(IMPVI_NUM num, IMPISPSENSORAttr *attr)
 /* ---- vendor ISPDevice-fd entries (T40 1.3.1 and T41 1.2.6 use the same
  * ioctl numbers; the stock driver owns the hardware access) ---- */
 extern int OpenIMP_P1_IspIOCtl(uint32_t command, void *argument);
+extern int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument);
 extern int OpenIMP_P1_GetSensorName(char name[32], int32_t *cbus_type);
 
 #define TISP_IOCTL_SET_SENSOR_REGISTER 0xc040540dU
@@ -1883,13 +1884,13 @@ int32_t IMP_ISP_Tuning_GetISPBypass(IMPVI_NUM num,
  * (0x46c48), the T41 names of the bypass pair (the T40 pair above has
  * "Tuning" in the name).  Set: pointer NULL -4087, sensor number >= 2
  * -4084; with the ISP device open the 8-byte block {value, sensor} goes to
- * the ISP node as ioctl 0x80085418 (TISP_VIDIOC_BYPASS_SENSOR), a failing
- * ioctl is -4095 and the value is remembered; without an open ISP device the
- * vendor only remembers it.  Get returns the remembered value (0 before any
- * Set).  The open-tx-isp T41 driver does not serve the ioctl yet (it answers
- * -ENOTTY), so Set fails with -4095 there, as on a vendor library with an
- * unsupporting kernel.  OpenIMP does not reproduce the vendor's "ISP device
- * not open" error for Get.
+ * the ISP node as ioctl 0x80085418 (TISP_VIDIOC_BYPASS_SENSOR); without an
+ * open ISP device the vendor only remembers the value.  Get returns the
+ * remembered value (0 before any Set).  A failing ioctl returns -1 here (the
+ * errno goes to syslog) and the value is not remembered: the open-tx-isp T41
+ * driver refuses the real bypass (value != 0) until its VIC capture path
+ * works (issue 125).  OpenIMP does not reproduce the vendor's "ISP device not
+ * open" error for Get.
  */
 #define TISP_IOCTL_BYPASS_SENSOR 0x80085418U
 static IMPISPTuningOpsMode p3_t41_bypass[2];
@@ -1904,9 +1905,15 @@ int32_t IMP_ISP_SetISPBypass(IMPVI_NUM num, IMPISPTuningOpsMode *enable)
         return -4084;
     request[0] = (uint32_t)*enable;
     request[1] = (uint32_t)num;
-    if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_BYPASS_SENSOR, request) != 0 &&
-        errno != ENODEV)
-        return -4095;
+    /* The vendor sends it as soon as the ISP device is open: the header
+     * requires the call before IMP_ISP_AddSensor, when no sensor is enabled
+     * yet (issue 125: the sensor-enabled ioctl path dropped it there). */
+    if (OpenIMP_P1_IspIOCtlOpened(TISP_IOCTL_BYPASS_SENSOR, request) != 0 &&
+        errno != ENODEV) {
+        syslog(LOG_WARNING, "libimp: SetISPBypass value=%u refused by the driver (errno %d)",
+               request[0], errno);
+        return -1;
+    }
     p3_t41_bypass[num] = *enable;
     return 0;
 }
