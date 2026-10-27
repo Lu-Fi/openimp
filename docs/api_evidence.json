@@ -1029,7 +1029,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "err"
+    "T41": "rt"
    },
    "used": {
     "T41": [
@@ -1043,7 +1043,7 @@
     ]
    },
    "ref": {
-    "T41": "apitest issue-115 2026-10-26 .34: ioctl served now (was -4095): Get ret=0, Set same value ret=0, frames flow; Bypass 1 ret 0 but no picture change (open gap)"
+    "T41": "apitest ispbypass 2026-10-27 .34 (#125 branch, in next): Set 0 ret 0 (was -4095), Set 1 refused -1, Get stays 0, frames flow; real bypass needs the VIC MDMA path (#125)"
    }
   },
   "ISP_Get/SetInternalChnAttr": {
@@ -1481,7 +1481,7 @@
    "cells": {
     "T10": "rt",
     "T20": "rt",
-    "T21": "rt",
+    "T21": "dev",
     "T23": "no-op",
     "T30": "qemu",
     "T31": "rt",
@@ -1514,9 +1514,9 @@
    "ref": {
     "T10": "apitest issue-109 2026-10-27 .31 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
     "T20": "apitest issue-109 2026-10-27 .107 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
-    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
+    "T21": "apitest movestate 2026-10-27 .24 (movestate-t21-t30, in next): IT max 2246 -> 1347 -> 2246, frames flow",
     "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
-    "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+    "T30": "QEMU T30 2026-10-27 (movestate-t21-t30): IT max 1916 -> 1149 -> 1916 (no T30 camera)"
    }
   },
   "ISP_Tuning_EnableDRC": {
@@ -1580,9 +1580,9 @@
    "cells": {
     "T10": "rt",
     "T20": "rt",
-    "T21": "rt",
+    "T21": "dev",
     "T23": "no-op",
-    "T30": "?",
+    "T30": "qemu",
     "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
@@ -1613,8 +1613,9 @@
    "ref": {
     "T10": "apitest issue-109 2026-10-27 .31 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
     "T20": "apitest issue-109 2026-10-27 .107 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
-    "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
-    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
+    "T21": "apitest movestate 2026-10-27 .24 (movestate-t21-t30, in next): IT max 2246 -> 1347 -> 2246, frames flow",
+    "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
+    "T30": "QEMU T30 2026-10-27 (movestate-t21-t30): IT max 1916 -> 1149 -> 1916 (no T30 camera)"
    }
   },
   "ISP_Tuning_Get/SetAntiFlickerAttr": {
@@ -3785,12 +3786,12 @@
   "ISP_Tuning_SetISPBypass": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "rt",
+    "T20": "rt",
     "T21": "rt",
-    "T23": "err",
+    "T23": "rt",
     "T30": "?",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "rt",
@@ -3829,8 +3830,11 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-    "T21": "apitest rc3-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
-    "T23": "FAIL apitest rc3-cases 2026-10-27 .30: ret=-1 rt: bypass DISABLE (= ISP processing on, the running state) written (ret -1), frames flow"
+    "T21": "apitest ispbypass_old 2026-10-27 .24 (open-tx-isp + OpenIMP next, #119/#126): ENABLE (full ISP, the streamer call) ret 0, DISABLE (real bypass) refused with -1 like the vendor T21, nothing touched, frames flow; real bypass = #129",
+    "T23": "apitest ispbypass_old 2026-10-27 .30 (open-tx-isp + OpenIMP next, #119/#126): ENABLE (full ISP, the streamer call) ret 0, DISABLE (real bypass) refused with -1 like the vendor T21, nothing touched, frames flow; real bypass = #129",
+    "T10": "apitest ispbypass_old 2026-10-27 .31 (open-tx-isp + OpenIMP next, #119/#126): ENABLE (full ISP, the streamer call) ret 0, DISABLE (real bypass) refused with -1 like the vendor T21, nothing touched, frames flow; real bypass = #129",
+    "T20": "apitest ispbypass_old 2026-10-27 .107 (open-tx-isp + OpenIMP next, #119/#126): ENABLE (full ISP, the streamer call) ret 0, DISABLE (real bypass) refused with -1 like the vendor T21, nothing touched, frames flow; real bypass = #129",
+    "T31": "apitest ispbypass_old 2026-10-27 .26 (open-tx-isp + OpenIMP next, #119/#126): ENABLE (full ISP, the streamer call) ret 0, DISABLE (real bypass) refused with -1 like the vendor T21, nothing touched, frames flow; real bypass = #129"
    }
   },
   "ISP_Tuning_SetISPLDC": {
@@ -6213,8 +6217,8 @@
   "ISP_Tuning_SetExpr": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
+    "T10": "dev",
+    "T20": "dev",
     "T21": "dev",
     "T23": "dev",
     "T30": "?",
@@ -6236,7 +6240,9 @@
    "ref": {
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T31": "apitest agg47 2026-10-26 .26",
-    "T23": "apitest rc3gaps2 2026-10-27 .30"
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T20": "apitest expr 2026-10-27 .107 (#130): 240 lines read back 240, Y 122 -> 191 (30 -> 240 lines); 10000 us -> 338 lines; AUTO restores (beyond vendor SDK)",
+    "T10": "apitest expr 2026-10-27 .31 (#130): 240 lines -> 240, Y 64 -> 92; 10000 us -> 227 lines (44 us/line) (beyond vendor SDK)"
    }
   },
   "ISP_Tuning_SetWB_ALGO": {
