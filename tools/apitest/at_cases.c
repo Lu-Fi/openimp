@@ -1452,7 +1452,187 @@ static void cs_autozoom_set(void)
 static void cs_autozoom_set(void) {}
 #endif
 
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old); default all */
+/* --------------------------------------------------------------------------------------------------- T41 AE API (issue 90) */
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_GetAeStatistics   /* T40: own AE API cases (t40dev); never GetAeExpList on the Eufy */
+/* optional Y snapshot of FS ch1 (PGM, 320x180 = every 2nd pixel) into APITEST_SNAPDIR, for the labeled collage; nothing without it */
+static void snap_y(const char *tag)
+{
+    const char *d = getenv("APITEST_SNAPDIR");
+    IMPFrameInfo *fr = NULL;
+    char path[256];
+    FILE *f;
+    int k;
+
+    if (!d || !IMP_FrameSource_GetFrame) return;
+    for (k = 0; k < 3; k++) if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) { if (k < 2) { IMP_FrameSource_ReleaseFrame(1, fr); fr = NULL; } }
+    if (!fr) return;
+    snprintf(path, sizeof(path), "%s/%s.pgm", d, tag);
+    if ((f = fopen(path, "wb"))) {
+        const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
+        int w = fr->width, h = fr->height, i, j;
+
+        fprintf(f, "P5\n%d %d\n255\n", w / 2, h / 2);
+        for (j = 0; j < h / 2; j++) for (i = 0; i < w / 2; i++) fputc(y[(size_t)(2 * j) * w + 2 * i], f);
+        fclose(f);
+    }
+    IMP_FrameSource_ReleaseFrame(1, fr);
+}
+
+/* expected 5-bin histogram (65535 scale) from the 256 bins and the limits, as the vendor AE's api_ae_long_process */
+static void hist5_expect(const IMPISPAEStatisInfo *st, const unsigned char *thr, unsigned *e)
+{
+    double b[5] = { 0, 0, 0, 0, 0 }, t = 0;
+    int i, k;
+
+    for (i = 0; i < 256; i++) {
+        for (k = 0; k < 4 && i >= thr[k]; k++) ;
+        b[k] += st->ae_hist_256bin[i];
+        t += st->ae_hist_256bin[i];
+    }
+    for (k = 0; k < 5; k++) e[k] = t > 0 ? (unsigned)(b[k] * 65535.0 / t) : 0;
+}
+
+/* The vendor AE counts the 5 bins on the raw hardware histogram; the reported 256 bins are those x4 with bin 0 replaced by the
+ * remainder of width x height, so only the split of bins 1..4 among themselves can be recomputed exactly: compare that (1 %). */
+static int hist5_close(const IMPISPAEStatisInfo *st, const unsigned *e)
+{
+    double s = 0, x = 0;
+    int k;
+
+    for (k = 1; k < 5; k++) { s += st->ae_hist_5bin[k]; x += e[k]; }
+    if (s == 0 || x == 0) return s == x;
+    for (k = 1; k < 5; k++) if (dabs(st->ae_hist_5bin[k] / s - e[k] / x) > 0.01) return 0;
+    return 1;
+}
+
+static void cs_aestats(void)
+{
+    NEED(IMP_ISP_Tuning_GetAeStatistics) NEED(IMP_ISP_Tuning_GetStatisConfig) NEED(IMP_ISP_Tuning_SetStatisConfig) {
+        G(IMPISPAEStatisInfo, a); G(IMPISPAEStatisInfo, b);
+        IMPISPStatisConfig o, c, back;
+        static const unsigned char thr2[4] = { 32, 64, 96, 128 };
+        unsigned long long sum = 0;
+        unsigned e0[5], e1[5], zmin = ~0U, zmax = 0, s5 = 0;
+        int r1, r2, r3, r4, r5, i, j, nz = 0, ok0, ok1;
+
+        memset(&o, 0, sizeof(o)); memset(&back, 0, sizeof(back));
+        r1 = IMP_ISP_Tuning_GetStatisConfig(IMPVI_MAIN, &o);
+        r2 = IMP_ISP_Tuning_GetAeStatistics(IMPVI_MAIN, a); gchk(a);
+        for (i = 0; i < 256; i++) { sum += a->ae_hist_256bin[i]; nz += a->ae_hist_256bin[i] != 0; }
+        for (i = 0; i < 5; i++) s5 += a->ae_hist_5bin[i];
+        for (j = 0; j < 15; j++) for (i = 0; i < 15; i++) { unsigned z = a->ae_statis.statis[j][i]; if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
+        hist5_expect(a, o.ae.histThresh, e0);
+        ok0 = hist5_close(a, e0);
+        rep(FN(IMP_ISP_Tuning_GetAeStatistics), r2, (r1 == 0 && r2 == 0 && sum == (unsigned long long)g_sw * g_sh && nz > 5 && s5 == 65535 && ok0 && zmax > zmin) ? V_PASS : V_FAIL,
+            "256 bins sum %llu (= %d x %d: %s), %d non-zero bins; 5-bin %u/%u/%u/%u/%u (sum %u) vs from the 256 bins over histThresh (bins 1..4 split) %u/%u/%u/%u %u/%u/%u/%u/%u (%s); zones %u..%u (centre %u)",
+            sum, g_sw, g_sh, sum == (unsigned long long)g_sw * g_sh ? "yes" : "NO", nz, a->ae_hist_5bin[0], a->ae_hist_5bin[1], a->ae_hist_5bin[2], a->ae_hist_5bin[3], a->ae_hist_5bin[4], s5,
+            o.ae.histThresh[0], o.ae.histThresh[1], o.ae.histThresh[2], o.ae.histThresh[3], e0[0], e0[1], e0[2], e0[3], e0[4], ok0 ? "match" : "MISMATCH", zmin, zmax, a->ae_statis.statis[7][7]);
+        /* histThresh 32/64/96/128 (AE part enabled, the rest as read), then the original back */
+        c = o; c.ae.ae_sta_en = IMPISP_TUNING_OPS_MODE_ENABLE; memcpy(c.ae.histThresh, thr2, 4);
+        r3 = IMP_ISP_Tuning_SetStatisConfig(IMPVI_MAIN, &c); usleep(600000);
+        r4 = IMP_ISP_Tuning_GetAeStatistics(IMPVI_MAIN, b); gchk(b);
+        hist5_expect(b, thr2, e1);
+        ok1 = hist5_close(b, e1);
+        /* restore: the original limits with the AE part enabled (a disabled part only clears its enable, the limits would stay),
+         * then the original record as read */
+        c = o; c.ae.ae_sta_en = IMPISP_TUNING_OPS_MODE_ENABLE;
+        r5 = IMP_ISP_Tuning_SetStatisConfig(IMPVI_MAIN, &c);
+        if (o.ae.ae_sta_en != IMPISP_TUNING_OPS_MODE_ENABLE) r5 |= IMP_ISP_Tuning_SetStatisConfig(IMPVI_MAIN, &o);
+        usleep(300000);
+        IMP_ISP_Tuning_GetStatisConfig(IMPVI_MAIN, &back);
+        rep(FN(IMP_ISP_Tuning_SetStatisConfig), r3 | r5, (r3 == 0 && r4 == 0 && r5 == 0 && ok1 && !memcmp(back.ae.histThresh, o.ae.histThresh, 4) && flow()) ? V_PASS : V_FAIL,
+            "histThresh 32/64/96/128: 5-bin %u/%u/%u/%u/%u vs from the 256 bins %u/%u/%u/%u/%u (%s; before %u/%u/%u/%u/%u); original %u/%u/%u/%u restored (%s), frames flow",
+            b->ae_hist_5bin[0], b->ae_hist_5bin[1], b->ae_hist_5bin[2], b->ae_hist_5bin[3], b->ae_hist_5bin[4], e1[0], e1[1], e1[2], e1[3], e1[4], ok1 ? "match" : "MISMATCH",
+            a->ae_hist_5bin[0], a->ae_hist_5bin[1], a->ae_hist_5bin[2], a->ae_hist_5bin[3], a->ae_hist_5bin[4],
+            o.ae.histThresh[0], o.ae.histThresh[1], o.ae.histThresh[2], o.ae.histThresh[3], !memcmp(back.ae.histThresh, o.ae.histThresh, 4) ? "read back" : "NOT read back");
+        gfree(a); gfree(b);
+    }
+}
+#else
+static void cs_aestats(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetFaceAe && HAS_IMP_ISP_Tuning_GetFaceAe
+/* face AE as streamers use it: the window + target set every frame (vendor remark), here every 40 ms for 'ms' */
+static Fst face_hold(IMPISPFaceAttr *f, int ms, int *ret)
+{
+    int64_t t0 = now_us();
+
+    *ret = 0;
+    while (now_us() - t0 < (int64_t)ms * 1000) { *ret |= IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, f); usleep(40000); }
+    return fst(0);
+}
+
+static void cs_faceae(void)
+{
+    NEED(IMP_ISP_Tuning_SetFaceAe) NEED(IMP_ISP_Tuning_GetFaceAe) {
+        IMPISPFaceAttr o, f, g, bad, after;
+        Fst base, lo, hi, back;
+        int r0, r1, r2, r3, r4, r5, ms, hold;
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&after, 0, sizeof(after));
+        r0 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &o);
+        base = fst(600); snap_y("faceae-0-base");
+        memset(&f, 0, sizeof(f));
+        f.enable = IMPISP_TUNING_OPS_MODE_ENABLE;
+        f.left = g_sw / 4; f.top = g_sh / 4; f.right = g_sw * 3 / 4; f.bottom = g_sh * 3 / 4;
+        hold = getenv("APITEST_FACE_MS") ? atoi(getenv("APITEST_FACE_MS")) : 8000;   /* the face AE converges slowly (vendor AE steps): 9 s moves the centre ~17 levels */
+        f.target = 40; lo = face_hold(&f, hold, &r1); snap_y("faceae-1-target40");
+        r2 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &g);
+        f.target = 180; hi = face_hold(&f, hold, &r3); snap_y("faceae-2-target180");
+        bad = f; bad.left = f.right + 8;                                  /* empty window: refused, nothing changed */
+        r4 = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &bad);
+        IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &after);
+        memset(&f, 0, sizeof(f)); f.enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r5 = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &f);
+        back = recover(base.y, &ms); snap_y("faceae-3-off");
+        rep(FN(IMP_ISP_Tuning_GetFaceAe), r0 | r2, (r0 == 0 && r2 == 0 && g.enable == IMPISP_TUNING_OPS_MODE_ENABLE && g.left == (unsigned)g_sw / 4 && g.bottom == (unsigned)g_sh * 3 / 4 && g.target == 40) ? V_PASS : V_FAIL,
+            "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u (set (%d,%d)-(%d,%d) 40)", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target,
+            g_sw / 4, g_sh / 4, g_sw * 3 / 4, g_sh * 3 / 4);
+        rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3 | r5, (r1 == 0 && r3 == 0 && r5 == 0 && r4 != 0 && after.target == 180 && lo.ok && hi.ok && hi.y > lo.y + 15 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+            "centre window metered: target 40 -> Y %.1f, target 180 -> Y %.1f (base %.1f); empty window refused (ret %d, target still %u); off: back to Y %.1f in %d ms, frames flow",
+            lo.y, hi.y, base.y, r4, after.target, back.y, ms);
+    }
+}
+#else
+static void cs_faceae(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetAeExpList && HAS_IMP_ISP_Tuning_GetAeExpList
+static void cs_aeexplist(void)
+{
+    NEED(IMP_ISP_Tuning_SetAeExpList) NEED(IMP_ISP_Tuning_GetAeExpList) {
+        G(IMPISPAeExpListAttr, o); G(IMPISPAeExpListAttr, l); G(IMPISPAeExpListAttr, g); G(IMPISPAeExpListAttr, z);
+        IMPISPAEExprInfo e0, e1;
+        Fst base, on, back;
+        int r0, r1, r2, r3, r4, i, same = 1, ms, have_ei = IMP_ISP_Tuning_GetAeExprInfo != NULL;
+
+        memset(&e0, 0, sizeof(e0)); memset(&e1, 0, sizeof(e1));
+        r0 = IMP_ISP_Tuning_GetAeExpList(IMPVI_MAIN, o); gchk(o);
+        base = fst(600); if (have_ei) IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &e0);
+        /* list mode on with the list as read (the calibration's own entries), so the exposure may only move inside the tuned range */
+        *l = *o; l->mode = IMPISP_TUNING_OPS_MODE_ENABLE;
+        r1 = IMP_ISP_Tuning_SetAeExpList(IMPVI_MAIN, l); on = fst(2000);
+        if (have_ei) IMP_ISP_Tuning_GetAeExprInfo(IMPVI_MAIN, &e1);
+        r2 = IMP_ISP_Tuning_GetAeExpList(IMPVI_MAIN, g); gchk(g);
+        for (i = 0; i < 16; i++) if (g->elist[i][1] != l->elist[i][1] || g->elist[i][2] != l->elist[i][2] || g->elist[i][3] != l->elist[i][3]) same = 0;
+        *z = *o; z->mode = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r3 = IMP_ISP_Tuning_SetAeExpList(IMPVI_MAIN, z);
+        z->mode = (IMPISPTuningOpsMode)7; r4 = IMP_ISP_Tuning_SetAeExpList(IMPVI_MAIN, z);   /* invalid mode: refused */
+        back = recover(base.y, &ms);
+        rep(FN(IMP_ISP_Tuning_GetAeExpList), r0 | r2, (r0 == 0 && r2 == 0 && g->mode == IMPISP_TUNING_OPS_MODE_ENABLE && same) ? V_PASS : V_FAIL,
+            "mode %d, row 0 it %u ag %u dg %u; after Set: mode %d, list %s", (int)o->mode, o->elist[0][1], o->elist[0][2], o->elist[0][3], (int)g->mode, same ? "read back" : "DIFFERENT");
+        rep(FN(IMP_ISP_Tuning_SetAeExpList), r1 | r3, (r1 == 0 && r3 == 0 && r4 != 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+            "rt: list mode on (own list): Y %.1f -> %.1f, IT %u -> %u, AG %u -> %u; off: Y back to %.1f in %d ms; mode 7 refused (ret %d), frames flow",
+            base.y, on.y, e0.AeIntegrationTime, e1.AeIntegrationTime, e0.AeAGain, e1.AeAGain, back.y, ms, r4);
+        gfree(o); gfree(l); gfree(g); gfree(z);
+    }
+}
+#else
+static void cs_aeexplist(void) {}
+#endif
+
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist); default all */
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -1565,7 +1745,7 @@ static void cs_stalesnap(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1627,5 +1807,8 @@ void t_cases(void)
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
     if (getenv("APITEST_CASES") && cs_on("stalesnap")) cs_stalesnap();   /* explicit only: ~3 min of pauses (issue #89) */
     wdog("cases", 240);
+    if (cs_on("aestats")) cs_aestats();    wdog("cases", 60);
+    if (cs_on("faceae")) cs_faceae();      wdog("cases", 90);
+    if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
     wdog("cases", 60);
 }

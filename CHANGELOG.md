@@ -8,6 +8,18 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-90` (2026-10-27)
+
+- **T41 IMP_ISP_Tuning_Set/GetFaceAe and Set/GetAeExpList** are exported (vendor 1.2.6 layout: pointer tuning ioctl,
+  controls 0x8000035 and 0x8000027; the T40 exposure list stays 0x8000099). The driver side (open-tx-isp `claude/issue-90`)
+  serves them from the vendor AE, and GetAeStatistics / SetStatisConfig histThresh now report what the vendor AE computes
+  (issue #90). AeSpeed is not in the T41 vendor API.
+- **apitest cases `aestats`, `faceae`, `aeexplist`** (T41): 256-bin sum = width x height, 5-bin split against the 256 bins for the
+  current and changed histThresh (original restored), zone spread; face window target 40 vs 180 must move the picture
+  (optional Y snapshots with `APITEST_SNAPDIR`, hold time `APITEST_FACE_MS`); list mode on/off with the calibration's own
+  list, read back, invalid mode refused. `run_swap.sh`: `TOPIC` for the STATUS lines, guard/oops lines kept in dmesg-tail.txt.
+  .34 (sc5336, runtime swap): all PASS (face: Y 98.2 -> 88.4 at target 40, -> 105.8 at target 180); QEMU T41 the same.
+
 ## Branch `claude/issue-89` (2026-10-27)
 
 - **T40 stale-first-snapshot fix verified on the device** (issue #89, no libimp change): new apitest case

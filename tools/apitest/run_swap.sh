@@ -6,7 +6,7 @@
 #
 #   AREAS=cases CASES=isposd tools/apitest/run_swap.sh 192.168.10.34 T41 path/tx-isp-t41.ko path/libimp.so OUT
 #
-# env: AREAS (default sys,fs,enc,osd,ivs,audio,isp,su,cases)  CASES (APITEST_CASES)  BIN (apitest dir, default ./build)
+# env: AREAS (default sys,fs,enc,osd,ivs,audio,isp,su,cases)  CASES (APITEST_CASES)  TOPIC (STATUS tag)  BIN (apitest dir, default ./build)
 #      SENSOR I2C W H (override the per-SoC table of run_cam.sh)  NOIMG=1 (default here; set NOIMG=0 for the picture area)
 # libimp-only (KO = "-"): the kernel modules are never touched, also not in the restore (the Eufy T40 panics/hangs on rmmod).
 # Rules: cam lock held for the whole run, STATUS "planned test" start/done lines, nothing large in /tmp (ko < 1 MB on T41 -> check
@@ -31,7 +31,7 @@ esac
 export SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-/run/user/1000/ssh-cam.sock}
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=8 -o ServerAliveInterval=3 -o ServerAliveCountMax=3 root@$IP"
 STATUS=$S/locks/cam-$NN.STATUS
-st() { echo "$(date '+%F %H:%M') rc3-gaps: $SOC $IP planned test: $*" >> "$STATUS"; }
+st() { echo "$(date '+%F %H:%M') ${TOPIC:-rc3-gaps}: $SOC $IP planned test: $*" >> "$STATUS"; }
 [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] && { echo "USER_IN_CELLAR"; exit 3; }
 mkdir -p "$OUT"
 exec 9> "$S/locks/cam-$NN.lock"; flock -w 3600 9 || { echo "cam lock busy"; exit 4; }
@@ -66,7 +66,7 @@ LD=; [ "$LIB" != - ] && LD="LD_LIBRARY_PATH=/tmp/rsw"
 timeout 1500 $SSH "cd /tmp/rsw; $LD APITEST_AO=0 ${EXTRA_ENV} ${CASES:+APITEST_CASES=$CASES} ./apitest --json /tmp/rsw/apitest.json $SENSOR $I2C $W $H $AREAS" > "$OUT/apitest.log" 2> "$OUT/apitest.err"
 echo "apitest rc=$?" >> "$OUT/run.log"
 $SSH 'cat /tmp/rsw/apitest.json' > "$OUT/apitest.json" 2>/dev/null
-$SSH 'dmesg | tail -n 40' > "$OUT/dmesg-tail.txt" 2>&1
+$SSH 'dmesg | tail -n 40; echo ---; dmesg | grep -E "guard|Oops|BUG:|Unable to handle" | head -20' > "$OUT/dmesg-tail.txt" 2>&1
 python3 "$D/results2json.py" --soc "$SOC" --ip "$IP" --image "rc3gaps-swap" --date "$(date +%F)" --out "$OUT/result.json" --apitest "$OUT/apitest.log" $([ -s "$OUT/apitest.json" ] && echo --report "$OUT/apitest.json") > "$OUT/r2j.txt" 2>&1
 grep -hE "^\[T\] summary|^\[E\]" "$OUT/apitest.log" | tail -3
 echo "FAIL lines:"; grep -hE "^\[A\] .* FAIL" "$OUT/apitest.log" | cut -c1-260

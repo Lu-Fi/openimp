@@ -1190,6 +1190,23 @@ P3_T41_POINTER_PAIR(ModuleControl, IMPISPModuleCtl, TISP_CID_MODULE_CONTROL)
 P3_T41_POINTER_PAIR(AutoZoom, IMPISPAutoZoom, TISP_CID_AUTOZOOM)
 
 /*
+ * T41 1.2.6 IMP_ISP_Tuning_Set/GetFaceAe (vendor libimp 0x5ee44 / 0x5f398)
+ * and Set/GetAeExpList (0x62e40 / 0x633ec): sensor number, ISP device,
+ * pointer and "tuning running" checks, then the public structure on the
+ * pointer tuning ioctl (FaceAe control 0x8000035, IMPISPFaceAttr 24 bytes;
+ * AeExpList control 0x8000027, IMPISPAeExpListAttr 324 bytes, which the
+ * vendor library bounces through a heap copy).  The T40 numbers of the
+ * exposure list differ (0x8000099, below).  open-tx-isp serves both from
+ * the vendor AE (issue 90: face window + target metered by the AE, list
+ * mode switching the AE to the list allocation).
+ */
+#define TISP_CID_T41_FACE_AE      0x08000035
+#define TISP_CID_T41_AE_EXP_LIST  0x08000027
+
+P3_T41_POINTER_PAIR(FaceAe, IMPISPFaceAttr, TISP_CID_T41_FACE_AE)
+P3_T41_POINTER_PAIR(AeExpList, IMPISPAeExpListAttr, TISP_CID_T41_AE_EXP_LIST)
+
+/*
  * WdrOutputMode (0x08000054).  The stock T41 driver's tisp_set/get_wdr_output_mode
  * are empty (2 instructions, binary audit) and the T31 OEM handler answers
  * Set = accepted, Get = mode 0, so the vendor call succeeds without an effect.
