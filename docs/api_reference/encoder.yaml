@@ -1,0 +1,471 @@
+# Descriptions for the Encoder API pages (tools/gen_api_wiki.py -> wiki page API-Encoder).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: Encoder
+intro: |
+  The encoder module turns frames from a FrameSource channel into H.264, H.265 or JPEG streams. An encoder channel
+  belongs to a group; the group is bound to a FrameSource channel with `IMP_System_Bind`. The application pulls
+  finished streams with `GetStream` (or waits with `PollingStream` first) and gives them back with `ReleaseStream`.
+
+  **Typical call order:** `CreateGroup`, `CreateChn` with a `IMPEncoderChnAttr` (use `SetDefaultParam` to fill it),
+  `RegisterChn`, bind the group to the FrameSource, `StartRecvPic`, then the loop `PollingStream`, `GetStream`,
+  process, `ReleaseStream`. Stop with `StopRecvPic`, `UnRegisterChn`, `DestroyChn`, `DestroyGroup`.
+
+  Rate-control behaviour differs between SoCs; the pages state where a setting is only stored. The rate-control modes
+  are `FIXQP`, `CBR`, `VBR`, `CAPPED_VBR` and `CAPPED_QUALITY` (some SoCs also `SMART`). What OpenIMP does beyond the vendor
+  library (closed-loop capped modes, HEVC on T31, telemetry) is collected in [Beyond the Vendor](Beyond-the-Vendor).
+  Calls whose status is `·` on a SoC do not exist in that SoC's vendor library.
+groups:
+  - id: life
+    title: Groups and channels
+  - id: stream
+    title: Streams
+    intro: One call chain per picture - `PollingStream` (wait), `GetStream` (take), `ReleaseStream` (return). Streams that are not fetched are dropped by the encoder, not queued without limit.
+  - id: attr
+    title: Channel attributes and defaults
+  - id: rc
+    title: Rate control
+    intro: |
+      Modes: `FIXQP` keeps one quantiser, `CBR` holds the bitrate, `VBR` lets it vary within a range, the capped modes limit
+      the quality-driven rate to a ceiling. Bitrate is in kbit/s in the attribute structures. Out-of-range QP and frame rate
+      values are clamped with a warning in the log.
+  - id: gop
+    title: GOP, key frames and frame rate
+  - id: qp
+    title: Quantiser, regions and picture quality
+  - id: h26x
+    title: H.264 and H.265 options
+  - id: jpeg
+    title: JPEG
+  - id: yuv
+    title: Unbound encoding of own frames (YUV interface)
+    intro: |
+      The encoder can be used without FrameSource: `YuvInit` creates an encoder context, `YuvEncode` encodes one frame
+      you supply, `YuvExit` frees the context. The `_Ex` variants use an integer handle instead of a pointer.
+  - id: mem
+    title: Memory, buffer sharing and pools
+  - id: misc
+    title: Other
+functions:
+  Encoder_CreateGroup:
+    group: life
+    summary: Creates an encoder group, the container a FrameSource channel is bound to.
+    params:
+      encGroup: Group number.
+    returns: 0 on success, -1 if the group exists or the number is invalid.
+    see_also: [Encoder_CreateChn, Encoder_RegisterChn]
+  Encoder_DestroyGroup:
+    group: life
+    summary: Removes a group. All channels must be unregistered first.
+  Encoder_CreateChn:
+    group: life
+    summary: Creates an encoder channel from an attribute structure (profile, size, rate control, GOP). The channel is idle until it is registered and receives pictures.
+    params:
+      encChn: Channel number.
+      attr: Encoder, rate control and GOP attributes.
+    returns: 0 on success, -1 on invalid attributes, a channel in use, or a profile the SoC cannot encode.
+    notes: |
+      The picture size has to match the FrameSource channel, and the rate-control block has to belong to the selected mode.
+      The log prints the rate control that is really used; the requested mode can map to a different one on some SoCs.
+    diff: Asking for H.265 on a SoC without HEVC hardware fails with -1 and a log line. The vendor library returns 0 and creates a channel that never produces a frame.
+    see_also: [Encoder_SetDefaultParam, Encoder_RegisterChn]
+  Encoder_DestroyChn:
+    group: life
+    summary: Destroys a channel and frees its buffers. The channel must not be receiving pictures.
+  Encoder_RegisterChn:
+    group: life
+    summary: Attaches a channel to a group, which makes it a destination of the bound FrameSource.
+    params:
+      encGroup: Group number.
+      encChn: Channel number.
+  Encoder_UnRegisterChn:
+    group: life
+    summary: Detaches a channel from its group.
+  Encoder_StartRecvPic:
+    group: life
+    summary: Starts encoding. Pictures that arrive after this call are encoded.
+    notes: Call after the bind. Pictures that came before are not encoded.
+    see_also: [Encoder_StopRecvPic]
+  Encoder_StopRecvPic:
+    group: life
+    summary: Stops encoding. Streams already encoded can still be fetched.
+  Encoder_GetStream:
+    group: stream
+    summary: Takes the next encoded stream of a channel. The stream consists of packs that point into the stream buffer of the channel.
+    params:
+      encChn: Channel number.
+      stream: Receives the pack list, sequence number and reference type.
+      block: Non-zero waits for a stream, zero returns at once.
+    returns: 0 on success, -1 when there is no stream or on error.
+    notes: |
+      A stream is one picture, in several packs (parameter sets and slices). The pack timestamps are in microseconds. Return it with
+      `ReleaseStream`; holding streams too long stalls the encoder when the stream buffer is full.
+    diff: On T40 and T41 the picture is encoded when the application polls, not ahead of time; the encoder keeps at most one finished stream.
+    see_also: [Encoder_PollingStream, Encoder_ReleaseStream]
+  Encoder_GetStream_Impl:
+    group: stream
+    summary: Internal worker behind `GetStream`, exported by some builds of the library.
+  Encoder_ReleaseStream:
+    group: stream
+    summary: Returns a stream taken with `GetStream`.
+    returns: 0 on success, -1 on a stream that does not belong to the channel.
+  Encoder_PollingStream:
+    group: stream
+    summary: Waits until the channel has a stream or the timeout expires.
+    params:
+      encChn: Channel number.
+      timeoutMsec: Maximum wait in milliseconds.
+    returns: 0 when a stream is ready, -1 on timeout or error.
+    diff: On T40 the wait honours its timeout even when the ISP delivers no frames.
+    see_also: [Encoder_GetStream]
+  Encoder_PollingModuleStream:
+    group: stream
+    summary: Waits on several channels at once and reports which have a stream.
+    params:
+      encChnBitmap: Bit mask of channels to wait on; on return the channels that are ready.
+      timeoutMsec: Maximum wait in milliseconds.
+  Encoder_FlushStream:
+    group: stream
+    summary: Drops the encoded streams nobody has fetched, so the next stream is fresh.
+  Encoder_GetFd:
+    group: stream
+    summary: Returns a file descriptor that becomes readable when a stream is ready, for use with `select` or `poll`.
+    notes: On T21, T23 and T31 this is a pipe filled by a helper thread.
+  Encoder_Query:
+    group: stream
+    summary: Reads the channel statistics - pictures waiting, streams ready, state and the bitrate counters.
+    params:
+      encChn: Channel number.
+      stat: Receives the statistics structure.
+    diff: Returns the full vendor layout including a real average bitrate. On T40 the encoder keeps no input queue, so the number of waiting pictures is not a measure of load.
+  Encoder_GetChnAttr:
+    group: attr
+    summary: Reads the attributes of a channel as they are in effect.
+    notes: Rate-control values are the ones after clamping, not necessarily those you set.
+    see_also: [Encoder_CreateChn]
+  Encoder_SetDefaultParam:
+    group: attr
+    summary: Fills an attribute structure with sensible values for a profile, rate-control mode, size, frame rate and GOP length.
+    params:
+      attr: Structure to fill.
+      profile: "`IMP_ENC_PROFILE_*`, for example AVC main or HEVC main."
+      rcMode: Rate-control mode.
+      width: Picture width.
+      height: Picture height.
+      fpsNum: Frame rate numerator.
+      fpsDen: Frame rate denominator.
+    notes: The remaining arguments are the GOP length, the QP bounds and the bitrate; see the header for the exact order. Start from this and then change the fields you need.
+    soc: T31, T40, T41
+  Encoder_GetChnEncType:
+    group: attr
+    summary: Reads the payload type (H.264, H.265, JPEG) of a channel.
+  Encoder_Get/SetChnAttrRcMode:
+    group: rc
+    summary: Reads or changes the rate-control attribute (mode and its parameters) of a running channel.
+    notes: Changing the mode at run time restarts the rate controller; the next picture is a key frame on most SoCs.
+    diff: On T10, T20 and T21 the vendor-clamped values are returned, so a read after a write can differ from what you wrote.
+    see_also: [Encoder_Get/SetChnRcAttr]
+  Encoder_Get/SetChnRcAttr:
+    group: rc
+    summary: Reads or sets the rate-control block through a generic pointer.
+  Encoder_SetChnBitRate:
+    group: rc
+    summary: Changes the target and maximum bitrate of a channel without touching the other rate-control settings.
+    params:
+      bitrate: Target in kbit/s.
+      bitrateMax: Upper limit in kbit/s (used by the VBR modes).
+    soc: T31, T40, T41
+  Encoder_Get/SetMbRC:
+    group: rc
+    summary: Switches macroblock-level rate control on or off. When on, the quantiser can change inside a picture to hold the picture budget.
+    notes: On T21 and T23 the setting is parsed and kept. The T23 macroblock rate control is opt-in via `OPENIMP_EPRC_*` variables.
+  Encoder_Get/SetSuperFrameCfg:
+    group: rc
+    summary: Configures what happens when a single picture gets much larger than planned (a "super frame").
+    notes: The configuration sets a size limit for key and predicted pictures and an action - do nothing, discard or re-encode with a higher quantiser.
+  Encoder_Get/SetChnMaxPictureSize:
+    group: rc
+    summary: Sets or reads the largest size, in bytes, of an I and a P picture before the encoder re-encodes with a higher quantiser.
+    soc: T23, T40, T41
+  Encoder_SetChnRcTrigLevel:
+    group: rc
+    summary: Sets the level at which the rate control switches its mode (trigger level).
+  Encoder_GetChnAveBitrate:
+    group: rc
+    summary: Computes the average bitrate over a number of streams.
+    params:
+      stream: A stream just fetched.
+      frames: How many frames to average over.
+      bitrate: Receives the result in kbit/s.
+  Encoder_SetFrameRelease:
+    group: rc
+    summary: Sets the ratio at which the encoder gives the source frame back early (num/den).
+    soc: T31, T40, T41
+  Encoder_Get/SetChnFrmRate:
+    group: gop
+    summary: Reads or changes the output frame rate of the channel.
+    params:
+      rate: Numerator and denominator.
+    notes: The rate must not exceed the FrameSource rate. The encoder drops pictures to get down to it.
+  Encoder_Get/SetGOPSize:
+    group: gop
+    summary: Reads or sets the GOP length - the number of pictures between two key frames.
+    notes: A short GOP recovers faster after packet loss, a long one is smaller. For per-channel control after creation use this or `SetChnGopAttr`.
+  Encoder_Get/SetChnGopAttr:
+    group: gop
+    summary: Reads or sets the GOP attributes (length, type and reference structure).
+    soc: T31, T40, T41
+  Encoder_SetChnGopLength:
+    group: gop
+    summary: Changes the GOP length of a running channel.
+    soc: T31, T40, T41
+  Encoder_RequestIDR:
+    group: gop
+    summary: Asks the encoder to make the next picture a key frame (IDR), with fresh parameter sets.
+    notes: Use it when a new client connects, or after a loss. Several requests before one picture count once.
+  Encoder_Get/SetGDRCfg:
+    group: gop
+    summary: Configures gradual decoder refresh, which refreshes the picture in slices over several frames instead of one large key frame.
+    soc: T23
+  Encoder_RequestGDR:
+    group: gop
+    summary: Starts a gradual refresh cycle of the given number of frames.
+    soc: T23
+  Encoder_Get/SetChangeRef:
+    group: gop
+    summary: Reads or sets the switch for changing the reference picture.
+  Encoder_Get/SetChnHSkip:
+    group: gop
+    summary: Reads or sets the hierarchical skip mode, a reference structure in which some predicted pictures can be dropped.
+    notes: Needs a created channel. On T10, T20 and T30 the setting is only stored.
+  Encoder_SetChnHSkipBlackEnhance:
+    group: gop
+    summary: Sets the black enhancement flag of the skip mode.
+  Encoder_Get/SetChnFrmUsedMode:
+    group: gop
+    summary: Reads or sets the frame use mode, which says how input frames are used by the encoder.
+  Encoder_SetChnQp:
+    group: qp
+    summary: Fixes the quantiser (QP) of the channel to one value.
+    soc: T31
+  Encoder_SetChnQpBounds:
+    group: qp
+    summary: Sets the lowest and highest quantiser the rate control may use.
+    params:
+      minQp: Lowest QP, lower means better quality.
+      maxQp: Highest QP.
+    notes: Out-of-range values are clamped with a warning.
+    soc: T31, T40, T41
+  Encoder_SetChnQpBoundsPerFrame:
+    group: qp
+    summary: Sets separate QP bounds for I and P pictures.
+    soc: T41
+  Encoder_SetChnQpIPDelta:
+    group: qp
+    summary: Sets the QP difference between I and P pictures.
+    soc: T31
+  Encoder_SetChnInitQP:
+    group: qp
+    summary: Sets the quantiser of the first picture.
+    soc: T23
+  Encoder_Get/SetQpgMode:
+    group: qp
+    summary: Selects the mode of the quantiser generator. On T21 it is kept without check, as in the vendor library.
+  Encoder_Get/SetChnROI:
+    group: qp
+    summary: Defines regions of interest in which the picture is coded with better quality.
+    params:
+      config: Region rectangles and the QP offset per region.
+    notes: Regions are in picture coordinates and aligned to the macroblock grid (16 pixels).
+  Encoder_Get/SetChnRoiAttr:
+    group: qp
+    summary: Region of interest attributes of the newer SoCs, with several regions and a QP value for each.
+    soc: T40, T41
+  Encoder_SetChnMapRoi:
+    group: qp
+    summary: Sets a region of interest from a map with one entry per macroblock.
+    soc: T40, T41
+  Encoder_Get/SetChnColor2Grey:
+    group: qp
+    summary: Makes the encoder code the picture without colour (the chroma planes are neutral), which saves bits at night.
+    soc: T10, T20, T21, T23, T30
+  Encoder_Get/SetChnDenoise:
+    group: qp
+    summary: Reads or sets the encoder-side noise filter.
+    soc: T10, T20, T21, T23
+  Encoder_Get/SetChnDemask:
+    group: qp
+    summary: Reads or sets the demask (lens shading) attribute of the encoder. The values are stored.
+    soc: T10, T20
+  Encoder_Get/SetChnCrop:
+    group: qp
+    summary: Crops the picture at the encoder input.
+    soc: T23
+  Encoder_SetChnResizeMode:
+    group: qp
+    summary: Switches the resize mode of the channel.
+    soc: T31, T40, T41
+  Encoder_Get/SetH264TransCfg:
+    group: h26x
+    summary: Reads or sets H.264 transform options such as the chroma QP offset.
+    soc: T10, T20, T21, T23
+  Encoder_Get/SetH265TransCfg:
+    group: h26x
+    summary: Reads or sets H.265 transform options. Checked and dropped on T21 and T23, as the vendor does.
+    soc: T20, T21, T23
+  Encoder_SetChnEntropyMode:
+    group: h26x
+    summary: Chooses CAVLC or CABAC for H.264.
+    soc: T31
+  Encoder_Get/SetChnSeiAttr:
+    group: h26x
+    summary: Enables and configures a user-data SEI message that is written into the stream.
+    soc: T40, T41
+    diff: On IDR pictures of T40 the SEI may be left out, because the header area holds the parameter sets twice.
+  Encoder_InsertUserData:
+    group: h26x
+    summary: Inserts user data into the stream of the next picture, as a user_data_unregistered SEI message.
+    params:
+      data: Bytes to insert.
+      size: Length in bytes.
+    soc: T10, T20, T21, T23
+  Encoder_Get/Setframelossthd:
+    group: h26x
+    summary: Reads or sets the frame loss threshold. On T23 the value is kept for the getter only.
+    soc: T23
+  Encoder_SetMultiSectionMode:
+    group: h26x
+    summary: Sets slice (section) splitting of pictures. Kept for the getter only on T23.
+    soc: T23
+  Encoder_Get/SetJpegeQl:
+    group: jpeg
+    summary: Reads or sets the quantisation table level of a JPEG channel - the picture quality.
+    notes: Takes effect on the next picture. Can be called while the channel runs.
+  Encoder_SetAvpuJpegQp:
+    group: jpeg
+    summary: Sets the JPEG quality value on T40 and T41 (hardware encoder).
+    soc: T41
+  Encoder_InputJpege:
+    group: jpeg
+    summary: Encodes one picture to JPEG without a channel.
+    params:
+      src: Source picture, NV12.
+      dst: Output buffer.
+      src_w: Width.
+      src_h: Height.
+      q: Quality.
+      stream_length: Receives the JPEG size in bytes.
+    soc: T23, T41
+  Encoder_InputJpege_Ex:
+    group: jpeg
+    summary: Same as `InputJpege` for a context with an integer handle.
+    soc: T41
+  Encoder_YuvInit:
+    group: yuv
+    summary: Creates an encoder context for frames supplied by the application.
+    soc: T23, T40, T41
+  Encoder_YuvEncode:
+    group: yuv
+    summary: Encodes one frame with the context and returns the stream.
+    notes: An output buffer must be big enough; a non-zero `outLen` on entry is the capacity of `outAddr`.
+    diff: A picture that does not fit the output buffer fails with -1 and `outLen` 0, instead of writing past the buffer.
+    soc: T23, T40, T41
+  Encoder_YuvExit:
+    group: yuv
+    summary: Frees the context.
+  Encoder_YuvRequestIDR:
+    group: yuv
+    summary: Makes the next frame of the context a key frame.
+  Encoder_YuvGetCrop:
+    group: yuv
+    summary: Reads the crop of the context.
+  Encoder_YuvSetCrop:
+    group: yuv
+    summary: Sets a crop on the context.
+  Encoder_YuvInit_Ex:
+    group: yuv
+    summary: Same as `YuvInit` with an integer handle.
+  Encoder_YuvEncode_Ex:
+    group: yuv
+    summary: Same as `YuvEncode` with an integer handle.
+  Encoder_YuvExit_Ex:
+    group: yuv
+    summary: Same as `YuvExit` with an integer handle.
+  Encoder_VbmAlloc:
+    group: yuv
+    summary: Allocates a physically contiguous buffer that the YUV interface can read.
+    params:
+      size: Size in bytes.
+      align: Alignment in bytes.
+    returns: Pointer to the buffer or NULL.
+  Encoder_VbmFree:
+    group: yuv
+    summary: Frees a buffer from `VbmAlloc`.
+  Encoder_VbmV2P:
+    group: yuv
+    summary: Converts a virtual address of such a buffer to its physical address.
+  Encoder_VbmP2V:
+    group: yuv
+    summary: Converts a physical address back to the virtual one.
+  Encoder_VbmAlloc_Ex:
+    group: yuv
+    summary: Allocation for the handle based YUV interface.
+  Encoder_VbmFree_Ex:
+    group: yuv
+    summary: Free for the handle based YUV interface.
+  Encoder_Get/SetMaxStreamCnt:
+    group: mem
+    summary: Sets or reads how many streams a channel may hold at the same time.
+    notes: Raise it when the consumer is slow and you can afford the memory.
+  Encoder_Get/SetStreamBufSize:
+    group: mem
+    summary: Sets or reads the size of the stream buffer of a channel.
+    notes: Set it before the channel starts; it should hold several key frames at your bitrate.
+    soc: T31, T40, T41
+  Encoder_SetbufshareChn:
+    group: mem
+    summary: Shares the reference buffer of a channel with another, to save memory.
+    params:
+      shareChn: The channel to share with.
+    soc: T31, T40, T41
+  Encoder_SetAvpuBsShare:
+    group: mem
+    summary: Switches sharing of the stream buffer of the hardware encoder.
+    soc: T41
+  Encoder_SetRdBufShare:
+    group: mem
+    summary: Switches sharing of the read buffer between channels.
+    soc: T23
+  Encoder_SetIvpuBsSize:
+    group: mem
+    summary: Sets the size of the stream buffer of the second hardware unit.
+    soc: T41
+  Encoder_SetPoolSize:
+    group: mem
+    summary: Sets the size of the encoder memory pool.
+  Encoder_Get/SetPool:
+    group: mem
+    summary: Binds the encoder buffers to a memory pool, or reads the pool id.
+    soc: T23, T31, T40, T41
+  Encoder_ClearPoolId:
+    group: mem
+    summary: Forgets the pool id of the channel.
+    soc: T31
+  Encoder_Get/SetFisheyeEnableStatus:
+    group: misc
+    summary: Marks the channel as a fisheye channel. The flag is only stored.
+  Encoder_EnableAllNCUDenoise:
+    group: misc
+    summary: Switches the NCU based denoise on for all channels. Internal entry kept for compatibility.
+  Encoder_DisableAllNCUDenoise:
+    group: misc
+    summary: Switches the NCU based denoise off for all channels.
+  Encoder_PadFrame:
+    group: misc
+    summary: Pads the frame to the encoder size. Not exported by OpenIMP on T10, T20, T21 and T31.
+  Encoder_SetPadFrameAttr:
+    group: misc
+    summary: Sets the padding attributes for `PadFrame`.
+  Encoder_GetChnEvalInfo:
+    group: misc
+    summary: Reads evaluation information of the channel for tuning.
+    soc: T31

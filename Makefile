@@ -78,13 +78,20 @@ status-check:
 	python3 tools/status_data.py --check
 	python3 tools/gen_feature_matrix_html.py --check
 	python3 tools/apitest/check_coverage.py
+	python3 tools/gen_api_wiki.py --check
 
 # Host only (needs the soak sampler logs and the camera STATUS files, not CI): daily soak summary, then regenerate the matrix
 status-soak:
 	python3 tools/status_soak.py
 	python3 tools/gen_feature_matrix_html.py
 
-.PHONY: status-check status-soak
+.PHONY: status-check status-soak api-wiki
+
+# API reference pages of the wiki (ISP, FrameSource, Encoder) from include/, docs/api_evidence.json and docs/api_reference/*.yaml
+# into a wiki checkout: make api-wiki WIKI_DIR=<openimp.wiki checkout>   (needs PyYAML; tools/gen_api_wiki.py)
+api-wiki:
+	@test -n "$(WIKI_DIR)" || { echo "usage: make api-wiki WIKI_DIR=<wiki checkout dir>"; exit 2; }
+	python3 tools/gen_api_wiki.py --out "$(WIKI_DIR)"
 
 export-check:
 	./tools/export-check.sh

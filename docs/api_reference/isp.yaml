@@ -1,0 +1,704 @@
+# Descriptions for the ISP API pages (tools/gen_api_wiki.py -> wiki page API-ISP).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: ISP (including ISP tuning)
+intro: |
+  The ISP module opens the image signal processor, registers the camera sensor and exposes the tuning interface:
+  exposure, white balance, colour, noise reduction, flip, crop, day/night and the statistics the ISP collects. The
+  calls named `IMP_ISP_Tuning_*` change the picture while the stream runs; they only work between `EnableTuning` and
+  `DisableTuning`.
+
+  **Typical start-up order:** `IMP_ISP_Open`, `IMP_ISP_AddSensor`, `IMP_ISP_EnableSensor`, `IMP_System_Init`, create and
+  enable the FrameSource channels, `IMP_ISP_EnableTuning`, then the tuning calls. Shut down in reverse order:
+  `DisableTuning`, `DisableSensor`, `DelSensor`, `IMP_ISP_Close`.
+
+  Many calls exist twice in the vendor library family: a plain form and a `_Sec` form (and `ISP_MultiCamera_` prefix) for
+  the second sensor of a dual-sensor SoC (T23, and T40 and T41 with their own `_VI` forms). The second-sensor forms are
+  not described separately; they take the same arguments. A value that the sensor driver does not support is refused with
+  -1 and the previous value stays. All "range 0 to 255, 128 is neutral" values use the same scale as the vendor library.
+groups:
+  - id: life
+    title: Open, sensor and tuning session
+  - id: ae
+    title: Exposure (AE)
+    intro: The auto exposure chooses integration time and gains to reach a brightness target. These calls read what it chose, limit it, or take it over.
+  - id: awb
+    title: White balance (AWB)
+  - id: color
+    title: Colour, contrast and sharpness
+    intro: Simple picture controls. Brightness, contrast, saturation, sharpness and hue use one byte, 128 is the neutral value, 0 to 255 the range.
+  - id: nr
+    title: Noise reduction, defog and dynamic range
+  - id: dn
+    title: Day/night, scene and running mode
+  - id: flip
+    title: Flip, crop and zoom
+  - id: wdr
+    title: Wide dynamic range
+  - id: af
+    title: Autofocus statistics
+  - id: stat
+    title: Statistics and reading the ISP state
+  - id: osd
+    title: OSD, masks and drawing
+    intro: Overlays that the ISP or the mscaler draws into the picture. The software OSD of the `IMP_OSD` module is the usual choice; these calls are the lower level used on some SoCs.
+  - id: ldc
+    title: Lens correction, bypass and raw
+  - id: sys
+    title: Board hooks and internals
+    intro: GPIO, camera input selection and helper entries of the vendor library that are exported for binary compatibility. Applications seldom call them.
+functions:
+  ISP_Open:
+    group: life
+    summary: Opens the ISP device and starts the ISP driver session. Has to be the first ISP call.
+    returns: 0 on success, -1 if the device cannot be opened (driver not loaded).
+    see_also: [ISP_Close]
+  ISP_Close:
+    group: life
+    summary: Closes the ISP device. The sensor has to be disabled and deleted first.
+    see_also: [ISP_Open]
+  ISP_AddSensor:
+    group: life
+    summary: Registers a sensor with the ISP driver. The structure names the sensor model, its I2C address and bus and the reset and power-down pins.
+    params:
+      pinfo: Sensor description (`IMPSensorInfo`), with the sensor name that the driver knows (for example `gc2053`).
+    returns: 0 on success, -1 if the sensor module is missing or the sensor is already registered.
+    notes: The sensor driver module has to be loaded first. Dual-sensor SoCs also have `IMP_ISP_AddSensor_VI(vi, pinfo)` for the second input.
+    diff: On T41 a sensor that stays registered after an application was killed makes the next call fail with EBUSY; unloading and reloading the driver clears it.
+    see_also: [ISP_EnableSensor, ISP_DelSensor]
+  ISP_DelSensor:
+    group: life
+    summary: Removes a registered sensor from the ISP driver.
+    see_also: [ISP_AddSensor]
+  ISP_EnableSensor:
+    group: life
+    summary: Powers up the registered sensor and starts its data stream into the ISP.
+    notes: Do it before `IMP_System_Init`. The `_VI` form selects the sensor input on dual-sensor SoCs.
+    see_also: [ISP_DisableSensor]
+  ISP_DisableSensor:
+    group: life
+    summary: Stops the sensor stream and powers the sensor down.
+    see_also: [ISP_EnableSensor]
+  ISP_EnableTuning:
+    group: life
+    summary: Starts the tuning session, which allows all `IMP_ISP_Tuning_*` calls.
+    notes: Call after the FrameSource channels are enabled. Tuning calls before this return -1.
+    see_also: [ISP_DisableTuning]
+  ISP_DisableTuning:
+    group: life
+    summary: Ends the tuning session.
+  ISP_Tuning_Get/SetSensorFPS:
+    group: life
+    summary: Sets or reads the frame rate of the sensor as a fraction.
+    params:
+      fps_num: Numerator, for example 25.
+      fps_den: Denominator, for example 1.
+    notes: This changes the rate at which the sensor produces frames; the FrameSource rate can only be equal or lower. The sensor driver rounds to the nearest rate it supports, so read the value back. A sensor that cannot change its rate answers -1.
+    diff: On T41 the setting reaches the sensor driver; a sensor without rate control (some GC5603 modules) returns EOPNOTSUPP.
+    see_also: [FrameSource_Get/SetChnAttr]
+  ISP_Tuning_GetSensorAttr:
+    group: life
+    summary: Reads the description of the registered sensor (name, resolution, bus, frame rate range).
+  ISP_Tuning_SetVideoDrop:
+    group: life
+    summary: Installs a function the library calls when the ISP delivers no frames for a while (after roughly 2, 4 and 6 seconds).
+    params:
+      cb: Callback without arguments; use it to restart the stream or to reboot the camera.
+  ISP_Tuning_WaitFrame:
+    group: stat
+    summary: Blocks until the ISP has finished a frame, and reports the frame counter and time stamp.
+    params:
+      attr: Receives the frame index and capture time; the structure also carries the timeout.
+    returns: 0 on success, -1 on timeout.
+    notes: Statistics read right after this call belong to that frame.
+  ISP_Tuning_WaitFrameDone:
+    group: stat
+    summary: Variant of `WaitFrame` that returns when the frame has been written out completely.
+  ISP_Tuning_Get/SetExpr:
+    group: ae
+    summary: Reads the exposure parameters in use, or overrides them. The structure holds the AE mode (auto or manual) and, for manual mode, integration time and gains.
+    notes: A manual setting stops the auto exposure; set the mode back to auto to resume. Values outside what the sensor can do are clamped.
+    see_also: [ISP_Tuning_GetEVAttr, ISP_Tuning_Get/SetAeComp]
+  ISP_Tuning_GetEVAttr:
+    group: ae
+    summary: "Reads the current exposure state: integration time, analogue gain, digital gain, total gain and the EV value."
+    notes: Use it for telemetry and for night/day decisions of your own (a high total gain means a dark scene).
+  ISP_Tuning_Get/SetAeComp:
+    group: ae
+    summary: Moves the brightness target of the auto exposure up or down (exposure compensation).
+    params:
+      comp: Compensation, 0 to 255, 128 is neutral. Higher values give a brighter picture.
+  ISP_Tuning_Get/SetMaxAgain:
+    group: ae
+    summary: Limits the analogue gain the auto exposure may use.
+    params:
+      gain: Maximum gain in the fixed-point gain unit of the ISP; read the current gain with `GetEVAttr` to see the scale of your SoC.
+    notes: Lowering it reduces noise in the dark at the price of a darker picture or longer integration time.
+  ISP_Tuning_Get/SetMaxDgain:
+    group: ae
+    summary: Limits the digital gain the auto exposure may use.
+    see_also: [ISP_Tuning_Get/SetMaxAgain]
+  ISP_Tuning_Get/SetBacklightComp:
+    group: ae
+    summary: Sets the strength of backlight compensation, which raises the exposure of dark centre regions against a bright background.
+    params:
+      strength: 0 disables, larger values compensate more.
+  ISP_Tuning_Get/SetHiLightDepress:
+    group: ae
+    summary: Sets how strongly very bright areas (lamps, headlights) are pulled down.
+    params:
+      strength: 0 off, larger values suppress more.
+  ISP_Tuning_Get/SetAntiFlickerAttr:
+    group: ae
+    summary: Selects the mains-flicker avoidance of the exposure control.
+    params:
+      attr: Disabled, 50 Hz or 60 Hz (`IMPISP_ANTIFLICKER_*`).
+    notes: Set it to the frequency of the local mains so the integration time is a multiple of the light period; with the wrong value the picture shows moving bands.
+  ISP_Tuning_Get/SetIntegrationTime:
+    group: ae
+    summary: Sets or reads the exposure integration time, either as a value or as a range for the auto exposure.
+    diff: On T21 the range part (upper limit of the auto exposure time) is honoured by OpenIMP; the vendor library ignores it.
+  ISP_Tuning_Get/SetAeAttr:
+    group: ae
+    summary: Reads or changes the AE attributes block (targets, speed, exposure limits) in one structure.
+  ISP_Tuning_Get/SetAeExprInfo:
+    group: ae
+    summary: Reads or sets the exposure parameter block of the AE on the newer SoCs.
+  ISP_Tuning_Get/SetAeScenceAttr:
+    group: ae
+    summary: Reads or sets the AE scene attributes (metering mode, target brightness and limits for a scene).
+  ISP_Tuning_Get/SetAeSpeed:
+    group: ae
+    summary: Sets or reads how fast the auto exposure converges to a new target.
+  ISP_Tuning_Get/SetAeConvergeStep:
+    group: ae
+    summary: Sets or reads the step size of the AE convergence.
+    diff: The value is stored and returned; it does not change the convergence.
+  ISP_Tuning_Get/SetAeStrategy:
+    group: ae
+    summary: "Chooses what the AE protects: highlights or shadows (`IMPISPAeStrategy`)."
+  ISP_Tuning_Get/SetAeMin:
+    group: ae
+    summary: Sets or reads the lower limit of the exposure (minimum integration time and gain) of the auto exposure.
+  ISP_Tuning_Get/SetAeTargetList:
+    group: ae
+    summary: Sets or reads the table that maps total gain to the AE brightness target, so the target can fall in the dark.
+  ISP_Tuning_Get/SetAeWeight:
+    group: ae
+    summary: Sets or reads the metering weights of the AE grid; zones with a higher weight count more.
+  ISP_Tuning_Get/SetAeHist:
+    group: ae
+    summary: Reads or sets the histogram parameters of the AE (bin thresholds and weights).
+  ISP_Tuning_Get/SetAeExpList:
+    group: ae
+    summary: Reads or sets the exposure table (list of integration time and gain steps) the AE walks through.
+  ISP_Tuning_AE_Get/SetROI:
+    group: ae
+    summary: Sets or reads a region of interest for the exposure metering.
+  ISP_Tuning_GetAE_IT_MAX:
+    group: ae
+    summary: Reads the upper limit of the AE integration time.
+  ISP_Tuning_SetAe_IT_MAX:
+    group: ae
+    summary: Sets the upper limit of the AE integration time. A short limit reduces motion blur and raises gain instead.
+  ISP_Tuning_SetAeFreeze:
+    group: ae
+    summary: Freezes the current exposure (non-zero) or releases it (zero).
+  ISP_Tuning_GetAeLuma:
+    group: stat
+    summary: Reads the mean luma of the picture as seen by the AE.
+    returns: 0 on success, -1 on error. The value is written to the output argument.
+  ISP_Tuning_GetAeState:
+    group: stat
+    summary: Reads whether the AE has converged.
+  ISP_Tuning_GetAeZone:
+    group: stat
+    summary: Reads the per-zone luma values of the AE grid.
+    notes: The grid is 15 by 15 zones on most SoCs.
+    diff: Not served by the stock T10/T20 kernel module, so on T10 and T20 the call is a no-op that returns success.
+  ISP_Tuning_GetAeHist_Origin:
+    group: stat
+    summary: Reads the unprocessed AE histogram.
+  ISP_Tuning_GetAeStatistics:
+    group: stat
+    summary: Reads the AE statistics block (histogram and zone data) of the last frame.
+  ISP_Tuning_GetAEEvList:
+    group: stat
+    summary: Reads the list of EV values of the AE.
+  ISP_Tuning_GetAeEvList:
+    group: stat
+    summary: Same as `GetAEEvList` with the spelling the newer library uses.
+  ISP_Tuning_GetAeAtList:
+    group: stat
+    summary: Reads the AE target list (brightness targets per gain step) in use.
+  ISP_Tuning_Get/SetWB:
+    group: awb
+    summary: Reads or sets the white balance mode and, for manual mode, the red and blue gains.
+    params:
+      wb: Mode (auto, manual or a preset such as daylight, cloudy, incandescent) and the gains for manual mode.
+    notes: Manual mode needs the gains in the structure; auto mode ignores them. A preset sets fixed gains for that light.
+    diff: On T21, auto mode could show a magenta picture in one test; open.
+    see_also: [ISP_Tuning_GetWB_Statis]
+  ISP_Tuning_GetWB_Statis:
+    group: awb
+    summary: Reads the colour temperature and gains that the AWB currently uses.
+  ISP_Tuning_GetWB_GOL_Statis:
+    group: awb
+    summary: Reads the global AWB statistics (mean R, G, B of the picture).
+  ISP_Tuning_SetWB_ALGO:
+    group: awb
+    summary: Selects the AWB algorithm variant.
+  ISP_Tuning_Get/SetAwbAttr:
+    group: awb
+    summary: Reads or sets the AWB attribute block of the newer SoCs.
+  ISP_Tuning_Get/SetAwbWeight:
+    group: awb
+    summary: Sets or reads the weights of the AWB zones.
+    notes: On T23 and T31 the stock driver treats this as a no-op, and OpenIMP matches that.
+  ISP_Tuning_Get/SetAwbZoneWeight:
+    group: awb
+    summary: Sets or reads the AWB zone weights as a zone table.
+  ISP_Tuning_Get/SetAwbHist:
+    group: awb
+    summary: Reads or sets the AWB histogram parameters.
+    notes: A no-op on T23 and T31, like the stock driver.
+  ISP_Tuning_Get/SetAwbClust:
+    group: awb
+    summary: Reads or sets the colour clusters of the AWB (the set of grey points it accepts).
+  ISP_Tuning_Get/SetAwbCtTrend:
+    group: awb
+    summary: Reads or sets the trend curve that links colour temperature and the red/blue ratio.
+  ISP_Tuning_Get/SetAwbCtTrendOffset:
+    group: awb
+    summary: Reads or sets an offset of the colour temperature trend, to shift the white balance warmer or cooler.
+  ISP_Tuning_Get/SetAwbConvergeStep:
+    group: awb
+    summary: Reads or sets how fast the AWB follows a light change.
+  ISP_Tuning_GetAWBCt:
+    group: awb
+    summary: Reads the colour temperature the AWB has estimated, in Kelvin.
+  ISP_Tuning_SetAwbCt:
+    group: awb
+    summary: Sets the colour temperature for the manual white balance.
+  ISP_Tuning_Awb_Get/SetRgbCoefft:
+    group: awb
+    summary: Reads or sets the red, green and blue correction coefficients of the white balance.
+  ISP_Tuning_Awb_Get/SetCwfShift:
+    group: awb
+    summary: Reads or sets the shift of the cool white fluorescent reference point of the AWB.
+  ISP_Tuning_AwbSync:
+    group: awb
+    summary: Copies the AWB result of one sensor to the other on dual-sensor boards.
+  ISP_Tuning_GetAwbZone:
+    group: stat
+    summary: Reads the per-zone AWB statistics (average R/G and B/G of each zone).
+  ISP_Tuning_GetAwbGlobalStatistics:
+    group: stat
+    summary: Reads the global AWB statistics of the last frame.
+  ISP_Tuning_GetAwbStatistics:
+    group: stat
+    summary: Reads the per-zone AWB statistics of the newer SoCs. Takes the sensor input as first argument.
+  ISP_Tuning_Get/SetBcshHue:
+    group: color
+    summary: Sets or reads the hue rotation. 128 is neutral.
+  ISP_Tuning_Get/SetContrast:
+    group: color
+    summary: Sets or reads the contrast, 0 to 255, 128 is neutral.
+  ISP_Tuning_Get/SetSaturation:
+    group: color
+    summary: Sets or reads the colour saturation, 0 to 255, 128 is neutral, 0 gives a grey picture.
+  ISP_Tuning_SetBrightness:
+    group: color
+    summary: Sets the brightness, 0 to 255, 128 is neutral.
+    diff: On T21 the value scales the AE target by value/128, so brightness acts through the exposure control (beyond the vendor, whose T21 call changes nothing).
+  ISP_Tuning_GetBrightness:
+    group: color
+    summary: Reads the brightness value.
+    diff: The T40 getter returned -1 in the RC1 test; it now returns the per-input cached value like the vendor library.
+  ISP_Tuning_SetSharpness:
+    group: color
+    summary: Sets the sharpness, 0 to 255, 128 is neutral.
+    diff: On T21 and one other SoC the value has no visible effect in our tests, as with the vendor library.
+  ISP_Tuning_GetSharpness:
+    group: color
+    summary: Reads the sharpness value.
+  ISP_Tuning_Get/SetColorfxMode:
+    group: color
+    summary: "Selects a colour effect: normal, black and white, sepia, negative or vivid."
+    params:
+      mode: One of the `IMPISP_COLORFX_*` values.
+    diff: Sepia works on T21 although the vendor library has no effect there.
+  ISP_Tuning_Get/SetGamma:
+    group: color
+    summary: Sets or reads the gamma curve table.
+    notes: A curve that falls anywhere is rejected. On T23 the new curve is applied at once.
+    diff: Applied at once on T23, where the stock behaviour is to wait.
+  ISP_Tuning_Get/SetGammaAttr:
+    group: color
+    summary: Reads or sets the gamma attribute block (curve and mode) on the newer SoCs.
+  ISP_Tuning_Get/SetCCMAttr:
+    group: color
+    summary: Reads or sets the colour correction matrix.
+  ISP_Tuning_Get/SetCsc_Attr:
+    group: color
+    summary: Reads or sets the colour space conversion (RGB to YUV) matrix and range.
+  ISP_Tuning_Get/SetISPCSCAttr:
+    group: color
+    summary: Reads or sets the colour space conversion of the newer SoCs.
+  ISP_Get/SetCsccrMode:
+    group: color
+    summary: Reads or sets the mode of the chroma conversion stage.
+  ISP_Tuning_Get/SetModule_Ratio:
+    group: color
+    summary: Reads or sets how strongly individual ISP blocks work, as a ratio.
+  ISP_Tuning_Get/SetModuleControl:
+    group: color
+    summary: Switches individual ISP processing blocks on or off (bypass bits).
+    params:
+      ispmodule: Bit field with one bit per processing block (`IMPISPModuleCtl`).
+    notes: Useful to find out which block causes an artefact. On T41 the driver may refuse the control.
+  ISP_Tuning_SetDPStrength:
+    group: nr
+    summary: Sets the strength of the dead pixel correction.
+  ISP_Tuning_Get/SetDPC_Strength:
+    group: nr
+    summary: Sets or reads the strength of the dead pixel correction, as a percentage.
+  ISP_Tuning_Get/SetDRC_Strength:
+    group: nr
+    summary: Sets or reads the strength of the dynamic range compression (it brings out dark areas).
+  ISP_Tuning_EnableDRC:
+    group: nr
+    summary: Switches the dynamic range compression block on or off.
+  ISP_Tuning_Get/SetRawDRC:
+    group: nr
+    summary: Reads or sets the DRC attributes of the raw stage.
+  ISP_Tuning_Get/SetDefog_Strength:
+    group: nr
+    summary: Sets or reads the defog strength.
+  ISP_Tuning_EnableDefog:
+    group: nr
+    summary: Switches defog on or off.
+    diff: Takes the enable flag as the vendor does; the earlier stub always switched it on.
+  ISP_Tuning_SetAntiFogAttr:
+    group: nr
+    summary: Sets the anti-fog attribute.
+    notes: Accepted, no picture change on T21 in our tests, as with the vendor library.
+  ISP_Tuning_Get/SetSinterDnsAttr:
+    group: nr
+    summary: Reads or sets the spatial (2D) noise reduction attributes.
+  ISP_Tuning_Get/SetTemperDnsAttr:
+    group: nr
+    summary: Reads or sets the temporal (3D) noise reduction attributes.
+  ISP_Tuning_SetTemperDnsCtl:
+    group: nr
+    summary: Sets the control word of the temporal noise reduction.
+  ISP_Tuning_SetSinterStrength:
+    group: nr
+    summary: Sets or reads the strength of the spatial noise reduction as a ratio.
+  ISP_Tuning_SetTemperStrength:
+    group: nr
+    summary: Sets or reads the strength of the temporal noise reduction as a ratio.
+  ISP_Tuning_SetMeshShadingScale:
+    group: nr
+    summary: Selects the scale of the lens shading (vignette) correction.
+  ISP_Tuning_Get/SetISPRunningMode:
+    group: dn
+    summary: Switches the ISP between day mode and night mode, or reads the mode.
+    params:
+      mode: "`IMPISP_RUNNING_MODE_DAY` for colour, `IMPISP_RUNNING_MODE_NIGHT` for black and white operation, custom modes where the SoC has them."
+    notes: |
+      Night mode changes the ISP tuning to the night set and removes colour. The IR-cut filter and the IR LEDs are not
+      switched by this call; the application drives them. The usual sequence for night: IR-cut off, LEDs on, then
+      this call.
+    see_also: [ISP_Tuning_Get/SetSceneMode]
+  ISP_Tuning_Get/SetISPCustomMode:
+    group: dn
+    summary: Selects a custom ISP mode (an extra tuning set that the application can switch to).
+  ISP_Tuning_Get/SetSceneMode:
+    group: dn
+    summary: Selects a scene preset (auto, indoor, outdoor and so on).
+    diff: The vendor T21 kernel module ignores the call; OpenIMP matches that.
+  ISP_Tuning_SetFWFreeze:
+    group: dn
+    summary: Freezes the ISP firmware loop (AE, AWB and the other adaptive steps) while the picture stays, or resumes it.
+  ISP_Tuning_SetISPProcess:
+    group: dn
+    summary: Switches the ISP processing of the frames on or off.
+  ISP_Tuning_EnableMovestate:
+    group: dn
+    summary: Enables the motion-state input of the ISP, so the noise reduction adapts to moving objects.
+    notes: A no-op in the stock driver on T21 and T23.
+  ISP_Tuning_DisableMovestate:
+    group: dn
+    summary: Disables the motion-state input again.
+  ISP_StartNightMode:
+    group: dn
+    summary: Starts the night mode sequence of the ISP firmware.
+  ISP_Tuning_Get/SetHVFLIP:
+    group: flip
+    summary: Sets or reads the horizontal and vertical flip as one value (normal, mirror, flip, both).
+    params:
+      hvflip: One of `IMPISP_FLIP_*`.
+    notes: Flipping mirrors the sensor read-out or the ISP output. After a flip the Bayer pattern changes, the library and driver adjust it.
+  ISP_Tuning_GetHVFlip:
+    group: flip
+    summary: Reads the combined flip, spelling used by the newer library.
+  ISP_Tuning_Get/SetISPHflip:
+    group: flip
+    summary: Sets or reads the horizontal mirror of the ISP output.
+    params:
+      mode: Enable or disable.
+  ISP_Tuning_Get/SetISPVflip:
+    group: flip
+    summary: Sets or reads the vertical flip of the ISP output.
+  ISP_Tuning_Get/SetISPHVflip:
+    group: flip
+    summary: Sets or reads both ISP flips at once.
+  ISP_Tuning_Get/SetSensorHflip:
+    group: flip
+    summary: Sets or reads the horizontal flip done by the sensor itself.
+  ISP_Tuning_Get/SetSensorVflip:
+    group: flip
+    summary: Sets or reads the vertical flip done by the sensor itself.
+  ISP_Tuning_Get/SetFrontCrop:
+    group: flip
+    summary: Crops the picture at the ISP input, before scaling, so a smaller window of the sensor is used.
+    params:
+      ispfrontcrop: Enable flag, position and size of the window.
+    notes: Changes the picture area, so FrameSource sizes have to be compatible. The window is aligned to the sensor pattern.
+  ISP_Tuning_SetAutoZoom:
+    group: flip
+    summary: Sets a crop window and scaler output for a smooth digital zoom (auto zoom).
+  ISP_Tuning_GetAutoZoom:
+    group: flip
+    summary: Reads the auto zoom window.
+  ISP_Tuning_SetScalerLv:
+    group: flip
+    summary: Sets the scaler level of the ISP.
+    notes: Not handled by the stock T23 module either, answers -1 there.
+  ISP_SetScalerLv:
+    group: flip
+    summary: Sets the scaler level (library-level entry for the same control).
+  ISP_Tuning_Get/SetWDRAttr:
+    group: wdr
+    summary: Switches the wide dynamic range processing on or off, or reads the state.
+  ISP_Tuning_Get/SetWdrOutputMode:
+    group: wdr
+    summary: Chooses how the WDR frame is delivered (fusion in the ISP or the long/short frames).
+    diff: The stock T41 driver has no handler for it; the call returns -1 there.
+  ISP_Tuning_Get/SetWdr_OutputMode:
+    group: wdr
+    summary: Same as `WdrOutputMode` under the older spelling.
+  ISP_WDR_ENABLE:
+    group: wdr
+    summary: Turns the WDR block on (driver control).
+  ISP_WDR_ENABLE_GET:
+    group: wdr
+    summary: Reads whether WDR is on.
+  ISP_WDR_ENABLE_Get:
+    group: wdr
+    summary: Reads whether WDR is on (older spelling).
+  ISP_WDR_OPEN:
+    group: wdr
+    summary: Opens the WDR path of the ISP.
+  ISP_Tuning_Get/SetAfHist:
+    group: af
+    summary: Reads or sets the AF histogram parameters.
+    notes: The AF statistics chain is off by default on T23.
+  ISP_Tuning_Get/SetAfWeight:
+    group: af
+    summary: Sets or reads the weights of the AF zones.
+  ISP_Tuning_GetAFMetrices:
+    group: af
+    summary: Reads the AF sharpness metrics.
+  ISP_Tuning_GetAFMetricesInfo:
+    group: af
+    summary: Reads the AF metrics information block.
+  ISP_Tuning_GetAfStatistics:
+    group: af
+    summary: Reads the AF statistics.
+  ISP_Tuning_GetAfZone:
+    group: af
+    summary: Reads the AF value per zone.
+  ISP_Tuning_SetAFThreshold:
+    group: af
+    summary: Sets the AF threshold.
+  ISP_Tuning_GetTotalGain:
+    group: stat
+    summary: Reads the total gain (analogue and digital together) used by the exposure.
+  ISP_Tuning_Get/SetStatisConfig:
+    group: stat
+    summary: Reads or sets the configuration of the statistics blocks (zones, thresholds).
+  ISP_Tuning_Get/SetTmoCurve:
+    group: nr
+    summary: Reads or sets the tone mapping curve.
+  ISP_Tuning_GetBlcAttr:
+    group: color
+    summary: Reads the black level correction attributes.
+    notes: The stock T23 module has no such control; the call returns -1 there.
+  ISP_Tuning_Get/SetMask:
+    group: osd
+    summary: Sets or reads the privacy mask (a rectangle filled with a colour).
+  ISP_Tuning_SetMaskBlock:
+    group: osd
+    summary: Sets the mask using the block table of the newer SoCs.
+  ISP_Tuning_GetMaskBlock:
+    group: osd
+    summary: Reads the mask block table.
+  ISP_Tuning_Get/SetDrawBlock:
+    group: osd
+    summary: Reads or sets the block table the ISP draws (rectangles).
+  ISP_Get/SetDrawAttr:
+    group: osd
+    summary: Reads or sets the drawing attributes.
+  ISP_Get/SetOSDAttr:
+    group: osd
+    summary: Reads or sets the ISP OSD attributes.
+  ISP_Get/SetSingleOSDAttr:
+    group: osd
+    summary: Reads or sets the attributes of one OSD region.
+  ISP_Tuning_Get/SetOSDAttr:
+    group: osd
+    summary: Reads or sets the mscaler OSD attribute bytes.
+  ISP_Tuning_Get/SetOSDBlock:
+    group: osd
+    summary: Reads or sets the mscaler OSD block table.
+  ISP_Tuning_CreateOsdRgn:
+    group: osd
+    summary: Creates an OSD region in the ISP. Returns -1 on T41 (not supported there).
+  ISP_Tuning_DestroyOsdRgn:
+    group: osd
+    summary: Removes an ISP OSD region.
+  ISP_Tuning_SetOsdRgnAttr:
+    group: osd
+    summary: Sets the attributes of an ISP OSD region.
+  ISP_Tuning_GetOsdRgnAttr:
+    group: osd
+    summary: Reads the attributes of an ISP OSD region.
+  ISP_Tuning_ShowOsdRgn:
+    group: osd
+    summary: Shows or hides an ISP OSD region.
+  ISP_Tuning_SetOsdPoolSize:
+    group: osd
+    summary: Sets the size of the memory pool for ISP OSD regions.
+  ISP_OSD_Alloc:
+    group: osd
+    summary: Allocates the memory for ISP OSD data.
+  ISP_Get/SetDefaultBinPath:
+    group: life
+    summary: Sets or reads the path of the ISP tuning binary (`.bin`) that the library loads at start-up.
+    notes: Set it before `IMP_ISP_AddSensor`. The default directory is `/etc/sensor`.
+  ISP_Tuning_SwitchBin:
+    group: life
+    summary: Loads another tuning binary while running (for example a night set).
+  ISP_Get/SetFrameDrop:
+    group: life
+    summary: Sets or reads a frame drop pattern, which makes the ISP skip frames.
+  ISP_Get/SetSensorRegister:
+    group: life
+    summary: Writes or reads a register of the sensor directly through the ISP.
+    params:
+      reg: Sensor register address.
+      value: Value to write, or the output for the read.
+    notes: For debugging and tuning only; the sensor driver does not know about changes made this way.
+  ISP_GetCameraInputMode:
+    group: sys
+    summary: Reads how the camera input is wired (single, dual or switched).
+  ISP_SetCameraInputMode:
+    group: sys
+    summary: Sets how the camera input is wired.
+  ISP_SetCameraInputSelect:
+    group: sys
+    summary: Chooses which sensor input is active in a switched dual input setup.
+  ISP_Get/SetISPBypass:
+    group: ldc
+    summary: Reads or sets the bypass of the whole ISP with the per-VI interface of T41. Reported as not working.
+  ISP_Tuning_SetISPBypass:
+    group: ldc
+    summary: Switches the ISP bypass bits on or off, to skip the processing blocks.
+    params:
+      enable: Enable or disable.
+  ISP_Tuning_GetISPBypass:
+    group: ldc
+    summary: Reads the bypass state.
+  ISP_Bypass_Bind:
+    group: ldc
+    summary: Binds a bypass output (raw frames straight from the sensor) to a FrameSource channel.
+  ISP_GetRaw:
+    group: ldc
+    summary: Captures one raw frame.
+  ISP_Tuning_Get/SetHLDCAttr:
+    group: ldc
+    summary: Reads or sets the hardware lens distortion correction.
+  ISP_Tuning_SetISPLDC:
+    group: ldc
+    summary: Switches the lens distortion correction on or off.
+  ISP_LDC_Get/SetAttr:
+    group: ldc
+    summary: Reads or sets the lens distortion correction attributes.
+  ISP_LDC_INIT:
+    group: ldc
+    summary: Initialises the lens distortion correction.
+  ISP_Tuning_SetFixedContraster:
+    group: color
+    summary: Fixes the contrast ratio.
+  ISP_SetFixedContraster:
+    group: color
+    summary: Fixes the contrast ratio at library level.
+  ISP_Tuning_SetSharpness_internal:
+    group: sys
+    summary: Internal helper of the vendor library for the sharpness call, exported for compatibility.
+  ISP_Tuning_SetContrast_internal:
+    group: sys
+    summary: Internal helper of the vendor library for the contrast call, exported for compatibility.
+  ISP_Tuning_SetShading:
+    group: sys
+    summary: Selects the lens shading table.
+  ISP_SetAeAlgoFunc:
+    group: ae
+    summary: Registers an application-supplied auto exposure algorithm, which then replaces the built-in AE. The application receives the statistics and writes exposure values back.
+    notes: The `_close` and `_internal` entries are helpers of the same registration in the vendor library.
+  ISP_SetAeAlgoFunc_close:
+    group: sys
+    summary: Unregisters the custom AE algorithm again (helper of `SetAeAlgoFunc`).
+  ISP_SetAeAlgoFunc_internal:
+    group: sys
+    summary: Internal registration entry behind `SetAeAlgoFunc`; exported for compatibility.
+  ISP_SetAwbAlgoFunc:
+    group: awb
+    summary: Registers an application-supplied auto white balance algorithm that replaces the built-in AWB.
+  ISP_SetAwbAlgoFunc_close:
+    group: sys
+    summary: Unregisters the custom AWB algorithm again (helper of `SetAwbAlgoFunc`).
+  ISP_SetAwbAlgoFunc_internal:
+    group: sys
+    summary: Internal registration entry behind `SetAwbAlgoFunc`; exported for compatibility.
+  ISP_Tuning_Get/SetFaceAe:
+    group: ae
+    summary: Reads or sets the face-priority exposure, which meters on a face rectangle given by the application.
+  ISP_Tuning_Get/SetFaceAwb:
+    group: awb
+    summary: Reads or sets the face-priority white balance, which uses a face rectangle supplied by the application.
+  ISP_SET_GPIO_INIT_OR_FREE:
+    group: sys
+    summary: Claims or releases the GPIO pins that the ISP firmware uses for IR-cut or sensor switching.
+  ISP_SET_GPIO_STA:
+    group: sys
+    summary: Sets the level of such a GPIO pin.
+  ISP_SetSwitchgpio:
+    group: sys
+    summary: Selects the GPIO that switches between two sensors on a multi-camera board.
+  ISP_SetPreDqtime:
+    group: sys
+    summary: Sets the time the ISP waits before it releases the first frames of a stream.
+  ISP_SetStreamOut:
+    group: sys
+    summary: Switches the ISP frame output on or off.
+  ISP_StreamCheck:
+    group: sys
+    summary: Checks that the sensor stream arrives.
+  ISP_Tuning_GetNCUAlloc:
+    group: sys
+    summary: Reads the size of the NCU (neural compute) buffer reserved by the ISP. Internal entry kept for compatibility.
+  ISP_Tuning_GetNCUInfo:
+    group: sys
+    summary: Reads the NCU buffer information. Internal entry kept for compatibility.
