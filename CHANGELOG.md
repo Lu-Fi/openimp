@@ -22,7 +22,21 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
 - QEMU first on all 7 SoCs (`tools/apitest/qemu_run.py` now prints `IMP_System_*` and `IMP_IVS_*` lines too), then the cameras (`run_cam.sh` areas sys,ivs): 0 FAIL.
   T40 needs `W=1920 H=1080 EXTRA_ENV="APITEST_CH0_SCALE=1 APITEST_KEEP_FPS=1"` for the apitest areas (3840x2160 ch0 without scaler starves the IVS).
   `run_cam.sh` takes `IMGFX_FILTER` for the picture area.
-- Gate cells (RC3 missing): 14 cells to dev (WriteReg32 and IVS_ReleaseData on T10, T20, T21, T23, T31, T40, T41); works 1692 -> 1704 of 1787.
+- **T31 IMP_Encoder_GetChnEvalInfo** (was ENOTSUP): vendor 1.1.6 returns 0 and copies the 36-byte record the Allegro EndEncoding left in the stream slot (JPEG: 8
+  bytes). Bytes as the vendor: six hardware counters of the merged slice status (status +0x1c..+0x30; values on the T31 camera e.g. 4 2896 136 886 0 0), then
+  int16 slice QP, min QP, max QP (20/20/21), the rest zero; JPEG channel: int16 quality factor (75), rest zero. The vendor copy starts one word later than
+  the public `IMPEncoderStreamInfo` (iNumBytes is not in it); we keep the vendor bytes. Host tests `eval_info_test`, `p2_jpeg_source_test`; QEMU; camera .26.
+- **T41 FrameSource_GetFrame follows the frame depth** (vendor 1.2.5 disassembly): depth 0 -> ret 0 and *frame untouched; depth N -> N frames can be held, the next
+  GetFrame waits 2 s, then 0x80012000. OpenIMP's own consumers use `OpenIMP_FrameSource_ConsumerGetFrame` (not bound to the depth), GetFrameEx stays depth-less.
+  Not like the vendor: the capture queue is shared and keeps the oldest frames when nobody pulls (the vendor depth queue replaces its oldest waiting frame).
+  QEMU T41 and camera .34 (fs, enc, ivs): 0 FAIL. FrameSource_Get/SetPool stays `cache` (vendor: pool must exist, one set per channel, buffers from the pool;
+  OpenIMP only records the id).
+- **T23 SetAutoZoom** (open-tx-isp `claude/rc3-gaps2`): cause 1: the driver refused GetAutoZoom (-EINVAL), so the round trip case failed; now served from the
+  channel record. Cause 2: crop off reset the window to the channel's output size, i.e. the top-left corner of the sensor picture (measured: layout distance
+  back-picture to corner 0.08, to whole 0.22); now the whole sensor picture (0.000). Case checks where the content sits. Camera .30 (ko swap): zoom shows the centre.
+- **T23 SetExpr** (rule): the manual integration time follows (13 vs 1363 lines) but the AE gain holds the brightness (Y +3); the picture detail differs 2.3x.
+- **T21 Get/SetSuperFrameCfg**: case on .24: mode NONE with thresholds stored and read back, DISCARD refused with -1 and the stored configuration unchanged.
+- Gate cells (RC3 missing): 14 cells to dev (WriteReg32 and IVS_ReleaseData on T10, T20, T21, T23, T31, T40, T41); works 1692 -> 1704 of 1787 (items 1+2), 1711 of 1787 with the items below.
 
 ## Branch `claude/issue-109` (2026-10-27)
 
