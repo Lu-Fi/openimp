@@ -133,22 +133,23 @@ functions:
     returns: "0 on success, -1 for an invalid or not created channel."
   Encoder_GetFd:
     group: stream
-    summary: Returns a file descriptor that becomes readable when a stream is ready, for use with `select` or `poll`.
-    notes: "In OpenIMP the descriptor is the read end of a pipe that a helper thread fills when a stream is ready. -1 for an invalid or not created channel. The pipe is closed by `UnRegisterChn` or `DestroyChn`."
-    unverified: true
+    summary: "Returns a file descriptor that becomes readable while a finished stream waits for `GetStream`, for use with `select` or `poll`."
+    returns: "The descriptor, or -1 for an invalid or not created channel."
+    notes: "In OpenIMP the descriptor is the read end of a pipe. The first call starts a helper thread that polls the channel and fills the pipe; `ReleaseStream` and `FlushStream` empty it again. `UnRegisterChn` and `DestroyChn` stop the helper and close the pipe. Not in the vendor library of T10 and T20."
   Encoder_Query:
     group: stream
-    summary: Reads the channel statistics - pictures waiting, streams ready, state and the bitrate counters.
+    summary: "Reads the channel statistics: registration state, pictures and streams waiting, and whether the encoder is working."
     params:
-      encChn: Channel number.
-      stat: Receives the statistics structure.
-    diff: Returns the full vendor layout including a real average bitrate. On T40 the encoder keeps no input queue, so the number of waiting pictures is not a measure of load.
-    unverified: true
+      encChn: "Channel number."
+      stat: "Receives the six-word statistics structure (`registered`, `leftPics`, `leftStreamBytes`, `leftStreamFrames`, `curPacks`, `work_done`)."
+    returns: "0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created. On T41 the channel errors are the vendor codes 0x80040001 and 0x80040008."
+    notes: "`leftPics` is 1 while a picture is being encoded, otherwise 0. `leftStreamFrames` is 1 while a finished stream waits for `GetStream`; `leftStreamBytes` and `curPacks` are filled from it on T41 and the other SoCs built on the same backend, and stay 0 on T40. `work_done` is 0 while a picture is being encoded and 1 when idle. There are no bit rate counters."
+    diff: "OpenIMP has no input queue on T40 and T41: the encoder works on demand in `PollingStream` / `GetStream`, so `leftPics` is at most 1 and the number of waiting pictures is not a measure of load."
   Encoder_GetChnAttr:
     group: attr
-    summary: Reads the attributes of a channel as they are in effect.
-    notes: Rate-control values are the ones after clamping, not necessarily those you set.
-    unverified: true
+    summary: "Reads the attribute structure of a channel as it is currently stored."
+    returns: "0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created."
+    notes: "The structure reflects what the Set calls stored; on T41 the rate-control and GOP members are the read-back values, and the GOP length is reported the way the vendor does: GOP length times the same-scene count (the key frame distance)."
     see_also: [Encoder_CreateChn]
   Encoder_SetDefaultParam:
     group: attr
@@ -170,14 +171,15 @@ functions:
     soc: T31, T40, T41
   Encoder_GetChnEncType:
     group: attr
-    summary: Reads the payload type (H.264, H.265, JPEG) of a channel.
-    unverified: true
+    summary: "Reads the payload type (H.264, H.265 or JPEG) of a channel."
+    returns: "0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created."
+    notes: "The type is an `IMPPayloadType` (`PT_H264`, `PT_H265`, `PT_JPEG`) on T21, T23 and T30 and an `IMPEncoderEncType` on the other SoCs."
   Encoder_Get/SetChnAttrRcMode:
     group: rc
-    summary: Reads or changes the rate-control attribute (mode and its parameters) of a running channel.
-    notes: Changing the mode at run time restarts the rate controller; the next picture is a key frame on most SoCs.
-    diff: On T10, T20 and T21 the vendor-clamped values are returned, so a read after a write can differ from what you wrote.
-    unverified: true
+    summary: "Reads or changes the rate-control attribute (mode and its parameters) of a created channel."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer, or a rate-control mode the SoC does not know or the codec refuses. On T41 the codes 0x80040001 (bad channel), 0x80040008 (channel not created) and 0x80040010 (bad argument) are used where the vendor does."
+    notes: "Bit rates are in kbit/s. On T31, T40 and T41 the QP values are normalised before they reach the codec."
+    diff: "On T21 and T23 the getter returns the values the running controller actually uses (clamped), so a read after a write can differ from what was written. On T41 the call at run time only changes the bit rate (target and maximum) and the QP window, and only when they differ from the current values; the mode, initial QP, deltas, maximum picture size and PSNR are ignored and not read back, and a FIXQP target is ignored. On a JPEG channel the T41 getter returns 0 and leaves the structure alone."
     see_also: [Encoder_Get/SetChnRcAttr]
   Encoder_Get/SetChnRcAttr:
     group: rc
@@ -194,23 +196,29 @@ functions:
     soc: T31, T40, T41
   Encoder_Get/SetMbRC:
     group: rc
-    summary: Switches macroblock-level rate control on or off. When on, the quantiser can change inside a picture to hold the picture budget.
-    notes: On T21 and T23 the setting is parsed and kept. The T23 macroblock rate control is opt-in via `OPENIMP_EPRC_*` variables.
-    unverified: true
+    summary: "Switches macroblock-level rate control on or off for a created channel. When on, the quantiser can change inside a picture to hold the picture budget."
+    params:
+      channel: "Channel number."
+      enable: "0 or 1; any other value is refused."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer or an enable value other than 0 and 1."
+    notes: "On T21 and T23 the switch is passed to the macroblock rate control of the Helix encoder; its default is chosen with the `OPENIMP_EPRC_MBRC` variable. On the other SoCs that have the call the value is stored and read back. Only on the legacy encoder API (T10, T20, T21, T23, T30); T31, T40 and T41 do not have the call."
   Encoder_Get/SetSuperFrameCfg:
     group: rc
-    summary: Configures what happens when a single picture gets much larger than planned (a "super frame").
-    notes: The configuration sets a size limit for key and predicted pictures and an action - do nothing, discard or re-encode with a higher quantiser.
-    unverified: true
+    summary: "Configures what happens when a single picture gets much larger than planned (a super frame): the size thresholds for I and P pictures and the action."
+    returns: "0 on success, -1 for an invalid or not created channel or a NULL pointer. T20 accepts only the modes none and re-encode, T21 only none (no super-frame control in its rate controller); other modes return -1."
+    notes: "The configuration is stored and read back by the getter. On T20 it is passed to the rate controller, on T23 to the encoder worker."
   Encoder_Get/SetChnMaxPictureSize:
     group: rc
-    summary: Sets or reads the largest size, in bytes, of an I and a P picture before the encoder re-encodes with a higher quantiser.
-    soc: T23, T40, T41
-    unverified: true
+    summary: "Sets or reads the largest size of an I and a P picture before the encoder lowers the quality. On T41 the sizes are in kbit and the encoder keeps both pictures at about 95 percent of the limit; on T23 one shared limit (the larger of the two) is used."
+    params:
+      maximum_i: "Limit for I pictures; 0 is refused (T23) or ignored (T41)."
+      maximum_p: "Limit for P pictures; 0 is refused (T23) or ignored (T41)."
+    returns: "0 on success, -1 for an invalid or not created channel or when a value is 0 (T23); on T41 a value of 0 is ignored with return 0, and the codec refusing the limit gives -1. The getter exists on T23 only; it reports the shared limit for both pictures."
+    soc: "T23, T40, T41"
   Encoder_SetChnRcTrigLevel:
     group: rc
-    summary: Sets the level at which the rate control switches its mode (trigger level).
-    unverified: true
+    summary: "Sets the trigger level and mode of the rate controller's re-encode. The pair is only stored in OpenIMP; there is no getter."
+    returns: "0 for a valid channel (also for one that was not created), -1 for an invalid channel."
   Encoder_GetChnAveBitrate:
     group: rc
     summary: "Averages the bitrate over a number of streams that you pass in one by one."
@@ -226,16 +234,18 @@ functions:
     unverified: true
   Encoder_Get/SetChnFrmRate:
     group: gop
-    summary: Reads or changes the output frame rate of the channel.
+    summary: "Reads or changes the output frame rate of a created channel."
     params:
-      rate: Numerator and denominator.
-    notes: The rate must not exceed the FrameSource rate. The encoder drops pictures to get down to it.
-    unverified: true
+      rate: "Frame rate as numerator and denominator; either value 0 is refused."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer, a zero numerator or denominator, or when the codec refuses the rate. On T41 the codes 0x80040001, 0x80040008 and 0x80040010 are used where the vendor does."
+    notes: "The call takes effect at run time; the output time stamps restart at the next picture. On T21, T23 and T30 the functions take only the channel and the rate; on T31, T40 and T41 the header declares an additional, unused third argument. Keep the rate at or below the FrameSource rate."
   Encoder_Get/SetGOPSize:
     group: gop
-    summary: Reads or sets the GOP length - the number of pictures between two key frames.
-    notes: A short GOP recovers faster after packet loss, a long one is smaller. For per-channel control after creation use this or `SetChnGopAttr`.
-    unverified: true
+    summary: "Reads or sets the GOP length - the number of pictures between two key frames - through the legacy `IMPEncoderGOPSizeCfg` structure."
+    params:
+      gop: "Structure holding `gopsize`."
+    returns: "0 on success, -1 for a NULL pointer, a `gopsize` of 0 or less, or an invalid or not created channel (T20 getter: -1 for a channel that was not created)."
+    notes: "The setter changes the maximum GOP length of the channel (the same value `SetChnGopLength` changes). A short GOP recovers faster after packet loss, a long one gives a smaller stream. The legacy structure exists on T10, T20, T21, T23 and T30; T31, T40 and T41 use `SetChnGopLength`."
   Encoder_Get/SetChnGopAttr:
     group: gop
     summary: Reads or sets the GOP attributes (length, type and reference structure).
@@ -263,8 +273,9 @@ functions:
     unverified: true
   Encoder_Get/SetChangeRef:
     group: gop
-    summary: Reads or sets the switch for changing the reference picture.
-    unverified: true
+    summary: "Reads or sets the switch for changing the reference picture."
+    returns: "The setter returns 0 for a created channel and -1 for one that does not exist (T20: -1 also for a started channel). The getter returns 0, also for a channel that does not exist (T20: -1)."
+    notes: "OpenIMP keeps the value; only the vendor encoder's reference-structure code reads it, so there is no visible effect on the Helix encoder."
   Encoder_Get/SetChnHSkip:
     group: gop
     summary: Reads or sets the hierarchical skip mode, a reference structure in which some predicted pictures can be dropped.
@@ -272,17 +283,17 @@ functions:
     unverified: true
   Encoder_SetChnHSkipBlackEnhance:
     group: gop
-    summary: Sets the black enhancement flag of the skip mode.
-    unverified: true
+    summary: "Sets the black enhancement flag of the skip mode."
+    returns: "-1 for an invalid channel, otherwise 0 (the flag is kept; the Helix path codes no skip structure)."
   Encoder_Get/SetChnFrmUsedMode:
     group: gop
     summary: Reads or sets the frame use mode, which says how input frames are used by the encoder.
     unverified: true
   Encoder_SetChnQp:
     group: qp
-    summary: Fixes the quantiser (QP) of the channel to one value.
-    soc: T31
-    unverified: true
+    summary: "Fixes the quantiser (QP) of the channel to one value for I, P and B pictures."
+    returns: "0 on success, -1 for an invalid or not created channel or a QP outside 0 to 51."
+    soc: "T31"
   Encoder_SetChnQpBounds:
     group: qp
     summary: Sets the lowest and highest quantiser the rate control may use.
@@ -294,9 +305,9 @@ functions:
     soc: T31, T40, T41
   Encoder_SetChnQpBoundsPerFrame:
     group: qp
-    summary: Sets separate QP bounds for I and P pictures.
-    soc: T41
-    unverified: true
+    summary: "Sets separate QP bounds for I and P pictures."
+    returns: "0 on success, -1 for an invalid or not created channel, or values outside 0 to 51 or a minimum above a maximum. On T41 the codes of `SetChnQpBounds` are used, and the call is silently ignored (return 0) unless all four values are above 0. Where the backend has one QP window only, the union of the two windows is applied."
+    soc: "T41"
   Encoder_SetChnQpIPDelta:
     group: qp
     summary: "Sets the QP difference between I and P pictures."
@@ -304,20 +315,21 @@ functions:
     soc: T31
   Encoder_SetChnInitQP:
     group: qp
-    summary: Sets the quantiser of the first picture.
-    soc: T23
-    unverified: true
+    summary: "Sets the quantiser of the first picture (T23)."
+    returns: "0 on success, -1 for an invalid channel or a QP outside 1 to 51."
+    soc: "T23"
   Encoder_Get/SetQpgMode:
     group: qp
-    summary: Selects the mode of the quantiser generator. On T21 it is kept without check, as in the vendor library.
-    unverified: true
+    summary: "Selects the quantiser generator mode (`ENC_QPG_CLOSE` to `ENC_QPG_SASM_TAB`, 0 to 7)."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer or a mode outside 0 to 7. T21 does not check the range and returns 0 for a channel that does not exist, as the vendor library does."
+    notes: "The mode is stored and read back. On T23 it is passed to the encoder worker; on T21 nothing reads it."
   Encoder_Get/SetChnROI:
     group: qp
-    summary: Defines regions of interest in which the picture is coded with better quality.
+    summary: "Defines up to eight regions of interest (index 0 to 7) in which the picture is coded with a different quantiser."
     params:
-      config: Region rectangles and the QP offset per region.
-    notes: Regions are in picture coordinates and aligned to the macroblock grid (16 pixels).
-    unverified: true
+      config: "Index of the region, enable flag, relative or absolute QP and the rectangle."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer or an index of 8 or more. A non-H.264 channel accepts the call and ignores it. On T23 a channel that was not created also returns 0. The T30 build refuses an enabled region with -1."
+    notes: "The rectangle is converted to the 16-pixel macroblock grid, so the getter returns the rounded rectangle. The relative QP range is -25 to 25, the absolute range 0 to 51; values outside are clamped (a warning is logged once). The T21 region can be turned off with `OPENIMP_T21_ROI=0`. Only on the legacy encoder API (T10, T20, T21, T23); T31, T40 and T41 use `SetChnRoiAttr`."
   Encoder_Get/SetChnRoiAttr:
     group: qp
     summary: Region of interest attributes of the newer SoCs, with several regions and a QP value for each.
@@ -330,14 +342,16 @@ functions:
     unverified: true
   Encoder_Get/SetChnColor2Grey:
     group: qp
-    summary: Makes the encoder code the picture without colour (the chroma planes are neutral), which saves bits at night.
-    soc: T10, T20, T21, T23, T30
-    unverified: true
+    summary: "Makes the encoder code an H.264 picture without colour (the chroma plane is neutral), which saves bits at night."
+    returns: "0 on success, -1 for an invalid or not created channel or a NULL pointer."
+    notes: "The enable flag is stored and read back. On T10, T20 and T21 it is applied from the next IDR picture on, and only on an H.264 channel; on T23 it is passed to the encoder worker."
+    soc: "T10, T20, T21, T23, T30"
   Encoder_Get/SetChnDenoise:
     group: qp
-    summary: Reads or sets the encoder-side noise filter.
-    soc: T10, T20, T21, T23
-    unverified: true
+    summary: "Reads or sets the encoder-side noise filter (type and the QP values for I and P pictures)."
+    returns: "0 on success. -1 for an invalid channel or a NULL pointer; the setter on T23 and the other SoCs also -1 for a channel that was not created (T20 and T21: 0). The setter on T30 returns -1 for a filter type other than 0 when the channel was created with denoise enabled."
+    notes: "The on/off switch of the filter is the one given at channel creation; the setter changes only the type and the QP values. T20 and T21 check the combination of values in the same way as the vendor library."
+    soc: "T10, T20, T21, T23"
   Encoder_Get/SetChnDemask:
     group: qp
     summary: Reads or sets the demask (lens shading) attribute of the encoder. The values are stored.
@@ -355,14 +369,15 @@ functions:
     unverified: true
   Encoder_Get/SetH264TransCfg:
     group: h26x
-    summary: Reads or sets H.264 transform options such as the chroma QP offset.
-    soc: T10, T20, T21, T23
-    unverified: true
+    summary: "Reads or sets the H.264 chroma QP index offset."
+    returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer or an offset outside -12 to 12. The T30 build accepts only an offset of 0."
+    notes: "The offset applies from the next IDR picture on (written into the picture parameter set). Stored and read back on all SoCs of the legacy encoder API."
+    soc: "T10, T20, T21, T23"
   Encoder_Get/SetH265TransCfg:
     group: h26x
-    summary: Reads or sets H.265 transform options. Checked and dropped on T21 and T23, as the vendor does.
-    soc: T20, T21, T23
-    unverified: true
+    summary: "Reads or sets the H.265 chroma QP offsets for Cb and Cr. Stored and read back on T30; dropped on T21 and T23."
+    returns: "0 on success. -1 for an invalid channel or a NULL pointer; on T30 also a channel that was not created or an offset outside -12 to 12. T21 and T23 check only channel and pointer, store nothing, and the getter returns zeros."
+    soc: "T20, T21, T23"
   Encoder_SetChnEntropyMode:
     group: h26x
     summary: Chooses CAVLC or CABAC for H.264.
@@ -384,9 +399,9 @@ functions:
     unverified: true
   Encoder_Get/Setframelossthd:
     group: h26x
-    summary: Reads or sets the frame loss threshold. On T23 the value is kept for the getter only.
-    soc: T23
-    unverified: true
+    summary: "Reads or sets the frame loss threshold in bytes (T23). The value is kept for the getter."
+    returns: "0 on success, -1 for an invalid or not created channel or a NULL pointer."
+    soc: "T23"
   Encoder_SetMultiSectionMode:
     group: h26x
     summary: Sets slice (section) splitting of pictures. Kept for the getter only on T23.
@@ -399,94 +414,102 @@ functions:
     unverified: true
   Encoder_SetAvpuJpegQp:
     group: jpeg
-    summary: Sets the JPEG quality value on T40 and T41 (hardware encoder).
-    soc: T41
-    unverified: true
+    summary: "Sets the JPEG quality (0 to 100) of a JPEG channel from the next picture on (T41)."
+    returns: "0 on success. The vendor codes 0x80040001 (channel 8 or more), 0x80040002 (quality above 100, or the channel is not a JPEG channel) and 0x80040008 (channel not created)."
+    soc: "T41"
   Encoder_InputJpege:
     group: jpeg
-    summary: Encodes one picture to JPEG without a channel.
+    summary: "Encodes one NV12 picture to a baseline JPEG without an encoder channel. The chroma plane follows directly after the `src_w * src_h` luma bytes."
     params:
-      src: Source picture, NV12.
-      dst: Output buffer.
-      src_w: Width.
-      src_h: Height.
-      q: Quality.
-      stream_length: Receives the JPEG size in bytes.
-    soc: T23, T41
-    unverified: true
+      src: "Source picture, NV12, luma plane followed by the interleaved chroma plane."
+      dst: "Output buffer. There is no capacity argument, so it must hold the worst case."
+      src_w: "Width. T41: multiple of 32. T23: even."
+      src_h: "Height. T41: multiple of 8. T23: even."
+      q: "Quality 1 to 100; any other value gives 75."
+      stream_length: "Receives the JPEG size in bytes (0 on failure)."
+    returns: "0 on success, -1 for a NULL pointer, a size outside the limits above, or an encoder failure."
+    notes: "On T41 the picture is coded by the software JPEG encoder; the vendor library ignores `q` there, OpenIMP honours it. On T23 the Helix hardware codes the picture, with the software encoder as a fallback, and the quality scales the quantisation tables."
+    soc: "T23, T41"
   Encoder_InputJpege_Ex:
     group: jpeg
-    summary: Same as `InputJpege` for a context with an integer handle.
-    soc: T41
-    unverified: true
+    summary: "Same as `InputJpege` for the secondary-process interface of the vendor library. In OpenIMP it works only in the process that owns the encoder."
+    returns: "0 on success, -1 on a height that is not a multiple of 16, in a process that does not own the encoder (errno ENOTSUP), and for the errors of `InputJpege`."
+    soc: "T41"
   Encoder_YuvInit:
     group: yuv
-    summary: Creates an encoder context for frames supplied by the application.
-    soc: T23, T40, T41
-    unverified: true
+    summary: "Creates an encoder context for frames supplied by the application, without a FrameSource channel."
+    params:
+      h: "Receives the context handle."
+      inWidth: "Frame width. T40/T41: multiple of 16. T23: even (the native T23 encoder also needs a multiple of 16)."
+      inHeight: "Frame height. T40/T41: multiple of 8. T23: even."
+      encIn: "Codec type, rate control, frame rate and GOP length (`IMPEncoderYuvIn`). T23 accepts H.264 only."
+    returns: "0 on success, -1 for a NULL argument, an unsupported size or type, no free context, or when the encoder cannot be created. T40/T41 provide a limited number of simultaneous contexts."
+    notes: "On T40 and T41 the context runs the same codec as a bound channel, so rate control and GOP behave the same. On T41 a user buffer given in `encIn` has to come from `VbmAlloc`."
+    soc: "T23, T40, T41"
   Encoder_YuvEncode:
     group: yuv
-    summary: Encodes one frame with the context and returns the stream.
-    notes: An output buffer must be big enough; a non-zero `outLen` on entry is the capacity of `outAddr`.
-    diff: A picture that does not fit the output buffer fails with -1 and `outLen` 0, instead of writing past the buffer.
-    soc: T23, T40, T41
-    unverified: true
+    summary: "Encodes one frame with the context and copies the finished stream into the caller's buffer."
+    params:
+      h: "Context from `YuvInit`."
+      frame: "Frame description with physical and virtual address of an NV12 picture (`IMPFrameInfo`, passed by value)."
+      encOut: "Output buffer `outAddr`; on entry `outLen` is the capacity (0 = unchecked on T40/T41), on return the length of the access unit."
+    returns: "0 on success, -1 for an invalid handle, a missing output buffer, a frame the encoder cannot use, an encode failure, no stream within 2 seconds (T40/T41), or a stream larger than the given capacity. `outLen` is 0 after a failure on T40/T41."
+    notes: "Use frame memory from `VbmAlloc` where possible. On T40/T41 a frame outside reserved memory, or whose chroma plane follows a luma plane of exactly `width * height` bytes, is copied into the layout the encoder reads. On T23 the frame size and dimensions must match the context, and `outLen` must be non-zero on entry."
+    diff: "A picture that does not fit the output buffer fails with -1 and `outLen` 0, instead of writing past the buffer."
+    soc: "T23, T40, T41"
   Encoder_YuvExit:
     group: yuv
-    summary: Frees the context.
-    unverified: true
+    summary: "Destroys the context and frees its resources."
+    returns: "0 on success, -1 for an invalid or NULL handle."
   Encoder_YuvRequestIDR:
     group: yuv
-    summary: Makes the next frame of the context a key frame.
-    unverified: true
+    summary: "Makes the next frame of the context a key frame."
+    returns: "0 on success, -1 for a NULL handle or when the encoder refuses the request."
+    soc: "T23"
   Encoder_YuvGetCrop:
     group: yuv
-    summary: Reads the crop of the context.
-    unverified: true
+    summary: "Reads the crop of a context (T23)."
+    returns: "0 on success, -1 for a NULL handle or pointer or when the crop cannot be read."
+    soc: "T23"
   Encoder_YuvSetCrop:
     group: yuv
-    summary: Sets a crop on the context.
-    unverified: true
+    summary: "Sets a crop rectangle on a context (T23). All values must be even and the rectangle inside the picture; the margins between rectangle and the 16-aligned picture edge must stay below 510 pixels."
+    returns: "0 on success, -1 for a NULL handle or pointer, an odd value, a rectangle outside the picture, a margin of 510 pixels or more, or when the encoder refuses it."
+    soc: "T23"
   Encoder_YuvInit_Ex:
     group: yuv
-    summary: Same as `YuvInit` with an integer handle.
-    unverified: true
+    summary: "Same as `YuvInit`, but returns a small integer handle (0 to 7) instead of a pointer. In OpenIMP it works only in the process that owns the encoder."
+    returns: "0 on success, -1 on the errors of `YuvInit`, when all 8 handles are in use, or in a process without the encoder (errno ENOTSUP)."
   Encoder_YuvEncode_Ex:
     group: yuv
-    summary: Same as `YuvEncode` with an integer handle.
-    unverified: true
+    summary: "Same as `YuvEncode` with an integer handle."
+    returns: "The result of `YuvEncode`; -1 for an unknown handle or in a process without the encoder (errno ENOTSUP)."
   Encoder_YuvExit_Ex:
     group: yuv
-    summary: Same as `YuvExit` with an integer handle.
-    unverified: true
+    summary: "Same as `YuvExit` with an integer handle; the handle is free for reuse afterwards."
+    returns: "The result of `YuvExit`; -1 for an unknown handle or in a process without the encoder (errno ENOTSUP)."
   Encoder_VbmAlloc:
     group: yuv
-    summary: Allocates a physically contiguous buffer that the YUV interface can read.
+    summary: "Allocates a physically contiguous buffer from reserved memory that the YUV and JPEG interfaces can read."
     params:
-      size: Size in bytes.
-      align: Alignment in bytes.
-    returns: Pointer to the buffer or NULL.
-    unverified: true
+      size: "Size in bytes."
+      align: "Alignment in bytes: 0 or a power of two up to 4096."
+    returns: "Pointer to the buffer, or NULL for a size of 0, a larger alignment, a non-power-of-two alignment, or when no memory is left."
   Encoder_VbmFree:
     group: yuv
-    summary: Frees a buffer from `VbmAlloc`.
-    unverified: true
+    summary: "Frees a buffer from `VbmAlloc`. A NULL pointer is ignored."
   Encoder_VbmV2P:
     group: yuv
-    summary: Converts a virtual address of such a buffer to its physical address.
-    unverified: true
+    summary: "Converts a virtual address of such a buffer to its physical address. Returns 0 for an address the allocator does not own."
   Encoder_VbmP2V:
     group: yuv
-    summary: Converts a physical address back to the virtual one.
-    unverified: true
+    summary: "Converts the physical address of a `VbmAlloc` buffer back to the virtual one. Returns 0 for a physical address of 0."
   Encoder_VbmAlloc_Ex:
     group: yuv
-    summary: Allocation for the handle based YUV interface.
-    unverified: true
+    summary: "Allocation for the secondary-process interface. In OpenIMP the same as `VbmAlloc`, but only in the process that owns the encoder; elsewhere it returns NULL (errno ENOTSUP)."
   Encoder_VbmFree_Ex:
     group: yuv
-    summary: Free for the handle based YUV interface.
-    unverified: true
+    summary: "Free for the secondary-process interface. In OpenIMP the same as `VbmFree`, but only in the process that owns the encoder; elsewhere it does nothing."
   Encoder_Get/SetMaxStreamCnt:
     group: mem
     summary: "Sets or reads how many output streams a channel may hold."
@@ -521,18 +544,23 @@ functions:
     unverified: true
   Encoder_SetIvpuBsSize:
     group: mem
-    summary: Sets the size of the stream buffer of the second hardware unit.
-    soc: T41
-    unverified: true
+    summary: "Sets the size of the bitstream buffer of the second hardware unit (T41). OpenIMP encodes JPEG on the CPU, so the value only limits the size of the JPEG that `InputJpege` returns."
+    returns: "0 on success, 0x80040002 for a size of 0, 0x80040040 when called after the system was initialised (`IMP_System_Init`)."
+    notes: "Call it before `IMP_System_Init`."
+    soc: "T41"
   Encoder_SetPoolSize:
     group: mem
-    summary: Sets the size of the encoder memory pool.
-    unverified: true
+    summary: "Sets the size of the encoder bitstream pool. On T30 it sets the bitstream buffer (1920 * 1080 bytes unless set); on the other SoCs the value is only kept."
+    returns: "0 on success, -1 for a size of 0 or less."
   Encoder_Get/SetPool:
     group: mem
-    summary: Binds the encoder buffers to a memory pool, or reads the pool id.
-    soc: T23, T31, T40, T41
-    unverified: true
+    summary: "Records which memory pool the channel is bound to, or reads it back (-1 = none)."
+    params:
+      encChn: "Channel number."
+      poolId: "Pool id, or -1 for none."
+    returns: "The setter returns 0, or -1 for an invalid channel or an id below -1; the getter returns the id, or -1 for an invalid channel."
+    diff: "In OpenIMP a pool is a name only: every channel takes its buffers from the one common memory arena, so the id changes nothing about where buffers come from."
+    soc: "T23, T31, T40, T41"
   Encoder_ClearPoolId:
     group: mem
     summary: Forgets the pool id of the channel.
@@ -560,6 +588,9 @@ functions:
     unverified: true
   Encoder_GetChnEvalInfo:
     group: misc
-    summary: Reads evaluation information of the channel for tuning.
-    soc: T31
-    unverified: true
+    summary: "Reads the evaluation record of the most recent picture of an H.264 channel on T31: six hardware picture counters, then the slice QP and the lowest and highest QP used."
+    params:
+      encChn: "Channel number."
+      info: "Buffer of at least 36 bytes."
+    returns: "0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created (errno ENOTSUP on the SoCs that do not have it). The record is 36 bytes (8 bytes for a JPEG channel) and is refreshed with every stream the encoder finishes."
+    soc: "T31"
