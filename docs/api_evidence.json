@@ -9917,7 +9917,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "run"
+    "T41": "cache"
    },
    "used": {
     "T10": [
@@ -9962,7 +9962,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34: SetFrameDepth(n)/GetFrameDepth round trip, GetFrame/ReleaseFrame work with and without it (OpenIMP serves GetFrame from the channel buffers; the depth value does not bound a frame queue)"
+    "T41": "apitest next+ko/libimp swap 2026-10-27 .34: SetFrameDepth/GetFrameDepth round trip and GetFrame/ReleaseFrame work, but the depth value is only stored: vendor behaviour (depth 0 -> GetFrame fails, depth N -> at most N frames held, older dropped) not implemented or proven"
    }
   },
   "FrameSource_Get/SetI2dAttr": {

@@ -17,7 +17,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
   while a consumer takes frames); T41 AutoZoom accepts the vendor normalisation of disabled outputs; SetChnAttrRcMode runs on T41 (header 1.2.0 lacks the
   declaration); SetChnMaxPictureSize is measured (biggest picture follows the limit); Sharpness: one visible direction proves it.
 - **Gate cells** (RC3 missing, before -> after): T10 22 -> 5, T40 43 -> 26, T41 57 -> 27 (AENC/ADEC on T10/T40/T41 from the audio runs, T41 encoder
-  FrameRate/BitRate/QpBounds/MaxPictureSize/RcMode, ISP OSD with open-tx-isp next, FrameDepth run, AutoZoom, WaitFrameDone, Sharpness).
+  FrameRate/BitRate/QpBounds/MaxPictureSize/RcMode, ISP OSD with open-tx-isp next, AutoZoom, WaitFrameDone, Sharpness).
 - Merge tool: a later PASS/RT clears an `err` cell this tool wrote from an earlier FAIL of any image tag.
 
 ## Branch `claude/rc3-cases` (2026-10-26/27)
