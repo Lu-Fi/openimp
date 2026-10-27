@@ -8,6 +8,20 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-119` (2026-10-27)
+
+- **IMP_ISP_Tuning_SetISPBypass** on T10/T20/T21/T23/T31 (issues #119, #126): OEM semantics of the bypass control
+  (T31 `apical_isp_core_ops_s_ctrl` 0x8000164): ENABLE (1) = full ISP pipeline, any other value = the real bypass.
+  ENABLE is the state after EnableSensor and what prudynt writes at startup (`isp_bypass=true`); it is now a no-op
+  returning 0. Before, T10/T23/T31 tore down and rebuilt the link graph around the control on every call, which
+  stopped the frame channels of a running pipeline for good, and T23 returned -1; T21 rebuilt its graph for ENABLE.
+  The real bypass (DISABLE) returns -1 without touching anything, like the vendor T21 library (measured on the
+  vendor-stack T21: ENABLE 0, DISABLE -1): on the open drivers the bypassed pipeline delivers no frames (QEMU T31:
+  none after ISP_PROCESS=0, none at all when set before the FrameSource). A real runtime bypass is a gap (issue).
+  QEMU T31/T23/T20/T21: prudynt's order (bypass between EnableTuning and FrameSource) and a runtime DISABLE/ENABLE
+  keep the frames flowing. apitest `ispbypass_old` now round-trips ENABLE; `APITEST_BYPASS_DISABLE=1` also checks
+  that DISABLE is refused with frames still flowing (opt-in: an older libimp wedges T10/T20/T31 on DISABLE).
+
 ## Branch `claude/api-wiki-review3` (2026-10-27)
 
 - **Wiki API reference: 62 more entries verified against src/** (ISP 60, Encoder 2; FrameSource, which was already complete, and the

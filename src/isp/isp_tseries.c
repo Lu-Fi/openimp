@@ -2073,108 +2073,34 @@ int IMP_ISP_Tuning_GetISPRunningMode(IMPISPRunningMode *pmode)
 int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable)
 {
     ISPDevice *isp;
-    int32_t destroy_arg;
-    int32_t sensor_index;
 
     if (tseries_get_isp(&isp) != 0) {
         return -1;
     }
 
-#if defined(PLATFORM_T23)
-    if (getenv("OPENIMP_T23_SKIP_BYPASS")) {
-        kmsg_trace("libimp/ISP: SetISPBypass skipped by T23 cold-start guard enable=%d\n",
-                   enable);
-        return 0;
-    }
-#endif
-
     kmsg_trace("libimp/ISP: SetISPBypass enter enable=%d isp=%p fd=%d tuning_fd=%d\n",
                enable, (void *)isp, isp->fd, isp->tuning_fd);
 
-#if defined(PLATFORM_T20)
-    /* T20 has no userspace-managed media link graph.  The selected sensor
-     * owns the fixed pipeline and video0 exposes the ISP-process control. */
-    if (tseries_v4l2_set(TISP_CID_ISP_PROCESS, enable) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass T20 S_CTRL failed value=%d errno=%d\n",
-                   enable, errno);
-        return -1;
-    }
-    tseries_bypass_link_setup_done = 1;
-    kmsg_trace("libimp/ISP: SetISPBypass T20 S_CTRL ok value=%d\n", enable);
-    return 0;
-#endif
-
-#if defined(PLATFORM_T21)
-    /* T21 exposes one media-link configuration (index zero).  Its OEM libimp
-     * nevertheless derives index one for DISABLE, which the driver rejects
-     * after the old graph has already been destroyed.  EnableSensor installed
-     * the normal processed graph, so disabling an already-disabled bypass is
-     * idempotent and must leave that graph intact. */
-    if (enable == IMPISP_TUNING_OPS_MODE_DISABLE) {
-        kmsg_trace("libimp/ISP: SetISPBypass T21 normal graph already active\n");
-        tseries_bypass_link_setup_done = 1;
+    /* OEM semantics of the ISP bypass control (T31 apical_isp_core_ops_s_ctrl
+     * 0x8000164): ENABLE (1) = full ISP pipeline, any other value = the real
+     * bypass.  ENABLE is the state after EnableSensor and what prudynt sets at
+     * startup (isp_bypass=true): nothing to do.  The OEM T10/T23/T31 library
+     * tears the link graph down and rebuilds it around the control even then,
+     * which stopped the frame channels of a running pipeline for good (issue
+     * 119; T23 returned -1, issue 126).
+     *
+     * The real bypass (DISABLE) is refused like the vendor T21 library does
+     * (it returns -1 for DISABLE, measured on the vendor-stack T21): on the
+     * open drivers the bypassed pipeline delivers no frames (QEMU T31: no frame
+     * after ISP_PROCESS=0, none at all when set before the FrameSource), and
+     * no streamer uses the raw bypass in normal operation.  Nothing is
+     * touched, so the running pipeline keeps streaming. */
+    if (enable == IMPISP_TUNING_OPS_MODE_ENABLE) {
+        kmsg_trace("libimp/ISP: SetISPBypass ENABLE: full ISP pipeline, no-op\n");
         return 0;
     }
-#endif
-
-    if (ioctl(isp->fd, TISP_VIDIOC_DISABLE_LINKS, 0) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass DISABLE_LINKS failed errno=%d\n", errno);
-        return -1;
-    }
-    kmsg_trace("libimp/ISP: SetISPBypass DISABLE_LINKS ok\n");
-
-    /* OEM sets DESTROY_LINKS arg to -1 before rebuilding the link graph. */
-    destroy_arg = -1;
-    if (ioctl(isp->fd, TISP_VIDIOC_DESTROY_LINKS, &destroy_arg) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass DESTROY_LINKS failed arg=%d errno=%d\n",
-                   destroy_arg, errno);
-        return -1;
-    }
-    kmsg_trace("libimp/ISP: SetISPBypass DESTROY_LINKS ok arg=%d\n", destroy_arg);
-
-    if (tseries_v4l2_set(TISP_CID_ISP_PROCESS, enable) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass S_CTRL ISP_PROCESS failed value=%d errno=%d\n",
-                   enable, errno);
-        return -1;
-    }
-    kmsg_trace("libimp/ISP: SetISPBypass S_CTRL ISP_PROCESS ok value=%d\n", enable);
-
-#if defined(PLATFORM_T21)
-    /* T21 has one link configuration.  This branch is reachable only when
-     * bypass is enabled; the normal path above remains undisturbed. */
-    sensor_index = 0;
-#else
-    sensor_index = -1;
-    if (ioctl(isp->fd, TISP_VIDIOC_GET_SENSOR_INDEX, &sensor_index) != 0 ||
-        sensor_index < 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass GET_SENSOR_INDEX failed errno=%d idx=%d\n",
-                   errno, sensor_index);
-        return -1;
-    }
-#endif
-
-    if (ioctl(isp->fd, TISP_VIDIOC_CREATE_LINKS, &sensor_index) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass CREATE_LINKS failed arg=%d errno=%d\n",
-                   sensor_index, errno);
-        return -1;
-    }
-    kmsg_trace("libimp/ISP: SetISPBypass CREATE_LINKS ok arg=%d\n", sensor_index);
-
-    if (ioctl(isp->fd, TISP_VIDIOC_ENABLE_LINKS, 0) != 0) {
-        kmsg_trace("libimp/ISP: SetISPBypass ENABLE_LINKS failed errno=%d\n", errno);
-        return -1;
-    }
-    kmsg_trace("libimp/ISP: SetISPBypass ENABLE_LINKS ok arg=%d\n", sensor_index);
-
-    /* Rebuild the graph during bypass reconfiguration, then let the later
-     * EnsureLinkStreamOn replay only the STREAMON edge once the frame channels
-     * are primed. This matches the legacy/userspace path that previously
-     * reached AVPU interrupts without duplicating CREATE/ENABLE. */
-    tseries_bypass_link_setup_done = 1;
-    tseries_isp_stream_started = 0;
-    kmsg_trace("libimp/ISP: SetISPBypass rearm-stream-only sensor=%d\n", sensor_index);
-
-    return 0;
+    kmsg_trace("libimp/ISP: SetISPBypass value=%d: real bypass not supported\n", enable);
+    return -1;
 }
 
 int ISP_EnsureLinkStreamOn(int32_t sensor_idx)
