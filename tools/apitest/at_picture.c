@@ -728,6 +728,7 @@ static int c_aeattr(int ph, int arg, char *info, size_t n)
 #define XE(nm, bit) MB_##nm,
 enum { MODBITS(XE) MB_N };
 #define XC(nm, bit) case MB_##nm: m.bit = 1; break;
+#define XU(nm, bit) case MB_N + MB_##nm: m.bit = 0; break;   /* unbypass-<nm>: clear the bit */
 static int c_mod(int ph, int arg, char *info, size_t n)
 {
     static IMPISPModuleCtl old;
@@ -738,7 +739,7 @@ static int c_mod(int ph, int arg, char *info, size_t n)
     if (ph) { IMP_ISP_Tuning_SetModuleControl(&old); return 0; }
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetModuleControl(&old);
     m = old;
-    switch (arg) { MODBITS(XC) default: break; }
+    switch (arg) { MODBITS(XC) MODBITS(XU) default: break; }
     r = IMP_ISP_Tuning_SetModuleControl(&m);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetModuleControl(&cur);
     snprintf(info, n, "key 0x%08x -> 0x%08x (was 0x%08x)", m.key, cur.key, old.key);
@@ -1496,6 +1497,10 @@ static const Case cases[] = {
 #ifdef H_MODCTL
 # define XT(nm, bit) { "bypass-" #nm, c_mod, MB_##nm, SET, 0 },
     MODBITS(XT)
+    { "unbypass-ccm", c_mod, MB_N + MB_ccm, SET, 0 },
+# ifndef PLATFORM_T21
+    { "unbypass-bcsh", c_mod, MB_N + MB_bcsh, SET, 0 },
+# endif
 #endif
 #ifdef PLATFORM_T41
 # define XT(nm, bit) { "bypass-" #nm, c_mod, MB_##nm, SET, 0 },
@@ -1672,6 +1677,11 @@ int picture_main(int argc, char **argv)
     IMP_FrameSource_SetFrameDepth(1, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
     sleep(3);   /* AE/AWB settle */
+    if (getenv("IMGFX_SAT") && HAVE(IMP_ISP_Tuning_SetSaturation)) {   /* saturation for the whole run (colour cases) */
+        int sr = SETU8(IMP_ISP_Tuning_SetSaturation, atoi(getenv("IMGFX_SAT")));
+        say("[T] saturation %d for the run (ret %d)\n", atoi(getenv("IMGFX_SAT")), sr);
+        usleep(600000);
+    }
 
     signal(SIGALRM, on_alarm);
     for (i = 0; i < NCASES; i++) {
@@ -1710,6 +1720,7 @@ int picture_main(int argc, char **argv)
         ran++;
     }
     alarm(0);
+    if (getenv("IMGFX_SAT") && HAVE(IMP_ISP_Tuning_SetSaturation)) SETU8(IMP_ISP_Tuning_SetSaturation, 128);
     say("[T] done: %u pictures, %u cases N/A, %u functions exercised (picture size %dx%d)\n", ran, na, nset, g_got_w, g_got_h);
 
     IMP_FrameSource_DisableChn(1);
