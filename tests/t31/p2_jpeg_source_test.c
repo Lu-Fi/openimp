@@ -333,18 +333,21 @@ int main(void)
         CHECK(OpenIMP_Encoder_StreamIsReused(2, &stream) == 0,
               "fresh JPEG reported as reused");
 #if defined(PLATFORM_T31)
-        /* GetChnEvalInfo of a JPEG channel: 8 bytes, the quality factor
-         * (iInitialQP 30) as int16 first, the rest zero; bytes behind them
+        /* GetChnEvalInfo of a JPEG channel: 8 bytes in the header layout,
+         * int32 iNumBytes (the stub JPEG is 7 bytes), the quality factor
+         * (iInitialQP 30) as int16 at +4, the rest zero; bytes behind them
          * are not touched */
         {
             uint8_t ev[40];
+            int32_t nb;
 
             memset(ev, 0xee, sizeof(ev));
-            CHECK(IMP_Encoder_GetChnEvalInfo(2, ev) == 0 && ev[0] == 30 &&
-                  ev[1] == 0 && !ev[2] && !ev[3] && !ev[4] && !ev[5] &&
-                  !ev[6] && !ev[7] && ev[8] == 0xee,
-                  "JPEG eval info %02x %02x %02x ... %02x", ev[0], ev[1],
-                  ev[2], ev[8]);
+            CHECK(IMP_Encoder_GetChnEvalInfo(2, ev) == 0, "JPEG eval info ret");
+            memcpy(&nb, ev, 4);
+            CHECK(nb == 7 && ev[4] == 30 && ev[5] == 0 && !ev[6] && !ev[7] &&
+                  ev[8] == 0xee,
+                  "JPEG eval info iNumBytes %d, %02x %02x %02x %02x ... %02x",
+                  nb, ev[4], ev[5], ev[6], ev[7], ev[8]);
             CHECK(IMP_Encoder_GetChnEvalInfo(9, ev) != 0 &&
                   IMP_Encoder_GetChnEvalInfo(2, NULL) != 0,
                   "bad GetChnEvalInfo arguments accepted");

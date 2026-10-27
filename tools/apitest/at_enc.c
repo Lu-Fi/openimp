@@ -1167,23 +1167,32 @@ static void live_misc(int chn, int codec)
                 if (r < 0 && e == ENOTSUP) rep(FN(IMP_Encoder_GetChnEvalInfo), r, V_NA, "ENOTSUP: eval info not provided by this libimp");
 # if defined(PLATFORM_T31)
                 else {
-                    /* vendor record (36 bytes, 8 for JPEG): six hardware counters, then int16 slice QP, min QP, max QP (bytes 24, 26, 28) */
+                    /* OpenIMP record = IMPEncoderStreamInfo of the header (36 bytes): iNumBytes @0, six counters @4..27,
+                     * int16 slice QP / min QP / max QP @28/30/32.  The vendor 1.1.6 record is shifted by 4 bytes (starts at
+                     * uNumIntra, QPs @24/26/28, no iNumBytes): a vendor run fails the iNumBytes / QP-field checks here.
+                     * JPEG (8 bytes): iNumBytes @0, int16 quality factor @4. */
                     const uint8_t *b = (const uint8_t *)info;
-                    uint32_t w[6]; int16_t q[3]; int i;
+                    IMPEncoderStreamInfo si;
+                    uint32_t au = 0; int i;
 
-                    for (i = 0; i < 6; i++) memcpy(&w[i], b + 4 * i, 4);
-                    for (i = 0; i < 3; i++) memcpy(&q[i], b + 24 + 2 * i, 2);
-                    if (codec == CODEC_JPEG) {      /* JPEG record: 8 bytes, int16 quality factor first, rest zero */
+                    memcpy(&si, b, sizeof(si));
+                    for (i = 0; i < (int)s->packCount; i++) au += s->pack[i].length;
+                    if (codec == CODEC_JPEG) {
                         int16_t ql; uint8_t z = 0;
-                        memcpy(&ql, b, 2);
-                        for (i = 2; i < 8; i++) z |= b[i];
-                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && ql >= 1 && ql <= 100 && !z,
-                              "JPEG record (8 bytes): ret %d, quality factor %d, remaining bytes %s", r, ql, z ? "NOT zero" : "zero");
+                        memcpy(&ql, b + 4, 2);
+                        for (i = 6; i < 8; i++) z |= b[i];
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && si.iNumBytes > 0 && ql >= 1 && ql <= 100 && !z,
+                              "JPEG record (8 bytes): ret %d, iNumBytes %d (stream %u), quality factor %d, bytes 6..7 %s", r, si.iNumBytes, au, ql, z ? "NOT zero" : "zero");
                     } else if (codec == CODEC_H264) {
-                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info) && q[0] >= 1 && q[0] <= 51 && q[1] >= 0 && q[1] <= q[2] && q[2] <= 51 && q[1] <= q[0] && q[0] <= q[2],
-                              "ret %d, record: counters %u %u %u %u %u %u, slice QP %d, min QP %d, max QP %d", r, w[0], w[1], w[2], w[3], w[4], w[5], q[0], q[1], q[2]);
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info) && si.iNumBytes > 0 && (uint32_t)si.iNumBytes <= au &&
+                              si.iSliceQP >= 1 && si.iSliceQP <= 51 && si.iMinQP >= 0 && si.iMinQP <= si.iMaxQP && si.iMaxQP <= 51 &&
+                              si.iMinQP <= si.iSliceQP && si.iSliceQP <= si.iMaxQP && !b[34] && !b[35],
+                              "ret %d, header layout: iNumBytes %d (access unit %u), intra %u skip %u cu8 %u cu16 %u cu32 %u cu64 %u, slice QP %d, min QP %d, max QP %d",
+                              r, si.iNumBytes, au, si.uNumIntra, si.uNumSkip, si.uNumCU8x8, si.uNumCU16x16, si.uNumCU32x32, si.uNumCU64x64,
+                              si.iSliceQP, si.iMinQP, si.iMaxQP);
                     } else
-                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info), "ret %d, 36 bytes written (this codec's counters are not filled): counters %u %u %u %u %u %u, QP %d/%d/%d", r, w[0], w[1], w[2], w[3], w[4], w[5], q[0], q[1], q[2]);
+                        CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r == 0 && gtouched(info), "ret %d, 36 bytes written (this codec's counters are not filled): iNumBytes %d (access unit %u), counters %u %u %u %u %u %u, QP %d/%d/%d",
+                              r, si.iNumBytes, au, si.uNumIntra, si.uNumSkip, si.uNumCU8x8, si.uNumCU16x16, si.uNumCU32x32, si.uNumCU64x64, si.iSliceQP, si.iMinQP, si.iMaxQP);
                 }
 # else
                 else CHECK(IMP_Encoder_GetChnEvalInfo, r < 0 ? r : 0, r >= 0, "ret %d, info buffer %s (4 KB guarded)", r, gtouched(info) ? "written" : "untouched");

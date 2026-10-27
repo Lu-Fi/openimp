@@ -79,10 +79,10 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(FIXED_CONTRAST_TEST_BIN)
 	$(EVAL_INFO_TEST_BIN)
 
-# IMP_Encoder_GetChnEvalInfo record layout (vendor 36 bytes)
+# IMP_Encoder_GetChnEvalInfo record layout (IMPEncoderStreamInfo of the header)
 $(EVAL_INFO_TEST_BIN): eval_info_test.c $(PROJECT_DIR)/src/t40/t31_eval_info.h
 	mkdir -p "$(dir $@)"
-	$(CC) -std=c99 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/src/t40 eval_info_test.c -o "$@"
+	$(CC) -std=c99 -O2 -Wall -Wextra -Werror -DPLATFORM_T31 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src/t40 eval_info_test.c -o "$@"
 
 # FrameSource delay FIFO helpers (SetMaxDelay/SetDelay/GetTimedFrame)
 $(VBM_DELAY_TEST_BIN): vbm_delay_test.c $(PROJECT_DIR)/src/vbm_delay.h

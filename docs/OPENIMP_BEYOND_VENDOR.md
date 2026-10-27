@@ -65,6 +65,20 @@ Further items (night 2026-10-03):
 
 - **T41 rate control after a scene change (accepted by the maintainers, 2026-10-24):** after a sudden light step the vendor library holds P pictures at the maximum QP (about 45) for roughly 2.5 s with near-empty pictures (its P-picture regime of `eRcOptions`); OpenIMP recovers within about a second (P QP 43 -> 28-32, next IDR 25 against 36). The rest of the T41 RC parameters (IP delta, initial QP, per-type windows, `uMaxPictureSize`, pending values applied at the next picture, read-back after the next picture, I-buffer guard) equals the vendor library 1.2.6 on the same camera. Still different: I pictures of detailed scenes are about 35 % larger at the same QP (hardware mode decision).
 
+### 0.9 T31 `IMP_Encoder_GetChnEvalInfo`: record in the header layout (2026-10-27)
+
+**Different from the vendor on purpose.** The vendor libimp 1.1.6 copies the per-picture record one word too late: it
+starts at `uNumIntra`, so every field sits 4 bytes before its declared offset in `IMPEncoderStreamInfo` (`imp_encoder.h`),
+`iNumBytes` is missing and the three QPs land in `uNumCU64x64` / `iSliceQP`. OpenIMP returns the record laid out exactly
+as the header declares it (36 bytes): `iNumBytes` (entropy bytes of the picture, the published access unit adds the
+Annex-B headers) @0, `uNumIntra`, `uNumSkip`, `uNumCU8x8`, `uNumCU16x16`, `uNumCU32x32`, `uNumCU64x64` @4..27,
+`iSliceQP` @28, `iMinQP` @30, `iMaxQP` @32. JPEG channel (8 bytes, same principle): `iNumBytes` = JPEG size @0, quality
+factor (int16) @4. **A streamer that compensated for the vendor shift must not do so with OpenIMP**: cast the buffer to
+`IMPEncoderStreamInfo` and read the fields by name. Evidence: host `tests/t31/eval_info_test.c` (offsets checked against
+the header struct), T31L cam .26 (libimp-only swap): iNumBytes 3993 of a 4003-byte access unit, intra 4 / skip 820 /
+CU8 444 / CU16 809 (= 3680 8x8 units of 640x368), QP 20/20/23; JPEG 40209 bytes = stream, quality 75. Branch
+`claude/t31-evalinfo-layout`.
+
 ### 1.0 Encoder telemetry (T41 and T40, 2026-10-24)
 
 `OpenIMP_Encoder_GetTelemetry(chn, &t)` (`include/openimp/openimp_encoder_telemetry.h`, weak-link it): set `t.size = sizeof(t)` first (versioned ABI: the library fills at most `size` bytes, writes back the filled size and `version`, fields are only appended); frames, bytes, IDR count, last frame size, encode time last/avg/max (microseconds, source frame to stream back), delivered fps x100 and average kbit/s since CreateChn, and whether a picture is in the codec right now. The vendor library has only `IMP_Encoder_Query` (6 words). Device-tested on T41 (.34): matches the consumer's own count exactly, fps 15.02 at 15, 2073 kbit/s at CBR 2000. Merged into next; `IMP_Encoder_Query` on T41 now also reports real values (`work_done` 0 for 38.7 % of the samples = the measured encode time of 25.9 ms average, polled-not-fetched stream shows frames=1) instead of the constant `leftPics=1`. T40 follows the same rule since the evening of 2026-10-24 (Eufy T40XP: `work_done` 0 in 17.5 % of the samples at 20 fps = 8.7 ms encode time per frame, before always idle; `OpenIMP_Encoder_GetTelemetry` counted 139 frames = the consumer's count at 20.02 fps, 2099 kbit/s; `GetChnAveBitrate` 1920 against 2033 kbit/s measured).

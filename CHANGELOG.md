@@ -8,6 +8,17 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t31-evalinfo-layout` (2026-10-27)
+
+- **T31 IMP_Encoder_GetChnEvalInfo: header layout instead of the vendor's shifted bytes** (beyond vendor, deliberate ABI
+  difference). The 36-byte record is now laid out exactly as `IMPEncoderStreamInfo` of the vendor header: `iNumBytes`
+  (entropy bytes of the picture) @0, the six counters @4..27, slice / min / max QP @28/30/32. The vendor 1.1.6 copy
+  starts one word late (no `iNumBytes`, every field 4 bytes early), which a31d7c7b reproduced. JPEG (8 bytes):
+  `iNumBytes` = JPEG size @0, quality factor @4. A streamer that compensated for the vendor shift must not do so with
+  OpenIMP (docs/OPENIMP_BEYOND_VENDOR.md 0.9). Host tests `tests/t31/eval_info_test.c` (offsets vs the header struct),
+  `p2_jpeg_source_test`; apitest enc on T31L .26 (libimp-only swap): PASS 122 FAIL 0, AVC iNumBytes 3993 of a 4003-byte
+  access unit, intra 4 / skip 820 / CU8 444 / CU16 809, QP 20/20/23; JPEG 40209 bytes, quality 75.
+
 ## Branch `claude/t23-osd-oddwidth` (2026-10-27)
 
 - **T23 ISP OSD: odd picture width refused** (beyond vendor, stability guard). `IMP_ISP_Tuning_SetOSDBlock` (all three

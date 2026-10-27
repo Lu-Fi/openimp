@@ -6816,21 +6816,19 @@ static void avpu_end_encoding_callback(void *user_data)
     }
 #if defined(PLATFORM_T31)
     if (completed && ctx && buf_idx >= 0 && buf_idx < 16 && status_regs_ptr) {
-        /* Vendor libimp (T31 1.1.6, update_one_frmstrm): the 36-byte record
-         * of IMP_Encoder_GetChnEvalInfo is slot bytes 356..391.  The Allegro
-         * EndEncoding writes there the merged slice status counters
-         * (EncodingStatusRegsToSliceStatus + MergeEncodingStatus: status
-         * +0x1c..+0x30, six words), then three int16: the picture's slice
-         * QP, the lowest and the highest QP (status +0x3e / +0x40).  The
-         * bytes after them stay zero.  Same bytes here, from the status
-         * block of this completion. */
+        /* IMP_Encoder_GetChnEvalInfo record in the IMPEncoderStreamInfo
+         * layout of the vendor header (t31_eval_info.h; the vendor copy is
+         * shifted by 4 bytes, see there): iNumBytes = the entropy bytes of
+         * this completion, then the merged slice status counters (status
+         * +0x1c..+0x30, six words, as the Allegro EndEncoding merges them)
+         * and three int16: slice QP, lowest and highest QP (+0x3e / +0x40). */
         uint8_t *rec = ctx->t31_eval_by_buf[buf_idx];
         struct { uint8_t raw[T31_SLICE_STATUS_SIZE]; } ev_merged;
 
         (void)EncodingStatusRegsToSliceStatus(&status_regs, &slice_status);
         t31_eval_status_init(ev_merged.raw);
         MergeEncodingStatus(&ev_merged, &slice_status);
-        t31_eval_pack(ev_merged.raw,
+        t31_eval_pack(ev_merged.raw, ctx->t31_payload_size_by_buf[buf_idx],
                       (uint16_t)ctx->t31_rate_control_qp_by_buf[buf_idx],
                       rec);
     }

@@ -334,7 +334,7 @@ typedef struct ALAvpuContext {
     /* Exact entropy bytes reported at completion status +0x104. */
     uint32_t t31_payload_size_by_buf[16];
     /* IMP_Encoder_GetChnEvalInfo record of each completed picture (vendor
-     * 36-byte layout, see avpu_t31_eval_record()). */
+     * IMPEncoderStreamInfo header layout, t31_eval_info.h). */
     uint8_t t31_eval_by_buf[16][36];
 #endif
 #if defined(OPENIMP_AL_FRAME_RC)
