@@ -1,7 +1,7 @@
 {
  "_comment": "Daily soak summary per fleet camera. Written by tools/status_soak.py on the host from the soak sampler logs and the camera STATUS files (not in CI); read by tools/release_gates.py. Do not edit by hand. Rules: docs/status/release.yaml.",
  "image": "agg47",
- "asof": "2026-10-27 18:47",
+ "asof": "2026-10-27 18:57",
  "sources": {
   "sampler_logs": [
    "logs1026/soak-agg47.log"
@@ -14,9 +14,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:03",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 25254,
+   "uptime_s": 25856,
    "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
@@ -26,7 +26,7 @@
     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-27 11:55)"
    },
    "stable_since": "2026-10-27 11:46",
-   "stable_days": 0.29,
+   "stable_days": 0.3,
    "events": [
     {
      "time": "2026-10-26 14:01",
@@ -47,9 +47,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:35",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 105159,
+   "uptime_s": 105761,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -74,9 +74,9 @@
    "soc": "T21",
    "image": "agg47",
    "first_seen": "2026-10-26 13:33",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 105288,
+   "uptime_s": 105890,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -86,7 +86,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:33",
-   "stable_days": 1.22,
+   "stable_days": 1.23,
    "events": [
     {
      "time": "2026-10-26 13:31",
@@ -101,9 +101,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:44",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104620,
+   "uptime_s": 105221,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -113,7 +113,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:44",
-   "stable_days": 1.21,
+   "stable_days": 1.22,
    "events": [
     {
      "time": "2026-10-26 13:42",
@@ -128,9 +128,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:47",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104476,
+   "uptime_s": 105077,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -140,7 +140,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:47",
-   "stable_days": 1.21,
+   "stable_days": 1.22,
    "events": [
     {
      "time": "2026-10-26 13:44",
@@ -155,9 +155,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:37",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 88519,
+   "uptime_s": 89121,
    "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
@@ -188,9 +188,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:49",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104310,
+   "uptime_s": 104912,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -215,9 +215,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:39",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104907,
+   "uptime_s": 105509,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -227,7 +227,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:39",
-   "stable_days": 1.21,
+   "stable_days": 1.22,
    "events": [
     {
      "time": "2026-10-26 13:37",
@@ -242,9 +242,9 @@
    "soc": "T10",
    "image": "agg47",
    "first_seen": "2026-10-26 13:27",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 90514,
+   "uptime_s": 91115,
    "unplanned_reboots": 2,
    "oops": 0,
    "last_reset": {
@@ -281,9 +281,9 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:10",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 103090,
+   "uptime_s": 103692,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -293,7 +293,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:10",
-   "stable_days": 1.19,
+   "stable_days": 1.2,
    "events": [
     {
      "time": "2026-10-26 14:06",
@@ -308,9 +308,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:52",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104165,
+   "uptime_s": 104767,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -320,7 +320,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:52",
-   "stable_days": 1.2,
+   "stable_days": 1.21,
    "events": [
     {
      "time": "2026-10-26 13:49",
@@ -335,9 +335,9 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:13",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 102920,
+   "uptime_s": 103522,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -347,7 +347,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:13",
-   "stable_days": 1.19,
+   "stable_days": 1.2,
    "events": [
     {
      "time": "2026-10-26 14:10",
@@ -362,9 +362,9 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:31",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 105437,
+   "uptime_s": 106039,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -374,7 +374,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:31",
-   "stable_days": 1.22,
+   "stable_days": 1.23,
    "events": [
     {
      "time": "2026-10-26 13:27",
@@ -389,9 +389,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:42",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104761,
+   "uptime_s": 105361,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -401,7 +401,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:42",
-   "stable_days": 1.21,
+   "stable_days": 1.22,
    "events": [
     {
      "time": "2026-10-26 13:40",
@@ -416,9 +416,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:06",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 103318,
+   "uptime_s": 103919,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -443,9 +443,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:54",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 104019,
+   "uptime_s": 104621,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -455,7 +455,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:54",
-   "stable_days": 1.2,
+   "stable_days": 1.21,
    "events": [
     {
      "time": "2026-10-26 13:52",
@@ -470,9 +470,9 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:58",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 103803,
+   "uptime_s": 104405,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -482,7 +482,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:58",
-   "stable_days": 1.2,
+   "stable_days": 1.21,
    "events": [
     {
      "time": "2026-10-26 13:55",
@@ -497,9 +497,9 @@
    "soc": "T40",
    "image": "agg47",
    "first_seen": "2026-10-26 14:30",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 4420,
+   "uptime_s": 5022,
    "unplanned_reboots": 1,
    "oops": 4,
    "last_reset": {
@@ -509,7 +509,7 @@
     "reason": "kernel oops counter rose by 2 (dmesg)"
    },
    "stable_since": "2026-10-27 00:04",
-   "stable_days": 0.78,
+   "stable_days": 0.79,
    "events": [
     {
      "time": "2026-10-26 14:13",
@@ -544,9 +544,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:01",
-   "last_sample": "2026-10-27 18:47",
+   "last_sample": "2026-10-27 18:57",
    "online": true,
-   "uptime_s": 103640,
+   "uptime_s": 104241,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -556,7 +556,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:01",
-   "stable_days": 1.2,
+   "stable_days": 1.21,
    "events": [
     {
      "time": "2026-10-26 13:58",
@@ -686,117 +686,117 @@
   },
   "2026-10-27": {
    ".21": {
-    "samples": 113,
+    "samples": 114,
     "offline": 1,
     "max_uptime_s": 77584,
     "max_oops": 0
    },
    ".23": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 105159,
+    "max_uptime_s": 105761,
     "max_oops": 0
    },
    ".24": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 105288,
+    "max_uptime_s": 105890,
     "max_oops": 0
    },
    ".25": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104620,
+    "max_uptime_s": 105221,
     "max_oops": 0
    },
    ".26": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104476,
+    "max_uptime_s": 105077,
     "max_oops": 0
    },
    ".28": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 88519,
+    "max_uptime_s": 89121,
     "max_oops": 0
    },
    ".29": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104310,
+    "max_uptime_s": 104912,
     "max_oops": 0
    },
    ".30": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104907,
+    "max_uptime_s": 105509,
     "max_oops": 0
    },
    ".31": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 90514,
+    "max_uptime_s": 91115,
     "max_oops": 0
    },
    ".32": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 103090,
+    "max_uptime_s": 103692,
     "max_oops": 0
    },
    ".33": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104165,
+    "max_uptime_s": 104767,
     "max_oops": 0
    },
    ".34": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 102920,
+    "max_uptime_s": 103522,
     "max_oops": 0
    },
    ".107": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 105437,
+    "max_uptime_s": 106039,
     "max_oops": 0
    },
    ".124": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104761,
+    "max_uptime_s": 105361,
     "max_oops": 0
    },
    ".145": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 103318,
+    "max_uptime_s": 103919,
     "max_oops": 0
    },
    ".151": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 104019,
+    "max_uptime_s": 104621,
     "max_oops": 0
    },
    ".163": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 103803,
+    "max_uptime_s": 104405,
     "max_oops": 0
    },
    ".184": {
-    "samples": 113,
+    "samples": 114,
     "offline": 9,
     "max_uptime_s": 57163,
     "max_oops": 2
    },
    ".224": {
-    "samples": 113,
+    "samples": 114,
     "offline": 0,
-    "max_uptime_s": 103640,
+    "max_uptime_s": 104241,
     "max_oops": 0
    }
   }
