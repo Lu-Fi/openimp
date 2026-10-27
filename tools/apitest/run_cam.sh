@@ -13,6 +13,7 @@
 # env: S (session dir, default below)  BIN  AREAS (default sys,fs,enc,osd,ivs,audio,isp,su)  RISKY=1 (imgfx
 #      bypass/FPS cases)  NOIMG=1 (skip imgfx)  T40_MASK (t40_devtest phases, hex)  TAG (label, default agg47)
 #      SENSOR I2C W H (override the table)  DRY=1 (print what would run)
+#      IMGFX_FILTER=name (picture area: only the cases whose name contains it, e.g. exp-; the base cases always run)
 S=${S:-/mnt/NVMe/git/scratch-clones/session-110bf918}
 D=$(cd "$(dirname "$0")" && pwd)
 BIN=${BIN:-$D/build}
@@ -79,7 +80,7 @@ run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
 run apitest ./apitest --json /tmp/at/apitest.json "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
 cam "cat /tmp/at/apitest.json" > "$OUT/apitest.json" 2>/dev/null
 if [ -z "$NOIMG" ] && [ "$SOC" != T40 ]; then
-  [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./apitest "$SENSOR" "$I2C" "$W" "$H" picture /tmp/at/img
+  [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./apitest "$SENSOR" "$I2C" "$W" "$H" picture /tmp/at/img $IMGFX_FILTER
 fi
 [ "$SOC" = T40 ] && [ -z "$NODEV" ] && run devtest ./apitest "$SENSOR" "$I2C" "$W" "$H" t40dev "$T40_MASK"
 cam 'dmesg | tail -n 40' > "$OUT/dmesg-tail.txt" 2>&1

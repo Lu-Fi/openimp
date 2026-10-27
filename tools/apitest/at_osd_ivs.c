@@ -217,6 +217,40 @@ static void ivs_unbind(int grp, int outid)
     if (r) rep(FN(IMP_System_UnBind), r, V_FAIL, "FS -> IVS group %d", grp);
 }
 
+/* ---- minimal custom IVS algorithm (IMPIVSInterface of the vendor header) ---- */
+#include <pthread.h>
+struct ca_res { uint32_t w, h; int mean, seq; };
+static struct { volatile int frames, rel_called, rel_bad, rel_ret, rel_res, init_called, exit_called, seq; struct ca_res res; } g_ca;
+static pthread_mutex_t g_ca_mx;
+static IMPIVSInterface g_ca_if;
+static int g_ca_param[4];
+static int ca_init(IMPIVSInterface *inf) { (void)inf; g_ca.init_called++; return 0; }
+static void ca_exit(IMPIVSInterface *inf) { (void)inf; g_ca.exit_called++; }
+static int ca_pre(IMPIVSInterface *inf, IMPFrameInfo *f) { (void)inf; (void)f; return 0; }
+static int ca_proc(IMPIVSInterface *inf, IMPFrameInfo *f)
+{
+    uint8_t *y = (uint8_t *)(uintptr_t)f->virAddr;
+    uint32_t n, step, sum = 0, cnt = 0, w = f->width, h = f->height;
+    struct ca_res r;
+    int rr;
+
+    (void)inf;
+    if (!y || !w || !h) return -1;
+    step = (w * h) / 512; if (!step) step = 1;
+    for (n = 0; n < w * h; n += step) { sum += y[n]; cnt++; }
+    r.w = w; r.h = h; r.mean = cnt ? (int)(sum / cnt) : 0; r.seq = ++g_ca.seq;
+    pthread_mutex_lock(&g_ca_mx); g_ca.res = r; pthread_mutex_unlock(&g_ca_mx);
+    rr = IMP_IVS_ReleaseData((void *)(uintptr_t)f->virAddr);      /* frame no longer needed */
+    g_ca.rel_ret = rr; g_ca.rel_called++; if (rr) g_ca.rel_bad++;
+    g_ca.frames++;
+    return 0;
+}
+static int ca_get(IMPIVSInterface *inf, void **res) { (void)inf; *res = &g_ca.res; return 0; }
+static int ca_rel(IMPIVSInterface *inf, void *res) { (void)inf; (void)res; g_ca.rel_res++; return 0; }
+static int ca_getp(IMPIVSInterface *inf, void *p) { (void)inf; memcpy(p, g_ca_param, sizeof(g_ca_param)); return 0; }
+static int ca_setp(IMPIVSInterface *inf, void *p) { (void)inf; memcpy(g_ca_param, p, sizeof(g_ca_param)); return 0; }
+static int ca_flush(IMPIVSInterface *inf) { (void)inf; return 0; }
+
 void t_ivs(void)
 {
     int r, o0 = 0, o1 = 0, i, got;
@@ -339,7 +373,52 @@ void t_ivs(void)
         r = IMP_IVS_DestroyGroup(1); if (r) rep(FN(IMP_IVS_DestroyGroup), r, V_FAIL, "group 1");
         NEED(IMP_IVS_DestroyBaseMoveInterface) { IMP_IVS_DestroyBaseMoveInterface(bm); rep(FN(IMP_IVS_DestroyBaseMoveInterface), 0, V_PASS, "void function"); }
     }
-    rep(FN(IMP_IVS_ReleaseData), 0, V_SKIP, "releases algorithm-owned frame data; only used with a custom IMPIVSInterface");
+    /* custom algorithm (IMPIVSInterface implemented here, as a streamer or an algorithm vendor does): processAsync gets the
+     * frame, measures it, releases it with IMP_IVS_ReleaseData(frame->virAddr) and leaves a result for GetResult/ReleaseResult */
+    NEED(IMP_IVS_ReleaseData) {
+        IMPIVSInterface *ci = &g_ca_if;
+
+        memset(ci, 0, sizeof(*ci));
+        memset((void *)&g_ca, 0, sizeof(g_ca));
+        pthread_mutex_init(&g_ca_mx, NULL);
+        ci->param = &g_ca_param; ci->paramSize = sizeof(g_ca_param); ci->pixfmt = PIX_FMT_NV12;
+        ci->init = ca_init; ci->exit = ca_exit; ci->preProcessSync = ca_pre; ci->processAsync = ca_proc;
+        ci->getResult = ca_get; ci->releaseResult = ca_rel; ci->getParam = ca_getp; ci->setParam = ca_setp;
+        ci->flushFrame = ca_flush;
+        r = IMP_IVS_CreateGroup(1); if (r) rep(FN(IMP_IVS_CreateGroup), r, V_FAIL, "group 1 (custom algorithm)");
+        if (r) { rep(FN(IMP_IVS_ReleaseData), r, V_FAIL, "no group for the custom algorithm"); }
+        else {
+            r = IMP_IVS_CreateChn(2, ci); if (r) rep(FN(IMP_IVS_CreateChn), r, V_FAIL, "chn 2 custom algorithm");
+            r = IMP_IVS_RegisterChn(1, 2); if (r) rep(FN(IMP_IVS_RegisterChn), r, V_FAIL, "group 1 chn 2");
+            r = IMP_IVS_StartRecvPic(2); if (r) rep(FN(IMP_IVS_StartRecvPic), r, V_FAIL, "chn 2");
+            if (ivs_bind(1, &o1, 0) == 0) {
+                void **pres = (void **)gnew(sizeof(void *));
+
+                r = IMP_IVS_PollingResult(2, 4000);
+                got = 0;
+                if (r == 0) {
+                    r = IMP_IVS_GetResult(2, pres); gchk(pres);
+                    if (r == 0 && *pres) {
+                        struct ca_res *cr = (struct ca_res *)*pres;
+                        got = 1;
+                        rep(LBL("IMP_IVS_GetResult (custom)"), r, (cr->mean > 0 && cr->w > 0) ? V_PASS : V_FAIL, "own result: frame %ux%u mean luma %d", cr->w, cr->h, cr->mean);
+                        r = IMP_IVS_ReleaseResult(2, *pres);
+                        rep(LBL("IMP_IVS_ReleaseResult (custom)"), r, (r == 0 && g_ca.rel_res) ? V_PASS : V_FAIL, "releaseResult of the algorithm called %d time(s)", g_ca.rel_res);
+                    } else rep(LBL("IMP_IVS_GetResult (custom)"), r, V_FAIL, "no result pointer");
+                } else rep(LBL("IMP_IVS_PollingResult (custom)"), r, V_FAIL, "no result within 4 s");
+                for (i = 0; i < 20 && g_ca.frames < 5; i++) usleep(200000);
+                rep(FN(IMP_IVS_ReleaseData), g_ca.rel_ret,
+                    (got && g_ca.frames >= 1 && g_ca.rel_called == g_ca.frames && g_ca.rel_bad == 0 && g_ca.init_called) ? V_PASS : V_FAIL,
+                    "processAsync got %d frames, released each with IMP_IVS_ReleaseData(frame->virAddr): %d calls, %d returned non-zero; init %d",
+                    g_ca.frames, g_ca.rel_called, g_ca.rel_bad, g_ca.init_called);
+                gfree(pres);
+                ivs_unbind(1, o1);
+            } else rep(FN(IMP_IVS_ReleaseData), -1, V_FAIL, "custom algorithm: no frame source bound");
+            IMP_IVS_StopRecvPic(2); IMP_IVS_UnRegisterChn(2); IMP_IVS_DestroyChn(2);
+            r = IMP_IVS_DestroyGroup(1); if (r) rep(FN(IMP_IVS_DestroyGroup), r, V_FAIL, "group 1");
+            if (!g_ca.exit_called) rep(LBL("IVS custom algorithm exit"), 0, V_FAIL, "DestroyChn did not call the algorithm exit()");
+        }
+    }
     r = IMP_IVS_DestroyGroup(0);
     RET0(IMP_IVS_DestroyGroup, r, "group 0");
 }

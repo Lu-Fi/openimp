@@ -446,13 +446,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -538,13 +538,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_DelSensor": {
@@ -615,13 +615,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -692,13 +692,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -769,13 +769,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -846,13 +846,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -923,13 +923,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -1256,13 +1256,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -9371,13 +9371,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9467,13 +9467,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9544,13 +9544,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9621,13 +9621,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9880,13 +9880,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -10032,13 +10032,13 @@
    },
    "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11)",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -12026,13 +12026,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_CreateChn": {
@@ -12093,13 +12093,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_CreateGroup": {
@@ -12160,13 +12160,13 @@
    },
    "note": "audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_CreateMoveInterface": {
@@ -12227,13 +12227,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_DestroyBaseMoveInterface": {
@@ -12284,13 +12284,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_DestroyChn": {
@@ -12361,13 +12361,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_DestroyGroup": {
@@ -12438,13 +12438,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_DestroyMoveInterface": {
@@ -12515,13 +12515,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_Get/SetParam": {
@@ -12582,13 +12582,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_GetResult": {
@@ -12649,13 +12649,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_PollingResult": {
@@ -12716,13 +12716,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_RegisterChn": {
@@ -12783,28 +12783,28 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_ReleaseData": {
    "area": "IVS",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
-    "T41": "aud"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -12838,7 +12838,16 @@
      "r†"
     ]
    },
-   "note": "audit: userspace implementation"
+   "note": "audit: userspace implementation",
+   "ref": {
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T41": "apitest rc3gaps2 2026-10-27 .34",
+    "T40": "apitest rc3gaps2 2026-10-27 .184"
+   }
   },
   "IVS_ReleaseResult": {
    "area": "IVS",
@@ -12898,13 +12907,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_StartRecvPic": {
@@ -12965,13 +12974,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_StopRecvPic": {
@@ -13042,13 +13051,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "IVS_UnRegisterChn": {
@@ -13119,13 +13128,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "ADEC_ReleaseDecoder": {
@@ -17395,13 +17404,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_Exit": {
@@ -17472,13 +17481,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17596,13 +17605,13 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_GetTimeStamp": {
@@ -17663,13 +17672,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_GetVersion": {
@@ -17740,13 +17749,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_Init": {
@@ -17817,13 +17826,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest rc3-cases 2026-10-26 .31",
-    "T20": "apitest rc3-cases 2026-10-26 .107",
-    "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest rc3-cases 2026-10-27 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_MemPoolFree": {
@@ -17842,7 +17851,7 @@
    },
    "note": "T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)",
    "ref": {
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest rc3gaps2 2026-10-27 .26"
    }
   },
   "System_MemPoolRequest": {
@@ -17860,10 +17869,10 @@
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
+    "T41": "apitest rc3gaps2 2026-10-27 .34",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184"
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
   },
@@ -17915,13 +17924,13 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_RebaseTimeStamp": {
@@ -17982,13 +17991,13 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T10": "apitest agg47 2026-10-26 .31",
-    "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24",
-    "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
   "System_UnBind": {
@@ -18071,16 +18080,16 @@
   "System_WriteReg32": {
    "area": "System",
    "cells": {
-    "T10": "aud",
-    "T20": "aud",
-    "T21": "aud",
-    "T23": "aud",
+    "T10": "dev",
+    "T20": "dev",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "?",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "?",
-    "T41": "aud"
+    "T40": "dev",
+    "T41": "dev"
    },
    "used": {
     "T10": [
@@ -18114,7 +18123,16 @@
      "r†"
     ]
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T10": "apitest rc3gaps2 2026-10-27 .31",
+    "T20": "apitest rc3gaps2 2026-10-27 .107",
+    "T21": "apitest rc3gaps2 2026-10-27 .24",
+    "T23": "apitest rc3gaps2 2026-10-27 .30",
+    "T31": "apitest rc3gaps2 2026-10-27 .26",
+    "T41": "apitest rc3gaps2 2026-10-27 .34",
+    "T40": "apitest rc3gaps2 2026-10-27 .184"
+   }
   },
   "AI_DisableDrcAndEq": {
    "area": "Audio",
