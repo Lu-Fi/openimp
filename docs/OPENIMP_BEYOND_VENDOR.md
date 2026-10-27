@@ -284,6 +284,24 @@ force; `OPENIMP_MOTION_V2=0` (or `features = 0` via `SetConfigEx`) is the vendor
 | Reference-frame ring (BUF_SHARE_CFG): saves about 1.5 MB video memory at 1080p, P frames equal or smaller, no artefacts. Vendor T23 does the same; vendor T21 has it off | T21, T23 only (Helix hardware; T10/T20/T31 have none) | `OPENIMP_REF_SHARE=0` disables | **on** for channels up to 1920x1088 and when it actually saves memory | Nothing; plan memory budget with the saving | log "reference sharing skipped" for larger/small pictures; `=0` to disable | cam-D, cam-B, `claude/t23-ref-ring` [-all-13] |
 | T40/T41: the vendor library has no reference-frame sharing (the AVPU keeps its own reference buffers); `IMP_Encoder_SetbufshareChn` (JPEG shares the stream manager) is as the vendor. Merged 2026-10-24 (`claude/t4x-bufshare`): T41 `IMP_Encoder_SetAvpuBsShare` and the vendor default of 2 stream slots per channel (saves 2.7 MB rmem at 1080p + 360p; OpenIMP used 4) | T40, T41 | none | on | Nothing | n/a | .34, decode clean, SSIM 1.000 against the default streams |
 
+### 5.1 T41 media memory pools and `IMP_FrameSource_SetPool` (2026-10-27, issue 72)
+
+Vendor-equal part (T41 1.2.5/1.2.6): `IMP_System_MemPoolRequest(id, size, name)` carves one contiguous block out of rmem;
+`IMP_FrameSource_SetPool(chn, id)` binds a channel (chn < 33, also before CreateChn) and its capture buffers are then
+allocated inside that block at EnableChn; return codes as the vendor (chn >= 33 0x80010001, unknown pool 0x80010040, a
+second SetPool on the channel 0x80010020; GetPool without a pool 0x80010020). A pool too small for the queue makes
+EnableChn fail (-1) without falling back to rmem and without leaking. Channels without a pool allocate exactly as before.
+
+Beyond vendor: `IMP_System_MemPoolFree(id)` (the vendor T41 library has no public release, a pool lives until exit)
+releases a pool whose buffers are all free again and unbinds its channels, so a streamer can rebuild a stream with a new
+pool size without restarting; refused (-1) while a buffer still lives. `OpenIMP_P2_PoolRange(id, &phys, &size)`
+reports the pool's physical range (diagnostics). How a streamer uses it: request one pool per stream before
+`IMP_System_Init`, bind the FrameSource channel, and a resolution change re-allocates inside the pool instead of
+fragmenting rmem (the purpose the vendor document gives). Evidence: host `tests/t41/mempool_ledger_test.c`,
+`fs_pool_test.c`; QEMU T41 and cam .34 (libimp-only swap) apitest case `fspool`: 3 cycles, frames inside the pool,
+rmem in use unchanged after the cycles, 64 KB pool refused at EnableChn; sys/fs/enc areas PASS 158 FAIL 0.
+`IMP_Encoder_SetPool` still records the id only.
+
 ## 6. Robustness (open-tx-isp and OpenIMP)
 
 | Feature | SoC | Behaviour vs vendor | How a streamer benefits | Status |

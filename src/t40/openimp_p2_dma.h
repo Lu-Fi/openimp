@@ -8,5 +8,12 @@
  */
 int OpenIMP_P2_DMARegion(uint32_t *base, uint32_t *size, void **mapping);
 int OpenIMP_P2_DMAState(uint32_t *base, uint32_t *used);
+#if defined(PLATFORM_T41)
+/* media memory pools (openimp_p2_dma.c) */
+int IMP_MemPool_InitPool(int pool_id, uint32_t size, const char *name);
+void *IMP_MemPool_GetById(int pool_id);
+int OpenIMP_P2_PoolRange(int pool_id, uint32_t *phys, uint32_t *size);
+int OpenIMP_P2_PoolRelease(int pool_id);
+#endif
 
 #endif

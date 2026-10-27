@@ -58,6 +58,11 @@ int OpenIMP_P2_DMAState(uint32_t *a, uint32_t *b) { (void)a; (void)b; abort(); }
 int OpenIMP_P2_DMARegion(uint32_t *a, uint32_t *b, void **c)
 { (void)a; (void)b; (void)c; abort(); }
 int DMA_FreePhys(uint32_t p) { (void)p; abort(); }
+#if defined(PLATFORM_T41)
+void *IMP_MemPool_GetById(int id) { (void)id; return NULL; }
+int DMA_PoolAllocDescriptor(int id, IMPDMABufferInfo *i, int size, const char *tag)
+{ (void)id; (void)i; (void)size; (void)tag; abort(); }
+#endif
 int DMA_RmemFlushCache(void *a, uint32_t n, int d) { (void)a; (void)n; (void)d; abort(); }
 OpenIMPProfileStamp openimp_profile_begin(void) { OpenIMPProfileStamp z; memset(&z, 0, sizeof z); return z; }
 void openimp_profile_end(OpenIMPProfileStage st, OpenIMPProfileStamp t) { (void)st; (void)t; }
