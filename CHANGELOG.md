@@ -8,6 +8,22 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/rc3-gaps2` (2026-10-27)
+
+- **System_WriteReg32 is tested on all 7 SoCs (no library change):** the case writes the scratch register SPR (offset 0x1c, 8 bit) of the UART that carries the
+  kernel console (`console=ttyS<n>` of `/proc/cmdline`, 0x10030000 + n * 0x1000; ttyS1 = 0x1003101c on all test boards) with a different value, reads it back
+  with `IMP_System_ReadReg32`, writes the original back and reads again. That UART is clocked (the console runs on it) and the 8250 driver uses SPR only in the
+  one-time probe, so the round trip has no side effect. Without a console on the command line the case SKIPs. Removed from `untestable.yaml`.
+- **IVS_ReleaseData is tested on all 7 SoCs:** a minimal custom algorithm (`IMPIVSInterface` of the vendor header: init, exit, preProcessSync, processAsync,
+  getResult, releaseResult, getParam, setParam, flushFrame) measures the frame, releases it with `IMP_IVS_ReleaseData(frame->virAddr)` and leaves a result for
+  `IMP_IVS_GetResult` / `IMP_IVS_ReleaseResult`; the case needs every processAsync release to return 0 and the result to come back through the interface.
+  Removed from `untestable.yaml`. (Vendor T31 `IMP_IVS_ReleaseData` is a tail call of `VBMUnlockFrameByVaddr`; OpenIMP never locks capture frames for IVS, so
+  it returns 0 for any non-NULL address.)
+- QEMU first on all 7 SoCs (`tools/apitest/qemu_run.py` now prints `IMP_System_*` and `IMP_IVS_*` lines too), then the cameras (`run_cam.sh` areas sys,ivs): 0 FAIL.
+  T40 needs `W=1920 H=1080 EXTRA_ENV="APITEST_CH0_SCALE=1 APITEST_KEEP_FPS=1"` for the apitest areas (3840x2160 ch0 without scaler starves the IVS).
+  `run_cam.sh` takes `IMGFX_FILTER` for the picture area.
+- Gate cells (RC3 missing): 14 cells to dev (WriteReg32 and IVS_ReleaseData on T10, T20, T21, T23, T31, T40, T41); works 1692 -> 1704 of 1787.
+
 ## Branch `claude/issue-109` (2026-10-27)
 
 - **T10/T20 IMP_ISP_Tuning_Enable/DisableMovestate** (issue #109) return 0 like the vendor and run the vendor

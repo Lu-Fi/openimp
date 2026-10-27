@@ -41,8 +41,36 @@ void t_system(void)
         uint32_t a = IMP_System_ReadReg32(0x10000000), b = IMP_System_ReadReg32(0x10000000);
         rep(FN(IMP_System_ReadReg32), 0, a == b ? V_PASS : V_FAIL, "0x10000000 = 0x%08x / 0x%08x", a, b);
     }
-    NEED(IMP_System_WriteReg32)
-        rep(FN(IMP_System_WriteReg32), 0, V_SKIP, "writes hardware registers, not exercised");
+    NEED(IMP_System_WriteReg32) {
+        /* Harmless register on every Ingenic SoC (T10..T41): the scratch register SPR (offset 0x1c, 8 bit) of the UART
+         * that carries the kernel console.  That UART is clocked (the console runs on it), the 8250 driver touches SPR
+         * only in the one-time probe, so a different value written and put back has no side effect.  The UART number comes
+         * from console=ttyS<n> on the kernel command line (all test boards: ttyS1 = 0x10031000); without it the case SKIPs. */
+        char cl[1024] = "";
+        FILE *f = fopen("/proc/cmdline", "r");
+        const char *c;
+        int uart = -1;
+
+        if (f) { if (!fgets(cl, sizeof(cl), f)) cl[0] = 0; fclose(f); }
+        c = strstr(cl, "console=ttyS");
+        if (c) uart = c[12] - '0';
+        if (uart < 0 || uart > 5) {
+            rep(FN(IMP_System_WriteReg32), 0, V_SKIP, "no console=ttyS<n> on the kernel command line: no known-safe register");
+        } else {
+            uint32_t addr = 0x10030000u + (uint32_t)uart * 0x1000u + 0x1c;
+            uint32_t orig = IMP_System_ReadReg32(addr) & 0xff, probe = (orig == 0xa5) ? 0x5a : 0xa5, got, same, back;
+
+            IMP_System_WriteReg32(addr, probe);
+            got = IMP_System_ReadReg32(addr) & 0xff;
+            IMP_System_WriteReg32(addr, orig);              /* put the original value back (also: write of the same value) */
+            same = IMP_System_ReadReg32(addr) & 0xff;
+            IMP_System_WriteReg32(addr, orig);
+            back = IMP_System_ReadReg32(addr) & 0xff;
+            rep(FN(IMP_System_WriteReg32), 0, (got == probe && same == orig && back == orig) ? V_PASS : V_FAIL,
+                "UART%d scratch SPR 0x%08x: 0x%02x -> wrote 0x%02x read 0x%02x -> restored 0x%02x / 0x%02x (round trip with ReadReg32)",
+                uart, addr, orig, probe, got, same, back);
+        }
+    }
 #if HAS_IMP_System_MemPoolRequest
     NEED(IMP_System_MemPoolRequest) {
         int r = IMP_System_MemPoolRequest(7, 65536, "apitest"), r2 = IMP_System_MemPoolRequest(7, 65536, "apitest");
