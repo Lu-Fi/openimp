@@ -1463,9 +1463,109 @@ static int cs_on(const char *n)
     return 0;
 }
 
+/* ---------------------------------------------------------------------------------------------- stale first snapshot (issue #89)
+ * A stream kept alive without a consumer fills every capture buffer once and leaves them "done"; the first frame requested after a
+ * pause must be a fresh one, not the oldest buffer.  The T40 frame timestamp is taken at DQBUF (no completion time on the wire),
+ * so it cannot show staleness: the picture does.  The ISP brightness is switched while nobody reads (after the buffers are full):
+ * a stale buffer still shows the old brightness, a fresh frame the new one (mean luma of ch1 NV12).  Explicit case only
+ * (APITEST_CASES=stalesnap), pauses APITEST_STALE_PAUSES (default "2,10,30" seconds), both consumers: SnapFrame and GetFrame. */
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetBrightness && HAS_IMP_ISP_Tuning_SetBrightness && HAS_IMP_FrameSource_GetFrame
+static double luma_nv12(const unsigned char *y, int w, int h)
+{
+    double s = 0;
+    long n = 0, i, tot = (long)w * h;
+
+    if (!y || tot <= 0) return -1;
+    for (i = 0; i < tot; i += 53) { s += y[i]; n++; }
+    return s / n;
+}
+
+static double frame_luma(void)      /* one GetFrame, mean luma, -1 = no frame */
+{
+    IMPFrameInfo *fr = NULL;
+    double y;
+
+    if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
+    y = luma_nv12((const unsigned char *)(uintptr_t)fr->virAddr, fr->width, fr->height);
+    IMP_FrameSource_ReleaseFrame(1, fr);
+    return y;
+}
+
+static void set_bright(unsigned char v) { unsigned char t = v; IMP_ISP_Tuning_SetBrightness(IMPVI_MAIN, &t); }
+
+static void cs_stalesnap(void)
+{
+    const char *pe = getenv("APITEST_STALE_PAUSES");
+    char list[64], *tok, *sv = NULL;
+    size_t nv12 = (size_t)SUB_W * SUB_H * 3 / 2;
+    unsigned char ob = 128;
+    int round = 0, fails = 0, runs = 0;
+
+    snprintf(list, sizeof list, "%s", pe && *pe ? pe : "2,10,30");
+    NEED(IMP_FrameSource_GetFrame) NEED(IMP_ISP_Tuning_SetBrightness) {
+        IMP_ISP_Tuning_GetBrightness(IMPVI_MAIN, &ob);
+        for (tok = strtok_r(list, ",", &sv); tok; tok = strtok_r(NULL, ",", &sv)) {
+            int pause_s = atoi(tok), mode;
+
+            if (pause_s <= 0) continue;
+            for (mode = 0; mode < 2; mode++) {       /* 0 SnapFrame, 1 GetFrame */
+                unsigned char from = (round & 1) ? 220 : 40, to = (round & 1) ? 40 : 220;
+                double y_from, y_to, y_first, lat_ms, y_after, diff, d_to, d_from;
+                int64_t ts_first = 0, t_req, t_ret, ok_snap = 0;
+                unsigned char *buf = NULL;
+                int k, verdict;
+
+                round++;
+                wdog("cases", pause_s + 60);
+                set_bright(from);
+                usleep(1200000);
+                for (k = 0; k < 6; k++) (void)frame_luma();
+                y_from = frame_luma();
+                usleep(1500000);                     /* no reader: the capture buffers fill with the "from" picture */
+                set_bright(to);
+                usleep((unsigned)pause_s * 1000000u);
+                t_req = now_us();
+                if (mode == 0) {
+                    G(IMPFrameInfo, fi);
+                    buf = malloc(nv12 + 4096);
+                    if (buf && IMP_FrameSource_SnapFrame && IMP_FrameSource_SnapFrame(1, PIX_FMT_NV12, SUB_W, SUB_H, buf, fi) == 0) {
+                        y_first = luma_nv12(buf, SUB_W, SUB_H); ts_first = fi->timeStamp; ok_snap = 1;
+                    } else y_first = -1;
+                    gfree(fi); free(buf);
+                } else {
+                    y_first = frame_luma();
+                    ok_snap = y_first >= 0;
+                }
+                t_ret = now_us();
+                lat_ms = (t_ret - t_req) / 1000.0;
+                for (k = 0; k < 6; k++) (void)frame_luma();
+                y_to = frame_luma();                 /* settled picture with the new brightness */
+                y_after = frame_luma();
+                (void)y_after; (void)ts_first;
+                diff = dabs(y_to - y_from);
+                d_to = dabs(y_first - y_to); d_from = dabs(y_first - y_from);
+                runs++;
+                if (!ok_snap || y_from < 0 || y_to < 0) verdict = 0;
+                else if (diff < 15) verdict = 2;     /* brightness step not visible: no statement */
+                else verdict = d_to < diff * 0.25 && d_from > diff * 0.5;
+                if (verdict == 0) fails++;
+                rep(mode == 0 ? LBL("stalesnap SnapFrame") : LBL("stalesnap GetFrame"), 0, verdict == 0 ? V_FAIL : V_PASS,
+                    "%s%ds pause, brightness %u->%u: luma old %.1f new %.1f, first frame after the pause %.1f (%s), %.0f ms for the call",
+                    verdict == 2 ? "rt: step too small, " : "", pause_s, from, to, y_from, y_to, y_first,
+                    !ok_snap ? "no frame" : verdict == 0 ? "STALE or wrong" : "fresh", lat_ms);
+            }
+        }
+        set_bright(ob);
+        (void)fails; (void)runs;
+    }
+}
+#else
+static void cs_stalesnap(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -1525,5 +1625,7 @@ void t_cases(void)
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
+    if (getenv("APITEST_CASES") && cs_on("stalesnap")) cs_stalesnap();   /* explicit only: ~3 min of pauses (issue #89) */
+    wdog("cases", 240);
     wdog("cases", 60);
 }

@@ -8,6 +8,7 @@
 #
 # env: AREAS (default sys,fs,enc,osd,ivs,audio,isp,su,cases)  CASES (APITEST_CASES)  BIN (apitest dir, default ./build)
 #      SENSOR I2C W H (override the per-SoC table of run_cam.sh)  NOIMG=1 (default here; set NOIMG=0 for the picture area)
+# libimp-only (KO = "-"): the kernel modules are never touched, also not in the restore (the Eufy T40 panics/hangs on rmmod).
 # Rules: cam lock held for the whole run, STATUS "planned test" start/done lines, nothing large in /tmp (ko < 1 MB on T41 -> check
 # 'free'), no AO call (APITEST_AO=0), never the vendor ISP ko.
 S=${S:-/mnt/NVMe/git/scratch-clones/session-110bf918}
@@ -48,7 +49,7 @@ MD5=$($SSH "md5sum $STOCK")
 
 st "start (cam-$NN.lock held, ~10 min): streamer stopped$([ "$KO" != - ] && echo ", runtime swap of $ISPMOD ($(basename "$KO"))")$([ "$LIB" != - ] && echo ", test libimp via LD_LIBRARY_PATH"), apitest $AREAS $CASES, stock module + streamer restored; no flash, no reboot, no vendor ko, no sound"
 restore() {
-  $SSH "killall apitest 2>/dev/null; sleep 1; lsmod | grep -q ^$ISPMOD && { rmmod $SENS; rmmod $ISPMOD || echo FAIL-rmmod-ours; insmod $STOCK $ISPARGS || echo FAIL-insmod-stock; modprobe $SENS || echo FAIL-sensor; }; rm -rf /tmp/rsw; /etc/init.d/$STREAMER start >/dev/null 2>&1; sleep 12; echo streamer=\$(ps | grep -c '[t]impsd\|[p]rudynt\|[r]aptor'); lsmod | grep -E 'tx_isp|sensor_'; md5sum $STOCK; dmesg | grep -ciE 'oops|BUG:|panic|unable to handle'" > "$OUT/restore.txt" 2>&1
+  $SSH "killall apitest 2>/dev/null; sleep 1; [ \"$KO\" != - ] && lsmod | grep -q ^$ISPMOD && { rmmod $SENS; rmmod $ISPMOD || echo FAIL-rmmod-ours; insmod $STOCK $ISPARGS || echo FAIL-insmod-stock; modprobe $SENS || echo FAIL-sensor; }; rm -rf /tmp/rsw; /etc/init.d/$STREAMER start >/dev/null 2>&1; sleep 12; echo streamer=\$(ps | grep -c '[t]impsd\|[p]rudynt\|[r]aptor'); lsmod | grep -E 'tx_isp|sensor_'; md5sum $STOCK; dmesg | grep -ciE 'oops|BUG:|panic|unable to handle'" > "$OUT/restore.txt" 2>&1
   grep -q "$(echo "$MD5" | cut -d' ' -f1)" "$OUT/restore.txt" && st "done, free (stock module md5 ok, streamer restarted, /tmp/rsw removed, out $OUT)" || st "done, free BUT restore needs a check: see $OUT/restore.txt"
 }
 trap restore EXIT

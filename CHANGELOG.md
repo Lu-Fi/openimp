@@ -8,6 +8,17 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-89` (2026-10-27)
+
+- **T40 stale-first-snapshot fix verified on the device** (issue #89, no libimp change): new apitest case
+  `stalesnap` (explicit only, `APITEST_CASES=stalesnap`, pauses `APITEST_STALE_PAUSES`, default 2,10,30 s). T40
+  frame timestamps are taken at DQBUF (the wire has no completion time), so they cannot show staleness; the case
+  switches the ISP brightness while nobody reads (the capture buffers are full) and checks that the first
+  SnapFrame / GetFrame after the pause shows the new brightness. Eufy T40XP, libimp from next via
+  LD_LIBRARY_PATH: fresh for 2, 10 and 30 s with both calls; the same libimp with the stale-drop disabled returns
+  the old picture every time (test sensitivity). `run_swap.sh` in libimp-only mode no longer rmmods the sensor/ISP
+  modules in its restore step (hang risk on the Eufy).
+
 ## Branch `claude/issue-127` (2026-10-27)
 
 - **T23 ISP OSD (IMP_ISP_Tuning_*OsdRgn, IMP_OSD_*_ISP)** (issue #127): the picture now appears in the frame. The
