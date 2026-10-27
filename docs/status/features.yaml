@@ -1475,8 +1475,8 @@ features:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
     T40:
-      sym: ✅
-      text: '2026-10-27: #81: the ISP event thread sleeps until an event is queued (about 20 wake-ups per second instead of a 1 ms poll; QEMU 50 -> 1, state D -> S), the load average is no longer pinned at 1. The per-frame cost of the translated vendor AWB in that thread (about 30 ms CPU per frame, 60 % of one core at 20 fps) is NOT fixed yet (#133, a fix is on a branch, not on the device): the symbol does not improve. Earlier: timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured'
+      sym: ⚠️
+      text: '2026-10-27: #81: the ISP event thread sleeps until an event is queued (about 20 wake-ups per second instead of a 1 ms poll; QEMU 50 -> 1, state D -> S), the load average is no longer pinned at 1. The per-frame cost of the translated vendor AWB in that thread (about 30 ms CPU per frame, 60 % of one core at 20 fps) is only partly fixed: #133 (C ct_detect, merged) brings it from about 35 to about 27 ms CPU per frame in day mode on the Eufy, still far above the vendor (the per-frame vendor AWB/ADR chain); ⚠️ until it is vendor-like. Earlier: timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured'
       issues:
       - 81
       - 133
