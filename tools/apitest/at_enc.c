@@ -18,6 +18,11 @@
 #define CODEC_H264 0
 #define CODEC_H265 1
 #define CODEC_JPEG 2
+#if defined(PLATFORM_T41) && !defined(HAS_IMP_Encoder_SetChnAttrRcMode)
+/* the T41 1.2.0 header lacks it, vendor libimp 1.0.1 and 1.2.6 export it (timps and raptor call it) */
+extern int IMP_Encoder_SetChnAttrRcMode(int encChn, const IMPEncoderAttrRcMode *pstRcModeCfg) __attribute__((weak));
+# define HAS_IMP_Encoder_SetChnAttrRcMode 1
+#endif
 #define STREAMCAP (512 * 1024)
 #if defined(ENC_OLD) && defined(HAVE_H265)
 # define T_H265 PT_H265
@@ -728,7 +733,28 @@ static void live_common(int chn, int codec)
         gfree(pi); gfree(pp);
     }
 #elif HAS_IMP_Encoder_SetChnMaxPictureSize
-    NEED(IMP_Encoder_SetChnMaxPictureSize) { r = IMP_Encoder_SetChnMaxPictureSize(chn, 60000, 40000); RET0(IMP_Encoder_SetChnMaxPictureSize, r, "I 60000 P 40000 (no getter)"); }
+    NEED(IMP_Encoder_SetChnMaxPictureSize) {
+        r = IMP_Encoder_SetChnMaxPictureSize(chn, 60000, 40000);
+#if defined(PLATFORM_T41)
+        /* T41 hardware rate control limits each picture to ~95 % of uMaxPictureSize (kbit): the biggest picture after the call is
+         * checked against the limit and against the biggest picture before it (IDR requested both times) */
+        if (codec != CODEC_JPEG) {
+            SI s0, s1;
+            int r2, lim_kbit;
+
+            IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &s0, 3000);
+            lim_kbit = s0.bytes_max * 8 / 1000 / 2;            /* half of the biggest picture so far (dark scenes give small pictures) */
+            if (lim_kbit < 6) lim_kbit = 6;
+            r2 = IMP_Encoder_SetChnMaxPictureSize(chn, (uint32_t)lim_kbit, (uint32_t)lim_kbit);
+            RB_SETTLE(chn, codec);
+            IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &s1, 3000);
+            IMP_Encoder_SetChnMaxPictureSize(chn, 60000, 40000);
+            CHECK(IMP_Encoder_SetChnMaxPictureSize, r | r2, r == 0 && r2 == 0 && s1.frames > 10 && s1.bytes_max <= lim_kbit * 125 * 115 / 100 && s1.bytes_max < s0.bytes_max,
+                  "%s: I and P limited to %d kbit (%d B): biggest picture %d B (before: %d B), limit +15 %%", cname[codec], lim_kbit, lim_kbit * 125, s1.bytes_max, s0.bytes_max);
+        } else
+#endif
+        RET0(IMP_Encoder_SetChnMaxPictureSize, r, "I 60000 P 40000 (no getter)");
+    }
 #endif
     (void)i;
 }

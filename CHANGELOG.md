@@ -8,6 +8,18 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/rc3-gaps` (2026-10-27)
+
+- **Runtime-swap evidence:** `tools/apitest/run_swap.sh` runs apitest on a camera with the open ISP ko and/or libimp of `next` swapped in at run time (no flash,
+  no reboot, stock ko and streamer restored); the T41 and T20 gate cells were re-judged on that stack.
+- **Test fixes (no library change):** the T41 sensor table uses the real sc5336 mode 2880x1620 (2592x1944 distorted every geometry case, e.g. ISP OSD);
+  the ISP OSD case uses ARGB order on T41 (BGRA reads byte 0 as alpha) and an encoder on FS ch0; WaitFrameDone drains ch0 (MSCA output 0 only delivers
+  while a consumer takes frames); T41 AutoZoom accepts the vendor normalisation of disabled outputs; SetChnAttrRcMode runs on T41 (header 1.2.0 lacks the
+  declaration); SetChnMaxPictureSize is measured (biggest picture follows the limit); Sharpness: one visible direction proves it.
+- **Gate cells** (RC3 missing, before -> after): T10 22 -> 5, T40 43 -> 26, T41 57 -> 27 (AENC/ADEC on T10/T40/T41 from the audio runs, T41 encoder
+  FrameRate/BitRate/QpBounds/MaxPictureSize/RcMode, ISP OSD with open-tx-isp next, FrameDepth run, AutoZoom, WaitFrameDone, Sharpness).
+- Merge tool: a later PASS/RT clears an `err` cell this tool wrote from an earlier FAIL of any image tag.
+
 ## Branch `claude/rc3-cases` (2026-10-26/27)
 
 - **One device test app:** `tools/imgfx` and `tests/t40/devtest/t40_devtest.c` are folded into apitest (areas `picture` and `t40dev`); one source, one

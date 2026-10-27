@@ -35,7 +35,7 @@ case "$SOC:$IP" in
   T23:*)   : ${SENSOR:=sc1a4t}; : ${I2C:=0x30}; : ${W:=1280}; : ${H:=720};;
   T31:*)   : ${SENSOR:=sc2336}; : ${I2C:=0x30}; : ${W:=1920}; : ${H:=1080};;
   T40:*)   : ${SENSOR:=sc830ai};: ${I2C:=0x30}; : ${W:=3840}; : ${H:=2160};;
-  T41:*)   : ${SENSOR:=sc5336}; : ${I2C:=0x30}; : ${W:=2592}; : ${H:=1944};;
+  T41:*)   : ${SENSOR:=sc5336}; : ${I2C:=0x30}; : ${W:=2880}; : ${H:=1620};;     # sc5336 mode of the open driver (2592x1944 distorts the geometry cases)
   *) echo "unknown SoC $SOC"; exit 2;;
 esac
 

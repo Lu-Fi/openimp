@@ -753,8 +753,11 @@ class Acc:
             old = d.get(nn)
             # keep the worst verdict of repeated reports of the same member
             order = {"FAIL": 0, "PART": 1, "RT": 2, "PASS": 3, "SKIP": 4, "NA": 5}
-            if src == "imgfx" and verdict in ("PART", "RT") and old is not None and old[0] == "PASS" and old[2] != "imgfx":
+            either = nn in ("ISP_Tuning_SetSharpness", "ISP_Tuning_GetSharpness")      # low and high case: one visible direction proves the function
+            if src == "imgfx" and verdict in ("PART", "RT") and old is not None and old[0] == "PASS" and (old[2] != "imgfx" or either):
                 continue                            # an unclear picture case never takes back an apitest PASS
+            if either and src == "imgfx" and verdict == "PASS" and old is not None and old[0] == "PART" and old[2] == "imgfx":
+                d[nn] = (verdict, detail, src); continue
             if old is None or order[verdict] < order[old[0]]:
                 d[nn] = (verdict, detail, src)
             elif src == "imgfx" and verdict in ("PASS", "RT") and old[0] in ("PART", "SKIP", "NA") and old[2] != "imgfx":

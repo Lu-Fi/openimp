@@ -56,15 +56,15 @@ for spec in files:
             elif cur == "miss":
                 # exported by the refreshed docs/api_exports.json (checked above) and PASS on the device: the gap is closed
                 cells[soc] = "dev"; report["dev"].append((soc, k, cur))
-            elif cur == "err" and F[k].get("ref", {}).get(soc, "").startswith("FAIL apitest %s" % tag):
-                # the err cell was written by this tool from an earlier FAIL (same image tag): a later PASS (re-run after a fix or a
+            elif cur == "err" and F[k].get("ref", {}).get(soc, "").startswith("FAIL apitest "):
+                # the err cell was written by this tool from an earlier FAIL (any image tag: the fix may sit in a later build): a later PASS (re-run after a fix or a
                 # corrected test expectation) clears it; hand-recorded err cells (other ref text) stay
                 cells[soc] = "dev"; report["dev"].append((soc, k, cur))
             elif cur in ("cache", "stub", "err"):
                 report["kept"].append((soc, k, "PASS", cur)); print("KEPT-GAP", soc, k, cur, "(PASS, but the cell records a known defect/stub: review)")
             if cur in ("aud", "host", "?", "run", "dev", "dev+", "no-op", "miss") or cells[soc] == "dev": F[k].setdefault("ref", {})[soc] = ref
         elif v["v"] == "RT":
-            if cur in ("aud", "host", "?", "run", "miss"):
+            if cur in ("aud", "host", "?", "run", "miss") or (cur == "err" and F[k].get("ref", {}).get(soc, "").startswith("FAIL apitest ")):
                 cells[soc] = "rt"; report["dev"].append((soc, k, cur))
                 F[k].setdefault("ref", {})[soc] = ref + " (API round trip, no visible effect expected)"
             else:

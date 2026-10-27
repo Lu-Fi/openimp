@@ -14,6 +14,7 @@
 #define _GNU_SOURCE 1
 #include <math.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "apitest.h"
 
 typedef struct { double y, u, v, c, h, sd; int ok; } Fst;
@@ -240,14 +241,33 @@ static void cs_process(void)
 
 /* --------------------------------------------------------------------------------------------------- WaitFrame / VideoDrop */
 #if HAS_IMP_ISP_Tuning_WaitFrameDone
+/* T41: MSCA output 0 only delivers frames while a consumer takes them (vendor too; timps stops ch0 without a client), and the frame-done
+ * wait counts those frames: a thread takes and releases the frames of ch0 for the duration of the case. */
+static volatile int g_wf_stop;
+static void *wf_drain(void *arg)
+{
+    (void)arg;
+    while (!g_wf_stop) {
+        IMPFrameInfo *fr = NULL;
+        if (IMP_FrameSource_GetFrame(0, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(0, fr);
+        else usleep(20000);
+    }
+    return NULL;
+}
 static void cs_waitframe(void)
 {
     NEED(IMP_ISP_Tuning_WaitFrameDone) {
         G(IMPISPWaitFrameAttr, a); G(IMPISPWaitFrameAttr, b);
-        int r1, r2;
+        int r1, r2, drain = 0;
+        pthread_t th;
 
+#ifdef PLATFORM_T41
+        g_wf_stop = 0;
+        if (pthread_create(&th, NULL, wf_drain, NULL) == 0) drain = 1;
+#endif
         a->timeout = 1000; b->timeout = 1000;
         r1 = IMP_ISP_Tuning_WaitFrameDone(V0 a); r2 = IMP_ISP_Tuning_WaitFrameDone(V0 b); gchk(a); gchk(b);
+        if (drain) { g_wf_stop = 1; pthread_join(th, NULL); }
         rep(FN(IMP_ISP_Tuning_WaitFrameDone), r1 | r2, (r1 == 0 && r2 == 0 && b->cnt > a->cnt) ? V_PASS : V_FAIL, "two waits ret %d/%d, frame count %llu -> %llu", r1, r2, (unsigned long long)a->cnt, (unsigned long long)b->cnt);
         gfree(a); gfree(b);
     }
@@ -592,14 +612,27 @@ static void cs_aehistorigin(void) {}
 static void cs_autozoom(void)
 {
     NEED(IMP_ISP_Tuning_GetAutoZoom) NEED(IMP_ISP_Tuning_SetAutoZoom) {
-        G(IMPISPAutoZoom, o); G(IMPISPAutoZoom, b);
-        int r1 = IMP_ISP_Tuning_GetAutoZoom(V0 o), r2, r3;
+        G(IMPISPAutoZoom, o); G(IMPISPAutoZoom, b); G(IMPISPAutoZoom, c);
+        int r1 = IMP_ISP_Tuning_GetAutoZoom(V0 o), r2, r3, r4, r5;
+        const int32_t *x, *y;
+        size_t w, bad = 0;
+        char dd[160] = ""; size_t n = 0;
 
         gchk(o);
         rep(FN(IMP_ISP_Tuning_GetAutoZoom), r1, r1 == 0 ? V_PASS : V_FAIL, "read");
         r2 = IMP_ISP_Tuning_SetAutoZoom(V0 o); r3 = IMP_ISP_Tuning_GetAutoZoom(V0 b); gchk(b);
-        rep(FN(IMP_ISP_Tuning_SetAutoZoom), r2, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && flow()) ? V_PASS : V_FAIL, "rt: same value written (set ret %d), read back %s", r2, !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT");
-        gfree(o); gfree(b);
+        r4 = IMP_ISP_Tuning_SetAutoZoom(V0 b); r5 = IMP_ISP_Tuning_GetAutoZoom(V0 c); gchk(c);
+        /* a disabled output (en != 1) reads back as the full input window after a Set (vendor tisp_s_autozoom_control stores
+         * 0,0,in_w,in_h for it); so: the first read-back may normalise disabled outputs only, a second Set/Get must be stable */
+        x = (const int32_t *)o; y = (const int32_t *)b;
+        for (w = 0; w < sizeof(*o) / 4; w++) if (x[w] != y[w]) {
+            size_t field = w / 3, chx = w % 3;       /* en[3] left[3] top[3] width[3] height[3] */
+            if (field == 0 || (field >= 1 && x[chx] == 1)) bad++;      /* enable flag changed, or an enabled output's window changed */
+            if (n < sizeof(dd) - 30) n += snprintf(dd + n, sizeof(dd) - n, " [%zu] %d->%d", w, x[w], y[w]);
+        }
+        rep(FN(IMP_ISP_Tuning_SetAutoZoom), r2 | r4, (r2 == 0 && r3 == 0 && r4 == 0 && r5 == 0 && !bad && !memcmp(b, c, sizeof(*b)) && flow()) ? V_PASS : V_FAIL,
+            "rt: same value written (set ret %d), read back %s%s; second Set/Get %s", r2, bad ? "DIFFERENT" : "equal (disabled outputs normalised to the full window)", dd, !memcmp(b, c, sizeof(*b)) ? "stable" : "UNSTABLE");
+        gfree(o); gfree(b); gfree(c);
     }
 }
 #else
@@ -770,11 +803,12 @@ void t_binpath_pre(void)
         snprintf(p, 128, "/etc/sensor/%s-t41.bin", g_sensor.name);
 #endif
         gchk(o);
-        rep(FN(IMP_ISP_GetDefaultBinPath), r1, r1 == 0 ? V_PASS : V_NA, "before AddSensor: \"%.100s\" (empty = none stored)", o);
         if (stat(p, &st) != 0) {
+            rep(FN(IMP_ISP_GetDefaultBinPath), r1, r1 == 0 ? V_PASS : V_NA, "before AddSensor: \"%.100s\" (empty = none stored)", o);
             rep(FN(IMP_ISP_SetDefaultBinPath), 0, V_SKIP, "%s does not exist", p);
         } else {
             r2 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, p); r3 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, b); gchk(b);
+            rep(FN(IMP_ISP_GetDefaultBinPath), r3, (r3 == 0 && !strcmp(p, b)) ? V_PASS : V_FAIL, "before AddSensor and the first Set: ret %d \"%.60s\" (nothing stored); after Set: \"%.100s\"", r1, o, b);
             rep(FN(IMP_ISP_SetDefaultBinPath), r2, (r2 == 0 && r3 == 0 && !strcmp(p, b)) ? V_PASS : V_FAIL, "rt: the sensor's own bin file %s written before AddSensor (ret %d), read back %s", p, r2, !strcmp(p, b) ? "equal" : "DIFFERENT");
         }
         gfree(o); gfree(b); gfree(p);
@@ -1202,7 +1236,7 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
 {
     double acc = 0; int n = 0, f, i, j;
 
-    usleep(700000);
+    usleep(getenv("APITEST_OSD_WAIT") ? (useconds_t)atoi(getenv("APITEST_OSD_WAIT")) * 1000 : 700000);
     for (f = 0; f < 4; f++) {
         IMPFrameInfo *fr = NULL;
         const unsigned char *y;
@@ -1221,18 +1255,35 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
 static void cs_isposd(void)
 {
     NEED(IMP_ISP_Tuning_CreateOsdRgn) NEED(IMP_ISP_Tuning_SetOsdRgnAttr) NEED(IMP_ISP_Tuning_ShowOsdRgn) NEED(IMP_ISP_Tuning_DestroyOsdRgn) NEED(IMP_ISP_Tuning_SetOsdPoolSize) {
-        enum { PWD = 256, PHT = 128 };
+        enum { PWD = 128, PHT = 64 };
         uint8_t *pic = (uint8_t *)malloc(PWD * PHT * 4);
         IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
-        int rp, h, rs, rsh, rhide, rd = -99, k, x0 = 64, y0 = 64;
+        int rp, h, rs, rsh, rhide, rd = -99, k, x0 = getenv("APITEST_OSD_X") ? atoi(getenv("APITEST_OSD_X")) : 64, y0 = getenv("APITEST_OSD_Y") ? atoi(getenv("APITEST_OSD_Y")) : 64;
         int cx0 = x0 + 4, cy0 = y0 + 4, cx1 = x0 + PWD - 4, cy1 = y0 + PHT - 4;
         double base, shown, hidden;
-        int dark;
+        int dark, jenc = 0;
 
         if (!pic || !a || cx1 <= cx0 + 2 || cy1 <= cy0 + 2) { rep(FN(IMP_ISP_Tuning_CreateOsdRgn), 0, V_SKIP, "no memory or sensor too small for the test picture"); free(pic); free(a); return; }
         base = region_y(cx0, cy0, cx1, cy1);
         dark = base < 140;
-        for (k = 0; k < PWD * PHT; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+        for (k = 0; k < PWD * PHT; k++) { uint8_t v = getenv("APITEST_OSD_FILL") ? (uint8_t)atoi(getenv("APITEST_OSD_FILL")) : (dark ? 255 : 0); pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+#ifdef PLATFORM_T41
+        /* a consumer on the drawn output: a JPEG encoder bound to FS ch0 (the ISP OSD is committed per frame of MSCA output 0;
+         * isp_osd_devtest, the proof of the driver, runs with it) */
+        {
+            IMPCell fs0 = { DEV_ID_FS, 0, 0 }, en0 = { DEV_ID_ENC, 6, 0 };
+            IMPEncoderChnAttr *ea = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea));
+
+            if (ea && IMP_Encoder_SetDefaultParam && IMP_Encoder_CreateGroup(6) == 0) {
+                IMP_Encoder_SetDefaultParam(ea, IMP_ENC_PROFILE_JPEG, IMP_ENC_RC_MODE_FIXQP, g_sw, g_sh, 15, 1, 0, 0, 30, 0);
+                if (IMP_Encoder_CreateChn(6, ea) == 0 && IMP_Encoder_RegisterChn(6, 6) == 0 && IMP_System_Bind(&fs0, &en0) == 0) {
+                    jenc = 1;
+                    IMP_Encoder_StartRecvPic(6);
+                }
+            }
+            free(ea);
+        }
+#endif
         { int (*oinit)(void) = (int (*)(void))dsym("IMP_OSD_Init_ISP"); if (oinit) oinit(); }      /* T23: the ISP OSD module needs its init first */
         rp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);
         rep(FN(IMP_ISP_Tuning_SetOsdPoolSize), rp, rp == 0 ? V_PASS : V_FAIL, "512 KB");
@@ -1241,7 +1292,13 @@ static void cs_isposd(void)
         if (h < 0) { free(pic); free(a); return; }
         a->type = ISP_OSD_REG_PIC;
         a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888;
+#ifdef PLATFORM_T41
+        /* T41 hardware (audit T41_ISP_OSD_1026): alpha is read from the MSB of the little-endian word; a B,G,R,A byte bitmap needs
+         * IMP_ISP_ARGB_TYPE_ARGB.  With BGRA byte 0 is the alpha: a black (0,0,0,255) pixel is fully transparent. */
+        a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+#else
         a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_BGRA;
+#endif
         a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
         
 #ifdef PLATFORM_T23
@@ -1251,18 +1308,40 @@ static void cs_isposd(void)
         a->stsinglepicAttr.pic.osd_left = x0; a->stsinglepicAttr.pic.osd_top = y0;
         a->stsinglepicAttr.pic.osd_width = PWD; a->stsinglepicAttr.pic.osd_height = PHT;
         a->stsinglepicAttr.pic.osd_image = (char *)pic; a->stsinglepicAttr.pic.osd_stride = PWD * 4;
+        if (getenv("APITEST_OSD_DEBUG")) {
+            int cxm, cym; char dbg[200]; int n = 0;
+            for (cym = 0; cym < 2; cym++) for (cxm = 0; cxm < 4; cxm++)
+                n += snprintf(dbg + n, sizeof(dbg) - n, "%.0f ", region_y(x0 + cxm * PWD / 4 + 2, y0 + cym * PHT / 2 + 2, x0 + (cxm + 1) * PWD / 4 - 2, y0 + (cym + 1) * PHT / 2 - 2));
+            fprintf(stderr, "[T] osd cells BEFORE luma: %s\n", dbg);
+        }
         rs = IMP_ISP_Tuning_SetOsdRgnAttr(0, h, a);
         rsh = IMP_ISP_Tuning_ShowOsdRgn(0, h, 1);
         shown = region_y(cx0, cy0, cx1, cy1);
+        if (getenv("APITEST_OSD_DEBUG")) {          /* where in the picture area is the OSD? 8x6 cells of 32x32 luma from (x0-32, y0-32) */
+            int cxm, cym; char dbg[400]; int n = 0;
+            for (cym = 0; cym < 6; cym++) { for (cxm = 0; cxm < 8; cxm++)
+                n += snprintf(dbg + n, sizeof(dbg) - n, "%.0f ", region_y(x0 - 32 + cxm * 32 + 2, y0 - 32 + cym * 32 + 2, x0 - 32 + (cxm + 1) * 32 - 2, y0 - 32 + (cym + 1) * 32 - 2)); n += snprintf(dbg + n, sizeof(dbg) - n, "| "); }
+            fprintf(stderr, "[T] osd map 8x6 from (x0-32,y0-32): %s\n", dbg);
+        }
         rhide = IMP_ISP_Tuning_ShowOsdRgn(0, h, 0);
         hidden = region_y(cx0, cy0, cx1, cy1);
         rd = IMP_ISP_Tuning_DestroyOsdRgn(0, h);
         {
             int appears = dark ? shown > base + 40 : shown < base - 40, gone = dabs(hidden - base) < 20;
-            rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s 256x128 ARGB picture at (64,64): region luma %.1f -> %.1f (%s)", dark ? "white" : "black", base, shown, appears ? "visible" : "NOT VISIBLE");
+            rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d ARGB picture at (64,64): region luma %.1f -> %.1f (%s)", dark ? "white" : "black", (int)PWD, (int)PHT, base, shown, appears ? "visible" : "NOT VISIBLE");
             rep(FN(IMP_ISP_Tuning_ShowOsdRgn), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
             rep(FN(IMP_ISP_Tuning_DestroyOsdRgn), rd, (rd == 0 && flow()) ? V_PASS : V_FAIL, "handle %d destroyed, frames flow", h);
         }
+#ifdef PLATFORM_T41
+        if (jenc) {
+            IMPCell fs0 = { DEV_ID_FS, 0, 0 }, en0 = { DEV_ID_ENC, 6, 0 };
+            IMP_Encoder_StopRecvPic(6);
+            IMP_System_UnBind(&fs0, &en0);
+            IMP_Encoder_UnRegisterChn(6);
+            IMP_Encoder_DestroyChn(6);
+            IMP_Encoder_DestroyGroup(6);
+        }
+#endif
         { void (*oexit)(void) = (void (*)(void))dsym("IMP_OSD_Exit_ISP"); if (oexit) oexit(); }
         free(pic); free(a);
     }
