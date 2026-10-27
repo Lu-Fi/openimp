@@ -73,19 +73,20 @@ functions:
     see_also: [ISP_EnableSensor, ISP_DelSensor]
   ISP_DelSensor:
     group: life
-    summary: Removes a registered sensor from the ISP driver.
-    unverified: true
+    summary: "Unregisters the sensor from the ISP driver and releases the buffers the library kept for it. The sensor has to be disabled first."
+    returns: "0 on success. -1 on T10 to T31 when the ISP is not open or the sensor is still enabled, and when the driver refuses the request (the driver's result is returned). On T40 and T41 -1 for a video input out of range, a NULL pointer, when no sensor is registered, or while it is enabled."
+    notes: "On T40 the call only deselects the input, since the sensor kernel module owns the sensor device; on T41 it also releases the sensor I2C client, so a new sensor can be registered without reloading the module."
     see_also: [ISP_AddSensor]
   ISP_EnableSensor:
     group: life
-    summary: Powers up the registered sensor and starts its data stream into the ISP.
-    notes: "Do it before `IMP_System_Init` (the usual start-up order of the vendor samples). The `_VI` form selects the sensor input on dual-sensor SoCs."
-    unverified: true
+    summary: "Starts the registered sensor and links it into the ISP data path."
+    returns: "0 on success. -1 on T10 to T31 when the ISP is not open, no sensor was registered, or a driver request fails. On T40 and T41 -1 for a video input out of range, a NULL pointer, when no sensor is registered or a driver request fails; calling it on an enabled sensor returns 0."
+    notes: "Do it before `IMP_System_Init`, as in the typical order above. The `_VI` form selects the sensor input on dual-sensor SoCs."
     see_also: [ISP_DisableSensor]
   ISP_DisableSensor:
     group: life
-    summary: Stops the sensor stream and powers the sensor down.
-    unverified: true
+    summary: "Stops the sensor and unlinks it from the ISP data path."
+    returns: "0 on success. -1 on T10 to T31 when the ISP is not open, no sensor was selected, or a driver request fails. On T40 and T41 -1 for a video input out of range or a failing driver request; calling it when the sensor is not enabled returns 0."
     see_also: [ISP_EnableSensor]
   ISP_EnableTuning:
     group: life
@@ -97,17 +98,18 @@ functions:
     summary: Ends the tuning session.
   ISP_Tuning_Get/SetSensorFPS:
     group: life
-    summary: "Sets or reads the frame rate of the sensor as a fraction."
+    summary: "Sets or reads the frame rate of the sensor as a fraction (numerator and denominator, each packed into 16 bits for the driver)."
     params:
-      fps_num: "Numerator, for example 25."
-      fps_den: "Denominator, for example 1."
-    notes: "On T40 and T41 the arguments are the video input and a frame-rate structure instead of two integers. Whether the sensor driver rounds the value to a supported rate was not checked, so read the value back."
-    unverified: true
+      fps_num: "Numerator, for example 25. At most 65535."
+      fps_den: "Denominator, for example 1. Must not be 0."
+    returns: "0 on success, -1 for a zero denominator or a NULL pointer. The setter on T40 and T41 also refuses a video input other than the main one and values above 65535. T10 to T31 also return -1 outside the tuning session, except T23, whose frame-rate calls do not check it."
+    notes: "On T40 and T41 the arguments are the video input and, on T41, a frame-rate structure (on T40 two pointers) instead of two integers. On T23 the call also retimes the frame source to the new rate. Except on T23 the getter returns the last known rate even when the driver request fails. The sensor driver decides whether it rounds the value to a rate it supports, so read the value back."
     see_also: [FrameSource_Get/SetChnAttr]
   ISP_Tuning_GetSensorAttr:
     group: life
-    summary: Reads the description of the registered sensor (name, resolution, bus, frame rate range).
-    unverified: true
+    summary: "Reads the sensor timing into `IMPISPSENSORAttr`: horizontal and vertical total size (`hts`, `vts`), frame rate and picture width and height (20 bytes)."
+    returns: "0 on success, -1 for a NULL pointer. On T31 a driver without the call leaves the structure zero except for `fps`, which then holds the last rate set with `SetSensorFPS`; on T23 the driver's answer is copied unchanged, and T40 and T41 pass the structure to the driver."
+    notes: "Only on T23, T31, T40 and T41."
   ISP_Tuning_SetVideoDrop:
     group: life
     summary: "Installs a callback that the library calls when the stream has stalled: no frame for 2 seconds, then again after 4 and 6 seconds (at most three times in a row, a new count starts when frames return)."
@@ -127,15 +129,15 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetExpr:
     group: ae
-    summary: "Reads the exposure mode and integration time in use, or overrides them. `IMPISPExpr` holds the mode (auto or manual) and the integration time, in lines or in microseconds."
-    notes: "A manual setting stops the auto exposure; set the mode back to auto to resume. The structure carries no gain fields. Details of the clamping were not checked."
-    unverified: true
+    summary: "Reads the exposure mode and integration time in use, or sets them. `IMPISPExpr` is a union: the setter uses `s_attr` (mode, unit line or microsecond, time) and the getter fills `g_attr` (mode, current, minimum and maximum integration time, microseconds per line)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "A manual mode setting stops the auto exposure; set the mode back to auto to resume. The structure carries no gain fields; limit the gain with `SetMaxAgain` / `SetMaxDgain`. Clamping of the time is done by the driver."
     see_also: [ISP_Tuning_GetEVAttr, ISP_Tuning_Get/SetAeComp]
   ISP_Tuning_GetEVAttr:
     group: ae
-    summary: "Reads the exposure state into `IMPISPEVAttr`, an array of six 32-bit values. The order of the values follows the vendor library of the SoC."
-    notes: "Use it for telemetry; to see how bright the scene is, read `GetTotalGain`."
-    unverified: true
+    summary: "Reads the exposure state into `IMPISPEVAttr`, an array of six 32-bit values filled by the driver. The meaning of the values is the driver's."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session. On T23 the 24 bytes are copied out even when the driver request failed."
+    notes: "Use it for telemetry; to see how bright the scene is, read `GetTotalGain` or `GetAeLuma`."
   ISP_Tuning_Get/SetAeComp:
     group: ae
     summary: Moves the brightness target of the auto exposure up or down (exposure compensation).
@@ -144,30 +146,29 @@ functions:
     notes: "The AE reacts slowly: on T31 allow about 30 seconds after a change. The vendor T40 and T41 libraries have no `AeComp` call; there the same effect is the `AeTargetComp` field of `Get/SetAeScenceAttr` (0 to 255, 128 neutral)."
   ISP_Tuning_Get/SetMaxAgain:
     group: ae
-    summary: Limits the analogue gain the auto exposure may use.
+    summary: "Sets or reads the ceiling of the analogue gain the auto exposure may use."
     params:
-      gain: "Maximum analogue gain in the gain unit of the ISP. The vendor T21 documentation gives 0 for 1x and 32 for 2x, which suggests a logarithmic scale; other SoCs were not checked."
-    notes: "Lowering it reduces noise in the dark at the price of a darker picture or longer integration time."
-    unverified: true
+      gain: "Ceiling in the gain unit of the ISP driver; the library passes the value on unchanged. 0 means no ceiling and 1 the smallest ceiling (1x) in the sensor-hold code of OpenIMP."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session; otherwise the driver's result. A failed getter stores 0 in the output."
+    notes: "Lowering it reduces noise in the dark at the price of a darker picture or longer integration time. The ceiling only binds while the auto exposure runs."
   ISP_Tuning_Get/SetMaxDgain:
     group: ae
-    summary: "Limits the digital gain the auto exposure may use."
-    unverified: true
+    summary: "Sets or reads the ceiling of the digital gain the auto exposure may use."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session; otherwise the driver's result. A failed getter stores 0 in the output."
     see_also: [ISP_Tuning_Get/SetMaxAgain]
   ISP_Tuning_Get/SetBacklightComp:
     group: ae
-    summary: "Sets the strength of backlight compensation."
+    summary: "Sets or reads the strength of backlight compensation."
     params:
-      strength: "Strength; the scale was not verified."
-    notes: "On T41 the open driver answers -EOPNOTSUPP (the call fails instead of being accepted without effect). On T40 the value is only stored."
-    unverified: true
+      strength: "Strength; the library passes it on unchanged, the range is the driver's."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31. A driver that does not support the control makes the call fail instead of being accepted without effect."
   ISP_Tuning_Get/SetHiLightDepress:
     group: ae
-    summary: "Sets how strongly very bright areas are held down."
+    summary: "Sets or reads how strongly very bright areas are held down."
     params:
-      strength: "0 switches the function off; the vendor T21 documentation gives 0 to 10 as the range."
-    notes: "On T41 the open driver answers -EOPNOTSUPP. On T40 the value is only stored."
-    unverified: true
+      strength: "Strength; the library passes it on unchanged, the range is the driver's."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session; otherwise the driver's result."
   ISP_Tuning_Get/SetAntiFlickerAttr:
     group: ae
     summary: Selects the mains-flicker avoidance of the exposure control.
@@ -176,13 +177,16 @@ functions:
     notes: "Set it to the frequency of the local mains so the integration time is a multiple of the light period; with the wrong value the picture shows moving bands."
   ISP_Tuning_Get/SetIntegrationTime:
     group: ae
-    summary: Sets or reads the exposure integration time, either as a value or as a range for the auto exposure.
-    diff: On T21 the range part (upper limit of the auto exposure time) is honoured by OpenIMP; the vendor library ignores it.
-    unverified: true
+    summary: "Sets or reads the exposure integration time of the legacy interface, either as a fixed value or as an upper limit for the auto exposure."
+    params:
+      itattr: "Structure with the mode (0 auto, 1 manual, 2 limit), the integration time and the maximum integration time."
+    returns: "0 on success, -1 for a NULL pointer, a mode other than 0 to 2, or outside the tuning session. On T20 and T21 a manual integration time of 256 or more is refused with -1."
+    notes: "Mode 1 fixes the integration time; mode 2 sets the maximum the auto exposure may use; mode 0 returns to auto. The getter reports mode 1 for a fixed time, 0 otherwise. Only on T10, T20, T21 and T30; newer SoCs use `SetExpr`."
   ISP_Tuning_Get/SetAeAttr:
     group: ae
-    summary: Reads or changes the AE attributes block (targets, speed, exposure limits) in one structure.
-    unverified: true
+    summary: "Reads or changes the AE attribute block in one structure."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31. The library converts between the public structure and the layout the driver uses; the meaning of the values is the driver's."
   ISP_Tuning_Get/SetAeExprInfo:
     group: ae
     summary: Reads or sets the exposure parameter block of the AE on the newer SoCs.
@@ -206,58 +210,68 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetAeMin:
     group: ae
-    summary: Sets or reads the lower limit of the exposure (minimum integration time and gain) of the auto exposure.
-    unverified: true
+    summary: "Sets or reads the lower limit of the exposure (minimum integration time and gain) for the auto exposure."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T21, T23 and T31."
   ISP_Tuning_Get/SetAeTargetList:
     group: ae
-    summary: Sets or reads the table that maps total gain to the AE brightness target, so the target can fall in the dark.
-    unverified: true
+    summary: "Sets or reads the table (10 values, `IMPISPAETargetList`) that maps total gain to the AE brightness target, so the target can fall in the dark."
+    returns: "0 on success. -1 for a NULL pointer on T31 and T10 to T30, and on T31 also outside the tuning session or on a driver failure."
+    notes: "Only on T23 and T31. On T31 the table reaches the driver. In the T-series library code for the other SoCs (T10 to T30) the table is only kept in memory and read back."
   ISP_Tuning_Get/SetAeWeight:
     group: ae
-    summary: Sets or reads the metering weights of the AE grid; zones with a higher weight count more.
-    unverified: true
+    summary: "Sets or reads the metering weights of the AE grid; zones with a higher weight count more."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. On T40 and T41 -1 for a video input out of range or NULL (the first argument is the video input)."
+    notes: "The grid size and weight range are defined by the driver."
   ISP_Tuning_Get/SetAeHist:
     group: ae
-    summary: Reads or sets the histogram parameters of the AE (bin thresholds and weights).
-    unverified: true
+    summary: "Reads or sets the histogram parameters of the AE (bin thresholds and weights)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Not on T40 and T41."
   ISP_Tuning_Get/SetAeExpList:
     group: ae
     summary: Reads or sets the exposure table (list of integration time and gain steps) the AE walks through.
     unverified: true
   ISP_Tuning_AE_Get/SetROI:
     group: ae
-    summary: Sets or reads a region of interest for the exposure metering.
-    unverified: true
+    summary: "Sets or reads a region of interest for the exposure metering."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "On T20 the 4-byte region is handed to the driver by value instead of through a pointer. Not on T40 and T41."
   ISP_Tuning_GetAE_IT_MAX:
     group: ae
-    summary: Reads the upper limit of the AE integration time.
-    unverified: true
+    summary: "Reads the upper limit of the AE integration time."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. A failed read stores 0 in the output."
+    notes: "Only on T23 and T31."
   ISP_Tuning_SetAe_IT_MAX:
     group: ae
-    summary: Sets the upper limit of the AE integration time. A short limit reduces motion blur and raises gain instead.
-    unverified: true
+    summary: "Sets the upper limit of the AE integration time. A short limit reduces motion blur and makes the auto exposure raise gain instead."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31. On the other T-series SoCs use `SetIntegrationTime` in mode 2."
   ISP_Tuning_SetAeFreeze:
     group: ae
-    summary: Freezes the current exposure (non-zero) or releases it (zero).
-    unverified: true
+    summary: "Freezes the current exposure (non-zero) or releases it (zero)."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31 (the T20 and T21 drivers have no freeze). OpenIMP's own hold for test patterns uses gain ceilings and a manual integration time instead, because those work on every driver."
   ISP_Tuning_GetAeLuma:
     group: stat
-    summary: Reads the mean luma of the picture as seen by the AE.
-    returns: 0 on success, -1 on error. The value is written to the output argument.
-    unverified: true
+    summary: "Reads the mean luma of the picture as seen by the AE."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. A failed read stores 0 in the output."
+    notes: "Only on T21, T23 and T31."
   ISP_Tuning_GetAeState:
     group: stat
-    summary: Reads whether the AE has converged.
-    unverified: true
+    summary: "Reads the state block of the AE into the structure you pass (whether the exposure has settled); the layout is defined by the driver."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31."
   ISP_Tuning_GetAeZone:
     group: stat
-    summary: Reads the per-zone luma values of the AE grid.
-    diff: Not served by the stock T10/T20 kernel module, so on T10 and T20 the call is a no-op that returns success.
-    unverified: true
+    summary: "Reads the per-zone luma values of the AE grid."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    diff: "Not served by the stock T10/T20 kernel module, so on T10 and T20 the call is a no-op that returns success."
   ISP_Tuning_GetAeHist_Origin:
     group: stat
-    summary: Reads the unprocessed AE histogram.
-    unverified: true
+    summary: "Reads the unprocessed AE histogram."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31."
   ISP_Tuning_GetAeStatistics:
     group: stat
     summary: Reads the AE statistics block (histogram and zone data) of the last frame.
@@ -276,21 +290,20 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetWB:
     group: awb
-    summary: Reads or sets the white balance mode and, for manual mode, the red and blue gains.
+    summary: "Reads or sets the white balance mode and, for manual mode, the red and blue gains."
     params:
-      wb: "`IMPISPWB`: `mode` (`IMPISP_WB_MODE_AUTO` or `IMPISP_WB_MODE_MANUAL`; the field also takes the other values of the driver's white-balance mode enum, which are fixed presets), `rgain` and `bgain`. On T20 the gains are Q7 (128 is 1.0) and only the low 8 bits count."
-    notes: "Manual mode needs the gains in the structure; auto mode ignores them."
-    diff: On T21, auto mode could show a magenta picture in one test; open.
-    unverified: true
+      wb: "`IMPISPWB`: `mode` (`IMPISP_WB_MODE_AUTO` or `IMPISP_WB_MODE_MANUAL`; the driver's other white-balance preset values pass through unchanged), `rgain` and `bgain`."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Manual mode needs the gains in the structure; auto mode ignores them. OpenIMP's own hold for test patterns switches to manual mode with the gains read from `GetWB_Statis` and restores the previous setting afterwards."
     see_also: [ISP_Tuning_GetWB_Statis]
   ISP_Tuning_GetWB_Statis:
     group: awb
-    summary: Reads the colour temperature and gains that the AWB currently uses.
-    unverified: true
+    summary: "Reads the colour temperature and gains that the AWB currently uses."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. Only `rgain` and `bgain` are written (unpacked from one 32-bit word); `mode` is left alone."
   ISP_Tuning_GetWB_GOL_Statis:
     group: awb
-    summary: Reads the global AWB statistics (mean R, G, B of the picture).
-    unverified: true
+    summary: "Reads the global AWB statistics (mean R, G, B of the picture)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. Only `rgain` and `bgain` are written (unpacked from one 32-bit word); `mode` is left alone."
   ISP_Tuning_SetWB_ALGO:
     group: awb
     summary: Selects the AWB algorithm variant.
@@ -301,18 +314,18 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetAwbWeight:
     group: awb
-    summary: Sets or reads the weights of the AWB zones.
-    notes: On T23 and T31 the stock driver treats this as a no-op, and OpenIMP matches that.
-    unverified: true
+    summary: "Sets or reads the weights of the AWB zones."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. On T40 and T41 the first argument is the video input; an invalid input or NULL gives -1."
+    notes: "On T23 and T31 the stock driver treats this as a no-op, and OpenIMP matches that."
   ISP_Tuning_Get/SetAwbZoneWeight:
     group: awb
     summary: Sets or reads the AWB zone weights as a zone table.
     unverified: true
   ISP_Tuning_Get/SetAwbHist:
     group: awb
-    summary: Reads or sets the AWB histogram parameters.
-    notes: A no-op on T23 and T31, like the stock driver.
-    unverified: true
+    summary: "Reads or sets the AWB histogram parameters."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "A no-op on T23 and T31, like the stock driver."
   ISP_Tuning_Get/SetAwbClust:
     group: awb
     summary: Reads or sets the colour clusters of the AWB (the set of grey points it accepts).
@@ -339,8 +352,8 @@ functions:
     unverified: true
   ISP_Tuning_Awb_Get/SetRgbCoefft:
     group: awb
-    summary: Reads or sets the red, green and blue correction coefficients of the white balance.
-    unverified: true
+    summary: "Reads or sets the red, green and blue correction coefficients of the white balance."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
   ISP_Tuning_Awb_Get/SetCwfShift:
     group: awb
     summary: Reads or sets the shift of the cool white fluorescent reference point of the AWB.
@@ -351,8 +364,8 @@ functions:
     unverified: true
   ISP_Tuning_GetAwbZone:
     group: stat
-    summary: Reads the per-zone AWB statistics (average R/G and B/G of each zone).
-    unverified: true
+    summary: "Reads the per-zone white balance statistics (`IMPISPAWBZone`: 225 red, 225 green and 225 blue values, 15 by 15 zones)."
+    returns: "0 on success, -1 for a NULL pointer, outside the tuning session, or when the driver has no statistics frame of the running stream; the call then does not return a zero-filled or stale block."
   ISP_Tuning_GetAwbGlobalStatistics:
     group: stat
     summary: Reads the global AWB statistics of the last frame.
@@ -363,9 +376,11 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetBcshHue:
     group: color
-    summary: "Sets or reads the hue rotation (one byte). The scale was not verified."
-    notes: "On T40 and T41 the call takes the video input and a pointer to the byte."
-    unverified: true
+    summary: "Sets or reads the hue rotation (one byte)."
+    params:
+      hue: "Hue byte. On T40 and T41 a pointer to the byte, after the video input."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. On T40 the codes are -4 (video input out of range), -9 (NULL pointer), -5 (tuning not running) and -6 (driver refused); the T40 getter returns the byte cached by the last set (128 before any set) and does not ask the driver. T41 takes only the main input and returns -1 otherwise."
+    notes: "On T40 the driver maps the byte 0 to 255 onto a hue angle of 0 to 120 degrees."
   ISP_Tuning_Get/SetContrast:
     group: color
     summary: "Sets or reads the contrast, one byte, 128 is the default."
@@ -402,10 +417,10 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetGamma:
     group: color
-    summary: Sets or reads the gamma curve table.
-    notes: A curve that falls anywhere is rejected. On T23 the new curve is applied at once.
-    diff: Applied at once on T23, where the stock behaviour is to wait.
-    unverified: true
+    summary: "Sets or reads the gamma curve table."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "A curve that falls anywhere is rejected. On T23 the new curve is applied at once."
+    diff: "Applied at once on T23, where the stock behaviour is to wait."
   ISP_Tuning_Get/SetGammaAttr:
     group: color
     summary: Reads or sets the gamma attribute block (curve and mode) on the newer SoCs.
@@ -432,23 +447,24 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetModuleControl:
     group: color
-    summary: Switches individual ISP processing blocks on or off (bypass bits).
+    summary: "Switches individual ISP processing blocks on or off (bypass bits)."
     params:
-      ispmodule: Bit field with one bit per processing block (`IMPISPModuleCtl`).
-    notes: Useful to find out which block causes an artefact. On T41 the driver may refuse the control.
-    unverified: true
+      ispmodule: "Bit field with one bit per processing block (`IMPISPModuleCtl`)."
+    returns: "0 on success, -1 for a NULL pointer; on T31 also when the driver refuses the request."
+    notes: "On T23 and T31 the mask goes to the driver. On T21 the driver request is tried and a refusal is ignored, the value being kept. On T20 the mask is only kept in the library and read back. Only the module bits the driver knows have an effect."
   ISP_Tuning_SetDPStrength:
     group: nr
     summary: Sets the strength of the dead pixel correction.
     unverified: true
   ISP_Tuning_Get/SetDPC_Strength:
     group: nr
-    summary: Sets or reads the strength of the dead pixel correction, as a percentage.
-    unverified: true
+    summary: "Sets or reads the strength of the dead pixel correction, as a percentage."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
   ISP_Tuning_Get/SetDRC_Strength:
     group: nr
-    summary: Sets or reads the strength of the dynamic range compression (it brings out dark areas).
-    unverified: true
+    summary: "Sets or reads the strength of the dynamic range compression (it brings out dark areas)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "On T20 the strength is limited to 255; if the driver refuses the ratio control, the call falls back to the strength field of the DRC attribute block."
   ISP_Tuning_EnableDRC:
     group: nr
     summary: Switches the dynamic range compression block on or off.
@@ -459,8 +475,11 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetDefog_Strength:
     group: nr
-    summary: Sets or reads the defog strength.
-    unverified: true
+    summary: "Sets or reads the defog strength."
+    params:
+      ratio: "Pointer to the strength byte (the setter takes the pointer too)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session (T10 to T31); otherwise the driver's result."
+    notes: "On T40 and T41 the call is an OpenIMP extension of the single-argument form: 0 to 255, 128 neutral, applied through the module ratio of the ISP firmware (the vendor's own defog strength call is a stub there), main sensor only; the getter returns 128 while the unit is not enabled."
   ISP_Tuning_EnableDefog:
     group: nr
     summary: Switches defog on or off.
@@ -485,23 +504,25 @@ functions:
     unverified: true
   ISP_Tuning_SetSinterStrength:
     group: nr
-    summary: "Sets the strength of the spatial (2D) noise reduction as a ratio."
-    unverified: true
+    summary: "Sets the strength of the spatial (2D) noise reduction as a ratio; 128 is the neutral value."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result."
+    notes: "On T21 the strength is converted to the sinter block of the driver. On T20 it is scaled to a percentage of the table (capped at 200 percent). The vendor library uses a different driver control there."
   ISP_Tuning_SetTemperStrength:
     group: nr
-    summary: "Sets the strength of the temporal (3D) noise reduction as a ratio."
-    unverified: true
+    summary: "Sets the strength of the temporal (3D) noise reduction as a ratio; 128 is the neutral value."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result."
+    notes: "On T20 the strength is scaled to a percentage of the table (capped at 200 percent) and the getter returns the last value set."
   ISP_Tuning_SetMeshShadingScale:
     group: nr
     summary: Selects the scale of the lens shading (vignette) correction.
     unverified: true
   ISP_Tuning_Get/SetISPRunningMode:
     group: dn
-    summary: Switches the ISP between day mode and night mode, or reads the mode.
+    summary: "Switches the ISP between day mode and night mode, or reads the mode."
     params:
-      mode: "`IMPISP_RUNNING_MODE_DAY` (0) or `IMPISP_RUNNING_MODE_NIGHT` (1)."
-    notes: "The IR-cut filter and the IR LEDs are not switched by this call (it is a user-space and driver call only); the application drives them. A common sequence for night is IR-cut off, LEDs on, then this call."
-    unverified: true
+      mode: "`IMPISP_RUNNING_MODE_DAY` (0) or `IMPISP_RUNNING_MODE_NIGHT` (1). On T40 and T41 a pointer to the mode, after the video input."
+    returns: "0 on success. -1 for a NULL pointer or outside the tuning session (T10 to T31, except T23, which does not check the session); otherwise the driver's result. On T40: -4 for a video input out of range or a mode outside the vendor range, -9 for NULL, -5 when tuning is not running on the getter, -6 when the driver refuses the getter. T41 takes only the main input."
+    notes: "The library does not switch the IR-cut filter or the IR LEDs; the application drives them. On T20 and T21 a successful switch re-applies brightness, contrast and saturation for the new mode. On T23 the call restarts the frame source change wait."
     see_also: [ISP_Tuning_Get/SetSceneMode]
   ISP_Tuning_Get/SetISPCustomMode:
     group: dn
@@ -509,9 +530,9 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetSceneMode:
     group: dn
-    summary: Selects a scene preset (auto, indoor, outdoor and so on).
-    diff: The vendor T21 kernel module ignores the call; OpenIMP matches that.
-    unverified: true
+    summary: "Selects a scene preset (auto, indoor, outdoor and so on)."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result."
+    diff: "The vendor T21 kernel module ignores the call; OpenIMP matches that."
   ISP_Tuning_SetFWFreeze:
     group: dn
     summary: Freezes the ISP firmware loop (AE, AWB and the other adaptive steps) while the picture stays, or resumes it.
@@ -534,25 +555,29 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetHVFLIP:
     group: flip
-    summary: Sets or reads the horizontal and vertical flip as one value (normal, mirror, flip, both).
+    summary: "Sets or reads the horizontal and vertical flip as one value (normal, horizontal, vertical, both)."
     params:
-      hvflip: "`IMPISP_FLIP_NORMAL_MODE` (0), `_H_MODE` (1), `_V_MODE` (2) or `_HV_MODE` (3)."
-    notes: Flipping mirrors the sensor read-out or the ISP output. After a flip the Bayer pattern changes, the library and driver adjust it.
-    unverified: true
+      hvflip: "`IMPISP_FLIP_NORMAL_MODE` (0), `_H_MODE` (1), `_V_MODE` (2) or `_HV_MODE` (3). On T23 a value above 3 is refused. On T40 and T41 a pointer to the value after the video input."
+    returns: "0 on success, -1 outside the tuning session; otherwise the driver's result. T23 refuses a value above 3 with -1. On T40: -4 (video input out of range or mode out of range), -9 (NULL), -5 (tuning not running), -6 (driver refused)."
+    notes: "On T10 to T31 the horizontal and vertical bits are set through two separate driver controls. On T40 the getter returns the mode cached by the last set (0 before any set), because the driver has no getter."
   ISP_Tuning_GetHVFlip:
     group: flip
-    summary: Reads the combined flip, spelling used by the newer library.
-    unverified: true
+    summary: "Reads the combined flip; the same call as `GetHVFLIP` under the spelling of the newer library."
+    returns: "0 on success, -1 for a NULL pointer; on T10 to T31 also outside the tuning session or when a driver read fails. On T40 the video input is checked (-4) and the cached value of the last set is returned (-9 for NULL)."
   ISP_Tuning_Get/SetISPHflip:
     group: flip
-    summary: Sets or reads the horizontal mirror of the ISP output.
+    summary: "Sets or reads the horizontal mirror of the ISP output."
     params:
-      mode: Enable or disable.
-    unverified: true
+      mode: "`IMPISP_TUNING_OPS_MODE_ENABLE` or `_DISABLE`."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session (T10 to T31, except T23); otherwise the driver's result."
+    notes: "On T23 every set restarts the frame source change wait."
   ISP_Tuning_Get/SetISPVflip:
     group: flip
-    summary: Sets or reads the vertical flip of the ISP output.
-    unverified: true
+    summary: "Sets or reads the vertical flip of the ISP output."
+    params:
+      mode: "`IMPISP_TUNING_OPS_MODE_ENABLE` or `_DISABLE`."
+    returns: "0 on success, -1 for a NULL pointer (getter) or outside the tuning session (T10 to T31, except T23); otherwise the driver's result."
+    notes: "On T23 every set restarts the frame source change wait."
   ISP_Tuning_Get/SetISPHVflip:
     group: flip
     summary: Sets or reads both ISP flips at once.
@@ -567,15 +592,15 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetFrontCrop:
     group: flip
-    summary: Crops the picture at the ISP input, before scaling, so a smaller window of the sensor is used.
+    summary: "Crops the picture at the ISP input, before scaling, so a smaller window of the sensor is used."
     params:
-      ispfrontcrop: Enable flag, position and size of the window.
-    notes: Changes the picture area, so FrameSource sizes have to be compatible. The window is aligned to the sensor pattern.
-    unverified: true
+      ispfrontcrop: "Enable flag, position and size of the window."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "Only on T23 and T31."
   ISP_Tuning_SetAutoZoom:
     group: flip
-    summary: Sets a crop window and scaler output for a smooth digital zoom (auto zoom).
-    unverified: true
+    summary: "Sets a crop window and scaler output for a smooth digital zoom (auto zoom)."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
   ISP_Tuning_GetAutoZoom:
     group: flip
     summary: Reads the auto zoom window.
@@ -604,12 +629,15 @@ functions:
     unverified: true
   ISP_WDR_ENABLE:
     group: wdr
-    summary: Turns the WDR block on (driver control).
-    unverified: true
+    summary: "Switches the wide dynamic range mode of the ISP on (1) or off (0)."
+    params:
+      mode: "T31: the integer 0 or 1. T40 and T41: a pointer to the mode after the video input (main input only)."
+    returns: "0 on success. -1 when the ISP is not open or the driver refuses; on T40 and T41 also for a NULL pointer or an input other than the main one. A value other than 0 and 1 is accepted without effect."
+    notes: "The library remembers the last mode, and the matching getter (`ISP_WDR_ENABLE_GET` on T40 and T41) answers from that memory without asking the driver."
   ISP_WDR_ENABLE_GET:
     group: wdr
-    summary: Reads whether WDR is on.
-    unverified: true
+    summary: "Reads the WDR mode the library last set."
+    returns: "0 on success, -1 for a NULL pointer or an input other than the main one (T40 and T41)."
   ISP_WDR_ENABLE_Get:
     group: wdr
     summary: Reads whether WDR is on (older spelling).
@@ -620,13 +648,13 @@ functions:
     unverified: true
   ISP_Tuning_Get/SetAfHist:
     group: af
-    summary: Reads or sets the AF histogram parameters.
-    notes: The AF statistics chain is off by default on T23.
-    unverified: true
+    summary: "Reads or sets the AF histogram parameters."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
+    notes: "The AF statistics chain is off by default on T23."
   ISP_Tuning_Get/SetAfWeight:
     group: af
-    summary: Sets or reads the weights of the AF zones.
-    unverified: true
+    summary: "Sets or reads the weights of the AF zones."
+    returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. On T40 and T41 the first argument is the video input and an invalid input or NULL gives -1."
   ISP_Tuning_GetAFMetrices:
     group: af
     summary: Reads the AF sharpness metrics.
@@ -649,8 +677,9 @@ functions:
     unverified: true
   ISP_Tuning_GetTotalGain:
     group: stat
-    summary: Reads the total gain (analogue and digital together) used by the exposure.
-    unverified: true
+    summary: "Reads the total gain (analogue and digital together) used by the exposure."
+    returns: "0 on success, -1 for a NULL pointer or when the ISP or its tuning object does not exist; otherwise the driver's result."
+    notes: "On T23 the call does not check the tuning session and stores the value only on success. On T20 the driver writes the value through an address that the library passes in the request."
   ISP_Tuning_Get/SetStatisConfig:
     group: stat
     summary: Reads or sets the configuration of the statistics blocks (zones, thresholds).
@@ -730,25 +759,29 @@ functions:
     unverified: true
   ISP_Get/SetDefaultBinPath:
     group: life
-    summary: Sets or reads the path of the ISP tuning binary (`.bin`) that the library loads at start-up.
-    notes: Set it before `IMP_ISP_AddSensor`. The default directory is `/etc/sensor`.
-    unverified: true
+    summary: "Sets or reads the path of the ISP tuning binary (`.bin`) loaded at start-up."
+    params:
+      path: "Path string. On T10 to T31 and T23 at most 63 characters; the getter's buffer needs 64 bytes. On T40 and T41 the first argument is the video input (main only)."
+    returns: "0 on success. The setter returns -1 for a NULL pointer, a path that is too long, and on T10 to T31 when the ISP is not open or the sensor is already running. The getter returns -1 for a NULL pointer, when the ISP is not open or no sensor was added (T10 to T31), or on T40 and T41 when no path was ever set and no default file is known."
+    notes: "Call the setter after `IMP_ISP_Open` and before `IMP_ISP_AddSensor` (T40 and T41 refuse it once a sensor is added). On T41, when no path was set, the getter reports `/etc/sensor/<sensor>-t41.bin` if that file exists."
   ISP_Tuning_SwitchBin:
     group: life
-    summary: Loads another tuning binary while running (for example a night set).
-    unverified: true
+    summary: "Switches the ISP tuning binary while running: with `enable` 1 it loads the file named in `bname`, with 0 it returns to the sensor's default bin."
+    params:
+      attr: "`IMPISPBinAttr` with `enable` and the file name (64 bytes on T40, 128 on T41); the name is always terminated in the copy sent to the driver."
+    returns: "0 on success. Failures: T40 -4 (video input of 4 or more), -9 (NULL), -5 (tuning not running), -10 (`enable` not 0 or 1), -6 (driver refused). T41 uses the same numbers as -4096 plus the code (-4096+12 for the input, whose limit is 2)."
   ISP_Get/SetFrameDrop:
     group: life
-    summary: Sets or reads a frame drop pattern, which makes the ISP skip frames.
-    unverified: true
+    summary: "Sets or reads the frame drop pattern, which makes the ISP skip frames: three channels, each with an enable flag and a pattern size."
+    returns: "0 on success, -1 for a NULL pointer or a missing ISP; otherwise the driver's result. On T40 and T41 only the main input is accepted and the setter refuses a size above 31 or an enable value out of range."
   ISP_Get/SetSensorRegister:
     group: life
-    summary: Writes or reads a register of the sensor directly through the ISP.
+    summary: "Writes or reads a register of the sensor directly through the ISP."
     params:
-      reg: Sensor register address.
-      value: Value to write, or the output for the read.
-    notes: For debugging and tuning only; the sensor driver does not know about changes made this way.
-    unverified: true
+      reg: "Sensor register address. On T41 an `{addr, value}` structure after the video input; on T40 pointers after the video input."
+      value: "Value to write, or the output for the read."
+    returns: "0 on success, -1 for a NULL pointer, a missing or closed ISP, when no sensor runs, or for a sensor on an SPI bus (only I2C sensors are supported on T10 to T31); otherwise the driver's result. On T40 and T41 only the main input is accepted."
+    notes: "For debugging and tuning only; the sensor driver does not know about changes made this way."
   ISP_GetCameraInputMode:
     group: sys
     summary: Reads how the camera input is wired (single, dual or switched).
