@@ -1,0 +1,199 @@
+# Descriptions for the System API page (tools/gen_api_wiki.py -> wiki page API-System).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: System (IMP_System, memory pools, log, decoder, SU)
+intro: |
+  The System module starts and stops the library, connects modules into a pipeline with bind calls, hands out
+  timestamps and gives access to a few system facilities. Every program calls `IMP_System_Init` once before it
+  creates FrameSource channels, encoder channels, OSD or IVS groups, and `IMP_System_Exit` at the end.
+
+  **Pipeline cells:** a *cell* (`IMPCell`) names one output of one module: device (`DEV_ID_FS`, `DEV_ID_ENC`,
+  `DEV_ID_OSD`, `DEV_ID_IVS`, ...), group (or channel) and output index. `IMP_System_Bind(src, dst)` connects the output
+  of `src` to the input of `dst`, for example FrameSource channel 0 to encoder group 0. OpenIMP records the bind;
+  the consumer (the encoder, the IVS group) pulls frames from the source when it starts, so bind **before** the consumer
+  starts. At most 16 binds exist at a time.
+
+  **Extensions in this module (OpenIMP only):** `OpenIMP_*` functions that belong to FrameSource, such as the
+  fallback test frame, are described on the [FrameSource page](API-FrameSource) and in
+  [Beyond the Vendor](Beyond-the-Vendor).
+groups:
+  - id: life
+    title: Start and stop
+  - id: bind
+    title: Binding modules
+  - id: time
+    title: Time and identification
+  - id: reg
+    title: Register access
+    intro: Direct access to hardware registers by physical address through `/dev/mem`. For debugging and bring-up, not for streamers.
+  - id: pool
+    title: Memory pools
+    intro: |
+      A pool reserves a block of media memory under an id; channels bound to it with `IMP_FrameSource_SetPool` or
+      `IMP_Encoder_SetPool` take their buffers from it. T41 carves a real contiguous pool out of the rmem arena. On the
+      other SoCs OpenIMP allocates every channel from its single rmem arena anyway, so a requested pool is validated and
+      recorded by name but reserves nothing (reserving memory that nothing draws from would only shrink the arena).
+  - id: log
+    title: Logging
+  - id: dec
+    title: Decoder (T23)
+    intro: A hardware JPEG decoder on channel 0, implemented by OpenIMP on T23 only (the T40 and T41 vendor libraries export it too; OpenIMP does not). It decodes JPEG pictures into NV12, NV21 or YUV420P and runs in the helper process that also hosts the T23 H.264 encoder. The status row is marked as having a known defect because that helper is off by default since agg-37, so the decoder is not usable in a default T23 build.
+  - id: su
+    title: System utilities (SU)
+functions:
+  System_Init:
+    group: life
+    summary: Initialises the library, starts the system clock at zero and prepares the FrameSource, IVS, OSD, encoder and framebuffer parts.
+    returns: 0 on success and when already initialised; negative when one of the parts fails (those already started are shut down again).
+    notes: Call it once, before any other module call.
+  System_Exit:
+    group: life
+    summary: Shuts the parts down in the reverse order.
+    returns: 0, also when not initialised.
+  System_Bind:
+    group: bind
+    summary: Connects the output cell `src` to the input cell `dst`.
+    params:
+      src: Source cell.
+      dst: Destination cell.
+    returns: 0 on success and when the same bind already exists; -1 for a NULL cell or when all bind slots are used.
+    notes: Typical binds are FrameSource -> encoder, FrameSource -> IVS, FrameSource -> OSD -> encoder. For an OSD group in the middle use `IMP_OSD_AttachToGroup`.
+    see_also: [System_UnBind, System_GetBindbyDest]
+  System_UnBind:
+    group: bind
+    summary: Removes a bind.
+    returns: 0 on success; -1 for a NULL cell or when no such bind exists.
+  System_GetBindbyDest:
+    group: bind
+    summary: Finds the source cell that feeds a destination cell.
+    params:
+      dst: Destination cell.
+      src: Receives the source cell.
+    returns: 0 on success; -1 for a NULL pointer or when nothing is bound to `dst`.
+  System_GetVersion:
+    group: time
+    summary: Writes the version text of the library into a buffer.
+    params:
+      version: Buffer of at least 64 bytes; it is zeroed and the text is copied in.
+    returns: -1 for NULL.
+    diff: The text is OpenIMP's own, for example `libimp.so T31 openimp`; the vendor library returns its release number.
+  System_GetCPUInfo:
+    group: time
+    summary: Returns the name of the SoC variant, for example `T31X`, `T41NQ` or `T40-XP`.
+    returns: A pointer to a constant string, never NULL.
+    notes: The variant is read from the SoC when possible; otherwise a default of the family is returned.
+  System_GetTimeStamp:
+    group: time
+    summary: Returns the system time in microseconds since `System_Init` (or since the last `RebaseTimeStamp`), taken from a monotonic clock.
+    returns: The time, or -1 when the clock cannot be read.
+    notes: FrameSource frame timestamps are on this timeline.
+  System_RebaseTimeStamp:
+    group: time
+    summary: Moves the system timeline so that the current moment has the given value.
+    params:
+      timestamp: New "now" in microseconds.
+    returns: 0, or -1 when the clock cannot be read.
+    notes: Use it to align the timeline with an external clock (for example the first RTP timestamp).
+  System_ReadReg32:
+    group: reg
+    summary: Reads a 32-bit hardware register at a physical address.
+    params:
+      addr: Physical address, must be 4-byte aligned.
+    returns: The register value; 0 when the address is not aligned or `/dev/mem` cannot be used (a failure cannot be told from a register that reads 0).
+    notes: The access maps one page of `/dev/mem` per call. It was tested by reading and writing a scratch register of the UART.
+  System_WriteReg32:
+    group: reg
+    summary: Writes a 32-bit hardware register at a physical address.
+    params:
+      addr: Physical address, 4-byte aligned.
+      value: Value to write.
+    returns: no value.
+    notes: Writing the wrong register can hang the SoC.
+  System_MemPoolRequest:
+    group: pool
+    summary: Requests a memory pool under an id.
+    params:
+      poolId: Pool number, 0 to 31 on T31, T40 and T41.
+      size: Bytes, above 0.
+      name: Label for diagnostics.
+    returns: "0 on success; -1 for an invalid id, a size of 0, a size above 2 GiB (T41), when the id is already requested (T31, T40, T41) or when the memory is not available (T41)."
+    diff: "T41 reserves a real block in rmem, as the vendor library does. T23, T31 and T40 only record the request."
+  System_MemPoolFree:
+    group: pool
+    summary: Releases a pool.
+    returns: "-1 for an invalid or not requested pool. On T41 also -1 while a buffer of the pool is still allocated; the channels bound to the pool are unbound and may be bound again with `IMP_FrameSource_SetPool`."
+    diff: "Beyond the vendor on T41: the vendor library keeps a pool until the program exits, OpenIMP lets the application release it."
+  MemPool_InitPool:
+    group: pool
+    summary: On T41 the call behind `System_MemPoolRequest`; it carves one contiguous block out of rmem and registers it under the pool id. Use the System call instead.
+    unverified: true
+  MemPool_GetById:
+    group: pool
+    summary: Returns a non-NULL pointer when a pool with that id exists, else NULL. FrameSource checks it before binding a channel to the pool (T41).
+    unverified: true
+  MemPool_Release:
+    group: pool
+    summary: Low-level release of a pool. Use `System_MemPoolFree`.
+    unverified: true
+  Log_Get/Set_Option:
+    group: log
+    decl: "int IMP_Log_Get_Option(void);\nvoid IMP_Log_Set_Option(int option);"
+    summary: Reads or sets which fields (file, line, function, ...) the library prints in front of a log message.
+    params:
+      option: Bit mask of the `IMP_LOG_OP_*` flags; `IMP_LOG_OP_NONE` gives the terse vendor line.
+    returns: Get returns the mask, Set has no return value.
+    notes: OpenIMP prints warnings and errors to stderr always, informational and debug messages only when `OPENIMP_DEBUG_TRACE` is set. Syslog output is enabled with `OPENIMP_LOG_SYSLOG=1`. The default mask is the full one.
+    diff: The vendor library starts with no fields and prints everything it has; OpenIMP is quiet by default so a camera is not flooded.
+  Decoder_CreateChn:
+    group: dec
+    summary: Creates the decoder channel 0 and starts the decoding worker.
+    params:
+      chn: Channel, only 0.
+      attr: Decoder attribute; the type must be JPEG, the maximum size non-zero, the pixel format NV12, NV21 or YUV420P.
+    returns: -1 for another channel, another payload type or pixel format, a zero size, an existing channel or when the worker cannot be started.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_DestroyChn:
+    group: dec
+    summary: Stops the worker and releases all frames.
+    returns: -1 for another channel or a channel that does not exist.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_StartRecvPic:
+    group: dec
+    summary: Marks the channel as receiving.
+    returns: -1 for another channel or a channel that does not exist.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_StopRecvPic:
+    group: dec
+    summary: Marks the channel as not receiving and wakes any waiting caller.
+    returns: -1 for another channel or a channel that does not exist.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_SendStreamTimeout:
+    group: dec
+    summary: Decodes one JPEG picture. It waits up to the timeout for a free picture buffer, decodes in the helper process and queues the picture.
+    params:
+      stream: JPEG data (`p_payload`, `i_payload`) and a timestamp that is passed on to the picture.
+      timeout_ms: Maximum wait in milliseconds for a buffer and for the decode.
+    returns: -1 for another channel, an empty or NULL stream, no free buffer within the timeout, or a decode error.
+    notes: Number of pictures that can be held at once is the `nrKeepStream` of the channel attribute (at least 1). Give every picture back with `ReleaseFrame`.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_PollingFrame:
+    group: dec
+    summary: Waits until a decoded picture is ready.
+    returns: 0 when ready; -1 on timeout, for another channel or when the channel does not exist.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_GetFrame:
+    group: dec
+    summary: Hands out the oldest decoded picture (a pointer to its frame info with address and size).
+    returns: -1 when none is ready, for another channel, NULL or when the channel does not exist.
+    soc: Implemented by OpenIMP on T23 only.
+  Decoder_ReleaseFrame:
+    group: dec
+    summary: Gives a picture back so the buffer can be reused.
+    returns: -1 for another channel, NULL, or a frame that was not handed out.
+    soc: Implemented by OpenIMP on T23 only.
+  SU_Base_Shutdown:
+    group: su
+    decl: "int SU_Base_Shutdown(void);"
+    summary: Syncs the file systems and tells the init process to reboot (or power off).
+    returns: 0 when the signal reached init, -1 (with `errno`) when it could not be sent.
+    notes: "The call returns before the shutdown has finished. The environment variable `OPENIMP_SU_SHUTDOWN` selects what init is asked to do: unset or `reboot` sends SIGTERM (reboot on busybox init), `poweroff` sends SIGUSR2 (power off), `vendor` sends SIGCHLD like the vendor library."
+    diff: "The vendor library only sends SIGCHLD, which busybox init ignores, so on such a system the camera keeps running. OpenIMP's default sends the signal busybox acts on."

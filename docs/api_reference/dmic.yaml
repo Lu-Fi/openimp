@@ -1,0 +1,115 @@
+# Descriptions for the DMIC API page (tools/gen_api_wiki.py -> wiki page API-DMIC).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: DMIC (digital microphone array)
+intro: |
+  DMIC records from a digital microphone array through the same `/dev/dsp` driver as the analog microphone. One
+  frame holds `numPerFrm` samples of every microphone, interleaved. The API mirrors AI: set the format, enable the
+  device, enable the channel, then poll and get frames.
+
+  **Typical call order:** `SetPubAttr`, `Enable`, `EnableChn`, optional `SetUserInfo` / `SetGain` / `EnableAec`, then
+  loop on `PollingFrame`, `GetFrame`, `ReleaseFrame`; stop with `DisableChn`, `Disable`.
+
+  **Status in OpenIMP:** the functions are implemented for T30, T31, T40 and T41. T31, T40 and T41 have been run as an
+  **API round trip** only; T30 is checked by static audit. There is no DMIC hardware proof yet (no test camera with a digital microphone, issue #131), so
+  recorded audio quality, the AEC result and the gain effect are not verified on a real microphone array.
+
+  Limits: only device 0 and channel 0 exist; at most 4 microphones (T30: one); 16-bit mono sound mode with
+  `chnCnt` microphones; `numPerFrm` must be a whole number of 10 ms at the sample rate. Calls fail with -1.
+
+  **Beyond the vendor (T40 and T41):** `Enable` refuses with -1 when the audio kernel module was loaded without
+  `dmic_enable=1` (module parameter, read from `/sys/module/audio/parameters/dmic_enable`). Without that parameter the
+  driver's DMIC ioctls dereference a route that does not exist and the kernel oopses, which the vendor library
+  does not guard against. Load the audio module with `dmic_enable=1` on a camera that has a DMIC.
+groups:
+  - id: dev
+    title: Device and channel
+  - id: frames
+    title: Frames
+  - id: level
+    title: Volume and gain
+  - id: aec
+    title: Echo cancellation
+functions:
+  DMIC_Get/SetPubAttr:
+    group: dev
+    summary: Sets or reads the capture format (sample rate, bit width, sound mode, number of microphones `chnCnt`, samples per frame `numPerFrm`, queue length).
+    returns: "-1 for a device other than 0, a NULL attribute, a `chnCnt` of 0 or above the limit, a sample rate or frame length of 0 or less, a frame length that is not a multiple of 10 ms, or (Set) a device that is already enabled."
+    notes: Set it before `Enable`.
+  DMIC_Enable:
+    group: dev
+    summary: Opens the sound device, programs rate, format and number of microphones, and starts the digital microphone stream.
+    returns: "0 on success and when already enabled. -1 for a device other than 0, an unsupported format (the sound mode must be mono, 16 bit), when `/dev/dsp` cannot be opened, or when the driver refuses the stream (no DMIC support built into the audio driver, or no DMIC wired)."
+    notes: On T40 and T41 also -1 when the audio module runs without `dmic_enable=1` (see the module introduction).
+    diff: The `dmic_enable` check on T40 and T41 does not exist in the vendor library.
+  DMIC_Disable:
+    group: dev
+    summary: Stops the channel if needed and closes the device.
+    returns: 0 on success and when not enabled; -1 for a device other than 0.
+  DMIC_EnableChn:
+    group: dev
+    summary: Starts the record thread that fills the frame queue; when the application falls behind, the oldest frame is dropped.
+    returns: -1 for an invalid device or channel or when `Enable` was not called.
+  DMIC_DisableChn:
+    group: dev
+    summary: Stops the record thread.
+    returns: -1 for an invalid device or channel.
+  DMIC_Get/SetChnParam:
+    group: dev
+    summary: Stores or reads the channel parameter (frame queue depth).
+    returns: -1 for an invalid device or channel or a NULL pointer.
+    unverified: true
+  DMIC_SetUserInfo:
+    group: aec
+    summary: Chooses which microphone of the array is used for echo cancellation and whether AEC is wanted.
+    params:
+      aecDmicId: Microphone index, 0 to 3.
+      need_aec: Non-zero when echo cancellation will be used.
+    returns: -1 for a device other than 0 or an index outside 0 to 3.
+  DMIC_PollingFrame:
+    group: frames
+    summary: Waits until a frame is queued.
+    params:
+      timeout_ms: Maximum wait in milliseconds.
+    returns: 0 when a frame is ready, -1 on timeout or when the channel is not running.
+    diff: The timeout is honoured. The vendor library always waits up to 5 seconds and returns 0.
+  DMIC_GetFrame:
+    group: frames
+    summary: Takes the oldest frame (all microphones interleaved in `rawFrame`; `aecFrame` holds the echo-cancelled signal when AEC is on, else it is zero).
+    params:
+      block: "`BLOCK` waits, `NOBLOCK` fails at once when no frame is queued."
+    returns: -1 when no frame is available, the channel is not running, or an argument is invalid.
+    notes: Give every frame back with `ReleaseFrame`.
+    diff: "`NOBLOCK` with an empty queue returns -1; the vendor library may return stale data."
+  DMIC_GetFrameAndRef:
+    group: aec
+    summary: Takes the oldest frame together with the playback reference frame (silence when the driver supplied none for that block).
+    returns: -1 when reference frames are not enabled (`EnableAecRefFrame`), no frame is available, or an argument is invalid.
+  DMIC_ReleaseFrame:
+    group: frames
+    summary: Gives a frame back to the queue.
+    returns: -1 when the frame does not belong to the queue or the channel is not running.
+  DMIC_Get/SetVol:
+    group: level
+    summary: Software volume, half decibels, -30 to 120, 60 = unity (the same curve as AI).
+    returns: -1 for an invalid device or channel or NULL; values outside the range are clamped.
+  DMIC_Get/SetGain:
+    group: level
+    summary: Gain of the digital microphone in the codec, 0 to 31.
+    returns: -1 when the device is not open, the driver rejects the value, or the arguments are invalid. Out of range values are clamped.
+  DMIC_EnableAec:
+    group: aec
+    summary: Starts echo cancellation on the microphone chosen with `SetUserInfo`, using the driver's playback reference as far end.
+    returns: "0 on success; also 0 (no change) when AEC or reference frames are already on. -1 when the device or channel is not running, the audio processing library cannot be loaded, or the reference cannot be enabled."
+  DMIC_DisableAec:
+    group: aec
+    summary: Stops echo cancellation.
+    returns: -1 when the device or channel is not running or AEC is not on.
+  DMIC_EnableAecRefFrame:
+    group: aec
+    summary: Delivers the playback reference with each frame for `GetFrameAndRef`.
+    returns: -1 when the device or channel is not running, AEC is already on, or the driver cannot enable the reference.
+  DMIC_DisableAecRefFrame:
+    group: aec
+    summary: Stops reference delivery.
+    returns: -1 for invalid arguments or when the device is not running.
+    unverified: true

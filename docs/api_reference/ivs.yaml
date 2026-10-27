@@ -1,0 +1,137 @@
+# Descriptions for the IVS API page (tools/gen_api_wiki.py -> wiki page API-IVS).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: IVS
+intro: |
+  IVS runs an analysis algorithm on the video frames; the usual one is motion detection. An algorithm is an
+  **interface** object (`IMPIVSInterface`): a set of callbacks plus a parameter block. The library ships two ready
+  interfaces (`CreateMoveInterface`, `CreateBaseMoveInterface`), and an application can fill an interface of its own
+  with custom callbacks (`init`, `exit`, `preProcessSync`, `processAsync`, `getResult`, `releaseResult`, `getParam`,
+  `setParam`, `flushFrame`). A **channel** runs one interface in its own thread; a **group** ties channels to a
+  frame source: bind the FrameSource channel to the IVS group with `IMP_System_Bind`, register the IVS channel in the
+  group, then start it.
+
+  **Typical call order:** `CreateMoveInterface`, `CreateGroup`, `CreateChn`, `RegisterChn`, bind the FrameSource
+  channel to the group, `StartRecvPic`, then loop on `PollingResult`, `GetResult`, `ReleaseResult`. Shut down with
+  `StopRecvPic`, `UnRegisterChn`, `DestroyChn`, `DestroyGroup`, `DestroyMoveInterface`.
+
+  OpenIMP implements the framework once for T10 to T41. There are two groups (0 and 1) and up to 65 channels
+  (0 to 64). Every frame of the bound FrameSource channel reaches each receiving IVS channel; a channel that is
+  still busy with the previous frame drops the new one, so a slow algorithm never stalls the video path. Custom
+  interfaces are supported: their `preProcessSync` sees the capture frame, and `processAsync` works on a private NV12
+  copy, since OpenIMP cannot hold a capture buffer for the algorithm. This was tested with a custom `IMPIVSInterface`.
+  On errors the calls return -1 and set `errno`.
+
+  OpenIMP also offers `OpenIMP_IVS_Move*Ex` functions (a richer motion result with objects and a runtime
+  configuration), see [Beyond the Vendor](Beyond-the-Vendor).
+groups:
+  - id: iface
+    title: Ready-made interfaces
+    intro: Both create an interface object from a parameter block (`NULL` is refused with -1/`EINVAL`) and copy the block into it. The returned pointer goes to `CreateChn`; destroy the interface after the channel is gone.
+  - id: group
+    title: Groups and channels
+  - id: run
+    title: Running and results
+  - id: param
+    title: Parameters
+functions:
+  IVS_CreateMoveInterface:
+    group: iface
+    summary: Creates the motion detection interface (frame-difference detector over up to 52 regions of interest with a sensitivity per region).
+    params:
+      param: "`IMP_IVS_MoveParam`: sensitivity per region, region rectangles and count, `skipFrameCnt` (frames skipped between comparisons) and the frame size."
+    returns: "The interface, or NULL when `param` is NULL (`EINVAL`) or memory runs out."
+    notes: The result of the channel is an `IMP_IVS_MoveOutput` with one flag per region (`retRoi`), obtained with `GetResult`.
+    see_also: [IVS_DestroyMoveInterface, IVS_CreateChn]
+  IVS_DestroyMoveInterface:
+    group: iface
+    summary: Frees a motion interface. The channel using it has to be destroyed first.
+    returns: no value.
+  IVS_CreateBaseMoveInterface:
+    group: iface
+    summary: Creates the base motion interface, a block-based comparison against reference frames that returns a per-block result buffer instead of region flags.
+    params:
+      param: "`IMP_IVS_BaseMoveParam`: `skipFrameCnt`, `referenceNum`, `sadMode`, `sense` and the frame size."
+    returns: "The interface, or NULL when `param` is NULL (`EINVAL`) or memory runs out."
+    notes: "The result is an `IMP_IVS_BaseMoveOutput` (`ret`, a data buffer and its length). On T23, T21 and T30 it also carries the frame timestamp."
+    unverified: true
+  IVS_DestroyBaseMoveInterface:
+    group: iface
+    summary: Frees a base motion interface. The channel using it has to be destroyed first.
+    returns: no value.
+  IVS_CreateGroup:
+    group: group
+    summary: Creates an IVS group.
+    params:
+      grpNum: Group number, 0 or 1.
+    returns: "0 on success; -1 for a group number out of range."
+    notes: Creating a group twice is not an error (it only logs), as in the vendor library.
+  IVS_DestroyGroup:
+    group: group
+    summary: Removes a group.
+    returns: "0 on success, also for a group that was never created (vendor behaviour). -1 for an invalid number or while a channel is still registered in the group."
+  IVS_CreateChn:
+    group: group
+    summary: Creates a channel for an interface and starts its processing thread. The interface's `init` callback is called.
+    params:
+      chnNum: Channel number, 0 to 64.
+      handler: Interface. It needs at least a `preProcessSync` or a `processAsync`; a `param` pointer must come with a positive `paramSize` and vice versa.
+    returns: "0 on success. -1 for a bad number or interface, a channel that exists, an interface that already serves another channel, an `init` that fails or no thread."
+    notes: One interface serves one channel. Create a second interface for a second channel.
+    see_also: [IVS_DestroyChn, IVS_RegisterChn]
+  IVS_DestroyChn:
+    group: group
+    summary: Stops the channel if needed, unregisters it, ends its thread and calls the interface's `exit` callback.
+    returns: "0 on success, -1 for an invalid number or a channel that does not exist."
+    notes: It is safe to call while another thread waits in `PollingResult`; that call returns with a timeout error.
+  IVS_RegisterChn:
+    group: group
+    summary: Attaches a channel to a group so it receives the frames bound to that group.
+    returns: "0 on success, -1 for invalid numbers, a group or channel that does not exist, or a channel that is already registered."
+  IVS_UnRegisterChn:
+    group: group
+    summary: Detaches a channel from its group.
+    returns: "0 on success, -1 when the channel is not registered or is still receiving (call `StopRecvPic` first)."
+  IVS_StartRecvPic:
+    group: run
+    summary: Lets the channel receive and analyse frames.
+    returns: "0 on success, -1 when the channel does not exist or is not registered in a group."
+  IVS_StopRecvPic:
+    group: run
+    summary: Stops frame delivery. A frame in flight is given up to about one second to finish, then the interface's `flushFrame` is called.
+    returns: "0 on success, -1 when the channel does not exist."
+  IVS_PollingResult:
+    group: run
+    summary: Waits until the channel has a new result.
+    params:
+      chnNum: Channel.
+      timeoutMs: Milliseconds; 0 only checks, a negative value (`IMP_IVS_DEFAULT_TIMEOUTMS`) waits up to 10 seconds.
+    returns: "0 when a result is ready, -1 with `ETIMEDOUT` when none arrived in time or the channel was destroyed meanwhile, -1 for an invalid or missing channel."
+    notes: Follow with `GetResult` and `ReleaseResult`.
+  IVS_GetResult:
+    group: run
+    summary: Hands out the pointer to the latest result (the interface's `getResult` callback).
+    params:
+      chnNum: Channel.
+      result: Receives the pointer to the result structure of the interface (for the motion interface an `IMP_IVS_MoveOutput`).
+    returns: "What the interface returns; -1 for invalid arguments or a channel without `getResult`."
+    notes: For the two ready-made interfaces six results are kept in a ring, and the call does not check that a new result is pending. Always wait with `PollingResult` first.
+    see_also: [IVS_PollingResult, IVS_ReleaseResult]
+  IVS_ReleaseResult:
+    group: run
+    summary: Gives a result back (the interface's `releaseResult` callback). For the ready-made interfaces this does nothing.
+    returns: "What the interface returns; -1 for invalid arguments or a missing channel."
+  IVS_ReleaseData:
+    group: run
+    summary: Releases frame data that a custom interface was handed. In OpenIMP the capture frames are never held for IVS, so this checks the pointer and returns.
+    params:
+      vaddr: Address of the data, must not be NULL.
+    returns: "0, or -1 for a NULL pointer."
+    notes: Call it where the vendor documentation says to, so the program also works with the vendor library. Tested with a custom `IMPIVSInterface`.
+  IVS_Get/SetParam:
+    group: param
+    summary: Reads or writes the parameter block of the channel's interface.
+    params:
+      chnNum: Channel.
+      param: A block of the size the interface declared (`paramSize`); for the motion interface an `IMP_IVS_MoveParam`.
+    returns: "0 on success, -1 for a NULL pointer, a missing channel, or an interface without parameter support. The motion interface refuses a sensitivity outside 0 to 8 and keeps the old parameters."
+    notes: A new parameter set takes effect with the next accepted frame. `GetParam` returns the interface's current copy.

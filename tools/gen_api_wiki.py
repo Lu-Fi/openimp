@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the API reference pages of the OpenIMP wiki (ISP, FrameSource, Encoder).
+"""Generate the API reference pages of the OpenIMP wiki (ISP, FrameSource, Encoder, OSD, IVS, Audio, DMIC, System).
 
 Inputs (all in this repository):
   include/imp/*.h, include/openimp/openimp_tuning.h   signatures (the API itself)
@@ -9,7 +9,8 @@ Inputs (all in this repository):
   docs/OPENIMP_BEYOND_VENDOR.md                       (or a wiki checkout's Beyond-the-Vendor.md) for "see also" links
 
 Output (into --out DIR, normally a wiki checkout):
-  API-Reference.md  API-ISP.md  API-FrameSource.md  API-Encoder.md
+  API-Reference.md  API-ISP.md  API-FrameSource.md  API-Encoder.md  API-OSD.md  API-IVS.md  API-Audio.md
+  API-DMIC.md  API-System.md
 
 Usage:
   python3 tools/gen_api_wiki.py --out ../openimp.wiki      write the pages
@@ -29,6 +30,8 @@ yaml format (docs/api_reference/<module>.yaml):
       notes: text                    # optional: typical call order, ranges, pitfalls
       diff: text                     # optional: how OpenIMP differs from the vendor library
       soc: text                      # optional: SoC-specific marker, overrides the automatic one
+      decl: text                     # optional: C declaration(s) when the function is not in an OpenIMP header
+      unverified: true               # optional: description not yet checked against src/ (page shows a note)
       see_also: [ISP_Tuning_GetBrightness]
 Descriptions are written in our own words; the vendor documentation is only read to understand semantics.
 """
@@ -40,10 +43,15 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOCS = ["T10", "T20", "T21", "T23", "T30", "T31", "T40", "T41"]
-MODULES = [  # key, page, yaml, headers, title
-    ("ISP", "API-ISP", "isp.yaml", ["imp_isp.h"], "ISP (including ISP tuning)"),
-    ("FrameSource", "API-FrameSource", "framesource.yaml", ["imp_framesource.h"], "FrameSource"),
-    ("Encoder", "API-Encoder", "encoder.yaml", ["imp_encoder.h"], "Encoder"),
+MODULES = [  # key, page, yaml, headers, title, export prefixes
+    ("ISP", "API-ISP", "isp.yaml", ["imp_isp.h"], "ISP (including ISP tuning)", ["ISP_"]),
+    ("FrameSource", "API-FrameSource", "framesource.yaml", ["imp_framesource.h"], "FrameSource", ["FrameSource_"]),
+    ("Encoder", "API-Encoder", "encoder.yaml", ["imp_encoder.h"], "Encoder", ["Encoder_"]),
+    ("OSD", "API-OSD", "osd.yaml", ["imp_osd.h"], "OSD", ["OSD_", "ISPOSD_"]),
+    ("IVS", "API-IVS", "ivs.yaml", ["imp_ivs.h", "imp_ivs_move.h", "imp_ivs_base_move.h"], "IVS", ["IVS_"]),
+    ("Audio", "API-Audio", "audio.yaml", ["imp_audio.h"], "Audio (AI, AO, AENC, ADEC)", ["AI_", "AO_", "AENC_", "ADEC_", "Audio_"]),
+    ("DMIC", "API-DMIC", "dmic.yaml", ["imp_dmic.h"], "DMIC", ["DMIC_"]),
+    ("System", "API-System", "system.yaml", ["imp_system.h"], "System", ["System_", "MemPool_", "Log_", "Decoder_", "SU_"]),
 ]
 EXTRA_HEADERS = ["openimp/openimp_tuning.h"]
 MATRIX_URL = "https://lu-fi.github.io/openimp/feature-matrix.html"
@@ -156,7 +164,7 @@ def beyond_index(path):
             head = m.group(1).strip()
             continue
         if head:
-            for n in set(re.findall(r"IMP_(?:ISP|FrameSource|Encoder)_\w+", ln)):
+            for n in set(re.findall(r"IMP_(?:ISP|FrameSource|Encoder|OSD|IVS|AI|AO|AENC|ADEC|DMIC|System|Log)_\w+", ln)):
                 idx.setdefault(n[4:], set()).add(head)
     return {k: sorted((h, slug(h)) for h in v) for k, v in idx.items()}
 
@@ -172,9 +180,9 @@ class Data:
         self.beyond = beyond_index(beyond_path)
         self.mods = []
         self.known = set()
-        for key, page, yf, _hdr, title in MODULES:
+        for key, page, yf, _hdr, title, _pfx in MODULES:
             y = load_yaml(os.path.join(ROOT, "docs", "api_reference", yf)) or {}
-            self.mods.append((key, page, title, y))
+            self.mods.append((key, page, title, y, _pfx))
             self.known |= set(y.get("functions") or {})
 
     def row_for(self, key):
@@ -184,21 +192,24 @@ class Data:
         for n in reversed(expand(key)):
             if n in self.rows:
                 return self.rows[n]
+        for rk, row in self.rows.items():     # wildcard rows such as "DMIC_*" or "AENC_* / ADEC_*"
+            if "*" in rk and any(p.strip().endswith("_*") and key.startswith(p.strip()[:-1]) for p in rk.split(" / ")):
+                return row
         return None
 
-    def exported_keys(self, prefix):
+    def exported_keys(self, prefixes):
         keys = {}
         for _soc, names in self.exports.items():
             for n in names:
-                if n.startswith(prefix):
+                if n.startswith(tuple(prefixes)):
                     keys.setdefault(row_key(n, self.rows, self.alias, self.known), set()).add(n)
         return keys
 
     def missing(self):
         out = {}
-        for key, _p, _t, y in self.mods:
+        for key, _p, _t, y, pfx in self.mods:
             have = set((y.get("functions") or {}))
-            out[key] = sorted(k for k in self.exported_keys(key + "_") if k not in have)
+            out[key] = sorted(k for k in self.exported_keys(pfx) if k not in have)
         return out
 
 
@@ -209,12 +220,22 @@ def cell_sym(row, soc):
     return CELL.get(c, ("?", ""))[0]
 
 
+def cname(key):
+    """C name of a yaml entry heading: IMP_<key>, except for SU_ functions"""
+    return key if key.startswith("SU_") else "IMP_" + key
+
+
 def render_function(d, key, ent, expo):
     row = d.row_for(key)
     names = sorted(set(expand(key)) | {norm(n) for n in expo if norm(n) not in d.alias and not n.endswith("_Sec")})
-    o = ["### IMP_" + key, "", "```c"]
-    for n in names:
-        o.append(d.decls.get(n, "/* IMP_%s: exported by libimp; declared in the vendor SDK header, not in the OpenIMP include directory */" % n))
+    if ent.get("decl"):
+        names = []
+    o = ["### " + cname(key), "", "```c"]
+    if ent.get("decl"):
+        o += ent["decl"].strip().splitlines()
+    else:
+        for n in names:
+            o.append(d.decls.get(n, "/* IMP_%s: exported by libimp; declared in the vendor SDK header, not in the OpenIMP include directory */" % n))
     o += ["```", ""]
     if ent.get("summary"):
         o += [ent["summary"].strip(), ""]
@@ -227,7 +248,7 @@ def render_function(d, key, ent, expo):
     if ent.get("notes"):
         o += [ent["notes"].strip(), ""]
     if ent.get("unverified"):
-        o += ["Details not yet verified.", ""]
+        o += ["Details not yet verified against the implementation.", ""]
     soc = ent.get("soc")
     if not soc and row:
         have = [s for s in SOCS if row["cells"].get(s) not in ("n.a.", "nob", None)]
@@ -262,7 +283,7 @@ def render_function(d, key, ent, expo):
                 "[%s](Beyond-the-Vendor#%s)" % (h.replace("|", "/"), a) for h, a in bl[:3]) + ".")
         o.append("")
     if ent.get("see_also"):
-        o += ["See also: " + ", ".join("[`IMP_%s`](#%s)" % (s, slug("IMP_" + s)) for s in ent["see_also"]), ""]
+        o += ["See also: " + ", ".join("[`%s`](#%s)" % (cname(s), slug(cname(s))) for s in ent["see_also"]), ""]
     return o
 
 
@@ -274,9 +295,9 @@ def legend():
 
 
 def render_page(d, mod):
-    key, _page, title, y = mod
+    key, _page, title, y, pfx = mod
     funcs = y.get("functions") or {}
-    expo = d.exported_keys(key + "_")
+    expo = d.exported_keys(pfx)
     allkeys = set(funcs) | set(expo)
     groups = list(y.get("groups") or [])
     gids = {g["id"] for g in groups}
@@ -314,10 +335,10 @@ def render_index(d, counts):
          "signatures of the vendor SDK; each entry says what the call does in OpenIMP, which values it accepts, what it returns, "
          "how it is usually combined with other calls, and on which SoCs it has been tested.", "",
          "| Module | Entries | Described |", "|---|---|---|"]
-    for key, page, title, _y in d.mods:
+    for key, page, title, _y, _p in d.mods:
         n, h = counts[key]
         o.append("| [%s](%s) | %d | %d |" % (title, page, n, h))
-    o += ["", "More modules (OSD, IVS, Audio, System) follow. One entry covers a Get/Set pair.", ""]
+    o += ["", "One entry covers a Get/Set pair. Entries that are marked \"not yet verified\" are described from the function name and a quick look at the implementation; they are being checked one by one.", ""]
     o += legend()
     o.append("The pages are generated from the OpenIMP sources (`tools/gen_api_wiki.py`); the descriptions live in "
              "`docs/api_reference/*.yaml`. Differences from the vendor library that go beyond a single call are collected in "
@@ -346,7 +367,7 @@ def main():
                 print("warning: API reference %s: %d exported functions without yaml entry in docs/api_reference/: %s%s" % (
                     m, len(ks), ", ".join(ks[:8]), " ..." if len(ks) > 8 else ""))
         if not tot:
-            print("API reference: every exported ISP/FrameSource/Encoder function has a yaml entry")
+            print("API reference: every exported function of the covered modules (%s) has a yaml entry" % ", ".join(m[0] for m in d.mods))
         if not a.out:
             return 1 if (tot and a.strict) else 0
     counts = {}

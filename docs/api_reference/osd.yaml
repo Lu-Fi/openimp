@@ -1,0 +1,257 @@
+# Descriptions for the OSD API page (tools/gen_api_wiki.py -> wiki page API-OSD).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: OSD
+intro: |
+  OSD puts overlays (text bitmaps, pictures, lines, rectangles, solid covers, mosaics) on the video. The model is:
+  a **group** is an overlay stage that sits in a frame path (usually between FrameSource and Encoder); a **region**
+  is one overlay object with a handle. A region exists on its own (`CreateRgn`), becomes visible in a group after
+  `RegisterRgn` and `ShowRgn`, and has two attribute sets: the region attribute (type, geometry, picture data) and the
+  group-region attribute (position and visibility inside one group).
+
+  **Typical call order:** `CreateGroup`, `CreateRgn`, `SetRgnAttr`, `RegisterRgn`, `SetGrpRgnAttr`, `AttachToGroup`
+  (or a bind that contains the OSD cell), `Start`, `ShowRgn`. Change the picture of a running region with
+  `UpdateRgnAttrData`.
+
+  **Where the overlay is drawn depends on the SoC.** On T10 to T31 the group draws into the NV12 frame in software:
+  lines, rectangles and bitmaps by the CPU, pictures and covers through the IPU where the build has the IPU backend
+  (switch off with `OPENIMP_T31_OSD=0`). T23, T40 and T41 use the same CPU drawing for lines and mosaics and the IPU
+  for pictures and covers (`OPENIMP_T23_OSD=0` disables drawing, the state is still kept). On T23, T40 and T41 there
+  is in addition an **ISP-drawn OSD**: pictures that the ISP blends into the stream after the scaler, with the
+  `_ISP` / `_PicISP` calls below (also reachable as `IMP_ISP_Tuning_*OsdRgn`).
+
+  Limits in OpenIMP: T10 to T31 accept groups 0 to 3 and 64 regions; T23, T40 and T41 accept groups 0 to 8 and 512
+  regions.
+
+  **Error values:** on T10 to T31 a failing call returns -1 and sets `errno`. T23, T40 and T41 return the OSD error
+  codes of that SDK generation instead (for example 0x80020001 for a bad group, 0x80020002 for a bad parameter,
+  0x80020008 for a region that does not exist, 0x80020010 for a NULL pointer). Test for "not 0", not for -1, in code
+  that runs on both families. The `_ISP` calls always return -1.
+groups:
+  - id: group
+    title: Groups
+  - id: region
+    title: Regions
+    intro: A region exists independently of any group. Types are line, rectangle, bitmap, cover and picture (`OSD_REG_*`), plus the ISP types on T23, T40 and T41.
+  - id: show
+    title: Registering and showing
+  - id: isp
+    title: ISP-drawn OSD (T23, T40, T41)
+    intro: |
+      Pictures drawn by the ISP itself. The region is addressed by frame-source channel `chn` and a slot `handle`
+      (8 slots per channel). The usual order is `Init_ISP` (done implicitly), `SetPoolSize_ISP`, `CreateRgn_ISP`,
+      `SetRgnAttr_PicISP`, `ShowRgn_ISP`, and at the end `DestroyRgn_ISP`. A picture must lie inside the frame of the
+      channel. The picture bytes are copied into rmem when the attribute is set, so the caller may free its buffer.
+  - id: helper
+    title: Helpers
+functions:
+  OSD_CreateGroup:
+    group: group
+    summary: Creates an OSD group so regions can be registered in it.
+    params:
+      grpNum: Group index, 0 to 3 on T10 to T31, 0 to 8 on T23, T40 and T41.
+    returns: "0 on success, an error value for a group number out of range."
+    notes: Creating a group that already exists succeeds and keeps it as it is.
+    see_also: [OSD_DestroyGroup, OSD_RegisterRgn]
+  OSD_DestroyGroup:
+    group: group
+    summary: Removes a group.
+    returns: "0 on success, an error value for an invalid index or a group that was not created. On T10 to T31 also an error while a region is still registered in the group; T23, T40 and T41 instead drop the registrations and succeed."
+    see_also: [OSD_CreateGroup, OSD_UnRegisterRgn]
+  OSD_AttachToGroup:
+    group: group
+    summary: Splices the OSD cell `from` into the existing bind that feeds the cell `to`, so the path source -> to becomes source -> OSD -> to.
+    params:
+      from: The OSD cell (device `DEV_ID_OSD`, group number).
+      to: The cell whose input is redirected, normally an encoder channel.
+    returns: "0 on success, non-zero when `to` has no bind to splice into or one of the new binds fails; the original bind is restored in that case."
+    notes: Do it before the encoder channel starts, since the encoder looks its OSD group up when the channel is registered or started. The call is a wrapper around `IMP_System_GetBindbyDest`, `IMP_System_UnBind` and `IMP_System_Bind`.
+    see_also: [System_Bind, OSD_Start]
+  OSD_Start:
+    group: group
+    summary: Lets the group draw on every frame that passes it.
+    returns: "0 on success, an error value for an invalid index; on T10 to T31 also when the group was not created."
+    see_also: [OSD_Stop]
+  OSD_Stop:
+    group: group
+    summary: Stops drawing; frames pass the group unchanged. Region state is kept.
+    returns: "0 on success, an error value for an invalid index; on T10 to T31 also when the group was not created."
+  OSD_SetGroupCallback:
+    group: group
+    summary: Installs a function that is called with every frame after the group has drawn into it (T40 and T41). NULL removes it.
+    params:
+      grpNum: Group created with `CreateGroup`; below 6 on T40, below 4 on T41.
+      callback: "`int cb(int group_index, IMPFrameInfo *frame)`; its return value is ignored."
+    returns: 0 on success, an error value for an invalid or not created group.
+    notes: Set it after `CreateGroup` and before the frame source is enabled. The callback runs outside the OSD lock, so it may call other OSD functions. The frame may be modified in place.
+    soc: Only in the vendor API of T40 and T41.
+  OSD_CreateRgn:
+    group: region
+    summary: Allocates a region and returns its handle. With an attribute it is also loaded straight away.
+    params:
+      attr: Region attribute, or NULL to set it later with `SetRgnAttr`.
+    returns: "The handle (0 or more), or a negative error value when all regions are in use (64 on T10 to T31, 512 on T23, T40 and T41) or memory runs out."
+    notes: A destroyed handle is reused. A bitmap or picture is converted and kept in rmem when the attribute is set, so the source buffer may be released afterwards.
+    see_also: [OSD_DestroyRgn, OSD_SetRgnAttr]
+  OSD_DestroyRgn:
+    group: region
+    summary: Frees a region and its picture memory.
+    returns: "0 on success, an error value for an invalid or unused handle. On T10 to T31 also an error while the region is still registered in a group."
+    notes: Call `UnRegisterRgn` first. On T23, T40 and T41 the call does not check this.
+  OSD_Get/SetRgnAttr:
+    group: region
+    summary: Writes or reads the region attribute (type, geometry, colours, picture data pointer).
+    params:
+      handle: Region handle from `CreateRgn`.
+      attr: Region attribute.
+    returns: an error value for an invalid or unused handle or a NULL attribute.
+    notes: Setting reloads the picture or bitmap, so it is slower than `UpdateRgnAttrData` when only the picture bytes change. The change is visible from the next frame on. On T40 and T41 an attribute from an older SDK layout is accepted, the missing part is zeroed.
+    see_also: [OSD_UpdateRgnAttrData]
+  OSD_SetRgnAttrWithTimestamp:
+    group: region
+    summary: Same as `SetRgnAttr`, with a timestamp argument that is accepted but not used.
+    notes: OpenIMP does not track a frame time window, the attribute applies from the next frame. On T23, T40 and T41 a NULL timestamp is refused.
+  OSD_UpdateRgnAttrData:
+    group: region
+    summary: Replaces only the data part of the region attribute (the picture or bitmap pointer) and reloads the overlay. Use it to refresh a clock or text bitmap.
+    returns: an error value for an invalid or unused handle or NULL data.
+  OSD_RgnCreate_Query:
+    group: region
+    summary: Tells whether a region handle is in use.
+    params:
+      stat: Receives status 1 when the region exists, else 0.
+    returns: an error value for a NULL pointer or a handle out of range.
+    soc: Only on T23, T40 and T41.
+  OSD_RgnRegister_Query:
+    group: region
+    summary: Tells whether a region is registered in a group.
+    params:
+      stat: Receives status 1 when registered in that group, else 0.
+    returns: an error value for a NULL pointer, a handle out of range or an invalid group.
+    soc: Only on T23, T40 and T41.
+  OSD_SetPoolSize:
+    group: region
+    summary: Records the size of the OSD picture pool.
+    params:
+      size: Bytes, must be above 0.
+    returns: an error value for a size of 0 or less.
+    notes: OpenIMP allocates each picture separately from rmem, so the value is only stored; the call is kept for programs that set it before `IMP_System_Init`.
+    diff: The vendor reserves a pool of this size. OpenIMP never runs out because of the pool size.
+  OSD_RegisterRgn:
+    group: show
+    summary: Puts a region into a group. The optional group-region attribute gives position and visibility there.
+    params:
+      handle: Region handle.
+      grpNum: Group created with `CreateGroup`.
+      attr: Group-region attribute (`show`, `offPos`, scaling, layer, alpha), or NULL for all zero (not shown).
+    returns: an error value for an invalid handle or group, a region or group that does not exist, or (T10 to T31) a region that is already registered in another group.
+    notes: On T10 to T31 a region belongs to one group, T23, T40 and T41 allow registering it in several. Registering a shown ISP line or cover region on T23 also hands it to the ISP.
+    see_also: [OSD_ShowRgn, OSD_SetGrpRgnAttr]
+  OSD_UnRegisterRgn:
+    group: show
+    summary: Takes a region out of a group.
+    returns: an error value for an invalid handle or group or when the region is not registered in that group.
+  OSD_Get/SetGrpRgnAttr:
+    group: show
+    summary: Writes or reads the per-group attribute of a registered region (visibility, offset, layer, alpha, scaling).
+    returns: an error value for an invalid argument or when the region is not registered in the group.
+  OSD_ShowRgn:
+    group: show
+    summary: Shows or hides a registered region in a group without touching its other attributes.
+    params:
+      show: Non-zero shows, 0 hides.
+    returns: an error value for an invalid argument or when the region is not registered in the group.
+    notes: For ISP line and cover regions on T23, T40 and T41 the call also switches the ISP overlay.
+  OSD_SetMosaic:
+    group: helper
+    summary: Pixelates a rectangle of an NV12 frame in place (luma only).
+    params:
+      frame_virAddr: Virtual address of the frame; its luma plane is modified.
+      attr: Rectangle (`x`, `y`, size), frame size and mosaic cell size.
+    returns: "0 on success, non-zero for a NULL argument, odd coordinates or sizes, a rectangle outside the frame or a cell size of 0 or less."
+    notes: Every pixel of a cell takes the value of the cell's top-left pixel; chroma stays untouched.
+    soc: Only on T23, T40 and T41.
+  OSD_Alloc:
+    group: helper
+    summary: Copies a picture into rmem and returns its physical address, for use as data of an `OSD_REG_PIC_RMEM` region (undocumented vendor helper).
+    params:
+      phys_out: Receives the physical address.
+      data: Picture bytes, or NULL to leave the memory uninitialised.
+      size: Bytes, above 0.
+    returns: 0 on success, -1 for a NULL output, a size of 0 or less, or no memory.
+    soc: Implemented by OpenIMP on T23.
+  ISPOSD_Alloc:
+    group: helper
+    summary: Allocates an uninitialised rmem buffer for an ISP OSD picture and returns its virtual address (undocumented vendor helper).
+    params:
+      size: Bytes, above 0.
+    returns: The address, or NULL on failure.
+    soc: Implemented by OpenIMP on T23.
+  OSD_CreateRgn_ISP:
+    group: isp
+    summary: Reserves one of the 8 picture slots of a frame-source channel for an ISP-drawn picture and returns its handle.
+    params:
+      chn: Frame-source channel (0 to 2 on T23, 0 to 5 on T40, 0 or 1 on T41).
+      attr: Must be NULL; the picture is given with `SetRgnAttr_PicISP`.
+    returns: "The handle (0 to 7), or -1 for a bad channel, a non-NULL attribute or when all 8 slots are in use."
+    soc: Only on T23, T40 and T41.
+  OSD_SetRgnAttr_PicISP:
+    group: isp
+    summary: Gives a slot its picture (position, size, stride, pixel data). The picture bytes are copied into rmem; the slot stays hidden until `ShowRgn_ISP`.
+    params:
+      chn: Frame-source channel.
+      handle: Slot from `CreateRgn_ISP`.
+      attr: ISP picture attribute of type `ISP_OSD_REG_PIC`; the picture must lie inside the channel frame.
+    returns: -1 for an invalid argument, a slot that was not created, another type, a picture outside the frame, stride times height of 0, or no rmem.
+    notes: On T40 and T41 the picture size of a slot cannot change after the first set; destroy and recreate the slot instead. The memory is counted against the pool size.
+    diff: "On T23 an odd picture width is refused with -1 (the ISP stops on it; the vendor library accepts it). The vendor takes the picture as it is; OpenIMP copies it into rmem and flushes the cache before the driver sees it."
+    soc: Only on T23, T40 and T41.
+  OSD_UpdateRgnAttrData_ISP:
+    group: isp
+    summary: Exchanges the picture bytes of a slot that already has a picture of the same size and resends it to the ISP.
+    returns: -1 for an invalid argument, a slot without picture, a different size or a NULL picture pointer.
+    soc: Only on T23 (T40 and T41 change a picture through `SetRgnAttr_PicISP`).
+  OSD_GetRgnAttr_ISPPic:
+    group: isp
+    summary: Reads back the stored attribute of a slot; `osd_enable` shows whether it is currently shown.
+    returns: -1 for an invalid argument. T23 also returns -1 for a slot that was not created, T40 and T41 return the stored copy anyway.
+    soc: Only on T23, T40 and T41.
+  OSD_ShowRgn_ISP:
+    group: isp
+    summary: Shows or hides an ISP picture slot.
+    returns: -1 for an invalid argument or a slot without picture (T23) or not created (T40, T41).
+    notes: On T40 and T41 a shown region that overlaps an earlier shown one in the same channel is dropped from the ISP update.
+    soc: Only on T23, T40 and T41.
+  OSD_DestroyRgn_ISP:
+    group: isp
+    summary: Hides the slot if needed, releases its picture memory and frees the slot.
+    returns: -1 for an invalid argument or (T23) a slot that was not created.
+    soc: Only on T23, T40 and T41.
+  OSD_SetPoolSize_ISP:
+    group: isp
+    summary: Sets the budget for ISP OSD pictures.
+    params:
+      size: Bytes, above 0.
+    returns: -1 for a size of 0 or less.
+    notes: On T40 and T41 the sum of all slot pictures is checked against this size and `SetRgnAttr_PicISP` fails when it is exceeded; the value may be set after `IMP_System_Init`. Call it before creating the pictures.
+    diff: The vendor allocates the pool at `IMP_System_Init`; OpenIMP counts the slot sizes against the latest value instead.
+    soc: Only on T23, T40 and T41.
+  OSD_Init_ISP:
+    group: isp
+    summary: Prepares the ISP OSD. Calling it is optional on T40 and T41, which prepare themselves on first use.
+    soc: Only on T23, T40 and T41.
+    unverified: true
+  OSD_Exit_ISP:
+    group: isp
+    summary: Destroys every ISP picture slot that is still in use.
+    returns: no value.
+    soc: Only on T23, T40 and T41.
+    unverified: true
+  OSD_Get/SetRgnAttr_ISP:
+    group: isp
+    summary: Draws or reads ISP line, rectangle and cover regions (the ISP draws boxes and masks, not pictures). The region attribute carries the draw or mask block.
+    params:
+      show: Non-zero draws the region.
+    returns: -1 on error.
+    notes: "T23 takes (attr, show) with `_Sec` for the second sensor and `MultiCamera_` variants with a sensor number; `RegisterRgn`, `SetRgnAttr` and `ShowRgn` call it for you for ISP line and cover regions. T40 takes (sensor, attr, show): sensor below 2, region type 10 to 12 only; the line/rectangle type goes to `IMP_ISP_SetDrawAttr`, the cover type to `IMP_ISP_Tuning_SetMask`, a picture type is refused (use `SetRgnAttr_PicISP`)."
+    soc: "T23 and T40; not exported on T41."
+    unverified: true

@@ -1,0 +1,472 @@
+# Descriptions for the Audio API page (tools/gen_api_wiki.py -> wiki page API-Audio).
+# Own words only; the vendor documentation is read for understanding, never copied.
+title: Audio (AI, AO, AENC, ADEC)
+intro: |
+  Four groups of calls: **AI** records from the microphone, **AO** plays to the speaker, **AENC** encodes PCM frames
+  (G.711, G.726, IMA ADPCM or a codec registered by the application), **ADEC** decodes such streams back to PCM. AI and
+  AO work on a *device* (the codec) and one *channel* on it; recording is polled frame by frame.
+
+  **Typical recording order:** `AI_SetPubAttr`, `AI_Enable`, `AI_EnableChn`, optional `AI_SetVol` / `AI_SetGain`,
+  then loop on `AI_PollingFrame`, `AI_GetFrame`, `AI_ReleaseFrame`. Shut down with `AI_DisableChn`, `AI_Disable`.
+  **Playback:** `AO_SetPubAttr`, `AO_Enable`, `AO_EnableChn`, `AO_SendFrame` in a loop, `AO_FlushChnBuf` to play out
+  what is queued, `AO_DisableChn`, `AO_Disable`. Frame length must be a whole number of 10 ms blocks for echo
+  cancellation (`numPerFrm` of 80 or 160 samples at 8 or 16 kHz).
+
+  Limits and conventions in OpenIMP: AI accepts devices 0 and 1 and channel 0, AO device 0 and channel 0. Attributes
+  can only be set while the device is disabled. The sample format is 16-bit PCM. Noise suppression, AGC, high-pass
+  filter and howling suppression use an audio processing library that is loaded at run time (`libaudioProcess`); the
+  enable calls return -1 when it is not installed. Echo cancellation is OpenIMP's own (an AECM from WebRTC) and
+  needs no extra library. Calls fail with -1 on errors; the codec driver is the ordinary `/dev/dsp` device.
+
+  **T10 to T31 versus T40 and T41:** AI/AO volume is a software gain on T10 to T31 (the value is applied to the samples);
+  T40 and T41 program the codec register instead, with a conversion from the IMP scale. On T40 and T41 there are a
+  few more calls (digital gain, raw capture, codec select).
+
+  **Audio output tests** on cameras in the OpenIMP test fleet are silence-only; the play path was verified with
+  zero-valued frames, not with audible sound.
+groups:
+  - id: aicore
+    title: AI device and channel
+  - id: aiframe
+    title: AI frames
+  - id: aivol
+    title: AI volume and gain
+    intro: Volume is on a scale of half decibels from -30 (mute) to 120, 60 meaning unity. Gain is the analog gain of the codec, 0 to 31.
+  - id: aifx
+    title: AI effects
+    intro: Noise suppression, AGC, high-pass filter and howling suppression run on every captured frame before it is handed out, in the order echo cancellation, effects, volume.
+  - id: aec
+    title: Echo cancellation
+    intro: |
+      The AEC compares the microphone with what the speaker played. The driver records the playback next to the
+      microphone; OpenIMP's AECM works on 10 ms blocks of mono samples at 8 or 16 kHz and removes the echo in
+      `AI_GetFrame`. AEC is a software step in the capture path; it can only be judged with a playing speaker.
+  - id: aocore
+    title: AO device and channel
+  - id: aoplay
+    title: AO playback
+  - id: aovol
+    title: AO volume and gain
+  - id: aofx
+    title: AO effects
+  - id: algo
+    title: Profile-driven effects, debug hooks, extras
+  - id: aenc
+    title: Audio encoder (AENC)
+    intro: |
+      Six channels. The work is done synchronously: `SendFrame` runs the codec in the calling thread and queues the
+      result, `GetStream` takes it, `ReleaseStream` gives the buffer back. Built-in codecs are slots 0 to 5 (G.711 A-law,
+      G.711 mu-law, G.726, IMA ADPCM; PCM and AEC types are not built in); slots 6 to 10 take codecs registered with
+      `RegisterEncoder`. The returned handle is used as `type` of the channel attribute.
+  - id: adec
+    title: Audio decoder (ADEC)
+    intro: Mirror of the encoder with the same slot scheme; `SendStream` decodes in the calling thread.
+functions:
+  AI_Get/SetPubAttr:
+    group: aicore
+    summary: Sets or reads the capture format (sample rate, bit width, sound mode, frame length `numPerFrm`, number of buffers).
+    params:
+      devID: Audio device, 0 or 1.
+      attr: Format. Mono 16-bit is the supported case; AEC needs mono.
+    returns: "-1 for an invalid device, a NULL or unsupported attribute, or when the device is already enabled (Set)."
+    notes: Set it before `AI_Enable`.
+    see_also: [AI_Enable]
+  AI_Enable:
+    group: aicore
+    summary: Opens the sound device for recording and programs the format into the codec driver.
+    returns: 0 on success and when already enabled; -1 for an invalid device, when `/dev/dsp` cannot be opened or the driver refuses the format.
+    see_also: [AI_EnableChn, AI_Disable]
+  AI_Disable:
+    group: aicore
+    summary: Stops capture, closes the sound device and drops AEC state.
+    returns: 0 on success, -1 for an invalid device.
+  AI_EnableChn:
+    group: aicore
+    summary: Starts the capture thread; captured audio collects in a queue until `GetFrame` takes it.
+    returns: -1 for an invalid device or channel, or when `AI_Enable` was not called.
+  AI_DisableChn:
+    group: aicore
+    summary: Stops the capture thread and clears the queue.
+    returns: -1 for an invalid device or channel.
+  AI_Get/SetChnParam:
+    group: aicore
+    summary: Stores or reads the channel parameter structure.
+    returns: -1 for an invalid device or channel or a NULL pointer.
+    notes: OpenIMP only keeps the values (`usrFrmDepth` does not change the capture queue).
+  AI_PollingFrame:
+    group: aiframe
+    summary: Waits until one complete frame is available.
+    params:
+      timeout_ms: Maximum wait in milliseconds.
+    returns: "0 when a frame is ready, -1 on timeout, when the channel is not running, or while a frame obtained earlier has not been released."
+    see_also: [AI_GetFrame]
+  AI_GetFrame:
+    group: aiframe
+    summary: Takes the oldest frame out of the queue and runs echo cancellation, effects and volume on it.
+    params:
+      frame: Receives length, timestamp, sequence number and a pointer to the data.
+      block: "`BLOCK` waits for a full frame, `NOBLOCK` fails at once when there is none."
+    returns: "0 on success, -1 when no frame is available, the channel is not running, a frame is still outstanding, or the arguments are invalid."
+    notes: Only one frame may be outstanding; release it before the next call. The timestamp marks the end of the captured block and never goes backwards.
+    see_also: [AI_ReleaseFrame]
+  AI_ReleaseFrame:
+    group: aiframe
+    summary: Gives the frame back.
+    returns: -1 when no frame is outstanding or the pointer is not the one handed out.
+  AI_GetFrameAndRef:
+    group: aec
+    summary: Like `GetFrame`, additionally returns the playback reference frame that belongs to the captured block (all zero when no reference was recorded).
+    params:
+      reference: Receives the reference frame.
+    returns: Same as `AI_GetFrame`.
+    notes: Needs `AI_EnableAecRefFrame` first. The application can then run its own echo canceller.
+  AI_Get/SetVol:
+    group: aivol
+    summary: Software volume of the recorded signal, half decibels, -30 (mute) to 120, 60 = unity.
+    returns: "-1 for an invalid device or channel or (T10 to T31 Set) a value outside the range. T40 and T41 clamp the value."
+    notes: "T10 to T31 apply the value to the samples in `AI_GetFrame`. T40 and T41 convert it to the codec register (0 dB = register value 195), so it acts in the codec; Get answers the value stored by the last Set on T40, the register value converted back on T41."
+  AI_Get/SetGain:
+    group: aivol
+    summary: Analog gain of the microphone input, 0 to 31.
+    returns: -1 for an invalid device or channel, or when the codec ioctl fails (T10 to T31, T41). T40 clamps the value and does not report a failing codec.
+    notes: Takes effect on the codec at once if the device is enabled, otherwise it is kept.
+  AI_Get/SetAlcGain:
+    group: aivol
+    summary: ALC gain; in OpenIMP the same hardware setting as `SetGain` (the value is kept separately for `GetAlcGain`).
+  AI_SetVolMute:
+    group: aivol
+    summary: Mutes or unmutes the recording.
+    params:
+      mute: 1 mutes, 0 unmutes.
+    returns: -1 for an invalid device or channel; T40 and T41 also for other mute values.
+    notes: Software mute, the codec is not touched; captured frames are silent while muted.
+  AI_Get/SetDigitalGain:
+    group: aivol
+    summary: Digital gain as the raw codec register (0 to 255, 0.5 dB steps).
+    returns: -1 for an invalid device or channel or NULL; out of range values are clamped.
+    notes: It uses the same register as `AI_SetVol`; the call made last wins. A failing codec ioctl is logged only.
+    soc: Only on T40 and T41.
+  AI_EnableHpf:
+    group: aifx
+    summary: Switches on a high-pass filter on the microphone signal; it removes rumble below the cut-off frequency.
+    params:
+      attr: The capture format (sample rate is used for the filter design).
+    returns: -1 when the audio processing library is missing, the attribute is invalid, or the cut-off frequency is not below the sample rate.
+    notes: Set the cut-off with `AI_SetHpfCoFrequency` first; with 0 a default is used (300 Hz class at 16 kHz).
+  AI_DisableHpf:
+    group: aifx
+    summary: Switches the filter off.
+    returns: 0.
+  AI_SetHpfCoFrequency:
+    group: aifx
+    summary: Stores the cut-off frequency in Hz that the next `EnableHpf` uses.
+    returns: 0.
+    notes: It does not change a filter that is already running; call `DisableHpf` and `EnableHpf` again.
+  AI_EnableNs:
+    group: aifx
+    summary: Switches on noise suppression.
+    params:
+      attr: The capture format.
+      mode: Strength, 0 (low) to 4; values outside are refused.
+    returns: -1 for an invalid attribute or mode or when the audio processing library is missing.
+  AI_DisableNs:
+    group: aifx
+    summary: Switches noise suppression off.
+    returns: 0.
+  AI_EnableAgc:
+    group: aifx
+    summary: Switches on automatic gain control with a target level and a compression gain.
+    params:
+      attr: The capture format.
+      agcConfig: "`TargetLevelDbfs` and `CompressionGaindB`."
+    returns: -1 for an invalid attribute or when the audio processing library is missing.
+  AI_DisableAgc:
+    group: aifx
+    summary: Switches AGC off.
+    returns: 0.
+  AI_SetAgcMode:
+    group: aifx
+    summary: Chooses the AGC mode (1 to 3, anything else becomes 2) used by the next `EnableAgc`.
+    returns: 0.
+  AI_Set_WebrtcProfileIni_Path:
+    group: algo
+    summary: Sets the directory of the profile file `webrtc_profile.ini` that `AI_EnableAlgo` and `AO_EnableAlgo` read.
+    returns: -1 for a NULL or too long path.
+    soc: Only on T23, T31, T40 and T41.
+  AI_EnableAec:
+    group: aec
+    summary: Starts echo cancellation of the microphone against the speaker playback.
+    params:
+      aiDevId, aiChn: Microphone device and channel 0.
+      aoDevId, aoChn: Speaker device and channel 0.
+    returns: "0 on success and when already running. -1 when the AI device is not enabled, the capture is not mono, the sample rate is not 8000 or 16000, `numPerFrm` is not a multiple of 10 ms, or the driver cannot supply the playback reference."
+    notes: Enable the AI device (and the AO device whose playback is to be cancelled) first. The delay between microphone and reference that the driver reports is applied automatically.
+    diff: The cancellation is OpenIMP's own (WebRTC AECM) running on the playback reference the codec driver records next to the microphone. It does not need the vendor AEC library.
+    see_also: [AI_DisableAec]
+  AI_DisableAec:
+    group: aec
+    summary: Stops echo cancellation and, if nobody uses reference frames, the driver's playback recording.
+    returns: -1 for an invalid device or channel.
+  AI_EnableAecRefFrame:
+    group: aec
+    summary: Lets the application receive the playback reference frame with `AI_GetFrameAndRef` (to run its own canceller).
+    returns: -1 for invalid arguments or when the driver does not enable the reference.
+  AI_DisableAecRefFrame:
+    group: aec
+    summary: Stops delivering reference frames.
+    returns: -1 for invalid arguments.
+  AI_EnableGetRaw:
+    group: algo
+    summary: Allows `AI_GetFrameAndRaw` to deliver the capture before echo cancellation and effects.
+    returns: -1 for an invalid device or channel.
+    soc: Only on T41.
+  AI_DisableGetRaw:
+    group: algo
+    summary: Switches raw delivery off again.
+    returns: -1 for an invalid device or channel.
+    soc: Only on T41.
+  AI_GetFrameAndRaw:
+    group: algo
+    summary: Returns the processed frame and the unprocessed capture of the same block.
+    returns: "-1 when the device or channel is not running, a pointer is NULL, or `AI_EnableGetRaw` was not called."
+    notes: One `AI_ReleaseFrame` of the first frame releases both.
+    soc: Only on T41.
+  AI_EnableAlgo:
+    group: algo
+    summary: Reads the profile file `webrtc_profile.ini` and switches on noise suppression, AGC and high-pass filter as it says.
+    returns: -1 for an invalid device or channel or when the device attributes cannot be read.
+    notes: The file is looked up in the directory set with `AI_Set_WebrtcProfileIni_Path`, default `/etc`. The sections `NS_AI` (noise suppression) and further AI sections switch the effects.
+    unverified: true
+    soc: Only on T23 and T41.
+  AI_DisableAlgo:
+    group: algo
+    summary: Switches high-pass filter, noise suppression and AGC off.
+    returns: -1 for an invalid device or channel.
+    soc: Only on T23 and T41.
+  AI_EnableHs:
+    group: algo
+    summary: Switches on howling suppression, run on every captured frame ahead of the other effects.
+    returns: -1 when the audio processing library is not available.
+    soc: Only on T23, T40 and T41.
+  AI_DisableHs:
+    group: algo
+    summary: Switches howling suppression off.
+    returns: 0.
+    soc: Only on T23, T40 and T41.
+  AI_IMPDBG_Init:
+    group: algo
+    summary: Debug server hook of the vendor library. OpenIMP has no debug server, so the call succeeds and does nothing.
+    returns: 0.
+  AI_IMPDBG_DeInit:
+    group: algo
+    summary: Debug server hook of the vendor library. OpenIMP has no debug server, so the call succeeds and does nothing.
+    returns: 0.
+  AO_IMPDBG_Init:
+    group: algo
+    summary: Debug server hook of the vendor library. OpenIMP has no debug server, so the call succeeds and does nothing.
+    returns: 0.
+  AO_IMPDBG_DeInit:
+    group: algo
+    summary: Debug server hook of the vendor library. OpenIMP has no debug server, so the call succeeds and does nothing.
+    returns: 0.
+  AO_Get/SetPubAttr:
+    group: aocore
+    summary: Sets or reads the playback format.
+    returns: "-1 for a device other than 0, a NULL or unsupported attribute, or when the device is enabled (Set)."
+    notes: "Set it before `AO_Enable`. `numPerFrm` times the channel count sets the size of a write block to the driver; it is rounded down to the driver fragment."
+  AO_Enable:
+    group: aocore
+    summary: Opens the sound device for playback and programs the format.
+    returns: 0 on success and when already enabled; -1 when `/dev/dsp` cannot be opened, the driver refuses the format or the block size is unusable.
+  AO_Disable:
+    group: aocore
+    summary: Plays out what the cache still holds, then stops and closes the device.
+    returns: 0 on success, -1 for a device other than 0.
+  AO_EnableChn:
+    group: aocore
+    summary: Opens the channel for `SendFrame`.
+    returns: -1 for an invalid device or channel or when `AO_Enable` was not called.
+  AO_DisableChn:
+    group: aocore
+    summary: Closes the channel, writing out cached data first.
+    returns: -1 for an invalid device or channel.
+  AO_SendFrame:
+    group: aoplay
+    summary: Queues PCM to the speaker. The data is collected into driver-sized blocks and written in the calling thread.
+    params:
+      frame: PCM data and length.
+      block: Ignored; the call returns when the data has been handed to the driver.
+    returns: "-1 for invalid arguments, a channel that is not enabled, a paused channel or a driver write error."
+    notes: On T10 to T31 volume, mute and the high-pass/AGC effects are applied to each block in software. A partial block stays queued until more data arrives; use `FlushChnBuf` to play it out.
+    see_also: [AO_FlushChnBuf]
+  AO_ClearChnBuf:
+    group: aoplay
+    summary: Throws away audio that has been queued but not played.
+    returns: -1 for invalid arguments, a device that is not open, or a failing driver call.
+  AO_FlushChnBuf:
+    group: aoplay
+    summary: Pads the pending partial block with silence, writes everything held, and waits until the driver has played it.
+    returns: -1 for invalid arguments, a device that is not open, or a failing driver call.
+  AO_PauseChn:
+    group: aoplay
+    summary: Pauses playback; `SendFrame` fails with -1 while paused.
+    returns: -1 for invalid arguments.
+  AO_ResumeChn:
+    group: aoplay
+    summary: Resumes a paused channel.
+    returns: -1 for invalid arguments.
+  AO_QueryChnStat:
+    group: aoplay
+    summary: Reports the buffer count (`chnTotalNum`, `chnFreeNum`). In OpenIMP both equal the configured `frmNum`; busy is always 0.
+    returns: -1 for invalid arguments.
+    diff: The numbers are constant. Do not use the call to find out how much audio is still queued.
+  AO_CacheSwitch:
+    group: aoplay
+    summary: Switches the play cache. With the cache on, the first data is held until two blocks are collected, so a late next frame does not cause stutter.
+    params:
+      enable: Non-zero on, 0 off.
+    returns: -1 for invalid arguments or a failing driver write while releasing held data; 0 when the device is not yet open.
+    diff: The vendor default is on. In OpenIMP the default is off (set the environment variable `OPENIMP_AO_CACHE=1` for the vendor default) because there is no play thread; turning the cache off writes out held data.
+  AO_Get/SetVol:
+    group: aovol
+    summary: Playback volume, half decibels, -30 (mute) to 120, 60 = unity.
+    returns: "-1 for an invalid device or channel or (T10 to T31) a value outside the range."
+    notes: "T10 to T31 apply the value to the samples before the driver write. T40 and T41 convert it to the DAC register (0 dB = 241)."
+  AO_Get/SetGain:
+    group: aovol
+    summary: Analog gain of the speaker output, 0 to 31.
+    returns: -1 for an invalid device or channel, a value outside 0 to 31 (T10 to T31) or a failing codec ioctl.
+  AO_SetVolMute:
+    group: aovol
+    summary: Mutes or unmutes the playback in software; while muted `SendFrame` plays silence of the same length.
+    returns: -1 for invalid arguments; T40 and T41 also for mute values other than 0 and 1.
+  AO_Soft_Mute:
+    group: aovol
+    summary: Same as `AO_SetVolMute(…, 1)`.
+    returns: As `AO_SetVolMute`.
+  AO_Soft_UNMute:
+    group: aovol
+    summary: Same as `AO_SetVolMute(…, 0)`.
+    returns: As `AO_SetVolMute`.
+  AO_Get/SetDigitalGain:
+    group: aovol
+    summary: Digital gain as the raw DAC register (0 to 255, 0.5 dB steps).
+    returns: -1 for an invalid device or channel, NULL, or an AO device that is not enabled; out of range values are clamped.
+    notes: Same register as `AO_SetVol`; the call made last wins.
+    soc: Only on T40 and T41.
+  AO_EnableHpf:
+    group: aofx
+    summary: Switches on a high-pass filter on the playback signal.
+    returns: -1 when the audio processing library is missing, the attribute is invalid, or twice the cut-off frequency is not below the sample rate.
+  AO_DisableHpf:
+    group: aofx
+    summary: Switches the filter off.
+    returns: 0.
+  AO_SetHpfCoFrequency:
+    group: aofx
+    summary: Stores the cut-off frequency for the next `AO_EnableHpf`.
+    returns: -1 for a negative value.
+  AO_EnableAgc:
+    group: aofx
+    summary: Switches on automatic gain control of the playback signal.
+    returns: -1 for an invalid attribute or when the audio processing library is missing.
+  AO_DisableAgc:
+    group: aofx
+    summary: Switches AGC off.
+    returns: 0.
+  AO_EnableAlgo:
+    group: algo
+    summary: Reads the profile file `webrtc_profile.ini` (section `AGC_AO`) and enables AGC and high-pass filter of the playback as it says.
+    returns: -1 for an invalid device or channel or when the device attributes cannot be read.
+    unverified: true
+    soc: Only on T23 and T41.
+  AO_DisableAlgo:
+    group: algo
+    summary: Switches the playback filter and AGC off.
+    returns: -1 for an invalid device or channel.
+    soc: Only on T23 and T41.
+  Audio_Select_Codec:
+    group: algo
+    summary: Selects the internal or the external codec (`SELECT_INTERNAL` 0, `SELECT_EXTERNAL` 1) of the audio driver.
+    params:
+      codec: 0 or 1.
+    returns: -1 for an invalid device or channel, a device or channel that is not running, or a driver error.
+    soc: Only on T41.
+  AENC_RegisterEncoder:
+    group: aenc
+    summary: Registers a codec of the application and returns its slot (6 to 10).
+    params:
+      handle: Receives the slot.
+      encoder: Callbacks and maximum frame length of the codec.
+    returns: -1 for NULL or when all user slots are in use.
+  AENC_UnRegisterEncoder:
+    group: aenc
+    summary: Frees a user slot.
+    returns: -1 for a built-in or out of range slot.
+  AENC_CreateChn:
+    group: aenc
+    summary: Creates one of the six encoder channels for a codec type with `bufSize` buffers.
+    returns: -1 for a bad channel number, an unregistered type, a channel that exists, or no memory.
+    notes: The buffer size follows the AI frame size (800 bytes when AI has no attributes yet); user codecs get at least 8 KiB of output room.
+  AENC_DestroyChn:
+    group: aenc
+    summary: Frees the channel.
+    returns: -1 for an invalid or not created channel.
+  AENC_SendFrame:
+    group: aenc
+    summary: Encodes one PCM frame in the calling thread and queues the result.
+    returns: -1 for an invalid channel, NULL or when no free buffer is available.
+    notes: Release streams with `ReleaseStream`, otherwise the buffers run out. User codecs get NULL as their instance pointer, as in the vendor library.
+  AENC_PollingStream:
+    group: aenc
+    summary: Waits until an encoded stream is available.
+    returns: -1 on timeout or for an invalid channel.
+  AENC_GetStream:
+    group: aenc
+    summary: Takes the oldest encoded frame.
+    params:
+      block: "`BLOCK` waits, `NOBLOCK` returns at once."
+    returns: -1 when nothing is queued and `NOBLOCK` is used (the vendor library returns 0 with an untouched stream there), or for invalid arguments.
+  AENC_ReleaseStream:
+    group: aenc
+    summary: Gives the encoded buffer back.
+    returns: -1 for an invalid channel.
+  ADEC_RegisterDecoder:
+    group: adec
+    summary: Registers a decoder of the application and returns its slot (6 to 10).
+    returns: -1 for NULL or when all user slots are in use.
+  ADEC_UnRegisterDecoder:
+    group: adec
+    summary: Frees a user slot.
+    returns: -1 for a built-in or out of range slot.
+  ADEC_CreateChn:
+    group: adec
+    summary: Creates one of the six decoder channels.
+    returns: -1 for a bad channel number, unregistered type, existing channel or no memory.
+  ADEC_DestroyChn:
+    group: adec
+    summary: Frees the channel.
+    returns: -1 for an invalid or not created channel.
+  ADEC_SendStream:
+    group: adec
+    summary: Decodes a stream chunk in the calling thread and queues the PCM.
+    params:
+      block: Ignored, the call always waits for a free buffer.
+    returns: -1 for an invalid channel, NULL, or when no buffer is available.
+    notes: The built-in decoders never write beyond their buffer.
+  ADEC_PollingStream:
+    group: adec
+    summary: Waits until decoded PCM is available.
+    returns: -1 on timeout or for an invalid channel.
+  ADEC_GetStream:
+    group: adec
+    summary: Takes the oldest decoded block.
+    returns: -1 when nothing is queued and `NOBLOCK` is used, or for invalid arguments.
+  ADEC_ReleaseStream:
+    group: adec
+    summary: Gives the decoded buffer back.
+    returns: -1 for an invalid channel.
+  ADEC_ClearChnBuf:
+    group: adec
+    summary: Drops all decoded blocks that have not been taken.
+    returns: -1 for an invalid or not created channel.

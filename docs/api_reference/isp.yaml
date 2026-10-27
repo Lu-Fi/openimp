@@ -125,8 +125,9 @@ functions:
     returns: "0 on success, non-zero (-1) on timeout or error."
   ISP_Tuning_WaitFrameDone:
     group: stat
-    summary: "Frame-done wait of the newer SoCs (`IMPVI_NUM` and the same attribute structure as `WaitFrame`). On T41 a timeout returns -1 with `errno` ETIMEDOUT and leaves the structure unchanged."
-    unverified: true
+    summary: "Waits for the next frame-done event of the sensor `num` and returns the frame counter and interrupt type of that event (T40 and T41)."
+    returns: "0 on success, -1 for a NULL attribute or an invalid sensor number. On T41 a timeout returns -1 with `errno` set to ETIMEDOUT and leaves the structure unchanged; the vendor driver returns 0 on a timeout and the caller has to compare the counter."
+    notes: "The first word of the attribute is the timeout. The wait happens outside the library lock, so other ISP calls are not blocked meanwhile."
   ISP_Tuning_Get/SetExpr:
     group: ae
     summary: "Reads the exposure mode and integration time in use, or sets them. `IMPISPExpr` is a union: the setter uses `s_attr` (mode, unit line or microsecond, time) and the getter fills `g_attr` (mode, current, minimum and maximum integration time, microseconds per line)."
@@ -462,8 +463,9 @@ functions:
     soc: T10, T20, T30.
   ISP_Tuning_AwbSync:
     group: awb
-    summary: Copies the AWB result of one sensor to the other on dual-sensor boards.
-    unverified: true
+    summary: "Has the kernel synchronise the AWB of sensor 1 to sensor 0 (dual-sensor boards)."
+    returns: "0 on success; sensors 0 and 2 and above return 0 without any request; the driver error otherwise."
+    notes: "Only sensor 1 is synchronised."
   ISP_Tuning_GetAwbZone:
     group: stat
     summary: "Reads the per-zone white balance statistics (`IMPISPAWBZone`: 225 red, 225 green and 225 blue values, 15 by 15 zones)."
@@ -653,9 +655,9 @@ functions:
     diff: Takes the enable flag like the vendor library; an earlier OpenIMP stub always switched it on.
   ISP_Tuning_SetAntiFogAttr:
     group: nr
-    summary: Sets the anti-fog attribute.
-    notes: Accepted, no picture change on T21 in our tests, as with the vendor library.
-    unverified: true
+    summary: "Sets the anti-fog level: 0 off, 1 strong, 2 medium, 3 weak."
+    returns: "0 on success, -1 without an open tuning session, otherwise the driver result; the T10 and T20 driver rejects levels above 3."
+    notes: "Accepted, no picture change on T21 in our tests, as with the vendor library."
   ISP_Tuning_Get/SetSinterDnsAttr:
     group: nr
     summary: 'Reads or sets the spatial (2D, Sinter) noise reduction: auto or manual mode and the strength.'
@@ -679,8 +681,9 @@ functions:
       on T23, T31, T40, T41.
   ISP_Tuning_SetTemperDnsCtl:
     group: nr
-    summary: Sets the control word of the temporal noise reduction.
-    unverified: true
+    summary: "Run-time control of the temporal noise reduction: a type and, for the manual type, a strength."
+    returns: "0 on success, -1 for NULL or no tuning session, otherwise the driver result."
+    notes: "T20: ignored while the ISP runs in night mode (returns 0); the type and the manual strength are sent only when they changed. T30: the value is only kept, no driver control is written. T21 sends the control to the driver."
   ISP_Tuning_SetSinterStrength:
     group: nr
     summary: "Sets the strength of the spatial (2D) noise reduction as a ratio; 128 is the neutral value."
@@ -725,12 +728,14 @@ functions:
     diff: "The vendor T21 kernel module ignores the call; OpenIMP matches that."
   ISP_Tuning_SetFWFreeze:
     group: dn
-    summary: Freezes the ISP firmware loop (AE, AWB and the other adaptive steps) while the picture stays, or resumes it.
-    unverified: true
+    summary: "Sends the firmware-freeze flag (1 or 0) to the ISP driver as a tuning control."
+    returns: "0 on success, -1 when the tuning session is not open, otherwise the driver result."
+    notes: "On T23 a value equal to the last one is not sent again. T20 and T21 use the older control interface for the same control."
   ISP_Tuning_SetISPProcess:
     group: dn
-    summary: Switches the ISP processing of the frames on or off.
-    unverified: true
+    summary: "Sends the ISP-process flag to the ISP driver as a tuning control."
+    returns: "0 on success, -1 when the tuning session is not open, otherwise the driver result."
+    notes: "On T23 a value equal to the last one is not sent again. T20 and T21 pass the argument as the control value, the other SoCs pass a pointer to it."
   ISP_Tuning_EnableMovestate:
     group: dn
     summary: "Tells the ISP that the camera is moving. It loads the moving-scene limits from `/etc/sensor/<sensor>move.txt` into the exposure control."
@@ -841,12 +846,13 @@ functions:
     returns: "0 on success, -1 for a NULL pointer or an input other than the main one (T40 and T41)."
   ISP_WDR_ENABLE_Get:
     group: wdr
-    summary: Reads whether WDR is on (older spelling).
-    unverified: true
+    summary: "Reads whether WDR is on (0 or 1) from the mode the library keeps."
+    returns: "0 on success, -1 for a NULL pointer or an ISP that is not open."
+    notes: "If the library holds a mode other than 0 or 1 it logs the fact and leaves the result unchanged."
   ISP_WDR_OPEN:
     group: wdr
-    summary: Opens the WDR path of the ISP.
-    unverified: true
+    summary: "Opens the WDR path (T40 and T41 form with a sensor number). For the linear running mode the sensor and input mode go to the driver; for the WDR running mode WDR is enabled in the driver."
+    returns: "0 on success, -8 for a NULL attribute or when the ISP is not open, -1 when the driver refuses, -9 for another running mode."
   ISP_Tuning_Get/SetAfHist:
     group: af
     summary: "Reads or sets the AF histogram parameters."
@@ -1063,8 +1069,9 @@ functions:
     soc: T40.
   ISP_SetCameraInputMode:
     group: sys
-    summary: Sets how the camera input is wired.
-    unverified: true
+    summary: "Passes the dual-sensor camera input mode to the ISP driver; the argument is a structure whose first field is the mode number."
+    returns: "T23: 0 on success, -1 when the ISP is not open, the pointer is NULL, the mode is 73 or above or its low nibble is 9 or above, or the driver refuses. T40 and T41: 0 on success, -8 when the ISP is not open, -9 for a NULL pointer, -4 for an invalid combination."
+    notes: "The accepted mode is remembered. Call it before the sensors are enabled."
   ISP_SetCameraInputSelect:
     group: sys
     summary: Chooses which sensor input is active when the camera input mode is the selecting one.
@@ -1104,12 +1111,16 @@ functions:
     soc: T40.
   ISP_Bypass_Bind:
     group: ldc
-    summary: Binds a bypass output (raw frames straight from the sensor) to a FrameSource channel.
-    unverified: true
+    summary: "Programs the three bypass outputs of sensor `num` (enable flag, virtual channel index and DMA index each) so the raw frames go to the selected DMA channels."
+    returns: "0 on success, -4 for a sensor number of 4 or more, -9 for a NULL attribute, -8 when the ISP device is not open, -1 when the driver refuses."
+    notes: "Call it after `IMP_ISP_Open`, and not together with `IMP_ISP_Tuning_SetISPBypass`."
+    soc: "Implemented for T40 and T41."
   ISP_GetRaw:
     group: ldc
-    summary: Captures one raw frame.
-    unverified: true
+    summary: "Captures one raw frame of sensor `num` into a buffer that the library allocates and keeps per sensor (grown when a larger frame is requested); the buffer address and size are returned in the attribute."
+    returns: "0 on success, -1 for a NULL attribute, a `raw_bit` other than 8 or 16, a zero size or a driver error, -2 when the buffer cannot be allocated, -4 for a sensor number of 4 or more, -8 when the ISP is not open."
+    notes: "`raw_bit` 8 uses width times height bytes, 16 uses twice that. The cache is invalidated so the data read after the call is what the DMA wrote."
+    soc: "Implemented for T40; not on T41."
   ISP_Tuning_Get/SetHLDCAttr:
     group: ldc
     summary: Reads or sets the hardware lens distortion correction.
@@ -1128,49 +1139,59 @@ functions:
     unverified: true
   ISP_Tuning_SetFixedContraster:
     group: color
-    summary: Fixes the contrast ratio.
-    unverified: true
+    summary: "Hands an `IMPISPFixedContrastAttr` to the driver as the fixed-contrast control (T40 and T41 form with a sensor number)."
+    returns: "0 on success, non-zero on error."
   ISP_SetFixedContraster:
     group: color
-    summary: Fixes the contrast ratio at library level.
-    unverified: true
+    summary: "Fixes the contrast of the picture: the argument points to an `IMPISPFixedContrastAttr` (mode and a low and a high limit) that is handed to the driver."
+    returns: "0 on success, -1 when the tuning session is not open or the pointer is NULL, otherwise the driver result."
+    notes: "On T23 the call goes to the sensor-0 form of the multi-camera call. On T10, T20, T21 and T30 the call does nothing and returns 0."
   ISP_Tuning_SetSharpness_internal:
     group: sys
-    summary: Internal helper of the vendor library for the sharpness call, exported for compatibility.
-    unverified: true
+    summary: "Internal sharpness entry (value and mode). On T23 it forwards to the multi-camera internal entry for sensor 0."
+    returns: "0 on success, non-zero on error."
+    notes: "Exported for compatibility with the vendor library; applications use `IMP_ISP_Tuning_SetSharpness`."
   ISP_Tuning_SetContrast_internal:
     group: sys
-    summary: Internal helper of the vendor library for the contrast call, exported for compatibility.
-    unverified: true
+    summary: "Internal contrast entry (value and mode). On T23 it forwards to the multi-camera internal entry for sensor 0; elsewhere it needs an open tuning session and logs an error without one."
+    returns: "0 on success, non-zero on error."
+    notes: "Exported for compatibility with the vendor library; applications use `IMP_ISP_Tuning_SetContrast`."
   ISP_Tuning_SetShading:
     group: sys
-    summary: Selects the lens shading table.
-    unverified: true
+    summary: "Sends the enable flag to the ISP driver as the lens-shading control."
+    returns: "0 on success, -1 when the tuning session is not open, otherwise the driver result."
+    notes: "The T23 implementation prints a trace line to standard output on every call."
+    soc: "Implemented on T23 only."
   ISP_SetAeAlgoFunc:
     group: ae
-    summary: Registers an application-supplied auto exposure algorithm, which then replaces the built-in AE. The application receives the statistics and writes exposure values back.
-    notes: The `_close` and `_internal` entries are helpers of the same registration in the vendor library.
-    unverified: true
+    summary: "Registers an application-supplied auto exposure algorithm as a table of callbacks. The function is copied and kept; it is handed to the driver the next time a sensor is enabled (and is re-registered at every enable)."
+    returns: "0 on success, -1 for NULL or no memory."
+    notes: "Register before `IMP_ISP_EnableSensor`. `DisableSensor` unregisters the algorithm again, so register it once per run of the sensor."
   ISP_SetAeAlgoFunc_close:
     group: sys
-    summary: Unregisters the custom AE algorithm again (helper of `SetAeAlgoFunc`).
-    unverified: true
+    summary: "Tells the driver to stop using the custom AE algorithm and clears the registration flag."
+    returns: "0 on success, -1 when the ISP is not open or the driver refuses."
+    notes: "Called by `DisableSensor`."
   ISP_SetAeAlgoFunc_internal:
     group: sys
-    summary: Internal registration entry behind `SetAeAlgoFunc`; exported for compatibility.
-    unverified: true
+    summary: "Registers the callback table directly with the driver (used by `EnableSensor`) and then stores it as `SetAeAlgoFunc` does."
+    returns: "0 on success, -1 for NULL, when the sensor is already running, or when the driver refuses."
+    notes: "Exported for compatibility with the vendor library; applications call `SetAeAlgoFunc`."
   ISP_SetAwbAlgoFunc:
     group: awb
-    summary: Registers an application-supplied auto white balance algorithm that replaces the built-in AWB.
-    unverified: true
+    summary: "Registers an application-supplied auto white balance algorithm as a table of callbacks; handled like `SetAeAlgoFunc`."
+    returns: "0 on success, -1 for NULL or no memory."
+    notes: "Register before `IMP_ISP_EnableSensor`; `DisableSensor` unregisters it."
   ISP_SetAwbAlgoFunc_close:
     group: sys
-    summary: Unregisters the custom AWB algorithm again (helper of `SetAwbAlgoFunc`).
-    unverified: true
+    summary: "Tells the driver to stop using the custom AWB algorithm and clears the registration flag."
+    returns: "0 on success, -1 when the ISP is not open or the driver refuses."
+    notes: "Called by `DisableSensor`."
   ISP_SetAwbAlgoFunc_internal:
     group: sys
-    summary: Internal registration entry behind `SetAwbAlgoFunc`; exported for compatibility.
-    unverified: true
+    summary: "Registers the AWB callback table with the driver (used by `EnableSensor`) and stores it as `SetAwbAlgoFunc` does."
+    returns: "0 on success, -1 for NULL, when the sensor is already running, or when the driver refuses."
+    notes: "Exported for compatibility with the vendor library; applications call `SetAwbAlgoFunc`."
   ISP_Tuning_Get/SetFaceAe:
     group: ae
     summary: 'Reads or sets the face-priority exposure: a face window and a brightness target that the AE meters instead of
@@ -1196,33 +1217,36 @@ functions:
     soc: T40 only.
   ISP_SET_GPIO_INIT_OR_FREE:
     group: sys
-    summary: Claims or releases the GPIO pins that the ISP firmware uses for IR-cut or sensor switching.
-    unverified: true
+    summary: "Hands a GPIO description (an int array) to the driver, which claims or releases the pin."
+    returns: "0 on success, -1 for NULL or when the ISP is not open, otherwise the driver result."
   ISP_SET_GPIO_STA:
     group: sys
-    summary: Sets the level of such a GPIO pin.
-    unverified: true
+    summary: "Hands a GPIO description (an int array) to the driver, which sets the pin level."
+    returns: "0 on success, -1 for NULL or when the ISP is not open, otherwise the driver result."
   ISP_SetSwitchgpio:
     group: sys
     summary: Selects the GPIO that switches between two sensors on a multi-camera board.
     unverified: true
   ISP_SetPreDqtime:
     group: sys
-    summary: Sets the time the ISP waits before it releases the first frames of a stream.
-    unverified: true
+    summary: "Hands a pre-dequeue time value to the ISP driver (T40 and T41)."
+    returns: "0 on success, -4 for a sensor number of 4 or more, -9 for a NULL pointer, -8 when the ISP device is missing, -6 when the driver refuses."
   ISP_SetStreamOut:
     group: sys
-    summary: Switches the ISP frame output on or off.
-    unverified: true
+    summary: "Hands a state structure to the driver's stream-out request."
+    returns: "0 on success, -1 when the ISP is not open or the pointer is NULL, otherwise the driver result."
+    soc: "Implemented on T23 only."
   ISP_StreamCheck:
     group: sys
-    summary: Checks that the sensor stream arrives.
-    unverified: true
+    summary: "Hands a state structure to the driver's stream-check request."
+    returns: "0 on success, -1 when the ISP is not open or the pointer is NULL, otherwise the driver result."
+    soc: "Implemented on T23 only."
   ISP_Tuning_GetNCUAlloc:
     group: sys
-    summary: Reads the size of the NCU (neural compute) buffer reserved by the ISP. Internal entry kept for compatibility.
-    unverified: true
+    summary: "Returns the NCU buffer allocation of sensor 0 that `IMP_ISP_AddSensor` made, as an integer (0 when there is none)."
+    soc: "Implemented on T23 only."
   ISP_Tuning_GetNCUInfo:
     group: sys
-    summary: Reads the NCU buffer information. Internal entry kept for compatibility.
-    unverified: true
+    summary: "Reads the NCU information block of the ISP driver into the buffer you pass."
+    returns: "0 on success, non-zero for a NULL pointer or a driver error."
+    soc: "Implemented on T23 only."
