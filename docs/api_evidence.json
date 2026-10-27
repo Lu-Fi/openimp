@@ -10486,7 +10486,7 @@
    },
    "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
    "ref": {
-    "T23": "apitest rc3-cases 2026-10-27 .30",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
    }
   },
@@ -10523,7 +10523,7 @@
    },
    "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
    "ref": {
-    "T23": "apitest rc3-cases 2026-10-27 .30",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
    }
   },
@@ -10533,7 +10533,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "err",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10543,7 +10543,8 @@
    },
    "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "ISP_Tuning_Get/SetOSDBlock": {
@@ -10552,7 +10553,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "err",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10562,7 +10563,8 @@
    },
    "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "ISP_Tuning_GetOsdRgnAttr": {
@@ -10571,7 +10573,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10580,7 +10582,8 @@
     "T41": "host"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "ISP_Tuning_SetOsdPoolSize": {
@@ -10616,7 +10619,7 @@
    },
    "note": "T41: 2 insns, returns ? T41: 2 insns, returns ?",
    "ref": {
-    "T23": "apitest rc3-cases 2026-10-27 .30",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
    }
   },
@@ -10626,7 +10629,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "err",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10653,7 +10656,7 @@
    },
    "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
    "ref": {
-    "T23": "FAIL apitest rc3-cases 2026-10-27 .30: ret=0 white 256x128 ARGB picture at (64,64): region luma 116.0 -> 116.3 (NOT VISIBLE)",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -10690,7 +10693,7 @@
    },
    "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
    "ref": {
-    "T23": "apitest rc3-cases 2026-10-27 .30",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
    }
   },
@@ -10870,7 +10873,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -10879,7 +10882,8 @@
     "T41": "aud"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_DestroyGroup": {
@@ -11042,7 +11046,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -11051,7 +11055,8 @@
     "T41": "aud"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_Exit_ISP": {
@@ -11060,7 +11065,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -11069,7 +11074,8 @@
     "T41": "host"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_Get/SetGrpRgnAttr": {
@@ -11239,6 +11245,9 @@
     "T33": "nob",
     "T40": "host",
     "T41": "miss"
+   },
+   "ref": {
+    "T23": "picture type works (apitest isposd .30, #127); line/rect/cover draw blocks are stored only, no MSCA draw path yet"
    }
   },
   "OSD_GetRegionLuma": {
@@ -11263,7 +11272,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -11272,7 +11281,8 @@
     "T41": "aud"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_RegisterRgn": {
@@ -11517,7 +11527,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "host",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -11527,7 +11537,8 @@
    },
    "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_SetRgnAttrWithTimestamp": {
@@ -11688,7 +11699,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -11697,7 +11708,8 @@
     "T41": "aud"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_Start": {
@@ -20348,7 +20360,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "nob",
@@ -20358,7 +20370,8 @@
    },
    "auto": true,
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
   "OSD_UpdateRgnAttrData_ISP": {
@@ -20375,7 +20388,8 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {}
   },
   "Phys_to_Virt": {
    "area": "System",
