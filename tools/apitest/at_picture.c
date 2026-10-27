@@ -949,20 +949,43 @@ static int c_csc(int ph, int arg, char *info, size_t n)
 static int c_ccm(int ph, int arg, char *info, size_t n)
 {
     static IMPISPCCMAttr old;
+#ifdef H_MODCTL
+    static IMPISPModuleCtl omc;       /* the IQ file can ship the CCM bypassed (T31 sc2336: key 0x42209, bit 9): a manual matrix has no effect then, so the case switches the CCM on and restores the key */
+    static int mc_ok;
+#endif
     IMPISPCCMAttr a, cur;
     static const float swap[9] = { 0, 0, 1, 0, 1, 0, 1, 0, 0 };
     int r, k;
 
     if (!HAVE(IMP_ISP_Tuning_SetCCMAttr)) return CASE_NA;
-    if (ph) { IMP_ISP_Tuning_SetCCMAttr(&old); return 0; }
+    if (ph) {
+        IMP_ISP_Tuning_SetCCMAttr(&old);
+#ifdef H_MODCTL
+        if (mc_ok) IMP_ISP_Tuning_SetModuleControl(&omc);
+        mc_ok = 0;
+#endif
+        return 0;
+    }
+#ifdef H_MODCTL
+    if (HAVE(IMP_ISP_Tuning_GetModuleControl) && HAVE(IMP_ISP_Tuning_SetModuleControl)) {
+        IMPISPModuleCtl mc;
+        memset(&omc, 0, sizeof(omc)); mc_ok = IMP_ISP_Tuning_GetModuleControl(&omc) == 0;
+        if (mc_ok && omc.bitBypassCCM) { mc = omc; mc.bitBypassCCM = 0; IMP_ISP_Tuning_SetModuleControl(&mc); usleep(300000); }
+    }
+#endif
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetCCMAttr(&old);
     memset(&a, 0, sizeof(a));
     a.ManualEn = IMPISP_TUNING_OPS_MODE_ENABLE; a.SatEn = IMPISP_TUNING_OPS_MODE_DISABLE;
     for (k = 0; k < 9; k++) a.ColorMatrix[k] = arg ? 1.0f / 3 : swap[k];
     r = IMP_ISP_Tuning_SetCCMAttr(&a);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetCCMAttr(&cur);
-    snprintf(info, n, "manual=%d m0=%.2f m4=%.2f m8=%.2f (was manual=%d)", cur.ManualEn, cur.ColorMatrix[0],
-             cur.ColorMatrix[4], cur.ColorMatrix[8], old.ManualEn);
+    snprintf(info, n, "manual=%d m0=%.2f m4=%.2f m8=%.2f (was manual=%d)%s", cur.ManualEn, cur.ColorMatrix[0],
+             cur.ColorMatrix[4], cur.ColorMatrix[8], old.ManualEn,
+#ifdef H_MODCTL
+             mc_ok && omc.bitBypassCCM ? " ccm-was-bypassed" : "");
+#else
+             "");
+#endif
     return r;
 }
 #endif

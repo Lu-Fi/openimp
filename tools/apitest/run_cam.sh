@@ -82,10 +82,19 @@ cam "cat /tmp/at/apitest.json" > "$OUT/apitest.json" 2>/dev/null
 if [ -z "$NOIMG" ] && [ "$SOC" != T40 ]; then
   [ -e "$S/audit/ab-t41/USER_IN_CELLAR" ] || run imgfx env IMGFX_STATS=1 IMGFX_SKIP_RISKY=$([ -n "$RISKY" ] && echo 0 || echo 1) ./apitest "$SENSOR" "$I2C" "$W" "$H" picture /tmp/at/img $IMGFX_FILTER
 fi
+# colour pass (issue 105): CCM/BCSH act on colour, a grey scene cannot show them.  Saturation 230 for the run, only the colour cases
+# (ccm*, bypass-*): results2json takes this log as the second --imgfx file and lets a clear picture effect override the first pass.
+# COLOR=0 skips it; the scene must be colourful (daylight or light.keller on, LIGHT.lock) - the chroma of the base frame is in the log.
+if [ -z "$NOIMG" ] && [ "$SOC" != T40 ] && [ "${COLOR:-1}" = 1 ] && [ ! -e "$S/audit/ab-t41/USER_IN_CELLAR" ]; then
+  for f in ccm bypass-; do
+    run imgfx2-$f env IMGFX_STATS=1 IMGFX_SAT=230 IMGFX_SKIP_RISKY=1 ./apitest "$SENSOR" "$I2C" "$W" "$H" picture /tmp/at/img2 $f
+    cat "$OUT/imgfx2-$f.log" >> "$OUT/imgfx2.log"
+  done
+fi
 [ "$SOC" = T40 ] && [ -z "$NODEV" ] && run devtest ./apitest "$SENSOR" "$I2C" "$W" "$H" t40dev "$T40_MASK"
 cam 'dmesg | tail -n 40' > "$OUT/dmesg-tail.txt" 2>&1
 
 python3 "$D/results2json.py" --soc "$SOC" --ip "$IP" --image "$TAG" --date "$(date +%F)" --out "$OUT/result.json" \
-  --apitest "$OUT/apitest.log" $([ -s "$OUT/apitest.json" ] && echo --report "$OUT/apitest.json") $([ -s "$OUT/imgfx.log" ] && echo --imgfx "$OUT/imgfx.log") $([ -s "$OUT/devtest.log" ] && echo --devtest "$OUT/devtest.log")
+  --apitest "$OUT/apitest.log" $([ -s "$OUT/apitest.json" ] && echo --report "$OUT/apitest.json") $([ -s "$OUT/imgfx.log" ] && echo --imgfx "$OUT/imgfx.log") $([ -s "$OUT/imgfx2.log" ] && echo --imgfx "$OUT/imgfx2.log") $([ -s "$OUT/devtest.log" ] && echo --devtest "$OUT/devtest.log")
 grep -hE "^\[T\] summary|^\[E\]" "$OUT/apitest.log" | tail -3
 echo "FAIL lines:"; grep -hE "^\[A\] .* FAIL" "$OUT/apitest.log" | head -40
