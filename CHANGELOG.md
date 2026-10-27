@@ -8,6 +8,18 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-109` (2026-10-27)
+
+- **T10/T20 IMP_ISP_Tuning_Enable/DisableMovestate** (issue #109) return 0 like the vendor and run the vendor
+  library logic (T10/T20 libimp 3.12.0, one binary for both, the same as T31 1.1.x): Enable reads the 0x70-byte
+  `isp_core_stab_attr` of control 0x800002c (IMAGE_TUNING_CID_SYSTEM_TAB), then sends it back with the motion
+  settings (day: maximum integration time 3/5 of the current one, manual sinter and temper, sharpening, sinter and
+  temper limits from `/etc/sensor/<sensor>move.txt`; night: the night limits of that file); Disable puts the
+  captured block back when the running mode is unchanged and asks for an IDR on channel 0. The T10/T20 driver
+  applies this block. Before, OpenIMP sent a plain 0/1 as the block pointer, the driver's copy failed and both
+  calls returned -1. Host test `tests/t30` `isp_t20_movestate_test` (the T31 test built for T20). QEMU T10/T20 and
+  cameras (T10 jxh42, T20 jxf23): -1/-1 before, 0/0 after, neighbour cases and frame flow unchanged, no oops.
+
 ## Branch `claude/rc3-gaps` (2026-10-27)
 
 - **Runtime-swap evidence:** `tools/apitest/run_swap.sh` runs apitest on a camera with the open ISP ko and/or libimp of `next` swapped in at run time (no flash,

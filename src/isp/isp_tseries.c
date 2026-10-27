@@ -51,7 +51,7 @@
 #endif
 
 static char *bpath;
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T20)
 void openimp_t31_isp_tuning_enabled(void);
 void openimp_t31_movestate_block(uint8_t ae[0x70], const uint8_t cur[0x70],
                                  const uint32_t c[14], uint32_t mode);
@@ -4416,9 +4416,11 @@ int IMP_ISP_Tuning_GetAFMetrices(void *metrices)
     return tseries_tuning_get_ptr(TISP_CID_AF_METRICES, metrices);
 }
 
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T20)
 /*
- * T31 (vendor libimp 1.1.x, disassembled): gmovestate is the 0x70-byte AE
+ * T31 (vendor libimp 1.1.x, disassembled) and T10/T20 (vendor libimp 3.12.0,
+ * the same binary for both, 0x60b38/0x60f80, byte for byte the same
+ * logic): gmovestate is the 0x70-byte AE
  * block of CID 0x800002c, the running mode it was captured in and the 14
  * values of /etc/sensor/<sensor>move.txt (loaded by EnableTuning).  The
  * logic equals the T23 library's (isp_t23_tuning.c): EnableMovestate reads
@@ -4428,6 +4430,12 @@ int IMP_ISP_Tuning_GetAFMetrices(void *metrices)
  * channel 0.  The stock T31 driver does nothing with the control (OEM
  * no-op), so the visible effects are the IDR and the return values: -1
  * without tuning, 0 once past the checks, also when a request fails.
+ * On T10/T20 control 0x800002c is IMAGE_TUNING_CID_SYSTEM_TAB (the 0x70-byte
+ * isp_core_stab_attr: system_tab values + ctrl flags), which the T10/T20
+ * driver applies, so there the block takes effect (shorter integration
+ * time, manual sinter, move.txt limits while moving).  The old T10/T20 code
+ * sent a plain 0/1 as the block pointer: the driver's copy_from_user failed
+ * and both calls returned -1 (vendor: 0).
  */
 static struct {
     uint8_t ae[0x70];
@@ -5394,7 +5402,7 @@ int IMP_ISP_EnableTuning(void)
 #if defined(PLATFORM_T23)
     openimp_t23_isp_tuning_enabled();
 #endif
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T20)
     openimp_t31_isp_tuning_enabled();
 #endif
     if (tseries_start_tuning_worker() != 0)

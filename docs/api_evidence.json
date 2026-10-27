@@ -1478,8 +1478,8 @@
   "ISP_Tuning_DisableMovestate": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "err",
-    "T20": "err",
+    "T10": "rt",
+    "T20": "rt",
     "T21": "rt",
     "T23": "no-op",
     "T30": "qemu",
@@ -1511,8 +1511,8 @@
    },
    "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control",
    "ref": {
-    "T10": "FAIL apitest agg47-cases 2026-10-26 .31: ret=-1 rt: disabled again, frames flow (1)",
-    "T20": "FAIL apitest agg47-cases 2026-10-26 .107: ret=-1 rt: disabled again, frames flow (1)",
+    "T10": "apitest issue-109 2026-10-27 .31 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
+    "T20": "apitest issue-109 2026-10-27 .107 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
     "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
     "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
@@ -1577,8 +1577,8 @@
   "ISP_Tuning_EnableMovestate": {
    "area": "ISP tuning",
    "cells": {
-    "T10": "err",
-    "T20": "err",
+    "T10": "rt",
+    "T20": "rt",
     "T21": "rt",
     "T23": "no-op",
     "T30": "?",
@@ -1610,8 +1610,8 @@
    },
    "note": "T23: stock driver also no-op (OEM-same); T31: vendor library logic (AE block of control 0x800002c, move.txt limits, IDR on disable), host-tested; the stock T31 driver ignores the control",
    "ref": {
-    "T10": "FAIL apitest agg47-cases 2026-10-26 .31: ret=-1 rt: enabled, frames flow before/after (1/1); ISP state is internal",
-    "T20": "FAIL apitest agg47-cases 2026-10-26 .107: ret=-1 rt: enabled, frames flow before/after (1/1); ISP state is internal",
+    "T10": "apitest issue-109 2026-10-27 .31 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
+    "T20": "apitest issue-109 2026-10-27 .107 + QEMU: ret 0 (was -1); vendor 3.12.0 logic (SYSTEM_TAB block, same as T31), picture effect not measured, no move.txt in the image (vendor alike)",
     "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
     "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)"
    }
@@ -9917,7 +9917,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "run"
+    "T41": "cache"
    },
    "used": {
     "T10": [
@@ -9962,7 +9962,7 @@
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest agg47 2026-10-26 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34: SetFrameDepth(n)/GetFrameDepth round trip, GetFrame/ReleaseFrame work with and without it (OpenIMP serves GetFrame from the channel buffers; the depth value does not bound a frame queue)"
+    "T41": "value stored and read back (.34, 2026-10-27); depth semantics (frames held / dropped) not yet proven against the vendor"
    }
   },
   "FrameSource_Get/SetI2dAttr": {
