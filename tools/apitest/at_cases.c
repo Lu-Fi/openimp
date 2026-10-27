@@ -121,16 +121,29 @@ static void *dsym(const char *n) { return dlsym(RTLD_DEFAULT, n); }
 
 /* --------------------------------------------------------------------------------------------------- Movestate */
 #if HAS_IMP_ISP_Tuning_EnableMovestate && HAS_IMP_ISP_Tuning_DisableMovestate
+/* the exposure ceiling the motion block changes (T10/T20/T21/T30: legacy GetIntegrationTime), -1 where not readable */
+static int ms_it_max(void)
+{
+#if HAS_IMP_ISP_Tuning_GetIntegrationTime && !defined(PLATFORM_T31)
+    IMPISPITAttr a;
+
+    memset(&a, 0, sizeof(a));
+    return IMP_ISP_Tuning_GetIntegrationTime(&a) == 0 ? (int)a.max_integration_time : -1;
+#else
+    return -1;
+#endif
+}
+
 static void cs_movestate(void)
 {
-    int r1, r2, f1, f2, f3;
+    int r1, r2, f1, f2, f3, m0, m1, m2;
 
     NEED(IMP_ISP_Tuning_EnableMovestate) NEED(IMP_ISP_Tuning_DisableMovestate) {
-        f1 = flow();
-        r1 = IMP_ISP_Tuning_EnableMovestate(); usleep(700000); f2 = flow();
-        r2 = IMP_ISP_Tuning_DisableMovestate(); usleep(700000); f3 = flow();
-        rep(FN(IMP_ISP_Tuning_EnableMovestate), r1, (r1 == 0 && f1 && f2) ? V_PASS : V_FAIL, "rt: enabled, frames flow before/after (%d/%d); ISP state is internal", f1, f2);
-        rep(FN(IMP_ISP_Tuning_DisableMovestate), r2, (r2 == 0 && f3) ? V_PASS : V_FAIL, "rt: disabled again, frames flow (%d)", f3);
+        f1 = flow(); m0 = ms_it_max();
+        r1 = IMP_ISP_Tuning_EnableMovestate(); usleep(700000); f2 = flow(); m1 = ms_it_max();
+        r2 = IMP_ISP_Tuning_DisableMovestate(); usleep(700000); f3 = flow(); m2 = ms_it_max();
+        rep(FN(IMP_ISP_Tuning_EnableMovestate), r1, (r1 == 0 && f1 && f2) ? V_PASS : V_FAIL, "rt: enabled, frames flow before/after (%d/%d); IT max %d -> %d", f1, f2, m0, m1);
+        rep(FN(IMP_ISP_Tuning_DisableMovestate), r2, (r2 == 0 && f3) ? V_PASS : V_FAIL, "rt: disabled again, frames flow (%d); IT max back %d", f3, m2);
     }
 }
 #else

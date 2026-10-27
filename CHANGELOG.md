@@ -8,6 +8,15 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/movestate-t21-t30` (2026-10-27)
+
+- **T21 / T30 IMP_ISP_Tuning_Enable/DisableMovestate**: the vendor T21 1.0.33 and T30 1.0.5 libimps run the same
+  gmovestate logic as T31 and T10/T20 (SYSTEM_TAB motion block on 0x800002c, move.txt limits, restore + IDR on
+  Disable); OpenIMP T21/T30 sent a plain 0/1 (T21 driver: no-op). The T31/T20 implementation now also builds for
+  PLATFORM_T21 and PLATFORM_T30 (move.txt load in EnableTuning). Needs open-tx-isp `claude/movestate-t21-t30`
+  (T30: SYSTEM_TAB set/get fixed; T21: the motion block applies its exposure cap only). Host tests
+  `isp_t21_movestate_test`, `isp_t30_movestate_test`; apitest movestate prints the exposure ceiling before/during/after.
+  QEMU: T21 2246 -> 1347 -> 2246, T30 1916 -> 1149 -> 1916, frames flow, no oops. Camera proof open (T21).
 ## Branch `claude/t41-fs-pool` (2026-10-27, issue 72)
 
 - **T41 IMP_FrameSource_SetPool / GetPool: real media memory pools** like the vendor 1.2.5/1.2.6.

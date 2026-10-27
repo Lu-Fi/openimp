@@ -64,9 +64,7 @@ static uint32_t seen_timeout;
 
 /* the video-drop monitor is covered by tests/t31 (video_drop_test) */
 int openimp_video_drop_set(void (*cb)(void)) { (void)cb; return 0; }
-#if defined(PLATFORM_T20)
 int IMP_Encoder_RequestIDR(int chn) { (void)chn; return 0; }  /* DisableMovestate */
-#endif
 
 int __real_ioctl(int fd, unsigned long request, ...);
 int __wrap_ioctl(int fd, unsigned long request, ...)
