@@ -18,6 +18,8 @@ int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr
  *
  * Env: IMGFX_MODE=night   running mode night while testing (IR-cut open, IR on)
  *      IMGFX_SETTLE_MS    extra settle time added to every case (default 0)
+ *      IMGFX_PAIR=1       a second consecutive frame per case (<name>-b.nv12), for temporal-noise measurements
+ *      IMGFX_PRE=a,b      blocks put into a working state for the run (dark,defog,nr,dpc; see pre_apply)
  *      IMGFX_SKIP_RISKY=1 skip the cases that may wedge a pipeline
  *                         (ISP bypass, FPS change); they run last
  * Run with the camera's streamer (timps/prudynt) stopped.
@@ -1125,6 +1127,9 @@ static int c_aeexpr(int ph, int arg, char *info, size_t n)
     case 2: a.AeMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeAGainManualMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeAGain = 1024; break;
     case 3: a.AeMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeAGainManualMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeAGain = 16 * 1024; break;
     case 4: a.AeMaxAGainMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeMaxAGain = old.AeMinAGain ? old.AeMinAGain : 1024; break;
+    case 6: a.AeIntegrationTimeUnit = ISP_CORE_EXPR_UNIT_US; a.AeMode = IMPISP_TUNING_OPS_TYPE_MANUAL;   /* IMGFX_PRE=dark: short time + 16x again */
+            a.AeIntegrationTimeMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeIntegrationTime = 200;
+            a.AeAGainManualMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeAGain = 16 * 1024; break;
     default: a.AeMaxDgainMode = IMPISP_TUNING_OPS_TYPE_MANUAL; a.AeMaxDgain = old.AeMinDgain ? old.AeMinDgain : 1024; break;
     }
     r = IMP_ISP_Tuning_SetAeExprInfo(IMPVI_MAIN, &a);
@@ -1520,6 +1525,86 @@ static const Case cases[] = {
 };
 #define NCASES (sizeof(cases) / sizeof(cases[0]))
 
+/* IMGFX_PRE=tok,tok...: put blocks into a state where their bypass bit matters, for the whole run (#106; restored at the end).
+ *   dark   manual short exposure (the AE then drives the gain to the cap): noisy dark picture (denoise, DPC)
+ *   defog  defog on at strength 255 (T21: SetAntiFogAttr strong; T41: module ratio 255)
+ *   nr     spatial + temporal noise reduction strength 255 (T41: sinter/temper ratio 255)
+ *   dpc    defect pixel correction strength 255 (T41: ratio 255)
+ * The bypass-<block> cases then compare against a base taken with the block working hard. */
+static void pre_apply(const char *list, int on)
+{
+    char buf[128], *t, *sv = NULL;
+#ifdef PLATFORM_T41
+    static IMPISPModuleRatioAttr oldratio; static int ratio_saved;
+    IMPISPModuleRatioAttr ra;
+#else
+    char tmp[16];
+#endif
+
+    if (!list || !*list) return;
+    snprintf(buf, sizeof(buf), "%s", list);
+    for (t = strtok_r(buf, ",", &sv); t; t = strtok_r(NULL, ",", &sv)) {
+        char info[160]; int r = 0;
+        info[0] = 0;
+        if (!strcmp(t, "dark")) {
+#ifdef PLATFORM_T41
+            r = on ? c_aeexpr(0, 6, info, sizeof(info)) : c_aeexpr(1, 6, info, sizeof(info));
+#else
+            /* manual short integration time, gain caps untouched: the AE raises the gain to hold the brightness */
+            static IMPISPExpr oe; IMPISPExpr e;
+            if (on) {
+                memset(&oe, 0, sizeof(oe)); IMP_ISP_Tuning_GetExpr(&oe);
+                memset(&e, 0, sizeof(e)); e.s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e.s_attr.unit = ISP_CORE_EXPR_UNIT_US; e.s_attr.time = 200;
+                r = IMP_ISP_Tuning_SetExpr(&e);
+                memset(&e, 0, sizeof(e)); IMP_ISP_Tuning_GetExpr(&e);
+                snprintf(info, sizeof(info), "manual time it=%u (was %u)", e.g_attr.integration_time, oe.g_attr.integration_time);
+            } else {
+                memset(&e, 0, sizeof(e)); e.s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; e.s_attr.unit = ISP_CORE_EXPR_UNIT_US; e.s_attr.time = oe.g_attr.integration_time;
+                IMP_ISP_Tuning_SetExpr(&e);
+            }
+#endif
+            if (on) sleep(4);   /* AE settles at the cap */
+        }
+#ifdef PLATFORM_T41
+        else if (!strcmp(t, "defog") || !strcmp(t, "nr") || !strcmp(t, "dpc")) {
+            if (!HAVE(IMP_ISP_Tuning_SetModule_Ratio) || !on) continue;
+            memset(&ra, 0, sizeof(ra)); IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &ra);
+            if (!ratio_saved) { oldratio = ra; ratio_saved = 1; }
+            if (!strcmp(t, "defog")) { ra.ratio_attr[4].en = IMPISP_TUNING_OPS_MODE_ENABLE; ra.ratio_attr[4].ratio = 255; }
+            if (!strcmp(t, "nr")) { ra.ratio_attr[0].en = ra.ratio_attr[1].en = IMPISP_TUNING_OPS_MODE_ENABLE; ra.ratio_attr[0].ratio = ra.ratio_attr[1].ratio = 255; }
+            if (!strcmp(t, "dpc")) { ra.ratio_attr[3].en = IMPISP_TUNING_OPS_MODE_ENABLE; ra.ratio_attr[3].ratio = 255; }
+            r = IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &ra);
+            IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &ra);
+            snprintf(info, sizeof(info), "ratio sinter %u temper %u dpc %u defog %u", ra.ratio_attr[0].ratio, ra.ratio_attr[1].ratio, ra.ratio_attr[3].ratio, ra.ratio_attr[4].ratio);
+        }
+#else
+# ifdef H_DEFOG
+        else if (!strcmp(t, "defog")) {
+            if (on) { r = c_defogen(0, 1, info, sizeof(info)); c_defogstr(0, 255, tmp, sizeof(tmp)); } else { c_defogstr(1, 0, tmp, sizeof(tmp)); c_defogen(1, 0, info, sizeof(info)); }
+        }
+# endif
+# ifdef H_ANTIFOG
+        else if (!strcmp(t, "defog")) {
+            r = on ? c_antifog(0, 1, info, sizeof(info)) : c_antifog(1, 1, info, sizeof(info));
+        }
+# endif
+        else if (!strcmp(t, "nr")) {
+            if (on) { r = c_sinter(0, 255, info, sizeof(info)); c_temper(0, 255, tmp, sizeof(tmp)); } else { c_sinter(1, 0, info, sizeof(info)); c_temper(1, 0, tmp, sizeof(tmp)); }
+        }
+# if defined(H_DPC) || defined(H_DPSTR)
+        else if (!strcmp(t, "dpc")) {
+            r = on ? c_dpc(0, 255, info, sizeof(info)) : c_dpc(1, 0, info, sizeof(info));
+        }
+# endif
+#endif
+        else continue;
+        if (on) say("[T] pre %s: ret %d %s\n", t, r, info);
+    }
+#ifdef PLATFORM_T41
+    if (!on && ratio_saved && HAVE(IMP_ISP_Tuning_SetModule_Ratio)) IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &oldratio);
+#endif
+}
+
 /* ------------------------------------------------------------- capture */
 static int g_got_w, g_got_h;
 
@@ -1552,7 +1637,26 @@ static void measure(const IMPFrameInfo *fr)
 }
 
 /* drop 'skip' frames, then save the next one as raw NV12 (or measure it with IMGFX_STATS) */
+static int g_pair;   /* IMGFX_PAIR=1: a second, consecutive frame per case (<name>-b.nv12) for temporal-noise measurements */
+static int snap1(const char *path, int skip);
 static int snap(const char *path, int skip)
+{
+    int r = snap1(path, skip);
+
+    if (!r && g_pair && !g_stats) {
+        char p2[300], *dot;
+        char keep[sizeof(g_st)];
+
+        snprintf(p2, sizeof(p2), "%s", path);
+        dot = strrchr(p2, '.');
+        if (dot) { memmove(dot + 2, dot, strlen(dot) + 1); dot[0] = '-'; dot[1] = 'b'; }
+        memcpy(keep, g_st, sizeof(keep));
+        snap1(p2, 0);
+        memcpy(g_st, keep, sizeof(keep));
+    }
+    return r;
+}
+static int snap1(const char *path, int skip)
 {
     int got = 0, tries;
     FILE *f;
@@ -1641,6 +1745,7 @@ int picture_main(int argc, char **argv)
     snprintf(path, sizeof(path), "%s/summary-%s.txt", outdir, SOC);
     sum = fopen(path, "a");   /* appended: filtered re-runs add to the same file */
     g_stats = getenv("IMGFX_STATS") && atoi(getenv("IMGFX_STATS"));
+    g_pair = getenv("IMGFX_PAIR") && atoi(getenv("IMGFX_PAIR"));
     if (getenv("IMGFX_SETTLE_MS")) g_extra_ms = atoi(getenv("IMGFX_SETTLE_MS"));
     g_risky = !(getenv("IMGFX_SKIP_RISKY") && atoi(getenv("IMGFX_SKIP_RISKY")));
     g_night = (getenv("IMGFX_MODE") && !strcmp(getenv("IMGFX_MODE"), "night")) ||
@@ -1683,6 +1788,7 @@ int picture_main(int argc, char **argv)
         usleep(600000);
     }
 
+    pre_apply(getenv("IMGFX_PRE"), 1);
     signal(SIGALRM, on_alarm);
     for (i = 0; i < NCASES; i++) {
         const Case *c = &cases[i];
@@ -1720,6 +1826,7 @@ int picture_main(int argc, char **argv)
         ran++;
     }
     alarm(0);
+    pre_apply(getenv("IMGFX_PRE"), 0);
     if (getenv("IMGFX_SAT") && HAVE(IMP_ISP_Tuning_SetSaturation)) SETU8(IMP_ISP_Tuning_SetSaturation, 128);
     say("[T] done: %u pictures, %u cases N/A, %u functions exercised (picture size %dx%d)\n", ran, na, nset, g_got_w, g_got_h);
 
