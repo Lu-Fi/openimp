@@ -1787,9 +1787,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
@@ -1808,7 +1808,9 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
-    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)"
+    "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
+    "T23": "apitest apitest-cov 2026-10-27 .30",
+    "T31": "apitest apitest-cov 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetColorfxMode": {
@@ -2719,8 +2721,8 @@
    "cells": {
     "T10": "n.a.",
     "T20": "n.a.",
-    "T21": "host",
-    "T23": "aud",
+    "T21": "dev",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "dev",
     "T32": "nob",
@@ -2745,7 +2747,9 @@
    "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T23": "apitest apitest-cov 2026-10-27 .30",
+    "T21": "apitest apitest-cov 2026-10-27 .24"
    }
   },
   "ISP_Tuning_Get/SetModule_Ratio": {
@@ -2760,9 +2764,12 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "aud"
+    "T41": "dev"
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T41": "apitest apitest-cov 2026-10-27 .34"
+   }
   },
   "ISP_Tuning_Get/SetSaturation": {
    "area": "ISP tuning",
@@ -2846,7 +2853,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "n.a.",
@@ -2854,7 +2861,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "ISP_Tuning_Get/SetSensorVflip": {
    "area": "ISP tuning",
@@ -2862,7 +2872,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "n.a.",
     "T32": "n.a.",
@@ -2870,7 +2880,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel"
+   "note": "audit: reaches the driver/kernel",
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "ISP_Tuning_Get/SetSinterDnsAttr": {
    "area": "ISP tuning",
@@ -4968,7 +4981,7 @@
   "ISP_Tuning_Get/SetAeStrategy": {
    "area": "AE / AWB / AF",
    "cells": {
-    "T10": "host",
+    "T10": "rt",
     "T20": "dev",
     "T21": "dev",
     "T23": "n.a.",
@@ -4979,7 +4992,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl"
+   "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl",
+   "ref": {
+    "T10": "apitest apitest-cov 2026-10-27 .31 (API round trip, no visible effect expected)"
+   }
   },
   "ISP_Tuning_Get/SetAeTargetList": {
    "area": "AE / AWB / AF",
@@ -20308,7 +20324,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20316,7 +20332,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "MemPool_InitPool": {
    "area": "System",
@@ -20324,7 +20343,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20332,7 +20351,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "MemPool_Release": {
    "area": "System",
@@ -20441,7 +20463,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20449,7 +20471,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolAlloc_Dump": {
    "area": "System",
@@ -20457,7 +20482,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20465,7 +20490,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolAlloc_Get_Attr": {
    "area": "System",
@@ -20473,7 +20501,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20481,7 +20509,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolAlloc_Set_Attr": {
    "area": "System",
@@ -20489,7 +20520,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20497,7 +20528,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolFlushCache": {
    "area": "System",
@@ -20505,7 +20539,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20513,7 +20547,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolFree": {
    "area": "System",
@@ -20521,7 +20558,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20529,7 +20566,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolPhys_to_Virt": {
    "area": "System",
@@ -20537,7 +20577,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20545,7 +20585,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "PoolVirt_to_Phys": {
    "area": "System",
@@ -20553,7 +20596,7 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "?",
+    "T23": "dev",
     "T30": "n.a.",
     "T31": "?",
     "T32": "nob",
@@ -20561,7 +20604,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "SU_ADC_Init": {
    "area": "System",
@@ -21017,7 +21063,7 @@
     "T10": "?",
     "T20": "?",
     "T21": "?",
-    "T23": "?",
+    "T23": "dev",
     "T30": "?",
     "T31": "?",
     "T32": "nob",
@@ -21025,7 +21071,10 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "auto": true
+   "auto": true,
+   "ref": {
+    "T23": "apitest apitest-cov 2026-10-27 .30"
+   }
   },
   "Virt_to_Phys": {
    "area": "System",

@@ -465,8 +465,14 @@ def rule_mesh(c):
     o = c.stat("shading-ultra" if c.name == "shading-low" else "shading-low")
     if o is None:
         return Q("no opposite case")
-    d = abs(c.st["Y"] - o["Y"])
-    return P("Y low/ultra differ %.1f; no getter" % d) if d > 5 else Q("Y low/ultra differ only %.1f" % d)
+    if min(c.st["Y"], o["Y"]) < 20:
+        return Q("scene too dark for a lens shading measurement (Y %.1f / %.1f); needs a bright scene" % (c.st["Y"], o["Y"]))
+
+    def vig(st):            # corner / centre luma of the 8x8 grid: lens shading compensation lifts the corners
+        g = st["G"]
+        return (g[0] + g[7] + g[56] + g[63]) / 4.0 / max((g[27] + g[28] + g[35] + g[36]) / 4.0, 1.0)
+    d, dv = abs(c.st["Y"] - o["Y"]), abs(vig(c.st) - vig(o))
+    return P("corner/centre %.3f vs %.3f (Y differ %.1f); no getter" % (vig(c.st), vig(o), d)) if (d > 5 or dv > 0.03) else Q("low/ultra differ only Y %.1f, corner/centre %.3f" % (d, dv))
 
 
 def rule_aflick(c, want):
@@ -510,7 +516,17 @@ def rule_bypass(c):
     names = [n for n in c.rows if n.startswith("bypass-")] + ["aflicker-off"]
     sts = [c.stat(n) for n in names if c.stat(n)]
     if len(sts) < 4:
-        return Q("readback only, no reference picture")
+        # a filtered colour pass has no median of other bypass cases: the reference is base and base-end (their difference is the drift)
+        be = c.stat("base-end")
+        if not be:
+            return Q("readback only, no reference picture")
+        drift = abs(c.b["U"] - be["U"]) + abs(c.b["V"] - be["V"])
+        ref = {k: (c.b[k] + be[k]) / 2 for k in ("Y", "U", "V", "H")}
+        ref["G"] = [(x + y) / 2 for x, y in zip(c.b["G"], be["G"])]
+        sh = abs(c.st["U"] - ref["U"]) + abs(c.st["V"] - ref["V"])
+        if sh > max(3.0, 3 * drift) or abs(c.st["Y"] - ref["Y"]) > 6 or abs(c.st["H"] - ref["H"]) > 0.2 * max(ref["H"], 0.01):
+            return P("key %s (was %s), picture differs from base/base-end (U/V shift %.1f, drift %.1f, Y %.1f vs %.1f)" % (b, w, sh, drift, c.st["Y"], ref["Y"]))
+        return Q("readback only, no visible effect (U/V shift %.1f, drift %.1f)" % (sh, drift))
 
     def med(f):
         v = sorted(f(x) for x in sts)
@@ -736,6 +752,7 @@ class Acc:
             for n in members(k):
                 self.m2k.setdefault(n, k)
         self.seen = {}      # key -> {member: (verdict, detail, src)}
+        self.override = False
         self.unmapped = []
 
     def key_of(self, name):
@@ -767,10 +784,15 @@ class Acc:
             old = d.get(nn)
             # keep the worst verdict of repeated reports of the same member
             order = {"FAIL": 0, "PART": 1, "RT": 2, "PASS": 3, "SKIP": 4, "NA": 5}
-            either = nn in ("ISP_Tuning_SetSharpness", "ISP_Tuning_GetSharpness")      # low and high case: one visible direction proves the function
+            # either: the function is proven by ONE case with a visible effect (sharpness: low or high direction; module control: any block whose
+            # bypass changes the picture, every bit flip is read back by its own case; module ratio: any module that has an effect on the scene)
+            either = nn in ("ISP_Tuning_SetSharpness", "ISP_Tuning_GetSharpness", "ISP_Tuning_SetModuleControl", "ISP_Tuning_GetModuleControl",
+                            "ISP_Tuning_SetModule_Ratio", "ISP_Tuning_GetModule_Ratio")
+            if self.override and src == "imgfx" and (verdict == "PASS" or old is None or old[0] != "PASS"):       # a later colour pass (--imgfx twice) replaces what the first pass said about the same member
+                d[nn] = (verdict, detail, src); continue
             if src == "imgfx" and verdict in ("PART", "RT") and old is not None and old[0] == "PASS" and (old[2] != "imgfx" or either):
                 continue                            # an unclear picture case never takes back an apitest PASS
-            if either and src == "imgfx" and verdict == "PASS" and old is not None and old[0] == "PART" and old[2] == "imgfx":
+            if either and src == "imgfx" and verdict == "PASS" and old is not None and old[0] in ("PART", "RT") and old[2] == "imgfx":
                 d[nn] = (verdict, detail, src); continue
             if old is None or order[verdict] < order[old[0]]:
                 d[nn] = (verdict, detail, src)
@@ -912,14 +934,19 @@ def main():
     ap.add_argument("--apitest")
     ap.add_argument("--report", help="apitest --json report (instead of --apitest)")
     ap.add_argument("--devtest")
-    ap.add_argument("--imgfx")
+    ap.add_argument("--imgfx", action="append", help="imgfx log; a second file (colour pass, IMGFX_SAT=230) overrides the first for the members it covers")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     acc = Acc(load_keys())
     cases = {}
-    for f, fn in ((a.report, parse_report), (a.apitest, parse_apitest), (a.devtest, parse_devtest), (a.imgfx, lambda p, ac: parse_imgfx(p, ac, cases))):
+    for f, fn in ((a.report, parse_report), (a.apitest, parse_apitest), (a.devtest, parse_devtest)):
         if f and os.path.exists(f):
             fn(f, acc)
+    for i, f in enumerate(a.imgfx or []):
+        if os.path.exists(f):
+            acc.override = i > 0
+            parse_imgfx(f, acc, cases)
+    acc.override = False
     res = acc.result()
     cnt = {}
     for r in res.values():

@@ -3,88 +3,20 @@
 "socs": {
 "T10": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Encoder_Get/SetFisheyeEnableStatus": [
 "PART",
 "Encoder_SetFisheyeEnableStatus: ret=-1 stock refuses it on a created channel: ret -1"
-],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 = 0x13; ISP_SetSensorRegister: ret=0 writes the sensor"
-],
-"ISP_Tuning_AE_Get/SetROI": [
-"PART",
-"ISP_Tuning_AE_GetROI: ret=0 roi 0x4040c0c0"
-],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
-"PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 256 g 256 b 256"
-],
-"ISP_Tuning_Get/SetAeStrategy": [
-"PART",
-"ISP_Tuning_GetAeStrategy: ret=0 strategy 0"
-],
-"ISP_Tuning_Get/SetColorfxMode": [
-"PART",
-"ISP_Tuning_GetColorfxMode: imgfx colorfx-vivid: chroma 2.7 vs base 1.6: no vivid increase; ISP_Tuning_SetColorfxMode: imgfx colorfx-vivid: chroma 2.7 vs base 1.6: no vivid increase"
 ],
 "ISP_Tuning_Get/SetCsc_Attr": [
 "PART",
 "ISP_Tuning_GetCsc_Attr: imgfx csc-4-user: mode readback 0 != set 4; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: mode readback 0 != set 4"
 ],
-"ISP_Tuning_Get/SetHiLightDepress": [
-"PART",
-"ISP_Tuning_GetHiLightDepress: imgfx hilight-depress-0: picture black at 255 (Y 0.25): no expected picture effect; ISP_Tuning_SetHiLightDepress: imgfx hilight-depress-0: picture black at 255 (Y 0.25): no expected picture effect"
-],
-"ISP_Tuning_Get/SetIntegrationTime": [
-"PART",
-"ISP_Tuning_GetIntegrationTime: ret=0 mode 0 it 450 max 1496"
-],
-"ISP_Tuning_Get/SetWB": [
-"PART",
-"ISP_Tuning_GetWB: ret=0 mode 0 rgain 95 bgain 174; ISP_Tuning_SetWB: imgfx awb-manual-bhigh: manual gains read back r=94 b=90, expected (94, 346)"
-],
 "ISP_Tuning_GetAeZone": [
 "NA",
 "ret=-1 -1 as on the vendor stack: the stock T10/T20 kernel module does not serve cid 0x800002f"
-],
-"ISP_Tuning_GetSceneMode": [
-"PART",
-"imgfx scene-night: no picture effect"
-],
-"ISP_Tuning_SetExpr": [
-"PART",
-"imgfx exp-short: Y long-short only +0.1: no picture effect"
-],
-"ISP_Tuning_SetSceneMode": [
-"PART",
-"imgfx scene-night: no picture effect"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -128,7 +60,7 @@
 ],
 "SU_Battery_GetCapacity": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetEvent": [
 "SKIP",
@@ -136,11 +68,11 @@
 ],
 "SU_Battery_GetStatus": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetVoltageUV": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_CIPHER_ConfigHandle": [
 "SKIP",
@@ -185,57 +117,17 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 },
 "T20": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Encoder_Get/SetFisheyeEnableStatus": [
 "PART",
 "Encoder_SetFisheyeEnableStatus: ret=-1 stock refuses it on a created channel: ret -1"
-],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 = 0x0; ISP_SetSensorRegister: ret=0 writes the sensor"
-],
-"ISP_Tuning_AE_Get/SetROI": [
-"PART",
-"ISP_Tuning_AE_GetROI: ret=0 roi 0x4040c0c0"
-],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
-"PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 256 g 256 b 256"
-],
-"ISP_Tuning_Get/SetAeComp": [
-"PART",
-"ISP_Tuning_GetAeComp: imgfx aecomp-low: picture lost (Y 0.00, base 119.0); ISP_Tuning_SetAeComp: imgfx aecomp-low: picture lost (Y 0.00, base 119.0)"
 ],
 "ISP_Tuning_Get/SetAeStrategy": [
 "PART",
@@ -243,55 +135,43 @@
 ],
 "ISP_Tuning_Get/SetColorfxMode": [
 "PART",
-"ISP_Tuning_GetColorfxMode: imgfx colorfx-bw: picture lost (Y 0.00, base 119.0); ISP_Tuning_SetColorfxMode: imgfx colorfx-bw: picture lost (Y 0.00, base 119.0)"
+"ISP_Tuning_GetColorfxMode: ret=0 mode 0, readback of the 4 modes set ok; ISP_Tuning_SetColorfxMode: imgfx colorfx-negative: Y 247.0 not inverted (base 128.6)"
 ],
 "ISP_Tuning_Get/SetCsc_Attr": [
 "PART",
-"ISP_Tuning_GetCsc_Attr: imgfx csc-0: picture lost (Y 0.00, base 119.0); ISP_Tuning_SetCsc_Attr: imgfx csc-0: picture lost (Y 0.00, base 119.0)"
+"ISP_Tuning_GetCsc_Attr: imgfx csc-4-user: mode readback 0 != set 4; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: mode readback 0 != set 4"
 ],
-"ISP_Tuning_Get/SetGamma": [
+"ISP_Tuning_Get/SetISPHflip": [
 "PART",
-"ISP_Tuning_SetGamma: imgfx gamma-steep: Y 160.3 vs base 119.0; Get returns zeros"
+"ISP_Tuning_GetISPHflip: ret=0 hflip 0; ISP_Tuning_SetISPHflip: imgfx isp-hflip: grid matches no mirror of base (best err 13.4, next 24.8)"
 ],
-"ISP_Tuning_Get/SetIntegrationTime": [
+"ISP_Tuning_Get/SetISPVflip": [
 "PART",
-"ISP_Tuning_GetIntegrationTime: ret=0 mode 0 it 45 max 2246"
+"ISP_Tuning_GetISPVflip: ret=0 vflip 0; ISP_Tuning_SetISPVflip: imgfx isp-hvflip: grid matches no mirror of base (best err 11.6, next 24.3)"
+],
+"ISP_Tuning_Get/SetSaturation": [
+"PART",
+"ISP_Tuning_GetSaturation: imgfx saturation-high: chroma 33.9 vs base 31.0: no increase; ISP_Tuning_SetSaturation: imgfx saturation-high: chroma 33.9 vs base 31.0: no increase"
 ],
 "ISP_Tuning_Get/SetWB": [
 "PART",
-"ISP_Tuning_GetWB: ret=0 mode 0 rgain 145 bgain 110; ISP_Tuning_SetWB: imgfx awb-auto: picture lost (Y 0.00, base 119.0)"
+"ISP_Tuning_GetWB: ret=0 mode 0 rgain 83 bgain 178; ISP_Tuning_SetWB: imgfx awb-manual-bhigh: manual gains read back r=83 b=100, expected (83, 356)"
 ],
 "ISP_Tuning_GetAeZone": [
 "NA",
 "ret=-1 -1 as on the vendor stack: the stock T10/T20 kernel module does not serve cid 0x800002f"
 ],
-"ISP_Tuning_GetRawDRC": [
-"PART",
-"imgfx rawdrc-off: picture lost (Y 0.00, base 119.0)"
-],
-"ISP_Tuning_GetSceneMode": [
-"PART",
-"imgfx scene-night: picture lost (Y 0.00, base 119.0)"
-],
-"ISP_Tuning_SetExpr": [
-"PART",
-"imgfx exp-short: set returned -1 (mode 0 it=44 lines (min 2 max 2246, 17 us/line) was it=44 mo)"
-],
 "ISP_Tuning_SetMeshShadingScale": [
 "PART",
-"imgfx shading-low: picture lost (Y 0.00, base 119.0)"
+"imgfx shading-low: Y low/ultra differ only 0.0"
 ],
-"ISP_Tuning_SetRawDRC": [
+"ISP_Tuning_SetSinterStrength": [
 "PART",
-"imgfx rawdrc-off: picture lost (Y 0.00, base 119.0)"
+"imgfx sinter-0: H(0) 0.00 vs H(255) 0.00: no expected picture effect"
 ],
-"ISP_Tuning_SetSceneMode": [
+"ISP_Tuning_SetTemperStrength": [
 "PART",
-"imgfx scene-night: picture lost (Y 0.00, base 119.0)"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
+"imgfx temper-0: H(0) 0.00 vs H(255) 0.00: no expected picture effect"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -335,7 +215,7 @@
 ],
 "SU_Battery_GetCapacity": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetEvent": [
 "SKIP",
@@ -343,11 +223,11 @@
 ],
 "SU_Battery_GetStatus": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetVoltageUV": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_CIPHER_ConfigHandle": [
 "SKIP",
@@ -392,105 +272,41 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 },
 "T21": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Encoder_Get/SetFisheyeEnableStatus": [
 "PART",
 "Encoder_SetFisheyeEnableStatus: ret=-1 stock refuses it on a created channel: ret -1"
-],
-"Encoder_Get/SetSuperFrameCfg": [
-"PART",
-"Encoder_GetSuperFrameCfg: ret=0 initial mode 0 I 0 P 0; Encoder_SetSuperFrameCfg: ret=-1 mode 1 refused: the Helix eprc controller of OpenIMP has no frame discard (T20: re-encode only, T21: none)"
-],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 = 0x0; ISP_SetSensorRegister: ret=0 writes the sensor"
 ],
 "ISP_Tuning_AE_Get/SetROI": [
 "PART",
 "ISP_Tuning_AE_GetROI: ret=0 roi weight[7][7] 8"
 ],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
-"PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 0 g 0 b 0"
-],
 "ISP_Tuning_Get/SetAeStrategy": [
 "PART",
 "ISP_Tuning_GetAeStrategy: ret=0 strategy 0"
-],
-"ISP_Tuning_Get/SetColorfxMode": [
-"PART",
-"ISP_Tuning_GetColorfxMode: imgfx colorfx-vivid: chroma 2.1 vs base 1.3: no vivid increase; ISP_Tuning_SetColorfxMode: imgfx colorfx-vivid: chroma 2.1 vs base 1.3: no vivid increase"
-],
-"ISP_Tuning_Get/SetContrast": [
-"PART",
-"ISP_Tuning_GetContrast: imgfx contrast-low: H 24.12 vs base 26.24: contrast not moving the detail energy; ISP_Tuning_SetContrast: imgfx contrast-low: H 24.12 vs base 26.24: contrast not moving the detail energy"
 ],
 "ISP_Tuning_Get/SetCsc_Attr": [
 "PART",
 "ISP_Tuning_GetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged"
 ],
-"ISP_Tuning_Get/SetIntegrationTime": [
+"ISP_Tuning_Get/SetSaturation": [
 "PART",
-"ISP_Tuning_GetIntegrationTime: ret=0 mode 0 it 0 max 0"
-],
-"ISP_Tuning_Get/SetModuleControl": [
-"PART",
-"ISP_Tuning_GetModuleControl: imgfx bypass-ccm: readback only, no visible effect (Y 121.2 H 26.11 vs neutral 120.9/26.11); ISP_Tuning_SetModuleControl: imgfx bypass-ccm: readback only, no visible effect (Y 121.2 H 26.11 vs neutral 120.9/26.11)"
-],
-"ISP_Tuning_GetRawDRC": [
-"PART",
-"imgfx rawdrc-manual255: strength readback 0 != 255"
-],
-"ISP_Tuning_GetSceneMode": [
-"PART",
-"imgfx scene-night: no picture effect"
+"ISP_Tuning_GetSaturation: imgfx saturation-high: chroma 38.7 vs base 36.7: no increase; ISP_Tuning_SetSaturation: imgfx saturation-high: chroma 38.7 vs base 36.7: no increase"
 ],
 "ISP_Tuning_SetRawDRC": [
 "PART",
 "imgfx rawdrc-manual255: strength readback 0 != 255"
 ],
-"ISP_Tuning_SetSceneMode": [
-"PART",
-"imgfx scene-night: no picture effect"
-],
 "ISP_Tuning_SetTemperStrength": [
 "PART",
-"imgfx temper-0: H(0) 29.76 vs H(255) 26.49: no expected picture effect"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
+"imgfx temper-0: H(0) 14.82 vs H(255) 14.64: no expected picture effect"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -534,7 +350,7 @@
 ],
 "SU_Battery_GetCapacity": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetEvent": [
 "SKIP",
@@ -542,11 +358,11 @@
 ],
 "SU_Battery_GetStatus": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetVoltageUV": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_CIPHER_ConfigHandle": [
 "SKIP",
@@ -591,38 +407,14 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 },
 "T23": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Encoder_Get/SetFisheyeEnableStatus": [
 "PART",
 "Encoder_SetFisheyeEnableStatus: ret=-1 stock refuses it on a created channel: ret -1"
@@ -633,59 +425,39 @@
 ],
 "ISP_Get/SetDefaultBinPath": [
 "PART",
-"ISP_GetDefaultBinPath: ret=0 \"�\" (empty: none set)"
+"ISP_GetDefaultBinPath: ret=0 \"0t�w�\u001f(x0t�w\" (empty: none set)"
 ],
 "ISP_Get/SetFrameDrop": [
 "PART",
 "ISP_GetFrameDrop: ret=0 ch0 enable 0 lsize 0, ch1 enable 0, ch2 enable 0"
 ],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 = 0x0; ISP_SetSensorRegister: ret=0 writes the sensor"
-],
 "ISP_Tuning_AE_Get/SetROI": [
 "PART",
 "ISP_Tuning_AE_GetROI: ret=0 roi weight[7][7] 8"
 ],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
+"ISP_Tuning_EnableDefog": [
 "PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 1024 g 1024 b 1024"
+"imgfx defog-strength-255: no picture effect vs defog-on"
 ],
 "ISP_Tuning_Get/SetAeAttr": [
 "PART",
-"ISP_Tuning_GetAeAttr: ret=0 freeze 0 it manual 0 it 2250 again 1055; ISP_Tuning_SetAeAttr: imgfx aeattr-it-short: Y high-low only +0.0: no picture effect"
-],
-"ISP_Tuning_Get/SetCCMAttr": [
-"PART",
-"ISP_Tuning_GetCCMAttr: imgfx ccm-swap-rb: U/V shift only 1.9; ISP_Tuning_SetCCMAttr: imgfx ccm-swap-rb: U/V shift only 1.9"
+"ISP_Tuning_GetAeAttr: ret=0 freeze 0 it manual 0 it 1800 again 1248; ISP_Tuning_SetAeAttr: imgfx aeattr-it-short: Y high-low only +0.0: no picture effect"
 ],
 "ISP_Tuning_Get/SetCsc_Attr": [
 "PART",
-"ISP_Tuning_GetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged"
+"ISP_Tuning_GetCsc_Attr: ret=0 mode 0 coef[0] 306; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged"
+],
+"ISP_Tuning_Get/SetDefog_Strength": [
+"PART",
+"ISP_Tuning_GetDefog_Strength: imgfx defog-strength-255: no picture effect vs defog-on; ISP_Tuning_SetDefog_Strength: imgfx defog-strength-255: no picture effect vs defog-on"
 ],
 "ISP_Tuning_Get/SetFrontCrop": [
 "PART",
 "ISP_Tuning_GetFrontCrop: imgfx fcrop-mid50: set returned -1 (en=0 0,0 1280x720); ISP_Tuning_SetFrontCrop: imgfx fcrop-mid50: set returned -1 (en=0 0,0 1280x720)"
 ],
-"ISP_Tuning_Get/SetHVFLIP": [
-"PART",
-"ISP_Tuning_SetHVFLIP: imgfx hvflip-enum-h: picture mirrored H- vs base as expected (err 0.0, next 38.9)"
-],
 "ISP_Tuning_Get/SetMask": [
 "PART",
 "ISP_Tuning_GetMask: imgfx mask-block: set returned -1 (chn0[0] en=0 chn1[0] en=0 0x0@0,0); ISP_Tuning_SetMask: imgfx mask-block: set returned -1 (chn0[0] en=0 chn1[0] en=0 0x0@0,0)"
-],
-"ISP_Tuning_Get/SetModuleControl": [
-"PART",
-"ISP_Tuning_GetModuleControl: imgfx bypass-defog: readback only, no visible effect (Y 183.9 H 19.18 vs neutral 183.2/20.96); ISP_Tuning_SetModuleControl: imgfx bypass-defog: readback only, no visible effect (Y 183.9 H 19.18 vs neutral 183.2/20.96)"
-],
-"ISP_Tuning_Get/SetSensorHflip": [
-"PART",
-"ISP_Tuning_SetSensorHflip: imgfx sensor-hflip: picture mirrored H- vs base as expected (err 0.3, next 38.9)"
-],
-"ISP_Tuning_Get/SetSensorVflip": [
-"PART",
-"ISP_Tuning_SetSensorVflip: imgfx sensor-vflip: picture mirrored -V vs base as expected (err 1.4, next 38.9)"
 ],
 "ISP_Tuning_GetBlcAttr": [
 "NA",
@@ -695,21 +467,13 @@
 "PART",
 "imgfx awbct-2800: U/V shift 2800/7500 only 0.0: no effect"
 ],
-"ISP_Tuning_SetExpr": [
-"PART",
-"imgfx exp-short: Y long-short only +6.5: no picture effect"
-],
 "ISP_Tuning_SetTemperStrength": [
 "PART",
-"imgfx temper-0: H(0) 19.53 vs H(255) 19.59: no expected picture effect"
+"imgfx temper-0: H(0) 7.90 vs H(255) 7.54: no expected picture effect"
 ],
 "ISP_Tuning_SetWB_ALGO": [
 "PART",
-"imgfx wbalgo-grayworld: U/V shift between algos only 0.0"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
+"imgfx wbalgo-grayworld: U/V shift between algos only 0.1"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -818,38 +582,14 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 },
 "T31": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Encoder_Get/SetFisheyeEnableStatus": [
 "PART",
 "Encoder_SetFisheyeEnableStatus: ret=-1 stock refuses it on a created channel: ret -1"
@@ -870,73 +610,37 @@
 "PART",
 "ISP_GetFrameDrop: ret=0 ch0 enable 1 lsize 0, ch1 enable 1, ch2 enable 1"
 ],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 = 0x7779f920; ISP_SetSensorRegister: ret=0 writes the sensor"
-],
 "ISP_Tuning_AE_Get/SetROI": [
 "PART",
 "ISP_Tuning_AE_GetROI: ret=0 roi weight[7][7] 8"
 ],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
-"PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 1024 g 1024 b 1024"
-],
 "ISP_Tuning_Get/SetAeAttr": [
 "PART",
-"ISP_Tuning_GetAeAttr: ret=0 freeze 0 it manual 0 it 0 again 0; ISP_Tuning_SetAeAttr: imgfx aeattr-it-short: Y high-low only +0.0: no picture effect"
+"ISP_Tuning_GetAeAttr: ret=0 freeze 0 it manual 0 it 6480 again 16384; ISP_Tuning_SetAeAttr: imgfx aeattr-it-short: Y high-low only +0.0: no picture effect"
 ],
 "ISP_Tuning_Get/SetBacklightComp": [
 "PART",
-"ISP_Tuning_GetBacklightComp: imgfx backlight-comp-255: readback 10 != set 255; ISP_Tuning_SetBacklightComp: imgfx backlight-comp-255: readback 10 != set 255"
-],
-"ISP_Tuning_Get/SetCCMAttr": [
-"PART",
-"ISP_Tuning_GetCCMAttr: imgfx ccm-mono: U 115.17 V 142.19 not grey; ISP_Tuning_SetCCMAttr: imgfx ccm-mono: U 115.17 V 142.19 not grey"
-],
-"ISP_Tuning_Get/SetCsc_Attr": [
-"PART",
-"ISP_Tuning_GetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged; ISP_Tuning_SetCsc_Attr: imgfx csc-4-user: user matrix mode read back, coefficient unchanged"
-],
-"ISP_Tuning_Get/SetDPC_Strength": [
-"PART",
-"ISP_Tuning_GetDPC_Strength: imgfx dpc-0: H(0) 14.79 vs H(255) 13.74: no expected picture effect; ISP_Tuning_SetDPC_Strength: imgfx dpc-0: H(0) 14.79 vs H(255) 13.74: no expected picture effect"
+"ISP_Tuning_GetBacklightComp: ret=0 value 0; ISP_Tuning_SetBacklightComp: imgfx backlight-comp-255: readback 10 != set 255"
 ],
 "ISP_Tuning_Get/SetHVFLIP": [
 "PART",
-"ISP_Tuning_SetHVFLIP: imgfx hvflip-enum-h: picture shows -- flip (err 1.6), implying initial state h1 v0, but Get reported h1 v1"
-],
-"ISP_Tuning_Get/SetHiLightDepress": [
-"PART",
-"ISP_Tuning_GetHiLightDepress: imgfx hilight-depress-255: readback 10 != set 255; ISP_Tuning_SetHiLightDepress: imgfx hilight-depress-255: readback 10 != set 255"
+"ISP_Tuning_GetHVFlip: ret=0 hvflip 3; ISP_Tuning_SetHVFLIP: imgfx hvflip-enum-h: picture shows -- flip (err 2.2), implying initial state h1 v0, but Get reported h1 v1"
 ],
 "ISP_Tuning_Get/SetISPHflip": [
 "PART",
-"ISP_Tuning_GetISPHflip: imgfx isp-hflip: picture shows -- flip (err 1.3), implying initial state h1 v0, but Get reported h1 v1; ISP_Tuning_SetISPHflip: imgfx isp-hflip: picture shows -- flip (err 1.3), implying initial state h1 v0, but Get reported h1 v1"
+"ISP_Tuning_GetISPHflip: ret=0 hflip 1; ISP_Tuning_SetISPHflip: imgfx isp-hflip: picture shows -- flip (err 0.7), implying initial state h1 v0, but Get reported h1 v1"
 ],
 "ISP_Tuning_Get/SetISPVflip": [
 "PART",
-"ISP_Tuning_GetISPVflip: imgfx isp-vflip: picture shows HV flip (err 1.3), implying initial state h1 v0, but Get reported h1 v1; ISP_Tuning_SetISPVflip: imgfx isp-vflip: picture shows HV flip (err 1.3), implying initial state h1 v0, but Get reported h1 v1"
-],
-"ISP_Tuning_Get/SetModuleControl": [
-"PART",
-"ISP_Tuning_GetModuleControl: imgfx bypass-ccm: key 00042209 -> 00042209 (was 00042209): bit not changed; ISP_Tuning_SetModuleControl: imgfx bypass-ccm: key 00042209 -> 00042209 (was 00042209): bit not changed"
-],
-"ISP_Tuning_GetHVFlip": [
-"PART",
-"imgfx hvflip-enum-h: picture shows -- flip (err 1.6), implying initial state h1 v0, but Get reported h1 v1"
+"ISP_Tuning_GetISPVflip: ret=0 vflip 1; ISP_Tuning_SetISPVflip: imgfx isp-vflip: grid matches no mirror of base (best err 6.3, next 15.0)"
 ],
 "ISP_Tuning_SetAwbCt": [
 "PART",
-"imgfx awbct-2800: U/V shift 2800/7500 only 0.3: no effect"
+"imgfx awbct-2800: U/V shift 2800/7500 only 0.2: no effect"
 ],
 "ISP_Tuning_SetTemperStrength": [
 "PART",
-"imgfx temper-0: H(0) 15.83 vs H(255) 14.80: no expected picture effect"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
+"imgfx temper-0: H(0) 16.03 vs H(255) 14.71: no expected picture effect"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -1033,10 +737,6 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 },
@@ -1148,18 +848,6 @@
 "ISP_Tuning_GetAfStatistics": [
 "SKIP",
 "ret=0 APITEST_SKIPFN: oopses the driver"
-],
-"ISP_Tuning_SetISPBypass": [
-"PART",
-"default=0, set 1 rc=0, get=1; stored flag only, picture unchanged (Y=143.4 vs 143.2); set 0 rc=0"
-],
-"ISP_Tuning_SetSharpness": [
-"PART",
-"default=128; set10->get 10 grad=0.25; set250->get 250 grad=0.25"
-],
-"ISP_Tuning_SetVideoDrop": [
-"PART",
-"set cb rc=0, 2 s streaming 42 frames, set NULL rc=0; callback firing on real video loss not triggered"
 ],
 "IVS_ReleaseData": [
 "SKIP",
@@ -1273,36 +961,12 @@
 },
 "T41": {
 "runs": [
-"agg47 2026-10-26"
+"apitest-cov 2026-10-27"
 ],
 "funcs": {
-"AI_DisableAec": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_DisableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_EnableAec": [
-"SKIP",
-"ret=0 AEC needs the speaker (AO) path; not run without explicit OK"
-],
-"AI_EnableAecRefFrame": [
-"SKIP",
-"ret=0 see EnableAec"
-],
-"AI_GetFrameAndRef": [
-"SKIP",
-"ret=0 see EnableAec"
-],
 "Audio_Select_Codec": [
 "SKIP",
 "ret=0 switches the codec routing of the board"
-],
-"Encoder_Get/SetChnAttrRcMode": [
-"PART",
-"Encoder_GetChnAttrRcMode: ret=0 rcMode 1 bitrate 512 (created with 512)"
 ],
 "Encoder_InputJpege_Ex": [
 "SKIP",
@@ -1370,43 +1034,27 @@
 ],
 "ISP_Get/SetCsccrMode": [
 "NA",
-"ISP_GetCsccrMode: ret=- not exported by this libimp"
+"ISP_GetCsccrMode: ret=0 not exported by this libimp"
 ],
 "ISP_Get/SetDefaultBinPath": [
 "PART",
 "ISP_GetDefaultBinPath: ret=0 \"/etc/sensor/sc5336-t41.bin\" (empty: none set)"
 ],
-"ISP_Get/SetFrameDrop": [
-"PART",
-"ISP_GetFrameDrop: ret=0 ch0 enable 1 lsize 0, ch1 enable 1, ch2 enable 1"
-],
-"ISP_Get/SetISPBypass": [
-"PART",
-"ISP_GetISPBypass: ret=0 bypass 0"
-],
 "ISP_Get/SetInternalChnAttr": [
 "NA",
-"ISP_GetInternalChnAttr: ret=- not exported by this libimp; ISP_SetInternalChnAttr: ret=- not exported by this libimp"
-],
-"ISP_Get/SetSensorRegister": [
-"PART",
-"ISP_GetSensorRegister: ret=0 reg 0x0 read; ISP_SetSensorRegister: ret=0 writes the sensor"
+"ISP_GetInternalChnAttr: ret=0 not exported by this libimp; ISP_SetInternalChnAttr: ret=0 not exported by this libimp"
 ],
 "ISP_LDC_Get/SetAttr": [
 "NA",
-"ISP_LDC_GetAttr: ret=- not exported by this libimp"
-],
-"ISP_Tuning_Awb_Get/SetRgbCoefft": [
-"PART",
-"ISP_Tuning_Awb_GetRgbCoefft: ret=0 r 1028 g 1026 b 1024"
+"ISP_LDC_GetAttr: ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_Get/SetAeExpList": [
 "NA",
-"ISP_Tuning_GetAeExpList: ret=- not exported by this libimp"
+"ISP_Tuning_GetAeExpList: ret=0 not exported by this libimp; ISP_Tuning_SetAeExpList: ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_Get/SetAeExprInfo": [
 "PART",
-"ISP_Tuning_GetAeExprInfo: ret=0 ae expr info read; ISP_Tuning_SetAeExprInfo: imgfx exp-short: Y long-short only -0.0: no picture effect"
+"ISP_Tuning_GetAeExprInfo: ret=0 ae expr info read; ISP_Tuning_SetAeExprInfo: imgfx exp-short: Y long-short only +0.0: no picture effect"
 ],
 "ISP_Tuning_Get/SetAeScenceAttr": [
 "PART",
@@ -1416,25 +1064,13 @@
 "PART",
 "ISP_Tuning_GetAwbAttr: ret=0 awb attr read"
 ],
-"ISP_Tuning_Get/SetCCMAttr": [
-"PART",
-"ISP_Tuning_GetCCMAttr: imgfx ccm-swap-rb: U/V shift only 1.1; ISP_Tuning_SetCCMAttr: imgfx ccm-swap-rb: U/V shift only 1.1"
-],
 "ISP_Tuning_Get/SetFaceAe": [
 "NA",
-"ISP_Tuning_GetFaceAe: ret=- not exported by this libimp"
+"ISP_Tuning_GetFaceAe: ret=0 not exported by this libimp; ISP_Tuning_SetFaceAe: ret=0 not exported by this libimp"
 ],
-"ISP_Tuning_Get/SetGammaAttr": [
+"ISP_Tuning_Get/SetHVFLIP": [
 "PART",
-"ISP_Tuning_GetGammaAttr: imgfx gamma-steep: Y 115.3 vs base 115.7: gamma curve has no picture effect; ISP_Tuning_SetGammaAttr: imgfx gamma-steep: Y 115.3 vs base 115.7: gamma curve has no picture effect"
-],
-"ISP_Tuning_Get/SetModuleControl": [
-"PART",
-"ISP_Tuning_GetModuleControl: imgfx bypass-ccm: readback only, no visible effect (Y 115.7 H 6.17 vs neutral 115.5/6.25); ISP_Tuning_SetModuleControl: imgfx bypass-ccm: readback only, no visible effect (Y 115.7 H 6.17 vs neutral 115.5/6.25)"
-],
-"ISP_Tuning_Get/SetModule_Ratio": [
-"PART",
-"ISP_Tuning_GetModule_Ratio: ret=0 module ratio struct read; ISP_Tuning_SetModule_Ratio: imgfx dpc-ratio-0: H(0) 6.29 vs H(255) 6.22: no expected picture effect"
+"ISP_Tuning_GetHVFlip: imgfx sensor-vflip: grid matches no mirror of base (best err 3.4, next 5.5); ISP_Tuning_SetHVFLIP: imgfx sensor-vflip: grid matches no mirror of base (best err 3.4, next 5.5)"
 ],
 "ISP_Tuning_Get/SetWdrOutputMode": [
 "PART",
@@ -1442,35 +1078,27 @@
 ],
 "ISP_Tuning_GetAEFlickerFlag": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_GetAFMetricesInfo": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_GetAeBv": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_GetAfStatistics": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "ISP_Tuning_GetFaceAeLuma": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
-"ISP_Tuning_GetSharpness": [
-"PART",
-"imgfx sharpness-0: H 5.61 vs base 6.24: no sharpness effect"
-],
-"ISP_Tuning_SetSharpness": [
-"PART",
-"imgfx sharpness-0: H 5.61 vs base 6.24: no sharpness effect"
-],
-"IVS_ReleaseData": [
-"SKIP",
-"ret=0 releases algorithm-owned frame data; only used with a custom IMPIVSInterface"
+"ISP_Tuning_SetISPProcess": [
+"NA",
+"ret=0 not exported by this libimp"
 ],
 "OSD_AttachToGroup": [
 "SKIP",
@@ -1482,7 +1110,7 @@
 ],
 "OSD_GetRegionLuma": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_ADC_Init": [
 "NA",
@@ -1526,7 +1154,7 @@
 ],
 "SU_Battery_GetCapacity": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetEvent": [
 "SKIP",
@@ -1534,11 +1162,11 @@
 ],
 "SU_Battery_GetStatus": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_Battery_GetVoltageUV": [
 "NA",
-"ret=- not exported by this libimp"
+"ret=0 not exported by this libimp"
 ],
 "SU_CIPHER_ConfigHandle": [
 "SKIP",
@@ -1603,10 +1231,6 @@
 "SU_LED_Command": [
 "SKIP",
 "ret=0 drives the board LED"
-],
-"System_WriteReg32": [
-"SKIP",
-"ret=0 writes hardware registers, not exercised"
 ]
 }
 }

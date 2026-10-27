@@ -1050,6 +1050,62 @@ static void cs_ispflip(void)
 #else
 static void cs_ispflip(void) {}
 #endif
+#if defined(PLATFORM_T23) && HAS_IMP_ISP_Tuning_GetSensorHflip && HAS_IMP_ISP_Tuning_SetSensorHflip && HAS_IMP_ISP_Tuning_GetSensorVflip && HAS_IMP_ISP_Tuning_SetSensorVflip
+/* T23 sensor flip: the vendor API has Get/Set pairs (the picture effect is proven by the picture cases sensor-hflip / sensor-vflip:
+ * mirrored frame, left/right and top/bottom halves compared) */
+static void cs_sensorflip(void)
+{
+    NEED(IMP_ISP_Tuning_GetSensorHflip) NEED(IMP_ISP_Tuning_SetSensorHflip) NEED(IMP_ISP_Tuning_GetSensorVflip) NEED(IMP_ISP_Tuning_SetSensorVflip) {
+        IMPISPTuningOpsMode h = 0, v = 0, h2 = 0, v2 = 0, h3 = 0, v3 = 0;
+        int r1 = IMP_ISP_Tuning_GetSensorHflip(&h), r2 = IMP_ISP_Tuning_GetSensorVflip(&v), r3, r4, r5, r6, r7, r8, f;
+
+        r3 = IMP_ISP_Tuning_SetSensorHflip(h); r4 = IMP_ISP_Tuning_SetSensorVflip(v); usleep(900000);
+        IMP_ISP_Tuning_GetSensorHflip(&h2); IMP_ISP_Tuning_GetSensorVflip(&v2);
+        r5 = IMP_ISP_Tuning_SetSensorHflip(!h); r6 = IMP_ISP_Tuning_SetSensorVflip(!v); usleep(1200000);
+        IMP_ISP_Tuning_GetSensorHflip(&h3); IMP_ISP_Tuning_GetSensorVflip(&v3); f = flow();
+        r7 = IMP_ISP_Tuning_SetSensorHflip(h); r8 = IMP_ISP_Tuning_SetSensorVflip(v); usleep(1200000);
+        rep(FN(IMP_ISP_Tuning_GetSensorHflip), r1, (r1 == 0 && r3 == 0 && h2 == h && r5 == 0 && h3 == !h && r7 == 0) ? V_PASS : V_FAIL,
+            "hflip %d; same value written (ret %d) reads back %d; toggled reads back %d; restored (ret %d)", (int)h, r3, (int)h2, (int)h3, r7);
+        rep(FN(IMP_ISP_Tuning_GetSensorVflip), r2, (r2 == 0 && r4 == 0 && v2 == v && r6 == 0 && v3 == !v && r8 == 0) ? V_PASS : V_FAIL,
+            "vflip %d; same value written (ret %d) reads back %d; toggled reads back %d; restored (ret %d)", (int)v, r4, (int)v2, (int)v3, r8);
+        rep(LBL("IMP_ISP_Tuning_SetSensorHflip+Vflip(toggle)"), r5 | r6 | r7 | r8, (!(r5 | r6 | r7 | r8) && f && flow()) ? V_PASS : V_FAIL, "frames flow while toggled (%d) and after the restore", f);
+    }
+}
+#else
+static void cs_sensorflip(void) {}
+#endif
+
+#if (defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T10) || defined(PLATFORM_T30)) && HAS_IMP_ISP_Tuning_GetAeStrategy && HAS_IMP_ISP_Tuning_SetAeStrategy
+/* AE strategy: split balanced (0) vs integration priority (1).  Round trip + effect: with the priority on integration time the AE keeps the
+ * gain lower / the exposure time longer at the same scene brightness; the effect is only visible when the scene is not at the exposure limits */
+static void cs_aestrategy(void)
+{
+    NEED(IMP_ISP_Tuning_GetAeStrategy) NEED(IMP_ISP_Tuning_SetAeStrategy) {
+        IMPISPAeStrategy o = 0, a = 0, b = 0, c = 0;
+        int r1 = IMP_ISP_Tuning_GetAeStrategy(&o), r2, r3, r4, r5, r6, it0 = -1, it1 = -1;
+        Fst s0, s1;
+
+        r2 = IMP_ISP_Tuning_SetAeStrategy(IMPISP_AE_STRATEGY_SPLIT_BALANCED); usleep(2500000);
+        r3 = IMP_ISP_Tuning_GetAeStrategy(&a); s0 = fst(300);
+#if HAS_IMP_ISP_Tuning_GetIntegrationTime
+        { IMPISPITAttr t; memset(&t, 0, sizeof(t)); if (IMP_ISP_Tuning_GetIntegrationTime && IMP_ISP_Tuning_GetIntegrationTime(&t) == 0) it0 = (int)t.integration_time; }
+#endif
+        r4 = IMP_ISP_Tuning_SetAeStrategy(IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY); usleep(2500000);
+        r5 = IMP_ISP_Tuning_GetAeStrategy(&b); s1 = fst(300);
+#if HAS_IMP_ISP_Tuning_GetIntegrationTime
+        { IMPISPITAttr t; memset(&t, 0, sizeof(t)); if (IMP_ISP_Tuning_GetIntegrationTime && IMP_ISP_Tuning_GetIntegrationTime(&t) == 0) it1 = (int)t.integration_time; }
+#endif
+        r6 = IMP_ISP_Tuning_SetAeStrategy(o); usleep(1500000); IMP_ISP_Tuning_GetAeStrategy(&c);
+        rep(FN(IMP_ISP_Tuning_GetAeStrategy), r1, (r1 == 0 && r3 == 0 && a == IMPISP_AE_STRATEGY_SPLIT_BALANCED && r5 == 0 && b == IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY && c == o) ? V_PASS : V_FAIL,
+            "initial %d; set 0 reads %d, set 1 reads %d, restored %d", (int)o, (int)a, (int)b, (int)c);
+        rep(FN(IMP_ISP_Tuning_SetAeStrategy), r2 | r4 | r6, (r2 == 0 && r4 == 0 && r6 == 0 && s0.ok && s1.ok && s0.y > 5 && s1.y > 5 && flow()) ? V_PASS : V_FAIL,
+            "%sintegration time %d (balanced) -> %d (integration priority), Y %.1f -> %.1f", RTMSG(it1 > it0 && it0 > 0), it0, it1, s0.y, s1.y);
+    }
+}
+#else
+static void cs_aestrategy(void) {}
+#endif
+
 #if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetHVFlip && HAS_IMP_ISP_Tuning_SetHVFLIP
 static void cs_hvflip(void)
 {
@@ -2053,9 +2109,114 @@ void t_dmic(void)
 void t_dmic(void) {}
 #endif
 
+/* --------------------------------------------------------------------------------------------------- allocator helpers */
+/* libimp's physical-memory allocator exports.  The vendor headers do not declare them (the OEM libimp exports them for the SDK samples), so the
+ * case resolves them with dlsym and uses the call forms the OEM binary has (descriptor style: IMP_Alloc(&info, size, tag) returns the virtual
+ * address and fills the 0x94 byte descriptor).  A function the libimp does not export is N/A. */
+typedef struct { char name[96]; char tag[32]; uint32_t virt, phys, size, flags, pool_id; } at_dmainfo;
+
+#define ALN(f) rep_na(LBL(f))
+static void cs_alloc(void)
+{
+    uintptr_t (*a_alloc)(void *, intptr_t, char *) = (uintptr_t (*)(void *, intptr_t, char *))dsym("IMP_Alloc");
+    int (*a_free)(uintptr_t) = (int (*)(uintptr_t))dsym("IMP_Free");
+    uintptr_t (*a_sp)(int, char *) = (uintptr_t (*)(int, char *))dsym("IMP_Sp_Alloc");
+    void *(*p2v)(uint32_t) = (void *(*)(uint32_t))dsym("IMP_Phys_to_Virt");
+    uint32_t (*v2p)(void *) = (uint32_t (*)(void *))dsym("IMP_Virt_to_Phys");
+    int (*flush)(void *, uint32_t) = (int (*)(void *, uint32_t))dsym("IMP_FlushCache");
+    int (*aset)(uint32_t, uint32_t) = (int (*)(uint32_t, uint32_t))dsym("IMP_Alloc_Set_Attr");
+    int (*aget)(uint32_t *, uint32_t *) = (int (*)(uint32_t *, uint32_t *))dsym("IMP_Alloc_Get_Attr");
+    int (*adump)(void) = (int (*)(void))dsym("IMP_Alloc_Dump");
+    int (*adumpf)(const char *) = (int (*)(const char *))dsym("IMP_Alloc_Dump_To_File");
+    uintptr_t (*p_alloc)(int, void *, intptr_t, char *) = (uintptr_t (*)(int, void *, intptr_t, char *))dsym("IMP_PoolAlloc");
+    void (*p_free)(void *) = (void (*)(void *))dsym("IMP_PoolFree");
+    int (*p_flush)(void *, uint32_t) = (int (*)(void *, uint32_t))dsym("IMP_PoolFlushCache");
+    void *(*pp2v)(uint32_t) = (void *(*)(uint32_t))dsym("IMP_PoolPhys_to_Virt");
+    uint32_t (*pv2p)(void *) = (uint32_t (*)(void *))dsym("IMP_PoolVirt_to_Phys");
+    int (*pset)(uint32_t, uint32_t) = (int (*)(uint32_t, uint32_t))dsym("IMP_PoolAlloc_Set_Attr");
+    int (*pget)(uint32_t *, uint32_t *) = (int (*)(uint32_t *, uint32_t *))dsym("IMP_PoolAlloc_Get_Attr");
+    int (*pdump)(void) = (int (*)(void))dsym("IMP_PoolAlloc_Dump");
+    int (*mp_init)(int, uint32_t, int) = (int (*)(int, uint32_t, int))dsym("IMP_MemPool_InitPool");
+    int (*mp_get)(int, void *) = (int (*)(int, void *))dsym("IMP_MemPool_GetById");
+    int (*mp_rel)(int) = (int (*)(int))dsym("IMP_MemPool_Release");
+    at_dmainfo *d = (at_dmainfo *)gnew(sizeof(at_dmainfo)), *d2 = (at_dmainfo *)gnew(sizeof(at_dmainfo)), *mi = (at_dmainfo *)gnew(sizeof(at_dmainfo));
+    uint32_t al = 0, cp = 0, i;
+    unsigned char *va = NULL;
+    int ok;
+    long r;
+
+    /* --- attributes (stored, read back, restored) */
+    if (aset && aget) {
+        uint32_t a0 = 0, c0 = 0;
+        aget(&a0, &c0);
+        r = aset(4096, 0); ok = aget(&al, &cp) == 0 && al == 4096 && cp == 0;
+        rep(LBL("IMP_Alloc_Set_Attr"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "alignment 4096 / cached written, read back %u/%u", al, cp);
+        rep(LBL("IMP_Alloc_Get_Attr"), 0, ok ? V_PASS : V_FAIL, "initial %u/%u, read back after Set %u/%u", a0, c0, al, cp);
+        aset(a0, c0);
+    } else { ALN("IMP_Alloc_Set_Attr"); ALN("IMP_Alloc_Get_Attr"); }
+    /* --- descriptor allocation, address conversion, cache flush, free */
+    if (a_alloc && a_free) {
+        uintptr_t st = a_alloc(d, 8192, "apitest"), v = (uintptr_t)d->virt;       /* descriptor style: the return value is the status, the addresses are in the descriptor */
+        va = (unsigned char *)v;
+        ok = st == 0 && v != 0 && d->phys != 0 && d->size >= 8192;
+        rep(LBL("IMP_Alloc"), ok ? 0 : -1, ok ? V_PASS : V_FAIL, "8192 bytes: status %ld virt %p phys 0x%x size %u", (long)st, (void *)v, d->phys, d->size);
+        if (ok) {
+            for (i = 0; i < 8192; i++) va[i] = (unsigned char)(i * 7 + 3);
+            if (v2p) { uint32_t ph = v2p(va + 100); r = ph; rep(LBL("IMP_Virt_to_Phys"), 0, ph == d->phys + 100 ? V_PASS : V_FAIL, "virt+100 -> 0x%x (descriptor phys+100 = 0x%x)", ph, d->phys + 100); } else ALN("IMP_Virt_to_Phys");
+            if (p2v) { void *pv = p2v(d->phys + 100); rep(LBL("IMP_Phys_to_Virt"), 0, pv == (void *)(va + 100) ? V_PASS : V_FAIL, "phys+100 -> %p (expected %p)", pv, (void *)(va + 100)); } else ALN("IMP_Phys_to_Virt");
+            if (flush) {
+                r = flush(va, 8192);
+                for (i = 0, ok = 1; i < 8192; i++) if (va[i] != (unsigned char)(i * 7 + 3)) { ok = 0; break; }
+                rep(LBL("IMP_FlushCache"), r, (r == 0 && ok && flush(NULL, 0) == -1) ? V_PASS : V_FAIL, "8192 bytes flushed, pattern intact (%d), NULL/0 rejected", ok);
+            } else ALN("IMP_FlushCache");
+            if (adump) { r = adump(); rep(LBL("IMP_Alloc_Dump"), r, r == 0 ? V_PASS : V_FAIL, "registry dump with a live buffer"); } else ALN("IMP_Alloc_Dump");
+            if (adumpf) { r = adumpf("/dev/null"); ok = adumpf(NULL) == -1; rep(LBL("IMP_Alloc_Dump_To_File"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "/dev/null accepted, NULL path rejected"); } else ALN("IMP_Alloc_Dump_To_File");
+            r = a_free(v);
+            rep(LBL("IMP_Free"), r, r == 0 ? V_PASS : V_FAIL, "freed (ret %ld)", r);
+        } else if (v) a_free(v);
+    } else { ALN("IMP_Alloc"); ALN("IMP_Free"); ALN("IMP_Virt_to_Phys"); ALN("IMP_Phys_to_Virt"); ALN("IMP_FlushCache"); ALN("IMP_Alloc_Dump"); ALN("IMP_Alloc_Dump_To_File"); }
+    if (a_sp && a_free) {
+        uintptr_t v = a_sp(4096, "apitest");
+        if (v) memset((void *)v, 0x5a, 4096);
+        r = v ? a_free(v) : -1;
+        rep(LBL("IMP_Sp_Alloc"), r, (v != 0 && r == 0) ? V_PASS : V_FAIL, "4096 bytes at %p written and freed", (void *)v);
+    } else ALN("IMP_Sp_Alloc");
+    /* --- pools */
+    if (pset && pget) {
+        uint32_t a0 = 0, c0 = 0;
+        pget(&a0, &c0);
+        r = pset(4096, 0); ok = pget(&al, &cp) == 0 && al == 4096 && cp == 0;
+        rep(LBL("IMP_PoolAlloc_Set_Attr"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "alignment 4096 / cached written, read back %u/%u", al, cp);
+        rep(LBL("IMP_PoolAlloc_Get_Attr"), 0, ok ? V_PASS : V_FAIL, "initial %u/%u, read back after Set %u/%u", a0, c0, al, cp);
+        pset(a0, c0);
+    } else { ALN("IMP_PoolAlloc_Set_Attr"); ALN("IMP_PoolAlloc_Get_Attr"); }
+    if (mp_init && mp_get) {
+        r = mp_init(9, 65536, 0);
+        ok = r == 0 && mp_get(9, mi) == 0 && mi->phys != 0 && mi->size == 65536 && mp_get(9 + 20, mi) != 0;
+        rep(LBL("IMP_MemPool_InitPool"), r, ok ? V_PASS : V_FAIL, "pool 9, 64 KB: phys 0x%x size %u; a second init of the same id returns %d", mi->phys, mi->size, mp_init(9, 65536, 0));
+        rep(LBL("IMP_MemPool_GetById"), 0, ok ? V_PASS : V_FAIL, "pool 9 info read back, unknown id rejected");
+        if (p_alloc && p_free) {
+            uintptr_t st = p_alloc(9, d2, 4096, "apitest"), v = (uintptr_t)d2->virt;
+            ok = st == 0 && v != 0 && d2->phys != 0;
+            rep(LBL("IMP_PoolAlloc"), ok ? 0 : -1, ok ? V_PASS : V_FAIL, "pool 9, 4096 bytes: status %ld virt %p phys 0x%x", (long)st, (void *)v, d2->phys);
+            if (ok) {
+                memset((void *)v, 0xa5, 4096);
+                if (pv2p) rep(LBL("IMP_PoolVirt_to_Phys"), 0, pv2p((void *)(v + 64)) == d2->phys + 64 ? V_PASS : V_FAIL, "virt+64 -> 0x%x (expected 0x%x)", pv2p((void *)(v + 64)), d2->phys + 64); else ALN("IMP_PoolVirt_to_Phys");
+                if (pp2v) rep(LBL("IMP_PoolPhys_to_Virt"), 0, pp2v(d2->phys + 64) == (void *)(v + 64) ? V_PASS : V_FAIL, "phys+64 -> %p (expected %p)", pp2v(d2->phys + 64), (void *)(v + 64)); else ALN("IMP_PoolPhys_to_Virt");
+                if (p_flush) { r = p_flush((void *)v, 4096); rep(LBL("IMP_PoolFlushCache"), r, (r == 0 && ((unsigned char *)v)[100] == 0xa5) ? V_PASS : V_FAIL, "4096 bytes flushed, data intact"); } else ALN("IMP_PoolFlushCache");
+                if (pdump) { r = pdump(); rep(LBL("IMP_PoolAlloc_Dump"), r, r == 0 ? V_PASS : V_FAIL, "pool dump with a live pool buffer"); } else ALN("IMP_PoolAlloc_Dump");
+                p_free((void *)v);
+                rep(LBL("IMP_PoolFree"), 0, V_PASS, "returned (void); the process continues");
+            }
+        } else { ALN("IMP_PoolAlloc"); ALN("IMP_PoolFree"); ALN("IMP_PoolVirt_to_Phys"); ALN("IMP_PoolPhys_to_Virt"); ALN("IMP_PoolFlushCache"); ALN("IMP_PoolAlloc_Dump"); }
+        if (mp_rel) mp_rel(9);
+    } else { ALN("IMP_MemPool_InitPool"); ALN("IMP_MemPool_GetById"); }
+    gfree(d); gfree(d2); gfree(mi);
+}
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2123,5 +2284,8 @@ void t_cases(void)
     if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
     if (cs_on("dmic")) t_dmic();        wdog("cases", 60);
     if (cs_on("fspool")) cs_fspool();     wdog("cases", 90);
+    if (cs_on("sensorflip")) cs_sensorflip(); wdog("cases", 90);
+    if (cs_on("aestrategy")) cs_aestrategy(); wdog("cases", 90);
+    if (cs_on("alloc")) cs_alloc();       wdog("cases", 60);
     wdog("cases", 60);
 }

@@ -8,6 +8,21 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/apitest-cov` (2026-10-27)
+
+- **apitest: "result unclear" cells resolved, T23 backlog 56 -> 18** (tools/apitest). Pass criteria that prove the effect:
+  `ISP_Tuning_Get/SetModuleControl` is proven by one block whose bypass visibly changes the picture (bit flips are read back
+  per block; a colour pass with saturation 230 gives CCM/BCSH a measurable U/V change, drift taken from base/base-end);
+  the CCM picture cases switch a bypassed CCM on first (T31 IQ file ships it bypassed) and restore it; T23 sensor H/V flip
+  has Get round trips (toggle + restore) next to the picture mirror check; `Set/GetAeStrategy` round trip with the exposure
+  time of both strategies (T10); `Module_Ratio` is proven by any module with an effect; lens shading is judged by the
+  corner/centre luma ratio and reports "scene too dark" instead of a silent PART. New cases `sensorflip`, `aestrategy`,
+  `alloc` (22 allocator exports: IMP_Alloc/Free/Sp_Alloc, Phys/Virt conversion, FlushCache, dumps, attrs, pools, MemPool);
+  QEMU first (T23 sensorflip + alloc, T10 aestrategy), then cameras. `run_cam.sh` runs the colour pass (COLOR=0 skips).
+  16 T23 exports that no SDK header declares are listed as `no-signature` in untestable.yaml. Resolved: T10 AeStrategy (rt),
+  T21 ModuleControl, T23 CCMAttr / ModuleControl / SensorHflip / SensorVflip, T31 CCMAttr, T41 Module_Ratio. Still open:
+  T20 MeshShadingScale (needs a bright scene), T40 AeExpList / FaceAe (need the open ISP driver of T41, not on the Eufy image).
+
 ## Branch `claude/movestate-t21-t30` (2026-10-27)
 
 - **T21 / T30 IMP_ISP_Tuning_Enable/DisableMovestate**: the vendor T21 1.0.33 and T30 1.0.5 libimps run the same
