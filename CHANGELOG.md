@@ -13,7 +13,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
 - **Wiki API reference: 62 more entries verified against src/** (ISP 60, Encoder 2; FrameSource, which was already complete, and the
   T31 `GetChnEvalInfo` entry were updated for today's merges: T41 real pools, T41 FrameDepth queue, header layout of the record).
   ISP-drawn OSD entries now name the SoCs that have them (T23, T40, T41), the T23 odd-width guard and the vendor-shift note
-  are in. 51 ISP and 26 Encoder entries stay marked unverified. Docs only (`docs/api_reference/*.yaml`).
+  are in. 53 ISP and 26 Encoder entries stay marked unverified. Docs only (`docs/api_reference/*.yaml`).
 
 ## Branch `claude/t41-fs-pool` (2026-10-27, issue 72)
 
