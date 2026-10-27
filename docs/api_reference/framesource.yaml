@@ -45,28 +45,26 @@ functions:
     params:
       chnNum: Channel number, normally 0 to 2.
       chn_attr: Size, pixel format, crop, scaler, frame rate and number of buffers of the channel.
-    returns: 0 on success, -1 if the number or the attributes are invalid or the channel already exists.
-    notes: |
-      The width must be a multiple of 16 unless the format is raw. The structure layout differs between SoC families
-      (T40 and T41 put an I2D block in front, T23 and newer add a frame crop), so build against the header of the SoC
-      you target. A frame rate of `outFrmRateNum/outFrmRateDen` below the sensor rate drops frames; it never raises the
-      rate above the sensor rate.
+    returns: "0 on success, -1 on an invalid channel number, a NULL attribute, a width that is not a multiple of 16 (not for raw), or a channel 0 that is not of type `FS_PHY_CHANNEL`. On T31 a size above 1280x720 is refused. On T40 and T41 a channel that already exists also returns -1."
+    notes: "The width must be a multiple of 16 unless the format is raw, and channel 0 has to be the physical channel. The structure layout differs between SoC families (T40 and T41 put an I2D block in front, T23 and newer add a frame crop), so build against the header of the SoC you target. A frame rate of `outFrmRateNum/outFrmRateDen` below the sensor rate drops frames; it never raises the rate above the sensor rate."
     see_also: [FrameSource_EnableChn, FrameSource_DestroyChn]
   FrameSource_DestroyChn:
     group: life
     summary: Releases a channel and its buffers. The channel has to be disabled and unbound first.
-    returns: 0 on success, -1 for an invalid or running channel.
+    returns: "0 on success, also for a channel that was never created. -1 for an invalid channel number or for a channel that is still running."
     see_also: [FrameSource_CreateChn]
   FrameSource_EnableChn:
     group: life
     summary: Starts the channel. The sensor stream starts with the first enabled channel, and the buffers are allocated here.
     returns: 0 on success, -1 on error (no sensor, size too large, not enough buffer memory).
     notes: Call it after all consumers are bound, so no frame is produced before somebody can take it. Enabling an already running channel is not an error.
+    unverified: true
     see_also: [FrameSource_DisableChn]
   FrameSource_DisableChn:
     group: life
     summary: Stops the channel. Frames that the application still holds stay valid until they are released.
     returns: 0 on success (also when the channel was not running), -1 for an invalid number.
+    unverified: true
     see_also: [FrameSource_EnableChn]
   FrameSource_Get/SetChnAttr:
     group: attr
@@ -75,6 +73,7 @@ functions:
       chnNum: Channel number.
       chn_attr: Attribute structure to read into or to apply.
     notes: A change of the picture size has to be followed by a matching change of the encoder channel. For a rotated or cropped stream see `SetChnRotate`, `SetI2dAttr` and the crop fields of the structure.
+    unverified: true
     see_also: [FrameSource_CreateChn]
   FrameSource_Get/SetChnFifoAttr:
     group: delay
@@ -82,38 +81,38 @@ functions:
     params:
       chnNum: Channel number.
       attr: "`maxdepth` is the number of frames to keep (0 means no FIFO). `type` selects the FIFO behaviour."
-    returns: 0 on success, -1 on error.
-    notes: A `maxdepth` of 0 changes nothing and is accepted in every state, which is what streamers send. Only `FIFO_CACHE_PRIORITY` is supported when the FIFO is used.
+    returns: "0 on success, -1 on an invalid channel, a channel that was not created, a negative `maxdepth`, or a depth above 0 with a type other than `FIFO_CACHE_PRIORITY`."
+    notes: "A `maxdepth` of 0 is accepted in every state; it clears the delay FIFO while the channel is created and not running, which is what streamers send. With a non-zero depth the call is only allowed between `CreateChn` and `EnableChn` (it calls `SetMaxDelay`). Only `FIFO_CACHE_PRIORITY` is supported when the FIFO is used."
     diff: "`FIFO_DATA_PRIORITY` with a non-zero depth is refused with -1, because it needs capture buffers shared between readers that OpenIMP does not have."
     see_also: [FrameSource_Get/SetMaxDelay, FrameSource_Get/SetDelay]
   FrameSource_Get/SetDelay:
     group: delay
     summary: Sets or reads the delay, in frames, of the channel's FIFO, that is how many of the newest frames are kept for `GetTimedFrame`.
     params:
-      chnNum: Channel number.
-      delay: Number of frames, between 0 and the value set with `SetMaxDelay`.
-    returns: -1 when the channel does not exist or the delay is larger than the maximum delay.
+      chnNum: "Channel number."
+      delay: "Number of frames, between 0 and the value set with `SetMaxDelay`."
+    returns: "0 on success, -1 when the channel was not created, the delay is below 0 or above 100, or above the value set with `SetMaxDelay`."
     notes: The delay can be changed while the channel is running. Each kept frame occupies one capture buffer, so the sum of `nrVBs` and the maximum delay has to fit the buffer budget (checked when the channel is enabled).
     see_also: [FrameSource_Get/SetMaxDelay, FrameSource_GetTimedFrame]
   FrameSource_Get/SetMaxDelay:
     group: delay
-    summary: Sets or reads the upper limit of the delay FIFO and reserves the buffers for it.
+    summary: "Sets or reads the upper limit of the delay FIFO of a channel."
     params:
-      chnNum: Channel number.
-      max_delay: Maximum delay in frames, 0 to 100 in the API, in OpenIMP limited by the buffers that fit in memory.
-    returns: -1 when the value is out of range or the channel is not in the created state.
-    notes: Call it between `CreateChn` and `EnableChn`. The default is 0, which changes nothing.
+      chnNum: "Channel number."
+      max_delay: "Maximum delay in frames, 0 to 100 in the API; OpenIMP holds fewer (31 frames on T10 to T31, 100 on T40 and T41, subject to the buffers that fit in memory)."
+    returns: "-1 when the value is out of range or the channel is not in the created state (not yet running)."
+    notes: "Call it between `CreateChn` and `EnableChn`. The default is 0, which keeps no frames."
     see_also: [FrameSource_Get/SetDelay]
   FrameSource_GetTimedFrame:
     group: delay
     summary: Returns the buffered frame that is closest to a requested capture time, together with the frame data copy.
     params:
-      chnNum: Channel number.
-      framets: Requested timestamp and the tolerance before and after it.
-      block: Non-zero waits for a matching frame, zero returns at once.
-      framedata: Buffer that receives the frame data.
-      frame: Receives the frame description.
-    returns: 0 on success, -1 when there is no delay FIFO (call `SetMaxDelay` before `EnableChn`) or no frame matches.
+      chnNum: "Channel number."
+      framets: "Requested capture time (`ts`). On T40 and T41 the tolerance before (`minus`) and after (`plus`) is used as well; on T10 to T31 only `ts` is read."
+      block: "Non-zero waits for a matching frame (up to 5 s on T10 to T31, 2 s on T40 and T41), zero returns at once."
+      framedata: "Buffer that receives the frame data."
+      frame: "Receives the frame description."
+    returns: "0 on success. On T10 to T31: -1 without a delay FIFO (call `SetMaxDelay` before `EnableChn`) or when every held frame is newer than the requested time, -2 when no frame matches and `block` is 0. On T40 and T41 the vendor error codes (`IMP_ERR_FS_*`) are returned for no match, timeout and missing FIFO."
     notes: Used for pre-event recording. T40 and T41 keep the delay frames as copies, which costs one frame copy per `GetFrame` while the delay is above 0.
     see_also: [FrameSource_Get/SetMaxDelay]
   FrameSource_Get/SetFrameDepth:
@@ -122,7 +121,8 @@ functions:
     params:
       chnNum: Channel number.
       depth: Number of queued frames. 0 disables the queue and frees the frames in it.
-    notes: The queue is separate from what the encoder sees through the bind; a frame the application does not release is not available again for the queue. Use the smallest depth that works (1 or 2), since every frame is a full capture buffer.
+    notes: "The queue is separate from what the encoder sees through the bind. Use the smallest depth that works (1 or 2), since every frame is a full capture buffer."
+    unverified: true
     see_also: [FrameSource_GetFrame, FrameSource_ReleaseFrame]
   FrameSource_GetFrame:
     group: frames
@@ -130,23 +130,26 @@ functions:
     params:
       chnNum: Channel number, which has to be running and have a frame depth.
       frame: Receives the frame pointer.
-    returns: 0 on success, -1 on a bad argument or when no frame arrives within about 2 seconds.
+    returns: "0 on success, -1 on a bad argument or when no frame arrives within 2 seconds (T10 to T31). On T40 and T41 the call returns 0 without a frame when the frame depth is 0, and `IMP_ERR_FS_*` codes on errors and timeouts."
     notes: Give the frame back with `ReleaseFrame`. Frame data is NV12 for the YUV formats; the stride can be larger than the width.
-    diff: Waits up to 2 seconds like the vendor library; a non-blocking first call after a pause no longer fails on an empty queue.
+    diff: "Waits up to 2 seconds like the vendor library."
     see_also: [FrameSource_ReleaseFrame, FrameSource_Get/SetFrameDepth]
   FrameSource_ReleaseFrame:
     group: frames
     summary: Returns a frame obtained with `GetFrame` to the channel.
     returns: 0 on success, -1 for an invalid channel or pointer.
+    unverified: true
     see_also: [FrameSource_GetFrame]
   FrameSource_GetFrameEx:
     group: frames
     summary: Variant of `GetFrame` for T40 and T41 that returns the frame without the depth queue, straight from the channel.
     returns: 0 on success, -1 on error or timeout.
+    unverified: true
     see_also: [FrameSource_ReleaseFrameEx]
   FrameSource_ReleaseFrameEx:
     group: frames
     summary: Gives back a frame obtained with `GetFrameEx`.
+    unverified: true
     see_also: [FrameSource_GetFrameEx]
   FrameSource_SnapFrame:
     group: frames
@@ -159,34 +162,35 @@ functions:
       out_buffer: Buffer of at least one packed frame (for NV12 `width*height*3/2`).
       info: Receives the frame description.
     returns: 0 on success, -1 when width, height or format differ from the channel or no frame arrives.
-    notes: The channel needs no frame depth for this call. The output is packed NV12 without line padding.
+    notes: "The channel needs no frame depth for this call. The output is packed NV12 without line padding. The call waits up to 2 seconds for a frame."
   FrameSource_ChnStatQuery:
     group: misc
     summary: Reads the state of a channel as a number.
     params:
-      chnNum: Channel number.
-      stat: Pointer to a 32-bit integer that receives 0 (closed), 1 (created) or 2 (running).
+      chnNum: "Channel number."
+      stat: "Pointer to a 32-bit integer that receives 0 (closed), 1 (created) or 2 (running)."
     soc: T31
   FrameSource_SetChnRotate:
     group: i2d
-    summary: Turns the channel picture by 90 or 180 degrees in software, before any consumer sees it.
+    summary: "Turns the channel picture by 90 or 180 degrees in software, before any consumer sees it. Works on T21 and T31 only."
     params:
       chnNum: Channel number.
       rotTo90: 0 off, 1 90 degrees counterclockwise, 2 90 degrees clockwise, 3 180 degrees.
       width: Picture width before the rotation.
       height: Picture height before the rotation.
-    returns: -1 for an unsupported size (odd, above 4096) or mode.
-    notes: Create the encoder channel with the rotated size (width and height swapped for 90 degrees). The rotation costs CPU time on every frame; on T40 and T41 use the hardware I2D block instead.
+    returns: "0 on success. -1 for an unsupported size (odd, above 4096) or mode. On SoCs without software rotation every mode but 0 returns -1. On T21 the size must be a multiple of 16 and is limited for CPU load, so the call refuses large pictures there."
+    notes: "Call it before `CreateChn` (the setting stays through `DestroyChn`). Create the encoder channel with the rotated size (width and height swapped for 90 degrees). The rotation costs CPU time on every frame; on T40 and T41 use the hardware I2D block instead."
     diff: Mode 3 (180 degrees) is an OpenIMP addition; the vendor library only knows 0 to 2.
-    soc: T31 (software rotation). T40 and T41 use `SetI2dAttr`.
+    soc: "T21 and T31 (software rotation). T40 and T41 use `SetI2dAttr`."
   FrameSource_Get/SetI2dAttr:
     group: i2d
     summary: Rotates, flips or mirrors the output of the channel with the hardware I2D block.
     params:
       chnNum: Channel number.
       attr: Enable flags for flip, mirror and rotate, and the angle.
-    notes: Changing it needs the channel to be stopped, and the encoder size has to follow a rotation by 90 degrees.
+    notes: "The attribute is stored in the channel and read when the channel is enabled; the hardware is not touched by the call itself. The encoder size has to follow a rotation by 90 degrees."
     soc: T40 and T41
+    unverified: true
   FrameSource_Get/SetPool:
     group: mem
     summary: Binds the channel's buffers to a memory pool created with `IMP_System_MemPoolRequest`, or reads the pool id.
@@ -196,14 +200,16 @@ functions:
     returns: The getter returns the pool id; the setter returns 0 or -1.
     diff: Real pools on T23 and T31. On T41 the id is only recorded and the buffers still come from the normal memory.
     soc: T23, T31, T41
+    unverified: true
   FrameSource_ClearPoolId:
     group: mem
-    summary: Forgets the pool id of the channel, so the buffers come from the default memory again.
-    soc: T31
+    summary: "Forgets the pool ids that were set, so the buffers come from the default memory again. Takes no channel argument."
+    soc: "T31"
   FrameSource_Get/SetDirectModeAttr:
     group: misc
     summary: Selects the direct (online) mode between ISP and encoder, in which frames are not routed through a memory buffer.
     soc: T23
+    unverified: true
   FrameSource_SetYuvAlign:
     group: attr
     summary: Asks for line padding of the YUV frames to a multiple of 8, 16 or 32 bytes.
@@ -213,6 +219,7 @@ functions:
     returns: 0 when the channel size already satisfies the alignment, -1 (errno ENOTSUP) when padded frames would be needed.
     diff: Refuses padding that the channel would need; the open frame channel cannot pad.
     soc: T41
+    unverified: true
   FrameSource_SetSource:
     group: misc
     summary: Declares which physical channel an extension channel (`FS_EXT_CHANNEL`) is derived from.
@@ -220,6 +227,7 @@ functions:
       extchnNum: Number of the extension channel.
       sourcechnNum: Number of the physical channel it is cut from, 0 to 2.
     soc: T31
+    unverified: true
   FrameSource_SetFrameDepthCopyType:
     group: frames
     summary: Chooses whether frames of the depth queue are copies or are held in place (zero copy).
@@ -227,37 +235,48 @@ functions:
       chnNum: Channel number.
       bNoCopy: Non-zero for zero copy.
     soc: T31
+    unverified: true
   FrameSource_DequeueBuffer:
     group: inject
     summary: Takes an empty buffer of an injection channel, which the application then fills with an NV12 picture.
     returns: 0 on success, -1 on error.
+    unverified: true
     see_also: [FrameSource_QueueBuffer]
   FrameSource_QueueBuffer:
     group: inject
     summary: Hands a filled buffer of an injection channel to the consumers of the channel.
+    unverified: true
     see_also: [FrameSource_DequeueBuffer]
   FrameSource_ExternInject_CreateChn:
     group: inject
     summary: Creates an injection channel, a channel without sensor that is fed by the application.
+    unverified: true
     see_also: [FrameSource_DequeueBuffer]
   FrameSource_ExternInject_DestroyChn:
     group: inject
     summary: Destroys an injection channel.
+    unverified: true
   FrameSource_ExternInject_EnableChn:
     group: inject
     summary: Starts the injection channel, so buffers can be dequeued.
+    unverified: true
   FrameSource_ExternInject_DisableChn:
     group: inject
     summary: Stops the injection channel.
+    unverified: true
   FrameSource_EnableChnUndistort:
     group: misc
     summary: Switches the lens distortion correction of the channel on. Accepted, no effect in OpenIMP (the call returns 0).
+    unverified: true
   FrameSource_DisableChnUndistort:
     group: misc
     summary: Switches the lens distortion correction of the channel off. Accepted, no effect in OpenIMP.
+    unverified: true
   FrameSource_SetFrameOffset:
     group: misc
     summary: Sets a frame offset for the channel. Accepted and ignored, returns 0.
+    unverified: true
   FrameSource_CloseNCUInfo:
     group: misc
     summary: Turns off the per-frame NCU information of the buffer manager. Internal helper of the vendor library, kept for compatibility.
+    unverified: true

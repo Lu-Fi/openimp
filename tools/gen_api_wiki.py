@@ -66,7 +66,7 @@ CELL = {
     "?": ("?", "state not determined"),
     "nob": ("📋", "no OpenIMP build for this SoC yet (planned)"),
 }
-DEFAULT_RET = "0 on success, -1 on error."
+DEFAULT_RET = "0 on success, non-zero on error (mostly -1; T40 and T41 return their own error codes for some failures)."
 
 
 def load_json(name):
@@ -226,6 +226,8 @@ def render_function(d, key, ent, expo):
     o += ["**Returns:** " + str(ent.get("returns", DEFAULT_RET)).strip(), ""]
     if ent.get("notes"):
         o += [ent["notes"].strip(), ""]
+    if ent.get("unverified"):
+        o += ["Details not yet verified.", ""]
     soc = ent.get("soc")
     if not soc and row:
         have = [s for s in SOCS if row["cells"].get(s) not in ("n.a.", "nob", None)]
