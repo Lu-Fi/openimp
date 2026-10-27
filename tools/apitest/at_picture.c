@@ -742,9 +742,10 @@ static int c_mod(int ph, int arg, char *info, size_t n)
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetModuleControl(&old);
     m = old;
     switch (arg) { MODBITS(XC) MODBITS(XU) default: break; }
+    unsigned int req = m.key;
     r = IMP_ISP_Tuning_SetModuleControl(&m);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetModuleControl(&cur);
-    snprintf(info, n, "key 0x%08x -> 0x%08x (was 0x%08x)", m.key, cur.key, old.key);
+    snprintf(info, n, "key 0x%08x -> 0x%08x (was 0x%08x) req 0x%08x ret %d", m.key, cur.key, old.key, req, r);
     return r;
 }
 #endif
@@ -1233,6 +1234,7 @@ static int c_ratio(int ph, int arg, char *info, size_t n)
 #define XE(nm, bit) MB_##nm,
 enum { MODBITS(XE) MB_N };
 #define XC(nm, bit) case MB_##nm: m.bit = 1; break;
+#define XU(nm, bit) case MB_N + MB_##nm: m.bit = 0; break;   /* unbypass-<nm>: clear the bit */
 static int c_mod(int ph, int arg, char *info, size_t n)
 {
     static IMPISPModuleCtl old;
@@ -1243,7 +1245,7 @@ static int c_mod(int ph, int arg, char *info, size_t n)
     if (ph) { IMP_ISP_Tuning_SetModuleControl(IMPVI_MAIN, &old); return 0; }
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetModuleControl(IMPVI_MAIN, &old);
     m = old;
-    switch (arg) { MODBITS(XC) default: break; }
+    switch (arg) { MODBITS(XC) MODBITS(XU) default: break; }
     r = IMP_ISP_Tuning_SetModuleControl(IMPVI_MAIN, &m);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetModuleControl(IMPVI_MAIN, &cur);
     snprintf(info, n, "key 0x%08x -> 0x%08x (was 0x%08x)", m.key, cur.key, old.key);
@@ -1510,6 +1512,7 @@ static const Case cases[] = {
 #ifdef PLATFORM_T41
 # define XT(nm, bit) { "bypass-" #nm, c_mod, MB_##nm, SET, 0 },
     MODBITS(XT)
+    { "unbypass-defog", c_mod, MB_N + MB_defog, SET, 0 },   /* #135: clear the calibrated defog bypass */
 #endif
     { "aflicker-off", c_aflick, 0, AE, 0 },
     { "aflicker-50hz", c_aflick, 1, AE, 0 },
