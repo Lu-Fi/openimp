@@ -46,7 +46,7 @@ entries:
     reason: "ISP-stage OSD (regions drawn by the ISP): case planned (tests/t41/devtest/isp_osd_devtest.c exists), open issue 73 on T41"
   - match: ["IMP_ISP_Tuning_GetFaceAeWeiget", "IMP_ISP_Tuning_SetFaceAeWeiget", "IMP_ISP_Tuning_SetTmoFaceae", "IMP_ISP_Tuning_GetFaceAwb", "IMP_ISP_Tuning_SetFaceAwb", "IMP_ISP_Tuning_GetAEEvList", "IMP_ISP_Tuning_SetAeExpList", "IMP_ISP_Tuning_GetAeExpList"]
     category: backlog
-    reason: "face-AE / AE list: needs a face rectangle or a vendor exposure list; Eufy GetAeExpList crashes (see T40 notes); issue 90"
+    reason: "face-AE weights / AE list on T40: T41 Set/GetFaceAe and Set/GetAeExpList have cases (faceae, aeexplist); FaceAeWeiget/TmoFaceae/FaceAwb no case yet; Eufy GetAeExpList crashes on the vendor kernel (see T40 notes)"
   - match: ["IMP_Encoder_*NCUDenoise", "IMP_Encoder_PadFrame", "IMP_Encoder_SetPadFrameAttr", "IMP_Encoder_SetChnRcTrigLevel", "IMP_Encoder_SetPoolSize", "IMP_Encoder_*Rence*", "IMP_Encoder_*PoolId", "IMP_Encoder_DiscardInitialFrame", "IMP_Encoder_GetStream_Impl", "IMP_Encoder_GroupWhichChnRegisted", "IMP_Encoder_SetRdBufShare", "IMP_Encoder_GetChnH264Demask", "IMP_Encoder_SetChnH264Demask", "IMP_Encoder_GetChnH264Denoise", "IMP_Encoder_SetChnH264Denoise", "IMP_Encoder_GetChnH264FrmUsedMode", "IMP_Encoder_SetChnH264FrmUsedMode", "IMP_Encoder_GetChnRcAttr", "IMP_Encoder_SetChnRcAttr"]
     category: backlog
     reason: "older-SoC encoder helpers without a case (the equivalent T31/T41 calls are tested); to be covered"

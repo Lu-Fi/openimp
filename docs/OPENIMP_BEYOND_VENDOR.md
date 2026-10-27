@@ -139,6 +139,19 @@ Beyond or different from the vendor:
 - GetAeStatistics answers -1/EAGAIN before the first statistics of the stream (vendor: zeros).
 - AeExpList and AeStartEv are stored and read back but do not steer the frame AE.
 
+### 2.y T41 AE tuning calls (vendor AE, 2026-10-27, issue 90)
+
+Vendor semantics (the vendor AE itself computes the statistics and runs the face/list paths). Beyond or different:
+- GetFaceAe returns the last accepted request with the enable word; the vendor returns the first window word from the AE's
+  face-history ring (0/1 after one frame) and leaves the enable as kernel stack.
+- SetFaceAe refuses an enable other than 0/1 and an enabled window that is empty after the vendor clamps (vendor: switched
+  the face AE on with the old window). The face AE meters the ROI-window statistics, which the open driver copies per frame
+  (`t41_ae_roi_stats=0` turns that off; the face AE then has nothing to meter, as before).
+- GetAeExpList returns the stored list (columns 1..3); the vendor returns columns 2/3 from unrelated AE cache words.
+  SetAeExpList refuses a mode other than 0/1.
+- GetAeStatistics without the vendor AE (`t41_vendor_ae=0`) keeps the raw-histogram reply (fixed fifths, mean zones).
+- The 5-bin histogram uses the RAW histogram for both hist_domain values (vendor: YUV domain from the GSM block).
+
 ## 3. JPEG / snapshot
 
 | Feature | SoC | API / env | Default | How a streamer uses it | Detect / disable | Status / branch |
