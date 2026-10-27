@@ -40,6 +40,11 @@
 # endif
 #endif
 #include "sysutils/su_cipher.h"
+#if defined(__has_include)
+# if __has_include("imp/imp_dmic.h")
+#  include "imp/imp_dmic.h"
+# endif
+#endif
 
 #include "apitest_have.h"
 #include "apitest_weak.h"
@@ -140,6 +145,7 @@ void t_ivs(void);
 void t_audio(void);
 void t_isp(void);
 void t_cases(void);
+void t_dmic(void);        /* IMP_DMIC_* round trips (at_cases.c); area "dmic" runs it without the ISP, case "dmic" inside area cases */
 void t_binpath_pre(void);  /* IMP_ISP_Set/GetDefaultBinPath, between ISP_Open and AddSensor (T41 family) */
 void cases_list(void);     /* names of the cases of area "cases" */
 int picture_main(int argc, char **argv);   /* former imgfx (at_picture.c) */

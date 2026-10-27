@@ -69,13 +69,11 @@ maintained `libaudioProcess-neo`; logging uses the target's
 - AE/AWB and image-quality processing run in the stock ISP firmware using the
   selected sensor tuning blob. OpenIMP forwards tuning requests without
   duplicating sensor policy.
-- Still `ENOTSUP`: DMIC (21 calls).  Findings from the vendor 1.3.1
-  disassembly (host work, 2026-10-10):
-  - **DMIC**: no DMIC hardware on the test boards (the Eufy T8416 and the Wyze
-    Cam v3 Pro dts only carry the generic `dmic-pc` pinmux group, no audio/mic
-    node).  The vendor T40 DMIC (`__dmic_dev_deinit`, ioctl 0x4004506b, ...) is
-    not the T31 oss2 interface of `src/t31/openimp_t31_dmic.c`; a port cannot be
-    tested here, so the 21 calls stay `ENOTSUP` until a board with a DMIC exists.
+- DMIC (21 calls, `src/t31/openimp_t31_dmic.c`, 2026-10-27): rebuilt from the vendor 1.3.1 `dmic.c` (OSS3 `/dev/dsp` ioctls 0x73
+  SET_PARAM, 0x6a/0x6b stream on/off, 0x69 GET_STREAM with a 16-byte stream struct, 0x68/0x67 AEC, 0x57 gain). No DMIC hardware on
+  the test boards (the Eufy T8416 and the Wyze Cam v3 Pro dts only carry the generic `dmic-pc` pinmux group), so apitest `dmic`
+  proves argument validation and Set/Get round trips (QEMU + Eufy .184, evidence level rt); `IMP_DMIC_Enable` returns -1 when
+  the audio module runs with `dmic_enable=0` (default), where the vendor library would oops the driver.
 - **ISP-drawn OSD** (`src/t40/openimp_t40_isp_osd.c`, 2026-10-10, device-tested
   on the Eufy T40XP with the vendor tx-isp-t40 driver): `IMP_ISP_Tuning_
   {SetOsdPoolSize,CreateOsdRgn,SetOsdRgnAttr,GetOsdRgnAttr,ShowOsdRgn,

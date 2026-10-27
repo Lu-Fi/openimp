@@ -8,6 +8,24 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/dmic` (2026-10-27)
+
+- **IMP_DMIC_* on T40 and T41** (issues #131, #61, #74): the 21 calls were `ENOTSUP` stubs, now the vendor `dmic.c` rebuilt
+  (libimp 1.3.1 / 1.2.5 disassembly, no vendor code): `src/t31/openimp_t31_dmic.c` serves T30/T31 (oss2 ioctls) and T40/T41
+  (OSS3 `/dev/dsp`: SET_PARAM 0x73, ENABLE_STREAM 0x6a, GET_STREAM 0x69 with the 16-byte (T40) / 20-byte (T41) stream struct,
+  ENABLE/DISABLE_AEC 0x68/0x67, gain 0x57, T40 DISABLE_STREAM 0x6b). Argument validation, Set/Get round trips, clamps (volume
+  -30..120, gain 0..31, frame = whole 10 ms, chnCnt 1..4) and the not-enabled return codes follow the vendor; T31 and T40/T41 share
+  one module. T31 existed (cell "aud") and is now run.
+- **Beyond the vendor:** T40/T41 `IMP_DMIC_Enable` reads `/sys/module/audio/parameters/dmic_enable` and returns -1 when it is 0.
+  The ingenic-sdk audio module then has no DMIC route and the vendor library's first ioctl dereferences NULL (kernel oops,
+  reproduced in QEMU T41); OpenIMP fails cleanly instead.
+- **apitest area/case `dmic`** (all 21 / T31 20 vendor functions, round-trip level, evidence level rt; with a DMIC board the stream
+  flow Enable..GetFrame, gain and clamps run as well); `apitest ... dmic` needs no ISP/sensor. `IMP_DMIC_*` removed from
+  `untestable.yaml`. `qemu_run.py`: `QR_LIB=<libimp.so>` pushes and uses a test libimp.
+  Evidence: QEMU T31/T40/T41 21/21 (T31 20/20) PASS, no oops; cameras .26 (T31), .184 (T40), .34 (T41) libimp-only runs all PASS
+  ("API round trip, no DMIC hardware on the test board"). Matrix: DMIC_* T31/T40/T41 aud/err -> rt; streamer-function cells 1713 -> 1779 of 1787.
+  Not proven (needs a DMIC board): capture, gain effect, AEC.
+
 ## Branch `claude/issue-90` (2026-10-27)
 
 - **T41 IMP_ISP_Tuning_Set/GetFaceAe and Set/GetAeExpList** are exported (vendor 1.2.6 layout: pointer tuning ioctl,

@@ -16,7 +16,7 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 Rules (machine-readable: `docs/status/release.yaml`). **RC3:** every vendor function that a streamer (timps, prudynt, raptor) calls works on T10, T20, T21, T23, T31, T40, T41 (API matrix cell dev, dev+, run, rt or vendor no-op). **Release 1:** RC3 is green and the release image ran at least 14 days on the fleet with at least 1 camera per SoC, 0 unplanned reboots and 0 oops; a new image or any reset restarts the counter; planned flashes and tests count as planned only when the camera STATUS log marks them so.
 
-- **RC3: 🔴 RED** (1713 of 1787 streamer-function cells work, 74 missing)
+- **RC3: 🔴 RED** (1779 of 1787 streamer-function cells work, 8 missing)
 - **Release 1: 🔴 RED** (0 of 7 SoCs reached 14 stable days; image –, soak as of 2026-10-26 19:23)
   - Not started: the 14-day counter starts when RC3 is published (tag pending) and runs only on the image built from that tag.
 
@@ -30,17 +30,17 @@ Per SoC: vendor functions that at least one streamer calls (a Get/Set row counts
 | T20 | 227/228 | `████████████████████` | 1 |
 | T21 | 252/252 | `████████████████████` | 0 |
 | T23 | 289/290 | `████████████████████` | 1 |
-| T31 | 296/319 | `███████████████████░` | 23 |
-| T40 | 195/217 | `██████████████████░░` | 22 |
-| T41 | 227/253 | `██████████████████░░` | 26 |
+| T31 | 318/319 | `████████████████████` | 1 |
+| T40 | 217/217 | `████████████████████` | 0 |
+| T41 | 249/253 | `████████████████████` | 4 |
 
 - **T10** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
 - **T20** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
 - **T21:** nothing missing
 - **T23** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (err; p† r†; no issue yet)
-- **T31** (23 missing, 2 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet), `DMIC_*` (aud; r†; no issue yet)
-- **T40** (22 missing, 2 rows): `DMIC_*` (err; r†; [#61](https://github.com/Lu-Fi/openimp/issues/61)), `DMIC_DisableAecRefFrame` (err; r†; [#61](https://github.com/Lu-Fi/openimp/issues/61))
-- **T41** (26 missing, 4 rows): `DMIC_*` (err; r†; [#74](https://github.com/Lu-Fi/openimp/issues/74)), `DMIC_DisableAecRefFrame` (err; r†; [#74](https://github.com/Lu-Fi/openimp/issues/74)), `FrameSource_Get/SetPool` (cache; r†; [#72](https://github.com/Lu-Fi/openimp/issues/72)), `ISP_Get/SetISPBypass` (err; p†; no issue yet)
+- **T31** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
+- **T40:** nothing missing
+- **T41** (4 missing, 2 rows): `FrameSource_Get/SetPool` (cache; r†; [#72](https://github.com/Lu-Fi/openimp/issues/72)), `ISP_Get/SetISPBypass` (err; p†; no issue yet)
 
 ### Release 1: stable days on the release image
 
@@ -906,9 +906,9 @@ Per area and SoC: functions that work (device-tested or vendor no-op) / function
 - **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 22/36 ✅ · 7 🔧 · 7 gaps · 0 ?
 - **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 36/42 ✅ · 4 🔧 · 0 gaps · 2 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 26/42 ✅ · 13 🔧 · 3 gaps · 0 ?
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 74/96 ✅ · 22 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 77/99 ✅ · 0 🔧 · 22 gaps · 0 ? · T41 84/107 ✅ · 1 🔧 · 22 gaps · 0 ?
+- **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 96/96 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 99/99 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 106/107 ✅ · 1 🔧 · 0 gaps · 0 ?
 - **System:** T10 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T20 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T21 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T23 21/60 ✅ · 25 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 22/64 ✅ · 28 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 21/50 ✅ · 1 🔧 · 1 gaps · 27 ? · T41 19/55 ✅ · 30 🔧 · 6 gaps · 0 ?
-- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 323/406 ✅ · 59 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 293/402 ✅ · 41 🔧 · 40 gaps · 28 ? · T41 302/449 ✅ · 63 🔧 · 84 gaps · 0 ?
+- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 345/406 ✅ · 37 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 315/402 ✅ · 41 🔧 · 18 gaps · 28 ? · T41 324/449 ✅ · 63 🔧 · 62 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -922,8 +922,8 @@ Gaps (error, missing, stub, cache-only) in functions that at least one streamer 
 - **T31:** 0 streamer-used gaps; 2 further gaps no streamer calls
 - **T32:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T33:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
-- **T40:** 2 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†); 6 further gaps no streamer calls
-- **T41:** 4 streamer-used gaps: `DMIC_*` (err; r†), `DMIC_DisableAecRefFrame` (err; r†), `ISP_Get/SetISPBypass` (err; p†), `FrameSource_Get/SetPool` (cache; r†); 37 further gaps no streamer calls
+- **T40:** 0 streamer-used gaps; 6 further gaps no streamer calls
+- **T41:** 2 streamer-used gaps: `ISP_Get/SetISPBypass` (err; p†), `FrameSource_Get/SetPool` (cache; r†); 37 further gaps no streamer calls
 
 ### Long-term backlog
 
@@ -1907,7 +1907,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### Audio
 
-79 rows (47 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+79 rows (45 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1988,10 +1988,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `AO_Soft_Mute` | ✅rt | ✅rt | ✅rt | ✅ | ? | ✅rt | 📋 | 📋 | ✅rt | ✅rt | r† |
 | `AO_Soft_UNMute` | ✅rt | ✅rt | ✅rt | ✅ | ? | ✅rt | 📋 | 📋 | ✅rt | ✅rt | r† |
 | `Audio_Select_Codec` | · | · | · | · | · | · | 📋 | 📋 | · | 🔧h | – |
-| `DMIC_*` | · | · | · | · | 🔧a | 🔧a | 📋 | 📋 | ❌e | ❌e | r† |
-| `DMIC_DisableAecRefFrame` | · | · | · | · | 🔧a | · | 📋 | 📋 | ❌e | ❌e | r† |
+| `DMIC_*` | · | · | · | · | 🔧a | ✅rt | 📋 | 📋 | ✅rt | ✅rt | r† |
+| `DMIC_DisableAecRefFrame` | · | · | · | · | 🔧a | · | 📋 | 📋 | ✅rt | ✅rt | r† |
 
-<details><summary>Notes and references (65)</summary>
+<details><summary>Notes and references (66)</summary>
 
 - `ADEC_ReleaseDecoder`: T10/T20 (4 builds each) and T31 (28 builds): declared in the SDK header, exported by none of the vendor libimp builds (nm)
 - `AENC_* / ADEC_*`: T41: apitest rc3-cases 2026-10-27 .34 (T41-audio: AENC G.711A and ADEC round trip of a microphone frame; custom codec registration SKIP as on every SoC). T10: apitest rc3-cases 2026-10-27 .31 (T41-audio: AENC G.711A and ADEC round trip of a microphone frame; custom codec registration SKIP as on every SoC). T40: apitest rc3-cases 2026-10-27 .184 (T41-audio: AENC G.711A and ADEC round trip of a microphone frame; custom codec registration SKIP as on every SoC).
@@ -2057,7 +2057,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `AO_Soft_Mute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware T10: apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected). T20: apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected). T21: apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected). T40: apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected). T41: apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected). T31: apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected).
 - `AO_Soft_UNMute`: audit: reaches the driver/kernel; userspace implementation; T41: software mute as in the vendor library (no ioctl); API-level test only 2026-10-10 (rc 0, invalid argument -1), the T41 test board has no audio hardware T10: apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected). T20: apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected). T21: apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected). T40: apitest rc3-cases 2026-10-27 .184 (API round trip, no visible effect expected). T41: apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected). T31: apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected).
 - `Audio_Select_Codec`: T41: OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet.
-- `DMIC_DisableAecRefFrame`: T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host T41: ENOTSUP stub (returns -1); T30 1.0.5: as DMIC_*; disassembly identical to T31 apart from offsets, not run on the host
+- `DMIC_*`: vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board T31: apitest dmic 2026-10-27 .26 + QEMU T31: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board. T40: apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board. T41: apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board.
+- `DMIC_DisableAecRefFrame`: vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board T40: apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board. T41: apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board.
 
 </details>
 

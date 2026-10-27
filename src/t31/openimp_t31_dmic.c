@@ -1,4 +1,7 @@
-/* T31 digital microphone array (IMP_DMIC_*).
+/* T30/T31/T40/T41 digital microphone array (IMP_DMIC_*).
+ *
+ * T40/T41: same dmic.c structure in libimp 1.3.1 / 1.2.5 (disassembled), OSS3 ioctls
+ * instead of the oss2 ones (DMIC_OSS3 below); apitest area "dmic" runs it without a DMIC.
  *
  * The T30 build compiles this file too: libimp 1.0.5 has the same dmic.c
  * (the 21 functions disassemble alike, buffer sizing aside) and the T30
@@ -46,7 +49,23 @@
 #include <unistd.h>
 
 #include <imp/imp_dmic.h>
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#include <linux/ioctl.h>
+#endif
 
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* T40/T41: OSS3 /dev/dsp ABI shared with the analog microphone (_IOR 'P'
+ * on MIPS = direction READ).  libimp 1.3.1 / 1.2.5 dmic.c:
+ *   SET_PARAM {rate, format, channels(= microphones)} (0x73), then
+ *   ENABLE_STREAM (0x6a); capture with GET_STREAM (0x69) =
+ *   {data, size, aec, aec_size[, timestamp *]} (T40 16 bytes, T41 20);
+ *   ENABLE_AEC (0x68) returns the sample offset between microphone and
+ *   playback reference; gain DMIC_SET_GAIN (0x57, 0..31). */
+#define DMIC_OSS3 1
+#define DMIC_OSS3_IOR(nr, type)   _IOC(_IOC_READ, 'P', (nr), sizeof(type))
+#define DMIC_MAX_MICS             4
+#define DMIC_MAX_CHN              DMIC_MAX_MICS
+#else
 #define DMIC_DSP_SPEED            0xc0045002UL
 #define DMIC_DSP_SETFMT           0xc0045005UL
 #define DMIC_DSP_CHANNELS         0xc0045006UL
@@ -64,17 +83,48 @@
 #else
 #define DMIC_MAX_CHN              DMIC_MAX_MICS
 #endif
+#endif
 #define DMIC_DEFAULT_VOLUME       60
 #define DMIC_READ_RETRY_US        20000
 
+#if defined(DMIC_OSS3)
+typedef struct {
+    uint32_t rate;
+    uint16_t format;
+    uint16_t channels;
+} DmicParam;
+typedef struct {
+    void *data;
+    uint32_t size;
+    void *aec;
+    uint32_t aec_size;
+#if defined(PLATFORM_T41)
+    void *timestamp;       /* kernel timeval, may stay NULL */
+#endif
+} DmicStream;
+#define DMIC_SET_PARAM       DMIC_OSS3_IOR(115, DmicParam)
+#define DMIC_ENABLE_STREAM   DMIC_OSS3_IOR(106, int)
+#define DMIC_DISABLE_STREAM  DMIC_OSS3_IOR(107, int)
+#define DMIC_GET_STREAM      DMIC_OSS3_IOR(105, DmicStream)
+#define DMIC_ENABLE_AEC_IOC  DMIC_OSS3_IOR(104, int)
+#define DMIC_DISABLE_AEC_IOC DMIC_OSS3_IOR(103, int)
+#define DMIC_SET_GAIN        DMIC_OSS3_IOR(87, int)
+#else
 typedef struct {
     void *data;
     void *aec;
     uint32_t size;
 } DmicStream;
+#endif
 
 #if UINTPTR_MAX == 0xffffffffu
+#if defined(PLATFORM_T41)
+_Static_assert(sizeof(DmicStream) == 20, "DMIC stream ABI mismatch");
+#elif defined(PLATFORM_T40)
+_Static_assert(sizeof(DmicStream) == 16, "DMIC stream ABI mismatch");
+#else
 _Static_assert(sizeof(DmicStream) == 12, "DMIC stream ABI mismatch");
+#endif
 _Static_assert(sizeof(IMPDmicFrame) == 32, "IMPDmicFrame ABI mismatch");
 _Static_assert(sizeof(IMPDmicChnFrame) == 64, "IMPDmicChnFrame ABI mismatch");
 #endif
@@ -272,6 +322,9 @@ static void *dmic_record_main(void *argument)
         stream.data = node->raw;
         stream.aec = ref;
         stream.size = (uint32_t)dmic_frame_bytes();
+#if defined(DMIC_OSS3)
+        stream.aec_size = ref ? (uint32_t)dmic_mic_bytes() : 0;
+#endif
         ret = ioctl(dmic.fd, DMIC_GET_STREAM, &stream);
         if (ret == 0) {
             node->timestamp = dmic_timestamp();
@@ -366,9 +419,11 @@ int IMP_DMIC_GetPubAttr(int dmicDevId, IMPDmicAttr *attr)
 int IMP_DMIC_Enable(int dmicDevId)
 {
     int fd;
+#if !defined(DMIC_OSS3)
     int rate;
     int channels;
     int format;
+#endif
 
     if (dmicDevId != 0)
         return -1;
@@ -384,11 +439,49 @@ int IMP_DMIC_Enable(int dmicDevId)
         pthread_mutex_unlock(&dmic.lock);
         return -1;
     }
+#if defined(DMIC_OSS3)
+    /* The T40/T41 audio module (ingenic-sdk oss3) sets the DMIC route up only
+     * with dmic_enable=1; without it every DMIC ioctl dereferences the
+     * missing route (kernel oops, seen in QEMU).  libimp sends them anyway,
+     * we refuse before touching the driver. */
+    {
+        char flag[8] = "";
+        int pf = open("/sys/module/audio/parameters/dmic_enable",
+                      O_RDONLY | O_CLOEXEC);
+
+        if (pf >= 0) {
+            ssize_t got = read(pf, flag, sizeof(flag) - 1);
+
+            close(pf);
+            if (got > 0 && flag[0] == '0') {
+                pthread_mutex_unlock(&dmic.lock);
+                return -1;
+            }
+        }
+    }
+#endif
     fd = open("/dev/dsp", O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         pthread_mutex_unlock(&dmic.lock);
         return -1;
     }
+#if defined(DMIC_OSS3)
+    {
+        DmicParam param;
+        int one = 1;
+
+        memset(&param, 0, sizeof(param));
+        param.rate = (uint32_t)dmic.attr.samplerate;
+        param.format = (uint16_t)dmic.attr.bitwidth;
+        param.channels = (uint16_t)dmic.attr.chnCnt;
+        if (ioctl(fd, DMIC_SET_PARAM, &param) != 0 ||
+            ioctl(fd, DMIC_ENABLE_STREAM, &one) != 0) {
+            close(fd);
+            pthread_mutex_unlock(&dmic.lock);
+            return -1;
+        }
+    }
+#else
     rate = dmic.attr.samplerate;
     channels = dmic.attr.chnCnt;
     format = dmic.attr.bitwidth;
@@ -401,6 +494,7 @@ int IMP_DMIC_Enable(int dmicDevId)
         pthread_mutex_unlock(&dmic.lock);
         return -1;
     }
+#endif
     dmic.fd = fd;
     dmic.enabled = 1;
     pthread_mutex_unlock(&dmic.lock);
@@ -422,6 +516,13 @@ int IMP_DMIC_Disable(int dmicDevId)
     pthread_mutex_unlock(&dmic.lock);
     dmic_stop_channel();
     pthread_mutex_lock(&dmic.lock);
+#if defined(PLATFORM_T40)
+    {
+        int one = 1;
+
+        (void)ioctl(dmic.fd, DMIC_DISABLE_STREAM, &one);
+    }
+#endif
     close(dmic.fd);
     dmic.fd = -1;
     dmic.enabled = 0;
@@ -547,7 +648,15 @@ static void dmic_stop_channel(void)
     dmic.thread_running = 0;
     if (dmic.aec_enabled || dmic.ref_enabled) {
         if (dmic.fd >= 0)
+#if defined(DMIC_OSS3)
+        {
+            int off = 0;
+
+            (void)ioctl(dmic.fd, DMIC_DISABLE_AEC_IOC, &off);
+        }
+#else
             (void)ioctl(dmic.fd, DMIC_EXT_DISABLE_AEC, 0);
+#endif
     }
     dmic_release_aec();
     dmic.ref_enabled = 0;
@@ -742,7 +851,11 @@ int IMP_DMIC_SetGain(int dmicDevId, int dmicChnId, int dmicGain)
     else if (dmicGain > 31)
         dmicGain = 31;
     pthread_mutex_lock(&dmic.lock);
+#if defined(DMIC_OSS3)
+    ret = dmic.fd >= 0 ? ioctl(dmic.fd, DMIC_SET_GAIN, &dmicGain) : -1;
+#else
     ret = dmic.fd >= 0 ? ioctl(dmic.fd, DMIC_SET_GAIN, dmicGain) : -1;
+#endif
     if (ret >= 0)
         dmic.gain = dmicGain;
     pthread_mutex_unlock(&dmic.lock);
@@ -769,7 +882,12 @@ static int dmic_ref_enable(void)
         if (!dmic.ref)
             return -1;
     }
+#if defined(DMIC_OSS3)
+    one = 0; /* in: unused, out: sample offset microphone <-> reference */
+    if (ioctl(dmic.fd, DMIC_ENABLE_AEC_IOC, &one) != 0) {
+#else
     if (ioctl(dmic.fd, DMIC_EXT_ENABLE_AEC, &one) != 0) {
+#endif
         free(dmic.ref);
         dmic.ref = NULL;
         return -1;
@@ -783,7 +901,11 @@ static void dmic_ref_disable(void)
     int zero = 0;
 
     dmic_wait_idle();
+#if defined(DMIC_OSS3)
+    (void)ioctl(dmic.fd, DMIC_DISABLE_AEC_IOC, &zero);
+#else
     (void)ioctl(dmic.fd, DMIC_EXT_DISABLE_AEC, &zero);
+#endif
     free(dmic.ref);
     dmic.ref = NULL;
 }

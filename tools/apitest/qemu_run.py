@@ -59,19 +59,31 @@ def sh(cmd, maxt=300, idle=60):
 
 s.sendall(b"\x03\n"); rd(1, 3)
 sh("stty -echo; mkdir -p /tmp/at; /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 2; dmesg -c >/dev/null; free | head -2", 60, 5)
-data = base64.b64encode(gzip.compress(open(binary, "rb").read(), 9)).decode() if not nopush else ""
-pace = float(os.environ.get("QR_PACE", "0.03"))
-for attempt in range(0 if nopush else 3):
-    s.sendall(b": > /tmp/at/b.b64\n"); rd(0.3, 2)
-    for i in range(0, len(data), 150):
-        s.sendall(("echo %s >> /tmp/at/b.b64\n" % data[i:i + 150]).encode()); rd(pace, 1)
-    o, _ = sh("wc -c < /tmp/at/b.b64", 900, 120)
-    got = re.findall(r"^(\d+)\s*$", o, re.M)
-    if got and int(got[-1]) == len(data) + len(data) // 150 + (1 if len(data) % 150 else 0):
-        break
-    print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:] , len(data) + (len(data) + 149) // 150))
-    pace *= 3
-out, rc = sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/apitest && chmod 755 /tmp/at/apitest && rm /tmp/at/b.b64; ls -l /tmp/at/apitest", 120, 10) if not nopush else sh("ls -l /tmp/at/apitest", 20, 5)
+def push(path, dest, mode="755"):
+    """gzip+base64 over the console into /tmp/at/<dest>"""
+    data = base64.b64encode(gzip.compress(open(path, "rb").read(), 9)).decode()
+    pace = float(os.environ.get("QR_PACE", "0.03"))
+    for attempt in range(3):
+        s.sendall(b": > /tmp/at/b.b64\n"); rd(0.3, 2)
+        for i in range(0, len(data), 150):
+            s.sendall(("echo %s >> /tmp/at/b.b64\n" % data[i:i + 150]).encode()); rd(pace, 1)
+        o, _ = sh("wc -c < /tmp/at/b.b64", 900, 120)
+        got = re.findall(r"^(\d+)\s*$", o, re.M)
+        if got and int(got[-1]) == len(data) + len(data) // 150 + (1 if len(data) % 150 else 0):
+            break
+        print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:], len(data) + (len(data) + 149) // 150))
+        pace *= 3
+    return sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/%s && chmod %s /tmp/at/%s && rm /tmp/at/b.b64; ls -l /tmp/at/%s" % (dest, mode, dest, dest), 120, 10)
+
+
+# QR_LIB=<libimp.so>: push that library too and run the guest apitest against it (LD_LIBRARY_PATH=/tmp/at) instead of the image's libimp
+ldp = ""
+if os.environ.get("QR_LIB") and not nopush:
+    lo, _ = push(os.environ["QR_LIB"], "libimp.so")
+    print("pushed lib:", lo.strip().splitlines()[-1:] if lo.strip() else lo)
+if os.environ.get("QR_LIB"):
+    ldp = "LD_LIBRARY_PATH=/tmp/at "
+out, rc = push(binary, "apitest") if not nopush else sh("ls -l /tmp/at/apitest", 20, 5)
 print("pushed:", out.strip().splitlines()[-2:] if out.strip() else out)
 res = []
 for c in cases:
@@ -81,7 +93,7 @@ for c in cases:
         area = c[5:]; c = area
     elif ":" in c:                   # case:ENVVAR  -> run with ENVVAR=1 (e.g. process:APITEST_PROCESS_BYPASS)
         c, envx = c.split(":", 1); envx = envx + "=1 "
-    cmd = "cd /tmp/at; " + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] IMP_(System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|ISP_[A-Z]|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
+    cmd = "cd /tmp/at; " + ldp + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] IMP_DMIC_|^\\[A\\] dmic|^\\[A\\] IMP_(System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|ISP_[A-Z]|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
     out, rc = sh(cmd, 300, 90)
     open(os.path.join(outdir, c + ".log"), "w").write(out)
     if rc is None or re.search(r"Kernel panic|Oops|Unable to handle|Restarting system", out):

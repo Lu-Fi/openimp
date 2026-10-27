@@ -7,9 +7,6 @@ entries:
   - match: ["IMP_LOG", "IMP_LOG_*"]
     category: no-signature
     reason: "header macros / enum constants (log levels and options), not functions"
-  - match: ["IMP_DMIC_*"]
-    category: sound
-    reason: "digital microphone path, board has none / no sound tests on the test cameras (microphone-only rule covers AI only)"
   - match: ["IMP_AI_IMPDBG_*", "IMP_AO_IMPDBG_*", "IMP_AI_DisableDrc", "IMP_AI_EnableDrc", "IMP_AO_DisableDrc", "IMP_AO_EnableDrc", "IMP_AI_GetRawSwitch", "IMP_AI_SetAECLeadAI", "IMP_DMIC_SetAECLeadDMIC"]
     category: sound
     reason: "audio debug / DRC / AEC lead switches of the audio path (speaker or AEC reference needed)"

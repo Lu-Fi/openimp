@@ -133,6 +133,11 @@ do
         -o "$output_dir/$source.o"
 done
 
+# IMP_DMIC_*: shared src/t31 DMIC module, OSS3 ioctl variant (PLATFORM_T40)
+"$compiler" $strict_flags -I"$T40_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t31/openimp_t31_dmic.c" \
+    -o "$output_dir/t40_dmic.o"
+
 for source in openimp_p3_controls openimp_p3_audio openimp_p3_compat
 do
     "$compiler" $strict_flags -I"$T40_HEADERS" \
@@ -175,6 +180,7 @@ done
     "$output_dir/openimp_avc.o" \
     "$output_dir/openimp_p3_controls.o" \
     "$output_dir/openimp_p3_audio.o" \
+    "$output_dir/t40_dmic.o" \
     "$output_dir/openimp_audio_codec.o" \
     "$output_dir/audio_ext.o" \
     "$output_dir/openimp_audio_enc_dec.o" \
