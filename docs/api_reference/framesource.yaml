@@ -115,13 +115,21 @@ functions:
     see_also: [FrameSource_Get/SetMaxDelay]
   FrameSource_Get/SetFrameDepth:
     group: frames
-    summary: "Sets or reads how many frames the application may hold at once through `GetFrame`."
+    summary: Sets or reads how many frames the application may hold at once through `GetFrame`.
     params:
-      chnNum: "Channel number."
-      depth: "Number of frames. 0 removes the depth."
-    returns: "0 on success, -1 for a channel number out of range or a NULL pointer; the setter on T40 and T41 also refuses a negative depth."
-    notes: "On T41 a depth of 0 makes `GetFrame` return 0 without a frame, and with the depth reached `GetFrame` waits for a `ReleaseFrame`, 2 s at most, then returns 0x80012000. On T40 `GetFrame` works without a depth. On T10 to T31 (except T20) the depth is added to the capture buffer count at `EnableChn`, so every frame costs a full capture buffer; keep it small."
-    see_also: [FrameSource_GetFrame, FrameSource_ReleaseFrame]
+      chnNum: Channel number.
+      depth: Number of frames. 0 removes the depth.
+    returns: 0 on success, -1 for a channel number out of range or a NULL pointer; the setter on T40 and T41 also refuses
+      a negative depth.
+    notes: 'On T41 a depth of 0 makes `GetFrame` return 0 without a frame, and with the depth reached `GetFrame` waits for
+      a `ReleaseFrame`, 2 s at most, then returns 0x80012000 (vendor 1.2.5 behaviour). Not like the vendor: the T41 capture
+      queue is shared and keeps the oldest frames when nobody pulls, where the vendor''s depth queue replaces its oldest waiting
+      frame. OpenIMP''s own consumers do not count against the depth. On T40 `GetFrame` works without a depth. On T10 to T31
+      (except T20) the depth is added to the capture buffer count at `EnableChn`, so every frame costs a full capture buffer;
+      keep it small.'
+    see_also:
+    - FrameSource_GetFrame
+    - FrameSource_ReleaseFrame
   FrameSource_GetFrame:
     group: frames
     summary: Waits for the next frame of the channel and returns a pointer to its description (`IMPFrameInfo`). The pixel data stays in the capture buffer, nothing is copied.
@@ -189,13 +197,23 @@ functions:
     soc: "T40 and T41"
   FrameSource_Get/SetPool:
     group: mem
-    summary: "Records which memory pool a channel is bound to (created with `IMP_System_MemPoolRequest`), or reads it back."
+    summary: Binds a channel to a memory pool (created with `IMP_System_MemPoolRequest`) so its capture buffers come from
+      that pool, or reads the binding back.
     params:
-      chnNum: "Channel number."
-      poolId: "Id of the pool. Set it before `EnableChn`."
-    returns: "Checked on T31 and T41: the getter returns the pool id, or -1 if none was set or the channel is invalid. The setter returns 0, or -1 for an invalid channel or a negative id; on T31 also when a pool is already set for the channel, on T41 also when the channel does not exist or is already running."
-    diff: "In OpenIMP a pool is a name only: every channel takes its buffers from the one common memory arena, so `SetPool` reserves nothing and has no effect on where the buffers come from."
-    soc: "T23, T31, T41"
+      chnNum: 'Channel number (T41: 0 to 32; the channel does not have to exist yet).'
+      poolId: Id of the pool. Set it before `EnableChn`.
+    returns: 'T41, as the vendor library: the setter returns 0x80010001 for a channel number of 33 or more, 0x80010040 if
+      the pool does not exist and 0x80010020 if the channel is already bound; the getter returns the pool id, 0x80010001 for
+      a channel of 33 or more and 0x80010020 when none is bound. T31: the getter returns the pool id or -1 if none was set
+      or the channel is invalid; the setter returns 0, or -1 for an invalid channel, a negative id or a pool already set.'
+    notes: 'Checked on a T41 camera: three enable/disable cycles with channel 1 frames inside a 2 MB pool, memory use identical
+      before and after, and a 64 KB pool refused.'
+    diff: 'T41 pools are real: the pool is a contiguous block of media memory, the capture buffers of a bound channel are
+      taken from it at the next `EnableChn`, and an `EnableChn` with a pool that is too small fails cleanly. Unbound channels
+      keep using the common arena. Beyond the vendor, `IMP_System_MemPoolFree` releases an idle pool and unbinds the channels
+      that used it. On the other SoCs (T31 and T23) a pool is a name only: `SetPool` records the id, reserves nothing and
+      does not change where the buffers come from.'
+    soc: T23, T31, T41
   FrameSource_ClearPoolId:
     group: mem
     summary: "Forgets the pool ids that were set, so the buffers come from the default memory again. Takes no channel argument."

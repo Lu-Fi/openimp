@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/api-wiki-review3` (2026-10-27)
+
+- **Wiki API reference: 62 more entries verified against src/** (ISP 60, Encoder 2; FrameSource, which was already complete, and the
+  T31 `GetChnEvalInfo` entry were updated for today's merges: T41 real pools, T41 FrameDepth queue, header layout of the record).
+  ISP-drawn OSD entries now name the SoCs that have them (T23, T40, T41), the T23 odd-width guard and the vendor-shift note
+  are in. 51 ISP and 26 Encoder entries stay marked unverified. Docs only (`docs/api_reference/*.yaml`).
+
 ## Branch `claude/t41-fs-pool` (2026-10-27, issue 72)
 
 - **T41 IMP_FrameSource_SetPool / GetPool: real media memory pools** like the vendor 1.2.5/1.2.6.

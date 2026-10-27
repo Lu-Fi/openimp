@@ -268,9 +268,15 @@ functions:
     unverified: true
   Encoder_RequestGDR:
     group: gop
-    summary: Starts a gradual refresh cycle of the given number of frames.
+    summary: 'Starts a gradual refresh cycle (GDR) of the given number of frames: instead of one IDR picture the channel refreshes
+      the picture over those frames.'
+    params:
+      encChn: Channel number.
+      gdrFrames: Number of frames of the cycle, 2 to 10.
+    returns: 0 on success; -1 for a bad channel, a channel that was not created, or a frame count outside 2 to 10.
+    notes: T23 only; the request is passed to the encoder with the frame control of the next picture. Checked in the userspace
+      audit only.
     soc: T23
-    unverified: true
   Encoder_Get/SetChangeRef:
     group: gop
     summary: "Reads or sets the switch for changing the reference picture."
@@ -391,12 +397,17 @@ functions:
     unverified: true
   Encoder_InsertUserData:
     group: h26x
-    summary: Inserts user data into the stream of the next picture, as a user_data_unregistered SEI message.
+    summary: Inserts user data into the stream before the next picture, as a user_data_unregistered SEI message (H.264 channels
+      only).
     params:
       data: Bytes to insert.
       size: Length in bytes.
+    returns: 0 on success; -1 for a NULL pointer, a size of 0 or more than 1024 bytes, a channel that does not exist or is
+      not H.264 (T20, T21, T23, T30).
+    notes: The data goes into the channel's user-data cache (the number and size of the payloads come from `userData.maxUserDataCnt`
+      / `maxUserDataSize` in the channel attribute, two payloads in the vendor library) and is written in front of the next
+      picture; the application finds it in the next frames of the stream. Checked with the API test on T10, T20, T21 and T23.
     soc: T10, T20, T21, T23
-    unverified: true
   Encoder_Get/Setframelossthd:
     group: h26x
     summary: "Reads or sets the frame loss threshold in bytes (T23). The value is kept for the getter."
@@ -588,9 +599,20 @@ functions:
     unverified: true
   Encoder_GetChnEvalInfo:
     group: misc
-    summary: "Reads the evaluation record of the most recent picture of an H.264 channel on T31: six hardware picture counters, then the slice QP and the lowest and highest QP used."
+    summary: 'Reads the evaluation record of the most recent picture of an H.264 channel on T31: bytes of the picture, six
+      hardware picture counters, then the slice QP and the lowest and highest QP used.'
     params:
-      encChn: "Channel number."
-      info: "Buffer of at least 36 bytes."
-    returns: "0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created (errno ENOTSUP on the SoCs that do not have it). The record is 36 bytes (8 bytes for a JPEG channel) and is refreshed with every stream the encoder finishes."
-    soc: "T31"
+      encChn: Channel number.
+      info: Buffer of at least 36 bytes (8 for a JPEG channel); lay it over `IMPEncoderStreamInfo` (`IMPEncoderJpegInfo` for
+        JPEG).
+    returns: 0 on success, -1 for an invalid channel, a NULL pointer or a channel that was not created (errno ENOTSUP on the
+      SoCs that do not have it). The record is 36 bytes (8 bytes for a JPEG channel) and is refreshed with every stream the
+      encoder finishes.
+    notes: 'Checked on a T31 camera with an AVC channel: `iNumBytes` 3993 for a 4003-byte access unit, QP 20/20/23; and a
+      JPEG channel with 40209 bytes at quality 75.'
+    diff: 'The record has the layout of `IMPEncoderStreamInfo` in the header: `iNumBytes` (entropy bytes of the picture) at
+      offset 0, the six counters at 4 to 27, slice, minimum and maximum QP at 28, 30 and 32. The vendor 1.1.6 library copies
+      the same data one 32-bit word later (no `iNumBytes`, every field 4 bytes earlier). This is a deliberate difference:
+      do not apply a 4-byte compensation for the vendor shift with OpenIMP. A JPEG channel returns 8 bytes: `iNumBytes` (JPEG
+      size) at 0 and the quality factor at 4.'
+    soc: T31
