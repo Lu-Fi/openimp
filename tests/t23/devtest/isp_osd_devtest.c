@@ -10,7 +10,9 @@
  * Phases: base; picture A (B,G,R,A bytes, order BGRA = 0, the T23 SDK's
  * name for "byte 0 is blue") at 64,64; picture D (quadrants, 50 % alpha
  * strip) at the same place; moved to (400,200) with picture B; second
- * region C at (5/8, 5/9 of ch0); hide the first; destroy both.  Per phase
+ * region C at (5/8, 5/9 of ch0); hide the first; an odd picture width
+ * (SetOSDBlock block 2 and SetOsdRgnAttr on C: refused, frames flow);
+ * destroy both.  Per phase
  * one NV12 frame of ch0 and ch1, written to stdout as
  * "FILE <name> <size>\n" + bytes (the host splits them), the ch1 frame
  * interval over 40 frames as the fps check, and the driver readback
@@ -181,7 +183,7 @@ static void readback(const char *phase)
     r = IMP_ISP_Tuning_GetOSDAttr(&a);
     fprintf(stderr, "EVT %s kattr ret %d type %d argb %d alpha_dis %d\n", phase,
             r, a.osd_type, a.osd_argb_type, a.osd_pixel_alpha_disable);
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < 3; i++) {
         memset(&b, 0, sizeof(b));
         b.pinum = (uint8_t)i;
         r = IMP_ISP_Tuning_GetOSDBlock(&b);
@@ -291,6 +293,34 @@ int main(int argc, char **argv)
     /* 5: hide the first */
     fprintf(stderr, "EVT hide h0 ret %d\n", IMP_ISP_Tuning_ShowOsdRgn(0, h0, 0));
     phase("p5hide");
+
+    /* 5b: odd picture width (beyond vendor: refused, nothing stored, the
+     * ISP keeps running).  Direct SetOSDBlock on block 2, then through the
+     * region API on h1. */
+    {
+        IMPISPOSDBlockAttr ob;
+
+        memset(&ob, 0, sizeof(ob));
+        ob.pinum = 2;
+        ob.osd_enable = 1;
+        ob.osd_left = 200;
+        ob.osd_top = 100;
+        ob.osd_width = PW - 1;
+        ob.osd_height = PH;
+        ob.osd_image = (char *)pic_c;
+        ob.osd_stride = PW * 4;
+        fprintf(stderr, "EVT oddw block2 ret %d\n", IMP_ISP_Tuning_SetOSDBlock(&ob));
+    }
+    {
+        IMPIspOsdAttrAsm a;
+
+        memset(&a, 0, sizeof(a));
+        IMP_ISP_Tuning_GetOsdRgnAttr(0, h1, &a);
+        a.stsinglepicAttr.pic.osd_width = PW - 1;
+        fprintf(stderr, "EVT oddw rgn h1 ret %d\n", IMP_ISP_Tuning_SetOsdRgnAttr(0, h1, &a));
+        fprintf(stderr, "EVT oddw show h1 ret %d\n", IMP_ISP_Tuning_ShowOsdRgn(0, h1, 1));
+    }
+    phase("p5oddw");
 
     /* 6: destroy both */
     fprintf(stderr, "EVT destroy h0 ret %d h1 ret %d\n",

@@ -197,6 +197,10 @@ int IMP_OSD_SetRgnAttr_PicISP(int chn, int handle, IMPIspOsdAttrAsm *attr)
     if (!valid_slot(chn, handle) || !attr ||
         attr->stsinglepicAttr.sensornum < chn || !fits_frame(chn, attr))
         return -1;
+    /* beyond OEM: an odd picture width stops the T23 ISP (QEMU model), the
+     * OEM takes it; refused here before any rmem is touched */
+    if (attr->stsinglepicAttr.pic.osd_width & 1)
+        return -1;
     size = picture_size(attr);
     if (size < 0)
         return -1;

@@ -8,6 +8,16 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t23-osd-oddwidth` (2026-10-27)
+
+- **T23 ISP OSD: odd picture width refused** (beyond vendor, stability guard). `IMP_ISP_Tuning_SetOSDBlock` (all three
+  sensor entry points) returns -1 without an ioctl for an enabled block with an odd width, and
+  `IMP_ISP_Tuning_SetOsdRgnAttr` / `IMP_OSD_SetRgnAttr_PicISP` returns -1 before any rmem is touched. The vendor library
+  and ISP take it, and an odd width stops the T23 ISP (QEMU T23: frames stop). open-tx-isp `claude/t23-osd-oddwidth`
+  refuses it in the driver as well (-EINVAL). Host test `tests/t23/isp_tuning_test.c`; device test
+  `tests/t23/devtest/isp_osd_devtest.c` phase p5oddw (QEMU T23: next driver + image libimp stopped both channels,
+  guarded driver refused and frames kept flowing at 20.4 fps).
+
 ## Branch `claude/issue-90` (2026-10-27)
 
 - **T41 IMP_ISP_Tuning_Set/GetFaceAe and Set/GetAeExpList** are exported (vendor 1.2.6 layout: pointer tuning ioctl,

@@ -595,6 +595,19 @@ static void test_mask(void)
     reset();
     ioctl_ret = -1;
     CHECK(IMP_ISP_Tuning_GetOSDBlock(buf) == -4090, "osd block error");
+    /* odd picture width of an enabled block: refused before the ioctl */
+    memset(buf, 0, 20);
+    buf[0] = 1; buf[1] = 1; buf[6] = 101; buf[8] = 64;
+    reset();
+    CHECK(IMP_ISP_Tuning_SetOSDBlock(buf) == -1 && calls == 0,
+          "osd block odd width refused");
+    buf[6] = 100;
+    reset();
+    CHECK(IMP_ISP_Tuning_SetOSDBlock(buf) == 0 && last_req.cid == 0x8000182,
+          "osd block even width");
+    buf[1] = 0; buf[6] = 101;
+    reset();
+    CHECK(IMP_ISP_Tuning_SetOSDBlock(buf) == 0, "osd block disable, odd width ignored");
 }
 
 static void test_misc(void)
