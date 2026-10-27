@@ -6,7 +6,13 @@
    "title": "T31 + SC2336: AE limit-cycles between anti-flicker IT steps (analog gain has no usable authority)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/2",
-   "labels": [],
+   "labels": [
+    "area:AE-AWB",
+    "prio:streamer",
+    "repo:open-tx-isp",
+    "soc:T31",
+    "type:bug"
+   ],
    "created": "2026-10-19T18:27:32Z",
    "closed": null,
    "milestone": null
@@ -201,7 +207,7 @@
    ],
    "created": "2026-10-26T15:58:34Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 15,
@@ -217,7 +223,7 @@
    ],
    "created": "2026-10-26T15:58:40Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 16,
@@ -233,7 +239,7 @@
    ],
    "created": "2026-10-26T15:58:45Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 17,
@@ -249,7 +255,7 @@
    ],
    "created": "2026-10-26T15:58:51Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 18,
@@ -265,7 +271,7 @@
    ],
    "created": "2026-10-26T15:58:57Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 19,
@@ -281,7 +287,7 @@
    ],
    "created": "2026-10-26T15:59:02Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 20,
@@ -297,7 +303,7 @@
    ],
    "created": "2026-10-26T15:59:08Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 21,
@@ -313,7 +319,7 @@
    ],
    "created": "2026-10-26T15:59:14Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 22,
@@ -473,7 +479,7 @@
    ],
    "created": "2026-10-26T16:00:12Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 32,
@@ -489,7 +495,7 @@
    ],
    "created": "2026-10-26T16:00:18Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 33,
@@ -505,7 +511,7 @@
    ],
    "created": "2026-10-26T16:00:23Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 34,
@@ -521,7 +527,7 @@
    ],
    "created": "2026-10-26T16:00:29Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 35,
@@ -537,7 +543,7 @@
    ],
    "created": "2026-10-26T16:00:35Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 36,
@@ -553,7 +559,7 @@
    ],
    "created": "2026-10-26T16:00:40Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 37,
@@ -569,7 +575,7 @@
    ],
    "created": "2026-10-26T16:00:46Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 38,
@@ -585,7 +591,7 @@
    ],
    "created": "2026-10-26T16:00:52Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 39,
@@ -713,7 +719,7 @@
    ],
    "created": "2026-10-26T16:01:37Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 47,
@@ -729,7 +735,7 @@
    ],
    "created": "2026-10-26T16:01:42Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 48,
@@ -745,7 +751,7 @@
    ],
    "created": "2026-10-26T16:01:48Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 49,
@@ -761,7 +767,7 @@
    ],
    "created": "2026-10-26T16:01:54Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 50,
@@ -777,7 +783,7 @@
    ],
    "created": "2026-10-26T16:02:00Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 51,
@@ -793,7 +799,7 @@
    ],
    "created": "2026-10-26T16:02:06Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 52,
@@ -809,7 +815,7 @@
    ],
    "created": "2026-10-26T16:02:12Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 53,
@@ -825,7 +831,7 @@
    ],
    "created": "2026-10-26T16:02:17Z",
    "closed": null,
-   "milestone": "RC3"
+   "milestone": null
   },
   {
    "number": 54,
@@ -942,7 +948,7 @@
   {
    "number": 61,
    "title": "[T40] Audio: 2 streamer-used API gaps",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/61",
    "labels": [
     "area:Audio",
@@ -952,13 +958,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:02Z",
-   "closed": null,
+   "closed": "2026-10-27T08:16:05Z",
    "milestone": "RC3"
   },
   {
    "number": 62,
    "title": "[T40] ISP tuning: audit of 2 streamer-used functions of unknown state",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/62",
    "labels": [
     "area:ISP",
@@ -968,13 +974,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:08Z",
-   "closed": null,
+   "closed": "2026-10-27T03:38:56Z",
    "milestone": "RC3"
   },
   {
    "number": 63,
    "title": "[T40] Audio: audit of 16 streamer-used functions of unknown state",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/63",
    "labels": [
     "area:Audio",
@@ -984,13 +990,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:13Z",
-   "closed": null,
+   "closed": "2026-10-27T03:38:58Z",
    "milestone": "RC3"
   },
   {
    "number": 64,
    "title": "[T40] System / sysutils / log: audit of 1 streamer-used functions of unknown state",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/64",
    "labels": [
     "area:System",
@@ -1000,7 +1006,7 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:03:19Z",
-   "closed": null,
+   "closed": "2026-10-27T03:38:54Z",
    "milestone": "RC3"
   },
   {
@@ -1102,7 +1108,7 @@
   {
    "number": 71,
    "title": "[T41] Encoder (and decoder): 4 streamer-used API gaps",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/71",
    "labels": [
     "area:Encoder",
@@ -1112,13 +1118,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:00Z",
-   "closed": null,
+   "closed": "2026-10-27T01:12:19Z",
    "milestone": "RC3"
   },
   {
    "number": 72,
-   "title": "[T41] FrameSource: 2 streamer-used API gaps",
-   "state": "open",
+   "title": "[T41] FrameSource: 1 streamer-used API gap",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/72",
    "labels": [
     "area:FrameSource",
@@ -1128,13 +1134,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:06Z",
-   "closed": null,
+   "closed": "2026-10-27T08:55:50Z",
    "milestone": "RC3"
   },
   {
    "number": 73,
    "title": "[T41] OSD: 5 streamer-used API gaps",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/73",
    "labels": [
     "area:OSD",
@@ -1144,13 +1150,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:12Z",
-   "closed": null,
+   "closed": "2026-10-27T01:12:21Z",
    "milestone": "RC3"
   },
   {
    "number": 74,
    "title": "[T41] Audio: 2 streamer-used API gaps",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/74",
    "labels": [
     "area:Audio",
@@ -1160,7 +1166,7 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:04:18Z",
-   "closed": null,
+   "closed": "2026-10-27T08:16:08Z",
    "milestone": "RC3"
   },
   {
@@ -1262,7 +1268,7 @@
   {
    "number": 81,
    "title": "[T40] tisp event thread wakes every millisecond (system CPU)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/81",
    "labels": [
     "area:Driver",
@@ -1272,7 +1278,7 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:04:57Z",
-   "closed": null,
+   "closed": "2026-10-27T09:48:46Z",
    "milestone": "RC3"
   },
   {
@@ -1294,7 +1300,7 @@
   {
    "number": 83,
    "title": "[T40] BCSH: take all words of the user CSC mode 4 and the user CCM",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/83",
    "labels": [
     "area:ISP",
@@ -1304,7 +1310,7 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:09Z",
-   "closed": null,
+   "closed": "2026-10-27T09:48:48Z",
    "milestone": "RC3"
   },
   {
@@ -1342,7 +1348,7 @@
   {
    "number": 86,
    "title": "[T40] Remaining %hi(.bss+N) inline asm (36 lines): latent layout hazards",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/86",
    "labels": [
     "area:Driver",
@@ -1352,13 +1358,13 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:27Z",
-   "closed": null,
+   "closed": "2026-10-27T09:48:43Z",
    "milestone": "RC3"
   },
   {
    "number": 87,
    "title": "[T40] tests/t40/bcsh_dn_host no longer builds",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/87",
    "labels": [
     "area:Docs",
@@ -1368,7 +1374,7 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:33Z",
-   "closed": null,
+   "closed": "2026-10-27T02:41:14Z",
    "milestone": "RC3"
   },
   {
@@ -1390,7 +1396,7 @@
   {
    "number": 89,
    "title": "[T40] Verify the stale-first-snapshot fix (frame timestamps)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/89",
    "labels": [
     "area:FrameSource",
@@ -1400,13 +1406,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:45Z",
-   "closed": null,
+   "closed": "2026-10-27T04:22:00Z",
    "milestone": "RC3"
   },
   {
    "number": 90,
    "title": "[T41] AE API gaps: zones, histogram thresholds, FaceAe/AeSpeed/AeExpList",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/90",
    "labels": [
     "area:AE-AWB",
@@ -1416,13 +1422,13 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:05:51Z",
-   "closed": null,
+   "closed": "2026-10-27T06:40:28Z",
    "milestone": "RC3"
   },
   {
    "number": 91,
    "title": "[T41] P-frames 37-65 % larger than the vendor at the same FixQP",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/91",
    "labels": [
     "area:Encoder",
@@ -1432,7 +1438,7 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:05:57Z",
-   "closed": null,
+   "closed": "2026-10-26T19:57:16Z",
    "milestone": "RC3"
   },
   {
@@ -1486,7 +1492,7 @@
   {
    "number": 95,
    "title": "[T31] AE slow after a brightness step: device proof and vendor A/B missing",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/95",
    "labels": [
     "area:AE-AWB",
@@ -1496,7 +1502,7 @@
     "type:gap"
    ],
    "created": "2026-10-26T16:06:19Z",
-   "closed": null,
+   "closed": "2026-10-27T10:51:57Z",
    "milestone": "RC3"
   },
   {
@@ -1604,6 +1610,7 @@
    "labels": [
     "area:ISP",
     "prio:long-term",
+    "repo:open-tx-isp",
     "repo:openimp",
     "soc:T10",
     "soc:T20",
@@ -1626,6 +1633,7 @@
    "labels": [
     "area:Driver",
     "prio:long-term",
+    "repo:open-tx-isp",
     "repo:openimp",
     "soc:T10",
     "soc:T20",
@@ -1658,8 +1666,8 @@
   },
   {
    "number": 105,
-   "title": "ISP bypass of CCM/BCSH shows no visible picture effect (T21, T23, T31, T41)",
-   "state": "open",
+   "title": "ISP bypass of CCM/BCSH: no visible effect measured on grey scenes; T31 CCM already bypassed by the IQ file",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/105",
    "labels": [
     "area:ISP",
@@ -1672,7 +1680,7 @@
     "type:bug"
    ],
    "created": "2026-10-26T16:10:59Z",
-   "closed": null,
+   "closed": "2026-10-27T15:01:57Z",
    "milestone": "RC3"
   },
   {
@@ -1705,6 +1713,430 @@
    "created": "2026-10-26T18:29:05Z",
    "closed": null,
    "milestone": "Release 1"
+  },
+  {
+   "number": 108,
+   "title": "T23: unexplained reboot on the agg47 image (~4.6 h after flash)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/108",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-10-26T18:45:38Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 109,
+   "title": "T10/T20: IMP_ISP_Tuning_Enable/DisableMovestate return -1",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/109",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T10",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-10-26T19:48:37Z",
+   "closed": "2026-10-27T00:39:25Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 110,
+   "title": "T21: IMP_ISP_Tuning_GetIntegrationTime reads mode 0 / it 0 / max 0; WaitFrame counter stays 0",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/110",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T21",
+    "type:bug"
+   ],
+   "created": "2026-10-26T19:49:29Z",
+   "closed": "2026-10-26T23:04:51Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 111,
+   "title": "T23: IMP_ISP_Tuning_GetAutoZoom returns -1",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/111",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-10-26T19:50:21Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 112,
+   "title": "T41: IMP_ISP_Tuning_WaitFrameDone returns -1; SetAutoZoom same-value read-back differs",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/112",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T19:51:14Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 113,
+   "title": "T31: IMP_ISP_GetSensorRegister returns a wrong chip id (0x0404 instead of 0xcb3a)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/113",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:open-tx-isp",
+    "repo:openimp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T19:52:12Z",
+   "closed": "2026-10-26T21:35:44Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 114,
+   "title": "T41: IMP_ISP_Tuning_SetGammaAttr user curve has no picture effect",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/114",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T20:41:44Z",
+   "closed": "2026-10-26T22:48:53Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 115,
+   "title": "T41: IMP_ISP_SetISPBypass returns -4095 (driver has no bypass ioctl)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/115",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T21:00:03Z",
+   "closed": "2026-10-26T22:48:55Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 116,
+   "title": "T41: IMP_ISP_AddSensor fails (-1) after IMP_ISP_SetDefaultBinPath with the sensor's own bin file",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/116",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T21:19:20Z",
+   "closed": "2026-10-26T22:48:51Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 117,
+   "title": "T31: IMP_ISP_Tuning_SetISPCustomMode returns -1 (also in QEMU)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/117",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T21:22:32Z",
+   "closed": "2026-10-26T23:07:10Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 118,
+   "title": "T31: IMP_ISP_Tuning_GetWdr_OutputMode returns -1 on a non-WDR sensor",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/118",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T21:23:21Z",
+   "closed": "2026-10-26T23:07:15Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 119,
+   "title": "T31: IMP_ISP_Tuning_SetISPBypass(DISABLE) wedges the frame flow in QEMU (link graph teardown)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/119",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T21:26:16Z",
+   "closed": "2026-10-27T10:20:15Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 120,
+   "title": "T21: IMP_ISP_Tuning_SetSceneMode AUTO after NIGHT does not restore the picture within 8 s",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/120",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T21",
+    "type:bug"
+   ],
+   "created": "2026-10-26T22:01:41Z",
+   "closed": "2026-10-27T02:11:08Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 121,
+   "title": "T20: IMP_ISP_Tuning_GetGamma returns an all-zero curve",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/121",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-10-26T22:11:31Z",
+   "closed": "2026-10-26T23:30:25Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 122,
+   "title": "T23: IMP_ISP_Tuning_GetISPCustomMode returns 0xffffffff, SetISPCustomMode of it fails",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/122",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-10-26T22:14:05Z",
+   "closed": "2026-10-26T23:07:13Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 123,
+   "title": "T41: kernel Oops in klogd (NULL in mm) under memory pressure (QEMU, 64 MB, observe)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/123",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-26T22:30:12Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 124,
+   "title": "T31: IMP_ISP_Tuning_SetAutoZoom crop request returns -1 (also in QEMU)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/124",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-10-26T22:35:57Z",
+   "closed": "2026-10-27T01:12:16Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 125,
+   "title": "T41: real ISP bypass needs the VIC frame-channel (MDMA) capture path",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/125",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-26T22:40:53Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 126,
+   "title": "T23: IMP_ISP_Tuning_SetISPBypass(DISABLE) returns -1 on the camera and in QEMU",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/126",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-10-26T23:10:38Z",
+   "closed": "2026-10-27T10:20:18Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 127,
+   "title": "T23: ISP OSD picture is not visible in FrameSource ch0 after SetOsdRgnAttr + ShowOsdRgn",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/127",
+   "labels": [
+    "area:OSD",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-10-26T23:23:07Z",
+   "closed": "2026-10-27T03:31:58Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 128,
+   "title": "T20: IMP_ISP_Tuning_SetIntegrationTime has no exposure effect (apitest inttime FAIL, night scene)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/128",
+   "labels": [
+    "area:AE-AWB",
+    "prio:release-gate",
+    "repo:openimp",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-10-27T00:26:17Z",
+   "closed": "2026-10-27T02:11:06Z",
+   "milestone": "RC3"
+  },
+  {
+   "number": 129,
+   "title": "T10/T20/T21/T23/T31: real ISP bypass (SetISPBypass DISABLE) is not supported",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/129",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "soc:T10",
+    "soc:T20",
+    "soc:T21",
+    "soc:T23",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-10-27T00:52:37Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 130,
+   "title": "T20: IMP_ISP_Tuning_SetExpr manual cannot set a time (UNIT_LINE sends 0 lines, UNIT_US -EINVAL on jxf23)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/130",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-10-27T02:01:26Z",
+   "closed": "2026-10-27T10:20:20Z",
+   "milestone": null
+  },
+  {
+   "number": 131,
+   "title": "DMIC_* on T31/T40/T41: no DMIC hardware on the test boards",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/131",
+   "labels": [
+    "area:Audio",
+    "prio:streamer",
+    "repo:openimp",
+    "soc:T31",
+    "soc:T40",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-27T03:39:12Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 132,
+   "title": "[T41] Oops after rmmod/insmod of a DIFFERENT tx-isp-t41 build (QEMU): kernel executes data",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/132",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-27T06:29:26Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 133,
+   "title": "T40: tisp event thread uses ~35 % CPU (per-frame event work)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/133",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-27T09:38:41Z",
+   "closed": null,
+   "milestone": "RC3"
   }
  ]
 }
