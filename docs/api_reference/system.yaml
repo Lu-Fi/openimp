@@ -124,16 +124,23 @@ functions:
     diff: "Beyond the vendor on T41: the vendor library keeps a pool until the program exits, OpenIMP lets the application release it."
   MemPool_InitPool:
     group: pool
-    summary: On T41 the call behind `System_MemPoolRequest`; it carves one contiguous block out of rmem and registers it under the pool id. Use the System call instead.
-    unverified: true
+    decl: "int IMP_MemPool_InitPool(int pool_id, uint32_t size, int flags);  /* T21, T23, T30, T31 */\nint IMP_MemPool_InitPool(int pool_id, uint32_t size, const char *name);  /* T40, T41 */"
+    summary: "Low-level pool creation; not in the public header. On T41 it is the call behind `System_MemPoolRequest`."
+    returns: "0 on success; -1 for an invalid id, a size of 0, a pool that is already in use, or when the memory is not available."
+    notes: "T21, T23, T30 and T31: ids 0 to 15, one DMA block of the given size, `flags` is ignored. T40 and T41: ids 0 to 31, size up to 2 GiB, the block is carved out of rmem as one contiguous range and registered under the id with its name. On T40 the System call only records the request and does not use this function. Use `System_MemPoolRequest`."
   MemPool_GetById:
     group: pool
-    summary: Returns a non-NULL pointer when a pool with that id exists, else NULL. FrameSource checks it before binding a channel to the pool (T41).
-    unverified: true
+    decl: "int IMP_MemPool_GetById(int pool_id, void *info_out);  /* T21, T23, T30, T31 */\nvoid *IMP_MemPool_GetById(int pool_id);  /* T40, T41 */"
+    summary: "Looks up a pool by id. Not in the public header."
+    returns: "T21, T23, T30, T31: 0 and an `IMPDMABufferInfo` (name, physical and virtual address, size, id) in `info_out`; -1 for an invalid id, a NULL pointer or a pool that is not in use. T40, T41: a non-NULL pointer when the pool exists, otherwise NULL."
+    notes: "On T41 FrameSource checks it before it binds a channel to the pool."
   MemPool_Release:
     group: pool
-    summary: Low-level release of a pool. Use `System_MemPoolFree`.
-    unverified: true
+    decl: "int IMP_MemPool_Release(int pool_id);"
+    summary: "Low-level release of a pool. Use `System_MemPoolFree` where it exists."
+    returns: "0 on success and for a pool that is not in use; -1 for an invalid id."
+    notes: "Only on T21, T23, T30 and T31 (ids 0 to 15); it frees the DMA block. T40 and T41 release pools through `System_MemPoolFree`."
+    soc: "T21, T23, T30 and T31."
   Log_Get/Set_Option:
     group: log
     decl: "int IMP_Log_Get_Option(void);\nvoid IMP_Log_Set_Option(int option);"

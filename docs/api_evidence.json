@@ -3055,7 +3055,7 @@
     "T40": "dev",
     "T41": "dev"
    },
-   "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: driver has no stock handler, refuses; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed) T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed)",
    "ref": {
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
@@ -3639,7 +3639,7 @@
      "r†"
     ]
    },
-   "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: driver has no stock handler, refuses; used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start",
    "ref": {
     "T23": "apitest rc3gaps2 2026-10-27 .30 (API round trip, no visible effect expected)",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
@@ -3899,7 +3899,7 @@
      "r†"
     ]
    },
-   "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: driver has no handler, fails with -EPERM since agg-25 (was silent 0); vendor behaviour unverified; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start",
    "ref": {
     "T41": "apitest agg47 2026-10-26 .34"
    }
@@ -3988,7 +3988,7 @@
      "r†"
     ]
    },
-   "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: driver has no handler, fails with -EPERM (was silent 0); vendor behaviour unverified; T41 (2026-10-10): deferred, live MSCA reprogramming carries a hang risk",
+   "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start",
    "ref": {
     "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
     "T31": "apitest rc3-cases 2026-10-26 .26"
@@ -10502,7 +10502,7 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
    "ref": {
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
@@ -10539,7 +10539,7 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
    "ref": {
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"
@@ -10672,7 +10672,7 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
    "ref": {
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
@@ -10709,7 +10709,7 @@
      "r†"
     ]
    },
-   "note": "T41: ENOTSUP stub (returns -1) T41: ENOTSUP stub (returns -1)",
+   "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
    "ref": {
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34: isposd: picture visible in FS ch0 (Y 111 -> 234), hide/destroy back to the background, frames flow; needs open-tx-isp next 8d3504c8 (ISP OSD) and the OpenIMP next libimp; stock agg47 ko draws nothing"

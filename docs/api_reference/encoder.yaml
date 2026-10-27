@@ -185,8 +185,10 @@ functions:
     see_also: [Encoder_Get/SetChnRcAttr]
   Encoder_Get/SetChnRcAttr:
     group: rc
-    summary: Reads or sets the rate-control block through a generic pointer.
-    unverified: true
+    decl: "int IMP_Encoder_SetChnRcAttr(int encChn, void *rcAttr);\nint IMP_Encoder_GetChnRcAttr(int encChn, void *rcAttr);"
+    summary: "Reads or sets the rate-control block of a channel through a generic pointer."
+    returns: "Declared in the header only."
+    notes: "OpenIMP does not implement these two calls on any SoC, so a program that uses them does not link. Use `SetChnAttrRcMode` and the other rate-control calls of this page."
   Encoder_SetChnBitRate:
     group: rc
     summary: Changes the target and maximum bitrate of a channel without touching the other rate-control settings.
@@ -269,9 +271,12 @@ functions:
     notes: "Use it when a new client connects, or after a loss."
   Encoder_Get/SetGDRCfg:
     group: gop
-    summary: Configures gradual decoder refresh, which refreshes the picture in slices over several frames instead of one large key frame.
-    soc: T23
-    unverified: true
+    summary: "Sets or reads gradual decoder refresh, which refreshes the picture in slices over several frames instead of one large key frame."
+    params:
+      cfg: "`IMPEncoderGDRCfg`: `enable`, `gdrCycle` (frames between refreshes) and `gdrFrames` (frames one refresh is spread over)."
+    returns: "0 on success; -1 for an invalid channel, a NULL pointer (Set) or a channel that is not created."
+    notes: "With `enable` set, a `gdrCycle` outside 3 to 65535 becomes 120 and a `gdrFrames` outside 2 to 10 becomes 6. Setting `enable` to 0 switches it off. Get returns the values as stored. `Encoder_RequestGDR` starts one refresh on demand."
+    soc: "T23"
   Encoder_RequestGDR:
     group: gop
     summary: 'Starts a gradual refresh cycle (GDR) of the given number of frames: instead of one IDR picture the channel refreshes
