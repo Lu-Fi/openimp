@@ -68,6 +68,7 @@
 
 #if defined(PLATFORM_T31)
 #include "t40/t31_stream_layout.h"
+#include "t40/t31_eval_info.h"
 #include "t31/openimp_t31_osd.h"
 #include "kernel_interface.h"
 
@@ -3319,13 +3320,16 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         p2_jpeg_keep_last(ch, (const P2HWStream *)stream);
 #if defined(PLATFORM_T31)
-    /* GetChnEvalInfo record: AVC = the completion statistics of this
-     * picture; JPEG = the quality factor in the first int16 (vendor). */
+    /* GetChnEvalInfo record (header layout, t31_eval_info.h): AVC = the
+     * completion statistics of this picture; JPEG = iNumBytes (the JPEG
+     * size) and the quality factor at +4. */
     if (ch->codec_type == IMP_ENC_TYPE_JPEG) {
-        int16_t q = ch->attr.rcAttr.attrRcMode.attrFixQp.iInitialQP;
+        const P2HWStream *hw = (const P2HWStream *)stream;
 
         memset(ch->eval_info, 0, sizeof(ch->eval_info));
-        memcpy(ch->eval_info, &q, sizeof(q));
+        t31_eval_pack_jpeg(hw ? hw->length : 0,
+                           (int16_t)ch->attr.rcAttr.attrRcMode.attrFixQp.iInitialQP,
+                           ch->eval_info);
     } else {
         uint8_t rec[36];
 
@@ -5144,10 +5148,12 @@ int IMP_Encoder_GetChnEvalInfo(int channel, void *info)
         !p2_channels[channel].created)
         return -1;
 #if defined(PLATFORM_T31)
-    /* Vendor T31 1.1.6: 0, the channel's 36-byte record (8 bytes for a
-     * JPEG channel), refreshed with every stream the encoder finishes.
-     * Same bytes as the vendor: six counters (intra, skip, CU8x8..CU32x32
-     * style hardware counts), then int16 slice QP, min QP, max QP. */
+    /* T31: 0 and the channel's 36-byte record (8 bytes for a JPEG
+     * channel), refreshed with every stream the encoder finishes, laid out
+     * as the IMPEncoderStreamInfo of the vendor header: iNumBytes, six
+     * counters (intra, skip, CU8x8..CU64x64), int16 slice QP, min QP, max
+     * QP.  Beyond vendor: the vendor 1.1.6 record starts one word late
+     * (every field 4 bytes early, no iNumBytes); see t31_eval_info.h. */
     {
         P2EncoderChannel *ch = &p2_channels[channel];
         size_t n = ch->codec_type == IMP_ENC_TYPE_JPEG ? 8 : 36;
