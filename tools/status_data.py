@@ -359,6 +359,22 @@ def refresh_issues(path=ISSUES):
     print("wrote %s (%d issues, %d open)" % (path, len(res), sum(1 for i in res if i["state"] == "open")))
 
 
+def validate_fresh():
+    """The status data must not lag behind the CHANGELOG: the newest dated CHANGELOG heading must have an
+    "Update <date>" bullet in docs/status/history.md of the same day or later (re-judge the cells, then add the bullet)."""
+    import re
+    cl = os.path.join(ROOT, "CHANGELOG.md")
+    hi = os.path.join(ROOT, "docs", "status", "history.md")
+    if not (os.path.exists(cl) and os.path.exists(hi)):
+        return []
+    cd = re.findall(r"^## .*?\((\d{4}-\d{2}-\d{2})", open(cl, encoding="utf-8").read(), re.M)
+    hd = re.findall(r"\*\*Update (\d{4}-\d{2}-\d{2})", open(hi, encoding="utf-8").read())
+    if cd and hd and max(cd) > max(hd):
+        return ["status data stale: CHANGELOG has entries of %s, newest history.md \"Update\" bullet is %s "
+                "(re-judge the touched cells in features.yaml and add an Update bullet)" % (max(cd), max(hd))]
+    return []
+
+
 def main():
     a = sys.argv[1:]
     if "--refresh-issues" in a:
@@ -371,7 +387,7 @@ def main():
     ev = os.path.join(ROOT, "docs", "api_evidence.json")
     if os.path.exists(ev):
         funcs = set(json.load(open(ev, encoding="utf-8")).get("functions", {}))
-    E = validate(functions=funcs) + validate_release()
+    E = validate(functions=funcs) + validate_release() + validate_fresh()
     for e in E:
         sys.stderr.write("status_data: %s\n" % e)
     if E:
