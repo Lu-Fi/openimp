@@ -450,7 +450,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -542,7 +542,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -619,7 +619,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -696,7 +696,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -773,7 +773,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -850,7 +850,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -927,7 +927,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -958,7 +958,7 @@
     "T31": "dev",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "used": {
@@ -983,7 +983,8 @@
    },
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
-    "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads"
+    "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads",
+    "T40": "apitest agg47 stock 2026-10-27 .184 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Get/SetFrameDrop": {
@@ -1259,7 +1260,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -1688,7 +1689,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -1774,7 +1775,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
     "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
    }
@@ -1918,7 +1919,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T41": "apitest agg47 2026-10-26 .34",
     "T21": "apitest rc3-cases 2026-10-26 .24"
    }
@@ -1947,7 +1948,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T23": "apitest rc3-cases 2026-10-26 .30 (API round trip, no visible effect expected)"
    }
   },
@@ -1978,7 +1979,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetDRC_Strength": {
@@ -2142,7 +2143,7 @@
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T20": "apitest issue-121 2026-10-27 .107 (open-tx-isp b4d8eae0): Get returns the active curve (128/129 points, was all 0); same curve written back: luma unchanged; x^0.3 vs linear Y 131.6 vs 42.3"
    }
   },
@@ -2204,9 +2205,9 @@
     "T10": "n.a.",
     "T20": "n.a.",
     "T21": "n.a.",
-    "T23": "aud",
+    "T23": "rt",
     "T30": "n.a.",
-    "T31": "aud",
+    "T31": "rt",
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
@@ -2234,7 +2235,9 @@
    },
    "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps",
    "ref": {
-    "T41": "apitest agg47 2026-10-26 .34"
+    "T41": "apitest agg47 2026-10-26 .34",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26 (API round trip, no visible effect expected)",
+    "T23": "apitest agg47 stock 2026-10-27 .30 (API round trip, no visible effect expected)"
    }
   },
   "ISP_Tuning_Get/SetHiLightDepress": {
@@ -2481,7 +2484,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -2652,7 +2655,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetMaxDgain": {
@@ -2707,7 +2710,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetModuleControl": {
@@ -2741,7 +2744,7 @@
    "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetModule_Ratio": {
@@ -3082,7 +3085,7 @@
    },
    "note": "T23: the stock T23 module has no BLC attr control (-1 as stock; apitest N/A); T31: apitest PASS",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetBrightness": {
@@ -3203,7 +3206,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetHVFlip": {
@@ -3231,7 +3234,7 @@
    "ref": {
     "T40": "apitest agg47 2026-10-26 .184",
     "T23": "apitest rc3-cases 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetISPBypass": {
@@ -3361,7 +3364,7 @@
    "note": "T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -3438,7 +3441,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -3561,7 +3564,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_SaveAllParam": {
@@ -3609,7 +3612,7 @@
     "T21": "n.a.",
     "T23": "err",
     "T30": "n.a.",
-    "T31": "err",
+    "T31": "dev",
     "T32": "nob",
     "T33": "nob",
     "T40": "rt",
@@ -3640,7 +3643,7 @@
     "T23": "FAIL apitest agg47-cases 2026-10-26 .30: ret=0 rt: same value written (set ret 0), read back equal",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
     "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-    "T31": "FAIL apitest rc3-cases 2026-10-26 .26: ret=-1 rt: ch1 crop to the upper-left quarter (ret -1) and back (ret 0): detail H 4.232 -> 4.288 -> 4.294, frames flow"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_SetBrightness": {
@@ -4094,7 +4097,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -4443,7 +4446,7 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest issue-110 2026-10-27 .24 (open-tx-isp 28b26d20): frame count 49->50, -ETIMEDOUT on timeout; QEMU 96->97",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_WaitFrameDone": {
@@ -4498,7 +4501,7 @@
    "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
    "ref": {
     "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_WDR_ENABLE_GET": {
@@ -4551,7 +4554,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest rc3-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_WDR_OPEN": {
@@ -4792,7 +4795,7 @@
    "ref": {
     "T10": "apitest rc3-cases 2026-10-26 .31",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest rc3-cases 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T20": "apitest rc3-cases 2026-10-26 .107"
    }
   },
@@ -4888,7 +4891,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAeMin": {
@@ -4918,7 +4921,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAeScenceAttr": {
@@ -4996,7 +4999,7 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAeWeight": {
@@ -5061,7 +5064,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -5106,7 +5109,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAfWeight": {
@@ -5150,7 +5153,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -5196,7 +5199,7 @@
    "note": "T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbConvergeStep": {
@@ -5242,7 +5245,7 @@
    "note": "T23: the open AWB reads the cluster/trend objects like the stock module (open-tx-isp agg-28, emulator-identical); apitest roundtrip PASS, the runtime effect is host/emulator-tested only",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbCtTrendOffset": {
@@ -5309,7 +5312,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_Get/SetAwbWeight": {
@@ -5374,7 +5377,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -5546,7 +5549,7 @@
    "note": "audit: reaches the driver/kernel",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAFMetrices": {
@@ -5581,7 +5584,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAFMetricesInfo": {
@@ -5628,7 +5631,7 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; used by: T23: raptor; T31: prudynt†, raptor†",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAeAtList": {
@@ -5708,7 +5711,7 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; used by: T23: prudynt; T31: prudynt†, raptor†",
    "ref": {
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAeLuma": {
@@ -5746,7 +5749,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAeState": {
@@ -5774,7 +5777,7 @@
    "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAeStatistics": {
@@ -5837,7 +5840,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAfStatistics": {
@@ -5883,7 +5886,7 @@
    "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetAwbGlobalStatistics": {
@@ -5977,7 +5980,7 @@
     "T10": "apitest agg47 2026-10-26 .31",
     "T20": "apitest agg47 2026-10-26 .107",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetExpr": {
@@ -6026,7 +6029,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetFaceAeLuma": {
@@ -6073,7 +6076,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_GetWB_Statis": {
@@ -6116,7 +6119,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "ISP_Tuning_SetAeFreeze": {
@@ -6335,7 +6338,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6412,7 +6415,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6489,7 +6492,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6566,7 +6569,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6633,7 +6636,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6720,7 +6723,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6876,7 +6879,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -6919,7 +6922,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7229,7 +7232,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7298,7 +7301,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7344,7 +7347,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7453,7 +7456,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7479,7 +7482,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "Encoder_GetChnEncType": {
@@ -7526,7 +7529,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7615,7 +7618,7 @@
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7714,7 +7717,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7800,7 +7803,7 @@
    "note": "audit: reaches the driver/kernel; T21/T23/T31: honours the input channel bitmap and polls all selected channels (apitest PASS)",
    "ref": {
     "T21": "apitest agg47 2026-10-26 .24",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
@@ -7876,7 +7879,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -7943,7 +7946,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8020,7 +8023,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8097,7 +8100,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8193,7 +8196,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8282,7 +8285,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8303,7 +8306,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "Encoder_SetChnGopLength": {
@@ -8322,7 +8325,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8427,7 +8430,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "Encoder_SetChnQpBounds": {
@@ -8463,7 +8466,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8508,7 +8511,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "Encoder_SetChnResizeMode": {
@@ -8527,7 +8530,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8565,7 +8568,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8586,7 +8589,7 @@
    },
    "note": "T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    }
   },
@@ -8693,7 +8696,7 @@
    },
    "note": "vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8770,7 +8773,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8847,7 +8850,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -8924,7 +8927,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9297,7 +9300,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "FrameSource_CreateChn": {
@@ -9372,7 +9375,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9468,7 +9471,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9545,7 +9548,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9622,7 +9625,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9775,7 +9778,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9842,7 +9845,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9881,7 +9884,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -9960,7 +9963,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "value stored and read back (.34, 2026-10-27); depth semantics (frames held / dropped) not yet proven against the vendor"
    }
@@ -10033,7 +10036,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10069,7 +10072,7 @@
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "FrameSource_GetFrame": {
@@ -10119,7 +10122,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10195,7 +10198,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10266,7 +10269,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10311,7 +10314,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "FrameSource_SetSource": {
@@ -10400,7 +10403,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10779,7 +10782,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10856,7 +10859,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -10951,7 +10954,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11028,7 +11031,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11141,7 +11144,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11218,7 +11221,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11344,7 +11347,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11503,7 +11506,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11579,7 +11582,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11674,7 +11677,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11769,7 +11772,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11826,7 +11829,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11903,7 +11906,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -11970,7 +11973,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12027,7 +12030,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12094,7 +12097,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12161,7 +12164,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12228,7 +12231,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12285,7 +12288,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12362,7 +12365,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12439,7 +12442,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12516,7 +12519,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12583,7 +12586,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12650,7 +12653,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12717,7 +12720,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12784,7 +12787,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12899,7 +12902,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -12966,7 +12969,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13043,7 +13046,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13120,7 +13123,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13281,7 +13284,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13471,7 +13474,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13567,7 +13570,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13662,7 +13665,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13759,7 +13762,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -13836,7 +13839,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14021,7 +14024,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14117,7 +14120,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14212,7 +14215,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14309,7 +14312,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14339,7 +14342,7 @@
    "note": "audit: reaches the driver/kernel; userspace implementation",
    "ref": {
     "T21": "apitest rc3-cases 2026-10-27 .24",
-    "T31": "apitest rc3-cases 2026-10-27 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "AI_Get/SetChnParam": {
@@ -14414,7 +14417,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14510,7 +14513,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14587,7 +14590,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14664,7 +14667,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14741,7 +14744,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14893,7 +14896,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14970,7 +14973,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -14991,7 +14994,7 @@
    },
    "note": "audit: userspace implementation",
    "ref": {
-    "T31": "apitest rc3-cases 2026-10-27 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "AI_SetHpfCoFrequency": {
@@ -15037,7 +15040,7 @@
    "note": "T23+T31 (+T41, untested): takes effect: IMP_AI_EnableHpf designs the filter for the cut-off like the vendor and hands a float biquad to libaudioProcess-neo (beyond the original library); apitest roundtrip PASS, no audio test (shared test cameras)",
    "ref": {
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -15094,7 +15097,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -15136,7 +15139,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -16586,7 +16589,7 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "Log_Set_Option": {
@@ -16610,7 +16613,7 @@
     "T20": "apitest agg47-cases 2026-10-26 .107",
     "T21": "apitest agg47-cases 2026-10-26 .24",
     "T23": "apitest agg47-cases 2026-10-26 .30",
-    "T31": "apitest agg47-cases 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "SU_ADC_DisableChn": {
@@ -16761,7 +16764,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -16786,7 +16789,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -16853,7 +16856,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -16894,7 +16897,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -16935,7 +16938,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17232,7 +17235,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184"
    }
   },
@@ -17288,7 +17291,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest agg47 2026-10-26 .184"
    }
   },
@@ -17396,7 +17399,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17473,7 +17476,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17530,7 +17533,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17597,7 +17600,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17664,7 +17667,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17741,7 +17744,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17818,7 +17821,7 @@
     "T20": "apitest rc3-cases 2026-10-26 .107",
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T23": "apitest rc3-cases 2026-10-27 .30",
-    "T31": "apitest rc3-cases 2026-10-27 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest rc3-cases 2026-10-27 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17839,7 +17842,7 @@
    },
    "note": "T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)",
    "ref": {
-    "T31": "apitest agg47 2026-10-26 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
    }
   },
   "System_MemPoolRequest": {
@@ -17859,7 +17862,7 @@
    "ref": {
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
@@ -17916,7 +17919,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -17983,7 +17986,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
@@ -18060,7 +18063,7 @@
     "T20": "apitest agg47 2026-10-26 .107",
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest agg47 2026-10-26 .26",
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
     "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }

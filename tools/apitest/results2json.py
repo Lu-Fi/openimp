@@ -710,7 +710,12 @@ def load_keys():
     return list(ev["functions"])
 
 
+PAIR_ALIAS = {"ISP_Tuning_Get/SetHVFLIP": ["ISP_Tuning_GetHVFlip", "ISP_Tuning_SetHVFLIP"]}      # the vendor header spells the pair differently
+
+
 def members(key):
+    if key in PAIR_ALIAS:
+        return PAIR_ALIAS[key]
     m = re.match(r"^(.*?)Get/Set(.*)$", key)
     return [m.group(1) + "Get" + m.group(2), m.group(1) + "Set" + m.group(2)] if m else [key]
 
@@ -734,6 +739,9 @@ class Acc:
             return [(n, x) for x in members(n)], None
         if n in self.m2k:
             return self.m2k[n], n
+        low = {x.lower(): x for x in self.m2k}          # vendor spelling differs in case (GetHVFlip / SetHVFLIP)
+        if n.lower() in low:
+            return self.m2k[low[n.lower()]], low[n.lower()]
         if "/" in n and n not in self.keys:         # composite "Encoder_A/B/C" -> Encoder_A, Encoder_B, Encoder_C
             parts = n.split("/")
             pre = parts[0][:parts[0].rindex("_") + 1] if "_" in parts[0] else ""
