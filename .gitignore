@@ -35,6 +35,8 @@ __pycache__/
 tools/roitest/roitest_t*
 tests/t30/isp_t31_movestate_test
 tests/t30/isp_t20_movestate_test
+tests/t30/isp_t21_movestate_test
+tests/t30/isp_t30_movestate_test
 tools/rawcheck/rawcheck_t*
 tools/rawcheck/rawana
 tools/testpattern/tbmotion

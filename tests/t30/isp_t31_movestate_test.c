@@ -1,8 +1,9 @@
 /*
  * T31 IMP_ISP_Tuning_Enable/DisableMovestate (vendor libimp 1.1.x logic),
  * also built for T10/T20 (vendor libimp 3.12.0, same logic on the
- * SYSTEM_TAB block): src/isp/isp_tseries.c with PLATFORM_T31 or
- * PLATFORM_T20 against a fake tuning ioctl.
+ * SYSTEM_TAB block), T21 (1.0.33) and T30 (1.0.5): src/isp/isp_tseries.c
+ * with PLATFORM_T31, PLATFORM_T20, PLATFORM_T21 or PLATFORM_T30 against a
+ * fake tuning ioctl.
  *  - -1 without tuning; 0 once past the checks;
  *  - Enable reads the 0x70-byte AE block of CID 0x800002c, then sends a
  *    block with the day or night limits (byte positions of the vendor) and
@@ -39,6 +40,10 @@ int IMP_Encoder_RequestIDR(int chn) { idr_calls++; idr_chn = chn; return 0; }
 
 #if defined(PLATFORM_T20)
 #define TEST_NAME "isp_t20_movestate_test"
+#elif defined(PLATFORM_T21)
+#define TEST_NAME "isp_t21_movestate_test"
+#elif defined(PLATFORM_T30)
+#define TEST_NAME "isp_t30_movestate_test"
 #else
 #define TEST_NAME "isp_t31_movestate_test"
 #endif

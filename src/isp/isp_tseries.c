@@ -4342,11 +4342,11 @@ int IMP_ISP_Tuning_GetAFMetrices(void *metrices)
     return tseries_tuning_get_ptr(TISP_CID_AF_METRICES, metrices);
 }
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
 /*
- * T31 (vendor libimp 1.1.x, disassembled) and T10/T20 (vendor libimp 3.12.0,
- * the same binary for both, 0x60b38/0x60f80, byte for byte the same
- * logic): gmovestate is the 0x70-byte AE
+ * T31 (vendor libimp 1.1.x, disassembled), T10/T20 (vendor libimp 3.12.0,
+ * the same binary for both, 0x60b38/0x60f80), T21 (1.0.33) and T30 (1.0.5),
+ * byte for byte the same logic: gmovestate is the 0x70-byte AE
  * block of CID 0x800002c, the running mode it was captured in and the 14
  * values of /etc/sensor/<sensor>move.txt (loaded by EnableTuning).  The
  * logic equals the T23 library's (isp_t23_tuning.c): EnableMovestate reads
@@ -4362,6 +4362,11 @@ int IMP_ISP_Tuning_GetAFMetrices(void *metrices)
  * time, manual sinter, move.txt limits while moving).  The old T10/T20 code
  * sent a plain 0/1 as the block pointer: the driver's copy_from_user failed
  * and both calls returned -1 (vendor: 0).
+ * T30 has the same SYSTEM_TAB block (open-tx-isp applies it since its
+ * stab_s_attr fix).  On T21 the stock driver ignores the control; the open
+ * T21 driver recognises the motion block and applies its exposure cap
+ * (u16 [26] with [82]), the Apical sinter/temper bytes have no T21
+ * equivalent there.  T21/T30 used to send a plain 0/1 (T21: no-op).
  */
 static struct {
     uint8_t ae[0x70];
@@ -5328,7 +5333,7 @@ int IMP_ISP_EnableTuning(void)
 #if defined(PLATFORM_T23)
     openimp_t23_isp_tuning_enabled();
 #endif
-#if defined(PLATFORM_T31) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
     openimp_t31_isp_tuning_enabled();
 #endif
     if (tseries_start_tuning_worker() != 0)
