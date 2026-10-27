@@ -8,6 +8,16 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-127` (2026-10-27)
+
+- **T23 ISP OSD (IMP_ISP_Tuning_*OsdRgn, IMP_OSD_*_ISP)** (issue #127): the picture now appears in the frame. The
+  cause was in the driver (open-tx-isp `claude/issue-127`: the stored OSD pictures were never written into the
+  MSCA); OpenIMP's T23 path (`src/t23/openimp_t23_isp_osd.c`, rmem picture copy + SetOSDAttr/SetOSDBlock) was
+  already right and is unchanged. New device tool `tests/t23/devtest/isp_osd_devtest.c` (+ `build.sh`): the
+  raptor-hal call sequence in 7 phases (picture, second picture, move, second region, hide, destroy) with one
+  NV12 frame of ch0/ch1 per phase on stdout for a host collage. Cam .30 with the open ko: apitest isposd FAIL ->
+  PASS (Y 111.3 -> 234.0), all devtest phases as requested; QEMU T23 the same.
+
 ## Branch `claude/rc3-gaps2` (2026-10-27)
 
 - **System_WriteReg32 is tested on all 7 SoCs (no library change):** the case writes the scratch register SPR (offset 0x1c, 8 bit) of the UART that carries the
