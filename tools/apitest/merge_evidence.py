@@ -24,6 +24,9 @@ import re
 
 def exported(soc, key):
     m = re.match(r"^(.*?)Get/Set(.*)$", key)
+    if key == "ISP_Tuning_Get/SetHVFLIP": m = None; key = None       # vendor spelling: GetHVFlip / SetHVFLIP
+    if key is None:
+        return all(n in EXPO.get(soc, []) for n in ("ISP_Tuning_GetHVFlip", "ISP_Tuning_SetHVFLIP"))
     names = [m.group(1) + "Get" + m.group(2), m.group(1) + "Set" + m.group(2)] if m else [key]
     return all(n in EXPO.get(soc, []) for n in names) or "*" in key or key.startswith(("SU_", "Log_", "Audio_"))
 report = {"dev": [], "err": [], "kept": [], "skipped": []}

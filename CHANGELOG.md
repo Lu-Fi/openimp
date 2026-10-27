@@ -18,6 +18,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of
   declaration); SetChnMaxPictureSize is measured (biggest picture follows the limit); Sharpness: one visible direction proves it.
 - **Gate cells** (RC3 missing, before -> after): T10 22 -> 5, T40 43 -> 26, T41 57 -> 27 (AENC/ADEC on T10/T40/T41 from the audio runs, T41 encoder
   FrameRate/BitRate/QpBounds/MaxPictureSize/RcMode, ISP OSD with open-tx-isp next, AutoZoom, WaitFrameDone, Sharpness).
+- **T31 AutoZoom (issue #124) was a test misuse:** the crop window is cut from the scaled picture and must keep the channel size; the case now zooms 2x
+  (scaler 2x, centre crop in the channel size): PASS with visible effect (detail 5.27 -> 2.18). T31 run on .26 with the open ko/libimp of next: 0 FAIL.
+  HVFLIP pair spelled differently by the vendor header (GetHVFlip / SetHVFLIP) is mapped; T40 DefaultBinPath Get reports after the first Set.
+- Gate (RC3 missing): T31 29 -> 26, T40 43 -> 24, T23 8 -> 6 (HVFLIP, plus the T41/T10 figures above). T23 ISP OSD (#127) is driver work (no image path in
+  driver/t23), commented on the issue.
 - Merge tool: a later PASS/RT clears an `err` cell this tool wrote from an earlier FAIL of any image tag.
 
 ## Branch `claude/rc3-cases` (2026-10-26/27)
