@@ -1632,9 +1632,6 @@ static void cs_aeexplist(void)
 static void cs_aeexplist(void) {}
 #endif
 
-<<<<<<< HEAD
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist dmic); default all */
-=======
 /* ---------------------------------------------------------------------------------------------- T41 FrameSource pool (issue #72)
  * IMP_System_MemPoolRequest + IMP_FrameSource_SetPool: ch1 is destroyed, bound to a pool and re-created; its capture buffers must
  * come from the pool (frame physical addresses inside the pool range, OpenIMP_P2_PoolRange), frames flow, and after Disable/Destroy
@@ -1736,8 +1733,7 @@ static void cs_fspool(void)
 static void cs_fspool(void) {}
 #endif
 
-/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist fspool); default all */
->>>>>>> origin/claude/t41-fs-pool
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist dmic fspool); default all */
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -1990,7 +1986,7 @@ void t_dmic(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2055,10 +2051,7 @@ void t_cases(void)
     if (cs_on("aestats")) cs_aestats();    wdog("cases", 60);
     if (cs_on("faceae")) cs_faceae();      wdog("cases", 90);
     if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
-<<<<<<< HEAD
     if (cs_on("dmic")) t_dmic();        wdog("cases", 60);
-=======
     if (cs_on("fspool")) cs_fspool();     wdog("cases", 90);
->>>>>>> origin/claude/t41-fs-pool
     wdog("cases", 60);
 }
