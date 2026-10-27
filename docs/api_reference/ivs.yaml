@@ -48,12 +48,11 @@ functions:
     returns: no value.
   IVS_CreateBaseMoveInterface:
     group: iface
-    summary: Creates the base motion interface, a block-based comparison against reference frames that returns a per-block result buffer instead of region flags.
+    summary: "Creates the base motion interface, a block-based comparison against reference frames that returns a per-block result buffer instead of region flags."
     params:
-      param: "`IMP_IVS_BaseMoveParam`: `skipFrameCnt`, `referenceNum`, `sadMode`, `sense` and the frame size."
-    returns: "The interface, or NULL when `param` is NULL (`EINVAL`) or memory runs out."
-    notes: "The result is an `IMP_IVS_BaseMoveOutput` (`ret`, a data buffer and its length). On T23, T21 and T30 it also carries the frame timestamp."
-    unverified: true
+      param: "`IMP_IVS_BaseMoveParam`: `skipFrameCnt` (0 or more), `referenceNum` (above 0), `sadMode` (0), `sense` and `frameInfo` with the frame size (1 to 8192 each)."
+    returns: "The interface, or NULL when `param` is NULL (`EINVAL`) or memory runs out. The values in `param` are checked when the channel initialises the interface; an out-of-range value makes the channel creation fail."
+    notes: "The result is an `IMP_IVS_BaseMoveOutput` (`ret`, a data buffer and its length). The buffer holds one byte per 8x8 block, `(width / 8) * (height / 8)` bytes, and one result is produced for every frame. On T21, T23, T30, T40 and T41 the output also carries the frame timestamp. `SetParam` changes only `sense`; the other fields stay as created."
   IVS_DestroyBaseMoveInterface:
     group: iface
     summary: Frees a base motion interface. The channel using it has to be destroyed first.

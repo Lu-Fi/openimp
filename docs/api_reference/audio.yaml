@@ -233,11 +233,10 @@ functions:
     soc: Only on T41.
   AI_EnableAlgo:
     group: algo
-    summary: Reads the profile file `webrtc_profile.ini` and switches on noise suppression, AGC and high-pass filter as it says.
-    returns: -1 for an invalid device or channel or when the device attributes cannot be read.
-    notes: The file is looked up in the directory set with `AI_Set_WebrtcProfileIni_Path`, default `/etc`. The sections `NS_AI` (noise suppression) and further AI sections switch the effects.
-    unverified: true
-    soc: Only on T23 and T41.
+    summary: "Reads the profile file `webrtc_profile.ini` and switches on noise suppression, AGC and the high-pass filter of the microphone as the file says."
+    returns: "0, also when the file is missing (nothing is switched on then); -1 for a device other than 0 or 1, a channel above 0, or when the device attributes cannot be read. A failing noise suppression or AGC start is only logged; a failing high-pass filter start returns -1."
+    notes: "The file is looked up in the directory set with `AI_Set_WebrtcProfileIni_Path` (a path ending in `.ini` is used as the file itself), default `/etc/webrtc_profile.ini`. Section `NS_AI` (`NS_enable = true`, `set_level` = kLow, kModerate, kHigh or kVeryHigh, default kHigh), section `AGC_AI` (`AGC_enable`, `set_mode`, `set_target_level_dbfs`, `set_compression_gain_db`) and section `HP_AI` (`HP_enable`, `cofrequency`, default 400) turn on the matching effect with the public `AI_Enable*` calls. `AI_DisableAlgo` switches the three effects off again."
+    soc: "Only on T23 and T41."
   AI_DisableAlgo:
     group: algo
     summary: Switches high-pass filter, noise suppression and AGC off.
@@ -376,10 +375,10 @@ functions:
     returns: 0.
   AO_EnableAlgo:
     group: algo
-    summary: Reads the profile file `webrtc_profile.ini` (section `AGC_AO`) and enables AGC and high-pass filter of the playback as it says.
-    returns: -1 for an invalid device or channel or when the device attributes cannot be read.
-    unverified: true
-    soc: Only on T23 and T41.
+    summary: "Reads the profile file `webrtc_profile.ini` and enables the AGC and the high-pass filter of the playback as the file says."
+    returns: "0, also when the file is missing; -1 for a device or channel other than 0 or when the device attributes cannot be read. A failing AGC start is only logged; a failing high-pass filter start returns -1."
+    notes: "Same file lookup as `AI_EnableAlgo`. Section `AGC_AO` (`AGC_enable`, `set_mode`, `set_target_level_dbfs`, `set_compression_gain_db`) and section `HP_AO` (`HP_enable`, `cofrequency`, default 400). The playback keeps its own AGC mode. `AO_DisableAlgo` switches both off."
+    soc: "Only on T23 and T41."
   AO_DisableAlgo:
     group: algo
     summary: Switches the playback filter and AGC off.

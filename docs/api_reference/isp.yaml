@@ -583,12 +583,19 @@ functions:
     soc: T40 and T41.
   ISP_Get/SetCsccrMode:
     group: color
-    summary: Reads or sets the mode of the chroma conversion stage.
-    unverified: true
+    summary: "Reads or sets the mode of the chroma conversion stage (a T41 vendor call)."
+    returns: "Not applicable."
+    notes: "Not provided by OpenIMP on any SoC. The matrix lists it as a gap on T41."
+    soc: "Vendor T41 only; missing in OpenIMP."
   ISP_Tuning_Get/SetModule_Ratio:
     group: color
-    summary: Reads or sets how strongly individual ISP blocks work, as a ratio.
-    unverified: true
+    summary: "Reads or sets how strongly individual ISP blocks work, as a ratio."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      attr: "`IMPISPModuleRatioAttr`."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through: the public structure goes to the ISP driver unchanged. On T41 the open driver applies the strengths of the 2D and 3D noise reduction, the dynamic range compression and the dead pixel correction; other fields are ignored there."
+    soc: "T40 and T41."
   ISP_Tuning_Get/SetModuleControl:
     group: color
     summary: "Switches individual ISP processing blocks on or off (bypass bits)."
@@ -750,8 +757,11 @@ functions:
       On T23 the library does the same as T31, but the stock driver does nothing with it.
   ISP_StartNightMode:
     group: dn
-    summary: Starts the night mode sequence of the ISP firmware.
-    unverified: true
+    summary: "Starts the sensor in night mode: call it after `IMP_ISP_Open` and before `IMP_ISP_AddSensor`, so the first frames already use the night settings."
+    params:
+      num: "Sensor number, below 4."
+    returns: "0 on success; -4 for a sensor number of 4 or more; -8 when the ISP device is not open; -1 when the driver call fails."
+    soc: "T40 only; missing on T41."
   ISP_Tuning_Get/SetHVFLIP:
     group: flip
     summary: "Sets or reads the horizontal and vertical flip as one value (normal, horizontal, vertical, both)."
@@ -779,16 +789,29 @@ functions:
     notes: "On T23 every set restarts the frame source change wait."
   ISP_Tuning_Get/SetISPHVflip:
     group: flip
-    summary: Sets or reads both ISP flips at once.
-    unverified: true
+    summary: "Sets or reads the horizontal and the vertical ISP flip in one call."
+    params:
+      hmode: "`IMPISP_TUNING_OPS_MODE_ENABLE` or `_DISABLE` for the horizontal flip."
+      vmode: "The same for the vertical flip."
+    returns: "0 on success; the first failing result of the two single flips (for example -1 outside the tuning session); -1 for a NULL pointer (Get)."
+    notes: "The library applies the two flips one after the other, as `SetISPHflip` followed by `SetISPVflip` (Get the same way), because the control the vendor library uses for the pair is not served by the open drivers."
+    soc: "T10, T20 and T30."
   ISP_Tuning_Get/SetSensorHflip:
     group: flip
-    summary: Sets or reads the horizontal flip done by the sensor itself.
-    unverified: true
+    summary: "Sets or reads the horizontal flip done by the sensor itself."
+    params:
+      mode: "Flip on or off; Get returns it through a pointer."
+    returns: "0 on success; -1 outside the tuning session or for a NULL pointer (Get); otherwise the driver's result, or -4090 when the driver call fails."
+    notes: "Set restarts the frame source change wait, like the ISP flip calls. The `MultiCamera_` form takes a sensor number below 3 (a larger number gives -4092). If the driver call fails, Get leaves the preset 0 in the result."
+    soc: "T23 only."
   ISP_Tuning_Get/SetSensorVflip:
     group: flip
-    summary: Sets or reads the vertical flip done by the sensor itself.
-    unverified: true
+    summary: "Sets or reads the vertical flip done by the sensor itself."
+    params:
+      mode: "Flip on or off; Get returns it through a pointer."
+    returns: "0 on success; -1 outside the tuning session or for a NULL pointer (Get); otherwise the driver's result, or -4090 when the driver call fails."
+    notes: "Same behaviour as `SetSensorHflip`."
+    soc: "T23 only."
   ISP_Tuning_Get/SetFrontCrop:
     group: flip
     summary: "Crops the picture at the ISP input, before scaling, so a smaller window of the sensor is used."
@@ -802,16 +825,17 @@ functions:
     returns: "0 on success, -1 for a NULL pointer or outside the tuning session; otherwise the driver's result."
   ISP_Tuning_GetAutoZoom:
     group: flip
-    summary: Reads the auto zoom window.
-    unverified: true
+    summary: "Reads the auto zoom window set with `SetAutoZoom`."
+    returns: "0 on success; -1 for a NULL pointer or outside the tuning session; otherwise the driver's result. T40 and T41: -1 for a bad video input number or NULL."
+    notes: "The structure goes to the driver and back unchanged. T40 and T41 take the video input as first argument."
+    soc: "T23, T40 and T41."
   ISP_Tuning_SetScalerLv:
     group: flip
     summary: Passes a scaler-level block to the ISP driver.
     returns: 'T31 (and T23): the driver''s result; -1 outside the tuning window or for NULL (T31). T40, T41: the driver''s
       result; -1 for a bad video input number or NULL.'
     notes: On T23 the stock driver has no handler for this control and answers an error; OpenIMP matches that. On T41 the
-      open driver has no handler either, so the call fails with an error (it used to return 0 silently); live scaler changes
-      are left out on purpose because reprogramming the scaler while streaming can hang the device.
+      open driver handles the control (set only); older drivers had no handler and the call failed with an error.
   ISP_SetScalerLv:
     group: flip
     summary: T40/T41 name of the scaler-level call, without `Tuning`; sends the same driver control as `ISP_Tuning_SetScalerLv`.
@@ -819,13 +843,21 @@ functions:
     soc: T40 (host-tested only).
   ISP_Tuning_Get/SetWDRAttr:
     group: wdr
-    summary: Switches the wide dynamic range processing on or off, or reads the state.
-    unverified: true
+    summary: "Switches the wide dynamic range processing on or off, or reads the state."
+    params:
+      mode: "`IMPISP_TUNING_OPS_MODE_ENABLE` or `_DISABLE`."
+    returns: "0 on success; -1 outside the tuning session or for a NULL pointer (Get); otherwise the driver's result."
+    notes: "The library remembers the last mode. Set returns 0 without a driver call when the mode is unchanged, and a failing Get hands back the remembered mode together with the driver's error. On T10 and T20 the driver refuses the switch without a WDR frame buffer."
+    soc: "T10, T20 and T30."
   ISP_Tuning_Get/SetWdrOutputMode:
     group: wdr
-    summary: Chooses how the WDR frame is delivered (fusion in the ISP or the long/short frames).
-    diff: The stock T41 driver has no handler for it; the call returns -1 there.
-    unverified: true
+    summary: "Chooses how the WDR frame is delivered (fusion in the ISP or the long/short frames)."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      attr: "`IMPISPWdrOutputMode`."
+    returns: "0 on success; -1 for NULL; on T40 also -1 for a bad video input number and the driver's result otherwise."
+    diff: "On T41 the open driver refuses the control. The library then still returns 0: Set stores the value and Get reads it back (0 until something is set), like the vendor library, which accepts the call without an effect."
+    soc: "T40 and T41."
   ISP_Tuning_Get/SetWdr_OutputMode:
     group: wdr
     summary: Reads or sets the WDR output mode with the older spelling of `WdrOutputMode`; the 4-byte value goes to the driver
@@ -871,12 +903,22 @@ functions:
       now collects AF statistics by default; on T31 metrics, zone, weight and histogram reads were checked on a camera.
   ISP_Tuning_GetAFMetricesInfo:
     group: af
-    summary: Reads the AF metrics information block.
-    unverified: true
+    summary: "Reads the AF metrics information block."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      metric: "`IMPISPAFMetricsInfo`."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through: the block goes to the ISP driver unchanged and its layout is not interpreted by the library."
+    soc: "T40; missing on T41."
   ISP_Tuning_GetAfStatistics:
     group: af
-    summary: Reads the AF statistics.
-    unverified: true
+    summary: "Reads the AF statistics."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      info: "`IMPISPAFStatisInfo`."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through, as `GetAFMetricesInfo`."
+    soc: "T40; missing on T41."
   ISP_Tuning_GetAfZone:
     group: af
     summary: Reads the AF value of each zone.
@@ -885,8 +927,12 @@ functions:
     notes: T23 and T31. See `GetAFMetrices` for the AF statistics source.
   ISP_Tuning_SetAFThreshold:
     group: af
-    summary: Sets the AF threshold.
-    unverified: true
+    summary: "Sets the AF threshold."
+    params:
+      threshold: "New threshold; only the low 16 bits are kept."
+    returns: "0 on success; -1 outside the tuning session."
+    notes: "OpenIMP has no AF algorithm on T30 that would use the value, so it is only stored."
+    soc: "T30 only."
   ISP_Tuning_GetTotalGain:
     group: stat
     summary: "Reads the total gain (analogue and digital together) used by the exposure."
@@ -905,8 +951,13 @@ functions:
       original restored).'
   ISP_Tuning_Get/SetTmoCurve:
     group: nr
-    summary: Reads or sets the tone mapping curve.
-    unverified: true
+    summary: "Reads or sets the tone mapping curve."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      attr: "The tone mapping curve block."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through: the block goes to the ISP driver unchanged."
+    soc: "T41 only."
   ISP_Tuning_GetBlcAttr:
     group: color
     summary: Reads the black level correction attributes.
@@ -932,28 +983,51 @@ functions:
     notes: 'An enabled RGB mask is converted to YUV in your structure first. The library also remembers the block at slot
       `chx * pinum`, as the vendor library does (an odd index choice that is kept). T23: the open driver stores the block;
       the stored masks have no visible effect yet because the scaler update that consumes them is not run. T41: the open driver
-      has no handler for this control at the moment and the live reprogramming of the scaler is deferred (hang risk), so check
-      the matrix cell before relying on it.'
+      handles the control (window and colour are stored and programmed at the next output start; Get always reports the block as
+      disabled, as the vendor driver does).'
   ISP_Tuning_GetMaskBlock:
     group: osd
-    summary: Reads the mask block table.
-    unverified: true
+    summary: "Reads one mask block of the mask block table."
+    params:
+      num: "Video input (`IMPVI_MAIN`); T23 has no such argument in the single-sensor form."
+      mask: "`IMPISPMaskBlockAttr`; set `chx` and `pinum` before the call."
+    returns: "T41: -1 for a bad video input or NULL, otherwise the driver's result. T23: -4090 if the driver ioctl fails."
+    notes: "After the driver call the library puts back the mask type and the colour that `SetMaskBlock` remembered for slot `chx * pinum`, because the driver does not return them. The driver reports the block as disabled on T41, as the vendor driver does."
+    soc: "T23 and T41."
   ISP_Tuning_Get/SetDrawBlock:
     group: osd
-    summary: Reads or sets the block table the ISP draws (rectangles).
-    unverified: true
+    summary: "Reads or sets one block of the table the ISP draws (rectangles and lines)."
+    params:
+      draw: "The draw block: type, channel, picture number and the configuration with colour."
+    returns: "-4090 if the driver ioctl fails; otherwise 0. There is no NULL check."
+    notes: "Set converts an RGB colour of an enabled block of the first three types to YUV in your structure and remembers it; Get puts the remembered colour type and colour back. Whether the running driver serves the control depends on its version: check the matrix cell."
+    soc: "T23 only; missing on T41."
   ISP_Get/SetDrawAttr:
     group: osd
-    summary: Reads or sets the drawing attributes.
-    unverified: true
+    summary: "Reads or sets the drawing attributes of the ISP: the 896-byte table of lines, ranges and windows (2 channels of 16 units)."
+    params:
+      num: "Sensor number, below 4."
+      attr: "`IMPISPDrawAttr`."
+    returns: "0 on success; -4 for a sensor number of 4 or more; -9 for NULL; -5 when tuning is not running; -6 when the driver call fails."
+    notes: "Set converts the RGB colour of every enabled line, range or window unit to YUV in your structure and keeps a copy; Get puts the colour type and the RGB colour back from that copy, because the driver returns only its own form."
+    soc: "T40 only."
   ISP_Get/SetOSDAttr:
     group: osd
-    summary: Reads or sets the ISP OSD attributes.
-    unverified: true
+    summary: "Reads or sets the ISP OSD attributes (the picture slots the ISP overlays)."
+    params:
+      num: "Video input."
+      attr: "`IMPISPOSDAttr`."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through: the public structure goes to the ISP driver unchanged."
+    soc: "T40 (the T23 form is `ISP_Tuning_Get/SetOSDAttr`)."
   ISP_Get/SetSingleOSDAttr:
     group: osd
-    summary: Reads or sets the attributes of one OSD region.
-    unverified: true
+    summary: "Reads or sets the attributes of a single ISP OSD region (44-byte block)."
+    params:
+      num: "Sensor number, below 4."
+      attr: "`IMPISPSingleOSDAttr`."
+    returns: "0 on success; -4 for a sensor number of 4 or more; -9 for NULL; -6 when the driver call fails."
+    soc: "T40 only."
   ISP_Tuning_Get/SetOSDAttr:
     group: osd
     summary: Reads or sets the 12-byte OSD picture format of the scaler OSD (T23, T41).
@@ -1031,8 +1105,9 @@ functions:
       call also works after `IMP_System_Init`.
   ISP_OSD_Alloc:
     group: osd
-    summary: Allocates the memory for ISP OSD data.
-    unverified: true
+    summary: "Allocates the memory for ISP OSD data (a vendor call of the newest SoCs)."
+    notes: "Not provided by OpenIMP on any SoC. T23 has its own `IMP_ISPOSD_Alloc(size)`, which returns the virtual address of an uninitialised rmem buffer or NULL."
+    soc: "Missing in OpenIMP."
   ISP_Get/SetDefaultBinPath:
     group: life
     summary: "Sets or reads the path of the ISP tuning binary (`.bin`) loaded at start-up."
@@ -1087,23 +1162,22 @@ functions:
     params:
       num: Video input, 0 or 1.
       enable: Pointer to `IMPISPTuningOpsMode`.
-    returns: 0 on success; -4087 for NULL, -4084 for an input number of 2 or more, -4095 if the driver ioctl fails (not if
-      the device is missing).
-    notes: T41 only. Set sends the bypass ioctl of the ISP device (0x80085418) and remembers the value for the Get. The open
-      T41 ISP driver does not serve that ioctl yet (it answers -ENOTTY), so Set returns -4095 there, as the vendor library
-      does on a kernel without it; the matrix lists the call as failing (cell `err`).
+    returns: 0 on success; -4087 for NULL, -4084 for an input number of 2 or more; -1 when the driver refuses the value.
+    notes: T41 only. Set sends the bypass ioctl of the ISP device (0x80085418) and remembers the value for the Get. Setting 0
+      (full ISP) works. Setting 1 (the real bypass) is refused by the open driver and the call returns -1, so the value is not
+      remembered and Get keeps returning 0 (issue 125). Without an open ISP device the value is only remembered.
     soc: T41.
   ISP_Tuning_SetISPBypass:
     group: ldc
-    summary: Switches the ISP bypass on or off. For SoCs with a link graph this rebuilds the ISP links.
+    summary: 'Switches the ISP bypass. On T10, T20, T21, T23 and T31 `ENABLE` (full ISP, the state after `EnableSensor`) does nothing and `DISABLE` (the real bypass) is refused.'
     params:
       enable: '`IMPISP_TUNING_OPS_MODE_ENABLE` or `_DISABLE`.'
-    returns: '0 on success, -1 on a failed step. T40: -1 for a video input other than `IMPVI_MAIN` or NULL.'
-    notes: 'T10 and T20 set the ISP-process control only. T21: disabling is a no-op (the processing graph from EnableSensor
-      stays); enabling destroys and recreates the media links with one sensor index. T23 and T31 disable the links, destroy
-      them, set the process control, ask for the sensor index and recreate and enable the links. On T23 the environment variable
-      `OPENIMP_T23_SKIP_BYPASS` skips the call (returns 0), a cold-start guard. T40 only stores the flag in the library and
-      sends nothing to the driver. Not in the T41 library under this name (see `ISP_Get/SetISPBypass`).'
+    returns: '0 for `ENABLE`; -1 for `DISABLE`. T40: 0 on success, -1 for a video input other than `IMPVI_MAIN` or NULL.'
+    notes: 'T10, T20, T21, T23 and T31: `ENABLE` is what a streamer calls at start-up; it is a no-op returning 0 and the running
+      pipeline keeps streaming. `DISABLE` (the real bypass) is refused with -1 and nothing is touched, like the vendor T21
+      library; on the open drivers a bypassed pipeline delivers no frames (issues 119 and 126; a working real bypass is issue
+      129). T40 only stores the flag in the library and sends nothing to the driver. Not in the T41 library under this name
+      (see `ISP_Get/SetISPBypass`).'
   ISP_Tuning_GetISPBypass:
     group: ldc
     summary: 'T40: reads the bypass flag stored by `SetISPBypass` (0 before the first Set).'
@@ -1123,20 +1197,28 @@ functions:
     soc: "Implemented for T40; not on T41."
   ISP_Tuning_Get/SetHLDCAttr:
     group: ldc
-    summary: Reads or sets the hardware lens distortion correction.
-    unverified: true
+    summary: "Reads or sets the hardware lens distortion correction."
+    params:
+      num: "Video input (`IMPVI_MAIN`)."
+      attr: "`IMPISPHLDCAttr`."
+    returns: "The driver's result; -1 for a bad video input number or NULL."
+    notes: "Pointer pass-through: the block goes to the ISP driver unchanged (control 0x8000097)."
+    soc: "T40 only."
   ISP_Tuning_SetISPLDC:
     group: ldc
-    summary: Switches the lens distortion correction on or off.
-    unverified: true
+    summary: "Switches the lens distortion correction on or off (a T30 vendor call)."
+    notes: "Not provided by OpenIMP on any SoC. The matrix lists it as a gap on T30."
+    soc: "Vendor T30 only; missing in OpenIMP."
   ISP_LDC_Get/SetAttr:
     group: ldc
-    summary: Reads or sets the lens distortion correction attributes.
-    unverified: true
+    summary: "Reads or sets the lens distortion correction attributes (a T41 vendor call)."
+    notes: "Not provided by OpenIMP on any SoC. The matrix lists it as a gap on T41."
+    soc: "Vendor T41 only; missing in OpenIMP."
   ISP_LDC_INIT:
     group: ldc
-    summary: Initialises the lens distortion correction.
-    unverified: true
+    summary: "Initialises the lens distortion correction (a T41 vendor call)."
+    notes: "Not provided by OpenIMP on any SoC. The matrix lists it as a gap on T41."
+    soc: "Vendor T41 only; missing in OpenIMP."
   ISP_Tuning_SetFixedContraster:
     group: color
     summary: "Hands an `IMPISPFixedContrastAttr` to the driver as the fixed-contrast control (T40 and T41 form with a sensor number)."
@@ -1225,8 +1307,10 @@ functions:
     returns: "0 on success, -1 for NULL or when the ISP is not open, otherwise the driver result."
   ISP_SetSwitchgpio:
     group: sys
-    summary: Selects the GPIO that switches between two sensors on a multi-camera board.
-    unverified: true
+    summary: "Selects the GPIO that switches between two sensors on a multi-camera board."
+    returns: "0."
+    notes: "OpenIMP exports only the `IMP_ISP_MultiCamera_SetSwitchgpio` spelling, on T23. A one-sensor T23 has no sensor switch, so the call does nothing and returns 0."
+    soc: "T23 only."
   ISP_SetPreDqtime:
     group: sys
     summary: "Hands a pre-dequeue time value to the ISP driver (T40 and T41)."

@@ -55,9 +55,11 @@ functions:
     returns: -1 for an invalid device or channel.
   DMIC_Get/SetChnParam:
     group: dev
-    summary: Stores or reads the channel parameter (frame queue depth).
-    returns: -1 for an invalid device or channel or a NULL pointer.
-    unverified: true
+    summary: "Sets or reads the channel parameter `usrFrmDepth`, the number of frames the application may hold at the same time."
+    params:
+      chnParam: "`IMPDmicChnParam`; only `usrFrmDepth` is used."
+    returns: "0 on success; -1 for an invalid device or channel or a NULL pointer. Set also fails for a depth below 2 or above the frame count from `SetPubAttr`, and after `EnableChn`. Get also fails before `Enable`."
+    notes: "Call Set between `Enable` and `EnableChn`. Get fills the whole structure with zeros before it writes the depth."
   DMIC_SetUserInfo:
     group: aec
     summary: Chooses which microphone of the array is used for echo cancellation and whether AEC is wanted.
@@ -110,6 +112,6 @@ functions:
     returns: -1 when the device or channel is not running, AEC is already on, or the driver cannot enable the reference.
   DMIC_DisableAecRefFrame:
     group: aec
-    summary: Stops reference delivery.
-    returns: -1 for invalid arguments or when the device is not running.
-    unverified: true
+    summary: "Stops the delivery of the playback reference frames started with `EnableAecRefFrame`."
+    returns: "0 on success; -1 for an invalid device or channel, when the device or channel is not enabled, or when the reference delivery was not enabled."
+    notes: "The AO device and channel arguments are accepted and ignored."
