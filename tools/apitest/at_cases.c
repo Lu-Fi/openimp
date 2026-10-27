@@ -1020,11 +1020,28 @@ static void cs_hvflip(void) {}
 static void cs_ispbypass_old(void)
 {
     NEED(IMP_ISP_Tuning_SetISPBypass) {
-        /* the old API has no getter: DISABLE = the ISP is not bypassed (the state the camera is in); ENABLE (the bypass itself) is never written here */
-        int r = IMP_ISP_Tuning_SetISPBypass(IMPISP_TUNING_OPS_MODE_DISABLE);
+        /* the old API has no getter.  OEM semantics (T31 ISP bypass control 0x8000164):
+         * ENABLE (1) = full ISP pipeline, the state the camera is in and what prudynt
+         * writes at startup; DISABLE = the real bypass.  The round trip writes ENABLE.
+         * DISABLE: the vendor T21 library returns -1 and OpenIMP refuses it the same
+         * way (issue 119: the bypassed open pipeline delivers no frames), so -1 with
+         * frames still flowing is the expected answer.  That part is opt-in
+         * (APITEST_BYPASS_DISABLE=1): an older libimp still tears the link graph
+         * down for DISABLE and wedges a T10/T20/T31 camera until reboot. */
+        int r = IMP_ISP_Tuning_SetISPBypass(IMPISP_TUNING_OPS_MODE_ENABLE), r2 = -1, f1, f2 = 1;
+        int dis = getenv("APITEST_BYPASS_DISABLE") && atoi(getenv("APITEST_BYPASS_DISABLE"));
 
         usleep(700000);
-        rep(FN(IMP_ISP_Tuning_SetISPBypass), r, (r == 0 && flow()) ? V_PASS : V_FAIL, "rt: bypass DISABLE (= ISP processing on, the running state) written (ret %d), frames flow", r);
+        f1 = flow();
+        if (dis) {
+            r2 = IMP_ISP_Tuning_SetISPBypass(IMPISP_TUNING_OPS_MODE_DISABLE);
+            usleep(700000);
+            f2 = flow();
+        }
+        rep(FN(IMP_ISP_Tuning_SetISPBypass), r, (r == 0 && f1 && r2 == -1 && f2) ? V_PASS : V_FAIL,
+            "rt: ENABLE (= full ISP pipeline, the running state) ret %d, frames %s%s%s%s",
+            r, f1 ? "flow" : "STOPPED", dis ? "; DISABLE (real bypass, refused like the vendor T21) ret " : "",
+            dis ? (r2 == -1 ? "-1" : "NOT -1") : "", dis ? (f2 ? ", frames flow" : ", frames STOPPED") : "");
     }
 }
 #else
