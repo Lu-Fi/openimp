@@ -1466,7 +1466,27 @@ int IMP_ISP_MultiCamera_Tuning_GetDrawBlock(int num, void *p)
 
 T23_MC_BLOCK(SetOSDAttr, 0, T23_CID_OSD_ATTR)
 T23_MC_BLOCK(GetOSDAttr, 1, T23_CID_OSD_ATTR)
-T23_MC_BLOCK(SetOSDBlock, 0, T23_CID_OSD_BLOCK)
+/*
+ * SetOSDBlock: 20-byte block, u8 pinum @0, u8 enable @1, u16 x/y/w/h @2..9.
+ * Beyond stock: an enabled block with an odd picture width is refused with
+ * -1 before the ioctl (the stock library and ISP take it, and an odd width
+ * stops the T23 ISP in the QEMU model); open-tx-isp refuses it as well.
+ */
+int IMP_ISP_MultiCamera_Tuning_SetOSDBlock(int num, void *p)
+{
+    const uint8_t *b = p;
+    ISPDevice *isp;
+    int ret = t23_prologue(__func__, num, NULL, 0, &isp);
+
+    if (ret)
+        return ret;
+    if (b && b[1] == 1 && ((b[6] | b[7] << 8) & 1)) {
+        T23_LOG_ERR(__func__, "odd OSD picture width %u refused\n",
+                    (unsigned)(b[6] | b[7] << 8));
+        return -1;
+    }
+    return t23_block_xfer(__func__, num, 0, T23_CID_OSD_BLOCK, p, isp);
+}
 T23_MC_BLOCK(GetOSDBlock, 1, T23_CID_OSD_BLOCK)
 
 /* Fixed contrast: IMPISPFixedContrastAttr pointer. */
