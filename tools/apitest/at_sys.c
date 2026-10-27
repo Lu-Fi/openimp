@@ -144,7 +144,12 @@ void t_fs_pre(void)
         g_fifo_set = r == 0;
     }
 #if HAS_IMP_FrameSource_SetPool
+# if defined(PLATFORM_T41)
+    /* T41 1.2.5/1.2.6: the pool must exist (IMP_System_MemPoolRequest), else 0x80010040; the real binding is case fspool */
+    NEED(IMP_FrameSource_SetPool) { r = IMP_FrameSource_SetPool(1, 0); rep(FN(IMP_FrameSource_SetPool), r, r == (int)0x80010040 ? V_PASS : V_FAIL, "ch1 pool 0 (not requested): ret 0x%x (vendor 0x80010040), ch1 stays in rmem", (unsigned)r); }
+# else
     NEED(IMP_FrameSource_SetPool) { r = IMP_FrameSource_SetPool(1, 0); RET0(IMP_FrameSource_SetPool, r, "ch1 pool 0"); }
+# endif
 #endif
     r = IMP_FrameSource_EnableChn(0);
     RET0(IMP_FrameSource_EnableChn, r, "ch0");
@@ -243,7 +248,12 @@ void t_fs(void)
         gfree(f);
     }
 #if HAS_IMP_FrameSource_GetPool
+# if defined(PLATFORM_T41)
+    /* T41: SetPool(1, 0) was refused (pool 0 not requested), so no pool is bound: vendor 0x80010020 */
+    NEED(IMP_FrameSource_GetPool) { r = IMP_FrameSource_GetPool(1); rep(FN(IMP_FrameSource_GetPool), r, r == (int)0x80010020 ? V_PASS : V_FAIL, "ch1: ret 0x%x (no pool bound, vendor 0x80010020)", (unsigned)r); }
+# else
     NEED(IMP_FrameSource_GetPool) { r = IMP_FrameSource_GetPool(1); rep(FN(IMP_FrameSource_GetPool), r, r == 0 ? V_PASS : V_FAIL, "pool %d (set 0)", r); }
+# endif
 #endif
 #if HAS_IMP_FrameSource_ChnStatQuery
     NEED(IMP_FrameSource_ChnStatQuery) {

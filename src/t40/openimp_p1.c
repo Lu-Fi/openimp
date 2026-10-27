@@ -467,6 +467,55 @@ static int dma_alloc(uint32_t size, const char *tag, uint32_t *physical,
     return 0;
 }
 
+#if defined(PLATFORM_T41)
+/* FrameSource pool table, see IMP_FrameSource_SetPool */
+#define P1_POOL_CHANNELS 33
+#define P1_ERR_PARAM    ((int)0x80010001)
+#define P1_ERR_BOUND    ((int)0x80010020)
+#define P1_ERR_NOPOOL   ((int)0x80010040)
+static int p1_pool_of[P1_POOL_CHANNELS];
+static int p1_pool_table_ready;
+
+static void p1_pool_table_prepare(void)
+{
+    int i;
+
+    if (p1_pool_table_ready)
+        return;
+    for (i = 0; i < P1_POOL_CHANNELS; i++)
+        p1_pool_of[i] = -1;
+    p1_pool_table_ready = 1;
+}
+
+#endif
+
+/* Capture buffer of a channel: from the channel's pool when one is bound
+ * (T41 IMP_FrameSource_SetPool), else from the arena as before. */
+static int p1_capture_alloc(int channel, uint32_t size, const char *tag,
+                            uint32_t *physical, void **virtual_address)
+{
+#if defined(PLATFORM_T41)
+    IMPDMABufferInfo allocation;
+    int pool_id;
+
+    p1_pool_table_prepare();
+    pool_id = channel >= 0 && channel < P1_POOL_CHANNELS ? p1_pool_of[channel] : -1;
+    if (pool_id >= 0) {
+        if (!size || size > INT32_MAX || !physical || !virtual_address ||
+            dma_init() < 0 ||
+            DMA_PoolAllocDescriptor(pool_id, &allocation, (int)size, tag) < 0)
+            return -1;
+        *physical = allocation.phys_addr;
+        *virtual_address = (void *)(uintptr_t)allocation.virt_addr;
+        memset(*virtual_address, 0, size);
+        return 0;
+    }
+#else
+    (void)channel;
+#endif
+    return dma_alloc(size, tag, physical, virtual_address);
+}
+
 static int free_capture_buffers(struct openimp_fs_channel *chn)
 {
     unsigned int i;
@@ -1518,6 +1567,67 @@ int IMP_FrameSource_GetFrameDepth(int channel, int *depth)
     return 0;
 }
 
+#if defined(PLATFORM_T41)
+/* IMP_FrameSource_SetPool / GetPool as the vendor T41 1.2.5 / 1.2.6
+ * framesource_tseries.c: a table of pool ids for channels 0..32 (the vendor
+ * checks chn < 33), independent of CreateChn / DestroyChn, so a pool may be
+ * bound before the channel exists.  SetPool: chn >= 33 -> 0x80010001, the
+ * pool must exist (IMP_MemPool_GetById, IMP_System_MemPoolRequest) else
+ * 0x80010040, a channel that already has a pool -> 0x80010020.  GetPool:
+ * the pool id, chn >= 33 -> 0x80010001, none bound -> 0x80010020.  The
+ * capture buffers of a bound channel come from the pool at the next
+ * EnableChn (p1_capture_alloc); unbound channels keep the arena (default
+ * path unchanged).  Beyond vendor: IMP_System_MemPoolFree releases an idle
+ * pool and unbinds its channels (OpenIMP_P1_PoolReleased). */
+int IMP_FrameSource_SetPool(int channel, int pool_id)
+{
+    if ((unsigned int)channel >= P1_POOL_CHANNELS) {
+        IMP_LOG_ERR("Framesource", "SetPool: chnNum %d out of range\n", channel);
+        return P1_ERR_PARAM;
+    }
+    if (!IMP_MemPool_GetById(pool_id)) {
+        IMP_LOG_ERR("Framesource", "SetPool: pool %d does not exist\n", pool_id);
+        return P1_ERR_NOPOOL;
+    }
+    lock_p1();
+    p1_pool_table_prepare();
+    if (p1_pool_of[channel] >= 0) {
+        unlock_p1();
+        IMP_LOG_ERR("Framesource", "SetPool: chn %d already in pool %d\n",
+                    channel, p1_pool_of[channel]);
+        return P1_ERR_BOUND;
+    }
+    p1_pool_of[channel] = pool_id;
+    unlock_p1();
+    return 0;
+}
+
+int IMP_FrameSource_GetPool(int channel)
+{
+    int pool_id;
+
+    if ((unsigned int)channel >= P1_POOL_CHANNELS)
+        return P1_ERR_PARAM;
+    lock_p1();
+    p1_pool_table_prepare();
+    pool_id = p1_pool_of[channel];
+    unlock_p1();
+    return pool_id >= 0 ? pool_id : P1_ERR_BOUND;
+}
+
+/* Called by IMP_System_MemPoolFree after the pool was released. */
+void OpenIMP_P1_PoolReleased(int pool_id)
+{
+    int i;
+
+    lock_p1();
+    p1_pool_table_prepare();
+    for (i = 0; i < P1_POOL_CHANNELS; i++)
+        if (p1_pool_of[i] == pool_id)
+            p1_pool_of[i] = -1;
+    unlock_p1();
+}
+#else
 int IMP_FrameSource_SetPool(int channel, int pool_id)
 {
     if (channel < 0 || channel >= OPENIMP_FS_CHANNELS || pool_id < 0)
@@ -1545,6 +1655,7 @@ int IMP_FrameSource_GetPool(int channel)
     unlock_p1();
     return pool_id;
 }
+#endif
 
 int IMP_FrameSource_SetChnFifoAttr(int channel, IMPFSChnFifoAttr *attr)
 {
@@ -2340,8 +2451,9 @@ int IMP_FrameSource_EnableChn(int channel)
         struct openimp_fs_buffer *buffer = &chn->buffers[i];
 
         trace_p1("P1_INNER ALLOC_BEGIN\n");
-        if (dma_alloc(chn->sizeimage, capture_tag, &buffer->physical,
-                      &buffer->virtual_address) < 0) {
+        if (p1_capture_alloc(channel, chn->sizeimage, capture_tag,
+                             &buffer->physical,
+                             &buffer->virtual_address) < 0) {
             syslog(LOG_ERR,
                    "openimp-p1: enable chn=%d DMA alloc index=%u size=%u failed",
                    channel, i, chn->sizeimage);

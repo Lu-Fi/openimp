@@ -19,6 +19,7 @@
         OpenIMP_P1_GetState;
         OpenIMP_P2_DMAState;
         OpenIMP_P2_DMAUsage;
+        OpenIMP_P2_PoolRange;
         OpenIMP_IVS_Move*;
         SU_Base_Shutdown;
     local:

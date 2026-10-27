@@ -8,6 +8,19 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/t41-fs-pool` (2026-10-27, issue 72)
+
+- **T41 IMP_FrameSource_SetPool / GetPool: real media memory pools** like the vendor 1.2.5/1.2.6.
+  `IMP_System_MemPoolRequest` now carves the pool out of rmem (`IMP_MemPool_InitPool`, `IMP_MemPool_GetById`,
+  `IMP_PoolAlloc` inside the pool, src/t40/openimp_p2_dma.c); `IMP_FrameSource_SetPool` checks chn < 33 (0x80010001),
+  that the pool exists (0x80010040) and refuses a second binding (0x80010020); a bound channel's capture buffers come from
+  the pool at EnableChn, a too small pool fails EnableChn cleanly. Unbound channels: unchanged. Beyond vendor:
+  `IMP_System_MemPoolFree` releases an idle pool and unbinds its channels (docs/OPENIMP_BEYOND_VENDOR.md 5.1). T40 keeps
+  the name-only pools. Host tests `tests/t41/mempool_ledger_test.c`, `fs_pool_test.c`; apitest case `fspool` (QEMU T41,
+  then cam .34 libimp-only swap: 3 cycles, ch1 frames 0x058f0000..0x0599e000 inside the 2 MB pool at 0x058f0000, rmem in
+  use 22032 KB before and after, 64 KB pool refused; sys/fs/enc/cases PASS 158 FAIL 0). The apitest fs area expects the
+  vendor codes for SetPool(1, 0) without a requested pool (0x80010040) and GetPool (0x80010020) on T41.
+
 ## Branch `claude/t31-evalinfo-layout` (2026-10-27)
 
 - **T31 IMP_Encoder_GetChnEvalInfo: header layout instead of the vendor's shifted bytes** (beyond vendor, deliberate ABI

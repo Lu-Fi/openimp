@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -51,6 +52,31 @@ P3_UNSUPPORTED(IMP_ISP_Tuning_ShowOsdRgn)
  * argument rules as the stock call: bad id or zero size fail, a second
  * request for the same id fails ("already request"). */
 #define P3_MEMPOOLS 32
+#if defined(PLATFORM_T41)
+/* T41: a real pool carved out of rmem (src/t40/openimp_p2_dma.c, vendor
+ * T41 Jz_mempool); IMP_FrameSource_SetPool binds capture buffers to it. */
+extern int IMP_MemPool_InitPool(int pool_id, uint32_t size, const char *name);
+extern int OpenIMP_P2_PoolRelease(int pool_id);
+extern void OpenIMP_P1_PoolReleased(int pool_id);
+
+int IMP_System_MemPoolRequest(int poolId, size_t size, const char *name)
+{
+    if (poolId < 0 || poolId >= P3_MEMPOOLS || size == 0 || size > 0x7fffffffU)
+        return -1;
+    return IMP_MemPool_InitPool(poolId, (uint32_t)size, name);
+}
+
+/* Beyond vendor (the vendor T41 library keeps a pool until exit): release
+ * a pool none of whose buffers is allocated any more; channels bound to it
+ * are unbound (IMP_FrameSource_SetPool may bind them again). */
+int IMP_System_MemPoolFree(int poolId)
+{
+    if (OpenIMP_P2_PoolRelease(poolId) != 0)
+        return -1;
+    OpenIMP_P1_PoolReleased(poolId);
+    return 0;
+}
+#else
 static struct { int requested; size_t size; char name[32]; } p3_pools[P3_MEMPOOLS];
 static pthread_mutex_t p3_pool_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -71,3 +97,4 @@ int IMP_System_MemPoolRequest(int poolId, size_t size, const char *name)
     pthread_mutex_unlock(&p3_pool_lock);
     return 0;
 }
+#endif

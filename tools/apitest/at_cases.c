@@ -1632,7 +1632,112 @@ static void cs_aeexplist(void)
 static void cs_aeexplist(void) {}
 #endif
 
+<<<<<<< HEAD
 /* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist dmic); default all */
+=======
+/* ---------------------------------------------------------------------------------------------- T41 FrameSource pool (issue #72)
+ * IMP_System_MemPoolRequest + IMP_FrameSource_SetPool: ch1 is destroyed, bound to a pool and re-created; its capture buffers must
+ * come from the pool (frame physical addresses inside the pool range, OpenIMP_P2_PoolRange), frames flow, and after Disable/Destroy
+ * the pool is idle again (IMP_System_MemPoolFree succeeds only without live buffers; rmem in use back to the start value, 3 cycles).
+ * Vendor return codes: chn 33 -> 0x80010001, unknown pool -> 0x80010040, second SetPool -> 0x80010020.  A pool too small for the
+ * queue: EnableChn fails, nothing leaks.  ch1 is restored without a pool at the end.  OpenIMP-only helpers are weak (vendor: N/A). */
+#if defined(PLATFORM_T41) && HAS_IMP_FrameSource_SetPool && HAS_IMP_FrameSource_GetPool && HAS_IMP_System_MemPoolRequest
+/* OpenIMP-only entry points, looked up at run time (vendor libimp: not there) */
+static int (*pool_free_fn)(int);
+static int (*pool_range_fn)(int, uint32_t *, uint32_t *);
+static int (*dma_usage_fn)(uint32_t *, uint32_t *, uint32_t *, const char *, uint32_t *, uint32_t *);
+
+static uint32_t rmem_used(void)
+{
+    uint32_t used = 0, total = 0, largest = 0, tb = 0, tc = 0;
+
+    if (dma_usage_fn) dma_usage_fn(&used, &total, &largest, "x", &tb, &tc);
+    return used;
+}
+
+static int ch1_up(const IMPFSChnAttr *a, int depth)
+{
+    if (IMP_FrameSource_CreateChn(1, (IMPFSChnAttr *)a)) return -1;
+    if (depth > 0) IMP_FrameSource_SetFrameDepth(1, depth);
+    return IMP_FrameSource_EnableChn(1);
+}
+
+static void ch1_down(void)
+{
+    IMP_FrameSource_DisableChn(1);
+    IMP_FrameSource_DestroyChn(1);
+}
+
+static void cs_fspool(void)
+{
+    IMPFSChnAttr a;
+    int depth = 0, cycle, e33, enone, ebound = 0, g = -1, fl_end = 0, ok_all = 1, inside_all = 1, flow_all = 1, free_all = 1, rs, rsmall, rback;
+    uint32_t used0, used_end, pphys = 0, psize = 0, fmin = 0xffffffffu, fmax = 0;
+    char note[160] = "";
+
+    pool_free_fn = (int (*)(int))dlsym(RTLD_DEFAULT, "IMP_System_MemPoolFree");
+    pool_range_fn = (int (*)(int, uint32_t *, uint32_t *))dlsym(RTLD_DEFAULT, "OpenIMP_P2_PoolRange");
+    dma_usage_fn = (int (*)(uint32_t *, uint32_t *, uint32_t *, const char *, uint32_t *, uint32_t *))dlsym(RTLD_DEFAULT, "OpenIMP_P2_DMAUsage");
+    if (!pool_free_fn || !pool_range_fn) { rep(FN(IMP_FrameSource_SetPool), 0, V_NA, "vendor libimp: no pool release / range (OpenIMP extension), case needs it"); return; }
+    memset(&a, 0, sizeof(a));
+    if (IMP_FrameSource_GetChnAttr(1, &a)) { rep(FN(IMP_FrameSource_SetPool), -1, V_SKIP, "ch1 not created"); return; }
+    IMP_FrameSource_GetFrameDepth(1, &depth);
+    ch1_down();
+    used0 = rmem_used();
+    e33 = IMP_FrameSource_SetPool(33, 9);
+    enone = IMP_FrameSource_SetPool(1, 31);
+    for (cycle = 0; cycle < 3; cycle++) {
+        int r = IMP_System_MemPoolRequest(9, 2u << 20, "apitest-fs1"), k, n = 0;
+
+        if (r || IMP_FrameSource_SetPool(1, 9)) { ok_all = 0; break; }
+        if (!cycle) ebound = IMP_FrameSource_SetPool(1, 9);
+        g = IMP_FrameSource_GetPool(1);
+        if (g != 9) ok_all = 0;
+        pool_range_fn(9, &pphys, &psize);
+        if (ch1_up(&a, depth > 2 ? depth : 2)) { ok_all = 0; snprintf(note, sizeof(note), "cycle %d: ch1 enable in the pool failed", cycle); break; }
+        usleep(500000);
+        for (k = 0; k < 8; k++) {
+            IMPFrameInfo *fr = NULL;
+            if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) {
+                if (fr->phyAddr < pphys || fr->phyAddr + fr->size > pphys + psize) inside_all = 0;
+                if (fr->phyAddr < fmin) fmin = fr->phyAddr;
+                if (fr->phyAddr > fmax) fmax = fr->phyAddr;
+                n++;
+                IMP_FrameSource_ReleaseFrame(1, fr);
+            }
+        }
+        if (n < 6 || !flow()) { flow_all = 0; snprintf(note, sizeof(note), "cycle %d: %d of 8 frames", cycle, n); }
+        ch1_down();
+        if (pool_free_fn(9)) free_all = 0;
+    }
+    used_end = rmem_used();
+    /* a pool too small for the capture queue: EnableChn fails, no leak */
+    rs = IMP_System_MemPoolRequest(10, 64u << 10, "apitest-small");
+    if (!rs) IMP_FrameSource_SetPool(1, 10);
+    rsmall = IMP_FrameSource_CreateChn(1, &a) ? -99 : IMP_FrameSource_EnableChn(1);
+    IMP_FrameSource_DestroyChn(1);
+    rs |= pool_free_fn(10);
+    /* restore ch1 as the run had it (no pool) */
+    rback = ch1_up(&a, depth > 2 ? depth : 2);
+    usleep(500000);
+    fl_end = flow();
+    if (!rback) IMP_FrameSource_SetFrameDepth(1, depth);   /* the depth the run had */
+    rep(FN(IMP_FrameSource_GetPool), g, (g == 9 && IMP_FrameSource_GetPool(1) == (int)0x80010020 && IMP_FrameSource_GetPool(33) == (int)0x80010001) ? V_PASS : V_FAIL,
+        "bound ch1 -> %d; after the pool release: 0x%x (vendor 0x80010020 none), chn 33 -> 0x%x", g, (unsigned)IMP_FrameSource_GetPool(1), (unsigned)IMP_FrameSource_GetPool(33));
+    rep(FN(IMP_FrameSource_SetPool), ok_all ? 0 : -1,
+        (ok_all && inside_all && flow_all && free_all && e33 == (int)0x80010001 && enone == (int)0x80010040 && ebound == (int)0x80010020 &&
+         used_end == used0 && rs == 0 && rsmall != 0 && rmem_used() <= used0 + 4u * 1024 * 1024 && rback == 0 && fl_end) ? V_PASS : V_FAIL,
+        "dev: 3 cycles pool 9 (2 MB at 0x%08x): ch1 frames 0x%08x..0x%08x %s the pool, frames flow %s, pool free after Destroy %s; rmem in use %u -> %u KB; "
+        "chn 33 0x%x, unknown pool 0x%x, second set 0x%x; 64 KB pool: EnableChn ret %d (refused), released %s; ch1 restored without pool ret %d, frames %s %s",
+        pphys, fmin, fmax, inside_all ? "inside" : "OUTSIDE", flow_all ? "yes" : "NO", free_all ? "yes" : "NO", used0 / 1024, used_end / 1024,
+        (unsigned)e33, (unsigned)enone, (unsigned)ebound, rsmall, rs ? "NO" : "yes", rback, fl_end ? "flow" : "STOPPED", note);
+}
+#else
+static void cs_fspool(void) {}
+#endif
+
+/* APITEST_CASES=a,b,c runs only these cases (names: sensorreg log waitframe videodrop movestate aefreeze aehistorigin autozoom framedrop cwf sinter temper process fwfreeze hilight inttime scene colorfx gamma modctl ccm rgbcoef ispbypass binpath switchbin scalerlv contrast hue aecomp backlight dpc custom wdr wdrout ispflip hvflip ispbypass_old gamma_old csc awbct scalerlv_old aestats faceae aeexplist fspool); default all */
+>>>>>>> origin/claude/t41-fs-pool
 static int cs_on(const char *n)
 {
     const char *e = getenv("APITEST_CASES"), *p;
@@ -1950,6 +2055,10 @@ void t_cases(void)
     if (cs_on("aestats")) cs_aestats();    wdog("cases", 60);
     if (cs_on("faceae")) cs_faceae();      wdog("cases", 90);
     if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
+<<<<<<< HEAD
     if (cs_on("dmic")) t_dmic();        wdog("cases", 60);
+=======
+    if (cs_on("fspool")) cs_fspool();     wdog("cases", 90);
+>>>>>>> origin/claude/t41-fs-pool
     wdog("cases", 60);
 }

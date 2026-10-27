@@ -565,6 +565,19 @@ uintptr_t IMP_PoolAlloc(int pool_id, void *info_or_size, intptr_t size,
     IMPDMABufferInfo info;
     int result;
 
+#if defined(PLATFORM_T41)
+    /* an existing pool (IMP_System_MemPoolRequest): the buffer comes from
+     * it, as in the vendor library; an unknown id keeps the arena */
+    if (IMP_MemPool_GetById(pool_id)) {
+        if (second > 0 && second <= P2_RMEM_SIZE) {
+            if (DMA_PoolAllocDescriptor(pool_id, &info, (int)second, "pool") != 0)
+                return (uintptr_t)0;
+            return (uintptr_t)info.virt_addr;
+        }
+        return (uintptr_t)DMA_PoolAllocDescriptor(pool_id,
+            (IMPDMABufferInfo *)info_or_size, (int)size, tag);
+    }
+#endif
     if (second > 0 && second <= P2_RMEM_SIZE) {
         result = DMA_AllocDescriptor(&info, (int)second, "pool");
         if (result != 0)
@@ -578,6 +591,233 @@ uintptr_t IMP_PoolAlloc(int pool_id, void *info_or_size, intptr_t size,
         ((IMPDMABufferInfo *)info_or_size)->pool_id = (uint32_t)pool_id;
     return (uintptr_t)result;
 }
+
+#if defined(PLATFORM_T41)
+/* Media memory pools (vendor T41 1.2.5/1.2.6 Jz_mempool: IMP_System_MemPoolRequest
+ * -> IMP_MemPool_InitPool carves one contiguous block out of rmem;
+ * IMP_PoolAlloc places buffers inside it; IMP_FrameSource_SetPool binds a
+ * channel's capture buffers to it).  A pool is one allocation of the arena
+ * ledger (tag "mempool", placed from the top like other long-lived buffers);
+ * its buffers are kept in a small per-pool ledger, first fit, page aligned.
+ * IMP_Free / DMA_FreePhys / IMP_PoolFree of an address inside a pool free the
+ * pool buffer, never the pool itself (a buffer at the pool start has the
+ * pool's address).  Nothing here runs unless an application creates a pool:
+ * the default path is unchanged. */
+#define P2_MEMPOOLS 32
+#define P2_POOL_ALLOCS 16
+
+struct p2_mempool {
+    int active;
+    uint32_t start;                 /* arena offset */
+    uint32_t size;                  /* page aligned */
+    char name[32];
+    struct { uint32_t start, size; } buf[P2_POOL_ALLOCS];   /* pool offsets, size 0 = free */
+};
+
+static struct p2_mempool p2_pools[P2_MEMPOOLS];
+
+int IMP_Free(uintptr_t address);
+
+/* Under p2_lock: the pool holding arena offset off, or NULL. */
+static struct p2_mempool *p2_pool_at(uint32_t off)
+{
+    unsigned int i;
+
+    for (i = 0; i < P2_MEMPOOLS; ++i)
+        if (p2_pools[i].active && off >= p2_pools[i].start &&
+            off - p2_pools[i].start < p2_pools[i].size)
+            return &p2_pools[i];
+    return NULL;
+}
+
+static unsigned int p2_pool_live(const struct p2_mempool *pool)
+{
+    unsigned int i, n = 0;
+
+    for (i = 0; i < P2_POOL_ALLOCS; ++i)
+        n += pool->buf[i].size != 0;
+    return n;
+}
+
+int IMP_MemPool_InitPool(int pool_id, uint32_t size, const char *name)
+{
+    IMPDMABufferInfo info;
+    struct p2_mempool *pool;
+    uint32_t off;
+
+    if (pool_id < 0 || pool_id >= P2_MEMPOOLS || !size || size > INT32_MAX)
+        return -1;
+    p2_lock();
+    if (p2_pools[pool_id].active) {
+        p2_unlock();
+        syslog(LOG_ERR, "openimp-dma: mempool %d already requested", pool_id);
+        return -1;
+    }
+    p2_unlock();
+    if (DMA_AllocDescriptor(&info, (int)size, "mempool") != 0) {
+        syslog(LOG_ERR, "openimp-dma: mempool %d: %u B not available", pool_id, size);
+        return -1;
+    }
+    p2_lock();
+    off = info.phys_addr - p2_dma.base;
+    pool = &p2_pools[pool_id];
+    if (pool->active) {             /* raced with a second request */
+        p2_unlock();
+        (void)IMP_Free((uintptr_t)info.phys_addr);
+        return -1;
+    }
+    memset(pool, 0, sizeof(*pool));
+    pool->active = 1;
+    pool->start = off;
+    pool->size = align_page(size);
+    if (name)
+        strncpy(pool->name, name, sizeof(pool->name) - 1U);
+    p2_unlock();
+    syslog(LOG_INFO, "openimp-dma: mempool %d \"%s\" %u B at 0x%08x",
+           pool_id, name ? name : "", size, info.phys_addr);
+    return 0;
+}
+
+/* Vendor: non-NULL when the pool exists (IMP_FrameSource_SetPool checks it). */
+void *IMP_MemPool_GetById(int pool_id)
+{
+    void *found = NULL;
+
+    if (pool_id < 0 || pool_id >= P2_MEMPOOLS)
+        return NULL;
+    p2_lock();
+    if (p2_pools[pool_id].active)
+        found = &p2_pools[pool_id];
+    p2_unlock();
+    return found;
+}
+
+/* Physical range of a pool (tests, FrameSource logs); 0 on success. */
+int OpenIMP_P2_PoolRange(int pool_id, uint32_t *phys, uint32_t *size)
+{
+    int result = -1;
+
+    if (pool_id < 0 || pool_id >= P2_MEMPOOLS)
+        return -1;
+    p2_lock();
+    if (p2_pools[pool_id].active) {
+        if (phys)
+            *phys = p2_dma.base + p2_pools[pool_id].start;
+        if (size)
+            *size = p2_pools[pool_id].size;
+        result = 0;
+    }
+    p2_unlock();
+    return result;
+}
+
+/* Release a pool (beyond vendor: the vendor T41 library has no public call
+ * for it).  Refused while a buffer of the pool is still allocated. */
+int OpenIMP_P2_PoolRelease(int pool_id)
+{
+    uint32_t phys;
+    unsigned int live;
+
+    if (pool_id < 0 || pool_id >= P2_MEMPOOLS)
+        return -1;
+    p2_lock();
+    if (!p2_pools[pool_id].active) {
+        p2_unlock();
+        return -1;
+    }
+    live = p2_pool_live(&p2_pools[pool_id]);
+    if (live) {
+        p2_unlock();
+        syslog(LOG_ERR, "openimp-dma: mempool %d: %u buffers still allocated",
+               pool_id, live);
+        return -1;
+    }
+    phys = p2_dma.base + p2_pools[pool_id].start;
+    memset(&p2_pools[pool_id], 0, sizeof(p2_pools[pool_id]));
+    p2_unlock();
+    return IMP_Free((uintptr_t)phys);
+}
+
+/* A buffer of size bytes inside pool pool_id (first fit); -1 when the pool
+ * does not exist or has no room (nothing allocated then). */
+int DMA_PoolAllocDescriptor(int pool_id, IMPDMABufferInfo *out, int size,
+                            const char *tag)
+{
+    struct p2_mempool *pool;
+    uint32_t need, cursor = 0;
+    int slot = -1;
+    unsigned int i;
+
+    if (!out || size <= 0 || pool_id < 0 || pool_id >= P2_MEMPOOLS)
+        return -1;
+    need = align_page((uint32_t)size);
+    p2_lock();
+    pool = &p2_pools[pool_id];
+    if (!pool->active) {
+        p2_unlock();
+        return -1;
+    }
+    for (i = 0; i < P2_POOL_ALLOCS; ++i)
+        if (!pool->buf[i].size && slot < 0)
+            slot = (int)i;
+    /* lowest start at or above cursor that overlaps nothing */
+    while (slot >= 0) {
+        uint32_t next = cursor;
+
+        for (i = 0; i < P2_POOL_ALLOCS; ++i) {
+            uint32_t b0 = pool->buf[i].start, b1 = b0 + pool->buf[i].size;
+
+            if (pool->buf[i].size && b0 < cursor + need && b1 > cursor && b1 > next)
+                next = align_page(b1);
+        }
+        if (next == cursor)
+            break;
+        cursor = next;
+    }
+    if (slot < 0 || cursor > pool->size || pool->size - cursor < need) {
+        syslog(LOG_ERR, "openimp-dma: mempool %d \"%s\" (%u B): no room for "
+               "%s %u B", pool_id, pool->name, pool->size, tag ? tag : "?",
+               need);
+        p2_unlock();
+        errno = ENOMEM;
+        return -1;
+    }
+    pool->buf[slot].start = cursor;
+    pool->buf[slot].size = need;
+    memset(out, 0, sizeof(*out));
+    if (tag)
+        strncpy(out->tag, tag, sizeof(out->tag) - 1U);
+    out->virt_addr = (uint32_t)(uintptr_t)
+        ((unsigned char *)p2_dma.mapping + pool->start + cursor);
+    out->phys_addr = p2_dma.base + pool->start + cursor;
+    out->size = (uint32_t)size;
+    out->flags = 2U;
+    out->pool_id = (uint32_t)pool_id;
+    p2_unlock();
+    return 0;
+}
+
+/* Under p2_lock: free the pool buffer at arena offset off.  1 = it was a
+ * pool address (result in *result), 0 = not inside a pool. */
+static int p2_pool_free_locked(uint32_t off, int *result)
+{
+    struct p2_mempool *pool = p2_pool_at(off);
+    unsigned int i;
+
+    if (!pool)
+        return 0;
+    *result = -1;
+    for (i = 0; i < P2_POOL_ALLOCS; ++i) {
+        if (pool->buf[i].size && pool->start + pool->buf[i].start == off) {
+            pool->buf[i].start = 0;
+            pool->buf[i].size = 0;
+            *result = 0;
+            break;
+        }
+    }
+    return 1;
+}
+#endif
 
 int IMP_Free(uintptr_t address)
 {
@@ -603,6 +843,12 @@ int IMP_Free(uintptr_t address)
         return -1;
     }
 
+#if defined(PLATFORM_T41)
+    if (p2_pool_free_locked(offset, &result)) {
+        p2_unlock();
+        return result;
+    }
+#endif
     for (i = 0; i < P2_DMA_MAX_ALLOCS; ++i) {
         struct p2_dma_allocation *allocation = &p2_dma.allocations[i];
 

@@ -28,7 +28,7 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path
+.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path fs-pool
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
@@ -36,6 +36,7 @@ check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(MAKE) audio-ext
 	$(MAKE) fs-inject
 	$(MAKE) bin-path
+	$(MAKE) fs-pool
 	$(MAKE) p3-controls
 	$(MAKE) isp-osd
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
@@ -285,3 +286,19 @@ p3-ao-mute: p3_ao_mute_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		p3_ao_mute_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -o "$(PROJECT_DIR)/build/tests/t41-p3-ao-mute-test"
 	$(PROJECT_DIR)/build/tests/t41-p3-ao-mute-test
+
+# T41 media memory pools: the P2 ledger (pool carve, buffers, release, no leak)
+# and IMP_FrameSource_SetPool/GetPool + the capture allocation routing
+fs-pool: mempool_ledger_test.c fs_pool_test.c $(PROJECT_DIR)/src/t40/openimp_p2_dma.c $(PROJECT_DIR)/src/t40/openimp_p1.c
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -D_GNU_SOURCE -DPLATFORM_T41 \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src mempool_ledger_test.c \
+		-o "$(PROJECT_DIR)/build/tests/t41-mempool-ledger-test"
+	"$(PROJECT_DIR)/build/tests/t41-mempool-ledger-test"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 \
+		'-D_Static_assert(c,m)=' -no-pie \
+		-I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include fs_pool_test.c \
+		$(PROJECT_DIR)/src/openimp_testpattern.c \
+		$(PROJECT_DIR)/src/core/imp_log_emit.c -lpthread \
+		-o "$(PROJECT_DIR)/build/tests/t41-fs-pool-test"
+	"$(PROJECT_DIR)/build/tests/t41-fs-pool-test"
