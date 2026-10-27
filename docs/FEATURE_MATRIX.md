@@ -16,7 +16,7 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 Rules (machine-readable: `docs/status/release.yaml`). **RC3:** every vendor function that a streamer (timps, prudynt, raptor) calls works on T10, T20, T21, T23, T31, T40, T41 (API matrix cell dev, dev+, run, rt or vendor no-op). **Release 1:** RC3 is green and the release image ran at least 14 days on the fleet with at least 1 camera per SoC, 0 unplanned reboots and 0 oops; a new image or any reset restarts the counter; planned flashes and tests count as planned only when the camera STATUS log marks them so.
 
-- **RC3: 🔴 RED** (1779 of 1787 streamer-function cells work, 8 missing)
+- **RC3: 🔴 RED** (1781 of 1787 streamer-function cells work, 6 missing)
 - **Release 1: 🔴 RED** (0 of 7 SoCs reached 14 stable days; image –, soak as of 2026-10-26 19:23)
   - Not started: the 14-day counter starts when RC3 is published (tag pending) and runs only on the image built from that tag.
 
@@ -32,7 +32,7 @@ Per SoC: vendor functions that at least one streamer calls (a Get/Set row counts
 | T23 | 289/290 | `████████████████████` | 1 |
 | T31 | 318/319 | `████████████████████` | 1 |
 | T40 | 217/217 | `████████████████████` | 0 |
-| T41 | 249/253 | `████████████████████` | 4 |
+| T41 | 251/253 | `████████████████████` | 2 |
 
 - **T10** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
 - **T20** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
@@ -40,7 +40,7 @@ Per SoC: vendor functions that at least one streamer calls (a Get/Set row counts
 - **T23** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (err; p† r†; no issue yet)
 - **T31** (1 missing, 1 rows): `ISP_Tuning_SetISPBypass` (aud; p† r†; no issue yet)
 - **T40:** nothing missing
-- **T41** (4 missing, 2 rows): `FrameSource_Get/SetPool` (cache; r†; [#72](https://github.com/Lu-Fi/openimp/issues/72)), `ISP_Get/SetISPBypass` (err; p†; no issue yet)
+- **T41** (2 missing, 1 rows): `ISP_Get/SetISPBypass` (err; p†; no issue yet)
 
 ### Release 1: stable days on the release image
 
@@ -903,12 +903,12 @@ Per area and SoC: functions that work (device-tested or vendor no-op) / function
 - **ISP tuning:** T10 66/67 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 65/67 ✅ · 2 🔧 · 0 gaps · 0 ? · T21 64/66 ✅ · 2 🔧 · 0 gaps · 0 ? · T23 77/97 ✅ · 16 🔧 · 4 gaps · 0 ? · T30 0/67 ✅ · 12 🔧 · 2 gaps · 53 ? · T31 82/87 ✅ · 5 🔧 · 0 gaps · 0 ? · T32 0/113 (no OpenIMP build yet) · T33 0/116 (no OpenIMP build yet) · T40 60/71 ✅ · 11 🔧 · 0 gaps · 0 ? · T41 57/78 ✅ · 3 🔧 · 18 gaps · 0 ?
 - **AE / AWB / AF:** T10 24/27 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 26/27 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 48/51 ✅ · 2 🔧 · 1 gaps · 0 ? · T30 0/26 ✅ · 4 🔧 · 0 gaps · 22 ? · T31 47/49 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 0/41 (no OpenIMP build yet) · T33 0/41 (no OpenIMP build yet) · T40 21/29 ✅ · 6 🔧 · 2 gaps · 0 ? · T41 28/39 ✅ · 0 🔧 · 11 gaps · 0 ?
 - **Encoder:** T10 38/70 ✅ · 0 🔧 · 31 gaps · 1 ? · T20 40/70 ✅ · 0 🔧 · 29 gaps · 1 ? · T21 51/67 ✅ · 0 🔧 · 16 gaps · 0 ? · T23 72/90 ✅ · 1 🔧 · 13 gaps · 4 ? · T30 0/67 ✅ · 3 🔧 · 19 gaps · 45 ? · T31 42/45 ✅ · 0 🔧 · 2 gaps · 1 ? · T32 0/116 (no OpenIMP build yet) · T33 0/128 (no OpenIMP build yet) · T40 46/59 ✅ · 3 🔧 · 10 gaps · 0 ? · T41 48/74 ✅ · 9 🔧 · 17 gaps · 0 ?
-- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 22/36 ✅ · 7 🔧 · 7 gaps · 0 ?
+- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/19 ✅ · 0 🔧 · 0 gaps · 19 ? · T31 22/30 ✅ · 1 🔧 · 5 gaps · 2 ? · T32 0/47 (no OpenIMP build yet) · T33 0/49 (no OpenIMP build yet) · T40 22/33 ✅ · 6 🔧 · 5 gaps · 0 ? · T41 24/36 ✅ · 7 🔧 · 5 gaps · 0 ?
 - **OSD:** T10 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T20 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T21 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T23 36/42 ✅ · 4 🔧 · 0 gaps · 2 ? · T30 0/17 ✅ · 1 🔧 · 0 gaps · 16 ? · T31 16/17 ✅ · 1 🔧 · 0 gaps · 0 ? · T32 0/44 (no OpenIMP build yet) · T33 0/44 (no OpenIMP build yet) · T40 28/43 ✅ · 14 🔧 · 0 gaps · 1 ? · T41 26/42 ✅ · 13 🔧 · 3 gaps · 0 ?
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/18 ✅ · 0 🔧 · 0 gaps · 18 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/18 (no OpenIMP build yet) · T33 0/18 (no OpenIMP build yet) · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 0/90 ✅ · 22 🔧 · 0 gaps · 68 ? · T31 96/96 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/127 (no OpenIMP build yet) · T33 0/127 (no OpenIMP build yet) · T40 99/99 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 106/107 ✅ · 1 🔧 · 0 gaps · 0 ?
 - **System:** T10 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T20 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T21 20/48 ✅ · 25 🔧 · 0 gaps · 3 ? · T23 21/60 ✅ · 25 🔧 · 0 gaps · 14 ? · T30 0/50 ✅ · 1 🔧 · 0 gaps · 49 ? · T31 22/64 ✅ · 28 🔧 · 0 gaps · 14 ? · T32 0/104 (no OpenIMP build yet) · T33 0/102 (no OpenIMP build yet) · T40 21/50 ✅ · 1 🔧 · 1 gaps · 27 ? · T41 19/55 ✅ · 30 🔧 · 6 gaps · 0 ?
-- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 345/406 ✅ · 37 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 315/402 ✅ · 41 🔧 · 18 gaps · 28 ? · T41 324/449 ✅ · 63 🔧 · 62 gaps · 0 ?
+- **All areas:** T10 268/333 ✅ · 30 🔧 · 31 gaps · 4 ? · T20 271/333 ✅ · 29 🔧 · 29 gaps · 4 ? · T21 286/333 ✅ · 28 🔧 · 16 gaps · 3 ? · T23 371/457 ✅ · 48 🔧 · 18 gaps · 20 ? · T30 0/354 ✅ · 43 🔧 · 21 gaps · 290 ? · T31 345/406 ✅ · 37 🔧 · 7 gaps · 17 ? · T32 0/610 (no OpenIMP build yet) · T33 0/625 (no OpenIMP build yet) · T40 315/402 ✅ · 41 🔧 · 18 gaps · 28 ? · T41 326/449 ✅ · 63 🔧 · 60 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -923,7 +923,7 @@ Gaps (error, missing, stub, cache-only) in functions that at least one streamer 
 - **T32:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T33:** no OpenIMP build yet; 178 vendor functions are called by a streamer. Most used: `AI_Disable` (p† r† t†), `AI_DisableAgc` (p† r† t†), `AI_DisableChn` (p† r† t†), `AI_DisableHpf` (p† r† t†), `AI_DisableNs` (p† r† t†), `AI_Enable` (p† r† t†), `AI_EnableAgc` (p† r† t†), `AI_EnableChn` (p† r† t†), `AI_EnableHpf` (p† r† t†), `AI_EnableNs` (p† r† t†), `AI_Get/SetChnParam` (p† r† t†), `AI_Get/SetGain` (p† r† t†)
 - **T40:** 0 streamer-used gaps; 6 further gaps no streamer calls
-- **T41:** 2 streamer-used gaps: `ISP_Get/SetISPBypass` (err; p†), `FrameSource_Get/SetPool` (cache; r†); 37 further gaps no streamer calls
+- **T41:** 1 streamer-used gap: `ISP_Get/SetISPBypass` (err; p†); 37 further gaps no streamer calls
 
 ### Long-term backlog
 
@@ -1624,7 +1624,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `Encoder_GetChnAttr`: audit: userspace implementation T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest rc3gaps2 2026-10-27 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest rc3gaps2 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
 - `Encoder_GetChnAveBitrate`: audit: userspace implementation T31: apitest rc3gaps2 2026-10-27 .26.
 - `Encoder_GetChnEncType`: audit: userspace implementation T21: apitest rc3gaps2 2026-10-27 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest rc3gaps2 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
-- `Encoder_GetChnEvalInfo`: T31: claude/t23-enc-rest (not in agg-25) T31: apitest rc3gaps2 2026-10-27 .26.
+- `Encoder_GetChnEvalInfo`: T31: claude/t23-enc-rest (not in agg-25) T31: apitest enc 2026-10-27 .26 (OpenIMP eb6aedda): IMPEncoderStreamInfo header layout (vendor record is shifted by 4 bytes), iNumBytes 3993 of 4003, counters sum to 640x368, QP 20/20/23; JPEG size + quality 75.
 - `Encoder_GetChnMaxPictureSize`: T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25) T23: apitest agg47 2026-10-26 .30.
 - `Encoder_GetFd`: audit: userspace implementation; T21/T23/T31: pipe + pump thread (new 2026-10-06, was a stub): poll(POLLIN) within 1 s, apitest PASS; T20/T10 not in the vendor API T21: apitest rc3gaps2 2026-10-27 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest rc3gaps2 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
 - `Encoder_GetGOPSize`: T10/T20/T21: the channel GOP length of a created channel (the vendor reads i264e param 7); an idle channel answers 0 and leaves the struct alone on T21, -1 on T20; apitest PASS on T10, T20, T21; T30 1.0.5: a created channel reads its maxGop; an idle channel answers 0 and leaves the struct alone (as T21); host test T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest rc3gaps2 2026-10-27 .24. T23: apitest agg47 2026-10-26 .30.
@@ -1681,7 +1681,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### FrameSource
 
-48 rows (19 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+48 rows (18 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1708,7 +1708,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_Get/SetFrameDepth` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | p p† r r† t |
 | `FrameSource_Get/SetI2dAttr` | · | · | · | · | · | · | 📋 | 📋 | ✅ | ✅ | r† |
 | `FrameSource_Get/SetMaxDelay` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r† |
-| `FrameSource_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | · | ⚠c | r† |
+| `FrameSource_Get/SetPool` | · | · | · | ✅ | · | ✅ | 📋 | 📋 | · | ✅ | r† |
 | `FrameSource_GetChnAttr_Expand` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetDirectMode` | · | · | · | · | · | · | 📋 | 📋 | · | · | – |
 | `FrameSource_GetFrame` | ✅ | ✅ | ✅ | ✅ | ? | ✅ | 📋 | 📋 | ✅ | ✅ | r r† t |
@@ -1753,7 +1753,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `FrameSource_Get/SetFrameDepth`: T41: GetFrame follows the frame depth as the vendor (not the shared capture queue); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T41: GetFrame follows the frame depth as the vendor (not the shared capture queue); used by: T10/T20/T21/T31/T41: prudynt†, raptor†; T23: prudynt, raptor, timps T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 libimp swap 2026-10-27 .34 (depth semantics of the vendor 1.2.5 GetFrame: depth 0 -> no frame, N held, third waits 2 s -> 0x80012000).
 - `FrameSource_Get/SetI2dAttr`: T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
 - `FrameSource_Get/SetMaxDelay`: T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest rc3gaps2 2026-10-27 .31. T20: apitest rc3gaps2 2026-10-27 .107. T21: apitest rc3gaps2 2026-10-27 .24. T23: apitest rc3gaps2 2026-10-27 .30. T31: apitest rc3gaps2 2026-10-27 .26. T40: apitest rc3gaps2 2026-10-27 .184. T41: apitest rc3gaps2 2026-10-27 .34.
-- `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26.
+- `FrameSource_Get/SetPool`: T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T41: apitest fspool 2026-10-27 .34 (OpenIMP 5270cc46): real rmem pool from MemPoolRequest, ch1 capture buffers inside the pool, 3 cycles, pool free after Destroy, too-small pool refused at EnableChn.
 - `FrameSource_GetFrame`: audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
 - `FrameSource_GetFrameEx`: T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.
 - `FrameSource_GetTimedFrame`: T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10: apitest agg47 2026-10-26 .31. T20: apitest agg47 2026-10-26 .107. T21: apitest agg47 2026-10-26 .24. T23: apitest agg47 2026-10-26 .30. T31: apitest next+ko/libimp swap 2026-10-27 .26. T40: apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184. T41: apitest rc3gaps2 2026-10-27 .34.

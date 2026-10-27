@@ -7563,7 +7563,7 @@
    },
    "note": "T31: claude/t23-enc-rest (not in agg-25)",
    "ref": {
-    "T31": "apitest rc3gaps2 2026-10-27 .26"
+    "T31": "apitest enc 2026-10-27 .26 (OpenIMP eb6aedda): IMPEncoderStreamInfo header layout (vendor record is shifted by 4 bytes), iNumBytes 3993 of 4003, counters sum to 640x368, QP 20/20/23; JPEG size + quality 75"
    }
   },
   "Encoder_GetChnMaxPictureSize": {
@@ -10064,7 +10064,7 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "cache"
+    "T41": "dev"
    },
    "used": {
     "T31": [
@@ -10083,7 +10083,8 @@
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+    "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+    "T41": "apitest fspool 2026-10-27 .34 (OpenIMP 5270cc46): real rmem pool from MemPoolRequest, ch1 capture buffers inside the pool, 3 cycles, pool free after Destroy, too-small pool refused at EnableChn"
    }
   },
   "FrameSource_GetFrame": {
