@@ -20,6 +20,8 @@ int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr
  *      IMGFX_SETTLE_MS    extra settle time added to every case (default 0)
  *      IMGFX_PAIR=1       a second consecutive frame per case (<name>-b.nv12), for temporal-noise measurements
  *      IMGFX_PRE=a,b      blocks put into a working state for the run (dark,defog,nr,dpc; see pre_apply)
+ *      IMGFX_CH0CROP=N    save ch0 (sensor size) instead of ch1: the centred N x N window as NV12 (N even),
+ *                         for full-resolution noise measurements without full-size files in /tmp (#137)
  *      IMGFX_SKIP_RISKY=1 skip the cases that may wedge a pipeline
  *                         (ISP bypass, FPS change); they run last
  * Run with the camera's streamer (timps/prudynt) stopped.
@@ -1664,6 +1666,21 @@ static void measure(const IMPFrameInfo *fr)
 
 /* drop 'skip' frames, then save the next one as raw NV12 (or measure it with IMGFX_STATS) */
 static int g_pair;   /* IMGFX_PAIR=1: a second, consecutive frame per case (<name>-b.nv12) for temporal-noise measurements */
+static int g_chn = 1, g_crop;   /* IMGFX_CH0CROP=N: frames from ch0, centred N x N window saved */
+
+/* the centred g_crop x g_crop window of an NV12 frame (Y rows, then the UV rows) */
+static void write_crop(FILE *f, const uint8_t *y, int w, int h)
+{
+    int n = g_crop, x0, y0, j;
+    const uint8_t *uv = y + (size_t)w * h;
+
+    if (n > w) n = w & ~1;
+    if (n > h) n = h & ~1;
+    x0 = ((w - n) / 2) & ~1; y0 = ((h - n) / 2) & ~1;
+    for (j = 0; j < n; j++) fwrite(y + (size_t)(y0 + j) * w + x0, 1, n, f);
+    for (j = 0; j < n / 2; j++) fwrite(uv + (size_t)(y0 / 2 + j) * w + x0, 1, n, f);
+    g_got_w = g_got_h = n;
+}
 static int snap1(const char *path, int skip);
 static int snap(const char *path, int skip)
 {
@@ -1691,29 +1708,33 @@ static int snap1(const char *path, int skip)
     for (tries = 0; tries < 30 && !got; tries++) {
         IMPFrameInfo *fr = NULL;
 
-        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) {
+        if (IMP_FrameSource_GetFrame(g_chn, &fr) < 0 || !fr) {
             usleep(100000);
             continue;
         }
-        if (skip > 0) { skip--; IMP_FrameSource_ReleaseFrame(1, fr); continue; }
+        if (skip > 0) { skip--; IMP_FrameSource_ReleaseFrame(g_chn, fr); continue; }
         if (g_stats) {
             measure(fr);
             g_got_w = fr->width; g_got_h = fr->height;
             got = 1;
-            IMP_FrameSource_ReleaseFrame(1, fr);
+            IMP_FrameSource_ReleaseFrame(g_chn, fr);
             continue;
         }
         f = fopen(path, "wb");
         if (f) {
             size_t sz = (size_t)fr->width * fr->height * 3 / 2;
 
-            if (fr->size && fr->size < sz) sz = fr->size;
-            fwrite((void *)(uintptr_t)fr->virAddr, 1, sz, f);
+            if (g_crop && (!fr->size || fr->size >= sz)) {
+                write_crop(f, (const uint8_t *)(uintptr_t)fr->virAddr, fr->width, fr->height);
+            } else {
+                if (fr->size && fr->size < sz) sz = fr->size;
+                fwrite((void *)(uintptr_t)fr->virAddr, 1, sz, f);
+                g_got_w = fr->width; g_got_h = fr->height;
+            }
             fclose(f);
-            g_got_w = fr->width; g_got_h = fr->height;
             got = 1;
         }
-        IMP_FrameSource_ReleaseFrame(1, fr);
+        IMP_FrameSource_ReleaseFrame(g_chn, fr);
     }
     return got ? 0 : -1;
 }
@@ -1726,7 +1747,7 @@ static void settle(int ms)
     usleep((300 + ms + g_extra_ms) * 1000);
     for (k = 0; k < 3; k++) {         /* skip 3 frames (older than the change) */
         fr = NULL;
-        if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(1, fr);
+        if (IMP_FrameSource_GetFrame(g_chn, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(g_chn, fr);
     }
 }
 
@@ -1772,6 +1793,7 @@ int picture_main(int argc, char **argv)
     sum = fopen(path, "a");   /* appended: filtered re-runs add to the same file */
     g_stats = getenv("IMGFX_STATS") && atoi(getenv("IMGFX_STATS"));
     g_pair = getenv("IMGFX_PAIR") && atoi(getenv("IMGFX_PAIR"));
+    if (getenv("IMGFX_CH0CROP") && atoi(getenv("IMGFX_CH0CROP")) > 0) { g_crop = atoi(getenv("IMGFX_CH0CROP")) & ~1; g_chn = 0; }
     if (getenv("IMGFX_SETTLE_MS")) g_extra_ms = atoi(getenv("IMGFX_SETTLE_MS"));
     g_risky = !(getenv("IMGFX_SKIP_RISKY") && atoi(getenv("IMGFX_SKIP_RISKY")));
     g_night = (getenv("IMGFX_MODE") && !strcmp(getenv("IMGFX_MODE"), "night")) ||
@@ -1806,6 +1828,7 @@ int picture_main(int argc, char **argv)
     fs1.scaler.enable = 1; fs1.scaler.outwidth = SUB_W; fs1.scaler.outheight = SUB_H;
     if (IMP_FrameSource_CreateChn(0, &fs0) < 0 || IMP_FrameSource_CreateChn(1, &fs1) < 0) { say("[E] FS_CreateChn failed\n"); return 1; }
     IMP_FrameSource_SetFrameDepth(1, 1);
+    if (g_chn == 0) IMP_FrameSource_SetFrameDepth(0, 1);
     if (IMP_FrameSource_EnableChn(0) < 0 || IMP_FrameSource_EnableChn(1) < 0) { say("[E] FS_EnableChn failed\n"); return 1; }
     sleep(3);   /* AE/AWB settle */
     if (getenv("IMGFX_SAT") && HAVE(IMP_ISP_Tuning_SetSaturation)) {   /* saturation for the whole run (colour cases) */
