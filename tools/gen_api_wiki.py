@@ -220,6 +220,15 @@ def cell_sym(row, soc):
     return CELL.get(c, ("?", ""))[0]
 
 
+def shorten_ref(r, limit=260):
+    """evidence reference text; a very long one is cut at the last ';' or ',' before the limit"""
+    r = " ".join(r.split())
+    if len(r) <= limit:
+        return r
+    cut = max(r.rfind("; ", 0, limit), r.rfind(", ", 0, limit))
+    return r[:cut if cut > limit // 2 else limit].rstrip(" ,;") + " ..."
+
+
 def cname(key):
     """C name of a yaml entry heading: IMP_<key>, except for SU_ functions"""
     return key if key.startswith("SU_") else "IMP_" + key
@@ -261,6 +270,11 @@ def render_function(d, key, ent, expo):
     if row:
         o += ["| " + " | ".join(SOCS) + " |", "|" + "---|" * len(SOCS),
               "| " + " | ".join(cell_sym(row, s) for s in SOCS) + " |", ""]
+        refs = [(s, row["ref"][s]) for s in SOCS if row.get("ref", {}).get(s)]
+        if refs:
+            o += ["Tested (tool, date, camera, what was checked):", ""]
+            o += ["- **%s**: %s" % (s, shorten_ref(r)) for s, r in refs]
+            o.append("")
         us = sorted({STREAMERS[u[0]] for s in SOCS for u in row.get("used", {}).get(s, []) if u and u[0] in STREAMERS})
         if us:
             o += ["Used by: " + ", ".join(us) + ".", ""]
