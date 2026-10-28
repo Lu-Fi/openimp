@@ -59,19 +59,20 @@ def sh(cmd, maxt=300, idle=60):
 
 s.sendall(b"\x03\n"); rd(1, 3)
 sh("stty -echo; mkdir -p /tmp/at; /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 2; dmesg -c >/dev/null; free | head -2", 60, 5)
+CH = int(os.environ.get("QR_CHUNK", "150"))      # characters per echo line (QR_CHUNK=900 pushes about 6x faster on a quiet host)
 def push(path, dest, mode="755"):
     """gzip+base64 over the console into /tmp/at/<dest>"""
     data = base64.b64encode(gzip.compress(open(path, "rb").read(), 9)).decode()
     pace = float(os.environ.get("QR_PACE", "0.03"))
     for attempt in range(3):
         s.sendall(b": > /tmp/at/b.b64\n"); rd(0.3, 2)
-        for i in range(0, len(data), 150):
-            s.sendall(("echo %s >> /tmp/at/b.b64\n" % data[i:i + 150]).encode()); rd(pace, 1)
+        for i in range(0, len(data), CH):
+            s.sendall(("echo %s >> /tmp/at/b.b64\n" % data[i:i + CH]).encode()); rd(pace, 1)
         o, _ = sh("wc -c < /tmp/at/b.b64", 900, 120)
         got = re.findall(r"^(\d+)\s*$", o, re.M)
-        if got and int(got[-1]) == len(data) + len(data) // 150 + (1 if len(data) % 150 else 0):
+        if got and int(got[-1]) == len(data) + len(data) // CH + (1 if len(data) % CH else 0):
             break
-        print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:], len(data) + (len(data) + 149) // 150))
+        print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:], len(data) + (len(data) + CH - 1) // CH))
         pace *= 3
     return sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/%s && chmod %s /tmp/at/%s && rm /tmp/at/b.b64; ls -l /tmp/at/%s" % (dest, mode, dest, dest), 120, 10)
 

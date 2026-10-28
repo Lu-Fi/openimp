@@ -5,7 +5,7 @@ One source, one binary `apitest_<soc>`, one CLI: areas `sys,fs,enc,osd,ivs,audio
 `--cases` (case names of area cases), `--json FILE` (one JSON report of the run: function -> PASS/FAIL/RT/NA/SKIP + detail + area;
 `results2json.py --report` and `merge_evidence.py` consume it). Completeness: `check_coverage.py` (part of `make check`) requires
 every vendor function of every gate SoC (`tools/export-check/vendor-<SoC>.txt`) to have a case here or an entry with a reason in
-`untestable.yaml` (categories sound, reboot, power, hardware, wedges-isp, no-signature, own-topology, not-in-soc-api, backlog).
+`untestable.yaml` (categories sound, reboot, power, hardware, wedges-isp, no-signature, own-topology, not-in-soc-api, backlog). T40 and T41 are strict (`STRICT` in `check_coverage.py`): any function still in category backlog fails the check. T40 ISP-OSD controls (`IMP_OSD_ShowRgn_ISP`, `IMP_ISP_Get/SetOSDAttr`, `IMP_ISP_Get/SetSingleOSDAttr`) oops `tx_isp_t40` in our QEMU guest, so case `isposdapi` skips them unless `APITEST_T40_ISPOSD_CTL=1` (not run on the Eufy, see audit APITEST_COV_T4X_1028).
 
 Device test for T10, T20, T21, T23, T31 and T41, sibling of `tools/imgfx` (which
 covers the image-changing ISP functions). It calls the vendor API of the SoC

@@ -2291,6 +2291,14 @@ static void cs_isposdapi(void)
         int cx0 = x0 + 4, cy0 = y0 + 4, cx1 = x0 + OPW - 4, cy1 = y0 + OPH - 4;
         int rp, rbad, h, h2, rs, rg, rg3, rsh, rhide, rd, rd2, k, jenc, dark, g_ok, c_ok, appears, gone;
         double base, shown, hidden;
+        /* T40: the ISP OSD controls 0x080000a1 / 0x080000a2 (Show, Get/SetOSDAttr, Get/SetSingleOSDAttr) oops tx_isp_t40 in our QEMU guest (kernel paging request);
+         * by the QEMU-first rule they do not run on the Eufy: only with APITEST_T40_ISPOSD_CTL=1 */
+        int show =
+# ifdef APITEST_T40
+            getenv("APITEST_T40_ISPOSD_CTL") != NULL;
+# else
+            1;
+# endif
         void (*oexit)(void) = (void (*)(void))dsym("IMP_OSD_Exit_ISP");
         int (*oinit)(void) = (int (*)(void))dsym("IMP_OSD_Init_ISP");
 
@@ -2310,14 +2318,14 @@ static void cs_isposdapi(void)
         rs = IMP_OSD_SetRgnAttr_PicISP(0, h, a);
         rg = IMP_OSD_GetRgnAttr_ISPPic(0, h, b);
         g_ok = rg == 0 && isposd_geom(b, x0, y0);
-        rsh = IMP_OSD_ShowRgn_ISP(0, h, 1);
-        shown = region_y(cx0, cy0, cx1, cy1);
+        rsh = show ? IMP_OSD_ShowRgn_ISP(0, h, 1) : 0;
+        shown = show ? region_y(cx0, cy0, cx1, cy1) : base;
         rg3 = IMP_ISP_Tuning_GetOsdRgnAttr(0, h, c);
-        c_ok = rg3 == 0 && isposd_geom(c, x0, y0) && c->stsinglepicAttr.pic.osd_enable == 1;
-        appears = dark ? shown > base + 40 : shown < base - 40;
-        rep(FN(IMP_OSD_SetRgnAttr_PicISP), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d picture at (%d,%d) through IMP_OSD_*_ISP: region luma %.1f -> %.1f (%s)", dark ? "white" : "black", OPW, OPH, x0, y0, base, shown, appears ? "visible" : "NOT VISIBLE");
+        c_ok = rg3 == 0 && isposd_geom(c, x0, y0) && c->stsinglepicAttr.pic.osd_enable == (show ? 1 : 0);
+        appears = !show || (dark ? shown > base + 40 : shown < base - 40);
+        rep(FN(IMP_OSD_SetRgnAttr_PicISP), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d picture at (%d,%d) through IMP_OSD_*_ISP: %s", dark ? "white" : "black", OPW, OPH, x0, y0, show ? (appears ? "visible after Show" : "NOT VISIBLE after Show") : "stored (rt: not shown, see APITEST_T40_ISPOSD_CTL)");
         rep(FN(IMP_OSD_GetRgnAttr_ISPPic), rg, g_ok ? V_PASS : V_FAIL, "stored attr: type %d, %ux%u at (%u,%u) stride %u", (int)b->type, b->stsinglepicAttr.pic.osd_width, b->stsinglepicAttr.pic.osd_height, b->stsinglepicAttr.pic.osd_left, b->stsinglepicAttr.pic.osd_top, b->stsinglepicAttr.pic.osd_stride);
-        rep(FN(IMP_ISP_Tuning_GetOsdRgnAttr), rg3, c_ok ? V_PASS : V_FAIL, "after Show: geometry %s, osd_enable %d (expected 1)", isposd_geom(c, x0, y0) ? "as set" : "DIFFERENT", (int)c->stsinglepicAttr.pic.osd_enable);
+        rep(FN(IMP_ISP_Tuning_GetOsdRgnAttr), rg3, c_ok ? V_PASS : V_FAIL, "%s: geometry %s, osd_enable %d (expected %d)", show ? "after Show" : "stored", isposd_geom(c, x0, y0) ? "as set" : "DIFFERENT", (int)c->stsinglepicAttr.pic.osd_enable, show ? 1 : 0);
 # ifdef APITEST_T40
         {
             /* T40 direct controls: the shown region as the driver holds it, hidden/shown again through SetSingleOSDAttr, whole-ISP OSD attr round trip */
@@ -2328,14 +2336,17 @@ static void cs_isposdapi(void)
 
             if (s && s2 && o1 && o2) {
                 s->chx = 0; s->pic_num = h;
-                rgs = IMP_ISP_GetSingleOSDAttr(IMPVI_MAIN, s);
+                rgs = show ? IMP_ISP_GetSingleOSDAttr(IMPVI_MAIN, s) : 0;
                 *s2 = *s; s2->pic.osd_enable = 0;
-                rss0 = IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s2); off = region_y(cx0, cy0, cx1, cy1);
-                rss1 = IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s); on = region_y(cx0, cy0, cx1, cy1);
-                rep(FN(IMP_ISP_GetSingleOSDAttr), rgs, (rgs == 0 && s->pic.osd_enable == 1 && s->pic.osd_left == x0 && s->pic.osd_top == y0 && s->pic.osd_width == OPW) ? V_PASS : V_FAIL,
+                rss0 = show ? IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s2) : 0; off = show ? region_y(cx0, cy0, cx1, cy1) : base;
+                rss1 = show ? IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s) : 0; on = show ? region_y(cx0, cy0, cx1, cy1) : (dark ? base + 100 : base - 100);
+                if (show) rep(FN(IMP_ISP_GetSingleOSDAttr), rgs, (rgs == 0 && s->chx == 0 && s->pic_num == h && (!show || (s->pic.osd_enable == 1 && s->pic.osd_left == x0 && s->pic.osd_top == y0 && s->pic.osd_width == OPW))) ? V_PASS : V_FAIL,
                     "driver holds chx %d pic %d: enable %u at (%u,%u) %ux%u", s->chx, s->pic_num, s->pic.osd_enable, s->pic.osd_left, s->pic.osd_top, s->pic.osd_width, s->pic.osd_height);
-                rep(FN(IMP_ISP_SetSingleOSDAttr), rss0 | rss1, (rss0 == 0 && rss1 == 0 && dabs(off - base) < 20 && (dark ? on > base + 40 : on < base - 40)) ? V_PASS : V_FAIL,
+                if (show) rep(FN(IMP_ISP_SetSingleOSDAttr), rss0 | rss1, (rss0 == 0 && rss1 == 0 && dabs(off - base) < 20 && (dark ? on > base + 40 : on < base - 40)) ? V_PASS : V_FAIL,
                     "enable 0 -> region luma %.1f (base %.1f), enable 1 -> %.1f", off, base, on);
+                else rep(FN(IMP_ISP_SetSingleOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (QEMU oops of the ISP OSD control)");
+                if (!show) rep(FN(IMP_ISP_GetSingleOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (QEMU oops of control 0x080000a2)");
+                if (!show) { rep(FN(IMP_ISP_GetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1 oopses tx_isp_t40 in QEMU)"); rep(FN(IMP_ISP_SetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1 oopses tx_isp_t40 in QEMU)"); } else {
                 ro1 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o1);
                 ro2 = IMP_ISP_SetOSDAttr(IMPVI_MAIN, o1);
                 ro3 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o2);
@@ -2345,7 +2356,8 @@ static void cs_isposdapi(void)
                 {
                     double again = region_y(cx0, cy0, cx1, cy1);
                     rep(FN(IMP_ISP_GetOSDAttr), ro1 | ro3, (ro1 == 0 && ro3 == 0 && same) ? V_PASS : V_FAIL, "chx0 type %d argb %d pic[%d] enable %u at (%u,%u); read again after Set: %s", (int)o1->osd_chx[0].osd_type, (int)o1->osd_chx[0].osd_argb_type, h, o1->osd_chx[0].pic[h].osd_enable, o1->osd_chx[0].pic[h].osd_left, o1->osd_chx[0].pic[h].osd_top, same ? "same" : "DIFFERENT");
-                    rep(FN(IMP_ISP_SetOSDAttr), ro2, (ro2 == 0 && (dark ? again > base + 40 : again < base - 40)) ? V_PASS : V_FAIL, "rt: attr as read written back (ret %d), picture still there: region luma %.1f", ro2, again);
+                    rep(FN(IMP_ISP_SetOSDAttr), ro2, (ro2 == 0 && (!show || (dark ? again > base + 40 : again < base - 40))) ? V_PASS : V_FAIL, "rt: attr as read written back (ret %d), picture still there: region luma %.1f", ro2, again);
+                }
                 }
             }
             free(s); free(s2); free(o1); free(o2);
@@ -2384,11 +2396,11 @@ static void cs_isposdapi(void)
             free(oa); free(ob); free(ba); free(bb);
         }
 # endif
-        rhide = IMP_OSD_ShowRgn_ISP(0, h, 0);
-        hidden = region_y(cx0, cy0, cx1, cy1);
+        rhide = show ? IMP_OSD_ShowRgn_ISP(0, h, 0) : 0;
+        hidden = show ? region_y(cx0, cy0, cx1, cy1) : base;
         gone = dabs(hidden - base) < 20;
         rd = IMP_OSD_DestroyRgn_ISP(0, h); rd2 = IMP_OSD_DestroyRgn_ISP(0, h2);
-        rep(FN(IMP_OSD_ShowRgn_ISP), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
+        if (!show) rep(FN(IMP_OSD_ShowRgn_ISP), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set: Show and Get/SetSingleOSDAttr (control 0x080000a2) oops tx_isp_t40 in QEMU, not run on the Eufy"); else rep(FN(IMP_OSD_ShowRgn_ISP), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
         rep(FN(IMP_OSD_DestroyRgn_ISP), rd | rd2, (rd == 0 && rd2 == 0 && flow()) ? V_PASS : V_FAIL, "handles %d and %d destroyed, frames flow", h, h2);
         isposd_cons_down(jenc);
         if (oexit) oexit();
