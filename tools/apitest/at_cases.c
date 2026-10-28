@@ -1356,7 +1356,7 @@ static void cs_rawdrc(void) {}
 
 
 /* ---- ISP-drawn OSD (raptor-hal sequence): pool, create, set attr (ARGB picture), show/hide, destroy; the picture must appear in the frame */
-#if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+#if HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
 static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a rectangle of FS ch0 (sensor size coordinates), 2 frames */
 {
     double acc = 0; int n = 0, f, i, j;
@@ -1376,7 +1376,9 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
     }
     return n ? acc / n : -1;
 }
+#endif
 
+#if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
 static void cs_isposd(void)
 {
     NEED(IMP_ISP_Tuning_CreateOsdRgn) NEED(IMP_ISP_Tuning_SetOsdRgnAttr) NEED(IMP_ISP_Tuning_ShowOsdRgn) NEED(IMP_ISP_Tuning_DestroyOsdRgn) NEED(IMP_ISP_Tuning_SetOsdPoolSize) {
@@ -2214,9 +2216,371 @@ static void cs_alloc(void)
     gfree(d); gfree(d2); gfree(mi);
 }
 
+/* ---------------------------------------------------------------------------------------------- T41/T40 ISP-OSD API family
+ * IMP_OSD_*_ISP (isp_osd.h, not part of the generated have/weak lists), IMP_ISP_Tuning_GetOsdRgnAttr, T41 Get/SetOSDAttr + Get/SetOSDBlock,
+ * T40 Get/SetOSDAttr + Get/SetSingleOSDAttr.  Pass criterion = the picture: shown -> region luma moves, hidden -> back to the base. */
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetOsdRgnAttr && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+extern int IMP_OSD_SetPoolSize_ISP(int size);
+extern int IMP_OSD_CreateRgn_ISP(int chn, IMPIspOsdAttrAsm *a);
+extern int IMP_OSD_SetRgnAttr_PicISP(int chn, int handle, IMPIspOsdAttrAsm *a);
+extern int IMP_OSD_GetRgnAttr_ISPPic(int chn, int handle, IMPIspOsdAttrAsm *a);
+extern int IMP_OSD_ShowRgn_ISP(int chn, int handle, int show);
+extern int IMP_OSD_DestroyRgn_ISP(int chn, int handle);
+#pragma weak IMP_OSD_SetPoolSize_ISP
+#pragma weak IMP_OSD_CreateRgn_ISP
+#pragma weak IMP_OSD_SetRgnAttr_PicISP
+#pragma weak IMP_OSD_GetRgnAttr_ISPPic
+#pragma weak IMP_OSD_ShowRgn_ISP
+#pragma weak IMP_OSD_DestroyRgn_ISP
+
+enum { OPW = 128, OPH = 64 };
+
+static void isposd_fill(IMPIspOsdAttrAsm *a, int h, int x, int y, uint8_t *img)
+{
+    memset(a, 0, sizeof(*a));
+    a->type = ISP_OSD_REG_PIC;
+# ifdef APITEST_T40
+    a->stsinglepicAttr.chx = 0; a->stsinglepicAttr.pic_num = h;
+    a->stsinglepicAttr.osd_type = IMP_ISP_PIC_ARGB_8888; a->stsinglepicAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_BGRA;
+    a->stsinglepicAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+# else
+    a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888; a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+    a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+    a->stsinglepicAttr.pic.pinum = (uint8_t)h;
+# endif
+    a->stsinglepicAttr.pic.osd_enable = 1; a->stsinglepicAttr.pic.osd_left = x; a->stsinglepicAttr.pic.osd_top = y;
+    a->stsinglepicAttr.pic.osd_width = OPW; a->stsinglepicAttr.pic.osd_height = OPH;
+    a->stsinglepicAttr.pic.osd_image = (char *)img; a->stsinglepicAttr.pic.osd_stride = OPW * 4;
+}
+
+static int isposd_geom(const IMPIspOsdAttrAsm *a, int x, int y)
+{
+    return a->type == ISP_OSD_REG_PIC && a->stsinglepicAttr.pic.osd_left == x && a->stsinglepicAttr.pic.osd_top == y && a->stsinglepicAttr.pic.osd_width == OPW
+        && a->stsinglepicAttr.pic.osd_height == OPH && a->stsinglepicAttr.pic.osd_stride == OPW * 4;
+}
+
+/* a JPEG encoder on FS ch0 as the consumer of the ISP-drawn output (the OSD is committed per frame of MSCA output 0) */
+static int isposd_cons_up(void)
+{
+    IMPCell fs0 = { DEV_ID_FS, 0, 0 }, en0 = { DEV_ID_ENC, 6, 0 };
+    IMPEncoderChnAttr *ea = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea));
+    int up = 0;
+
+    if (ea && IMP_Encoder_SetDefaultParam && IMP_Encoder_CreateGroup(6) == 0) {
+        IMP_Encoder_SetDefaultParam(ea, IMP_ENC_PROFILE_JPEG, IMP_ENC_RC_MODE_FIXQP, g_sw, g_sh, 15, 1, 0, 0, 30, 0);
+        if (IMP_Encoder_CreateChn(6, ea) == 0 && IMP_Encoder_RegisterChn(6, 6) == 0 && IMP_System_Bind(&fs0, &en0) == 0) { up = 1; IMP_Encoder_StartRecvPic(6); }
+    }
+    free(ea);
+    return up;
+}
+
+static void isposd_cons_down(int up)
+{
+    IMPCell fs0 = { DEV_ID_FS, 0, 0 }, en0 = { DEV_ID_ENC, 6, 0 };
+
+    if (!up) return;
+    IMP_Encoder_StopRecvPic(6); IMP_System_UnBind(&fs0, &en0); IMP_Encoder_UnRegisterChn(6); IMP_Encoder_DestroyChn(6); IMP_Encoder_DestroyGroup(6);
+}
+
+static void cs_isposdapi(void)
+{
+    NEED(IMP_OSD_CreateRgn_ISP) NEED(IMP_OSD_SetRgnAttr_PicISP) NEED(IMP_OSD_GetRgnAttr_ISPPic) NEED(IMP_OSD_ShowRgn_ISP) NEED(IMP_OSD_DestroyRgn_ISP) NEED(IMP_OSD_SetPoolSize_ISP) NEED(IMP_ISP_Tuning_GetOsdRgnAttr) {
+        uint8_t *pic = (uint8_t *)malloc(OPW * OPH * 4);
+        IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a)), *b = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a)), *c = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
+        int x0 = getenv("APITEST_OSD_X") ? atoi(getenv("APITEST_OSD_X")) : 64, y0 = getenv("APITEST_OSD_Y") ? atoi(getenv("APITEST_OSD_Y")) : 64;
+        int cx0 = x0 + 4, cy0 = y0 + 4, cx1 = x0 + OPW - 4, cy1 = y0 + OPH - 4;
+        int rp, rbad, h, h2, rs, rg, rg3, rsh, rhide, rd, rd2, k, jenc, dark, g_ok, c_ok, appears, gone;
+        double base, shown, hidden;
+        void (*oexit)(void) = (void (*)(void))dsym("IMP_OSD_Exit_ISP");
+        int (*oinit)(void) = (int (*)(void))dsym("IMP_OSD_Init_ISP");
+
+        if (!pic || !a || !b || !c || cx1 <= cx0 + 2 || cy1 <= cy0 + 2) { rep(FN(IMP_OSD_CreateRgn_ISP), 0, V_SKIP, "no memory or sensor too small"); goto out; }
+        base = region_y(cx0, cy0, cx1, cy1);
+        dark = base < 140;
+        for (k = 0; k < OPW * OPH; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
+        jenc = isposd_cons_up();
+        if (oinit) oinit();
+        rp = IMP_OSD_SetPoolSize_ISP(512 * 1024);
+        rep(FN(IMP_OSD_SetPoolSize_ISP), rp, rp == 0 ? V_PASS : V_FAIL, "512 KB");
+        rbad = IMP_OSD_CreateRgn_ISP(99, NULL);
+        h = IMP_OSD_CreateRgn_ISP(0, NULL); h2 = IMP_OSD_CreateRgn_ISP(0, NULL);
+        rep(FN(IMP_OSD_CreateRgn_ISP), h, (h >= 0 && h2 >= 0 && h2 != h && rbad < 0) ? V_PASS : V_FAIL, "handles %d and %d (distinct), channel 99 refused (ret %d)", h, h2, rbad);
+        if (h < 0) { isposd_cons_down(jenc); goto out; }
+        isposd_fill(a, h, x0, y0, pic);
+        rs = IMP_OSD_SetRgnAttr_PicISP(0, h, a);
+        rg = IMP_OSD_GetRgnAttr_ISPPic(0, h, b);
+        g_ok = rg == 0 && isposd_geom(b, x0, y0);
+        rsh = IMP_OSD_ShowRgn_ISP(0, h, 1);
+        shown = region_y(cx0, cy0, cx1, cy1);
+        rg3 = IMP_ISP_Tuning_GetOsdRgnAttr(0, h, c);
+        c_ok = rg3 == 0 && isposd_geom(c, x0, y0) && c->stsinglepicAttr.pic.osd_enable == 1;
+        appears = dark ? shown > base + 40 : shown < base - 40;
+        rep(FN(IMP_OSD_SetRgnAttr_PicISP), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d picture at (%d,%d) through IMP_OSD_*_ISP: region luma %.1f -> %.1f (%s)", dark ? "white" : "black", OPW, OPH, x0, y0, base, shown, appears ? "visible" : "NOT VISIBLE");
+        rep(FN(IMP_OSD_GetRgnAttr_ISPPic), rg, g_ok ? V_PASS : V_FAIL, "stored attr: type %d, %ux%u at (%u,%u) stride %u", (int)b->type, b->stsinglepicAttr.pic.osd_width, b->stsinglepicAttr.pic.osd_height, b->stsinglepicAttr.pic.osd_left, b->stsinglepicAttr.pic.osd_top, b->stsinglepicAttr.pic.osd_stride);
+        rep(FN(IMP_ISP_Tuning_GetOsdRgnAttr), rg3, c_ok ? V_PASS : V_FAIL, "after Show: geometry %s, osd_enable %d (expected 1)", isposd_geom(c, x0, y0) ? "as set" : "DIFFERENT", (int)c->stsinglepicAttr.pic.osd_enable);
+# ifdef APITEST_T40
+        {
+            /* T40 direct controls: the shown region as the driver holds it, hidden/shown again through SetSingleOSDAttr, whole-ISP OSD attr round trip */
+            IMPISPSingleOSDAttr *s = (IMPISPSingleOSDAttr *)calloc(1, sizeof(*s)), *s2 = (IMPISPSingleOSDAttr *)calloc(1, sizeof(*s));
+            IMPISPOSDAttr *o1 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1)), *o2 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1));
+            int rgs, rss0, rss1, ro1, ro2, ro3, same = 0;
+            double off, on;
+
+            if (s && s2 && o1 && o2) {
+                s->chx = 0; s->pic_num = h;
+                rgs = IMP_ISP_GetSingleOSDAttr(IMPVI_MAIN, s);
+                *s2 = *s; s2->pic.osd_enable = 0;
+                rss0 = IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s2); off = region_y(cx0, cy0, cx1, cy1);
+                rss1 = IMP_ISP_SetSingleOSDAttr(IMPVI_MAIN, s); on = region_y(cx0, cy0, cx1, cy1);
+                rep(FN(IMP_ISP_GetSingleOSDAttr), rgs, (rgs == 0 && s->pic.osd_enable == 1 && s->pic.osd_left == x0 && s->pic.osd_top == y0 && s->pic.osd_width == OPW) ? V_PASS : V_FAIL,
+                    "driver holds chx %d pic %d: enable %u at (%u,%u) %ux%u", s->chx, s->pic_num, s->pic.osd_enable, s->pic.osd_left, s->pic.osd_top, s->pic.osd_width, s->pic.osd_height);
+                rep(FN(IMP_ISP_SetSingleOSDAttr), rss0 | rss1, (rss0 == 0 && rss1 == 0 && dabs(off - base) < 20 && (dark ? on > base + 40 : on < base - 40)) ? V_PASS : V_FAIL,
+                    "enable 0 -> region luma %.1f (base %.1f), enable 1 -> %.1f", off, base, on);
+                ro1 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o1);
+                ro2 = IMP_ISP_SetOSDAttr(IMPVI_MAIN, o1);
+                ro3 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o2);
+                same = o1->osd_chx[0].osd_type == o2->osd_chx[0].osd_type && o1->osd_chx[0].osd_argb_type == o2->osd_chx[0].osd_argb_type
+                    && o1->osd_chx[0].pic[h].osd_enable == o2->osd_chx[0].pic[h].osd_enable && o1->osd_chx[0].pic[h].osd_left == o2->osd_chx[0].pic[h].osd_left
+                    && o1->osd_chx[0].pic[h].osd_width == o2->osd_chx[0].pic[h].osd_width;
+                {
+                    double again = region_y(cx0, cy0, cx1, cy1);
+                    rep(FN(IMP_ISP_GetOSDAttr), ro1 | ro3, (ro1 == 0 && ro3 == 0 && same) ? V_PASS : V_FAIL, "chx0 type %d argb %d pic[%d] enable %u at (%u,%u); read again after Set: %s", (int)o1->osd_chx[0].osd_type, (int)o1->osd_chx[0].osd_argb_type, h, o1->osd_chx[0].pic[h].osd_enable, o1->osd_chx[0].pic[h].osd_left, o1->osd_chx[0].pic[h].osd_top, same ? "same" : "DIFFERENT");
+                    rep(FN(IMP_ISP_SetOSDAttr), ro2, (ro2 == 0 && (dark ? again > base + 40 : again < base - 40)) ? V_PASS : V_FAIL, "rt: attr as read written back (ret %d), picture still there: region luma %.1f", ro2, again);
+                }
+            }
+            free(s); free(s2); free(o1); free(o2);
+        }
+# else
+        {
+            /* T41: per-channel OSD attr and block (control 0x080000a1 / a2), written back as read */
+            IMPISPOSDAttr *oa = (IMPISPOSDAttr *)calloc(1, sizeof(*oa)), *ob = (IMPISPOSDAttr *)calloc(1, sizeof(*oa));
+            IMPISPOSDBlockAttr *ba = (IMPISPOSDBlockAttr *)calloc(1, sizeof(*ba)), *bb = (IMPISPOSDBlockAttr *)calloc(1, sizeof(*ba));
+            int ra, rsa, rb, rsb, rb2, ra2;
+            double again, again_a, off_b;
+
+            if (oa && ob && ba && bb) {
+                ra = IMP_ISP_Tuning_GetOSDAttr(IMPVI_MAIN, oa);
+                rb = IMP_ISP_Tuning_GetOSDBlock(IMPVI_MAIN, ba);
+                rsa = IMP_ISP_Tuning_SetOSDAttr(IMPVI_MAIN, oa);
+                again_a = region_y(cx0, cy0, cx1, cy1);
+                /* the driver returns the picture address as a KSEG0 virtual address, the control takes the physical one */
+                ba->osd_image = (char *)((uintptr_t)ba->osd_image & 0x1fffffffu);
+                *bb = *ba; bb->osd_enable = 0;
+                rsb = IMP_ISP_Tuning_SetOSDBlock(IMPVI_MAIN, bb);
+                off_b = region_y(cx0, cy0, cx1, cy1);
+                rsb |= IMP_ISP_Tuning_SetOSDBlock(IMPVI_MAIN, ba);
+                ra2 = IMP_ISP_Tuning_GetOSDAttr(IMPVI_MAIN, ob);
+                rb2 = IMP_ISP_Tuning_GetOSDBlock(IMPVI_MAIN, bb);
+                again = region_y(cx0, cy0, cx1, cy1);
+                rep(FN(IMP_ISP_Tuning_GetOSDAttr), ra | ra2, (ra == 0 && ra2 == 0 && oa->osd_type == IMP_ISP_PIC_ARGB_8888 && oa->osd_argb_type == IMP_ISP_ARGB_TYPE_ARGB) ? V_PASS : V_FAIL,
+                    "type %d argb %d alpha_disable %d (region was sent as ARGB8888 / ARGB)", (int)oa->osd_type, (int)oa->osd_argb_type, (int)oa->osd_pixel_alpha_disable);
+                rep(FN(IMP_ISP_Tuning_GetOSDBlock), rb | rb2, (rb == 0 && rb2 == 0 && ba->osd_width == OPW && ba->osd_height == OPH && ba->osd_left == x0 && ba->osd_top == y0) ? V_PASS : V_FAIL,
+                    "pinum %u enable %u at (%u,%u) %ux%u stride %u", ba->pinum, ba->osd_enable, ba->osd_left, ba->osd_top, ba->osd_width, ba->osd_height, ba->osd_stride);
+                rep(FN(IMP_ISP_Tuning_SetOSDAttr), rsa, (rsa == 0 && ob->osd_type == oa->osd_type && ob->osd_argb_type == oa->osd_argb_type && (dark ? again_a > base + 40 : again_a < base - 40)) ? V_PASS : V_FAIL,
+                    "rt: attr as read written back (ret %d), read again equal, picture still there: region luma %.1f", rsa, again_a);
+                rep(FN(IMP_ISP_Tuning_SetOSDBlock), rsb, (rsb == 0 && bb->osd_left == ba->osd_left && bb->osd_top == ba->osd_top && bb->osd_width == ba->osd_width && dabs(off_b - base) < 20 && (dark ? again > base + 40 : again < base - 40)) ? V_PASS : V_FAIL,
+                    "block with osd_enable 0: region luma %.1f (base %.1f); block as read (image %p) written back: region luma %.1f (ret %d), read again equal", off_b, base, (void *)ba->osd_image, again, rsb);
+            }
+            free(oa); free(ob); free(ba); free(bb);
+        }
+# endif
+        rhide = IMP_OSD_ShowRgn_ISP(0, h, 0);
+        hidden = region_y(cx0, cy0, cx1, cy1);
+        gone = dabs(hidden - base) < 20;
+        rd = IMP_OSD_DestroyRgn_ISP(0, h); rd2 = IMP_OSD_DestroyRgn_ISP(0, h2);
+        rep(FN(IMP_OSD_ShowRgn_ISP), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
+        rep(FN(IMP_OSD_DestroyRgn_ISP), rd | rd2, (rd == 0 && rd2 == 0 && flow()) ? V_PASS : V_FAIL, "handles %d and %d destroyed, frames flow", h, h2);
+        isposd_cons_down(jenc);
+        if (oexit) oexit();
+out:
+        free(pic); free(a); free(b); free(c);
+    }
+}
+#else
+static void cs_isposdapi(void) {}
+#endif
+
+/* ---------------------------------------------------------------------------------------------- T41 misc ISP calls (backlog T41) */
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+/* GetAEEvList: declared in the 1.2.5/1.2.6 English header only (the build uses the zh one): own prototype */
+typedef struct { IMPISPTuningOpsMode enable; uint64_t ev[15]; } AtAeEvList;
+extern int32_t IMP_ISP_Tuning_GetAEEvList(IMPVI_NUM num, AtAeEvList *attr);
+# pragma weak IMP_ISP_Tuning_GetAEEvList
+
+static void cs_aeevlist(void)
+{
+    NEED(IMP_ISP_Tuning_GetAEEvList) {
+        G(AtAeEvList, l); G(AtAeEvList, l2);
+        int r = IMP_ISP_Tuning_GetAEEvList(IMPVI_MAIN, l), r2 = IMP_ISP_Tuning_GetAEEvList(IMPVI_MAIN, l2), i, same = 1;
+
+        gchk(l); gchk(l2);
+        for (i = 0; i < 15; i++) if (l->ev[i] != l2->ev[i]) same = 0;
+        rep(FN(IMP_ISP_Tuning_GetAEEvList), r | r2, (r == 0 && r2 == 0 && (l->enable == 0 || l->enable == 1) && same) ? V_PASS : V_FAIL,
+            "enable %d, ev[0..2] = %llu %llu %llu, ev[14] = %llu; second read %s (static table)", (int)l->enable, (unsigned long long)l->ev[0], (unsigned long long)l->ev[1], (unsigned long long)l->ev[2], (unsigned long long)l->ev[14], same ? "equal" : "DIFFERENT");
+        gfree(l); gfree(l2);
+    }
+}
+#else
+static void cs_aeevlist(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_GetFaceAeWeiget && HAS_IMP_ISP_Tuning_SetFaceAeWeiget
+static void cs_faceaeweight(void)
+{
+    NEED(IMP_ISP_Tuning_GetFaceAeWeiget) NEED(IMP_ISP_Tuning_SetFaceAeWeiget) {
+        G(IMPISPFaceAeWeiget, o); G(IMPISPFaceAeWeiget, n); G(IMPISPFaceAeWeiget, g);
+        int r0 = IMP_ISP_Tuning_GetFaceAeWeiget(IMPVI_MAIN, o), r1, r2, r3;
+
+        gchk(o);
+        *n = *o; n->global_weight = o->global_weight ^ 1; n->roi_weight = o->roi_weight ^ 2; n->smooth = o->smooth ^ 1;
+        r1 = IMP_ISP_Tuning_SetFaceAeWeiget(IMPVI_MAIN, n);
+        r2 = IMP_ISP_Tuning_GetFaceAeWeiget(IMPVI_MAIN, g); gchk(g);
+        r3 = IMP_ISP_Tuning_SetFaceAeWeiget(IMPVI_MAIN, o);
+        rep(FN(IMP_ISP_Tuning_GetFaceAeWeiget), r0 | r2, (r0 == 0 && r2 == 0 && g->global_weight == n->global_weight && g->roi_weight == n->roi_weight && g->smooth == n->smooth) ? V_PASS : V_FAIL,
+            "initial global %u roi %u smooth %u; after Set: %u %u %u (set %u %u %u)", o->global_weight, o->roi_weight, o->smooth, g->global_weight, g->roi_weight, g->smooth, n->global_weight, n->roi_weight, n->smooth);
+        rep(FN(IMP_ISP_Tuning_SetFaceAeWeiget), r1 | r3, (r1 == 0 && r3 == 0 && flow()) ? V_PASS : V_FAIL, "rt: changed weights read back, initial values restored (ret %d), frames flow", r3);
+        gfree(o); gfree(n); gfree(g);
+    }
+}
+#else
+static void cs_faceaeweight(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetTmoFaceae
+static void cs_tmofaceae(void)
+{
+    NEED(IMP_ISP_Tuning_SetTmoFaceae) {
+        G(IMPISPTmoFaceae, t);
+        Fst base, on, back;
+        int r1, r2, ms;
+
+        base = fst(800);
+        t->tmo_roinum = 1; t->tmo_xcent[0] = (uint16_t)(g_sw / 2); t->tmo_ycent[0] = (uint16_t)(g_sh / 2); t->tmo_distep[0] = (uint16_t)(g_sh / 3);
+        t->tmo_uplumthr[0] = 128; t->tmo_upk[0] = 16;
+        r1 = IMP_ISP_Tuning_SetTmoFaceae(IMPVI_MAIN, t); on = fst(1500);
+        memset(t, 0, sizeof(*t));
+        r2 = IMP_ISP_Tuning_SetTmoFaceae(IMPVI_MAIN, t); back = recover(base.y, &ms);
+        {
+            int eff = on.ok && base.ok && on.y > base.y + 3;
+            rep(FN(IMP_ISP_Tuning_SetTmoFaceae), r1 | r2, (r1 == 0 && r2 == 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sone brighten region at the centre: Y %.1f -> %.1f; 0 regions: back to Y %.1f in %d ms, frames flow", RTMSG(eff), base.y, on.y, back.y, ms);
+        }
+        gfree(t);
+    }
+}
+#else
+static void cs_tmofaceae(void) {}
+#endif
+
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetDrawBlock && HAS_IMP_ISP_Tuning_GetDrawBlock
+static void cs_drawblock(void)
+{
+    NEED(IMP_ISP_Tuning_SetDrawBlock) NEED(IMP_ISP_Tuning_GetDrawBlock) {
+        G(IMPISPDrawBlockAttr, a); G(IMPISPDrawBlockAttr, g);
+        int x = g_sw / 4, y = g_sh / 4, w = g_sw / 2, bw = 24, r1, r2, r3;
+        double base, on, off;
+
+        base = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
+        a->pinum = 0; a->type = IMP_ISP_DRAW_WIND; a->color_type = IMPISP_MASK_TYPE_YUV;
+        a->cfg.wind.enable = 1; a->cfg.wind.left = x; a->cfg.wind.top = y; a->cfg.wind.width = w; a->cfg.wind.height = g_sh / 2;
+        a->cfg.wind.color.ayuv.y_value = base < 140 ? 235 : 16; a->cfg.wind.color.ayuv.u_value = 128; a->cfg.wind.color.ayuv.v_value = 128;
+        a->cfg.wind.line_width = bw; a->cfg.wind.alpha = 7;
+        r1 = IMP_ISP_Tuning_SetDrawBlock(IMPVI_MAIN, a);
+        on = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
+        memset(g, 0, sizeof(*g)); g->pinum = 0; g->type = IMP_ISP_DRAW_WIND;
+        r2 = IMP_ISP_Tuning_GetDrawBlock(IMPVI_MAIN, g); gchk(g);
+        a->cfg.wind.enable = 0; r3 = IMP_ISP_Tuning_SetDrawBlock(IMPVI_MAIN, a);
+        off = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
+        rep(FN(IMP_ISP_Tuning_SetDrawBlock), r1 | r3, (r1 == 0 && r3 == 0 && (base < 140 ? on > base + 30 : on < base - 30) && dabs(off - base) < 20 && flow()) ? V_PASS : V_FAIL,
+            "window frame %d px at (%d,%d): top edge luma %.1f -> %.1f; disabled: %.1f (base %.1f); frames flow", bw, x, y, base, on, off, base);
+        rep(FN(IMP_ISP_Tuning_GetDrawBlock), r2, (r2 == 0 && g->cfg.wind.enable == 1 && g->cfg.wind.left == x && g->cfg.wind.top == y && g->cfg.wind.width == w && g->cfg.wind.line_width == bw) ? V_PASS : V_FAIL,
+            "read while drawn: enable %u at (%u,%u) width %u line %u", g->cfg.wind.enable, g->cfg.wind.left, g->cfg.wind.top, g->cfg.wind.width, g->cfg.wind.line_width);
+        gfree(a); gfree(g);
+    }
+}
+#else
+static void cs_drawblock(void) {}
+#endif
+
+/* ---------------------------------------------------------------------------------------------- T40 ISP calls (backlog T40) */
+#if defined(APITEST_T40)
+static void cs_scalerlv_t40(void)
+{
+    NEED(IMP_ISP_SetScalerLv) {
+        G(IMPISPScalerLvAttr, a);
+        int r1, r2, r3, ms;
+        Fst lo, hi, back, base;
+
+        base = fst(800);
+        a->chx = 1; a->mode = IMPISP_SCALER_FITTING_CRUVE; a->level = 0;
+        r1 = IMP_ISP_SetScalerLv(IMPVI_MAIN, a); lo = fst(1200);
+        a->level = 128;
+        r2 = IMP_ISP_SetScalerLv(IMPVI_MAIN, a); hi = fst(1200);
+        a->level = 64;
+        r3 = IMP_ISP_SetScalerLv(IMPVI_MAIN, a); back = recover(base.y, &ms);
+        {
+            int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+            rep(FN(IMP_ISP_SetScalerLv), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && lo.ok && hi.ok && lo.y > 5 && hi.y > 5 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%sch1 level 0/128/64 accepted, detail H %.3f at 0 vs %.3f at 128, Y %.1f/%.1f, picture %s alive (Y %.1f)", RTMSG(eff), lo.h, hi.h, lo.y, hi.y, ms >= 0 ? "" : "NOT", back.y);
+        }
+        gfree(a);
+    }
+}
+
+static void cs_fixedcontrast(void)
+{
+    NEED(IMP_ISP_Tuning_SetFixedContraster) {
+        G(IMPISPFixedContrastAttr, a);
+        Fst base, on, back;
+        int r1, r2, ms;
+
+        base = fst(800);
+        a->mode = 1; a->range_low = 70; a->range_high = 180;
+        r1 = IMP_ISP_Tuning_SetFixedContraster(IMPVI_MAIN, a); on = fst(1500);
+        a->mode = 0; a->range_low = 16; a->range_high = 235;
+        r2 = IMP_ISP_Tuning_SetFixedContraster(IMPVI_MAIN, a); back = recover(base.y, &ms);
+        {
+            int eff = on.ok && base.ok && dabs(on.sd - base.sd) > 3;
+            rep(FN(IMP_ISP_Tuning_SetFixedContraster), r1 | r2, (r1 == 0 && r2 == 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%srange 70..180 on: luma std-dev %.1f -> %.1f (Y %.1f -> %.1f); off: back to Y %.1f in %d ms, frames flow", RTMSG(eff), base.sd, on.sd, base.y, on.y, back.y, ms);
+        }
+        gfree(a);
+    }
+}
+
+static void cs_faceawb(void)
+{
+    NEED(IMP_ISP_Tuning_SetFaceAwb) NEED(IMP_ISP_Tuning_GetFaceAwb) {
+        IMPISPFaceAttr o, f, g, z;
+        Fst base, on, back;
+        int r0, r1, r2, r3, ms;
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&f, 0, sizeof(f)); memset(&z, 0, sizeof(z));
+        r0 = IMP_ISP_Tuning_GetFaceAwb(IMPVI_MAIN, &o);
+        base = fst(600);
+        f.enable = IMPISP_TUNING_OPS_MODE_ENABLE; f.left = g_sw / 4; f.top = g_sh / 4; f.right = g_sw * 3 / 4; f.bottom = g_sh * 3 / 4; f.target = 128;
+        r1 = IMP_ISP_Tuning_SetFaceAwb(IMPVI_MAIN, &f); on = fst(1500);
+        r2 = IMP_ISP_Tuning_GetFaceAwb(IMPVI_MAIN, &g);
+        z.enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r3 = IMP_ISP_Tuning_SetFaceAwb(IMPVI_MAIN, &z); back = recover(base.y, &ms);
+        {
+            int eff = on.ok && base.ok && (dabs(on.u - base.u) + dabs(on.v - base.v)) > 0.8;
+            rep(FN(IMP_ISP_Tuning_GetFaceAwb), r0 | r2, (r0 == 0 && r2 == 0 && g.enable == f.enable && g.left == f.left && g.top == f.top && g.right == f.right && g.bottom == f.bottom) ? V_PASS : V_FAIL,
+                "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target);
+            rep(FN(IMP_ISP_Tuning_SetFaceAwb), r1 | r3, (r1 == 0 && r3 == 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%scentre window target 128: chroma U/V %.2f/%.2f -> %.2f/%.2f; off: back to Y %.1f in %d ms, frames flow", RTMSG(eff), base.u, base.v, on.u, on.v, back.y, ms);
+        }
+    }
+}
+#else
+static void cs_scalerlv_t40(void) {}
+static void cs_fixedcontrast(void) {}
+static void cs_faceawb(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2287,5 +2651,13 @@ void t_cases(void)
     if (cs_on("sensorflip")) cs_sensorflip(); wdog("cases", 90);
     if (cs_on("aestrategy")) cs_aestrategy(); wdog("cases", 90);
     if (cs_on("alloc")) cs_alloc();       wdog("cases", 60);
+    if (cs_on("isposdapi")) cs_isposdapi(); wdog("cases", 90);
+    if (cs_on("aeevlist")) cs_aeevlist();  wdog("cases", 60);
+    if (cs_on("faceaeweight")) cs_faceaeweight(); wdog("cases", 60);
+    if (cs_on("tmofaceae")) cs_tmofaceae(); wdog("cases", 90);
+    if (cs_on("drawblock")) cs_drawblock(); wdog("cases", 90);
+    if (cs_on("scalerlv_t40")) cs_scalerlv_t40(); wdog("cases", 90);
+    if (cs_on("fixedcontrast")) cs_fixedcontrast(); wdog("cases", 90);
+    if (cs_on("faceawb")) cs_faceawb();   wdog("cases", 90);
     wdog("cases", 60);
 }

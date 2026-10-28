@@ -2,13 +2,14 @@
 """Completeness check (part of `make check`): every vendor function of a SoC (tools/export-check/vendor-<SoC>.txt) has a test
 case in tools/apitest (its name appears in the case sources, incl. the picture/devtest sources) or an entry in
 tools/apitest/untestable.yaml (category + reason).  Exit 1 on a function with neither, a bad entry, or an entry for a
-function that has a test case.  Prints the number of entries per category (backlog = testable, no case yet)."""
+function that has a test case.  Prints the number of entries per category (backlog = testable, no case yet; a SoC in STRICT fails on any backlog)."""
 import fnmatch, glob, os, re, sys
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 SOCS = ["T10", "T20", "T21", "T23", "T31", "T40", "T41"]
+STRICT = ["T40", "T41"]     # SoCs whose backlog is closed: a function that is still category "backlog" fails the check (T41/T40 since 2026-10-28)
 CATS = {"sound", "reboot", "power", "hardware", "wedges-isp", "no-signature", "own-topology", "not-in-soc-api", "backlog"}
 
 srcs = [f for f in glob.glob(os.path.join(HERE, "*.c"))] + glob.glob(os.path.join(ROOT, "tests", "t40", "devtest", "*.c"))
@@ -38,6 +39,9 @@ for soc in SOCS:
         stats[soc][ent[0]["category"]] += 1
 for soc in SOCS:
     print("apitest coverage %s: %s" % (soc, ", ".join("%s %d" % (k, v) for k, v in sorted(stats.get(soc, {}).items())) or "all vendor functions have a case"))
+for soc in STRICT:
+    if stats.get(soc, {}).get("backlog"):
+        bad.append("%s is strict: %d function(s) are still category backlog (write a case or classify them with a concrete reason)" % (soc, stats[soc]["backlog"]))
 for m in bad:
     print("ERROR", m)
 for soc, n in missing:

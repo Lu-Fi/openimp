@@ -452,7 +452,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_Bypass_Bind": {
@@ -544,7 +544,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_DelSensor": {
@@ -621,7 +621,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_DisableSensor": {
@@ -698,7 +698,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_DisableTuning": {
@@ -775,7 +775,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_EnableSensor": {
@@ -852,7 +852,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_EnableTuning": {
@@ -929,7 +929,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_Get/SetCsccrMode": {
@@ -1262,7 +1262,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_RAW_RwControl": {
@@ -5533,6 +5533,9 @@
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "dev"
+   },
+   "ref": {
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "ISP_Tuning_GetAEFlickerFlag": {
@@ -9410,7 +9413,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_DequeueBuffer": {
@@ -9506,7 +9509,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_DisableChn": {
@@ -9583,7 +9586,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_EnableChn": {
@@ -9660,7 +9663,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_ExternInject_CreateChn": {
@@ -9919,7 +9922,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_Get/SetDirectModeAttr": {
@@ -10071,7 +10074,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "FrameSource_Get/SetPool": {
@@ -10573,11 +10576,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "rt"
    },
    "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34 (API round trip, no visible effect expected)",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -10593,11 +10596,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "n.a.",
-    "T41": "host"
+    "T41": "dev"
    },
    "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -10613,10 +10616,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "dev",
-    "T41": "host"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -10913,10 +10916,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -11086,10 +11089,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -11312,10 +11315,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -11567,11 +11570,11 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "host"
+    "T41": "dev"
    },
    "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)",
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -11644,10 +11647,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "OSD_ShowRgn": {
@@ -11739,10 +11742,10 @@
     "T32": "nob",
     "T33": "nob",
     "T40": "host",
-    "T41": "aud"
+    "T41": "dev"
    },
    "ref": {
-    "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): static audit against the vendor libimp.a, no host test of its own; no camera run yet",
+    "T41": "apitest agg47 2026-10-28 .34",
     "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
    }
   },
@@ -17543,7 +17546,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "System_GetBindbyDest": {
@@ -17888,7 +17891,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T40": "apitest rc3gaps2 2026-10-27 .184",
-    "T41": "apitest rc3gaps2 2026-10-27 .34"
+    "T41": "apitest agg47 2026-10-28 .34"
    }
   },
   "System_MemPoolFree": {

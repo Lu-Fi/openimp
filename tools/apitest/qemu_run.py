@@ -78,7 +78,7 @@ def push(path, dest, mode="755"):
 
 # QR_LIB=<libimp.so>: push that library too and run the guest apitest against it (LD_LIBRARY_PATH=/tmp/at) instead of the image's libimp
 ldp = ""
-if os.environ.get("QR_LIB") and not nopush:
+if os.environ.get("QR_LIB") and not nopush and not os.environ.get("QR_LIBKEEP"):   # QR_LIBKEEP=1: the lib from an earlier push is still in /tmp/at
     lo, _ = push(os.environ["QR_LIB"], "libimp.so")
     print("pushed lib:", lo.strip().splitlines()[-1:] if lo.strip() else lo)
 if os.environ.get("QR_LIB"):
@@ -92,8 +92,8 @@ for c in cases:
     if c.startswith("area:"):        # area:audio -> the whole area (all [A] lines of IMP_ functions reported)
         area = c[5:]; c = area
     elif ":" in c:                   # case:ENVVAR  -> run with ENVVAR=1 (e.g. process:APITEST_PROCESS_BYPASS)
-        c, envx = c.split(":", 1); envx = envx + "=1 "
-    cmd = "cd /tmp/at; " + ldp + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] IMP_DMIC_|^\\[A\\] dmic|^\\[A\\] IMP_(Alloc|Free|Sp_Alloc|Phys_to|Virt_to|FlushCache|Pool|MemPool_|System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|ISP_[A-Z]|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
+        c, envx = c.split(":", 1); envx = " ".join(v + "=1" for v in envx.split(":")) + " "   # case:VAR1:VAR2 -> VAR1=1 VAR2=1
+    cmd = "cd /tmp/at; " + ldp + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] IMP_DMIC_|^\\[A\\] dmic|^\\[A\\] IMP_(Alloc|Free|Sp_Alloc|Phys_to|Virt_to|FlushCache|Pool|MemPool_|System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|ISP_[A-Z]|OSD_[A-Za-z_]*ISP[A-Za-z]*|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
     out, rc = sh(cmd, 300, 90)
     open(os.path.join(outdir, c + ".log"), "w").write(out)
     if rc is None or re.search(r"Kernel panic|Oops|Unable to handle|Restarting system", out):
