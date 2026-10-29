@@ -2659,6 +2659,118 @@ static void cs_aeinfo_t40(void)
     free(a); free(b);
 }
 
+/* #139b: tuning node /dev/tisp commands 0x20007400 (get parameter process), 0x20007401 (set), 0x20007406 (AE
+ * min/max set), 0x20007407 / 0x20007408 (AWB info get / set).  Before the fix all five failed with ret -1 ("copy_to_user
+ * error": the lift tested the asm __copy_user's return value) and their handlers passed 0 for every argument / copied
+ * 28 bytes into a 4-byte local.  Block: +0 module id, +4 size out, +8 parameter id, +0xc sensor, +0x10 data.
+ * par: get every module id 0..0x19 (sensor 0), write the same block back for the settable ids 1..0x17, get again
+ * and compare (size and data).  minmax: AE info get (0x20007404, the 41 ctrl words) -> min/max set with word 35 + 1
+ * -> get shows it -> set the original -> get equal.  awb: get -> set the same -> get equal.  Frames flow after each. */
+static int t40_tisp_par(int fd, uint32_t *p, uint32_t cmd, uint32_t id, uint32_t pid, uint32_t sel)
+{
+    p[0] = id; p[2] = pid; p[3] = sel;
+    return ioctl(fd, cmd, p);
+}
+
+static void cs_tisppar_t40(void)
+{
+    uint32_t *a = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES), *b = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    int fd = open("/dev/tisp", O_RDWR);
+    char gl[512] = "", bad[256] = "";
+    int rg = 0, rs = 0, nset = 0, nbad = 0;
+    uint32_t id;
+
+    if (fd < 0 || !a || !b) {
+        rep("tisp_node_par_get", -1, V_SKIP, "/dev/tisp not usable (fd %d)", fd);
+        goto out;
+    }
+    for (id = 0; id <= 0x19; id++) {
+        int r;
+
+        memset(a, 0, T40_TISP_PAR_BYTES);
+        r = t40_tisp_par(fd, a, 0x20007400, id, 0, 0);
+        rg |= r;
+        snprintf(gl + strlen(gl), sizeof(gl) - strlen(gl), " %x:%d%s", id, (int)a[1], r ? "!" : "");
+        if (r == 0 && id >= 1 && id <= 0x17 && a[1] > 0 && a[1] <= T40_TISP_PAR_BYTES - 16) {
+            uint32_t n = a[1];
+
+            nset++;
+            r = t40_tisp_par(fd, a, 0x20007401, id, 0, 0);
+            rs |= r;
+            memset(b, 0, T40_TISP_PAR_BYTES);
+            r |= t40_tisp_par(fd, b, 0x20007400, id, 0, 0);
+            if (r || b[1] != n || memcmp(a + 4, b + 4, n)) {
+                nbad++;
+                snprintf(bad + strlen(bad), sizeof(bad) - strlen(bad), " %x", id);
+            }
+        }
+    }
+    rep("tisp_node_par_get", rg, (rg == 0 && flow()) ? V_PASS : V_FAIL, "ids 0..0x19 id:size%s, frames flow", gl);
+    rep("tisp_node_par_set", rs, (rs == 0 && nbad == 0 && nset > 0 && flow()) ? V_PASS : V_FAIL,
+        "%d settable ids written back as read, read back %s%s, frames flow", nset, nbad ? "DIFFERENT for" : "equal", bad);
+out:
+    if (fd >= 0)
+        close(fd);
+    free(a); free(b);
+}
+
+static void cs_tispminmax_t40(void)
+{
+    uint32_t *a = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES), *b = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    uint32_t *c = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    int fd = open("/dev/tisp", O_RDWR);
+
+    if (fd < 0 || !a || !b || !c) {
+        rep("tisp_node_ae_minmax", -1, V_SKIP, "/dev/tisp not usable (fd %d)", fd);
+    } else {
+        int r0, r1, r2, r3, r4, ok1, ok2;
+        uint32_t w35, shown;
+
+        r0 = t40_tisp_ae_get(fd, a, 0);
+        w35 = a[4 + 35];
+        memcpy(b, a, T40_TISP_PAR_BYTES);
+        b[4 + 35] = w35 + 1;
+        r1 = t40_tisp_par(fd, b, 0x20007406, 0, 0, 0);
+        r2 = t40_tisp_ae_get(fd, c, 0);
+        shown = c[4 + 35];
+        ok1 = shown == w35 + 1 && !memcmp(a + 4, c + 4, 35 * 4);
+        r3 = t40_tisp_par(fd, a, 0x20007406, 0, 0, 0);
+        r4 = t40_tisp_ae_get(fd, c, 0);
+        ok2 = !memcmp(a + 4, c + 4, 0xa4);
+        rep("tisp_node_ae_minmax", r0 | r1 | r2 | r3 | r4, (!(r0 | r1 | r2 | r3 | r4) && b[1] == 0xa4 && ok1 && ok2 && flow()) ? V_PASS : V_FAIL,
+            "main: min/max word 35 %u -> set %u, AE info shows %u (%s), words 0..34 %s; restored %s, frames flow",
+            w35, w35 + 1, shown, ok1 ? "landed" : "NOT landed", ok1 ? "unchanged" : "?", ok2 ? "equal" : "DIFFERENT");
+    }
+    if (fd >= 0)
+        close(fd);
+    free(a); free(b); free(c);
+}
+
+static void cs_tispawb_t40(void)
+{
+    uint32_t *a = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES), *b = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    int fd = open("/dev/tisp", O_RDWR);
+
+    if (fd < 0 || !a || !b) {
+        rep("tisp_node_awb_info", -1, V_SKIP, "/dev/tisp not usable (fd %d)", fd);
+    } else {
+        int r1, r2, r3, same;
+
+        memset(a, 0, T40_TISP_PAR_BYTES);
+        r1 = t40_tisp_par(fd, a, 0x20007407, 0, 0, 0);
+        r2 = t40_tisp_par(fd, a, 0x20007408, 0, 0, 0);
+        memset(b, 0, T40_TISP_PAR_BYTES);
+        r3 = t40_tisp_par(fd, b, 0x20007407, 0, 0, 0);
+        same = !memcmp(a + 4, b + 4, 28);
+        rep("tisp_node_awb_info", r1 | r2 | r3, (!(r1 | r2 | r3) && a[1] == 28 && b[1] == 28 && same && flow()) ? V_PASS : V_FAIL,
+            "main: get/set/get of the 28-byte AWB mode block (mode %u, gains %u/%u %u/%u %u/%u), read back %s, frames flow",
+            b[4], b[5], b[6], b[7], b[8], b[9], b[10], same ? "equal" : "DIFFERENT");
+    }
+    if (fd >= 0)
+        close(fd);
+    free(a); free(b);
+}
+
 /* #139: GetFaceAe (control 0x8000035) used to copy an uninitialised stack slot; it reads back what
  * SetFaceAe stored (no picture check: QEMU-safe round trip, the effect case is t40dev A9). */
 static void cs_faceae_t40(void)
@@ -2719,13 +2831,16 @@ static void cs_scalerlv_t40(void) {}
 static void cs_fixedcontrast(void) {}
 static void cs_faceawb(void) {}
 static void cs_aeinfo_t40(void) {}
+static void cs_tisppar_t40(void) {}
+static void cs_tispminmax_t40(void) {}
+static void cs_tispawb_t40(void) {}
 static void cs_faceae_t40(void) {}
 static void cs_switchbin_t40(void) {}
 #endif
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "tisppar_t40", "tispminmax_t40", "tispawb_t40" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2805,6 +2920,9 @@ void t_cases(void)
     if (cs_on("fixedcontrast")) cs_fixedcontrast(); wdog("cases", 90);
     if (cs_on("faceawb")) cs_faceawb();   wdog("cases", 90);
     if (cs_on("aeinfo_t40")) cs_aeinfo_t40(); wdog("cases", 60);
+    if (cs_on("tisppar_t40")) cs_tisppar_t40(); wdog("cases", 90);
+    if (cs_on("tispminmax_t40")) cs_tispminmax_t40(); wdog("cases", 60);
+    if (cs_on("tispawb_t40")) cs_tispawb_t40(); wdog("cases", 60);
     if (cs_on("faceae_t40")) cs_faceae_t40(); wdog("cases", 60);
     if (cs_on("switchbin_t40")) cs_switchbin_t40(); wdog("cases", 90);
     wdog("cases", 60);
