@@ -2613,15 +2613,119 @@ static void cs_faceawb(void)
         }
     }
 }
+
+/* #139: tuning node /dev/tisp, AE manual block of the OEM tuning tool: 0x20007404 get / 0x20007405 set on a
+ * 0x5010-byte parameter block (+4 size, +0xc sensor 0 main / 1 sec, +0x10 the 164-byte block).  The get
+ * uses the block of the previous call, so 0x20007402 (version, copies the block in and out) selects the
+ * sensor first.  Before the fix every set oopsed (lifted stores through never-assigned pointers).
+ * Same-value get/set/get per sensor block, then frames flow.  Not a libimp API: reported as tisp_node_*. */
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#define T40_TISP_PAR_BYTES 0x5010
+static int t40_tisp_ae_get(int fd, uint32_t *p, uint32_t sel)
+{
+    int r;
+
+    memset(p, 0, T40_TISP_PAR_BYTES); p[3] = sel;
+    r = ioctl(fd, 0x20007402, p);
+    p[3] = sel;
+    return r | ioctl(fd, 0x20007404, p);
+}
+
+static void cs_aeinfo_t40(void)
+{
+    uint32_t *a = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES), *b = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    int fd = open("/dev/tisp", O_RDWR);
+    uint32_t sel;
+
+    if (fd < 0 || !a || !b) {
+        rep("tisp_node_ae_info", -1, V_SKIP, "/dev/tisp not usable (fd %d)", fd);
+    } else {
+        for (sel = 0; sel < 2; sel++) {
+            int r1, r2, r3, same;
+
+            r1 = t40_tisp_ae_get(fd, a, sel);
+            a[3] = sel;
+            r2 = ioctl(fd, 0x20007405, a);
+            r3 = t40_tisp_ae_get(fd, b, sel);
+            same = !memcmp(a + 4, b + 4, 0xa4);
+            rep("tisp_node_ae_info", r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && a[1] == 0xa4 && same && flow()) ? V_PASS : V_FAIL,
+                "%s: get/set/get of the 164-byte AE manual block (size %u, ae_manual %u it %u ag %u, short ae_manual %u), read back %s, frames flow",
+                sel ? "sec" : "main", a[1], a[4], a[4 + 3], a[4 + 1], a[4 + 24], same ? "equal" : "DIFFERENT");
+        }
+    }
+    if (fd >= 0)
+        close(fd);
+    free(a); free(b);
+}
+
+/* #139: GetFaceAe (control 0x8000035) used to copy an uninitialised stack slot; it reads back what
+ * SetFaceAe stored (no picture check: QEMU-safe round trip, the effect case is t40dev A9). */
+static void cs_faceae_t40(void)
+{
+    NEED(IMP_ISP_Tuning_SetFaceAe) NEED(IMP_ISP_Tuning_GetFaceAe) {
+        IMPISPFaceAttr o, f, g, h, z;
+        int r0, r1, r2, r3, r4;
+
+        memset(&o, 0, sizeof(o)); memset(&f, 0, sizeof(f)); memset(&g, 0x5a, sizeof(g)); memset(&h, 0x5a, sizeof(h)); memset(&z, 0, sizeof(z));
+        r0 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &o);
+        f.enable = IMPISP_TUNING_OPS_MODE_ENABLE; f.left = g_sw / 4; f.top = g_sh / 4; f.right = g_sw * 3 / 4; f.bottom = g_sh * 3 / 4; f.target = 160;
+        r1 = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &f);
+        r2 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &g);
+        z.enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r3 = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &z);
+        r4 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &h);
+        rep(FN(IMP_ISP_Tuning_GetFaceAe), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && !memcmp(&g, &f, sizeof(f)) && h.enable == IMPISP_TUNING_OPS_MODE_DISABLE) ? V_PASS : V_FAIL,
+            "initial enable %d; after set: enable %d (%u,%u)-(%u,%u) target %u (%s); after disable: enable %d",
+            (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target, !memcmp(&g, &f, sizeof(f)) ? "as set" : "DIFFERENT", (int)h.enable);
+        rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3, (r1 == 0 && r3 == 0 && flow()) ? V_PASS : V_FAIL, "centre window target 160 then disable accepted, frames flow");
+    }
+}
+
+/* #139: SwitchBin on T40 (control 0x80000a5) oopsed in the lifted tisp_core_switch_bin (stores through
+ * never-assigned pointers) and returned 1 on success.  The T41 case needs GetDefaultBinPath, which is -1 on
+ * T40; this one switches to the bin file of the running sensor (/etc/sensor/<sensor>-t40.bin), then back
+ * to the default with enable 0.  Ret 0 and frames flow afterwards. */
+#include <glob.h>
+static void cs_switchbin_t40(void)
+{
+    NEED(IMP_ISP_Tuning_SwitchBin) {
+        G(IMPISPBinAttr, a);
+        glob_t gl;
+        int r1 = -1, r2 = -1, ms = 0;
+        Fst base, back;
+
+        char pat[96];
+
+        memset(&gl, 0, sizeof(gl));
+        snprintf(pat, sizeof(pat), "/etc/sensor/%s-t40.bin", g_sensor.name);   /* the running sensor's bin */
+        if (glob(pat, 0, NULL, &gl) != 0 || gl.gl_pathc == 0) {
+            rep(FN(IMP_ISP_Tuning_SwitchBin), -1, V_SKIP, "no %s", pat);
+        } else {
+            base = fst(800);
+            a->enable = IMPISP_TUNING_OPS_MODE_ENABLE; snprintf(a->bname, sizeof(a->bname), "%s", gl.gl_pathv[0]);
+            r1 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a);
+            a->enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+            r2 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a); back = recover(base.y, &ms);
+            rep(FN(IMP_ISP_Tuning_SwitchBin), r1 | r2, (r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "rt: %.50s (ret %d), back to the default (ret %d), Y %.1f -> %.1f, frames flow", a->bname, r1, r2, base.y, back.y);
+        }
+        globfree(&gl);
+        gfree(a);
+    }
+}
 #else
 static void cs_scalerlv_t40(void) {}
 static void cs_fixedcontrast(void) {}
 static void cs_faceawb(void) {}
+static void cs_aeinfo_t40(void) {}
+static void cs_faceae_t40(void) {}
+static void cs_switchbin_t40(void) {}
 #endif
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2700,5 +2804,8 @@ void t_cases(void)
     if (cs_on("scalerlv_t40")) cs_scalerlv_t40(); wdog("cases", 90);
     if (cs_on("fixedcontrast")) cs_fixedcontrast(); wdog("cases", 90);
     if (cs_on("faceawb")) cs_faceawb();   wdog("cases", 90);
+    if (cs_on("aeinfo_t40")) cs_aeinfo_t40(); wdog("cases", 60);
+    if (cs_on("faceae_t40")) cs_faceae_t40(); wdog("cases", 60);
+    if (cs_on("switchbin_t40")) cs_switchbin_t40(); wdog("cases", 90);
     wdog("cases", 60);
 }
