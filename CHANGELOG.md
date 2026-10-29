@@ -8,6 +8,15 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-139-case` (2026-10-29)
+
+- **apitest T40: cases for the lifted-handler sweep of open-tx-isp #139** (tools/apitest). `aeinfo_t40`: tuning node
+  `/dev/tisp` AE manual block get/set/get (0x20007404/05) per sensor block, reported as `tisp_node_ae_info`;
+  `faceae_t40`: SetFaceAe/GetFaceAe round trip without a picture check; `switchbin_t40`: SwitchBin to the running
+  sensor's `/etc/sensor/<sensor>-t40.bin` and back to the default (the T41 case needs GetDefaultBinPath, -1 on T40).
+  `qemu_run.py` keeps `tisp_node_*` result lines. QEMU T40 only (no camera yet): all PASS with the #139 driver; on
+  origin/next `aeinfo_t40` FAILs (every tuning-node command failed), `faceae_t40` and `framedrop` pass.
+
 ## Branch `claude/apitest-cov` (2026-10-27)
 
 - **apitest: "result unclear" cells resolved, T23 backlog 56 -> 18** (tools/apitest). Pass criteria that prove the effect:
