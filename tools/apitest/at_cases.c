@@ -3196,20 +3196,20 @@ extern int IMP_OSD_UpdateRgnAttrData_ISP(int sensor, int handle, T23IspPic *a);
 #pragma weak IMP_OSD_DestroyRgn_ISP
 #pragma weak IMP_OSD_UpdateRgnAttrData_ISP
 
-/* mean luma of a rectangle of FS channel ch (its own coordinates), 2 frames after a settle time */
+/* mean luma of a rectangle of FS channel ch (its own coordinates), 2 frames after a settle time and 8 dropped ones */
 static double reg_luma(int ch, int x0, int y0, int x1, int y1)
 {
     double s = 0;
     int f, n = 0;
 
     usleep(700000);
-    for (f = 0; f < 4; f++) {
+    for (f = 0; f < 10; f++) {     /* 8 frames dropped: the FIFO of ch1 holds frames from before the change */
         IMPFrameInfo *fr = NULL;
         const unsigned char *y;
         int i, j;
 
         if (IMP_FrameSource_GetFrame(ch, &fr) < 0 || !fr) continue;
-        if (f >= 2) {
+        if (f >= 8) {
             y = (const unsigned char *)(uintptr_t)fr->virAddr;
             for (j = y0; j < y1 && j < (int)fr->height; j++)
                 for (i = x0; i < x1 && i < (int)fr->width; i++) { s += y[(size_t)j * fr->width + i]; n++; }
@@ -3217,6 +3217,38 @@ static double reg_luma(int ch, int x0, int y0, int x1, int y1)
         IMP_FrameSource_ReleaseFrame(ch, fr);
     }
     return n ? s / n : -1;
+}
+
+/* coarse luma map of FS ch1 (16 x 9 cells), printed with a tag (cover debugging) */
+static void luma_grid(const char *tag)
+{
+    IMPFrameInfo *fr = NULL;
+    int k;
+
+    usleep(700000);
+    for (k = 0; k < 3; k++) {
+        if (fr) IMP_FrameSource_ReleaseFrame(1, fr);
+        fr = NULL;
+        if (IMP_FrameSource_GetFrame(1, &fr) < 0) fr = NULL;
+    }
+    if (!fr) return;
+    {
+        const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
+        int w = fr->width, h = fr->height, gx, gy, i, j;
+
+        printf("COVERGRID %s %dx%d\n", tag, w, h);
+        for (gy = 0; gy < 9; gy++) {
+            printf("COVERGRID %s ", tag);
+            for (gx = 0; gx < 16; gx++) {
+                double sum = 0; int n = 0;
+                for (j = gy * h / 9; j < (gy + 1) * h / 9; j += 2)
+                    for (i = gx * w / 16; i < (gx + 1) * w / 16; i += 2) { sum += y[(size_t)j * w + i]; n++; }
+                printf("%4.0f", n ? sum / n : 0);
+            }
+            printf("\n");
+        }
+    }
+    IMP_FrameSource_ReleaseFrame(1, fr);
 }
 
 static void cs_ispcover_t23(void)
@@ -3227,6 +3259,7 @@ static void cs_ispcover_t23(void)
         double base, on, off;
 
         base = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("base");
         a->type = OSD_REG_ISP_COVER;
         a->osdispdraw.stCoverAttr.chx = 1; a->osdispdraw.stCoverAttr.pinum = 0; a->osdispdraw.stCoverAttr.mask_en = 1;
         a->osdispdraw.stCoverAttr.mask_pos_left = x; a->osdispdraw.stCoverAttr.mask_pos_top = y;
@@ -3236,21 +3269,72 @@ static void cs_ispcover_t23(void)
         a->osdispdraw.stCoverAttr.mask_value.ayuv.u_value = 128; a->osdispdraw.stCoverAttr.mask_value.ayuv.v_value = 128;
         r1 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
         on = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("on");
         g->osdispdraw.stCoverAttr.chx = 1; g->osdispdraw.stCoverAttr.pinum = 0;
         r2 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(0, g, &show);
         a->osdispdraw.stCoverAttr.mask_en = 0;
         r3 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
         off = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("off");
+        if (getenv("APITEST_COVER_DEBUG")) {
+            double o1, i2, o2, i3, o3;
+            int rr;
+
+            o1 = reg_luma(1, 8, 8, x - 8, y - 8);
+            a->osdispdraw.stCoverAttr.mask_en = 1; a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value = 16;
+            rr = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
+            i2 = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4); o2 = reg_luma(1, 8, 8, x - 8, y - 8);
+            a->osdispdraw.stCoverAttr.mask_en = 0;
+            rr |= IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
+            i3 = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4); o3 = reg_luma(1, 8, 8, x - 8, y - 8);
+            printf("COVERDBG outside after off %.1f; black cover rr %d: in %.1f out %.1f; off again: in %.1f out %.1f\n", o1, rr, i2, o2, i3, o3);
+        }
         r4 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(3, g, &show);
         rbad = IMP_OSD_MultiCamera_SetRgnAttr_ISP(3, a, 0);
         rnul = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, NULL, 0);
         rep(FN(IMP_OSD_MultiCamera_SetRgnAttr_ISP), r1 | r3, (r1 == 0 && r3 == 0 && dabs(on - base) > 40 && dabs(off - base) < 20 && rbad == -1 && rnul != 0 && flow()) ? V_PASS : V_FAIL,
             "sensor 0, ch1 cover %dx%d at (%d,%d) Y %u: luma %.1f -> %.1f, disabled %.1f; vi 3 -> %d, NULL -> %d", w, h, x, y,
             a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value, base, on, off, rbad, rnul);
-        rep(FN(IMP_OSD_MultiCamera_GetRgnAttr_ISP), r2, (r2 == 0 && show == 1 && g->osdispdraw.stCoverAttr.mask_en == 1 && g->osdispdraw.stCoverAttr.mask_width == w
-            && g->osdispdraw.stCoverAttr.mask_pos_left == x && r4 == -1) ? V_PASS : V_FAIL,
-            "while shown: show %d enable %u %ux%u at (%u,%u); vi 3 -> %d", show, g->osdispdraw.stCoverAttr.mask_en, g->osdispdraw.stCoverAttr.mask_width,
+        /* stock tisp_g_mscaler_mask_block_attr always reports mask_en = 0; the geometry of an enabled block is read back */
+        rep(FN(IMP_OSD_MultiCamera_GetRgnAttr_ISP), r2, (r2 == 0 && show == 1 && g->osdispdraw.stCoverAttr.mask_width == w && g->osdispdraw.stCoverAttr.mask_height == h
+            && g->osdispdraw.stCoverAttr.mask_pos_left == x && g->osdispdraw.stCoverAttr.mask_pos_top == y && r4 == -1) ? V_PASS : V_FAIL,
+            "while shown: show %d enable %u (stock: always 0) %ux%u at (%u,%u); vi 3 -> %d", show, g->osdispdraw.stCoverAttr.mask_en, g->osdispdraw.stCoverAttr.mask_width,
             g->osdispdraw.stCoverAttr.mask_height, g->osdispdraw.stCoverAttr.mask_pos_left, g->osdispdraw.stCoverAttr.mask_pos_top, r4);
+        gfree(a); gfree(g);
+    }
+}
+
+/* ISP-drawn window frame (OSD_REG_ISP_LINE_RECT / IMP_ISP_DRAW_WIND) through the multi-camera call: the top edge band changes,
+ * the inside does not, disabled -> back.  Measured on ch0 (draw coordinates) and on ch1 at half scale. */
+static void cs_ispdraw_t23(void)
+{
+    NEED(IMP_OSD_MultiCamera_SetRgnAttr_ISP) NEED(IMP_OSD_MultiCamera_GetRgnAttr_ISP) {
+        G(IMPOSDRgnAttr, a); G(IMPOSDRgnAttr, g);
+        int x = 160, y = 90, w = 320, h = 180, lw = 8, show = -1, r1, r2, r3;
+        double e0, i0, e1, i1, e2, i2, e0s, e1s;
+        IMPISPDrawWindAttr *wd = &a->osdispdraw.stDrawAttr.cfg.wind;
+
+        e0 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i0 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        e0s = reg_luma(1, (x + 10) / 2, (y + 1) / 2, (x + w - 10) / 2, (y + lw - 1) / 2);
+        a->type = OSD_REG_ISP_LINE_RECT;
+        a->osdispdraw.stDrawAttr.pinum = 0; a->osdispdraw.stDrawAttr.type = IMP_ISP_DRAW_WIND;
+        a->osdispdraw.stDrawAttr.color_type = IMPISP_MASK_TYPE_YUV;
+        wd->enable = 1; wd->left = x; wd->top = y; wd->width = w; wd->height = h; wd->line_width = lw; wd->alpha = 7;
+        wd->color.ayuv.y_value = e0 < 128 ? 235 : 16; wd->color.ayuv.u_value = 128; wd->color.ayuv.v_value = 128;
+        r1 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
+        e1 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i1 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        e1s = reg_luma(1, (x + 10) / 2, (y + 1) / 2, (x + w - 10) / 2, (y + lw - 1) / 2);
+        g->type = OSD_REG_ISP_LINE_RECT; g->osdispdraw.stDrawAttr.pinum = 0; g->osdispdraw.stDrawAttr.type = IMP_ISP_DRAW_WIND;
+        r2 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(0, g, &show);
+        wd->enable = 0;
+        r3 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
+        e2 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i2 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        {
+            int eff = (dabs(e1 - e0) > 40 || dabs(e1s - e0s) > 40) && dabs(i1 - i0) < 15 && dabs(e2 - e0) < 20;
+            rep(LBL("IMP_OSD_MultiCamera_SetRgnAttr_ISP draw"), r1 | r3, (r1 == 0 && r3 == 0 && eff && flow()) ? V_PASS : V_FAIL,
+                "window %dx%d at (%d,%d) line %d Y %u: top edge ch0 %.1f -> %.1f (ch1 %.1f -> %.1f), inside %.1f -> %.1f; disabled: edge %.1f inside %.1f; get rc %d show %d",
+                w, h, x, y, lw, wd->color.ayuv.y_value, e0, e1, e0s, e1s, i0, i1, e2, i2, r2, show);
+        }
         gfree(a); gfree(g);
     }
 }
@@ -3297,6 +3381,7 @@ static void cs_isppicupd_t23(void)
 }
 #else
 static void cs_ispcover_t23(void) {}
+static void cs_ispdraw_t23(void) {}
 static void cs_isppicupd_t23(void) {}
 #endif
 
@@ -3451,7 +3536,7 @@ static void cs_t140c(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "ispdraw_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -3545,6 +3630,7 @@ void t_cases(void)
     if (cs_on("encgrp_t31")) cs_encgrp_t31(); wdog("cases", 120);
     if (cs_on("osdhelp_t31")) cs_osdhelp_t31(); wdog("cases", 60);
     if (cs_on("ispcover_t23")) cs_ispcover_t23(); wdog("cases", 60);
+    if (cs_on("ispdraw_t23")) cs_ispdraw_t23(); wdog("cases", 60);
     if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
     if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
