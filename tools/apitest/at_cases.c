@@ -3551,6 +3551,47 @@ static double fs_rate(int ch, int ms)     /* frames per second delivered by FS c
     return n * 1000.0 / ms;
 }
 
+/* framedrop_t40: IMP_ISP_Set/GetFrameDrop through the driver (QEMU-safe).  OEM tisp_get_frame_drop always
+ * reports enable 1 and the register values (lsize byte 0x16130 + ch<<8, fmark 0x16134 + ch<<8); a disabled
+ * entry is written as lsize 0, fmark 0xffffffff.  Before the driver fix the ioctl never reached the handler
+ * (Get read back all zero).  The ch1 rate is reported: QEMU's MSCA does not model the drop, the camera must
+ * show about half the rate with drop 1 of 2 (strict effect check: t140c). */
+static void cs_framedrop_t40(void)
+{
+    NEED(IMP_ISP_SetFrameDrop) NEED(IMP_ISP_GetFrameDrop) {
+        IMPISPFrameDropAttr o, s, g, h;
+        double f0, f1, f2;
+        int r0, r1, r2, r3, r4, r5, i, on_ok = 1, off_ok = 1;
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&h, 0, sizeof(h));
+        r0 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, &o);
+        f0 = fs_rate(1, 2000);
+        s = o;
+        for (i = 0; i < 3; i++) { s.fdrop[i].enable = IMPISP_TUNING_OPS_MODE_ENABLE; s.fdrop[i].lsize = 1; s.fdrop[i].fmark = 0x1; }
+        r1 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &s); r2 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, &g); usleep(300000);
+        f1 = fs_rate(1, 2000);
+        for (i = 0; i < 3; i++)
+            if (g.fdrop[i].enable != IMPISP_TUNING_OPS_MODE_ENABLE || g.fdrop[i].lsize != 1 || g.fdrop[i].fmark != 0x1) on_ok = 0;
+        for (i = 0; i < 3; i++) s.fdrop[i].enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r3 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &s); r4 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, &h); usleep(300000);
+        f2 = fs_rate(1, 2000);
+        for (i = 0; i < 3; i++)
+            if (h.fdrop[i].lsize != 0 || h.fdrop[i].fmark != 0xffffffffU) off_ok = 0;
+        /* Registers never written since boot read back as lsize 0 / fmark 0 (OEM getter: enable 1): writing that
+         * back would ask for "output no frame", so such an entry is restored as disabled (0 / 0xffffffff). */
+        for (i = 0; i < 3; i++)
+            if (o.fdrop[i].lsize == 0 && o.fdrop[i].fmark == 0) o.fdrop[i].enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r5 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &o);
+        rep(FN(IMP_ISP_GetFrameDrop), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && on_ok && off_ok) ? V_PASS : V_FAIL,
+            "framedrop_t40 read back: boot ch1 lsize %u mark 0x%x (restored with en %d); on ch0..2 en %d/%d/%d lsize %u/%u/%u mark 0x%x/0x%x/0x%x (want 1 1 0x1); off lsize %u mark 0x%x (want 0 0xffffffff)",
+            o.fdrop[1].lsize, o.fdrop[1].fmark, (int)o.fdrop[1].enable, (int)g.fdrop[0].enable, (int)g.fdrop[1].enable, (int)g.fdrop[2].enable, g.fdrop[0].lsize, g.fdrop[1].lsize, g.fdrop[2].lsize,
+            g.fdrop[0].fmark, g.fdrop[1].fmark, g.fdrop[2].fmark, h.fdrop[1].lsize, h.fdrop[1].fmark);
+        rep(FN(IMP_ISP_SetFrameDrop), r1 | r3 | r5, (r1 == 0 && r3 == 0 && r5 == 0 && flow()) ? V_PASS : V_FAIL,
+            "framedrop_t40 set on/off/restore rc %d/%d/%d, frames flow; ch1 %.1f fps, drop 1 of 2: %.1f fps, off: %.1f fps (%s)",
+            r1, r3, r5, f0, f1, f2, f1 < f0 * 0.75 && f2 > f0 * 0.85 ? "drop effect seen" : "no drop effect: expected in QEMU, a FAIL on a camera");
+    }
+}
+
 static void cs_t140c(void)
 {
     NEED(IMP_ISP_Tuning_SetISPRunningMode) NEED(IMP_ISP_Tuning_GetISPRunningMode) {
@@ -3620,11 +3661,12 @@ static void cs_t140c(void)
 }
 #else
 static void cs_t140c(void) {}
+static void cs_framedrop_t40(void) {}
 #endif
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "framedrop_t40" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -3722,5 +3764,6 @@ void t_cases(void)
     if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
     if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
+    if (getenv("APITEST_CASES") && cs_on("framedrop_t40")) cs_framedrop_t40(); wdog("cases", 60);
     wdog("cases", 60);
 }
