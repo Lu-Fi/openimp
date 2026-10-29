@@ -2330,11 +2330,10 @@ static void cs_isposdapi(void)
         {
             /* T40 direct controls: the shown region as the driver holds it, hidden/shown again through SetSingleOSDAttr, whole-ISP OSD attr round trip */
             IMPISPSingleOSDAttr *s = (IMPISPSingleOSDAttr *)calloc(1, sizeof(*s)), *s2 = (IMPISPSingleOSDAttr *)calloc(1, sizeof(*s));
-            IMPISPOSDAttr *o1 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1)), *o2 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1));
-            int rgs, rss0, rss1, ro1, ro2, ro3, same = 0;
+            int rgs, rss0, rss1;
             double off, on;
 
-            if (s && s2 && o1 && o2) {
+            if (s && s2) {
                 s->chx = 0; s->pic_num = h;
                 rgs = show ? IMP_ISP_GetSingleOSDAttr(IMPVI_MAIN, s) : 0;
                 *s2 = *s; s2->pic.osd_enable = 0;
@@ -2346,21 +2345,9 @@ static void cs_isposdapi(void)
                     "enable 0 -> region luma %.1f (base %.1f), enable 1 -> %.1f", off, base, on);
                 else rep(FN(IMP_ISP_SetSingleOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (QEMU oops of the ISP OSD control)");
                 if (!show) rep(FN(IMP_ISP_GetSingleOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (QEMU oops of control 0x080000a2)");
-                if (!show) { rep(FN(IMP_ISP_GetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1 oopses tx_isp_t40 in QEMU)"); rep(FN(IMP_ISP_SetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1 oopses tx_isp_t40 in QEMU)"); } else {
-                ro1 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o1);
-                ro2 = IMP_ISP_SetOSDAttr(IMPVI_MAIN, o1);
-                ro3 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o2);
-                same = o1->osd_chx[0].osd_type == o2->osd_chx[0].osd_type && o1->osd_chx[0].osd_argb_type == o2->osd_chx[0].osd_argb_type
-                    && o1->osd_chx[0].pic[h].osd_enable == o2->osd_chx[0].pic[h].osd_enable && o1->osd_chx[0].pic[h].osd_left == o2->osd_chx[0].pic[h].osd_left
-                    && o1->osd_chx[0].pic[h].osd_width == o2->osd_chx[0].pic[h].osd_width;
-                {
-                    double again = region_y(cx0, cy0, cx1, cy1);
-                    rep(FN(IMP_ISP_GetOSDAttr), ro1 | ro3, (ro1 == 0 && ro3 == 0 && same) ? V_PASS : V_FAIL, "chx0 type %d argb %d pic[%d] enable %u at (%u,%u); read again after Set: %s", (int)o1->osd_chx[0].osd_type, (int)o1->osd_chx[0].osd_argb_type, h, o1->osd_chx[0].pic[h].osd_enable, o1->osd_chx[0].pic[h].osd_left, o1->osd_chx[0].pic[h].osd_top, same ? "same" : "DIFFERENT");
-                    rep(FN(IMP_ISP_SetOSDAttr), ro2, (ro2 == 0 && (!show || (dark ? again > base + 40 : again < base - 40))) ? V_PASS : V_FAIL, "rt: attr as read written back (ret %d), picture still there: region luma %.1f", ro2, again);
-                }
-                }
+                /* IMP_ISP_Get/SetOSDAttr: own round trip after the pool regions are destroyed, see below */
             }
-            free(s); free(s2); free(o1); free(o2);
+            free(s); free(s2);
         }
 # else
         {
@@ -2402,6 +2389,48 @@ static void cs_isposdapi(void)
         rd = IMP_OSD_DestroyRgn_ISP(0, h); rd2 = IMP_OSD_DestroyRgn_ISP(0, h2);
         if (!show) rep(FN(IMP_OSD_ShowRgn_ISP), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set: Show and Get/SetSingleOSDAttr (control 0x080000a2) oops tx_isp_t40 in QEMU, not run on the Eufy"); else rep(FN(IMP_OSD_ShowRgn_ISP), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
         rep(FN(IMP_OSD_DestroyRgn_ISP), rd | rd2, (rd == 0 && rd2 == 0 && flow()) ? V_PASS : V_FAIL, "handles %d and %d destroyed, frames flow", h, h2);
+# ifdef APITEST_T40
+        if (!show) { rep(FN(IMP_ISP_GetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1)"); rep(FN(IMP_ISP_SetOSDAttr), 0, V_SKIP, "APITEST_T40_ISPOSD_CTL not set (control 0x080000a1)"); }
+        else {
+            /* IMP_ISP_Get/SetOSDAttr (control 0x080000a1, whole-ISP OSD attr): the driver (vendor tisp_s_osd_attr, same in
+             * ours) kfree's the image of every slot it rewrites or clears and copies the user image (file path or pixel
+             * array, osd_image is read as a user pointer) into a kernel buffer; GetOSDAttr returns that buffer's physical
+             * address and no image type.  So the attr cannot be written back "as read" (strcpy/memcpy of a physical
+             * address: oops), and SetOSDAttr must not run while an IMP_OSD_*_ISP region holds its pool pointer in a slot
+             * (kfree of non-slab memory).  Round trip on slot h after the pool regions are destroyed: array image in,
+             * read back, cleared again. */
+            IMPISPOSDAttr *o1 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1)), *o2 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1)), *o3 = (IMPISPOSDAttr *)calloc(1, sizeof(*o1));
+            int ro1, ro2, ro3, ro4, ro5, same = 0, cleared = 0, free_slot = 0;
+            double on_a = base, off_a = base;
+
+            if (o1 && o2 && o3) {
+                IMPISPOSDPicAttr *pa = &o2->osd_chx[0].pic[h], *pb = &o3->osd_chx[0].pic[h];
+
+                ro1 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o1);
+                free_slot = o1->osd_chx[0].pic[h].osd_enable == 0;
+                o2->osd_chx[0].osd_type = IMP_ISP_PIC_ARGB_8888; o2->osd_chx[0].osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+                pa->osd_enable = 1; pa->osd_left = x0; pa->osd_top = y0; pa->osd_width = OPW; pa->osd_height = OPH;
+                pa->osd_image = (char *)pic; pa->osd_image_type = IMP_ISP_OSD_PIC_ARRAY; pa->osd_stride = OPW * 4;
+                ro2 = IMP_ISP_SetOSDAttr(IMPVI_MAIN, o2);
+                on_a = region_y(cx0, cy0, cx1, cy1);
+                ro3 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o3);
+                same = pb->osd_enable == 1 && pb->osd_left == x0 && pb->osd_top == y0 && pb->osd_width == OPW && pb->osd_height == OPH && pb->osd_stride == OPW * 4
+                    && o3->osd_chx[0].osd_type == o2->osd_chx[0].osd_type && o3->osd_chx[0].osd_argb_type == o2->osd_chx[0].osd_argb_type;
+                memset(o2, 0, sizeof(*o2));
+                ro4 = IMP_ISP_SetOSDAttr(IMPVI_MAIN, o2);
+                off_a = region_y(cx0, cy0, cx1, cy1);
+                ro5 = IMP_ISP_GetOSDAttr(IMPVI_MAIN, o1);
+                cleared = o1->osd_chx[0].pic[h].osd_enable == 0 && o1->osd_chx[0].pic[h].osd_width == 0;
+                rep(FN(IMP_ISP_GetOSDAttr), ro1 | ro3 | ro5, (ro1 == 0 && ro3 == 0 && ro5 == 0 && free_slot && same && cleared) ? V_PASS : V_FAIL,
+                    "slot %d free after Destroy: %s; after Set: enable %u at (%u,%u) %ux%u stride %u type %d argb %d (%s); after clear: %s",
+                    h, free_slot ? "yes" : "NO", pb->osd_enable, pb->osd_left, pb->osd_top, pb->osd_width, pb->osd_height, pb->osd_stride,
+                    (int)o3->osd_chx[0].osd_type, (int)o3->osd_chx[0].osd_argb_type, same ? "as set" : "DIFFERENT", cleared ? "cleared" : "NOT cleared");
+                rep(FN(IMP_ISP_SetOSDAttr), ro2 | ro4, (ro2 == 0 && ro4 == 0 && (dark ? on_a > base + 40 : on_a < base - 40) && dabs(off_a - base) < 20) ? V_PASS : V_FAIL,
+                    "%dx%d array image into chx0 pic %d (ret %d): region luma %.1f (base %.1f); all slots cleared (ret %d): %.1f", OPW, OPH, h, ro2, on_a, base, ro4, off_a);
+            }
+            free(o1); free(o2); free(o3);
+        }
+# endif
         isposd_cons_down(jenc);
         if (oexit) oexit();
 out:
