@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## Branch `claude/issue-143` (2026-10-29)
+
+- apitest T40/T41: the 19 "no-signature" entries (`IMP_LOG`, `IMP_LOG_{UNK,VERBOSE,DBG,INFO,WARN,ERR,FATAL,SILENT,PRINT,TO_FILE,TO_SERVER}`, `IMP_LOG_OP_*`) are not exported symbols: they are macros of the vendor `imp/imp_log.h` (T40 1.3.1 = T41 1.2.5) that expand to `imp_log_fun(level, option, sink, tag, file, line, func, fmt, ...)` and `IMP_Log_Get_Option()`. The new case `logmacro` uses the vendor macro definitions against libimp and checks level filter, printf arguments, the option mask (file/line/function/tag) and the three sinks; the yaml entry is gone (T40/T41: no no-signature left).
+- libimp `imp_log_fun`: the sink argument is honoured like the vendor libalog (RE of `imp_log_fun`/`imp_log_print_buf`/`imp_log_buf`): sink 0 (`IMP_LOG_OUT_STDOUT`) prints to stdout, sink 1 (`IMP_LOG_OUT_LOCAL_FILE`) appends to `timp.log` (`$OPENIMP_LOG_FILE` overrides the name), sink 2 (logcat, does not exist on the cameras) stays stderr. Before, every sink ended on stderr.
+
 ## Branch `claude/issue-139-case` (2026-10-29)
 
 - **apitest T40: cases for the lifted-handler sweep of open-tx-isp #139** (tools/apitest). `aeinfo_t40`: tuning node

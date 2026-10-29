@@ -14,6 +14,7 @@
 #define _GNU_SOURCE 1
 #include <math.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include "apitest.h"
 
@@ -374,6 +375,142 @@ static void cs_log(void)
 }
 #else
 static void cs_log(void) {}
+#endif
+
+/* ------------------------------------------------------------------------------- Vendor logging macros */
+/* imp/imp_log.h of the T40 1.3.1 / T41 1.2.5 SDK (identical, no copy in the ingenic-headers): the macros expand to
+ * imp_log_fun(level, option, sink, tag, file, line, func, fmt, ...) + IMP_Log_Get_Option(); libimp exports both. */
+#if defined(PLATFORM_T41)
+extern void imp_log_fun(int le, int op, int out, const char *tag, const char *file, int line, const char *func, const char *fmt, ...) __attribute__((weak));
+extern void IMP_Log_Set_Option(int op) __attribute__((weak));
+extern int IMP_Log_Get_Option(void) __attribute__((weak));
+#define LM_LEVEL_UNKNOWN 0
+#define LM_LEVEL_VERBOSE 2
+#define LM_LEVEL_DEBUG 3
+#define LM_LEVEL_INFO 4
+#define LM_LEVEL_WARN 5
+#define LM_LEVEL_ERROR 6
+#define LM_LEVEL_FATAL 7
+#define LM_LEVEL_SILENT 8
+#define LM_OP_PID 0x01
+#define LM_OP_USTIME 0x02
+#define LM_OP_MODULE 0x04
+#define LM_OP_FILE 0x08
+#define LM_OP_FUNC 0x10
+#define LM_OP_LINE 0x20
+#define IMP_LOG_PRINT(tag, le, op, fmt, ...) imp_log_fun(le, op, 0, tag, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define IMP_LOG_TO_FILE(tag, le, op, fmt, ...) imp_log_fun(le, op, 1, tag, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define IMP_LOG_TO_SERVER(tag, le, op, fmt, ...) imp_log_fun(le, op, 2, tag, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
+#define IMP_LOG IMP_LOG_TO_SERVER
+#define IMP_LOG_UNK(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_UNKNOWN, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_VERBOSE(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_VERBOSE, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_DBG(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_DEBUG, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_INFO(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_INFO, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_WARN(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_WARN, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_ERR(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_ERROR, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_FATAL(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_FATAL, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+#define IMP_LOG_SILENT(tag, fmt, ...) IMP_LOG(tag, LM_LEVEL_SILENT, IMP_Log_Get_Option(), fmt, ##__VA_ARGS__)
+
+/* Run f with stdout+stderr redirected into a temp file; returns the captured text (static buffer). */
+static char lm_buf[8192];
+static const char *lm_run(void (*f)(void))
+{
+    char path[] = "/tmp/apitest_lm_XXXXXX";
+    int fd = mkstemp(path), o1, o2;
+    ssize_t n = 0;
+
+    lm_buf[0] = 0;
+    if (fd < 0) return lm_buf;
+    fflush(stdout); fflush(stderr);
+    o1 = dup(1); o2 = dup(2); dup2(fd, 1); dup2(fd, 2);
+    f();
+    fflush(stdout); fflush(stderr);
+    dup2(o1, 1); dup2(o2, 2); close(o1); close(o2);
+    lseek(fd, 0, SEEK_SET);
+    n = read(fd, lm_buf, sizeof(lm_buf) - 1);
+    lm_buf[n > 0 ? n : 0] = 0;
+    close(fd); unlink(path);
+    return lm_buf;
+}
+static void lm_levels(void)
+{
+    IMP_LOG_UNK("LMTAG", "m-unk");       IMP_LOG_VERBOSE("LMTAG", "m-verbose");
+    IMP_LOG_DBG("LMTAG", "m-dbg %d", 1); IMP_LOG_INFO("LMTAG", "m-info");
+    IMP_LOG_WARN("LMTAG", "m-warn %s", "x"); IMP_LOG_ERR("LMTAG", "m-err");
+    IMP_LOG_FATAL("LMTAG", "m-fatal");   IMP_LOG_SILENT("LMTAG", "m-silent");
+}
+static void lm_print(void) { IMP_LOG_PRINT("LMTAG", LM_LEVEL_ERROR, 0, "m-print %d", 7); }
+static void lm_server(void) { IMP_LOG_TO_SERVER("LMTAG", LM_LEVEL_ERROR, 0, "m-server"); }
+static void lm_optall(void) { IMP_LOG_PRINT("LMTAG", LM_LEVEL_ERROR, LM_OP_PID | LM_OP_USTIME | LM_OP_MODULE | LM_OP_FILE | LM_OP_FUNC | LM_OP_LINE, "m-all"); }
+static void lm_optnone(void) { IMP_LOG_PRINT("LMTAG", LM_LEVEL_ERROR, 0, "m-none"); }
+static void lm_file(void) { IMP_LOG_TO_FILE("LMTAG", LM_LEVEL_ERROR, 0, "m-file"); }
+
+static void cs_logmacro(void)
+{
+    const char *t;
+    int ok;
+    char fpath[] = "/tmp/apitest_lmf_XXXXXX";
+    char gpath[] = "/tmp/apitest_lmg_XXXXXX";
+    int ffd;
+
+    NEED(imp_log_fun) NEED(IMP_Log_Get_Option) NEED(IMP_Log_Set_Option) {
+        int o0 = IMP_Log_Get_Option();
+
+        t = lm_run(lm_levels);
+        /* UNKNOWN/VERBOSE (level < 3) are below the vendor default level: never printed. WARN, ERROR, FATAL, SILENT print. */
+        ok = !strstr(t, "m-unk") && !strstr(t, "m-verbose") && strstr(t, "m-warn x") && strstr(t, "m-err") && strstr(t, "m-fatal") && strstr(t, "m-silent");
+        rep("IMP_LOG_UNK", 0, !strstr(t, "m-unk") ? V_PASS : V_FAIL, "level 0 suppressed");
+        rep("IMP_LOG_VERBOSE", 0, !strstr(t, "m-verbose") ? V_PASS : V_FAIL, "level 2 suppressed");
+        rep("IMP_LOG_DBG", 0, V_PASS, "level 3: %s (OpenIMP prints DBG/INFO only with OPENIMP_DEBUG_TRACE, vendor default level 3 prints)", strstr(t, "m-dbg 1") ? "printed" : "quiet by design");
+        rep("IMP_LOG_INFO", 0, V_PASS, "level 4: %s", strstr(t, "m-info") ? "printed" : "quiet by design");
+        rep("IMP_LOG_WARN", 0, strstr(t, "[LMTAG]") && strstr(t, "m-warn x") ? V_PASS : V_FAIL, "printf-style args rendered");
+        rep("IMP_LOG_ERR", 0, strstr(t, "m-err") ? V_PASS : V_FAIL, "printed");
+        rep("IMP_LOG_FATAL", 0, strstr(t, "m-fatal") ? V_PASS : V_FAIL, "printed");
+        rep("IMP_LOG_SILENT", 0, strstr(t, "m-silent") ? V_PASS : V_FAIL, "level 8 still printed (vendor: level >= 3)");
+        rep("IMP_LOG", 0, ok ? V_PASS : V_FAIL, "IMP_LOG = IMP_LOG_TO_SERVER: all level macros go through it");
+        /* stdout sink */
+        { int fd = mkstemp(fpath), o1; char b[512]; ssize_t n;
+          if (fd >= 0) {
+              fflush(stdout); o1 = dup(1); dup2(fd, 1);
+              lm_print();
+              fflush(stdout); dup2(o1, 1); close(o1);
+              lseek(fd, 0, SEEK_SET); n = read(fd, b, sizeof(b) - 1); b[n > 0 ? n : 0] = 0;
+              rep("IMP_LOG_PRINT", 0, strstr(b, "m-print 7") ? V_PASS : V_FAIL, "sink 0 (IMP_LOG_OUT_STDOUT) lands on stdout: \"%.60s\"", b);
+              close(fd); unlink(fpath);
+          } }
+        t = lm_run(lm_server);
+        rep("IMP_LOG_TO_SERVER", 0, strstr(t, "m-server") ? V_PASS : V_FAIL, "sink 2 (no logcat on the camera) lands on stderr");
+        /* option mask */
+        IMP_Log_Set_Option(LM_OP_PID | LM_OP_USTIME | LM_OP_MODULE | LM_OP_FILE | LM_OP_FUNC | LM_OP_LINE);
+        t = lm_run(lm_optall);
+        ok = strstr(t, "at_cases.c") && strstr(t, "lm_optall") && strstr(t, "m-all");
+        rep("IMP_LOG_OP_ALL", 0, ok ? V_PASS : V_FAIL, "file, line and function rendered: \"%.70s\"", t);
+        rep("IMP_LOG_OP_FILE", 0, strstr(t, "at_cases.c") ? V_PASS : V_FAIL, "file name field");
+        rep("IMP_LOG_OP_LINE", 0, strstr(t, "c:") ? V_PASS : V_FAIL, "line field");
+        rep("IMP_LOG_OP_FUNC", 0, strstr(t, "lm_optall") ? V_PASS : V_FAIL, "function field");
+        rep("IMP_LOG_OP_MODULE", 0, strstr(t, "[LMTAG]") ? V_PASS : V_FAIL, "tag field");
+        rep("IMP_LOG_OP_PID", 0, V_PASS, "bit accepted (vendor libalog does not render it either)");
+        rep("IMP_LOG_OP_USTIME", 0, V_PASS, "bit accepted (vendor libalog does not render it either)");
+        t = lm_run(lm_optnone);
+        IMP_Log_Set_Option(0);
+        t = lm_run(lm_optnone);
+        rep("IMP_LOG_PRINT", 0, strstr(t, "m-none") && !strstr(t, "at_cases.c") ? V_PASS : V_FAIL, "option 0: message only, no file/line/func");
+        IMP_Log_Set_Option(o0);
+        /* file sink: timp.log in cwd (vendor), OPENIMP_LOG_FILE overrides */
+        ffd = mkstemp(gpath);
+        if (ffd >= 0) {
+            char b[256]; ssize_t n;
+            close(ffd); setenv("OPENIMP_LOG_FILE", gpath, 1);
+            lm_file();
+            ffd = open(gpath, O_RDONLY); n = ffd >= 0 ? read(ffd, b, sizeof(b) - 1) : -1; b[n > 0 ? n : 0] = 0;
+            rep("IMP_LOG_TO_FILE", 0, strstr(b, "m-file") ? V_PASS : V_FAIL, "sink 1 (IMP_LOG_OUT_LOCAL_FILE) appended to the log file: \"%.40s\"", b);
+            if (ffd >= 0) close(ffd);
+            unlink(gpath); unsetenv("OPENIMP_LOG_FILE");
+        }
+    }
+}
+#else
+static void cs_logmacro(void) {}
 #endif
 
 /* --------------------------------------------------------------------------------------------------- Cwf shift */
@@ -3451,7 +3588,7 @@ static void cs_t140c(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -3465,6 +3602,7 @@ void t_cases(void)
     measure_drift();
     if (cs_on("sensorreg")) cs_sensorreg();  wdog("cases", 60);
     if (cs_on("log")) cs_log();        wdog("cases", 60);
+    if (cs_on("logmacro")) cs_logmacro(); wdog("cases", 60);
     if (cs_on("waitframe")) cs_waitframe();  wdog("cases", 60);
     if (cs_on("videodrop")) cs_videodrop();  wdog("cases", 60);
     if (cs_on("movestate")) cs_movestate();  wdog("cases", 60);

@@ -93,7 +93,6 @@ int imp_log_fun(int level, int option, int type, ...)
     char buf[512];
     static int inited;
 
-    (void)type;
     if (level < 5 && !openimp_debug_trace_enabled())
         return 0;
 
@@ -127,12 +126,34 @@ int imp_log_fun(int level, int option, int type, ...)
     vsnprintf(buf + n, sizeof(buf) - (size_t)n, fmt, ap);
     va_end(ap);
 
-    /* The sink is `type` in the OEM ABI; OpenIMP has no logcat backend, so
-     * every record lands on stderr (plus syslog when enabled). */
-    fputs(buf, stderr);
+    /* The sink is `type` in the OEM ABI (libalog imp_log_fun, T40 1.3.1):
+     * 0 IMP_LOG_OUT_STDOUT     -> imp_log_print_buf: fputs to the process output,
+     * 1 IMP_LOG_OUT_LOCAL_FILE -> imp_log_buf: fopen("timp.log", "a+") once,
+     *                             fputs (OpenIMP: $OPENIMP_LOG_FILE overrides the
+     *                             name; open failure falls back to stderr),
+     * 2 IMP_LOG_OUT_SERVER     -> logcat; OpenIMP has no logcat, stderr. */
     len = strlen(buf);
-    if (!len || buf[len - 1] != '\n')
-        fputc('\n', stderr);
+    {
+        static FILE *lf;
+        FILE *out = stderr;
+
+        if (type == 0) {
+            out = stdout;
+        } else if (type == 1) {
+            if (!lf) {
+                const char *fn = getenv("OPENIMP_LOG_FILE");
+
+                lf = fopen(fn && fn[0] ? fn : "timp.log", "a+");
+            }
+            if (lf)
+                out = lf;
+        }
+        fputs(buf, out);
+        if (!len || buf[len - 1] != '\n')
+            fputc('\n', out);
+        if (out == lf)
+            fflush(out);
+    }
     if (imp_log_syslog_enabled()) {
         if (!inited) {
             openlog("libimp", LOG_PID | LOG_NDELAY, LOG_USER);
