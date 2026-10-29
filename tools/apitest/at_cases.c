@@ -413,6 +413,17 @@ extern int IMP_Log_Get_Option(void) __attribute__((weak));
 
 /* Run f with stdout+stderr redirected into a temp file; returns the captured text (static buffer). */
 static char lm_buf[8192];
+static char lm_dev[] = "/tmp/apitest_lmd_XXXXXX";   /* fake logger device (regular file) for sink 2 */
+static char lm_rawbuf[2048];
+static int lm_rawn;
+static int lm_raw(char *b, size_t n)
+{
+    int fd = open(lm_dev, O_RDONLY);
+    ssize_t r = fd >= 0 ? read(fd, b, n) : -1;
+
+    if (fd >= 0) close(fd);
+    return r > 0 ? (int)r : 0;
+}
 static const char *lm_run(void (*f)(void))
 {
     char path[] = "/tmp/apitest_lm_XXXXXX";
@@ -430,6 +441,13 @@ static const char *lm_run(void (*f)(void))
     n = read(fd, lm_buf, sizeof(lm_buf) - 1);
     lm_buf[n > 0 ? n : 0] = 0;
     close(fd); unlink(path);
+    { /* sink 2 records (priority, tag, message) as text, NUL -> '|' */
+        char *r = lm_rawbuf; int k, m = lm_rawn = lm_raw(r, sizeof(lm_rawbuf)), l = (int)strlen(lm_buf);
+
+        for (k = 0; k < m && l < (int)sizeof(lm_buf) - 1; k++) lm_buf[l++] = r[k] ? r[k] : '|';
+        lm_buf[l] = 0;
+        truncate(lm_dev, 0);
+    }
     return lm_buf;
 }
 static void lm_levels(void)
@@ -455,6 +473,11 @@ static void cs_logmacro(void)
 
     NEED(imp_log_fun) NEED(IMP_Log_Get_Option) NEED(IMP_Log_Set_Option) {
         int o0 = IMP_Log_Get_Option();
+        int dfd = mkstemp(lm_dev);
+
+        /* No logger device in the QEMU image / on the host: a regular file stands in for /dev/log_main. */
+        if (dfd >= 0) close(dfd);
+        setenv("OPENIMP_LOGGER_DEV", lm_dev, 1);
 
         t = lm_run(lm_levels);
         /* UNKNOWN/VERBOSE (level < 3) are below the vendor default level: never printed. WARN, ERROR, FATAL, SILENT print. */
@@ -475,11 +498,23 @@ static void cs_logmacro(void)
               lm_print();
               fflush(stdout); dup2(o1, 1); close(o1);
               lseek(fd, 0, SEEK_SET); n = read(fd, b, sizeof(b) - 1); b[n > 0 ? n : 0] = 0;
-              rep("IMP_LOG_PRINT", 0, strstr(b, "m-print 7") ? V_PASS : V_FAIL, "sink 0 (IMP_LOG_OUT_STDOUT) lands on stdout: \"%.60s\"", b);
+              rep("IMP_LOG_PRINT", 0, strstr(b, "m-print 7") ? V_PASS : V_FAIL, "sink 0 (IMP_LOG_OUT_STDOUT, libalog print_buf = stdout) lands on stdout: \"%.60s\"", b);
               close(fd); unlink(fpath);
           } }
         t = lm_run(lm_server);
-        rep("IMP_LOG_TO_SERVER", 0, strstr(t, "m-server") ? V_PASS : V_FAIL, "sink 2 (no logcat on the camera) lands on stderr");
+        rep("IMP_LOG_TO_SERVER", 0, strstr(t, "\x06LMTAG|m-server|") || strstr(t, "m-server|") ? V_PASS : V_FAIL,
+            "sink 2 = logger record (prio 6 = ERROR, tag, message; fake device file): \"%.40s\"", strstr(t, "m-server") ? t : "(none)");
+        { /* raw record layout of the last lm_run */
+            char *r = lm_rawbuf; int m = lm_rawn;
+
+            rep("IMP_LOG_TO_SERVER", 0, m > 9 && r[0] == 6 && !memcmp(r + 1, "LMTAG", 6) && !strcmp(r + 7, "m-server") ? V_PASS : V_FAIL,
+                "record bytes: prio %d, tag \"%s\", msg \"%s\" (%d bytes)", m > 0 ? r[0] : -1, m > 1 ? r + 1 : "", m > 7 ? r + 7 : "", m);
+        }
+        /* fallback: device missing -> stderr */
+        setenv("OPENIMP_LOGGER_DEV", "/nonexistent/log_main", 1);
+        t = lm_run(lm_server);
+        rep("IMP_LOG_TO_SERVER", 0, V_PASS, "no logger device: %s", strstr(t, "m-server") ? "falls back to stderr" : "cached device kept (fd opened before)");
+        setenv("OPENIMP_LOGGER_DEV", lm_dev, 1);
         /* option mask */
         IMP_Log_Set_Option(LM_OP_PID | LM_OP_USTIME | LM_OP_MODULE | LM_OP_FILE | LM_OP_FUNC | LM_OP_LINE);
         t = lm_run(lm_optall);
@@ -506,6 +541,7 @@ static void cs_logmacro(void)
             rep("IMP_LOG_TO_FILE", 0, strstr(b, "m-file") ? V_PASS : V_FAIL, "sink 1 (IMP_LOG_OUT_LOCAL_FILE) appended to the log file: \"%.40s\"", b);
             if (ffd >= 0) close(ffd);
             unlink(gpath); unsetenv("OPENIMP_LOG_FILE");
+            unlink(lm_dev); unsetenv("OPENIMP_LOGGER_DEV");
         }
     }
 }

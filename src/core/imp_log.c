@@ -31,6 +31,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/uio.h>
 
 #include <stdlib.h>
 
@@ -84,6 +87,33 @@ void IMP_Log_Set_Option(int option)
     imp_log_option = option;
 }
 
+/* Sink 2: the vendor imp_log_fun calls __android_log_write(prio = level, tag,
+ * text) of the bundled Android liblog (libalog.so, logd_write.c), which writes
+ * one record to the logger device "/dev/log_main" (T40 1.3.1 libalog string):
+ * writev {priority byte, tag + NUL, message + NUL}.  OpenIMP does the same;
+ * OPENIMP_LOGGER_DEV overrides the device (host tests).  Returns 0 on success,
+ * -1 when no logger device can be opened (caller falls back to stderr). */
+static int imp_log_logcat(int level, const char *tag, const char *msg)
+{
+    static int fd = -2;
+    struct iovec v[3];
+    unsigned char prio = (unsigned char)level;
+
+    if (fd == -2) {
+        const char *dev = getenv("OPENIMP_LOGGER_DEV");
+
+        fd = open(dev && dev[0] ? dev : "/dev/log_main", O_WRONLY | O_CLOEXEC);
+        if (fd < 0 && !(dev && dev[0]))
+            fd = open("/dev/log/main", O_WRONLY | O_CLOEXEC);
+    }
+    if (fd < 0)
+        return -1;
+    v[0].iov_base = &prio;           v[0].iov_len = 1;
+    v[1].iov_base = (void *)tag;     v[1].iov_len = strlen(tag) + 1;
+    v[2].iov_base = (void *)msg;     v[2].iov_len = strlen(msg) + 1;
+    return writev(fd, v, 3) < 0 ? -1 : 0;
+}
+
 int imp_log_fun(int level, int option, int type, ...)
 {
     va_list ap;
@@ -131,13 +161,28 @@ int imp_log_fun(int level, int option, int type, ...)
      * 1 IMP_LOG_OUT_LOCAL_FILE -> imp_log_buf: fopen("timp.log", "a+") once,
      *                             fputs (OpenIMP: $OPENIMP_LOG_FILE overrides the
      *                             name; open failure falls back to stderr),
-     * 2 IMP_LOG_OUT_SERVER     -> logcat; OpenIMP has no logcat, stderr. */
+     * 2 IMP_LOG_OUT_SERVER     -> __android_log_write(level, tag, text): logger
+     *                             device record, stderr when there is no device;
+     *                             stdout is the libalog `stdout` (GOT symbol). */
     len = strlen(buf);
     {
         static FILE *lf;
         FILE *out = stderr;
 
-        if (type == 0) {
+        if (type == 2) {
+            const char *m = buf + (tag ? strlen(tag) : 3) + 2;   /* skip "[tag]" */
+            char msg[512];
+            size_t ml;
+
+            if (*m == ' ')
+                m++;
+            snprintf(msg, sizeof(msg), "%s", m);
+            ml = strlen(msg);
+            while (ml && msg[ml - 1] == '\n')
+                msg[--ml] = 0;
+            if (imp_log_logcat(level, tag ? tag : "IMP", msg) == 0)
+                out = NULL;
+        } else if (type == 0) {
             out = stdout;
         } else if (type == 1) {
             if (!lf) {
@@ -148,11 +193,13 @@ int imp_log_fun(int level, int option, int type, ...)
             if (lf)
                 out = lf;
         }
-        fputs(buf, out);
-        if (!len || buf[len - 1] != '\n')
-            fputc('\n', out);
-        if (out == lf)
-            fflush(out);
+        if (out) {
+            fputs(buf, out);
+            if (!len || buf[len - 1] != '\n')
+                fputc('\n', out);
+            if (out == lf)
+                fflush(out);
+        }
     }
     if (imp_log_syslog_enabled()) {
         if (!inited) {
