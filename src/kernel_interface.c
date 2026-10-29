@@ -1822,6 +1822,12 @@ extern void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 extern void openimp_fs_rotate_capture(int chn, void *frame)
     __attribute__((weak));
 #endif
+#if defined(PLATFORM_T31)
+/* IMP_FrameSource_SetChnCallback hooks (framesource_tseries.c): every
+ * captured frame, also one nobody pulls or that waits in the delay FIFO */
+extern void openimp_fs_chn_callback(int chn, void *frame)
+    __attribute__((weak));
+#endif
 
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
     defined(PLATFORM_T21) || defined(PLATFORM_T30)
@@ -2277,6 +2283,10 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
         vbm_test_pattern_fill(chn, &pool->frames[idx], 1);
     if (openimp_t31_ivs_capture)
         openimp_t31_ivs_capture(chn, &pool->frames[idx]);
+#endif
+#if defined(PLATFORM_T31)
+    if (openimp_fs_chn_callback)
+        openimp_fs_chn_callback(chn, &pool->frames[idx]);
 #endif
     /* Mark buffer as in userspace — VBMReleaseFrame will only QBUF it back
      * if this flag is set, preventing double-QBUF. */

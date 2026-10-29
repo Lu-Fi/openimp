@@ -458,6 +458,43 @@ static uint32_t p2_fill_t31_packs(P2EncoderChannel *channel,
 
 static int p2_initialized;
 static int p2_groups[P2_MAX_GROUPS];
+#if defined(PLATFORM_T31)
+/* IMP_Encoder_DiscardInitialFrame: frames still to drop per group */
+static int p2_discard_left[P2_MAX_GROUPS];
+/* IMP_Encoder_GroupWhichChnRegisted: stock groups hold three channel
+ * slots, a channel takes the first free one at RegisterChn */
+#define P2_GROUP_SLOTS 3
+static int p2_group_slot[P2_MAX_GROUPS][P2_GROUP_SLOTS] = {
+    [0 ... P2_MAX_GROUPS - 1] = { -1, -1, -1 } };
+static pthread_mutex_t p2_slot_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void p2_group_slot_drop(int channel)
+{
+    int g, slot;
+
+    pthread_mutex_lock(&p2_slot_lock);
+    for (g = 0; g < P2_MAX_GROUPS; g++)
+        for (slot = 0; slot < P2_GROUP_SLOTS; slot++)
+            if (p2_group_slot[g][slot] == channel)
+                p2_group_slot[g][slot] = -1;
+    pthread_mutex_unlock(&p2_slot_lock);
+}
+
+/* one frame of the group's DiscardInitialFrame budget, if any is left */
+static int p2_discard_take(int group)
+{
+    int left;
+
+    if (group < 0 || group >= P2_MAX_GROUPS)
+        return 0;
+    left = __atomic_load_n(&p2_discard_left[group], __ATOMIC_ACQUIRE);
+    while (left > 0)
+        if (__atomic_compare_exchange_n(&p2_discard_left[group], &left, left - 1,
+                                        0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+            return 1;
+    return 0;
+}
+#endif
 static P2EncoderChannel p2_channels[P2_ALL_CHANNELS];
 static P2Bind p2_binds[P2_MAX_BINDS];
 static pthread_mutex_t p2_state_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -2671,6 +2708,9 @@ static int p2_destroy_chn(int channel)
     pthread_cond_broadcast(&ch->jpeg_frame_ready);
     ch->group = -1;
     ch->source_channel = -1;
+#if defined(PLATFORM_T31)
+    p2_group_slot_drop(channel);
+#endif
 #if defined(P2_JPEG_LEND)
     {
         /* no PollingStream runs any more (p2_wait_poll_idle): a frame
@@ -2706,6 +2746,19 @@ int IMP_Encoder_RegisterChn(int group, int channel)
     ch->source_channel = p2_find_source_channel(group);
     ch->osd_group = p2_find_osd_group(group);
     pthread_mutex_unlock(&ch->lock);
+#if defined(PLATFORM_T31)
+    pthread_mutex_lock(&p2_slot_lock);
+    {
+        int slot;
+
+        for (slot = 0; slot < P2_GROUP_SLOTS; slot++)
+            if (p2_group_slot[group][slot] < 0) {
+                p2_group_slot[group][slot] = channel;
+                break;
+            }
+    }
+    pthread_mutex_unlock(&p2_slot_lock);
+#endif
     p2_trace("openimp/P2: RegisterChn group=%d ch=%d source=%d\n",
              group, channel, ch->source_channel);
     return 0;
@@ -2736,6 +2789,9 @@ int IMP_Encoder_UnRegisterChn(int channel)
     ch->group = -1;
     ch->source_channel = -1;
     pthread_mutex_unlock(&ch->lock);
+#if defined(PLATFORM_T31)
+    p2_group_slot_drop(channel);
+#endif
     return 0;
 }
 
@@ -3129,8 +3185,14 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
             /* the pull stays non-blocking here: the public GetFrame of
              * T31 waits up to 2 s like libimp, this loop has its own
              * deadline and StopRecvPic check */
-            if (VBMGetFrame(ch->source_channel, &frame) == 0)
-                break;
+            if (VBMGetFrame(ch->source_channel, &frame) == 0) {
+                /* DiscardInitialFrame: the frame is dropped before encoding */
+                if (!p2_discard_take(ch->group))
+                    break;
+                p2_release_source_frame(ch->source_channel, frame);
+                frame = NULL;
+                continue;
+            }
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             now_us = p2_monotonic_us();
             if (!timeout_ms || now_us >= frame_deadline_us ||
@@ -3581,6 +3643,51 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     pthread_mutex_unlock(&ch->lock);
     return 0;
 }
+
+#if defined(PLATFORM_T31)
+/* Stock T31 1.1.6 (0x84c5c): IMP_Encoder_GetStream is GetStream_Impl(chn,
+ * stream, block, 0); force != 0 skips the "receiving started" check, so a
+ * stream that is still queued after StopRecvPic can be taken.  Without
+ * receiving no new stream can come here (encoding runs in the poll), so a
+ * forced get does not block: the stock call would wait forever. */
+int IMP_Encoder_GetStream_Impl(int encChn, IMPEncoderStream *stream, int block, int force)
+{
+    if (force && p2_valid_channel(encChn) &&
+        !__atomic_load_n(&p2_channels[encChn].receiving, __ATOMIC_ACQUIRE))
+        block = 0;
+    return IMP_Encoder_GetStream(encChn, stream, block);
+}
+
+/* Stock T31 1.1.5-zrt (0x7b5d4): the next n frames that reach encoder group
+ * encGrp are dropped before encoding (n < 0 leaves the count alone; the
+ * stock call has no group check, an invalid group is -1 here). */
+int IMP_Encoder_DiscardInitialFrame(int encGrp, int n)
+{
+    if (!p2_valid_group(encGrp))
+        return -1;
+    if (n >= 0)
+        __atomic_store_n(&p2_discard_left[encGrp], n, __ATOMIC_RELEASE);
+    return 0;
+}
+
+/* Stock T31 1.1.5.2 (0x76fc8): out[i] = 1 when slot i of the group holds a
+ * registered channel, else 0; group out of range or out NULL: -1. */
+int IMP_Encoder_GroupWhichChnRegisted(int encGrp, int *out)
+{
+    int slot;
+
+    if (!p2_valid_group(encGrp) || out == NULL)
+        return -1;
+    pthread_mutex_lock(&p2_slot_lock);
+    for (slot = 0; slot < P2_GROUP_SLOTS; slot++) {
+        int c = p2_group_slot[encGrp][slot];
+
+        out[slot] = c >= 0 && p2_channels[c].registered ? 1 : 0;
+    }
+    pthread_mutex_unlock(&p2_slot_lock);
+    return 0;
+}
+#endif
 
 /* Hands a stream taken off the channel back to the codec and its source
  * frame back to the FrameSource. */

@@ -2723,9 +2723,735 @@ static void cs_faceae_t40(void) {}
 static void cs_switchbin_t40(void) {}
 #endif
 
+/* ------------------------------------------------------------------- older-SoC ISP calls (backlog T31 / T23, 2026-10-29) */
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAe_IT_MAX && HAS_IMP_ISP_Tuning_GetAE_IT_MAX
+/* SetAe_IT_MAX (lines) must read back through GetAE_IT_MAX; a quarter of the limit darkens a scene that runs at long
+ * integration times (effect), a bright scene keeps its luma (rt).  The original limit is restored and read back. */
+static void cs_itmax(void)
+{
+    NEED(IMP_ISP_Tuning_SetAe_IT_MAX) NEED(IMP_ISP_Tuning_GetAE_IT_MAX) {
+        unsigned int m0 = 0, m1 = 0, m2 = 0, v;
+        int r0, r1, r2, r3, r4, ms;
+        Fst base, lo, back;
+
+        r0 = IMP_ISP_Tuning_GetAE_IT_MAX(&m0);
+        v = m0 / 4 < 8 ? 8 : m0 / 4;
+        base = fst(800);
+        r1 = IMP_ISP_Tuning_SetAe_IT_MAX(v); lo = fst(2000);
+        r2 = IMP_ISP_Tuning_GetAE_IT_MAX(&m1);
+        r3 = IMP_ISP_Tuning_SetAe_IT_MAX(m0); back = recover(base.y, &ms);
+        r4 = IMP_ISP_Tuning_GetAE_IT_MAX(&m2);
+        {
+            int eff = lo.ok && base.ok && lo.y < base.y - 3;
+            rep(FN(IMP_ISP_Tuning_GetAE_IT_MAX), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && m0 > 0 && m1 == v && m2 == m0) ? V_PASS : V_FAIL,
+                "initial %u lines; after Set(%u): %u; after restore: %u", m0, v, m1, m2);
+            rep(FN(IMP_ISP_Tuning_SetAe_IT_MAX), r1 | r3, (r1 == 0 && r3 == 0 && m1 == v && m2 == m0 && lo.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%slimit %u -> %u lines: Y %.1f -> %.1f; restored: back to Y %.1f in %d ms, frames flow", RTMSG(eff), m0, v, base.y, lo.y, back.y, ms);
+        }
+    }
+}
+#else
+static void cs_itmax(void) {}
+#endif
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_SetFixedContraster
+/* SetFixedContraster (MJPEG fixed contrast range; no getter): range 70..180 on, then off with the full range.  The
+ * stream under test is NV12 from FS ch1, so the std-dev is reported but a change is not required (rt). */
+static void cs_fixedcontrast_old(void)
+{
+    NEED(IMP_ISP_SetFixedContraster) {
+        G(IMPISPFixedContrastAttr, a);
+        Fst base, on, back;
+        int r1, r2, ms;
+
+        base = fst(800);
+        a->mode = IMPISP_TUNING_OPS_MODE_ENABLE; a->range_low = 70; a->range_high = 180;
+        r1 = IMP_ISP_SetFixedContraster(a); on = fst(1500);
+        a->mode = IMPISP_TUNING_OPS_MODE_DISABLE; a->range_low = 16; a->range_high = 235;
+        r2 = IMP_ISP_SetFixedContraster(a); back = recover(base.y, &ms);
+        {
+            int eff = on.ok && base.ok && dabs(on.sd - base.sd) > 3;
+            rep(FN(IMP_ISP_SetFixedContraster), r1 | r2, (r1 == 0 && r2 == 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%srange 70..180 on: luma std-dev %.1f -> %.1f (Y %.1f -> %.1f); off: back to Y %.1f in %d ms, frames flow", RTMSG(eff), base.sd, on.sd, base.y, on.y, back.y, ms);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_fixedcontrast_old(void) {}
+#endif
+
+/* ---------------------------------------------------------------------- T31 calls without an SDK header (coverage 2026-10-29)
+ * Signatures from the stock T31 libimp (1.1.6, 1.1.5-zrt, 1.1.5.2), see the OpenIMP implementations; every case restores what it
+ * changed.  Pass criterion = the stock semantics: return codes, read-back and, where the call has one, the effect. */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
+/* T23 1.3.0 / T31 1.1.6 share these (T23: channel < 9, T31: < 5) */
+extern int IMP_ISP_Tuning_GetNCUAlloc(void);
+extern int IMP_ISP_Tuning_GetNCUInfo(void *info);
+extern int IMP_FrameSource_CloseNCUInfo(void);
+extern int IMP_FrameSource_SetFrameOffset(int chn, int x, int y);
+extern int IMP_FrameSource_EnableChnUndistort(int chn, int param);
+extern int IMP_FrameSource_DisableChnUndistort(int chn);
+extern int IMP_ISP_Tuning_SetShading(int enable);
+extern int IMP_ISP_Tuning_SetContrast_internal(unsigned int v, int mode);
+extern int IMP_ISP_Tuning_SetSharpness_internal(unsigned int v, int mode);
+#pragma weak IMP_ISP_Tuning_GetNCUAlloc
+#pragma weak IMP_ISP_Tuning_GetNCUInfo
+#pragma weak IMP_FrameSource_CloseNCUInfo
+#pragma weak IMP_FrameSource_SetFrameOffset
+#pragma weak IMP_FrameSource_EnableChnUndistort
+#pragma weak IMP_FrameSource_DisableChnUndistort
+#pragma weak IMP_ISP_Tuning_SetShading
+#pragma weak IMP_ISP_Tuning_SetContrast_internal
+#pragma weak IMP_ISP_Tuning_SetSharpness_internal
+# if defined(PLATFORM_T31)
+#  define FS_BAD_CHN 5
+# else
+#  define FS_BAD_CHN 9
+# endif
+#endif
+#if defined(PLATFORM_T31)
+extern int IMP_Encoder_ClearPoolId(int encChn);
+extern int IMP_FrameSource_ClearPoolId(void);
+extern int IMP_FrameSource_SetFrameDepthCopyType(int chn, int bNoCopy);
+extern int IMP_FrameSource_SetChnCallback(int chn, int (*cb)(int, void *));
+extern int IMP_ISP_Tuning_SetEvStart(uint32_t value);
+extern int IMP_ISP_Tuning_GetEvStart(uint32_t *value);
+extern int IMP_Encoder_DiscardInitialFrame(int encGrp, int n);
+extern int IMP_Encoder_GroupWhichChnRegisted(int encGrp, int *out);
+extern int IMP_Encoder_GetStream_Impl(int encChn, IMPEncoderStream *stream, int block, int force);
+extern int IMP_OSD_MemPoolRequest(int grp, int size, const char *name);
+extern int IMP_OSD_ResizeRGB_Pic(const uint8_t *src, uint8_t *dst, int align_corners, const int *p);
+#pragma weak IMP_Encoder_ClearPoolId
+#pragma weak IMP_FrameSource_ClearPoolId
+#pragma weak IMP_FrameSource_SetFrameDepthCopyType
+#pragma weak IMP_FrameSource_SetChnCallback
+#pragma weak IMP_ISP_Tuning_SetEvStart
+#pragma weak IMP_ISP_Tuning_GetEvStart
+#pragma weak IMP_Encoder_DiscardInitialFrame
+#pragma weak IMP_Encoder_GroupWhichChnRegisted
+#pragma weak IMP_Encoder_GetStream_Impl
+#pragma weak IMP_OSD_MemPoolRequest
+#pragma weak IMP_OSD_ResizeRGB_Pic
+
+/* pool ids: ClearPoolId drops every channel's pool binding (GetPool -1 afterwards); the old bindings are restored */
+static void cs_poolid_t31(void)
+{
+    NEED(IMP_FrameSource_ClearPoolId) NEED(IMP_FrameSource_SetPool) NEED(IMP_FrameSource_GetPool) {
+        int old[5], i, r1, r2, g1, g2 = 0;
+
+        for (i = 0; i < 5; i++) old[i] = IMP_FrameSource_GetPool(i);
+        r1 = IMP_FrameSource_SetPool(3, 2); g1 = IMP_FrameSource_GetPool(3);
+        r2 = IMP_FrameSource_ClearPoolId();
+        for (i = 0; i < 5; i++) g2 |= IMP_FrameSource_GetPool(i) != -1;
+        for (i = 0; i < 5; i++) if (old[i] >= 0) IMP_FrameSource_SetPool(i, old[i]);
+        rep(FN(IMP_FrameSource_ClearPoolId), r1 | r2, (r1 == 0 && g1 == 2 && r2 == 0 && !g2 && flow()) ? V_PASS : V_FAIL,
+            "ch3 pool 2 set (read %d); after ClearPoolId every channel %s; old bindings restored, frames flow", g1, g2 ? "NOT -1" : "-1");
+    }
+    NEED(IMP_Encoder_ClearPoolId) NEED(IMP_Encoder_SetPool) NEED(IMP_Encoder_GetPool) {
+        int o7 = IMP_Encoder_GetPool(7), r1, r2, g1, g2;
+
+        r1 = IMP_Encoder_SetPool(7, 2); g1 = IMP_Encoder_GetPool(7);
+        r2 = IMP_Encoder_ClearPoolId(0); g2 = IMP_Encoder_GetPool(7);
+        if (o7 >= 0) IMP_Encoder_SetPool(7, o7);
+        rep(FN(IMP_Encoder_ClearPoolId), r1 | r2, (r1 == 0 && g1 == 2 && r2 == 0 && g2 == -1) ? V_PASS : V_FAIL,
+            "chn7 pool 2 set (read %d); after ClearPoolId %d (the argument is unused like stock)", g1, g2);
+    }
+}
+
+/* per-frame channel hook: counts the calls, checks the arguments, removed again */
+static volatile int g_cb_n, g_cb_badarg;
+static int t31_chn_cb(int chn, void *frame)
+{
+    if (chn != 1 || !frame) g_cb_badarg++;
+    g_cb_n++;
+    return 0;
+}
+
+static void cs_fscb_t31(void)
+{
+    NEED(IMP_FrameSource_SetChnCallback) {
+        int r1, r2, r3, n1, n2;
+
+        g_cb_n = g_cb_badarg = 0;
+        r1 = IMP_FrameSource_SetChnCallback(1, t31_chn_cb);
+        usleep(1500000); n1 = g_cb_n;
+        r2 = IMP_FrameSource_SetChnCallback(1, NULL);
+        usleep(300000); n2 = g_cb_n; usleep(1000000);
+        r3 = IMP_FrameSource_SetChnCallback(7, t31_chn_cb);
+        rep(FN(IMP_FrameSource_SetChnCallback), r1 | r2, (r1 == 0 && r2 == 0 && r3 == -1 && n1 >= 10 && !g_cb_badarg && g_cb_n == n2 && flow()) ? V_PASS : V_FAIL,
+            "cb(chn, frame) called %d times in 1.5 s (bad args %d); removed: %d more calls; ch7 %d", n1, g_cb_badarg, g_cb_n - n1, r3);
+    }
+}
+
+/* AE start exposure through the tuning node (control 0x800003a): set, read back, restore */
+static void cs_evstart_t31(void)
+{
+    NEED(IMP_ISP_Tuning_SetEvStart) NEED(IMP_ISP_Tuning_GetEvStart) {
+        uint32_t o = 0, g = 0, b = 0;
+        int r0, r1, r2, r3, r4;
+
+        r0 = IMP_ISP_Tuning_GetEvStart(&o);
+        r1 = IMP_ISP_Tuning_SetEvStart(o == 300 ? 400 : 300);
+        r2 = IMP_ISP_Tuning_GetEvStart(&g);
+        r3 = IMP_ISP_Tuning_SetEvStart(o);
+        r4 = IMP_ISP_Tuning_GetEvStart(&b);
+        rep(FN(IMP_ISP_Tuning_GetEvStart), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && g == (o == 300 ? 400U : 300U) && b == o) ? V_PASS : V_FAIL,
+            "initial %u, after set %u, restored %u", o, g, b);
+        rep(FN(IMP_ISP_Tuning_SetEvStart), r1 | r3, (r1 == 0 && r3 == 0 && flow()) ? V_PASS : V_FAIL, "rt: value set and restored, frames flow");
+    }
+}
+
+/* encoder group 5 / channel 5, H.264 on FS ch1 */
+static int t31_enc_up(int discard, int64_t *first_us, int *slots_before, int *slots_after)
+{
+    IMPCell fs1 = { DEV_ID_FS, 1, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
+    IMPEncoderChnAttr *ea = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea));
+    int up = 0;
+
+    *first_us = -1;
+    if (ea && IMP_Encoder_SetDefaultParam && IMP_Encoder_CreateGroup(5) == 0) {
+        IMP_Encoder_SetDefaultParam(ea, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, SUB_W, SUB_H, 15, 1, 30, 2, -1, 512);
+        if (IMP_Encoder_CreateChn(5, ea) == 0) {
+            if (slots_before && IMP_Encoder_GroupWhichChnRegisted) IMP_Encoder_GroupWhichChnRegisted(5, slots_before);
+            if (IMP_Encoder_RegisterChn(5, 5) == 0 && IMP_System_Bind(&fs1, &en5) == 0) {
+                int64_t t0;
+
+                up = 1;
+                if (slots_after && IMP_Encoder_GroupWhichChnRegisted) IMP_Encoder_GroupWhichChnRegisted(5, slots_after);
+                if (discard > 0 && IMP_Encoder_DiscardInitialFrame) IMP_Encoder_DiscardInitialFrame(5, discard);
+                t0 = now_us();
+                IMP_Encoder_StartRecvPic(5);
+                while (now_us() - t0 < 5000000) {
+                    IMPEncoderStream s;
+
+                    if (IMP_Encoder_PollingStream(5, 500) == 0 && IMP_Encoder_GetStream(5, &s, 0) == 0) {
+                        *first_us = now_us() - t0;
+                        IMP_Encoder_ReleaseStream(5, &s);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    free(ea);
+    return up;
+}
+
+static void t31_enc_down(void)
+{
+    IMPCell fs1 = { DEV_ID_FS, 1, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
+
+    IMP_Encoder_StopRecvPic(5); IMP_System_UnBind(&fs1, &en5); IMP_Encoder_UnRegisterChn(5); IMP_Encoder_DestroyChn(5); IMP_Encoder_DestroyGroup(5);
+}
+
+static void cs_encgrp_t31(void)
+{
+    NEED(IMP_Encoder_DiscardInitialFrame) NEED(IMP_Encoder_GroupWhichChnRegisted) NEED(IMP_Encoder_GetStream_Impl) {
+        int sb[3] = { 9, 9, 9 }, sa[3] = { 9, 9, 9 }, sd[3] = { 9, 9, 9 }, up1, up2, rn, rg, rd, n = 20;
+        int64_t t_base = -1, t_disc = -1, tf;
+        IMPEncoderStream s;
+        int rs, rf, rnf;
+
+        up1 = t31_enc_up(0, &t_base, sb, sa);
+        if (up1) {
+            /* GetStream_Impl(.., 0) is GetStream; after StopRecvPic a forced get does not block */
+            rs = IMP_Encoder_PollingStream(5, 1000) == 0 ? IMP_Encoder_GetStream_Impl(5, &s, 1, 0) : -1;
+            if (rs == 0) IMP_Encoder_ReleaseStream(5, &s);
+            IMP_Encoder_StopRecvPic(5);
+            while (IMP_Encoder_GetStream(5, &s, 0) == 0) IMP_Encoder_ReleaseStream(5, &s);   /* drain */
+            tf = now_us(); rf = IMP_Encoder_GetStream_Impl(5, &s, 1, 1); tf = now_us() - tf;
+            if (rf == 0) IMP_Encoder_ReleaseStream(5, &s);
+            rnf = IMP_Encoder_GetStream_Impl(5, &s, 1, 0);
+            if (rnf == 0) IMP_Encoder_ReleaseStream(5, &s);
+            IMP_Encoder_StartRecvPic(5);
+            t31_enc_down();
+            rep(FN(IMP_Encoder_GetStream_Impl), rs, (rs == 0 && rf == -1 && tf < 300000 && rnf == -1 && flow()) ? V_PASS : V_FAIL,
+                "receiving: (block, 0) -> %d; stopped and drained: forced -> %d in %lld ms (no block), unforced -> %d", rs, rf, (long long)(tf / 1000), rnf);
+        }
+        up2 = t31_enc_up(n, &t_disc, NULL, NULL);
+        if (up2) {
+            IMP_Encoder_GroupWhichChnRegisted(5, sd);
+            t31_enc_down();
+        }
+        rn = IMP_Encoder_GroupWhichChnRegisted(5, NULL);
+        rg = IMP_Encoder_GroupWhichChnRegisted(6, sd);
+        rd = IMP_Encoder_DiscardInitialFrame(6, 1);
+        rep(FN(IMP_Encoder_GroupWhichChnRegisted), 0, (up1 && sb[0] == 0 && sb[1] == 0 && sb[2] == 0 && sa[0] == 1 && sa[1] == 0 && sa[2] == 0 && rn == -1 && rg == -1) ? V_PASS : V_FAIL,
+            "group 5 before RegisterChn %d %d %d, after %d %d %d; NULL out %d, group 6 %d", sb[0], sb[1], sb[2], sa[0], sa[1], sa[2], rn, rg);
+        rep(FN(IMP_Encoder_DiscardInitialFrame), 0, (up1 && up2 && t_base >= 0 && t_disc >= 0 && t_disc - t_base > 400000 && rd == -1 && flow()) ? V_PASS : V_FAIL,
+            "first stream after StartRecvPic %lld ms, with %d frames discarded %lld ms; group 6 %d", (long long)(t_base / 1000), n, (long long)(t_disc / 1000), rd);
+    }
+}
+
+/* OSD helpers: group pool request (once per group, group < 5) and the bilinear RGB resize */
+static void cs_osdhelp_t31(void)
+{
+    NEED(IMP_OSD_MemPoolRequest) {
+        int r1 = IMP_OSD_MemPoolRequest(4, 65536, "apitest"), r2 = IMP_OSD_MemPoolRequest(4, 65536, "apitest"), r3 = IMP_OSD_MemPoolRequest(5, 4096, "x"),
+            r4 = IMP_OSD_MemPoolRequest(3, 0, "x");
+
+        rep(FN(IMP_OSD_MemPoolRequest), r1, (r1 == 0 && r2 == -1 && r3 == -1 && r4 == -1) ? V_PASS : V_FAIL,
+            "rt: group 4 64 KiB -> %d, again -> %d (already requested), group 5 -> %d, size 0 -> %d", r1, r2, r3, r4);
+    }
+    NEED(IMP_OSD_ResizeRGB_Pic) {
+        static const uint8_t s22[4] = { 0, 100, 200, 255 }, want33[9] = { 0, 50, 100, 100, 138, 177, 200, 227, 255 };
+        uint8_t d33[9], s44[2 * 4 * 4 * 3], d44[2 * 4 * 4 * 3];
+        int p1[7] = { 1, 2, 2, 1, 0, 3, 3 }, p2[7] = { 2, 4, 4, 3, 0, 4, 4 }, i, r1, r2, bad1 = 0, bad2 = 0;
+
+        r1 = IMP_OSD_ResizeRGB_Pic(s22, d33, 1, p1);
+        for (i = 0; i < 9; i++) bad1 += d33[i] != want33[i];
+        for (i = 0; i < (int)sizeof(s44); i++) s44[i] = (uint8_t)(i * 7 + 3);
+        memset(d44, 0, sizeof(d44));
+        r2 = IMP_OSD_ResizeRGB_Pic(s44, d44, 0, p2);
+        bad2 = memcmp(s44, d44, sizeof(s44)) != 0;
+        rep(FN(IMP_OSD_ResizeRGB_Pic), r1 | r2, (r1 == 0 && r2 == 0 && !bad1 && !bad2) ? V_PASS : V_FAIL,
+            "2x2 -> 3x3 align-corners: %u %u %u / %u %u %u / %u %u %u (%d wrong); 2 stacked 4x4 RGB images, centre mode, same size: %s",
+            d33[0], d33[1], d33[2], d33[3], d33[4], d33[5], d33[6], d33[7], d33[8], bad1, bad2 ? "DIFFERENT" : "identical");
+    }
+}
+#else
+static void cs_poolid_t31(void) {}
+static void cs_fscb_t31(void) {}
+static void cs_evstart_t31(void) {}
+static void cs_encgrp_t31(void) {}
+static void cs_osdhelp_t31(void) {}
+#endif
+
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
+/* NCU buffer: GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
+static void cs_ncu_t31(void)
+{
+    NEED(IMP_ISP_Tuning_GetNCUAlloc) {
+        int a = IMP_ISP_Tuning_GetNCUAlloc();
+        uint32_t ph = a ? *(uint32_t *)((char *)(intptr_t)a + 0x84) : 0, sz = a ? *(uint32_t *)((char *)(intptr_t)a + 0x88) : 0;
+
+        rep(FN(IMP_ISP_Tuning_GetNCUAlloc), 0, (a && ph && sz) ? V_PASS : V_FAIL, "IMPAlloc %p phys 0x%08x size %u", (void *)(intptr_t)a, ph, sz);
+    }
+    NEED(IMP_ISP_Tuning_GetNCUInfo) {
+        uint32_t info[16];
+        int r, r2;
+
+        memset(info, 0xa5, sizeof(info));
+        r = IMP_ISP_Tuning_GetNCUInfo(info);
+        r2 = IMP_ISP_Tuning_GetNCUInfo(NULL);
+        rep(FN(IMP_ISP_Tuning_GetNCUInfo), r, (r == 0 && r2 == -1 && info[5] == 0xa5a5a5a5U) ? V_PASS : V_FAIL,
+            "rt: 0x14 bytes %08x %08x %08x %08x %08x, word 5 untouched (%08x); NULL -> %d", info[0], info[1], info[2], info[3], info[4], info[5], r2);
+    }
+    NEED(IMP_FrameSource_CloseNCUInfo) {
+        int r = IMP_FrameSource_CloseNCUInfo();
+
+        rep(FN(IMP_FrameSource_CloseNCUInfo), r, (r == 0 && flow()) ? V_PASS : V_FAIL, "rt: NCU info closed (VBM flag), frames flow");
+    }
+}
+
+/* FrameSource state setters with the stock checks */
+static void cs_fsset_t31(void)
+{
+    NEED(IMP_FrameSource_SetFrameOffset) {
+        int r1 = IMP_FrameSource_SetFrameOffset(1, 16, 8), r2 = IMP_FrameSource_SetFrameOffset(FS_BAD_CHN, 0, 0), r3 = IMP_FrameSource_SetFrameOffset(1, 0, 0);
+
+        rep(FN(IMP_FrameSource_SetFrameOffset), r1 | r3, (r1 == 0 && r3 == 0 && r2 == -1 && flow()) ? V_PASS : V_FAIL,
+            "rt: ch1 (16,8) %d, back to (0,0) %d, ch%d %d (out of range), frames flow", r1, r3, FS_BAD_CHN, r2);
+    }
+    NEED(IMP_FrameSource_EnableChnUndistort) NEED(IMP_FrameSource_DisableChnUndistort) NEED(IMP_FrameSource_GetChnAttr) {
+        G(IMPFSChnAttr, ca);
+        int is960, r1, r2, r3, r4;
+
+        IMP_FrameSource_GetChnAttr(1, ca);
+        is960 = ca->picWidth == 960 && ca->picHeight == 960;
+        r1 = IMP_FrameSource_EnableChnUndistort(1, 1);
+        r2 = IMP_FrameSource_DisableChnUndistort(1);
+        r3 = IMP_FrameSource_EnableChnUndistort(FS_BAD_CHN, 1);
+        r4 = IMP_FrameSource_DisableChnUndistort(FS_BAD_CHN);
+        rep(FN(IMP_FrameSource_EnableChnUndistort), r1, ((is960 ? r1 == 0 : r1 == -1) && r3 == -1 && flow()) ? V_PASS : V_FAIL,
+            "rt: ch1 %dx%d -> %d (stock: only a 960x960 channel), ch%d %d", ca->picWidth, ca->picHeight, r1, FS_BAD_CHN, r3);
+        rep(FN(IMP_FrameSource_DisableChnUndistort), r2, (r2 == 0 && r4 == -1) ? V_PASS : V_FAIL, "rt: ch1 %d, ch%d %d", r2, FS_BAD_CHN, r4);
+        gfree(ca);
+    }
+#if defined(PLATFORM_T31)
+    NEED(IMP_FrameSource_SetFrameDepthCopyType) NEED(IMP_FrameSource_GetFrameDepth) {
+        int d = -1, r1, r2, r3;
+
+        IMP_FrameSource_GetFrameDepth(1, &d);
+        r1 = IMP_FrameSource_SetFrameDepthCopyType(1, 1);
+        r2 = IMP_FrameSource_SetFrameDepthCopyType(1, 0);
+        r3 = IMP_FrameSource_SetFrameDepthCopyType(5, 0);
+        rep(FN(IMP_FrameSource_SetFrameDepthCopyType), r1 | r2, ((d == 0 ? (r1 == 0 && r2 == 0) : (r1 == -1 && r2 == -1)) && r3 == -1 && flow()) ? V_PASS : V_FAIL,
+            "rt: ch1 depth %d: nocopy -> %d, copy -> %d (stock: only before SetFrameDepth), ch5 %d", d, r1, r2, r3);
+    }
+#endif
+}
+
+/* lens shading off: the corners darken against the centre (FS ch1, mean Y of the four corner blocks / centre block) */
+static double corner_ratio(void)
+{
+    double r = 0;
+    int f, ok = 0;
+
+    usleep(1200000);
+    for (f = 0; f < 3; f++) {
+        IMPFrameInfo *fr = NULL;
+        const unsigned char *y;
+        int w, h, bw, bh, i, j;
+        double c = 0, m = 0;
+
+        if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) continue;
+        y = (const unsigned char *)(uintptr_t)fr->virAddr; w = fr->width; h = fr->height; bw = w / 8; bh = h / 8;
+        for (j = 0; j < bh; j++)
+            for (i = 0; i < bw; i++)
+                c += y[(size_t)j * w + i] + y[(size_t)j * w + w - 1 - i] + y[(size_t)(h - 1 - j) * w + i] + y[(size_t)(h - 1 - j) * w + w - 1 - i];
+        for (j = h / 2 - bh / 2; j < h / 2 + bh / 2; j++)
+            for (i = w / 2 - bw / 2; i < w / 2 + bw / 2; i++)
+                m += y[(size_t)j * w + i];
+        IMP_FrameSource_ReleaseFrame(1, fr);
+        if (m > 0) { r += (c / 4) / m; ok++; }
+    }
+    return ok ? r / ok : 0;
+}
+
+static void cs_shading_t31(void)
+{
+    NEED(IMP_ISP_Tuning_SetShading) {
+        double on = corner_ratio(), off, back;
+        int r1, r2;
+
+        r1 = IMP_ISP_Tuning_SetShading(0); off = corner_ratio();
+        r2 = IMP_ISP_Tuning_SetShading(1); back = corner_ratio();
+        {
+            int eff = on > 0 && off > 0 && off < on * 0.97;
+            rep(FN(IMP_ISP_Tuning_SetShading), r1 | r2, (r1 == 0 && r2 == 0 && dabs(back - on) < 0.05 && flow()) ? V_PASS : V_FAIL,
+                "%scorner/centre luma %.3f -> %.3f with shading off, %.3f on again, frames flow", RTMSG(eff), on, off, back);
+        }
+    }
+}
+
+/* contrast / sharpness override layer: mode 1 applies and holds, mode 2 (= SetContrast) is only remembered while held,
+ * mode 0 releases to the remembered value, other modes -1 */
+static void cs_override_t31(void)
+{
+    NEED(IMP_ISP_Tuning_SetContrast_internal) NEED(IMP_ISP_Tuning_GetContrast) NEED(IMP_ISP_Tuning_SetContrast) {
+        unsigned char c0 = 128, c1 = 0, c2 = 0;
+        Fst base, ov, held, rel;
+        int r1, r2, r3, r4;
+
+        IMP_ISP_Tuning_GetContrast(&c0);
+        base = fst(600);
+        r1 = IMP_ISP_Tuning_SetContrast_internal(c0 < 128 ? 250 : 10, 1); ov = fst(1200);
+        r2 = IMP_ISP_Tuning_SetContrast(c0); IMP_ISP_Tuning_GetContrast(&c1); held = fst(1200);
+        r3 = IMP_ISP_Tuning_SetContrast_internal(0, 0); IMP_ISP_Tuning_GetContrast(&c2); rel = fst(1200);
+        r4 = IMP_ISP_Tuning_SetContrast_internal(c0, 3);
+        {
+            int eff = base.ok && ov.ok && held.ok && rel.ok && dabs(ov.sd - base.sd) > 3 && dabs(held.sd - ov.sd) < 2 && dabs(rel.sd - base.sd) < 3;
+            rep(FN(IMP_ISP_Tuning_SetContrast_internal), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && r4 == -1 && c1 == c0 && c2 == c0 && flow()) ? V_PASS : V_FAIL,
+                "%soverride %d: luma std-dev %.1f -> %.1f; SetContrast(%u) while held: %.1f (not applied); release: %.1f (remembered %u); mode 3 -> %d",
+                RTMSG(eff), c0 < 128 ? 250 : 10, base.sd, ov.sd, c0, held.sd, rel.sd, c2, r4);
+        }
+    }
+    NEED(IMP_ISP_Tuning_SetSharpness_internal) NEED(IMP_ISP_Tuning_GetSharpness) NEED(IMP_ISP_Tuning_SetSharpness) {
+        unsigned char s0 = 128, s2 = 0;
+        Fst base, ov, rel;
+        int r1, r2, r3, r4;
+
+        IMP_ISP_Tuning_GetSharpness(&s0);
+        base = fst(600);
+        r1 = IMP_ISP_Tuning_SetSharpness_internal(s0 < 128 ? 255 : 0, 1); ov = fst(1200);
+        r2 = IMP_ISP_Tuning_SetSharpness(s0);
+        r3 = IMP_ISP_Tuning_SetSharpness_internal(0, 0); IMP_ISP_Tuning_GetSharpness(&s2); rel = fst(1200);
+        r4 = IMP_ISP_Tuning_SetSharpness_internal(s0, 3);
+        {
+            int eff = base.ok && ov.ok && rel.ok && dabs(ov.h - base.h) > 0.1;
+            rep(FN(IMP_ISP_Tuning_SetSharpness_internal), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && r4 == -1 && s2 == s0 && flow()) ? V_PASS : V_FAIL,
+                "%soverride %d: detail H %.3f -> %.3f; release: %.3f (remembered %u); mode 3 -> %d", RTMSG(eff), s0 < 128 ? 255 : 0, base.h, ov.h, rel.h, s2, r4);
+        }
+    }
+}
+
+#else
+static void cs_ncu_t31(void) {}
+static void cs_fsset_t31(void) {}
+static void cs_shading_t31(void) {}
+static void cs_override_t31(void) {}
+#endif
+
+/* ---------------------------------------------------------------------- T23 ISP-OSD calls without an SDK header (coverage 2026-10-29)
+ * MultiCamera_{Set,Get}RgnAttr_ISP(vi, attr, show) = the single-camera calls for sensor vi; UpdateRgnAttrData_ISP(sensor, handle, attr)
+ * replaces the picture bytes of a shown ISP picture region (signatures from the stock T23 1.3.0 libimp). */
+#if defined(PLATFORM_T23) && HAS_IMP_OSD_SetRgnAttr_ISP
+extern int IMP_OSD_MultiCamera_SetRgnAttr_ISP(int vi, IMPOSDRgnAttr *attr, int show);
+extern int IMP_OSD_MultiCamera_GetRgnAttr_ISP(int vi, IMPOSDRgnAttr *attr, int *show);
+typedef struct { int type; int chx; int sensornum; IMPISPOSDAttr chnOSDAttr; IMPISPOSDBlockAttr pic; } T23IspPic;   /* IMPIspOsdAttrAsm */
+extern int IMP_OSD_Init_ISP(void);
+extern int IMP_OSD_CreateRgn_ISP(int sensor, T23IspPic *a);
+extern int IMP_OSD_SetRgnAttr_PicISP(int sensor, int handle, T23IspPic *a);
+extern int IMP_OSD_ShowRgn_ISP(int sensor, int handle, int show);
+extern int IMP_OSD_DestroyRgn_ISP(int sensor, int handle);
+extern int IMP_OSD_UpdateRgnAttrData_ISP(int sensor, int handle, T23IspPic *a);
+#pragma weak IMP_OSD_MultiCamera_SetRgnAttr_ISP
+#pragma weak IMP_OSD_MultiCamera_GetRgnAttr_ISP
+#pragma weak IMP_OSD_Init_ISP
+#pragma weak IMP_OSD_CreateRgn_ISP
+#pragma weak IMP_OSD_SetRgnAttr_PicISP
+#pragma weak IMP_OSD_ShowRgn_ISP
+#pragma weak IMP_OSD_DestroyRgn_ISP
+#pragma weak IMP_OSD_UpdateRgnAttrData_ISP
+
+/* mean luma of a rectangle of FS channel ch (its own coordinates), 2 frames after a settle time */
+static double reg_luma(int ch, int x0, int y0, int x1, int y1)
+{
+    double s = 0;
+    int f, n = 0;
+
+    usleep(700000);
+    for (f = 0; f < 4; f++) {
+        IMPFrameInfo *fr = NULL;
+        const unsigned char *y;
+        int i, j;
+
+        if (IMP_FrameSource_GetFrame(ch, &fr) < 0 || !fr) continue;
+        if (f >= 2) {
+            y = (const unsigned char *)(uintptr_t)fr->virAddr;
+            for (j = y0; j < y1 && j < (int)fr->height; j++)
+                for (i = x0; i < x1 && i < (int)fr->width; i++) { s += y[(size_t)j * fr->width + i]; n++; }
+        }
+        IMP_FrameSource_ReleaseFrame(ch, fr);
+    }
+    return n ? s / n : -1;
+}
+
+static void cs_ispcover_t23(void)
+{
+    NEED(IMP_OSD_MultiCamera_SetRgnAttr_ISP) NEED(IMP_OSD_MultiCamera_GetRgnAttr_ISP) {
+        G(IMPOSDRgnAttr, a); G(IMPOSDRgnAttr, g);
+        int x = SUB_W / 4, y = SUB_H / 4, w = SUB_W / 4, h = SUB_H / 4, show = -1, r1, r2, r3, r4, rbad, rnul;
+        double base, on, off;
+
+        base = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        a->type = OSD_REG_ISP_COVER;
+        a->osdispdraw.stCoverAttr.chx = 1; a->osdispdraw.stCoverAttr.pinum = 0; a->osdispdraw.stCoverAttr.mask_en = 1;
+        a->osdispdraw.stCoverAttr.mask_pos_left = x; a->osdispdraw.stCoverAttr.mask_pos_top = y;
+        a->osdispdraw.stCoverAttr.mask_width = w; a->osdispdraw.stCoverAttr.mask_height = h;
+        a->osdispdraw.stCoverAttr.mask_type = IMPISP_MASK_TYPE_YUV;
+        a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value = base < 128 ? 235 : 16;
+        a->osdispdraw.stCoverAttr.mask_value.ayuv.u_value = 128; a->osdispdraw.stCoverAttr.mask_value.ayuv.v_value = 128;
+        r1 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
+        on = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        g->osdispdraw.stCoverAttr.chx = 1; g->osdispdraw.stCoverAttr.pinum = 0;
+        r2 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(0, g, &show);
+        a->osdispdraw.stCoverAttr.mask_en = 0;
+        r3 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
+        off = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        r4 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(3, g, &show);
+        rbad = IMP_OSD_MultiCamera_SetRgnAttr_ISP(3, a, 0);
+        rnul = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, NULL, 0);
+        rep(FN(IMP_OSD_MultiCamera_SetRgnAttr_ISP), r1 | r3, (r1 == 0 && r3 == 0 && dabs(on - base) > 40 && dabs(off - base) < 20 && rbad == -1 && rnul != 0 && flow()) ? V_PASS : V_FAIL,
+            "sensor 0, ch1 cover %dx%d at (%d,%d) Y %u: luma %.1f -> %.1f, disabled %.1f; vi 3 -> %d, NULL -> %d", w, h, x, y,
+            a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value, base, on, off, rbad, rnul);
+        rep(FN(IMP_OSD_MultiCamera_GetRgnAttr_ISP), r2, (r2 == 0 && show == 1 && g->osdispdraw.stCoverAttr.mask_en == 1 && g->osdispdraw.stCoverAttr.mask_width == w
+            && g->osdispdraw.stCoverAttr.mask_pos_left == x && r4 == -1) ? V_PASS : V_FAIL,
+            "while shown: show %d enable %u %ux%u at (%u,%u); vi 3 -> %d", show, g->osdispdraw.stCoverAttr.mask_en, g->osdispdraw.stCoverAttr.mask_width,
+            g->osdispdraw.stCoverAttr.mask_height, g->osdispdraw.stCoverAttr.mask_pos_left, g->osdispdraw.stCoverAttr.mask_pos_top, r4);
+        gfree(a); gfree(g);
+    }
+}
+
+/* ISP picture region on sensor 0 / main channel: shown white, then UpdateRgnAttrData_ISP with black bytes of the same size */
+static void cs_isppicupd_t23(void)
+{
+    NEED(IMP_OSD_CreateRgn_ISP) NEED(IMP_OSD_SetRgnAttr_PicISP) NEED(IMP_OSD_ShowRgn_ISP) NEED(IMP_OSD_DestroyRgn_ISP) NEED(IMP_OSD_UpdateRgnAttrData_ISP) {
+        enum { PW = 128, PH = 64 };
+        uint32_t *white = (uint32_t *)malloc(PW * PH * 4), *black = (uint32_t *)malloc(PW * PH * 4);
+        T23IspPic a;
+        int hdl = -1, x = 256, y = 128, i, r1 = -1, r2 = -1, r3 = -1, rbad, rnul;
+        double base = 0, on = 0, upd = 0;
+
+        if (!white || !black) { rep(FN(IMP_OSD_UpdateRgnAttrData_ISP), -1, V_SKIP, "no memory"); free(white); free(black); return; }
+        for (i = 0; i < PW * PH; i++) { white[i] = 0xffffffffU; black[i] = 0xff000000U; }
+        if (IMP_OSD_Init_ISP) IMP_OSD_Init_ISP();
+        base = reg_luma(0, x + 4, y + 4, x + PW - 4, y + PH - 4);
+        hdl = IMP_OSD_CreateRgn_ISP(0, NULL);
+        memset(&a, 0, sizeof(a));
+        a.type = 1; a.chx = 0; a.sensornum = 0;
+        a.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888; a.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+        a.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        a.pic.pinum = (uint8_t)(hdl < 0 ? 0 : hdl); a.pic.osd_enable = 1; a.pic.osd_left = x; a.pic.osd_top = y;
+        a.pic.osd_width = PW; a.pic.osd_height = PH; a.pic.osd_image = (char *)white; a.pic.osd_stride = PW * 4;
+        if (hdl >= 0) {
+            r1 = IMP_OSD_SetRgnAttr_PicISP(0, hdl, &a) | IMP_OSD_ShowRgn_ISP(0, hdl, 1);
+            on = reg_luma(0, x + 4, y + 4, x + PW - 4, y + PH - 4);
+            a.pic.osd_image = (char *)black;
+            r2 = IMP_OSD_UpdateRgnAttrData_ISP(0, hdl, &a);
+            upd = reg_luma(0, x + 4, y + 4, x + PW - 4, y + PH - 4);
+            a.pic.osd_height = PH / 2;
+            rbad = IMP_OSD_UpdateRgnAttrData_ISP(0, hdl, &a);          /* the size must stay the same */
+            a.pic.osd_height = PH;
+            r3 = IMP_OSD_ShowRgn_ISP(0, hdl, 0) | IMP_OSD_DestroyRgn_ISP(0, hdl);
+        } else {
+            rbad = -2;
+        }
+        rnul = IMP_OSD_UpdateRgnAttrData_ISP(0, 7, NULL);
+        rep(FN(IMP_OSD_UpdateRgnAttrData_ISP), r2, (hdl >= 0 && r1 == 0 && r2 == 0 && r3 == 0 && on > base + 30 && upd < on - 60 && rbad == -1 && rnul == -1 && flow()) ? V_PASS : V_FAIL,
+            "handle %d white %dx%d at (%d,%d): luma %.1f -> %.1f; updated to black: %.1f; other size -> %d, NULL -> %d", hdl, PW, PH, x, y, base, on, upd, rbad, rnul);
+        free(white); free(black);
+    }
+}
+#else
+static void cs_ispcover_t23(void) {}
+static void cs_isppicupd_t23(void) {}
+#endif
+
+/* T23 encoder helpers without a header (stock T23 1.3.0): checks and results of the stock calls */
+#if defined(PLATFORM_T23)
+extern int IMP_Encoder_SetRdBufShare(int chn, int enable);
+extern int IMP_Encoder_SetPoolSize(int size);
+extern int IMP_Encoder_EnableAllNCUDenoise(void);
+extern int IMP_Encoder_DisableAllNCUDenoise(void);
+extern int IMP_Encoder_SetPadFrameAttr(int chn, int enable, const void *attr);
+extern int IMP_Encoder_PadFrame(int chn, void *frame, void *priv, void (*release)(void *frame, void *priv));
+extern int IMP_Encoder_SetChnRcTrigLevel(int chn, uint32_t level, int mode);
+#pragma weak IMP_Encoder_SetRdBufShare
+#pragma weak IMP_Encoder_SetPoolSize
+#pragma weak IMP_Encoder_EnableAllNCUDenoise
+#pragma weak IMP_Encoder_DisableAllNCUDenoise
+#pragma weak IMP_Encoder_SetPadFrameAttr
+#pragma weak IMP_Encoder_PadFrame
+#pragma weak IMP_Encoder_SetChnRcTrigLevel
+static volatile int g_pad_released;
+static void t23_pad_release(void *frame, void *priv) { (void)frame; if (priv == (void *)&g_pad_released) g_pad_released++; }
+
+static void cs_enchelp_t23(void)
+{
+    NEED(IMP_Encoder_SetRdBufShare) {
+        int r1 = IMP_Encoder_SetRdBufShare(7, 1), r2 = IMP_Encoder_SetRdBufShare(7, 0), r3 = IMP_Encoder_SetRdBufShare(99, 1);
+
+        rep(FN(IMP_Encoder_SetRdBufShare), r1 | r2, (r1 == 0 && r2 == 0 && r3 == -1) ? V_PASS : V_FAIL,
+            "rt: chn 7 (not created) on %d / off %d, chn 99 %d", r1, r2, r3);
+    }
+    NEED(IMP_Encoder_SetPoolSize) {
+        int r1 = IMP_Encoder_SetPoolSize(4 << 20), r2 = IMP_Encoder_SetPoolSize(0);
+
+        rep(FN(IMP_Encoder_SetPoolSize), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: 4 MiB -> %d, 0 -> %d", r1, r2);
+    }
+    NEED(IMP_Encoder_EnableAllNCUDenoise) NEED(IMP_Encoder_DisableAllNCUDenoise) {
+        int r1 = IMP_Encoder_EnableAllNCUDenoise(), r2 = IMP_Encoder_DisableAllNCUDenoise();
+
+        rep(FN(IMP_Encoder_EnableAllNCUDenoise), 0, (r1 == -1 && flow()) ? V_PASS : V_FAIL, "rt: %d (stock T23: NCU denoise only on T30-class SoCs, -1)", r1);
+        rep(FN(IMP_Encoder_DisableAllNCUDenoise), 0, r2 == -1 ? V_PASS : V_FAIL, "rt: %d (same)", r2);
+    }
+    NEED(IMP_Encoder_SetPadFrameAttr) NEED(IMP_Encoder_PadFrame) {
+        uint32_t attr[16];
+        int r1, r2, r3, fr = 0;
+
+        memset(attr, 0, sizeof(attr));
+        r1 = IMP_Encoder_SetPadFrameAttr(7, 1, attr);
+        r3 = IMP_Encoder_SetPadFrameAttr(99, 1, attr);
+        g_pad_released = 0;
+        r2 = IMP_Encoder_PadFrame(7, &fr, (void *)&g_pad_released, t23_pad_release);
+        IMP_Encoder_SetPadFrameAttr(7, 0, NULL);
+        rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn 7 enable -> %d, chn 99 -> %d", r1, r3);
+        rep(FN(IMP_Encoder_PadFrame), r2, (r2 == -1 && g_pad_released == 1) ? V_PASS : V_FAIL,
+            "rt: frame refused (%d) and handed back to the release callback (%d call) - pad-frame encoding is not implemented in OpenIMP (Helix encodes FrameSource frames only)", r2, g_pad_released);
+    }
+    NEED(IMP_Encoder_SetChnRcTrigLevel) {
+        union { float f; uint32_t u; } lv = { 1.5f };
+        int r1 = IMP_Encoder_SetChnRcTrigLevel(7, lv.u, 1), r2 = IMP_Encoder_SetChnRcTrigLevel(99, lv.u, 1);
+
+        rep(FN(IMP_Encoder_SetChnRcTrigLevel), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: idle chn 7 -> %d (stock: 0, nothing to do), chn 99 -> %d", r1, r2);
+    }
+}
+#else
+static void cs_enchelp_t23(void) {}
+#endif
+
+/* #140c targeted T40 checks: day mode, frame drop with a real change, SDNS/DPC ratio effect, AF/WDR read-out */
+#if defined(APITEST_T40)
+static double fs_rate(int ch, int ms)     /* frames per second delivered by FS ch over ms */
+{
+    int64_t t0 = now_us();
+    int n = 0;
+
+    while (now_us() - t0 < (int64_t)ms * 1000) {
+        IMPFrameInfo *fr = NULL;
+
+        if (IMP_FrameSource_GetFrame(ch, &fr) == 0 && fr) { n++; IMP_FrameSource_ReleaseFrame(ch, fr); }
+    }
+    return n * 1000.0 / ms;
+}
+
+static void cs_t140c(void)
+{
+    NEED(IMP_ISP_Tuning_SetISPRunningMode) NEED(IMP_ISP_Tuning_GetISPRunningMode) {
+        IMPISPRunningMode o = IMPISP_RUNNING_MODE_DAY, m;
+        Fst a, d, b;
+        int r1, r2;
+
+        IMP_ISP_Tuning_GetISPRunningMode(IMPVI_MAIN, &o);
+        a = fst(600);
+        m = IMPISP_RUNNING_MODE_DAY; r1 = IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &m); d = fst(2500);
+        m = o; r2 = IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &m); b = fst(2500);
+        rep(LBL("t140c_day_mode"), r1 | r2, (r1 == 0 && r2 == 0 && d.ok && flow()) ? V_PASS : V_FAIL,
+            "mode %d: chroma %.2f Y %.1f; DAY: chroma %.2f Y %.1f U/V %.1f/%.1f; back to %d: chroma %.2f Y %.1f", (int)o, a.c, a.y, d.c, d.y, d.u, d.v, (int)o, b.c, b.y);
+    }
+    NEED(IMP_ISP_SetFrameDrop) NEED(IMP_ISP_GetFrameDrop) {
+        IMPISPFrameDropAttr o, s, g;
+        double f0, f1, f2;
+        int r0, r1, r2, r3, i;
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g));
+        r0 = IMP_ISP_GetFrameDrop(IMPVI_MAIN, &o);
+        f0 = fs_rate(1, 3000);
+        s = o;
+        for (i = 0; i < 3; i++) { s.fdrop[i].enable = IMPISP_TUNING_OPS_MODE_ENABLE; s.fdrop[i].lsize = 1; s.fdrop[i].fmark = 0x1; }
+        r1 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &s); IMP_ISP_GetFrameDrop(IMPVI_MAIN, &g); usleep(500000);
+        f1 = fs_rate(1, 3000);
+        for (i = 0; i < 3; i++) s.fdrop[i].enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        r2 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &s); usleep(500000);
+        f2 = fs_rate(1, 3000);
+        r3 = IMP_ISP_SetFrameDrop(IMPVI_MAIN, &o);
+        rep(LBL("t140c_frame_drop"), r0 | r1 | r2 | r3, (r1 == 0 && r2 == 0 && f1 < f0 * 0.75 && f2 > f0 * 0.85 && flow()) ? V_PASS : V_FAIL,
+            "ch1 %.1f fps; drop 1 of 2 on (read back en %d lsize %u mark 0x%x): %.1f fps; disabled: %.1f fps; original restored", f0, (int)g.fdrop[1].enable, g.fdrop[1].lsize, g.fdrop[1].fmark, f1, f2);
+    }
+    NEED(IMP_ISP_Tuning_SetModule_Ratio) NEED(IMP_ISP_Tuning_GetModule_Ratio) {
+        static const struct { int idx; const char *name; } mod[2] = { { IMP_ISP_MODULE_SINTER, "sinter(SDNS)" }, { IMP_ISP_MODULE_DPC, "DPC" } };
+        int k;
+
+        for (k = 0; k < 2; k++) {
+            IMPISPModuleRatioAttr o, s;
+            Fst lo, hi;
+            int r1, r2, r3;
+
+            memset(&o, 0, sizeof(o));
+            IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &o);
+            s = o; s.ratio_attr[mod[k].idx].en = IMPISP_TUNING_OPS_MODE_ENABLE;
+            s.ratio_attr[mod[k].idx].ratio = 0; r1 = IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &s); lo = fst(2000);
+            s.ratio_attr[mod[k].idx].ratio = 255; r2 = IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &s); hi = fst(2000);
+            r3 = IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &o);
+            {
+                int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+                rep(k ? LBL("t140c_dpc_ratio") : LBL("t140c_sdns_ratio"), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && flow()) ? V_PASS : V_FAIL,
+                    "%s%s ratio 0: detail H %.3f sd %.1f; ratio 255: H %.3f sd %.1f; restored", RTMSG(eff), mod[k].name, lo.h, lo.sd, hi.h, hi.sd);
+            }
+        }
+    }
+    NEED(IMP_ISP_Tuning_GetAFMetricesInfo) {
+        IMPISPAFMetricsInfo a, b;
+        int r1, r2;
+        const uint32_t *wa = (const uint32_t *)&a, *wb = (const uint32_t *)&b;
+
+        memset(&a, 0, sizeof(a)); memset(&b, 0, sizeof(b));
+        r1 = IMP_ISP_Tuning_GetAFMetricesInfo(IMPVI_MAIN, &a); usleep(1000000);
+        r2 = IMP_ISP_Tuning_GetAFMetricesInfo(IMPVI_MAIN, &b);
+        rep(LBL("t140c_af_metrics"), r1 | r2, (r1 == 0 && r2 == 0 && (wa[0] | wa[1] | wa[2] | wa[3]) != 0) ? V_PASS : V_FAIL,
+            "first words %u %u %u %u, 1 s later %u %u %u %u (sizeof %u)", wa[0], wa[1], wa[2], wa[3], wb[0], wb[1], wb[2], wb[3], (unsigned)sizeof(a));
+    }
+}
+#else
+static void cs_t140c(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2807,5 +3533,20 @@ void t_cases(void)
     if (cs_on("aeinfo_t40")) cs_aeinfo_t40(); wdog("cases", 60);
     if (cs_on("faceae_t40")) cs_faceae_t40(); wdog("cases", 60);
     if (cs_on("switchbin_t40")) cs_switchbin_t40(); wdog("cases", 90);
+    if (cs_on("itmax")) cs_itmax();       wdog("cases", 90);
+    if (cs_on("fixedcontrast_old")) cs_fixedcontrast_old(); wdog("cases", 90);
+    if (cs_on("poolid_t31")) cs_poolid_t31(); wdog("cases", 60);
+    if (cs_on("ncu_t31")) cs_ncu_t31(); wdog("cases", 60);
+    if (cs_on("fsset_t31")) cs_fsset_t31(); wdog("cases", 60);
+    if (cs_on("fscb_t31")) cs_fscb_t31(); wdog("cases", 60);
+    if (cs_on("evstart_t31")) cs_evstart_t31(); wdog("cases", 60);
+    if (cs_on("shading_t31")) cs_shading_t31(); wdog("cases", 90);
+    if (cs_on("override_t31")) cs_override_t31(); wdog("cases", 90);
+    if (cs_on("encgrp_t31")) cs_encgrp_t31(); wdog("cases", 120);
+    if (cs_on("osdhelp_t31")) cs_osdhelp_t31(); wdog("cases", 60);
+    if (cs_on("ispcover_t23")) cs_ispcover_t23(); wdog("cases", 60);
+    if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
+    if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
     wdog("cases", 60);
 }

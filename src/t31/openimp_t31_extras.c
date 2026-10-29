@@ -100,14 +100,6 @@ int IMP_Encoder_ClearPoolId(int encChn)
     return 0;
 }
 
-/* IMP_Encoder_GetStream is GetStream_Impl(chn, stream, block, 0); "force"
- * only lets libimp's own drain path read a channel that stopped receiving. */
-int IMP_Encoder_GetStream_Impl(int encChn, void *stream, int block, int force)
-{
-    (void)force;
-    return IMP_Encoder_GetStream(encChn, stream, block);
-}
-
 /* libimp reserves "size" bytes of rmem per pool and channels bound with
  * IMP_FrameSource_SetPool/IMP_Encoder_SetPool allocate from it. OpenIMP
  * allocates every channel from the one rmem arena, so a pool is a name only:

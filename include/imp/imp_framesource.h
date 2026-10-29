@@ -245,11 +245,15 @@ int IMP_FrameSource_GetMaxDelay(int chnNum, int *max_delay_ms);
 int IMP_FrameSource_SetPool(int chnNum, int poolId);
 int IMP_FrameSource_GetPool(int chnNum);
 int IMP_FrameSource_ChnStatQuery(int chnNum, void *stat);
-int IMP_FrameSource_EnableChnUndistort(int chnNum);
+int IMP_FrameSource_EnableChnUndistort(int chnNum, int param);   /* T23/T31: 960x960 channels only */
 int IMP_FrameSource_DisableChnUndistort(int chnNum);
 int IMP_FrameSource_GetTimedFrame(int chnNum, void *framets, int block,
                                    void *framedata, void *frame);
-int IMP_FrameSource_SetFrameOffset(int chnNum, int offset);
+int IMP_FrameSource_SetFrameOffset(int chnNum, int x, int y);
+#if defined(PLATFORM_T31)
+/* T31 1.1.5-zrt: cb(chn, frame) for every captured frame before delivery; NULL removes it */
+int IMP_FrameSource_SetChnCallback(int chnNum, int (*cb)(int, void *));
+#endif
 
 #if defined(PLATFORM_T40) || defined(PLATFORM_T41)
 /* T40 1.3.1 / T41 1.2.6: frames without the depth queue, external frame

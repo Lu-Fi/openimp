@@ -933,6 +933,24 @@ static void framesource_ctor_trace(void)
                   (void *)framesource_unbind);
 }
 
+#if defined(PLATFORM_T31)
+/* IMP_FrameSource_SetChnCallback hooks, run for every captured frame */
+static int (*g_fs_chn_cb[FS_MAX_CHANNELS])(int, void *);
+
+/* called by VBMKernelDequeue for every captured frame (stock: in
+ * on_framesource_group_data_update for every frame taken from the VBM) */
+void openimp_fs_chn_callback(int chn, void *frame)
+{
+    int (*cb)(int, void *);
+
+    if (chn < 0 || chn >= FS_MAX_CHANNELS)
+        return;
+    cb = __atomic_load_n(&g_fs_chn_cb[chn], __ATOMIC_ACQUIRE);
+    if (cb != NULL)
+        (void)cb(chn, frame);
+}
+#endif
+
 static void framesource_publish_outputs(Module *module, void *frame)
 {
     if (module == NULL) return;
@@ -1559,8 +1577,9 @@ int IMP_FrameSource_SetFrameDepthCopyType(int chnNum, int bNoCopy)
         }
         result = -1;
     } else {
-        *(int32_t *)(chan + 0x1d0) = (bNoCopy > 0) ? 1 : 0;
-        g_fs_ctx[chnNum].copy_type = (bNoCopy > 0) ? 1 : 0;
+        /* OEM 0x9cd74 sltu: any non-zero value (also negative) is 1 */
+        *(int32_t *)(chan + 0x1d0) = bNoCopy != 0;
+        g_fs_ctx[chnNum].copy_type = bNoCopy != 0;
         result = 0;
     }
 
@@ -2873,24 +2892,74 @@ int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width,
     return 0;
 }
 
-int IMP_FrameSource_SetFrameOffset(int chnNum, int offset)
+/* Stock T31 1.1.6 (0xa1a34): the two values go to chan + 0x234 / 0x238 for a
+ * channel below 5 (the stock check is signed only; negative channels are
+ * rejected here); nothing in the stock library reads them back. */
+int IMP_FrameSource_SetFrameOffset(int chnNum, int x, int y)
 {
-    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
-    (void)offset;
+    uint8_t *chan;
+
+    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || gFrameSource == NULL) return -1;
+    chan = fs_channel_base(chnNum);
+    *(int32_t *)(chan + 0x234) = x;
+    *(int32_t *)(chan + 0x238) = y;
     return 0;
 }
 
-int IMP_FrameSource_EnableChnUndistort(int chnNum)
+/* Stock T31 1.1.6 (0xa1afc): undistortion exists only for a 960x960 channel
+ * (picWidth/picHeight at chan + 0x20/0x24); then chan + 0x1ac = 1 and
+ * chan + 0x1b0 = param, otherwise both are cleared and -1 is returned. */
+int IMP_FrameSource_EnableChnUndistort(int chnNum, int param)
 {
-    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
-    return 0;
+    uint8_t *chan;
+    int ret = -1;
+
+    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || gFrameSource == NULL) return -1;
+    chan = fs_channel_base(chnNum);
+    pthread_mutex_lock((pthread_mutex_t *)(chan + 0x208));
+    if (*(int32_t *)(chan + 0x20) == 960 && *(int32_t *)(chan + 0x24) == 960) {
+        *(int32_t *)(chan + 0x1b0) = param;
+        *(int32_t *)(chan + 0x1ac) = 1;
+        ret = 0;
+    } else {
+        imp_log_fun(5, IMP_Log_Get_Option(), 2, "Framesource",
+            "/home/user/git/proj/sdk-lv3/src/imp/framesource/framesource_tseries.c",
+            0x9cc, "IMP_FrameSource_EnableChnUndistort",
+            "%s(): chn%d is not 960x960, undistort unsupported\n",
+            "IMP_FrameSource_EnableChnUndistort", chnNum);
+        *(int32_t *)(chan + 0x1b0) = 0;
+        *(int32_t *)(chan + 0x1ac) = 0;
+    }
+    pthread_mutex_unlock((pthread_mutex_t *)(chan + 0x208));
+    return ret;
 }
 
+/* Stock T31 1.1.6 (0xa1cbc): clears the flag set by EnableChnUndistort. */
 int IMP_FrameSource_DisableChnUndistort(int chnNum)
 {
-    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS) return -1;
+    uint8_t *chan;
+
+    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || gFrameSource == NULL) return -1;
+    chan = fs_channel_base(chnNum);
+    pthread_mutex_lock((pthread_mutex_t *)(chan + 0x208));
+    if (*(int32_t *)(chan + 0x1ac) == 1)
+        *(int32_t *)(chan + 0x1ac) = 0;
+    pthread_mutex_unlock((pthread_mutex_t *)(chan + 0x208));
     return 0;
 }
+
+/* Stock T31 1.1.5-zrt (0x97d18): a per-channel hook that
+ * on_framesource_group_data_update calls as cb(chn, frame) for every frame
+ * taken from the VBM, before the frame goes to the bound modules; its
+ * return value is ignored.  NULL removes it. */
+#if defined(PLATFORM_T31)
+int IMP_FrameSource_SetChnCallback(int chnNum, int (*cb)(int, void *))
+{
+    if (chnNum < 0 || chnNum >= FS_MAX_CHANNELS || gFrameSource == NULL) return -1;
+    __atomic_store_n(&g_fs_chn_cb[chnNum], cb, __ATOMIC_RELEASE);
+    return 0;
+}
+#endif
 
 #if defined(FS_SW_ROTATE)
 /* ---------------------------------------------------------------------
