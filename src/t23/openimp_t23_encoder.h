@@ -19,6 +19,7 @@ typedef int (*OpenIMPT23P2Fn)(OpenIMPT23P2View *view, void *arg);
 /* Run fn with the channel locked; -1 for an invalid channel. */
 int openimp_t23_p2_call(int channel, OpenIMPT23P2Fn fn, void *arg);
 
+
 /* Forward a channel setting to the running Helix encoder (the OEM
  * i264e_set_param behind each IMP_Encoder_Set* call).  No-ops for
  * channels that are not H.264 or not created; -1 when the encoder

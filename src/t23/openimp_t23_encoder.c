@@ -42,8 +42,6 @@ typedef struct {
     int fisheye;
     int rd_buf_share;
     int change_ref;
-    int pad_enable;
-    uint8_t pad_attr[32];
     IMPEncoderGDRCfg gdr;
     T23HelixFrameCtl frame_ctl;
 } T23EncExtra;
@@ -805,41 +803,7 @@ int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt)
     return 0;
 }
 
-/* Undocumented OEM pad-frame input: frames handed in by the application
- * are encoded in place of captured ones.  The attribute is stored like the
- * OEM's; frames are refused - the OEM error path: the release callback gets
- * the frame back and -1 is returned - because the Helix path encodes
- * FrameSource frames only. */
-static int pad_attr_cb(OpenIMPT23P2View *v, void *arg)
-{
-    T23Call *c = arg;
-
-    if (!is_h264(v))
-        return 0;
-    pthread_mutex_lock(&extra_lock);
-    extras[c->channel].pad_enable = c->value != 0;
-    if (c->value && c->in)
-        memcpy(extras[c->channel].pad_attr, c->in,
-               sizeof(extras[c->channel].pad_attr));
-    pthread_mutex_unlock(&extra_lock);
-    return 0;
-}
-
-int IMP_Encoder_SetPadFrameAttr(int channel, int enable, const void *attr)
-{
-    if (!valid_channel(channel))
-        return -1;
-    return call(channel, pad_attr_cb, attr, NULL, enable);
-}
-
-int IMP_Encoder_PadFrame(int channel, void *frame, void *priv,
-                         void (*release)(void *frame, void *priv))
-{
-    (void)channel;
-    if (release)
-        release(frame, priv);
-    return -1;
-}
+/* Pad frames (IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): src/t40/openimp_p2_encoder.c, shared with the T21 family. */
 
 /* OEM: NCU denoise exists on T30-class SoCs only (cpu id 3..5); on T23
  * both calls log and fail. */

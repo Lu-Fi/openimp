@@ -1,5 +1,6 @@
 /* Standalone T40 public encoder lifecycle built on the recovered AL backend. */
 
+#include <stddef.h>
 #include <errno.h>
 #include "../core/thread_name.h"
 #include <fcntl.h>
@@ -458,6 +459,15 @@ static uint32_t p2_fill_t31_packs(P2EncoderChannel *channel,
 
 static int p2_initialized;
 static int p2_groups[P2_MAX_GROUPS];
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+/* IMP_Encoder_PadFrame (pad frames, see p2_pad_select) */
+typedef struct {
+    void *frame;
+    void *priv;
+    void (*release)(void *frame, void *priv);
+} P2PadNode;
+static void p2_pad_flush(int channel);
+#endif
 #if defined(PLATFORM_T31)
 /* IMP_Encoder_DiscardInitialFrame: frames still to drop per group */
 static int p2_discard_left[P2_MAX_GROUPS];
@@ -2711,6 +2721,9 @@ static int p2_destroy_chn(int channel)
 #if defined(PLATFORM_T31)
     p2_group_slot_drop(channel);
 #endif
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+    p2_pad_flush(channel);
+#endif
 #if defined(P2_JPEG_LEND)
     {
         /* no PollingStream runs any more (p2_wait_poll_idle): a frame
@@ -2958,6 +2971,233 @@ static void t23_pace_account(int channel, uint64_t start_us,
 }
 #endif
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+/* ---- pad frames -----------------------------------------------------------
+ * Stock T23 1.3.0 IMP_Encoder_SetPadFrameAttr (0x548dc) / IMP_Encoder_PadFrame
+ * (0x54a3c) / do_channel_process, the same in T21 1.0.33 and T20/T10 3.12.0
+ * (channel < 6 there, < 9 on T23): the application hands in processed copies
+ * of captured frames (IMPFrameInfo, time stamp at +0x28 on T23, +0x20 on the
+ * T21 family, as in each stock do_channel_process) with a release
+ * callback; while pad frames are enabled every captured frame is encoded
+ * from the pad frame that matches it instead, and a captured frame without
+ * one is not encoded.  Attribute (32 bytes): word 1 = match the time stamps
+ * (0: take the next pad frame), words 2/3 = tolerance lo/hi.  Matching (the
+ * stock arithmetic): d = |(int32)(captured.lo - pad.lo)|; within tolerance
+ * when tol.hi > d >> 31 (unsigned) or tol.hi == d >> 31 and d <= tol.lo;
+ * else a newer pad frame waits for its capture (this capture is skipped)
+ * and an older one is released and the next one is tried.  The queue waits
+ * up to one frame interval for a pad frame / for room.  Pad frames use the
+ * encoder's input layout (luma width x align16(height), chroma after it). */
+#define P2_PAD_DEPTH 8
+#if defined(PLATFORM_T23)
+#define P2_PAD_CHANNELS 9
+#else
+#define P2_PAD_CHANNELS 6
+#endif
+
+static struct {
+    int enable;
+    uint8_t attr[32];
+    P2PadNode n[P2_PAD_DEPTH];
+    unsigned int head, count;
+} p2_pad[P2_MAX_CHANNELS];
+static pthread_mutex_t p2_pad_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t p2_pad_cond = PTHREAD_COND_INITIALIZER;
+
+static int p2_pad_channel(int channel)
+{
+    return channel >= 0 && channel < P2_PAD_CHANNELS && p2_valid_channel(channel);
+}
+
+static uint32_t p2_pad_interval_us(int channel)
+{
+    P2EncoderChannel *ch = &p2_channels[channel];
+    uint32_t num, den;
+
+    pthread_mutex_lock(&ch->lock);
+    num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+    den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+    pthread_mutex_unlock(&ch->lock);
+    return num && den ? (uint32_t)((1000000ull * den) / num) : 40000u;
+}
+
+static void p2_pad_deadline(struct timespec *ts, uint32_t wait_us)
+{
+    clock_gettime(CLOCK_REALTIME, ts);
+    ts->tv_sec += wait_us / 1000000u;
+    ts->tv_nsec += (long)(wait_us % 1000000u) * 1000L;
+    if (ts->tv_nsec >= 1000000000L) {
+        ts->tv_sec++;
+        ts->tv_nsec -= 1000000000L;
+    }
+}
+
+int IMP_Encoder_SetPadFrameAttr(int channel, int enable, const void *attr)
+{
+    int created;
+
+    if (!p2_pad_channel(channel))
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    created = p2_channels[channel].created;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    if (!created)                   /* stock: 0, nothing stored */
+        return 0;
+    pthread_mutex_lock(&p2_pad_lock);
+    p2_pad[channel].enable = enable != 0;
+    if (enable && attr)
+        memcpy(p2_pad[channel].attr, attr, sizeof(p2_pad[channel].attr));
+    pthread_mutex_unlock(&p2_pad_lock);
+    return 0;
+}
+
+int IMP_Encoder_PadFrame(int channel, void *frame, void *priv,
+                         void (*release)(void *frame, void *priv))
+{
+    struct timespec ts;
+    int state;
+
+    if (!p2_pad_channel(channel) || !frame)
+        goto refuse;
+    EncoderInit();
+    /* stock order: registered group, started stream, channel state 1 */
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    state = !p2_channels[channel].registered || !p2_channels[channel].receiving ? -1 :
+            !p2_channels[channel].created ? 1 : 0;
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    if (state < 0)
+        goto refuse;
+    if (state == 1)
+        return 0;                   /* stock: not handed back, 0 */
+    pthread_mutex_lock(&p2_pad_lock);
+    if (!p2_pad[channel].enable) {
+        pthread_mutex_unlock(&p2_pad_lock);
+        goto refuse;
+    }
+    p2_pad_deadline(&ts, p2_pad_interval_us(channel));
+    while (p2_pad[channel].count == P2_PAD_DEPTH)
+        if (pthread_cond_timedwait(&p2_pad_cond, &p2_pad_lock, &ts) != 0 &&
+            p2_pad[channel].count == P2_PAD_DEPTH) {
+            pthread_mutex_unlock(&p2_pad_lock);
+            goto refuse;
+        }
+    {
+        unsigned int at = (p2_pad[channel].head + p2_pad[channel].count) % P2_PAD_DEPTH;
+
+        p2_pad[channel].n[at].frame = frame;
+        p2_pad[channel].n[at].priv = priv;
+        p2_pad[channel].n[at].release = release;
+        p2_pad[channel].count++;
+    }
+    pthread_cond_broadcast(&p2_pad_cond);
+    pthread_mutex_unlock(&p2_pad_lock);
+    return 0;
+refuse:
+    IMP_LOG_LIMITED(LOG_ERR, "Encoder", "IMP_Encoder_PadFrame: chn %d frame %p refused", channel, frame);
+    if (release)
+        release(frame, priv);
+    return -1;
+}
+
+static int64_t p2_pad_ts(const void *frame)
+{
+    int64_t t;
+
+    memcpy(&t, (const uint8_t *)frame + offsetof(IMPFrameInfo, timeStamp), sizeof(t));
+    return t;
+}
+
+/* PollingStream, captured frame src: 0 = no pad frames (encode src),
+ * 1 = encode node->frame instead (then p2_pad_release), -1 = do not encode src. */
+static int p2_pad_select(int channel, const void *src, uint32_t wait_us, P2PadNode *node)
+{
+    struct timespec ts;
+    int ret = 0;
+
+    if (!p2_pad_channel(channel) || !src)
+        return 0;
+    pthread_mutex_lock(&p2_pad_lock);
+    if (!p2_pad[channel].enable)
+        goto out;
+    p2_pad_deadline(&ts, wait_us);
+    for (;;) {
+        P2PadNode *h;
+        uint32_t w1, tol_lo, tol_hi, d, dhi;
+        int64_t st, pt;
+
+        while (!p2_pad[channel].count)
+            if (pthread_cond_timedwait(&p2_pad_cond, &p2_pad_lock, &ts) != 0 &&
+                !p2_pad[channel].count) {
+                ret = -1;
+                goto out;
+            }
+        h = &p2_pad[channel].n[p2_pad[channel].head];
+        memcpy(&w1, p2_pad[channel].attr + 4, 4);
+        memcpy(&tol_lo, p2_pad[channel].attr + 8, 4);
+        memcpy(&tol_hi, p2_pad[channel].attr + 12, 4);
+        st = p2_pad_ts(src);
+        pt = p2_pad_ts(h->frame);
+        d = (uint32_t)st - (uint32_t)pt;
+        d = (int32_t)d < 0 ? 0u - d : d;
+        dhi = (uint32_t)((int32_t)d >> 31);
+        if (!w1 || tol_hi > dhi || (tol_hi == dhi && d <= tol_lo)) {
+            *node = *h;
+            p2_pad[channel].head = (p2_pad[channel].head + 1) % P2_PAD_DEPTH;
+            p2_pad[channel].count--;
+            pthread_cond_broadcast(&p2_pad_cond);
+            ret = 1;
+            goto out;
+        }
+        if (pt > st) {              /* newer: waits for its capture */
+            ret = -1;
+            goto out;
+        }
+        {                           /* older: back to the application, try the next */
+            P2PadNode old = *h;
+
+            p2_pad[channel].head = (p2_pad[channel].head + 1) % P2_PAD_DEPTH;
+            p2_pad[channel].count--;
+            pthread_cond_broadcast(&p2_pad_cond);
+            pthread_mutex_unlock(&p2_pad_lock);
+            if (old.release)
+                old.release(old.frame, old.priv);
+            pthread_mutex_lock(&p2_pad_lock);
+        }
+    }
+out:
+    pthread_mutex_unlock(&p2_pad_lock);
+    return ret;
+}
+
+static void p2_pad_release(const P2PadNode *node)
+{
+    if (node && node->release)
+        node->release(node->frame, node->priv);
+}
+
+/* DestroyChn: queued pad frames go back to the application, pad mode off */
+static void p2_pad_flush(int channel)
+{
+    P2PadNode q[P2_PAD_DEPTH];
+    unsigned int n = 0, i;
+
+    if (!p2_pad_channel(channel))
+        return;
+    pthread_mutex_lock(&p2_pad_lock);
+    while (p2_pad[channel].count) {
+        q[n++] = p2_pad[channel].n[p2_pad[channel].head];
+        p2_pad[channel].head = (p2_pad[channel].head + 1) % P2_PAD_DEPTH;
+        p2_pad[channel].count--;
+    }
+    p2_pad[channel].enable = 0;
+    pthread_cond_broadcast(&p2_pad_cond);
+    pthread_mutex_unlock(&p2_pad_lock);
+    for (i = 0; i < n; i++)
+        p2_pad_release(&q[i]);
+}
+#endif
+
 int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
 {
     P2EncoderChannel *ch;
@@ -3039,6 +3279,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     uint32_t fps_num;
     uint32_t fps_den;
     uint64_t interval_us;
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+    P2PadNode pad;
+    int pad_sel = 0;
+#endif
     uint64_t now_us;
     uint64_t frame_deadline_us;
 #if defined(PLATFORM_T40)
@@ -3301,8 +3545,24 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         (void)AL_Codec_Encode_SetJpegSrcPitch(ch->codec, ch->jpeg_src_pitch);
         (void)AL_Codec_Encode_SetJpegSkip(ch->codec, jpeg_may_skip);
     }
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+    /* IMP_Encoder_PadFrame: while pad frames are enabled the matching pad
+     * frame is encoded instead of the captured one, and a capture without
+     * one is not encoded (stock do_channel_process) */
+    if (frame && frame != &ch->synthetic_frame) {
+        pad_sel = p2_pad_select(channel, frame, (uint32_t)interval_us, &pad);
+        if (pad_sel < 0)
+            goto done;
+    }
+#endif
     ch->enc_start_us = p2_monotonic_us();
     __atomic_store_n(&ch->encoding, 1, __ATOMIC_RELEASE);
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+    if (pad_sel > 0) {
+        process_result = AL_Codec_Encode_Process(ch->codec, pad.frame, pad.frame);
+        p2_pad_release(&pad);
+    } else
+#endif
     process_result = AL_Codec_Encode_Process(ch->codec, frame, frame);
 #if defined(PLATFORM_T41)
     /* the pending RC values are in effect from this picture on */
@@ -6002,6 +6262,58 @@ int IMP_Encoder_SetChnRcTrigLevel(int channel, float level, int mode)
         (void)AL_Codec_Encode_SetRcTrig(ch->codec, level, mode);
     pthread_mutex_unlock(&ch->lock);
     return 0;
+}
+#endif
+
+#if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
+/* T21 1.0.33 IMP_Encoder_SetChnRcTrigLevel (0x462cc -> i264e_reconfig_rc_trig_set
+ * 0x2f420): channel >= 6 is -1, an idle channel 0; a created channel stores
+ * {float level, int new max QP} at i264e +10336 / +10340 and flags a rate
+ * control reconfiguration.  The T21 rate control here (eprc) has no
+ * trigger yet, so the pair is kept with the stock checks (tracked with the
+ * T20 NCU denoise work). */
+static struct { float level; int mode; } p2_rc_trig[P2_MAX_CHANNELS];
+
+int IMP_Encoder_SetChnRcTrigLevel(int channel, float level, int mode)
+{
+    if (channel < 0 || channel >= 6 || !p2_valid_channel(channel))
+        return -1;
+    EncoderInit();
+    pthread_mutex_lock(&p2_channels[channel].lock);
+    if (p2_channels[channel].created) {
+        p2_rc_trig[channel].level = level;
+        p2_rc_trig[channel].mode = mode;
+    }
+    pthread_mutex_unlock(&p2_channels[channel].lock);
+    return 0;
+}
+#endif
+
+#if defined(PLATFORM_T21)
+/* T21 1.0.33 IMP_Encoder_Enable/DisableAllNCUDenoise (0x4c6a0): the NCU
+ * denoise exists for CPU ids 3..5 only; on a T21 both log and return -1.
+ * T20 / T10 3.12.0 (0x4e000) do have it: they set bit 0x400 of the NCU
+ * register 0x13380040 and switch every created channel's i264e to the NCU
+ * reference path; the Helix encoder here has no NCU integration yet, so
+ * these SoCs log and return -1 too instead of claiming success. */
+static int p2_ncu_denoise_unsupported(const char *fn)
+{
+#if defined(PLATFORM_T20)
+    IMP_LOG_ERR("Encoder", "%s: NCU denoise is not implemented in OpenIMP for T20/T10 yet", fn);
+#else
+    IMP_LOG_ERR("Encoder", "%s: this CPU has no NCU denoise", fn);
+#endif
+    return -1;
+}
+
+int IMP_Encoder_EnableAllNCUDenoise(void)
+{
+    return p2_ncu_denoise_unsupported(__func__);
+}
+
+int IMP_Encoder_DisableAllNCUDenoise(void)
+{
+    return p2_ncu_denoise_unsupported(__func__);
 }
 #endif
 

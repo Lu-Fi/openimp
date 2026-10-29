@@ -2957,8 +2957,9 @@ static void cs_fixedcontrast_old(void) {}
 /* ---------------------------------------------------------------------- T31 calls without an SDK header (coverage 2026-10-29)
  * Signatures from the stock T31 libimp (1.1.6, 1.1.5-zrt, 1.1.5.2), see the OpenIMP implementations; every case restores what it
  * changed.  Pass criterion = the stock semantics: return codes, read-back and, where the call has one, the effect. */
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
-/* T23 1.3.0 / T31 1.1.6 share these (T23: channel < 9, T31: < 5) */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
+/* T23 1.3.0 / T31 1.1.6 / T21 1.0.33 / T20 + T10 3.12.0 share these (FrameSource channel < 9 on T23, < 5 on T31 / T21,
+ * < 4 on T20 / T10; NCU info only on T31 / T23 / T21) */
 extern int IMP_ISP_Tuning_GetNCUAlloc(void);
 extern int IMP_ISP_Tuning_GetNCUInfo(void *info);
 extern int IMP_FrameSource_CloseNCUInfo(void);
@@ -2977,10 +2978,10 @@ extern int IMP_ISP_Tuning_SetSharpness_internal(unsigned int v, int mode);
 #pragma weak IMP_ISP_Tuning_SetShading
 #pragma weak IMP_ISP_Tuning_SetContrast_internal
 #pragma weak IMP_ISP_Tuning_SetSharpness_internal
-# if defined(PLATFORM_T31)
-#  define FS_BAD_CHN 5
-# else
+# if defined(PLATFORM_T23)
 #  define FS_BAD_CHN 9
+# else
+#  define FS_BAD_CHN 5
 # endif
 #endif
 #if defined(PLATFORM_T31)
@@ -3191,8 +3192,8 @@ static void cs_encgrp_t31(void) {}
 static void cs_osdhelp_t31(void) {}
 #endif
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
-/* NCU buffer: GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21)
+/* NCU buffer (not on T20 / T10: stock 3.12.0 has no GetNCUAlloc / GetNCUInfo / CloseNCUInfo): GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
 static void cs_ncu_t31(void)
 {
     NEED(IMP_ISP_Tuning_GetNCUAlloc) {
@@ -3218,6 +3219,11 @@ static void cs_ncu_t31(void)
     }
 }
 
+#else
+static void cs_ncu_t31(void) {}
+#endif
+
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 /* FrameSource state setters with the stock checks */
 static void cs_fsset_t31(void)
 {
@@ -3341,7 +3347,6 @@ static void cs_override_t31(void)
 }
 
 #else
-static void cs_ncu_t31(void) {}
 static void cs_fsset_t31(void) {}
 static void cs_shading_t31(void) {}
 static void cs_override_t31(void) {}
@@ -3369,20 +3374,20 @@ extern int IMP_OSD_UpdateRgnAttrData_ISP(int sensor, int handle, T23IspPic *a);
 #pragma weak IMP_OSD_DestroyRgn_ISP
 #pragma weak IMP_OSD_UpdateRgnAttrData_ISP
 
-/* mean luma of a rectangle of FS channel ch (its own coordinates), 2 frames after a settle time */
+/* mean luma of a rectangle of FS channel ch (its own coordinates), 2 frames after a settle time and 8 dropped ones */
 static double reg_luma(int ch, int x0, int y0, int x1, int y1)
 {
     double s = 0;
     int f, n = 0;
 
     usleep(700000);
-    for (f = 0; f < 4; f++) {
+    for (f = 0; f < 10; f++) {     /* 8 frames dropped: the FIFO of ch1 holds frames from before the change */
         IMPFrameInfo *fr = NULL;
         const unsigned char *y;
         int i, j;
 
         if (IMP_FrameSource_GetFrame(ch, &fr) < 0 || !fr) continue;
-        if (f >= 2) {
+        if (f >= 8) {
             y = (const unsigned char *)(uintptr_t)fr->virAddr;
             for (j = y0; j < y1 && j < (int)fr->height; j++)
                 for (i = x0; i < x1 && i < (int)fr->width; i++) { s += y[(size_t)j * fr->width + i]; n++; }
@@ -3390,6 +3395,38 @@ static double reg_luma(int ch, int x0, int y0, int x1, int y1)
         IMP_FrameSource_ReleaseFrame(ch, fr);
     }
     return n ? s / n : -1;
+}
+
+/* coarse luma map of FS ch1 (16 x 9 cells), printed with a tag (cover debugging) */
+static void luma_grid(const char *tag)
+{
+    IMPFrameInfo *fr = NULL;
+    int k;
+
+    usleep(700000);
+    for (k = 0; k < 3; k++) {
+        if (fr) IMP_FrameSource_ReleaseFrame(1, fr);
+        fr = NULL;
+        if (IMP_FrameSource_GetFrame(1, &fr) < 0) fr = NULL;
+    }
+    if (!fr) return;
+    {
+        const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
+        int w = fr->width, h = fr->height, gx, gy, i, j;
+
+        printf("COVERGRID %s %dx%d\n", tag, w, h);
+        for (gy = 0; gy < 9; gy++) {
+            printf("COVERGRID %s ", tag);
+            for (gx = 0; gx < 16; gx++) {
+                double sum = 0; int n = 0;
+                for (j = gy * h / 9; j < (gy + 1) * h / 9; j += 2)
+                    for (i = gx * w / 16; i < (gx + 1) * w / 16; i += 2) { sum += y[(size_t)j * w + i]; n++; }
+                printf("%4.0f", n ? sum / n : 0);
+            }
+            printf("\n");
+        }
+    }
+    IMP_FrameSource_ReleaseFrame(1, fr);
 }
 
 static void cs_ispcover_t23(void)
@@ -3400,6 +3437,7 @@ static void cs_ispcover_t23(void)
         double base, on, off;
 
         base = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("base");
         a->type = OSD_REG_ISP_COVER;
         a->osdispdraw.stCoverAttr.chx = 1; a->osdispdraw.stCoverAttr.pinum = 0; a->osdispdraw.stCoverAttr.mask_en = 1;
         a->osdispdraw.stCoverAttr.mask_pos_left = x; a->osdispdraw.stCoverAttr.mask_pos_top = y;
@@ -3409,21 +3447,72 @@ static void cs_ispcover_t23(void)
         a->osdispdraw.stCoverAttr.mask_value.ayuv.u_value = 128; a->osdispdraw.stCoverAttr.mask_value.ayuv.v_value = 128;
         r1 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
         on = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("on");
         g->osdispdraw.stCoverAttr.chx = 1; g->osdispdraw.stCoverAttr.pinum = 0;
         r2 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(0, g, &show);
         a->osdispdraw.stCoverAttr.mask_en = 0;
         r3 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
         off = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4);
+        if (getenv("APITEST_COVER_DEBUG")) luma_grid("off");
+        if (getenv("APITEST_COVER_DEBUG")) {
+            double o1, i2, o2, i3, o3;
+            int rr;
+
+            o1 = reg_luma(1, 8, 8, x - 8, y - 8);
+            a->osdispdraw.stCoverAttr.mask_en = 1; a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value = 16;
+            rr = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
+            i2 = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4); o2 = reg_luma(1, 8, 8, x - 8, y - 8);
+            a->osdispdraw.stCoverAttr.mask_en = 0;
+            rr |= IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
+            i3 = reg_luma(1, x + 4, y + 4, x + w - 4, y + h - 4); o3 = reg_luma(1, 8, 8, x - 8, y - 8);
+            printf("COVERDBG outside after off %.1f; black cover rr %d: in %.1f out %.1f; off again: in %.1f out %.1f\n", o1, rr, i2, o2, i3, o3);
+        }
         r4 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(3, g, &show);
         rbad = IMP_OSD_MultiCamera_SetRgnAttr_ISP(3, a, 0);
         rnul = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, NULL, 0);
         rep(FN(IMP_OSD_MultiCamera_SetRgnAttr_ISP), r1 | r3, (r1 == 0 && r3 == 0 && dabs(on - base) > 40 && dabs(off - base) < 20 && rbad == -1 && rnul != 0 && flow()) ? V_PASS : V_FAIL,
             "sensor 0, ch1 cover %dx%d at (%d,%d) Y %u: luma %.1f -> %.1f, disabled %.1f; vi 3 -> %d, NULL -> %d", w, h, x, y,
             a->osdispdraw.stCoverAttr.mask_value.ayuv.y_value, base, on, off, rbad, rnul);
-        rep(FN(IMP_OSD_MultiCamera_GetRgnAttr_ISP), r2, (r2 == 0 && show == 1 && g->osdispdraw.stCoverAttr.mask_en == 1 && g->osdispdraw.stCoverAttr.mask_width == w
-            && g->osdispdraw.stCoverAttr.mask_pos_left == x && r4 == -1) ? V_PASS : V_FAIL,
-            "while shown: show %d enable %u %ux%u at (%u,%u); vi 3 -> %d", show, g->osdispdraw.stCoverAttr.mask_en, g->osdispdraw.stCoverAttr.mask_width,
+        /* stock tisp_g_mscaler_mask_block_attr always reports mask_en = 0; the geometry of an enabled block is read back */
+        rep(FN(IMP_OSD_MultiCamera_GetRgnAttr_ISP), r2, (r2 == 0 && show == 1 && g->osdispdraw.stCoverAttr.mask_width == w && g->osdispdraw.stCoverAttr.mask_height == h
+            && g->osdispdraw.stCoverAttr.mask_pos_left == x && g->osdispdraw.stCoverAttr.mask_pos_top == y && r4 == -1) ? V_PASS : V_FAIL,
+            "while shown: show %d enable %u (stock: always 0) %ux%u at (%u,%u); vi 3 -> %d", show, g->osdispdraw.stCoverAttr.mask_en, g->osdispdraw.stCoverAttr.mask_width,
             g->osdispdraw.stCoverAttr.mask_height, g->osdispdraw.stCoverAttr.mask_pos_left, g->osdispdraw.stCoverAttr.mask_pos_top, r4);
+        gfree(a); gfree(g);
+    }
+}
+
+/* ISP-drawn window frame (OSD_REG_ISP_LINE_RECT / IMP_ISP_DRAW_WIND) through the multi-camera call: the top edge band changes,
+ * the inside does not, disabled -> back.  Measured on ch0 (draw coordinates) and on ch1 at half scale. */
+static void cs_ispdraw_t23(void)
+{
+    NEED(IMP_OSD_MultiCamera_SetRgnAttr_ISP) NEED(IMP_OSD_MultiCamera_GetRgnAttr_ISP) {
+        G(IMPOSDRgnAttr, a); G(IMPOSDRgnAttr, g);
+        int x = 160, y = 90, w = 320, h = 180, lw = 8, show = -1, r1, r2, r3;
+        double e0, i0, e1, i1, e2, i2, e0s, e1s;
+        IMPISPDrawWindAttr *wd = &a->osdispdraw.stDrawAttr.cfg.wind;
+
+        e0 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i0 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        e0s = reg_luma(1, (x + 10) / 2, (y + 1) / 2, (x + w - 10) / 2, (y + lw - 1) / 2);
+        a->type = OSD_REG_ISP_LINE_RECT;
+        a->osdispdraw.stDrawAttr.pinum = 0; a->osdispdraw.stDrawAttr.type = IMP_ISP_DRAW_WIND;
+        a->osdispdraw.stDrawAttr.color_type = IMPISP_MASK_TYPE_YUV;
+        wd->enable = 1; wd->left = x; wd->top = y; wd->width = w; wd->height = h; wd->line_width = lw; wd->alpha = 7;
+        wd->color.ayuv.y_value = e0 < 128 ? 235 : 16; wd->color.ayuv.u_value = 128; wd->color.ayuv.v_value = 128;
+        r1 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 1);
+        e1 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i1 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        e1s = reg_luma(1, (x + 10) / 2, (y + 1) / 2, (x + w - 10) / 2, (y + lw - 1) / 2);
+        g->type = OSD_REG_ISP_LINE_RECT; g->osdispdraw.stDrawAttr.pinum = 0; g->osdispdraw.stDrawAttr.type = IMP_ISP_DRAW_WIND;
+        r2 = IMP_OSD_MultiCamera_GetRgnAttr_ISP(0, g, &show);
+        wd->enable = 0;
+        r3 = IMP_OSD_MultiCamera_SetRgnAttr_ISP(0, a, 0);
+        e2 = reg_luma(0, x + 10, y + 1, x + w - 10, y + lw - 1); i2 = reg_luma(0, x + 40, y + 40, x + w - 40, y + h - 40);
+        {
+            int eff = (dabs(e1 - e0) > 40 || dabs(e1s - e0s) > 40) && dabs(i1 - i0) < 15 && dabs(e2 - e0) < 20;
+            rep(LBL("IMP_OSD_MultiCamera_SetRgnAttr_ISP draw"), r1 | r3, (r1 == 0 && r3 == 0 && eff && flow()) ? V_PASS : V_FAIL,
+                "window %dx%d at (%d,%d) line %d Y %u: top edge ch0 %.1f -> %.1f (ch1 %.1f -> %.1f), inside %.1f -> %.1f; disabled: edge %.1f inside %.1f; get rc %d show %d",
+                w, h, x, y, lw, wd->color.ayuv.y_value, e0, e1, e0s, e1s, i0, i1, e2, i2, r2, show);
+        }
         gfree(a); gfree(g);
     }
 }
@@ -3470,11 +3559,13 @@ static void cs_isppicupd_t23(void)
 }
 #else
 static void cs_ispcover_t23(void) {}
+static void cs_ispdraw_t23(void) {}
 static void cs_isppicupd_t23(void) {}
 #endif
 
-/* T23 encoder helpers without a header (stock T23 1.3.0): checks and results of the stock calls */
-#if defined(PLATFORM_T23)
+/* T23 / T21-family encoder helpers without a header (stock T23 1.3.0, T21 1.0.33, T20 + T10 3.12.0): checks and results of
+ * the stock calls */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 extern int IMP_Encoder_SetRdBufShare(int chn, int enable);
 extern int IMP_Encoder_SetPoolSize(int size);
 extern int IMP_Encoder_EnableAllNCUDenoise(void);
@@ -3492,6 +3583,13 @@ extern int IMP_Encoder_SetChnRcTrigLevel(int chn, uint32_t level, int mode);
 static volatile int g_pad_released;
 static void t23_pad_release(void *frame, void *priv) { (void)frame; if (priv == (void *)&g_pad_released) g_pad_released++; }
 
+/* last encoder channel the stock checks accept (T23: chn < 9; T21 / T20 / T10: chn < 6), never created by the cases */
+#if defined(PLATFORM_T23)
+# define ENC_IDLE_CHN 7
+#else
+# define ENC_IDLE_CHN 5
+#endif
+
 static void cs_enchelp_t23(void)
 {
     NEED(IMP_Encoder_SetRdBufShare) {
@@ -3503,12 +3601,19 @@ static void cs_enchelp_t23(void)
     NEED(IMP_Encoder_SetPoolSize) {
         int r1 = IMP_Encoder_SetPoolSize(4 << 20), r2 = IMP_Encoder_SetPoolSize(0);
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T10)
+        /* interim until the shared vpuBs pool exists on T20 / T10 (openimp issue #146): -1 for every size, never a fake 0 */
+        rep(FN(IMP_Encoder_SetPoolSize), r1, (r1 == -1 && r2 == -1) ? V_PASS : V_FAIL,
+            "rt: 4 MiB -> %d, 0 -> %d (stock: 0 / -1; OpenIMP T20 / T10 has no shared bitstream pool yet, -1, issue #146)", r1, r2);
+#else
         rep(FN(IMP_Encoder_SetPoolSize), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: 4 MiB -> %d, 0 -> %d", r1, r2);
+#endif
     }
     NEED(IMP_Encoder_EnableAllNCUDenoise) NEED(IMP_Encoder_DisableAllNCUDenoise) {
         int r1 = IMP_Encoder_EnableAllNCUDenoise(), r2 = IMP_Encoder_DisableAllNCUDenoise();
 
-        rep(FN(IMP_Encoder_EnableAllNCUDenoise), 0, (r1 == -1 && flow()) ? V_PASS : V_FAIL, "rt: %d (stock T23: NCU denoise only on T30-class SoCs, -1)", r1);
+        rep(FN(IMP_Encoder_EnableAllNCUDenoise), 0, (r1 == -1 && flow()) ? V_PASS : V_FAIL,
+            "rt: %d (stock T23 / T21: NCU denoise only on CPU ids 3..5, -1; T20 / T10: not implemented in OpenIMP yet, -1)", r1);
         rep(FN(IMP_Encoder_DisableAllNCUDenoise), 0, r2 == -1 ? V_PASS : V_FAIL, "rt: %d (same)", r2);
     }
     NEED(IMP_Encoder_SetPadFrameAttr) NEED(IMP_Encoder_PadFrame) {
@@ -3516,20 +3621,20 @@ static void cs_enchelp_t23(void)
         int r1, r2, r3, fr = 0;
 
         memset(attr, 0, sizeof(attr));
-        r1 = IMP_Encoder_SetPadFrameAttr(7, 1, attr);
+        r1 = IMP_Encoder_SetPadFrameAttr(ENC_IDLE_CHN, 1, attr);
         r3 = IMP_Encoder_SetPadFrameAttr(99, 1, attr);
         g_pad_released = 0;
-        r2 = IMP_Encoder_PadFrame(7, &fr, (void *)&g_pad_released, t23_pad_release);
-        IMP_Encoder_SetPadFrameAttr(7, 0, NULL);
-        rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn 7 enable -> %d, chn 99 -> %d", r1, r3);
+        r2 = IMP_Encoder_PadFrame(ENC_IDLE_CHN, &fr, (void *)&g_pad_released, t23_pad_release);
+        IMP_Encoder_SetPadFrameAttr(ENC_IDLE_CHN, 0, NULL);
+        rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn %d enable -> %d, chn 99 -> %d", ENC_IDLE_CHN, r1, r3);
         rep(FN(IMP_Encoder_PadFrame), r2, (r2 == -1 && g_pad_released == 1) ? V_PASS : V_FAIL,
-            "rt: frame refused (%d) and handed back to the release callback (%d call) - pad-frame encoding is not implemented in OpenIMP (Helix encodes FrameSource frames only)", r2, g_pad_released);
+            "rt: chn %d not registered: frame refused (%d) and handed back to the release callback (%d call), as stock (encoding of pad frames: case padframe_t23)", ENC_IDLE_CHN, r2, g_pad_released);
     }
     NEED(IMP_Encoder_SetChnRcTrigLevel) {
         union { float f; uint32_t u; } lv = { 1.5f };
-        int r1 = IMP_Encoder_SetChnRcTrigLevel(7, lv.u, 1), r2 = IMP_Encoder_SetChnRcTrigLevel(99, lv.u, 1);
+        int r1 = IMP_Encoder_SetChnRcTrigLevel(ENC_IDLE_CHN, lv.u, 1), r2 = IMP_Encoder_SetChnRcTrigLevel(99, lv.u, 1);
 
-        rep(FN(IMP_Encoder_SetChnRcTrigLevel), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: idle chn 7 -> %d (stock: 0, nothing to do), chn 99 -> %d", r1, r2);
+        rep(FN(IMP_Encoder_SetChnRcTrigLevel), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: idle chn %d -> %d (stock: 0, nothing to do), chn 99 -> %d", ENC_IDLE_CHN, r1, r2);
     }
 }
 #else
@@ -3622,9 +3727,127 @@ static void cs_t140c(void)
 static void cs_t140c(void) {}
 #endif
 
+/* T23 pad frames (stock IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): H.264 on FS ch1 (group 1 / chn 1); a feeder thread hands in
+ * a black NV12 picture (rmem) as pad frame.  Free mode (attr word 1 = 0): the black picture is encoded instead of the scene -> much smaller
+ * frames, every pad frame released.  Time-stamp mode with stale pad frames (time stamp 1): nothing encoded, the pad frames come back.
+ * Pad off: the scene again. */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
+static volatile int g_pad_run, g_pad_rel, g_pad_inflight;
+static uint64_t g_pad_ts;
+static IMPFrameInfo g_pad_fi[4];
+static void t23_pad_rel_cb(void *frame, void *priv) { (void)frame; (void)priv; g_pad_rel++; __sync_sub_and_fetch(&g_pad_inflight, 1); }
+static void *t23_pad_feeder(void *arg)
+{
+    int i = 0;
+
+    (void)arg;
+    while (g_pad_run) {
+        if (g_pad_inflight < 3) {
+            IMPFrameInfo *f = &g_pad_fi[i++ & 3];
+
+            f->timeStamp = g_pad_ts ? (int64_t)g_pad_ts : IMP_System_GetTimeStamp();
+            __sync_add_and_fetch(&g_pad_inflight, 1);
+            if (IMP_Encoder_PadFrame(1, f, NULL, t23_pad_rel_cb) == 0 && 0) {}
+        }
+        usleep(20000);
+    }
+    return NULL;
+}
+
+static void t23_stream_stats(int ms, int *frames, double *avg)
+{
+    int64_t t0 = now_us();
+    long bytes = 0;
+
+    *frames = 0;
+    while (now_us() - t0 < (int64_t)ms * 1000) {
+        IMPEncoderStream s;
+        unsigned k;
+
+        if (IMP_Encoder_PollingStream(1, 200) != 0) continue;
+        if (IMP_Encoder_GetStream(1, &s, 0) != 0) continue;
+        for (k = 0; k < s.packCount; k++) bytes += s.pack[k].length;
+        (*frames)++;
+        IMP_Encoder_ReleaseStream(1, &s);
+    }
+    *avg = *frames ? (double)bytes / *frames : 0;
+}
+
+static void cs_padframe_t23(void)
+{
+    uintptr_t (*a_alloc)(void *, intptr_t, char *) = (uintptr_t (*)(void *, intptr_t, char *))dsym("IMP_Alloc");
+    int (*a_free)(uintptr_t) = (int (*)(uintptr_t))dsym("IMP_Free");
+    int (*flush)(void *, uint32_t) = (int (*)(void *, uint32_t))dsym("IMP_FlushCache");
+
+    NEED(IMP_Encoder_SetPadFrameAttr) NEED(IMP_Encoder_PadFrame) {
+        IMPCell fs1 = { DEV_ID_FS, 1, 0 }, en1 = { DEV_ID_ENC, 1, 0 };
+        IMPEncoderCHNAttr *a = (IMPEncoderCHNAttr *)calloc(1, sizeof(*a));
+        at_dmainfo *d = (at_dmainfo *)gnew(sizeof(at_dmainfo));
+        uint32_t attr[8];
+        int w = SUB_W, h = SUB_H, ha = (SUB_H + 15) & ~15, up = 0, f0, f1, f2, f3, i, r1, r2, r3, rel1, rel2;
+        double s0, s1, s2, s3;
+        pthread_t th;
+
+        /* the encoder's input layout: luma of w x align16(h), chroma after it (stock: UV at align16(w) * align16(h)) */
+        if (a_alloc) (void)a_alloc(d, w * ha * 3 / 2, (char *)"apitest-pad");   /* descriptor style: 0 = ok, d filled */
+        if (!a || !a_alloc || !d->virt || !d->phys) {
+            rep(FN(IMP_Encoder_PadFrame), -1, V_SKIP, "no rmem buffer (IMP_Alloc)"); free(a); gfree(d); return;
+        }
+        memset((void *)(uintptr_t)d->virt, 16, (size_t)w * ha);
+        memset((void *)(uintptr_t)(d->virt + w * ha), 128, (size_t)w * ha / 2);
+        if (flush) flush((void *)(uintptr_t)d->virt, w * ha * 3 / 2);
+        for (i = 0; i < 4; i++) {
+            memset(&g_pad_fi[i], 0, sizeof(g_pad_fi[i]));
+            g_pad_fi[i].index = i; g_pad_fi[i].width = w; g_pad_fi[i].height = h; g_pad_fi[i].pixfmt = PIX_FMT_NV12;
+            g_pad_fi[i].size = w * ha * 3 / 2; g_pad_fi[i].phyAddr = d->phys; g_pad_fi[i].virAddr = d->virt;
+        }
+        a->encAttr.picWidth = w; a->encAttr.picHeight = h; a->encAttr.enType = PT_H264; a->encAttr.profile = 1;
+        a->rcAttr.outFrmRate.frmRateNum = 15; a->rcAttr.outFrmRate.frmRateDen = 1; a->rcAttr.maxGop = 30;
+        a->rcAttr.attrRcMode.rcMode = ENC_RC_MODE_CBR;
+        a->rcAttr.attrRcMode.attrH264Cbr.maxQp = 45; a->rcAttr.attrRcMode.attrH264Cbr.minQp = 15;
+        a->rcAttr.attrRcMode.attrH264Cbr.outBitRate = 1024; a->rcAttr.attrRcMode.attrH264Cbr.frmQPStep = 3;
+        a->rcAttr.attrRcMode.attrH264Cbr.gopQPStep = 15;
+        if (IMP_Encoder_CreateGroup(1) == 0 && IMP_Encoder_CreateChn(1, a) == 0 && IMP_Encoder_RegisterChn(1, 1) == 0 &&
+            IMP_System_Bind(&fs1, &en1) == 0 && IMP_Encoder_StartRecvPic(1) == 0)
+            up = 1;
+        if (!up) {
+            rep(FN(IMP_Encoder_PadFrame), -1, V_FAIL, "encoder set-up failed");
+        } else {
+            t23_stream_stats(2000, &f0, &s0);                        /* scene */
+            memset(attr, 0, sizeof(attr));
+            r1 = IMP_Encoder_SetPadFrameAttr(1, 1, attr);          /* free mode */
+            g_pad_run = 1; g_pad_rel = 0; g_pad_inflight = 0; g_pad_ts = 0;
+            pthread_create(&th, NULL, t23_pad_feeder, NULL);
+            t23_stream_stats(2000, &f1, &s1);
+            rel1 = g_pad_rel;
+            attr[1] = 1; attr[2] = 1000; attr[3] = 0;              /* match within 1 ms */
+            g_pad_ts = 1;                                          /* stale pad frames */
+            r2 = IMP_Encoder_SetPadFrameAttr(1, 1, attr);
+            usleep(300000);
+            rel2 = g_pad_rel;
+            t23_stream_stats(1500, &f2, &s2);
+            rel2 = g_pad_rel - rel2;
+            g_pad_run = 0; pthread_join(th, NULL);
+            r3 = IMP_Encoder_SetPadFrameAttr(1, 0, NULL);
+            t23_stream_stats(2000, &f3, &s3);
+            IMP_Encoder_StopRecvPic(1); IMP_System_UnBind(&fs1, &en1); IMP_Encoder_UnRegisterChn(1); IMP_Encoder_DestroyChn(1); IMP_Encoder_DestroyGroup(1);
+            rep(FN(IMP_Encoder_SetPadFrameAttr), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && f3 > 5 && s3 > s1 * 2) ? V_PASS : V_FAIL,
+                "free mode on / time-stamp mode on / off: ret %d %d %d; off again: %d frames, %.0f bytes avg", r1, r2, r3, f3, s3);
+            rep(FN(IMP_Encoder_PadFrame), 0, (f1 > 5 && s1 < s0 / 3 && rel1 >= f1 && f2 <= 1 && rel2 > 5 && g_pad_inflight == 0 && flow()) ? V_PASS : V_FAIL,
+                "scene %d frames %.0f B avg; black pad frames: %d frames %.0f B avg, %d released; stale pad frames (ts mode): %d frames encoded, %d released; "
+                "all handed back after DestroyChn (in flight %d)", f0, s0, f1, s1, rel1, f2, rel2, g_pad_inflight);
+        }
+        if (a_free) a_free(d->virt);
+        free(a); gfree(d);
+    }
+}
+#else
+static void cs_padframe_t23(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -3719,8 +3942,10 @@ void t_cases(void)
     if (cs_on("encgrp_t31")) cs_encgrp_t31(); wdog("cases", 120);
     if (cs_on("osdhelp_t31")) cs_osdhelp_t31(); wdog("cases", 60);
     if (cs_on("ispcover_t23")) cs_ispcover_t23(); wdog("cases", 60);
+    if (cs_on("ispdraw_t23")) cs_ispdraw_t23(); wdog("cases", 60);
     if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
     if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
+    if (cs_on("padframe_t23")) cs_padframe_t23(); wdog("cases", 120);
     wdog("cases", 60);
 }
