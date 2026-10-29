@@ -3019,8 +3019,8 @@ static void cs_encgrp_t31(void) {}
 static void cs_osdhelp_t31(void) {}
 #endif
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
-/* NCU buffer: GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21)
+/* NCU buffer (not on T20 / T10: stock 3.12.0 has no GetNCUAlloc / GetNCUInfo / CloseNCUInfo): GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
 static void cs_ncu_t31(void)
 {
     NEED(IMP_ISP_Tuning_GetNCUAlloc) {
@@ -3406,6 +3406,13 @@ extern int IMP_Encoder_SetChnRcTrigLevel(int chn, uint32_t level, int mode);
 static volatile int g_pad_released;
 static void t23_pad_release(void *frame, void *priv) { (void)frame; if (priv == (void *)&g_pad_released) g_pad_released++; }
 
+/* last encoder channel the stock checks accept (T23: chn < 9; T21 / T20 / T10: chn < 6), never created by the cases */
+#if defined(PLATFORM_T23)
+# define ENC_IDLE_CHN 7
+#else
+# define ENC_IDLE_CHN 5
+#endif
+
 static void cs_enchelp_t23(void)
 {
     NEED(IMP_Encoder_SetRdBufShare) {
@@ -3431,20 +3438,20 @@ static void cs_enchelp_t23(void)
         int r1, r2, r3, fr = 0;
 
         memset(attr, 0, sizeof(attr));
-        r1 = IMP_Encoder_SetPadFrameAttr(7, 1, attr);
+        r1 = IMP_Encoder_SetPadFrameAttr(ENC_IDLE_CHN, 1, attr);
         r3 = IMP_Encoder_SetPadFrameAttr(99, 1, attr);
         g_pad_released = 0;
-        r2 = IMP_Encoder_PadFrame(7, &fr, (void *)&g_pad_released, t23_pad_release);
-        IMP_Encoder_SetPadFrameAttr(7, 0, NULL);
-        rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn 7 enable -> %d, chn 99 -> %d", r1, r3);
+        r2 = IMP_Encoder_PadFrame(ENC_IDLE_CHN, &fr, (void *)&g_pad_released, t23_pad_release);
+        IMP_Encoder_SetPadFrameAttr(ENC_IDLE_CHN, 0, NULL);
+        rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn %d enable -> %d, chn 99 -> %d", ENC_IDLE_CHN, r1, r3);
         rep(FN(IMP_Encoder_PadFrame), r2, (r2 == -1 && g_pad_released == 1) ? V_PASS : V_FAIL,
-            "rt: chn 7 not registered: frame refused (%d) and handed back to the release callback (%d call), as stock (encoding of pad frames: case padframe_t23)", r2, g_pad_released);
+            "rt: chn %d not registered: frame refused (%d) and handed back to the release callback (%d call), as stock (encoding of pad frames: case padframe_t23)", ENC_IDLE_CHN, r2, g_pad_released);
     }
     NEED(IMP_Encoder_SetChnRcTrigLevel) {
         union { float f; uint32_t u; } lv = { 1.5f };
-        int r1 = IMP_Encoder_SetChnRcTrigLevel(7, lv.u, 1), r2 = IMP_Encoder_SetChnRcTrigLevel(99, lv.u, 1);
+        int r1 = IMP_Encoder_SetChnRcTrigLevel(ENC_IDLE_CHN, lv.u, 1), r2 = IMP_Encoder_SetChnRcTrigLevel(99, lv.u, 1);
 
-        rep(FN(IMP_Encoder_SetChnRcTrigLevel), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: idle chn 7 -> %d (stock: 0, nothing to do), chn 99 -> %d", r1, r2);
+        rep(FN(IMP_Encoder_SetChnRcTrigLevel), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: idle chn %d -> %d (stock: 0, nothing to do), chn 99 -> %d", ENC_IDLE_CHN, r1, r2);
     }
 }
 #else

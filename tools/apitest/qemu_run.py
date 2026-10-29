@@ -82,8 +82,16 @@ ldp = ""
 if os.environ.get("QR_LIB") and not nopush and not os.environ.get("QR_LIBKEEP"):   # QR_LIBKEEP=1: the lib from an earlier push is still in /tmp/at
     lo, _ = push(os.environ["QR_LIB"], "libimp.so")
     print("pushed lib:", lo.strip().splitlines()[-1:] if lo.strip() else lo)
+    # QR_LIBEXTRA=<a.so,b.so>: further libraries next to it (the stock libimp needs the vendor libalog / libsysutils)
+    for extra in filter(None, os.environ.get("QR_LIBEXTRA", "").split(",")):
+        lo, _ = push(extra, os.path.basename(extra))
+        print("pushed extra:", lo.strip().splitlines()[-1:] if lo.strip() else lo)
 if os.environ.get("QR_LIB"):
     ldp = "LD_LIBRARY_PATH=/tmp/at "
+    # the stock libimp does not list libalog as NEEDED (the vendor programs link it): preload the extras
+    pre = [os.path.join("/tmp/at", os.path.basename(e)) for e in os.environ.get("QR_LIBEXTRA", "").split(",") if e]
+    if pre:
+        ldp += "LD_PRELOAD=%s " % ":".join(pre)
 out, rc = push(binary, "apitest") if not nopush else sh("ls -l /tmp/at/apitest", 20, 5)
 print("pushed:", out.strip().splitlines()[-2:] if out.strip() else out)
 res = []

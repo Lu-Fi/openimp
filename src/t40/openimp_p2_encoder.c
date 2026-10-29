@@ -1,5 +1,6 @@
 /* Standalone T40 public encoder lifecycle built on the recovered AL backend. */
 
+#include <stddef.h>
 #include <errno.h>
 #include "../core/thread_name.h"
 #include <fcntl.h>
@@ -2975,7 +2976,8 @@ static void t23_pace_account(int channel, uint64_t start_us,
  * Stock T23 1.3.0 IMP_Encoder_SetPadFrameAttr (0x548dc) / IMP_Encoder_PadFrame
  * (0x54a3c) / do_channel_process, the same in T21 1.0.33 and T20/T10 3.12.0
  * (channel < 6 there, < 9 on T23): the application hands in processed copies
- * of captured frames (IMPFrameInfo, time stamp at +0x28) with a release
+ * of captured frames (IMPFrameInfo, time stamp at +0x28 on T23, +0x20 on the
+ * T21 family, as in each stock do_channel_process) with a release
  * callback; while pad frames are enabled every captured frame is encoded
  * from the pad frame that matches it instead, and a captured frame without
  * one is not encoded.  Attribute (32 bytes): word 1 = match the time stamps
@@ -3102,7 +3104,7 @@ static int64_t p2_pad_ts(const void *frame)
 {
     int64_t t;
 
-    memcpy(&t, (const uint8_t *)frame + 0x28, sizeof(t));
+    memcpy(&t, (const uint8_t *)frame + offsetof(IMPFrameInfo, timeStamp), sizeof(t));
     return t;
 }
 
