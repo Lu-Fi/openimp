@@ -2723,9 +2723,67 @@ static void cs_faceae_t40(void) {}
 static void cs_switchbin_t40(void) {}
 #endif
 
+/* ------------------------------------------------------------------- older-SoC ISP calls (backlog T31 / T23, 2026-10-29) */
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAe_IT_MAX && HAS_IMP_ISP_Tuning_GetAE_IT_MAX
+/* SetAe_IT_MAX (lines) must read back through GetAE_IT_MAX; a quarter of the limit darkens a scene that runs at long
+ * integration times (effect), a bright scene keeps its luma (rt).  The original limit is restored and read back. */
+static void cs_itmax(void)
+{
+    NEED(IMP_ISP_Tuning_SetAe_IT_MAX) NEED(IMP_ISP_Tuning_GetAE_IT_MAX) {
+        unsigned int m0 = 0, m1 = 0, m2 = 0, v;
+        int r0, r1, r2, r3, r4, ms;
+        Fst base, lo, back;
+
+        r0 = IMP_ISP_Tuning_GetAE_IT_MAX(&m0);
+        v = m0 / 4 < 8 ? 8 : m0 / 4;
+        base = fst(800);
+        r1 = IMP_ISP_Tuning_SetAe_IT_MAX(v); lo = fst(2000);
+        r2 = IMP_ISP_Tuning_GetAE_IT_MAX(&m1);
+        r3 = IMP_ISP_Tuning_SetAe_IT_MAX(m0); back = recover(base.y, &ms);
+        r4 = IMP_ISP_Tuning_GetAE_IT_MAX(&m2);
+        {
+            int eff = lo.ok && base.ok && lo.y < base.y - 3;
+            rep(FN(IMP_ISP_Tuning_GetAE_IT_MAX), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && m0 > 0 && m1 == v && m2 == m0) ? V_PASS : V_FAIL,
+                "initial %u lines; after Set(%u): %u; after restore: %u", m0, v, m1, m2);
+            rep(FN(IMP_ISP_Tuning_SetAe_IT_MAX), r1 | r3, (r1 == 0 && r3 == 0 && m1 == v && m2 == m0 && lo.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%slimit %u -> %u lines: Y %.1f -> %.1f; restored: back to Y %.1f in %d ms, frames flow", RTMSG(eff), m0, v, base.y, lo.y, back.y, ms);
+        }
+    }
+}
+#else
+static void cs_itmax(void) {}
+#endif
+
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_SetFixedContraster
+/* SetFixedContraster (MJPEG fixed contrast range; no getter): range 70..180 on, then off with the full range.  The
+ * stream under test is NV12 from FS ch1, so the std-dev is reported but a change is not required (rt). */
+static void cs_fixedcontrast_old(void)
+{
+    NEED(IMP_ISP_SetFixedContraster) {
+        G(IMPISPFixedContrastAttr, a);
+        Fst base, on, back;
+        int r1, r2, ms;
+
+        base = fst(800);
+        a->mode = IMPISP_TUNING_OPS_MODE_ENABLE; a->range_low = 70; a->range_high = 180;
+        r1 = IMP_ISP_SetFixedContraster(a); on = fst(1500);
+        a->mode = IMPISP_TUNING_OPS_MODE_DISABLE; a->range_low = 16; a->range_high = 235;
+        r2 = IMP_ISP_SetFixedContraster(a); back = recover(base.y, &ms);
+        {
+            int eff = on.ok && base.ok && dabs(on.sd - base.sd) > 3;
+            rep(FN(IMP_ISP_SetFixedContraster), r1 | r2, (r1 == 0 && r2 == 0 && on.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "%srange 70..180 on: luma std-dev %.1f -> %.1f (Y %.1f -> %.1f); off: back to Y %.1f in %d ms, frames flow", RTMSG(eff), base.sd, on.sd, base.y, on.y, back.y, ms);
+        }
+        gfree(a);
+    }
+}
+#else
+static void cs_fixedcontrast_old(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -2807,5 +2865,7 @@ void t_cases(void)
     if (cs_on("aeinfo_t40")) cs_aeinfo_t40(); wdog("cases", 60);
     if (cs_on("faceae_t40")) cs_faceae_t40(); wdog("cases", 60);
     if (cs_on("switchbin_t40")) cs_switchbin_t40(); wdog("cases", 90);
+    if (cs_on("itmax")) cs_itmax();       wdog("cases", 90);
+    if (cs_on("fixedcontrast_old")) cs_fixedcontrast_old(); wdog("cases", 90);
     wdog("cases", 60);
 }
