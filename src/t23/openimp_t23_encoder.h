@@ -8,7 +8,6 @@
 /* What src/t40/openimp_p2_encoder.c shares with the T23 encoder extras. */
 typedef struct {
     int created;
-    int registered;
     int receiving;
     int codec_type;                 /* IMP_ENC_TYPE_* */
     void *codec;                    /* AL codec, NULL until created */
@@ -20,20 +19,6 @@ typedef int (*OpenIMPT23P2Fn)(OpenIMPT23P2View *view, void *arg);
 /* Run fn with the channel locked; -1 for an invalid channel. */
 int openimp_t23_p2_call(int channel, OpenIMPT23P2Fn fn, void *arg);
 
-/* One frame interval of the channel in microseconds (40000 if unknown). */
-uint32_t openimp_t23_p2_frame_interval_us(int channel);
-
-/* IMP_Encoder_PadFrame (openimp_t23_encoder.c): the pad frame used for a
- * captured frame, chosen in PollingStream. */
-typedef struct {
-    void *frame;
-    void *priv;
-    void (*release)(void *frame, void *priv);
-} T23PadNode;
-int openimp_t23_pad_select(int channel, const void *src, uint32_t wait_us,
-                           T23PadNode *node);
-void openimp_t23_pad_release(const T23PadNode *node);
-void openimp_t23_pad_flush(int channel);
 
 /* Forward a channel setting to the running Helix encoder (the OEM
  * i264e_set_param behind each IMP_Encoder_Set* call).  No-ops for

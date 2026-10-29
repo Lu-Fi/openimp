@@ -2784,8 +2784,9 @@ static void cs_fixedcontrast_old(void) {}
 /* ---------------------------------------------------------------------- T31 calls without an SDK header (coverage 2026-10-29)
  * Signatures from the stock T31 libimp (1.1.6, 1.1.5-zrt, 1.1.5.2), see the OpenIMP implementations; every case restores what it
  * changed.  Pass criterion = the stock semantics: return codes, read-back and, where the call has one, the effect. */
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
-/* T23 1.3.0 / T31 1.1.6 share these (T23: channel < 9, T31: < 5) */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
+/* T23 1.3.0 / T31 1.1.6 / T21 1.0.33 / T20 + T10 3.12.0 share these (FrameSource channel < 9 on T23, < 5 on T31 / T21,
+ * < 4 on T20 / T10; NCU info only on T31 / T23 / T21) */
 extern int IMP_ISP_Tuning_GetNCUAlloc(void);
 extern int IMP_ISP_Tuning_GetNCUInfo(void *info);
 extern int IMP_FrameSource_CloseNCUInfo(void);
@@ -2804,10 +2805,10 @@ extern int IMP_ISP_Tuning_SetSharpness_internal(unsigned int v, int mode);
 #pragma weak IMP_ISP_Tuning_SetShading
 #pragma weak IMP_ISP_Tuning_SetContrast_internal
 #pragma weak IMP_ISP_Tuning_SetSharpness_internal
-# if defined(PLATFORM_T31)
-#  define FS_BAD_CHN 5
-# else
+# if defined(PLATFORM_T23)
 #  define FS_BAD_CHN 9
+# else
+#  define FS_BAD_CHN 5
 # endif
 #endif
 #if defined(PLATFORM_T31)
@@ -3018,7 +3019,7 @@ static void cs_encgrp_t31(void) {}
 static void cs_osdhelp_t31(void) {}
 #endif
 
-#if defined(PLATFORM_T31) || defined(PLATFORM_T23)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 /* NCU buffer: GetNCUAlloc returns the IMPAlloc of the "ncubuf" reservation (phys at +0x84, size at +0x88) */
 static void cs_ncu_t31(void)
 {
@@ -3385,8 +3386,9 @@ static void cs_ispdraw_t23(void) {}
 static void cs_isppicupd_t23(void) {}
 #endif
 
-/* T23 encoder helpers without a header (stock T23 1.3.0): checks and results of the stock calls */
-#if defined(PLATFORM_T23)
+/* T23 / T21-family encoder helpers without a header (stock T23 1.3.0, T21 1.0.33, T20 + T10 3.12.0): checks and results of
+ * the stock calls */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 extern int IMP_Encoder_SetRdBufShare(int chn, int enable);
 extern int IMP_Encoder_SetPoolSize(int size);
 extern int IMP_Encoder_EnableAllNCUDenoise(void);
@@ -3420,7 +3422,8 @@ static void cs_enchelp_t23(void)
     NEED(IMP_Encoder_EnableAllNCUDenoise) NEED(IMP_Encoder_DisableAllNCUDenoise) {
         int r1 = IMP_Encoder_EnableAllNCUDenoise(), r2 = IMP_Encoder_DisableAllNCUDenoise();
 
-        rep(FN(IMP_Encoder_EnableAllNCUDenoise), 0, (r1 == -1 && flow()) ? V_PASS : V_FAIL, "rt: %d (stock T23: NCU denoise only on T30-class SoCs, -1)", r1);
+        rep(FN(IMP_Encoder_EnableAllNCUDenoise), 0, (r1 == -1 && flow()) ? V_PASS : V_FAIL,
+            "rt: %d (stock T23 / T21: NCU denoise only on CPU ids 3..5, -1; T20 / T10: not implemented in OpenIMP yet, -1)", r1);
         rep(FN(IMP_Encoder_DisableAllNCUDenoise), 0, r2 == -1 ? V_PASS : V_FAIL, "rt: %d (same)", r2);
     }
     NEED(IMP_Encoder_SetPadFrameAttr) NEED(IMP_Encoder_PadFrame) {
@@ -3538,7 +3541,7 @@ static void cs_t140c(void) {}
  * a black NV12 picture (rmem) as pad frame.  Free mode (attr word 1 = 0): the black picture is encoded instead of the scene -> much smaller
  * frames, every pad frame released.  Time-stamp mode with stale pad frames (time stamp 1): nothing encoded, the pad frames come back.
  * Pad off: the scene again. */
-#if defined(PLATFORM_T23)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 static volatile int g_pad_run, g_pad_rel, g_pad_inflight;
 static uint64_t g_pad_ts;
 static IMPFrameInfo g_pad_fi[4];
