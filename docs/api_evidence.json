@@ -5441,11 +5441,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "rt",
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): target 40 Y 98.2->88.4, target 180 ->105.8, off restores; Get returns the request (beyond vendor)"
+    "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): target 40 Y 98.2->88.4, target 180 ->105.8, off restores; Get returns the request (beyond vendor)",
+    "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops"
    }
   },
   "ISP_Tuning_Get/SetFaceAeWeiget": {
@@ -5474,11 +5475,11 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "err",
+    "T40": "rt",
     "T41": "n.a."
    },
    "ref": {
-    "T40": "FAIL apitest agg47 2026-10-28 .184: ISP_Tuning_GetFaceAwb: ret=0 initial enable -2130397920; while set: enable 92106752 window (2156961188,2156961188)-(2156961196,2156961196) target 2178853952; ISP_Tuning_SetFaceAwb: ret=0 rt: centre window target 128: chroma U/V 170.46/169.49 -> 170.46/169.50; off: back to Y 118.7 in 600 ms, frames f"
+    "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #138): GetFaceAwb returns the stored attribute (enable, window, target as set; no kernel pointers), SetFaceAwb round trip; no effect on AWB, like the vendor"
    }
   },
   "ISP_Tuning_Get/SetWB": {
@@ -10480,8 +10481,11 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "rt",
     "T41": "n.a."
+   },
+   "ref": {
+    "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp t40-isposd-oops): Set with an array image in chx0 pic0 returns 0, GetOSDAttr reads back the state; the picture does not appear yet (luma 33.0 vs base 33.7), effect path open"
    }
   },
   "ISP_Get/SetSingleOSDAttr": {
@@ -10495,8 +10499,11 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "dev",
+    "T40": "rt",
     "T41": "n.a."
+   },
+   "ref": {
+    "T40": "apitest agg47z-combo 2026-10-29 .184: GetSingleOSDAttr PASS, SetSingleOSDAttr returns 0 but shows no picture (enable 1: luma 34.1 vs 33.7), effect path open; the oops of agg47 is fixed"
    }
   },
   "ISP_Tuning_CreateOsdRgn": {
@@ -11756,12 +11763,13 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "ref": {
     "T41": "apitest agg47 2026-10-28 .34",
-    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
+    "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
+    "T40": "apitest agg47z-combo 2026-10-29 .184: CreateRgn, SetRgnAttr (visible after Show), ShowRgn/Hide, DestroyRgn PASS, 0 oops (agg47 oopsed in tisp_s_osd_single_pic)"
    }
   },
   "OSD_Start": {
