@@ -40,6 +40,16 @@ int IMP_Encoder_SetPoolSize(int size)
     pthread_mutex_unlock(&helix_bs.lock);
     return 0;
 }
+#elif defined(PLATFORM_T20)
+/* Stock T20 / T10 3.12.0 (0x4ac40) stores the size of the one shared "vpuBs"
+ * buffer EncoderInit allocates.  The T20 Helix path here still gives every
+ * encoder its own bitstream buffer and has no pool to size, so it logs and
+ * returns -1 instead of claiming success (openimp issue #146). */
+int IMP_Encoder_SetPoolSize(int size)
+{
+    IMP_LOG_ERR("Encoder", "IMP_Encoder_SetPoolSize(%d): no shared bitstream pool in OpenIMP for T20/T10 yet", size);
+    return -1;
+}
 #endif
 
 static int helix_bs_alloc(uint32_t size, IMPDMABufferInfo *next)

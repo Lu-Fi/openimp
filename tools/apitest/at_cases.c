@@ -3046,6 +3046,11 @@ static void cs_ncu_t31(void)
     }
 }
 
+#else
+static void cs_ncu_t31(void) {}
+#endif
+
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
 /* FrameSource state setters with the stock checks */
 static void cs_fsset_t31(void)
 {
@@ -3169,7 +3174,6 @@ static void cs_override_t31(void)
 }
 
 #else
-static void cs_ncu_t31(void) {}
 static void cs_fsset_t31(void) {}
 static void cs_shading_t31(void) {}
 static void cs_override_t31(void) {}
@@ -3424,7 +3428,13 @@ static void cs_enchelp_t23(void)
     NEED(IMP_Encoder_SetPoolSize) {
         int r1 = IMP_Encoder_SetPoolSize(4 << 20), r2 = IMP_Encoder_SetPoolSize(0);
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T10)
+        /* interim until the shared vpuBs pool exists on T20 / T10 (openimp issue #146): -1 for every size, never a fake 0 */
+        rep(FN(IMP_Encoder_SetPoolSize), r1, (r1 == -1 && r2 == -1) ? V_PASS : V_FAIL,
+            "rt: 4 MiB -> %d, 0 -> %d (stock: 0 / -1; OpenIMP T20 / T10 has no shared bitstream pool yet, -1, issue #146)", r1, r2);
+#else
         rep(FN(IMP_Encoder_SetPoolSize), r1, (r1 == 0 && r2 == -1) ? V_PASS : V_FAIL, "rt: 4 MiB -> %d, 0 -> %d", r1, r2);
+#endif
     }
     NEED(IMP_Encoder_EnableAllNCUDenoise) NEED(IMP_Encoder_DisableAllNCUDenoise) {
         int r1 = IMP_Encoder_EnableAllNCUDenoise(), r2 = IMP_Encoder_DisableAllNCUDenoise();
