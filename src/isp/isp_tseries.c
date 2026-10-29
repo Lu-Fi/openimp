@@ -875,7 +875,9 @@ int IMP_ISP_Tuning_SetContrast_internal(uint32_t arg1, int32_t arg2)
             }
 
             if (arg2 == 1) {
+                /* OEM 0x8d8f0: mode 1 turns the override on and applies the value */
                 global_mode = (uint32_t)arg2;
+                goto label_9d914;
             }
 
             if (arg2 != 0) {
@@ -982,11 +984,10 @@ int IMP_ISP_Tuning_SetSharpness_internal(uint32_t arg1, int32_t arg2)
                 if (global_mode_1 == 1) {
                     return 0;
                 }
+            } else if (arg2 == 1) {
+                /* OEM: mode 1 turns the override on and applies the value */
+                global_mode = (uint32_t)arg2;
             } else {
-                if (arg2 == 1) {
-                    global_mode = (uint32_t)arg2;
-                }
-
                 if (arg2 != 0) {
                     puts("We do not support this mode");
                     return -1;
@@ -4155,8 +4156,9 @@ int IMP_ISP_Tuning_GetColorfxMode(IMPISPColorfxMode *pmode)
 
 int IMP_ISP_Tuning_SetShading(void *attr)
 {
-#if defined(PLATFORM_T21) /* T21 and T20 */
-    /* T21 1.0.33 / T20 3.12.0 pass the argument as the S_CTRL value. */
+#if defined(PLATFORM_T21) || defined(PLATFORM_T31) /* T21 and T20, T31 */
+    /* T21 1.0.33 / T20 3.12.0 / T31 1.1.6 (0x92020) pass the argument as the
+     * S_CTRL value (shading enable, control 0x8000166). */
     return tseries_v4l2_set(TISP_CID_SHADING, (int32_t)(intptr_t)attr);
 #else
     return tseries_tuning_set_ptr(TISP_CID_SHADING, attr);
@@ -4322,9 +4324,33 @@ int IMP_ISP_Tuning_GetNCUInfo(void *info)
     return tseries_tuning_get_ptr(TISP_CID_NCU_INFO, info);
 }
 
-int IMP_ISP_Tuning_GetNCUAlloc(void *info)
+#if defined(PLATFORM_T31)
+/* Stock T31 1.1.5-zrt (0x906bc / 0x90544): AE start exposure strictness
+ * through the tuning node, control 0x800003a: set passes the value, get
+ * passes the pointer the kernel fills.  The stock T31 1.1.6 kernel has no
+ * such control (only S_CTRL 0x80000e6); open-tx-isp T31 has both. */
+#define TISP_CID_EV_START 0x800003a
+int IMP_ISP_Tuning_SetEvStart(uint32_t value)
 {
-    return tseries_tuning_get_ptr(TISP_CID_NCU_INFO, info);
+    return tseries_tuning_set_val(TISP_CID_EV_START, (int32_t)value);
+}
+
+int IMP_ISP_Tuning_GetEvStart(uint32_t *value)
+{
+    /* stock: the pointer itself is the third word, the kernel writes it */
+    return tseries_tuning_get_ptr(TISP_CID_EV_START, value);
+}
+#endif
+
+/* Stock T31 1.1.6 (0x8c658): int (void), the IMPAlloc of the NCU buffer
+ * that IMP_ISP_AddSensor reserved ("ncubuf", isp + 0xac), 0 without an ISP. */
+int IMP_ISP_Tuning_GetNCUAlloc(void)
+{
+    ISPDevice *isp;
+
+    if (tseries_get_isp(&isp) != 0)
+        return 0;
+    return (int)(intptr_t)*(void **)((char *)isp + 0xac);
 }
 
 int IMP_ISP_Tuning_GetBlcAttr(void *attr)

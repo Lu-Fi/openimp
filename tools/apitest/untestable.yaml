@@ -4,18 +4,6 @@
 # category: sound | reboot | power | hardware | wedges-isp | no-signature | own-topology | not-in-soc-api | backlog
 #   backlog = testable in principle, no case yet (counted and printed by the checker; to be turned into cases or re-classified)
 entries:
-  - match: ["IMP_Encoder_DisableAllNCUDenoise", "IMP_Encoder_EnableAllNCUDenoise", "IMP_Encoder_PadFrame", "IMP_Encoder_SetPadFrameAttr", "IMP_Encoder_SetChnRcTrigLevel", "IMP_Encoder_SetPoolSize", "IMP_Encoder_SetRdBufShare", "IMP_FrameSource_CloseNCUInfo", "IMP_FrameSource_DisableChnUndistort", "IMP_FrameSource_EnableChnUndistort", "IMP_FrameSource_SetFrameOffset", "IMP_ISP_Tuning_GetNCUAlloc", "IMP_ISP_Tuning_GetNCUInfo", "IMP_ISP_Tuning_SetContrast_internal", "IMP_ISP_Tuning_SetSharpness_internal", "IMP_ISP_Tuning_SetShading"]
-    socs: [T23]
-    category: no-signature
-    reason: "exported by the T23 vendor libimp but declared in no header of the T23 SDKs (1.1.0 / 1.1.2 / 1.3.0 held): argument types and semantics are unknown, so a conformant call cannot be written (NCU / undistort / pad-frame / rc-trigger helpers of newer SDKs, *_internal tuning helpers)"
-  - match: ["IMP_Encoder_ClearPoolId", "IMP_Encoder_DiscardInitialFrame", "IMP_Encoder_GetStream_Impl", "IMP_Encoder_GroupWhichChnRegisted", "IMP_FrameSource_ClearPoolId", "IMP_FrameSource_CloseNCUInfo", "IMP_FrameSource_DisableChnUndistort", "IMP_FrameSource_EnableChnUndistort", "IMP_FrameSource_SetChnCallback", "IMP_FrameSource_SetFrameDepthCopyType", "IMP_FrameSource_SetFrameOffset", "IMP_ISP_Tuning_GetEvStart", "IMP_ISP_Tuning_SetEvStart", "IMP_ISP_Tuning_GetNCUAlloc", "IMP_ISP_Tuning_GetNCUInfo", "IMP_ISP_Tuning_SetContrast_internal", "IMP_ISP_Tuning_SetSharpness_internal", "IMP_ISP_Tuning_SetShading", "IMP_OSD_MemPoolRequest", "IMP_OSD_ResizeRGB_Pic"]
-    socs: [T31]
-    category: no-signature
-    reason: "exported by the T31 vendor libimp but declared in no header of the T31 SDKs (1.1.1 / 1.1.2 / 1.1.4 / 1.1.5 / 1.1.5.2 / 1.1.6 held): argument types and semantics are unknown, so a conformant call cannot be written (pool-id / stream-impl / NCU / undistort / frame-offset / EV-start helpers, *_internal tuning helpers, OSD pool and resize helpers; OpenIMP's own guesses disagree between files, e.g. SetShading(int) vs SetShading(void *); SetFrameDepthCopyType is declared only in the T32/T33 SDKs)"
-  - match: ["IMP_OSD_MultiCamera_GetRgnAttr_ISP", "IMP_OSD_MultiCamera_SetRgnAttr_ISP", "IMP_OSD_UpdateRgnAttrData_ISP"]
-    socs: [T23]
-    category: no-signature
-    reason: "exported by the T23 vendor libimp but declared in no header of the T23 SDKs (1.1.0 / 1.1.2 / 1.3.0 held); the declared single-camera IMP_OSD_GetRgnAttr_ISP / SetRgnAttr_ISP have a case"
   - match: ["IMP_LOG", "IMP_LOG_*"]
     category: no-signature
     reason: "header macros / enum constants (log levels and options), not functions"

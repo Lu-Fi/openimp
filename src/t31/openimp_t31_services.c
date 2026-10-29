@@ -709,6 +709,121 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
     }
     return result;
 }
+/* Stock T31 1.1.5-zrt (0xbedf0): a dedicated rmem pool per OSD group (stock
+ * IMP_Alloc of `size` bytes named `name`, group below 5, once per group).
+ * OpenIMP allocates every region from the one rmem arena (see
+ * IMP_System_MemPoolRequest), so the request is recorded with the stock
+ * checks and results only; reserving memory nothing draws from would shrink
+ * the arena. */
+#define T31_OSD_POOL_GROUPS 5
+static struct {
+    int requested;
+    int size;
+    char name[32];
+} t31_osd_pool[T31_OSD_POOL_GROUPS];
+static pthread_mutex_t t31_osd_pool_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int IMP_OSD_MemPoolRequest(int group, int size, const char *name)
+{
+    if ((unsigned int)group >= T31_OSD_POOL_GROUPS || size <= 0)
+        return -1;
+    pthread_mutex_lock(&t31_osd_pool_lock);
+    if (t31_osd_pool[group].requested) {
+        pthread_mutex_unlock(&t31_osd_pool_lock);
+        IMP_LOG_ERR("OSD", "IMP_OSD_MemPoolRequest: group %d pool already requested", group);
+        return -1;
+    }
+    t31_osd_pool[group].requested = 1;
+    t31_osd_pool[group].size = size;
+    memset(t31_osd_pool[group].name, 0, sizeof(t31_osd_pool[group].name));
+    if (name)
+        strncpy(t31_osd_pool[group].name, name, sizeof(t31_osd_pool[group].name) - 1);
+    pthread_mutex_unlock(&t31_osd_pool_lock);
+    return 0;
+}
+
+/* Stock T31 1.1.5-zrt (0xc0280): bilinear resize of p[0] stacked images of
+ * p[3] bytes per pixel from p[1] x p[2] (rows x columns) to p[5] x p[6],
+ * single-precision like the stock code.  align_corners != 0: the corner
+ * pixels map onto each other (scale (src-1)/(dst-1), position i*scale);
+ * else scale src/dst with pixel centres ((i+0.5)*scale-0.5 in double,
+ * clamped at 0).  The second neighbour is clamped at the last row/column;
+ * the four weighted samples are summed in the stock order and truncated.
+ * p[4] is not used.  Returns 0 (-1 for NULL arguments or empty sizes,
+ * which the stock code does not check). */
+__attribute__((optimize("fp-contract=off")))   /* separate roundings like the stock mul.s/add.s */
+int IMP_OSD_ResizeRGB_Pic(const uint8_t *src, uint8_t *dst, int align_corners, const int *p)
+{
+    int n, sh, sw, bpp, dh, dw, img, y, x, c;
+    float fy_scale, fx_scale;
+
+    if (!src || !dst || !p)
+        return -1;
+    n = p[0]; sh = p[1]; sw = p[2]; bpp = p[3]; dh = p[5]; dw = p[6];
+    if (n <= 0 || sh <= 0 || sw <= 0 || bpp <= 0 || dh <= 0 || dw <= 0)
+        return -1;
+    if (align_corners) {
+        fy_scale = dh > 1 ? (float)(sh - 1) / (float)(dh - 1) : 0.0f;
+        fx_scale = dw > 1 ? (float)(sw - 1) / (float)(dw - 1) : 0.0f;
+    } else {
+        fy_scale = (float)sh / (float)dh;
+        fx_scale = (float)sw / (float)dw;
+    }
+    for (img = 0; img < n; img++) {
+        const uint8_t *s0 = src + (size_t)img * sh * sw * bpp;
+        uint8_t *d = dst + (size_t)img * dh * dw * bpp;
+
+        for (y = 0; y < dh; y++) {
+            float fy, wy1, wy0;
+            int y0, y1;
+
+            if (align_corners)
+                fy = (float)y * fy_scale;
+            else
+                fy = (float)(((double)y + 0.5) * (double)fy_scale - 0.5);
+            if (fy < 0.0f) {
+                y0 = 0; wy1 = 0.0f; wy0 = 1.0f;
+            } else {
+                y0 = (int)fy;
+                wy1 = fy - (float)y0;
+                wy0 = 1.0f - wy1;
+            }
+            y1 = y0 + (y0 < sh - 1);
+            for (x = 0; x < dw; x++) {
+                float fx, wx1, wx0, w00, w01, w10, w11;
+                int x0, x1;
+                const uint8_t *p00, *p01, *p10, *p11;
+
+                if (align_corners)
+                    fx = (float)x * fx_scale;
+                else
+                    fx = (float)(((double)x + 0.5) * (double)fx_scale - 0.5);
+                if (fx < 0.0f) {
+                    x0 = 0; wx1 = 0.0f; wx0 = 1.0f;
+                } else {
+                    x0 = (int)fx;
+                    wx1 = fx - (float)x0;
+                    wx0 = 1.0f - wx1;
+                }
+                x1 = x0 + (x0 < sw - 1);
+                w00 = wy0 * wx0; w01 = wy0 * wx1; w10 = wy1 * wx0; w11 = wy1 * wx1;
+                p00 = s0 + ((size_t)y0 * sw + x0) * bpp;
+                p01 = s0 + ((size_t)y0 * sw + x1) * bpp;
+                p10 = s0 + ((size_t)y1 * sw + x0) * bpp;
+                p11 = s0 + ((size_t)y1 * sw + x1) * bpp;
+                for (c = 0; c < bpp; c++) {
+                    float v = (float)p00[c] * w00 + (float)p01[c] * w01;
+
+                    v = v + (float)p10[c] * w10;
+                    v = v + (float)p11[c] * w11;
+                    *d++ = (uint8_t)(int)v;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 int IMP_OSD_SetPoolSize(int size)
 {
     /* vendor 0xc5dc8 tests the size with blez: zero is rejected too */
