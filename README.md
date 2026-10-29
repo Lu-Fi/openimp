@@ -42,25 +42,25 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC2 `v2026.10.25
 | T23 | Fully open, native Helix H.264 encoder, no vendor helper (2 h 34 min soak). Frequent Helix frame drops fixed (residual interrupt 0x100, kernel patch merged upstream); still open: a rare single Helix encode error (errno 5), no real WDR yet. |
 | T30 | Builds against a real T30 kernel; H.264 command lists match the vendor in an emulator. No device in the test campaign, so not device-verified here. |
 | T31 | Reference SoC. H.264, HEVC, hardware JPEG, OSD, rotation, AEC; 2 h 53 min soak without errors. |
-| T40 | Builds; AVPU H.264 path from upstream work. Not part of the device campaign. |
-| T41 | Runs from a flashed image with H.264 and H.265. Open: live flip, night column noise, short IVS gaps, OOM with three parallel streams at 30 MB rmem (26 MB in the test image works); day/night and AE/AWB quality untested. |
+| T40 | Runs the open stack (open-tx-isp driver + OpenIMP) from a flashed image on the T40XP test camera: H.264/H.265, day/night, AE/AWB and the tuning API with device tests. Open: ISP event thread CPU load vs. the vendor (#133, 6.25 -> about 2.3 ms per frame so far), ISP OSD picture of the Set calls (#141). |
+| T41 | Runs from a flashed image with H.264 and H.265 on the test cameras, with day/night and AE/AWB; the API coverage is strict (every vendor function has a case). Open items are tracked in the GitHub issues (label `soc:T41`). |
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC at RC1 (from the progress table of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#progress-per-soc)). "Done" = device-tested + host-tested + audited; "gaps" = cache-only, stub, error or missing.
+Vendor IMP/SU functions per SoC on 2026-10-29 (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary)). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; "gaps" = cache-only, stub, error or missing; "?" = not determined yet.
 
-| SoC | Vendor functions | Done | Gaps | Status |
-|---|--:|--:|--:|---|
-| T10 | 325 | 89.2 % | 32 | release |
-| T20 | 325 | 90.5 % | 30 | release |
-| T21 | 325 | 93.2 % | 14 | release |
-| T23 | 437 | 93.8 % | 15 | release |
-| T31 | 387 | 96.4 % | 8 | release |
-| T30 | 347 | n/a (no device; 293 not audited) | 54 | experimental |
-| T40 | 398 | 25.4 % (177 not audited/run yet) | 120 | experimental |
-| T41 | 445 | 59.3 % | 179 | experimental |
+| SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
+|---|--:|--:|--:|--:|--:|---|
+| T10 | 333 | 272 (81.7 %) | 26 | 31 | 4 | release |
+| T20 | 333 | 273 (82.0 %) | 27 | 29 | 4 | release |
+| T21 | 333 | 288 (86.5 %) | 26 | 16 | 3 | release |
+| T23 | 457 | 391 (85.6 %) | 40 | 17 | 9 | release |
+| T31 | 406 | 348 (85.7 %) | 34 | 7 | 17 | release |
+| T30 | 354 | 0 (0.0 %) | 44 | 21 | 289 | experimental |
+| T40 | 402 | 329 (81.8 %) | 27 | 18 | 28 | experimental |
+| T41 | 449 | 341 (75.9 %) | 50 | 58 | 0 | experimental |
 
-Work after RC1 (agg-36) raises T30/T40/T41 further. Release notes: [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
+The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes: [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 
 Details per feature and SoC: [FEATURE_MATRIX](docs/FEATURE_MATRIX.md).
 History: [CHANGELOG.md](CHANGELOG.md) and the full
