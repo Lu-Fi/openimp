@@ -2711,6 +2711,9 @@ static int p2_destroy_chn(int channel)
 #if defined(PLATFORM_T31)
     p2_group_slot_drop(channel);
 #endif
+#if defined(PLATFORM_T23)
+    openimp_t23_pad_flush(channel);
+#endif
 #if defined(P2_JPEG_LEND)
     {
         /* no PollingStream runs any more (p2_wait_poll_idle): a frame
@@ -3039,6 +3042,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     uint32_t fps_num;
     uint32_t fps_den;
     uint64_t interval_us;
+#if defined(PLATFORM_T23)
+    T23PadNode pad;
+    int pad_sel = 0;
+#endif
     uint64_t now_us;
     uint64_t frame_deadline_us;
 #if defined(PLATFORM_T40)
@@ -3301,8 +3308,24 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         (void)AL_Codec_Encode_SetJpegSrcPitch(ch->codec, ch->jpeg_src_pitch);
         (void)AL_Codec_Encode_SetJpegSkip(ch->codec, jpeg_may_skip);
     }
+#if defined(PLATFORM_T23)
+    /* IMP_Encoder_PadFrame: while pad frames are enabled the matching pad
+     * frame is encoded instead of the captured one, and a capture without
+     * one is not encoded (stock do_channel_process) */
+    if (frame && frame != &ch->synthetic_frame) {
+        pad_sel = openimp_t23_pad_select(channel, frame, (uint32_t)interval_us, &pad);
+        if (pad_sel < 0)
+            goto done;
+    }
+#endif
     ch->enc_start_us = p2_monotonic_us();
     __atomic_store_n(&ch->encoding, 1, __ATOMIC_RELEASE);
+#if defined(PLATFORM_T23)
+    if (pad_sel > 0) {
+        process_result = AL_Codec_Encode_Process(ch->codec, pad.frame, pad.frame);
+        openimp_t23_pad_release(&pad);
+    } else
+#endif
     process_result = AL_Codec_Encode_Process(ch->codec, frame, frame);
 #if defined(PLATFORM_T41)
     /* the pending RC values are in effect from this picture on */
@@ -6395,6 +6418,23 @@ int IMP_Encoder_GetFd(int channel)
 #if defined(PLATFORM_T23)
 /* T23 encoder extras (src/t23/openimp_t23_encoder.c) run `fn` on a view of
  * the channel with the channel lock held, so the codec cannot go away. */
+uint32_t openimp_t23_p2_frame_interval_us(int channel)
+{
+    P2EncoderChannel *ch;
+    uint32_t num, den;
+
+    if (!p2_valid_channel(channel))
+        return 40000u;
+    ch = &p2_channels[channel];
+    pthread_mutex_lock(&ch->lock);
+    num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+    den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+    pthread_mutex_unlock(&ch->lock);
+    if (!num || !den)
+        return 40000u;
+    return (uint32_t)((1000000ull * den) / num);
+}
+
 int openimp_t23_p2_call(int channel, OpenIMPT23P2Fn fn, void *arg)
 {
     P2EncoderChannel *ch;
@@ -6407,6 +6447,7 @@ int openimp_t23_p2_call(int channel, OpenIMPT23P2Fn fn, void *arg)
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
     view.created = ch->created;
+    view.registered = ch->registered;
     view.receiving = ch->receiving;
     view.codec_type = ch->codec_type;
     view.codec = ch->codec;

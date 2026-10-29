@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <imp/imp_encoder.h>
 
@@ -805,23 +806,51 @@ int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt)
     return 0;
 }
 
-/* Undocumented OEM pad-frame input: frames handed in by the application
- * are encoded in place of captured ones.  The attribute is stored like the
- * OEM's; frames are refused - the OEM error path: the release callback gets
- * the frame back and -1 is returned - because the Helix path encodes
- * FrameSource frames only. */
+/* ---- pad frames ---------------------------------------------------------
+ * Stock T23 1.3.0 IMP_Encoder_SetPadFrameAttr (0x548dc) / IMP_Encoder_PadFrame
+ * (0x54a3c) / do_channel_process: the application hands in processed copies
+ * of captured frames (IMPFrameInfo, time stamp at +0x28) with a release
+ * callback; while pad frames are enabled every captured frame is encoded
+ * from the pad frame that matches it instead, and a captured frame without
+ * one is not encoded.  Attribute (32 bytes): word 1 = match the time stamps
+ * (0: take the next pad frame), words 2/3 = tolerance lo/hi.  Matching (the
+ * stock arithmetic): d = |(int32)(captured.lo - pad.lo)|; within tolerance
+ * when tol.hi > d >> 31 (unsigned) or tol.hi == d >> 31 and d <= tol.lo;
+ * else a newer pad frame waits for its capture (this capture is skipped)
+ * and an older one is released and the next one is tried.  The queue waits
+ * up to one frame interval for a pad frame / for room. */
+#define T23_PAD_DEPTH 8
+
+static struct {
+    T23PadNode n[T23_PAD_DEPTH];
+    unsigned int head, count;
+} pad_q[T23_ENC_CHANNELS];
+static pthread_mutex_t pad_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t pad_cond = PTHREAD_COND_INITIALIZER;
+
+static void pad_deadline(struct timespec *ts, uint32_t wait_us)
+{
+    clock_gettime(CLOCK_REALTIME, ts);
+    ts->tv_sec += wait_us / 1000000u;
+    ts->tv_nsec += (long)(wait_us % 1000000u) * 1000L;
+    if (ts->tv_nsec >= 1000000000L) {
+        ts->tv_sec++;
+        ts->tv_nsec -= 1000000000L;
+    }
+}
+
 static int pad_attr_cb(OpenIMPT23P2View *v, void *arg)
 {
     T23Call *c = arg;
 
-    if (!is_h264(v))
+    if (!v->created)                /* stock: 0, nothing stored */
         return 0;
-    pthread_mutex_lock(&extra_lock);
+    pthread_mutex_lock(&pad_lock);
     extras[c->channel].pad_enable = c->value != 0;
     if (c->value && c->in)
         memcpy(extras[c->channel].pad_attr, c->in,
                sizeof(extras[c->channel].pad_attr));
-    pthread_mutex_unlock(&extra_lock);
+    pthread_mutex_unlock(&pad_lock);
     return 0;
 }
 
@@ -832,13 +861,164 @@ int IMP_Encoder_SetPadFrameAttr(int channel, int enable, const void *attr)
     return call(channel, pad_attr_cb, attr, NULL, enable);
 }
 
+typedef struct {
+    int state;                      /* 0 queue, 1 hand back (0 to the caller), -1 refuse */
+} T23PadCheck;
+
+static int pad_check_cb(OpenIMPT23P2View *v, void *arg)
+{
+    T23PadCheck *k = ((T23Call *)arg)->out;
+
+    /* stock order: registered group, started stream, channel state 1 */
+    if (!v->registered || !v->receiving)
+        k->state = -1;
+    else if (!v->created)
+        k->state = 1;
+    else
+        k->state = 0;
+    return 0;
+}
+
 int IMP_Encoder_PadFrame(int channel, void *frame, void *priv,
                          void (*release)(void *frame, void *priv))
 {
-    (void)channel;
+    T23PadCheck k = { -1 };
+    struct timespec ts;
+    uint32_t wait_us = openimp_t23_p2_frame_interval_us(channel);
+
+    if (!valid_channel(channel) || !frame ||
+        call(channel, pad_check_cb, NULL, &k, 0) != 0 || k.state < 0)
+        goto refuse;
+    if (k.state == 1)
+        return 0;                   /* stock: not handed back, 0 */
+    pthread_mutex_lock(&pad_lock);
+    if (!extras[channel].pad_enable) {
+        pthread_mutex_unlock(&pad_lock);
+        goto refuse;
+    }
+    pad_deadline(&ts, wait_us);
+    while (pad_q[channel].count == T23_PAD_DEPTH)
+        if (pthread_cond_timedwait(&pad_cond, &pad_lock, &ts) != 0 &&
+            pad_q[channel].count == T23_PAD_DEPTH) {
+            pthread_mutex_unlock(&pad_lock);
+            goto refuse;
+        }
+    {
+        unsigned int at = (pad_q[channel].head + pad_q[channel].count) % T23_PAD_DEPTH;
+
+        pad_q[channel].n[at].frame = frame;
+        pad_q[channel].n[at].priv = priv;
+        pad_q[channel].n[at].release = release;
+        pad_q[channel].count++;
+    }
+    pthread_cond_broadcast(&pad_cond);
+    pthread_mutex_unlock(&pad_lock);
+    return 0;
+refuse:
+    IMP_LOG_LIMITED(LOG_ERR, "Encoder", "IMP_Encoder_PadFrame: chn %d frame %p refused", channel, frame);
     if (release)
         release(frame, priv);
     return -1;
+}
+
+static int64_t pad_ts(const void *frame)
+{
+    int64_t t;
+
+    memcpy(&t, (const uint8_t *)frame + 0x28, sizeof(t));
+    return t;
+}
+
+/* PollingStream, captured frame src: 0 = no pad frames (encode src),
+ * 1 = encode *node's frame instead (then openimp_t23_pad_release(node)),
+ * -1 = do not encode src. */
+int openimp_t23_pad_select(int channel, const void *src, uint32_t wait_us,
+                           T23PadNode *node)
+{
+    struct timespec ts;
+    int ret = 0;
+
+    if (!valid_channel(channel) || !src)
+        return 0;
+    pthread_mutex_lock(&pad_lock);
+    if (!extras[channel].pad_enable)
+        goto out;
+    pad_deadline(&ts, wait_us);
+    for (;;) {
+        T23PadNode *h;
+        uint32_t w1, tol_lo, tol_hi, d, dhi;
+        int64_t st, pt;
+
+        while (!pad_q[channel].count)
+            if (pthread_cond_timedwait(&pad_cond, &pad_lock, &ts) != 0 &&
+                !pad_q[channel].count) {
+                ret = -1;
+                goto out;
+            }
+        h = &pad_q[channel].n[pad_q[channel].head];
+        memcpy(&w1, extras[channel].pad_attr + 4, 4);
+        memcpy(&tol_lo, extras[channel].pad_attr + 8, 4);
+        memcpy(&tol_hi, extras[channel].pad_attr + 12, 4);
+        st = pad_ts(src);
+        pt = pad_ts(h->frame);
+        d = (uint32_t)(int32_t)((uint32_t)st - (uint32_t)pt);
+        d = (int32_t)d < 0 ? 0u - d : d;
+        dhi = (uint32_t)((int32_t)d >> 31);
+        if (!w1 || tol_hi > dhi || (tol_hi == dhi && d <= tol_lo)) {
+            *node = *h;
+            pad_q[channel].head = (pad_q[channel].head + 1) % T23_PAD_DEPTH;
+            pad_q[channel].count--;
+            pthread_cond_broadcast(&pad_cond);
+            ret = 1;
+            goto out;
+        }
+        if (pt > st) {              /* newer: waits for its capture */
+            ret = -1;
+            goto out;
+        }
+        /* older: back to the application, try the next one */
+        {
+            T23PadNode old = *h;
+
+            pad_q[channel].head = (pad_q[channel].head + 1) % T23_PAD_DEPTH;
+            pad_q[channel].count--;
+            pthread_cond_broadcast(&pad_cond);
+            pthread_mutex_unlock(&pad_lock);
+            if (old.release)
+                old.release(old.frame, old.priv);
+            pthread_mutex_lock(&pad_lock);
+        }
+    }
+out:
+    pthread_mutex_unlock(&pad_lock);
+    return ret;
+}
+
+void openimp_t23_pad_release(const T23PadNode *node)
+{
+    if (node && node->release)
+        node->release(node->frame, node->priv);
+}
+
+/* DestroyChn: queued pad frames go back to the application, pad mode off */
+void openimp_t23_pad_flush(int channel)
+{
+    T23PadNode q[T23_PAD_DEPTH];
+    unsigned int n = 0, i;
+
+    if (!valid_channel(channel))
+        return;
+    pthread_mutex_lock(&pad_lock);
+    while (pad_q[channel].count) {
+        q[n++] = pad_q[channel].n[pad_q[channel].head];
+        pad_q[channel].head = (pad_q[channel].head + 1) % T23_PAD_DEPTH;
+        pad_q[channel].count--;
+    }
+    extras[channel].pad_enable = 0;
+    pthread_cond_broadcast(&pad_cond);
+    pthread_mutex_unlock(&pad_lock);
+    for (i = 0; i < n; i++)
+        openimp_t23_pad_release(&q[i]);
 }
 
 /* OEM: NCU denoise exists on T30-class SoCs only (cpu id 3..5); on T23

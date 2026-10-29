@@ -3435,7 +3435,7 @@ static void cs_enchelp_t23(void)
         IMP_Encoder_SetPadFrameAttr(7, 0, NULL);
         rep(FN(IMP_Encoder_SetPadFrameAttr), r1, (r1 == 0 && r3 == -1) ? V_PASS : V_FAIL, "rt: chn 7 enable -> %d, chn 99 -> %d", r1, r3);
         rep(FN(IMP_Encoder_PadFrame), r2, (r2 == -1 && g_pad_released == 1) ? V_PASS : V_FAIL,
-            "rt: frame refused (%d) and handed back to the release callback (%d call) - pad-frame encoding is not implemented in OpenIMP (Helix encodes FrameSource frames only)", r2, g_pad_released);
+            "rt: chn 7 not registered: frame refused (%d) and handed back to the release callback (%d call), as stock (encoding of pad frames: case padframe_t23)", r2, g_pad_released);
     }
     NEED(IMP_Encoder_SetChnRcTrigLevel) {
         union { float f; uint32_t u; } lv = { 1.5f };
@@ -3534,9 +3534,127 @@ static void cs_t140c(void)
 static void cs_t140c(void) {}
 #endif
 
+/* T23 pad frames (stock IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): H.264 on FS ch1 (group 1 / chn 1); a feeder thread hands in
+ * a black NV12 picture (rmem) as pad frame.  Free mode (attr word 1 = 0): the black picture is encoded instead of the scene -> much smaller
+ * frames, every pad frame released.  Time-stamp mode with stale pad frames (time stamp 1): nothing encoded, the pad frames come back.
+ * Pad off: the scene again. */
+#if defined(PLATFORM_T23)
+static volatile int g_pad_run, g_pad_rel, g_pad_inflight;
+static uint64_t g_pad_ts;
+static IMPFrameInfo g_pad_fi[4];
+static void t23_pad_rel_cb(void *frame, void *priv) { (void)frame; (void)priv; g_pad_rel++; __sync_sub_and_fetch(&g_pad_inflight, 1); }
+static void *t23_pad_feeder(void *arg)
+{
+    int i = 0;
+
+    (void)arg;
+    while (g_pad_run) {
+        if (g_pad_inflight < 3) {
+            IMPFrameInfo *f = &g_pad_fi[i++ & 3];
+
+            f->timeStamp = g_pad_ts ? (int64_t)g_pad_ts : IMP_System_GetTimeStamp();
+            __sync_add_and_fetch(&g_pad_inflight, 1);
+            if (IMP_Encoder_PadFrame(1, f, NULL, t23_pad_rel_cb) == 0 && 0) {}
+        }
+        usleep(20000);
+    }
+    return NULL;
+}
+
+static void t23_stream_stats(int ms, int *frames, double *avg)
+{
+    int64_t t0 = now_us();
+    long bytes = 0;
+
+    *frames = 0;
+    while (now_us() - t0 < (int64_t)ms * 1000) {
+        IMPEncoderStream s;
+        unsigned k;
+
+        if (IMP_Encoder_PollingStream(1, 200) != 0) continue;
+        if (IMP_Encoder_GetStream(1, &s, 0) != 0) continue;
+        for (k = 0; k < s.packCount; k++) bytes += s.pack[k].length;
+        (*frames)++;
+        IMP_Encoder_ReleaseStream(1, &s);
+    }
+    *avg = *frames ? (double)bytes / *frames : 0;
+}
+
+static void cs_padframe_t23(void)
+{
+    uintptr_t (*a_alloc)(void *, intptr_t, char *) = (uintptr_t (*)(void *, intptr_t, char *))dsym("IMP_Alloc");
+    int (*a_free)(uintptr_t) = (int (*)(uintptr_t))dsym("IMP_Free");
+    int (*flush)(void *, uint32_t) = (int (*)(void *, uint32_t))dsym("IMP_FlushCache");
+
+    NEED(IMP_Encoder_SetPadFrameAttr) NEED(IMP_Encoder_PadFrame) {
+        IMPCell fs1 = { DEV_ID_FS, 1, 0 }, en1 = { DEV_ID_ENC, 1, 0 };
+        IMPEncoderCHNAttr *a = (IMPEncoderCHNAttr *)calloc(1, sizeof(*a));
+        at_dmainfo *d = (at_dmainfo *)gnew(sizeof(at_dmainfo));
+        uint32_t attr[8];
+        int w = SUB_W, h = SUB_H, ha = (SUB_H + 15) & ~15, up = 0, f0, f1, f2, f3, i, r1, r2, r3, rel1, rel2;
+        double s0, s1, s2, s3;
+        pthread_t th;
+
+        /* the encoder's input layout: luma of w x align16(h), chroma after it (stock: UV at align16(w) * align16(h)) */
+        if (a_alloc) (void)a_alloc(d, w * ha * 3 / 2, (char *)"apitest-pad");   /* descriptor style: 0 = ok, d filled */
+        if (!a || !a_alloc || !d->virt || !d->phys) {
+            rep(FN(IMP_Encoder_PadFrame), -1, V_SKIP, "no rmem buffer (IMP_Alloc)"); free(a); gfree(d); return;
+        }
+        memset((void *)(uintptr_t)d->virt, 16, (size_t)w * ha);
+        memset((void *)(uintptr_t)(d->virt + w * ha), 128, (size_t)w * ha / 2);
+        if (flush) flush((void *)(uintptr_t)d->virt, w * ha * 3 / 2);
+        for (i = 0; i < 4; i++) {
+            memset(&g_pad_fi[i], 0, sizeof(g_pad_fi[i]));
+            g_pad_fi[i].index = i; g_pad_fi[i].width = w; g_pad_fi[i].height = h; g_pad_fi[i].pixfmt = PIX_FMT_NV12;
+            g_pad_fi[i].size = w * ha * 3 / 2; g_pad_fi[i].phyAddr = d->phys; g_pad_fi[i].virAddr = d->virt;
+        }
+        a->encAttr.picWidth = w; a->encAttr.picHeight = h; a->encAttr.enType = PT_H264; a->encAttr.profile = 1;
+        a->rcAttr.outFrmRate.frmRateNum = 15; a->rcAttr.outFrmRate.frmRateDen = 1; a->rcAttr.maxGop = 30;
+        a->rcAttr.attrRcMode.rcMode = ENC_RC_MODE_CBR;
+        a->rcAttr.attrRcMode.attrH264Cbr.maxQp = 45; a->rcAttr.attrRcMode.attrH264Cbr.minQp = 15;
+        a->rcAttr.attrRcMode.attrH264Cbr.outBitRate = 1024; a->rcAttr.attrRcMode.attrH264Cbr.frmQPStep = 3;
+        a->rcAttr.attrRcMode.attrH264Cbr.gopQPStep = 15;
+        if (IMP_Encoder_CreateGroup(1) == 0 && IMP_Encoder_CreateChn(1, a) == 0 && IMP_Encoder_RegisterChn(1, 1) == 0 &&
+            IMP_System_Bind(&fs1, &en1) == 0 && IMP_Encoder_StartRecvPic(1) == 0)
+            up = 1;
+        if (!up) {
+            rep(FN(IMP_Encoder_PadFrame), -1, V_FAIL, "encoder set-up failed");
+        } else {
+            t23_stream_stats(2000, &f0, &s0);                        /* scene */
+            memset(attr, 0, sizeof(attr));
+            r1 = IMP_Encoder_SetPadFrameAttr(1, 1, attr);          /* free mode */
+            g_pad_run = 1; g_pad_rel = 0; g_pad_inflight = 0; g_pad_ts = 0;
+            pthread_create(&th, NULL, t23_pad_feeder, NULL);
+            t23_stream_stats(2000, &f1, &s1);
+            rel1 = g_pad_rel;
+            attr[1] = 1; attr[2] = 1000; attr[3] = 0;              /* match within 1 ms */
+            g_pad_ts = 1;                                          /* stale pad frames */
+            r2 = IMP_Encoder_SetPadFrameAttr(1, 1, attr);
+            usleep(300000);
+            rel2 = g_pad_rel;
+            t23_stream_stats(1500, &f2, &s2);
+            rel2 = g_pad_rel - rel2;
+            g_pad_run = 0; pthread_join(th, NULL);
+            r3 = IMP_Encoder_SetPadFrameAttr(1, 0, NULL);
+            t23_stream_stats(2000, &f3, &s3);
+            IMP_Encoder_StopRecvPic(1); IMP_System_UnBind(&fs1, &en1); IMP_Encoder_UnRegisterChn(1); IMP_Encoder_DestroyChn(1); IMP_Encoder_DestroyGroup(1);
+            rep(FN(IMP_Encoder_SetPadFrameAttr), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && f3 > 5 && s3 > s1 * 2) ? V_PASS : V_FAIL,
+                "free mode on / time-stamp mode on / off: ret %d %d %d; off again: %d frames, %.0f bytes avg", r1, r2, r3, f3, s3);
+            rep(FN(IMP_Encoder_PadFrame), 0, (f1 > 5 && s1 < s0 / 3 && rel1 >= f1 && f2 <= 1 && rel2 > 5 && g_pad_inflight == 0 && flow()) ? V_PASS : V_FAIL,
+                "scene %d frames %.0f B avg; black pad frames: %d frames %.0f B avg, %d released; stale pad frames (ts mode): %d frames encoded, %d released; "
+                "all handed back after DestroyChn (in flight %d)", f0, s0, f1, s1, rel1, f2, rel2, g_pad_inflight);
+        }
+        if (a_free) a_free(d->virt);
+        free(a); gfree(d);
+    }
+}
+#else
+static void cs_padframe_t23(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "ispdraw_t23", "isppicupd_t23", "enchelp_t23", "t140c" };
+    static const char *n[] = { "sensorreg", "log", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "ispdraw_t23", "isppicupd_t23", "enchelp_t23", "t140c", "padframe_t23" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -3634,5 +3752,6 @@ void t_cases(void)
     if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
     if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
+    if (cs_on("padframe_t23")) cs_padframe_t23(); wdog("cases", 120);
     wdog("cases", 60);
 }
