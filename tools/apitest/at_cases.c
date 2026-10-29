@@ -481,12 +481,12 @@ static void cs_logmacro(void)
 
         t = lm_run(lm_levels);
         /* UNKNOWN/VERBOSE (level < 3) are below the vendor default level: never printed. WARN, ERROR, FATAL, SILENT print. */
-        ok = !strstr(t, "m-unk") && !strstr(t, "m-verbose") && strstr(t, "m-warn x") && strstr(t, "m-err") && strstr(t, "m-fatal") && strstr(t, "m-silent");
+        ok = !strstr(t, "m-unk") && !strstr(t, "m-verbose") && strstr(t, "m-dbg 1") && strstr(t, "m-info") && strstr(t, "m-warn x") && strstr(t, "m-err") && strstr(t, "m-fatal") && strstr(t, "m-silent");
         rep("IMP_LOG_UNK", 0, !strstr(t, "m-unk") ? V_PASS : V_FAIL, "level 0 suppressed");
         rep("IMP_LOG_VERBOSE", 0, !strstr(t, "m-verbose") ? V_PASS : V_FAIL, "level 2 suppressed");
-        rep("IMP_LOG_DBG", 0, V_PASS, "level 3: %s (OpenIMP prints DBG/INFO only with OPENIMP_DEBUG_TRACE, vendor default level 3 prints)", strstr(t, "m-dbg 1") ? "printed" : "quiet by design");
-        rep("IMP_LOG_INFO", 0, V_PASS, "level 4: %s", strstr(t, "m-info") ? "printed" : "quiet by design");
-        rep("IMP_LOG_WARN", 0, strstr(t, "[LMTAG]") && strstr(t, "m-warn x") ? V_PASS : V_FAIL, "printf-style args rendered");
+        rep("IMP_LOG_DBG", 0, strstr(t, "m-dbg 1") ? V_PASS : V_FAIL, "level 3 = vendor default log_level: printed");
+        rep("IMP_LOG_INFO", 0, strstr(t, "m-info") ? V_PASS : V_FAIL, "level 4 printed");
+        rep("IMP_LOG_WARN", 0, strstr(t, "LMTAG") && strstr(t, "m-warn x") ? V_PASS : V_FAIL, "printf-style args rendered");
         rep("IMP_LOG_ERR", 0, strstr(t, "m-err") ? V_PASS : V_FAIL, "printed");
         rep("IMP_LOG_FATAL", 0, strstr(t, "m-fatal") ? V_PASS : V_FAIL, "printed");
         rep("IMP_LOG_SILENT", 0, strstr(t, "m-silent") ? V_PASS : V_FAIL, "level 8 still printed (vendor: level >= 3)");
@@ -523,7 +523,7 @@ static void cs_logmacro(void)
         rep("IMP_LOG_OP_FILE", 0, strstr(t, "at_cases.c") ? V_PASS : V_FAIL, "file name field");
         rep("IMP_LOG_OP_LINE", 0, strstr(t, "c:") ? V_PASS : V_FAIL, "line field");
         rep("IMP_LOG_OP_FUNC", 0, strstr(t, "lm_optall") ? V_PASS : V_FAIL, "function field");
-        rep("IMP_LOG_OP_MODULE", 0, strstr(t, "[LMTAG]") ? V_PASS : V_FAIL, "tag field");
+        rep("IMP_LOG_OP_MODULE", 0, strstr(t, "LMTAG") ? V_PASS : V_FAIL, "tag field");
         rep("IMP_LOG_OP_PID", 0, V_PASS, "bit accepted (vendor libalog does not render it either)");
         rep("IMP_LOG_OP_USTIME", 0, V_PASS, "bit accepted (vendor libalog does not render it either)");
         t = lm_run(lm_optnone);

@@ -34,6 +34,8 @@
 
 int IMP_Log_Get_Option(void);
 void IMP_Log_Set_Option(int option);
+int imp_get_log_level(void);          /* libalog log_level, default 3 (DEBUG) */
+void imp_set_log_level(int level);
 int imp_log_fun(int level, int option, int type, ...);
 
 #endif /* IMP_LOG_FUN_H */

@@ -21,11 +21,10 @@
  * a record only when `level >= log_level`, then prints the fields the mask
  * selects (it emits `[%s]:` for FILE, `[%d]` for LINE, `[%s]` for FUNC).
  *
- * Levels (OEM): 3 DBG, 4 INFO, 5 WARN, 6 ERR.  OpenIMP deviates on purpose:
- * WARN/ERR always go to stderr and DBG/INFO only when OPENIMP_DEBUG_TRACE is
- * set, so the library stays quiet on a camera unless asked.  OpenIMP also
- * has no logcat backend, so both sinks end up on stderr.  Syslog is off by
- * default and enabled with OPENIMP_LOG_SYSLOG=1.
+ * Levels (OEM): 3 DBG, 4 INFO, 5 WARN, 6 ERR.  Filter and sinks follow libalog exactly:
+ * records below log_level (initial 3) are dropped; sink 0 stdout, 1 timp.log, 2 logcat
+ * (/dev/log_main).  Only when sink 2 has no logger device, DBG/INFO stay off stderr
+ * unless OPENIMP_DEBUG_TRACE is set.  Syslog is off by default (OPENIMP_LOG_SYSLOG=1).
  */
 #include <stdarg.h>
 #include <stdio.h>
@@ -77,6 +76,19 @@ static int imp_log_syslog_enabled(void)
     return cached;
 }
 
+/* libalog log_level (.data, initial 3 = IMP_LOG_LEVEL_DEBUG): records below it are dropped. */
+static int imp_log_level = 3;
+
+int imp_get_log_level(void)
+{
+    return imp_log_level;
+}
+
+void imp_set_log_level(int level)
+{
+    imp_log_level = level;
+}
+
 int IMP_Log_Get_Option(void)
 {
     return imp_log_option;
@@ -102,9 +114,9 @@ static int imp_log_logcat(int level, const char *tag, const char *msg)
     if (fd == -2) {
         const char *dev = getenv("OPENIMP_LOGGER_DEV");
 
-        fd = open(dev && dev[0] ? dev : "/dev/log_main", O_WRONLY | O_CLOEXEC);
+        fd = open(dev && dev[0] ? dev : "/dev/log_main", O_WRONLY | O_APPEND | O_CLOEXEC);
         if (fd < 0 && !(dev && dev[0]))
-            fd = open("/dev/log/main", O_WRONLY | O_CLOEXEC);
+            fd = open("/dev/log/main", O_WRONLY | O_APPEND | O_CLOEXEC);
     }
     if (fd < 0)
         return -1;
@@ -123,7 +135,8 @@ int imp_log_fun(int level, int option, int type, ...)
     char buf[512];
     static int inited;
 
-    if (level < 5 && !openimp_debug_trace_enabled())
+    /* libalog: `if (level < log_level) return;` with log_level starting at 3 (DEBUG). */
+    if (level < imp_log_level)
         return 0;
 
     va_start(ap, type);
@@ -176,12 +189,16 @@ int imp_log_fun(int level, int option, int type, ...)
 
             if (*m == ' ')
                 m++;
+            else if (m[0] == ':' && m[1] == ' ')
+                m += 2;   /* option 0: no fields, only the message */
             snprintf(msg, sizeof(msg), "%s", m);
             ml = strlen(msg);
             while (ml && msg[ml - 1] == '\n')
                 msg[--ml] = 0;
             if (imp_log_logcat(level, tag ? tag : "IMP", msg) == 0)
                 out = NULL;
+            else if (level < 5 && !openimp_debug_trace_enabled())
+                out = NULL;   /* no logger device: DBG/INFO stay off the console unless tracing */
         } else if (type == 0) {
             out = stdout;
         } else if (type == 1) {
