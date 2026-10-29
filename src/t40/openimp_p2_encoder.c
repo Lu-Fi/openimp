@@ -80,6 +80,13 @@
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_osd.h"
 #include "t23/openimp_t23_encoder.h"
+#if defined(PLATFORM_T23)
+/* pad frames (openimp_t23_encoder.c); weak: host tests link this file alone */
+extern int openimp_t23_pad_select(int channel, const void *src, uint32_t wait_us,
+                                  T23PadNode *node) __attribute__((weak));
+extern void openimp_t23_pad_release(const T23PadNode *node) __attribute__((weak));
+extern void openimp_t23_pad_flush(int channel) __attribute__((weak));
+#endif
 #elif defined(PLATFORM_T41) || defined(PLATFORM_T40)
 #include "t23/openimp_t23_osd.h"
 #endif
@@ -2712,7 +2719,8 @@ static int p2_destroy_chn(int channel)
     p2_group_slot_drop(channel);
 #endif
 #if defined(PLATFORM_T23)
-    openimp_t23_pad_flush(channel);
+    if (openimp_t23_pad_flush)
+        openimp_t23_pad_flush(channel);
 #endif
 #if defined(P2_JPEG_LEND)
     {
@@ -3312,7 +3320,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     /* IMP_Encoder_PadFrame: while pad frames are enabled the matching pad
      * frame is encoded instead of the captured one, and a capture without
      * one is not encoded (stock do_channel_process) */
-    if (frame && frame != &ch->synthetic_frame) {
+    if (openimp_t23_pad_select && frame && frame != &ch->synthetic_frame) {
         pad_sel = openimp_t23_pad_select(channel, frame, (uint32_t)interval_us, &pad);
         if (pad_sel < 0)
             goto done;
