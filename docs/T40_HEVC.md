@@ -145,6 +145,16 @@ next command push, which is 16 % of the 50 ms picture period at 20 fps:
    and compares the whole payload and the 0x8304 count with the early
    reading: 297 + 237 pictures at 4K, 0 mismatches, 0 late bursts.
 
+3. Frame wait (#149, 2026-10-30): the encoder waited for the next capture with a
+   1 ms probe through the FrameSource DQBUF worker plus a 1 ms sleep (about
+   10 probes and 40 context switches per frame, 20 fps: the main thread cost
+   7x the vendor's).  Now the worker probes the non-blocking frame channel
+   itself, the encoder waits in 20 ms slices and starts the next wait 2 ms
+   before the capture is due (`P2_T40_ARRIVAL_MARGIN_US`).  Frame selection
+   and the bitstream are unchanged.  `OPENIMP_T40_SOURCE_INVALIDATE=0` skips
+   the 3 MB per-frame source invalidate that the open driver's DQBUF sync
+   already covers (A/B knob, default on).
+
 Device results (Eufy T40XP, IR-cut day, streaming application stopped, one session each,
 `ffmpeg -err_detect aggressive` and VA-API clean for every stream below;
 SSIM against the vendor FixQP 22 stream of the same session):

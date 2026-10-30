@@ -48,6 +48,7 @@ int main(int argc, char **argv)
     IMPCell fsc = { DEV_ID_FS, 0, 0 }, enc = { DEV_ID_ENC, 0, 0 };
     int secs = argc > 1 ? atoi(argv[1]) : 60, frames = 0;
     const char *mode = argc > 2 ? argv[2] : "auto";
+    FILE *out = argc > 3 ? fopen(argv[3], "wb") : NULL;   /* raw Annex B, for before/after byte compares */
     long long bytes = 0;
     int64_t t0;
 
@@ -102,8 +103,20 @@ int main(int argc, char **argv)
             continue;
         if (IMP_Encoder_GetStream(0, &st, 1) != 0)
             continue;
-        for (k = 0; k < st.packCount; k++)
+        for (k = 0; k < st.packCount; k++) {
             bytes += st.pack[k].length;
+            if (out) {  /* T40 packs are offsets into the stream ring (may wrap) */
+                const uint8_t *base = (const uint8_t *)(uintptr_t)st.virAddr;
+                uint32_t off = st.pack[k].offset, len = st.pack[k].length;
+
+                if (off + len <= st.streamSize) {
+                    fwrite(base + off, 1, len, out);
+                } else {
+                    fwrite(base + off, 1, st.streamSize - off, out);
+                    fwrite(base, 1, len - (st.streamSize - off), out);
+                }
+            }
+        }
         frames++;
         IMP_Encoder_ReleaseStream(0, &st);
     }

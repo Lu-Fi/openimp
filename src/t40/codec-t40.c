@@ -11530,6 +11530,17 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             -1, (void *)(uintptr_t)virt_addr, size,
             2 /* DMA_FROM_DEVICE / invalidate */,
             OPENIMP_PROFILE_CACHE_SOURCE_INVALIDATE);
+#elif defined(PLATFORM_T40)
+        /* #149 A/B knob: the open T40 driver syncs the whole frame
+         * (bidirectional) in DQBUF and the vendor libimp never invalidates a
+         * source frame (Rtos_InvalidateCacheMemory has no caller), so this
+         * 3 MB invalidate per 1080p frame is redundant on the open stack.
+         * OPENIMP_T40_SOURCE_INVALIDATE=0 skips it; default unchanged until
+         * the camera A/B shows the saving. */
+        source_sync_ret = AVPU_T40_STREAM_KNOB("OPENIMP_T40_SOURCE_INVALIDATE")
+            ? avpu_flush_cache(-1, (void *)(uintptr_t)virt_addr, size,
+                               2 /* DMA_FROM_DEVICE / invalidate */)
+            : 0;
 #else
         source_sync_ret = avpu_flush_cache(
             -1, (void *)(uintptr_t)virt_addr, size,

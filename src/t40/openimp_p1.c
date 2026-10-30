@@ -2050,11 +2050,31 @@ struct p1_dqw {
     int started, want, done, rc, err, fd;
     uint32_t epoch;
     uint32_t words[TISP_BUFFER_WORDS];
+    uint64_t deadline_us;       /* monotonic: the worker retries an empty
+                                 * (non-blocking) DQBUF until then */
 };
 static struct p1_dqw p1_dqw[OPENIMP_FS_CHANNELS] = {
     [0 ... OPENIMP_FS_CHANNELS - 1] = {
-        PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0, 0, 0, 0, 0, -1, 0, {0} }
+        PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0, 0, 0, 0, 0, -1, 0, {0}, 0 }
 };
+
+/* The open T40 frame channel answers an empty queue at once (ENODATA/EAGAIN,
+ * no wait in the driver).  Cycling the request between the consumer and this
+ * worker every millisecond cost four context switches per probe (#149): the
+ * worker keeps probing itself, 1 ms apart, until the request's deadline, and
+ * hands back one result.  A blocking DQBUF (vendor driver, T41) is unchanged:
+ * the ioctl returns only with a frame. */
+static int p1_dqw_retry(const struct p1_dqw *w, int rc, int err)
+{
+    struct timespec nap = { 0, 1000000L };
+
+    if (rc >= 0 || (err != EAGAIN && err != ENODATA))
+        return 0;
+    if (p1_monotonic_us() + 1000u > __atomic_load_n(&w->deadline_us, __ATOMIC_RELAXED))
+        return 0;
+    nanosleep(&nap, NULL);
+    return 1;
+}
 
 struct p1_dqw_arg { int channel; uint32_t epoch; };
 
@@ -2077,8 +2097,11 @@ static void *p1_dqw_main(void *arg)
         memcpy(words, w->words, sizeof(words));
         fd = w->fd;
         pthread_mutex_unlock(&w->mu);
-        rc = ioctl(fd, TISP_VIDIOC_DQBUF, words);
-        err = rc < 0 ? errno : 0;
+        do {
+            rc = ioctl(fd, TISP_VIDIOC_DQBUF, words);
+            err = rc < 0 ? errno : 0;
+        } while (p1_dqw_retry(w, rc, err) &&
+                 __atomic_load_n(&w->epoch, __ATOMIC_RELAXED) == a.epoch);
         pthread_mutex_lock(&w->mu);
         if (w->epoch != a.epoch)
             break;                  /* the channel was disabled meanwhile */
@@ -2128,11 +2151,19 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
         w->started = 1;
         w->want = w->done = 0;
     }
-    if (!w->want && !w->done) {
-        memcpy(w->words, words, sizeof(w->words));
-        w->fd = fd;
-        w->want = 1;
-        pthread_cond_broadcast(&w->cv);
+    {
+        uint64_t deadline = p1_monotonic_us() + wait_us;
+
+        if (!w->want && !w->done) {
+            memcpy(w->words, words, sizeof(w->words));
+            w->fd = fd;
+            w->want = 1;
+            __atomic_store_n(&w->deadline_us, deadline, __ATOMIC_RELAXED);
+            pthread_cond_broadcast(&w->cv);
+        } else if (w->want && deadline > w->deadline_us) {
+            /* an outstanding probe: this caller waits longer */
+            __atomic_store_n(&w->deadline_us, deadline, __ATOMIC_RELAXED);
+        }
     }
     clock_gettime(CLOCK_REALTIME, &until);
     until.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
@@ -2921,6 +2952,21 @@ int OpenIMP_T40_FrameSource_TryGetFrame(int channel, void **frame)
     if (!frame)
         return -1;
     ret = p1_get_frame_attempts(channel, &ready, 1);
+    *frame = ready;
+    return ret;
+}
+
+/* The encoder's sliced wait (#149): up to wait_ms for a frame, in one wait
+ * on the DQBUF worker (or 1 ms probes without it); the fallback frame logic
+ * is that of GetFrame. */
+int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame, uint32_t wait_ms)
+{
+    IMPFrameInfo *ready = NULL;
+    int ret;
+
+    if (!frame)
+        return -1;
+    ret = p1_get_frame_attempts(channel, &ready, wait_ms ? (int)wait_ms : 1);
     *frame = ready;
     return ret;
 }

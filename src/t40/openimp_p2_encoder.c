@@ -78,6 +78,14 @@
  * wait at once). */
 #define P2_FRAME_WAIT_SLICE_US 20000u
 #endif
+#if defined(PLATFORM_T40)
+/* the next frame wait starts this long before the capture is due (#149) */
+#define P2_T40_ARRIVAL_MARGIN_US 2000u
+/* longest single frame wait: bounds how late StopRecvPic is noticed */
+#define P2_T40_FRAME_WAIT_SLICE_MS 20u
+extern int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame,
+                                             uint32_t wait_ms);
+#endif
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_osd.h"
 #include "t23/openimp_t23_encoder.h"
@@ -3452,6 +3460,30 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         /* T20/T21/T23: the public GetFrame waits up to 2 s like libimp; this loop
          * keeps its own deadline and StopRecvPic check, so it polls the
          * ready queue directly. */
+#if defined(PLATFORM_T40)
+        /* T40 (#149): one sliced wait per attempt instead of a 1 ms probe
+         * plus a 1 ms sleep.  The FrameSource worker probes the (non
+         * blocking) frame channel 1 ms apart and wakes this thread once,
+         * with the frame; StopRecvPic and the deadline are seen every
+         * P2_T40_FRAME_WAIT_SLICE_MS. */
+        while (OpenIMP_T40_FrameSource_WaitFrame(
+                   ch->source_channel, &frame,
+                   P2_T40_FRAME_WAIT_SLICE_MS) != 0) {
+            if (!timeout_ms || p2_monotonic_us() >= frame_deadline_us ||
+                !__atomic_load_n(&ch->receiving, __ATOMIC_RELAXED))
+                goto done;
+        }
+        /* Pace from this frame's arrival: the next poll starts a little
+         * before the next capture is due, so the probes per frame stay at a
+         * few instead of half a frame interval of 1 ms probes.  The frame
+         * selection is unchanged (the oldest queued buffer, as before). */
+        if (interval_us > P2_T40_ARRIVAL_MARGIN_US) {
+            pthread_mutex_lock(&ch->lock);
+            ch->next_frame_due_us = p2_monotonic_us() + interval_us -
+                                    P2_T40_ARRIVAL_MARGIN_US;
+            pthread_mutex_unlock(&ch->lock);
+        }
+#else
         while (P2_FS_TRY_FRAME(ch->source_channel, &frame) != 0) {
             /* StopRecvPic ends the wait: UnRegisterChn waits for us. */
             if (!timeout_ms || p2_monotonic_us() >= frame_deadline_us ||
@@ -3459,6 +3491,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                 goto done;
             p2_sleep_us(1000u);
         }
+#endif
 #endif
 #if defined(PLATFORM_T23)
         pace_got_us = p2_monotonic_us();
