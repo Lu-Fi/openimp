@@ -4035,11 +4035,34 @@ static void cs_awbctstart_t40(void)
             (int)o.mode, o.ct, (int)o.awb_start_en);
     }
 }
+
+/* sensorattr_t40 (#147): IMP_ISP_Tuning_GetSensorAttr (driver g_ctrl 0x8000033).  The OEM answers it from the
+ * core's copy of the sensor video block (hts/vts from the attribute, fps, vi_max_width/height); the open driver
+ * returned fps 0 and 0x0 (vendor on the Eufy sc830ai: 20<<16|1, 3840x2160).  Size must equal the sensor size
+ * (FS ch0 = sensor argument), fps the sensor's own rate (GetSensorFPS, packed num<<16|den). */
+static void cs_sensorattr_t40(void)
+{
+    NEED(IMP_ISP_Tuning_GetSensorAttr) {
+        IMPISPSENSORAttr sa;
+        uint32_t n = 0, d = 0;
+        int r, rf;
+
+        memset(&sa, 0, sizeof(sa));
+        r = IMP_ISP_Tuning_GetSensorAttr(IMPVI_MAIN, &sa);
+        rf = IMP_ISP_Tuning_GetSensorFPS(IMPVI_MAIN, &n, &d);
+        rep(LBL("sensorattr_t40"), r,
+            (!r && !rf && sa.hts && sa.vts && sa.fps && sa.fps == ((n << 16) | d) &&
+             (int)sa.width == g_sw && (int)sa.height == g_sh) ? V_PASS : V_FAIL,
+            "hts %u vts %u fps 0x%x (%u/%u) %ux%u; sensor %dx%d, GetSensorFPS rc=%d %u/%u (want 0x%x)",
+            sa.hts, sa.vts, sa.fps, sa.fps >> 16, sa.fps & 0xffff, sa.width, sa.height, g_sw, g_sh, rf, n, d, (n << 16) | d);
+    }
+}
 #else
 static void cs_t140c(void) {}
 static void cs_awbctstart_t40(void) {}
 static void cs_framedrop_t40(void) {}
 static void cs_ratiohang_t40(void) {}
+static void cs_sensorattr_t40(void) {}
 #endif
 
 /* T23 pad frames (stock IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): H.264 on FS ch1 (group 1 / chn 1); a feeder thread hands in
@@ -4162,7 +4185,7 @@ static void cs_padframe_t23(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "tisp2open_t40" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "tisp2open_t40", "sensorattr_t40" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -4269,5 +4292,6 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("ratiohang_t40")) cs_ratiohang_t40(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("awbctstart_t40")) cs_awbctstart_t40(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("tisp2open_t40")) cs_tisp2open_t40(); wdog("cases", 60);
+    if (cs_on("sensorattr_t40")) cs_sensorattr_t40(); wdog("cases", 30);
     wdog("cases", 60);
 }
