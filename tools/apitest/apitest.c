@@ -294,6 +294,17 @@ int main(int argc, char **argv)
     strncpy(g_sensor.i2c.type, argv[1], sizeof(g_sensor.i2c.type) - 1);
     g_sensor.i2c.addr = (int)strtol(argv[2], NULL, 0);
     g_sensor.rst_gpio = g_sensor.pwdn_gpio = g_sensor.power_gpio = -1;
+#ifdef APITEST_T40
+    /* APITEST_VENDOR_SINFO=1: the full board description the vendor ko needs (the open driver takes it from its
+     * sensor driver): i2c adapter 1, reset gpio 91, MCLK1, MIPI CSI0, default boot 4 (Eufy .184, as at_t40dev.c) */
+    if (getenv("APITEST_VENDOR_SINFO")) {
+        g_sensor.i2c.i2c_adapter_id = 1;
+        g_sensor.rst_gpio = 91;
+        g_sensor.video_interface = IMPISP_SENSOR_VI_MIPI_CSI0;
+        g_sensor.mclk = IMPISP_SENSOR_MCLK1;
+        g_sensor.default_boot = 4;
+    }
+#endif
 
     if (jpath && (g_jf = fopen(jpath, "w"))) {
         g_jfd = fileno(g_jf);

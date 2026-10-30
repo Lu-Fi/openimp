@@ -1043,7 +1043,7 @@ void t_binpath_pre(void)
 void t_binpath_pre(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
+#if (defined(PLATFORM_T41) || defined(PLATFORM_T40)) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
 static void cs_switchbin(void)
 {
     NEED(IMP_ISP_Tuning_SwitchBin) NEED(IMP_ISP_GetDefaultBinPath) {
@@ -1053,7 +1053,15 @@ static void cs_switchbin(void)
         Fst base, back;
         struct stat st;
 
-        if (r1 != 0 || !p[0] || stat(p, &st) != 0) {
+        if (r1 != 0 || !p[0]) {         /* no path given to libimp: the driver's default bin file of this sensor */
+#ifdef APITEST_T40
+            snprintf(p, 128, "/etc/sensor/%s-t40.bin", g_sensor.name);
+#else
+            snprintf(p, 128, "/etc/sensor/%s-t41.bin", g_sensor.name);
+#endif
+            r1 = 0;
+        }
+        if (stat(p, &st) != 0) {
             rep(FN(IMP_ISP_Tuning_SwitchBin), r1, V_SKIP, "no usable current bin file (\"%.80s\")", p);
         } else {
             base = fst(800);
@@ -2860,6 +2868,9 @@ static void cs_tisppar_t40(void)
     for (id = 0; id <= 0x19; id++) {
         int r;
 
+        /* APITEST_TISPPAR_TRACE=1: every step on stderr before the ioctl (unbuffered, survives a hang of the camera) */
+        if (getenv("APITEST_TISPPAR_TRACE"))
+            fprintf(stderr, "tisppar: get id 0x%x\n", id);
         memset(a, 0, T40_TISP_PAR_BYTES);
         r = t40_tisp_par(fd, a, 0x20007400, id, 0, 0);
         rg |= r;
@@ -2868,6 +2879,8 @@ static void cs_tisppar_t40(void)
             uint32_t n = a[1];
 
             nset++;
+            if (getenv("APITEST_TISPPAR_TRACE"))
+                fprintf(stderr, "tisppar: id 0x%x size %u -> set + get back\n", id, n);
             r = t40_tisp_par(fd, a, 0x20007401, id, 0, 0);
             rs |= r;
             memset(b, 0, T40_TISP_PAR_BYTES);
