@@ -3909,8 +3909,8 @@ static void cs_sensorattr_t40(void)
         rf = IMP_ISP_Tuning_GetSensorFPS(IMPVI_MAIN, &n, &d);
         rep(LBL("sensorattr_t40"), r,
             (!r && !rf && sa.hts && sa.vts && sa.fps && sa.fps == ((n << 16) | d) &&
-             (int)sa.width == g_sw && (int)sa.height == g_sh) ? V_PASS : V_FAIL,
-            "hts %u vts %u fps 0x%x (%u/%u) %ux%u; sensor %dx%d, GetSensorFPS rc=%d %u/%u (want 0x%x)",
+             (int)sa.width >= g_sw && (int)sa.height >= g_sh) ? V_PASS : V_FAIL,
+            "hts %u vts %u fps 0x%x (%u/%u) %ux%u (sensor native, vendor: 3840x2160 on sc830ai); channel %dx%d, GetSensorFPS rc=%d %u/%u (want 0x%x)",
             sa.hts, sa.vts, sa.fps, sa.fps >> 16, sa.fps & 0xffff, sa.width, sa.height, g_sw, g_sh, rf, n, d, (n << 16) | d);
     }
 }
