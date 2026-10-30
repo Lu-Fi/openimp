@@ -20,6 +20,7 @@
 #include <pthread.h>
 
 #include "openimp_profile.h"
+#include "openimp_mono_cond.h"
 #include "trace_control.h"
 #include "dma_alloc.h"
 /* T41 and T40 share the frame-channel front end: no capture thread, frames
@@ -2057,6 +2058,18 @@ static struct p1_dqw p1_dqw[OPENIMP_FS_CHANNELS] = {
     [0 ... OPENIMP_FS_CHANNELS - 1] = {
         PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0, 0, 0, 0, 0, -1, 0, {0}, 0 }
 };
+static pthread_cond_t p1_snap_cond = PTHREAD_COND_INITIALIZER;
+
+/* The timed waits of the frame path use CLOCK_MONOTONIC: a step of the
+ * system clock must not stretch or cut a wait that runs once per frame. */
+static void __attribute__((constructor)) p1_cond_init(void)
+{
+    int i;
+
+    for (i = 0; i < OPENIMP_FS_CHANNELS; i++)
+        openimp_cond_init_mono(&p1_dqw[i].cv);
+    openimp_cond_init_mono(&p1_snap_cond);
+}
 
 /* The open T40 frame channel answers an empty queue at once (ENODATA/EAGAIN,
  * no wait in the driver).  Cycling the request between the consumer and this
@@ -2172,10 +2185,7 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
             __atomic_store_n(&w->deadline_us, deadline, __ATOMIC_RELAXED);
         }
     }
-    clock_gettime(CLOCK_REALTIME, &until);
-    until.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
-    until.tv_sec += (time_t)(wait_us / 1000000u) + until.tv_nsec / 1000000000L;
-    until.tv_nsec %= 1000000000L;
+    openimp_deadline_mono(&until, wait_us);
     /* DisableChn (epoch change) ends the wait at once */
     while (!w->done && w->epoch == epoch) {
         if (pthread_cond_timedwait(&w->cv, &w->mu, &until) != 0)
@@ -2370,7 +2380,6 @@ static void p1_ivs_feeder_start(void)
 
 /* SnapFrame waits here for a consumer's next dequeue (t41_snap.h). */
 static pthread_mutex_t p1_snap_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t p1_snap_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t p1_snap_serial[OPENIMP_FS_CHANNELS] = {
     [0 ... OPENIMP_FS_CHANNELS - 1] = PTHREAD_MUTEX_INITIALIZER
 };
@@ -3098,11 +3107,7 @@ int IMP_FrameSource_SnapFrame(int channel, int fmt, int width, int height,
     lock_p1();
     chn->snap.waiting = 1;
     unlock_p1();
-    clock_gettime(CLOCK_REALTIME, &deadline);
-    deadline.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
-    deadline.tv_sec += (time_t)(wait_us / 1000000u) +
-                       deadline.tv_nsec / 1000000000L;
-    deadline.tv_nsec %= 1000000000L;
+    openimp_deadline_mono(&deadline, wait_us);
     for (;;) {
         lock_p1();
         ready = chn->snap.ready;

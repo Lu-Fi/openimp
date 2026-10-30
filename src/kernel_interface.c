@@ -21,6 +21,7 @@
 #include "imp_log_int.h"
 #include "kernel_interface.h"
 #include "trace_control.h"
+#include "openimp_mono_cond.h"
 #include "vbm_dq_step.h"
 #include "vbm_delay.h"
 #include "openimp_testpattern_rt.h"
@@ -1124,6 +1125,14 @@ static pthread_mutex_t vbm_delay_lock[MAX_VBM_POOLS] = {
 static pthread_cond_t vbm_delay_cond[MAX_VBM_POOLS] = {
     [0 ... MAX_VBM_POOLS - 1] = PTHREAD_COND_INITIALIZER
 };
+/* monotonic clock for the timed wait (a clock step must not stretch it) */
+static void __attribute__((constructor)) vbm_delay_cond_init(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_VBM_POOLS; i++)
+        openimp_cond_init_mono(&vbm_delay_cond[i]);
+}
 static VBMDelayRing vbm_delay[MAX_VBM_POOLS];
 static int vbm_delay_active[MAX_VBM_POOLS];   /* atomic copy of max != 0 */
 /* The last destroyed pool of each channel, kept allocated (header and
@@ -2957,8 +2966,7 @@ int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
             break;
         }
         if (!deadline_set) {
-            clock_gettime(CLOCK_REALTIME, &deadline);
-            deadline.tv_sec += VBM_TIMED_WAIT_S;
+            openimp_deadline_mono(&deadline, (uint64_t)VBM_TIMED_WAIT_S * 1000000u);
             deadline_set = 1;
         }
         if (pthread_cond_timedwait(&vbm_delay_cond[chn], &vbm_delay_lock[chn],

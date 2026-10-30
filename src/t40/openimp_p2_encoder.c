@@ -28,6 +28,7 @@
 #include <openimp/openimp_encoder_telemetry.h>
 #include "imp_log_int.h"
 #include "trace_control.h"
+#include "openimp_mono_cond.h"
 #include "p2_rc_readback.h"
 #include "p2_denoise.h"
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
@@ -1060,13 +1061,7 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
                     "period; OPENIMP_JPEG_MIN_WAIT_MS overrides)", floor_ms);
         }
     }
-    clock_gettime(CLOCK_REALTIME, &deadline);
-    deadline.tv_sec += timeout_ms / 1000u;
-    deadline.tv_nsec += (long)(timeout_ms % 1000u) * 1000000l;
-    if (deadline.tv_nsec >= 1000000000l) {
-        deadline.tv_sec++;
-        deadline.tv_nsec -= 1000000000l;
-    }
+    openimp_deadline_mono(&deadline, (uint64_t)timeout_ms * 1000u);
 
     pthread_mutex_lock(&channel->lock);
     generation = channel->jpeg_frame_generation;
@@ -1078,12 +1073,7 @@ static int p2_wait_for_jpeg_frame(P2EncoderChannel *channel,
 
         /* Wake every P2_FANOUT_IDLE_US: when the video channel stopped
          * being polled, the frame has to come from the framesource. */
-        clock_gettime(CLOCK_REALTIME, &slice);
-        slice.tv_nsec += (long)(P2_FANOUT_IDLE_US * 1000ull);
-        while (slice.tv_nsec >= 1000000000l) {
-            slice.tv_sec++;
-            slice.tv_nsec -= 1000000000l;
-        }
+        openimp_deadline_mono(&slice, P2_FANOUT_IDLE_US);
         if (slice.tv_sec > deadline.tv_sec ||
             (slice.tv_sec == deadline.tv_sec &&
              slice.tv_nsec > deadline.tv_nsec))
@@ -1966,7 +1956,7 @@ int EncoderInit(void)
             p2_channels[i].bufshare_chn = -1;
             p2_channels[i].pool_id = -1;
             pthread_mutex_init(&p2_channels[i].lock, NULL);
-            pthread_cond_init(&p2_channels[i].jpeg_frame_ready, NULL);
+            openimp_cond_init_mono(&p2_channels[i].jpeg_frame_ready);
             pthread_cond_init(&p2_channels[i].poll_idle, NULL);
             pthread_mutex_init(&p2_channels[i].poll_serial, NULL);
         }
@@ -3012,6 +3002,11 @@ static struct {
 } p2_pad[P2_MAX_CHANNELS];
 static pthread_mutex_t p2_pad_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t p2_pad_cond = PTHREAD_COND_INITIALIZER;
+/* monotonic clock for the timed waits (a clock step must not stretch them) */
+static void __attribute__((constructor)) p2_pad_cond_init(void)
+{
+    openimp_cond_init_mono(&p2_pad_cond);
+}
 
 static int p2_pad_channel(int channel)
 {
@@ -3032,13 +3027,7 @@ static uint32_t p2_pad_interval_us(int channel)
 
 static void p2_pad_deadline(struct timespec *ts, uint32_t wait_us)
 {
-    clock_gettime(CLOCK_REALTIME, ts);
-    ts->tv_sec += wait_us / 1000000u;
-    ts->tv_nsec += (long)(wait_us % 1000000u) * 1000L;
-    if (ts->tv_nsec >= 1000000000L) {
-        ts->tv_sec++;
-        ts->tv_nsec -= 1000000000L;
-    }
+    openimp_deadline_mono(ts, wait_us);
 }
 
 int IMP_Encoder_SetPadFrameAttr(int channel, int enable, const void *attr)

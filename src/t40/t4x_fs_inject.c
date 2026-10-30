@@ -34,6 +34,7 @@
 #include <imp/imp_framesource.h>
 
 #include "dma_alloc.h"
+#include "openimp_mono_cond.h"
 #include "imp_log_int.h"
 
 #define FSI_CHANNELS 7                  /* vendor: chnNum < 7 */
@@ -67,6 +68,11 @@ struct fsi_channel {
 static struct fsi_channel fsi[FSI_CHANNELS];
 static pthread_mutex_t fsi_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t fsi_ready = PTHREAD_COND_INITIALIZER;
+/* monotonic clock for the timed wait (a clock step must not stretch it) */
+static void __attribute__((constructor)) fsi_cond_init(void)
+{
+    openimp_cond_init_mono(&fsi_ready);
+}
 
 static int fsi_valid(int chn, const char *function)
 {
@@ -326,13 +332,7 @@ int OpenIMP_FSInject_GetFrame(int channel, IMPFrameInfo **frame,
     if (channel < 0 || channel >= FSI_CHANNELS || !frame)
         return -1;
     *frame = NULL;
-    clock_gettime(CLOCK_REALTIME, &until);
-    until.tv_sec += wait_ms / 1000u;
-    until.tv_nsec += (long)(wait_ms % 1000u) * 1000000L;
-    if (until.tv_nsec >= 1000000000L) {
-        until.tv_sec++;
-        until.tv_nsec -= 1000000000L;
-    }
+    openimp_deadline_mono(&until, (uint64_t)wait_ms * 1000u);
     pthread_mutex_lock(&fsi_lock);
     c = &fsi[channel];
     for (;;) {
