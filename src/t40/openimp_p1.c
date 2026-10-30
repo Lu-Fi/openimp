@@ -2122,6 +2122,7 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
 {
     struct p1_dqw *w = &p1_dqw[channel];
     struct timespec until;
+    uint32_t epoch;
     int rc;
 
     pthread_mutex_lock(&w->mu);
@@ -2151,6 +2152,12 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
         w->started = 1;
         w->want = w->done = 0;
     }
+    epoch = w->epoch;
+    if (w->done && w->rc < 0) {
+        /* a "nothing yet" result a timed-out caller left behind: it says
+         * nothing about this call, probe again (L1) */
+        w->done = 0;
+    }
     {
         uint64_t deadline = p1_monotonic_us() + wait_us;
 
@@ -2169,11 +2176,12 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
     until.tv_nsec += (long)(wait_us % 1000000u) * 1000L;
     until.tv_sec += (time_t)(wait_us / 1000000u) + until.tv_nsec / 1000000000L;
     until.tv_nsec %= 1000000000L;
-    while (!w->done) {
+    /* DisableChn (epoch change) ends the wait at once */
+    while (!w->done && w->epoch == epoch) {
         if (pthread_cond_timedwait(&w->cv, &w->mu, &until) != 0)
             break;
     }
-    if (!w->done) {
+    if (!w->done || w->epoch != epoch) {
         pthread_mutex_unlock(&w->mu);
         errno = EAGAIN;
         return -1;
@@ -2181,8 +2189,13 @@ static int p1_dqbuf_timed(int channel, int fd, uint32_t *words, uint32_t wait_us
     memcpy(words, w->words, sizeof(w->words));
     rc = w->rc;
     w->done = 0;
-    if (rc < 0)
-        errno = w->err;
+    if (rc < 0) {
+        /* The worker probes until the request deadline (#149) and then
+         * reports ENODATA: that is this call's time-out, not a failed try.
+         * Report EAGAIN so the caller's budget counts as used and one call
+         * never waits more than once for the time it asked for. */
+        errno = (w->err == ENODATA || w->err == EAGAIN) ? EAGAIN : w->err;
+    }
     pthread_mutex_unlock(&w->mu);
     return rc;
 }

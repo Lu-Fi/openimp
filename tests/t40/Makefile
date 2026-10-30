@@ -19,7 +19,7 @@ OSD_CB_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-osd-callback-test
 DGAIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-dgain-test
 I2D_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-i2d-test
 
-check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd
+check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-wait
 	$(QUERY_TEST_BIN)
 	$(SEI_TEST_BIN)
 	$(OSD_CB_TEST_BIN)
@@ -172,6 +172,14 @@ fs-hold:
 		framesource_hold_test.c $(PROJECT_DIR)/src/openimp_profile.c -pthread \
 		-o $(PROJECT_DIR)/build/tests/t40-fs-hold-test
 	$(PROJECT_DIR)/build/tests/t40-fs-hold-test
+
+.PHONY: fs-wait
+fs-wait:
+	mkdir -p $(PROJECT_DIR)/build/tests
+	$(CC) -std=gnu99 -O2 -w -DPLATFORM_T40 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		framesource_wait_test.c $(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/core/imp_log_emit.c $(PROJECT_DIR)/src/openimp_testpattern.c -pthread \
+		-o $(PROJECT_DIR)/build/tests/t40-fs-wait-test
+	$(PROJECT_DIR)/build/tests/t40-fs-wait-test
 
 .PHONY: mempool
 mempool:
