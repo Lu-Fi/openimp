@@ -260,11 +260,11 @@ int IMP_ISP_SetDefaultBinPath(const char *arg1)
             bpath_1 = bpath_2;
         }
 
-        sprintf(bpath_1, arg1);
-        imp_log_fun(4, IMP_Log_Get_Option(), 2,
-            "Bin file path set successfully.new bin path:%s\n",
+        snprintf(bpath_1, 0x40, "%s", arg1);   /* arg1 is a path, not a format */
+        imp_log_fun(4, IMP_Log_Get_Option(), 2, "IMP-ISP",
             "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x179,
-            "IMP_ISP_SetDefaultBinPath", bpath);
+            "IMP_ISP_SetDefaultBinPath",
+            "Bin file path set successfully.new bin path:%s\n", bpath);
         return 0;
     }
 
@@ -314,10 +314,10 @@ int IMP_ISP_GetDefaultBinPath(char *arg1)
         memcpy(arg1, var_50, sizeof(var_50));
     }
 
-    imp_log_fun(4, IMP_Log_Get_Option(), 2,
-        "Bin file path get successfully.bin path:%s",
+    imp_log_fun(4, IMP_Log_Get_Option(), 2, "IMP-ISP",
         "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x191,
-        "IMP_ISP_GetDefaultBinPath", arg1);
+        "IMP_ISP_GetDefaultBinPath",
+        "Bin file path get successfully.bin path:%s", arg1);
     return result;
 }
 
