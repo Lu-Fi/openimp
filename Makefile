@@ -61,6 +61,7 @@ check:
 	$(MAKE) -C tests/t41 check
 	$(MAKE) -C tests/testpattern check
 	$(MAKE) -C tests/fallback check
+	$(MAKE) -C tests/rc3_gate check
 	$(MAKE) -C tests/device check
 
 # Device test app (tools/apitest): make apitest PLATFORM=T31 TOOLCHAIN_PREFIX=<host/bin/mipsel-linux> APITEST_HEADERS=<ingenic-headers root>

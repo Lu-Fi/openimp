@@ -10,6 +10,7 @@
     "area:AE-AWB",
     "prio:streamer",
     "repo:open-tx-isp",
+    "severity:medium",
     "soc:T31",
     "type:bug"
    ],
@@ -26,6 +27,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T10",
     "type:gap"
    ],
@@ -42,6 +44,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T10",
     "type:gap"
    ],
@@ -58,6 +61,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T20",
     "type:gap"
    ],
@@ -74,6 +78,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T20",
     "type:gap"
    ],
@@ -90,6 +95,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T21",
     "type:gap"
    ],
@@ -106,6 +112,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T21",
     "type:gap"
    ],
@@ -122,6 +129,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T23",
     "type:gap"
    ],
@@ -138,6 +146,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T23",
     "type:gap"
    ],
@@ -154,6 +163,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T23",
     "type:gap"
    ],
@@ -170,6 +180,7 @@
     "area:OSD",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T23",
     "type:gap"
    ],
@@ -186,6 +197,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T23",
     "type:gap"
    ],
@@ -202,6 +214,7 @@
     "area:ISP",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -218,6 +231,7 @@
     "area:AE-AWB",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -234,6 +248,7 @@
     "area:Encoder",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -250,6 +265,7 @@
     "area:FrameSource",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -266,6 +282,7 @@
     "area:OSD",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -282,6 +299,7 @@
     "area:IVS",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -298,6 +316,7 @@
     "area:Audio",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -314,6 +333,7 @@
     "area:System",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T30",
     "type:gap"
    ],
@@ -330,6 +350,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -346,6 +367,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -362,6 +384,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -378,6 +401,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -394,6 +418,7 @@
     "area:Audio",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -410,6 +435,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -426,6 +452,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T31",
     "type:gap"
    ],
@@ -442,6 +469,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T31",
     "type:gap"
    ],
@@ -458,6 +486,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T31",
     "type:gap"
    ],
@@ -474,6 +503,7 @@
     "area:ISP",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -490,6 +520,7 @@
     "area:AE-AWB",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -506,6 +537,7 @@
     "area:Encoder",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -522,6 +554,7 @@
     "area:FrameSource",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -538,6 +571,7 @@
     "area:OSD",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -554,6 +588,7 @@
     "area:IVS",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -570,6 +605,7 @@
     "area:Audio",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -586,6 +622,7 @@
     "area:System",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -602,6 +639,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -618,6 +656,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -634,6 +673,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -650,6 +690,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -666,6 +707,7 @@
     "area:OSD",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -682,6 +724,7 @@
     "area:Audio",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -698,6 +741,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "type:gap"
    ],
@@ -714,6 +758,7 @@
     "area:ISP",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -730,6 +775,7 @@
     "area:AE-AWB",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -746,6 +792,7 @@
     "area:Encoder",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -762,6 +809,7 @@
     "area:FrameSource",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -778,6 +826,7 @@
     "area:OSD",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -794,6 +843,7 @@
     "area:IVS",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -810,6 +860,7 @@
     "area:Audio",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -826,6 +877,7 @@
     "area:System",
     "prio:streamer",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -842,6 +894,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -858,6 +911,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -874,6 +928,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -890,6 +945,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -906,6 +962,7 @@
     "area:OSD",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -922,6 +979,7 @@
     "area:Audio",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -938,6 +996,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -1018,6 +1077,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1034,6 +1094,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1050,6 +1111,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1066,6 +1128,7 @@
     "area:OSD",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1082,6 +1145,7 @@
     "area:Audio",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1098,6 +1162,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1178,6 +1243,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1194,6 +1260,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1210,6 +1277,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1226,6 +1294,7 @@
     "area:FrameSource",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1242,6 +1311,7 @@
     "area:OSD",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1258,6 +1328,7 @@
     "area:System",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -1290,6 +1361,7 @@
     "area:AE-AWB",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1322,6 +1394,7 @@
     "area:Docs",
     "prio:release-gate",
     "repo:openimp",
+    "severity:high",
     "soc:T40",
     "type:gap"
    ],
@@ -1338,6 +1411,7 @@
     "area:Driver",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1386,6 +1460,7 @@
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:critical",
     "soc:T40",
     "type:bug"
    ],
@@ -1450,6 +1525,7 @@
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:high",
     "soc:T31",
     "type:gap"
    ],
@@ -1466,6 +1542,7 @@
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:high",
     "soc:T31",
     "type:bug"
    ],
@@ -1482,6 +1559,7 @@
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:critical",
     "soc:T31",
     "type:bug"
    ],
@@ -1514,6 +1592,7 @@
     "area:System",
     "prio:release-gate",
     "repo:openimp",
+    "severity:critical",
     "soc:T41",
     "type:bug"
    ],
@@ -1530,6 +1609,7 @@
     "area:Driver",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T32",
     "type:wip"
    ],
@@ -1546,6 +1626,7 @@
     "area:Docs",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T33",
     "type:gap"
    ],
@@ -1562,6 +1643,7 @@
     "area:Encoder",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T32",
     "soc:T33",
     "type:gap"
@@ -1579,6 +1661,7 @@
     "area:Docs",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T30",
     "type:gap"
    ],
@@ -1595,6 +1678,7 @@
     "area:Audio",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T40",
     "type:gap"
    ],
@@ -1612,6 +1696,7 @@
     "prio:long-term",
     "repo:open-tx-isp",
     "repo:openimp",
+    "severity:low",
     "soc:T10",
     "soc:T20",
     "soc:T21",
@@ -1635,6 +1720,7 @@
     "prio:long-term",
     "repo:open-tx-isp",
     "repo:openimp",
+    "severity:low",
     "soc:T10",
     "soc:T20",
     "soc:T21",
@@ -1657,6 +1743,7 @@
     "area:Driver",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:medium",
     "soc:T31",
     "type:bug"
    ],
@@ -1686,7 +1773,7 @@
   {
    "number": 106,
    "title": "ISP bypass of defog/DPC/denoise/LSC blocks shows no visible effect (T21, T23, T31, T41)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/106",
    "labels": [
     "area:ISP",
@@ -1708,7 +1795,8 @@
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/107",
    "labels": [
-    "prio:release-gate"
+    "prio:release-gate",
+    "severity:medium"
    ],
    "created": "2026-10-26T18:29:05Z",
    "closed": null,
@@ -1723,6 +1811,7 @@
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:critical",
     "soc:T23",
     "type:bug"
    ],
@@ -1766,7 +1855,7 @@
   {
    "number": 111,
    "title": "T23: IMP_ISP_Tuning_GetAutoZoom returns -1",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/111",
    "labels": [
     "area:ISP",
@@ -1782,7 +1871,7 @@
   {
    "number": 112,
    "title": "T41: IMP_ISP_Tuning_WaitFrameDone returns -1; SetAutoZoom same-value read-back differs",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/112",
    "labels": [
     "area:ISP",
@@ -1959,7 +2048,7 @@
   {
    "number": 123,
    "title": "T41: kernel Oops in klogd (NULL in mm) under memory pressure (QEMU, 64 MB, observe)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/123",
    "labels": [
     "area:System",
@@ -1997,6 +2086,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:open-tx-isp",
+    "severity:low",
     "soc:T41",
     "type:gap"
    ],
@@ -2061,6 +2151,7 @@
     "area:ISP",
     "prio:long-term",
     "repo:openimp",
+    "severity:low",
     "soc:T10",
     "soc:T20",
     "soc:T21",
@@ -2097,6 +2188,7 @@
     "area:Audio",
     "prio:streamer",
     "repo:openimp",
+    "severity:medium",
     "soc:T31",
     "soc:T40",
     "soc:T41",
@@ -2109,7 +2201,7 @@
   {
    "number": 132,
    "title": "[T41] Oops after rmmod/insmod of a DIFFERENT tx-isp-t41 build (QEMU): kernel executes data",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/132",
    "labels": [
     "area:Driver",
@@ -2124,19 +2216,467 @@
   },
   {
    "number": 133,
-   "title": "T40: tisp event thread uses ~35 % CPU (per-frame event work)",
+   "title": "T40: ISP event work costs more CPU than the vendor (~9 % less free CPU; AWB process + ADR)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/133",
    "labels": [
     "area:Driver",
     "prio:release-gate",
     "repo:open-tx-isp",
+    "severity:high",
     "soc:T40",
     "type:bug"
    ],
    "created": "2026-10-27T09:38:41Z",
    "closed": null,
    "milestone": "RC3"
+  },
+  {
+   "number": 134,
+   "title": "T41 QEMU: kernel oops in tx_isp_t41 kworker (NULL+0xc) after apitest waitframe/autozoom/fs sequence",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/134",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-27T17:48:57Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 139,
+   "title": "T40: lifted ioctl handlers store through uninitialised pointers (GetFaceAe, tisp_set_ae_info, further)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/139",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-28T23:48:35Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 140,
+   "title": "T40: lifted calls lost arguments (about 380 sites, mostly per-frame code)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/140",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-29T06:30:07Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 141,
+   "title": "T40: ISP OSD Set calls return 0 but show no picture (SetOSDAttr, SetSingleOSDAttr)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/141",
+   "labels": [
+    "area:OSD",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-29T08:01:23Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 144,
+   "title": "T10/T20: EnableAllNCUDenoise is real hardware (NCU reg 0x13380040), OpenIMP has no NCU integration",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/144",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T10",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-10-29T20:47:54Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 145,
+   "title": "T40: lifted ioctl dispatch compares against scaled constants (uintptr_t* arithmetic), other request codes fall through to return 0",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/145",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-29T22:14:58Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 146,
+   "title": "T20/T10: IMP_Encoder_SetPoolSize and the shared vpuBs bitstream buffer (per-encoder 2x frame buffer today)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/146",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T10",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-10-29T22:47:47Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 147,
+   "title": "T40: GetSensorAttr returns fps 0 and size 0x0 (vendor: fps 20<<16|1, 3840x2160)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/147",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T00:22:24Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 148,
+   "title": "T40: ISP picture under apitest init at night is about 8x darker than the vendor (Y 4.5 vs 35)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/148",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T00:23:14Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 149,
+   "title": "T40: OpenIMP encoder path costs about 3.5x the vendor user CPU (H.264 1080p20, encload)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/149",
+   "labels": [
+    "area:Encoder",
+    "prio:release-gate",
+    "repo:openimp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T10:44:15Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 150,
+   "title": "T40: ISP top block 'main' is not zero after ISP open (the boot clear of tisp_tstp_main_init is lost); sec holds the same hardware defaults on the vendor",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/150",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T10:45:07Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 151,
+   "title": "T10/T20/T21/T23: encoder frame wait is a 1 ms sleep loop (VBMGetFrame + p2_sleep_us(1000)), about 20-25 probes per frame",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/151",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T10",
+    "soc:T20",
+    "soc:T21",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-10-30T13:48:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 152,
+   "title": "T40: tx-isp-t40 never gates the ISP clock (CLKGR bit 23) or stops the sensor MCLK at rmmod; compare with the vendor",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/152",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-10-30T17:07:04Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 153,
+   "title": "T41: camera check of the +0x4c deinit alignment (claude/isp-stats-deinit) and the maintainer's silicon test",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/153",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-10-30T17:08:07Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 154,
+   "title": "T40: T40 SetModule_Ratio (sinter/SDNS entry) or WDR enable can hang the kernel (infinite loop in ioctl)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/154",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "severity:critical",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T17:53:01Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 155,
+   "title": "T40: /dev/tisp: one global 20 KB buffer, freed by any closer (UAF / NULL deref, user-triggerable)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/155",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T17:54:02Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 156,
+   "title": "T40: T40 SetAwbAttr: `tisp_s_awb_attr` passes pointer-scaled offsets (uintptr_t* arithmetic)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/156",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T17:55:08Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 157,
+   "title": "T40: Format strings with missing arguments in error paths of /dev/tisp (possible oops)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/157",
+   "labels": [
+    "area:Driver",
+    "prio:release-gate",
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T17:56:11Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 158,
+   "title": "T40: T40 OSD setters: pointer-scaled counter index and missing NULL checks",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/158",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T17:57:14Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 160,
+   "title": "T40: T40 `tisp_s_osd_attr` (cf0fafd7) keeps OEM edge cases that are cheap to make safe",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/160",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:01:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 161,
+   "title": "T40: Lifted code that would oops if reached (compiled NULL-based stores), same bug class as #139",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/161",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:02:19Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 162,
+   "title": "T41: T41 #134 barrier does not cover the user sensor-register ioctl",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/162",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:02:27Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 163,
+   "title": "T40: Bit-exactness and alignment proofs are not in `make check`",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/163",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:48:08Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 164,
+   "title": "T40: `t40_tisp_par=1` exposes physical-memory read/write",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/164",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:50:27Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 165,
+   "title": "T40: Swept T40 handlers still share no lock",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/165",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:52:50Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 166,
+   "title": "T40: Dead-but-armed DPC twin of C1",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/166",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-30T18:55:13Z",
+   "closed": null,
+   "milestone": null
   }
  ]
 }

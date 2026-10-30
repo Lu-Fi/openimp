@@ -14,7 +14,7 @@ docs/FEATURE_MATRIX.md and docs/feature-matrix.html are generated from these fil
 Usage:
   status_data.py --check             validate the data (unknown symbols, missing SoCs, dangling issue
                                      references, API links); exit status 1 on any problem
-  status_data.py --refresh-issues    refresh docs/status/issues.json with `gh api` (needs the gh CLI)
+  status_data.py --refresh-issues    refresh docs/status/issues.json with one `gh issue list` call (labels, milestone) (needs the gh CLI)
   status_data.py --print-head        print the generated head of FEATURE_MATRIX.md (everything before the API section)
 
 Needs PyYAML (python3-yaml / `pip install pyyaml`); the other generators use the standard library only.
@@ -300,6 +300,11 @@ def validate_release(rel=None, soak=None):
     rc3 = next((x for x in rel["gates"] if x.get("id") == "rc3"), None)
     if not rc3 or not rc3.get("works_cells"):
         E.append("release.yaml: gate rc3 with works_cells missing")
+    if rc3:
+        have = {k for r in rc3.get("rules", []) for k in r}
+        for k in ("block_severity", "block_milestone"):
+            if k not in have:
+                E.append("release.yaml: gate rc3: rule key %s missing" % k)
     r1 = next((x for x in rel["gates"] if x.get("id") == "release1"), None)
     if not r1:
         E.append("release.yaml: gate release1 missing")
@@ -337,26 +342,38 @@ def gh(*args):
 
 
 def refresh_issues(path=ISSUES):
-    """Fetch all issues (open and closed, no pull requests) of the repository with the gh CLI."""
-    out = gh("api", "--paginate", "repos/%s/issues?state=all&per_page=100" % REPO)
-    # --paginate prints one JSON array per page
-    arrs = [json.loads(x) for x in re.split(r"(?<=\])\s*(?=\[)", out.strip())] if out.strip() else []
-    res = []
-    for a in arrs:
-        for i in a:
-            if "pull_request" in i:
-                continue
-            res.append({"number": i["number"], "title": i["title"], "state": i["state"], "url": i["html_url"],
-                        "labels": sorted(l["name"] for l in i["labels"]), "created": i["created_at"],
-                        "closed": i.get("closed_at"),
-                        "milestone": (i.get("milestone") or {}).get("title")})
-    res.sort(key=lambda x: x["number"])
+    """Refresh the cache with ONE `gh issue list` call (open issues: number, title, labels, milestone, url, created).
+    Cached issues that are no longer open are marked closed; closed issues stay as cached. A failed call keeps the old
+    cache and only prints a warning (never an error: make check must work offline)."""
+    try:
+        out = gh("issue", "list", "-R", REPO, "--state", "open", "--limit", "300",
+                 "--json", "number,title,state,labels,milestone,url,createdAt")
+        cur = json.loads(out)
+    except (subprocess.CalledProcessError, OSError, ValueError) as e:
+        sys.stderr.write("status_data: WARNING: issue refresh failed, keeping the old cache (%s)\n"
+                         % (getattr(e, "stderr", None) or e))
+        return False
+    old = {}
+    if os.path.exists(path):
+        old = {int(i["number"]): i for i in json.load(open(path, encoding="utf-8")).get("issues", [])}
+    opened = set()
+    for i in cur:
+        n = int(i["number"])
+        opened.add(n)
+        old[n] = {"number": n, "title": i["title"], "state": "open", "url": i["url"],
+                  "labels": sorted(l["name"] for l in i["labels"]), "created": i["createdAt"],
+                  "closed": None, "milestone": (i.get("milestone") or {}).get("title")}
+    for n, i in old.items():
+        if n not in opened and i.get("state") == "open":
+            i["state"] = "closed"
+    res = [old[n] for n in sorted(old)]
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"_comment": "Cache of the public GitHub issues of %s (refresh: python3 tools/status_data.py "
                                "--refresh-issues). Read by the matrix generators; do not edit by hand." % REPO,
                    "issues": res}, f, indent=1, ensure_ascii=False)
         f.write("\n")
     print("wrote %s (%d issues, %d open)" % (path, len(res), sum(1 for i in res if i["state"] == "open")))
+    return True
 
 
 def validate_fresh():
