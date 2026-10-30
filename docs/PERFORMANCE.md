@@ -226,6 +226,20 @@ Notes on the T20 rows:
 | Bitrate at 400 / 1200 / 3000 kbit/s targets | 518 / 1195 / 2777 kbit/s | not measured | 2026-10-04 | `M:Rate-control mode` |
 | RSS, threads, time to first image, snapshot latency, system CPU | not measured | not measured | — | — |
 
+### 3.7 T40 (Eufy T40XP, sc830ai; measured 2026-10-30)
+
+Same `tools/encload` binary on both stacks (H.264 1080p20 CBR 2 Mbit/s, GOP 40 on FS ch0, frames read and dropped, timps stopped, 60 s windows, light 100 %, forced ISP mode); open = open-tx-isp + OpenIMP, vendor = vendor ko + libimp 1.3.1 (zero-flash method). All runs 20.0 fps, about 2.05 Mbit/s (CBR undershoots on flat night scenes for both).
+
+| Metric | Open | Vendor | Condition / date | Source |
+| --- | --- | --- | --- | --- |
+| encload process, day | 2.67 % before, 0.90 % after the #149 fix | 0.77 % | encoder running, 2026-10-30 | audit/issue-149/cam2 |
+| encload process, night | 2.72 % before, 0.93 % after | 0.84 % | same | same |
+| ISP kernel threads, day / night | 2.2 / 3.0 % | 3.57 / 3.55 % | same | same |
+| ISP event thread per frame | 2.3-3.1 ms (was 4.55 at the start of #133) | not measured | 2026-10-29/30 | audit/issue-133c |
+| idle (no stream), day / night | busy 1.9 / 0.6 %, timps 1.63 / 0.29 % | busy 2.6 / 1.4 %, timpsd 2.01 / 2.33 % | 0 RTSP clients, 2026-10-30 | audit/cpu/T40_2026-10-30.md |
+
+The 1 ms polling loop of the T40 frame wait cost 33 probes per frame (4 context switches each); after the fix frame_source_wait is 1 per frame and encoder_poll 615 us per frame. Open: a blocking DQBUF in open-tx-isp for full parity (#149 part 2). Different streamers in the idle rows (open timps vs vendor timpsd).
+
 ## 4. Not comparable / caveats
 
 1. **`L5` (cam-I, T20, vendor, 2026-10-05) and `L6` (cam-J, T21, vendor, 2026-10-05)** were
