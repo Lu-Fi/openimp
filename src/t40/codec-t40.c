@@ -11538,8 +11538,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
          * OPENIMP_T40_SOURCE_INVALIDATE=0 skips it; default unchanged until
          * the camera A/B shows the saving. */
         source_sync_ret = AVPU_T40_STREAM_KNOB("OPENIMP_T40_SOURCE_INVALIDATE")
-            ? avpu_flush_cache(-1, (void *)(uintptr_t)virt_addr, size,
-                               2 /* DMA_FROM_DEVICE / invalidate */)
+            ? avpu_flush_cache_profiled(
+                  -1, (void *)(uintptr_t)virt_addr, size,
+                  2 /* DMA_FROM_DEVICE / invalidate */,
+                  OPENIMP_PROFILE_CACHE_SOURCE_INVALIDATE)   /* counted (was unprofiled on T40) */
             : 0;
 #else
         source_sync_ret = avpu_flush_cache(

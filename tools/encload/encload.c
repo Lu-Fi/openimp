@@ -53,6 +53,14 @@ int main(int argc, char **argv)
     int64_t t0;
 
     setvbuf(stdout, NULL, _IOLBF, 0);
+    {   /* which libimp the loader took (LD_LIBRARY_PATH swaps need RUNPATH, not RPATH) */
+        FILE *m = fopen("/proc/self/maps", "r");
+        char line[256];
+
+        while (m && fgets(line, sizeof(line), m))
+            if (strstr(line, "libimp")) { printf("[I] libimp: %s", strchr(line, '/') ? strchr(line, '/') : line); break; }
+        if (m) fclose(m);
+    }
     memset(&s, 0, sizeof(s));
     strcpy(s.name, "sc830ai");
     s.cbus_type = TX_SENSOR_CONTROL_INTERFACE_I2C;
