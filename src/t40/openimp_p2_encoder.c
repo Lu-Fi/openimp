@@ -83,6 +83,7 @@
 #define P2_T40_ARRIVAL_MARGIN_US 2000u
 /* longest single frame wait: bounds how late StopRecvPic is noticed */
 #define P2_T40_FRAME_WAIT_SLICE_MS 20u
+#include "t40/p2_t40_pace.h"
 extern int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame,
                                              uint32_t wait_ms);
 #endif
@@ -3473,14 +3474,18 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                 !__atomic_load_n(&ch->receiving, __ATOMIC_RELAXED))
                 goto done;
         }
-        /* Pace from this frame's arrival: the next poll starts a little
-         * before the next capture is due, so the probes per frame stay at a
-         * few instead of half a frame interval of 1 ms probes.  The frame
-         * selection is unchanged (the oldest queued buffer, as before). */
+        /* The pacing clock keeps its cadence (due += interval, so the output
+         * rate and the time stamps are those of the frame rate); it only
+         * follows the capture phase when the frame came late (see
+         * p2_t40_next_due), so the next wait starts a little before the
+         * next capture and the probes per frame stay at a few. */
         if (interval_us > P2_T40_ARRIVAL_MARGIN_US) {
+            uint64_t arrival_us = p2_monotonic_us();
+
             pthread_mutex_lock(&ch->lock);
-            ch->next_frame_due_us = p2_monotonic_us() + interval_us -
-                                    P2_T40_ARRIVAL_MARGIN_US;
+            ch->next_frame_due_us = p2_t40_next_due(
+                ch->next_frame_due_us, interval_us, arrival_us,
+                P2_T40_ARRIVAL_MARGIN_US);
             pthread_mutex_unlock(&ch->lock);
         }
 #else
