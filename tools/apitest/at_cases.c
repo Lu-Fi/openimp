@@ -2957,6 +2957,34 @@ static void cs_tispawb_t40(void)
     free(a); free(b);
 }
 
+/* tisp2open_t40 (open-tx-isp review-week-1030 H1): /dev/tisp had ONE global parameter block, replaced by every open
+ * and kfree'd by every close: with two openers, the first close left the second one's AE/AWB info gets (0x20007404 /
+ * 0x20007407, on by default) writing to NULL+16 or freed memory.  Two opens, close the first, then gets on the second
+ * (and a third open/close in between) must return 0 with the 28-byte AWB block, without an oops. */
+static void cs_tisp2open_t40(void)
+{
+    uint32_t *a = (uint32_t *)calloc(1, T40_TISP_PAR_BYTES);
+    int f1 = open("/dev/tisp", O_RDWR), f2 = open("/dev/tisp", O_RDWR), f3, r1 = -1, r2 = -1, r3 = -1;
+
+    if (f1 < 0 || f2 < 0 || !a) {
+        rep("tisp_node_two_openers", -1, V_SKIP, "/dev/tisp not usable (fd %d/%d)", f1, f2);
+    } else {
+        r1 = t40_tisp_par(f1, a, 0x20007407, 0, 0, 0);
+        close(f1); f1 = -1;
+        memset(a, 0, T40_TISP_PAR_BYTES);
+        r2 = t40_tisp_par(f2, a, 0x20007407, 0, 0, 0);
+        f3 = open("/dev/tisp", O_RDWR);
+        if (f3 >= 0) close(f3);
+        r3 = t40_tisp_par(f2, a, 0x20007404, 0, 0, 0);
+        rep("tisp_node_two_openers", r1 | r2 | r3, (!(r1 | r2 | r3) && a[1] != 0 && flow()) ? V_PASS : V_FAIL,
+            "open A + B, AWB get on A %d, close A, AWB get on B %d, open/close C, AE get on B %d (block len %u), frames flow",
+            r1, r2, r3, a[1]);
+    }
+    if (f1 >= 0) close(f1);
+    if (f2 >= 0) close(f2);
+    free(a);
+}
+
 /* #139: GetFaceAe (control 0x8000035) used to copy an uninitialised stack slot; it reads back what
  * SetFaceAe stored (no picture check: QEMU-safe round trip, the effect case is t40dev A9). */
 static void cs_faceae_t40(void)
@@ -3020,6 +3048,7 @@ static void cs_aeinfo_t40(void) {}
 static void cs_tisppar_t40(void) {}
 static void cs_tispminmax_t40(void) {}
 static void cs_tispawb_t40(void) {}
+static void cs_tisp2open_t40(void) {}
 static void cs_faceae_t40(void) {}
 static void cs_switchbin_t40(void) {}
 #endif
@@ -3892,9 +3921,125 @@ static void cs_t140c(void)
             "first words %u %u %u %u, 1 s later %u %u %u %u (sizeof %u)", wa[0], wa[1], wa[2], wa[3], wb[0], wb[1], wb[2], wb[3], (unsigned)sizeof(a));
     }
 }
+
+/* ratiohang_t40 (open-tx-isp review-week-1030 C1): SetModule_Ratio(sinter) and a WDR switch ran a lifted
+ * tisp_sdns_par_refresh that compiled to an endless kernel loop ("b .-4; sw") once the ratio setter got past
+ * its pointer guard.  Every call that can reach it runs in a helper thread with a per-call watchdog: a call
+ * that does not come back in RH_SEC s is reported as a HANG FAIL (the thread is left stuck in the kernel, the
+ * case stops issuing calls) instead of hanging the whole run.  Sequence: sinter ratio 0 / 255 / restore with
+ * readback, then WDR on, sinter ratio 0 under WDR, ratio restore, WDR back to the original value. */
+#define RH_SEC 10
+enum { RH_SETRATIO, RH_WDR };
+struct rh_call { int kind; IMPISPModuleRatioAttr ra; IMPISPTuningOpsMode wm; int ret, done; pthread_mutex_t m; pthread_cond_t c; };
+static void *rh_thread(void *p)
+{
+    struct rh_call *k = p;
+    int r = k->kind == RH_SETRATIO ? IMP_ISP_Tuning_SetModule_Ratio(IMPVI_MAIN, &k->ra) : IMP_ISP_WDR_ENABLE(IMPVI_MAIN, &k->wm);
+
+    pthread_mutex_lock(&k->m); k->ret = r; k->done = 1; pthread_cond_signal(&k->c); pthread_mutex_unlock(&k->m);
+    return NULL;
+}
+/* 0 = returned (ret in *ret), -1 = HANG (no return within RH_SEC s), -2 = no thread */
+static int rh_guard(struct rh_call *k, int *ret)
+{
+    static struct rh_call slots[8]; static int ns;    /* a hung thread keeps its slot (never reused) */
+    struct rh_call *s; pthread_t th; struct timespec ts; int done;
+
+    if (ns >= 8) return -2;
+    s = &slots[ns++]; *s = *k; s->done = 0;
+    pthread_mutex_init(&s->m, NULL); pthread_cond_init(&s->c, NULL);
+    if (pthread_create(&th, NULL, rh_thread, s)) return -2;
+    clock_gettime(CLOCK_REALTIME, &ts); ts.tv_sec += RH_SEC;
+    pthread_mutex_lock(&s->m);
+    while (!s->done && pthread_cond_timedwait(&s->c, &s->m, &ts) == 0) ;
+    done = s->done; *ret = s->ret;
+    pthread_mutex_unlock(&s->m);
+    if (!done) { pthread_detach(th); return -1; }
+    pthread_join(th, NULL);
+    return 0;
+}
+static void cs_ratiohang_t40(void)
+{
+    NEED(IMP_ISP_Tuning_SetModule_Ratio) NEED(IMP_ISP_Tuning_GetModule_Ratio) NEED(IMP_ISP_WDR_ENABLE) NEED(IMP_ISP_WDR_ENABLE_GET) {
+        IMPISPModuleRatioAttr o, g;
+        IMPISPTuningOpsMode w0 = IMPISP_TUNING_OPS_MODE_DISABLE, wg = IMPISP_TUNING_OPS_MODE_DISABLE;
+        struct rh_call k;
+        int r[7] = { 0 }, h[7] = { 0 }, i, n = 0, hang = -1, rb = 0, gw;
+        static const char *step[7] = { "sinter 0", "sinter 255", "restore", "WDR on", "sinter 0 under WDR", "restore under WDR", "WDR back" };
+        Fst lo = { 0 }, hi = { 0 };
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&k, 0, sizeof(k));
+        IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &o);
+        gw = IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &w0);
+        for (i = 0; i < 7; i++, n++) {
+            wdog("ratiohang_t40", 60);
+            k.kind = (i == 3 || i == 6) ? RH_WDR : RH_SETRATIO;
+            k.ra = o;
+            if (i == 0 || i == 1 || i == 4) {
+                k.ra.ratio_attr[IMP_ISP_MODULE_SINTER].en = IMPISP_TUNING_OPS_MODE_ENABLE;
+                k.ra.ratio_attr[IMP_ISP_MODULE_SINTER].ratio = i == 1 ? 255 : 0;
+            }
+            k.wm = i == 3 ? IMPISP_TUNING_OPS_MODE_ENABLE : w0;
+            if (i == 3 && gw != 0) { h[i] = 0; r[i] = 0; continue; }   /* no WDR state to restore: skip the WDR leg */
+            if (i == 6 && gw != 0) { r[i] = 0; continue; }
+            h[i] = rh_guard(&k, &r[i]);
+            if (h[i]) { hang = i; break; }
+            if (i == 0) lo = fst(2000);
+            if (i == 1) hi = fst(2000);
+            if (i == 1) {
+                IMP_ISP_Tuning_GetModule_Ratio(IMPVI_MAIN, &g);
+                rb = g.ratio_attr[IMP_ISP_MODULE_SINTER].en == IMPISP_TUNING_OPS_MODE_ENABLE && g.ratio_attr[IMP_ISP_MODULE_SINTER].ratio == 255;
+            }
+            usleep(300000);
+        }
+        if (hang >= 0) {
+            rep(LBL("ratiohang_t40"), -1, V_FAIL, "HANG: step '%s' (%s) did not return within %d s; the ISP ioctl thread is stuck in the kernel",
+                step[hang], h[hang] == -2 ? "no thread" : "watchdog", RH_SEC);
+            return;
+        }
+        IMP_ISP_WDR_ENABLE_GET(IMPVI_MAIN, &wg);
+        {
+            int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+            int bad = 0;
+            for (i = 0; i < 7; i++) bad |= r[i];
+            rep(LBL("ratiohang_t40"), bad, (!bad && rb && (gw != 0 || wg == w0) && flow()) ? V_PASS : V_FAIL,
+                "%sall %d calls returned within %d s (rc %d/%d/%d, WDR %s rc %d/%d/%d/%d); sinter ratio 0: H %.3f, 255: H %.3f; readback en/255 %s; WDR back to %d (%d); frames flow",
+                RTMSG(eff), n, RH_SEC, r[0], r[1], r[2], gw == 0 ? "on/off" : "skipped (WDR_ENABLE_GET failed)", r[3], r[4], r[5], r[6],
+                lo.h, hi.h, rb ? "ok" : "WRONG", (int)w0, (int)wg);
+        }
+    }
+}
+
+/* awbctstart_t40 (open-tx-isp review-week-1030 H2): SetAwbAttr with a frozen (manual) CT and custom start gains.
+ * tisp_s_awb_attr passed attr + 272 / + 64 (pointer-scaled) instead of + 68 / + 16, i.e. read 196 bytes past the
+ * 76-byte copy for the start gains and took the start-enable word as the CT; tisp_awb_set_ct never stored.
+ * Readback through GetAwbAttr must give the CT and start gains that were set; the original attr is restored. */
+static void cs_awbctstart_t40(void)
+{
+    NEED(IMP_ISP_Tuning_SetAwbAttr) NEED(IMP_ISP_Tuning_GetAwbAttr) {
+        IMPISPWBAttr o, s, g;
+        int r0, r1, r2, r3, ok;
+
+        memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g));
+        r0 = IMP_ISP_Tuning_GetAwbAttr(IMPVI_MAIN, &o);
+        s = o;
+        s.awb_frz = IMPISP_TUNING_OPS_MODE_ENABLE; s.ct = 4321;
+        s.awb_start_en = IMPISP_TUNING_OPS_MODE_ENABLE; s.awb_start.rgain = 345; s.awb_start.bgain = 289;
+        r1 = IMP_ISP_Tuning_SetAwbAttr(IMPVI_MAIN, &s); usleep(500000);
+        r2 = IMP_ISP_Tuning_GetAwbAttr(IMPVI_MAIN, &g);
+        ok = g.ct == 4321 && g.awb_start_en == IMPISP_TUNING_OPS_MODE_ENABLE && g.awb_start.rgain == 345 && g.awb_start.bgain == 289;
+        r3 = IMP_ISP_Tuning_SetAwbAttr(IMPVI_MAIN, &o);
+        rep(LBL("awbctstart_t40"), r0 | r1 | r2 | r3, (!(r0 | r1 | r2 | r3) && ok && flow()) ? V_PASS : V_FAIL,
+            "rt: frz on, ct 4321, start en 345/289: read back frz %d ct %u start en %d %u/%u (%s); original (mode %d ct %u start en %d) restored, frames flow",
+            (int)g.awb_frz, g.ct, (int)g.awb_start_en, g.awb_start.rgain, g.awb_start.bgain, ok ? "equal" : "DIFFERENT",
+            (int)o.mode, o.ct, (int)o.awb_start_en);
+    }
+}
 #else
 static void cs_t140c(void) {}
+static void cs_awbctstart_t40(void) {}
 static void cs_framedrop_t40(void) {}
+static void cs_ratiohang_t40(void) {}
 #endif
 
 /* T23 pad frames (stock IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): H.264 on FS ch1 (group 1 / chn 1); a feeder thread hands in
@@ -4017,7 +4162,7 @@ static void cs_padframe_t23(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "isposdapi", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "tisp2open_t40" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -4121,5 +4266,8 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
     if (cs_on("padframe_t23")) cs_padframe_t23(); wdog("cases", 120);
     if (getenv("APITEST_CASES") && cs_on("framedrop_t40")) cs_framedrop_t40(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("ratiohang_t40")) cs_ratiohang_t40(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("awbctstart_t40")) cs_awbctstart_t40(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("tisp2open_t40")) cs_tisp2open_t40(); wdog("cases", 60);
     wdog("cases", 60);
 }
