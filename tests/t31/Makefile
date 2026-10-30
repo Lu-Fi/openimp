@@ -38,6 +38,8 @@ VBM_DELAY_TEST_BIN := $(PROJECT_DIR)/build/tests/vbm-delay-test
 ROI_CLAMP_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-roi-clamp-test
 FIXED_CONTRAST_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-fixed-contrast-test
 EVAL_INFO_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-eval-info-test
+BIN_PATH_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-bin-path-test
+LOG_SINK_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-sink-test
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -48,7 +50,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
-	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN)
+	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN) $(LOG_SINK_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(AL_RC_OVERLOAD_TEST_BIN)
@@ -79,6 +81,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(FIXED_CONTRAST_TEST_BIN)
 	$(EVAL_INFO_TEST_BIN)
 	$(BIN_PATH_TEST_BIN)
+	$(LOG_SINK_TEST_BIN)
 
 # IMP_Encoder_GetChnEvalInfo record layout (IMPEncoderStreamInfo of the header)
 $(EVAL_INFO_TEST_BIN): eval_info_test.c $(PROJECT_DIR)/src/t40/t31_eval_info.h
@@ -107,7 +110,11 @@ $(FIXED_CONTRAST_TEST_BIN): fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tse
 		fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
 		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o "$@"
 
-BIN_PATH_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-bin-path-test
+$(LOG_SINK_TEST_BIN): log_sink_test.c $(PROJECT_DIR)/src/core/imp_log.c $(PROJECT_DIR)/src/imp_log_fun.h
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/src log_sink_test.c \
+		$(PROJECT_DIR)/src/core/imp_log.c $(PROJECT_DIR)/src/core/imp_log_emit.c -lpthread -o "$@"
+
 $(BIN_PATH_TEST_BIN): bin_path_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
 	mkdir -p "$(dir $@)"
 	$(CC) -std=gnu11 -O2 -D_FORTIFY_SOURCE=2 -Wno-unused-function -fno-pie -no-pie \

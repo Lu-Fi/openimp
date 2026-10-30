@@ -26,6 +26,7 @@
  * (/dev/log_main).  Only when sink 2 has no logger device, DBG/INFO stay off stderr
  * unless OPENIMP_DEBUG_TRACE is set.  Syslog is off by default (OPENIMP_LOG_SYSLOG=1).
  */
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -105,25 +106,48 @@ void IMP_Log_Set_Option(int option)
  * writev {priority byte, tag + NUL, message + NUL}.  OpenIMP does the same;
  * OPENIMP_LOGGER_DEV overrides the device (host tests).  Returns 0 on success,
  * -1 when no logger device can be opened (caller falls back to stderr). */
+static int imp_log_fd = -1;
+static pthread_once_t imp_log_fd_once = PTHREAD_ONCE_INIT;
+
+static void imp_log_fd_open(void)
+{
+    const char *dev = getenv("OPENIMP_LOGGER_DEV");
+    int fd = open(dev && dev[0] ? dev : "/dev/log_main", O_WRONLY | O_APPEND | O_CLOEXEC);
+
+    if (fd < 0 && !(dev && dev[0]))
+        fd = open("/dev/log/main", O_WRONLY | O_APPEND | O_CLOEXEC);
+    imp_log_fd = fd;
+}
+
 static int imp_log_logcat(int level, const char *tag, const char *msg)
 {
-    static int fd = -2;
     struct iovec v[3];
     unsigned char prio = (unsigned char)level;
+    int fd;
 
-    if (fd == -2) {
-        const char *dev = getenv("OPENIMP_LOGGER_DEV");
-
-        fd = open(dev && dev[0] ? dev : "/dev/log_main", O_WRONLY | O_APPEND | O_CLOEXEC);
-        if (fd < 0 && !(dev && dev[0]))
-            fd = open("/dev/log/main", O_WRONLY | O_APPEND | O_CLOEXEC);
-    }
+    pthread_once(&imp_log_fd_once, imp_log_fd_open);   /* two threads must not both open */
+    fd = imp_log_fd;
     if (fd < 0)
         return -1;
     v[0].iov_base = &prio;           v[0].iov_len = 1;
     v[1].iov_base = (void *)tag;     v[1].iov_len = strlen(tag) + 1;
     v[2].iov_base = (void *)msg;     v[2].iov_len = strlen(msg) + 1;
     return writev(fd, v, 3) < 0 ? -1 : 0;
+}
+
+static FILE *imp_log_file;
+static pthread_once_t imp_log_file_once = PTHREAD_ONCE_INIT;
+
+static void imp_log_file_open(void)
+{
+    const char *fn = getenv("OPENIMP_LOG_FILE");
+
+    imp_log_file = fopen(fn && fn[0] ? fn : "timp.log", "a+");
+}
+
+static void imp_log_openlog(void)
+{
+    openlog("libimp", LOG_PID | LOG_NDELAY, LOG_USER);
 }
 
 int imp_log_fun(int level, int option, int type, ...)
@@ -133,7 +157,8 @@ int imp_log_fun(int level, int option, int type, ...)
     int line, prio, n;
     size_t len;
     char buf[512];
-    static int inited;
+    static pthread_once_t syslog_once = PTHREAD_ONCE_INIT;
+    size_t skip = 0;                /* offset of the message in buf */
 
     /* libalog: `if (level < log_level) return;` with log_level starting at 3 (DEBUG). */
     if (level < imp_log_level)
@@ -156,6 +181,7 @@ int imp_log_fun(int level, int option, int type, ...)
      * only identifier left once every field bit is clear. */
     len = 0;
     len = imp_log_add(buf, sizeof(buf), len, "[%s]", tag ? tag : "IMP");
+    skip = len;
     if (option & IMP_LOG_OP_FILE)
         len = imp_log_add(buf, sizeof(buf), len, " %s", base);
     if (option & IMP_LOG_OP_LINE)
@@ -163,8 +189,10 @@ int imp_log_fun(int level, int option, int type, ...)
     if (option & IMP_LOG_OP_FUNC)
         len = imp_log_add(buf, sizeof(buf), len, " %s", func ? func : "?");
     len = imp_log_add(buf, sizeof(buf), len, ": ");
-    if (len >= sizeof(buf))
+    if (len >= sizeof(buf)) {
         len = 0;    /* prefix did not fit: log the bare message */
+        skip = 0;
+    }
     n = (int)len;
     vsnprintf(buf + n, sizeof(buf) - (size_t)n, fmt, ap);
     va_end(ap);
@@ -179,17 +207,17 @@ int imp_log_fun(int level, int option, int type, ...)
      *                             stdout is the libalog `stdout` (GOT symbol). */
     len = strlen(buf);
     {
-        static FILE *lf;
         FILE *out = stderr;
+        FILE *lf = NULL;
 
         if (type == 2) {
-            const char *m = buf + (tag ? strlen(tag) : 3) + 2;   /* skip "[tag]" */
+            const char *m = buf + skip;   /* skip "[tag]" (0: bare message) */
             char msg[512];
             size_t ml;
 
-            if (*m == ' ')
+            if (skip && *m == ' ')
                 m++;
-            else if (m[0] == ':' && m[1] == ' ')
+            else if (skip && m[0] == ':' && m[1] == ' ')
                 m += 2;   /* option 0: no fields, only the message */
             snprintf(msg, sizeof(msg), "%s", m);
             ml = strlen(msg);
@@ -202,11 +230,8 @@ int imp_log_fun(int level, int option, int type, ...)
         } else if (type == 0) {
             out = stdout;
         } else if (type == 1) {
-            if (!lf) {
-                const char *fn = getenv("OPENIMP_LOG_FILE");
-
-                lf = fopen(fn && fn[0] ? fn : "timp.log", "a+");
-            }
+            pthread_once(&imp_log_file_once, imp_log_file_open);
+            lf = imp_log_file;
             if (lf)
                 out = lf;
         }
@@ -219,10 +244,7 @@ int imp_log_fun(int level, int option, int type, ...)
         }
     }
     if (imp_log_syslog_enabled()) {
-        if (!inited) {
-            openlog("libimp", LOG_PID | LOG_NDELAY, LOG_USER);
-            inited = 1;
-        }
+        pthread_once(&syslog_once, imp_log_openlog);
         prio = level >= 6 ? LOG_ERR : level == 5 ? LOG_WARNING
              : level == 4 ? LOG_INFO : LOG_DEBUG;
         syslog(prio, "%s", buf);
