@@ -8,6 +8,14 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-10-31 merge round (OpenIMP next 772614e1, open-tx-isp next 24c2c556)
+
+- **Device proof (Eufy T40XP, image agg57, ko f7960883):** apitest all areas plus 28 cases PASS 262 / FAIL 8, 0 oopses. The run sends the board information before the cases (as the streamer does), so it sees real sensor frames; the apitest runs of agg54-56 without it saw only fallback frames and their PASS counts are void.
+- **open-tx-isp (T40) in the image:** slot 0 = core fix (agg54 oops at AddSensor/MDNS), frame-channel mapping fix, re-translated AE zones / second-sensor ISR / custom AE / LSC / LCE chains, `/dev/tisp` parameter handlers for the reviewed setters (#139c), optional blocking frame-channel DQBUF `t40_dqbuf_wait_ms` (default 0, #149 part 2), `&sclk_name` anchor sweep (#140). #139c, #140 and #149 part 2 are not behaviour-checked on a camera yet; #155/#157 (`/dev/tisp`) and the T41 #134 fix are QEMU/host-tested only.
+- **Remaining FAILs (open):** #167 `SetGammaAttr` without picture effect (fix on branch `claude/issue-167-gamma`, QEMU only, not merged), #168 stale frame after a pause in the full run (`stalesnap` alone passes), #169 `SetScalerLv` on channel 1 without effect. New: #170 (review leftovers L6, L8-L11).
+- **Closed:** #134, #137, #138, #142, #143, #145, #147, #154, #155, #156, #157, #159. RC3 gate: red (15 blocking issues, 2 streamer cells missing).
+- Docs: feature matrix cells T40 #20 and #24 now ⚠️, API cells `SetScalerLv` and `SetGammaAttr` ERR (docs/api_evidence.json, merged from the agg57 run); Update 2026-10-31 in the matrix summary.
+
 ## Branch `claude/issue-143` (2026-10-29)
 
 - apitest T40/T41: the 19 "no-signature" entries (`IMP_LOG`, `IMP_LOG_{UNK,VERBOSE,DBG,INFO,WARN,ERR,FATAL,SILENT,PRINT,TO_FILE,TO_SERVER}`, `IMP_LOG_OP_*`) are not exported symbols: they are macros of the vendor `imp/imp_log.h` (T40 1.3.1 = T41 1.2.5) that expand to `imp_log_fun(level, option, sink, tag, file, line, func, fmt, ...)` and `IMP_Log_Get_Option()`. The new case `logmacro` uses the vendor macro definitions against libimp and checks level filter, printf arguments, the option mask (file/line/function/tag) and the three sinks; the yaml entry is gone (T40/T41: no no-signature left).

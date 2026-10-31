@@ -1,6 +1,6 @@
 {
  "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
- "asof": "2026-10-26",
+ "asof": "2026-10-31",
  "socs": [
   "T10",
   "T20",
@@ -451,7 +451,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -543,7 +543,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -620,7 +620,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -697,7 +697,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -774,7 +774,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -851,7 +851,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -928,7 +928,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -1261,7 +1261,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -1391,11 +1391,11 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "dev",
+    "T40": "err",
     "T41": "n.a."
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-28 .184"
+    "T40": "FAIL apitest agg57 2026-10-31 .184: ret=0 ch1 level 0/128/64 accepted, detail H 10.553 at 0 vs 27.373 at 128, Y 242.1/194.4, picture NOT alive (Y 130.1)"
    }
   },
   "ISP_SetStreamOut": {
@@ -1694,7 +1694,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -2164,7 +2164,7 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "dev",
+    "T40": "err",
     "T41": "dev"
    },
    "used": {
@@ -2187,7 +2187,8 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
    "ref": {
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
+    "T40": "FAIL apitest agg57 2026-10-31 .184: ISP_Tuning_GetGammaAttr: ret=0 type 0 g[0]=0 g[64]=2879 g[128]=4095; ISP_Tuning_SetGammaAttr: ret=0 same value written (set ret 0), read back equal; user curve x^0.3 Y 130.9 vs linear Y 131.8 (base 131.5): NO PICTURE EFFECT; picture  restored (Y 131.5)"
    }
   },
   "ISP_Tuning_Get/SetHLDCAttr": {
@@ -2317,7 +2318,7 @@
    },
    "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -2491,7 +2492,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -2939,7 +2940,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226"
    }
   },
@@ -3269,7 +3270,7 @@
     "T41": "n.a."
    },
    "ref": {
-    "T40": "apitest rc3-cases 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "ISP_Tuning_GetMaskBlock": {
@@ -3382,7 +3383,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -3459,7 +3460,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -4121,7 +4122,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -4483,11 +4484,12 @@
     "T31": "n.a.",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
    "ref": {
-    "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
+    "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "ISP_WDR_ENABLE": {
@@ -4981,7 +4983,7 @@
     "T41": "n.a."
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "ISP_Tuning_Get/SetAeStrategy": {
@@ -5094,7 +5096,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -5183,7 +5185,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -5407,7 +5409,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -5641,7 +5643,7 @@
     "T41": "miss"
    },
    "ref": {
-    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "ISP_Tuning_GetAWBCt": {
@@ -5835,7 +5837,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): 256-bin sum = 2880x1620, 5-bin split follows histThresh, zones 1..226"
    }
   },
@@ -5897,7 +5899,7 @@
     "T41": "miss"
    },
    "ref": {
-    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "ISP_Tuning_GetAfZone": {
@@ -5944,7 +5946,7 @@
    },
    "note": "audit: reaches the driver/kernel",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -5978,7 +5980,7 @@
    },
    "note": "T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -6381,7 +6383,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6458,7 +6460,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6535,7 +6537,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6612,7 +6614,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6679,7 +6681,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6766,7 +6768,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6922,7 +6924,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -6965,7 +6967,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7099,7 +7101,7 @@
    },
    "note": "not in the T31 vendor API (T31 column stays n.a.): OpenIMP exports it on T31 as a beyond-vendor ROI through the AVPU QP table, device-tested (dev), default on, `OPENIMP_T31_ROI=0` refuses the call; T40: experimental, off unless `OPENIMP_T40_ROI=1`, code only, not device-tested; T41 (also `SetChnMapRoi`): cache, the windows/map are stored and the EP2 QP table is written (off unless `OPENIMP_T41_ROI=1`), but the T41 AVPU ignores the table (no effect on bit rate or picture in FixQP/CBR, docs/ROI.md); same valid-H.264 clamp as the Helix paths (docs/ROI.md)",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "Encoder_Get/SetChnSeiAttr": {
@@ -7275,7 +7277,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "gate1026 .184 2026-10-26 (open-tx-isp 2acd1afa, OpenIMP d2b40b9c): 100x, 0 oops, apitest PASS",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7344,7 +7346,7 @@
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7390,7 +7392,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7500,7 +7502,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7573,7 +7575,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7665,7 +7667,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7764,7 +7766,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7850,7 +7852,7 @@
    "ref": {
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "Encoder_PollingStream": {
@@ -7926,7 +7928,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -7993,7 +7995,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8070,7 +8072,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8147,7 +8149,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8243,7 +8245,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8332,7 +8334,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8372,7 +8374,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8513,7 +8515,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8577,7 +8579,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8615,7 +8617,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8636,7 +8638,7 @@
    "note": "T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched) T31: vendor stores num/den and a helper hands the source frame back early; OpenIMP returns every frame as soon as the AVPU has consumed it, so the ratio has nothing to change (class a: no visible effect, matched)",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "Encoder_SetGOPSize": {
@@ -8743,7 +8745,7 @@
    "note": "vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only vendor T31 1.1.6 / T40 1.3.1 / T41 1.2.6 (disassembled): stores the share channel in the channel record (kept over CreateChn, set to -1 by DestroyChn; a negative value is valid and means no sharing) and CreateChn reads it for a JPEG channel only: the JPEG channel borrows the video channel's stream manager and stream contexts and skips building its own pool of stream buffers (CreateChn fails when that video channel does not exist yet; T41 also refuses the MMA option). OpenIMP: same value handling, argument checks and return codes (-1 on T31/T40, 0x80040001 on T41, both channel numbers below the channel limit); CreateChn only logs a warning where the vendor would fail. There is nothing to share: OpenIMP JPEG channels own no stream buffer pool (JPEG is software on T40/T41, T31 uses one hardware-JPEG stream buffer for all JPEG channels), so sharing would save no rmem; measured on a T40 camera (video 640x360 plus a JPEG channel in the same group, with and without the call): JPEG channel cost about 24-72 kB of free memory either way, snapshots valid, H.264 decodes without errors in software and VA-API decoders. Host tests for T31/T40/T41, device test T40 only",
    "ref": {
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8820,7 +8822,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8897,7 +8899,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8974,7 +8976,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -8999,7 +9001,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9042,7 +9044,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9080,7 +9082,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9105,7 +9107,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9130,7 +9132,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9173,7 +9175,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9235,7 +9237,7 @@
    },
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9422,7 +9424,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -9518,7 +9520,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -9595,7 +9597,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -9672,7 +9674,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -9825,7 +9827,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9892,7 +9894,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -9931,7 +9933,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -10010,7 +10012,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 libimp swap 2026-10-27 .34 (depth semantics of the vendor 1.2.5 GetFrame: depth 0 -> no frame, N held, third waits 2 s -> 0x80012000)"
    }
   },
@@ -10044,7 +10046,7 @@
    },
    "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1",
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10083,7 +10085,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -10170,7 +10172,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10189,7 +10191,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10246,7 +10248,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10317,7 +10319,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10336,7 +10338,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10451,7 +10453,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -10840,7 +10842,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -10917,7 +10919,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11014,7 +11016,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11091,7 +11093,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11207,7 +11209,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11284,7 +11286,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11415,7 +11417,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11436,7 +11438,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11457,7 +11459,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11476,7 +11478,7 @@
     "T41": "dev"
    },
    "ref": {
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11497,7 +11499,7 @@
    "note": "audit: userspace implementation",
    "ref": {
     "T23": "apitest agg47 2026-10-26 .30",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11574,7 +11576,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11652,7 +11654,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11748,7 +11750,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11845,7 +11847,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11902,7 +11904,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -11979,7 +11981,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -12046,7 +12048,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -12103,7 +12105,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12170,7 +12172,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12237,7 +12239,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12304,7 +12306,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12361,7 +12363,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12438,7 +12440,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12515,7 +12517,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12592,7 +12594,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12659,7 +12661,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12726,7 +12728,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12793,7 +12795,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12860,7 +12862,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -12918,7 +12920,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T41": "apitest rc3gaps2 2026-10-27 .34",
-    "T40": "apitest rc3gaps2 2026-10-27 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "IVS_ReleaseResult": {
@@ -12984,7 +12986,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -13051,7 +13053,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -13128,7 +13130,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -13205,7 +13207,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -16856,7 +16858,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -16881,7 +16883,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -16948,7 +16950,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -16989,7 +16991,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -17030,7 +17032,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest next+ko/libimp swap 2026-10-27 .34"
    }
   },
@@ -17327,7 +17329,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "SU_Key_DisableEvent": {
@@ -17383,7 +17385,7 @@
     "T21": "apitest agg47 2026-10-26 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-26 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "SU_Key_ReadEvent": {
@@ -17491,7 +17493,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -17568,7 +17570,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -17625,7 +17627,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -17692,7 +17694,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -17759,7 +17761,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -17836,7 +17838,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -17913,7 +17915,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest agg47 2026-10-28 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest agg47 2026-10-28 .34"
    }
   },
@@ -17954,7 +17956,7 @@
     "T41": "apitest rc3gaps2 2026-10-27 .34",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    },
    "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
   },
@@ -18011,7 +18013,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -18078,7 +18080,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest rc3gaps2 2026-10-27 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -18155,7 +18157,7 @@
     "T21": "apitest rc3gaps2 2026-10-27 .24",
     "T23": "apitest agg47 2026-10-26 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
-    "T40": "apitest gate1026 (open-tx-isp 2acd1afa) 2026-10-26 .184",
+    "T40": "apitest agg57 2026-10-31 .184",
     "T41": "apitest rc3gaps2 2026-10-27 .34"
    }
   },
@@ -18213,7 +18215,7 @@
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T31": "apitest rc3gaps2 2026-10-27 .26",
     "T41": "apitest rc3gaps2 2026-10-27 .34",
-    "T40": "apitest rc3gaps2 2026-10-27 .184"
+    "T40": "apitest agg57 2026-10-31 .184"
    }
   },
   "AI_DisableDrcAndEq": {

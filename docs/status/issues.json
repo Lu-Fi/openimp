@@ -2677,6 +2677,76 @@
    "created": "2026-10-30T18:55:13Z",
    "closed": null,
    "milestone": null
+  },
+  {
+   "number": 167,
+   "title": "T40: IMP_ISP_Tuning_SetGammaAttr user curve has no picture effect (Eufy .184, agg56)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/167",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-31T09:30:24Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 168,
+   "title": "T40: stale frames after a pause (SnapFrame/GetFrame return the old picture, 2/10/30 s)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/168",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "severity:high",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-31T09:31:22Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 169,
+   "title": "T40: IMP_ISP_SetScalerLv ch1 has no effect on the picture (detail/alive check fails)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/169",
+   "labels": [
+    "area:ISP",
+    "prio:streamer",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-31T09:32:24Z",
+   "closed": null,
+   "milestone": "RC3"
+  },
+  {
+   "number": 170,
+   "title": "Review leftovers L6/L8-L11: behaviour vs stock unverified",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/170",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T23",
+    "soc:T31",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-10-31T09:59:21Z",
+   "closed": null,
+   "milestone": null
   }
  ]
 }
