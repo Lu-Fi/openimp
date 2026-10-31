@@ -2092,6 +2092,44 @@ static void cs_stalesnap(void)
 
     snprintf(list, sizeof list, "%s", pe && *pe ? pe : "2,10,30");
     NEED(IMP_FrameSource_GetFrame) NEED(IMP_ISP_Tuning_SetBrightness) {
+        /* #168 bisect: APITEST_STALE_PRE=depth,chnattr,frames16,snap,timed,ex,cycle runs just these calls of the fs area, in
+         * the order given, before the pause rounds (alone, the case passes; after the whole fs area it fails). */
+        const char *pre = getenv("APITEST_STALE_PRE");
+
+        if (pre && *pre) {
+            char pl[128], *pt, *ps = NULL;
+            unsigned char *tb = malloc(nv12 * 2 + 4096);
+
+            snprintf(pl, sizeof pl, "%s", pre);
+            for (pt = strtok_r(pl, ",", &ps); pt; pt = strtok_r(NULL, ",", &ps)) {
+                if (!strcmp(pt, "depth") && IMP_FrameSource_SetFrameDepth) IMP_FrameSource_SetFrameDepth(1, 2);
+                else if (!strcmp(pt, "chnattr") && IMP_FrameSource_GetChnAttr && IMP_FrameSource_SetChnAttr) {
+                    G(IMPFSChnAttr, a);
+                    if (IMP_FrameSource_GetChnAttr(1, a) == 0) IMP_FrameSource_SetChnAttr(1, a);
+                    gfree(a);
+                } else if (!strcmp(pt, "frames16")) { int k; for (k = 0; k < 16; k++) (void)frame_luma(); }
+                else if (!strcmp(pt, "snap") && IMP_FrameSource_SnapFrame && tb) {
+                    G(IMPFrameInfo, fi);
+                    (void)IMP_FrameSource_SnapFrame(1, PIX_FMT_NV12, SUB_W, SUB_H, tb, fi);
+                    gfree(fi);
+                } else if (!strcmp(pt, "timed") && IMP_FrameSource_GetTimedFrame && tb) {
+                    G(IMPFrameInfo, fi);
+                    G(IMPFrameTimestamp, ts);
+                    ts->ts = (uint64_t)IMP_System_GetTimeStamp() - 33000; ts->minus = 200000; ts->plus = 200000;
+                    if (IMP_FrameSource_GetTimedFrame(1, ts, 1, tb, fi) == 0) {
+                        ts->ts = (uint64_t)fi->timeStamp;
+                        (void)IMP_FrameSource_GetTimedFrame(1, ts, 0, tb, fi);
+                    }
+                    gfree(fi); gfree(ts);
+                } else if (!strcmp(pt, "ex") && IMP_FrameSource_GetFrameEx && IMP_FrameSource_ReleaseFrameEx) {
+                    IMPFrameInfo *f = NULL;
+                    if (IMP_FrameSource_GetFrameEx(1, &f) == 0 && f) IMP_FrameSource_ReleaseFrameEx(1, f);
+                } else if (!strcmp(pt, "cycle")) {
+                    IMP_FrameSource_DisableChn(1); IMP_FrameSource_EnableChn(1); usleep(500000);
+                }
+            }
+            free(tb);
+        }
         IMP_ISP_Tuning_GetBrightness(IMPVI_MAIN, &ob);
         for (tok = strtok_r(list, ",", &sv); tok; tok = strtok_r(NULL, ",", &sv)) {
             int pause_s = atoi(tok), mode;
