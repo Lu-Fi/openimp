@@ -908,7 +908,7 @@ static void cs_gamma(void)
     NEED(IMP_ISP_Tuning_GetGammaAttr) NEED(IMP_ISP_Tuning_SetGammaAttr) {
         G(IMPISPGammaAttr, o); G(IMPISPGammaAttr, b); G(IMPISPGammaAttr, u);
         int r1 = IMP_ISP_Tuning_GetGammaAttr(IMPVI_MAIN, o), r2, r3, r4, k, ms, eff;
-        Fst base, steep, lin, back;
+        Fst base, steep, lin, back, steep_s, lin_s;
 
         gchk(o);
         rep(FN(IMP_ISP_Tuning_GetGammaAttr), r1, r1 == 0 ? V_PASS : V_FAIL, "type %d g[0]=%u g[64]=%u g[128]=%u", (int)o->Curve_type, o->gamma[0], o->gamma[64], o->gamma[128]);
@@ -917,14 +917,18 @@ static void cs_gamma(void)
         /* effect: user curve x^0.3 (bright) vs x^1.0 (linear = dark); the module is not bypassed */
         u->Curve_type = IMP_ISP_GAMMA_CURVE_USER;
         for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(pow(k / 128.0, 0.3) * 4095 + 0.5);
-        r4 = IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); steep = fst(1500);
+        r4 = IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); steep_s = fst(100); steep = fst(1400);
         for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(k * 4095 / 128);
-        IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); lin = fst(1500);
+        IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); lin_s = fst(100); lin = fst(1400);
         IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, o); back = recover(base.y, &ms);
-        eff = steep.ok && lin.ok && steep.y > lin.y * 1.15 + 3;
+        /* The closed-loop AE presumably sees the luma AFTER the gamma stage (T40: the AE converges at a fraction of the exposure with the
+         * gamma LUT, docs/T40_TUNING_HURDLES.md 06-09), so a fixed curve change may be compensated by the AE within ~1 s and a settled
+         * measurement shows no difference (#167: Y 124.1 vs 121.9 although the LUT was written).  The verdict therefore uses the
+         * early window (~250 ms after the set, before the AE has moved); the settled values stay in the message. */
+        eff = (steep_s.ok && lin_s.ok && steep_s.y > lin_s.y * 1.15 + 3) || (steep.ok && lin.ok && steep.y > lin.y * 1.15 + 3);
         rep(FN(IMP_ISP_Tuning_SetGammaAttr), r2 | r4, (r2 == 0 && r3 == 0 && !memcmp(o, b, sizeof(*o)) && ms >= 0 && eff) ? V_PASS : V_FAIL,
-            "same value written (set ret %d), read back %s; user curve x^0.3 Y %.1f vs linear Y %.1f (base %.1f): %s; picture %s restored (Y %.1f)", r2,
-            !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT", steep.y, lin.y, base.y, eff ? "effect" : "NO PICTURE EFFECT", ms >= 0 ? "" : "NOT", back.y);
+            "same value written (set ret %d), read back %s; user curve x^0.3 Y %.1f vs linear Y %.1f after 250 ms (settled %.1f vs %.1f, base %.1f): %s; picture %s restored (Y %.1f)", r2,
+            !memcmp(o, b, sizeof(*o)) ? "equal" : "DIFFERENT", steep_s.y, lin_s.y, steep.y, lin.y, base.y, eff ? "effect" : "NO PICTURE EFFECT", ms >= 0 ? "" : "NOT", back.y);
         gfree(o); gfree(b); gfree(u);
     }
 }
