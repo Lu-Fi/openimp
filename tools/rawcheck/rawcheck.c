@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
+#include "../save_guard.h"
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #if defined(PLATFORM_T40)
@@ -62,7 +63,7 @@ static void emit(int ch, const char *kind, int k, const struct fv *f, const void
 {
     fprintf(out, "RAW ch=%d kind=%s k=%d w=%d h=%d pixfmt=%u size=%zu phy=%x vir=%x\n", ch, kind, k, w, h,
             (unsigned)f->pixfmt, n, (unsigned)f->phyAddr, (unsigned)f->virAddr);
-    fwrite(data, 1, n, out);
+    if (save_guard_ok(n)) fwrite(data, 1, n, out);
     fflush(out);
 }
 

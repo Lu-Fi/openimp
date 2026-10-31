@@ -18,6 +18,7 @@
 #include <time.h>
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
+#include "../save_guard.h"
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #include <imp/imp_encoder.h>
@@ -118,8 +119,8 @@ int main(int argc, char **argv)
                 uint32_t off = st.pack[k].offset, len = st.pack[k].length;
 
                 if (off + len <= st.streamSize) {
-                    fwrite(base + off, 1, len, out);
-                } else {
+                    if (save_guard_ok(len)) fwrite(base + off, 1, len, out);
+                } else if (save_guard_ok(len)) {
                     fwrite(base + off, 1, st.streamSize - off, out);
                     fwrite(base, 1, len - (st.streamSize - off), out);
                 }

@@ -4,6 +4,27 @@ The T41 target is an in-progress port of the shared T4 OpenIMP implementation.
 It is intentionally kept in the same encoder and FrameSource sources as T40;
 platform branches represent measured public or kernel ABI differences.
 
+## Test tools and camera RAM (/tmp is tmpfs)
+
+On small T41 boards (about 30 MB RAM) `/tmp` is tmpfs, so every byte a test tool
+saves there is unswappable RAM. A capture of two 8000 kbit/s streams into `/tmp`
+consumed about 1 MB/s; MemAvailable fell from 12.4 to 1.6 MB in 9 s, then WLAN,
+ssh and syslog stopped without any OOM line and the hardware watchdog reset the
+board 50-60 s later (reproduced three times on a Cinnado T41, 2026-10-24).
+
+Rules for testers:
+- Never write large files (RAW, JPEG series, bitstream dumps) to `/tmp` on a
+  small-RAM camera. Stream them to the host (`ssh ... cat`, NFS, SD card).
+- Tools that save bulk data (`bstest`, `rctest`, `encload`, `fbtest`, `roitest`,
+  `rawcheck`, `apitest` picture and stream dumps) include `tools/save_guard.h`.
+  It stops writing when MemAvailable drops under `SAVE_MIN_AVAIL_KB` (default
+  6144 KB), prints one warning and keeps counting; the saved file is then
+  truncated. `SAVE_MIN_AVAIL_KB=0` disables the guard. New tools that write bulk
+  data must use `save_guard_ok(len)` before each write.
+- Firmware note: mounting `/tmp` with `size=4m` (instead of the 50 % default)
+  would make tmpfs growth fail with ENOSPC instead of starving the system. This
+  is a firmware-side change and not part of this repository.
+
 ## Verified on Wyze v4 / T41NQ
 
 - `build-t41.sh` builds an OEM-independent `libimp.so` and resolves all 270

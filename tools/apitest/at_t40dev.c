@@ -33,6 +33,7 @@
 
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
+#include "../save_guard.h"
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #include <imp/imp_encoder.h>
@@ -356,7 +357,7 @@ static void stream_sei(double secs, struct seiscan *z, FILE *dump)
             IMPEncoderPack *pk = &st.pack[i];
             unsigned n = pack_bytes(&st, pk, buf, sizeof buf), h = 0;
             z->bytes += pk->length;
-            if (dump && n) fwrite(buf, 1, n, dump);
+            if (dump && n && save_guard_ok(n)) fwrite(buf, 1, n, dump);
             if (pk->nalType.h264NalType == 5) isidr = 1;
             while (h + 3 < n && !(buf[h] == 0 && buf[h + 1] == 0 && buf[h + 2] == 1)) h++;
             h += 3;

@@ -40,6 +40,7 @@ int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr
 
 #include "imp/imp_common.h"
 #include "imp/imp_system.h"
+#include "../save_guard.h"
 #include "imp/imp_isp.h"
 #include "imp/imp_framesource.h"
 
@@ -1728,7 +1729,7 @@ static int snap1(const char *path, int skip)
                 write_crop(f, (const uint8_t *)(uintptr_t)fr->virAddr, fr->width, fr->height);
             } else {
                 if (fr->size && fr->size < sz) sz = fr->size;
-                fwrite((void *)(uintptr_t)fr->virAddr, 1, sz, f);
+                if (save_guard_ok(sz)) fwrite((void *)(uintptr_t)fr->virAddr, 1, sz, f);
                 g_got_w = fr->width; g_got_h = fr->height;
             }
             fclose(f);

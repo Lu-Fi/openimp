@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
+#include "../save_guard.h"
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #include <imp/imp_encoder.h>
@@ -64,7 +65,7 @@ static void *consumer(void *a)
             ts_last = last_ts = ts;
         }
         if (out) {
-            for (k = 0; k < s.packCount && out_bytes < OUT_CAP; k++) {
+            for (k = 0; k < s.packCount && out_bytes < OUT_CAP && save_guard_ok(s.pack[k].length); k++) {
                 uint32_t off = s.pack[k].offset, len = s.pack[k].length;
                 if (off + len > s.streamSize) {
                     uint32_t first = s.streamSize - off;

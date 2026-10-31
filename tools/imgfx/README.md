@@ -27,7 +27,9 @@ before, so cases are independent. No encoder is used (raw frames from
 * Stop the streamer first (timps/prudynt: `/etc/init.d/S95timps stop`), keep
   the scene static and lit. Pictures are ~337 KB each, 70-100 per run: use a
   directory with 40+ MB free (camera `/tmp` is RAM; with little free RAM use
-  filters in batches or an SD/NFS path).
+  filters in batches or an SD/NFS path). On small T41 boards a full /tmp
+  starves the system and ends in a watchdog reset (see docs/T41_STATUS.md,
+  "Test tools and camera RAM"); tools that save data use `tools/save_guard.h`.
 * Case results are meant to be read with the host script (below); `set=0` only
   means the call returned 0.
 

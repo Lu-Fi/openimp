@@ -40,6 +40,7 @@
 #include <time.h>
 #include <imp/imp_common.h>
 #include <imp/imp_system.h>
+#include "../save_guard.h"
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #include <imp/imp_encoder.h>
@@ -382,7 +383,7 @@ static long drain(int chn, unsigned char *buf, FILE *f, int *frames, int *idrs, 
         if (cap < 0) cap = 1024L * (getenv("ROITEST_MAXKB") ? atol(getenv("ROITEST_MAXKB")) : 1024L);
         static long tcap = -1;
         if (tcap < 0) tcap = getenv("ROITEST_TOTALKB") ? 1024L * atol(getenv("ROITEST_TOTALKB")) : 4 * cap;
-        if (f && fsz + (long)len <= cap && total + (long)len <= tcap) {
+        if (f && fsz + (long)len <= cap && total + (long)len <= tcap && save_guard_ok(len)) {
             fwrite(buf, 1, len, f);
             total += (long)len;
         }
