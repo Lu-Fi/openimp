@@ -1,7 +1,7 @@
 {
  "_comment": "Daily soak summary per fleet camera. Written by tools/status_soak.py on the host from the soak sampler logs and the camera STATUS files (not in CI); read by tools/release_gates.py. Do not edit by hand. Rules: docs/status/release.yaml.",
  "image": "agg47",
- "asof": "2026-10-30 06:53",
+ "asof": "2026-10-31 06:56",
  "sources": {
   "sampler_logs": [
    "logs1026/soak-agg47.log"
@@ -14,9 +14,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:03",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 241637,
+   "uptime_s": 328217,
    "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
@@ -26,7 +26,7 @@
     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-27 11:55)"
    },
    "stable_since": "2026-10-27 11:46",
-   "stable_days": 2.8,
+   "stable_days": 3.8,
    "events": [
     {
      "time": "2026-10-26 14:01",
@@ -47,9 +47,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:35",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321543,
+   "uptime_s": 408123,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -59,7 +59,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:35",
-   "stable_days": 3.72,
+   "stable_days": 4.72,
    "events": [
     {
      "time": "2026-10-26 13:33",
@@ -74,9 +74,9 @@
    "soc": "T21",
    "image": "agg47",
    "first_seen": "2026-10-26 13:33",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321671,
+   "uptime_s": 408251,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -86,7 +86,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:33",
-   "stable_days": 3.72,
+   "stable_days": 4.72,
    "events": [
     {
      "time": "2026-10-26 13:31",
@@ -101,9 +101,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:44",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321003,
+   "uptime_s": 407583,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -113,7 +113,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:44",
-   "stable_days": 3.71,
+   "stable_days": 4.72,
    "events": [
     {
      "time": "2026-10-26 13:42",
@@ -128,9 +128,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:47",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 320859,
+   "uptime_s": 407439,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -140,7 +140,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:47",
-   "stable_days": 3.71,
+   "stable_days": 4.71,
    "events": [
     {
      "time": "2026-10-26 13:44",
@@ -155,9 +155,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:37",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 64521,
+   "uptime_s": 151101,
    "unplanned_reboots": 3,
    "oops": 0,
    "last_reset": {
@@ -167,7 +167,7 @@
     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-29 13:00)"
    },
    "stable_since": "2026-10-29 12:58",
-   "stable_days": 0.75,
+   "stable_days": 1.75,
    "events": [
     {
      "time": "2026-10-26 13:35",
@@ -200,25 +200,31 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:49",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 320693,
-   "unplanned_reboots": 0,
+   "uptime_s": 58100,
+   "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
-    "time": "2026-10-26 13:47",
-    "kind": "flash",
-    "planned": true,
-    "reason": "image agg47 flashed (full OTA)"
+    "time": "2026-10-30 14:48",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 14:54)"
    },
-   "stable_since": "2026-10-26 13:49",
-   "stable_days": 3.71,
+   "stable_since": "2026-10-30 14:48",
+   "stable_days": 0.67,
    "events": [
     {
      "time": "2026-10-26 13:47",
      "kind": "flash",
      "planned": true,
      "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-10-30 14:48",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 14:54)"
     }
    ]
   },
@@ -227,9 +233,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:39",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321290,
+   "uptime_s": 407870,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -239,7 +245,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:39",
-   "stable_days": 3.72,
+   "stable_days": 4.72,
    "events": [
     {
      "time": "2026-10-26 13:37",
@@ -254,9 +260,9 @@
    "soc": "T10",
    "image": "agg47",
    "first_seen": "2026-10-26 13:27",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 306897,
+   "uptime_s": 393477,
    "unplanned_reboots": 2,
    "oops": 0,
    "last_reset": {
@@ -266,7 +272,7 @@
     "reason": "recovery reboot (SetISPProcess(0) wedge, bisect)"
    },
    "stable_since": "2026-10-26 17:38",
-   "stable_days": 3.55,
+   "stable_days": 4.55,
    "events": [
     {
      "time": "2026-10-26 13:25",
@@ -293,9 +299,9 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:10",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 319473,
+   "uptime_s": 406053,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -305,7 +311,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:10",
-   "stable_days": 3.7,
+   "stable_days": 4.7,
    "events": [
     {
      "time": "2026-10-26 14:06",
@@ -320,9 +326,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:52",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 320548,
+   "uptime_s": 407128,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -332,7 +338,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:52",
-   "stable_days": 3.71,
+   "stable_days": 4.71,
    "events": [
     {
      "time": "2026-10-26 13:49",
@@ -347,9 +353,9 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:13",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 319303,
+   "uptime_s": 405883,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -359,7 +365,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:13",
-   "stable_days": 3.69,
+   "stable_days": 4.7,
    "events": [
     {
      "time": "2026-10-26 14:10",
@@ -374,9 +380,9 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:31",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321820,
+   "uptime_s": 408400,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -386,7 +392,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:31",
-   "stable_days": 3.72,
+   "stable_days": 4.73,
    "events": [
     {
      "time": "2026-10-26 13:27",
@@ -401,9 +407,9 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:42",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 321143,
+   "uptime_s": 407723,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -413,7 +419,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:42",
-   "stable_days": 3.72,
+   "stable_days": 4.72,
    "events": [
     {
      "time": "2026-10-26 13:40",
@@ -428,9 +434,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:06",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 319701,
+   "uptime_s": 406281,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -440,7 +446,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:06",
-   "stable_days": 3.7,
+   "stable_days": 4.7,
    "events": [
     {
      "time": "2026-10-26 14:04",
@@ -455,9 +461,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:54",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 24813,
+   "uptime_s": 111393,
    "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
@@ -467,7 +473,7 @@
     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 00:02)"
    },
    "stable_since": "2026-10-29 23:59",
-   "stable_days": 0.29,
+   "stable_days": 1.29,
    "events": [
     {
      "time": "2026-10-26 13:52",
@@ -488,9 +494,9 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:58",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 320186,
+   "uptime_s": 406766,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -500,7 +506,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 13:58",
-   "stable_days": 3.71,
+   "stable_days": 4.71,
    "events": [
     {
      "time": "2026-10-26 13:55",
@@ -515,19 +521,19 @@
    "soc": "T40",
    "image": "agg47",
    "first_seen": "2026-10-26 14:30",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 20350,
-   "unplanned_reboots": 4,
-   "oops": 5,
+   "uptime_s": 4110,
+   "unplanned_reboots": 6,
+   "oops": 9,
    "last_reset": {
-    "time": "2026-10-30 01:12",
-    "kind": "reboot",
+    "time": "2026-10-31 05:46",
+    "kind": "oops",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 01:12)"
+    "reason": "kernel oops counter rose by 2 (dmesg)"
    },
-   "stable_since": "2026-10-30 01:12",
-   "stable_days": 0.24,
+   "stable_since": "2026-10-31 05:46",
+   "stable_days": 0.05,
    "events": [
     {
      "time": "2026-10-26 14:13",
@@ -579,6 +585,32 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 01:12)"
+    },
+    {
+     "time": "2026-10-30 07:26",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 07:33)"
+    },
+    {
+     "time": "2026-10-30 11:42",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-30 11:43)"
+    },
+    {
+     "time": "2026-10-31 00:25",
+     "kind": "oops",
+     "planned": false,
+     "count": 2,
+     "reason": "kernel oops counter rose by 2 (dmesg)"
+    },
+    {
+     "time": "2026-10-31 05:46",
+     "kind": "oops",
+     "planned": false,
+     "count": 2,
+     "reason": "kernel oops counter rose by 2 (dmesg)"
     }
    ]
   },
@@ -587,9 +619,9 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:01",
-   "last_sample": "2026-10-30 06:53",
+   "last_sample": "2026-10-31 06:56",
    "online": true,
-   "uptime_s": 320023,
+   "uptime_s": 406603,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": {
@@ -599,7 +631,7 @@
     "reason": "image agg47 flashed (full OTA)"
    },
    "stable_since": "2026-10-26 14:01",
-   "stable_days": 3.7,
+   "stable_days": 4.71,
    "events": [
     {
      "time": "2026-10-26 13:58",
@@ -1077,117 +1109,233 @@
   },
   "2026-10-30": {
    ".21": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 302947,
+    "max_oops": 0
+   },
+   ".23": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382852,
+    "max_oops": 0
+   },
+   ".24": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382981,
+    "max_oops": 0
+   },
+   ".25": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382313,
+    "max_oops": 0
+   },
+   ".26": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382169,
+    "max_oops": 0
+   },
+   ".28": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 125831,
+    "max_oops": 0
+   },
+   ".29": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 348939,
+    "max_oops": 0
+   },
+   ".30": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382600,
+    "max_oops": 0
+   },
+   ".31": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 368207,
+    "max_oops": 0
+   },
+   ".32": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 380783,
+    "max_oops": 0
+   },
+   ".33": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 381858,
+    "max_oops": 0
+   },
+   ".34": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 380613,
+    "max_oops": 0
+   },
+   ".107": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 383130,
+    "max_oops": 0
+   },
+   ".124": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 382453,
+    "max_oops": 0
+   },
+   ".145": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 381011,
+    "max_oops": 0
+   },
+   ".151": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 86123,
+    "max_oops": 0
+   },
+   ".163": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 381496,
+    "max_oops": 0
+   },
+   ".184": {
+    "samples": 144,
+    "offline": 4,
+    "max_uptime_s": 35529,
+    "max_oops": 0
+   },
+   ".224": {
+    "samples": 144,
+    "offline": 0,
+    "max_uptime_s": 381333,
+    "max_oops": 0
+   }
+  },
+  "2026-10-31": {
+   ".21": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 241637,
+    "max_uptime_s": 328217,
     "max_oops": 0
    },
    ".23": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321543,
+    "max_uptime_s": 408123,
     "max_oops": 0
    },
    ".24": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321671,
+    "max_uptime_s": 408251,
     "max_oops": 0
    },
    ".25": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321003,
+    "max_uptime_s": 407583,
     "max_oops": 0
    },
    ".26": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 320859,
+    "max_uptime_s": 407439,
     "max_oops": 0
    },
    ".28": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 64521,
+    "max_uptime_s": 151101,
     "max_oops": 0
    },
    ".29": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 320693,
+    "max_uptime_s": 58100,
     "max_oops": 0
    },
    ".30": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321290,
+    "max_uptime_s": 407870,
     "max_oops": 0
    },
    ".31": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 306897,
+    "max_uptime_s": 393477,
     "max_oops": 0
    },
    ".32": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 319473,
+    "max_uptime_s": 406053,
     "max_oops": 0
    },
    ".33": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 320548,
+    "max_uptime_s": 407128,
     "max_oops": 0
    },
    ".34": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 319303,
+    "max_uptime_s": 405883,
     "max_oops": 0
    },
    ".107": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321820,
+    "max_uptime_s": 408400,
     "max_oops": 0
    },
    ".124": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 321143,
+    "max_uptime_s": 407723,
     "max_oops": 0
    },
    ".145": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 319701,
+    "max_uptime_s": 406281,
     "max_oops": 0
    },
    ".151": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 24813,
+    "max_uptime_s": 111393,
     "max_oops": 0
    },
    ".163": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 320186,
+    "max_uptime_s": 406766,
     "max_oops": 0
    },
    ".184": {
     "samples": 42,
-    "offline": 2,
-    "max_uptime_s": 32177,
-    "max_oops": 0
+    "offline": 7,
+    "max_uptime_s": 8921,
+    "max_oops": 2
    },
    ".224": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 320023,
+    "max_uptime_s": 406603,
     "max_oops": 0
    }
   }
