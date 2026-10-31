@@ -8,6 +8,15 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) after the long soak of the release candidate and is tagged `vYYYY.MM.DD`; until then dates are the reference. The first release covers T10, T20, T21, T23 and T31; T10 has not been re-tested on the open stack today ("not re-tested"); T41 is not part of the first release. Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-10-31, evening (OpenIMP next 10d3fe59, open-tx-isp next 71d00b99 = agg59)
+
+- **Device proof (Eufy T40XP, image agg59, ko 176f0f5b):** apitest all areas plus 28 cases PASS 270 / FAIL 0, 0 oopses, 0 `unresolved jalr` (agg58: 268 / 2).
+- **Closed with camera proof:** #167 `SetGammaAttr` (the case is judged after the AE settled; the driver's soft-writer set path works, Y 156 against 64 at 250 ms); #168 stale frame after a pause (open-tx-isp: STREAMOFF now runs `__vb2_queue_cancel`, FREE_BUFFER and clears the MSCA FIFO; A/B with the old libimp: agg57 fails 6/6, agg58 passes 49/0; the libimp requeue mitigation stays as a safety net); #169 `SetScalerLv` (test baseline settles first).
+- **In the image, clean on the camera, effect not measured:** #139c `/dev/tisp` parameter handlers; #140 batch 3, anchor sweep and jalr batches 1 and 2 (7 class-A sites fixed, 58 sites left and classified in the issue); #149b `t40_dqbuf_wait_ms` (default 0); #133 CPU branch (`claude/issue-133-cpu` is in next, the CPU effect is not measured yet, plan in the #133 comment).
+- **QEMU only:** rmmod fix for two work items (10 of 10 reload cycles). Unloading only the vendor module is dangerous; ours reloads cleanly since 2026-10-24.
+- **Reboot class (#94, #108), diagnostics:** no panic text reached the syslog host before the three unplanned resets of one T23; DRAM pstore proved useless on a T31L (the pattern is lost on reset); the second diagnostic uses RTCSAR, which survives a reset (proven on the T31L); the first runs on the T31L, the second is pending on the T31L and the T23.
+- Docs: feature matrix cells T40 #20 and #24 back to ✅+ / ✅, API cells `SetScalerLv` and `SetGammaAttr` dev again, README T40 row. RC3 gate: red (12 blocking issues; streamer-function cells 1787 of 1787).
+
 ## 2026-10-31 merge round (OpenIMP next 772614e1, open-tx-isp next 24c2c556)
 
 - **Device proof (Eufy T40XP, image agg57, ko f7960883):** apitest all areas plus 28 cases PASS 262 / FAIL 8, 0 oopses. The run sends the board information before the cases (as the streamer does), so it sees real sensor frames; the apitest runs of agg54-56 without it saw only fallback frames and their PASS counts are void.

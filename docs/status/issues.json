@@ -2681,7 +2681,7 @@
   {
    "number": 167,
    "title": "T40: IMP_ISP_Tuning_SetGammaAttr user curve has no picture effect (Eufy .184, agg56)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/167",
    "labels": [
     "area:ISP",
@@ -2698,7 +2698,7 @@
   {
    "number": 168,
    "title": "T40: stale frames after a pause (SnapFrame/GetFrame return the old picture, 2/10/30 s)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/168",
    "labels": [
     "area:ISP",
@@ -2715,7 +2715,7 @@
   {
    "number": 169,
    "title": "T40: IMP_ISP_SetScalerLv ch1 has no effect on the picture (detail/alive check fails)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/169",
    "labels": [
     "area:ISP",
