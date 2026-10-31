@@ -16,36 +16,29 @@ Open stack = open-tx-isp (kernel driver) + OpenIMP (libimp) + timps. Vendor = tx
 
 Rules (machine-readable: `docs/status/release.yaml`). **RC3** is green only if (a) every vendor function that a streamer (timps, prudynt, raptor) calls works on T10, T20, T21, T23, T31, T40, T41 (API matrix cell dev, dev+, run, rt or vendor no-op), (b) no open issue has the label severity:critical or severity:high and (c) no open issue is in the milestone RC3. **Release 1:** RC3 is green and the release image ran at least 14 days on the fleet with at least 1 camera per SoC, 0 unplanned reboots and 0 oops; a new image or any reset restarts the counter; planned flashes and tests count as planned only when the camera STATUS log marks them so.
 
-- **RC3: 🔴 RED** (19 blocking issues)
+- **RC3: 🔴 RED** (12 blocking issues)
   - (a) streamer functions: 🟢 1787 of 1787 cells work, 0 missing
-  - (b) no open issue with severity critical or high: 🔴 5 critical, 13 high
-  - (c) no open issue in milestone RC3: 🔴 18 open
+  - (b) no open issue with severity critical or high: 🔴 4 critical, 7 high
+  - (c) no open issue in milestone RC3: 🔴 12 open
 - **Release 1: 🔴 RED** (0 of 7 SoCs reached 14 stable days; image –, soak as of 2026-10-30 06:53)
   - Not started: the 14-day counter starts when RC3 is published (tag pending) and runs only on the image built from that tag.
 
 ### RC3: blocking issues
 
-- **Critical (severity:critical): 5**
+- **Critical (severity:critical): 4**
   - [#88](https://github.com/Lu-Fi/openimp/issues/88) [T40] Unplanned reboot while inserting a temporary test build (observe) (severity critical; milestone RC3)
   - [#94](https://github.com/Lu-Fi/openimp/issues/94) [T31] T31L watchdog reboot after 52 h without a kernel trace (severity critical; milestone RC3)
   - [#96](https://github.com/Lu-Fi/openimp/issues/96) [T41] Unexplained reboot during a userland JPEG benchmark in /tmp (suspected OOM) (severity critical; milestone RC3)
   - [#108](https://github.com/Lu-Fi/openimp/issues/108) T23: unexplained reboot on the agg47 image (~4.6 h after flash) (severity critical; milestone RC3)
-  - [#154](https://github.com/Lu-Fi/openimp/issues/154) T40: T40 SetModule_Ratio (sinter/SDNS entry) or WDR enable can hang the kernel (infinite loop in ioctl) (severity critical; milestone RC3)
-- **High (severity:high): 13**
+- **High (severity:high): 7**
   - [#84](https://github.com/Lu-Fi/openimp/issues/84) [T40] One full vendor-vs-open comparison pass (chart, day, night, CPU) (severity high; milestone RC3)
   - [#92](https://github.com/Lu-Fi/openimp/issues/92) [T31] isp_memopt=1 as the default: firmware pin and a second board check (severity high; milestone RC3)
   - [#93](https://github.com/Lu-Fi/openimp/issues/93) [T31] Long-term stability: evidence for the AE-zone stack fix (>= 5 days) (severity high; milestone RC3)
   - [#133](https://github.com/Lu-Fi/openimp/issues/133) T40: ISP event work costs more CPU than the vendor (~9 % less free CPU; AWB process + ADR) (severity high; milestone RC3)
-  - [#134](https://github.com/Lu-Fi/openimp/issues/134) T41 QEMU: kernel oops in tx_isp_t41 kworker (NULL+0xc) after apitest waitframe/autozoom/fs sequence (severity high; milestone RC3)
   - [#139](https://github.com/Lu-Fi/openimp/issues/139) T40: lifted ioctl handlers store through uninitialised pointers (GetFaceAe, tisp_set_ae_info, further) (severity high; milestone RC3)
   - [#140](https://github.com/Lu-Fi/openimp/issues/140) T40: lifted calls lost arguments (about 380 sites, mostly per-frame code) (severity high; milestone RC3)
-  - [#145](https://github.com/Lu-Fi/openimp/issues/145) T40: lifted ioctl dispatch compares against scaled constants (uintptr_t* arithmetic), other request codes fall through to return 0 (severity high; milestone none)
-  - [#147](https://github.com/Lu-Fi/openimp/issues/147) T40: GetSensorAttr returns fps 0 and size 0x0 (vendor: fps 20<<16\|1, 3840x2160) (severity high; milestone RC3)
   - [#149](https://github.com/Lu-Fi/openimp/issues/149) T40: OpenIMP encoder path costs about 3.5x the vendor user CPU (H.264 1080p20, encload) (severity high; milestone RC3)
-  - [#155](https://github.com/Lu-Fi/openimp/issues/155) T40: /dev/tisp: one global 20 KB buffer, freed by any closer (UAF / NULL deref, user-triggerable) (severity high; milestone RC3)
-  - [#156](https://github.com/Lu-Fi/openimp/issues/156) T40: T40 SetAwbAttr: `tisp_s_awb_attr` passes pointer-scaled offsets (uintptr_t* arithmetic) (severity high; milestone RC3)
-  - [#157](https://github.com/Lu-Fi/openimp/issues/157) T40: Format strings with missing arguments in error paths of /dev/tisp (possible oops) (severity high; milestone RC3)
-- **RC3 milestone: 18**
+- **RC3 milestone: 12**
   - [#84](https://github.com/Lu-Fi/openimp/issues/84) [T40] One full vendor-vs-open comparison pass (chart, day, night, CPU) (severity high; milestone RC3)
   - [#88](https://github.com/Lu-Fi/openimp/issues/88) [T40] Unplanned reboot while inserting a temporary test build (observe) (severity critical; milestone RC3)
   - [#92](https://github.com/Lu-Fi/openimp/issues/92) [T31] isp_memopt=1 as the default: firmware pin and a second board check (severity high; milestone RC3)
@@ -55,15 +48,9 @@ Rules (machine-readable: `docs/status/release.yaml`). **RC3** is green only if (
   - [#108](https://github.com/Lu-Fi/openimp/issues/108) T23: unexplained reboot on the agg47 image (~4.6 h after flash) (severity critical; milestone RC3)
   - [#131](https://github.com/Lu-Fi/openimp/issues/131) DMIC_* on T31/T40/T41: no DMIC hardware on the test boards (severity medium; milestone RC3)
   - [#133](https://github.com/Lu-Fi/openimp/issues/133) T40: ISP event work costs more CPU than the vendor (~9 % less free CPU; AWB process + ADR) (severity high; milestone RC3)
-  - [#134](https://github.com/Lu-Fi/openimp/issues/134) T41 QEMU: kernel oops in tx_isp_t41 kworker (NULL+0xc) after apitest waitframe/autozoom/fs sequence (severity high; milestone RC3)
   - [#139](https://github.com/Lu-Fi/openimp/issues/139) T40: lifted ioctl handlers store through uninitialised pointers (GetFaceAe, tisp_set_ae_info, further) (severity high; milestone RC3)
   - [#140](https://github.com/Lu-Fi/openimp/issues/140) T40: lifted calls lost arguments (about 380 sites, mostly per-frame code) (severity high; milestone RC3)
-  - [#147](https://github.com/Lu-Fi/openimp/issues/147) T40: GetSensorAttr returns fps 0 and size 0x0 (vendor: fps 20<<16\|1, 3840x2160) (severity high; milestone RC3)
   - [#149](https://github.com/Lu-Fi/openimp/issues/149) T40: OpenIMP encoder path costs about 3.5x the vendor user CPU (H.264 1080p20, encload) (severity high; milestone RC3)
-  - [#154](https://github.com/Lu-Fi/openimp/issues/154) T40: T40 SetModule_Ratio (sinter/SDNS entry) or WDR enable can hang the kernel (infinite loop in ioctl) (severity critical; milestone RC3)
-  - [#155](https://github.com/Lu-Fi/openimp/issues/155) T40: /dev/tisp: one global 20 KB buffer, freed by any closer (UAF / NULL deref, user-triggerable) (severity high; milestone RC3)
-  - [#156](https://github.com/Lu-Fi/openimp/issues/156) T40: T40 SetAwbAttr: `tisp_s_awb_attr` passes pointer-scaled offsets (uintptr_t* arithmetic) (severity high; milestone RC3)
-  - [#157](https://github.com/Lu-Fi/openimp/issues/157) T40: Format strings with missing arguments in error paths of /dev/tisp (possible oops) (severity high; milestone RC3)
 
 ### RC3: streamer functions that work
 

@@ -2234,7 +2234,7 @@
   {
    "number": 134,
    "title": "T41 QEMU: kernel oops in tx_isp_t41 kworker (NULL+0xc) after apitest waitframe/autozoom/fs sequence",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/134",
    "labels": [
     "area:Driver",
@@ -2320,7 +2320,7 @@
   {
    "number": 145,
    "title": "T40: lifted ioctl dispatch compares against scaled constants (uintptr_t* arithmetic), other request codes fall through to return 0",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/145",
    "labels": [
     "area:Driver",
@@ -2355,7 +2355,7 @@
   {
    "number": 147,
    "title": "T40: GetSensorAttr returns fps 0 and size 0x0 (vendor: fps 20<<16|1, 3840x2160)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/147",
    "labels": [
     "area:ISP",
@@ -2477,7 +2477,7 @@
   {
    "number": 154,
    "title": "T40: T40 SetModule_Ratio (sinter/SDNS entry) or WDR enable can hang the kernel (infinite loop in ioctl)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/154",
    "labels": [
     "area:Driver",
@@ -2494,7 +2494,7 @@
   {
    "number": 155,
    "title": "T40: /dev/tisp: one global 20 KB buffer, freed by any closer (UAF / NULL deref, user-triggerable)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/155",
    "labels": [
     "area:Driver",
@@ -2511,7 +2511,7 @@
   {
    "number": 156,
    "title": "T40: T40 SetAwbAttr: `tisp_s_awb_attr` passes pointer-scaled offsets (uintptr_t* arithmetic)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/156",
    "labels": [
     "area:Driver",
@@ -2528,7 +2528,7 @@
   {
    "number": 157,
    "title": "T40: Format strings with missing arguments in error paths of /dev/tisp (possible oops)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/157",
    "labels": [
     "area:Driver",
