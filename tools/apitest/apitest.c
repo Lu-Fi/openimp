@@ -295,14 +295,20 @@ int main(int argc, char **argv)
     g_sensor.i2c.addr = (int)strtol(argv[2], NULL, 0);
     g_sensor.rst_gpio = g_sensor.pwdn_gpio = g_sensor.power_gpio = -1;
 #ifdef APITEST_T40
-    /* APITEST_VENDOR_SINFO=1: the full board description the vendor ko needs (the open driver takes it from its
-     * sensor driver): i2c adapter 1, reset gpio 91, MCLK1, MIPI CSI0, default boot 4 (Eufy .184, as at_t40dev.c) */
-    if (getenv("APITEST_VENDOR_SINFO")) {
-        g_sensor.i2c.i2c_adapter_id = 1;
-        g_sensor.rst_gpio = 91;
-        g_sensor.video_interface = IMPISP_SENSOR_VI_MIPI_CSI0;
-        g_sensor.mclk = IMPISP_SENSOR_MCLK1;
-        g_sensor.default_boot = 4;
+    /* Board sensor description (Eufy .184, as at_t40dev.c and timps.conf): i2c adapter 1, reset gpio 91, MCLK1,
+     * MIPI CSI0, default boot 4.  The open driver forwards it to the sensor driver too, and the sc830ai
+     * picks its register set by default_boot: 0/1 are the 4-lane settings, 2..4 the 2-lane ones.  With the
+     * zero description (boot 0 = 3840x2160 15 fps 4-lane) the 2-lane board delivers no frame at all
+     * (agg54..56: FrameSource 0 frames, "no sensor signal").  APITEST_VENDOR_SINFO=0 sends the zero one. */
+    {
+        const char *vs = getenv("APITEST_VENDOR_SINFO");
+        if (!vs || strcmp(vs, "0")) {
+            g_sensor.i2c.i2c_adapter_id = 1;
+            g_sensor.rst_gpio = 91;
+            g_sensor.video_interface = IMPISP_SENSOR_VI_MIPI_CSI0;
+            g_sensor.mclk = IMPISP_SENSOR_MCLK1;
+            g_sensor.default_boot = 4;
+        }
     }
 #endif
 
@@ -312,6 +318,10 @@ int main(int argc, char **argv)
         atexit(jclose);
     }
     printf("[T] apitest %s sensor %s %dx%d areas %s\n", SOC, argv[1], g_sw, g_sh, areas ? areas : "all");
+#ifdef APITEST_T40
+    printf("[T] sensor info: i2c%d mclk%d vin %d boot %d rst %d\n", (int)g_sensor.i2c.i2c_adapter_id, (int)g_sensor.mclk,
+           (int)g_sensor.video_interface, g_sensor.default_boot, g_sensor.rst_gpio);
+#endif
 
     if (areas && !strcmp(areas, "dmic")) {      /* IMP_DMIC_*: no ISP / sensor needed (area dmic = the case of area cases) */
         rep_area("dmic");
