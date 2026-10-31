@@ -2568,6 +2568,12 @@ static void p1_test_pattern_fill(struct openimp_fs_channel *chn,
         (void)DMA_RmemFlushCache(buffer->virtual_address, need, 1 /* WBACK */);
 }
 
+#if defined(PLATFORM_T40)
+/* CLOCK_MONOTONIC us of the last frame a consumer (not the 3A feeder)
+ * dequeued per channel; P1 lock. */
+static int64_t p1_gap_last_us[OPENIMP_FS_CHANNELS];
+#endif
+
 static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_attempts)
 {
     struct openimp_fs_channel *chn;
@@ -2578,6 +2584,12 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     int delay_cache = 0;
 #if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     uint32_t stale_drops = 0;
+#endif
+#if defined(PLATFORM_T40)
+    int64_t flush_from_us = 0;      /* consumer gap: drop buffers queued before this */
+    int64_t last_q_ago_ms = -1;
+    uint32_t young_drops = 0;
+    int young = 0;       /* buffers returned before they could be filled */
 #endif
     IMPFrameInfo cache_frame;
     OpenIMPProfileStamp wait_profile;
@@ -2616,6 +2628,32 @@ static int p1_get_frame_attempts(int channel, IMPFrameInfo **frame, int max_atte
     }
 
     wait_profile = openimp_profile_begin();
+#if defined(PLATFORM_T40)
+    if (!p1_in_ivs_feeder) {
+        /* #168: a consumer that was away longer than the staleness bound
+         * finds every capture buffer done, and the per-buffer QBUF age alone
+         * did not catch all of them on the device (first frame after a
+         * pause was the picture from before it).  After such a gap every
+         * buffer queued before this moment is dropped, whatever its stamp
+         * says: only a buffer queued now, i.e. filled now, is returned. */
+        struct timespec rawt;
+        int64_t now_us;
+        uint32_t iv = 33333u;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &rawt);   /* the queued_us clock */
+        now_us = (int64_t)rawt.tv_sec * 1000000 + rawt.tv_nsec / 1000;
+
+        lock_p1();
+        if (chn->attr.outFrmRateNum > 0 && chn->attr.outFrmRateDen > 0)
+            iv = 1000000u * (uint32_t)chn->attr.outFrmRateDen /
+                 (uint32_t)chn->attr.outFrmRateNum;
+        if (p1_gap_last_us[channel] &&
+            t41_frame_is_stale(now_us - p1_gap_last_us[channel] -
+                               (int64_t)chn->buffer_count * iv, iv))
+            flush_from_us = now_us;
+        unlock_p1();
+    }
+#endif
 
 #if defined(PLATFORM_T41) || defined(PLATFORM_T40)
 again:
@@ -2747,7 +2785,8 @@ again:
      * t41_frame_is_stale limit therefore completed more than the limit ago
      * (stream kept alive without a consumer): requeue it, at most one pass
      * over the queue.  A requeued buffer is fresh again (stamp = now). */
-    if (stale_drops < chn->buffer_count && buffer->queued_us) {
+    if ((stale_drops < 2u * chn->buffer_count || young_drops < 16u) &&
+        buffer->queued_us) {
         struct timespec raw;
         int64_t now_us;
         uint32_t interval_us = 33333u;
@@ -2757,8 +2796,21 @@ again:
         if (chn->attr.outFrmRateNum > 0 && chn->attr.outFrmRateDen > 0)
             interval_us = 1000000u * (uint32_t)chn->attr.outFrmRateDen /
                           (uint32_t)chn->attr.outFrmRateNum;
-        if (t40_buffer_is_stale(now_us, buffer->queued_us,
-                                chn->buffer_count, interval_us)) {
+        last_q_ago_ms = (now_us - buffer->queued_us) / 1000;
+        /* #168: after a DisableChn/EnableChn cycle the open driver handed
+         * back, right after the stale ones were requeued, a buffer queued
+         * 0 ms earlier (agg57 b-cycle.syslog) with the old picture: its
+         * done entry was already in the driver's completion ring.  A buffer
+         * cannot hold a frame completed less than 3 ms after its own QBUF
+         * (steady state: tens of ms, ring of >= 2 behind it): requeue it
+         * and take the next entry, at most 16 times per call. */
+        young = now_us - buffer->queued_us < 3000 && young_drops < 16u;
+        if (young ||
+            (stale_drops < chn->buffer_count &&
+             t40_buffer_is_stale(now_us, buffer->queued_us,
+                                 chn->buffer_count, interval_us)) ||
+            (stale_drops < 2u * chn->buffer_count && flush_from_us &&
+             buffer->queued_us < flush_from_us)) {
             uint32_t qwords[TISP_BUFFER_WORDS];
 
             fill_qbuf(qwords, index, buffer->physical, buffer->size);
@@ -2766,8 +2818,14 @@ again:
                 int64_t queued_ago_ms = (now_us - buffer->queued_us) / 1000;
 
                 p1_mark_queued(buffer);
-                stale_drops++;
-                if (stale_drops == 1u)
+                if (young) {
+                    if (young_drops++ == 0)
+                        syslog(LOG_INFO, "openimp-p1: chn%d: buffer returned "
+                               "%lld ms after its QBUF, requeued", channel,
+                               (long long)queued_ago_ms);
+                } else
+                    stale_drops++;
+                if (stale_drops == 1u && !young)
                     syslog(LOG_INFO, "openimp-p1: chn%d: dropped stale "
                            "capture buffers (queued %lld ms ago)", channel,
                            (long long)queued_ago_ms);
@@ -2775,6 +2833,17 @@ again:
                 goto again;
             }
         }
+    }
+    if (!p1_in_ivs_feeder) {
+        struct timespec rawt;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &rawt);
+        p1_gap_last_us[channel] = (int64_t)rawt.tv_sec * 1000000 +
+                                  rawt.tv_nsec / 1000;
+        if (flush_from_us)
+            syslog(LOG_INFO, "openimp-p1: chn%d: first frame after a gap: "
+                   "%u buffers dropped, returned buffer queued %lld ms ago",
+                   channel, stale_drops, (long long)last_q_ago_ms);
     }
 #endif
     buffer->queued = 0;
