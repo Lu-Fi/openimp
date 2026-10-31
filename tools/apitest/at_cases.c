@@ -109,6 +109,23 @@ static Fst recover(double y0, int *ms)
     return s;
 }
 
+/* wait (up to 30 s) until the mean luma of ch1 is steady (two consecutive readings 1 s apart within 1.5 + 1 %); the cases that run
+ * right after a brightness case (stalesnap) otherwise start while the picture still settles (agg57: Y 240 -> 182 -> 129 inside one case,
+ * #169); returns the steady reading, *settled = 0 if it never was */
+static Fst settle_pic(int *settled)
+{
+    Fst s = fst(800), p;
+    int t;
+
+    *settled = 0;
+    for (t = 0; t < 30; t++) {
+        p = s;
+        s = fst(1000);
+        if (s.ok && p.ok && dabs(s.y - p.y) < 1.5 + 0.01 * p.y) { *settled = 1; break; }
+    }
+    return s;
+}
+
 /* verdict line: PASS (effect measured) or PASS "rt:" (call + readback only) */
 #define RTMSG(eff) ((eff) ? "" : "rt: ")
 
@@ -2768,10 +2785,10 @@ static void cs_scalerlv_t40(void)
 {
     NEED(IMP_ISP_SetScalerLv) {
         G(IMPISPScalerLvAttr, a);
-        int r1, r2, r3, ms;
+        int r1, r2, r3, ms, settled;
         Fst lo, hi, back, base;
 
-        base = fst(800);
+        base = settle_pic(&settled);
         a->chx = 1; a->mode = IMPISP_SCALER_FITTING_CRUVE; a->level = 0;
         r1 = IMP_ISP_SetScalerLv(IMPVI_MAIN, a); lo = fst(1200);
         a->level = 128;
@@ -2779,9 +2796,11 @@ static void cs_scalerlv_t40(void)
         a->level = 64;
         r3 = IMP_ISP_SetScalerLv(IMPVI_MAIN, a); back = recover(base.y, &ms);
         {
-            int eff = lo.ok && hi.ok && dabs(lo.h - hi.h) > 0.05;
+            /* the detail energy only counts as an effect when the luma did not move between the two readings (it scales with the brightness) */
+            int steady = lo.ok && hi.ok && dabs(lo.y - hi.y) < 3 + 0.03 * base.y;
+            int eff = steady && dabs(lo.h - hi.h) > 0.05;
             rep(FN(IMP_ISP_SetScalerLv), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && lo.ok && hi.ok && lo.y > 5 && hi.y > 5 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
-                "%sch1 level 0/128/64 accepted, detail H %.3f at 0 vs %.3f at 128, Y %.1f/%.1f, picture %s alive (Y %.1f)", RTMSG(eff), lo.h, hi.h, lo.y, hi.y, ms >= 0 ? "" : "NOT", back.y);
+                "%sch1 level 0/128/64 accepted, detail H %.3f at 0 vs %.3f at 128, Y %.1f/%.1f (base %.1f%s), picture %s alive (Y %.1f)", RTMSG(eff), lo.h, hi.h, lo.y, hi.y, base.y, settled ? "" : ", never settled", ms >= 0 ? "" : "NOT", back.y);
         }
         gfree(a);
     }
