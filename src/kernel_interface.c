@@ -419,8 +419,13 @@ int fs_set_format(int fd, fs_format_t *fmt) {
         }
     }
     if (ioctl(fd, VIDIOC_SET_CROP, &crop) < 0) {
-        fprintf(stderr, "[KernelIF] T20 VIDIOC_S_CROP failed: %s\n", strerror(errno));
-        return -1;
+        /* Kernels without the legacy crop ioctls (7.x) answer ENOTTY; with no
+         * crop requested the frame source simply stays at its full-frame
+         * default.  A requested crop that cannot be applied still fails. */
+        if (errno != ENOTTY || fmt->crop_enable) {
+            fprintf(stderr, "[KernelIF] T20 VIDIOC_S_CROP failed: %s\n", strerror(errno));
+            return -1;
+        }
     }
     /* The driver answers GET_SCALERCAP with EPERM for a channel without a
      * usable scaler (ISP bypass, YUV sensors, an FR channel) and would then
