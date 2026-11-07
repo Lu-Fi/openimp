@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-07, T30: Temper (3D denoise) on like the vendor (#202, branch `claude/t30-gaps-1107`; device check pending)
+
+- Vendor parity, not beyond vendor (user decision 2026-11-07 "on like the vendor"; the earlier "beyond vendor" note was wrong): the vendor libimp 1.0.5 runs Temper AUTO on the T30X (stock ISP 0x2c0 = 0x83, "do not have /etc/sensor/ncu_sc4236.bin, try to use temper"). OpenIMP T30 now does the same: AddSensor keeps the S_INPUT result (vi_max_width << 16 | height), EnableSensor (vendor 0xd3fe4) allocates the "ncubuf" Temper buffer of vi_max_width^2 * 4 bytes, EnableTuning (0xd76f4 tail) sends it with tuning 0x8000084 and calls SetTemperDnsAttr({AUTO}); DisableSensor frees it. Without the buffer (EnableTuning before EnableSensor) the Set*Temper* calls are no-ops returning 0, like the vendor flag. Better than vendor: a failed allocation leaves Temper off instead of failing EnableSensor; OpenIMP has no NCU engine, so an NCU bin is reported and Temper is used.
+- `IMP_ISP_Tuning_Set/GetTemperDnsAttr` (vendor 0xd6520 / 0xd66f8) send / read tuning 0x8000083 (were cache-only); `SetTemperDnsCtl` uses the same control (the vendor's 0x8000167 / 0x8000082 have no arm in the open driver). Host test `tests/t30/isp_gap_test_t30` (fake driver: SET/GET 0x8000083 reach it).
+- open-tx-isp (same branch): the 0x8000083 arm writes the SDK system-table items, new get arm.
+
 ## 2026-11-07, T30: apitest CSC user matrix and RawDRC input trace (#202 review, branch `claude/t30-gaps-1107`; no library change)
 
 - `csc-4-user` (tools/apitest/at_picture.c): the old user matrix was preset 0 with rows U/V sign-flipped; the driver normalises the signs (`tx_isp_csc_params`), so it programmed preset 0 and read back `mode 0` (T30X b26/b27/b29): a test artefact, not a driver fault. New matrix `0x100 0x200 0x60 | -0xa0 -0x140 0x1e0 | 0x1e0 -0x190 -0x50`, offsets 0/0x80, clip 16..235 / 16..240 (no preset equals it; grey stays grey, luma ~84 %); the case now fails unless the read-back is mode 4, the info line counts the equal words (`rb n/15`).

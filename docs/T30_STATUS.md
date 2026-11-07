@@ -113,7 +113,7 @@ any of the applications using the IMP API that were checked.
   `Encoder_Get/SetChangeRef`, `Get/SetFisheyeEnableStatus`,
   `SetChnHSkipBlackEnhance`, `Get/SetChnHSkip` (the IDR period is not handed
   to the Helix encoder), `SetPoolSize`, `SetChnRcTrigLevel`,
-  `ISP_Tuning_SetTemperDnsCtl`, `SetAFThreshold`.
+  `SetAFThreshold` (`ISP_Tuning_SetTemperDnsCtl` reaches the driver since 2026-11-07, see Temper below).
 - Still missing on 2026-10-10 (17 names): `Decoder_*` (8) and `Encoder_Get/SetChnCrop`,
   `ISP_Tuning_SetISPLDC` (need a T30 device or driver work);
   `Encoder_Enable/DisableAllNCUDenoise`, `PadFrame`, `SetPadFrameAttr`,
@@ -218,3 +218,15 @@ kit in `tools/testkit/t30/` (see its `README.md`) runs the vendor API test
 against the vendor and the OpenIMP `libimp.so`, a short H.264 encode, and packs
 the logs, `dmesg` and `/proc/jz/isp/isp-m0` into one tar.gz for you to review
 and send. It restores the streamer and changes no configuration.
+
+## Temper (3D denoise): vendor parity (2026-11-07, branch `claude/t30-gaps-1107`, device check pending)
+
+Not beyond vendor: the vendor libimp 1.0.5 runs Temper AUTO on the T30X (ISP 0x2c0 = 0x83 on the stock stack,
+"do not have /etc/sensor/ncu_sc4236.bin, try to use temper"). Vendor flow: EnableSensor (0xd3fe4) without an
+NCU bin -> ncu mode 2 and an "ncubuf" of vi_max_width^2 * 4 bytes; EnableTuning (0xd76f4) tail -> tuning
+0x8000084 (buffer phys) and SetTemperDnsAttr({AUTO}) -> tuning 0x8000083; mode 0 -> Set*Temper* are no-ops.
+OpenIMP T30 does the same (no NCU engine: an NCU bin is reported and Temper is used); a failed buffer
+allocation leaves Temper off instead of failing EnableSensor. `Set/GetTemperDnsAttr` send/read 0x8000083;
+`SetTemperDnsCtl` goes through the same control (the open driver has no 0x8000167/0x8000082 arm). The open
+driver's 0x8000083 arm now writes the SDK system-table items (manual flag 11, target 46, max/min 47/48) and
+has a get arm (SDK apical_isp_temper_dns_g_attr).

@@ -116,6 +116,24 @@ static IMPISPTemperDenoiseAttr tseries_temper_dns = {
 };
 #endif
 
+#if defined(PLATFORM_T30)
+/*
+ * T30 Temper (3D denoise), vendor libimp 1.0.5 (#202):
+ *  - AddSensor keeps the S_INPUT result vi_max_width << 16 | vi_max_height (vendor globals +0x1514/+0x1510).
+ *  - EnableSensor (0xd3fe4): without /etc/sensor/ncu_<sensor>.bin ("try to use temper") ncu mode 2 and an
+ *    IMP_Alloc "ncubuf" of vi_max_width^2 * 4 bytes at ISPDevice+0xac; mode kept at ISPDevice+0xb0.
+ *  - EnableTuning (0xd76f4) tail: mode 0 -> temper flag (+0x15cc) = 1, Set*Temper* become no-ops; mode 1/2 ->
+ *    tuning SET 0x8000084 (TEMPER_BUF, ncubuf phys) then SetTemperDnsAttr({AUTO}).
+ *  - SetTemperDnsAttr (0xd6520) / GetTemperDnsAttr (0xd66f8): tuning SET/GET 0x8000083 with the 8-byte attr.
+ * OpenIMP has no NCU engine: an ncu bin is reported and Temper is used anyway (the vendor would run the NCU).
+ */
+#define TSERIES_T30_CID_TEMPER_ATTR 0x8000083
+#define TSERIES_T30_CID_TEMPER_BUF  0x8000084
+static uint32_t tseries_t30_vi_max_wh;   /* AddSensor S_INPUT result */
+static int tseries_t30_ncu_mode;         /* vendor ISPDevice+0xb0: 0 none, 2 temper */
+static uint8_t tseries_t30_temper_off;   /* vendor +0x15cc: no temper buffer, Set*Temper* no-ops */
+#endif
+
 int IMP_ISP_Tuning_SetContrast_internal(uint32_t arg1, int32_t arg2);
 int IMP_ISP_Tuning_SetSharpness_internal(uint32_t arg1, int32_t arg2);
 
@@ -3241,6 +3259,64 @@ int IMP_ISP_Tuning_GetSinterDnsAttr(IMPISPSinterDenoiseAttr *attribute)
     return 0;
 }
 
+#if defined(PLATFORM_T30)
+/* T30 1.0.5 SetTemperDnsAttr (0xd6520): tuning SET 0x8000083 with the caller's
+ * 8-byte attribute (the driver checks the mode), then the cache, also when the
+ * ioctl failed; a no-op returning 0 while the temper flag is set. */
+int IMP_ISP_Tuning_SetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
+{
+    ISPDevice *isp;
+    int result;
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL || attribute == NULL ||
+        isp->tuning_state != 2)
+        return -1;
+    if (tseries_t30_temper_off) {
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+            "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x620,
+            "IMP_ISP_Tuning_SetTemperDnsAttr", "%s(%d): temper is not enabled\n",
+            "IMP_ISP_Tuning_SetTemperDnsAttr", 0x620);
+        return 0;
+    }
+    result = tseries_tuning_set_ptr(TSERIES_T30_CID_TEMPER_ATTR, attribute);
+    if (result != 0)
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+            "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x629,
+            "IMP_ISP_Tuning_SetTemperDnsAttr", "%s(%d): VIDIOC_S_CTRL error\n",
+            "IMP_ISP_Tuning_SetTemperDnsAttr", 0x629);
+    tseries_temper_dns = *attribute;
+    return result;
+}
+
+/* T30 1.0.5 GetTemperDnsAttr (0xd66f8): tuning GET 0x8000083 (driver: mode from the
+ * temper bypass bit and the manual flag, strength = threshold target). */
+int IMP_ISP_Tuning_GetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
+{
+    ISPDevice *isp;
+
+    if (tseries_get_isp(&isp) != 0 || isp->tuning == NULL || attribute == NULL ||
+        isp->tuning_state != 2)
+        return -1;
+    if (tseries_tuning_get_ptr(TSERIES_T30_CID_TEMPER_ATTR, attribute) != 0) {
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+            "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x643,
+            "IMP_ISP_Tuning_GetTemperDnsAttr", "%s(%d): VIDIOC_G_CTRL error\n",
+            "IMP_ISP_Tuning_GetTemperDnsAttr", 0x643);
+        return -1;
+    }
+    tseries_temper_dns = *attribute;
+    return 0;
+}
+
+/* T30 1.0.5 SetTemperDnsCtl (0xd637c) changes the mode with V4L2 S_CTRL 0x8000167 and a manual
+ * strength with tuning 0x8000082; the open T30 driver has neither arm, so the run-time call goes
+ * through the Attr path (0x8000083: same register sequence plus the system-table items). No-op
+ * returning 0 while the temper flag is set, like the vendor. */
+int IMP_ISP_Tuning_SetTemperDnsCtl(IMPISPTemperDenoiseAttr *attribute)
+{
+    return IMP_ISP_Tuning_SetTemperDnsAttr(attribute);
+}
+#else
 int IMP_ISP_Tuning_SetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
 {
     if (!attribute || attribute->type > IMPISP_TEMPER_MANUAL)
@@ -3255,15 +3331,6 @@ int IMP_ISP_Tuning_GetTemperDnsAttr(IMPISPTemperDenoiseAttr *attribute)
         return -1;
     *attribute = tseries_temper_dns;
     return 0;
-}
-
-#if defined(PLATFORM_T30)
-/* T30 1.0.5 SetTemperDnsCtl (0xc637c; same code as T21 1.0.33): the run-time
- * variant of SetTemperDnsAttr.  Like the Attr call of this build it only
- * keeps the value (no driver control), so both share the cache. */
-int IMP_ISP_Tuning_SetTemperDnsCtl(IMPISPTemperDenoiseAttr *attribute)
-{
-    return IMP_ISP_Tuning_SetTemperDnsAttr(attribute);
 }
 #endif
 #endif /* PLATFORM_T21 && !PLATFORM_T20 */
@@ -4971,6 +5038,62 @@ int IMP_ISP_SetAwbAlgoFunc_close(void)
     return 0;
 }
 
+#if defined(PLATFORM_T30)
+int32_t IMP_Alloc(void *info, int32_t size, const char *name);
+/* vendor EnableSensor 0xd3fe4 ncu block, temper branch (mode 2): the Temper frame buffer.
+ * A failed allocation leaves Temper off (vendor: EnableSensor fails). */
+static void tseries_t30_temper_alloc(ISPDevice *isp)
+{
+    uint8_t *isp_b = (uint8_t *)isp;
+    uint32_t w = tseries_t30_vi_max_wh >> 16;
+    char path[64];
+    void *buf;
+
+    tseries_t30_ncu_mode = 0;
+    if (*(void **)(isp_b + 0xac) != NULL) {
+        tseries_t30_ncu_mode = 2;
+        return;
+    }
+    snprintf(path, sizeof(path), "/etc/sensor/ncu_%s.bin", (const char *)(isp_b + 0x28));
+    if (access(path, R_OK) != 0)
+        printf("warn: do not have %s, try to use temper\n", path);
+    else
+        printf("warn: %s found, but OpenIMP has no NCU: use temper\n", path);
+    if (w == 0) {
+        printf("error(%s,%d): no sensor width, temper off\n", "IMP_ISP_EnableSensor", __LINE__);
+        return;
+    }
+    buf = malloc(0x94);
+    if (buf == NULL) {
+        printf("error(%s,%d): maloc err\n", "IMP_ISP_EnableSensor", __LINE__);
+        return;
+    }
+    if (IMP_Alloc(buf, (int32_t)(w * w * 4), "ncubuf") != 0) {
+        printf("error(%s,%d): IMP_Alloc %u bytes, temper off\n", "IMP_ISP_EnableSensor", __LINE__,
+               (unsigned)(w * w * 4));
+        free(buf);
+        return;
+    }
+    *(void **)(isp_b + 0xac) = buf;
+    tseries_t30_ncu_mode = 2;
+    kmsg_trace("libimp/ISP: T30 temper buffer %u bytes phys=0x%x\n", (unsigned)(w * w * 4),
+               (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
+}
+
+/* vendor DisableSensor: IMP_Free of the ncubuf after stream off */
+static void tseries_t30_temper_free(ISPDevice *isp)
+{
+    uint8_t *isp_b = (uint8_t *)isp;
+    void *buf = *(void **)(isp_b + 0xac);
+
+    if (buf != NULL) {
+        DMA_FreePhys(((const IMPDMABufferInfo *)buf)->phys_addr);
+        free(buf);
+        *(void **)(isp_b + 0xac) = NULL;
+    }
+}
+#endif
+
 int IMP_ISP_EnableSensor(void)
 {
     ISPDevice *isp;
@@ -5038,6 +5161,9 @@ int IMP_ISP_EnableSensor(void)
     }
     kmsg_trace("libimp/ISP: EnableSensor ENABLE_LINKS ok\n");
 
+#if defined(PLATFORM_T30)
+    tseries_t30_temper_alloc(isp);
+#endif
     isp->opened += 2;
     return 0;
 }
@@ -5112,6 +5238,9 @@ int IMP_ISP_DisableSensor(void)
         return -1;
     }
     kmsg_trace("libimp/ISP: DisableSensor DISABLE_SENSOR ok\n");
+#if defined(PLATFORM_T30)
+    tseries_t30_temper_free(isp);
+#endif
 
     tseries_isp_stream_started = 0;
     tseries_bypass_link_setup_done = 0;
@@ -5221,6 +5350,9 @@ int IMP_ISP_AddSensor(IMPSensorInfo *pinfo)
             "IMP_ISP_AddSensor", "Failed to select sensor[%s]!\n", name);
         return -1;
     }
+#if defined(PLATFORM_T30)
+    tseries_t30_vi_max_wh = (uint32_t)sensor_idx;   /* vi_max_width << 16 | vi_max_height */
+#endif
 
     /* T23's OEM ISPDevice retains the complete 0x54-byte sensor record. */
 #if defined(PLATFORM_T23)
@@ -5571,6 +5703,29 @@ int IMP_ISP_EnableTuning(void)
 #endif
 #if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
     openimp_t31_isp_tuning_enabled();
+#endif
+#if defined(PLATFORM_T30)
+    /* vendor EnableTuning tail: Temper buffer + Temper AUTO (failures logged, tuning stays up) */
+    tseries_t30_temper_off = 0;
+    if (tseries_t30_ncu_mode == 0) {
+        tseries_t30_temper_off = 1;
+    } else if (tseries_t30_ncu_mode == 1 || tseries_t30_ncu_mode == 2) {
+        const IMPDMABufferInfo *nb = *(const IMPDMABufferInfo **)((uint8_t *)isp + 0xac);
+
+        if (nb == NULL ||
+            tseries_tuning_set_val(TSERIES_T30_CID_TEMPER_BUF, (int32_t)nb->phys_addr) != 0) {
+            printf("err: %s(%d): temper buffer not set, temper off\n", "IMP_ISP_EnableTuning", 0x487);
+        } else {
+            IMPISPTemperDenoiseAttr ta;
+
+            memset(&ta, 0, sizeof(ta));
+            ta.type = IMPISP_TEMPER_AUTO;
+            if (IMP_ISP_Tuning_SetTemperDnsAttr(&ta) != 0)
+                imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+                    "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x48f,
+                    "IMP_ISP_EnableTuning", "IMP_ISP_Tuning_SetTemperDnsAttr failed\n");
+        }
+    }
 #endif
     if (tseries_start_tuning_worker() != 0)
         kmsg_trace("libimp/ISP: failed to start gain/contrast tuning worker\n");

@@ -55,6 +55,9 @@ static int wdr_ret;                       /* errno for the WDR control */
 static int32_t last_tuning_sub, last_tuning_val;
 static int tbl_calls, tbl_set_table;
 static uint16_t tbl_last[3][2];
+#if defined(PLATFORM_T30)
+static int temper_calls, temper_dir;
+#endif
 
 int __real_ioctl(int fd, unsigned long request, ...);
 int __wrap_ioctl(int fd, unsigned long request, ...)
@@ -128,6 +131,21 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
             }
             return 0;
         }
+#if defined(PLATFORM_T30)
+        if (w[1] == 0x8000083) {        /* TEMPER_ATTR: 8-byte {mode, strength} by pointer */
+            static unsigned char temper[8];
+            void *pp;
+
+            memcpy(&pp, (char *)arg + 8, sizeof(pp));
+            temper_calls++;
+            temper_dir = w[0];
+            if (w[0] == 0)
+                memcpy(temper, pp, sizeof(temper));
+            else
+                memcpy(pp, temper, sizeof(temper));
+            return 0;
+        }
+#endif
         t_calls++;
         last_tuning_sub = w[1];
         last_tuning_val = w[2];
@@ -242,12 +260,20 @@ int main(void)
         isp.tuning = NULL;
         CHECK(IMP_ISP_Tuning_SetAFThreshold(1) == -1);
         isp.tuning = &isp;
-        /* temper control shares the cache of SetTemperDnsAttr */
-        CHECK(IMP_ISP_Tuning_SetTemperDnsCtl(&tn) == 0);
+        /* Temper attr (vendor 1.0.5 0xd6520 / 0xd66f8): tuning SET/GET 0x8000083 with the
+         * 8-byte attribute; SetTemperDnsCtl goes through the same control (#202) */
+        temper_calls = 0;
+        CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(&tn) == 0 && temper_calls == 1 && temper_dir == 0);
+        tn.temper_strength = 99;
+        CHECK(IMP_ISP_Tuning_SetTemperDnsCtl(&tn) == 0 && temper_calls == 2 && temper_dir == 0);
         memset(&tg, 0, sizeof(tg));
-        CHECK(IMP_ISP_Tuning_GetTemperDnsAttr(&tg) == 0 &&
-              tg.type == IMPISP_TEMPER_MANUAL && tg.temper_strength == 77);
+        CHECK(IMP_ISP_Tuning_GetTemperDnsAttr(&tg) == 0 && temper_calls == 3 && temper_dir == 1 &&
+              tg.type == IMPISP_TEMPER_MANUAL && tg.temper_strength == 99);
         CHECK(IMP_ISP_Tuning_SetTemperDnsCtl(NULL) == -1);
+        CHECK(IMP_ISP_Tuning_GetTemperDnsAttr(NULL) == -1);
+        isp.tuning_state = 1;
+        CHECK(IMP_ISP_Tuning_SetTemperDnsAttr(&tn) == -1 && temper_calls == 3);
+        isp.tuning_state = 2;
     }
     {
         /* Sinter/Temper strength (T30 1.0.5 0xdb0dc / 0xdaff0): the stock libimp
