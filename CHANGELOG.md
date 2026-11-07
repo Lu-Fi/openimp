@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-07, T30: apitest CSC user matrix and RawDRC input trace (#202 review, branch `claude/t30-gaps-1107`; no library change)
+
+- `csc-4-user` (tools/apitest/at_picture.c): the old user matrix was preset 0 with rows U/V sign-flipped; the driver normalises the signs (`tx_isp_csc_params`), so it programmed preset 0 and read back `mode 0` (T30X b26/b27/b29): a test artefact, not a driver fault. New matrix `0x100 0x200 0x60 | -0xa0 -0x140 0x1e0 | 0x1e0 -0x190 -0x50`, offsets 0/0x80, clip 16..235 / 16..240 (no preset equals it; grey stays grey, luma ~84 %); the case now fails unless the read-back is mode 4, the info line counts the equal words (`rb n/15`).
+- T30 `rawdrc-*`: `[DRC]` lines print `GetEVAttr` + `GetAeHist` + `GetRawDRC` before the set and 0.5/1.0/1.5 s after it (same line on the vendor and the open stack): the unlimit strength gap (open 221-247, vendor 149-154) follows the AE inputs, the DRC code is vendor-equal (review `audit/t30/FABLE_T30_GAPS.md`). Device run: `audit/t30/gaps/check.sh` (T30X).
+- The T30 AWB scene presets fix is in open-tx-isp (same branch name): OpenIMP already sends the vendor WB attribute.
+
 ## 2026-11-07: RC3 `v2026.11.07-rc3` released; docs brought to the released state (doc audit)
 
 - RC3 is tagged `v2026.11.07-rc3` in OpenIMP and open-tx-isp and released on GitHub (Lu-Fi and opensensor); RC3 gate green (2017 of 2017 streamer-function cells, 0 blocking issues). Gate SoCs: T10, T20, T21, T23, T30, T31, T40, T41; T32/T33 planned (QEMU).

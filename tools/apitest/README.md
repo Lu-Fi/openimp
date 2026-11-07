@@ -103,6 +103,13 @@ on T40 `t40_devtest` (phases `T40_MASK`, default `cdff`), then removes `/tmp/at`
 writes `result.json` (per evidence function key: PASS / FAIL / PART / SKIP / NA with the detail line). It refuses to run
 while `audit/ab-t41/USER_IN_CELLAR` exists. Not done, by design: speaker/AO/AEC, flash, reboot, module load/unload, light.
 
+Picture cases `csc-0..3` / `csc-4-user` (OpenIMP CSC extension): the user matrix of `csc-4-user` differs from every preset
+(the driver normalises coefficient signs to the preset pattern, so a sign-flipped preset read back as that preset), values are
+multiples of 4 (exact through the Q8 Apical table); the case fails unless the read-back is mode 4 and reports `rb n/15` (words
+equal to the set matrix). T30 `rawdrc-*`: `[DRC]` lines with `GetEVAttr` (ev, expr_us, ev_log2, again, dgain, gain_log2),
+`GetAeHist` (5 bins, thresholds) and `GetRawDRC` before the set and 0.5/1.0/1.5 s after it, for the open-vs-vendor comparison
+of the Iridix strength inputs (#202).
+
 Register references per picture case: `IMGFX_HOOK=cmd` runs `cmd` after each case has settled, with the case name in
 `IMGFX_CASE`. `tools/regpeek.c` (static build: `mipsel-linux-gcc -O2 -static -o regpeek tools/regpeek.c`) reads 32-bit
 registers through `/dev/mem` and prints one `[REG] <case> off=value ...` line, for example on T30
