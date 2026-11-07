@@ -7,4 +7,4 @@ the pass/fail checks, the deviations and the pictures; names are `<vendor>-<soc>
 
 | SoC | camera | date | lamps | result |
 |---|---|---|---|---|
-| T10 | Secuplug SP1, jxh42 | 2026-11-07 | 3000 K fair pass + 5000 K colour pass | [25 pass / 3 differ](secuplug-t10-jxh42-2026-11-07.html) |
+| T10 | Secuplug SP1, jxh42 | 2026-11-07 | 3000 K fair pass + 5000 K colour pass + day/night D1/D4 | [28 pass / 3 differ](secuplug-t10-jxh42-2026-11-07.html) |

@@ -13,7 +13,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-07: light-box protocol T10, open vs vendor (#230)
 
 - New folder `docs/lightbox/`: one self-contained HTML measurement protocol per camera and run (pictures from the light box only). First one: `secuplug-t10-jxh42-2026-11-07.html` (T10, jxh42), fair pass at 3000 K plus colour pass at 5000 K, both stacks on the same camera one after the other.
-- Result: 25 checks pass, 3 differ. Day defaults are equal (frame luma 91.7 vs 92.6, NV12 temporal noise 1.25 vs 1.24); at matched exposure 4x and 8x the open stack is equal in brightness and slightly lower in noise; colour at 5000 K: open-vs-vendor dE00 mean 0.19 (dE00 to the chart 9.41 vs 9.40); CPU of the streaming application 2.6 % open vs 7.4 % vendor.
+- Result: 28 checks pass, 3 differ (day/night: dark start goes to night in 60 s, lamps on -> day and lamps off -> night within 180 s). Day defaults are equal (frame luma 91.7 vs 92.6, NV12 temporal noise 1.25 vs 1.24); at matched exposure 4x and 8x the open stack is equal in brightness and slightly lower in noise; colour at 5000 K: open-vs-vendor dE00 mean 0.19 (dE00 to the chart 9.41 vs 9.40); CPU of the streaming application 2.6 % open vs 7.4 % vendor.
 - Differences: the vendor is 30 % darker at the 2x gain step only (open is linear over 2x/4x/8x); night: at identical exposure the vendor tone curve is ~9 % brighter, with default AE the open stack is brighter (longer integration time) and has less noise. Low priority, tracked in #230.
 - Report naming is vendor-soc-sensor of the camera. The 3000 K pass had the chart off-centre (same framing on both stacks); the colour pass was centred.
 

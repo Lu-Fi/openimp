@@ -13,20 +13,29 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 figcaption{font-size:12px;color:var(--mut)}code{font-size:12px}
 </style></head><body>
 <h1>Light-box protocol: T10 secuplug-t10-jxh42, 2026-11-07</h1>
-<p class="mut">OpenIMP #230 light-box test, generated 2026-11-07 23:20 by lightbox_report.py from run-1107-v2. Open vs vendor on one camera.</p>
-<div class="sum"><h2 style="margin-top:.3em">Summary</h2><p>Camera secuplug-t10-jxh42 (T10) in the light box with the SpyderCheckr 24 chart, lamps 3000 (fair pass) + 5000 (colour pass) K. Both stacks ran on the same camera, the same chart position and the same light: the <b>open</b> stack (open-tx-isp + OpenIMP + streamer) and the <b>vendor</b> stack (Ingenic ISP module + vendor libimp + streamer built for it), one after the other.</p><p>Result: <b>25 pass, 3 fail</b>, 1 info/warn, 10 planned checks not run in these runs.</p><p>Failed checks: frame luma p1_night (AE target, default comp 128) (open 87.2, vendor 76.0; pass = open within +-10 % of vendor); p2_a frame luma at the same exposure (open 70.8, vendor 49.4; pass = within +-3 %); p2_night frame luma at the same exposure (open 68.6, vendor 74.8; pass = within +-3 %).</p><p>Passed: frame luma p1_day (AE target, default comp 128); chart grey RG (AWB, 1.0 = neutral); chart grey BG (AWB, 1.0 = neutral); p2_a NV12 temporal noise Y (Y 32..224); p2_a NV12 temporal noise U; p2_a NV12 temporal noise V; p2_b frame luma at the same exposure; p2_b NV12 temporal noise Y (Y 32..224); p2_b NV12 temporal noise U; p2_b NV12 temporal noise V; ...</p><p>How to read: "pass" means the open stack is equal to or better than the vendor stack within the tolerance named in each row; matched-exposure rows (A2) compare the same integration time and gain on both stacks, read back from the ISP.</p></div>
+<p class="mut">OpenIMP #230 light-box test, generated 2026-11-07 23:52 by lightbox_report.py from run-1107-v2, run-1107-d1d4. Open vs vendor on one camera.</p>
+<div class="sum"><h2 style="margin-top:.3em">Summary</h2><p>Camera secuplug-t10-jxh42 (T10) in the light box with the SpyderCheckr 24 chart, lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K. Both stacks ran on the same camera, the same chart position and the same light: the <b>open</b> stack (open-tx-isp + OpenIMP + streamer) and the <b>vendor</b> stack (Ingenic ISP module + vendor libimp + streamer built for it), one after the other.</p><p>Result: <b>28 pass, 3 fail</b>, 1 info/warn, 9 planned checks not run in these runs.</p><p>Failed checks: frame luma p1_night (AE target, default comp 128) (open 87.2, vendor 76.0; pass = open within +-10 % of vendor); p2_a frame luma at the same exposure (open 70.8, vendor 49.4; pass = within +-3 %); p2_night frame luma at the same exposure (open 68.6, vendor 74.8; pass = within +-3 %).</p><p>Passed: frame luma p1_day (AE target, default comp 128); chart grey RG (AWB, 1.0 = neutral); chart grey BG (AWB, 1.0 = neutral); p2_a NV12 temporal noise Y (Y 32..224); p2_a NV12 temporal noise U; p2_a NV12 temporal noise V; p2_b frame luma at the same exposure; p2_b NV12 temporal noise Y (Y 32..224); p2_b NV12 temporal noise U; p2_b NV12 temporal noise V; ...</p><p>How to read: "pass" means the open stack is equal to or better than the vendor stack within the tolerance named in each row; matched-exposure rows (A2) compare the same integration time and gain on both stacks, read back from the ISP.</p></div>
 <h2>Protocol</h2><table><tr><th>item</th><th>value</th></tr>
 <tr><td>camera</td><td>secuplug-t10-jxh42 (T10, sensor jxh42), position: light box, chart centred, camera at the card centre (fixed, no PTZ)</td></tr>
-<tr><td>run dirs</td><td>run-1107-v2</td></tr>
+<tr><td>run dirs</td><td>run-1107-v2, run-1107-d1d4</td></tr>
 <tr><td>open stack time (run-1107-v2)</td><td>2026-11-07 22:01:52 .. 22:17:18</td></tr>
+<tr><td>open stack time (run-1107-d1d4)</td><td>2026-11-07 23:34:09 .. 23:52:05</td></tr>
 <tr><td>vendor stack time (run-1107-v2)</td><td>2026-11-07 22:17:40 .. 22:45:51</td></tr>
-<tr><td>lamps</td><td>CT 3000 (fair pass) + 5000 (colour pass) K (2 x DiCUNO E14 5 W CRI 98 per CT, DC LED)</td></tr>
+<tr><td>lamps</td><td>CT 3000 (fair pass) + 5000 (colour pass, D1/D4) K (2 x DiCUNO E14 5 W CRI 98 per CT, DC LED)</td></tr>
 <tr><td>lamp marker</td><td>22:13:47 NEED_LAMPS_OFF_1 (run-1107-v2)</td></tr>
 <tr><td>lamp marker</td><td>22:14:05 LAMPS_OFF_1 (run-1107-v2)</td></tr>
 <tr><td>lamp marker</td><td>22:17:40 NEED_LAMPS_ON (run-1107-v2)</td></tr>
 <tr><td>lamp marker</td><td>22:17:59 LAMPS_ON (run-1107-v2)</td></tr>
 <tr><td>lamp marker</td><td>22:41:16 NEED_LAMPS_OFF_2 (run-1107-v2)</td></tr>
 <tr><td>lamp marker</td><td>22:41:29 LAMPS_OFF_2 (run-1107-v2)</td></tr>
+<tr><td>lamp marker</td><td>23:38:16 NEED_LAMPS_OFF_1 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:38:36 LAMPS_OFF_1 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:41:36 NEED_LAMPS_ON_2 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:41:49 LAMPS_ON_2 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:44:51 NEED_LAMPS_OFF_3 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:45:04 LAMPS_OFF_3 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:48:32 NEED_LAMPS_ON_4 (run-1107-d1d4)</td></tr>
+<tr><td>lamp marker</td><td>23:48:45 LAMPS_ON_4 (run-1107-d1d4)</td></tr>
 <tr><td>box temperature</td><td>21.8 C (STALE: thermometer not logged during the run)</td></tr>
 <tr><td>flashed image / build</td><td>secuplug_sp1_t10l_jxh42_mt7601 build=&quot;claude/aperto-port-1107+725a14d, 2026-11-07 19:53:25 UTC&quot;</td></tr>
 <tr><td>open: ko file in /lib/modules (flashed; the loaded ko is under stack pieces) / libimp mapped</td><td>tx_isp_t10 md5=0da5d9d4 libimp=0c0132c8</td></tr>
@@ -43,8 +52,8 @@ figcaption{font-size:12px;color:var(--mut)}code{font-size:12px}
 <h2>Checks (pass/fail)</h2><table><tr><th>section</th><th>check</th><th>setting</th><th>open</th><th>vendor</th><th>verdict</th><th>rule / note</th></tr>
 <tr><td>A1 P1 defaults</td><td>frame luma p1_day (AE target, default comp 128)</td><td>default AE, comp 128</td><td>91.7</td><td>92.6</td><td class="pass">pass</td><td>pass = open within +-10 % of vendor</td></tr>
 <tr><td>A1 P1 defaults</td><td>frame luma p1_night (AE target, default comp 128)</td><td>default AE, comp 128</td><td>87.2</td><td>76.0</td><td class="fail">fail</td><td>pass = open within +-10 % of vendor</td></tr>
-<tr><td>A1 P1 defaults</td><td>chart grey RG (AWB, 1.0 = neutral)</td><td>lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>1.0883</td><td>1.1063</td><td class="pass">pass</td><td>pass = |open - vendor| &lt;= 0.02</td></tr>
-<tr><td>A1 P1 defaults</td><td>chart grey BG (AWB, 1.0 = neutral)</td><td>lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>0.8752</td><td>0.8806</td><td class="pass">pass</td><td>pass = |open - vendor| &lt;= 0.02</td></tr>
+<tr><td>A1 P1 defaults</td><td>chart grey RG (AWB, 1.0 = neutral)</td><td>lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>1.0883</td><td>1.1063</td><td class="pass">pass</td><td>pass = |open - vendor| &lt;= 0.02</td></tr>
+<tr><td>A1 P1 defaults</td><td>chart grey BG (AWB, 1.0 = neutral)</td><td>lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>0.8752</td><td>0.8806</td><td class="pass">pass</td><td>pass = |open - vendor| &lt;= 0.02</td></tr>
 <tr><td>A2 matched exposure</td><td>p2_a frame luma at the same exposure</td><td>IT 351 / AGain 32 / IspDG 0</td><td>70.8</td><td>49.4</td><td class="fail">fail</td><td>pass = within +-3 %</td></tr>
 <tr><td>A2 matched exposure</td><td>p2_a NV12 temporal noise Y (Y 32..224)</td><td>IT 351 / AGain 32 / IspDG 0</td><td>1.200</td><td>1.117</td><td class="pass">pass</td><td>pass = open &lt;= vendor x (1 + 2 x A/A spread 5 %)</td></tr>
 <tr><td>A2 matched exposure</td><td>p2_a NV12 temporal noise U</td><td>IT 351 / AGain 32 / IspDG 0</td><td>0.748</td><td>0.785</td><td class="pass">pass</td><td>pass = open &lt;= vendor x (1 + 2 x A/A spread 9 %)</td></tr>
@@ -60,16 +69,19 @@ figcaption{font-size:12px;color:var(--mut)}code{font-size:12px}
 <tr><td>A2 matched exposure</td><td>p2_night frame luma at the same exposure</td><td>IT 73 / AGain 32 / IspDG 0</td><td>68.6</td><td>74.8</td><td class="fail">fail</td><td>pass = within +-3 %</td></tr>
 <tr><td>A2 matched exposure</td><td>p2_night NV12 temporal noise Y (Y 32..224)</td><td>IT 73 / AGain 32 / IspDG 0</td><td>1.604</td><td>1.753</td><td class="pass">pass</td><td>pass = open &lt;= vendor x (1 + 2 x A/A spread 5 %)</td></tr>
 <tr><td>A2 matched exposure</td><td>A/A repeatability (p2_a vs p2_a2, same point twice)</td><td>IT/gain of p2_a</td><td>Ytemp 0% U 9% V 3%</td><td>Ytemp 0% U 1% V 7%</td><td class="info">info</td><td>relative |a - a2|; &gt; 15 % = the method is noisier than the difference sought</td></tr>
-<tr><td>A3 colour</td><td>p1_day dE00 mean, unclipped patches</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>9.33</td><td>9.31</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
-<tr><td>A3 colour</td><td>p1_day dE00 mean, grey-normalised</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>7.25</td><td>7.22</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
-<tr><td>A3 colour</td><td>p2_a dE00 mean, unclipped patches</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>8.73</td><td>9.24</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
-<tr><td>A3 colour</td><td>p2_a dE00 mean, grey-normalised</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass) K</td><td>7.03</td><td>7.26</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
+<tr><td>A3 colour</td><td>p1_day dE00 mean, unclipped patches</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>9.33</td><td>9.31</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
+<tr><td>A3 colour</td><td>p1_day dE00 mean, grey-normalised</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>7.25</td><td>7.22</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
+<tr><td>A3 colour</td><td>p2_a dE00 mean, unclipped patches</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>8.73</td><td>9.24</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
+<tr><td>A3 colour</td><td>p2_a dE00 mean, grey-normalised</td><td>chart_de.py, lamps 3000 (fair pass) + 5000 (colour pass, D1/D4) K</td><td>7.03</td><td>7.26</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 1.0</td></tr>
 <tr><td>A3 colour</td><td>grey row tone slope</td><td>P1 day</td><td>0.881</td><td>0.877</td><td class="pass">pass</td><td>pass = |open - vendor| &lt;= 0.05</td></tr>
 <tr><td>A4 sharpness</td><td>MTF50 median of 8 chart edges (cycles/pixel)</td><td>P1 day, 8 frames averaged</td><td>0.481</td><td>0.434</td><td class="pass">pass</td><td>pass = open &gt;= 0.9 x vendor</td></tr>
 <tr><td>A4 sharpness</td><td>10-90 % edge rise median (px)</td><td>P1 day</td><td>0.83</td><td>0.84</td><td class="pass">pass</td><td>pass = open &lt;= vendor x 1.1</td></tr>
 <tr><td>B3 CPU/RAM</td><td>system busy % (idle streamer, 60 s)</td><td>0 RTSP clients</td><td>3.20</td><td>5.30</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 0.5 points</td></tr>
 <tr><td>B3 CPU/RAM</td><td>streamer % of all CPU</td><td>0 RTSP clients</td><td>2.59</td><td>7.37</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 0.5 points</td></tr>
 <tr><td>B3 CPU/RAM</td><td>ISP/codec kernel threads %</td><td>0 RTSP clients</td><td>0.05</td><td>7.92</td><td class="pass">pass</td><td>pass = open &lt;= vendor + 0.5 points</td></tr>
+<tr><td>C1 D1/D4</td><td>D1 dark start: ISP night</td><td>streamer daynight trace, dark start, lamps on 180 s, off 180 s</td><td>mode=Night </td><td>- </td><td class="pass">pass</td><td>60 s after start in the dark</td></tr>
+<tr><td>C1 D1/D4</td><td>D4 lamps off: ISP night after 180 s</td><td>streamer daynight trace, dark start, lamps on 180 s, off 180 s</td><td>mode=Night </td><td>- </td><td class="pass">pass</td><td></td></tr>
+<tr><td>C1 D1/D4</td><td>D4 lamps on: ISP day after 180 s</td><td>streamer daynight trace, dark start, lamps on 180 s, off 180 s</td><td>mode=Day </td><td>- </td><td class="pass">pass</td><td></td></tr>
 <tr><td>A1b</td><td>AE comp sweep 40..200 + path test</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>A2b</td><td>AWB 3000/5000 K + WB presets</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>A5</td><td>night IR picture</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
@@ -77,7 +89,6 @@ figcaption{font-size:12px;color:var(--mut)}code{font-size:12px}
 <tr><td>B1</td><td>SSIM/PSNR + P/I ratio</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>B2</td><td>RC modes CBR/VBR/FixQP + bitrate jump</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>B4</td><td>reload 10x + kill -9 + i2c release</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
-<tr><td>C1</td><td>D1/D4 day/night</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>C2</td><td>control API with picture check</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr>
 <tr><td>C3</td><td>stability: 3 RTSP clients, snapshot under load, restart, persistence</td><td>-</td><td>-</td><td>-</td><td class="notrun">not run</td><td>not part of the runs in this report</td></tr></table>
 <h2>A1 P1 defaults (default AE, comp 128)</h2><table><tr><th>stack</th><th>phase</th><th>mode</th><th>IT</th><th>AGain</th><th>IspDG</th><th>EV</th><th>jpg Y</th><th>R/G</th><th>B/G</th><th>clipped</th><th>time</th><th>run</th></tr>
