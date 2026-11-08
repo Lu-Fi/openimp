@@ -1002,6 +1002,27 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
     slice->raw_format = T30_NV12_MODE;
     slice->stride[0] = (int)encoder->params.width;
     slice->stride[1] = (int)encoder->params.width;
+#if defined(PLATFORM_T30)
+    {
+        /* #236 debug: OPENIMP_T30_FSC=<hex> replaces the OEM REG_MCE_FSC
+         * word (e.g. 0x88080303 = with FSE, 0 = the old open value). */
+        static int fsc_read;
+        static int fsc_set;
+        static uint32_t fsc_word;
+
+        if (!fsc_read) {
+            const char *env = getenv("OPENIMP_T30_FSC");
+
+            fsc_read = 1;
+            if (env && *env) {
+                fsc_word = (uint32_t)strtoul(env, NULL, 16);
+                fsc_set = 1;
+            }
+        }
+        slice->fsc_override = (uint8_t)fsc_set;
+        slice->fsc_word = fsc_word;
+    }
+#endif
     slice->raw[0] = frame->phyAddr;
     /* T30 FrameSource lays NV12 chroma after the macroblock-aligned luma
      * plane, not immediately after the visible-height plane. */

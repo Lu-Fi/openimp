@@ -193,6 +193,20 @@ static int t30_emit_motion_estimation(T30DescriptorWriter *writer,
      * b40 << 16 | b39 << 8 | b38): 0x88080303 at 1080p, 0 at 640x360 (#191). */
     MOTION_EMIT(0x5004c, (config->mb_width >= 51u && config->mb_height >= 39u) ?
                          0x88080303u : 0u);
+#elif defined(PLATFORM_T30)
+    /* REG_MCE_FSC (GPL helix.h: FSE bit 31, RECY 31..24, RECX 23..16,
+     * PERY 15..8, PERX 7..0).  OEM T30 1.0.5 h264_api_enc @0x137db4 fills
+     * slice +0x25..+0x2c and H264E_T30_SliceInit @0x45590 packs them:
+     * FSE is forced to 0 in every branch; pictures of at least 51 x 39
+     * macroblocks (816 x 624) get RECY/RECX = 8, PERY/PERX = 3, smaller
+     * ones 0.  Same word as the OEM T23 (the OEM T20 also sets FSE).
+     * #236: with 0 at 1080p the P pictures cost as much as I pictures. */
+    if (config->fsc_override)
+        MOTION_EMIT(0x5004c, config->fsc_word);
+    else
+        MOTION_EMIT(0x5004c,
+                    (config->mb_width >= 51u && config->mb_height >= 39u) ?
+                    0x08080303u : 0u);
 #else
     /* Disable the optional frame-size-control padding: OpenIMP owns tightly
      * aligned reconstruction planes and supplies their addresses directly. */

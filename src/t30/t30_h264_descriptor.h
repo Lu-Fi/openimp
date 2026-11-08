@@ -52,6 +52,11 @@ typedef struct {
      * the PPS value): 0x40120 = offset & 0x1f.  The T10 command list has
      * no such register (H264E_T10_SliceInit). */
     int8_t chroma_qp_offset;
+    /* T30 only, debug (#236): fsc_override != 0 writes fsc_word into
+     * REG_MCE_FSC 0x5004c instead of the OEM size rule
+     * (OPENIMP_T30_FSC=<hex>, read once in t30_fill_slice). */
+    uint8_t fsc_override;
+    uint32_t fsc_word;
 } T30H264SliceConfig;
 
 
