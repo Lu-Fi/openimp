@@ -1,7 +1,7 @@
 {
  "_comment": "Daily soak summary per fleet camera. Written by tools/status_soak.py on the host from the soak sampler logs and the camera STATUS files (not in CI); read by tools/release_gates.py. Do not edit by hand. Rules: docs/status/release.yaml.",
  "image": "agg47",
- "asof": "2026-11-07 06:58",
+ "asof": "2026-11-08 06:52",
  "sources": {
   "sampler_logs": [
    "logs1026/soak-agg47.log"
@@ -14,19 +14,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:03",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 133404,
-   "unplanned_reboots": 32,
+   "uptime_s": 22044,
+   "unplanned_reboots": 34,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-05 17:54",
+    "time": "2026-11-08 00:45",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-05 18:00)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:52)"
    },
-   "stable_since": "2026-11-05 17:54",
-   "stable_days": 1.54,
+   "stable_since": "2026-11-08 00:45",
+   "stable_days": 0.26,
    "events": [
     {
      "time": "2026-10-26 14:01",
@@ -225,6 +225,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-05 18:00)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-08 00:45",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:52)"
     }
    ]
   },
@@ -233,19 +245,19 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:35",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 46162,
-   "unplanned_reboots": 1,
+   "uptime_s": 30622,
+   "unplanned_reboots": 4,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 10:43",
+    "time": "2026-11-07 22:22",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:50)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
    },
-   "stable_since": "2026-11-04 10:43",
-   "stable_days": 2.84,
+   "stable_since": "2026-11-07 22:22",
+   "stable_days": 0.35,
    "events": [
     {
      "time": "2026-10-26 13:33",
@@ -258,6 +270,24 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:50)"
+    },
+    {
+     "time": "2026-11-07 10:08",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 10:08)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 22:22",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
     }
    ]
   },
@@ -266,19 +296,19 @@
    "soc": "T21",
    "image": "agg47",
    "first_seen": "2026-10-26 13:33",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 40651,
-   "unplanned_reboots": 4,
+   "uptime_s": 31108,
+   "unplanned_reboots": 6,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 19:40",
+    "time": "2026-11-07 22:14",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:45)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:21)"
    },
-   "stable_since": "2026-11-06 19:40",
-   "stable_days": 0.47,
+   "stable_since": "2026-11-07 22:14",
+   "stable_days": 0.36,
    "events": [
     {
      "time": "2026-10-26 13:31",
@@ -309,6 +339,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:45)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 22:14",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:21)"
     }
    ]
   },
@@ -317,19 +359,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:44",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 249379,
-   "unplanned_reboots": 3,
+   "uptime_s": 29890,
+   "unplanned_reboots": 5,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 09:41",
+    "time": "2026-11-07 22:34",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 09:50)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
    },
-   "stable_since": "2026-11-04 09:41",
-   "stable_days": 2.89,
+   "stable_since": "2026-11-07 22:34",
+   "stable_days": 0.35,
    "events": [
     {
      "time": "2026-10-26 13:42",
@@ -354,6 +396,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 09:50)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:34",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
     }
    ]
   },
@@ -362,19 +416,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:47",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 248673,
-   "unplanned_reboots": 2,
+   "uptime_s": 29710,
+   "unplanned_reboots": 4,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 09:53",
+    "time": "2026-11-07 22:37",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:00)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
    },
-   "stable_since": "2026-11-04 09:53",
-   "stable_days": 2.88,
+   "stable_since": "2026-11-07 22:37",
+   "stable_days": 0.34,
    "events": [
     {
      "time": "2026-10-26 13:44",
@@ -393,6 +447,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:00)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:37",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
     }
    ]
   },
@@ -401,19 +467,19 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:37",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 552133,
-   "unplanned_reboots": 5,
+   "uptime_s": 30444,
+   "unplanned_reboots": 7,
    "oops": 0,
    "last_reset": {
-    "time": "2026-10-31 21:10",
+    "time": "2026-11-07 22:25",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-31 21:11)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
    },
-   "stable_since": "2026-10-31 21:10",
-   "stable_days": 6.41,
+   "stable_since": "2026-11-07 22:25",
+   "stable_days": 0.35,
    "events": [
     {
      "time": "2026-10-26 13:35",
@@ -450,6 +516,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-10-31 21:11)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:25",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
     }
    ]
   },
@@ -458,19 +536,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:49",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 45014,
-   "unplanned_reboots": 5,
+   "uptime_s": 30252,
+   "unplanned_reboots": 7,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 18:28",
+    "time": "2026-11-07 22:28",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 18:35)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
    },
-   "stable_since": "2026-11-06 18:28",
-   "stable_days": 0.52,
+   "stable_since": "2026-11-07 22:28",
+   "stable_days": 0.35,
    "events": [
     {
      "time": "2026-10-26 13:47",
@@ -507,6 +585,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 18:35)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:28",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:31)"
     }
    ]
   },
@@ -515,19 +605,19 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:39",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 47541,
-   "unplanned_reboots": 6,
+   "uptime_s": 30867,
+   "unplanned_reboots": 8,
    "oops": 4,
    "last_reset": {
-    "time": "2026-11-05 23:15",
+    "time": "2026-11-07 22:18",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-05 23:21)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:21)"
    },
-   "stable_since": "2026-11-05 23:15",
-   "stable_days": 1.32,
+   "stable_since": "2026-11-07 22:18",
+   "stable_days": 0.36,
    "events": [
     {
      "time": "2026-10-26 13:37",
@@ -584,6 +674,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-05 23:21)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 22:18",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:21)"
     }
    ]
   },
@@ -592,19 +694,19 @@
    "soc": "T10",
    "image": "agg47",
    "first_seen": "2026-10-26 13:27",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 42874,
-   "unplanned_reboots": 6,
+   "uptime_s": 20551,
+   "unplanned_reboots": 14,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 19:03",
+    "time": "2026-11-08 01:10",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:05)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:12)"
    },
-   "stable_since": "2026-11-06 19:03",
-   "stable_days": 0.5,
+   "stable_since": "2026-11-08 01:10",
+   "stable_days": 0.24,
    "events": [
     {
      "time": "2026-10-26 13:25",
@@ -647,6 +749,54 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:05)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 15:59",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 16:00)"
+    },
+    {
+     "time": "2026-11-07 16:26",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 16:30)"
+    },
+    {
+     "time": "2026-11-07 21:35",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 21:41)"
+    },
+    {
+     "time": "2026-11-07 21:51",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:01)"
+    },
+    {
+     "time": "2026-11-07 22:44",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:51)"
+    },
+    {
+     "time": "2026-11-07 23:19",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 23:21)"
+    },
+    {
+     "time": "2026-11-08 01:10",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:12)"
     }
    ]
   },
@@ -655,19 +805,19 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:10",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 252782,
-   "unplanned_reboots": 1,
+   "uptime_s": 22273,
+   "unplanned_reboots": 3,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 08:45",
+    "time": "2026-11-08 00:41",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 08:50)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:52)"
    },
-   "stable_since": "2026-11-04 08:45",
-   "stable_days": 2.93,
+   "stable_since": "2026-11-08 00:41",
+   "stable_days": 0.26,
    "events": [
     {
      "time": "2026-10-26 14:06",
@@ -680,6 +830,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 08:50)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-08 00:41",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:52)"
     }
    ]
   },
@@ -688,25 +850,37 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:52",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 559575,
-   "unplanned_reboots": 0,
+   "uptime_s": 29513,
+   "unplanned_reboots": 2,
    "oops": 0,
    "last_reset": {
-    "time": "2026-10-26 13:49",
-    "kind": "flash",
-    "planned": true,
-    "reason": "image agg47 flashed (full OTA)"
+    "time": "2026-11-07 22:40",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:51)"
    },
-   "stable_since": "2026-10-26 13:52",
-   "stable_days": 11.71,
+   "stable_since": "2026-11-07 22:40",
+   "stable_days": 0.34,
    "events": [
     {
      "time": "2026-10-26 13:49",
      "kind": "flash",
      "planned": true,
      "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:40",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:51)"
     }
    ]
   },
@@ -715,19 +889,19 @@
    "soc": "T41",
    "image": "agg47",
    "first_seen": "2026-10-26 14:13",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 254449,
-   "unplanned_reboots": 3,
+   "uptime_s": 27965,
+   "unplanned_reboots": 4,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 08:17",
+    "time": "2026-11-07 14:15",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 08:20)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
    },
-   "stable_since": "2026-11-04 08:17",
-   "stable_days": 2.95,
+   "stable_since": "2026-11-07 14:15",
+   "stable_days": 0.69,
    "events": [
     {
      "time": "2026-10-26 14:10",
@@ -752,6 +926,12 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 08:20)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
     }
    ]
   },
@@ -760,19 +940,19 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:31",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 42125,
-   "unplanned_reboots": 4,
+   "uptime_s": 3070,
+   "unplanned_reboots": 13,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 19:16",
+    "time": "2026-11-08 06:01",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:25)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 06:02)"
    },
-   "stable_since": "2026-11-06 19:16",
-   "stable_days": 0.49,
+   "stable_since": "2026-11-08 06:01",
+   "stable_days": 0.04,
    "events": [
     {
      "time": "2026-10-26 13:27",
@@ -803,6 +983,60 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:25)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:02",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:11)"
+    },
+    {
+     "time": "2026-11-08 01:11",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:12)"
+    },
+    {
+     "time": "2026-11-08 01:17",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:22)"
+    },
+    {
+     "time": "2026-11-08 01:30",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:32)"
+    },
+    {
+     "time": "2026-11-08 01:40",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:42)"
+    },
+    {
+     "time": "2026-11-08 01:47",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:52)"
+    },
+    {
+     "time": "2026-11-08 02:57",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 03:02)"
+    },
+    {
+     "time": "2026-11-08 06:01",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 06:02)"
     }
    ]
   },
@@ -811,25 +1045,37 @@
    "soc": "T23",
    "image": "agg47",
    "first_seen": "2026-10-26 13:42",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 1012635,
-   "unplanned_reboots": 0,
+   "uptime_s": 22910,
+   "unplanned_reboots": 2,
    "oops": 0,
    "last_reset": {
-    "time": "2026-10-26 13:40",
-    "kind": "flash",
-    "planned": true,
-    "reason": "image agg47 flashed (full OTA)"
+    "time": "2026-11-08 00:30",
+    "kind": "reboot",
+    "planned": false,
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:32)"
    },
-   "stable_since": "2026-10-26 13:42",
-   "stable_days": 11.72,
+   "stable_since": "2026-11-08 00:30",
+   "stable_days": 0.27,
    "events": [
     {
      "time": "2026-10-26 13:40",
      "kind": "flash",
      "planned": true,
      "reason": "image agg47 flashed (full OTA)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-08 00:30",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:32)"
     }
    ]
   },
@@ -838,19 +1084,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:06",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 244969,
-   "unplanned_reboots": 1,
+   "uptime_s": 22726,
+   "unplanned_reboots": 3,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 10:55",
+    "time": "2026-11-08 00:33",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 11:00)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:42)"
    },
-   "stable_since": "2026-11-04 10:55",
-   "stable_days": 2.84,
+   "stable_since": "2026-11-08 00:33",
+   "stable_days": 0.26,
    "events": [
     {
      "time": "2026-10-26 14:04",
@@ -863,6 +1109,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 11:00)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-08 00:33",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 00:42)"
     }
    ]
   },
@@ -871,19 +1129,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 13:54",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 247085,
-   "unplanned_reboots": 2,
+   "uptime_s": 30067,
+   "unplanned_reboots": 4,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-04 10:20",
+    "time": "2026-11-07 22:31",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:30)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
    },
-   "stable_since": "2026-11-04 10:20",
-   "stable_days": 2.86,
+   "stable_since": "2026-11-07 22:31",
+   "stable_days": 0.35,
    "events": [
     {
      "time": "2026-10-26 13:52",
@@ -902,6 +1160,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-04 10:30)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:31",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:41)"
     }
    ]
   },
@@ -910,19 +1180,19 @@
    "soc": "T20",
    "image": "agg47",
    "first_seen": "2026-10-26 13:58",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 41387,
-   "unplanned_reboots": 3,
+   "uptime_s": 31382,
+   "unplanned_reboots": 5,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 19:28",
+    "time": "2026-11-07 22:09",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:35)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:11)"
    },
-   "stable_since": "2026-11-06 19:28",
-   "stable_days": 0.48,
+   "stable_since": "2026-11-07 22:09",
+   "stable_days": 0.36,
    "events": [
     {
      "time": "2026-10-26 13:55",
@@ -947,6 +1217,18 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 19:35)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 22:09",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:11)"
     }
    ]
   },
@@ -955,19 +1237,19 @@
    "soc": "T40",
    "image": "agg47",
    "first_seen": "2026-10-26 14:30",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 2162,
-   "unplanned_reboots": 37,
+   "uptime_s": 28235,
+   "unplanned_reboots": 46,
    "oops": 23,
    "last_reset": {
-    "time": "2026-11-07 06:22",
+    "time": "2026-11-07 16:01",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 06:28)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 16:10)"
    },
-   "stable_since": "2026-11-07 06:22",
-   "stable_days": 0.03,
+   "stable_since": "2026-11-07 16:01",
+   "stable_days": 0.62,
    "events": [
     {
      "time": "2026-10-26 14:13",
@@ -1280,6 +1562,60 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 06:28)"
+    },
+    {
+     "time": "2026-11-07 07:02",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 07:08)"
+    },
+    {
+     "time": "2026-11-07 09:10",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 09:18)"
+    },
+    {
+     "time": "2026-11-07 09:27",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 09:28)"
+    },
+    {
+     "time": "2026-11-07 09:41",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 09:48)"
+    },
+    {
+     "time": "2026-11-07 10:58",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 10:59)"
+    },
+    {
+     "time": "2026-11-07 11:09",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 11:19)"
+    },
+    {
+     "time": "2026-11-07 12:51",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 12:59)"
+    },
+    {
+     "time": "2026-11-07 14:15",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:19)"
+    },
+    {
+     "time": "2026-11-07 16:01",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 16:10)"
     }
    ]
   },
@@ -1288,19 +1624,19 @@
    "soc": "T31",
    "image": "agg47",
    "first_seen": "2026-10-26 14:01",
-   "last_sample": "2026-11-07 06:58",
+   "last_sample": "2026-11-08 06:52",
    "online": true,
-   "uptime_s": 45853,
-   "unplanned_reboots": 2,
+   "uptime_s": 21068,
+   "unplanned_reboots": 6,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-06 18:14",
+    "time": "2026-11-08 01:01",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 18:25)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:02)"
    },
-   "stable_since": "2026-11-06 18:14",
-   "stable_days": 0.53,
+   "stable_since": "2026-11-08 01:01",
+   "stable_days": 0.24,
    "events": [
     {
      "time": "2026-10-26 13:58",
@@ -1319,6 +1655,30 @@
      "kind": "reboot",
      "planned": false,
      "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-06 18:25)"
+    },
+    {
+     "time": "2026-11-07 10:12",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 10:18)"
+    },
+    {
+     "time": "2026-11-07 14:07",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 14:09)"
+    },
+    {
+     "time": "2026-11-07 22:44",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-07 22:51)"
+    },
+    {
+     "time": "2026-11-08 01:01",
+     "kind": "reboot",
+     "planned": false,
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-08 01:02)"
     }
    ]
   },
@@ -2733,117 +3093,233 @@
   },
   "2026-11-07": {
    ".21": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 158681,
+    "max_oops": 0
+   },
+   ".23": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 56997,
+    "max_oops": 0
+   },
+   ".24": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 65927,
+    "max_oops": 0
+   },
+   ".25": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 274655,
+    "max_oops": 0
+   },
+   ".26": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 273950,
+    "max_oops": 0
+   },
+   ".28": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 577409,
+    "max_oops": 0
+   },
+   ".29": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 52238,
+    "max_oops": 0
+   },
+   ".30": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 54765,
+    "max_oops": 0
+   },
+   ".31": {
+    "samples": 143,
+    "offline": 2,
+    "max_uptime_s": 68151,
+    "max_oops": 0
+   },
+   ".32": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 278059,
+    "max_oops": 0
+   },
+   ".33": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 584852,
+    "max_oops": 0
+   },
+   ".34": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 279726,
+    "max_oops": 0
+   },
+   ".107": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 67402,
+    "max_oops": 0
+   },
+   ".124": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 1037912,
+    "max_oops": 0
+   },
+   ".145": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 270246,
+    "max_oops": 0
+   },
+   ".151": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 272361,
+    "max_oops": 0
+   },
+   ".163": {
+    "samples": 143,
+    "offline": 1,
+    "max_uptime_s": 66664,
+    "max_oops": 0
+   },
+   ".184": {
+    "samples": 143,
+    "offline": 4,
+    "max_uptime_s": 38818,
+    "max_oops": 0
+   },
+   ".224": {
+    "samples": 143,
+    "offline": 0,
+    "max_uptime_s": 57289,
+    "max_oops": 0
+   }
+  },
+  "2026-11-08": {
+   ".21": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 133404,
+    "max_uptime_s": 37588,
     "max_oops": 0
    },
    ".23": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 46162,
+    "max_uptime_s": 30622,
     "max_oops": 0
    },
    ".24": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 40651,
+    "max_uptime_s": 31108,
     "max_oops": 0
    },
    ".25": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 249379,
+    "max_uptime_s": 29890,
     "max_oops": 0
    },
    ".26": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 248673,
+    "max_uptime_s": 29710,
     "max_oops": 0
    },
    ".28": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 552133,
+    "max_uptime_s": 30444,
     "max_oops": 0
    },
    ".29": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 45014,
+    "max_uptime_s": 30252,
     "max_oops": 0
    },
    ".30": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 47541,
+    "max_uptime_s": 30867,
     "max_oops": 0
    },
    ".31": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 42874,
+    "max_uptime_s": 20551,
     "max_oops": 0
    },
    ".32": {
     "samples": 42,
-    "offline": 0,
-    "max_uptime_s": 252782,
+    "offline": 1,
+    "max_uptime_s": 36987,
     "max_oops": 0
    },
    ".33": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 559575,
+    "max_uptime_s": 29513,
     "max_oops": 0
    },
    ".34": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 254449,
+    "max_uptime_s": 27965,
     "max_oops": 0
    },
    ".107": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 42125,
+    "max_uptime_s": 10772,
     "max_oops": 0
    },
    ".124": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 1012635,
+    "max_uptime_s": 36878,
     "max_oops": 0
    },
    ".145": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 244969,
+    "max_uptime_s": 37479,
     "max_oops": 0
    },
    ".151": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 247085,
+    "max_uptime_s": 30067,
     "max_oops": 0
    },
    ".163": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 41387,
+    "max_uptime_s": 31382,
     "max_oops": 0
    },
    ".184": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 38818,
+    "max_uptime_s": 28235,
     "max_oops": 0
    },
    ".224": {
     "samples": 42,
     "offline": 0,
-    "max_uptime_s": 45853,
+    "max_uptime_s": 21068,
     "max_oops": 0
    }
   }
