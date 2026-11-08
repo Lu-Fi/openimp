@@ -8,11 +8,9 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-08, T30: vendor REG_MCE_FSC word in the P-picture command list (#236, vendor parity)
 
-
-## 2026-11-08, T30: P pictures as small as the vendor's (REG_MCE_FSC, #236)
-
-- T30 P-picture command list: `0x5004c` (REG_MCE_FSC) now carries the vendor word: `0x08080303` (FSE 0, RECX/RECY 8, PERX/PERY 3) for pictures of at least 51 x 39 macroblocks, 0 below, as the vendor libimp 1.0.5 `h264_api_enc` / `H264E_T30_SliceInit` compute it. OpenIMP wrote 0, the only register difference to the vendor P list (I lists were already equal); at 1080p the P pictures were nearly as large as the I pictures. The vendor-vs-open command-list comparison (vendor SliceInit emulated) now shows 0 differing words for I and P at 1920x1080, 1280x720, 640x368 and at the 51 x 39 boundary. Debug knob `OPENIMP_T30_FSC=<hex>` overrides the word. Host-tested (`tests/t30` descriptor test); device proof pending.
+- T30 P-picture command list: `0x5004c` (REG_MCE_FSC) now carries the vendor word: `0x08080303` (FSE 0, RECX/RECY 8, PERX/PERY 3) for pictures of at least 51 x 39 macroblocks, 0 below, as the vendor libimp 1.0.5 `h264_api_enc` / `H264E_T30_SliceInit` compute it. OpenIMP wrote 0, the only register difference to the vendor P list (I lists were already equal). This is not the cause of the large open P pictures: the T30X device run gave P/I 0.963 with the vendor word and 0.951 with 0 (vendor 0.073); the cause is source noise in dark macroblocks without Temper (entry below, #236 ANALYSIS). The vendor-vs-open command-list comparison (vendor SliceInit emulated) now shows 0 differing words for I and P at 1920x1080, 1280x720, 640x368 and at the 51 x 39 boundary. Debug knob `OPENIMP_T30_FSC=<hex>` overrides the word. Host-tested (`tests/t30` descriptor test); device proof pending.
 
 ## 2026-11-08, T20: EnableChn on kernels without the legacy crop ioctls
 
@@ -467,7 +465,6 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-02 (night), T41 `SU_Base_SetWkupMode`: RTC register-level proof, #80 closed
 
 - On the T41 camera the documented RTC write sequence (RTC clock gate cleared) writes and reads back RTCCR, RTCSR, RTCSAR and HWCR with the exact `SU_Base_SetWkupMode` requests (0xd2ad2d28/29). The counter does not tick and an alarm never fires: the board has no usable 32 kHz oscillator (hardware limit). API evidence only, no code change.
-
 
 ## 2026-11-02 (night), T41 ISP backlog closed: LDC / GPIO vendor no-op, StartNightMode and WDR_OPEN as the stock module (#75, #171)
 
