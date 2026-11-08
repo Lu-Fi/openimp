@@ -43,14 +43,17 @@ int openimp_mxu2_select(const char *name, int (*selftest)(void))
     volatile int ok = 0;
     const char *why;
 
-#if defined(PLATFORM_T23)
+#if defined(PLATFORM_T23) || (defined(PLATFORM_T21) && !defined(PLATFORM_T20) && !defined(PLATFORM_T10))
     /* The T23 core has no MXU/COP2 and its kernel does not raise SIGILL for a
      * COP2 instruction: the CU2 handler restores an MXU context and oopses in
      * xburst_cop2_restore, the watchdog then resets the board (T23N .30,
-     * 2026-11-05). The SIGILL-guarded selftest below must never run here, so
-     * this build never probes: always the C path (Opus review finding B1). */
+     * 2026-11-05). The T21 kernel does the same: the default MXU2 selection
+     * reset the T21N board three times when a rotated channel started
+     * (PC420 .24, 2026-11-08), while OPENIMP_MXU=0 rotates cleanly. The
+     * SIGILL-guarded selftest below must never run on these SoCs, so the build
+     * never probes: always the C path (Opus review finding B1). */
     (void)selftest;
-    fprintf(stderr, "[MXU] %s: C (T23 has no MXU)\n", name);
+    fprintf(stderr, "[MXU] %s: C (no usable MXU2 on this SoC)\n", name);
     return 0;
 #endif
     if (!openimp_mxu_env_allowed()) {
