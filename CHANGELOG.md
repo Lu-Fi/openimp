@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-08: feature matrix release badges per interval
+
+- Every matrix cell that is better than at the previous release carries the badge of the release in which it improved: RC2 (RC1 -> RC2, outlined), RC3 (RC2 -> RC3, filled) or new (after the RC3 tag, orange); "changed" stays for cells that changed without improving. Filter "new / in RC3 / in RC2 / changed" and counts per SoC and interval. Before RC1 there is no earlier matrix, so there is no RC1 badge. The release list is data-driven (`RELEASES` in `tools/gen_feature_matrix_html.py`), so Release 1 is one more line.
+
 ## 2026-11-08: start page for the GitHub Pages site
 
 - Per-camera trend pages (`cam/<camera>.html`): every run with its image, the pass/fail split and charts of the key numbers (noise, brightness, colour, CPU, encoder, AE response, start-up) open vs vendor over time; each protocol now also writes a `<name>.json` with these numbers.

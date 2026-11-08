@@ -24,14 +24,15 @@ Special handling:
     the cell codes (dev, host, aud, ...), data-gap rows and a "only rows with
     gaps" filter.
   * "Progress per SoC" gets a bar column computed from the counts.
-  * "New in RC2": every matrix cell symbol is compared with the matrix at the
-    baseline tag (default v2026.10.11-rc1, read with `git show TAG:docs/FEATURE_MATRIX.md`;
-    override with --baseline FILE or the env var BASELINE_MD).  Cells whose
-    symbol is better than at the baseline (rank ? < X < planned < in progress <
-    defect < supported < beyond vendor; "—" -> anything counts as new) get an
-    "RC2" badge and a highlight, cells that changed otherwise a muted "chg"
-    badge.  A toggle "only changes since RC1" hides unchanged rows and a count
-    per SoC is shown above the table.  Without a baseline nothing is marked.
+  * Release badges: RELEASES is a list of (tag, label), oldest first (a new release is one line).
+    Every matrix cell symbol is compared with the matrix at each tag (`git show TAG:docs/FEATURE_MATRIX.md`;
+    --baseline FILE or the env var BASELINE_MD replaces the first one).  A cell that is better than at
+    the previous release (rank ? < X < planned < in progress < defect < supported < beyond vendor;
+    "—" -> anything counts as better) gets the badge of the release in which it improved (the label of
+    the interval's end tag); one that improved after the last tag gets "new".  The latest improvement
+    wins.  Cells that changed in some interval without improving get a muted "changed" badge.  Before
+    the first tag there is nothing to compare with, so there is no badge for it.  A select filters the
+    rows by badge and the summary table counts per SoC and interval.  Without baselines nothing is marked.
 """
 import html
 import json
@@ -47,10 +48,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "docs", "FEATURE_MATRIX.md")
 DST = os.path.join(ROOT, "docs", "feature-matrix.html")
-BASE_TAG = "v2026.10.11-rc1"
-BASE_LABEL = "RC1"
+# (tag, label), oldest first.  RC4 / Release 1 later: append one line.
+RELEASES = [("v2026.10.11-rc1", "RC1"), ("v2026.10.25-rc2", "RC2"), ("v2026.11.07-rc3", "RC3")]
 MATRIX_COUNTS = {}
-BASE = {}          # feature title -> {soc: symbol} at the baseline
+SYMS = []          # per release: feature title -> {soc: symbol} at that tag
+TXTS = []          # per release: feature number -> {soc: detail text without the symbol}
 RANK = {"?": 0, "❌": 1, "📋": 2, "🔧": 3, "⚠": 4, "✅": 5, "✅+": 6}
 
 CSS = api.API_CSS + r"""
@@ -97,7 +99,6 @@ td.new{box-shadow:inset 3px 0 0 var(--accent)}
 .rc2bar{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 12px;margin:0 0 10px;font-size:.85rem}
 .rc2bar table{width:auto;table-layout:auto;margin:.4rem 0}.rc2bar th,.rc2bar td{position:static;width:auto;font-weight:400;text-align:center;padding:3px 10px}
 .rc2bar td:first-child,.rc2bar th:first-child{text-align:left;font-weight:600}
-body.rc2only tr[data-rc2="0"],body.rc2only tr.grp.empty{display:none}
 table.mx{table-layout:auto;width:max-content;min-width:100%;font-size:.82rem}
 table.mx th,table.mx td{padding:3px 6px;vertical-align:middle}
 table.mx th:first-child,table.mx td:first-child{width:auto;min-width:300px;max-width:520px;font-weight:400}
@@ -113,7 +114,7 @@ td.mc .sym{margin:0}td.mc:hover{filter:brightness(.94)}td.mc:focus-visible,.fnam
 td.mc.dim{opacity:.3}td.mc.sel{box-shadow:inset 0 0 0 2px var(--accent)}tr.selr th{box-shadow:inset 3px 0 0 var(--accent)}
 td.mc i.rc2{font-style:normal;margin-left:3px;padding:0 4px;font-size:.6rem}
 i.rc2{display:inline-block;padding:0 5px;border-radius:8px;background:var(--accent);color:var(--bg);font-size:.66rem;font-weight:700;font-style:normal;vertical-align:middle}
-i.rc2.chg{background:var(--muted)}i.rc2.nw{background:#d9822b;color:#fff}
+i.rc2.chg{background:var(--muted)}i.rc2.nw{background:#d9822b;color:#fff}i.rc2.old{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .lgbar{display:flex;flex-wrap:wrap;gap:4px 6px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 8px;margin:0 0 8px;font-size:.78rem}
 .lgi{border:1px solid var(--line);border-radius:8px;padding:1px 7px;cursor:help;display:inline-flex;align-items:center;gap:4px}.lgi:focus-visible{outline:2px solid var(--accent)}
 .num{display:inline-block;min-width:1.6rem;color:var(--muted);font-size:.74rem}
@@ -524,10 +525,6 @@ def parse_details(blocks):
     return res, groups
 
 
-BASE2 = {}         # same for the RC2 tag
-TXT1, TXT2 = {}, {}    # feature number -> {soc: detail text without the symbol} at RC1 / RC2
-BASE2_TAG = "v2026.10.25-rc2"
-BASE2_LABEL = "RC2"
 LEGEND = {}        # symbol -> (label, description) from the Legend bullets of the md
 
 
@@ -565,9 +562,20 @@ def load_state(src, is_path, syms, txts):
         txts[n] = {soc: SYM_RE.sub("", t, count=1).strip() for soc, t in dd["cells"].items()}
 
 
-def load_baseline(path=None, path2=None):
-    load_state(path or BASE_TAG, bool(path), BASE, TXT1)
-    load_state(path2 or BASE2_TAG, bool(path2), BASE2, TXT2)
+def load_baseline(path=None):
+    del SYMS[:], TXTS[:]
+    for i, (tag, _) in enumerate(RELEASES):
+        sy, tx = {}, {}
+        load_state(path if (path and i == 0) else tag, bool(path and i == 0), sy, tx)
+        SYMS.append(sy)
+        TXTS.append(tx)
+
+
+def intervals():
+    """[(key, badge text, start index, end index or None for the current matrix)]; start/end index the RELEASES."""
+    n = len(RELEASES)
+    return [(RELEASES[i + 1][1].lower() if i + 1 < n else "new", RELEASES[i + 1][1] if i + 1 < n else "new",
+             i, i + 1 if i + 1 < n else None) for i in range(n)]
 
 
 def classify(old, new, otxt=None, ntxt=None):
@@ -588,7 +596,7 @@ MX_JS = r"""(function(){
 var D=JSON.parse(document.getElementById('mxdata').textContent),R=D.rows;
 var $=function(s,e){return (e||document).querySelector(s)},$$=function(s,e){return [].slice.call((e||document).querySelectorAll(s))};
 var tbl=$('#mx'),rows=$$('tbody tr[data-n]',tbl),grps=$$('tbody tr.grp',tbl),pn=$('#pn'),pnb=$('#pnb'),tip=$('#tip');
-var F={q:'',soc:{},sym:{},tag:{},r1:false,r2:false},last=null,cur=null;
+var F={q:'',soc:{},sym:{},tag:{},rk:'',iv:''},last=null,cur=null;
 function any(o){for(var k in o)if(o[k])return true;return false}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var SS={'⚠':'⚠️'};function ss(s){return SS[s]||s}
@@ -604,7 +612,7 @@ function apply(){
     cs.forEach(function(td){var s=td.getAttribute('data-sym'),v=vis.indexOf(td.getAttribute('data-soc'))>=0;
       var hit=sy&&F.sym[s]&&v;td.classList.toggle('dim',sy&&!F.sym[s]);if(hit)m=true});
     if(ok&&sy&&!m)ok=false;
-    if(ok&&F.r1&&tr.getAttribute('data-r1')!=='1')ok=false;if(ok&&F.r2&&tr.getAttribute('data-r2')!=='1')ok=false;
+    if(ok&&F.rk&&(' '+tr.getAttribute('data-k')+' ').indexOf(' '+F.rk+' ')<0)ok=false;
     tr.hidden=!ok;if(ok)n++;
   });
   var g=null,a=false;
@@ -620,13 +628,13 @@ function tagBtns(){$$('[data-ftag]').forEach(function(b){b.setAttribute('aria-pr
 $$('[data-ftag]').forEach(function(b){b.onclick=function(){var k=b.getAttribute('data-ftag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
 $$('.tag',tbl).forEach(function(b){b.onclick=function(e){e.stopPropagation();var k=b.getAttribute('data-tag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
 $('#mxq').oninput=function(){F.q=this.value.trim();apply()};
-var r1=$('#mxr1'),r2=$('#mxr2');if(r1)r1.onchange=function(){F.r1=this.checked;apply()};if(r2)r2.onchange=function(){F.r2=this.checked;apply()};
-$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},r1:false,r2:false};$('#mxq').value='';if(r1)r1.checked=false;if(r2)r2.checked=false;
+var rk=$('#mxrk');if(rk)rk.onchange=function(){F.rk=this.value;apply()};
+$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},rk:''};$('#mxq').value='';if(rk)rk.value='';
   $$('[aria-pressed="true"]').forEach(function(b){b.setAttribute('aria-pressed','false')});tagBtns();apply()};
 /* tooltip */
 function showTip(td){
   var tr=td.parentNode,r=R[tr.getAttribute('data-n')],s=td.getAttribute('data-soc'),c=r.c[s];
-  var lg=D.leg[c.s],bd=c.k?'<i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'">'+D.bl[c.k]+'</i> ':'';
+  var lg=D.leg[c.s],bd=c.k?'<i class="rc2'+D.bc[c.k]+'">'+D.bl[c.k]+'</i> ':'';
   tip.innerHTML='<b>#'+tr.getAttribute('data-n')+' '+esc(r.t)+' / '+s+'</b>'+
    '<div><b>'+esc(ss(c.s))+'</b> '+(lg?esc(lg[0])+': '+esc(lg[1]):'')+'</div>'+(c.k?'<div>'+bd+esc(c.bt)+'</div>':'')+
    '<div>'+(c.q?esc(c.q):'<i>no detail text</i>')+'</div><div class="small">click or Enter: full detail</div>';
@@ -655,7 +663,7 @@ function apiSec(n,s,full){
   return h}
 function block(r,s,full){
   var c=r.c[s];
-  var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+({'rc2':'','new':' nw','chg':' chg'}[c.k])+'" title="'+esc(c.bt)+'">'+D.bl[c.k]+'</i> <span class="small">'+esc(c.bt)+'</span>':'')+'</h4>';
+  var h='<section class="cd"><h4><span class="sym">'+esc(ss(c.s))+'</span> '+s+(c.k?' <i class="rc2'+D.bc[c.k]+'" title="'+esc(c.bt)+'">'+D.bl[c.k]+'</i> <span class="small">'+esc(c.bt)+'</span>':'')+'</h4>';
   h+=c.h?'<div class="tx">'+c.h+'</div>':'<p class="small">No detail text for this cell.</p>';
   (c.x||[]).forEach(function(x){h+='<div class="tx"><b>'+x[0]+':</b> '+x[1]+'</div>'});
   (c.w||[]).forEach(function(w){h+='<div class="tx">&#128679; <b>in progress:</b> '+(w[3]?'<a href="'+esc(w[3])+'">'+esc(w[0])+'</a>':esc(w[0]))+' (since '+esc(w[1])+')'+(w[2]?' &ndash; '+esc(w[2]):'')+'</div>'});
@@ -737,31 +745,44 @@ def json_js(o):
     return json.dumps(o, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/").replace("<!--", "<\\!--")
 
 
-BADGE_TXT = {"rc2": "RC2", "new": "new", "chg": "changed"}
-BADGE_CLS = {"rc2": "", "new": " nw", "chg": " chg"}
-BADGE_SHORT = {"rc2": "improved between RC1 and RC2", "new": "improved after the RC2 tag (in next, not released)",
-               "chg": "cell changed, not improved"}
-BADGE_DESC = {
-    "rc2": "RC2: improved between RC1 (%s) and RC2 (%s); included in the RC2 release" % (BASE_TAG, BASE2_TAG),
-    "new": "new: improved after the RC2 tag (%s); in next, not yet released" % BASE2_TAG,
-    "chg": "changed: the cell changed (other symbol without improvement, or new text) but did not improve",
-}
+def badge_tables():
+    """kind key -> text / css suffix / short text / long text for every interval plus 'chg'."""
+    iv = intervals()
+    txt, cls, short_, desc = {}, {}, {}, {}
+    for j, (key, label, i, e) in enumerate(iv):
+        txt[key] = label
+        cls[key] = " nw" if e is None else ("" if j == len(iv) - 2 else " old")
+        a = "%s (%s)" % (RELEASES[i][1], RELEASES[i][0])
+        if e is None:
+            short_[key] = "improved after %s (in next, not released)" % RELEASES[i][1]
+            desc[key] = "new: improved after the %s tag (%s); in next, not yet released" % (RELEASES[i][1], RELEASES[i][0])
+        else:
+            short_[key] = "improved between %s and %s" % (RELEASES[i][1], label)
+            desc[key] = "%s: improved between %s and %s (%s); included in the %s release" % (
+                label, a, label, RELEASES[e][0], label)
+    txt["chg"], cls["chg"] = "changed", " chg"
+    short_["chg"] = "cell changed, not improved"
+    desc["chg"] = "changed: the cell changed (other symbol without improvement, or new text) but did not improve"
+    return txt, cls, short_, desc
 
 
-def badge_tip(kind, o1, o2, sym, k1, k2):
+BADGE_TXT, BADGE_CLS, BADGE_SHORT, BADGE_DESC = badge_tables()
+
+
+def badge_tip(kind, olds, ks, sym):
+    """olds[i] = symbol at release i (None if unknown); ks[j] = classify result of interval j."""
     t = BADGE_DESC[kind]
-    if kind == "new":
-        t += " (%s at %s, now %s)" % (SYM_SHOW.get(o2, o2), BASE2_LABEL, SYM_SHOW.get(sym, sym))
-    elif kind == "rc2":
-        t += " (%s at %s, now %s)" % (SYM_SHOW.get(o1, o1), BASE_LABEL, SYM_SHOW.get(sym, sym))
-    else:
-        parts = []
-        for lab, o, k in ((BASE_LABEL, o1, k1), (BASE2_LABEL, o2, k2)):
-            if k:
-                parts.append("%s %s, now %s" % (lab, SYM_SHOW.get(o, o), SYM_SHOW.get(sym, sym)) if o != sym
-                             else "%s: same symbol %s, new text" % (lab, SYM_SHOW.get(sym, sym)))
-        t += " (" + "; ".join(parts) + ")"
-    return t
+    iv = intervals()
+    if kind != "chg":
+        i = next(i for key, _, i, _ in iv if key == kind)
+        return t + " (%s at %s, now %s)" % (SYM_SHOW.get(olds[i], olds[i]), RELEASES[i][1], SYM_SHOW.get(sym, sym))
+    parts = []
+    for (key, label, i, e), k in zip(iv, ks):
+        if k:
+            o = olds[i]
+            parts.append("%s %s, now %s" % (RELEASES[i][1], SYM_SHOW.get(o, o), SYM_SHOW.get(sym, sym)) if o != sym
+                         else "%s: same symbol %s, new text" % (RELEASES[i][1], SYM_SHOW.get(sym, sym)))
+    return t + " (" + "; ".join(parts) + ")"
 
 
 def legend_bar():
@@ -771,11 +792,14 @@ def legend_bar():
             lab, desc = LEGEND[sym]
             items.append('<span class="lgi %s" tabindex="0" title="%s"><b>%s</b> %s</span>' % (
                 SYM.get(sym, ("s-na",))[0], esc(desc), esc(SYM_SHOW.get(sym, sym)), esc(lab)))
-    for k in ("rc2", "new", "chg"):
+    for k in [x[0] for x in intervals()][::-1] + ["chg"]:
         items.append('<span class="lgi" tabindex="0" title="%s"><i class="rc2%s">%s</i> %s</span>' % (
             esc(BADGE_DESC[k]), BADGE_CLS[k], BADGE_TXT[k], esc(BADGE_SHORT[k])))
     items.append('<span class="lgi" tabindex="0" title="%s"><b>&#128679;</b> in progress (issue)</span>' % esc(
         "work in progress: a branch is running; an open GitHub issue labelled type:wip; hover the sign for the issue and start date"))
+    items.append('<span class="lgi" tabindex="0" title="%s">no %s badge</span>' % (esc(
+        "the first release has no earlier matrix to compare with, so improvements before %s cannot be marked" % RELEASES[0][1]),
+        esc(RELEASES[0][1])))
     return '<div class="lgbar" id="lgbar">%s</div>' % "".join(items)
 
 
@@ -783,10 +807,13 @@ def render_matrix(rows, details, groups_info):
     head = rows[0]
     socs = head[2:]
     mism = []
-    cnt = {soc: [0, 0, 0, 0] for soc in socs}      # [RC2 badge, new badge, changed badge, improved since RC1 (RC2+new)]
+    iv = intervals()
+    ikeys = [x[0] for x in iv]
+    cnt = {soc: {k: 0 for k in ikeys + ["chg"]} for soc in socs}      # badge counts per kind
+    rowcnt = {k: 0 for k in ikeys + ["chg"]}
     symcnt = {soc: {} for soc in socs}
     trs, data = [], {}
-    grp, nchg_rows, nchg2_rows, nrows = "", 0, 0, 0
+    grp, nrows, nbadge = "", 0, 0
     th = ('<th scope="col" class="fh">Feature</th>'
           + "".join('<th scope="col" data-soc="%s">%s</th>' % (esc(s), esc(s)) for s in socs))
     for r in rows[1:]:
@@ -800,9 +827,8 @@ def render_matrix(rows, details, groups_info):
         d = details.get(n, {"vendor": "", "cells": {}, "extra_cells": {}, "extra": []})
         tags = NUM_TAGS.get(n, []) if n in NUM_REPLACE else GROUP_TAGS.get(grp, []) + NUM_TAGS.get(n, [])
         tags = list(tags)
-        base = BASE.get(title, {})
-        base2 = BASE2.get(title, {})
-        cells, tds, changed, changed2, plus = {}, [], 0, 0, False
+        bases = [S.get(title, {}) for S in SYMS]
+        cells, tds, rowk, plus = {}, [], set(), False
         for soc, sym in zip(socs, r[2:]):
             sym = norm_sym(sym.strip())
             cls, ttl = SYM.get(sym, ("s-unk", "unknown"))
@@ -816,16 +842,18 @@ def render_matrix(rows, details, groups_info):
                 txt = txt[mm.end():]
             extras = [(lab, SYM_RE.sub("", t, count=1)) for lab, t in d["extra_cells"].get(soc, [])]
             ntxt = txt.strip()
-            k1 = classify(base.get(soc), sym, TXT1.get(n, {}).get(soc) if n in TXT1 else None, ntxt)
-            k2 = classify(base2.get(soc), sym, TXT2.get(n, {}).get(soc) if n in TXT2 else None, ntxt)
-            if k2 == "new":
-                kind = "new"
-            elif k1 == "new":
-                kind = "rc2"
-            elif k1 or k2:
+            olds = [bs.get(soc) for bs in bases]
+            ks = []
+            for (key, label, i, e) in iv:
+                if e is None:
+                    nsym, ntx = sym, ntxt
+                else:
+                    nsym, ntx = olds[e], (TXTS[e].get(n, {}).get(soc) if n in TXTS[e] else None)
+                ks.append(classify(olds[i], nsym, TXTS[i].get(n, {}).get(soc) if n in TXTS[i] else None, ntx))
+            kind = next((iv[j][0] for j in range(len(iv) - 1, -1, -1) if ks[j] == "new"), None)
+            if not kind and any(ks):
                 kind = "chg"
-            else:
-                kind = None
+            better = kind not in (None, "chg") or any(k == "new" for k in ks)
             pt = plain(txt)
             wl = API.wipfeat.get((n, soc), []) if API else []
             c = {"s": sym, "h": inline(txt), "q": short(pt) if pt else "",
@@ -843,13 +871,11 @@ def render_matrix(rows, details, groups_info):
             badge = ""
             tip = ""
             if kind:
-                changed += 1
-                changed2 += 1 if k2 else 0
-                cnt[soc][{"rc2": 0, "new": 1, "chg": 2}[kind]] += 1
-                cnt[soc][3] += 1 if k1 == "new" else 0
-                tip = badge_tip(kind, base.get(soc), base2.get(soc), sym, k1, k2)
+                rowk.add(kind)
+                cnt[soc][kind] += 1
+                tip = badge_tip(kind, olds, ks, sym)
                 c["k"] = kind
-                c["o"] = base.get(soc, "")
+                c["o"] = olds[0] or ""
                 c["bt"] = tip
                 badge = '<i class="rc2%s">%s</i>' % (BADGE_CLS[kind], BADGE_TXT[kind])
             cells[soc] = c
@@ -857,7 +883,7 @@ def render_matrix(rows, details, groups_info):
             aria = "%s: %s%s%s" % (soc, lg[0] if lg else sym, "; " + tip if tip else "", "")
             tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s aria-label="%s">'
                        '<span class="sym">%s</span>%s</td>' % (
-                           cls, " new" if k1 == "new" else "", esc(soc), esc(sym),
+                           cls, " new" if better else "", esc(soc), esc(sym),
                            ' data-rc2="%s"' % kind if kind else "", esc(aria), esc(SYM_SHOW.get(sym, sym)), badge + wm))
         if plus:
             tags.append("beyond-vendor")
@@ -865,12 +891,13 @@ def render_matrix(rows, details, groups_info):
         slg = slug(d["title"]) if d.get("extra") else ""
         data[n] = {"n": n, "t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
         chips = "".join('<button type="button" class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t)) for t in tags)
-        trs.append('<tr id="r-%d" data-n="%d" data-r1="%d" data-r2="%d"><th scope="row"><span class="num">%d</span>'
+        trs.append('<tr id="r-%d" data-n="%d" data-k="%s"><th scope="row"><span class="num">%d</span>'
                    '<button type="button" class="fname" data-row="%d">%s</button><span class="tags">%s</span></th>%s</tr>'
-                   % (n, n, 1 if changed else 0, 1 if changed2 else 0, n, n, inline(title), chips, "".join(tds)))
+                   % (n, n, " ".join(sorted(rowk)), n, n, inline(title), chips, "".join(tds)))
         nrows += 1
-        nchg_rows += 1 if changed else 0
-        nchg2_rows += 1 if changed2 else 0
+        for k in rowk:
+            rowcnt[k] += 1
+        nbadge += 1 if rowk else 0
     for m in mism:
         sys.stderr.write("warning: row %d %s: table symbol %s, detail symbol %s\n" % m)
     alltags = [t for t in TAG_ORDER if any(t in v["tags"] for v in data.values())]
@@ -886,38 +913,41 @@ def render_matrix(rows, details, groups_info):
            + chipgrp("SoC", socs, "data-fsoc")
            + chipgrp("Status", allsyms, "data-fsym", lambda x: SYM_SHOW.get(x, x))
            + chipgrp("Tags", alltags, "data-ftag")
-           + ('<div class="fg"><label><input type="checkbox" id="mxr1"> only changed since %s</label> '
-              '<label><input type="checkbox" id="mxr2"> only changed since %s (new in <code>next</code>)</label></div>'
-              % (BASE_LABEL, BASE2_LABEL) if BASE else "") + '</div>')
+           + ('<div class="fg"><span class="fl">Badge</span><select id="mxrk" aria-label="Show only rows with a release badge">'
+              '<option value="">all features</option>%s<option value="chg">changed, not improved</option></select></div>'
+              % "".join('<option value="%s">%s</option>' % (k, esc(
+                  "changes since %s (new, in next)" % RELEASES[-1][1] if k == "new" else "in " + BADGE_TXT[k]))
+                  for k in ikeys[::-1]) if any(SYMS) else "") + '</div>')
     # counts per SoC (+ comparison with the baseline)
     hd = "".join("<th>%s</th>" % esc(x) for x in socs)
     body = ""
     for s in allsyms:
         body += "<tr><td>%s</td>%s</tr>" % (esc(SYM_SHOW.get(s, s)), "".join(
             "<td>%d</td>" % symcnt[x].get(s, 0) for x in socs))
-    if BASE:
-        def crow(label, badge, i):
-            return "<tr%s><td>%s</td>%s</tr>" % (' class="sep"' if i == 0 else "", label, "".join(
-                "<td>%s</td>" % (("<b>%d</b>" if i == 0 else "%d") % cnt[x][i]) for x in socs))
-        body += crow('improved since %s, in %s <i class="rc2">RC2</i>' % (BASE_LABEL, BASE2_LABEL), "", 0)
-        body += crow('improved since %s, only in <code>next</code> <i class="rc2 nw">new</i>' % BASE2_LABEL, "", 1)
-        body += crow('changed without improvement <i class="rc2 chg">changed</i>', "", 2)
-        body += crow('total improved since %s' % BASE_LABEL, "", 3)
+    if any(SYMS):
+        def crow(label, key, first=False):
+            return "<tr%s><td>%s</td>%s</tr>" % (' class="sep"' if first else "", label, "".join(
+                "<td>%s</td>" % (("<b>%d</b>" if first else "%d") % cnt[x][key]) for x in socs))
+        for j, k in enumerate(ikeys[::-1]):
+            body += crow('%s <i class="rc2%s">%s</i> (%d features)' % (BADGE_SHORT[k], BADGE_CLS[k], BADGE_TXT[k], rowcnt[k]), k, j == 0)
+        body += crow('changed without improvement <i class="rc2 chg">changed</i> (%d features)' % rowcnt["chg"], "chg")
+        body += "<tr><td>total improved since %s</td>%s</tr>" % (RELEASES[0][1], "".join(
+            "<td>%d</td>" % sum(cnt[x][k] for k in ikeys) for x in socs))
         MATRIX_COUNTS.clear()
         MATRIX_COUNTS.update(cnt)
-    sumline = ("%d of %d features have a badge on at least one cell (%s = tag <code>%s</code>, %s = tag <code>%s</code>); "
-               "%d features have a cell changed since %s" % (nchg_rows, nrows, BASE_LABEL, BASE_TAG, BASE2_LABEL,
-                                                             BASE2_TAG, nchg2_rows, BASE2_LABEL)) if BASE else "cells per symbol"
-    bar = ('<details class="rc2bar"><summary>Counts per SoC and %s comparison</summary><p class="small">%s</p>'
+    sumline = ("%d of %d features have a badge on at least one cell; compared with the tags %s. There is no %s badge: "
+               "nothing earlier to compare with." % (nbadge, nrows, ", ".join("%s = <code>%s</code>" % (l, t) for t, l in RELEASES),
+                                                     RELEASES[0][1])) if any(SYMS) else "cells per symbol"
+    bar = ('<details class="rc2bar"><summary>Counts per SoC and release comparison</summary><p class="small">%s</p>'
            '<table><thead><tr><th></th>%s</tr></thead><tbody>%s</tbody></table></details>'
-           % (BASE_LABEL, sumline, hd, body))
+           % (sumline, hd, body))
     panel = ('<aside id="pn" role="dialog" aria-modal="false" aria-labelledby="pnt" hidden>'
              '<div class="pnh"><h3 id="pnt"></h3><button type="button" id="pnx" aria-label="Close (Esc)">&times;</button></div>'
              '<div id="pnb"></div></aside><div id="tip" role="tooltip" hidden></div>')
     table = ('<div class="mwrap" id="mwrap"><table class="mx" id="mx"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>'
              % (th, "".join(trs)))
     script = '<script type="application/json" id="mxdata">%s</script><script>%s</script>' % (
-        json_js({"socs": socs, "rows": data, "base": BASE_LABEL, "leg": LEGEND, "bl": BADGE_TXT, "bd": BADGE_DESC,
+        json_js({"socs": socs, "rows": data, "leg": LEGEND, "bl": BADGE_TXT, "bc": BADGE_CLS, "bd": BADGE_DESC,
                  "api": API.api_json() if API else {"areas": {}, "fa": {}}}), MX_JS)
     return legend_bar() + bar + ctl + table + panel + script
 
@@ -1127,9 +1157,9 @@ def main():
     open(dst, "w", encoding="utf-8").write(page)
     print("wrote %s (%d bytes)" % (dst, len(page.encode())))
     if MATRIX_COUNTS:
-        print("cells per SoC: improved since %s total/RC2 badge/new badge/changed badge: %s" % (BASE_TAG, ", ".join(
-            "%s %d/%d/%d/%d" % (k, v[3], v[0], v[1], v[2]) for k, v in MATRIX_COUNTS.items())))
-
+        ks = [x[0] for x in intervals()] + ["chg"]
+        print("cells per SoC, badge counts (%s): %s" % ("/".join(ks), ", ".join(
+            "%s %s" % (k, "/".join(str(v[x]) for x in ks)) for k, v in MATRIX_COUNTS.items())))
 
 if __name__ == "__main__":
     main()
