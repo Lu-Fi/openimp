@@ -12,6 +12,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `docs/lightbox/wyze-t20x-jxf23-2026-11-08.html`: fair pass at 3000 K plus the runner supplement (sharpness, reload, API, stability, day/night D1/D4), both stacks on the same camera one after the other.
 - Day and night with default AE are equal: noise 1.80 vs 1.81 (day), 2.56 vs 2.57 (night), night frame luma 80.7 vs 78.4; the open AE runs about 7 % darker in day light (frame Y 105.8 vs 113.5). CPU of the streaming application 9.1 % open vs 9.9 % vendor. Day/night D1/D4 pass; 10/10 module reloads with a valid picture and no oops.
+- Colour at 5000 K: dE00 to the chart open 11.85 vs vendor 13.27, saturation ratio 0.83 vs 0.62 (the open stack is closer to the chart and less washed out).
 - At matched exposure the open stack is linear over 2x/4x/8x gain, the vendor stack is not (gain-step quirk of the vendor sensor driver, as on the T10).
 - New issue #238: `SetMaxAgain(0)` does not cap the analog gain on the open T20. The report notes which checks were invalid because of the test setup (RTSP without credentials, reload check too strict); the runner is fixed for the next camera.
 
