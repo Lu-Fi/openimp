@@ -4372,7 +4372,7 @@
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): stored in the same cache as the T30 SetTemperDnsAttr, no driver control; host test. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #22): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: current type 1 written, frames flow). Stored with SetTemperDnsAttr's cache; the vendor sends the temper type through 0x8000082/0x8000167. The call round-trips in QEMU.",
+   "note": "T10+T20: newly exported (agg-25); T30 1.0.5 (the vendor sends the temper type through control 0x8000167 and ignores night mode): since 2026-11-07 (branch claude/t30-gaps-1107) sent through the Attr control 0x8000083 (the open T30 driver has no 0x8000167/0x8000082 arm), no-op while Temper is off like the vendor; host test. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #22): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: current type 1 written, frames flow). Until 2026-11-07 stored with SetTemperDnsAttr's cache; the vendor sends the temper type through 0x8000082/0x8000167. The call round-trips in QEMU.",
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
     "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",

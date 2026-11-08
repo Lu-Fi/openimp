@@ -833,6 +833,25 @@ static int c_antifog(int ph, int arg, char *info, size_t n)
 #endif
 
 #ifdef H_RAWDRC
+#ifdef PLATFORM_T30
+/* T30 RawDRC inputs (#202): the Iridix strength follows the AE exposure and histogram, so print
+ * GetEVAttr + GetAeHist right before each GetRawDRC; same line on the vendor and the open stack. */
+W(IMP_ISP_Tuning_GetEVAttr) W(IMP_ISP_Tuning_GetAeHist)
+static void drc_inputs(int arg, const char *tag)
+{
+    IMPISPEVAttr ev; IMPISPAEHist h; IMPISPDrcAttr d;
+    int re, rh, rd;
+
+    memset(&ev, 0, sizeof(ev)); memset(&h, 0, sizeof(h)); memset(&d, 0, sizeof(d));
+    re = HAVE(IMP_ISP_Tuning_GetEVAttr) ? IMP_ISP_Tuning_GetEVAttr(&ev) : -99;
+    rh = HAVE(IMP_ISP_Tuning_GetAeHist) ? IMP_ISP_Tuning_GetAeHist(&h) : -99;
+    rd = IMP_ISP_Tuning_GetRawDRC(&d);
+    say("[DRC] arg=%d %s ev=%u expr_us=%u ev_log2=%u again=%u dgain=%u gain_log2=%u (r%d) hist=%u,%u,%u,%u,%u thr=%u,%u,%u,%u (r%d) drc mode=%d str=%u (r%d)\n",
+        arg, tag, ev.ev, ev.expr_us, ev.ev_log2, ev.again, ev.dgain, ev.gain_log2, re,
+        h.ae_hist[0], h.ae_hist[1], h.ae_hist[2], h.ae_hist[3], h.ae_hist[4],
+        h.ae_histhresh[0], h.ae_histhresh[1], h.ae_histhresh[2], h.ae_histhresh[3], rh, d.mode, d.drc_strength, rd);
+}
+#endif
 /* arg 0 disable, 1 manual strength 255, 2 unlimit */
 static int c_rawdrc(int ph, int arg, char *info, size_t n)
 {
@@ -847,7 +866,13 @@ static int c_rawdrc(int ph, int arg, char *info, size_t n)
     if (arg == 0) a.mode = IMPISP_DRC_DISABLE;
     else if (arg == 1) { a.mode = IMPISP_DRC_MANUAL; a.drc_strength = 255; }
     else a.mode = IMPISP_DRC_UNLIMIT;
+#ifdef PLATFORM_T30
+    drc_inputs(arg, "pre");
+#endif
     r = IMP_ISP_Tuning_SetRawDRC(&a);
+#ifdef PLATFORM_T30
+    for (int k = 0; k < 3; k++) { usleep(500000); drc_inputs(arg, k == 0 ? "t0.5" : k == 1 ? "t1.0" : "t1.5"); }
+#endif
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetRawDRC(&cur);
     snprintf(info, n, "mode %d str %u (was %d %u)", cur.mode, cur.drc_strength, old.mode, old.drc_strength);
     return r;
@@ -945,16 +970,20 @@ static int c_fcrop(int ph, int arg, char *info, size_t n)
 #endif
 
 #if defined(H_CSC) || defined(H_EXT_CSC)
-/* CSC mode 0..4; 4 = user matrix (BT601 full, U/V sign inverted -> visible hue swap) */
+/* CSC mode 0..4; 4 = user matrix.  The user matrix differs from every preset (the driver normalises
+ * the coefficient signs to the preset pattern +++ / --+ / +--, so a sign-flipped preset reads back as that
+ * preset): luma row sum 0x360 (preset 0x400, Y ~84 %), U/V rows sum to 0 (grey stays grey), clip 16..235/240.
+ * All values are multiples of 4, so the Q8 Apical table (T10/T20/T30) reads back exactly.  The read-back
+ * must be mode 4 with all 15 words equal (info "rb n/15"); mode != 4 fails the case. */
 static int c_csc(int ph, int arg, char *info, size_t n)
 {
     static const int32_t user[15] = {
-        0x132, 0x259, 0x75, 0xad, 0x153, -0x200, -0x200, 0x1ad, 0x53,
-        0x00, 0x80, 0x00, 0xff, 0x00, 0xff,
+        0x100, 0x200, 0x60, -0xa0, -0x140, 0x1e0, 0x1e0, -0x190, -0x50,
+        0x00, 0x80, 0x10, 0xeb, 0x10, 0xf0,
     };
     static int32_t old[16];
     int32_t a[16], b[16];
-    int r;
+    int r, i, eq = 0;
 
     if (!HAVE(IMP_ISP_Tuning_SetCsc_Attr)) return CASE_NA;
     if (ph) { IMP_ISP_Tuning_SetCsc_Attr((void *)old); return 0; }
@@ -963,7 +992,12 @@ static int c_csc(int ph, int arg, char *info, size_t n)
     if (arg == 4) memcpy(&a[1], user, sizeof(user));
     r = IMP_ISP_Tuning_SetCsc_Attr((void *)a);
     memset(b, 0, sizeof(b)); IMP_ISP_Tuning_GetCsc_Attr((void *)b);
-    snprintf(info, n, "mode %d (was %d) coef0 %d", b[0], old[0], b[1]);
+    for (i = 0; i < 15; i++) eq += b[1 + i] == user[i];
+    if (arg == 4) {
+        snprintf(info, n, "mode %d (was %d) coef0 %d rb %d/15", b[0], old[0], b[1], eq);
+        if (r == 0 && b[0] != 4) r = -2;     /* user matrix read back as a preset */
+    } else
+        snprintf(info, n, "mode %d (was %d) coef0 %d", b[0], old[0], b[1]);
     return r;
 }
 #endif
