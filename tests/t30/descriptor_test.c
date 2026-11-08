@@ -128,6 +128,9 @@ static void test_p_descriptor(void)
     assert(pair_value(62) == config.reference_y);
     assert(pair_register(63) == 0x50804u);
     assert(pair_value(63) == config.reference_c);
+    /* REG_MCE_FSC (#236): OEM T30 writes 0 below 51 x 39 macroblocks. */
+    assert(pair_register(225) == 0x5004cu);
+    assert(pair_value(225) == 0u);
     assert(pair_register(226) == 0x50000u);
     assert(pair_value(226) == 0x11u);
     assert(pair_register(236) == 0x80030u);
@@ -144,6 +147,32 @@ static void test_p_descriptor(void)
     assert(pair_value(count - 2u) == 0x97850fcfu);
     assert(pair_register(count - 1u) == 0x40000u);
     assert(pair_value(count - 1u) == 0xc0001c3bu);
+
+    /* 1080p (120 x 68 MBs): OEM T30 1.0.5 h264_api_enc / SliceInit word. */
+    config.mb_width = 120;
+    config.mb_height = 68;
+    config.last_mby = 67;
+    config.width = 1920;
+    config.height = 1080;
+    config.stride[0] = config.stride[1] = 1920;
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(count == 785u);
+    assert(pair_register(225) == 0x5004cu);
+    assert(pair_value(225) == 0x08080303u);
+    config.mb_height = 38;      /* 51 x 39 is the OEM lower bound */
+    config.mb_width = 51;
+    config.last_mby = 37;
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(pair_value(225) == 0u);
+    config.mb_height = 39;
+    config.last_mby = 38;
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(pair_value(225) == 0x08080303u);
+    config.fsc_override = 1;    /* OPENIMP_T30_FSC debug knob */
+    config.fsc_word = 0x88080303u;
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(pair_value(225) == 0x88080303u);
+    config.fsc_override = 0;
 
     config.reference_y = 0;
     errno = 0;

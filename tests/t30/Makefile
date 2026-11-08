@@ -13,8 +13,10 @@ SOURCES := \
 
 .PHONY: radix-diff radix-smoke check clean ivs-bench sanitize
 
+# PLATFORM_T30: the T30 build defines it (build-t30.sh); the T30-only
+# REG_MCE_FSC rule (#236) is under test here.
 descriptor_test: $(SOURCES)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(SOURCES)
+	$(CC) $(CFLAGS) -DPLATFORM_T30 $(INCLUDES) -o $@ $(SOURCES)
 
 annexb_test: annexb_test.c $(ROOT)/src/t30/t30_annexb.h
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ annexb_test.c

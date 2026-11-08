@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-08, T30: P pictures as small as the vendor's (REG_MCE_FSC, #236)
+
+- T30 P-picture command list: `0x5004c` (REG_MCE_FSC) now carries the vendor word: `0x08080303` (FSE 0, RECX/RECY 8, PERX/PERY 3) for pictures of at least 51 x 39 macroblocks, 0 below, as the vendor libimp 1.0.5 `h264_api_enc` / `H264E_T30_SliceInit` compute it. OpenIMP wrote 0, the only register difference to the vendor P list (I lists were already equal); at 1080p the P pictures were nearly as large as the I pictures. The vendor-vs-open command-list comparison (vendor SliceInit emulated) now shows 0 differing words for I and P at 1920x1080, 1280x720, 640x368 and at the 51 x 39 boundary. Debug knob `OPENIMP_T30_FSC=<hex>` overrides the word. Host-tested (`tests/t30` descriptor test); device proof pending.
+
 ## 2026-11-08, T20: EnableChn on kernels without the legacy crop ioctls
 
 - `fs_set_format()` (T20): a kernel without the legacy crop ioctls (7.x) answers `VIDIOC_S_CROP` with ENOTTY, and EnableChn failed at "set format failed". With no crop requested this is now accepted and the frame source stays at its full-frame default. Every other S_CROP or CROPCAP error, and a requested crop that cannot be applied, still fails as before, so the 3.10 vendor kernel path is unchanged. Reported by Paul Philippov (a narrower variant of his patch). Build-checked for T20, not yet run on a 7.x kernel.
