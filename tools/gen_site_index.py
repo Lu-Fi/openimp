@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """gen_site_index.py: the start page of the GitHub Pages site (index.html).
 
-Links the feature matrix, the issue views and every light-box protocol in docs/lightbox/
-(one row per <vendor>-<soc>-<sensor>-<date>.html, the result column taken from docs/lightbox/README.md).
-usage: gen_site_index.py OUT.html   (run from the repository root; the workflow copies docs/lightbox/ next to it)
+Sections: header with navigation, hero (banner, newest release, key numbers), SoC status (completeness per SoC
+from the README status table), light-box protocols (every docs/lightbox/<vendor>-<soc>-<sensor>-<date>.html with
+the row of docs/lightbox/README.md; filter, SoC selector, sorting) and a footer.
+usage: gen_site_index.py OUT.html   (run from the repository root; the workflow copies docs/lightbox/ and the
+banner/logo from docs/assets/ next to it)
 """
 import glob, html, os, re, subprocess, sys
+from datetime import datetime, timezone
+from string import Template
 
 REPO = "https://github.com/Lu-Fi"
 BOARD = "https://github.com/users/Lu-Fi/projects/1"
+PLANNED = ("T32", "T33")
+
+
+def esc(s):
+    return html.escape(str(s), quote=True)
 
 
 def readme_rows():
@@ -27,95 +36,171 @@ def readme_rows():
     return rows
 
 
+def soc_status():
+    """[(soc, functions, done, pct, status)] from the README status table ('| T10 | 329 | 304 (92.4 %) | ... | RC3 gate |')"""
+    out = []
+    try:
+        text = open("README.md", encoding="utf-8").read()
+    except OSError:
+        return out
+    for m in re.finditer(r"^\|\s*(T\d\d)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\(([\d.]+)\s*%\)\s*\|.*\|\s*([^|]+?)\s*\|\s*$", text, re.M):
+        out.append((m.group(1), int(m.group(2)), int(m.group(3)), float(m.group(4)), m.group(5)))
+    return out
+
+
 def newest_tag():
     try:
-        out = subprocess.run(["git", "tag", "--list", "v20*", "--sort=-creatordate"], capture_output=True, text=True).stdout
-        return out.split()[0] if out.split() else ""
+        out = subprocess.run(["git", "tag", "--list", "v20*", "--sort=-creatordate"], capture_output=True, text=True).stdout.split()
+        return out[0] if out else ""
     except OSError:
         return ""
+
+
+def counts(res):
+    """'28 pass / 3 differ' -> (28, 3)"""
+    p = re.search(r"(\d+)\s*pass", res)
+    f = re.search(r"(\d+)\s*(?:fail|differ)", res)
+    return (int(p.group(1)) if p else None, int(f.group(1)) if f else None)
+
+
+PAGE = Template(r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenIMP open camera stack</title>
+<meta name="description" content="Open replacement of the Ingenic camera stack: open-tx-isp kernel ISP driver and the OpenIMP library, with vendor comparisons in a light box.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f5f6f8;--fg:#17202a;--mut:#5c6773;--card:#ffffff;--line:#dde2e8;--acc:#3e63dd;--acc-soft:#e8edfd;
+  --ok:#1a7f4b;--ok-soft:#e3f4ea;--warn:#a15c00;--warn-soft:#fdf0dc;--plan:#6b7280;--shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--mut:#97a1ad;--card:#171b21;--line:#272d36;--acc:#7c9cff;--acc-soft:#1c2440;
+  --ok:#4cc38a;--ok-soft:#15281f;--warn:#f0b35a;--warn-soft:#2c2214;--plan:#8b93a0;--shadow:none}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:16px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;color:var(--fg)}.brand img{width:26px;height:26px}
+nav{margin-left:auto;display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto}
+nav a{color:var(--mut);padding:6px 10px;border-radius:8px;font-size:.93em;white-space:nowrap}nav a:hover{background:var(--acc-soft);color:var(--acc);text-decoration:none}
+.hero{padding:40px 0 18px}.hero picture img{display:block;max-width:min(520px,100%);height:auto}
+.hero p.lead{font-size:1.12em;color:var(--mut);max-width:720px;margin:14px 0 18px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:.88em;color:var(--mut)}
+.pill b{color:var(--fg)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:22px 0 6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.stat .v{font-size:1.7em;font-weight:700;line-height:1.1}.stat .k{color:var(--mut);font-size:.88em;margin-top:4px}
+section{padding:26px 0}h2{font-size:1.25em;margin:0 0 4px}.sub{color:var(--mut);margin:0 0 16px}
+.socs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.soc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.soc .n{display:flex;justify-content:space-between;align-items:baseline;font-weight:650}.soc .n span{font-weight:500;font-size:.8em;color:var(--mut)}
+.bar{height:6px;border-radius:6px;background:var(--line);margin:10px 0 6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.soc .p{font-size:.85em;color:var(--mut)}.soc.plan{opacity:.8}.soc.plan .bar i{background:var(--plan)}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.link{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--fg);box-shadow:var(--shadow);transition:border-color .15s}
+.link:hover{border-color:var(--acc);text-decoration:none}.link b{display:block;margin-bottom:2px}.link span{color:var(--mut);font-size:.9em}
+.flt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.flt input,.flt select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:inherit}
+.flt input{flex:1 1 240px;min-width:0}#cnt{color:var(--mut);font-size:.9em;margin-left:auto}
+.reps{display:grid;gap:10px}
+.rep{display:grid;grid-template-columns:auto 1fr auto;gap:6px 14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+.rep .socb{font-weight:700;font-size:.85em;color:var(--acc);background:var(--acc-soft);border-radius:8px;padding:6px 9px;align-self:start}
+.rep .t{font-weight:600}.rep .t a{color:var(--fg)}.rep .m{color:var(--mut);font-size:.88em}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font-size:.8em;border-radius:999px;padding:3px 10px;white-space:nowrap}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.rep .open{grid-column:3;justify-self:end;font-size:.88em}
+@media (max-width:640px){.rep{grid-template-columns:auto 1fr}.chips,.rep .open{grid-column:1/-1;justify-content:flex-start;justify-self:start}}
+footer{border-top:1px solid var(--line);margin-top:24px;padding:20px 0 40px;color:var(--mut);font-size:.88em}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+</style></head><body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenIMP</a>
+  <nav><a href="#status">Status</a><a href="#lightbox">Light box</a><a href="feature-matrix.html">Matrix</a><a href="$board">Board</a><a href="$repo/openimp/issues">Issues</a><a href="$repo/openimp/releases">Releases</a><a href="$repo/openimp">GitHub</a></nav>
+</div></header>
+<main class="wrap">
+<div class="hero">
+  <picture><source srcset="assets/banner-dark.svg" media="(prefers-color-scheme: dark)"><img src="assets/banner.svg" alt="OpenIMP - OSS stack for Ingenic SoCs" width="520"></picture>
+  <p class="lead">An open replacement of the Ingenic camera stack: the <b>open-tx-isp</b> kernel ISP driver and the <b>OpenIMP</b> library,
+  measured feature by feature against the vendor stack, in a light box, on real cameras.</p>
+  <span class="pill">Newest release <b>$release</b></span>
+  <div class="stats">
+    <div class="stat"><div class="v">$ngate</div><div class="k">SoCs at the release gate</div></div>
+    <div class="stat"><div class="v">$avg %</div><div class="k">of vendor functions done (mean)</div></div>
+    <div class="stat"><div class="v">$nrep</div><div class="k">light-box protocols</div></div>
+    <div class="stat"><div class="v">$nplan</div><div class="k">SoCs planned</div></div>
+  </div>
+</div>
+<section id="status"><h2>Status per SoC</h2><p class="sub">Share of the vendor IMP functions implemented and checked, from the feature matrix. <a href="feature-matrix.html">Full matrix &rarr;</a></p>
+<div class="socs">$socs</div></section>
+<section><h2>Project</h2><p class="sub">Where the work is tracked.</p><div class="links">
+<a class="link" href="feature-matrix.html"><b>Feature matrix</b><span>Every function per SoC: done, vendor-equal or better, release gates</span></a>
+<a class="link" href="$board"><b>Project board</b><span>All open work with its status</span></a>
+<a class="link" href="$repo/openimp/issues"><b>Issues</b><span>OpenIMP; kernel driver: <span>open-tx-isp</span></span></a>
+<a class="link" href="$repo/openimp/blob/next/CHANGELOG.md"><b>Changelog</b><span>What changed, with device evidence</span></a>
+</div></section>
+<section id="lightbox"><h2>Light-box protocols</h2><p class="sub">Each camera runs the vendor stack and the open stack one after the other in the same light box, with the same lamps and chart. Every protocol lists the measurements, pictures, charts and how each deviation is followed up.</p>
+<div class="flt"><input id="q" type="search" placeholder="Filter: camera, sensor, lamps, result ..." aria-label="Filter the protocols">
+<select id="soc" aria-label="SoC"><option value="">All SoCs</option>$opts</select>
+<select id="sort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="soc">By SoC</option></select>
+<span id="cnt"></span></div>
+<div class="reps" id="reps">$reps</div></section>
+</main>
+<footer><div class="wrap"><span>Generated $gen from the <code>next</code> branch of <a href="$repo/openimp">Lu-Fi/openimp</a>.</span>
+<span><a href="$repo/openimp">OpenIMP</a> &middot; <a href="$repo/open-tx-isp">open-tx-isp</a> &middot; <a href="$repo/openimp/releases">Releases</a></span></div></footer>
+<script>
+(function(){
+  var q=document.getElementById("q"),soc=document.getElementById("soc"),so=document.getElementById("sort"),cnt=document.getElementById("cnt"),box=document.getElementById("reps");
+  var items=[].slice.call(box.querySelectorAll(".rep"));
+  function run(){var t=q.value.toLowerCase().trim(),s=soc.value,k=so.value,n=0;
+    items.sort(function(a,b){if(k=="soc"){var c=a.dataset.soc.localeCompare(b.dataset.soc);if(c)return c;}
+      return k=="old"?a.dataset.date.localeCompare(b.dataset.date):b.dataset.date.localeCompare(a.dataset.date);})
+    .forEach(function(r){var ok=(!s||r.dataset.soc==s)&&(!t||r.textContent.toLowerCase().indexOf(t)>=0);r.style.display=ok?"":"none";if(ok)n++;box.appendChild(r);});
+    cnt.textContent=n+" of "+items.length+" protocols";}
+  [q,soc,so].forEach(function(e){e.addEventListener("input",run);});run();})();
+</script>
+</body></html>
+""")
 
 
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else "_site/index.html"
     rows = readme_rows()
     reports = sorted(glob.glob("docs/lightbox/*-20??-??-??.html"), reverse=True)
-    tr = []
+    reps, socset = [], set()
     for p in reports:
         f = os.path.basename(p)
         soc, cam, date, lamps, res = rows.get(f, ("", f[:-16], f[-15:-5], "", ""))
-        tr.append("<tr data-soc=\"%s\" data-date=\"%s\"><td>%s</td><td><a href=\"lightbox/%s\">%s</a></td><td>%s</td><td>%s</td><td>%s</td></tr>"
-                  % (html.escape(soc.upper()), html.escape(date), html.escape(soc), html.escape(f), html.escape(cam), html.escape(date),
-                     html.escape(lamps), html.escape(res)))
-    socs = sorted({(rows.get(os.path.basename(p), ("",))[0] or "").upper() for p in reports} - {""})
-    opts = "".join('<option value="%s">%s</option>' % (html.escape(x), html.escape(x)) for x in socs)
+        socset.add(soc.upper())
+        npass, nfail = counts(res)
+        chips = ""
+        if npass is not None:
+            chips += '<span class="chip ok">%d pass</span>' % npass
+        if nfail:
+            chips += '<span class="chip warn">%d %s</span>' % (nfail, "differ" if "differ" in res else "fail")
+        note = re.sub(r"^\s*report\s*", "", re.sub(r"\(?\d+\s*pass\s*/\s*\d+\s*(?:fail|differ)\)?[,;]?\s*", "", res)).strip(" ()")
+        reps.append('<article class="rep" data-soc="%s" data-date="%s"><span class="socb">%s</span>'
+                    '<div><div class="t"><a href="lightbox/%s">%s</a></div><div class="m">%s &middot; %s%s</div></div>'
+                    '<div class="chips">%s</div></article>'
+                    % (esc(soc.upper()), esc(date), esc(soc or "?"), esc(f), esc(cam), esc(date), esc(lamps),
+                       (" &middot; " + esc(note)) if note else "", chips))
+    st = soc_status()
+    cards = []
+    for soc, nf, nd, pct, status in st:
+        cards.append('<div class="soc"><div class="n">%s<span>%s</span></div><div class="bar"><i style="width:%.1f%%"></i></div>'
+                     '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), esc(status), pct, pct, nd, nf))
+    for soc in PLANNED:
+        cards.append('<div class="soc plan"><div class="n">%s<span>planned</span></div><div class="bar"><i style="width:0"></i></div>'
+                     '<div class="p">QEMU only</div></div>' % soc)
+    avg = sum(x[3] for x in st) / len(st) if st else 0.0
     tag = newest_tag()
-    rel = ('<a href="%s/openimp/releases/tag/%s">%s</a>' % (REPO, tag, tag)) if tag else "see the releases page"
-    page = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Open camera stack</title>
-<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
-<style>
-:root{--bg:#f6f7f9;--fg:#1d232b;--mut:#5b6672;--card:#fff;--line:#d9dee4;--acc:#1f6feb}
-@media (prefers-color-scheme:dark){:root{--bg:#14171c;--fg:#e6e9ee;--mut:#9aa4af;--card:#1c2027;--line:#2c323b;--acc:#58a6ff}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-picture.banner img{display:block;max-width:100%%;height:auto;margin:4px 0 12px}
-main{max-width:980px;margin:0 auto;padding:24px 16px 48px}h1{font-size:1.6em;margin:.2em 0}h2{font-size:1.15em;margin:1.6em 0 .5em}
-p{color:var(--mut);margin:.3em 0 1em}a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-.card b{display:block;margin-bottom:4px}.card span{color:var(--mut);font-size:.9em}
-.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%%;font-size:.92em}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-th{color:var(--mut);font-weight:600}
-.flt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
-.flt input,.flt select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
-.flt input{flex:1 1 220px;min-width:0}#cnt{color:var(--mut);font-size:.9em}tr:last-child td{border-bottom:0}footer{margin-top:28px;color:var(--mut);font-size:.85em}
-</style></head><body><main>
-<picture class="banner"><source srcset="assets/banner-dark.svg" media="(prefers-color-scheme: dark)"><img src="assets/banner.svg" alt="OpenIMP - OSS stack for Ingenic SoCs" width="560"></picture>
-<h1>Open camera stack: OpenIMP + open-tx-isp</h1>
-<p>Open replacement of the Ingenic camera stack (kernel ISP driver open-tx-isp and the IMP user-space library OpenIMP) for
-T10, T20, T21, T23, T30, T31, T40 and T41 (T32/T33 planned). Newest release: %s.</p>
-<div class="cards">
-<a class="card" href="feature-matrix.html"><b>Feature matrix</b><span>State per function and SoC, vendor-equal or better, release gates</span></a>
-<a class="card" href="%s"><b>Project board</b><span>All open work with status</span></a>
-<a class="card" href="%s/openimp/issues"><b>Issues: OpenIMP</b><span>Open issues and findings</span></a>
-<a class="card" href="%s/open-tx-isp/issues"><b>Issues: open-tx-isp</b><span>Kernel driver issues</span></a>
-<a class="card" href="%s/openimp/releases"><b>Releases</b><span>Tags, release notes and images</span></a>
-<div class="card"><b>Changelog</b><span><a href="%s/openimp/blob/next/CHANGELOG.md">OpenIMP</a> and <a href="%s/open-tx-isp/blob/next/CHANGELOG.md">open-tx-isp</a></span></div>
-</div>
-<h2>Light-box protocols (open stack vs vendor stack)</h2>
-<p>Each camera runs the vendor stack and the open stack one after the other in the same light box, same lamps and chart.
-The protocols list every measurement with pictures and charts.</p>
-<div class="flt"><input id="q" type="search" placeholder="Filter: camera, sensor, result, lamps ..." aria-label="Filter the reports">
-<select id="soc" aria-label="SoC"><option value="">All SoCs</option>%s</select>
-<select id="sort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="soc">By SoC</option></select>
-<span id="cnt"></span></div>
-<div class="tw"><table><thead><tr><th>SoC</th><th>Camera / report</th><th>Date</th><th>Lamps and runs</th><th>Result</th></tr></thead>
-<tbody>%s</tbody></table></div>
-<script>
-(function(){
-  var q=document.getElementById("q"), soc=document.getElementById("soc"), so=document.getElementById("sort"), cnt=document.getElementById("cnt");
-  var tb=document.querySelector("tbody"), rows=[].slice.call(tb.querySelectorAll("tr[data-date]"));
-  function run(){
-    var t=q.value.toLowerCase().trim(), s=soc.value, n=0, k=so.value;
-    rows.sort(function(a,b){
-      if(k=="soc"){var c=a.dataset.soc.localeCompare(b.dataset.soc); if(c) return c;}
-      return k=="old" ? a.dataset.date.localeCompare(b.dataset.date) : b.dataset.date.localeCompare(a.dataset.date);
-    }).forEach(function(r){
-      var ok=(!s||r.dataset.soc==s)&&(!t||r.textContent.toLowerCase().indexOf(t)>=0);
-      r.style.display=ok?"":"none"; if(ok) n++; tb.appendChild(r);
-    });
-    cnt.textContent=n+" of "+rows.length+" reports";
-  }
-  [q,soc,so].forEach(function(e){e.addEventListener("input",run);}); run();
-})();
-</script>
-<footer>Generated from the <code>next</code> branch of <a href="%s/openimp">Lu-Fi/openimp</a>.</footer>
-</main></body></html>
-""" % (rel, BOARD, REPO, REPO, REPO, REPO, REPO, opts, "\n".join(tr) or "<tr><td colspan=5>none yet</td></tr>", REPO)
+    page = PAGE.substitute(
+        repo=REPO, board=BOARD, release=esc(tag or "-"), ngate=len(st), avg="%.1f" % avg, nrep=len(reports), nplan=len(PLANNED),
+        socs="".join(cards),
+        opts="".join('<option value="%s">%s</option>' % (esc(x), esc(x)) for x in sorted(socset - {""})),
+        reps="".join(reps) or '<p class="sub">No protocols yet.</p>',
+        gen=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"))
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     open(out, "w", encoding="utf-8").write(page)
-    print("%s: %d light-box reports" % (out, len(reports)))
+    print("%s: %d SoCs, %d light-box protocols" % (out, len(st), len(reports)))
 
 
 if __name__ == "__main__":
