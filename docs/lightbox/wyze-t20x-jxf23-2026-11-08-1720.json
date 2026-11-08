@@ -5,9 +5,8 @@
   "fail_by_handling": {
    "accepted": 1,
    "fixed": 1,
-   "invalid": 8,
-   "issue": 15,
-   "vendor": 1
+   "invalid": 9,
+   "issue": 15
   },
   "info": 40,
   "n/a": 8,
@@ -50,7 +49,7 @@
    "vendor": null
   }
  },
- "generated": "2026-11-08 17:23",
+ "generated": "2026-11-08 17:58",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
