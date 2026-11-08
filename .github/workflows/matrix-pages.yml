@@ -1,7 +1,7 @@
 # Regenerates the feature matrix from docs/status/ (features.yaml, history.md, issues.json),
 # docs/api_evidence.json and docs/api_exports.json on every push to next and publishes
 # it with GitHub Pages: index.html = start page (tools/gen_site_index.py) with links to the matrix, the issue
-# views and the light-box protocols (docs/lightbox/, copied to lightbox/).  The issue cache issues.json is refreshed
+# views and the light-box protocols (docs/lightbox/*.html + their key-number *.json, copied to lightbox/; one cam/<alias>.html trend page per camera).  The issue cache issues.json is refreshed
 # from the public GitHub issues at build time (tools/status_data.py --refresh-issues).
 name: feature-matrix pages
 
@@ -60,6 +60,7 @@ jobs:
           mkdir -p _site/lightbox _site/assets
           cp docs/assets/banner.svg docs/assets/banner-dark.svg docs/assets/logo.svg docs/assets/logo-dark.svg _site/assets/
           cp docs/lightbox/*.html _site/lightbox/ 2>/dev/null || true
+          cp docs/lightbox/*.json _site/lightbox/ 2>/dev/null || true   # key numbers per run, read for the cam/<alias>.html trend pages
           python3 tools/gen_site_index.py _site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
