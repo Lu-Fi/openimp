@@ -57,7 +57,8 @@ jobs:
           python3 tools/gen_feature_matrix_html.py
           mkdir -p _site
           cp docs/feature-matrix.html _site/feature-matrix.html
-          mkdir -p _site/lightbox
+          mkdir -p _site/lightbox _site/assets
+          cp docs/assets/banner.svg docs/assets/banner-dark.svg docs/assets/logo.svg docs/assets/logo-dark.svg _site/assets/
           cp docs/lightbox/*.html _site/lightbox/ 2>/dev/null || true
           python3 tools/gen_site_index.py _site/index.html
       - uses: actions/upload-pages-artifact@v3

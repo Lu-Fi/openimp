@@ -53,10 +53,12 @@ def main():
     page = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Open camera stack</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <style>
 :root{--bg:#f6f7f9;--fg:#1d232b;--mut:#5b6672;--card:#fff;--line:#d9dee4;--acc:#1f6feb}
 @media (prefers-color-scheme:dark){:root{--bg:#14171c;--fg:#e6e9ee;--mut:#9aa4af;--card:#1c2027;--line:#2c323b;--acc:#58a6ff}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+picture.banner img{display:block;max-width:100%%;height:auto;margin:4px 0 12px}
 main{max-width:980px;margin:0 auto;padding:24px 16px 48px}h1{font-size:1.6em;margin:.2em 0}h2{font-size:1.15em;margin:1.6em 0 .5em}
 p{color:var(--mut);margin:.3em 0 1em}a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
@@ -69,6 +71,7 @@ th{color:var(--mut);font-weight:600}
 .flt input,.flt select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
 .flt input{flex:1 1 220px;min-width:0}#cnt{color:var(--mut);font-size:.9em}tr:last-child td{border-bottom:0}footer{margin-top:28px;color:var(--mut);font-size:.85em}
 </style></head><body><main>
+<picture class="banner"><source srcset="assets/banner-dark.svg" media="(prefers-color-scheme: dark)"><img src="assets/banner.svg" alt="OpenIMP - OSS stack for Ingenic SoCs" width="560"></picture>
 <h1>Open camera stack: OpenIMP + open-tx-isp</h1>
 <p>Open replacement of the Ingenic camera stack (kernel ISP driver open-tx-isp and the IMP user-space library OpenIMP) for
 T10, T20, T21, T23, T30, T31, T40 and T41 (T32/T33 planned). Newest release: %s.</p>
