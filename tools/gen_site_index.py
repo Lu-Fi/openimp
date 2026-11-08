@@ -106,7 +106,8 @@ section{padding:26px 0}h2{font-size:1.25em;margin:0 0 4px}.sub{color:var(--mut);
 .rep .socb{font-weight:700;font-size:.85em;color:var(--acc);background:var(--acc-soft);border-radius:8px;padding:6px 9px;align-self:start}
 .rep .t{font-weight:600}.rep .t a{color:var(--fg)}.rep .m{color:var(--mut);font-size:.88em}
 .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.chip{font-size:.8em;border-radius:999px;padding:3px 10px;white-space:nowrap}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip{font-size:.8em;border-radius:999px;padding:3px 10px;white-space:nowrap}.chip.plan{background:var(--line);color:var(--plan)}
+.soc .n .chip{font-weight:600;font-size:.72em;padding:2px 8px}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
 .rep .open{grid-column:3;justify-self:end;font-size:.88em}
 @media (max-width:640px){.rep{grid-template-columns:auto 1fr}.chips,.rep .open{grid-column:1/-1;justify-content:flex-start;justify-self:start}}
 footer{border-top:1px solid var(--line);margin-top:24px;padding:20px 0 40px;color:var(--mut);font-size:.88em}
@@ -185,10 +186,13 @@ def main():
     st = soc_status()
     cards = []
     for soc, nf, nd, pct, status in st:
-        cards.append('<div class="soc"><div class="n">%s<span>%s</span></div><div class="bar"><i style="width:%.1f%%"></i></div>'
-                     '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), esc(status), pct, pct, nd, nf))
+        passed = "gate" in status.lower()   # README status "RC3 gate" = passed the RC3 release gate
+        chip = '<span class="chip %s" title="%s">%s%s</span>' % ("ok" if passed else "warn", esc(status),
+                                                                 "&#10003; " if passed else "", esc(status))
+        cards.append('<div class="soc"><div class="n">%s%s</div><div class="bar"><i style="width:%.1f%%"></i></div>'
+                     '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), chip, pct, pct, nd, nf))
     for soc in PLANNED:
-        cards.append('<div class="soc plan"><div class="n">%s<span>planned</span></div><div class="bar"><i style="width:0"></i></div>'
+        cards.append('<div class="soc plan"><div class="n">%s<span class="chip plan">planned</span></div><div class="bar"><i style="width:0"></i></div>'
                      '<div class="p">QEMU only</div></div>' % soc)
     avg = sum(x[3] for x in st) / len(st) if st else 0.0
     tag = newest_tag()
