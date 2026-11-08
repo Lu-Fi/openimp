@@ -164,20 +164,20 @@
  "soc": "T20",
  "stack": {
   "open": {
-   "desc": "open-tx-isp tx_isp_t20 (flashed, aperto-port 725a14d RC3) + OpenIMP libimp (flashed) + installed timpsd v1.12.0 under LD_PRELOAD fair_preload_t20.so",
+   "desc": "open-tx-isp tx_isp_t20 (flashed, aperto-port 725a14d RC3) + OpenIMP libimp (flashed) + installed streamer v1.12.0 under LD_PRELOAD fair_preload_t20.so",
    "ko": "tx_isp_t20 md5=9c3d9681 libimp=0c0132c8",
    "pieces_md5": [
     "tx-isp-t20.ko 9c3d9681 (run-1108-0211)",
     "sensor_jxf23_t20.ko 5f0c6499 (run-1108-0211)",
     "libimp.so 0c0132c8 (run-1108-0211)",
-    "timpsd b8faed54 (run-1108-0211)",
+    "streamer b8faed54 (run-1108-0211)",
     "jxf23.bin db5536f9 (run-1108-0211)"
    ],
-   "streamer": "timpsd bin_md5=b8faed54 version=v1.12.0",
-   "timps": "v1.12.0"
+   "streamer": "streamer bin_md5=b8faed54 version=v1.12.0",
+   "streamer": "v1.12.0"
   },
   "vendor": {
-   "desc": "ingenic-sdk tx-isp-t20.ko (vendor ISP blob libt20-firmware-3.12.0) + sensor_jxf23_t20.ko (vendor-compatible rebuild) + vendor libimp 3.12.0 (da38e940) + timps v1.12.0 USE_OPENIMP=0",
+   "desc": "ingenic-sdk tx-isp-t20.ko (vendor ISP blob libt20-firmware-3.12.0) + sensor_jxf23_t20.ko (vendor-compatible rebuild) + vendor libimp 3.12.0 (da38e940) + streamer v1.12.0 USE_OPENIMP=0",
    "ko": "tx_isp_t20 md5=9c3d9681 libimp=da38e940",
    "pieces_md5": [
     "libalog.so 90a3c90d (run-1108-0211)",
@@ -185,13 +185,13 @@
     "libsysutils.so 3e9d3e8b (run-1108-0211)",
     "tx-isp-t20.ko 13169fc2 (run-1108-0211)",
     "sensor_jxf23_t20.ko 9bc0c394 (run-1108-0211)",
-    "timpsd 904a2785 (run-1108-0211)",
+    "streamer 904a2785 (run-1108-0211)",
     "fair_preload.so 8d8cfe9c (run-1108-0211)",
     "jxf23.bin db5536f9 (run-1108-0211)",
     "tx-isp-t20.ko 9c3d9681 (run-1108-0211)"
    ],
-   "streamer": "timpsd bin_md5=904a2785 version=v1.12.0-vendorlib",
-   "timps": "v1.12.0-vendorlib"
+   "streamer": "streamer bin_md5=904a2785 version=v1.12.0-vendorlib",
+   "streamer": "v1.12.0-vendorlib"
   }
  },
  "stacks": [

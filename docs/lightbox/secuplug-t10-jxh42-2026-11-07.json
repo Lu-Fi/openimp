@@ -143,19 +143,19 @@
  "soc": "T10",
  "stack": {
   "open": {
-   "desc": "open-tx-isp tx_isp_t10 (flashed) + OpenIMP libimp (flashed) + installed timpsd under LD_PRELOAD fair_preload.so",
+   "desc": "open-tx-isp tx_isp_t10 (flashed) + OpenIMP libimp (flashed) + installed streamer under LD_PRELOAD fair_preload.so",
    "ko": "tx_isp_t10 md5=0da5d9d4 libimp=0c0132c8",
    "pieces_md5": [
     "tx-isp-t10.ko 0da5d9d4 (run-1107-v2)",
     "sensor_jxh42_t10.ko b0e940bc (run-1107-v2)",
     "libimp.so 0c0132c8 (run-1107-v2)",
-    "timpsd 5d79ec5d (run-1107-v2)"
+    "streamer 5d79ec5d (run-1107-v2)"
    ],
-   "streamer": "timpsd bin_md5=5d79ec5d version=v1.12.0",
-   "timps": "v1.12.0"
+   "streamer": "streamer bin_md5=5d79ec5d version=v1.12.0",
+   "streamer": "v1.12.0"
   },
   "vendor": {
-   "desc": "ingenic-sdk tx-isp-t10.ko (vendor ISP blob 3.12.0) + sensor_jxh42_t10.ko + vendor libimp 3.12.0 (da38e940) + timps bb048e4 USE_OPENIMP=0",
+   "desc": "ingenic-sdk tx-isp-t10.ko (vendor ISP blob 3.12.0) + sensor_jxh42_t10.ko + vendor libimp 3.12.0 (da38e940) + streamer bb048e4 USE_OPENIMP=0",
    "ko": "tx_isp_t10 md5=0da5d9d4 libimp=da38e940",
    "pieces_md5": [
     "libalog.so 90a3c90d (run-1107-v2)",
@@ -163,12 +163,12 @@
     "libsysutils.so 3e9d3e8b (run-1107-v2)",
     "tx-isp-t10.ko a9fa2729 (run-1107-v2)",
     "sensor_jxh42_t10.ko 36c8fac8 (run-1107-v2)",
-    "timpsd 69c86ddb (run-1107-v2)",
+    "streamer 69c86ddb (run-1107-v2)",
     "fair_preload.so d65ce4bf (run-1107-v2)",
     "tx-isp-t10.ko 0da5d9d4 (run-1107-v2)"
    ],
-   "streamer": "timpsd bin_md5=69c86ddb version=websocket version 13 required",
-   "timps": "vendor-t10-bb048e4"
+   "streamer": "streamer bin_md5=69c86ddb version=websocket version 13 required",
+   "streamer": "vendor-t10-bb048e4"
   }
  },
  "stacks": [
