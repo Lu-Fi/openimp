@@ -8,7 +8,7 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
-## 2026-11-08, T10/T20/T21: software rotation device-tested; T21 never probes MXU2
+## 2026-11-08, T10/T20/T21: software rotation device-tested; T21 never probes MXU2 (#240)
 
 - `IMP_FrameSource_SetChnRotate` 90/270 (beyond vendor: the vendor T10/T20/T21 libimp has no rotation call) device-tested on a T10 (Secuplug SP1), a T20 (Wyze Cam Pan) and a T21 (Victure PC420): dimensions swapped, 0 decode errors, direction checked by correlation, main stream unchanged, invalid sizes refused. Matrix: rotation 🔧 -> ✅+ on T10, T20 and T21.
 - T21 fix: the default MXU2 selection reset the T21 board when a rotated channel started (the kernel does not raise SIGILL for the COP2 probe, as on T23). The T21 build now never probes MXU2 and always uses the C rotate path (2.2-3.8 ms per frame at 640x368 / 704x576, 15 fps); T20 (built with PLATFORM_T20 and PLATFORM_T21) keeps its MXU2 path.
