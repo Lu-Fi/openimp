@@ -109,6 +109,7 @@ section{padding:26px 0}h2{font-size:1.25em;margin:0 0 4px}.sub{color:var(--mut);
 .chip{font-size:.8em;border-radius:999px;padding:3px 10px;white-space:nowrap}.chip.plan{background:var(--line);color:var(--plan)}
 .soc .n .chip{font-weight:600;font-size:.72em;padding:2px 8px}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
 .rep .open{grid-column:3;justify-self:end;font-size:.88em}
+.rep .hist{grid-column:1/-1;font-size:.88em;color:var(--mut)}.rep .hist summary{cursor:pointer}.rep .hist ul{margin:6px 0 0;padding-left:18px}
 @media (max-width:640px){.rep{grid-template-columns:auto 1fr}.chips,.rep .open{grid-column:1/-1;justify-content:flex-start;justify-self:start}}
 footer{border-top:1px solid var(--line);margin-top:24px;padding:20px 0 40px;color:var(--mut);font-size:.88em}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
@@ -165,12 +166,33 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-betw
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else "_site/index.html"
     rows = readme_rows()
-    reports = sorted(glob.glob("docs/lightbox/*-20??-??-??.html"), reverse=True)
-    reps, socset = [], set()
+    # every protocol is kept: <alias>-<YYYY-MM-DD>[-<HHMM>].html; one card per camera alias (newest run),
+    # the earlier runs of that camera in a "history" list below it
+    reports = sorted(glob.glob("docs/lightbox/*-20??-??-??*.html"), reverse=True)
+    groups = {}
     for p in reports:
         f = os.path.basename(p)
-        soc, cam, date, lamps, res = rows.get(f, ("", f[:-16], f[-15:-5], "", ""))
+        m = re.match(r"(.+?)-(20\d\d-\d\d-\d\d)(?:-(\d{4}))?\.html$", f)
+        if not m:
+            continue
+        groups.setdefault(m.group(1), []).append((m.group(2) + (" " + m.group(3)[:2] + ":" + m.group(3)[2:] if m.group(3) else ""), f))
+    reps, socset = [], set()
+    for alias, runs in sorted(groups.items(), key=lambda kv: max(r[0] for r in kv[1]), reverse=True):
+        runs.sort(reverse=True)
+        f = runs[0][1]
+        soc, cam, date, lamps, res = rows.get(f, ("", alias, runs[0][0], "", ""))
+        date = runs[0][0]
         socset.add(soc.upper())
+        hist = ""
+        if len(runs) > 1:
+            items = []
+            for d, hf in runs[1:]:
+                hres = rows.get(hf, ("", "", "", "", ""))[4]
+                hp, hn = counts(hres)
+                items.append('<li><a href="lightbox/%s">%s</a>%s</li>' % (esc(hf), esc(d),
+                             (" &middot; %d pass / %d %s" % (hp, hn or 0, "differ" if "differ" in hres else "fail")) if hp is not None else ""))
+            hist = '<details class="hist"><summary>History: %d earlier run%s</summary><ul>%s</ul></details>' % (
+                len(runs) - 1, "s" if len(runs) > 2 else "", "".join(items))
         npass, nfail = counts(res)
         chips = ""
         if npass is not None:
@@ -180,9 +202,9 @@ def main():
         note = re.sub(r"^\s*report\s*", "", re.sub(r"\(?\d+\s*pass\s*/\s*\d+\s*(?:fail|differ)\)?[,;]?\s*", "", res)).strip(" ()")
         reps.append('<article class="rep" data-soc="%s" data-date="%s"><span class="socb">%s</span>'
                     '<div><div class="t"><a href="lightbox/%s">%s</a></div><div class="m">%s &middot; %s%s</div></div>'
-                    '<div class="chips">%s</div></article>'
+                    '<div class="chips">%s</div>%s</article>'
                     % (esc(soc.upper()), esc(date), esc(soc or "?"), esc(f), esc(cam), esc(date), esc(lamps),
-                       (" &middot; " + esc(note)) if note else "", chips))
+                       (" &middot; " + esc(note)) if note else "", chips, hist))
     st = soc_status()
     cards = []
     for soc, nf, nd, pct, status in st:
