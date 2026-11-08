@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-08, Light box: Wyze Cam v2 (T20) full report with classified findings (#230)
+
+- New report `docs/lightbox/wyze-t20x-jxf23-2026-11-08-1720.html` (+ JSON for the trend page): full runner on both stacks, 3000 K and 5000 K, every fail linked to its handling. New findings: open stack stayed in night mode with the lamps on (#244), encoder decode errors in the CBR capture and slow bitrate step (#245), colour error / tone curve / sharpness behind the vendor and weak WB presets (#246); camera hang under the RTSP reconnect loop (#243). The earlier report of the same day stays for the history.
+
 ## 2026-11-08, Docs: guide for AI assistants (AGENTS.md, docs/ai/)
 
 - New `AGENTS.md` and `docs/ai/` for support assistants (for example the thingino support AI): what the open stack is, how to tell which stack a camera runs, every user-visible feature per SoC with the vendor behaviour next to it (incl. features that exist only with the open stack, such as rotation on T10/T20/T21/T23/T30), where the vendor stack is still better, troubleshooting, all environment variables and kernel module parameters. Top rule: honest answers, also when the vendor stack is better; the live feature matrix wins over the copy. English only.
