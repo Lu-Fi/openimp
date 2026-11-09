@@ -3,8 +3,8 @@
  "counts": {
   "fail": 3,
   "fail_by_handling": {
-   "accepted": 1,
    "invalid": 1,
+   "issue": 1,
    "vendor": 1
   },
   "flaky": 1,
@@ -101,7 +101,7 @@
    }
   }
  },
- "generated": "2026-11-09 22:02",
+ "generated": "2026-11-09 23:01",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
