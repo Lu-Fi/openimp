@@ -7,7 +7,7 @@ Runs on the HOST (not in CI): it reads the fleet soak sampler logs and the camer
                  "<date> <time> .N up=S pid=P snap=C oops=N encdead=E rss=.. mem=.. dn=.. [motor=..]" or "<date> <time> .N OFFLINE"
   STATUS files   <locks>/cam-N.STATUS             "<date> <hh:mm> <who>: <text>"; read: "full OTA" (image flash, planned by
                  definition, starts a new image counter), "reboot" lines (recovery reboot, ...). A line containing the word
-                 "planned" (not "unplanned") marks the event as planned.
+                 "planned" (not "unplanned") marks the event as planned; any other line with the marker explains a boot near it.
 
 Rules come from docs/status/release.yaml (fleet camera -> SoC, planned marker). The file is rebuilt completely from the logs on every
 run (idempotent), so a daily cron or a manual run by the coordinator is enough:
@@ -69,6 +69,10 @@ def parse_status(path, marker):
         if re.match(r"(?:coordinator|main)", who) and re.search(r"\b(recovery )?reboot\b(?!ed)", text, re.I) \
                 or re.search(r"\bREBOOTED unplanned\b", text):
             ev.append(dict(t=t, kind="reboot", planned=is_planned(text, marker), text=text))
+        elif is_planned(text, marker):
+            # any other "planned test" line (flash-one, lb_run, apitest, ...): not a reboot itself, but it explains a boot
+            # within EXPLAIN_TOL (test tools reboot or swap modules without writing the word "reboot")
+            ev.append(dict(t=t, kind="test", planned=True, text=text))
     return ev
 
 

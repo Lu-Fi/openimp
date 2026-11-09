@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-09, Soak summary: planned test lines explain reboots (daily review 2026-11-09)
+
+- `tools/status_soak.py`: every camera STATUS line with the planned marker (flash-one, lb_run, apitest, rotation tests, ...) now explains a boot within 10 min, not only lines with the word "reboot" from the coordinator. Before, test-tool flashes and vendor-stack reboots counted as unplanned (fleet total 180 -> 45 on the 2026-11-09 data).
+
 ## 2026-11-09, Light box: Wyze Cam v2 (T20) re-run with the new runner (#230, #248)
 
 - New report `docs/lightbox/wyze-t20x-jxf23-2026-11-09.html`: 54 pass, 6 fail (5 tracked in #246: temporal noise about 25 % above the vendor, night picture darker, a WB preset that does not settle; 1 OSD test-setup case). Runner: preflight gate, health log (a single lost ping no longer counts), auto-repeat, frozen runner copy, lamps switched through Home Assistant, optional Claude picture check (before each phase) and post-run review (flip, OSD, encoder frames, open-vs-vendor comparison, logs, triage) shown as an advisory report section.
