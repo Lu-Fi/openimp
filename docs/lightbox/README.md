@@ -1,3 +1,5 @@
+<img src="lightbox-logo.webp" alt="The Light Box" width="160" align="right">
+
 # Light-box protocols (#230)
 
 Vendor-or-better check of the open stack on real cameras: each camera runs the vendor stack (Ingenic ISP module, vendor libimp)

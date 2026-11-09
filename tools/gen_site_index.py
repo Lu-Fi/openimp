@@ -115,6 +115,7 @@ section{padding:26px 0}h2{font-size:1.25em;margin:0 0 4px}.sub{color:var(--mut);
 @media (max-width:640px){.rep{grid-template-columns:auto 1fr}.chips,.rep .open{grid-column:1/-1;justify-content:flex-start;justify-self:start}}
 footer{border-top:1px solid var(--line);margin-top:24px;padding:20px 0 40px;color:var(--mut);font-size:.88em}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+h2.lbh{display:flex;align-items:center;gap:12px}h2.lbh img{width:72px;height:72px;flex:none}
 </style></head><body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenIMP</a>
@@ -141,7 +142,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-betw
 <a class="link" href="$repo/openimp/issues"><b>Issues</b><span>OpenIMP; kernel driver: <span>open-tx-isp</span></span></a>
 <a class="link" href="$repo/openimp/blob/next/CHANGELOG.md"><b>Changelog</b><span>What changed, with device evidence</span></a>
 </div></section>
-<section id="lightbox"><h2>Light-box protocols</h2><p class="sub">Each camera runs the vendor stack and the open stack one after the other in the same light box, with the same lamps and chart. Every protocol lists the measurements, pictures, charts and how each deviation is followed up.</p>
+<section id="lightbox"><h2 class="lbh"><img src="lightbox/lightbox-logo.webp" alt="" width="96" height="96" loading="lazy">Light-box protocols</h2><p class="sub">Each camera runs the vendor stack and the open stack one after the other in the same light box, with the same lamps and chart. Every protocol lists the measurements, pictures, charts and how each deviation is followed up.</p>
 <div class="flt"><input id="q" type="search" placeholder="Filter: camera, sensor, lamps, result ..." aria-label="Filter the protocols">
 <select id="soc" aria-label="SoC"><option value="">All SoCs</option>$opts</select>
 <select id="sort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="soc">By SoC</option></select>
