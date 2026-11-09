@@ -31,6 +31,7 @@
 
 #include "audio/openimp_aec.h"
 #include "audio/openimp_ao_cache.h"
+#include "t31/openimp_alsa_pcm.h"
 
 #if defined(PLATFORM_T23)
 /* T23 speaks the OSS3 "AMIC" /dev/dsp ABI of ingenic-sdk audio/t23/oss3
@@ -180,6 +181,10 @@ typedef int (*T31AgcFree)(void *);
 static struct {
     int ai_fd;
     int ao_fd;
+    int ai_alsa;    /* ai_fd is an ALSA PCM node (no /dev/dsp), see openimp_alsa_pcm.h */
+    int ao_alsa;
+    unsigned int ai_wire;   /* channels the ALSA stream runs with */
+    unsigned int ao_wire;
     int ai_enabled;
     int ai_channel_enabled;
     int ao_enabled;
@@ -761,6 +766,15 @@ static int t31_ref_reserve(size_t capacity)
     return 0;
 }
 
+/* Mono capture on the stereo ALSA wire: OPENIMP_ALSA_CAPTURE_CHANNEL=0
+ * (left) or 1 (right) picks one channel, default 2 averages both. */
+static __attribute__((unused)) int t31_alsa_capture_channel(void)
+{
+    const char *value = getenv("OPENIMP_ALSA_CAPTURE_CHANNEL");
+
+    return value && (value[0] == '0' || value[0] == '1') ? value[0] - '0' : 2;
+}
+
 /* Like the stock _ai_record_thread: the driver only offers a blocking
  * GET_STREAM (its poll handler returns -EINVAL), so capture runs here and
  * IMP_AI_GetFrame/IMP_AI_PollingFrame consume a bounded FIFO.  When the
@@ -805,10 +819,22 @@ static void *t31_capture_main(void *argument)
          * route was disabled under it - capture_stop is checked below) */
         size = result == 0 ? chunk_size : 0;
 #else
-        stream.size = (uint32_t)chunk_size;
-        stream.aec = with_ref ? ref_chunk : NULL;
-        result = ioctl(t31_audio.ai_fd, T31_AI_GET_STREAM, &stream);
-        size = stream.size < chunk_size ? stream.size : chunk_size;
+        if (t31_audio.ai_alsa) {
+            /* ALSA: a blocking read of one chunk; no AEC reference */
+            long got = openimp_alsa_xfer(t31_audio.ai_fd, 1, chunk, chunk_size,
+                                         (unsigned int)(align / 2),
+                                         t31_audio.ai_wire,
+                                         t31_alsa_capture_channel());
+
+            result = got > 0 ? 0 : -1;
+            size = got > 0 ? (size_t)got : 0;
+            with_ref = 0;
+        } else {
+            stream.size = (uint32_t)chunk_size;
+            stream.aec = with_ref ? ref_chunk : NULL;
+            result = ioctl(t31_audio.ai_fd, T31_AI_GET_STREAM, &stream);
+            size = stream.size < chunk_size ? stream.size : chunk_size;
+        }
 #endif
         size -= size % align;
         pthread_mutex_lock(&t31_capture_lock);
@@ -960,9 +986,16 @@ static void t31_capture_stop(void)
         (void)t23_configure_fd(t31_audio.ai_fd, &t31_audio.ai_attr,
                                T23_AI_SET_PARAM, T23_AI_ENABLE_STREAM);
 #else
-        (void)ioctl(t31_audio.ai_fd, T31_DISABLE_STREAM, 1);
-        pthread_join(t31_audio.capture_thread, NULL);
-        (void)ioctl(t31_audio.ai_fd, T31_ENABLE_STREAM, 1);
+        if (t31_audio.ai_alsa) {
+            /* DROP wakes the blocked read; PREPARE re-arms the stream */
+            (void)openimp_alsa_drop(t31_audio.ai_fd);
+            pthread_join(t31_audio.capture_thread, NULL);
+            (void)openimp_alsa_prepare(t31_audio.ai_fd);
+        } else {
+            (void)ioctl(t31_audio.ai_fd, T31_DISABLE_STREAM, 1);
+            pthread_join(t31_audio.capture_thread, NULL);
+            (void)ioctl(t31_audio.ai_fd, T31_ENABLE_STREAM, 1);
+        }
 #endif
     } else {
         pthread_join(t31_audio.capture_thread, NULL);
@@ -998,6 +1031,24 @@ int IMP_AI_Enable(int device)
     if (t31_audio.ai_enabled)
         return 0;
     fd = open("/dev/dsp", O_RDONLY | O_CLOEXEC);
+#if !defined(PLATFORM_T23)
+    if (fd < 0 && errno == ENOENT) {
+        /* mainline kernel: no OSS node, use the ALSA PCM */
+        if (!t31_valid_attr(&t31_audio.ai_attr))
+            return -1;
+        fd = openimp_alsa_open(1, (unsigned int)t31_audio.ai_attr.samplerate,
+                               t31_audio.ai_attr.soundmode ==
+                                       AUDIO_SOUND_MODE_STEREO ? 2U : 1U,
+                               &t31_audio.ai_wire);
+        if (fd < 0)
+            return -1;
+        t31_audio.ai_alsa = 1;
+        t31_audio.ai_fd = fd;
+        t31_audio.ai_enabled = 1;
+        t31_audio.capture_valid = 0;
+        return 0;
+    }
+#endif
     if (fd < 0)
         return -1;
 #if defined(PLATFORM_T23)
@@ -1009,6 +1060,7 @@ int IMP_AI_Enable(int device)
         close(fd);
         return -1;
     }
+    t31_audio.ai_alsa = 0;
     t31_audio.ai_fd = fd;
     t31_audio.ai_enabled = 1;
     t31_audio.capture_valid = 0;
@@ -1023,7 +1075,9 @@ int IMP_AI_Disable(int device)
         return -1;
     t31_capture_stop();
     if (t31_audio.ai_fd >= 0) {
-        if (t31_audio.ai_enabled)
+        if (t31_audio.ai_enabled && t31_audio.ai_alsa)
+            result = openimp_alsa_drop(t31_audio.ai_fd);
+        else if (t31_audio.ai_enabled)
 #if defined(PLATFORM_T23)
             result = ioctl(t31_audio.ai_fd, T23_AI_DISABLE_STREAM, 1);
 #else
@@ -1031,6 +1085,7 @@ int IMP_AI_Disable(int device)
 #endif
         close(t31_audio.ai_fd);
     }
+    t31_audio.ai_alsa = 0;
     t31_audio.ai_fd = -1;
     t31_audio.ai_enabled = 0;
     t31_audio.ai_channel_enabled = 0;
@@ -1243,7 +1298,8 @@ int IMP_AI_SetGain(int device, int channel, int value)
         t23_set_gain(t31_audio.ai_fd, T23_AI_SET_GAIN, value) != 0)
         return -1;
 #else
-    if (t31_audio.ai_fd >= 0 &&
+    /* ALSA: the t31-aic codec has no gain control; the value is only kept */
+    if (t31_audio.ai_fd >= 0 && !t31_audio.ai_alsa &&
         ioctl(t31_audio.ai_fd, T31_AI_SET_GAIN, &value) != 0)
         return -1;
 #endif
@@ -1534,6 +1590,9 @@ static int t31_reference_set(int on)
 
     if (t31_audio.ai_fd < 0)
         return -1;
+    /* the ALSA backend has no playback reference to record */
+    if (t31_audio.ai_alsa)
+        return on ? -1 : 0;
 #if defined(PLATFORM_T23)
     /* The T23 AEC route is mono with the AI's rate and format and
      * GET_STREAM wants one reference fragment per AI fragment, so the
@@ -1774,6 +1833,23 @@ int IMP_AO_Enable(int device)
         t31_audio.ao_period_valid = 0;
     }
     fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC);
+#if !defined(PLATFORM_T23)
+    if (fd < 0 && errno == ENOENT) {
+        /* mainline kernel: no OSS node, use the ALSA PCM */
+        if (!t31_valid_attr(&t31_audio.ao_attr))
+            return -1;
+        fd = openimp_alsa_open(0, (unsigned int)t31_audio.ao_attr.samplerate,
+                               t31_audio.ao_attr.soundmode ==
+                                       AUDIO_SOUND_MODE_STEREO ? 2U : 1U,
+                               &t31_audio.ao_wire);
+        if (fd < 0)
+            return -1;
+        t31_audio.ao_alsa = 1;
+        t31_audio.ao_fd = fd;
+        t31_audio.ao_enabled = 1;
+        return 0;
+    }
+#endif
     if (fd < 0)
         return -1;
 #if defined(PLATFORM_T23)
@@ -1785,6 +1861,7 @@ int IMP_AO_Enable(int device)
         close(fd);
         return -1;
     }
+    t31_audio.ao_alsa = 0;
     t31_audio.ao_fd = fd;
     t31_audio.ao_enabled = 1;
     return 0;
@@ -1801,7 +1878,9 @@ int IMP_AO_Disable(int device)
         (void)openimp_ao_cache_release(&t31_audio.ao_cache, t31_ao_now_ns(),
                                        t31_ao_bytes_per_sec(),
                                        t31_ao_driver_write, NULL);
-        if (t31_audio.ao_enabled)
+        if (t31_audio.ao_enabled && t31_audio.ao_alsa)
+            result = openimp_alsa_drop(t31_audio.ao_fd);
+        else if (t31_audio.ao_enabled)
 #if defined(PLATFORM_T23)
             result = ioctl(t31_audio.ao_fd, T23_AO_DISABLE_STREAM, 1);
 #else
@@ -1809,6 +1888,7 @@ int IMP_AO_Disable(int device)
 #endif
         close(t31_audio.ao_fd);
     }
+    t31_audio.ao_alsa = 0;
     t31_audio.ao_fd = -1;
     t31_audio.ao_enabled = 0;
     t31_audio.ao_channel_enabled = 0;
@@ -1919,6 +1999,19 @@ static int t31_ao_driver_write(void *ctx, const void *data, size_t len)
         size_t take = len < t31_audio.ao_period_bytes
                           ? len : t31_audio.ao_period_bytes;
 
+        if (t31_audio.ao_alsa) {
+            unsigned int channels = t31_audio.ao_attr.soundmode ==
+                                            AUDIO_SOUND_MODE_STEREO ? 2U : 1U;
+            size_t frame = channels * sizeof(int16_t);
+
+            if (openimp_alsa_xfer(t31_audio.ao_fd, 0, (void *)(uintptr_t)bytes,
+                                  take, channels, t31_audio.ao_wire, 2) !=
+                (long)(take - take % frame))
+                return -1;
+            bytes += take;
+            len -= take;
+            continue;
+        }
         stream.data = (void *)(uintptr_t)bytes;
         stream.size = (uint32_t)take;
         if (ioctl(t31_audio.ao_fd, T31_AO_SET_STREAM, &stream) != 0)
@@ -2010,7 +2103,7 @@ int IMP_AO_SetGain(int device, int channel, int value)
         t23_set_gain(t31_audio.ao_fd, T23_AO_SET_GAIN, value) != 0)
         return -1;
 #else
-    if (t31_audio.ao_fd >= 0 &&
+    if (t31_audio.ao_fd >= 0 && !t31_audio.ao_alsa &&
         ioctl(t31_audio.ao_fd, T31_AO_SET_GAIN, &value) != 0)
         return -1;
 #endif
@@ -2040,6 +2133,9 @@ int IMP_AO_ClearChnBuf(int device, int channel)
         return -1;
     t31_audio.ao_period_valid = 0;
     openimp_ao_cache_drop(&t31_audio.ao_cache);
+    if (t31_audio.ao_alsa)
+        return openimp_alsa_drop(t31_audio.ao_fd) == 0
+                   ? openimp_alsa_prepare(t31_audio.ao_fd) : -1;
     return ioctl(t31_audio.ao_fd, T31_AO_CLEAR_STREAM, 1);
 }
 
@@ -2060,6 +2156,8 @@ int IMP_AO_FlushChnBuf(int device, int channel)
                                  t31_ao_bytes_per_sec(),
                                  t31_ao_driver_write, NULL) != 0)
         return -1;
+    if (t31_audio.ao_alsa)
+        return openimp_alsa_drain(t31_audio.ao_fd);
     return ioctl(t31_audio.ao_fd, T31_AO_SYNC_STREAM, 1);
 }
 

@@ -156,6 +156,9 @@ Audio processing belongs to [`libaudioProcess-neo`](https://github.com/gtxaspec/
 logging and system libraries to [`ingenic-system-libs-neo`](https://github.com/gtxaspec/ingenic-system-libs-neo).
 OpenIMP provides the native IMP audio I/O layer on T31 and T40/T41; HPF, noise suppression and AGC are
 loaded at runtime from `libaudioProcess-neo`. Acoustic echo cancellation uses the bundled WebRTC AECM.
+On the vendor 3.10 kernel the audio I/O talks to `/dev/dsp`; on mainline kernels, which only have ALSA, T31 falls back
+to raw ALSA PCM ioctls on `/dev/snd/pcmC0D0c` / `pcmC0D0p` (`src/t31/openimp_alsa_pcm.h`, no alsa-lib). Mono is
+converted to the stereo-only I2S, volume is software, AEC is not available on that backend.
 
 ## Documentation
 
