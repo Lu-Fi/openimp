@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-09, T20 contrast follows the gain again (#246; cam-C T20X, light box 3000 K, runtime libimp from /tmp)
+
+- The ISP tuning worker (vendor isp_tuning_deamon_thread / isp_tuning_func_contrast_judge) read the total gain with the direct tuning get. The T20 SDK handler `apical_isp_g_totalgain` copies the result through `control->value`, so the read got -EFAULT every second and the contrast was never re-sent: the gain-dependent contrast curve stayed at its startup point (contrast 128 at gain 16x, vendor 103). On T20 the worker now uses the indirect get, like `IMP_ISP_Tuning_GetTotalGain`.
+- Device, same session, same IT/gain on both stacks: contrast 128/113/103 at gain 1/8/16 (vendor 128/113/103); NV12 Y temporal noise open/vendor gain 2..max 1.25/1.21, 1.73/1.72, 1.07/1.09, 1.26/1.30, 1.29/1.35 (before +25 % at gain 16 and max). Gain 1 stays +33 % with a 39 % brighter picture: the vendor keeps Iridix at its minimum (13) under manual exposure, ours runs the auto Iridix strength (97); not changed. Host checks pass.
+
 ## 2026-11-09, Soak summary: planned test lines explain reboots (daily review 2026-11-09)
 
 - `tools/status_soak.py`: every camera STATUS line with the planned marker (flash-one, lb_run, apitest, rotation tests, ...) now explains a boot within 10 min, not only lines with the word "reboot" from the coordinator. Before, test-tool flashes and vendor-stack reboots counted as unplanned (fleet total 180 -> 45 on the 2026-11-09 data).

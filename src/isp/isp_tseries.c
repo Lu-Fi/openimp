@@ -1886,7 +1886,17 @@ static void *tseries_tuning_worker(void *unused)
     while (!tseries_tuning_thread_stop) {
         int32_t total_gain = 0;
 
+#if defined(PLATFORM_T20)
+        /* openimp #246: the T20 SDK apical_isp_g_totalgain copy_to_user()s
+         * the gain through control->value (see IMP_ISP_Tuning_GetTotalGain);
+         * the direct read passed 0 there, got -EFAULT every second and never
+         * re-sent the contrast, so the gain-dependent contrast curve stayed
+         * at its startup point (vendor 3.12.0 isp_tuning_func_contrast_judge
+         * lowers contrast 128 -> 103 at gain 16x on the Wyze jxf23). */
+        if (tseries_tuning_get_val_indirect(TISP_CID_TOTAL_GAIN, &total_gain) == 0 &&
+#else
         if (tseries_tuning_get_val(TISP_CID_TOTAL_GAIN, &total_gain) == 0 &&
+#endif
             total_gain >= 0 &&
             total_gain != tseries_tuning_last_total_gain) {
             uint32_t packed =
