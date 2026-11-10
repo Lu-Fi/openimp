@@ -4,7 +4,7 @@
   "fail": 4,
   "fail_by_handling": {
    "accepted": 1,
-   "open": 3
+   "issue": 3
   },
   "flaky": 0,
   "info": 107,
@@ -100,7 +100,7 @@
    }
   }
  },
- "generated": "2026-11-10 21:51",
+ "generated": "2026-11-10 22:05",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
