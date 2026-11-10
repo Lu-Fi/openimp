@@ -1667,6 +1667,7 @@ static int tseries_v4l2_get(int32_t id, int32_t *value)
 #define TISP_CID_TABLE_TUNING 0x8000161
 #define TSERIES_TABLE_SINTER 109
 #define TSERIES_TABLE_TEMPER 132
+#define TSERIES_TABLE_DPC 83     /* T30 1.0.5 SetDPStrength: DP_SLOPE_LINEAR */
 
 typedef struct {
     uint32_t table;
@@ -1685,9 +1686,10 @@ typedef struct {
     void *base;
 } TSeriesTableBaseline;
 
-static TSeriesTableBaseline tseries_table_baseline[2] = {
+static TSeriesTableBaseline tseries_table_baseline[3] = {
     { TSERIES_TABLE_SINTER, 0, 0, 0, NULL },
     { TSERIES_TABLE_TEMPER, 0, 0, 0, NULL },
+    { TSERIES_TABLE_DPC, 0, 0, 0, NULL },
 };
 
 static void tseries_table_baseline_reset(void)
@@ -2658,9 +2660,18 @@ int IMP_ISP_Tuning_GetDPC_Strength(uint32_t *pratio)
 int IMP_ISP_Tuning_SetDPStrength(uint32_t ratio)
 {
     uint32_t v = ratio > 200u ? 200u : ratio;
+#if defined(PLATFORM_T30)
+    /* T30 1.0.5 (0xdb1c8): isp_table_tuning_ratio(0x53, min(ratio, 200)),
+     * the caller's value in percent of the tuning table.  The T30 drivers
+     * (stock and open) have no DPC ratio control 0x8000062 (b53 on the
+     * T30X: -1 for every value); the open driver serves table 0x53
+     * (DP_SLOPE_LINEAR) through 0x8000161 like the stock one. */
+    return tseries_table_tuning_ratio(TSERIES_TABLE_DPC, v);
+#else
     uint32_t scaled = (v * 128u + 50u) / 100u;
 
     return tseries_tuning_set_val(TISP_CID_DPC_RATIO, (int32_t)(scaled > 255u ? 255u : scaled));
+#endif
 }
 #endif /* T21, T20 and T30: SetDPStrength */
 

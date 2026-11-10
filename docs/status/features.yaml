@@ -292,8 +292,8 @@ features:
       sym: ✅
       text: 'device-tested: vendor AE 50/60/off IT 720/900/971; HLIL 720/600/711'
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `Get/SetAntiFlickerAttr` round trip PASS on the device (API cell dev) and the exposure sits on the same 50 Hz step as the vendor (1916 vs 1915 lines, b24-b29); timps anti_flicker 1/2 accepted (b47 a1, no Y change). The 50/60 Hz banding effect under a flickering light was not measured. Earlier: 2026-11-03, QEMU only (#177): `GetAntiFlickerAttr` answers and reads back the mode set (V4L2 0x980918 get; before: -1). Earlier: 2026-10-25: reaches the driver in QEMU (T30 image, sc4236 model; reload/controls clean after six driver fixes), no T30 camera. Earlier: ? exported, no test result"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): the integration time snaps to the mains period like the vendor: anti-flicker off 744 lines (15.5 ms), 50 Hz 480 lines = 10.00 ms (vendor 479 = 9.98 ms), 60 Hz 400 lines = 8.33 ms (vendor 404 = 8.42 ms), line time 20.83 us (1916 lines at 25 fps). Banding under a flickering light not measured (no such light in the lab). Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `Get/SetAntiFlickerAttr` round trip PASS on the device (API cell dev) and the exposure sits on the same 50 Hz step as the vendor (1916 vs 1915 lines, b24-b29); timps anti_flicker 1/2 accepted (b47 a1, no Y change). The 50/60 Hz banding effect under a flickering light was not measured. Earlier: 2026-11-03, QEMU only (#177): `GetAntiFlickerAttr` answers and reads back the mode set (V4L2 0x980918 get; before: -1). Earlier: 2026-10-25: reaches the driver in QEMU (T30 image, sc4236 model; reload/controls clean after six driver fixes), no T30 camera. Earlier: ? exported, no test result"
     T31:
       sym: ✅
       text: 'device-tested with 22 ms IT cap: IT 1000/900/750 lines off/50/60 Hz, gain compensates; daylight test pending'
@@ -695,8 +695,10 @@ features:
       issues:
       - 106
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): timps dpc_strength 0/128/255 is accepted on the device (b47 a1) but gives no measurable change in the test scene (Y 108.3-108.4); `SetDPStrength` stays host-tested in the API table. Earlier: `SetDPStrength` exported since 2026-10-10 (DPC ratio control, host test), no device result"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): `SetDPStrength` scales the defect-pixel table 0x53 like the vendor 1.0.5 (#269; it returned -1 before, b53): outliers (>30 against the 3x3 median, FixQP 20 IDR, 1080p) at DPC 0 vs 200 %: short exposure (96 lines, gain 4008) hot 1585 -> 729, cold 3605 -> 1591; auto exposure hot 3111 -> 2731, cold 3940 -> 3319 (b54). The vendor stack aborts the same group earlier (its manual exposure of 1 ms gives 3 lines at gain 57548 and the i264e NAL buffer assert fires), so there is no vendor number; the vendor function is the same table scale. Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): timps dpc_strength 0/128/255 is accepted on the device (b47 a1) but gives no measurable change in the test scene (Y 108.3-108.4); `SetDPStrength` stays host-tested in the API table. Earlier: `SetDPStrength` exported since 2026-10-10 (DPC ratio control, host test), no device result"
+      issues:
+      - 269
     T31:
       sym: ✅
       text: 'vendor-identical: m1/m3 thresholds 0→(d1000,f5), 255→(d5,f1191); impulses −6 % (defect pixels only)'
@@ -769,8 +771,8 @@ features:
       sym: ✅
       text: '2026-11-04 (API pass, two T23 cameras, image agg67d): `IMP_ISP_Tuning_Set/GetMaskBlock` draws a white block into the picture on ch0 and ch1 (luma 123 -> 255 inside the window, off restores), the window and colour type read back equal (the enable flag reads 0 as in the stock handler), channel 3 is refused. Earlier: device-tested: both streams, green fill'
     T30:
-      sym: '?'
-      text: no privacy-mask call in the T30 vendor export list
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): no ISP privacy-mask API in the T30 1.0.5 export list; the privacy cover is the OSD COVER region: 300x300 blue cover at (1300,500) on 1080p H.264 is solid (Y 25, sd 0.02, U 240 V 110; scene sd there without cover 43.9). In the same test the vendor stack drew the cover only as a small block at the top left (b52, b53). Earlier: no privacy-mask call in the T30 vendor export list"
     T31:
       sym: ✅
       text: as vendor, follows mirror/flip; emulator 400/400 identical; cam-A black+red ok [-all-13]
@@ -804,8 +806,8 @@ features:
       sym: ✅
       text: '2026-10-27: `GetAutoZoom` works and crop off restores the whole sensor picture instead of the top-left corner (T23 camera, runtime ko swap: zoom shows the centre half, crop off layout distance 0.000). Earlier: front crop via vendor path (960x540 crop ok); MASK -EINVAL as vendor (no stock handler); the 2026-10-06 crop hang is fixed in agg-34 and device-tested on 2026-10-09: crop off unlocks the window and restores the full sensor window, a locked window that does not fit is dropped (with a warning) instead of stalling the MSCA, the lock is released at the last close of the ISP device (a streamer restart without crop gets the full frame), module parameter `fcrop_upscale_pct` (default 0) lets the geometry check tolerate a measured upscale (T23 upscales up to 2.0; at 2.2 the MSCA stalled briefly, the crop was dropped, no reboot); flip, day/night, fast changes with many streamer restarts, corner windows, sub-stream and a reboot with a persisted crop all passed; `SetAutoZoom` as the stock control (host/build-tested only) Front crop vs flip (device-tested 2026-10-10): the window is in sensor space before the flip; the streamer mirrors it on both axes; with image hflip/vflip both the sensor (reg 0x3221) and the MSCA (0xd050) flip, `shvflip=1` only flips the LSC mesh. A streamer detects the safe crop path by `/sys/module/tx_isp_t23/parameters/fcrop_upscale_pct` (present only in fixed drivers).'
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): FrameSource channel crop works on both stacks (fs1-crop b26); CSC presets (OpenIMP extension, beyond vendor) change the picture (b26/b32: coef0 306/262/218/186), but after a user matrix Get reports mode 0 (read-back incomplete); `SetFrontCrop` is library-cache only on T30 (no vendor API, picture unchanged). Earlier: 2026-10-25: reaches the driver in QEMU (T30 image, sc4236 model; reload/controls clean after six driver fixes), no T30 camera. Earlier: ? no front-crop/scaler-level call in the T30 vendor export list"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): FrameSource channel crop (64,228) 1920x1080 and the scaler 2048x1536 -> 1280x720 give the same geometry on both stacks (scaled vs crop correlation open 0.979, vendor 0.989). (b52 showed a black scaled clip: the 3 pictures were the #216 black start, test artefact.) CSC presets stay an OpenIMP extension (beyond vendor); `SetFrontCrop` has no vendor API on T30 (library cache only). Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): FrameSource channel crop works on both stacks (fs1-crop b26); CSC presets (OpenIMP extension, beyond vendor) change the picture (b26/b32: coef0 306/262/218/186), but after a user matrix Get reports mode 0 (read-back incomplete); `SetFrontCrop` is library-cache only on T30 (no vendor API, picture unchanged). Earlier: 2026-10-25: reaches the driver in QEMU (T30 image, sc4236 model; reload/controls clean after six driver fixes), no T30 camera. Earlier: ? no front-crop/scaler-level call in the T30 vendor export list"
     T31:
       sym: ✅
       text: '2026-10-27: AutoZoom (#124) was a test misuse (the crop window is cut from the scaled picture and must keep the channel size): 2x zoom with a centre crop works, detail 5.27 -> 2.18, T31 camera 0 FAIL. Earlier: Update 2026-10-24, evening (open-tx-isp `claude/t31-crop`, merged): the front crop accepts enlarging up to 2.0x per axis by default (`fcrop_upscale_pct` default 100, was 0 = no enlarging), as the vendor enlarges; beyond 2.0x it is refused with -EINVAL (2.5x hangs the MSCA, so better than the vendor). Device (T31L, sc2336, 1080p main): 960x540 accepted, zoom visible, 80 s hold at 117 IRQ/s, snapshots 200; 600x338 and 768x432 refused; off restores 1920x1080; 0 oopses. Not tested: decoding the encoded main stream and a T31X with the new default. Older text: BLC get, CSC presets 0–4 + user matrix, scaler level (tested on cam-A); front crop: the crash is fixed (enabling a window smaller than a channel''s scaler output stalled every MSCA output until reboot; the kernel now refuses such a window with -EINVAL and logs it without a hang, a main stream larger than the window drops the crop with a warning, the crop survives idle off/on, a restart and a flip, disabling restores the full frame; module parameter `fcrop_upscale_pct`, default 0) and, device-tested on 2026-10-10, a valid window zooms both streams (**proven**) Front crop vs flip (device-tested 2026-10-10): the window is in sensor space before the flip; the streamer mirrors it on both axes. Front crop is effective (picture effect proven on both streams in daylight, 2026-10-10); `/sys/module/tx_isp_t31/parameters/fcrop_upscale_pct` exists only in fixed drivers. The vendor does no transform (T23/T31 stock).'
@@ -1040,8 +1042,8 @@ features:
       sym: ✅
       text: 'eprc controller: 60 s at 1200 kbit/s, decode clean: SMART 1141, CBR 1253, VBR 1255 (claude/eprc-t21-t23, not yet in an aggregate); MB-level RC ported (claude/eprc-mbrc 9e2bc3a, a8b483a: 0x400c0/0x400c4 per picture type like the vendor; device test running)'
     T30:
-      sym: 🔧
-      text: "2026-11-07: the live CBR/VBR change on H.265 is vendor-equal on the device (#228, see H.265); the first-window overshoot of CBR/VBR is fixed and device-proven (#216 closed, b46, see H.264). FixQP and SMART still not run on the device; macroblock fields in #217. Earlier: 2026-11-06, T30X lab camera (b39): CBR and VBR run the ported vendor T30 rate controller (`src/eprc/eprc_t30.c`, bit-exact against the stock library, 6966 OEM decisions in `make check`): CBR 2000 steady 2040-2069 kbit/s at 2048x1536 25/15 fps and 1080p + sub, VBR max 2000 settles at 1.4 Mbit/s, the old GOP controller gave 14.2 Mbit/s in the same run. FixQP and SMART not run on the device; first-second overshoot (start QP 26) open in #216, macroblock fields in #217."
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): all modes run and the rates match the vendor (1080p25, kbit/s over the last 2 s, open / vendor): FixQP 25 29915 / 29819, FixQP 35 966 / 1152, CBR 2000 2073 / 2070, VBR 2000 ql0 1549 / 1943, SMART 2000 ql0 1544 / 1970 (VBR/SMART stay under the maximum on both). FixQP bytes 25/35 31.1 vs 27.6 (b52 before #236: 4.7 vs 20.3). Earlier: 2026-11-07: the live CBR/VBR change on H.265 is vendor-equal on the device (#228, see H.265); the first-window overshoot of CBR/VBR is fixed and device-proven (#216 closed, b46, see H.264). FixQP and SMART still not run on the device; macroblock fields in #217. Earlier: 2026-11-06, T30X lab camera (b39): CBR and VBR run the ported vendor T30 rate controller (`src/eprc/eprc_t30.c`, bit-exact against the stock library, 6966 OEM decisions in `make check`): CBR 2000 steady 2040-2069 kbit/s at 2048x1536 25/15 fps and 1080p + sub, VBR max 2000 settles at 1.4 Mbit/s, the old GOP controller gave 14.2 Mbit/s in the same run. FixQP and SMART not run on the device; first-second overshoot (start QP 26) open in #216, macroblock fields in #217."
       issues:
       - 216
       - 228
@@ -1081,10 +1083,11 @@ features:
       sym: ✅
       text: uses the vendor CreateChn clamps (1/50/2/2); parameters reach the native encoder (changePos min 50); app value 0 = vendor default 3/15/2/80 [-all-13]
     T30:
-      sym: 🔧
-      text: "2026-11-07: the live bitrate change is device-proven on H.265 (#228: 1000 -> 1063, 3000 -> 3109-3114 kbit/s after 10 s, vendor-equal); run-time frame-rate and GOP changes are host-tested only. Earlier: 2026-11-06: the parameter mapping follows the vendor i264e (QP steps, staticTime, changePos, quality) and the emulator is bit-exact (#210); the device ran the defaults only (b39)."
+      sym: ⚠️
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): maxQp acts like the vendor (CBR 500, maxQp 30 vs 45: +1119 % / vendor +1183 %), but frmQPStep, iBiasLvl and qualityLvl show no effect (frmQPStep 1 vs 8: P size sd -0 % / vendor -52 %; iBias -3 vs +3: avg I +0 % / +40 %; VBR qualityLvl 0 vs 7: +1 % / +111 %; SMART +0 % / +114 %); changePos/staticTime about 0 on both (#271). Earlier: 2026-11-07: the live bitrate change is device-proven on H.265 (#228: 1000 -> 1063, 3000 -> 3109-3114 kbit/s after 10 s, vendor-equal); run-time frame-rate and GOP changes are host-tested only. Earlier: 2026-11-06: the parameter mapping follows the vendor i264e (QP steps, staticTime, changePos, quality) and the emulator is bit-exact (#210); the device ran the defaults only (b39)."
       issues:
       - 228
+      - 271
     T31:
       sym: ✅
       text: T31 defaults like the vendor (max QP 48, max bitrate 4/3, ...) [-all-13] (claude/rc-modes-2)
@@ -1120,8 +1123,8 @@ features:
       issues:
       - 127
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the OSD API runs on the device (apitest osd area, API cells dev) and timps with OSD on keeps 358 frames in 15 s (b35 row B); the overlay itself was not checked in the picture. Earlier: OSD calls exported (T23 services, shared), no test result for T30"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): rectangle, line, BGRA bitmap and text (5x7 font picture) and cover on 1080p H.264 appear as set and match the vendor stack in the same boot (rect top V 240 / U 91 vs 240 / 90, line U 54 V 35 vs 54 / 34, bitmap white 253 / black 16 vs 254 / 16, text pattern match 1.000 on both); the cover is solid on the open stack, the vendor drew it only as a small block at the top left (b54; b52/b53 had a test-side region setup bug on both stacks). Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the OSD API runs on the device (apitest osd area, API cells dev) and timps with OSD on keeps 358 frames in 15 s (b35 row B); the overlay itself was not checked in the picture. Earlier: OSD calls exported (T23 services, shared), no test result for T30"
     T31:
       sym: ✅
       text: 'IPU OSD; lines/rectangles; rotation: no OSD clamp in timps'
@@ -1156,8 +1159,8 @@ features:
       sym: ✅
       text: motion active again after sub-stream idle (WebUI grid)
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the IVS move/base-move API passes on the device when the ivs area runs alone (46 PASS / 0 FAIL, API cells dev); it fails after the encoder area in the same process (state leak, open); no real motion test with a moving scene. Earlier: IVS calls exported (T31 IVS code), no test result for T30"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): IVS move on 640x360 (4x4 grid, stimulus = ISP hflip toggled every second): open motion in 35 % of the results while flipping, 0 % static before and after; vendor 7 % / 0 % (b52: open 40 %, vendor 13 %). No false motion on a static scene on either stack. Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the IVS move/base-move API passes on the device when the ivs area runs alone (46 PASS / 0 FAIL, API cells dev); it fails after the encoder area in the same process (state leak, open); no real motion test with a moving scene. Earlier: IVS calls exported (T31 IVS code), no test result for T30"
       issues:
       - 19
     T31:
@@ -1277,8 +1280,8 @@ features:
       sym: ✅
       text: '`IMP_AO` enable/`SendFrame`, speaker playback of a known signal at several volumes and `SetVol`, recorded back by the microphone (2026-10-10 AEC test, device-tested)'
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the AO API runs on the device silently (muted, -30 dB, zero frames; API cells rt, b27/b29 AO=1); audible playback not checked. Earlier: AO exported, no test result"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): 1 kHz tone 2 s through AO (volume 70) is picked up by the camera microphone 13.4 dB over the noise floor (vendor 10.8 dB); OpenIMP next with the #266 OSS2 stale-zero filter. Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the AO API runs on the device silently (muted, -30 dB, zero frames; API cells rt, b27/b29 AO=1); audible playback not checked. Earlier: AO exported, no test result"
     T31:
       sym: ✅
       text: volume/mute work, whole OSS fragments (tested on cam-A); `IMP_AO` enable/`SendFrame`, speaker playback of a known signal at several volumes and `SetVol`, recorded back by the microphone (2026-10-10 AEC test, device-tested)
@@ -1314,8 +1317,10 @@ features:
       sym: ✅
       text: 'device-tested 2026-10-10: OpenIMP AECM (WebRTC), mono 16 kHz, `EnableAec` returns 0; ERLE 19 dB on a speech segment against the room noise floor; was 🔧'
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `AI_EnableAec` / `DisableAec` / AEC reference frame calls run on the device (API cells rt, b27; the vendor stack fails AI_EnableAec); echo cancellation itself not measured. Earlier: AEC code is built in (`openimp_aec.c`), no test result"
+      sym: ⚠️
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): `AI_EnableAec` runs (AECM, driver reference on, 50/50 reference frames, no failed blocks) but removes no echo: 1 kHz echo off -> on 0.8 dB (vendor 1.8 dB), ERLE 0.0-0.1 dB, delay estimate about -1 ms (#272). Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `AI_EnableAec` / `DisableAec` / AEC reference frame calls run on the device (API cells rt, b27; the vendor stack fails AI_EnableAec); echo cancellation itself not measured. Earlier: AEC code is built in (`openimp_aec.c`), no test result"
+      issues:
+      - 272
     T31:
       sym: ✅+
       text: 'real AECM: echo −18 dB, ERLE 44 dB (loopback); before: fake success'
@@ -1352,8 +1357,8 @@ features:
       sym: ✅+
       text: 726 KB (was 774 KB; native, no helixd; claude/openimp-size)
     T30:
-      sym: '?'
-      text: 594,232 B (~0.57 MB) stripped build; the vendor size was not measured
+      sym: ✅+
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): 529,804 B file (text 491,849 B, data 4,724 B, bss 161,784 B; OpenIMP next of 2026-11-10) vs the vendor libimp 1.0.5 1,889,603 B (text 1,550,774 B), measured on the T30X lab camera (b52/b53). Earlier: 594,232 B (~0.57 MB) stripped build; the vendor size was not measured"
     T31:
       sym: ✅+
       text: ~0.57 MB
@@ -1436,8 +1441,8 @@ features:
       sym: ✅+
       text: JPEG shares bitstream −1.44 MB; main window 2 MiB
     T30:
-      sym: '?'
-      text: not measured
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): rmem 42 MB; MemFree with timps idle (1080p15 H.264 + 640x360): open 49,136 kB, vendor 47,844 kB (T30X lab camera, b52, 2026-11-07); timpsd RSS 2,180 vs 5,680 kB."
     T31:
       sym: ✅
       text: '2026-10-31: #92 closed: `isp_memopt=1` (the driver default) ran 5 days on the T31X with a 10 min check, no stripes or errors; the firmware pin to the RC3 tag is still open. Earlier: drift per reload 460→45 KB'
@@ -1510,8 +1515,8 @@ features:
       sym: ✅
       text: '2026-11-01 (#151, T23 camera .30, 1280x720 15 fps, one RTSP client, 60 s window, two runs each): the encoder sleeps on the frame-ready event; encoder thread 3.40 / 3.41 % before, 1.79 / 1.78 % after (about 48 % less), whole streamer 8.5 / 8.6 % before, 6.6 / 7.0 % after; streams decode clean (SSIM 0.98), 0 oopses. Earlier: ~6–7 % for 2 streams 25 fps'
     T30:
-      sym: '?'
-      text: not measured
+      sym: ✅+
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): timps idle 120 s (1080p15 H.264 + 640x360, no client) on the T30X lab camera (b52, 2026-11-07): timpsd CPU open 1.57 %, vendor 5.15 %; system busy 5.65 % vs 8.44 %."
     T31:
       sym: ✅
       text: '2026-10-24 the AWB statistics sweeps are about 2.4 times faster (MXU2, `t31_awb_impl=2` by default, bit-exact, see #8). Earlier (history): 2026-10-21 fleet figures (60 s windows, OpenIMP + open-tx-isp + timps 1.10.1): timpsd 8.0-8.4 % of a core with two clients on the Cinnado T31L cameras against 17.7-18.4 % with the vendor libimp (2026-08-30); 2026-10-24 night A/B on .25: timpsd 8.1 % against the vendor 17.2 %, system CPU 16 % against 23 %, ISP interrupts 109 against 228 per s. Earlier (history): rotation 9 ms/frame @15 fps'
@@ -1746,8 +1751,8 @@ features:
       sym: ✅+
       text: ditto
     T30:
-      sym: '?'
-      text: not documented
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): `IMP_Encoder_Query` on a running CBR channel returns 0 with registered 1 and work_done 1 on both stacks (b52, b53); the vendor reports bytes still queued (leftStreamBytes, curPacks), the open library reports 0 because the stream is fetched synchronously. T30 1.0.5 has no GetChnEvalInfo."
     T31:
       sym: ✅+
       text: '2026-10-27: `GetChnEvalInfo` returns the header layout of `IMPEncoderStreamInfo` (`iNumBytes` first, then the counters, QP at 28/30/32) instead of the vendor''s one-word-shifted bytes: beyond vendor, a deliberate ABI difference a streamer must not compensate for (AVC: iNumBytes 3993 of a 4003-byte access unit; JPEG: size and quality 75); apitest enc on the T31L camera PASS 122 / FAIL 0. Earlier: ditto'
@@ -1782,8 +1787,8 @@ features:
       sym: ✅
       text: 'on the native Helix encoder (default backend), the same registers the vendor 1.3.0 encoder programs; device-tested 2026-10-10: QP map shows the window (relative QP acts inside -12/+13 of the slice QP, like T21), bit rate +10 % at delta -15 and -4 % at +20/absolute 51, 9 streams valid in VA-API and strict ffmpeg; OPENIMP_T23_ROI=0 switches it off'
     T30:
-      sym: 🔧
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `Get/SetChnROI` (8 slots) and SuperFrameCfg PASS on the device with the vendor read-back (b10, API cell dev); the QP effect of a region in the stream was not measured. Earlier: ROI calls (4 vendor names) exported, no test result for T30"
+      sym: ✅
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): FixQP 38 + ROI (640,320)-(1279,719) dQP -12: stream bytes x4.51 (vendor x3.69), detail inside the ROI x1.98 (vendor x1.88), outside x1.00 on both; Get reads the vendor-aligned rectangle back. Earlier: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): `Get/SetChnROI` (8 slots) and SuperFrameCfg PASS on the device with the vendor read-back (b10, API cell dev); the QP effect of a region in the stream was not measured. Earlier: ROI calls (4 vendor names) exported, no test result for T30"
     T31:
       sym: ✅+
       text: 'beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; 2026-10-10: 20 phases valid in VA-API and strict ffmpeg (`-err_detect`); known deviation: under FixQP 42 an absolute 5 or relative -25 window drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream valid); `OPENIMP_T31_ROI=0` refuses the call'

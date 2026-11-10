@@ -3081,17 +3081,18 @@
     "T20": "dev",
     "T21": "n.a.",
     "T23": "n.a.",
-    "T30": "host",
+    "T30": "rt",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10/T20 3.12.0: V4L2 control 0x98e912 with the vendor's mode cache (an unchanged mode returns 0 without the driver). apitest PASS on T10 and T20 for Get and Set of the current mode; switching WDR on was not run: the driver refuses (-EPERM) without a WDR frame buffer, as the stock module; T30 1.0.5: V4L2 control 0x8000169 with the vendor's mode cache (an unchanged mode returns 0 without the driver; a failed Get returns the cached mode with the error); host test with a fake ioctl; whether the open T30 driver serves the control is not checked",
+   "note": "T10/T20 3.12.0: V4L2 control 0x98e912 with the vendor's mode cache (an unchanged mode returns 0 without the driver). apitest PASS on T10 and T20 for Get and Set of the current mode; switching WDR on was not run: the driver refuses (-EPERM) without a WDR frame buffer, as the stock module; T30 1.0.5: V4L2 control 0x8000169 with the vendor's mode cache (an unchanged mode returns 0 without the driver; a failed Get returns the cached mode with the error); host test with a fake ioctl; whether the open T30 driver serves the control is not checked. T30 device 2026-11-10: Get returned -1 on the open stack (b53, #270: the open driver had no get arm for 0x8000169); with open-tx-isp next bc9e5bda Get 0 / mode 0 and Set of the current mode 0 on both stacks (b54); switching WDR on was not run (linear sensor mode, the SDK driver refuses without a WDR buffer).",
    "ref": {
     "T10": "apitest t10wrench 2026-11-03 .31",
-    "T20": "apitest agg47 2026-10-26 .107"
+    "T20": "apitest agg47 2026-10-26 .107",
+    "T30": "b53t T30X lab 2026-11-10 (b53/b54) (API round trip)"
    }
   },
   "ISP_Tuning_Get/SetWdrOutputMode": {
@@ -3840,18 +3841,19 @@
     "T20": "dev",
     "T21": "dev",
     "T23": "n.a.",
-    "T30": "host",
+    "T30": "dev",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl",
+   "note": "T21: exported like the vendor (cap 200 %); reaches the open driver DPC ratio (control 0x8000062); not individually device-tested; T31: none of the 28 vendor libimp builds (1.1.1-1.1.6) exports it, the header set does not declare it either; T10/T20 3.12.0 (0x60138): the same call as T21, capped at 200 %, here mapped onto the open driver DPC ratio (0x8000062); apitest PASS (return code) on T10, T20, T21; the picture effect was not measured; T30 1.0.5: capped at 200 %, mapped onto the DPC ratio control (0x8000062) like T21; host test with a fake tuning ioctl. T30 2026-11-10 (#269): the T30 drivers have no 0x8000062 DPC ratio control (b53: -1 for every value); like the vendor 1.0.5 (0xdb1c8: isp_table_tuning_ratio(0x53, min(v, 200))) OpenIMP now scales calibration table 0x53 (DP_SLOPE_LINEAR) through 0x8000161; device b54: returns 0 for 0, 128 and 200 on the open stack, 0 on the vendor stack.",
    "ref": {
     "T10": "apitest t10wrench 2026-11-03 .31",
     "T20": "apitest agg47 2026-10-26 .107",
-    "T21": "apitest agg47 2026-10-26 .24"
+    "T21": "apitest agg47 2026-10-26 .24",
+    "T30": "b53t T30X lab 2026-11-10 (b53/b54)"
    }
   },
   "ISP_Tuning_SetFWFreeze": {
@@ -4822,17 +4824,18 @@
     "T20": "rt",
     "T21": "n.a.",
     "T23": "n.a.",
-    "T30": "host",
+    "T30": "dev",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl",
+   "note": "T10+T20: newly exported (agg-25); T30 1.0.5: tuning control 0x8000001 (rgain << 16 | bgain), as T20; host test with a fake ioctl. T30 device 2026-11-10 (b53/b54): Get r 267 b 238, Set +8 reads back 275/246, restore 0; the same values on the vendor stack.",
    "ref": {
     "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
-    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)"
+    "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
+    "T30": "b53t T30X lab 2026-11-10 (b53/b54)"
    }
   },
   "ISP_Tuning_Awb_Get/SetRgbCoefft": {
@@ -5140,16 +5143,17 @@
     "T20": "dev",
     "T21": "dev",
     "T23": "n.a.",
-    "T30": "host",
+    "T30": "dev",
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
     "T40": "n.a.",
     "T41": "n.a."
    },
-   "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl",
+   "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl. T30 device 2026-11-10 (b53/b54): Get 0, Set 1 reads back 1, restore 0 on both stacks.",
    "ref": {
-    "T10": "apitest apitest-cov 2026-10-27 .31 (API round trip, no visible effect expected)"
+    "T10": "apitest apitest-cov 2026-10-27 .31 (API round trip, no visible effect expected)",
+    "T30": "b53t T30X lab 2026-11-10 (b53/b54)"
    }
   },
   "ISP_Tuning_Get/SetAeTargetList": {
@@ -6440,7 +6444,7 @@
     "T20": "dev",
     "T21": "dev",
     "T23": "dev",
-    "T30": "aud",
+    "T30": "dev",
     "T31": "dev",
     "T32": "n.a.",
     "T33": "n.a.",
@@ -6455,14 +6459,14 @@
      "r†"
     ]
    },
-   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #23): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). Static: the pointer is passed in the tuning block as in the vendor (0xd9f70, control 0x8000025, tuning running required); not run in QEMU (no apitest case for the set side), the get side is not served by the open driver.",
+   "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #23): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). Static: the pointer is passed in the tuning block as in the vendor (0xd9f70, control 0x8000025, tuning running required); not run in QEMU (no apitest case for the set side), the get side is not served by the open driver. T30 device 2026-11-10 (b53/b54): manual 800 lines reads back mode 1 / 800 lines and the sensor register follows (1600 half lines), auto again reads back mode 0; the vendor stack in the same boot reads back 3 lines for a manual 800 (and 1 ms), i.e. its manual exposure in lines does not take the value; OpenIMP follows the documented API.",
    "ref": {
     "T21": "apitest rc3-cases 2026-10-27 .24",
     "T31": "apitest agg47 2026-10-26 .26",
     "T23": "apitest rc3gaps2 2026-10-27 .30",
     "T20": "apitest expr 2026-10-27 .107 (#130): 240 lines read back 240, Y 122 -> 191 (30 -> 240 lines); 10000 us -> 338 lines; AUTO restores (beyond vendor SDK)",
     "T10": "apitest expr 2026-10-27 .31 (#130): 240 lines -> 240, Y 64 -> 92; 10000 us -> 227 lines (44 us/line) (beyond vendor SDK)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "b53t T30X lab 2026-11-10 (b53/b54)"
    }
   },
   "ISP_Tuning_SetWB_ALGO": {

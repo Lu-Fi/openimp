@@ -100,14 +100,14 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
              * two 16-bit columns, 3 rows, kept per table id */
             struct { uint32_t table, rows, cols, elem, flag; void *buf; } *r;
             void *pp;
-            static uint16_t store[2][3][2];
-            static int init[2];
+            static uint16_t store[3][3][2];
+            static int init[3];
             int k;
             int i;
 
             memcpy(&pp, (char *)arg + 8, sizeof(pp));   /* ptr after {dir, subcmd} */
             r = pp;
-            k = r->table == 109 ? 0 : r->table == 132 ? 1 : -1;
+            k = r->table == 109 ? 0 : r->table == 132 ? 1 : r->table == 83 ? 2 : -1;
             if (k < 0) {
                 errno = EPERM;
                 return -1;
@@ -167,12 +167,25 @@ int main(void)
     isp.tuning = &isp;
     isp.tuning_state = 2;
 
+#if defined(PLATFORM_T30)
+    /* T30 1.0.5 SetDPStrength (0xdb1c8): isp_table_tuning_ratio(0x53, min(ratio, 200)),
+     * percent of the tuning table 83 (element 1 of every row); no 0x8000062 */
+    tbl_calls = 0; tbl_set_table = 0;
+    CHECK(IMP_ISP_Tuning_SetDPStrength(100) == 0 && tbl_set_table == 83);
+    CHECK(tbl_last[0][1] == 100 && tbl_last[1][1] == 120 && tbl_last[2][1] == 140);
+    CHECK(IMP_ISP_Tuning_SetDPStrength(1000) == 0 && tbl_last[0][1] == 200 && tbl_last[2][1] == 280); /* cap 200 % */
+    CHECK(IMP_ISP_Tuning_SetDPStrength(50) == 0 && tbl_last[0][1] == 50 && tbl_last[2][0] == 12);   /* from the baseline */
+    CHECK(IMP_ISP_Tuning_SetDPStrength(0) == 0 && tbl_last[1][1] == 0);
+    CHECK(last_tuning_sub != 0x8000062);
+    tbl_calls = 0; tbl_set_table = 0;
+#else
     /* SetDPStrength: capped at 200 %, 100 % = driver DPC ratio 128 */
     CHECK(IMP_ISP_Tuning_SetDPStrength(100) == 0);
     CHECK(t_calls == 1 && last_tuning_sub == 0x8000062 && last_tuning_val == 128);
     CHECK(IMP_ISP_Tuning_SetDPStrength(1000) == 0);
     CHECK(last_tuning_val == 255);                       /* 200 % */
     CHECK(IMP_ISP_Tuning_SetDPStrength(0) == 0 && last_tuning_val == 0);
+#endif
     isp.tuning_state = 1;
     CHECK(IMP_ISP_Tuning_SetDPStrength(100) == -1);      /* tuning not running */
     isp.tuning_state = 2;
