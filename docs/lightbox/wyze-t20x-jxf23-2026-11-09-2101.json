@@ -1,11 +1,10 @@
 {
  "alias": "wyze-t20x-jxf23",
  "counts": {
-  "fail": 3,
+  "fail": 2,
   "fail_by_handling": {
    "invalid": 1,
-   "issue": 1,
-   "vendor": 1
+   "issue": 1
   },
   "flaky": 1,
   "info": 108,
@@ -14,7 +13,7 @@
   "not_run": 1,
   "not_run_planned": 1,
   "not_run_preflight": 0,
-  "pass": 56,
+  "pass": 57,
   "reference": 0,
   "warn": 0
  },
@@ -101,7 +100,7 @@
    }
   }
  },
- "generated": "2026-11-09 23:01",
+ "generated": "2026-11-10 09:13",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
@@ -489,18 +488,18 @@
  "soc": "T20",
  "stack": {
   "open": {
-   "desc": "open-tx-isp tx_isp_t20 next 138f62d7 (flashed image fx1109: #244 #246 #252 #253 fixes) + OpenIMP next 75315270 (flashed) + installed streamer v1.12.0 under LD_PRELOAD fair_preload_t20.so",
+   "desc": "open-tx-isp tx_isp_t20 next 138f62d7 (flashed image fx1109: #244 #246 #252 #253 fixes) + OpenIMP next 75315270 (flashed) + installed timpsd v1.12.0 under LD_PRELOAD fair_preload_t20.so",
    "ko": "tx_isp_t20 md5=d6d5542f libimp=b3d54dd0",
    "pieces_md5": [],
-   "streamer": "streamer bin_md5=b8faed54 version=v1.12.0",
-   "streamer": "v1.12.0"
+   "streamer": "timpsd bin_md5=b8faed54 version=v1.12.0",
+   "timps": "v1.12.0"
   },
   "vendor": {
-   "desc": "ingenic-sdk tx-isp-t20.ko (vendor ISP blob libt20-firmware-3.12.0) + sensor_jxf23_t20.ko (vendor-compatible rebuild) + vendor libimp 3.12.0 (da38e940) + streamer v1.12.0 USE_OPENIMP=0",
+   "desc": "ingenic-sdk tx-isp-t20.ko (vendor ISP blob libt20-firmware-3.12.0) + sensor_jxf23_t20.ko (vendor-compatible rebuild) + vendor libimp 3.12.0 (da38e940) + timps v1.12.0 USE_OPENIMP=0",
    "ko": "tx_isp_t20 md5=d6d5542f libimp=da38e940",
    "pieces_md5": [],
-   "streamer": "streamer bin_md5=904a2785 version=v1.12.0-vendorlib",
-   "streamer": "v1.12.0-vendorlib"
+   "streamer": "timpsd bin_md5=904a2785 version=v1.12.0-vendorlib",
+   "timps": "v1.12.0-vendorlib"
   }
  },
  "stacks": [
