@@ -382,6 +382,32 @@ dies in D state and `/dev/dsp` stays locked (reproduced in QEMU T41 with the ven
 gets the normal "no device" answer and the audio path keeps working. (Streamer-visible: none, the return code is what the vendor
 returns on a healthy driver without the device.) Status: QEMU T40/T41 and cameras .184 (T40) and .34 (T41), apitest `dmic`, no oops.
 
+### 6.4 Stale capture fragments of the OSS2 audio driver (T10/T20/T21/T30/T31, default on)
+
+The OSS2 `/dev/dsp` driver of the 3.10 kernels (ingenic-sdk `audio/<soc>/oss2/interface/xb_snd_dsp.c`) keeps the capture DMA ring
+(100 fragments of 10 ms) with a DMA index and a read index. Its worker runs from a 20 ms timer and first calls
+`ai_dmaaddr_sync_ioaddr()`, the overrun guard: a read index less than 5 fragments ahead of the DMA index is moved to 5 ahead. A reader
+that keeps up ends every worker run with read index == DMA index, and the guard cannot tell that from a full ring. When the worker runs
+twice before the DMA has finished another fragment (a late worker followed by one on time), the read index jumps 5 ahead of the DMA and
+the driver hands out the other 95 fragments of the ring again. It cleared them when they were read, so the application gets 0.95 s of
+digital silence that was never recorded and every sample after it is 0.95 s late (issue #266: about 0.9 s of silent AAC frames in the
+stream, then the backlog with repeated timestamps, about 1 s more audio than wall time; 2 of 58 light-box recordings on a T20). The
+vendor libimp passes this on unchanged (same test program, vendor library: 3 runs of 23 silent 40 ms frames in 60 s under the load that
+provokes it).
+
+OpenIMP's capture thread (`src/audio/openimp_ai_stale.h`, used by `src/t31/openimp_t31_audio.c`) removes these fragments: a run of
+all-zero fragments is held back while it is undecided (at most about 100 ms), dropped when it arrives more than 50 ms ahead of the wall
+clock (recorded audio cannot), and passed on unchanged when it keeps real-time pace (a source that really delivers zeros) or ends before
+it is decided (the 50 ms of cleared fragments at stream start). While it drops, it asks the driver for up to one task node (4096 bytes)
+per read, so the 95 fragments are gone after about 0.2 s instead of 0.5 s; the audio recorded meanwhile follows faster than real time
+and the frame time stamps stay those of consecutive samples. Nothing recorded is lost and no silence is inserted; what remains is one
+delivery pause of about 0.2 s. Not covered: T23/T40/T41 (OSS3 driver, different code) and the ALSA backend.
+
+- Switch: on by default; `OPENIMP_AI_STALE=0` passes the fragments on like the vendor library, `OPENIMP_AI_STALE_LOG=1|<path>` logs
+  every run.
+- Driver-side fix (not ours to ship, ingenic-sdk): let the guard see how far the DMA moved since the last worker run, e.g. pass the
+  previous `dma_tracer` and move the read index only when `(prev - io) mod cnt + (current - prev) mod cnt >= cnt - 5`.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**
@@ -394,6 +420,7 @@ set in production.
 | `OPENIMP_IVS_VENDOR_ORDER` | `1` posts the IVS result before the channel-free semaphore as the vendor does (a frame fed right after the result is dropped as busy) | off | user-facing (opt-in) |
 | `OPENIMP_SU_SHUTDOWN` | `SU_Base_Shutdown`: unset, `poweroff` or `vendor` = sync, then SIGUSR2 (signal 17 on MIPS) to init, as the vendor libsysutils (busybox powers off; issue #206); `reboot` = sync, then SIGTERM (busybox reboots, opt-in) | `poweroff` (vendor) | user-facing |
 | `OPENIMP_REF_SHARE` | `0` disables the T21/T23 reference ring | on | user-facing |
+| `OPENIMP_AI_STALE` (`_LOG`) | `0` passes the cleared fragments of the OSS2 capture driver on like the vendor library (section 6.4); `_LOG=1` or a file path logs every run | on, log off | debug-only |
 | `OPENIMP_T31_HW_JPEG` | `0` selects the software JPEG encoder on T31 | on | user-facing |
 | `OPENIMP_T31_OSD` | `0` disables the IPU OSD backend on T31 | on | user-facing |
 | `OPENIMP_MXU` | `0` (or `off`) keeps every MXU2 kernel on its C reference (today: `nv12_rotate`); otherwise each kernel runs a bit-exact selftest once and uses MXU2 when it passes | on | user-facing |

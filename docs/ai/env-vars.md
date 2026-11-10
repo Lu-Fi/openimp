@@ -136,6 +136,8 @@ the debug-level log messages in.
 | Variable | Values / default | Effect | SoC | Class |
 |---|---|---|---|---|
 | `OPENIMP_AEC_STATS` | `1` (other non-`0` values select variants) | Periodic audio echo-cancellation (AEC) statistics. | T31 audio code (also used by T10, T20, T21) | debug only |
+| `OPENIMP_AI_STALE` | `0` = off; default on | Drop the cleared fragments the OSS2 capture driver hands out a second time after a false overrun (0.95 s of silence, #266); `0` passes them on as the vendor library does. | T10, T20, T21, T30, T31 (`/dev/dsp`) | debug only |
+| `OPENIMP_AI_STALE_LOG` | `1` = stderr, a path = append to that file; default off | One line per such run (fragments dropped, or passed on with `OPENIMP_AI_STALE=0`). | T10, T20, T21, T30, T31 (`/dev/dsp`) | debug only |
 | `OPENIMP_AO_CACHE` | `1` = on; default off | Audio-output cache (opt-in). | audio SoCs | internal |
 | `OPENIMP_SU_SHUTDOWN` | unset = SIGTERM to init (reboot on busybox); `vendor` = SIGCHLD; `poweroff` = SIGUSR2 | What `SU_Base_Shutdown` does. | all | user |
 

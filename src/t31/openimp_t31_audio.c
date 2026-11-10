@@ -30,6 +30,7 @@
 #include <imp/imp_audio.h>
 
 #include "audio/openimp_aec.h"
+#include "audio/openimp_ai_stale.h"
 #include "audio/openimp_ao_cache.h"
 #include "t31/openimp_alsa_pcm.h"
 
@@ -132,6 +133,8 @@ _Static_assert(T23_AI_SET_GAIN ==
 #define T31_AO_SYNC_STREAM        0x4004506bUL
 #define T31_PCM_FORMAT_S16_LE     0x10
 #define T31_CAPTURE_CHUNK_BYTES   1280U
+/* SND_TASK_NODE_SIZE: the most the driver copies in one worker run */
+#define T31_CAPTURE_NODE_BYTES    4096U
 #define T31_CAPTURE_DEFAULT_DEPTH 8
 #define T31_CAPTURE_MAX_DEPTH     50
 #define T31_CAPTURE_RETRY_US      20000
@@ -276,6 +279,11 @@ static struct {
     unsigned char *capture_ref_chunk;
     size_t capture_chunk_capacity;
     size_t capture_chunk_bytes;
+    /* the largest GET_STREAM (while stale fragments are dropped, see
+     * audio/openimp_ai_stale.h) and the state of that filter */
+    size_t capture_chunk_most;
+    int capture_stale_drop;         /* 0: OPENIMP_AI_STALE=0, count only */
+    openimp_ai_stale capture_stale;
     /* SendFrame re-blocks arbitrary frame sizes into whole driver periods */
     unsigned char *ao_period;
     size_t ao_period_capacity;
@@ -775,6 +783,39 @@ static __attribute__((unused)) int t31_alsa_capture_channel(void)
     return value && (value[0] == '0' || value[0] == '1') ? value[0] - '0' : 2;
 }
 
+#if !defined(PLATFORM_T23)
+static int64_t t31_monotonic_us(void)
+{
+    struct timespec now;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (int64_t)now.tv_sec * 1000000 + now.tv_nsec / 1000;
+}
+
+/* OPENIMP_AI_STALE_LOG=1 reports every stale run to stderr, =<path> appends
+ * it to a file. */
+static void t31_stale_log(const openimp_ai_stale *state, int dropped)
+{
+    const char *setting = getenv("OPENIMP_AI_STALE_LOG");
+    FILE *out = stderr;
+
+    if (!setting || !*setting || !strcmp(setting, "0"))
+        return;
+    if (strcmp(setting, "1")) {
+        out = fopen(setting, "a");
+        if (!out)
+            return;
+    }
+    fprintf(out, "[openimp-ai] stale capture run %lu: %u driver fragments "
+                 "%s (%lu in total)\n",
+            state->events, state->last_run,
+            dropped ? "dropped" : "passed on (OPENIMP_AI_STALE=0)",
+            state->dropped);
+    if (out != stderr)
+        fclose(out);
+}
+#endif
+
 /* Like the stock _ai_record_thread: the driver only offers a blocking
  * GET_STREAM (its poll handler returns -EINVAL), so capture runs here and
  * IMP_AI_GetFrame/IMP_AI_PollingFrame consume a bounded FIFO.  When the
@@ -785,9 +826,12 @@ static void *t31_capture_main(void *argument)
      * re-blocks them into frames. */
     unsigned char *chunk = t31_audio.capture_chunk;
     unsigned char *ref_chunk = t31_audio.capture_ref_chunk;
-    const size_t chunk_size = t31_audio.capture_chunk_bytes;
+    size_t chunk_size = t31_audio.capture_chunk_bytes;
 #if defined(PLATFORM_T23)
     T23AudioTimeval capture_time;
+#else
+    const size_t fragment = t31_fragment_bytes(&t31_audio.ai_attr);
+    unsigned long stale_events = 0;
 #endif
     int with_ref;
     T31AudioInputStream stream;
@@ -799,6 +843,9 @@ static void *t31_capture_main(void *argument)
     pthread_mutex_lock(&t31_capture_lock);
     while (!t31_audio.capture_stop) {
         size_t size;
+        size_t lead = 0;    /* bytes of held-back silence to queue first */
+        int filtered = 0;
+        int64_t tail_lag = 0;
         int result;
 
         with_ref = t31_audio.capture_ref_on && t31_audio.capture_ref;
@@ -834,19 +881,51 @@ static void *t31_capture_main(void *argument)
             stream.aec = with_ref ? ref_chunk : NULL;
             result = ioctl(t31_audio.ai_fd, T31_AI_GET_STREAM, &stream);
             size = stream.size < chunk_size ? stream.size : chunk_size;
+            if (result == 0 && size) {
+                /* the driver can hand out cleared fragments of its ring a
+                 * second time (audio/openimp_ai_stale.h); drop them */
+                unsigned int held;
+
+                size = openimp_ai_stale_filter(
+                    &t31_audio.capture_stale, t31_monotonic_us(), chunk,
+                    with_ref ? ref_chunk : NULL, size, fragment, 10000,
+                    t31_audio.capture_stale_drop, &held);
+                lead = (size_t)held * fragment;
+                chunk_size = fragment * openimp_ai_stale_next(
+                    &t31_audio.capture_stale,
+                    t31_audio.capture_chunk_bytes / fragment,
+                    t31_audio.capture_chunk_most / fragment);
+                if (t31_audio.capture_stale.events != stale_events) {
+                    stale_events = t31_audio.capture_stale.events;
+                    t31_stale_log(&t31_audio.capture_stale,
+                                  t31_audio.capture_stale_drop);
+                }
+                tail_lag = t31_audio.capture_stale.lag_us;
+                filtered = 1;
+            }
         }
 #endif
         size -= size % align;
         pthread_mutex_lock(&t31_capture_lock);
         if (t31_audio.capture_stop)
             break;
-        if (result != 0 || !size) {
+        if (filtered && !size && !lead)
+            continue;       /* all of it stale or held back: no error */
+        if (result != 0 || (!size && !lead)) {
             t31_audio.capture_error = 1;
             pthread_cond_broadcast(&t31_capture_cond);
             pthread_mutex_unlock(&t31_capture_lock);
             usleep(T31_CAPTURE_RETRY_US);
             pthread_mutex_lock(&t31_capture_lock);
             continue;
+        }
+        if (lead) {
+            memset(t31_audio.capture_buffer + t31_audio.capture_valid, 0,
+                   lead);
+            if (t31_audio.capture_ref)
+                memset(t31_audio.capture_ref + t31_audio.capture_valid, 0,
+                       lead);
+            t31_audio.capture_valid += lead;
         }
         memcpy(t31_audio.capture_buffer + t31_audio.capture_valid, chunk, size);
         if (t31_audio.capture_ref) {
@@ -870,7 +949,9 @@ static void *t31_capture_main(void *argument)
                 memmove(t31_audio.capture_ref, t31_audio.capture_ref + drop,
                         t31_audio.capture_valid);
         }
-        t31_audio.capture_tail_time = IMP_System_GetTimeStamp();
+        /* the driver's fragments are fresh, except those it recorded while
+         * stale ones were dropped (audio/openimp_ai_stale.h) */
+        t31_audio.capture_tail_time = IMP_System_GetTimeStamp() - tail_lag;
         t31_audio.capture_error = 0;
         pthread_cond_broadcast(&t31_capture_cond);
     }
@@ -911,25 +992,39 @@ static int t31_capture_start(void)
                             ? frame : T31_CAPTURE_CHUNK_BYTES;
 #endif
         size_t chunk;
+        size_t most;
+        size_t held = 0;
 
         if (!fragment)
             return -1;
         chunk = target - target % fragment;
         if (!chunk)
             chunk = fragment;
-        if (chunk > t31_audio.capture_chunk_capacity) {
-            void *buffer = realloc(t31_audio.capture_chunk, chunk);
+        most = chunk;
+#if !defined(PLATFORM_T23)
+        /* while stale fragments are dropped: what one driver task node
+         * takes; the FIFO also has to take the silence that was held back */
+        if (!t31_audio.ai_alsa && T31_CAPTURE_NODE_BYTES > chunk)
+            most = T31_CAPTURE_NODE_BYTES -
+                   T31_CAPTURE_NODE_BYTES % fragment;
+        if (most < chunk)
+            most = chunk;
+        held = (size_t)OPENIMP_AI_STALE_HOLD_MAX * fragment;
+#endif
+        if (most > t31_audio.capture_chunk_capacity) {
+            void *buffer = realloc(t31_audio.capture_chunk, most);
             if (!buffer)
                 return -1;
             t31_audio.capture_chunk = buffer;
-            buffer = realloc(t31_audio.capture_ref_chunk, chunk);
+            buffer = realloc(t31_audio.capture_ref_chunk, most);
             if (!buffer)
                 return -1;
             t31_audio.capture_ref_chunk = buffer;
-            t31_audio.capture_chunk_capacity = chunk;
+            t31_audio.capture_chunk_capacity = most;
         }
         t31_audio.capture_chunk_bytes = chunk;
-        capacity = frame * depth + chunk;
+        t31_audio.capture_chunk_most = most;
+        capacity = frame * depth + most + held;
     }
     if (capacity > t31_audio.capture_capacity) {
         void *buffer = realloc(t31_audio.capture_buffer, capacity);
@@ -950,6 +1045,14 @@ static int t31_capture_start(void)
     t31_audio.capture_stop = 0;
     t31_audio.capture_exited = 0;
     t31_audio.capture_error = 0;
+#if !defined(PLATFORM_T23)
+    {
+        const char *setting = getenv("OPENIMP_AI_STALE");
+
+        t31_audio.capture_stale_drop = !(setting && !strcmp(setting, "0"));
+        openimp_ai_stale_reset(&t31_audio.capture_stale, t31_monotonic_us());
+    }
+#endif
     if (pthread_create(&t31_audio.capture_thread, NULL, t31_capture_main,
                        NULL) != 0)
         return -1;

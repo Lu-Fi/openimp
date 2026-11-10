@@ -14,6 +14,7 @@ ACODEC_SOC_TEST_BINS := $(PROJECT_DIR)/build/tests/acodec-test-t20 \
 FRAME_PIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-frame-pin-test
 AO_SENDFRAME_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ao-sendframe-test
 AO_CACHE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ao-cache-test
+AI_STALE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-ai-stale-test
 HEVC_HEADERS_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-hevc-headers-test
 AEC_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-aec-test
 NV12_ROTATE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-nv12-rotate-test
@@ -47,7 +48,7 @@ LOG_SINK_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-sink-test
 check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(ACODEC_SOC_TEST_BINS) \
 	$(FRAME_PIN_TEST_BIN) \
-	$(AO_SENDFRAME_TEST_BIN) $(AO_CACHE_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
+	$(AO_SENDFRAME_TEST_BIN) $(AO_CACHE_TEST_BIN) $(AI_STALE_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(ALSA_PCM_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
@@ -62,6 +63,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(FRAME_PIN_TEST_BIN)
 	$(AO_SENDFRAME_TEST_BIN)
 	$(AO_CACHE_TEST_BIN)
+	$(AI_STALE_TEST_BIN)
 	$(HEVC_HEADERS_TEST_BIN)
 	$(AEC_TEST_BIN)
 	$(NV12_ROTATE_TEST_BIN)
@@ -298,6 +300,12 @@ $(AO_CACHE_TEST_BIN): ao_cache_test.c \
 		$(PROJECT_DIR)/src/audio/openimp_aec.c \
 		-Wl,--wrap=open,--wrap=ioctl,--wrap=close,--wrap=clock_gettime \
 		-lpthread -ldl -lm -o "$@"
+
+# Cleared fragments the OSS2 capture driver hands out twice (#266).
+$(AI_STALE_TEST_BIN): ai_stale_test.c \
+	$(PROJECT_DIR)/src/audio/openimp_ai_stale.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src ai_stale_test.c -o "$@"
 
 # AI/AO device lifecycle (same fake /dev/dsp approach) with a fake
 # libaudioProcess.so for the HPF/NS/AGC effects.
