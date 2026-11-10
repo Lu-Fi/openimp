@@ -470,7 +470,11 @@ def main():
         m = re.match(r"(.+?)-(20\d\d-\d\d-\d\d)(?:-(\d{4}))?\.html$", f)
         if not m:
             continue
-        groups.setdefault(m.group(1), []).append((m.group(2) + (" " + m.group(3)[:2] + ":" + m.group(3)[2:] if m.group(3) else ""), f))
+        t = m.group(3)[:2] + ":" + m.group(3)[2:] if m.group(3) else ""
+        if not t:   # no -HHMM in the file name: the run time from the protocol's key-number file (user 2026-11-10: always a time)
+            j = load_json(p[:-5] + ".json")
+            t = str(j.get("time") or "") if j else ""
+        groups.setdefault(m.group(1), []).append((m.group(2) + (" " + t if t else ""), f))
     reps, socset, ncam = [], set(), 0
     for alias, runs in sorted(groups.items(), key=lambda kv: max(r[0] for r in kv[1]), reverse=True):
         runs.sort(reverse=True)
@@ -494,7 +498,10 @@ def main():
             chips += '<span class="chip ok">%d pass</span>' % npass
         if nfail:
             chips += '<span class="chip warn">%d %s</span>' % (nfail, "differ" if "differ" in res else "fail")
-        note = re.sub(r"^\s*report\s*", "", re.sub(r"\(?\d+\s*pass\s*/\s*\d+\s*(?:fail|differ)\)?[,;]?\s*", "", res)).strip(" ()")
+        mf = re.search(r"(\d+)\s*flaky", res)
+        if mf and int(mf.group(1)):
+            chips += '<span class="chip warn">%s flaky</span>' % mf.group(1)
+        note = re.sub(r"^\s*report\s*", "", re.sub(r"\(?\d+\s*pass\s*/\s*\d+\s*(?:fail|differ)(?:\s*/\s*\d+\s*flaky)?\)?[,;]?\s*", "", res)).strip(" ()")
         reps.append('<article class="rep" data-soc="%s" data-date="%s"><span class="socb">%s</span>'
                     '<div><div class="t"><a href="lightbox/%s">%s</a></div><div class="m">%s &middot; %s%s</div></div>'
                     '<div class="chips">%s</div>%s<a class="open" href="cam/%s.html">Development over time &rarr;</a></article>'
