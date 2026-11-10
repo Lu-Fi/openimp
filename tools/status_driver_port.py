@@ -25,7 +25,7 @@ def git(repo, *a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default="/mnt/NVMe/git/open-tx-isp")
+    ap.add_argument("--repo", default=os.environ.get("OPEN_TX_ISP", "../open-tx-isp"))
     ap.add_argument("--recovered", default="origin/t32/recovered-baseline")
     ap.add_argument("--oracle", default="origin/claude/t32-ds-batch")
     ap.add_argument("--print", action="store_true", help="print, do not write")
