@@ -135,6 +135,10 @@ _Static_assert(T23_AI_SET_GAIN ==
 #define T31_CAPTURE_CHUNK_BYTES   1280U
 /* SND_TASK_NODE_SIZE: the most the driver copies in one worker run */
 #define T31_CAPTURE_NODE_BYTES    4096U
+/* how long late audio waits for room in the frame FIFO */
+#define T31_CAPTURE_CATCHUP_MS    100U
+/* a consumer that took a frame this recently is taking frames */
+#define T31_CAPTURE_CONSUMER_MS   300U
 #define T31_CAPTURE_DEFAULT_DEPTH 8
 #define T31_CAPTURE_MAX_DEPTH     50
 #define T31_CAPTURE_RETRY_US      20000
@@ -217,6 +221,7 @@ static struct {
     size_t capture_limit;
     size_t capture_frame_bytes;
     int64_t capture_tail_time;
+    int64_t capture_taken_time;     /* when GetFrame last took a frame */
     int64_t frame_last_ts;      /* stamp of the last frame handed out (0: none) */
     unsigned char *frame_buffer;
     size_t frame_capacity;
@@ -783,8 +788,7 @@ static __attribute__((unused)) int t31_alsa_capture_channel(void)
     return value && (value[0] == '0' || value[0] == '1') ? value[0] - '0' : 2;
 }
 
-#if !defined(PLATFORM_T23)
-static int64_t t31_monotonic_us(void)
+static __attribute__((unused)) int64_t t31_monotonic_us(void)
 {
     struct timespec now;
 
@@ -792,12 +796,13 @@ static int64_t t31_monotonic_us(void)
     return (int64_t)now.tv_sec * 1000000 + now.tv_nsec / 1000;
 }
 
-/* OPENIMP_AI_STALE_LOG=1 reports every stale run to stderr, =<path> appends
- * it to a file. */
-static void t31_stale_log(const openimp_ai_stale *state, int dropped)
+/* OPENIMP_AI_STALE_LOG=1 reports every stale run (audio/openimp_ai_stale.h)
+ * to stderr, =<path> appends it to a file. */
+static void t31_stale_log(const char *format, ...)
 {
     const char *setting = getenv("OPENIMP_AI_STALE_LOG");
     FILE *out = stderr;
+    va_list arguments;
 
     if (!setting || !*setting || !strcmp(setting, "0"))
         return;
@@ -806,15 +811,14 @@ static void t31_stale_log(const openimp_ai_stale *state, int dropped)
         if (!out)
             return;
     }
-    fprintf(out, "[openimp-ai] stale capture run %lu: %u driver fragments "
-                 "%s (%lu in total)\n",
-            state->events, state->last_run,
-            dropped ? "dropped" : "passed on (OPENIMP_AI_STALE=0)",
-            state->dropped);
+    fprintf(out, "[openimp-ai] ");
+    va_start(arguments, format);
+    vfprintf(out, format, arguments);
+    va_end(arguments);
+    fputc('\n', out);
     if (out != stderr)
         fclose(out);
 }
-#endif
 
 /* Like the stock _ai_record_thread: the driver only offers a blocking
  * GET_STREAM (its poll handler returns -EINVAL), so capture runs here and
@@ -836,6 +840,9 @@ static void *t31_capture_main(void *argument)
     int with_ref;
     T31AudioInputStream stream;
     size_t align;
+    unsigned int catchup_waits = 0; /* reads that waited for FIFO room */
+    size_t catchup_lost = 0;        /* bytes the FIFO dropped while late */
+    int64_t catchup_peak = 0;       /* largest lag of the current catch-up */
 
     (void)argument;
     openimp_thread_setname("ai-_ai_record_t");
@@ -846,6 +853,7 @@ static void *t31_capture_main(void *argument)
         size_t lead = 0;    /* bytes of held-back silence to queue first */
         int filtered = 0;
         int64_t tail_lag = 0;
+        int64_t done_time;
         int result;
 
         with_ref = t31_audio.capture_ref_on && t31_audio.capture_ref;
@@ -897,8 +905,14 @@ static void *t31_capture_main(void *argument)
                     t31_audio.capture_chunk_most / fragment);
                 if (t31_audio.capture_stale.events != stale_events) {
                     stale_events = t31_audio.capture_stale.events;
-                    t31_stale_log(&t31_audio.capture_stale,
-                                  t31_audio.capture_stale_drop);
+                    t31_stale_log("stale capture run %lu: %u driver fragments "
+                                  "%s (%lu in total)",
+                                  stale_events,
+                                  t31_audio.capture_stale.last_run,
+                                  t31_audio.capture_stale_drop
+                                      ? "dropped"
+                                      : "passed on (OPENIMP_AI_STALE=0)",
+                                  t31_audio.capture_stale.dropped);
                 }
                 tail_lag = t31_audio.capture_stale.lag_us;
                 filtered = 1;
@@ -906,11 +920,32 @@ static void *t31_capture_main(void *argument)
         }
 #endif
         size -= size % align;
+        done_time = IMP_System_GetTimeStamp();
         pthread_mutex_lock(&t31_capture_lock);
         if (t31_audio.capture_stop)
             break;
         if (filtered && !size && !lead)
             continue;       /* all of it stale or held back: no error */
+        if (tail_lag > 0 &&
+            t31_audio.capture_valid + lead + size > t31_audio.capture_limit &&
+            done_time - t31_audio.capture_taken_time <
+                (int64_t)T31_CAPTURE_CONSUMER_MS * 1000) {
+            /* audio recorded during a stale run comes at twice real time:
+             * give a consumer that is taking frames a moment before its
+             * oldest ones go (the driver keeps what is not read yet) */
+            struct timespec deadline;
+
+            t31_capture_deadline(&deadline, T31_CAPTURE_CATCHUP_MS);
+            while (!t31_audio.capture_stop &&
+                   t31_audio.capture_valid + lead + size >
+                       t31_audio.capture_limit &&
+                   pthread_cond_timedwait(&t31_capture_cond,
+                                          &t31_capture_lock, &deadline) == 0)
+                ;
+            if (t31_audio.capture_stop)
+                break;
+            catchup_waits++;
+        }
         if (result != 0 || (!size && !lead)) {
             t31_audio.capture_error = 1;
             pthread_cond_broadcast(&t31_capture_cond);
@@ -942,6 +977,8 @@ static void *t31_capture_main(void *argument)
             size_t drop = t31_audio.capture_valid - t31_audio.capture_limit;
 
             drop = (drop + frame - 1) / frame * frame;
+            if (tail_lag > 0)
+                catchup_lost += drop;
             t31_audio.capture_valid -= drop;
             memmove(t31_audio.capture_buffer, t31_audio.capture_buffer + drop,
                     t31_audio.capture_valid);
@@ -951,9 +988,20 @@ static void *t31_capture_main(void *argument)
         }
         /* the driver's fragments are fresh, except those it recorded while
          * stale ones were dropped (audio/openimp_ai_stale.h) */
-        t31_audio.capture_tail_time = IMP_System_GetTimeStamp() - tail_lag;
+        t31_audio.capture_tail_time = done_time - tail_lag;
         t31_audio.capture_error = 0;
         pthread_cond_broadcast(&t31_capture_cond);
+        if (tail_lag > catchup_peak)
+            catchup_peak = tail_lag;
+        if (!tail_lag && catchup_peak) {
+            t31_stale_log("caught up: audio was up to %d ms late, %u reads "
+                          "waited for the consumer, %lu bytes dropped from "
+                          "the frame FIFO", (int)(catchup_peak / 1000),
+                          catchup_waits, (unsigned long)catchup_lost);
+            catchup_peak = 0;
+            catchup_waits = 0;
+            catchup_lost = 0;
+        }
     }
     t31_audio.capture_exited = 1;
     pthread_cond_broadcast(&t31_capture_cond);
@@ -1299,6 +1347,9 @@ int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
     if (t31_audio.ref_frame_valid)
         memcpy(t31_audio.ref_frame, t31_audio.capture_ref, bytes);
     t31_audio.capture_valid -= bytes;
+    /* the capture thread may be waiting for room (late audio) */
+    t31_audio.capture_taken_time = IMP_System_GetTimeStamp();
+    pthread_cond_broadcast(&t31_capture_cond);
     if (t31_audio.capture_valid)
         memmove(t31_audio.capture_buffer, t31_audio.capture_buffer + bytes,
                 t31_audio.capture_valid);

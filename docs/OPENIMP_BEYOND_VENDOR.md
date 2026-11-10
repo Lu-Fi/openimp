@@ -392,16 +392,20 @@ twice before the DMA has finished another fragment (a late worker followed by on
 the driver hands out the other 95 fragments of the ring again. It cleared them when they were read, so the application gets 0.95 s of
 digital silence that was never recorded and every sample after it is 0.95 s late (issue #266: about 0.9 s of silent AAC frames in the
 stream, then the backlog with repeated timestamps, about 1 s more audio than wall time; 2 of 58 light-box recordings on a T20). The
-vendor libimp passes this on unchanged (same test program, vendor library: 3 runs of 23 silent 40 ms frames in 60 s under the load that
-provokes it).
+vendor libimp passes this on unchanged (same capture-only test program with the vendor library under the load that provokes it: 4 runs of 23
+silent 40 ms frames and 3.8 s more audio than wall time in 120 s).
 
 OpenIMP's capture thread (`src/audio/openimp_ai_stale.h`, used by `src/t31/openimp_t31_audio.c`) removes these fragments: a run of
 all-zero fragments is held back while it is undecided (at most about 100 ms), dropped when it arrives more than 50 ms ahead of the wall
 clock (recorded audio cannot), and passed on unchanged when it keeps real-time pace (a source that really delivers zeros) or ends before
 it is decided (the 50 ms of cleared fragments at stream start). While it drops, it asks the driver for up to one task node (4096 bytes)
-per read, so the 95 fragments are gone after about 0.2 s instead of 0.5 s; the audio recorded meanwhile follows faster than real time
-and the frame time stamps stay those of consecutive samples. Nothing recorded is lost and no silence is inserted; what remains is one
-delivery pause of about 0.2 s. Not covered: T23/T40/T41 (OSS3 driver, different code) and the ALSA backend.
+per read, so the 95 fragments are gone after about 0.2 s instead of 0.5 s. The audio recorded meanwhile follows at twice real time; its
+frames keep the time stamps of consecutive samples (the capture thread knows how late they are), and a consumer that is taking frames
+gets up to 100 ms per read before the frame FIFO drops its oldest frame. Nothing recorded is lost and no silence is inserted; what
+remains is one delivery pause of about 0.2 s. A streamer that pairs its RTCP sender reports with the send time of the last packet can
+show a receiver a timestamp step of up to 0.19 s for one report interval when a report falls into that pause (seen in about 1 of 10
+events with the test streamer, no silent frame, no sample lost; the cause is read from the streamer's code, not measured). Not covered: T23/T40/T41 (OSS3 driver, different code) and the ALSA
+backend.
 
 - Switch: on by default; `OPENIMP_AI_STALE=0` passes the fragments on like the vendor library, `OPENIMP_AI_STALE_LOG=1|<path>` logs
   every run.
