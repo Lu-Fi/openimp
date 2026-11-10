@@ -3496,7 +3496,7 @@
   {
    "number": 268,
    "title": "[T10] WB preset 1 does not settle within 60 s at 3000 K (vendor 22 s), light box",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/268",
    "labels": [
     "area:AE-AWB",
@@ -3587,6 +3587,38 @@
     "type:bug"
    ],
    "created": "2026-11-10T20:53:56Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 274,
+   "title": "[T30] open-tx-isp: tx-isp-t30.ko is 2.1x the vendor module in memory (747 KB vs 348 KB)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/274",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-10T21:20:14Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 275,
+   "title": "[T30] CCM and colour registers differ from the vendor stack at the same scene (picture colour equal)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/275",
+   "labels": [
+    "area:AE-AWB",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-10T21:20:16Z",
    "closed": null,
    "milestone": null
   }

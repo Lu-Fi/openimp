@@ -377,7 +377,9 @@ features:
       - 105
     T30:
       sym: '?'
-      text: no CCM call in the T30 vendor export list; LSC `SetShading` exported, no test result
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): LSC registers 0x380-0x3a0 equal on both stacks; the CCM registers 0x480-0x4a0 differ strongly (vendor matrix close to unity, open much stronger) while the picture colour is equal (U/V mean and spread equal in the lab scene); not settled (#275). Earlier: no CCM call in the T30 vendor export list; LSC `SetShading` exported, no test result"
+      issues:
+      - 275
     T31:
       sym: ✅
       text: '2026-10-27: BCSH bypass shows the colour change (74.4/80.6); the CCM is already bypassed by the sc2336 IQ file, so its bypass shows nothing (#105: not a defect, the earlier test scenes were nearly colourless). Earlier: CCM follows day/night (regs 0x5004-0x5018 differ), LSC LUT loaded and follows mode + flip; per-CT sweep not testable on a fixed scene'
@@ -1401,8 +1403,10 @@ features:
       sym: ✅+
       text: 622 KB stripped (was 1,047; vendor 857; claude/open-tx-isp-size2, device-tested on cam-B)
     T30:
-      sym: '?'
-      text: not measured
+      sym: ⚠️
+      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): /proc/modules 747,184 B (open-tx-isp next bc9e5bda) vs the vendor module 347,648 B; text 662,551 vs 257,384 B: the lifted code is 2.6x the vendor text, no size pass on T30 yet (#274)."
+      issues:
+      - 274
     T31:
       sym: ✅+
       text: "2026-11-07 (#223, #231; full OTA on a T31X and a T31L): `/proc/modules` 719712 -> 703544 B (-16168), two idle IRQ threads gone, \"ch0 done\" counted once; the #231 fixes add 16 B. Earlier: 711 KB stripped (was 859; vendor 829; claude/open-tx-isp-size2, device-tested on cam-A)"
