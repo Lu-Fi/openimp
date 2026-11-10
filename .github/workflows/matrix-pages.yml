@@ -13,6 +13,8 @@ on:
       - 'tools/status_data.py'
       - 'tools/gen_feature_matrix_html.py'
       - 'tools/gen_api_coverage.py'
+      - 'tools/release_gates.py'
+      - 'tools/driver_port.py'
       - 'tools/gen_site_index.py'
       - 'tools/export-check/**'
       - '.github/workflows/matrix-pages.yml'

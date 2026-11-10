@@ -1,0 +1,19 @@
+{
+ "socs": {
+  "T33": {
+   "proven": 0,
+   "total": null,
+   "branch": null,
+   "date": "2026-11-10",
+   "note": "paused, no recovered driver yet"
+  },
+  "T32": {
+   "proven": 463,
+   "total": 1591,
+   "branch": "claude/t32-ds-batch",
+   "date": "2026-11-10",
+   "note": "bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested"
+  }
+ },
+ "asof": "2026-11-10"
+}

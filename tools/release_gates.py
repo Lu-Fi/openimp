@@ -86,7 +86,9 @@ class Gates:
     def _rc3(self):
         m = self.m
         self.rc3 = {}
-        for s in self.socs:
+        # T32/T33 are shown in the progress table (honest 0/N: no OpenIMP build yet) but are not gate SoCs
+        self.extra = [s for s in m.socs if s not in self.socs]
+        for s in self.socs + self.extra:
             tot = ok = 0
             miss = []
             for f in m.funcs:
@@ -101,7 +103,7 @@ class Gates:
                     miss.append(f)
             miss.sort(key=lambda f: (-m.nstream(m.users(f, s)), f["name"].lower()))
             self.rc3[s] = dict(total=tot, ok=ok, missing=miss)
-        self.rc3_cells_ok = all(v["ok"] == v["total"] for v in self.rc3.values())
+        self.rc3_cells_ok = all(self.rc3[s]["ok"] == self.rc3[s]["total"] for s in self.socs)
         self.rc3_eval = evaluate_rc3(self.rc3_cells_ok, self.m.issues, self.rel)
         self.rc3_ok = self.rc3_eval["ok"]
 
@@ -143,8 +145,8 @@ class Gates:
 
     # ------------------------------------------------------------ helpers
     def totals(self):
-        t = sum(v["total"] for v in self.rc3.values())
-        o = sum(v["ok"] for v in self.rc3.values())
+        t = sum(self.rc3[s]["total"] for s in self.socs)
+        o = sum(self.rc3[s]["ok"] for s in self.socs)
         return o, t
 
     @staticmethod
@@ -205,9 +207,13 @@ class Gates:
               "Per SoC: vendor functions that at least one streamer calls (a Get/Set row counts two, a wildcard row its vendor names) "
               "and that work. The list below names the missing ones with their issues (milestone RC3).", "",
               "| SoC | works | progress | missing |", "|---|--:|---|--:|"]
-        for s in self.socs:
+        for s in self.socs + self.extra:
             v = self.rc3[s]
-            o.append("| %s | %d/%d | `%s` | %d |" % (s, v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
+            o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (no OpenIMP build yet)" if s in self.extra else ""),
+                     v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
+        if self.extra:
+            o += ["", "%s are not gate SoCs: there is no OpenIMP build yet, so no streamer function works there (planned). "
+                  "The count uses the same vendor-function weighting as the other SoCs." % ", ".join(self.extra)]
         o.append("")
         for s in self.socs:
             v = self.rc3[s]
@@ -280,12 +286,15 @@ class Gates:
                             esc(i.get("url", "")), i["number"], esc(i["title"]), esc(self.sev_of(i)), esc(i.get("milestone") or "none"))
                         for i in bl[key])))
         rows = []
-        for s in self.socs:
+        for s in self.socs + self.extra:
             v = self.rc3[s]
             rows.append("<tr><td>%s</td><td class='c'>%d/%d</td><td>%s</td><td class='c'>%d</td></tr>" % (
-                s, v["ok"], v["total"], self._pb(v["ok"], v["total"]), v["total"] - v["ok"]))
+                s + (" <span class='small'>(no OpenIMP build yet)</span>" if s in self.extra else ""),
+                v["ok"], v["total"], self._pb(v["ok"], v["total"]), v["total"] - v["ok"]))
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>streamer functions that work</th><th>progress</th><th>missing</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
+        if self.extra:
+            h.append('<p class="small">%s are not gate SoCs: there is no OpenIMP build yet, so 0 works (planned).</p>' % ", ".join(self.extra))
         for s in self.socs:
             v = self.rc3[s]
             if not v["missing"]:

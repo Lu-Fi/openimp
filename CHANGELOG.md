@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-10, Feature matrix: T32 and T33 progress (#234)
+
+- The RC3 "streamer functions that work" table now also lists T32 and T33 as 0/258 (no OpenIMP build yet; not gate SoCs, the gate numbers of the other SoCs are unchanged). New section "Kernel driver port from the recovered vendor code (open-tx-isp)": functions proven bit-exact by a host oracle / all functions of the recovered driver, T32 463/1591 (branch not merged, host-proven is not device-tested), T33 not started. Data in `docs/status/driver_port.json`, refreshed on the host by `tools/status_driver_port.py`.
+
 ## 2026-11-10, T31 audio: ALSA PCM backend for mainline kernels (#258; Wuuk Y0510 T31X, thingino kernel 7.3.3)
 
 - `IMP_AI_Enable` / `IMP_AO_Enable` fall back to raw ALSA PCM ioctls on `/dev/snd/pcmC0D0{c,p}` when `/dev/dsp` does not exist (`ENOENT`); the `/dev/dsp` path of the vendor 3.10 kernel is unchanged. Backend: `src/t31/openimp_alsa_pcm.h` (header-only, `<sound/asound.h>`, no alsa-lib): HW_PARAMS (interleaved S16_LE, 20 ms periods, 8 periods), SW_PARAMS, PREPARE, READI/WRITEI_FRAMES, DROP, DRAIN; no mmap status page, so the 64-bit `time_t` of kernel-7 uClibc cannot change an ioctl size.
