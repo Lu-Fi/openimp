@@ -3168,7 +3168,7 @@
   {
    "number": 224,
    "title": "[T23] Driver/module review: performance, memory, load, binary size",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/224",
    "labels": [
     "area:ISP",
@@ -3205,6 +3205,7 @@
    "url": "https://github.com/Lu-Fi/openimp/issues/226",
    "labels": [
     "area:ISP",
+    "found:lightbox",
     "repo:open-tx-isp",
     "severity:medium",
     "soc:T40",
@@ -3221,6 +3222,7 @@
    "url": "https://github.com/Lu-Fi/openimp/issues/227",
    "labels": [
     "area:ISP",
+    "found:lightbox",
     "repo:open-tx-isp",
     "severity:medium",
     "soc:T40",
@@ -3320,6 +3322,7 @@
    "url": "https://github.com/Lu-Fi/openimp/issues/233",
    "labels": [
     "area:AE-AWB",
+    "found:lightbox",
     "prio:long-term",
     "repo:open-tx-isp",
     "severity:low",
@@ -3344,6 +3347,246 @@
     "type:wip"
    ],
    "created": "2026-11-07T12:48:16Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 235,
+   "title": "[T10] channel 1 (640x360) NV12 frame layout wrong in SnapFrame/GetFrame",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/235",
+   "labels": [
+    "area:FrameSource",
+    "found:lightbox",
+    "prio:streamer",
+    "repo:open-tx-isp",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T10",
+    "type:bug"
+   ],
+   "created": "2026-11-07T20:56:04Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 239,
+   "title": "[T40] AE analog gain stops at 4095 vs vendor 5247 at high exposure compensation",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/239",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "severity:low",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-11-08T06:42:08Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 242,
+   "title": "[T40] Boot dump_stack: pinctrl-ingenic 'gpio functions has redefinition' (GPB6 requested twice)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/242",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:low",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-11-08T14:57:07Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 251,
+   "title": "Kernel review 2026-11-08: low findings L1-L8 (T30 debug pr_err, NULL checks, T20 ERR_PTR, T31 flip return, ...)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/251",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "type:bug"
+   ],
+   "created": "2026-11-09T06:43:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 258,
+   "title": "T31 kernel 7: audio in/out needs an ALSA backend (no /dev/dsp on mainline)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/258",
+   "labels": [
+    "area:Audio",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-11-09T21:02:25Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 260,
+   "title": "T32: three guards where the port differs from the vendor (MSCA init, MSCA curve, CLM zone count)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/260",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-10T06:15:07Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 264,
+   "title": "[T31] t31_ipu review findings (Opus review 2026-11-10): GET_PBUFF NULL memset, timeout retry without reprogramming, +11",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/264",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-11-10T12:13:30Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 265,
+   "title": "k7 T31: SDIO WiFi (msc1) runs without DMA, ~500 IRQ/s",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/265",
+   "labels": [],
+   "created": "2026-11-10T15:59:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 267,
+   "title": "[T10] H.264 CBR 1000: PSNR 1.3 dB under the vendor and a block step 1.12 vs 1.10 (light box)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/267",
+   "labels": [
+    "area:Encoder",
+    "found:lightbox",
+    "repo:openimp",
+    "severity:low",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-11-10T20:52:25Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 268,
+   "title": "[T10] WB preset 1 does not settle within 60 s at 3000 K (vendor 22 s), light box",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/268",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T10",
+    "type:bug"
+   ],
+   "created": "2026-11-10T20:52:45Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 269,
+   "title": "[T30] IMP_ISP_Tuning_SetDPStrength returns -1 on the T30 (driver has no DPC ratio control 0x8000062)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/269",
+   "labels": [
+    "area:ISP",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-10T20:53:50Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 270,
+   "title": "[T30] open-tx-isp: GetWDRAttr returns -1 (no getter for CUSTOM_WDR 0x8000169)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/270",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-10T20:53:51Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 271,
+   "title": "[T30] RC parameters frmQPStep, iBiasLvl and qualityLvl show no effect on the open stack (vendor: -52 %, +40 %, +111 %)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/271",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-10T20:53:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 272,
+   "title": "[T30] AEC: no echo reduction measured on the T30X (open ERLE 0 dB, vendor 1.8 dB)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/272",
+   "labels": [
+    "area:Audio",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-10T20:53:54Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 273,
+   "title": "[T30] open-tx-isp: GetEVAttr expr_us does not follow the exposure (stays at the first value)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/273",
+   "labels": [
+    "area:AE-AWB",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-10T20:53:56Z",
    "closed": null,
    "milestone": null
   }

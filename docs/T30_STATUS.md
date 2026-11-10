@@ -20,7 +20,8 @@ b1-b51, vendor stack on the same board as reference. Results (details and number
 - ISP bypass graph device-proven: RAW 2048x1536 12-bit in 16 bits, then NV12 again (`OPENIMP_T30_BYPASS_GRAPH=1`, default off) (#218).
 - `IMP_FrameSource_GetFrame` compact NV12 like the vendor (#202); `GetAFMetrices` like the vendor; WaitFrame, RawDRC, antifog, mirror, picture controls and the CSC presets (extra, opt-in) reach the driver.
 - API coverage on 2026-11-07 (matrix "All areas"): 286 of 350 vendor functions work, 44 implemented but not device-tested, 19 gaps, 1 unknown.
-- Not covered yet: picture quality (SSIM) against the vendor, FixQP and SMART on the device, run-time frame-rate / GOP changes (host-tested only); DMIC rows count as `nohw` (no DMIC on the lab board).
+- 2026-11-10 (b53/b54): anti-flicker steps, DPC (`SetDPStrength` through table 0x53, #269), crop/scaler, FixQP/CBR/VBR/SMART rates, OSD, IVS motion, audio output and encoder ROI vendor-equal on the device; AE/AWB equal to the vendor in the lab scene (#202). Still deviating: RC parameters frmQPStep/iBiasLvl/qualityLvl (#271), AEC without echo reduction (#272), GetEVAttr expr_us (#273).
+- Not covered yet: picture quality (SSIM) against the vendor, run-time frame-rate / GOP changes (host-tested only), banding under a flickering light; DMIC rows count as `nohw` (no DMIC on the lab board).
 
 The sections below are dated; they record the state before the lab camera where they say so.
 
