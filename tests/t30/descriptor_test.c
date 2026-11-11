@@ -336,11 +336,87 @@ static void test_t10_matches_stock(const char *path, int p_slice)
            82u * 47u * 256u + 83u * 256u);
 }
 
+static size_t find_register(size_t count, uint32_t reg, size_t from)
+{
+    size_t i;
+
+    for (i = from; i < count; i++)
+        if (pair_register(i) == reg)
+            return i;
+    return (size_t)-1;
+}
+
+/* #217: the macroblock rate-control words of H264E_T30_SliceInit */
+static void test_mbrc_descriptor(void)
+{
+    static const uint32_t regs[13] = {
+        0x4007c, 0x40080, 0x40084, 0x40088, 0x4008c, 0x40090, 0x40078,
+        0x400a4, 0x400a8, 0x400ac, 0x400b0, 0x400b4, 0x400c8
+    };
+    static const uint32_t bu_regs[5] = {
+        0x80158, 0x8010c, 0x80108, 0x80104, 0x80100
+    };
+    int32_t targets[3] = {-297, -292, 7};
+    h264_cabac_t cabac;
+    T30H264SliceConfig config;
+    size_t count = 0, base, i, at;
+
+    memset(&cabac, 0, sizeof(cabac));
+    h264_cabac_context_init(&cabac, SLICE_TYPE_P, 28, 0);
+    config = make_config(&cabac);
+    config.slice_type = 1;
+    config.mbrc = 1;
+    config.mbrc_qp_flags = 0xc010u;
+    for (i = 0; i < 13u; i++)
+        config.mbrc_regs[i] = 0x11110000u + (uint32_t)i;
+    config.mbrc_bu_on = 1;
+    config.mbrc_bu_n = 3;
+    config.mbrc_bu_tgt = targets;
+    for (i = 0; i < 5u; i++)
+        config.mbrc_bu[i] = 0x22220000u + (uint32_t)i;
+    memset(descriptor, 0, sizeof(descriptor));
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(count == 785u + 8u);
+    at = find_register(count, 0x40074u, 0);
+    assert(at != (size_t)-1);
+    assert(pair_value(at) == (41u << 24 | 16u << 16 | 28u << 8 | 0xc010u));
+    for (i = 0; i < 13u; i++) {
+        assert(pair_register(at + 1u + i) == regs[i]);
+        assert(pair_value(at + 1u + i) == 0x11110000u + i);
+    }
+    base = find_register(count, 0x8007cu, 0);
+    assert(base != (size_t)-1);
+    for (i = 0; i < 3u; i++) {
+        assert(pair_register(base + 1u + i) == 0x80800u + 4u * i);
+        assert(pair_value(base + 1u + i) == (uint32_t)targets[i]);
+    }
+    for (i = 0; i < 5u; i++) {
+        assert(pair_register(base + 4u + i) == bu_regs[i]);
+        assert(pair_value(base + 4u + i) == 0x22220000u + i);
+    }
+    assert(pair_register(base + 9u) == 0x80040u);  /* deblocking follows */
+    config.mbrc_bu_tgt = NULL;                      /* no fresh targets: zero */
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(pair_value(base + 1u) == 0u);
+    /* I slices: no basic unit; mbrc off: the former list */
+    config.slice_type = 0;
+    h264_cabac_context_init(&cabac, SLICE_TYPE_I, 28, 0);
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    assert(count == 611u);
+    config.mbrc = 0;
+    assert(T30_H264_BuildDescriptor(&config, &count) == 0);
+    at = find_register(count, 0x40074u, 0);
+    assert(pair_value(at) == (41u << 24 | 16u << 16 | 28u << 8));
+    for (i = 0; i < 13u; i++)
+        assert(pair_value(at + 1u + i) == 0u);
+}
+
 int main(void)
 {
     h264_cabac_init();
     test_idr_descriptor();
     test_p_descriptor();
+    test_mbrc_descriptor();
     test_high_profile_sps();
     test_t10_matches_stock("fixtures/t10_stock_I.txt", 0);
     test_t10_matches_stock("fixtures/t10_stock_P.txt", 1);

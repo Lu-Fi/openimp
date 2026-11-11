@@ -218,6 +218,20 @@ static int t30_emit_motion_estimation(T30DescriptorWriter *writer,
     return 0;
 }
 
+/* the command-list words of the T30 basic-unit block (#217, OEM
+ * H264E_T30_SliceInit: P slices only) */
+static size_t t30_mbrc_bu_words(const T30H264SliceConfig *config)
+{
+#if defined(PLATFORM_T20)
+    (void)config;
+    return 0;
+#else
+    if (!config->mbrc || !config->mbrc_bu_on || !config->slice_type)
+        return 0;
+    return 2u * ((size_t)(config->mbrc_bu_n > 128u ? 128u : config->mbrc_bu_n) + 5u);
+#endif
+}
+
 int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
                              size_t *pair_count)
 {
@@ -254,7 +268,8 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
         !config->mb_width || !config->mb_height ||
         !config->width || !config->height || config->slice_type > 1u ||
         config->descriptor_words < (config->slice_type ? 1570u : 1222u) +
-                                   2u * config->qp_table_words ||
+                                   2u * config->qp_table_words +
+                                   t30_mbrc_bu_words(config) ||
         (config->qp_table_words && !config->qp_table) ||
         (config->slice_type &&
          (!config->reference_y || !config->reference_c))) {
@@ -354,10 +369,14 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x4010c, 0x03400000u);
 #else
     EMIT(0x4010c, 0x00400000u | ((uint32_t)config->dcs_oth << 24));
+    /* OEM H264E_T30_SliceInit: the macroblock rate-control fields of the
+     * slice block in 0x40074 and 0x4007c..0x400c8 (#217); without them
+     * zero (the former list) */
     EMIT(0x40074, (max_qp << 24) | (min_qp << 16) |
-                  ((uint32_t)config->qp << 8));
+                  ((uint32_t)config->qp << 8) |
+                  (config->mbrc ? config->mbrc_qp_flags : 0u));
     for (i = 0; i < 13u; i++)
-        EMIT(qpg_zero_registers[i], 0);
+        EMIT(qpg_zero_registers[i], config->mbrc ? config->mbrc_regs[i] : 0u);
 #endif
 
     if (config->slice_type &&
@@ -402,6 +421,22 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
              config->cabac_state[t30_vmau_context_index(config->slice_type,
                                                         i)]);
     EMIT(0x8007c, 2);
+#if !defined(PLATFORM_T20)
+    if (t30_mbrc_bu_words(config)) {
+        /* OEM H264E_T30_SliceInit: the basic-unit bit targets and the
+         * basic-unit rate control (#217) */
+        uint32_t n = config->mbrc_bu_n > 128u ? 128u : config->mbrc_bu_n;
+        static const uint32_t bu_registers[5] = {
+            0x80158, 0x8010c, 0x80108, 0x80104, 0x80100
+        };
+
+        for (i = 0; i < n; i++)
+            EMIT(0x80800u + 4u * i, config->mbrc_bu_tgt ?
+                                    (uint32_t)config->mbrc_bu_tgt[i] : 0u);
+        for (i = 0; i < 5u; i++)
+            EMIT(bu_registers[i], config->mbrc_bu[i]);
+    }
+#endif
 
     /* Deblocking. */
     EMIT(0x80040, 1);

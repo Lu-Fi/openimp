@@ -371,6 +371,13 @@ struct T30HelixEncoder {
      * previous picture's values of the registers not read (as the OEM
      * hwicodec_pf_h264e_t30_enc loop, which stops at the failure) */
     uint32_t eprc30_regs[EPRC30_STAT_REGS];
+    /* the macroblock rate control of the controller's slice block in the
+     * command list (#217, OEM H264E_T30_SliceInit, EPRC30_MbRcRegs): off
+     * until device-tested (the OEM always sends it); OPENIMP_EPRC_MBRC=1
+     * or IMP_Encoder_SetMbRC switch it, OPENIMP_EPRC_MBRC_LOG=<n> logs
+     * every n-th picture's words */
+    int eprc30_mbrc_on;
+    uint32_t eprc30_mbrc_log, eprc30_mbrc_pictures;
     uint32_t eprc30_stats_seconds;          /* OPENIMP_T30_EPRC_STATS */
     uint32_t eprc30_frames, eprc30_idrs;
     uint64_t eprc30_bytes, eprc30_qp_sum[2];
@@ -983,6 +990,26 @@ static int t30_soc_is_t10(void)
 }
 #endif
 
+#if defined(PLATFORM_T30)
+/* HWEncoderParams.mb_rc (IMP_Encoder_SetMbRC) on the T30 (#217):
+ * HW_MBRC_DEFAULT keeps the current setting; the controller computes the
+ * macroblock rate control for every picture either way (as the OEM), the
+ * switch only decides whether the command list carries it. */
+static void t30_mbrc_set(T30HelixEncoder *encoder, uint32_t mb_rc)
+{
+    int on;
+
+    if (mb_rc != HW_MBRC_ON && mb_rc != HW_MBRC_OFF)
+        return;
+    on = mb_rc == HW_MBRC_ON;
+    if (on == encoder->eprc30_mbrc_on)
+        return;
+    encoder->eprc30_mbrc_on = on;
+    IMP_LOG_INFO("Encoder", "T30 eprc: macroblock rate control %s",
+                 on ? "on" : "off");
+}
+#endif
+
 static void t30_fill_slice(T30HelixEncoder *encoder,
                            const IMPFrameInfo *frame, uint32_t qp,
                            int idr, unsigned int output_index)
@@ -1021,6 +1048,30 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
         }
         slice->fsc_override = (uint8_t)fsc_set;
         slice->fsc_word = fsc_word;
+    }
+    if (encoder->eprc30_on && encoder->eprc30_mbrc_on) {
+        Eprc30MbRc m;
+
+        /* the slice block this try is coded with (EPRC30_FrameStart, or
+         * FrameEnd before a re-encode) */
+        EPRC30_MbRcRegs(encoder->eprc30_slice, !idr, &m);
+        slice->mbrc = 1;
+        slice->mbrc_qp_flags = m.qp_flags;
+        memcpy(slice->mbrc_regs, m.reg, sizeof(slice->mbrc_regs));
+        slice->mbrc_bu_on = (uint8_t)m.bu_on;
+        slice->mbrc_bu_n = (uint16_t)m.bu_n;
+        memcpy(slice->mbrc_bu, m.bu, sizeof(slice->mbrc_bu));
+        slice->mbrc_bu_tgt = m.bu_fresh ? encoder->eprc30.bu_tgt : NULL;
+        if (encoder->eprc30_mbrc_log &&
+            encoder->eprc30_mbrc_pictures++ % encoder->eprc30_mbrc_log == 0u)
+            IMP_LOG_INFO("Encoder", "Helix eprc: frame=%u qp=%u macroblock "
+                         "rate control 0x40074|=%x 0x4007c..90=%08x %08x "
+                         "%08x %08x %08x %08x 0x40078=%08x 0x400a4..c8=%08x "
+                         "%08x %08x %08x %08x %08x basic unit %d/%u",
+                         encoder->frame_number, qp, m.qp_flags, m.reg[0],
+                         m.reg[1], m.reg[2], m.reg[3], m.reg[4], m.reg[5],
+                         m.reg[6], m.reg[7], m.reg[8], m.reg[9], m.reg[10],
+                         m.reg[11], m.reg[12], m.bu_on, m.bu_n);
     }
 #endif
     slice->raw[0] = frame->phyAddr;
@@ -2791,6 +2842,16 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
         encoder->mbrc_log = mbrc ? (uint32_t)strtoul(mbrc, NULL, 0) : 0u;
     }
     helix_mbrc_set(encoder, params->mb_rc);
+#endif
+#if defined(PLATFORM_T30)
+    {
+        const char *mbrc = getenv("OPENIMP_EPRC_MBRC");
+
+        encoder->eprc30_mbrc_on = mbrc && mbrc[0] == '1';
+        mbrc = getenv("OPENIMP_EPRC_MBRC_LOG");
+        encoder->eprc30_mbrc_log = mbrc ? (uint32_t)strtoul(mbrc, NULL, 0) : 0u;
+    }
+    t30_mbrc_set(encoder, params->mb_rc);
 #endif
     encoder->params = *params;
 #if defined(PLATFORM_T20)
@@ -4750,6 +4811,9 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
         return -1;
 #if defined(HELIX_T21_SYNTAX)
     helix_mbrc_set(encoder, requested->mb_rc);
+#endif
+#if defined(PLATFORM_T30)
+    t30_mbrc_set(encoder, requested->mb_rc);
 #endif
 #if !defined(PLATFORM_T23)
     /* Color2Grey, chroma QP offset: picked up by the next IDR, no

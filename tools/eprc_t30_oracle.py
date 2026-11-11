@@ -17,6 +17,12 @@ picture-size and statistics models are those of tools/eprc_oracle.py.
     tools/eprc_t30_oracle.py LIB [--real] --slice [--dump DIR] ...  (H.264: a 'B'
         line per picture, CRC-32 of the slice-parameter block and of the
         basic-unit targets of h264_get_mb_qp, Lu-Fi/openimp#217)
+    tools/eprc_t30_oracle.py LIB [--real] --regs ...  (as --slice, and after each
+        'B' line one 'W' line per coding try of the picture: the macroblock
+        rate-control register words that the OEM H264E_T30_SliceInit makes
+        of the slice block that try is coded with, #217 step 2)
+    tools/eprc_t30_oracle.py LIB --regs-fuzz SEED N  (H264E_T30_SliceInit on N
+        random slice blocks: a 'Z' line with the input, then its 'W' line)
     tools/eprc_t30_oracle.py LIB --h265 [--random SEED N [FRAMES]]  (H.265, I265eRatectrl)
     tools/eprc_t30_oracle.py LIB --h265-reconf [SEED N]  (H.265 run-time change: I265e::reset)
 
@@ -110,9 +116,36 @@ class SimT30:
         a = L.syms.get('h264_get_mb_qp')
         if a is not None:
             L.uc.hook_add(UC_HOOK_CODE, _zero_sas_stack, begin=a, end=a)
+        # the basic-unit targets as h264_get_mb_qp leaves them: read at its
+        # return address, before later calls reuse that stack
+        from unicorn.mips_const import UC_MIPS_REG_RA
+        self.bu_targets = b''
+        self._ret_hooks = set()
+        def _at_return(uc, addr, size, data):
+            tp = struct.unpack('<I', bytes(uc.mem_read(self.SL + 0x1e4, 4)))[0]
+            nt = min(struct.unpack('<i', bytes(uc.mem_read(self.SL + 0x1d8, 4)))[0], 128)
+            self.bu_targets = bytes(uc.mem_read(tp, 4 * nt)) if tp and nt > 0 else b''
+        def _on_entry(uc, addr, size, data):
+            self.bu_targets = b''
+            ra = uc.reg_read(UC_MIPS_REG_RA)
+            if ra not in self._ret_hooks:
+                self._ret_hooks.add(ra)
+                uc.hook_add(UC_HOOK_CODE, _at_return, begin=ra, end=ra)
+        if a is not None:
+            L.uc.hook_add(UC_HOOK_CODE, _on_entry, begin=a, end=a)
 
     def qp(self):
         return self.L.rd(self.E + 0x228, 1)[0]
+
+    def slice_init_line(self, p_slice):
+        """the 'W' line of the picture about to be coded: H264E_T30_SliceInit
+        on the slice block as rate control left it; the basic-unit targets
+        are read through +0x1e4 (h264_get_mb_qp's stack, intact right after
+        the call), none (zero) when +0x1e4 is 0"""
+        blk = self.L.rd(self.SL, 0x1204)
+        tp = struct.unpack_from('<I', blk, 0x1e4)[0]
+        tg = self.bu_targets if tp else b''
+        return slice_init_regs(self.L, blk, p_slice, tg)
 
     def start(self, since):
         L = self.L
@@ -158,6 +191,92 @@ def real_statistics(frame, w, h):
     return regs, cmpx
 
 
+
+# ------------------------------------------------- H264E_T30_SliceInit (#217)
+# The OEM hwicodec_pf_h264e_t30_enc copies the first 500 bytes of the
+# i264e slice block into a zeroed per-buffer block, sets +0x100..+0x10c
+# (+0x108 the command list) and +0x1f1/+0x1f2, and calls
+# H264E_T30_SliceInit on it.  Byte 0 is the slice type (0 I, 1 P) there.
+MBRC_REGS = (0x40074, 0x4007c, 0x40080, 0x40084, 0x40088, 0x4008c, 0x40090,
+             0x40078, 0x400a4, 0x400a8, 0x400ac, 0x400b0, 0x400b4, 0x400c8,
+             0x4006c)
+BU_REGS = (0x80158, 0x8010c, 0x80108, 0x80104, 0x80100)
+SI_BLK, SI_LIST, SI_TGT, SI_QPT = (HEAP + 0x2000000, HEAP + 0x2010000,
+                                   HEAP + 0x2040000, HEAP + 0x2050000)
+
+
+def slice_init_regs(L, blk, p_slice, targets=b''):
+    """the 'W' line fields of one OEM H264E_T30_SliceInit run on blk"""
+    b = bytearray(0x1204)
+    b[:500] = blk[:500]
+    b[0] = 1 if p_slice else 0
+    struct.pack_into('<I', b, 0x108, SI_LIST)
+    struct.pack_into('<I', b, 0x1e4, SI_TGT)
+    L.wr(SI_BLK, b)
+    L.wr(SI_LIST, bytes(0x30000))
+    L.wr(SI_TGT, targets + bytes(0x1000))
+    L.call('H264E_T30_SliceInit', SI_BLK)
+    regs, tgt, bu = {}, [], False
+    for i in range(0x6000):
+        value, cmd = struct.unpack('<II', L.rd(SI_LIST + 8 * i, 8))
+        if not cmd & 0x80000000:
+            break
+        a = cmd & 0xffffc
+        if 0x80800 <= a < 0x80a00:
+            tgt.append(value)
+        elif a in MBRC_REGS or a in BU_REGS:
+            regs.setdefault(a, value)
+            bu = bu or a in BU_REGS
+        if cmd & 0x40000000:
+            break
+    tw = b''.join(struct.pack('<I', v) for v in tgt[:128])
+    return 'W %s %d %d %s %08x' % (
+        ' '.join('%08x' % regs.get(a, 0) for a in MBRC_REGS), int(bu),
+        min(len(tgt), 128), ' '.join('%08x' % regs.get(a, 0) for a in BU_REGS),
+        zlib.crc32(tw))
+
+
+def fuzz_target(k, salt):
+    """the basic-unit target k of a --regs-fuzz block (eprc_t30_test.c)"""
+    return (k * 0x9e3779b1 + salt) & 0xffffffff
+
+
+def main_regs_fuzz(lib, seed, n):
+    import random
+    L = Lib(lib)
+    rnd = random.Random(seed)
+    L.wr(SI_QPT, bytes(rnd.getrandbits(8) for _ in range(0x1000)))
+    for _ in range(n):
+        p = rnd.getrandbits(1)
+        # the geometry of tools/t30_oem_slice_order.py, random macroblock
+        # rate-control fields +0x184..+0x1f3 (the rest stays zero)
+        b = bytearray(500)
+        mbw, mbh = rnd.choice(((120, 68), (80, 45), (40, 23)))
+        b[1], b[2], b[4] = mbw, mbh, mbh - 1
+        struct.pack_into('<II', b, 8, mbw * 16, mbh * 16)
+        b[0x184:500] = bytes(rnd.getrandbits(8) for _ in range(500 - 0x184))
+        b[0x187] = rnd.choice((0, 0, 1, rnd.getrandbits(8)))
+        if b[0x187]:
+            cnt = rnd.randrange(0, 300)
+        else:
+            cnt = rnd.getrandbits(32)
+        struct.pack_into('<I', b, 0x188, cnt)
+        struct.pack_into('<I', b, 0x18c, SI_QPT)
+        struct.pack_into('<i', b, 0x1e8, rnd.choice((-1, 0, 1, 2, 3, rnd.getrandbits(31))))
+        b[0x1c7] = rnd.choice((0, 1, 2, 3, rnd.getrandbits(8)))
+        bu = p and struct.unpack_from('<i', b, 0x1e8)[0] > 1 and b[0x1c7]
+        if bu:
+            struct.pack_into('<I', b, 0x1d8, rnd.choice((0, 1, rnd.randrange(0, 129),
+                                                         rnd.randrange(129, 200))))
+        for o in (0x190, 0x191, 0x192, 0x193, 0x1e0, 0x1c8, 0x1e1):
+            b[o] = rnd.choice((0, 1, 3, 0x7f, 0x80, 0xff, rnd.getrandbits(8)))
+        nt = struct.unpack_from('<I', b, 0x1d8)[0] if bu else 0
+        salt = struct.unpack_from('<I', b, 0x1cc)[0]
+        tg = b''.join(struct.pack('<I', fuzz_target(k, salt)) for k in range(min(nt, 200)))
+        print('Z %d %s' % (p, bytes(b[0x184:0x1f4]).hex()))
+        print(slice_init_regs(L, bytes(b), p, tg))
+
+
 def main():
     lib = sys.argv[1]
     args = sys.argv[2:]
@@ -167,9 +286,16 @@ def main():
     if '--h265' in args:
         args.remove('--h265')
         return main_h265(lib, args)
+    if '--regs-fuzz' in args:
+        i = args.index('--regs-fuzz')
+        return main_regs_fuzz(lib, int(args[i + 1]), int(args[i + 2]))
     real = '--real' in args
     if real:
         args.remove('--real')
+    regs_line = '--regs' in args
+    if regs_line:
+        args.remove('--regs')
+        args.append('--slice')
     # --slice: after each picture a 'B' line, the CRC-32 of the slice-parameter
     # block (0x1204 bytes, +0x1e4 zeroed: h264_get_mb_qp stores a stack address
     # there) and of the basic-unit targets it points to; --dump DIR also writes
@@ -203,8 +329,11 @@ def main():
         for f in range(frames):
             since = f % idr
             is_idr = since % gop == 0
+            if slice_crc or dump:
+                s.L.w32(s.SL + 0x1e4, 0)        # set again only by a basic-unit run
             qp = s.start(since)
             out = [qp]
+            words = [s.slice_init_line(not is_idr)] if regs_line else []
             size = picture_bytes(f, qp, is_idr, w * h, n % 2)
             if real:
                 regs, s.cmpx = real_statistics(f, w, h)
@@ -219,6 +348,8 @@ def main():
                     break
                 qp = s.qp()
                 out.append(qp)
+                if regs_line:
+                    words.append(s.slice_init_line(not is_idr))
                 size = max(size // 2, 20)
             print('F', since, ' '.join(str(v) for v in out))
             if slice_crc or dump:
@@ -231,6 +362,8 @@ def main():
                 blk[0x1e4:0x1e8] = bytes(4)
                 if slice_crc:
                     print('B %08x %08x' % (zlib.crc32(bytes(blk)), zlib.crc32(tg)))
+                for line in words:
+                    print(line)
                 if dump:
                     open(os.path.join(dump, '%d_%d.bin' % (n, f)), 'wb').write(bytes(blk))
 

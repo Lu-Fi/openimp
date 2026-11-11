@@ -21,6 +21,8 @@ check: $(EPRC_TEST) $(EPRC30_TEST)
 	$(EPRC30_TEST) eprc_t30_random_vectors.txt
 	$(EPRC30_TEST) eprc_t30_static_vectors.txt
 	$(EPRC30_TEST) eprc_t30_slice_random_vectors.txt
+	$(EPRC30_TEST) eprc_t30_regs_vectors.txt
+	$(EPRC30_TEST) eprc_t30_sliceinit_vectors.txt
 	$(EPRC30_TEST) eprc_t30_h265_vectors.txt
 	$(EPRC30_TEST) eprc_t30_h265_random_vectors.txt
 	$(EPRC30_TEST) eprc_t30_h265_reconf_vectors.txt
