@@ -1654,7 +1654,7 @@
   },
   {
    "number": 100,
-   "title": "[T30] Verify on real hardware (no T30 camera yet)",
+   "title": "[T30] Verify on real hardware: remaining rows 3, 11, 37, 39, 41, 42 (T30X lab camera)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/100",
    "labels": [
@@ -2802,7 +2802,7 @@
   {
    "number": 177,
    "title": "[T30] open-tx-isp: many ISP getters and controls are not served by tx-isp-t30 (32 err cells)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/177",
    "labels": [
     "area:Driver",
@@ -3478,7 +3478,7 @@
   },
   {
    "number": 267,
-   "title": "[T10] H.264 CBR 1000: PSNR 1.3 dB under the vendor and a block step 1.12 vs 1.10 (light box)",
+   "title": "[T10] Picture brightness hunts by ~1 Y on the open stack (vendor 0.3-0.5 Y); showed up as a lower H.264 PSNR (light box)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/267",
    "labels": [
@@ -3513,7 +3513,7 @@
   {
    "number": 269,
    "title": "[T30] IMP_ISP_Tuning_SetDPStrength returns -1 on the T30 (driver has no DPC ratio control 0x8000062)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/269",
    "labels": [
     "area:ISP",
@@ -3529,7 +3529,7 @@
   {
    "number": 270,
    "title": "[T30] open-tx-isp: GetWDRAttr returns -1 (no getter for CUSTOM_WDR 0x8000169)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/270",
    "labels": [
     "area:Driver",
@@ -3545,7 +3545,7 @@
   {
    "number": 271,
    "title": "[T30] RC parameters frmQPStep, iBiasLvl and qualityLvl show no effect on the open stack (vendor: -52 %, +40 %, +111 %)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/271",
    "labels": [
     "area:Encoder",
@@ -3609,7 +3609,7 @@
   {
    "number": 275,
    "title": "[T30] CCM and colour registers differ from the vendor stack at the same scene (picture colour equal)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/275",
    "labels": [
     "area:AE-AWB",
@@ -3619,6 +3619,292 @@
     "type:bug"
    ],
    "created": "2026-11-10T21:20:16Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 277,
+   "title": "[T32] t32_lce_hist_method refuses index -1 cases that the vendor handles (empty ramps), ~20 % of LCE v4 end-to-end cases",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/277",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-11T01:05:14Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 282,
+   "title": "[T32] Oracle hardening from the night review (case counts, mutant spread)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/282",
+   "labels": [],
+   "created": "2026-11-11T07:14:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 283,
+   "title": "[T30] open-tx-isp: AE_fsm_switch_state never reaches ae_calculate_exposure (missing braces after the event 4 branch)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/283",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-11T07:30:33Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 284,
+   "title": "[T10/T20] #267 AE: analog reserve applied after the cap clamp (plateau 140 vs OEM 142)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/284",
+   "labels": [],
+   "created": "2026-11-11T07:32:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 285,
+   "title": "[T10/T20] Compact AE ignores manual analog gain (stab[28] overwritten every frame)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/285",
+   "labels": [],
+   "created": "2026-11-11T07:32:53Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 291,
+   "title": "T32: soc_vpu channel layer (64 B channel_node)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/291",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:25Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 292,
+   "title": "T32: JPEG encoder on the JPEG v1.2 engine",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/292",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:27Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 293,
+   "title": "T32: H.264 on HERA",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/293",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:28Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 294,
+   "title": "T32: H.265 on HERA",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/294",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:30Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 295,
+   "title": "T32: rate control (eprc T32/T33 defaults, CBR/VBR/capped, statistics read-back)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/295",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:31Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 296,
+   "title": "T32: ISP tuning table",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/296",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:33Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 297,
+   "title": "T32: OSD (IPU + 2-bit ISP/MSCA OSD, 272 B region attr)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/297",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:34Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 298,
+   "title": "T32: audio AI/AO/AENC/ADEC + DMIC",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/298",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:36Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 299,
+   "title": "T32: IVS + sysutils + alloc API leftovers",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/299",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:38Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 300,
+   "title": "T32: apitest column + matrix \"planned\" rows",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/300",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:40Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 301,
+   "title": "T32 (later): IVDC direct mode, LDC, PM/OneShot, Decoder, kern_enc, T33/T32Pro variants",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/301",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-11T08:07:41Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 304,
+   "title": "[T10] Encoder PSNR 0.7-1.3 dB below vendor at CBR and FixQP 35 (jxh42, light box)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/304",
+   "labels": [],
+   "created": "2026-11-11T09:54:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 305,
+   "title": "T32 vendor tx-isp-t32.ko oopses reading /proc/jz/isp/isp-m0 (isp_info_base NULL)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/305",
+   "labels": [
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-11T09:57:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 306,
+   "title": "[T20] matrix: audit-only cells to device-tested",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/306",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:low",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-11-11T10:03:31Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 307,
+   "title": "[T23] matrix: audit-only cells to device-tested",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/307",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:low",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-11-11T10:04:02Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 308,
+   "title": "[T30] matrix: unknown cells and missing functions",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/308",
+   "labels": [
+    "area:Docs",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-11T10:05:44Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 309,
+   "title": "[T31] matrix gaps: FB_* + audit-only cells",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/309",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-11-11T10:05:56Z",
    "closed": null,
    "milestone": null
   }
