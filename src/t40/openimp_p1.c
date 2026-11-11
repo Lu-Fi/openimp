@@ -2912,6 +2912,10 @@ again:
 #endif
     buffer->queued = 0;
     fb_back = p1_fb_real_locked(channel);
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+    if (channel == 0 && openimp_tp_ispmid_active())
+        openimp_tp_ispmid_tick();       /* mode 5: hold the MDNS reference picture (src/t40/openimp_t4x_ispmid.c) */
+#endif
     if (openimp_testpattern_mode() != 0)   /* EnableChn admits NV12 only */
         p1_test_pattern_fill(chn, buffer, channel);
     if (openimp_testpattern_mode() != 1 && openimp_testpattern_mode() != 2 &&

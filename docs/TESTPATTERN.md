@@ -29,7 +29,7 @@ decides the picture size, every channel gets its own counter. Mode 4 does not to
 sets a test pattern bit in the sensor (register table per sensor, written through the ISP sensor
 register ioctl; the chip ID is read first and the write is verified by a readback).
 
-### Mode 5 details (T23, T31, T21)
+### Mode 5 details (T23, T31, T21; T40/T41 below)
 
 T21, T23 and T31 (2026-11-11). The hooks are in `src/isp/isp_mid_ref.c`. T23 and T31 share the MDNS
 register block (`0x7820` Y, `0x7824` stride, `0x7828` C, weights `0x799c` / `0x7a6c`). On T21 the
@@ -56,6 +56,48 @@ The rest of the gap to 1.0 comes after MDNS: the T31 spatial filter and sharpeni
 encoding. With the newer T23 driver, the night-mode chroma behind MDNS is weaker (UV 0.90 instead of
 0.96, tracked separately). An installed T23 driver whose `mdns_ref_hold` writes `0x00ffffff` overrides
 the library's `b_min` write, so the chroma gain needs the updated driver.
+
+### Mode 5 on T40 and T41 (2026-11-11)
+
+Hooks in `src/t40/openimp_t4x_ispmid.c`. The T40/T41 MDNS block (ISP core `0xf000`, ID `0x20191209`) keeps
+its reference as two planes: Y at `+0x40` (stride `+0x44`), UV at `+0x48` (stride `+0x4c`), height =
+`+0x68` / (stride / 16). The tuning values drop the reference wherever it differs from the frame, so a
+written picture is gone after one frame. Mode 5 sets these fields to 0xff (found on the device by a luma
+step of 40 written into the reference, which then stays instead of decaying in one frame): the per-pixel
+gate `+0x120` (bytes 0/2), the weight limits `+0x150` (bytes 0/1) and `+0x234`, the weights by block age
+`+0x154..+0x16c`, the difference and output ramps `+0x174/+0x178`, `+0x180..+0x190`, `+0x264/+0x26c`, and the
+block motion limits `+0x198` (bytes 0..2), `+0x210`, `+0x278`.
+
+The reference is 7 MB (2880x1620) on the T41 and 12 MB (3840x2160) on the T40: more than the CPU copies in
+a frame time, and too much RAM for a copy on a 32 MB board. So the picture is drawn once straight into the
+reference (cached `/dev/mem` mapping, written back; 0.5 s per pass on a T41LQ, two passes against rows the
+block writes back while they are drawn) and the block keeps it by itself. The channel-0 frame tick sets the
+fields again when the driver rewrote them, and a worker thread draws the picture again when that happened or
+when 64 sample points of the reference moved away for three frames (timps stops the stream between clients,
+and the restart programs the block anew). With open-tx-isp `claude/tp5-103c` the T41 module parameter
+`mdns_ref_hold` (set by the library while the mode runs) makes the driver's own MDNS writer keep the bits;
+it rewrites the block on nearly every gain update.
+
+T40 only: bit 24 of `+0x24` (function enables, `par[8]` of `tisp_mdns_func_en`) makes the block write the
+reference as a coded stream (random-looking words). Mode 5 clears it while it runs (the block then writes
+plain NV12 into the same buffer) and restores it after. The second pipeline's block (`0xf800`) is not used.
+
+Device runs (2026-11-11, H.264 main stream 1920x1080, SSIM against the mode 1 picture at the reference size
+scaled to 1920x1080, rows above the OSD; pictures stay local):
+
+| SoC (sensor), state | live alone Y/U/V | mode 5 Y/U/V | ref share Y | on/off cycles |
+|---|---|---|---|---|
+| T41LQ Vanhua T55A (gc5603), night (mono) | 0.48 / 0.87 / 0.87 | 0.924 / 0.868 / 0.866 | 0.90 | 3 ok (0.908 after), fields restored |
+| T41LQ, colour forced, IR on (pinkish, medium gain; test tool with the same fields) | 0.47 / 0.81 / 0.79 | 0.901 / 0.860 / 0.875 | 0.89 (U/V 0.55/0.58) | - |
+| T41LQ, colour forced in the dark (IR off, maximum gain) | 0.45 / 0.80 / 0.78 | 0.20 (fails: only the high-contrast logo box stays) | - | - |
+| T40XP Eufy (sc830ai), night (mono) | 0.46 / 0.87 / 0.86 | 0.836 / 0.866 / 0.864 | 0.85 | 3 ok (0.840 after), coded bit restored |
+| T40XP, colour forced | 0.47 / 0.86 / 0.86 | 0.842 / 0.866 / 0.876 | 0.86 (U/V 0.66/0.75) | - |
+
+In night mode the ISP removes the colour behind MDNS, so U/V stay at the live value. With mode 0 the
+stream is the live picture again (ref share 0). Open: T41 colour mode at maximum gain (a further gate of
+that tuning range; check in daylight), the ISP horizontal flip (not checked on T40/T41,
+`openimp_tp_ispmid_hmirror` returns 0), the picture is redrawn after each driver rewrite on a T40 (no
+driver hold there yet).
 
 Older T23 notes (2026-10-25):
 
@@ -102,7 +144,7 @@ OpenIMP_TestPattern_Set(OPENIMP_TP_OFF, NULL);
 - `OpenIMP_TestPattern_Get(state)`: `state->size` must be set. Returns the mode, the active
   parameters, frames replaced since the last Set, mode 3 objects shown and visible now.
 - `OpenIMP_TestPattern_Supported(mode)`: 1 when the mode can be used here (build, SoC, running
-  sensor for mode 4, ISP-middle hooks for mode 5 = T21, T23, T31), 0 when not; nothing is switched.
+  sensor for mode 4, ISP-middle hooks for mode 5 = T21, T23, T31, T40, T41), 0 when not; nothing is switched.
   For greying out UI switches up front. Unknown mode: 0 with `EINVAL`.
 - `OpenIMP_TestPattern_SensorInfo(name, reg, mask, desc)`: sensor name, test pattern register,
   mask and a short description of the running sensor (mode 4).

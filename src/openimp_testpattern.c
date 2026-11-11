@@ -226,17 +226,22 @@ int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride) __attribute
 int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h) __attribute__((weak));
 void openimp_tp_ispmid_off(void) __attribute__((weak));
 int openimp_tp_ispmid_hmirror(void) __attribute__((weak));   /* 1: store the picture mirrored (ISP flips later) */
+/* Optional (T41): the platform draws the picture into the reference itself and the block holds it (no frame-sized
+ * copy here); _put then gets NULL and returns 1 when the picture has to be drawn again. */
+int openimp_tp_ispmid_draw(uint32_t logo) __attribute__((weak));
 
 int openimp_tp_ispmid_v;                 /* 1 while mode 5 runs (frame path: one relaxed load) */
 static pthread_mutex_t mid_lock = PTHREAD_MUTEX_INITIALIZER;   /* tick vs Set/off only */
 static uint8_t *mid_cache;
 static uint32_t mid_w, mid_h, mid_stride, mid_logo;
+static int mid_inplace;                  /* the platform draws the picture (openimp_tp_ispmid_draw) */
 static uint64_t mid_frames;
 
 static void mid_free(void)
 {
     free(mid_cache);
     mid_cache = NULL;
+    mid_inplace = 0;
 }
 
 /* Mirror an NV12 picture horizontally in place (Y bytes, UV pairs). */
@@ -269,6 +274,18 @@ static int mid_build(uint32_t logo)
     if (!openimp_tp_ispmid_on || openimp_tp_ispmid_on(&w, &h, &st) != 0)
         return -1;
     mid_free();
+    if (openimp_tp_ispmid_draw) {
+        if (openimp_tp_ispmid_draw(logo) != 0) {
+            int err = errno;
+
+            openimp_tp_ispmid_off();
+            errno = err;
+            return -1;
+        }
+        mid_inplace = 1;
+        mid_w = w; mid_h = h; mid_stride = st; mid_logo = logo;
+        return 0;
+    }
     mid_cache = calloc(1, (size_t)st * h * 3u / 2u);
     if (!mid_cache) {
         openimp_tp_ispmid_off();
@@ -318,8 +335,12 @@ static int mid_switch(int on, uint32_t logo)
 void openimp_tp_ispmid_tick(void)
 {
     pthread_mutex_lock(&mid_lock);
-    if (__atomic_load_n(&openimp_tp_ispmid_v, __ATOMIC_ACQUIRE) && mid_cache) {
-        if (openimp_tp_ispmid_put(mid_cache, mid_stride, mid_h) != 0 && mid_build(mid_logo) != 0) {
+    if (__atomic_load_n(&openimp_tp_ispmid_v, __ATOMIC_ACQUIRE) && (mid_cache || mid_inplace)) {
+        int r = openimp_tp_ispmid_put(mid_cache, mid_stride, mid_h);
+
+        if (r > 0 && mid_inplace)
+            r = openimp_tp_ispmid_draw(mid_logo);
+        if (r != 0 && mid_build(mid_logo) != 0) {
             /* buffer layout changed and cannot be followed: leave the mode */
             __atomic_store_n(&openimp_tp_ispmid_v, 0, __ATOMIC_RELEASE);
             openimp_tp_ispmid_off();
@@ -600,7 +621,7 @@ void openimp_tp_release(struct openimp_tp_chan *c)
 
 /* Up-front capability query (no switching, no register write): 1 = the mode can be used on this
  * build/SoC/sensor now, 0 = not.  Mode 4 needs a table entry for the running sensor, mode 5 the
- * ISP-middle hooks of the platform (T23 only so far). */
+ * ISP-middle hooks of the platform (T21, T23, T31, T41). */
 VIS int OpenIMP_TestPattern_Supported(int mode)
 {
     char name[32];
