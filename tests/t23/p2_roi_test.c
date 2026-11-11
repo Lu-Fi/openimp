@@ -129,6 +129,7 @@ T23STUB(openimp_t23_enc_push_rc)
 T23STUB(openimp_t23_enc_push_gop)
 T23STUB(openimp_t23_enc_set_lossthd)
 int openimp_t23_enc_fisheye(int c) { (void)c; return 0; }
+uint32_t openimp_t23_enc_section_bytes(void) { return 0; }
 T23STUB(openimp_t23_enc_push_color2grey)
 T23STUB(openimp_t23_enc_push_denoise)
 T23STUB(openimp_t23_enc_push_mbrc)

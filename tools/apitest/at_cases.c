@@ -4255,7 +4255,7 @@ static void cs_enchelp_t23(void)
 #if HAS_IMP_Encoder_SetMultiSectionMode
     NEED(IMP_Encoder_SetMultiSectionMode) {
         /* stock 1.3.0 (0x57e80): module-level setting, -1 once the encoder module is initialised (first group / channel);
-         * before that: mode 0, size <= 0, cnt <= 0 -> -1, else 0 (stored for the closed encoder, no effect here) */
+         * before that: mode 0, size <= 0, cnt <= 0 -> -1, else 0 (the section output itself: case multisection_t23) */
         int pre = IMP_Encoder_SetMultiSectionMode(1, 300, 2), bad0 = IMP_Encoder_SetMultiSectionMode(0, 300, 2), bad1 = IMP_Encoder_SetMultiSectionMode(1, 0, 2);
         int g = IMP_Encoder_CreateGroup(ENC_IDLE_CHN), late = IMP_Encoder_SetMultiSectionMode(1, 300, 2);
 
@@ -4998,6 +4998,90 @@ static void cs_padframe_t23(void)
 }
 #else
 static void cs_padframe_t23(void) {}
+#endif
+
+/* T23 multi-section mode (stock IMP_Encoder_SetMultiSectionMode, set before the encoder module exists: APITEST_MS=mode,KiB,cnt
+ * is applied by main() before IMP_System_Init).  H.264 on FS ch1 (group 1 / chn 1), ~4 s.  Mode 2: a picture larger than the
+ * window comes in sections, one stream each: every section of a picture has the picture's seq, pack[0].frameEnd 0 until the last
+ * section; further sections are one pack of window bytes (the last one at most that); ReleaseStream of a section returns 0 and
+ * the next GetStream gives the next section.  Mode 1 / off: whole pictures (pack[0].frameEnd not used).  APITEST_MS_DUMP: the
+ * joined pictures are written out (decode + picture check on the host). */
+#if defined(PLATFORM_T23) && HAS_IMP_Encoder_SetMultiSectionMode
+int g_ms_mode = -1, g_ms_kib, g_ms_ret = -2;
+static void cs_multisection_t23(void)
+{
+    IMPCell fs1 = { DEV_ID_FS, 1, 0 }, en1 = { DEV_ID_ENC, 1, 0 };
+    IMPEncoderCHNAttr *a = (IMPEncoderCHNAttr *)calloc(1, sizeof(*a));
+    static unsigned char pic[1 << 20];
+    FILE *dump = getenv("APITEST_MS_DUMP") ? fopen(getenv("APITEST_MS_DUMP"), "wb") : NULL;
+    uint32_t win = g_ms_mode == 2 && g_ms_ret == 0 ? (uint32_t)g_ms_kib << 10 : 0, seq = 0, k;
+    int up = 0, pics = 0, split = 0, sec = 0, maxsec = 0, bad_seq = 0, bad_len = 0, bad_end = 0, bad_rel = 0, bad_sc = 0, errs = 0;
+    size_t n = 0, big = 0;
+    int64_t t0;
+
+    a->encAttr.picWidth = SUB_W; a->encAttr.picHeight = SUB_H; a->encAttr.enType = PT_H264; a->encAttr.profile = 1;
+    a->rcAttr.outFrmRate.frmRateNum = 15; a->rcAttr.outFrmRate.frmRateDen = 1; a->rcAttr.maxGop = 15;
+    a->rcAttr.attrRcMode.rcMode = ENC_RC_MODE_CBR;
+    a->rcAttr.attrRcMode.attrH264Cbr.maxQp = 45; a->rcAttr.attrRcMode.attrH264Cbr.minQp = 15;
+    a->rcAttr.attrRcMode.attrH264Cbr.outBitRate = 2048; a->rcAttr.attrRcMode.attrH264Cbr.frmQPStep = 3;
+    a->rcAttr.attrRcMode.attrH264Cbr.gopQPStep = 15;
+    if (IMP_Encoder_CreateGroup(1) == 0 && IMP_Encoder_CreateChn(1, a) == 0 && IMP_Encoder_RegisterChn(1, 1) == 0 &&
+        IMP_System_Bind(&fs1, &en1) == 0 && IMP_Encoder_StartRecvPic(1) == 0)
+        up = 1;
+    if (!up) {
+        rep(FN(IMP_Encoder_SetMultiSectionMode), -1, V_FAIL, "encoder set-up failed");
+        free(a); if (dump) fclose(dump);
+        return;
+    }
+    t0 = now_us();
+    while (now_us() - t0 < 4000000 && errs < 20) {
+        IMPEncoderStream s;
+        int last;
+
+        if (IMP_Encoder_PollingStream(1, 500) != 0 || IMP_Encoder_GetStream(1, &s, 0) != 0) { errs++; continue; }
+        if (sec == 0) { seq = s.seq; n = 0; }
+        else if (s.seq != seq) bad_seq++;
+        if (sec > 0 && (s.packCount != 1 || s.pack[0].length > win)) bad_len++;
+        for (k = 0; k < s.packCount; k++) {
+            if (n + s.pack[k].length <= sizeof(pic)) memcpy(pic + n, (const void *)(uintptr_t)s.pack[k].virAddr, s.pack[k].length);
+            n += s.pack[k].length;
+        }
+        last = !win || s.pack[0].frameEnd;
+        sec++;
+        if (!last) {
+            if (!s.pack[0].length) bad_len++;
+            if (IMP_Encoder_ReleaseStream(1, &s) != 0) bad_rel++;
+            if (sec > 4096) { bad_end++; sec = 0; }
+            continue;
+        }
+        if (s.packCount > 1 && !s.pack[s.packCount - 1].frameEnd) bad_end++;
+        IMP_Encoder_ReleaseStream(1, &s);
+        if (n < 5 || pic[0] || pic[1] || pic[2] != 0 || pic[3] != 1) bad_sc++;
+        if (dump && n <= sizeof(pic)) fwrite(pic, 1, n, dump);
+        if (win && n > big) big = n;
+        if (sec > 1) split++;
+        if (sec > maxsec) maxsec = sec;
+        /* a picture larger than one window (beyond the slice header) must have come in sections */
+        if (win && sec == 1 && n > (size_t)win + 64) bad_len++;
+        pics++; sec = 0;
+    }
+    if (dump) fclose(dump);
+    at_td_arm("multisection_t23 teardown");
+    at_td_step("IMP_Encoder_StopRecvPic(1)"); IMP_Encoder_StopRecvPic(1);
+    at_td_step("IMP_System_UnBind"); IMP_System_UnBind(&fs1, &en1);
+    at_td_step("IMP_Encoder_UnRegisterChn(1)"); IMP_Encoder_UnRegisterChn(1);
+    at_td_step("IMP_Encoder_DestroyChn(1)"); IMP_Encoder_DestroyChn(1);
+    at_td_step("IMP_Encoder_DestroyGroup(1)"); IMP_Encoder_DestroyGroup(1);
+    at_td_disarm();
+    rep(FN(IMP_Encoder_SetMultiSectionMode), g_ms_ret,
+        (pics > 20 && !bad_seq && !bad_len && !bad_end && !bad_rel && !bad_sc && (win ? split > 0 : split == 0) && flow()) ? V_PASS : V_FAIL,
+        "rt: SetMultiSectionMode(%d, %d KiB) before init -> %d; %d pictures, %d in sections (at most %d, largest %u B, window %u B); "
+        "seq mismatch %d, section length/pack %d, frameEnd %d, release %d, start code %d, get errors %d",
+        g_ms_mode, g_ms_kib, g_ms_ret, pics, split, maxsec, (unsigned)big, win, bad_seq, bad_len, bad_end, bad_rel, bad_sc, errs);
+    free(a);
+}
+#else
+static void cs_multisection_t23(void) {}
 #endif
 
 /* ---------------------------------------------------------------------------------------------- T41 backlog (#78..#80) */
@@ -6525,7 +6609,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -6652,6 +6736,7 @@ void t_cases(void)
         while (pc-- > 0) cs_padframe_t23();
     }
     wdog("cases", 120);
+    if (getenv("APITEST_CASES") && cs_on("multisection_t23")) cs_multisection_t23(); wdog("cases", 60);
     if (cs_on("switchbin_t23")) cs_switchbin_t23(); wdog("cases", 90);
     if (cs_on("osdalloc_t23")) cs_osdalloc_t23(); wdog("cases", 60);
 #if defined(PLATFORM_T23)

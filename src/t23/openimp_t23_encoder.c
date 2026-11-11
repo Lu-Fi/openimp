@@ -9,11 +9,12 @@
  * controls.  As in the OEM, these setters do nothing for JPEG channels.
  *
  * Settings that the OEM keeps on the channel for its own buffer and frame
- * scheduling logic - frame reuse mode, pool sizes, multi-section mode,
- * read-buffer sharing, pad frames - are validated and stored like the OEM
- * does, but have no effect on this stack (documented per function).  The
- * frame-loss threshold and the fisheye flag act in the native Helix
- * backend as in the OEM (documented per function).
+ * scheduling logic - frame reuse mode, pool sizes, read-buffer sharing,
+ * pad frames - are validated and stored like the OEM does, but have no
+ * effect on this stack (documented per function).  The frame-loss
+ * threshold and the fisheye flag act in the native Helix backend as in the
+ * OEM, the multi-section mode in GetStream/ReleaseStream (documented per
+ * function).
  *
  * OPENIMP_T23_ENC_PARAMS=0 keeps the settings local (nothing is sent to
  * the encoder), for comparison on a device. */
@@ -29,6 +30,7 @@
 #include "imp_log_int.h"
 #include "t23/openimp_t23_encoder.h"
 #include "t23/openimp_t23_helix_bridge.h"
+#include "t23/t23_multisection.h"
 
 #define T23_ENC_CHANNELS 8
 
@@ -49,10 +51,10 @@ typedef struct {
 
 static pthread_mutex_t extra_lock = PTHREAD_MUTEX_INITIALIZER;
 static T23EncExtra extras[T23_ENC_CHANNELS];
+/* OEM module word +0x6640: SetPoolSize and SetMultiSectionMode both write
+ * it; CreateChn reads it as the multi-section window. */
 static int pool_size;
 static int multi_section_mode;
-static int multi_section_size;
-static int multi_section_count;
 
 static int valid_channel(int channel)
 {
@@ -814,8 +816,10 @@ int IMP_Encoder_SetRdBufShare(int channel, int enable)
     return 0;
 }
 
-/* OEM: size of the encoder's rmem pool.  The Helix worker allocates its
- * buffers from the OEM VBM in its own process, so this is only checked. */
+/* OEM: size of the encoder's rmem pool (the module word that
+ * SetMultiSectionMode also writes).  The Helix worker allocates its
+ * buffers from the OEM VBM in its own process, so here the value only
+ * feeds the multi-section window of channels created later. */
 int IMP_Encoder_SetPoolSize(int size)
 {
     if (size <= 0)
@@ -824,26 +828,39 @@ int IMP_Encoder_SetPoolSize(int size)
     return 0;
 }
 
-/* OEM 1.3.0 (disassembly 0x57e80): refused with -1 once the encoder module is
- * initialised (EncoderInit ran: first group / channel); otherwise the section
- * size (KiB, below 300 only a warning) is stored as bytes, mode 1/2 as given,
- * larger modes as 1; mode 0, size <= 0 or cnt <= 0 return -1 (mode 0 also
- * resets the stored mode).  Kept only, for the same reason as SetPoolSize:
- * the Helix session cannot be split into sections. */
+/* OEM 1.3.0 (decompile 0x67e80): refused with -1 once the encoder module is
+ * initialised (EncoderInit ran: first group / channel); otherwise the
+ * section size (KiB, below 300 only a warning) is stored as bytes in the
+ * pool word, mode 1/2 as given, larger modes as 1; mode 0, size <= 0 or
+ * cnt <= 0 return -1 (mode 0 also resets the stored mode); cnt is not
+ * kept.  CreateChn turns the mode and the pool word into the channel's
+ * section window (t23/t23_multisection.h): mode 2 hands every picture
+ * larger than one window out in window-sized sections, mode 1 delivers
+ * whole pictures as before. */
 int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt)
 {
-    if (openimp_t23_p2_initialized())
+    if (openimp_t23_p2_initialized()) {
+        IMP_LOG_ERR("Encoder", "SetMultiSectionMode must be called "
+                    "before the encoder is initialised");
         return -1;
+    }
+    if (size < 300)
+        IMP_LOG_WARN("Encoder", "multi-section size %d KiB below 300", size);
     if (mode == 0) {
         multi_section_mode = 0;
+        IMP_LOG_ERR("Encoder", "multi-section mode 0 is invalid");
         return -1;
     }
     if (size <= 0 || cnt <= 0)
         return -1;
-    multi_section_mode = mode < 3 ? mode : 1;
-    multi_section_size = size << 10;
-    multi_section_count = cnt;
+    pool_size = size << 10;
+    multi_section_mode = t23_ms_mode(mode);
     return 0;
+}
+
+uint32_t openimp_t23_enc_section_bytes(void)
+{
+    return t23_ms_section_bytes(multi_section_mode, pool_size);
 }
 
 /* Pad frames (IMP_Encoder_SetPadFrameAttr / IMP_Encoder_PadFrame): src/t40/openimp_p2_encoder.c, shared with the T21 family. */

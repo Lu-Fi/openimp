@@ -359,6 +359,17 @@ int main(int argc, char **argv)
         goto summary;
     }
     if (!IMP_ISP_Open || !IMP_System_Init) { printf("[E] libimp does not export IMP_ISP_Open / IMP_System_Init (not linked?)\n"); return 1; }
+#if defined(PLATFORM_T23) && HAS_IMP_Encoder_SetMultiSectionMode
+    /* case multisection_t23: the module-level mode must be set before the encoder module exists */
+    if (getenv("APITEST_MS") && IMP_Encoder_SetMultiSectionMode) {
+        int c = 1;
+
+        g_ms_mode = 2; g_ms_kib = 8;
+        (void)sscanf(getenv("APITEST_MS"), "%d,%d,%d", &g_ms_mode, &g_ms_kib, &c);
+        g_ms_ret = IMP_Encoder_SetMultiSectionMode(g_ms_mode, g_ms_kib, c);
+        printf("[T] SetMultiSectionMode(%d, %d, %d) -> %d\n", g_ms_mode, g_ms_kib, c, g_ms_ret);
+    }
+#endif
     rep_area("isp-init");
     ret = 0;
 #ifdef PLATFORM_T41
