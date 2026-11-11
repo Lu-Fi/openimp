@@ -1,0 +1,56 @@
+{
+ "tag": "t31-open-tint",
+ "ok": true,
+ "info": {
+  "rows": 29,
+  "span_s": 86.5,
+  "row_interval_s": 3.09,
+  "loop": "open (sensor model has no exposure model)",
+  "final_Y": 40.0,
+  "final_EV": 23428.0,
+  "tol": 2811.4,
+  "judged_signal": "ev",
+  "ae_rail_at_end": null,
+  "target_Y": null,
+  "rb_warm": 0.227,
+  "rb_cool": 1.465,
+  "ct_warm": 2299.0,
+  "ct_cool": 10000.0,
+  "warm_window_s": [
+   8.1,
+   15.1
+  ]
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 88.267,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "rg_over_bg_cool_vs_warm",
+   "value": 6.448,
+   "limit": ">= 1.1 (red gain falls, blue rises under warm light)",
+   "ok": true
+  },
+  {
+   "name": "rg_over_bg_vs_time_rho",
+   "value": 0.955,
+   "limit": ">= 0.85",
+   "ok": true
+  },
+  {
+   "name": "ct_warm_below_cool",
+   "value": 7701.0,
+   "limit": "colour temperature rises",
+   "ok": true
+  }
+ ]
+}

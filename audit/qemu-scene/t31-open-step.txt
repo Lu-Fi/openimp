@@ -1,0 +1,8 @@
+t31-open-step: PASS
+  {"rows": 65, "span_s": 85.2, "row_interval_s": 1.33, "loop": "open (sensor model has no exposure model)", "final_Y": 149.0, "final_EV": 1.0, "tol": 0.1, "judged_signal": "ev", "ae_rail_at_end": "floor", "target_Y": null, "step_seen_at_s": 35.1, "pre_Y": 7.0, "pre_EV": 390960.0, "Y_right_after_step": 149.0}
+  coverage_end_s               89.4       ok   (limit samples reach >= 80 s of the clip)
+  stayed_in_day_mode           0          ok   (limit 0 rows in ISP Night mode)
+  step_seen_near_30s           35.067     ok   (limit 30 +- 8 s)
+  settle_after_step_s          11.133     ok   (limit <= 45 s (ev))
+  overshoot_pct                -0.0       ok   (limit <= 25 % (ev))
+  exposure_follows_step        390960.0   ok   (limit >= 1.5 x)

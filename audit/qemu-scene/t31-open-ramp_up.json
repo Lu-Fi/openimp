@@ -1,0 +1,42 @@
+{
+ "tag": "t31-open-ramp_up",
+ "ok": true,
+ "info": {
+  "rows": 54,
+  "span_s": 87.9,
+  "row_interval_s": 1.66,
+  "loop": "open (sensor model has no exposure model)",
+  "final_Y": 134.0,
+  "final_EV": 1.0,
+  "tol": 0.1,
+  "judged_signal": "ev",
+  "ae_rail_at_end": "floor",
+  "target_Y": null
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 89.867,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "exposure_vs_scene_rho",
+   "value": -0.928,
+   "limit": "<= -0.85 (exposure falls as the scene brightens)",
+   "ok": true
+  },
+  {
+   "name": "exposure_direction",
+   "value": 0.0,
+   "limit": "EV falls over the ramp",
+   "ok": true
+  }
+ ]
+}

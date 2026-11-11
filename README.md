@@ -110,6 +110,32 @@ make t31                    # or t20 t21 t23 t30 t40 t41; equivalent: ./build-fo
 - `make check` runs the host tests (rate-control oracles, T23/T30/T31/T40/T41 checks).
 - `BUILD.md` describes an older host build and is outdated; the scripts above are authoritative.
 
+## QEMU scene AE/AWB regression
+
+`tools/qemu/scene_ae_test.sh <t31|t20|t20j> <grey|step|ramp_up|ramp_down|tint|all>` plays a synthetic video through the
+`scene=` input of the QEMU image-sensor model (ingenic QEMU 0.7.14 or newer) into the open ISP stack and checks what AE and
+AWB do with it. The clips come from `tools/qemu/gen_scenes.sh` (ffmpeg lavfi only, no camera pictures; 320x180, 15 fps,
+90 s, looped by the model): static grey, brightness ramp up and down, a dark-to-bright step at 30 s, and a warm-to-cool
+tint shift (Cb/Cr 103/153 to 153/103) from 20 to 70 s.
+
+- The script boots the SoC's flash image read-only (`snapshot=on`) on the QEMU in `$Q/build` (`taskset -c 4-15 nice -n 19`,
+  one QEMU at a time), starts the ISP stack with day/night switching neutralised, and runs `tools/qemu/ae_sample.sh` in the
+  guest: once per loop (about 1 to 2 s of guest time on this emulated CPU) it records the sensor's integration time and gains,
+  the ISP EV value, the WB weighted gains and colour temperature, the running mode, the ISP frame counter and (T31) the AE
+  luma. The clock is the frame counter divided by the frame rate, so the time axis is the scene's own.
+- `tools/qemu/ae_analyze.py` writes `audit/qemu-scene/<soc>-<stack>-<clip>.{txt,json,csv,png}` and exits 1 on a failed check:
+  convergence time, steady state, overshoot after the step, exposure direction against the scene (rank correlation over the
+  ramp), final luma against the grey-run target, AE not stuck at a limit, and the red/blue gain ratio and colour
+  temperature moving the right way under the tint. The limits are in the `LIMITS` table of the script.
+- Limits of the model (QEMU 0.7.14): only some sensor models turn the exposure into picture brightness (jxf22, gc2053,
+  sc4236, os02g10, os08c10, cv2005). With sc2336 (T31) and jxf23 (T20) the picture does not follow the exposure, the AE loop
+  stays open, and the script judges the exposure (direction, settling, overshoot) instead of the luma. `t20j` is the T20X
+  image with the jxf22 and is the closed-loop T20 case. The T20 driver has no AE luma query; there the exposure is judged.
+- The vendor stack cannot be tested this way: the `1a-*` images carry only the open stack and the guest has no network or
+  other path for the vendor driver and library (the serial console is the only way in).
+
+Results and the raw samples of the last run are in `audit/qemu-scene/`.
+
 ## Integration in Thingino
 
 The packages `openimp` (this repository) and `open-tx-isp` (kernel driver) are in the upstream

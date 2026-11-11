@@ -1,0 +1,57 @@
+{
+ "tag": "t20j-open-step",
+ "ok": true,
+ "info": {
+  "rows": 53,
+  "note": "sampling began 24 s into the clip (stream restart, console and daemon start-up)",
+  "span_s": 65.4,
+  "row_interval_s": 1.26,
+  "loop": "closed (exposure moves the picture); no AE luma on this SoC, judged on the exposure",
+  "final_Y": NaN,
+  "final_EV": 290.0,
+  "tol": 34.8,
+  "judged_signal": "ev",
+  "ae_rail_at_end": null,
+  "target_Y": null,
+  "pre_Y": NaN,
+  "pre_EV": 7224.0
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 89.8,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "ae_not_railed",
+   "value": 0,
+   "limit": "AE ends between its limits",
+   "ok": true
+  },
+  {
+   "name": "settle_after_step_s",
+   "value": 10.467,
+   "limit": "<= 45 s (ev)",
+   "ok": true
+  },
+  {
+   "name": "overshoot_pct",
+   "value": -0.0,
+   "limit": "<= 25 % (ev)",
+   "ok": true
+  },
+  {
+   "name": "exposure_follows_step",
+   "value": 24.91,
+   "limit": ">= 1.5 x",
+   "ok": true
+  }
+ ]
+}
