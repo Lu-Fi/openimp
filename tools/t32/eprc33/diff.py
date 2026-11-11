@@ -101,7 +101,16 @@ class Harness:
             r, qp, typ = t.start()
             idr = i % O.GOP == 0
             nb = O.model_bytes(qp, idr, mbs, cplx)
-            t.end(nb, O.model_stats(qp, nb, mbs))
+            st = O.model_stats(qp, nb, mbs)
+            if getattr(self, 'rich', None):
+                rr = self.rich
+                still = cplx < 3.0
+                for j in (39, 40, 41, 42):
+                    lo = rr.randint(0, mbs // (2 if still else 6)); hi = rr.randint(0, mbs // (2 if still else 6))
+                    st[j] = (lo | hi << 16) & 0xffffffff
+                for j in range(22, 39):
+                    st[j] = rr.randint(0, 1 << 20)
+            t.end(nb, st)
             seq.append(qp)
         return seq
 

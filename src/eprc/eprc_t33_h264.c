@@ -487,3 +487,160 @@ static void e33_frc_bitrate(E33 *X, uint32_t cfg, uint32_t out, uint32_t st, uin
     else
         ST_S64(out + 0x30, rate);
 }
+
+/* ----------------------------------------------------- scene classes */
+
+/* scene block (controller block + 0x878 ->): +0 -> class output byte,
+ * +4 -> class history (32 bytes, newest first), +8 class in force,
+ * +9 class of this picture, +0x1c activity, +0x40 motion level */
+#define SC_OUT   0x0
+#define SC_HIST  0x4
+#define SC_CUR   0x8
+#define SC_NEW   0x9
+
+static void t33_hist_push(E33 *X, uint32_t sc, uint8_t v)
+{
+    uint32_t h = LD_U32(sc + SC_HIST);
+
+    for (int i = 31; i > 0; i--)
+        ST_U8(h + i, LD_U8(h + i - 1));
+    ST_U8(h, v);
+}
+
+/* class of the picture from the engine's block-type statistics
+ * (get_scene_frame_method1, 0x18e0f8): @cfgp -> picture parameters,
+ * @stat statistics block, @pic -> picture info */
+static void e33_scene_class(E33 *X, uint32_t cfgp, uint32_t stat, uint32_t pic, uint32_t sc)
+{
+    uint32_t cfg = LD_U32(cfgp), mbs, a, b, s, t, h0;
+    uint32_t c8 = LD_U16(stat + 0xf8), c9 = (LD_U16(stat + 0xfa) + LD_U16(stat + 0xfc)) & 0xffff;
+    uint32_t still = LD_U16(stat + 0xfe);
+    int k, m = -1;
+    uint8_t lvl;
+
+    mbs = (LD_U16(cfg + 4) * LD_U16(cfg + 6)) & 0xffff;
+    if (mbs == 0)
+        mbs = 1;
+    a = (still * 100 / mbs) & 0xffff;
+    ST_U8(sc + 0x1c, (((still + (c9 * 7 + c8 * 3) / 10) & 0xffff) * 100) / mbs);
+    b = ((((uint32_t)LD_U16(stat + 0xf0) + LD_U16(stat + 0xf2) + LD_U16(stat + 0xf4) + LD_U16(stat + 0xf6)) & 0xffff)
+         * 100 / mbs) & 0xffff;
+    h0 = LD_U8(LD_U32(sc + SC_HIST));
+    k = 4;
+    if (a > 80) {
+        k = 6;
+    } else if (a + (s = (c9 * 100 / mbs) & 0xffff) >= 81) {
+        k = a < 61 ? 4 : 5;
+    } else {
+        t = (c8 * 100 / mbs) & 0xffff;
+        if (s + t < 81) {
+            if (b + t > 90)
+                m = b > 50 ? 0 : 2;     /* static (0) or still (2) candidate */
+        } else if (s < 61) {
+            m = 2;
+        }
+    }
+    if (m < 0)
+        m = h0 != 0 ? k : 1;
+    else if (h0 >= 4 && m == 0)
+        m = 3;
+    t33_hist_push(X, sc, (uint8_t)m);
+    ST_U8(sc + SC_NEW, m);
+    lvl = 3;
+    if (LD_S32(LD_U32(pic)) != 0)
+        lvl = b >= 95 ? 0 : b >= 75 ? 1 : 2;
+    ST_U8(sc + 0x40, lvl);
+}
+
+/* class map when the last ten pictures agree (0x1e9670) */
+static const uint8_t t33_class_same[8] = { 0, 1, 2, 4, 3, 5, 6, 7 };
+
+static void t33_class_set(E33 *X, uint32_t sc, uint8_t v)
+{
+    ST_U8(sc + SC_CUR, v);
+    ST_U8(LD_U32(sc + SC_OUT), v);
+}
+
+/* scene class in force from the class history (IFA_get_frm_feature,
+ * 0x18e3b0) */
+static void e33_frame_feature(E33 *X, uint32_t e)
+{
+    uint32_t fi = LD_U32(e + 0x87c), sc = LD_U32(e + 0x878), h;
+    uint8_t c, v[10];
+    int rev = LD_S8(e + 0x34), i;
+
+    if (LD_S8(LD_U32(fi + 8)) == 1)
+        return;
+    if (LD_S8(LD_U32(fi + 4) + 0x20) == 2) {
+        t33_hist_push(X, sc, LD_U8(sc + SC_NEW));
+        goto tail;
+    }
+    if (rev == 6 || rev == 7)
+        e33_scene_class(X, e + 0x874, LD_U32(fi), fi + 4, sc);
+    h = LD_U32(sc + SC_HIST);
+    c = LD_U8(sc + SC_NEW);
+    for (i = 1; i <= 9; i++)
+        v[i] = LD_U8(h + i);
+    for (i = 1; i <= 9 && v[i] == c; i++)
+        ;
+    if (i > 9) {
+        if (c > 7)
+            ST_U8(LD_U32(sc + SC_OUT), LD_U8(sc + SC_CUR));
+        else if (c == 3 || c == 4)
+            t33_class_set(X, sc, t33_class_same[c]);
+        else {
+            ST_U8(sc + SC_CUR, t33_class_same[c]);
+            ST_U8(LD_U32(sc + SC_OUT), c);
+        }
+        goto tail;
+    }
+#define ANY(x) (v[1] == (x) || v[2] == (x) || v[3] == (x) || v[4] == (x) || v[5] == (x) || v[6] == (x) \
+                || v[7] == (x) || v[8] == (x) || v[9] == (x))
+    if (ANY(6)) {
+        t33_class_set(X, sc, 6);
+    } else if (ANY(5)) {
+        t33_class_set(X, sc, 5);
+    } else if (ANY(1)) {
+        if (c != 0)
+            ST_U8(LD_U32(sc + SC_OUT), LD_U8(sc + SC_CUR));
+        else
+            t33_class_set(X, sc, 1);
+    } else if (ANY(3) || ANY(4)) {
+        if (c == 0)
+            t33_class_set(X, sc, 4);
+        else
+            ST_U8(LD_U32(sc + SC_OUT), LD_U8(sc + SC_CUR));
+    } else {
+        /* only 0 (static) and 2 (still) in the window */
+        int two = ANY(2), zero_late = v[3] == 0 || v[4] == 0 || v[5] == 0 || v[6] == 0 || v[7] == 0 || v[8] == 0
+                                      || v[9] == 0;
+        int mixed;              /* 0x19e7e8: no static picture in the window */
+
+        if (v[1] == 2)
+            mixed = v[2] != 0;
+        else if (v[2] != 2)
+            mixed = !(v[1] == 0 || v[2] == 0);
+        else
+            mixed = v[1] != 0;
+        if (v[1] != 2 && v[2] == 2 && v[1] == 0) {
+            t33_class_set(X, sc, c != 0 ? 1 : 4);
+        } else if (mixed && !zero_late) {
+            if (c != 0)
+                ST_U8(LD_U32(sc + SC_OUT), LD_U8(sc + SC_CUR));
+            else
+                t33_class_set(X, sc, two ? 4 : 0);
+        } else if (c != 0) {
+            t33_class_set(X, sc, 1);
+        } else {
+            t33_class_set(X, sc, two ? 4 : 0);
+        }
+    }
+#undef ANY
+tail:
+    if (rev == 7) {
+        uint32_t src = LD_U32(fi) + 0x228;
+
+        for (i = 0; i < 32; i++)
+            ST_U32(sc + 0x44 + 4 * i, LD_U32(src + 4 * i));
+    }
+}

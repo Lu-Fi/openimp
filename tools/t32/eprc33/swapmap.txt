@@ -9,3 +9,5 @@ RC_output_param e33_output_param
 vbv_init_isra_54 e33_vbv_init
 init_stat_param e33_init_stat
 FRC_get_bitrate e33_frc_bitrate
+get_scene_frame_method1_isra_1 e33_scene_class
+IFA_get_frm_feature e33_frame_feature

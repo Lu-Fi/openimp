@@ -15,6 +15,7 @@ for k in range(K0,K0+n):
     O.W,O.H,O.GOP,O.FPS=w,h,gop,fps
     hh=Harness(mode,kbps,verbose=VB,w=w,h=h,gop=gop,fps=fps,minqp=minqp,maxqp=maxqp,initqp=initqp)
     pics=r.choice([80,150,250])
+    hh.rich=random.Random(seed*7+k)
     lvl=[60.0]; still=[0]
     def cpl(i):
         if r.random()<0.03: lvl[0]=r.choice([5.0,20.0,60.0,120.0,250.0])    # scene change
