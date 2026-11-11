@@ -718,7 +718,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -775,7 +775,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS. T32 (2026-11-11 matrix-x): IMP_ISP_DisableTuning rc=0 in the T32 QEMU runs.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -784,7 +784,8 @@
         "T31": "apitest agg61 2026-10-31 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b30 2026-11-05 .231"
+        "T30": "apitest t30b30 2026-11-05 .231",
+        "T32": "QEMU #296 2026-11-11"
       }
     },
     "ISP_EnableSensor": {
@@ -875,7 +876,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -932,7 +933,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS.",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS. T32 (2026-11-11 matrix-x): QEMU round trip on driver/t32 (Set 10/1, Get 10/1; EnableTuning reads the rate), request equal to vendor 2.2.0.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -941,7 +942,8 @@
         "T31": "apitest agg61 2026-10-31 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b30 2026-11-05 .231"
+        "T30": "apitest t30b30 2026-11-05 .231",
+        "T32": "QEMU #296 2026-11-11"
       }
     },
     "ISP_Get/SetCsccrMode": {
@@ -953,14 +955,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): Get mode 0; Set same value read back equal, frames flow (control 0x8000097, served by the open T41 module since #171)"
-      }
+        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): Get mode 0; Set same value read back equal, frames flow (control 0x8000097, served by the open T41 module since #171)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Get/SetDefaultBinPath": {
       "area": "ISP tuning",
@@ -1697,7 +1701,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -1754,7 +1758,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 attr 0, Set ret=0 same 0 written, read back 0). The open driver stores the mode and answers V4L2 0x980918 (before: ENOSYS, Get -1).",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 attr 0, Set ret=0 same 0 written, read back 0). The open driver stores the mode and answers V4L2 0x980918 (before: ENOSYS, Get -1). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -1763,7 +1767,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetBacklightComp": {
@@ -1807,7 +1812,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "dev"
@@ -1844,12 +1849,13 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel",
+      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+        "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetCCMAttr": {
@@ -1861,7 +1867,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "rt"
@@ -1877,11 +1883,12 @@
           "r†"
         ]
       },
-      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T23": "apitest apitest-cov 2026-10-27 .30",
-        "T31": "apitest apitest-cov 2026-10-27 .26"
+        "T31": "apitest apitest-cov 2026-10-27 .26",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetColorfxMode": {
@@ -1932,7 +1939,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -1989,7 +1996,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (ISP_Tuning_GetContrast: ret=0 value 128; ISP_Tuning_SetContrast: ret=0 rt: same value 128 written, read back 1). Set/Get follow the vendor (S_CTRL 0x980901, value cached in the tuning block); round trip 128 -> 88 -> 128 in QEMU.",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (ISP_Tuning_GetContrast: ret=0 value 128; ISP_Tuning_SetContrast: ret=0 rt: same value 128 written, read back 1). Set/Get follow the vendor (S_CTRL 0x980901, value cached in the tuning block); round trip 128 -> 88 -> 128 in QEMU. T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -1998,7 +2005,8 @@
         "T41": "apitest agg47 2026-10-26 .34",
         "T21": "apitest rc3-cases 2026-10-26 .24",
         "T30": "apitest t30b26 2026-11-05 .231",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetCsc_Attr": {
@@ -2138,15 +2146,16 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
       },
-      "note": "T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case drawblock_t23 ran in the T23 QEMU first, no oops): superseded remark: the agg-36 driver did not run the draw update; with the agg67 driver (MSCA draw commit) a window frame 320x180 at (160,90), line 8, is drawn on ch0: top edge luma 122.9 -> 235.0 (second camera 120.4 -> 235.0), inside unchanged (113.3 -> 113.3), back to 122.9 when disabled; GetDrawBlock reads window, line width back; block number 20 is refused (-4090). Device PASS.",
+      "note": "T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000180 on the stock mscaler draw table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers including the stock Get slip of colour byte 23; a draw block above 5 is refused, beyond stock); host build only, device test pending; the stored block has no image effect yet (the MSCA update that programs it is not run, as for the mask blocks); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case drawblock_t23 ran in the T23 QEMU first, no oops): superseded remark: the agg-36 driver did not run the draw update; with the agg67 driver (MSCA draw commit) a window frame 320x180 at (160,90), line 8, is drawn on ch0: top edge luma 122.9 -> 235.0 (second camera 120.4 -> 235.0), inside unchanged (113.3 -> 113.3), back to 122.9 when disabled; GetDrawBlock reads window, line width back; block number 20 is refused (-4090). Device PASS. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_Get/SetFrontCrop": {
@@ -2238,7 +2247,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -2261,10 +2270,11 @@
           "r†"
         ]
       },
-      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetHLDCAttr": {
@@ -2292,7 +2302,7 @@
         "T23": "rt",
         "T30": "n.a.",
         "T31": "rt",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -2317,12 +2327,13 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps",
+      "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T41": "apitest agg47 2026-10-26 .34",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T23": "apitest agg47 stock 2026-10-27 .30 (API round trip, no visible effect expected)",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetHiLightDepress": {
@@ -2390,15 +2401,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested",
+      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetISPCustomMode": {
@@ -2816,7 +2828,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -2835,13 +2847,14 @@
           "r†"
         ]
       },
-      "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library)",
+      "note": "T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T21: tuning 0x80000e2 (agg-25); T41: driver rejects 0x8000072 (-EINVAL); T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T23": "apitest apitest-cov 2026-10-27 .30",
         "T21": "apitest apitest-cov 2026-10-27 .24",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetModule_Ratio": {
@@ -2853,14 +2866,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: reaches the driver/kernel",
+      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T41": "apitest apitest-cov 2026-10-27 .34"
+        "T41": "apitest apitest-cov 2026-10-27 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetSaturation": {
@@ -2872,7 +2886,7 @@
         "T23": "dev",
         "T30": "rt",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -2929,7 +2943,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (tuning_strength QEMU test: Set 160, Get 160; Set 128 restores). The open driver keeps the value in the tuning object and applies the customer mid-node scaling like the stock code (before: Get read 0).",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (tuning_strength QEMU test: Set 160, Get 160; Set 128 restores). The open driver keeps the value in the tuning object and applies the customer mid-node scaling like the stock code (before: Get read 0). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest agg47 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -2938,7 +2952,8 @@
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest agg47 2026-10-26 .34",
         "T30": "apitest t30b26 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetSensorHflip": {
@@ -3024,15 +3039,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetTemperDnsAttr": {
       "area": "ISP tuning",
@@ -3118,12 +3135,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "no-op"
       },
-      "note": "T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17)"
+      "note": "T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_Get/SetWdr_OutputMode": {
       "area": "ISP tuning",
@@ -3158,16 +3178,17 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed) T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed)",
+      "note": "T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed) T23: stock autozoom control 0x80000e8 (open-tx-isp agg-28), host/build-tested only; T41: control 0x08000077 is handled by the open driver (open-tx-isp next, MSCA zoom; applied at the next output start unless live reprogramming is allowed) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T23": "apitest rc3gaps2 2026-10-27 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetBlcAttr": {
@@ -3206,7 +3227,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -3253,7 +3274,7 @@
           "r†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (tuning_strength QEMU test: Set 90, Get 90; Set 128 restores). Value kept in the tuning object, customer mid-node scaling as in the stock code (before: Get read 0).",
+      "note": "audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested) audit: reaches the driver/kernel; T40: returned -1 on cam-K 2026-10-10 (vendor library returns the value); fixed after RC1: the getters return the vendor per-input cache (host-tested). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (tuning_strength QEMU test: Set 90, Get 90; Set 128 restores). Value kept in the tuning object, customer mid-node scaling as in the stock code (before: Get read 0). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -3261,7 +3282,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest agg47 2026-10-26 .34",
-        "T30": "apitest t30b26 2026-11-05 .231"
+        "T30": "apitest t30b26 2026-11-05 .231",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetEVAttr": {
@@ -3375,15 +3397,16 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
       },
-      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): ch1 block 0 set (80x60 at 40,30, RGB), read back (window and colour equal; the kernel reports the enable bit as 0 like the stock one), block off, frames flow; the stored block has no picture effect before the next output start.  T23 2026-11-04 (T23 cameras, sensors SC1A4T and SC2336P; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case maskblock_t23 ran in the T23 QEMU first, no oops): superseded remark: \"stored masks have no image effect\" holds for drivers before the MSCA mask update (agg-47 and older); with the agg67 driver the block IS drawn into the picture. Set white 320x180 at (160,90) on ch1 block 0 and white 640x360 at (320,180) on ch0 block 1: luma inside 122.8 -> 255.0 on both channels, back to 122.9 after mask_en 0 (second camera 135.9 -> 255.0 / 129.3 -> 255.0); GetMaskBlock returns window and colour type equal, the enable flag reads 0 as the stock handler does; channel 3 is refused (-4090). The same call is behind IMP_OSD_SetRgnAttr_ISP (cover).",
+      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): ch1 block 0 set (80x60 at 40,30, RGB), read back (window and colour equal; the kernel reports the enable bit as 0 like the stock one), block off, frames flow; the stored block has no picture effect before the next output start.  T23 2026-11-04 (T23 cameras, sensors SC1A4T and SC2336P; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case maskblock_t23 ran in the T23 QEMU first, no oops): superseded remark: \"stored masks have no image effect\" holds for drivers before the MSCA mask update (agg-47 and older); with the agg67 driver the block IS drawn into the picture. Set white 320x180 at (160,90) on ch1 block 0 and white 640x360 at (320,180) on ch0 block 1: luma inside 122.8 -> 255.0 on both channels, back to 122.9 after mask_en 0 (second camera 135.9 -> 255.0 / 129.3 -> 255.0); GetMaskBlock returns window and colour type equal, the enable flag reads 0 as the stock handler does; channel 3 is refused (-4090). The same call is behind IMP_OSD_SetRgnAttr_ISP (cover). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_GetRawDRC": {
@@ -3453,7 +3476,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -3478,12 +3501,13 @@
           "t†"
         ]
       },
-      "note": "T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library)",
+      "note": "T41: driver claude/t41-connect (agg-25); host tests 58/58; used by: T23/T31: timps; T41: raptor†, timps; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetSensorFPS": {
@@ -3495,7 +3519,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -3552,7 +3576,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). QEMU T30 (sc4236 model, no camera): PASS (25/1).",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). QEMU T30 (sc4236 model, no camera): PASS (25/1). T32 (2026-11-11 matrix-x): QEMU round trip on driver/t32 (Set 10/1, Get 10/1; EnableTuning reads the rate), request equal to vendor 2.2.0.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -3561,7 +3585,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T32": "QEMU #296 2026-11-11"
       }
     },
     "ISP_Tuning_GetSharpness": {
@@ -3573,7 +3598,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -3620,7 +3645,7 @@
           "r†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set 100 / Get 100 round trip.",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set 100 / Get 100 round trip. T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -3628,7 +3653,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
-        "T30": "apitest t30b26 2026-11-05 .231"
+        "T30": "apitest t30b26 2026-11-05 .231",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetTotalGain": {
@@ -3734,7 +3760,7 @@
         "T23": "rt",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "rt"
@@ -3759,12 +3785,13 @@
           "r†"
         ]
       },
-      "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start",
+      "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T23": "apitest rc3gaps2 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-        "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+        "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_SetBrightness": {
@@ -3776,7 +3803,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -3833,7 +3860,7 @@
           "t†"
         ]
       },
-      "note": "T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set rc 0 (S_CTRL 0x980900 as the vendor). Not in the apitest for T30 (no picture cases).",
+      "note": "T21: acts (beyond vendor: AE target scaled by value/128, open-tx-isp claude/release-t21-brightness); imgfx Y 28.8/117.7/193.0 for 30/128/225; the vendor kernel only stores the value. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set rc 0 (S_CTRL 0x980900 as the vendor). Not in the apitest for T30 (no picture cases). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "better": [
         "T21"
       ],
@@ -3845,7 +3872,8 @@
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest agg47 2026-10-26 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_SetDPStrength": {
@@ -4012,7 +4040,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
@@ -4028,10 +4056,11 @@
           "r†"
         ]
       },
-      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04: see GetMaskBlock (device PASS, the block is drawn into the picture on ch0 and ch1 and switched off again, channel 3 refused).",
+      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04: see GetMaskBlock (device PASS, the block is drawn into the picture on ch0 and ch1 and switched off again, channel 3 refused). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest agg47 2026-10-26 .34",
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_SetMeshShadingScale": {
@@ -4098,7 +4127,7 @@
         "T23": "no-op",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
@@ -4120,10 +4149,11 @@
           "r†"
         ]
       },
-      "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04 (T23 cameras): apitest answers -1 on all three levels as the stock T23 module does (no handler for control 0x80000e9), now reported N/A instead of FAIL; frames keep flowing.",
+      "note": "T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: the stock module has no handler for 0x80000e9 either (-EINVAL as stock); T41: control 0x080000a6 is handled by the open driver (open-tx-isp next, set only); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04 (T23 cameras): apitest answers -1 on all three levels as the stock T23 module does (no handler for control 0x80000e9), now reported N/A instead of FAIL; frames keep flowing. T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
-        "T31": "apitest rc3-cases 2026-10-26 .26"
+        "T31": "apitest rc3-cases 2026-10-26 .26",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_SetSceneMode": {
@@ -4171,7 +4201,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -4228,7 +4258,7 @@
           "t†"
         ]
       },
-      "note": "T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Set ret=0 same 15/1 written, read back 15/1; Get 15/1). The control 0xe0 is served (sensor fps event, then the firmware fps mode). The lifted set_sensor_fps read the sensor's fps callback as one byte (jump to address 0) and used a wrong id table; both are fixed.",
+      "note": "T41: reaches the sensor (agg-25); -EOPNOTSUPP on the gc5603 of cam-F. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Set ret=0 same 15/1 written, read back 15/1; Get 15/1). The control 0xe0 is served (sensor fps event, then the firmware fps mode). The lifted set_sensor_fps read the sensor's fps callback as one byte (jump to address 0) and used a wrong id table; both are fixed. T32 (2026-11-11 matrix-x): QEMU round trip on driver/t32 (Set 10/1, Get 10/1; EnableTuning reads the rate), request equal to vendor 2.2.0.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -4237,7 +4267,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T32": "QEMU #296 2026-11-11"
       }
     },
     "ISP_Tuning_SetSharpness": {
@@ -4249,7 +4280,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -4306,7 +4337,7 @@
           "t†"
         ]
       },
-      "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set 100 / Get 100 round trip (S_CTRL/G_CTRL 0x98091b).",
+      "note": "T21: imgfx 2026-10-05: no picture change; vendor no-op or measurement issue (which one: unverified). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. t30-tune (QEMU 2026-10-31): Set 100 / Get 100 round trip (S_CTRL/G_CTRL 0x98091b). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -4315,7 +4346,8 @@
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_SetSinterStrength": {
@@ -4460,14 +4492,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): set/clear of one brighten region, frames flow; registers 0x1e040..0x1e07c read back equal with a diagnostic ko (open-tx-isp #180); no visible luma change for the apitest request (the weighting acts on face regions only)"
-      }
+        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): set/clear of one brighten region, frames flow; registers 0x1e040..0x1e07c read back equal with a diagnostic ko (open-tx-isp #180); no visible luma change for the apitest request (the weighting acts on face regions only)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_SetVideoDrop": {
       "area": "ISP tuning",
@@ -4478,7 +4512,7 @@
         "T23": "rt",
         "T30": "rt",
         "T31": "rt",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "rt"
@@ -4515,7 +4549,7 @@
           "r†"
         ]
       },
-      "note": "all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: callback registered, frames flow (1), callback fired 0 times while frames flow (must be 0); a real sensor-).",
+      "note": "all: callback after 2/4/6 s without frames (agg-25); host-tested; video demand rule. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: callback registered, frames flow (1), callback fired 0 times while frames flow (must be 0); a real sensor-). T32 (2026-11-11 matrix-x): implemented, no driver request (the callback is stored, as the vendor); host check only.",
       "ref": {
         "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
@@ -4524,7 +4558,8 @@
         "T31": "apitest agg47-cases 2026-10-26 .26 (API round trip, no visible effect expected)",
         "T41": "apitest agg47-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)"
+        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_SwitchBin": {
@@ -4611,15 +4646,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest t40pass 2026-11-04 .184"
-      }
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_WDR_ENABLE": {
       "area": "ISP tuning",
@@ -5005,16 +5042,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): mode on/off with the calibration list reads back, frames flow, mode 7 refused",
-        "T40": "apitest t40pass 2026-11-04 .184 (API round trip, no visible effect expected)"
+        "T40": "apitest t40pass 2026-11-04 .184 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): Get and Set run with the new T40 variant of the apitest case aeexplist (QEMU first): the list read back after Set agrees within 3 % (the driver recomputes the ladder while the AE runs), list mode on and off keep the picture and the frame flow. The T40 driver (OEM code) stores any mode, so a mode 7 is not refused here (the T41 library refuses it)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): Get and Set run with the new T40 variant of the apitest case aeexplist (QEMU first): the list read back after Set agrees within 3 % (the driver recomputes the ladder while the AE runs), list mode on and off keep the picture and the frame flow. The T40 driver (OEM code) stores any mode, so a mode 7 is not refused here (the T41 library refuses it). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetAeExprInfo": {
       "area": "AE / AWB / AF",
@@ -5025,14 +5063,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "rt"
       },
-      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, modes and limits equal, frames flow; no picture-effect claim (night/IR scene).",
+      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, modes and limits equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)"
+        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetAeHist": {
@@ -5209,7 +5248,7 @@
         "T23": "dev",
         "T30": "rt",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -5256,7 +5295,7 @@
           "r†"
         ]
       },
-      "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; T41: driver claude/t41-connect (agg-25); host tests 58/58. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #15): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 weight[7][7] 15). The 15x15 zone weights (0x1e00) are read and written byte-packed; the lifted version walked a 4-byte stride over a 225-byte buffer.",
+      "note": "T23: stock handlers routed (open-tx-isp agg-25), no device test; _Sec/MultiCamera_ variants unverified; T41: driver claude/t41-connect (agg-25); host tests 58/58. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #15): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 weight[7][7] 15). The 15x15 zone weights (0x1e00) are read and written byte-packed; the lifted version walked a 4-byte stride over a 225-byte buffer. T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -5265,7 +5304,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)"
+        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetAfHist": {
@@ -5321,7 +5361,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -5349,13 +5389,14 @@
           "r†"
         ]
       },
-      "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost",
+      "note": "T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T23: AF statistics chain from the stock module, off by default (source_af=0); no device test; T31: reconstructed AF chain; metrics/zone/weight/hist verified on cam-A 2026-10-05, Get->Set roundtrip 0; T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35); T23: AF statistics on by default since open-tx-isp agg-28 (source_af=1 as stock); apitest PASS on a T23 camera, no measurable CPU cost T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T21": "apitest agg47 2026-10-26 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetAwbAttr": {
@@ -5367,15 +5408,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "rt"
       },
-      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene).",
+      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)"
+        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetAwbClust": {
@@ -5461,14 +5503,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetAwbHist": {
       "area": "AE / AWB / AF",
@@ -5529,7 +5573,7 @@
         "T23": "no-op",
         "T30": "rt",
         "T31": "no-op",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -5576,7 +5620,7 @@
           "r†"
         ]
       },
-      "note": "T23+T31: stock driver also no-op (OEM-same). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #15): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 weight[7][7] 15). The 15x15 zone weights (0x1f00) are read and written.",
+      "note": "T23+T31: stock driver also no-op (OEM-same). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #15): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Control id and transport equal to the 1.0.5 disassembly (call-site comparison). T30 2026-11-03 (#177, QEMU T30 sc4236 model, no camera, open-tx-isp with tx_isp_t30_tuning_ctl.h): PASS (Get ret=0 weight[7][7] 15). The 15x15 zone weights (0x1f00) are read and written. T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -5585,7 +5629,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)"
+        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_Get/SetAwbZoneWeight": {
@@ -5616,15 +5661,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops"
-      }
+        "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetFaceAeWeiget": {
       "area": "AE / AWB / AF",
@@ -5635,14 +5682,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): changed global/roi/smooth weights read back, initial values restored, frames flow (control 0x8000036)"
-      }
+        "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): changed global/roi/smooth weights read back, initial values restored, frames flow (control 0x8000036)",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetFaceAwb": {
       "area": "AE / AWB / AF",
@@ -5653,14 +5702,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "rt",
         "T41": "n.a."
       },
       "ref": {
-        "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #138): GetFaceAwb returns the stored attribute (enable, window, target as set; no kernel pointers), SetFaceAwb round trip; no effect on AWB, like the vendor"
-      }
+        "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #138): GetFaceAwb returns the stored attribute (enable, window, target as set; no kernel pointers), SetFaceAwb round trip; no effect on AWB, like the vendor",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetWB": {
       "area": "AE / AWB / AF",
@@ -5741,14 +5792,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_GetAE_IT_MAX": {
       "area": "AE / AWB / AF",
@@ -5823,19 +5876,20 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179"
+        "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       },
       "action": {
         "T41": "implement"
       },
-      "note": "T41: served only when open-tx-isp is loaded with t41_af=1 (default 0: AF block off, call answers EPERM / -4090, apitest N/A)"
+      "note": "T41: served only when open-tx-isp is loaded with t41_af=1 (default 0: AF block off, call answers EPERM / -4090, apitest N/A) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_GetAWBCt": {
       "area": "AE / AWB / AF",
@@ -6025,15 +6079,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: reaches the driver/kernel",
+      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetAeZone": {
@@ -6088,19 +6143,20 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179"
+        "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       },
       "action": {
         "T41": "implement"
       },
-      "note": "T41: served only when open-tx-isp is loaded with t41_af=1 (default 0: AF block off, call answers EPERM / -4090, apitest N/A)"
+      "note": "T41: served only when open-tx-isp is loaded with t41_af=1 (default 0: AF block off, call answers EPERM / -4090, apitest N/A) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_GetAfZone": {
       "area": "AE / AWB / AF",
@@ -6139,15 +6195,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: reaches the driver/kernel",
+      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetAwbStatistics": {
@@ -6159,7 +6216,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -6178,10 +6235,11 @@
           "t†"
         ]
       },
-      "note": "T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger)",
+      "note": "T40/T41: vendor 1.3.1 / 1.2.6 ABI `(IMPVI_NUM, IMPISPAWBStatisInfo *)`, 2700-byte block (three 15x15 u32 planes: zone means of the raw pre-WB R, G, B AWB statistics, stock `tisp_awb_get_zone`), 0 only with a block that holds statistics (T41: open driver `-EAGAIN` unless from a frame of the running stream within 1 s, needs open-tx-isp `claude/awbstats`; T40 vendor kernel driver: an all-zero block is -1), capability symbol `OpenIMP_Cap_AwbStatistics` (`claude/awbstats`, device-tested 2026-10-12: Eufy T40 identical to the vendor libimp, lamp response; T41 static); used by: timps 1.10.2 (night colour trigger) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
       }
     },
     "ISP_Tuning_GetAwbZone": {
@@ -6283,14 +6341,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      },
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_GetWB_GOL_Statis": {
       "area": "AE / AWB / AF",
@@ -10916,7 +10976,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -10938,10 +10998,11 @@
           "r†"
         ]
       },
-      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
+      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_DestroyOsdRgn": {
@@ -10953,7 +11014,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -10975,10 +11036,11 @@
           "r†"
         ]
       },
-      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
+      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_Get/SetOSDAttr": {
@@ -10990,15 +11052,16 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "rt"
       },
-      "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
+      "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest agg47 2026-10-28 .34 (API round trip, no visible effect expected)",
-        "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
+        "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_Get/SetOSDBlock": {
@@ -11010,15 +11073,16 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "dev"
       },
-      "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged).",
+      "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing"
+        "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_GetOsdRgnAttr": {
@@ -11030,7 +11094,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11038,8 +11102,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
-      }
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
+      },
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "ISP_Tuning_SetOsdPoolSize": {
       "area": "OSD",
@@ -11050,7 +11116,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11072,10 +11138,11 @@
           "r†"
         ]
       },
-      "note": "T41: 2 insns, returns ? T41: 2 insns, returns ?",
+      "note": "T41: 2 insns, returns ? T41: 2 insns, returns ? T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_SetOsdRgnAttr": {
@@ -11087,7 +11154,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11109,10 +11176,11 @@
           "r†"
         ]
       },
-      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
+      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "ISP_Tuning_ShowOsdRgn": {
@@ -11124,7 +11192,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11146,10 +11214,11 @@
           "r†"
         ]
       },
-      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing",
+      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "OSD_AttachToGroup": {
@@ -11344,7 +11413,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11352,8 +11421,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
-      }
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
+      },
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_DestroyGroup": {
       "area": "OSD",
@@ -11522,7 +11593,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11530,8 +11601,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
-      }
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
+      },
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_Exit_ISP": {
       "area": "OSD",
@@ -11721,16 +11794,17 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "host",
         "T41": "dev"
       },
       "ref": {
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_GetRegionLuma": {
       "area": "OSD",
@@ -11763,7 +11837,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -11771,8 +11845,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
-      }
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
+      },
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_RegisterRgn": {
       "area": "OSD",
@@ -12027,16 +12103,17 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25)",
+      "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
       }
     },
     "OSD_SetRgnAttrWithTimestamp": {
@@ -12107,7 +12184,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -12115,9 +12192,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T23 2026-11-04 (T23 cameras; new check in apitest case isppicupd_t23, QEMU T23 first): a white 128x64 ISP picture at (256,128) is shown: luma 137.5 -> 234.0 on the camera without ISP flip. Finding: on the camera whose ISP mirrors both axes (module parameter msca_flip_state = 12) the same call puts the picture at the mirrored position (1536,888 of 1920x1080; luma 95.2 -> 234.0 there, unchanged at the requested place), while the draw and mask blocks follow the requested coordinates; whether the stock T23 behaves like that is not known (no stock-stack T23 camera), the apitest measures at the flipped place when the flip bits are set. Issue #207."
+      "note": "T23 2026-11-04 (T23 cameras; new check in apitest case isppicupd_t23, QEMU T23 first): a white 128x64 ISP picture at (256,128) is shown: luma 137.5 -> 234.0 on the camera without ISP flip. Finding: on the camera whose ISP mirrors both axes (module parameter msca_flip_state = 12) the same call puts the picture at the mirrored position (1536,888 of 1920x1080; luma 95.2 -> 234.0 there, unchanged at the requested place), while the draw and mask blocks follow the requested coordinates; whether the stock T23 behaves like that is not known (no stock-stack T23 camera), the apitest measures at the flipped place when the flip bits are set. Issue #207. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_ShowRgn": {
       "area": "OSD",
@@ -12207,7 +12285,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -12215,8 +12293,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest agg62 2026-10-31 .184"
-      }
+        "T40": "apitest agg62 2026-10-31 .184",
+        "T32": "QEMU #336 2026-11-11"
+      },
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_Start": {
       "area": "OSD",
@@ -14479,7 +14559,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #26): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: AI dev 1 chn 0 with the muted AO dev 0 chn 0 as reference). Round trip with a muted AO reference in QEMU (no speaker involved in the model). T32 (2026-11-11 #300 follow-up): not determined: the #297 apitest FAILed (ret=-1, AI enable for the AEC test) on OpenIMP and on vendor 2.2.0 alike in QEMU; not rerun after the #329 audio rework.",
+      "note": "audit: reaches the driver/kernel; used by: T10/T20/T31: raptor†, timps; T21/T23/T41: raptor†; T10/T20/T21/T23/T31: device-tested 2026-10-10 (mono 16 kHz recording, AEC test). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #26): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: AI dev 1 chn 0 with the muted AO dev 0 chn 0 as reference). Round trip with a muted AO reference in QEMU (no speaker involved in the model). T32 (2026-11-11 #300 follow-up): not determined: the #297 apitest FAILed (ret=-1, AI enable for the AEC test) on OpenIMP and on vendor 2.2.0 alike in QEMU; not rerun after the #329 audio rework. T32 rerun 2026-11-11 (matrix-x): not rerun, another T32 QEMU was running (one at a time). The #297 FAIL used AI dev 1 (DMIC); #330 found audio.ko dmic_enable=0 as the cause of DMIC failures, so the FAIL probably is that setting, not the AEC code; rerun with dmic_enable=1 pending.",
       "ref": {
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
@@ -14532,7 +14612,7 @@
           "r†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: reference frame on). T32 (2026-11-11 #300 follow-up): not determined: #297 apitest FAIL ret=-1 on OpenIMP in QEMU, not rerun after the #329 audio rework.",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (rt: reference frame on). T32 (2026-11-11 #300 follow-up): not determined: #297 apitest FAIL ret=-1 on OpenIMP in QEMU, not rerun after the #329 audio rework. T32 rerun 2026-11-11 (matrix-x): not rerun, another T32 QEMU was running (one at a time). The #297 FAIL used AI dev 1 (DMIC); #330 found audio.ko dmic_enable=0 as the cause of DMIC failures, so the FAIL probably is that setting, not the AEC code; rerun with dmic_enable=1 pending.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
@@ -18865,7 +18945,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "stub",
+        "T32": "err",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -18912,7 +18992,7 @@
           "r†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (base 5000000 -> GetTimeStamp 5000071 us; restored (ret 0)).",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (base 5000000 -> GetTimeStamp 5000071 us; restored (ret 0)). T32 (2026-11-11 matrix-x): still the skeleton stub: returns -1 (apitest QEMU FAIL), no rebase.",
       "ref": {
         "T10": "apitest rc3gaps2 2026-10-27 .31",
         "T20": "apitest rc3gaps2 2026-10-27 .107",
@@ -18921,7 +19001,8 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       }
     },
     "System_UnBind": {
@@ -19071,12 +19152,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_DisableLpf": {
       "area": "Audio",
@@ -19087,12 +19172,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_EnableDrcAndEq": {
       "area": "Audio",
@@ -19103,12 +19192,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_EnableLpf": {
       "area": "Audio",
@@ -19119,12 +19212,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_GetAlgoOrder": {
       "area": "Audio",
@@ -19135,12 +19232,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_SetAlgoOrder": {
       "area": "Audio",
@@ -19151,12 +19252,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AI_SetLpfCoFrequency": {
       "area": "Audio",
@@ -19167,12 +19272,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_DisableDrcAndEq": {
       "area": "Audio",
@@ -19183,12 +19292,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_DisableNs": {
       "area": "Audio",
@@ -19199,12 +19312,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_EnableDrcAndEq": {
       "area": "Audio",
@@ -19215,12 +19332,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_EnableNs": {
       "area": "Audio",
@@ -19231,12 +19352,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_GetAlgoOrder": {
       "area": "Audio",
@@ -19247,12 +19372,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
+      "ref": {
+        "T32": "QEMU #329 audiox 2026-11-11"
+      }
     },
     "AO_SetAlgoOrder": {
       "area": "Audio",
@@ -19263,12 +19392,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "aud",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): implemented (openimp_t32_audio2x.inc, same chain as the AI side); not called in the #329 QEMU runs.",
+      "ref": {
+        "T32": "static audit src/t32/openimp_t32_audio2x.inc"
+      }
     },
     "Buf_Alloc": {
       "area": "System",
@@ -20153,12 +20286,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera.",
+      "ref": {
+        "T32": "QEMU #301/#349 2026-11-11"
+      }
     },
     "FrameSource_GetJointByHandler": {
       "area": "FrameSource",
@@ -20233,12 +20370,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera.",
+      "ref": {
+        "T32": "QEMU #301/#349 2026-11-11"
+      }
     },
     "FrameSource_SetFrameDepthCopyType": {
       "area": "FrameSource",
@@ -20268,12 +20409,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "aud",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): implemented with the vendor range check (openimp_t32_ivdc.c); not called in the #301 QEMU runs.",
+      "ref": {
+        "T32": "static audit src/t32/openimp_t32_ivdc.c"
+      }
     },
     "FrameSource_SetJointBackground": {
       "area": "FrameSource",
@@ -20480,12 +20625,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_HB_SetAttr": {
       "area": "ISP tuning",
@@ -20496,12 +20645,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_LDC_GetMode": {
       "area": "ISP tuning",
@@ -20992,12 +21145,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetAeOnlyReadAttr": {
       "area": "AE / AWB / AF",
@@ -21008,12 +21165,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetAeStartAttr": {
       "area": "AE / AWB / AF",
@@ -21024,12 +21185,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetAeTargetAttr": {
       "area": "AE / AWB / AF",
@@ -21040,12 +21205,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetAwbOnlyReadAttr": {
       "area": "AE / AWB / AF",
@@ -21056,12 +21225,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetBcshRGBOffsetAttr": {
       "area": "ISP tuning",
@@ -21072,12 +21245,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetISPRunningModeWithFd": {
       "area": "ISP tuning",
@@ -21104,12 +21281,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetMultiSensorAeEffect": {
       "area": "AE / AWB / AF",
@@ -21120,12 +21301,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_GetMultiSensorEffect": {
       "area": "ISP tuning",
@@ -21136,12 +21321,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetAeLightCompensation": {
       "area": "AE / AWB / AF",
@@ -21152,12 +21341,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetAeStartAttr": {
       "area": "AE / AWB / AF",
@@ -21168,12 +21361,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetAeTargetAttr": {
       "area": "AE / AWB / AF",
@@ -21184,12 +21381,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetBcshRGBOffsetAttr": {
       "area": "ISP tuning",
@@ -21200,12 +21401,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetMultiSensorAWBEffect": {
       "area": "AE / AWB / AF",
@@ -21216,12 +21421,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetMultiSensorAeEffect": {
       "area": "AE / AWB / AF",
@@ -21232,12 +21441,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "ISP_Tuning_SetMultiSensorEffect": {
       "area": "ISP tuning",
@@ -21248,12 +21461,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "host",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "ref": {
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+      }
     },
     "MemPool_GetById": {
       "area": "System",
@@ -21362,7 +21579,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "stub",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "dev",
         "T41": "dev"
@@ -21371,9 +21588,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34 .32",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "OSD_UpdateRgnAttrData_ISP": {
       "area": "OSD",
@@ -21384,16 +21602,17 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched): device PASS on both cameras: a white 128x64 picture region shown through IMP_OSD_*_ISP raises the luma at its place (122.1 -> 234.0), UpdateRgnAttrData with black bytes of the same size takes it back (122.0), another size and NULL are refused (-1, -1). The agg62 FAIL (luma 115.0 -> 115.0) did not reproduce with the agg67 driver (ISP picture commits counted in the module parameter osd_commits); on the camera with the ISP flip on (both axes) the picture sits at the mirrored position, see SetRgnAttr_PicISP."
+      "note": "T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched): device PASS on both cameras: a white 128x64 picture region shown through IMP_OSD_*_ISP raises the luma at its place (122.1 -> 234.0), UpdateRgnAttrData with black bytes of the same size takes it back (122.0), another size and NULL are refused (-1, -1). The agg62 FAIL (luma 115.0 -> 115.0) did not reproduce with the agg67 driver (ISP picture commits counted in the module parameter osd_commits); on the camera with the ISP flip on (both axes) the picture sits at the mirrored position, see SetRgnAttr_PicISP. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
     },
     "Phys_to_Virt": {
       "area": "System",
