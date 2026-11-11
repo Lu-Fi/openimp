@@ -3,7 +3,15 @@ CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
 # Vendor T41 1.2.0 headers for p3-controls.  Without T41_HEADERS it was skipped
 # silently (#351), so auto-detect the thingino-raptor-hal tree of a local build.
-# isp-osd/rawvic keep needing an explicit T41_HEADERS (they do not build with 1.2.0).
+# isp-osd/rawvic need the 1.2.5/1.2.6 API (IMP_ISP_Tuning_DestroyOsdRgn, ...), which 1.2.0
+# lacks (#352): T41_ISP_HEADERS = T41_HEADERS, else the 1.2.6 en headers of ingenic-sdk-tg.
+T41_ISP_SDK ?= /mnt/NVMe/git/ingenic-sdk-tg/T41_TOMCAT_20260204/T41_TOMCAT_20260204/SDK_20260204/ISVP-T41-1.2.6-20260204.x/ISVP-T41-1.2.6-20260204/software/board/Ingenic-SDK-T41.x/Ingenic-SDK-T41/media/en/include
+T41_ISP_HEADERS := $(or $(T41_HEADERS),$(wildcard $(T41_ISP_SDK)/imp),)
+ifeq ($(T41_HEADERS),)
+ifneq ($(T41_ISP_HEADERS),)
+T41_ISP_HEADERS := $(T41_ISP_SDK)
+endif
+endif
 T41_P3_HEADERS := $(or $(T41_HEADERS),$(lastword $(sort $(wildcard $(PROJECT_DIR)/../../thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en $(HOME)/thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en /mnt/NVMe/git/thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en))))
 COMMAND_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-command-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rate-control-test
@@ -208,28 +216,28 @@ osd-luma:
 # ISP-drawn OSD region table and the 0x080000a1/0x080000a2 driver controls
 # (vendor T41 libimp 1.2.6).  Needs the vendor T41 headers; skipped without.
 isp-osd:
-ifneq ($(T41_HEADERS),)
+ifneq ($(T41_ISP_HEADERS),)
 	mkdir -p "$(dir $(ISP_OSD_TEST_BIN))"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -I$(T41_HEADERS) \
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -Wno-comment -I$(T41_ISP_HEADERS) \
 		-I$(PROJECT_DIR)/src isp_osd_test.c $(PROJECT_DIR)/src/t40/openimp_t40_isp_osd.c \
 		-pthread -o "$(ISP_OSD_TEST_BIN)"
 	$(ISP_OSD_TEST_BIN)
 else
-	@echo "t41 isp osd test skipped (set T41_HEADERS)"
+	@echo "t41 isp osd test skipped (set T41_HEADERS to vendor T41 1.2.5/1.2.6 en headers)"
 endif
 
 # IMP_ISP_SetVicDoneCbFunc / IMP_ISP_RAW_RwControl (vendor 1.2.5 codes, ioctls,
 # worker threads, cancel while the driver sleeps) on a fake driver (#320).
 RAWVIC_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rawvic-test
 rawvic:
-ifneq ($(T41_HEADERS),)
+ifneq ($(T41_ISP_HEADERS),)
 	mkdir -p "$(dir $(RAWVIC_TEST_BIN))"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -I$(T41_HEADERS) \
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -Wno-comment -I$(T41_ISP_HEADERS) \
 		-I$(PROJECT_DIR)/src -fno-pie -no-pie rawvic_test.c \
 		$(PROJECT_DIR)/src/t40/openimp_t41_rawvic.c -pthread -o "$(RAWVIC_TEST_BIN)"
 	$(RAWVIC_TEST_BIN)
 else
-	@echo "t41 rawvic test skipped (set T41_HEADERS)"
+	@echo "t41 rawvic test skipped (set T41_HEADERS to vendor T41 1.2.5/1.2.6 en headers)"
 endif
 
 p3-controls:

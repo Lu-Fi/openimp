@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-11: T41 isp-osd and rawvic host tests build again (#352)
+
+- The `openimp_t40_isp_osd.c` static assert (OSD block 20 bytes, mask block at +100) failed because IMPISPOSDBlockAttr holds a `char *` and is 24 bytes on the 64-bit test host; the vendor layout is right (1.2.5/1.2.6 header, 32-bit device), so the assert is now 32-bit only. No device code changed. isp-osd/rawvic need the 1.2.5/1.2.6 API (1.2.0 has no IMP_ISP_Tuning_DestroyOsdRgn): tests/t41/Makefile selects T41_HEADERS, else the 1.2.6 `en` headers of ingenic-sdk-tg; p3-controls keeps 1.2.0. isp_osd_test stubs Set/GetMaskBlock. `make -C tests/t41 check` is complete and green.
+
 ## 2026-11-11: T41 SetISPBypass returns -4095 on a refused ioctl, t41 header tests auto-detect headers (#351)
 
 - Commit 246bf938 (#125) changed the comment and the host test to the vendor -4095 (libimp 1.2.6 0x47418) but not the code, which still returned -1; `tests/t41 p3-controls` failed since. Code now returns -4095. The test was silently skipped by `make check` without `T41_HEADERS`; tests/t41/Makefile now auto-detects the vendor T41 1.2.0 headers in the thingino-out tree and the skip message is a WARNING.
