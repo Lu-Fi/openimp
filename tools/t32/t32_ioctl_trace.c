@@ -109,6 +109,8 @@ int ioctl(int fd, unsigned long req, ...)
         n = 36;
     else if (req == 0xc00454c9UL)       /* DEFAULT_BIN: 880-byte buffer */
         n = 880;
+    else if (req == 0xc00454c8UL)       /* SET_TIZIANO_PAR: 20-byte switch-bin attr */
+        n = 20;
     if (n > dump_bytes)
         n = dump_bytes;
     if (traced) {

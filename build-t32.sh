@@ -61,6 +61,8 @@ compile dma_alloc src/dma_alloc.c
 compile t32_skeleton src/t32/openimp_t32_skeleton.c
 # ISP open / sensor lifecycle, System_Init/Exit (#288)
 compile t32_isp src/t32/openimp_t32_isp.c
+# userspace IQ-bin loader, day/night bins (#289)
+compile t32_bin src/t32/openimp_t32_bin.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects

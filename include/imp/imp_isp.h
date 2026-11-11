@@ -282,6 +282,39 @@ int IMP_ISP_AddSensor(IMPVI_NUM num, IMPSensorInfo *info);
 int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info);
 int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info);
 int IMP_ISP_DisableSensor(IMPVI_NUM num);
+
+/*
+ * T32 2.x IQ bin (#289): libimp loads <sensor>-PRJ007-<mode>.bin itself and
+ * hands it to the driver (SET_TIZIANO_PAR).  Layouts of the vendor 2.x API.
+ */
+typedef enum {
+    IMPISP_BIN_MODE_DAY,
+    IMPISP_BIN_MODE_NIGHT,
+    IMPISP_BIN_MODE_DAY_WDR,
+    IMPISP_BIN_MODE_NIGHT_WDR,
+    IMPISP_BIN_MODE_BUTT,
+} IMPISPBinMode;
+
+typedef struct {
+    IMPISPBinMode mode;         /* bin slot, < IMPISP_BIN_MODE_BUTT */
+    char bname[128];            /* absolute path of the bin file */
+} IMPISPDefaultBinAttr;
+
+typedef struct {
+    int enable;                 /* IMPISPTuningOpsMode: 1 load bname, 0 back to the default */
+    IMPISPBinMode mode;
+    char bname[128];
+} IMPISPBinAttr;
+
+/* before IMP_ISP_AddSensor: default bin of one mode (file is checked) */
+int IMP_ISP_SetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr);
+/* before IMP_ISP_AddSensor: start with the night (or night WDR) bin */
+int IMP_ISP_StartNightMode(IMPVI_NUM num);
+/* day / night: loads the bin of the new mode */
+int IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num, IMPISPRunningMode *mode);
+int IMP_ISP_Tuning_GetISPRunningMode(IMPVI_NUM num, IMPISPRunningMode *pmode);
+/* load another bin into one mode slot (enable 0: back to the default bin) */
+int IMP_ISP_Tuning_SwitchBin(IMPVI_NUM num, IMPISPBinAttr *attr);
 #else
 /**
  * Add sensor to ISP (T21/T23/T31/C100)
@@ -389,6 +422,7 @@ int IMP_ISP_Tuning_GetSensorFPS(uint32_t *fps_num, uint32_t *fps_den);
  */
 int IMP_ISP_Tuning_SetAntiFlickerAttr(IMPISPAntiflickerAttr attr);
 
+#if !defined(PLATFORM_T32)       /* T32: VI-number variants above */
 /**
  * Set ISP running mode (day/night)
  *
@@ -404,6 +438,7 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode);
  * @return 0 on success, negative on error
  */
 int IMP_ISP_Tuning_GetISPRunningMode(IMPISPRunningMode *pmode);
+#endif
 
 /**
  * Set ISP bypass mode

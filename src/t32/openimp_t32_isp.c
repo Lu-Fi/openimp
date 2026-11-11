@@ -19,9 +19,10 @@
  *   IMP_System_Init     IVDC direct-mode query (system core and FrameSource
  *                       module each ask; 0 = not in direct mode)
  *
- * Not here (later T32 issues): the userspace IQ-bin loader (DEFAULT_BIN,
- * MEMORY_MALLOC/FREE, SET_TIZIANO_PAR between REGISTER_SENSOR and ENUMINPUT,
- * #289), tuning on /dev/isp-m0, FrameSource, bind.
+ * The userspace IQ-bin loader (DEFAULT_BIN, MEMORY_MALLOC/FREE,
+ * SET_TIZIANO_PAR between REGISTER_SENSOR and ENUMINPUT, day/night) is
+ * openimp_t32_bin.c (#289).  Not here (later T32 issues): tuning on
+ * /dev/isp-m0, FrameSource, bind.
  *
  * The ISP memory comes from the shared reserved-arena allocator
  * (src/dma_alloc.c, as on T21/T23/T30/T31).
@@ -170,7 +171,8 @@ int IMP_ISP_Open(void)
         return -1;
     }
     memset(&ver, 0, sizeof(ver));
-    if (T32_IOCTL(fd, DRIVER_VERSION, &ver) < 0 || !t32_version_ok(&ver)) {
+    if (T32_IOCTL(fd, DRIVER_VERSION, &ver) < 0 || !t32_version_ok(&ver) ||
+        OpenIMP_T32_BinOpen() < 0) {
         close(fd);
         pthread_mutex_unlock(&t32.lock);
         return -1;
@@ -190,6 +192,7 @@ int IMP_ISP_Close(void)
         return -1;
     }
     if (t32.open) {
+        OpenIMP_T32_BinClose();
         close(t32.isp_fd);
         t32.isp_fd = -1;
         t32.open = 0;
@@ -272,10 +275,12 @@ int IMP_ISP_AddSensor(IMPVI_NUM num, IMPSensorInfo *info)
     if (T32_IOCTL(t32.isp_fd, REGISTER_SENSOR, info) < 0)
         goto fail;
     t32.vinum = num;
-    /* #289: IQ bin (DEFAULT_BIN, MEMORY_MALLOC, SET_TIZIANO_PAR) goes here */
+    /* IQ bin: DEFAULT_BIN, MEMORY_MALLOC, SET_TIZIANO_PAR (#289) */
+    if (OpenIMP_T32_BinAddSensor(num, info->name) < 0)
+        goto fail_release;
     index = t32_find_input(info->name);
     if (index < 0)
-        goto fail_release;
+        goto fail_bin;
     in.enable = 1;
     in.vinum = index;
     if (T32_IOCTL(t32.isp_fd, S_INPUT, &in) < 0)
@@ -300,6 +305,10 @@ fail_input:
     in.enable = 0;
     in.vinum = 0;
     T32_IOCTL(t32.isp_fd, S_INPUT, &in);
+fail_bin:
+    T32_IOCTL(t32.isp_fd, RELEASE_SENSOR, info);
+    OpenIMP_T32_BinDelSensor(num);
+    goto fail;
 fail_release:
     T32_IOCTL(t32.isp_fd, RELEASE_SENSOR, info);
 fail:
@@ -328,7 +337,9 @@ int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info)
     if (rc == 0)
         rc = T32_IOCTL(t32.isp_fd, RELEASE_SENSOR, info);
     if (rc == 0) {
-        /* the driver dropped its pa with the sensor; the memory is ours again */
+        /* the driver dropped its pa with the sensor; the memory is ours
+         * again: IQ-bin buffers (MEMORY_FREE, as the vendor), ISP memory */
+        OpenIMP_T32_BinDelSensor(num);
         t32_free_mem(&t32.isp_mem);
         t32_free_mem(&t32.ipc_mem);
         memset(&t32.sensor, 0, sizeof(t32.sensor));

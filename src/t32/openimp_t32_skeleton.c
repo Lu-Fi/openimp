@@ -104,8 +104,6 @@ T32_STUB(IMP_ISP_EnableTuning, (void))
 T32_STUB(IMP_ISP_DisableTuning, (void))
 T32_STUB(IMP_ISP_Tuning_SetSensorFPS, (uint32_t fps_num, uint32_t fps_den))
 T32_STUB(IMP_ISP_Tuning_GetSensorFPS, (uint32_t *fps_num, uint32_t *fps_den))
-T32_STUB(IMP_ISP_Tuning_SetISPRunningMode, (IMPISPRunningMode mode))
-T32_STUB(IMP_ISP_Tuning_GetISPRunningMode, (IMPISPRunningMode *pmode))
 
 /* ---- FrameSource (vendor 2.x: /dev/framechanN, base 130) ---------------- */
 T32_STUB(IMP_FrameSource_CreateChn, (int chnNum, IMPFSChnAttr *chn_attr))

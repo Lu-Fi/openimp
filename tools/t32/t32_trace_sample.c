@@ -13,8 +13,10 @@
  * EnableSensor, System_Init, the /proc/jz/isp/isp-m0 status lines
  * (prefix T32P), then System_Exit, DisableSensor, DelSensor, ISP close;
  * "isp N" repeats the whole cycle N times in one process.
+ * "bin" is "isp" plus a night and a day IMP_ISP_Tuning_SetISPRunningMode
+ * (IQ-bin switch, #289) between System_Init and the teardown.
  *
- * usage: t32_trace_sample [h264|h265|jpeg|none|isp] [streams] [sensor] [i2c addr]
+ * usage: t32_trace_sample [h264|h265|jpeg|none|isp|bin] [streams] [sensor] [i2c addr]
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -72,7 +74,8 @@ int main(int argc, char **argv)
     int streams = argc > 2 ? atoi(argv[2]) : 5;
     const char *sensor = argc > 3 ? argv[3] : "cv8001";
     int addr = argc > 4 ? (int)strtol(argv[4], NULL, 0) : 0x35;
-    int isp_only = !strcmp(codec, "isp");
+    int bin_test = !strcmp(codec, "bin");
+    int isp_only = !strcmp(codec, "isp") || bin_test;
     int enc = strcmp(codec, "none") != 0 && !isp_only;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
@@ -123,6 +126,17 @@ int main(int argc, char **argv)
     MUST(IMP_ISP_AddSensor(IMPVI_MAIN, &si));
     MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
     MUST(IMP_System_Init());
+    if (bin_test) {                     /* #289: day/night bin switch */
+        IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
+        STEP(IMP_ISP_EnableTuning());   /* vendor needs it; OpenIMP T32: stub */
+        STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
+        STEP(IMP_ISP_Tuning_GetISPRunningMode(IMPVI_MAIN, &rm));
+        printf("T32S running mode %d\n", (int)rm);
+        proc_status();
+        rm = IMPISP_RUNNING_MODE_DAY;
+        STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
+        STEP(IMP_ISP_DisableTuning());
+    }
     if (isp_only) {
         proc_status();
         STEP(IMP_System_Exit());

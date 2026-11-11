@@ -13,4 +13,11 @@ int OpenIMP_T32_SensorSize(uint32_t *width, uint32_t *height);
 /* /dev/misc-ivdc GET_DIRECT: 1 when the ISP feeds the encoder directly */
 int OpenIMP_T32_IvdcDirect(void);
 
+/* IQ-bin loader (openimp_t32_bin.c, #289) */
+#include <imp/imp_common.h>
+int OpenIMP_T32_BinOpen(void);
+void OpenIMP_T32_BinClose(void);
+int OpenIMP_T32_BinAddSensor(IMPVI_NUM num, const char *sensor);
+void OpenIMP_T32_BinDelSensor(IMPVI_NUM num);
+
 #endif

@@ -80,6 +80,18 @@ typedef struct {                /* DEFAULT_BIN (size field 4) */
     uint8_t bytes[880];
 } T32IocDefaultBin;
 
+/* SET_TIZIANO_PAR (size field 4; the vendor driver copies 20 B, #289):
+ * the loaded IQ bin = vendor IMPISPSwitchBinAttr */
+typedef struct {
+    uint32_t paddr;             /* MEMORY_MALLOC buffer holding the bin */
+    uint32_t size;              /* bin file size */
+    uint32_t wdr;               /* 1 = WDR bin (day-wdr / night-wdr) */
+    uint32_t night;             /* 1 = night bin */
+    uint8_t update_csccr;       /* 1 when day and night changed */
+    uint8_t vinum;
+    uint8_t pad[2];
+} T32IocTizianoPar;
+
 typedef struct {                /* S_CTRL / G_CTRL */
     uint32_t id;
     int32_t value;
@@ -147,6 +159,7 @@ _Static_assert(sizeof(T32IocSensorReg) == 116, "T32 sensor register info");
 _Static_assert(sizeof(T32IocDriverVersion) == 64, "T32 driver version buffer");
 _Static_assert(sizeof(T32IocEnumInput) == 36, "T32 enum input buffer");
 _Static_assert(sizeof(T32IocDefaultBin) == 880, "T32 default bin buffer");
+_Static_assert(sizeof(T32IocTizianoPar) == 20, "T32 tiziano par (switch bin attr)");
 _Static_assert(sizeof(T32IocCtrl) == 8, "T32 tisp_control");
 _Static_assert(sizeof(T32IocTuning) == 16, "T32 tuning default ctrl");
 _Static_assert(sizeof(T32IocReqBufs) == 20, "T32 requestbuffers");
@@ -265,7 +278,7 @@ _Static_assert(sizeof(IMPSensorInfo) == sizeof(T32IocSensorReg),
 #define OI_T32_IOC_LDC_ONLINE_REFLESH_LUT         0xc00454bdu
 
 /* /dev/tx-isp, DEVICE1 base 200 */
-#define OI_T32_IOC_SET_TIZIANO_PAR                0xc00454c8u  /* int: pa of a MEMORY_MALLOC buffer holding the IQ bin */
+#define OI_T32_IOC_SET_TIZIANO_PAR                0xc00454c8u  /* size field says int; 20 B T32IocTizianoPar (pa first) */
 #define OI_T32_IOC_DEFAULT_BIN                    0xc00454c9u  /* size field says int; the buffer is 880 B */
 #define OI_T32_IOC_SET_WDR_ENABLE                 0xc00454cau
 #define OI_T32_IOC_GPIO_STATE_SWITCH              0xc00454cbu
@@ -388,7 +401,7 @@ enum { OI_T32_DEV_ISP, OI_T32_DEV_M0, OI_T32_DEV_IVDC, OI_T32_DEV_FS, OI_T32_DEV
     X(ISP, OI_T32_IOC_GET_LDC_PAR, RW, 'T', 187, sizeof(int32_t), sizeof(int32_t), OI_T32_F_LATER) \
     X(ISP, OI_T32_IOC_SET_HLDC_BYPASS_STATE, RW, 'T', 188, sizeof(int32_t), sizeof(int32_t), OI_T32_F_LATER) \
     X(ISP, OI_T32_IOC_LDC_ONLINE_REFLESH_LUT, RW, 'T', 189, sizeof(int32_t), sizeof(int32_t), OI_T32_F_LATER) \
-    X(ISP, OI_T32_IOC_SET_TIZIANO_PAR, RW, 'T', 200, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN|OI_T32_F_DRV) \
+    X(ISP, OI_T32_IOC_SET_TIZIANO_PAR, RW, 'T', 200, sizeof(int32_t), sizeof(T32IocTizianoPar), OI_T32_F_SEEN|OI_T32_F_DRV) \
     X(ISP, OI_T32_IOC_DEFAULT_BIN, RW, 'T', 201, sizeof(int32_t), sizeof(T32IocDefaultBin), OI_T32_F_SEEN|OI_T32_F_DRV) \
     X(ISP, OI_T32_IOC_SET_WDR_ENABLE, RW, 'T', 202, sizeof(int32_t), sizeof(int32_t), 0) \
     X(ISP, OI_T32_IOC_GPIO_STATE_SWITCH, RW, 'T', 203, sizeof(int32_t), sizeof(int32_t), 0) \

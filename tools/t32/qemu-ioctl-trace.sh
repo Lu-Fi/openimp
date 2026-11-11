@@ -19,6 +19,8 @@
 # LIBIMP      optional libimp.so to install instead of the rootfs one
 # PORT/MPORT  console / monitor TCP ports (default 3391/3392)
 # CPUS        taskset CPU list for QEMU (default 4-15; the host is shared)
+# QEMU_EXTRA  extra QEMU arguments, e.g. "-trace ingenic_isp_write,file=OUT/isp.trace"
+#             (driver register writes for the vendor-vs-OpenIMP comparison, #289)
 set -eu
 CODEC=${1:-h264}; STREAMS=${2:-5}; OUT=$(readlink -f "${3:-./t32-trace-out}")
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
@@ -48,7 +50,7 @@ taskset -c "$CPUS" nice -n 19 "$QEMU" -M ingenic-t32 -m 128M -display none \
     -drive file="$OUT/rootfs.bin",format=raw,if=none,id=flash0 -kernel "$KERNEL" -append "$CMDLINE" \
     -serial null -chardev socket,id=con,host=127.0.0.1,port=$PORT,server=on,wait=off,logfile="$OUT/console.log" \
     -serial chardev:con -monitor tcp:127.0.0.1:$MPORT,server=on,wait=off \
-    -device image-sensor,model=cv8001,bus=i2c0 -no-reboot > "$OUT/qemu.stdout" 2>&1 &
+    -device image-sensor,model=cv8001,bus=i2c0 -no-reboot ${QEMU_EXTRA:-} > "$OUT/qemu.stdout" 2>&1 &
 QPID=$!
 trap 'kill $QPID 2>/dev/null || true' EXIT
 
