@@ -11,6 +11,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-11 (late): test pattern mode 5 on T31 and T21, T23 chroma (#103)
 
 - Mode 5 (ISP-middle picture via the MDNS reference buffer) moves to `src/isp/isp_mid_ref.c` and now runs on T31 and T21 as well as T23. Device-tested: T31L Y/U/V SSIM 0.89/0.96/0.98, T21 0.85/0.89/0.90. The weight words are written with `b_min` = 0xff, which completes the T23 chroma path (U/V 0.87/0.89 -> 0.96). On T31 the picture is stored mirrored while the ISP hflip is on.
+- T23 mode 5 sets `mdns_ref_hold=7` (weights plus the chroma fake/mv and r words, #340): with bit 0 alone colour day mode kept about 30 % live chroma (U/V 0.90). T23 sc1a4t: U/V 0.97/0.98 in night, 0.97/0.97 colour day (driver bits set at runtime), no live frame in 266 night frames; mode 0 releases the hold and the driver writes its computed words again.
 - T23 build: the audio capture catch-up constants are defined for the T23 path too. `next` did not build for T23 since #266.
 ## 2026-11-11, T32 (planned): ISP-drawn OSD (#336)
 

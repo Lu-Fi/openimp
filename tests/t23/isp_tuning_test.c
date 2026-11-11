@@ -859,7 +859,7 @@ static void test_ispmid(void)
             mid_hold_path = hp;
             R(0x799c) = 0x00dc14ff; R(0x7a6c) = 0x00dc14ff;
             CHECK(openimp_tp_ispmid_on(&w, &h, &st) == 0 && mid_hold_set, "ispmid: hold on");
-            CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '1', "ispmid: hold param written");
+            CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '7', "ispmid: hold param written (T23: bits 0-2, #340)");
             CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0xffffffff &&
                   R(0x7a6c) == 0xffffffff, "ispmid: hold: weights incl. b_min still written per frame");
             openimp_tp_ispmid_off();
