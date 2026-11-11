@@ -24,6 +24,7 @@ JPEGDEC_CLI := $(BUILD)/t23-jpegdec-cli
 AUDIO_ABI := $(BUILD)/t23-audio-abi-test
 P2_ROI := $(BUILD)/t23-p2-roi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
+FRAMELOSS := $(BUILD)/t23-frameloss-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c \
 	$(PROJECT_DIR)/src/t30/h264enc/cabac.c \
@@ -32,7 +33,8 @@ HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t30/h264enc/slice.c \
 	$(PROJECT_DIR)/src/t40/t31_rate_control.c \
 	$(PROJECT_DIR)/src/eprc/eprc.c \
-	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c
+	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c \
+	$(PROJECT_DIR)/src/fisheye/fisheye.c
 # The IMP headers pin the 32-bit MIPS ABI with _Static_assert; the Helix
 # bridge host build (x86_64, both ends of the IPC built alike) only checks
 # the bridge's input path, so those layout checks are compiled out there.
@@ -46,8 +48,9 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS)
 	$(P2_ROI)
+	$(FRAMELOSS) frameloss_vectors.txt
 	@if python3 -c 'import PIL' 2>/dev/null; then python3 jpegdec_check.py $(JPEGDEC_CLI); \
 	else echo 'jpegdec_check: Pillow not installed, skipped'; fi
 	$(HELIX_DESCRIPTOR)
@@ -163,6 +166,12 @@ $(HELIX_DESCRIPTOR): helix_descriptor_test.c \
 	$(CC) $(CFLAGS) -DPLATFORM_T23 -I$(PROJECT_DIR)/src \
 		helix_descriptor_test.c \
 		$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c -o "$@"
+
+# IMP_Encoder_Setframelossthd: the drop rule and the IDR QP against the
+# vendor get_idr_frameqp vectors (tools/frameloss_oracle.py)
+$(FRAMELOSS): frameloss_test.c $(PROJECT_DIR)/src/t23/t23_frameloss.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src frameloss_test.c -lm -o "$@"
 
 $(HELIX_STREAM): helix_stream_test.c $(HELIX_NATIVE_SOURCES) \
 	$(PROJECT_DIR)/src/t30/t30_helix_encoder.h

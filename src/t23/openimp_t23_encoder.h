@@ -48,5 +48,8 @@ int openimp_t23_enc_push_qpgmode(void *codec, int codec_type,
                                  const IMPEncoderQpgMode *mode);
 /* OEM frame-loss threshold in bytes (Setframelossthd/MaxPictureSize). */
 int openimp_t23_enc_set_lossthd(int channel, uint32_t bytes);
+/* IMP_Encoder_SetFisheyeEnableStatus flag of a channel (0/1), read by
+ * CreateChn for the encoder. */
+int openimp_t23_enc_fisheye(int channel);
 
 #endif

@@ -319,6 +319,7 @@ static unsigned int reg_reads;
 static uint32_t last_qp_seen[2];
 static uint32_t qp_log[8];
 static unsigned int qp_log_n;
+static uint32_t list_roi[10];   /* 0x40044..0x40068 of the last picture */
 
 int __real_open(const char *path, int flags, ...);
 int __real_close(int fd);
@@ -537,6 +538,12 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         assert(window >= (256u << 10) && window <= (2u << 20));
         assert(start == (bitstream & ~0x7fu));
         assert(in_allocation(start, window));
+        {
+            unsigned int r;
+
+            for (r = 0; r < 10u; r++)
+                list_roi[r] = reg_value(list, pairs, 0x40044u + 4u * r);
+        }
         node->output_len = encode_picture(list, pairs, p,
                                           virt_of(bitstream),
                                           window - (bitstream - start));
@@ -1064,6 +1071,128 @@ static void overflow_test(void)
     printf("overflow recovery ok (%u pictures)\n", frame);
 }
 
+/* IMP_Encoder_SetFisheyeEnableStatus on T23 (src/fisheye, OEM 1.3.0
+ * i264e_icodec_enc 0x42a2c): with the flag the application's ROI is gone
+ * and region 0 (macroblocks x 0..3, y 0..1) is programmed at QP min(slice
+ * QP, 15) on IDR pictures and at whole seconds of the frame rate; the T23
+ * hardware has the table (unlike T21).  Without the flag the
+ * application's window is programmed. */
+static void fisheye_test(void)
+{
+    static const uint8_t roi[8][7] = { {1, 1, (uint8_t)-4, 0, 39, 0, 22},
+                                       {0}, {0}, {0}, {0}, {0}, {0}, {0} };
+    HWEncoderParams params;
+    T30HelixEncoder *encoder = NULL;
+    uint8_t *mem = rmem + RMEM_SIZE - FRAME_BYTES - 4096u;
+    unsigned int n, flag, regions = 0, late;
+    int idr;
+
+    unsetenv("OPENIMP_T23_ROI");
+    for (late = 0; late < 2u; late++)
+    for (flag = 0; flag < 2u; flag++) {
+        rc_params(&params, HW_RC_MODE_FIXQP);
+        params.fps_num = 15;
+        params.gop_length = 20;
+        params.fisheye = late ? 0u : flag;
+        assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+        if (late) {
+            /* CreateChn hands the flag over before the first picture */
+            params.fisheye = flag;
+            assert(OpenIMP_T30_HelixReconfigure(encoder, &params) == 0);
+        }
+        assert(OpenIMP_T30_HelixSetRoi(encoder, roi) == 0);
+        for (n = 0; n < 45u; n++) {
+            uint32_t qp = rc_frame(encoder, mem, n, &idr);
+
+            if (!flag) {
+                assert(list_roi[0] != 0u);      /* the application's window */
+                continue;
+            }
+            if (idr || n % 15u == 0u) {
+                uint32_t want = (uint32_t)(qp < 15u ? qp : 15u) << 2 | 1u;
+
+                /* the H.264 limit of 25 between macroblock QPs
+                 * (Helix_H264_RoiSanitize) lifts region 0 to slice QP - 12
+                 * on these lists, as on T20/T21 */
+                if ((int)qp - 12 > 15)
+                    want = (qp - 12u) << 2 | 1u;
+                assert(list_roi[0] == want);
+                assert(list_roi[2] == 0x01000300u);
+                assert(list_roi[1] == 0u && list_roi[3] == 0u &&
+                       list_roi[9] == 0u);
+                regions++;
+            } else {
+                unsigned int i;
+
+                for (i = 0; i < 10u; i++)
+                    assert(list_roi[i] == 0u);
+            }
+        }
+        OpenIMP_T30_HelixDestroy(encoder);
+    }
+    /* IDRs at 0, 20, 40; whole seconds at 0, 15, 30: 5 per run */
+    assert(regions == 10u);
+    printf("fisheye: region 0 on IDR and whole-second pictures, no "
+           "application ROI with the flag\n");
+}
+
+/* IMP_Encoder_Setframelossthd: the IDR the codec requests after a dropped
+ * picture is coded at the given QP (OEM picture +0x1a4), with the GOP
+ * controller and with the OEM controller (eprc E+1828, within its QP
+ * window); an IDR request without a QP keeps the controller's QP. */
+static void forced_idr_qp_test(void)
+{
+    HWEncoderParams params;
+    T30HelixEncoder *encoder = NULL;
+    uint8_t *mem = rmem + RMEM_SIZE - FRAME_BYTES - 4096u;
+    unsigned int k, n;
+    uint32_t q;
+    int idr;
+
+    for (k = 0; k < 2u; k++) {
+        rc_params(&params, HW_RC_MODE_CBR);
+        params.max_qp = 51;
+        if (k)
+            setenv("OPENIMP_T23_EPRC", "1", 1);
+        else
+            setenv("OPENIMP_T23_EPRC", "0", 1);
+        assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+        for (n = 0; n < 5u; n++)
+            (void)rc_frame(encoder, mem, n, &idr);
+        assert((uint32_t)OpenIMP_T30_HelixLastQp(encoder) ==
+               last_qp_seen[1]);
+        /* the first coding try of the IDR is at the forced QP (the OEM
+         * controller may code it again higher: the fake core's pictures
+         * are too large, see eprc_test) */
+        qp_log_n = 0;
+        assert(OpenIMP_T30_HelixRequestIDRQp(encoder, 44) == 0);
+        q = rc_frame(encoder, mem, n++, &idr);
+        assert(idr && qp_log[0] == 44u);
+        assert(OpenIMP_T30_HelixLastQp(encoder) == (int)q);
+        (void)rc_frame(encoder, mem, n++, &idr);
+        assert(!idr);
+        /* clamped to 51 like i264e_update_fenc */
+        qp_log_n = 0;
+        assert(OpenIMP_T30_HelixRequestIDRQp(encoder, 70) == 0);
+        (void)rc_frame(encoder, mem, n++, &idr);
+        assert(idr && qp_log[0] == 51u);
+        /* the forced QP is used once: a plain request is coded at the
+         * controller's QP */
+        (void)rc_frame(encoder, mem, n++, &idr);
+        qp_log_n = 0;
+        assert(OpenIMP_T30_HelixRequestIDRQp(encoder, 21) == 0);
+        (void)rc_frame(encoder, mem, n++, &idr);
+        assert(idr && qp_log[0] == 21u);
+        qp_log_n = 0;
+        assert(OpenIMP_T30_HelixRequestIDR(encoder) == 0);
+        (void)rc_frame(encoder, mem, n++, &idr);
+        assert(idr && qp_log[0] != 21u);
+        OpenIMP_T30_HelixDestroy(encoder);
+    }
+    unsetenv("OPENIMP_T23_EPRC");
+    printf("frameloss: forced IDR QP with the GOP and the OEM controller\n");
+}
+
 static int rc_test(void)
 {
     HWEncoderParams params;
@@ -1167,6 +1296,8 @@ static int rc_test(void)
            "frmQPStep 1\n", plain_pp, limited_pp);
     eprc_test();
     overflow_test();
+    fisheye_test();
+    forced_idr_qp_test();
     return 0;
 }
 

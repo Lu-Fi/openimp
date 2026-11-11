@@ -90,6 +90,9 @@ static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #if defined(PLATFORM_T30) || defined(PLATFORM_T23)
 #include "t30/t30_helix_encoder.h"
+#if defined(PLATFORM_T23)
+#include "t23/t23_frameloss.h"
+#endif
 #if defined(CODEC_T30_RADIX)
 #include "t30/radix/t30_radix_encoder.h"
 #endif
@@ -8606,6 +8609,10 @@ struct AL_CodecEncode {
     uint8_t helix_roi[8][7];       /* AL_Codec_Encode_SetRoi (codec_roi_lock) */
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
     int t23_backend;               /* T23_BACKEND_*, chosen on first frame */
+    /* IMP_Encoder_Setframelossthd (src/t23/t23_frameloss.h): the threshold
+     * is written by the API thread (atomic), the state by the encoder */
+    int32_t frameloss_threshold;
+    T23FrameLoss frameloss;
 #endif
 };
 
@@ -9612,6 +9619,50 @@ int AL_Codec_Encode_SetFisheye(void *codec, int enable)
     ((AL_CodecEncode *)codec)->hw_params.fisheye = enable ? 1u : 0u;
     return 0;
 }
+
+#if defined(PLATFORM_T23)
+/* IMP_Encoder_Setframelossthd: bytes, 0 = off (src/t23/t23_frameloss.h) */
+int AL_Codec_Encode_SetFrameLossThd(void *codec, uint32_t bytes)
+{
+    if (codec == NULL)
+        return -1;
+    __atomic_store_n(&((AL_CodecEncode *)codec)->frameloss_threshold,
+                     (int32_t)bytes, __ATOMIC_RELAXED);
+    return 0;
+}
+
+/* OEM update_h264_one_frmstrm: 1 = the picture is not handed out (the IDR
+ * it needs is requested); the caller frees the stream. */
+static int t23_frameloss_check(AL_CodecEncode *enc,
+                               const HWStreamBuffer *stream)
+{
+    T23FrameLoss *fl = &enc->frameloss;
+    const HWEncoderParams *hp = &enc->hw_params;
+    int qp = 0;
+
+    fl->threshold = __atomic_load_n(&enc->frameloss_threshold,
+                                    __ATOMIC_RELAXED);
+    if (!fl->threshold) {
+        fl->lost = 0;
+        return 0;
+    }
+    if (!t23_frameloss_picture(fl, (int32_t)stream->length,
+                               stream->frame_type == HW_FRAME_TYPE_I,
+                               (int)hp->rc_mode, (int)hp->qp,
+                               (int)hp->min_qp, (int)hp->max_qp,
+                               OpenIMP_T30_HelixLastQp(enc->t30_helix), &qp))
+        return 0;
+    (void)OpenIMP_T30_HelixRequestIDRQp(enc->t30_helix,
+                                        t23_frameloss_fenc_qp(qp));
+    if (fl->drops <= 3u || fl->drops % 100u == 0u)
+        IMP_LOG_INFO("Encoder", "T23 channel %d: picture of %u bytes not "
+                     "delivered (frame-loss threshold %d bytes, %u so far), "
+                     "IDR at QP %d requested", enc->channel_id - 1,
+                     stream->length, fl->threshold, fl->drops,
+                     t23_frameloss_fenc_qp(qp));
+    return 1;
+}
+#endif
 
 #if defined(PLATFORM_T20)
 int AL_Codec_Encode_GetPictureQp(void *codec, int *qp)
@@ -12064,6 +12115,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                     enc->t23_backend = T23_BACKEND_NATIVE_STOPPED;
                 }
                 codec_set_error(enc, -1);
+                return -1;
+            }
+            if (t23_frameloss_check(enc, hw_stream)) {
+                /* not handed out, as the OEM: no stream for this frame
+                 * (the native stream owns its heap payload) */
+                if (hw_stream->virt_addr != 0 && hw_stream->phys_addr == 0)
+                    free((void *)(uintptr_t)hw_stream->virt_addr);
+                free(hw_stream);
                 return -1;
             }
             goto queue_encoded_stream;

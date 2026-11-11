@@ -9,10 +9,11 @@
  * controls.  As in the OEM, these setters do nothing for JPEG channels.
  *
  * Settings that the OEM keeps on the channel for its own buffer and frame
- * scheduling logic - frame reuse mode, frame-loss threshold, fisheye
- * flag, pool sizes, multi-section mode, read-buffer sharing, pad frames -
- * are validated and stored like the OEM does, but have no effect on this
- * stack (documented per function).
+ * scheduling logic - frame reuse mode, pool sizes, multi-section mode,
+ * read-buffer sharing, pad frames - are validated and stored like the OEM
+ * does, but have no effect on this stack (documented per function).  The
+ * frame-loss threshold and the fisheye flag act in the native Helix
+ * backend as in the OEM (documented per function).
  *
  * OPENIMP_T23_ENC_PARAMS=0 keeps the settings local (nothing is sent to
  * the encoder), for comparison on a device. */
@@ -690,13 +691,28 @@ static int created_cb(OpenIMPT23P2View *v, void *arg)
     return v->created ? 0 : -1;
 }
 
-/* The OEM compares each encoded frame with this threshold (bytes) to
- * re-encode oversized frames at a higher QP; the Helix session has no such
- * hook, so the threshold is kept for the getters. */
+extern int AL_Codec_Encode_SetFrameLossThd(void *codec, uint32_t bytes);
+
+static int lossthd_cb(OpenIMPT23P2View *v, void *arg)
+{
+    if (!v->created)
+        return -1;
+    if (v->codec)
+        (void)AL_Codec_Encode_SetFrameLossThd(v->codec,
+                                              *(const uint32_t *)arg);
+    return 0;
+}
+
+/* OEM 1.3.0 (0x5cec4): a created channel (below 9) stores the threshold
+ * (bytes) under the channel lock; the stream thread then drops every H.264
+ * picture of that size or more and the non-IDR pictures after it, and
+ * requests an IDR at a QP from the picture size (src/t23/t23_frameloss.h).
+ * The native Helix backend does the same; the OEM worker backend keeps
+ * only the value. */
 int openimp_t23_enc_set_lossthd(int channel, uint32_t bytes)
 {
     if (!valid_channel(channel) ||
-        openimp_t23_p2_call(channel, created_cb, NULL) != 0)
+        openimp_t23_p2_call(channel, lossthd_cb, &bytes) != 0)
         return -1;
     pthread_mutex_lock(&extra_lock);
     extras[channel].loss_threshold = bytes;
@@ -740,9 +756,27 @@ static int not_created_cb(OpenIMPT23P2View *v, void *arg)
     return v->created ? -1 : 0;
 }
 
-/* OEM: a creation-time i264e option (fisheye lens motion search); the OEM
- * YUV session the Helix worker uses has no way to pass it, so it is kept
- * for the getter only. */
+/* OEM 1.3.0 (0x52a40/0x52b4c): channel below 9, a flag in the channel
+ * record that can be set only while the channel is not created (-1
+ * afterwards).  CreateChn copies it into i264e parameter +0x1d4, which
+ * i264e_icodec_enc (0x42a2c) reads for every picture: the picture's ROI
+ * table is cleared (an application ROI is lost) and on I pictures and at
+ * whole seconds of the frame rate region 0 is the top-left 64x32 pixels at
+ * QP min(slice QP, 15); the T23 hardware programs that table.  The native
+ * Helix encoder does the same (src/fisheye, src/t30/t30_helix_encoder.c);
+ * the OEM worker backend cannot be given the flag. */
+int openimp_t23_enc_fisheye(int channel)
+{
+    int enable;
+
+    if (!valid_channel(channel))
+        return 0;
+    pthread_mutex_lock(&extra_lock);
+    enable = extras[channel].fisheye;
+    pthread_mutex_unlock(&extra_lock);
+    return enable;
+}
+
 int IMP_Encoder_SetFisheyeEnableStatus(int channel, int enable)
 {
     if (!valid_channel(channel) ||

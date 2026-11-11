@@ -14,6 +14,10 @@ layout is picked from the library.  Both T21 builds give output byte-identical t
 (tests/fisheye/fisheye_vectors.txt; `tools/fisheye_oracle.py <T21 libimp> | cmp - tests/fisheye/fisheye_vectors.txt` after the
 2-line comment header).
 
+T23 (libimp 1.3.0): the same function at 0x42a2c; encoder handle at context +0x1320, flag at handle +0x1d4, frame rate
++0x198/+0x19c (three words past T10/T20).  CreateChn copies the channel flag into i264e parameter +0x1d4; unlike T21 the
+T23 hardware programs the table (hwicodec_pf_h264e_t21_enc copies it to slice +752, docs/ROI.md).
+
 This script runs the real vendor i264e_icodec_enc under the unicorn CPU emulator on a synthetic picture context and
 prints, per case, the ROI table the function hands to hwicodec_process.  tests/fisheye/fisheye_test.c checks
 src/fisheye against the output.  Nothing of the vendor library is copied into OpenIMP; it is read from the path you pass.
@@ -36,15 +40,18 @@ from unicorn.mips_const import *
 
 O.LAYOUT_T21['code'] = (0x4d000, 0x4e000)       # T10/T20 i264e_icodec_enc (unaligned-access fix-up range)
 O.LAYOUT_T21['code21'] = (0x38000, 0x3a000)     # T21 1.0.33, both gcc builds
+O.LAYOUT_T21['code23'] = (0x42000, 0x44000)     # T23 1.3.0 (i264e_icodec_enc 0x42a2c)
 CTX = O.HEAP + 0x100000
 ENC = O.HEAP + 0x200000
 
 
 class Vendor:
     def __init__(self, path):
-        if 'eprc_default_set_T21' in subprocess.run(['strings', '-a', path], capture_output=True, text=True).stdout:
+        strs = subprocess.run(['strings', '-a', path], capture_output=True, text=True).stdout
+        self.t23 = 'IMP_Encoder_SetMultiSectionMode' in strs
+        if self.t23 or 'eprc_default_set_T21' in strs:
             self.t21 = True
-            O.LAYOUT_T21['code'] = O.LAYOUT_T21['code21']
+            O.LAYOUT_T21['code'] = O.LAYOUT_T21['code23' if self.t23 else 'code21']
         else:
             self.t21 = False
         self.L = L = O.Lib(path)
@@ -71,11 +78,11 @@ class Vendor:
         L = self.L
         L.wr(CTX, bytes(0x10000))
         L.wr(ENC, bytes(0x100000))
-        L.w32(CTX + (0x12b0 if self.t21 else 4 * 0x490), ENC)
+        L.w32(CTX + (0x1320 if self.t23 else 0x12b0 if self.t21 else 4 * 0x490), ENC)
         L.w32(CTX, counter)
         L.w32(CTX + 4 * 0x1f6, stype)
         L.w32(CTX + 4 * 0xb9, qp)
-        sh = 8 if self.t21 else 0                  # T21: two words further
+        sh = 12 if self.t23 else 8 if self.t21 else 0   # T21: two words further, T23: three
         L.w32(ENC + 4 * 0x72 + sh, flag)
         L.w32(ENC + 4 * 99 + sh, fnum)
         L.w32(ENC + 4 * 100 + sh, fden)

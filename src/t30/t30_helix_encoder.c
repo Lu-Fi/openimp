@@ -85,7 +85,7 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #if defined(HELIX_HSKIP)
 #include "hskip/hskip.h"
 #endif
-#if defined(PLATFORM_T20) || defined(HELIX_T21_HSKIP)
+#if defined(PLATFORM_T20) || defined(HELIX_T21_HSKIP) || defined(PLATFORM_T23)
 #include "fisheye/fisheye.h"
 #endif
 
@@ -350,6 +350,12 @@ struct T30HelixEncoder {
 #endif
     int have_reference;
     int force_idr;
+#if defined(PLATFORM_T23)
+    /* IMP_Encoder_Setframelossthd: QP of the requested IDR (0 = none) and
+     * the slice QP of the last coded picture */
+    int forced_idr_qp;
+    int last_qp;
+#endif
 #if defined(PLATFORM_T20)
     /* IMP_Encoder_SetChnRcTrigLevel: i264e_reconfig_rc_trig_set only stores the pair; i264e_idr_reconfig copies it into
      * the controller parameters with the next natural IDR and sets the controller up again there (no IDR of its own) */
@@ -1184,9 +1190,11 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
 #endif
     if (encoder->roi_hw)
         memcpy(slice->roi, encoder->roi, sizeof(slice->roi));
-#if defined(PLATFORM_T20)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T23)
     /* IMP_Encoder_SetFisheyeEnableStatus: i264e_icodec_enc clears the ROI table of every try and codes
-     * the top-left 64x32 pixels at QP <= 15 on I slices and whole-second pictures (src/fisheye) */
+     * the top-left 64x32 pixels at QP <= 15 on I slices and whole-second pictures (src/fisheye).
+     * T23 1.3.0: the same function (0x42a2c, flag at i264e parameter +0x1d4), and unlike T21 the T23
+     * hardware programs the table (hwicodec_pf_h264e_t21_enc copies it to slice +752, docs/ROI.md) */
     if (encoder->params.fisheye)
         fisheye_roi(1, encoder->frame_number, idr, encoder->params.fps_num, encoder->params.fps_den, (int)qp,
                     slice->roi);
@@ -3799,6 +3807,11 @@ t20_picture:
 
         memset(&in, 0, sizeof(in));
         in.frames_since_idr = idr ? 0u : encoder->gop_position;
+#if defined(PLATFORM_T23)
+        /* i264e_ratecontrol_start: the forced QP of a requested IDR (E+1828) */
+        if (idr && encoder->force_idr)
+            in.frame_qp = encoder->forced_idr_qp;
+#endif
         if ((
 #if !defined(PLATFORM_T23)
              HELIX_EPRC_IS_T21(encoder) ? EPRC21_FrameStart(&encoder->eprc, &in, &pic) :
@@ -3865,6 +3878,13 @@ t30_again:
 #if defined(PLATFORM_T23)
     if (!encoder->eprc_on)
         qp = t23_rc_picture_qp(encoder, qp, idr);
+    if (idr && encoder->force_idr && encoder->forced_idr_qp > 0) {
+        /* IMP_Encoder_Setframelossthd: the IDR after a dropped picture (with
+         * eprc the controller took it as E+1828 above) */
+        if (!encoder->eprc_on)
+            qp = (uint32_t)encoder->forced_idr_qp;
+        encoder->forced_idr_qp = 0;
+    }
     qp = t23_overflow_qp(encoder, qp, idr);
 #endif
     output_index = encoder->have_reference
@@ -4531,6 +4551,7 @@ again:
         encoder->last_p_qp = qp;
         encoder->have_p_qp = 1;
     }
+    encoder->last_qp = (int)qp;
     t23_rc_stats(encoder, qp, idr, stream->length);
     t23_overflow_settle(encoder, idr, encoder->channel.output_len);
     if (encoder->frame_number <= 3u)
@@ -4631,6 +4652,10 @@ int OpenIMP_T30_HelixReconfigure(T30HelixEncoder *encoder,
         next.gop_qp_step != encoder->params.gop_qp_step ||
         next.bias_level != encoder->params.bias_level ||
         next.rc_flags != encoder->params.rc_flags;
+    /* IMP_Encoder_SetFisheyeEnableStatus (only before CreateChn, so this
+     * is the CreateChn value): a per-picture table, nothing to restart */
+    encoder->params.fisheye = params->fisheye ? 1u : 0u;
+    next.fisheye = encoder->params.fisheye;
 
     if (!extras_changed &&
         next.gop_length == encoder->params.gop_length &&
@@ -4786,6 +4811,22 @@ int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder)
     return 0;
 }
 
+#if defined(PLATFORM_T23)
+int OpenIMP_T30_HelixRequestIDRQp(T30HelixEncoder *encoder, int qp)
+{
+    if (!encoder)
+        return -1;
+    encoder->force_idr = 1;
+    encoder->forced_idr_qp = qp > 0 ? (qp > 51 ? 51 : qp) : 0;
+    return 0;
+}
+
+int OpenIMP_T30_HelixLastQp(const T30HelixEncoder *encoder)
+{
+    return encoder ? encoder->last_qp : 0;
+}
+#endif
+
 int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
                             const uint8_t roi[8][7])
 {
@@ -4821,9 +4862,9 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
     encoder->params.color2grey = requested->color2grey ? 1u : 0u;
     encoder->params.chroma_qp_offset = requested->chroma_qp_offset;
 #endif
-#if defined(PLATFORM_T20) || defined(HELIX_T21_HSKIP)
+#if defined(PLATFORM_T20) || defined(HELIX_T21_HSKIP) || defined(PLATFORM_T23)
     /* IMP_Encoder_SetFisheyeEnableStatus: CreateChn sets the flag after the encoder was made (T21 makes it at
-     * CreateChn; T10/T20 with OPENIMP_HELIX_EARLY_CREATE=1) */
+     * CreateChn; T10/T20 with OPENIMP_HELIX_EARLY_CREATE=1; T23 creates it on the first picture) */
     encoder->params.fisheye = requested->fisheye ? 1u : 0u;
 #endif
     next = encoder->params;
