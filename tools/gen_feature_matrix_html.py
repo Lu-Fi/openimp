@@ -33,11 +33,18 @@ Special handling:
     wins.  Cells that changed in some interval without improving get a muted "changed" badge.  Before
     the first tag there is nothing to compare with, so there is no badge for it.  A select filters the
     rows by badge and the summary table counts per SoC and interval.  Without baselines nothing is marked.
+  * Date badges (on top of the release ones): "today" = the cell changed since the last commit of
+    docs/FEATURE_MATRIX.md before today 00:00 (local time, env TZ), "yday" = it changed between the last commit
+    before yesterday 00:00 and the one before today 00:00.  Filled badge = improved, outlined = changed without
+    improving.  Computed at generation time from git history (`git rev-list -1 --before=...`), so the hourly Pages
+    rebuild keeps them current (the workflow checks out the full history).  The API function tables mark cells whose
+    code in docs/api_evidence.json differs between the same commits (filter "changed today / yesterday").
 """
 import html
 import json
 import os
 import re
+import datetime
 import subprocess
 import sys
 
@@ -53,6 +60,9 @@ RELEASES = [("v2026.10.11-rc1", "RC1"), ("v2026.10.25-rc2", "RC2"), ("v2026.11.0
 MATRIX_COUNTS = {}
 SYMS = []          # per release: feature title -> {soc: symbol} at that tag
 TXTS = []          # per release: feature number -> {soc: detail text without the symbol}
+DSYMS = []         # date baselines [before yesterday, before today]: feature title -> {soc: symbol}
+DTXTS = []         # same for the detail texts
+DREVS = []         # the two commits (None if the history has none)
 RANK = {"?": 0, "❌": 1, "📋": 2, "🔧": 3, "⚠": 4, "✅": 5, "✅+": 6}
 
 CSS = api.API_CSS + r"""
@@ -114,6 +124,9 @@ td.mc .sym{margin:0}td.mc:hover{filter:brightness(.94)}td.mc:focus-visible,.fnam
 td.mc.dim{opacity:.3}td.mc.sel{box-shadow:inset 0 0 0 2px var(--accent)}tr.selr th{box-shadow:inset 3px 0 0 var(--accent)}
 td.mc i.rc2{font-style:normal;margin-left:3px;padding:0 4px;font-size:.6rem}
 i.rc2{display:inline-block;padding:0 5px;border-radius:8px;background:var(--accent);color:var(--bg);font-size:.66rem;font-weight:700;font-style:normal;vertical-align:middle}
+i.dtb{display:inline-block;margin-left:3px;padding:0 4px;border-radius:8px;font-size:.6rem;font-weight:700;font-style:normal;vertical-align:middle;color:#fff;background:var(--dc);box-shadow:inset 0 0 0 1px var(--dc)}
+i.dtb.t{--dc:#1a8f5a}i.dtb.y{--dc:#6a4fc8}i.dtb.c{background:transparent;color:var(--dc)}
+td.mc[data-dt]{box-shadow:inset 0 -3px 0 var(--dcol,#1a8f5a)}td.mc[data-dt^="y"]{--dcol:#6a4fc8}
 i.rc2.chg{background:var(--muted)}i.rc2.nw{background:#d9822b;color:#fff}i.rc2.old{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .lgbar{display:flex;flex-wrap:wrap;gap:4px 6px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 8px;margin:0 0 8px;font-size:.78rem}
 .lgi{border:1px solid var(--line);border-radius:8px;padding:1px 7px;cursor:help;display:inline-flex;align-items:center;gap:4px}.lgi:focus-visible{outline:2px solid var(--accent)}
@@ -571,6 +584,54 @@ def load_baseline(path=None):
         TXTS.append(tx)
 
 
+def date_revs(now=None):
+    """Last commits of docs/FEATURE_MATRIX.md before yesterday 00:00 and before today 00:00 (local time)."""
+    now = now or datetime.datetime.now()
+    t0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    out = []
+    for d in (t0 - datetime.timedelta(days=1), t0):
+        try:
+            r = subprocess.run(["git", "-C", ROOT, "rev-list", "-1", "--before=" + d.strftime("%Y-%m-%d %H:%M:%S"),
+                                "HEAD", "--", "docs/FEATURE_MATRIX.md"], check=True, capture_output=True, text=True).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            r = ""
+        out.append(r or None)
+    return out
+
+
+def load_date_baselines():
+    del DSYMS[:], DTXTS[:], DREVS[:]
+    DREVS.extend(date_revs())
+    for rev in DREVS:
+        sy, tx = {}, {}
+        if rev:
+            load_state(rev, False, sy, tx)
+        DSYMS.append(sy)
+        DTXTS.append(tx)
+
+
+def api_date_changes():
+    """{(function, soc): 't' | 'y'}: evidence cell code changed since before today / between before yesterday and before today."""
+    def cells(rev):
+        try:
+            d = json.loads(subprocess.run(["git", "-C", ROOT, "show", "%s:docs/api_evidence.json" % rev], check=True,
+                                          capture_output=True, text=True).stdout)
+        except (OSError, subprocess.CalledProcessError, ValueError):
+            return None
+        return {n: f.get("cells", {}) for n, f in d.get("functions", {}).items()}
+    y, t = (cells(r) if r else None for r in DREVS)
+    cur = {n: f["cells"] for n, f in API.ev["functions"].items()}
+    res = {}
+    for base, new, k in ((t, cur, "t"), (y, t, "y")):
+        if base is None or new is None:
+            continue
+        for n, nc in new.items():
+            for soc, c in nc.items():
+                if n in base and base[n].get(soc) is not None and base[n][soc] != c:
+                    res.setdefault((n, soc), k)
+    return res
+
+
 def intervals():
     """[(key, badge text, start index, end index or None for the current matrix)]; start/end index the RELEASES."""
     n = len(RELEASES)
@@ -596,7 +657,7 @@ MX_JS = r"""(function(){
 var D=JSON.parse(document.getElementById('mxdata').textContent),R=D.rows;
 var $=function(s,e){return (e||document).querySelector(s)},$$=function(s,e){return [].slice.call((e||document).querySelectorAll(s))};
 var tbl=$('#mx'),rows=$$('tbody tr[data-n]',tbl),grps=$$('tbody tr.grp',tbl),pn=$('#pn'),pnb=$('#pnb'),tip=$('#tip');
-var F={q:'',soc:{},sym:{},tag:{},rk:'',iv:''},last=null,cur=null;
+var F={q:'',soc:{},sym:{},tag:{},rk:'',dt:'',iv:''},last=null,cur=null;
 function any(o){for(var k in o)if(o[k])return true;return false}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var SS={'⚠':'⚠️'};function ss(s){return SS[s]||s}
@@ -613,6 +674,7 @@ function apply(){
       var hit=sy&&F.sym[s]&&v;td.classList.toggle('dim',sy&&!F.sym[s]);if(hit)m=true});
     if(ok&&sy&&!m)ok=false;
     if(ok&&F.rk&&(' '+tr.getAttribute('data-k')+' ').indexOf(' '+F.rk+' ')<0)ok=false;
+    if(ok&&F.dt){var dd=' '+tr.getAttribute('data-d')+' ';ok=F.dt.split(' ').some(function(x){return dd.indexOf(' '+x+' ')>=0})}
     tr.hidden=!ok;if(ok)n++;
   });
   var g=null,a=false;
@@ -629,14 +691,15 @@ $$('[data-ftag]').forEach(function(b){b.onclick=function(){var k=b.getAttribute(
 $$('.tag',tbl).forEach(function(b){b.onclick=function(e){e.stopPropagation();var k=b.getAttribute('data-tag');F.tag[k]=!F.tag[k];tagBtns();apply()}});
 $('#mxq').oninput=function(){F.q=this.value.trim();apply()};
 var rk=$('#mxrk');if(rk)rk.onchange=function(){F.rk=this.value;apply()};
-$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},rk:''};$('#mxq').value='';if(rk)rk.value='';
+var dtsel=$('#mxdt');if(dtsel)dtsel.onchange=function(){F.dt=this.value;apply()};
+$('#mxreset').onclick=function(){F={q:'',soc:{},sym:{},tag:{},rk:'',dt:''};$('#mxq').value='';if(rk)rk.value='';if(dtsel)dtsel.value='';
   $$('[aria-pressed="true"]').forEach(function(b){b.setAttribute('aria-pressed','false')});tagBtns();apply()};
 /* tooltip */
 function showTip(td){
   var tr=td.parentNode,r=R[tr.getAttribute('data-n')],s=td.getAttribute('data-soc'),c=r.c[s];
   var lg=D.leg[c.s],bd=c.k?'<i class="rc2'+D.bc[c.k]+'">'+D.bl[c.k]+'</i> ':'';
   tip.innerHTML='<b>#'+tr.getAttribute('data-n')+' '+esc(r.t)+' / '+s+'</b>'+
-   '<div><b>'+esc(ss(c.s))+'</b> '+(lg?esc(lg[0])+': '+esc(lg[1]):'')+'</div>'+(c.k?'<div>'+bd+esc(c.bt)+'</div>':'')+
+   '<div><b>'+esc(ss(c.s))+'</b> '+(lg?esc(lg[0])+': '+esc(lg[1]):'')+'</div>'+(c.k?'<div>'+bd+esc(c.bt)+'</div>':'')+(c.d?'<div><i class="dtb '+c.d.charAt(0)+(c.d.length>1?' c':'')+'">'+D.dt[c.d.charAt(0)]+'</i> '+esc(c.dtip)+'</div>':'')+
    '<div>'+(c.q?esc(c.q):'<i>no detail text</i>')+'</div><div class="small">click or Enter: full detail</div>';
   tip.hidden=false;var b=td.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
   var x=Math.min(Math.max(8,b.left+b.width/2-w/2),innerWidth-w-8),y=b.bottom+6;if(y+h>innerHeight-8)y=Math.max(8,b.top-h-6);
@@ -767,6 +830,7 @@ def badge_tables():
 
 
 BADGE_TXT, BADGE_CLS, BADGE_SHORT, BADGE_DESC = badge_tables()
+DTXT = {"t": "today", "y": "yday"}
 
 
 def badge_tip(kind, olds, ks, sym):
@@ -795,6 +859,11 @@ def legend_bar():
     for k in [x[0] for x in intervals()][::-1] + ["chg"]:
         items.append('<span class="lgi" tabindex="0" title="%s"><i class="rc2%s">%s</i> %s</span>' % (
             esc(BADGE_DESC[k]), BADGE_CLS[k], BADGE_TXT[k], esc(BADGE_SHORT[k])))
+    if DREVS and (DREVS[0] or DREVS[1]):
+        for k, t in (("t", ""), ("y", "")):
+            items.append('<span class="lgi" tabindex="0" title="%s"><i class="dtb %s">%s</i><i class="dtb %s c">%s</i> %s</span>' % (
+                esc("cell compared with the last matrix commit before today / yesterday 00:00 (local time)"),
+                k, DTXT[k], k, DTXT[k], esc("since " + ("00:00" if k == "t" else "yesterday 00:00") + " (filled = improved, outlined = changed)")))
     items.append('<span class="lgi" tabindex="0" title="%s"><b>&#128679;</b> in progress (issue)</span>' % esc(
         "work in progress: a branch is running; an open GitHub issue labelled type:wip; hover the sign for the issue and start date"))
     items.append('<span class="lgi" tabindex="0" title="%s">no %s badge</span>' % (esc(
@@ -812,6 +881,9 @@ def render_matrix(rows, details, groups_info):
     cnt = {soc: {k: 0 for k in ikeys + ["chg"]} for soc in socs}      # badge counts per kind
     rowcnt = {k: 0 for k in ikeys + ["chg"]}
     symcnt = {soc: {} for soc in socs}
+    dkeys = ["t", "tc", "y", "yc"]
+    dcnt = {soc: {k: 0 for k in dkeys} for soc in socs}     # date badge counts per SoC
+    drow = {k: 0 for k in dkeys}
     trs, data = [], {}
     grp, nrows, nbadge = "", 0, 0
     th = ('<th scope="col" class="fh">Feature</th>'
@@ -828,7 +900,7 @@ def render_matrix(rows, details, groups_info):
         tags = NUM_TAGS.get(n, []) if n in NUM_REPLACE else GROUP_TAGS.get(grp, []) + NUM_TAGS.get(n, [])
         tags = list(tags)
         bases = [S.get(title, {}) for S in SYMS]
-        cells, tds, rowk, plus = {}, [], set(), False
+        cells, tds, rowk, plus, rowd = {}, [], set(), False, set()
         for soc, sym in zip(socs, r[2:]):
             sym = norm_sym(sym.strip())
             cls, ttl = SYM.get(sym, ("s-unk", "unknown"))
@@ -854,6 +926,24 @@ def render_matrix(rows, details, groups_info):
             if not kind and any(ks):
                 kind = "chg"
             better = kind not in (None, "chg") or any(k == "new" for k in ks)
+            dk, dtip = None, ""
+            if DREVS and (DREVS[0] or DREVS[1]):
+                tsym = DSYMS[1].get(title, {}).get(soc)
+                ysym = DSYMS[0].get(title, {}).get(soc)
+                kt = classify(tsym, sym, DTXTS[1].get(n, {}).get(soc) if n in DTXTS[1] else None, ntxt)
+                ky = classify(ysym, tsym, DTXTS[0].get(n, {}).get(soc) if n in DTXTS[0] else None,
+                              DTXTS[1].get(n, {}).get(soc) if n in DTXTS[1] else None) if tsym is not None else None
+                if kt:
+                    dk = "t" + ("" if kt == "new" else "c")
+                    dtip = "today: %s (%s before today, now %s)" % (
+                        "improved" if kt == "new" else "changed", SYM_SHOW.get(tsym, tsym), SYM_SHOW.get(sym, sym))
+                elif ky:
+                    dk = "y" + ("" if ky == "new" else "c")
+                    dtip = "yesterday: %s (%s before yesterday, then %s)" % (
+                        "improved" if ky == "new" else "changed", SYM_SHOW.get(ysym, ysym), SYM_SHOW.get(tsym, tsym))
+                if dk:
+                    rowd.add(dk)
+                    dcnt[soc][dk] += 1
             pt = plain(txt)
             wl = API.wipfeat.get((n, soc), []) if API else []
             c = {"s": sym, "h": inline(txt), "q": short(pt) if pt else "",
@@ -878,26 +968,33 @@ def render_matrix(rows, details, groups_info):
                 c["o"] = olds[0] or ""
                 c["bt"] = tip
                 badge = '<i class="rc2%s">%s</i>' % (BADGE_CLS[kind], BADGE_TXT[kind])
+            if dk:
+                c["d"] = dk
+                c["dtip"] = dtip
+                badge += '<i class="dtb %s" title="%s">%s</i>' % (dk[0] + (" c" if dk.endswith("c") else ""), esc(dtip), DTXT[dk[0]])
+                tip = (tip + "; " if tip else "") + dtip
             cells[soc] = c
             lg = LEGEND.get(sym)
             aria = "%s: %s%s%s" % (soc, lg[0] if lg else sym, "; " + tip if tip else "", "")
             tds.append('<td class="mc %s%s" tabindex="0" data-soc="%s" data-sym="%s"%s aria-label="%s">'
                        '<span class="sym">%s</span>%s</td>' % (
                            cls, " new" if better else "", esc(soc), esc(sym),
-                           ' data-rc2="%s"' % kind if kind else "", esc(aria), esc(SYM_SHOW.get(sym, sym)), badge + wm))
+                           (' data-rc2="%s"' % kind if kind else "") + (' data-dt="%s"' % dk if dk else ""), esc(aria), esc(SYM_SHOW.get(sym, sym)), badge + wm))
         if plus:
             tags.append("beyond-vendor")
         tags = [t for t in TAG_ORDER if t in tags]
         slg = slug(d["title"]) if d.get("extra") else ""
         data[n] = {"n": n, "t": title, "g": grp, "v": inline(d["vendor"]), "tags": tags, "l": slg, "c": cells}
         chips = "".join('<button type="button" class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t)) for t in tags)
-        trs.append('<tr id="r-%d" data-n="%d" data-k="%s"><th scope="row"><span class="num">%d</span>'
+        trs.append('<tr id="r-%d" data-n="%d" data-k="%s" data-d="%s"><th scope="row"><span class="num">%d</span>'
                    '<button type="button" class="fname" data-row="%d">%s</button><span class="tags">%s</span></th>%s</tr>'
-                   % (n, n, " ".join(sorted(rowk)), n, n, inline(title), chips, "".join(tds)))
+                   % (n, n, " ".join(sorted(rowk)), " ".join(sorted(rowd)), n, n, inline(title), chips, "".join(tds)))
         nrows += 1
         for k in rowk:
             rowcnt[k] += 1
         nbadge += 1 if rowk else 0
+        for k in rowd:
+            drow[k] += 1
     for m in mism:
         sys.stderr.write("warning: row %d %s: table symbol %s, detail symbol %s\n" % m)
     alltags = [t for t in TAG_ORDER if any(t in v["tags"] for v in data.values())]
@@ -917,7 +1014,11 @@ def render_matrix(rows, details, groups_info):
               '<option value="">all features</option>%s<option value="chg">changed, not improved</option></select></div>'
               % "".join('<option value="%s">%s</option>' % (k, esc(
                   "changes since %s (new, in next)" % RELEASES[-1][1] if k == "new" else "in " + BADGE_TXT[k]))
-                  for k in ikeys[::-1]) if any(SYMS) else "") + '</div>')
+                  for k in ikeys[::-1]) if any(SYMS) else "")
+           + ('<div class="fg"><span class="fl">Changed</span><select id="mxdt" aria-label="Show only rows changed today or yesterday">'
+              '<option value="">any time</option><option value="t tc">today</option><option value="y yc">yesterday</option>'
+              '<option value="t tc y yc">today or yesterday</option><option value="t y">improved today or yesterday</option></select></div>'
+              if DREVS and (DREVS[0] or DREVS[1]) else "") + '</div>')
     # counts per SoC (+ comparison with the baseline)
     hd = "".join("<th>%s</th>" % esc(x) for x in socs)
     body = ""
@@ -931,6 +1032,12 @@ def render_matrix(rows, details, groups_info):
         for j, k in enumerate(ikeys[::-1]):
             body += crow('%s <i class="rc2%s">%s</i> (%d features)' % (BADGE_SHORT[k], BADGE_CLS[k], BADGE_TXT[k], rowcnt[k]), k, j == 0)
         body += crow('changed without improvement <i class="rc2 chg">changed</i> (%d features)' % rowcnt["chg"], "chg")
+        if DREVS and (DREVS[0] or DREVS[1]):
+            for k, lab in (("t", "improved today"), ("tc", "changed today, not improved"),
+                           ("y", "improved yesterday"), ("yc", "changed yesterday, not improved")):
+                body += "<tr%s><td>%s <i class=\"dtb %s\">%s</i> (%d features)</td>%s</tr>" % (
+                    ' class="sep"' if k == "t" else "", lab, k[0] + (" c" if k.endswith("c") else ""), DTXT[k[0]], drow[k],
+                    "".join("<td>%d</td>" % dcnt[x][k] for x in socs))
         body += "<tr><td>total improved since %s</td>%s</tr>" % (RELEASES[0][1], "".join(
             "<td>%d</td>" % sum(cnt[x][k] for k in ikeys) for x in socs))
         MATRIX_COUNTS.clear()
@@ -938,6 +1045,10 @@ def render_matrix(rows, details, groups_info):
     sumline = ("%d of %d features have a badge on at least one cell; compared with the tags %s. There is no %s badge: "
                "nothing earlier to compare with." % (nbadge, nrows, ", ".join("%s = <code>%s</code>" % (l, t) for t, l in RELEASES),
                                                      RELEASES[0][1])) if any(SYMS) else "cells per symbol"
+    if DREVS and (DREVS[0] or DREVS[1]):
+        sumline += (" Date badges: today = changed since the last matrix commit before today 00:00 (%s), "
+                    "yday = changed between the last commits before yesterday 00:00 (%s) and before today 00:00." % (
+                        (DREVS[1] or "none")[:9], (DREVS[0] or "none")[:9]))
     bar = ('<details class="rc2bar"><summary>Counts per SoC and release comparison</summary><p class="small">%s</p>'
            '<table><thead><tr><th></th>%s</tr></thead><tbody>%s</tbody></table></details>'
            % (sumline, hd, body))
@@ -947,7 +1058,7 @@ def render_matrix(rows, details, groups_info):
     table = ('<div class="mwrap" id="mwrap"><table class="mx" id="mx"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>'
              % (th, "".join(trs)))
     script = '<script type="application/json" id="mxdata">%s</script><script>%s</script>' % (
-        json_js({"socs": socs, "rows": data, "leg": LEGEND, "bl": BADGE_TXT, "bc": BADGE_CLS, "bd": BADGE_DESC,
+        json_js({"socs": socs, "rows": data, "leg": LEGEND, "bl": BADGE_TXT, "bc": BADGE_CLS, "bd": BADGE_DESC, "dt": DTXT,
                  "api": API.api_json() if API else {"areas": {}, "fa": {}}}), MX_JS)
     return legend_bar() + bar + ctl + table + panel + script
 
@@ -1129,6 +1240,7 @@ def main():
     src = args[0] if args else SRC
     dst = args[1] if len(args) > 1 else DST
     load_baseline(base_file)
+    load_date_baselines()
     global API
     if os.path.abspath(src) == os.path.abspath(SRC):
         API, changed = api.update_md(write=not check)       # regenerate FEATURE_MATRIX.md from the status data first
@@ -1141,6 +1253,9 @@ def main():
         API = api.Model(open(src, encoding="utf-8").read())
     for w in API.warnings:
         sys.stderr.write("warning: %s\n" % w)
+    API.datechg = api_date_changes() if any(DREVS) else {}
+    sys.stderr.write("date baselines: before yesterday %s, before today %s; API cells changed: %d today, %d yesterday\n" % (
+        DREVS[0], DREVS[1], sum(v == "t" for v in API.datechg.values()), sum(v == "y" for v in API.datechg.values())))
     api.print_counts(API)
     md = open(src, encoding="utf-8").read()
     md = re.sub(r"<!--.*?-->", "", md, flags=re.S)

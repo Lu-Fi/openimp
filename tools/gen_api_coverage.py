@@ -498,6 +498,10 @@ class Model:
         il = self.func_issues.get((f["name"], s), [])
         if il:
             attr += ' data-issue="%d|%s"' % (il[0]["number"], esc(il[0].get("url", "")))
+        dk = getattr(self, "datechg", {}).get((f["name"], s))
+        if dk:
+            attr += ' data-dt="%s"' % dk
+            L = L + ["changed " + ("today" if dk == "t" else "yesterday") + " (evidence code differs from the earlier matrix commit)"]
         return '<td class="c %s" title="%s" data-code="%s" data-soc="%s"%s tabindex="0">%s%s%s</td>' % (
             cls, esc("\n".join(L)), c, s, attr, esc(lab), icon, sign)
 
@@ -611,6 +615,7 @@ class Model:
         o.append('<div class="mxctl"><div class="fg"><span class="fl">Rows</span>'
                  '<label><input type="checkbox" id="apg"> only gaps / unknown</label> '
                  '<label><input type="checkbox" id="apu"> only streamer-used</label> '
+                 '%s'
                  '<input id="apq" type="search" placeholder="Filter by function name" aria-label="Filter by function name"></div>'
                  '<div class="fg"><span class="fl">State</span>%s</div>'
                  '<div class="fg"><span class="fl">SoC</span>%s</div>'
@@ -618,7 +623,10 @@ class Model:
                  '<div class="fg"><button type="button" class="chip" id="apreset">Reset filters</button> <span class="small" id="apn" aria-live="polite"></span>'
                  ' <span class="small">States combine with SoC and area: a row shows if one selected SoC (all if none) has a selected state. Icons: '
                  '&empty; no test case yet &middot; &asymp; test ran, result unclear &middot; &#8631; not run on this SoC.</span></div></div>'
-                 % ("".join('<button type="button" class="chip" data-apst="%s" aria-pressed="false">%s</button>' % (k, l) for k, l in (
+                 % (('<select id="apdt" aria-label="Show only functions with a cell changed today or yesterday"><option value="">changed: any time</option>'
+                     '<option value="t">changed today</option><option value="y">changed yesterday</option><option value="ty">changed today or yesterday</option></select> '
+                     if getattr(self, "datechg", None) else ""),
+                    "".join('<button type="button" class="chip" data-apst="%s" aria-pressed="false">%s</button>' % (k, l) for k, l in (
                         ("works", "works (dev / run / rt)"), ("untested", "implemented, not device-tested"), ("gap", "gap"),
                         ("unknown", "unknown"), ("na", "n.a."), ("nob", "no build"))),
                     "".join('<button type="button" class="chip" data-apsoc="%s" aria-pressed="false">%s</button>' % (x, x) for x in socs),
@@ -645,8 +653,8 @@ class Model:
                     det.append("<p class='small'>Used by (per SoC): %s</p>" % esc("; ".join(per)))
                 cells = "".join(self._cellhtml(f, s) for s in socs)
                 name = ('<button type="button" class="fname" data-fn>%s</button>' % esc(f["name"])) if det else esc(f["name"])
-                trs.append('<tr data-gap="%d" data-used="%d" data-n="%s"%s><td>%s</td>%s<td class="c small">%s</td></tr>' % (
-                    1 if gap else 0, 1 if us else 0, esc(f["name"].lower()),
+                trs.append('<tr data-gap="%d" data-used="%d" data-dt="%s" data-n="%s"%s><td>%s</td>%s<td class="c small">%s</td></tr>' % (
+                    1 if gap else 0, 1 if us else 0, "".join(sorted({self.datechg.get((f["name"], x), "") for x in socs})) if getattr(self, "datechg", None) else "", esc(f["name"].lower()),
                     (' data-note="%s"' % esc(f["note"])) if f["note"] else "", name, cells, esc(self.ulabel(us))))
                 if det:
                     trs.append('<tr class="det" hidden><td colspan="%d">%s</td></tr>' % (len(socs) + 2, "".join(det)))
@@ -695,19 +703,20 @@ function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}
 var ST={works:['dev','dev+','run','no-op','rt'],untested:['host','aud','qemu'],gap:['cache','stub','err','miss'],unknown:['?'],na:['n.a.'],nob:['nob']};
 var sel={st:{},soc:{},area:{}};
 function any(o){return Object.keys(o).some(function(k){return o[k]})}
-function ap(){var g=document.getElementById('apg').checked,u=document.getElementById('apu').checked,q=document.getElementById('apq').value.trim().toLowerCase();
+function ap(){var dsel=document.getElementById('apdt'),dt=dsel?dsel.value:'',g=document.getElementById('apg').checked,u=document.getElementById('apu').checked,q=document.getElementById('apq').value.trim().toLowerCase();
  var socs=Object.keys(sel.soc).filter(function(k){return sel.soc[k]}),sts=Object.keys(sel.st).filter(function(k){return sel.st[k]}),n=0;
  $$('table.apit').forEach(function(tb){var det=tb.closest('details'),aid=det.id.replace('api-',''),ah=any(sel.area)&&!sel.area[aid],cnt=0;
   $$('tbody tr[data-n]',tb).forEach(function(tr){var ok=!ah;
    if(g&&tr.getAttribute('data-gap')!=='1')ok=false;if(u&&tr.getAttribute('data-used')!=='1')ok=false;
    if(q&&tr.getAttribute('data-n').indexOf(q)<0)ok=false;
+   if(dt){var dd=tr.getAttribute('data-dt')||'';if(!dd||(dt!=='ty'&&dd.indexOf(dt)<0))ok=false}
    var cells=$$('td.c[data-soc]',tr);
    if(ok&&sts.length){ok=cells.some(function(c){return (!socs.length||socs.indexOf(c.getAttribute('data-soc'))>=0)&&sts.some(function(s){return ST[s].indexOf(c.getAttribute('data-code'))>=0})})}
    cells.forEach(function(c){var m=sts.length&&(!socs.length||socs.indexOf(c.getAttribute('data-soc'))>=0)&&sts.some(function(s){return ST[s].indexOf(c.getAttribute('data-code'))>=0});c.classList.toggle('dim',!!sts.length&&!m)});
    tr.hidden=!ok;var d=tr.nextElementSibling;while(d&&(d.classList.contains('det')||d.classList.contains('cdet'))){if(!ok)d.hidden=true;d=d.nextElementSibling}
    if(ok)cnt++});
   n+=cnt;det.hidden=ah;if(any(sel.area)&&!ah)det.open=true});
- document.getElementById('apn').textContent=(sts.length||socs.length||any(sel.area)||q||g||u)?n+' rows':''}
+ document.getElementById('apn').textContent=(sts.length||socs.length||any(sel.area)||q||g||u||dt)?n+' rows':''}
 function chips(attr,key,dk){$$('['+attr+']').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute(attr);sel[key][k]=!sel[key][k];b.setAttribute('aria-pressed',sel[key][k]?'true':'false');ap()})})}
 chips('data-apst','st');chips('data-apsoc','soc');chips('data-aparea','area');
 function setf(area,soc,state){sel={st:{},soc:{},area:{}};$$('.chip[data-apst],.chip[data-apsoc],.chip[data-aparea]').forEach(function(b){b.setAttribute('aria-pressed','false')});
@@ -716,8 +725,9 @@ function setf(area,soc,state){sel={st:{},soc:{},area:{}};$$('.chip[data-apst],.c
  var d=document.getElementById(area?'api-'+area:'api-isp-tuning');var c=document.getElementById('apq');(c.closest('.mxctl')||c).scrollIntoView({block:'start'})}
 document.addEventListener('click',function(e){var f=e.target.closest('.flt');if(f)setf(f.getAttribute('data-area'),f.getAttribute('data-soc'),f.getAttribute('data-state'))});
 document.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){var f=e.target.closest&&e.target.closest('.flt');if(f){e.preventDefault();setf(f.getAttribute('data-area'),f.getAttribute('data-soc'),f.getAttribute('data-state'))}}});
-document.getElementById('apreset').addEventListener('click',function(){setf('','','');document.getElementById('apq').value='';document.getElementById('apg').checked=false;document.getElementById('apu').checked=false;ap()});
-['apg','apu','apq'].forEach(function(i){document.getElementById(i).addEventListener('input',ap)});
+document.getElementById('apreset').addEventListener('click',function(){setf('','','');document.getElementById('apq').value='';document.getElementById('apg').checked=false;document.getElementById('apu').checked=false;var ds=document.getElementById('apdt');if(ds)ds.value='';ap()});
+['apg','apu','apq','apdt'].forEach(function(i){var e=document.getElementById(i);if(e)e.addEventListener('input',ap)});
+
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 $$('table.apit').forEach(function(tb){
  tb.addEventListener('mouseover',function(e){var c=e.target.closest('td.c[data-code]');if(!c||c.getAttribute('data-n'))return;c.setAttribute('data-n','1');
