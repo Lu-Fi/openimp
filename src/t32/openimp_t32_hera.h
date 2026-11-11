@@ -60,6 +60,12 @@ uint32_t t32_hera_ring_prev(uint32_t addr, uint32_t base, uint32_t end, uint32_t
 /* the list into @list (T32_HERA_LIST_MAX_PAIRS * 2 words): pairs written, 0 on bad input */
 size_t t32_hera_h264_list(const T32HeraH264Pic *p, uint32_t *list);
 
+/* FIXQP analysis defaults shared by H.264 and H.265 (vendor 2.2.0, by QP):
+ * EFE complexity QP offsets (@which 0: 0x2003c, 1: 0x20040) and the four
+ * ROI slots' control bytes (0x20054..0x20060) */
+uint32_t t32_hera_cplx_qp(uint32_t qp, int which);
+uint32_t t32_hera_roi_info(int qp);
+
 /* one pair's command word */
 uint32_t t32_hera_cmd(uint32_t reg, uint32_t value, int term);
 

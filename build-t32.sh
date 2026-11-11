@@ -74,6 +74,12 @@ compile t32_hera src/t32/openimp_t32_hera.c
 compile t32_h264 src/t32/openimp_t32_h264.c
 compile t32_h264_cabac src/t30/h264enc/cabac.c
 compile t32_h264_common src/t30/h264enc/common.c
+# H.265 on HERA (#294): CTB-64 command lists, VPS / SPS / PPS / slice headers
+# with the T30 Radix HEVC bit writers and CABAC context init
+compile t32_hera_h265 src/t32/openimp_t32_hera_h265.c
+compile t32_h265 src/t32/openimp_t32_h265.c
+compile t32_hevc_syntax src/t30/radix/t30_radix_hevc.c
+compile t32_hevc_cabac src/t30/radix/t30_radix_cabac.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects
@@ -82,7 +88,7 @@ rm -f "$output_dir/libimp.a"
     -Wl,-soname,libimp.so -Wl,--gc-sections \
     -Wl,--version-script="$project_dir/src/t40/libimp.map" \
     -o "$output_dir/libimp.so" $objects \
-    -ldl -lpthread -lrt
+    -ldl -lpthread -lrt -lm
 
 if readelf -d "$output_dir/libimp.so" |
     grep -q 'Shared library: \[libimp.so'

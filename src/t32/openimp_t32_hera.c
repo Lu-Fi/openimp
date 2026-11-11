@@ -141,7 +141,7 @@ static int hera_roi_qp(int qp)            /* ROI QP of the (disabled) ROI slots 
 }
 
 /* complexity QP offsets (signed bytes) by QP band, measured QP 0..51 */
-static uint32_t hera_cplx_qp(uint32_t qp, int which)
+uint32_t t32_hera_cplx_qp(uint32_t qp, int which)
 {
     if (which)
         return qp < 27u ? 0x04040302u : qp < 39u ? 0x04040303u : qp < 42u ? 0x04030201u : 0x04030200u;
@@ -154,7 +154,7 @@ static uint32_t hera_qpg_dlt(uint32_t qp)   /* four 6-bit QP delta thresholds */
     return qp < 30u ? 0x00208205u : qp < 42u ? 0x00145145u : 0x00145148u;
 }
 
-static uint32_t roi_info(int qp)
+uint32_t t32_hera_roi_info(int qp)
 {
     uint32_t b = (uint32_t)(hera_roi_qp(qp) & 0x3f) << 2 | 1u;
 
@@ -180,11 +180,11 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
     case EFE_FRM_QP:                    /* base QP, min, max (I: all the picture QP) */
         return p->p_frame ? qp << 8 | 1u << 16 | 51u << 24 : qp << 8 | qp << 16 | qp << 24;
     case EFE_CPLX_QP0:
-        return hera_cplx_qp(qp, 0);
+        return t32_hera_cplx_qp(qp, 0);
     case EFE_CPLX_QP1:
-        return hera_cplx_qp(qp, 1);
+        return t32_hera_cplx_qp(qp, 1);
     case EFE_ROI_INFOA: case EFE_ROI_INFOA + 4: case EFE_ROI_INFOA + 8: case EFE_ROI_INFOD:
-        return roi_info(p->qp);
+        return t32_hera_roi_info(p->qp);
     case EFE_QPG_DLT:
         return hera_qpg_dlt(qp);
     case JRFD_CTRL:
