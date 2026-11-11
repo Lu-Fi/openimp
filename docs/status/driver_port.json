@@ -8,7 +8,7 @@
    "note": "paused, no recovered driver yet"
   },
   "T32": {
-   "proven": 1569,
+   "proven": 1580,
    "total": 1591,
    "branch": "claude/t32-ds-batch",
    "date": "2026-11-11",
