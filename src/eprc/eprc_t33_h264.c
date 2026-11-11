@@ -1564,3 +1564,115 @@ static int32_t e33_p_qp(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_
     }
     return (int8_t)(LD_S32(st + 0x58) + idx);
 }
+
+/* default controller settings (eprc_default_set_H264_T33, 0x198e40): @e is
+ * the controller block, its +4 the configuration (1280x720, 25 fps, QP
+ * 10..51); the per-mode block at +0x82c is filled for the mode at +0x824 */
+static void e33_default_set(E33 *X, uint32_t e)
+{
+    uint32_t cfg = e + 4;
+
+    ST_U32(e + 0x874, cfg);
+    ST_U32(e + 0x820, cfg);
+    ST_U32(e + 0x880, cfg);
+    ST_U32(e + 0x894, cfg);
+    ST_U8(e + 0xc, 0);
+    ST_U16(e + 4, 1280);
+    ST_U16(e + 6, 720);
+    ST_U16(e + 8, 120);
+    ST_U16(e + 10, 80);
+    ST_U32(e + 0x10, 25);
+    ST_U32(e + 0x18, 25);
+    ST_U32(e + 0x14, 1);
+    ST_U8(e + 0x1c, 51);
+    ST_U8(e + 0x1d, 10);
+    ST_U8(e + 0x1e, 0);
+    ST_U8(e + 0x30, 0);
+    ST_U8(e + 0x31, 2);
+    ST_U8(e + 0x825, 0x30);
+    ST_U8(e + 0x826, 0);
+    ST_U8(e + 0x827, 0);
+    ST_U32(e + 0x85c, 0);
+    ST_U32(e + 0x860, 0);
+    switch (LD_U8(e + 0x824)) {
+    case 0:                 /* jump table 0x1e97ac */
+        ST_U8(e + 0x82c, 30);
+        ST_U8(e + 0x82d, 33);
+        ST_U8(e + 0x82e, 33);
+        break;
+    case 1:
+        ST_U32(e + 0x82c, 6);
+        ST_U32(e + 0x830, 1000);
+        ST_U8(e + 0x834, 2);
+        ST_U8(e + 0x840, 24);
+        ST_U8(e + 0x841, 1);
+        ST_U8(e + 0x844, 6);
+        ST_U8(e + 0x845, 3);
+        ST_U8(e + 0x842, 51);
+        ST_U8(e + 0x843, 10);
+        ST_U8(e + 0x846, 0);
+        break;
+    case 2:
+        ST_U32(e + 0x82c, 6);
+        ST_U32(e + 0x830, 1000);
+        ST_U8(e + 0x840, 80);
+        ST_U8(e + 0x841, 24);
+        ST_U8(e + 0x842, 1);
+        ST_U8(e + 0x843, 6);
+        ST_U8(e + 0x844, 3);
+        ST_U8(e + 0x845, 0);
+        ST_U8(e + 0x846, 45);
+        ST_U8(e + 0x847, 20);
+        break;
+    case 3:
+    case 5:
+        ST_U32(e + 0x82c, 6);
+        ST_U32(e + 0x830, 1000);
+        ST_U8(e + 0x840, 80);
+        ST_U8(e + 0x841, 24);
+        ST_U8(e + 0x842, 1);
+        ST_U8(e + 0x843, 6);
+        ST_U8(e + 0x844, 3);
+        ST_U8(e + 0x845, 0);
+        ST_U8(e + 0x846, 50);
+        ST_U8(e + 0x847, 35);
+        ST_U8(e + 0x848, 45);
+        ST_U8(e + 0x849, 20);
+        ST_U8(e + 0x84a, 0);
+        ST_U8(e + 0x84b, 2);
+        ST_U8(e + 0x84c, 0);
+        ST_U8(e + 0x84d, 5);
+        ST_U8(e + 0x84e, 0);
+        ST_U8(e + 0x84f, 20);
+        break;
+    case 4:
+        ST_U32(e + 0x82c, 6);
+        ST_U32(e + 0x830, 1500);
+        ST_U32(e + 0x834, 1);
+        ST_U32(e + 0x838, 1000);
+        ST_U32(e + 0x83c, 500);
+        ST_U8(e + 0x840, 80);
+        ST_U8(e + 0x841, 24);
+        ST_U8(e + 0x842, 1);
+        ST_U8(e + 0x843, 6);
+        ST_U8(e + 0x844, 3);
+        ST_U8(e + 0x845, 0);
+        ST_U16(e + 0x846, 5);
+        ST_U16(e + 0x848, 60);
+        ST_U8(e + 0x84a, 45);
+        ST_U8(e + 0x84b, 20);
+        break;
+    }
+    ST_U8(e + 0x850, 6);
+    ST_U8(e + 0x851, 6);
+    ST_U8(e + 0x829, 0);
+    ST_U8(e + 0x82a, 2);
+    ST_U8(e + 0x898, 0);
+    ST_U8(e + 0x899, 1);
+    ST_U32(e + 0x89c, 0x151800);
+    ST_U32(e + 0x8a0, 2);
+    ST_U8(e + 0x8a4, 2);
+    ST_U32(e + 0x8a8, 0x10e000);
+    ST_U32(e + 0x8ac, 0x87000);
+    ST_U32(e + 0x8b0, 0x87000);
+}

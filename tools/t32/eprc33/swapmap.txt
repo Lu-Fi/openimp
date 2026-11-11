@@ -16,3 +16,4 @@ get_history_iqp e33_history_iqp
 get_I_frame_qp e33_iqp
 estimate_qp e33_estimate_qp
 get_P_frame_qp e33_p_qp
+eprc_default_set_H264_T33 e33_default_set
