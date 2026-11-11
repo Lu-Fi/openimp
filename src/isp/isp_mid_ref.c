@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <syslog.h>
 #include <sys/mman.h>
 
 #include "isp_tseries_dev.h"
@@ -206,5 +207,25 @@ void openimp_tp_ispmid_off(void)
     }
     munmap((void *)mid_regs, MID_MAP);
     mid_regs = NULL;
+}
+/* IMP_ISP_EnableTuning (review 2026-11-11 F8): a streamer that died in mode 5 left the driver hold set (the
+ * parameter outlives the process); clear it unless this process holds it itself. */
+void openimp_tp_ispmid_reset(void)
+{
+    char v[16] = "";
+    int fd;
+    ssize_t n;
+
+    if (mid_hold_set)
+        return;
+    fd = open(mid_hold_path, O_RDONLY);
+    if (fd < 0)
+        return;
+    n = read(fd, v, sizeof(v) - 1);
+    close(fd);
+    if (n > 0 && v[0] != '0') {
+        (void)mid_hold("0");
+        syslog(LOG_WARNING, "libimp: MDNS reference hold left set (%.*s) by an earlier process: cleared", (int)strcspn(v, "\n"), v);
+    }
 }
 #endif /* PLATFORM_T23 || PLATFORM_T31 || PLATFORM_T21 */
