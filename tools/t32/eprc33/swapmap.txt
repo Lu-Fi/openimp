@@ -11,3 +11,6 @@ init_stat_param e33_init_stat
 FRC_get_bitrate e33_frc_bitrate
 get_scene_frame_method1_isra_1 e33_scene_class
 IFA_get_frm_feature e33_frame_feature
+decide_Iqp_proportion_isra_62 e33_i_share
+get_history_iqp e33_history_iqp
+get_I_frame_qp e33_iqp

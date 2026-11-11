@@ -644,3 +644,466 @@ tail:
             ST_U32(sc + 0x44 + 4 * i, LD_U32(src + 4 * i));
     }
 }
+
+/* ------------------------------------------------------ I-picture share */
+
+/* share model of the I picture (percent of the GOP budget) over the mean
+ * I/P complexity v: per bit-rate class a piece-wise linear curve with the
+ * knots t33_ishare_knot (0x1e9ce0), value base - slope * (v - lo) / (hi - lo)
+ * (0x1e9cac, rows of base[5] + slope[5]) */
+static const int8_t t33_ishare_base[4][5] = {
+    { 20, 50, 60, 80, 90 }, { 20, 50, 50, 65, 85 }, { 15, 50, 50, 55, 80 }, { 15, 40, 40, 50, 70 },
+};
+static const int8_t t33_ishare_slope[4][5] = {
+    { 10, 30, 10, 20, 10 }, { 10, 30, 0, 15, 20 }, { 7, 35, 0, 5, 25 }, { 7, 25, 0, 10, 20 },
+};
+static const int8_t t33_ishare_knot[5] = { 100, 50, 20, 10, 5 };
+/* bit-rate classes (bit/s / 10000, 0x1e9c9c) */
+static const int32_t t33_ishare_rate[4] = { 8000, 6000, 4000, 2000 };
+/* SMART/AVBR still-scene cut in percent by motion class and level (0x1e9bd8) */
+static const int8_t t33_ishare_still[5][8] = {
+    { -30, -30, -30, -30, 20, 20, 20, 20 }, { -20, -20, -20, -20, 20, 20, 20, 20 },
+    { -13, -13, -13, -13, 20, 20, 20, 20 }, { 0, 0, 0, 0, 10, 10, 10, 10 },
+    { 10, 10, 10, 10, 30, 40, 50, 60 },
+};
+
+static int32_t t33_ishare_curve(int k, int seg, int32_t v)
+{
+    int32_t lo = seg < 4 ? t33_ishare_knot[seg + 1] : 0;
+
+    return t33_ishare_base[k][seg] - t33_ishare_slope[k][seg] * (v - lo) / (t33_ishare_knot[seg] - lo);
+}
+
+/* share of the I picture in percent (decide_Iqp_proportion, 0x18f7f8):
+ * @rc rate block (+0 -> cfg (+0xc GOP length), +4 mode, +0x3c bit budget
+ * cap), @inst
+ * instance block (+0x7d still mode, +0x7e level), @st statistics (+0x234
+ * ten s8 I/P complexity history, +0xa0 bit/s, +0xdc last I QP, +0x2e0
+ * target, +0x358 seconds), @pic picture state (+0x1c complexity, +0x1d
+ * still strength) */
+static int32_t e33_i_share(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t pic)
+{
+    uint32_t cfg = LD_U32(rc), gop, cap, n, share;
+    int32_t avg = 0, v, rate, hi, lo, seg, a, b, qi;
+    int interp = 1;
+
+    if (LD_U32(cfg + 0x10) == 0)
+        return 0;
+    n = LD_U32(cfg + 0x14) / LD_U32(cfg + 0x10) / 3;
+    if (n > 10)
+        n = 10;
+    if (n) {
+        /* the vendor counts the valid entries among the first n and then
+         * averages the first `count` positions */
+        int32_t cnt = 0, sum = 0;
+
+        for (uint32_t i = 0; i < n; i++)
+            cnt += LD_S8(st + 0x234 + i) != -1;
+        for (int32_t i = 0; i < cnt; i++)
+            sum += LD_S8(st + 0x234 + i);
+        if (cnt)
+            avg = sum / cnt;
+    }
+    v = LD_S8(pic + 0x1c);
+    if ((v + avg) / 2 > v)
+        v = (v + avg) / 2;
+
+    rate = (int32_t)(LD_S64(st + 0xa0) / 10000);
+    if (rate > 8000) {
+        hi = lo = 0;
+        interp = 0;
+    } else if (rate > 6000) {
+        hi = 1, lo = 0;
+    } else if (rate > 4000) {
+        hi = 2, lo = 1;
+    } else if (rate > 2000) {
+        hi = 3, lo = 2;
+    } else {
+        hi = lo = 3;
+        interp = 0;
+    }
+    seg = v > 50 ? 0 : v > 20 ? 1 : v > 10 ? 2 : v > 5 ? 3 : 4;
+    if (v > 0) {
+        a = t33_ishare_curve(hi, seg, v);
+        b = t33_ishare_curve(lo, seg, v);
+    } else {
+        a = t33_ishare_base[hi][4];
+        b = t33_ishare_base[lo][4];
+    }
+    share = (uint32_t)a;
+    if (interp)
+        share += (int32_t)((uint32_t)(b - a) * (uint32_t)(rate - t33_ishare_rate[hi]))
+               / (t33_ishare_rate[lo] - t33_ishare_rate[hi]);
+
+    /* long GOPs: a larger I share */
+    gop = LD_U32(cfg + 0xc);
+    if (gop >= 30)
+        share = ((((gop - 30) >> 1) + 30) * share) / gop;
+    qi = LD_S8(st + 0xdc);
+    cap = LD_U32(rc + 0x3c);
+    if (qi != -1 && qi < 37) {
+        if ((int32_t)share < 6)
+            goto cap;
+        share -= (int32_t)((uint32_t)(37 - qi < 30 ? 37 - qi : 30) * (share - 5)) / 30;
+    }
+    if ((int32_t)share >= 21 && LD_S8(inst + 0x7d) != 0) {
+        int8_t mode = (int8_t)LD_S32(rc + 4);
+        int32_t m;
+        int cls;
+
+        if (mode != T33_SMART && mode != T33_AVBR)
+            goto cap;
+        m = (qi + LD_S32(st + 0x58)) >> 1;
+        cls = m < 11 ? 0 : m < 21 ? 1 : m < 33 ? 2 : m < 46 ? 3 : m < 52 ? 4 : 3;
+        if (LD_S8(inst + 0x7d) == 1)
+            share = (int32_t)((100 - LD_S8(pic + 0x1d) * t33_ishare_still[cls][LD_S8(inst + 0x7e)] / 100)
+                              * (int32_t)share) / 100;
+        share = (int8_t)share < 20 ? 20 : (uint32_t)(int8_t)share;
+    }
+cap: {
+        int32_t pct = 100;
+
+        if (cap) {
+            int64_t per = (LD_S64(st + 0x2e0) * LD_S32(st + 0x358)) >> 10;
+            int64_t q = per ? (int64_t)(uint32_t)((cap >> 10) * 100) / per : 0;
+
+            pct = q < 1 ? 1 : q > 100 ? 100 : (int32_t)q;
+        }
+        if ((int32_t)share < 0)
+            return 0;
+        return (int8_t)((int32_t)share <= pct ? (int32_t)share : pct);
+    }
+}
+
+/* I QP from the history of I pictures (get_history_iqp, 0x18b9f0): @st
+ * keeps the sizes of the last ten I pictures (int64 at +0x1d0) and their QPs
+ * (s8 at +0x22a).  The QP of the picture closest above @lo_pct percent of
+ * the budget (@bits * seconds at st+0x358) is a lower bound, the QP of the
+ * one closest below @hi_pct an upper bound: q_lo + 1 <= qp < q_hi (the
+ * caller passes the larger share as @lo_pct). */
+static int32_t e33_history_iqp(E33 *X, uint32_t st, int32_t lo_pct, int32_t hi_pct, int32_t qp, int32_t bits)
+{
+    int32_t budget = (int32_t)((uint32_t)bits * (uint32_t)LD_S32(st + 0x358));
+    int64_t lo = (int64_t)budget * lo_pct / 100, hi = (int64_t)budget * hi_pct / 100;
+    int64_t best_lo = INT64_MAX, best_hi = INT64_MAX;
+    int32_t q_lo = 1, q_hi = 51;
+
+    for (int i = 0; i < 10; i++) {
+        int64_t s = LD_S64(st + 0x1d0 + 8 * i);
+
+        if (s == 0)
+            continue;
+        if (s > lo && s - lo < best_lo) {
+            best_lo = s - lo;
+            q_lo = LD_S8(st + 0x22a + i);
+        }
+        if (s < hi && hi - s < best_hi) {
+            best_hi = hi - s;
+            q_hi = LD_S8(st + 0x22a + i);
+        }
+    }
+    if (qp >= q_hi)
+        qp = (int8_t)(q_hi - 1);
+    if (qp <= q_lo)
+        qp = (int8_t)(q_lo + 1);
+    return qp;
+}
+
+/* ---------------------------------------------------------- I picture QP */
+
+/* forget the I-picture history (sizes, QPs, QP window) after a change */
+static void t33_iqp_reset(E33 *X, uint32_t st)
+{
+    ST_S8(st + 0x111, 52);
+    ST_S8(st + 0x110, 0);
+    for (int i = 0; i < 0x50; i++)
+        ST_U8(st + 0x1d0 + i, 0);
+    for (int i = 0; i < 10; i++)
+        ST_S8(st + 0x22a + i, 0);
+}
+
+/* the vendor skips QP 39 in two places: one step in the direction of dQP */
+static int32_t t33_skip39(int32_t q, int32_t dqp)
+{
+    if ((int8_t)q != 39)
+        return (int8_t)q;
+    return dqp < 1 ? (int8_t)(q - (dqp != 0)) : (int8_t)(q + 1);
+}
+
+static uint32_t t33_gop_share(uint32_t gop, uint32_t share)
+{
+    return gop < 30 ? share : share * gop / (((gop - 30) >> 1) + 30);
+}
+
+/* budgets of the I picture and of a P picture for the GOP (+0x80, +0x88) */
+static void t33_iqp_budgets(E33 *X, uint32_t inst, uint32_t st, int64_t share)
+{
+    int32_t sec = LD_S32(st + 0x358);
+
+    ST_S64(st + 0x80, (int64_t)((uint64_t)LD_S64(st + 0x360) * (uint64_t)share * (uint64_t)(int64_t)sec) / 100);
+    ST_S64(st + 0x88, (int64_t)((uint64_t)LD_S64(st + 0x2e0) * (uint64_t)(int64_t)LD_S32(inst + 0x10)
+                                * (uint64_t)(int64_t)sec) / 100);
+}
+
+/* QP of an I picture (get_I_frame_qp, 0x187b78).  @rc rate block (+0 ->
+ * cfg, +4 mode, +5 fixed I QP or -1), @inst instance parameters (+0x10 /
+ * +0x14 I share limits in percent, +0x28 maximum QP step, +0x54 reference
+ * model, +0x7c history use, +0x78 SMART/AVBR I QP cap), @st statistics,
+ * @out picture block (+8 int64 bit rate, +0x20 -> picture state) */
+static int32_t e33_iqp(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t out)
+{
+    uint32_t cfg = LD_U32(rc), pic, bits_a = st + 0xa0;
+    int32_t sec = LD_S32(st + 0x358), gop, share, qp_p, last, base, refqp, qcls, qcls8, stable, low_motion;
+    int32_t q_lo, q_mid, qa, qb, qlim, d_hi, qp, cap, lo_pct, hi_pct, h1;
+    int64_t bits, prev, est, est100, per10, per_out, r;
+    int keep = 0, stable_scene;
+    float ratio;
+
+    if (LD_S32(st + 0x14) == 0) {
+        /* first picture */
+        ST_S8(st + 0x111, 52);
+        ST_S8(st + 0xdc, -1);
+        ST_S8(st + 0x110, 0);
+        t33_iqp_budgets(X, inst, st, 60);
+        if (LD_S8(rc + 5) != -1)
+            return LD_S8(rc + 5);
+        if (LD_S8(inst + 0x54) == 0)
+            return e33_refer_qp_bpp(X, cfg, inst + 8, out + 8);
+        return e33_refer_qp_size(X, cfg, LD_S32(inst + 8), sec, 0, LD_S32(out + 8));
+    }
+    gop = LD_S32(cfg + 0xc);
+    if (gop == 1) {
+        int64_t v = (int64_t)((uint64_t)LD_S64(st + 0x360) * (uint64_t)(int64_t)sec);
+
+        ST_S64(st + 0x80, v);
+        ST_S64(st + 0x88, v);
+        return (int8_t)((int8_t)LD_U32(st + 0x58) + (int8_t)e33_iratio_idqp(X, bits_a, LD_S32(st + 0x68), 100));
+    }
+    pic = LD_U32(out + 0x20);
+    share = e33_i_share(X, rc, inst, st, pic);
+
+    /* QP class of the last P picture against the P budget */
+    {
+        int8_t dir = LD_S8(st + 0x94);
+        int32_t t = dir == 1 ? (int32_t)((double)LD_S64(st + 0x48) * 1.2)
+                  : dir == -1 ? (int32_t)((double)LD_S64(st + 0x48) * 0.8) : (int32_t)LD_S64(st + 0x48);
+
+        qp_p = LD_S32(st + 0x5c);
+        qcls = (int8_t)qp_p;
+        if (LD_S8(st + 0x7a) == 0) {
+            int64_t pb = (int64_t)((uint64_t)LD_S64(st + 0x360) * (uint64_t)(int64_t)(100 - share)
+                                   * (uint64_t)(int64_t)sec);
+            float p, ft = (float)t;
+            int c;
+
+            pb = (gop - 1) ? pb / (int64_t)(gop - 1) : 0;
+            p = (float)(pb / 100);
+            if (ft < p * 0.2f)
+                c = 0;
+            else if (ft < p * 0.5f)
+                c = 1;
+            else if (ft < p)
+                c = 2;
+            else if (ft < p + p)
+                c = 3;
+            else if (ft < p * 3.5f)
+                c = 4;
+            else if (ft < p * 6.0f)
+                c = 5;
+            else
+                c = 6;
+            qcls = (int8_t)((int8_t)qp_p - 3 + c);
+        }
+        if (LD_S8(st + 0x96) != 0)
+            qcls = (int8_t)((int8_t)qcls * 2 - (int8_t)qp_p);
+        qcls8 = qcls & 0xff;
+    }
+
+    bits = LD_S64(st + 0xa0);
+    prev = LD_S64(st + 0x70);
+    if (LD_S32(st + 0x28) == 0)
+        return 0;
+    ST_S8(st + 0x1d, (int8_t)(LD_S64(st + 0x20) / LD_S32(st + 0x28)));
+    low_motion = LD_S8(st + 0x1d) < 10;
+    stable = 1;
+    if (!low_motion || LD_S8(st + 0x1c) > 14) {
+        int64_t d = bits > prev ? bits - prev : prev - bits;
+
+        stable = !(bits / 10 < d * 2);
+    }
+    ST_S8(st + 0xaa, stable);
+
+    ratio = (float)(int32_t)(bits <= 0 ? 1 : (uint32_t)bits) / (float)(int32_t)(prev <= 0 ? 1 : (uint32_t)prev);
+    est = (int64_t)(ratio * (float)(LD_S64(st + 0x38) >> 10));
+    est100 = est * 100;
+    per10 = (int64_t)((uint64_t)LD_S64(st + 0x360) * (uint64_t)(int64_t)sec) >> 10;
+    if (per10 <= 0)
+        per10 = 1;
+    refqp = e33_refer_qp_bpp(X, cfg, inst + 8, out + 8);
+
+    stable_scene = LD_S8(inst + 0x7c) != 0 && LD_S8(pic + 8) == 0 && LD_S8(st + 0x98) != 0;
+    ST_S8(st + 0x99, stable_scene);
+    if (!stable_scene) {
+        if (!stable) {
+            uint32_t s;
+
+            t33_iqp_reset(X, st);
+            s = t33_gop_share((uint32_t)gop, (uint32_t)share);
+            qp = qcls;
+            if ((int32_t)s > 19) {
+                int32_t d = e33_iratio_idqp(X, bits_a, (int32_t)(est100 / per10), share), m;
+
+                qp = t33_skip39((int8_t)((int8_t)LD_U32(st + 0x58) + 2 + (int8_t)d), d);
+                m = LD_S8(st + 0xdc) < qp_p ? LD_S8(st + 0xdc) : qp_p;
+                if (LD_S32(inst + 0x28) < m - qp)
+                    qp = (int8_t)((int8_t)m - (int8_t)LD_S32(inst + 0x28));
+                if (qcls8 <= qp)
+                    qp = qcls8;
+                qp = (int8_t)qp;
+                if (LD_S8(inst + 0x18) <= 5) {
+                    if (qcls8 > 32)
+                        qp = qp < 33 ? 33 : qp;
+                    else
+                        qp = qcls;
+                }
+            }
+            goto out;
+        }
+    } else {
+        if (!stable) {
+            t33_iqp_reset(X, st);
+            qp = LD_S8(st + 0x60);
+            goto out;
+        }
+        est100 = (est < 1 ? 1 : est) * 100;
+        share = 95;
+        keep = 1;
+    }
+
+    /* the estimated size of this I picture against the bounds */
+    per_out = (int64_t)((uint64_t)LD_S64(out + 8) * (uint64_t)(int64_t)sec) >> 10;
+    if (per_out <= 0)
+        per_out = 1;
+    last = LD_S32(st + 0x58);
+    r = est100 / per_out;
+    d_hi = e33_iratio_idqp(X, bits_a, (int32_t)r, LD_S32(inst + 0x14));
+    q_lo = (int8_t)e33_iratio_idqp(X, bits_a, (int32_t)r, LD_S32(inst + 0x10));
+    base = (int8_t)last;
+    {
+        int32_t qwin;
+        int64_t s8 = LD_S64(st + 8);
+
+        if (est100 < per_out * (int64_t)LD_S32(inst + 0x14))
+            ST_S8(st + 0x111, base);
+        else if (est100 > per_out * (int64_t)LD_S32(inst + 0x10))
+            ST_S8(st + 0x110, base);
+        if (s8 == 0 || s8 > LD_S64(st + 0x38)) {
+            qwin = LD_S8(st + 0x110);
+        } else {
+            qwin = base;
+            ST_S8(st + 0x110, base);
+        }
+        cap = qwin;
+    }
+    r = est100 / per10;
+    if (share < 11) {
+        qb = (int8_t)(base + (int8_t)e33_iratio_idqp(X, bits_a, (int32_t)r, 0));
+        hi_pct = share + 10;
+    } else {
+        qb = (int8_t)(base + (int8_t)e33_iratio_idqp(X, bits_a, (int32_t)r, share - 10));
+        hi_pct = share < 90 ? share + 10 : 100;
+    }
+    qa = (int8_t)(base + (int8_t)e33_iratio_idqp(X, bits_a, (int32_t)r, hi_pct));
+    q_mid = e33_iratio_idqp(X, bits_a, (int32_t)r, share);
+    {
+        int32_t sum = q_mid + last, cand = qcls;
+        int use_mid = 0;  /* candidate: the QP of the I share (else the P class) */
+
+        if (keep) {
+            qa = qcls;
+        } else {
+            if (refqp < sum) {
+                int32_t q2 = e33_iratio_idqp(X, bits_a, (int32_t)(est100 / per_out), share);
+
+                if (q2 + last <= refqp) {
+                    q_mid = (int8_t)((int8_t)refqp - base);
+                    qa = refqp;
+                    qb = refqp;
+                }
+                use_mid = low_motion && LD_S8(st + 0x1c) < 15 && !(q_mid + last < 27);
+            } else {
+                use_mid = low_motion && LD_S8(st + 0x1c) <= 14 && !(sum < 27);
+            }
+            if (use_mid)
+                cand = t33_skip39((int8_t)(base + (int8_t)q_mid), q_mid);
+            if (!(cand < qa)) {
+                qa = cand;
+                if (qb > 26) {
+                    if (cand < qb)
+                        qb = cand;
+                    qa = (int8_t)qb;
+                }
+            }
+        }
+    }
+    /* bound by the history of I pictures */
+    lo_pct = share < 90 ? share + 10 : 100;
+    hi_pct = share < 90 && share < 11 ? 0 : share - 10;
+    h1 = e33_history_iqp(X, st, lo_pct, hi_pct, qa, (int32_t)LD_U32(st + 0x360));
+    if (refqp < h1 && !keep) {
+        int32_t h2 = e33_history_iqp(X, st, lo_pct, hi_pct, qa, LD_S32(out + 8));
+
+        h1 = refqp < h2 ? (int8_t)(h2 < h1 ? h2 : h1) : refqp;
+    }
+    {
+        uint32_t s = t33_gop_share(LD_U32(cfg + 0xc), (uint32_t)share);
+
+        qp = qcls;
+        if ((int32_t)s > 19) {
+            qp = h1;
+            if (LD_S8(inst + 0x18) < 6) {
+                qp = qcls;
+                if (qcls8 > 32)
+                    qp = (int8_t)(h1 < 33 ? 33 : h1);
+            }
+        }
+    }
+    if (!keep) {
+        int32_t m = LD_S8(st + 0xdc) <= qp_p ? LD_S8(st + 0xdc) : qp_p, c;
+        int64_t b2;
+
+        if (LD_S32(inst + 0x28) < m - qp)
+            qp = (int8_t)((int8_t)m - (int8_t)LD_S32(inst + 0x28));
+        qlim = qp < qcls8 ? qp : qcls8;
+        qp = (int8_t)qlim;
+        if (qp < (int8_t)(base + q_lo)) {
+            qp = (int8_t)(base + q_lo);
+        } else {
+            c = (int8_t)(base + (int8_t)d_hi);
+            if (c > 26)
+                qp = qp < c ? (int8_t)qlim : c;
+        }
+        b2 = (int64_t)((uint64_t)LD_S64(st + 0x2f0) + (uint64_t)LD_S64(inst + 0x30)) / 2;
+        if (b2 < LD_S64(st + 0x368) && qp <= last + 1)
+            qp = (int8_t)(base + 2);
+    }
+    if (cap < qp) {
+        if (LD_S8(st + 0x111) <= qp)
+            qp = LD_S8(st + 0x111) - 1;
+        qp = (int8_t)qp;
+    } else {
+        qp = (int8_t)(cap + 1);
+    }
+out:
+    t33_iqp_budgets(X, inst, st, (int64_t)share);
+    qp = (int8_t)(qp + LD_S8(st));
+    if (LD_S8(st + 0x248) > 4)
+        return qp;
+    {
+        int8_t mode = (int8_t)LD_S32(rc + 4);
+
+        if (mode != T33_SMART && mode != T33_AVBR)
+            return qp;
+    }
+    return LD_S32(inst + 0x78) < qp ? (int8_t)LD_S32(inst + 0x78) : qp;
+}
