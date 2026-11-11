@@ -131,6 +131,16 @@ tint shift (Cb/Cr 103/153 to 153/103) from 20 to 70 s.
   sc4236, os02g10, os08c10, cv2005). With sc2336 (T31) and jxf23 (T20) the picture does not follow the exposure, the AE loop
   stays open, and the script judges the exposure (direction, settling, overshoot) instead of the luma. `t20j` is the T20X
   image with the jxf22 and is the closed-loop T20 case. The T20 driver has no AE luma query; there the exposure is judged.
+- AWB on T20: the driver's AWB waits for four AE-stable frames before it moves the gains. With jxf23 (open AE loop) the AE
+  never settles, so `t20 tint` cannot pass. That is a limit of the model, not of the driver. `t20j tint` is the T20 AWB
+  check. Until #353 (open-tx-isp fix; jxf22 bin with four calibrated light sources), the T20 AWB did not run with jxf22 at all.
+  With the fix, `t20j tint` passes the direction checks. The time correlation stays below the limit because the gains
+  hold during the AE settling at the start of the clip.
+- T31 snapshots while an H.264 stream runs crash the daemon with SIGBUS in QEMU 0.7.14 (#354). This is not a library bug.
+  The hardware JPEG path maps its coherent EP1 buffer through the AVPU driver (`GET_DMA_MMAP`). The 3.10 MIPS kernel's
+  `dma_common_mmap` turns the uncached KSEG1 address into the physical alias 0x2xxxxxxx (DDR + 512 MiB). The T31 model has
+  no DDR alias there, so the first store (the EP1 `memset`) is a data bus error. Real T31 hardware works. In QEMU, take
+  snapshots without a running H.264 consumer or set `OPENIMP_T31_HW_JPEG=0`; the model would need a DDR alias at 0x20000000.
 - The vendor stack cannot be tested this way: the `1a-*` images carry only the open stack and the guest has no network or
   other path for the vendor driver and library (the serial console is the only way in).
 
