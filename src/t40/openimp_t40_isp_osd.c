@@ -232,8 +232,13 @@ int32_t IMP_ISP_Tuning_GetDrawBlock(IMPVI_NUM num, IMPISPDrawBlockAttr *attr)
 #define P3_OSD_ISP_ERR_OP 0x80020040
 _Static_assert(P3_OSD_ISP_DRAW + sizeof(IMPISPDrawBlockAttr) == P3_OSD_ISP_PIC,
                "the OSD block follows the draw block");
+/* IMPISPOSDBlockAttr holds a char * (osd_image): 20 bytes on the 32-bit
+ * device, 24 on a 64-bit host build of the tests (#352), so only check the
+ * layout where it is real. */
+#if UINTPTR_MAX == 0xffffffffu
 _Static_assert(P3_OSD_ISP_PIC + sizeof(IMPISPOSDBlockAttr) == P3_OSD_ISP_COVER,
                "the mask block follows the OSD block");
+#endif
 static int isp_osd_rgn_show;
 static pthread_mutex_t isp_osd_rgn_lock = PTHREAD_MUTEX_INITIALIZER;
 

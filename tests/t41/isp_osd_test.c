@@ -29,6 +29,22 @@ static int nsent, tuning_on = 1, ioctl_fail;
 static int nalloc, nfree, nflush;
 static unsigned char (*rmem)[4096];   /* below 4 GiB: virt_addr is 32-bit */
 
+/* The mask block lives in openimp_p3_controls.c (tests/t41 p3-controls); the
+ * ISP-draw region path only forwards to it, so stub it here (#352). */
+int32_t IMP_ISP_Tuning_SetMaskBlock(IMPVI_NUM num, IMPISPMaskBlockAttr *mask)
+{
+    (void)num;
+    (void)mask;
+    return 0;
+}
+
+int32_t IMP_ISP_Tuning_GetMaskBlock(IMPVI_NUM num, IMPISPMaskBlockAttr *mask)
+{
+    (void)num;
+    (void)mask;
+    return 0;
+}
+
 int OpenIMP_P1_TuningEnabled(void);
 int OpenIMP_P1_TuningEnabled(void)
 {
