@@ -161,6 +161,15 @@ functions:
       show: Non-zero shows, 0 hides.
     returns: an error value for an invalid argument or when the region is not registered in the group.
     notes: For ISP line and cover regions on T23, T40 and T41 the call also switches the ISP overlay.
+  OSD_GetRegionLuma:
+    group: helper
+    summary: For each character of a timestamp region, tells whether the picture under it is brighter than a threshold, so the caller can draw that character in the inverse colour.
+    params:
+      handle: Not a region handle but the slot of the last frame the OSD saw (0 for group 0, 1 for any other group).
+      attr: Region attribute of the timestamp (position, font size, `luminance`, `invertColorSwitch`); the result is written to `fontData.colType`, one entry per character.
+    returns: 0, or an OSD error value for a NULL attribute, a slot without a frame or a region type that is not a picture.
+    notes: Samples the luma at the centre of each character (the pixel and four neighbours). A slot above 1 is refused, samples outside the frame give 0, and at most 64 entries are written.
+    soc: Only on T41.
   OSD_SetMosaic:
     group: helper
     summary: Pixelates a rectangle of an NV12 frame in place (luma only).

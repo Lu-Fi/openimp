@@ -463,6 +463,8 @@ set in production.
 | `OPENIMP_T31_DUMP_SOURCE_DIR` | dump source frames to a directory | off | debug-only |
 | `OPENIMP_T23_HELIX_BSF` | `1` hard bitstream limit; needs a patched kernel, device test open | off | debug-only |
 | `OPENIMP_T41_STREAM_COPY_MODE`, `OPENIMP_T41_RATE_CONTROL_COUPLING`, `OPENIMP_T41_UNCACHED_COMMAND_RING`, `OPENIMP_T41_UNCACHED_EP3_RING` | `=0` rolls back T41 behaviour for A/B (docs/T41_STATUS.md, PROFILING.md) | new behaviour on | debug-only |
+| `OPENIMP_T32_HERA_SECTION_KB` | T32 (planned, QEMU only): size of one HERA bitstream section in KiB; test hook for the BSFULL path (#293) | engine default | debug-only |
+| `OPENIMP_T32_VPU_TEST` | T32 (planned, QEMU only): `1` runs the JPEG channel through START + WAIT_COMPLETE and WOR_VPU_REG instead of RUN (#292) | off | debug-only |
 
 Further `OPENIMP_*` knobs exist in the source. The rmem, reference-sharing tuning, startup-trace, Helix SoC/timeout
 and per-SoC statistics variables are listed in the wiki page "Environment variables"; the remaining bring-up/trace
