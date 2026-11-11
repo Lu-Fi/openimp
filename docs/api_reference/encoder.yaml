@@ -461,6 +461,23 @@ functions:
     summary: "Sets the JPEG quality (0 to 100) of a JPEG channel from the next picture on (T41)."
     returns: "0 on success. The vendor codes 0x80040001 (channel 8 or more), 0x80040002 (quality above 100, or the channel is not a JPEG channel) and 0x80040008 (channel not created)."
     soc: "T41"
+  Encoder_Get/SetJpegQp:
+    group: jpeg
+    summary: "Sets or reads the quantiser of a JPEG channel (T32)."
+    params:
+      encChn: Channel number.
+      jpegQp: "Quantiser 0 to 98, higher means better quality. `Get` receives the stored value."
+    returns: "0 on success, -1 for an invalid channel, a NULL pointer (`Get`) or a value outside 0 to 98 (`Set`)."
+    notes: "The value is used for pictures coded after the call. A picture that does not fit the stream buffer is coded again with a lower quality."
+    soc: "T32"
+  Encoder_SetJpegBsSize:
+    group: jpeg
+    summary: "Sets the stream buffer size used for JPEG channels created afterwards (T32)."
+    params:
+      jpegBsSize: "Size in bytes, rounded up to a multiple of 4096. 0 selects the default, which scales with the picture area."
+    returns: "Always 0."
+    notes: "A buffer size given in the channel attributes takes precedence. Channels that already exist keep their buffer."
+    soc: "T32"
   Encoder_InputJpege:
     group: jpeg
     summary: "Encodes one NV12 picture to a baseline JPEG without an encoder channel. The chroma plane follows directly after the `src_w * src_h` luma bytes."
