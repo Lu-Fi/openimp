@@ -14,10 +14,20 @@ OPEN_TX_ISP ?= $(PROJECT_DIR)/../open-tx-isp
 DRV_REF ?= origin/claude/t32-ds-batch
 DRV_EXTRACT := $(BUILD)/t32-drv-abi
 
+# OpenIMP ISP lifecycle (#288) = vendor minus the IQ-bin requests (#289) and
+# the shared allocator's rmem cache write-back when the ISP memory is freed
+# #302: compile-time IMPEncoderProfile check, 32-bit layout (MIPS o32 aligns int64 to 8)
+PROFILE_FLAGS := -m32 -malign-double -ffreestanding -fsyntax-only -std=gnu99 -Wall -Wextra -Werror
+OI_ISP_PENDING := DEFAULT_BIN,MEMORY_MALLOC,SET_TIZIANO_PAR,MEMORY_FREE,rmem
+
 .PHONY: check check-drv
 check: $(TEST_BIN)
 	$(TEST_BIN)
+	for p in T32 T31 T41 T23; do $(CC) $(PROFILE_FLAGS) -DPLATFORM_$$p -I$(PROJECT_DIR)/include \
+		encoder_profile_test.c || exit 1; done; echo "encoder profile numbering (T32 2.x, T31/T41/T23): ok"
 	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py check vendor-2.2.0-ioctl-seq-*.txt
+	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-isp.txt \
+		openimp-ioctl-seq-isp.txt --ignore $(OI_ISP_PENDING)
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

@@ -9,7 +9,12 @@
  * then the full teardown.  Each API step is announced to the LD_PRELOAD
  * recorder (oi_trace_mark) so the ioctl log is phase-tagged.
  *
- * usage: t32_trace_sample [h264|h265|jpeg|none] [streams] [sensor] [i2c addr]
+ * "isp" runs only the ISP / sensor lifecycle (#288): ISP open, AddSensor,
+ * EnableSensor, System_Init, the /proc/jz/isp/isp-m0 status lines
+ * (prefix T32P), then System_Exit, DisableSensor, DelSensor, ISP close;
+ * "isp N" repeats the whole cycle N times in one process.
+ *
+ * usage: t32_trace_sample [h264|h265|jpeg|none|isp] [streams] [sensor] [i2c addr]
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -28,16 +33,28 @@
 #error "build with -DPLATFORM_T32"
 #endif
 
-/*
- * T32 libimp 2.x profile word: type byte JPEG 0, AVC 1, HEVC 2 (<< 24),
- * low bits the profile_idc.  Not the T23/T31 numbering in imp_encoder.h
- * (AVC 0, HEVC 1, JPEG 4), which the T32 libimp rejects (#287 finding).
- */
-#define T32_PROFILE_JPEG      0x00000000u
-#define T32_PROFILE_AVC_MAIN  0x0100004du
-#define T32_PROFILE_HEVC_MAIN 0x02000001u
+/* T32 profile words come from imp_encoder.h (type byte JPEG 0, AVC 1,
+ * HEVC 2 on PLATFORM_T32, asserted there; #302) */
+#define T32_PROFILE_JPEG      IMP_ENC_PROFILE_JPEG
+#define T32_PROFILE_AVC_MAIN  IMP_ENC_PROFILE_AVC_MAIN
+#define T32_PROFILE_HEVC_MAIN IMP_ENC_PROFILE_HEVC_MAIN
 
 static void (*mark)(const char *);
+
+static void proc_status(void)
+{
+    char line[160];
+    FILE *f = fopen("/proc/jz/isp/isp-m0", "r");
+
+    if (!f) {
+        printf("T32P no /proc/jz/isp/isp-m0\n");
+        return;
+    }
+    while (fgets(line, sizeof line, f))
+        printf("T32P %s", line);
+    fclose(f);
+    fflush(stdout);
+}
 
 static int step(const char *name, int rc)
 {
@@ -55,15 +72,15 @@ int main(int argc, char **argv)
     int streams = argc > 2 ? atoi(argv[2]) : 5;
     const char *sensor = argc > 3 ? argv[3] : "cv8001";
     int addr = argc > 4 ? (int)strtol(argv[4], NULL, 0) : 0x35;
-    int enc = strcmp(codec, "none") != 0;
+    int isp_only = !strcmp(codec, "isp");
+    int enc = strcmp(codec, "none") != 0 && !isp_only;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
     static IMPEncoderCHNAttr ea;
     IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, 0, 0 };
-    uint32_t profile = !strcmp(codec, "jpeg") ? T32_PROFILE_JPEG :
-                       !strcmp(codec, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
-    IMPEncoderProfile prof = (IMPEncoderProfile)profile;
-    IMPEncoderRcMode rc = profile == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
+    IMPEncoderProfile prof = !strcmp(codec, "jpeg") ? T32_PROFILE_JPEG :
+                             !strcmp(codec, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
+    IMPEncoderRcMode rc = prof == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
     int i, got = 0;
 
     mark = (void (*)(const char *))dlsym(RTLD_DEFAULT, "oi_trace_mark");
@@ -89,10 +106,33 @@ int main(int argc, char **argv)
     fs.nrVBs = 2;
     fs.type = FS_PHY_CHANNEL;
 
+    if (isp_only && streams > 1) {      /* "isp N": N-1 extra full cycles first */
+        for (i = 1; i < streams; i++) {
+            MUST(IMP_ISP_Open());
+            MUST(IMP_ISP_AddSensor(IMPVI_MAIN, &si));
+            MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
+            MUST(IMP_System_Init());
+            proc_status();
+            MUST(IMP_System_Exit());
+            MUST(IMP_ISP_DisableSensor(IMPVI_MAIN));
+            MUST(IMP_ISP_DelSensor(IMPVI_MAIN, &si));
+            MUST(IMP_ISP_Close());
+        }
+    }
     MUST(IMP_ISP_Open());
     MUST(IMP_ISP_AddSensor(IMPVI_MAIN, &si));
     MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
     MUST(IMP_System_Init());
+    if (isp_only) {
+        proc_status();
+        STEP(IMP_System_Exit());
+        STEP(IMP_ISP_DisableSensor(IMPVI_MAIN));
+        STEP(IMP_ISP_DelSensor(IMPVI_MAIN, &si));
+        STEP(IMP_ISP_Close());
+        proc_status();
+        printf("T32S end ok=1\n");
+        return 0;
+    }
     MUST(IMP_ISP_EnableTuning());
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));

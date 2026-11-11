@@ -1,0 +1,33 @@
+# Vendor libimp 2.2.0 ioctl reference, T32 PRJ007 (#288), ISP / sensor lifecycle only (t32_trace_sample isp 1).
+# Recorded in QEMU -M ingenic-t32 (gtxaspec 0.7.14) with tools/t32/qemu-ioctl-trace.sh, cv8001 model,
+# open-tx-isp driver/t32 1729253a.  OpenIMP (#288) gives the same sequence minus the IQ-bin requests (#289).
+@ IMP_ISP_Open()
+= tx-isp DRIVER_VERSION 80045401 rc=0
+@ IMP_ISP_AddSensor(IMPVI_MAIN, &si)
+= tx-isp REGISTER_SENSOR 80745405 rc=0
+= tx-isp DEFAULT_BIN c00454c9 rc=0 x3
+= tx-isp MEMORY_MALLOC 800c543a rc=0 x2
+= tx-isp SET_TIZIANO_PAR c00454c8 rc=0
+= tx-isp ENUMINPUT c0045402 rc=0
+= tx-isp ENUMINPUT c0045402 rc=-1:EINVAL
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp GET_ISP_IPC_MEM_INFO 800c5439 rc=0
+= tx-isp SET_ISP_IPC_MEM_INFO 800c5438 rc=0
+= tx-isp GET_ISP_MEM_INFO 800c5410 rc=0
+= tx-isp SET_ISP_MEM_INFO 800c540f rc=0
+@ IMP_ISP_EnableSensor(IMPVI_MAIN, &si)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp STREAMON 80085407 rc=0
+= tx-isp CREATE_SUBDEV_LINKS 80085409 rc=0
+= tx-isp LINKS_STREAMON c008540b rc=0
+@ IMP_System_Init()
+= misc-ivdc GET_DIRECT c0045471 rc=0 x2
+@ IMP_ISP_DisableSensor(IMPVI_MAIN)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp LINKS_STREAMOFF c008540c rc=0
+= tx-isp DESTROY_SUBDEV_LINKS 8008540a rc=0
+= tx-isp STREAMOFF 80085408 rc=0
+@ IMP_ISP_DelSensor(IMPVI_MAIN, &si)
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp RELEASE_SENSOR 80745406 rc=0
+= tx-isp MEMORY_FREE 800c543b rc=0 x2

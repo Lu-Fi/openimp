@@ -55,8 +55,12 @@ compile()
 # IMP_LOG back end and IMP_Log_* (vendor libalog), shared with every SoC
 compile core_imp_log_emit src/core/imp_log_emit.c
 compile core_imp_log src/core/imp_log.c
+# reserved-arena DMA allocator (shared with T21/T23/T30/T31)
+compile dma_alloc src/dma_alloc.c
 # T32 layout asserts + stub entry points
 compile t32_skeleton src/t32/openimp_t32_skeleton.c
+# ISP open / sensor lifecycle, System_Init/Exit (#288)
+compile t32_isp src/t32/openimp_t32_isp.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects

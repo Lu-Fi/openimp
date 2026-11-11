@@ -2,7 +2,9 @@
 """T32 ioctl trace oracle (#287).
 
 norm  RAW [--header H]   raw t32_ioctl_trace log -> ordered sequence file
-diff  REF NEW            compare two sequence files (exit 1 on a difference)
+diff  REF NEW [--ignore X,..]  compare two sequence files (exit 1 on a difference);
+                          --ignore drops requests by name or device (e.g. the
+                          IQ-bin requests a later issue adds, or 'rmem')
 check SEQ... [--header H] every request of the sequences is in the ABI header,
                           and the header's OI_T32_F_SEEN rows are exactly the
                           requests the sequences contain
@@ -92,7 +94,7 @@ def norm(args):
     print("\n".join(out))
 
 
-def parse_seq(path):
+def parse_seq(path, ignore=()):
     phases = []
     for line in open(path):
         line = line.rstrip("\n")
@@ -102,6 +104,8 @@ def parse_seq(path):
             if not phases:
                 phases.append(["start", [], set()])
             f = line[2:].split()
+            if f[0] in ignore or f[1] in ignore:
+                continue
             if line[0] == "=":
                 phases[-1][1].append(" ".join(f[:4] + [x for x in f[4:] if x.startswith("x")]))
             else:
@@ -125,7 +129,8 @@ def flat(phases):
 
 def diff(args):
     import difflib
-    a, b = flat(parse_seq(args.ref)), flat(parse_seq(args.new))
+    ignore = set(x for x in (args.ignore or "").split(",") if x)
+    a, b = flat(parse_seq(args.ref, ignore)), flat(parse_seq(args.new, ignore))
     d = list(difflib.unified_diff(a, b, args.ref, args.new, lineterm="", n=2))
     if d:
         print("\n".join(d))
@@ -161,7 +166,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     n = sub.add_parser("norm"); n.add_argument("raw"); n.add_argument("--header", default=HDR)
-    d = sub.add_parser("diff"); d.add_argument("ref"); d.add_argument("new")
+    d = sub.add_parser("diff"); d.add_argument("ref"); d.add_argument("new"); d.add_argument("--ignore")
     c = sub.add_parser("check"); c.add_argument("seq", nargs="+"); c.add_argument("--header", default=HDR)
     a = p.parse_args()
     return {"norm": norm, "diff": diff, "check": check}[a.cmd](a) or 0
