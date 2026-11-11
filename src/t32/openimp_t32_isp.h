@@ -10,6 +10,8 @@
 int OpenIMP_T32_IspFd(void);
 /* sensor input size from S_INPUT (AddSensor); -1 without a sensor */
 int OpenIMP_T32_SensorSize(uint32_t *width, uint32_t *height);
+/* sensor of VI num: 0 none, 1 added, 2 enabled (streaming) */
+int OpenIMP_T32_SensorState(int num);
 /* /dev/misc-ivdc GET_DIRECT: 1 when the ISP feeds the encoder directly */
 int OpenIMP_T32_IvdcDirect(void);
 /* the answer IMP_System_Init got (0 before System_Init) */

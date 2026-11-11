@@ -101,10 +101,8 @@ T32_STUB(IMP_System_RebaseTimeStamp, (uint64_t basets))
 
 /* ---- ISP (vendor 2.x: /dev/tx-isp, /dev/isp-m0) ------------------------- */
 /* Open/Close, Add/Del/Enable/DisableSensor: openimp_t32_isp.c (#288) */
-T32_STUB(IMP_ISP_EnableTuning, (void))
-T32_STUB(IMP_ISP_DisableTuning, (void))
-T32_STUB(IMP_ISP_Tuning_SetSensorFPS, (uint32_t fps_num, uint32_t fps_den))
-T32_STUB(IMP_ISP_Tuning_GetSensorFPS, (uint32_t *fps_num, uint32_t *fps_den))
+/* EnableTuning/DisableTuning and the IMP_ISP_Tuning_* calls on /dev/isp-m0:
+ * openimp_t32_tuning.c (#296, vendor 2.x prototypes) */
 
 /* ---- FrameSource (vendor 2.x: /dev/framechanN, base 130) ---------------- */
 /* Create/Destroy/Set/GetChnAttr, Enable/DisableChn, Set/GetFrameDepth,

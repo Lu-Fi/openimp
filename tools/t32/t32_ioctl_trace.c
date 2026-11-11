@@ -11,6 +11,10 @@
  * With T32_TRACE_VPU=<bytes>, a /dev/soc_vpu CHANNEL_RUN / CHANNEL_START
  * also logs the job's register image (channel_node.dma_addr, a physical
  * address; read through /dev/mem before the call):  V <seq> <pa> <words>.
+ * oi_trace_tuning_size(n) (dlsym, #296) arms the next /dev/isp-m0
+ * DEFAULT_CMD_ISP_TUNING (0xc0105467): its value word is a pointer, and the
+ * n bytes behind it are logged before and after the call as
+ *   P <seq> in|out <id> <hex bytes>   (one shot; 0 disarms).
  * Output: $T32_TRACE_LOG (default /tmp/t32-ioctl.log).  Diagnostic tool,
  * never part of libimp.
  */
@@ -36,6 +40,7 @@ static pthread_once_t once = PTHREAD_ONCE_INIT;
 static int safe_copy(void *dst, const void *src, unsigned n);
 static int (*real_ioctl)(int, unsigned long, ...);
 static int copy_pipe[2] = { -1, -1 };
+static unsigned tuning_bytes;           /* oi_trace_tuning_size(), one shot */
 
 static void trace_init(void)
 {
@@ -136,6 +141,31 @@ void oi_trace_mark(const char *text)
     pthread_mutex_unlock(&lock);
 }
 
+void oi_trace_tuning_size(unsigned n)
+{
+    pthread_mutex_lock(&lock);
+    tuning_bytes = n > 16384 ? 16384 : n;
+    pthread_mutex_unlock(&lock);
+}
+
+/* the payload behind a tuning request's value pointer (#296) */
+static void dump_tuning(unsigned long s, const char *tag, const void *arg, unsigned n)
+{
+    static unsigned char buf[16384];      /* under the lock */
+    unsigned w[4], i;
+
+    if ((unsigned long)arg < 0x1000 || safe_copy(w, arg, sizeof w))
+        return;
+    if (w[3] < 0x1000 || safe_copy(buf, (const void *)(unsigned long)w[3], n)) {
+        fprintf(log_file, "P %lu %s %08x -\n", s, tag, w[2]);
+        return;
+    }
+    fprintf(log_file, "P %lu %s %08x ", s, tag, w[2]);
+    for (i = 0; i < n; i++)
+        fprintf(log_file, "%02x", buf[i]);
+    fputc('\n', log_file);
+}
+
 int ioctl(int fd, unsigned long req, ...)
 {
     va_list ap;
@@ -145,6 +175,7 @@ int ioctl(int fd, unsigned long req, ...)
     unsigned long s = 0;
     unsigned dir = (req >> 29) & 7, size = (req >> 16) & 0x1fff, n;
     int rc, err, traced;
+    unsigned tun = 0;
 
     va_start(ap, req);
     arg = va_arg(ap, void *);
@@ -177,6 +208,11 @@ int ioctl(int fd, unsigned long req, ...)
             dump_words(s, "in", arg, n);
         if (vpu_bytes && (req == 0xc0406302UL || req == 0xc0406303UL))
             dump_vpu_job(s, arg);
+        if (req == 0xc0105467UL && tuning_bytes) {
+            tun = tuning_bytes;
+            tuning_bytes = 0;
+            dump_tuning(s, "in", arg, tun);
+        }
         pthread_mutex_unlock(&lock);
     }
     rc = real_ioctl(fd, req, arg);
@@ -186,6 +222,8 @@ int ioctl(int fd, unsigned long req, ...)
         fprintf(log_file, "I %lu %ld %s %08lx %d %d\n", s, (long)syscall(SYS_gettid),
                 path, req, rc, rc < 0 ? err : 0);
         dump_words(s, "out", arg, n);    /* _IOW requests are written back too */
+        if (tun)
+            dump_tuning(s, "out", arg, tun);
         pthread_mutex_unlock(&lock);
     }
     errno = err;

@@ -22,8 +22,8 @@
  *
  * The userspace IQ-bin loader (DEFAULT_BIN, MEMORY_MALLOC/FREE,
  * SET_TIZIANO_PAR between REGISTER_SENSOR and ENUMINPUT, day/night) is
- * openimp_t32_bin.c (#289).  Not here (later T32 issues): tuning on
- * /dev/isp-m0.  FrameSource and bind: openimp_t32_fs.c (#290).
+ * openimp_t32_bin.c (#289).  Tuning on /dev/isp-m0: openimp_t32_tuning.c
+ * (#296).  FrameSource and bind: openimp_t32_fs.c (#290).
  *
  * The ISP memory comes from the shared reserved-arena allocator
  * (src/dma_alloc.c, as on T21/T23/T30/T31).
@@ -106,6 +106,17 @@ int OpenIMP_T32_SensorSize(uint32_t *width, uint32_t *height)
     }
     pthread_mutex_unlock(&t32.lock);
     return rc;
+}
+
+int OpenIMP_T32_SensorState(int num)
+{
+    int st = 0;
+
+    pthread_mutex_lock(&t32.lock);
+    if (t32.sensor_added && num == (int)t32.vinum)
+        st = t32.sensor_enabled ? 2 : 1;
+    pthread_mutex_unlock(&t32.lock);
+    return st;
 }
 
 int OpenIMP_T32_IvdcDirect(void)
