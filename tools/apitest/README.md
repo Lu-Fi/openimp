@@ -129,7 +129,7 @@ It pushes the binary over the console (gzip+base64), stops the streamer and runs
 followed by a health check (plain `fs` area: a fresh FrameSource EnableChn must work and frames must flow; dmesg without Oops).  QEMU proves
 return codes, set/get round trips, oops/crash and that frames still flow afterwards; it cannot prove picture effects.  A camera then proves only
 the picture effects, and only for cases that were QEMU-safe.  Anything that crashes the guest or stops the frame flow in QEMU is a bug and
-never runs on a camera.  A SoC without a camera (T30) gets evidence level `qemu` (matrix 🔧+, "API round trip in QEMU, no camera").
+never runs on a camera.  A SoC without a camera (T30) gets evidence level `qemu` (matrix 🔧+, "API round trip in QEMU, no camera"). T32 (planned, #300): built with `-DPLATFORM_T41 -DAPITEST_T32` against the T32 1.0.6 headers (T41 family, T23-family encoder attribute), run in `-M ingenic-t32` by `tools/t32/qemu-apitest.sh OUT [areas]` (OpenIMP `LIBIMP=build/t32/libimp.so`, `MODPROBE=audio` for the audio area); the picture area and the cases with T41-only types are not built for T32 yet.
 History: `IMP_ISP_Tuning_SetISPProcess(DISABLE)` (= ISP bypass for this driver) wedged the T10 camera until reboot (agg47-cases); the case now
 writes ENABLE only (`APITEST_PROCESS_BYPASS=1` runs the wedging value, QEMU only).
 

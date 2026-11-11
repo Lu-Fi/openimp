@@ -1026,7 +1026,7 @@ static void cs_rgbcoef(void)
 static void cs_rgbcoef(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetISPBypass && HAS_IMP_ISP_SetISPBypass
+#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_GetISPBypass && HAS_IMP_ISP_SetISPBypass
 static void cs_ispbypass(void)
 {
     NEED(IMP_ISP_GetISPBypass) NEED(IMP_ISP_SetISPBypass) {
@@ -1044,7 +1044,7 @@ static void cs_ispbypass(void) {}
 
 /* IMP_ISP_Set/GetDefaultBinPath: the vendor requires the call BEFORE IMP_ISP_AddSensor (attention note of the header); called from main()
  * between ISP_Open and AddSensor.  Writes the bin file the sensor loads by default (only if it exists), reads it back. */
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetDefaultBinPath && HAS_IMP_ISP_SetDefaultBinPath
+#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_GetDefaultBinPath && HAS_IMP_ISP_SetDefaultBinPath
 void t_binpath_pre(void)
 {
     const char *want = getenv("APITEST_CASES");
@@ -1076,7 +1076,7 @@ void t_binpath_pre(void)
 void t_binpath_pre(void) {}
 #endif
 
-#if (defined(PLATFORM_T41) || defined(PLATFORM_T40)) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
+#if (defined(PLATFORM_T41) || defined(PLATFORM_T40)) && !defined(APITEST_T32) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_GetDefaultBinPath
 static void cs_switchbin(void)
 {
     NEED(IMP_ISP_Tuning_SwitchBin) NEED(IMP_ISP_GetDefaultBinPath) {
@@ -1638,7 +1638,7 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
 }
 #endif
 
-#if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+#if !defined(APITEST_T40) && !defined(APITEST_T32) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
 static void cs_isposd(void)
 {
     NEED(IMP_ISP_Tuning_CreateOsdRgn) NEED(IMP_ISP_Tuning_SetOsdRgnAttr) NEED(IMP_ISP_Tuning_ShowOsdRgn) NEED(IMP_ISP_Tuning_DestroyOsdRgn) NEED(IMP_ISP_Tuning_SetOsdPoolSize) {
@@ -1985,7 +1985,7 @@ static void cs_faceae(void)
 static void cs_faceae(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAeExpList && HAS_IMP_ISP_Tuning_GetAeExpList
+#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_Tuning_SetAeExpList && HAS_IMP_ISP_Tuning_GetAeExpList
 #ifdef APITEST_T40
 #define AEL_BADMODE_OK 1      /* T40: the OEM tisp_ae_api_set_exp_list stores any mode (no check in the driver lift); the return code of mode 7 is only reported */
 #else
@@ -2530,7 +2530,7 @@ static void cs_alloc(void)
         pset(a0, c0);
     } else { ALN("IMP_PoolAlloc_Set_Attr"); ALN("IMP_PoolAlloc_Get_Attr"); }
     if (mp_init && mp_get) {
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) && !defined(APITEST_T32)     /* T32: the T10..T31 descriptor form (src/dma_alloc.c, #299) */
         /* T40/T41 have the vendor 1.2.x form: InitPool(id, size, name), GetById(id) returns the pool (NULL = unknown), no output struct
          * (the T10..T31 form below fills a descriptor); the physical range comes from OpenIMP_P2_PoolRange (diagnostics export) */
         {
@@ -2582,7 +2582,7 @@ static void cs_alloc(void)
 /* ---------------------------------------------------------------------------------------------- T41/T40 ISP-OSD API family
  * IMP_OSD_*_ISP (isp_osd.h, not part of the generated have/weak lists), IMP_ISP_Tuning_GetOsdRgnAttr, T41 Get/SetOSDAttr + Get/SetOSDBlock,
  * T40 Get/SetOSDAttr + Get/SetSingleOSDAttr.  Pass criterion = the picture: shown -> region luma moves, hidden -> back to the base. */
-#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetOsdRgnAttr && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_Tuning_GetOsdRgnAttr && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
 extern int IMP_OSD_SetPoolSize_ISP(int size);
 extern int IMP_OSD_CreateRgn_ISP(int chn, IMPIspOsdAttrAsm *a);
 extern int IMP_OSD_SetRgnAttr_PicISP(int chn, int handle, IMPIspOsdAttrAsm *a);
@@ -4604,7 +4604,7 @@ static void cs_ctmove_t40(void)
 #endif /* APITEST_T40 */
 
 /* T40 and T41 (same vendor protocol): case customalgo_t40 / customalgo_t41 */
-#if defined(APITEST_T40) || defined(PLATFORM_T41)
+#if (defined(APITEST_T40) || defined(PLATFORM_T41)) && !defined(APITEST_T32)
 /* customalgo_t40 / customalgo_t41 (#65 #76): IMP_ISP_SetAeAlgoFunc / IMP_ISP_SetAwbAlgoFunc.  The vendor registers the callback records when the sensor is enabled
  * (a record set later only counts at the next EnableSensor), so the records are installed by algo_pre_t40() before IMP_ISP_EnableSensor in the
  * main flow (when this case is selected); the case then checks open / handle / notify and algo_post_t40() the close after DisableSensor.
@@ -5671,7 +5671,7 @@ static void cs_meshscale(void)
 static void cs_meshscale(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && HAS_IMP_FrameSource_ExternInject_CreateChn && HAS_IMP_FrameSource_DequeueBuffer && HAS_IMP_FrameSource_QueueBuffer
+#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_FrameSource_ExternInject_CreateChn && HAS_IMP_FrameSource_DequeueBuffer && HAS_IMP_FrameSource_QueueBuffer
 /* IMP_FrameSource_ExternInject_* + DequeueBuffer/QueueBuffer (T40/T41): an injected NV12 channel (own channel number, no sensor) bound to its own
  * H.264 encoder channel; a feeder thread dequeues a buffer, paints a moving pattern and queues it; the encoder must hand out the frames.  Checks:
  * channel 7 refused, a double Create refused, Dequeue of a channel that is not enabled refused, N encoded frames with increasing time stamps,
@@ -5761,7 +5761,7 @@ static void cs_inject_t40(void)
 static void cs_inject_t40(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && !defined(APITEST_T32)
 /* ---------------------------------------------------------------------- t41pass (2026-11-04)
  * API-level cases for T41 cells that had no run before: IMP_FrameSource_SetYuvAlign (argument rules + geometry check against the real ch1 size),
  * IMP_ISP_Tuning_Get/SetMaskBlock (stored block read back, block off again), Get/SetAeScenceAttr, Get/SetAeExprInfo, Get/SetAwbAttr (written back
@@ -6364,7 +6364,7 @@ static void cs_t30pass2(void) {}
  * frames flow, read-back proof: the callback blackens the top half of every RAW frame -> the ISP output top half goes dark and
  * comes back when it stops; disable -> full rate again; 5 enable/disable cycles).  RAWVIC_HOLD=<s>: enable the ring and sleep
  * (the host kills the process with -9 for the recovery test).  Nothing is saved, no picture leaves the camera. */
-#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+#if defined(PLATFORM_T41) && !defined(APITEST_T40) && !defined(APITEST_T32)
 static volatile int g_vic_cnt, g_raw_cnt, g_raw_zero, g_raw_bad;
 static volatile uint32_t g_raw_w, g_raw_h;
 static int g_vic_on;

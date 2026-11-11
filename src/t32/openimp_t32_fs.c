@@ -67,8 +67,8 @@
 #define T32_FS_CHANNELS   3     /* /dev/framechan0-2 (MSCA channels) */
 #define T32_FS_MAX_BUFS   8     /* driver limit per channel */
 #define T32_FS_MAX_DEPTH  8
-#define T32_FS_MAX_BINDS  8
-#define T32_FS_MAX_SINKS  8
+#define T32_FS_MAX_BINDS  16
+#define T32_FS_MAX_SINKS  32            /* encoder, IVS and 12 OSD groups */
 #define T32_FS_GET_WAIT_MS 2000
 
 #define T32_BUF_TYPE_CAPTURE 1
@@ -115,9 +115,11 @@ struct t32_fs_chn {
     uint32_t frames, dropped, copied, sink_frames;
 };
 
+/* src: a FrameSource channel, or an OSD group that passes the frames on
+ * (FS -> OSD -> encoder, #297) */
 struct t32_fs_bind {
     int used;
-    int fs_chn;
+    IMPCell src;
     IMPCell dst;
 };
 
@@ -299,22 +301,32 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
 static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
     struct { OpenIMP_T32_FrameSink fn; void *ctx; } sinks[T32_FS_MAX_BINDS];
+    IMPCell from[T32_FS_MAX_BINDS + 1];
     struct t32_fs_slot *slot;
-    int i, j, nsinks = 0, done = 0;
+    int i, j, k, nsinks = 0, nfrom = 1, done = 0;
 
+    /* every cell this channel reaches, breadth first: the FrameSource
+     * channel's own receivers, then those behind an OSD group (which draws
+     * into the buffer before it passes it on, as the vendor OSD module) */
+    from[0].deviceID = DEV_ID_FS;
+    from[0].groupID = chn;
     pthread_mutex_lock(&fs_lock);
-    for (i = 0; i < T32_FS_MAX_BINDS; i++) {
-        if (!fs_bind[i].used || fs_bind[i].fs_chn != chn)
-            continue;
-        for (j = 0; j < T32_FS_MAX_SINKS; j++)
-            if (fs_sink[j].used && fs_sink[j].dev == (int)fs_bind[i].dst.deviceID &&
-                fs_sink[j].grp == (int)fs_bind[i].dst.groupID) {
-                sinks[nsinks].fn = fs_sink[j].fn;
-                sinks[nsinks].ctx = fs_sink[j].ctx;
-                nsinks++;
-                break;
-            }
-    }
+    for (k = 0; k < nfrom; k++)
+        for (i = 0; i < T32_FS_MAX_BINDS; i++) {
+            if (!fs_bind[i].used || fs_bind[i].src.deviceID != from[k].deviceID ||
+                fs_bind[i].src.groupID != from[k].groupID)
+                continue;
+            for (j = 0; j < T32_FS_MAX_SINKS && nsinks < T32_FS_MAX_BINDS; j++)
+                if (fs_sink[j].used && fs_sink[j].dev == (int)fs_bind[i].dst.deviceID &&
+                    fs_sink[j].grp == (int)fs_bind[i].dst.groupID) {
+                    sinks[nsinks].fn = fs_sink[j].fn;
+                    sinks[nsinks].ctx = fs_sink[j].ctx;
+                    nsinks++;
+                    break;
+                }
+            if (fs_bind[i].dst.deviceID == DEV_ID_OSD && nfrom <= T32_FS_MAX_BINDS)
+                from[nfrom++] = fs_bind[i].dst;
+        }
     slot = fs_pick_slot_locked(c);
     if (slot)
         slot->state = SLOT_FILLING;
@@ -829,15 +841,24 @@ int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn_num, IMPFrameInfo *frame)
 }
 
 /* ---- System bind ---------------------------------------------------------- */
+#define T32_OSD_GROUPS 12               /* vendor 2.2.0 osd.c: group < 12 */
+
+static int same_cell(const IMPCell *a, const IMPCell *b)
+{
+    return a->deviceID == b->deviceID && a->groupID == b->groupID;
+}
+
 int IMP_System_Bind(IMPCell *srcCell, IMPCell *dstCell)
 {
     int i, freei = -1, sink = 0;
 
     if (!srcCell || !dstCell)
         return -1;
-    if (srcCell->deviceID != DEV_ID_FS || srcCell->groupID < 0 ||
-        srcCell->groupID >= T32_FS_CHANNELS || srcCell->outputID != 0) {
-        IMP_LOG_ERR(TAG, "Bind: source %d-%d-%d not supported (FrameSource channels only)",
+    if (srcCell->outputID != 0 || srcCell->groupID < 0 ||
+        !((srcCell->deviceID == DEV_ID_FS && srcCell->groupID < T32_FS_CHANNELS) ||
+          (srcCell->deviceID == DEV_ID_OSD && srcCell->groupID < T32_OSD_GROUPS)) ||
+        same_cell(srcCell, dstCell)) {
+        IMP_LOG_ERR(TAG, "Bind: source %d-%d-%d not supported (FrameSource channels, OSD groups)",
                     srcCell->deviceID, srcCell->groupID, srcCell->outputID);
         return -1;
     }
@@ -864,7 +885,7 @@ int IMP_System_Bind(IMPCell *srcCell, IMPCell *dstCell)
         return -1;
     }
     fs_bind[freei].used = 1;
-    fs_bind[freei].fs_chn = srcCell->groupID;
+    fs_bind[freei].src = *srcCell;
     fs_bind[freei].dst = *dstCell;
     pthread_mutex_unlock(&fs_lock);
     return 0;
@@ -879,10 +900,8 @@ int IMP_System_UnBind(IMPCell *srcCell, IMPCell *dstCell)
     pthread_once(&fs_once, fs_init_once);
     pthread_mutex_lock(&fs_lock);
     for (i = 0; i < T32_FS_MAX_BINDS; i++)
-        if (fs_bind[i].used && srcCell->deviceID == DEV_ID_FS &&
-            fs_bind[i].fs_chn == srcCell->groupID &&
-            fs_bind[i].dst.deviceID == dstCell->deviceID &&
-            fs_bind[i].dst.groupID == dstCell->groupID) {
+        if (fs_bind[i].used && same_cell(&fs_bind[i].src, srcCell) &&
+            same_cell(&fs_bind[i].dst, dstCell)) {
             memset(&fs_bind[i], 0, sizeof(fs_bind[i]));
             rc = 0;
         }
@@ -907,9 +926,7 @@ int IMP_System_GetBindbyDest(IMPCell *dstCell, IMPCell *srcCell)
     for (i = 0; i < T32_FS_MAX_BINDS; i++)
         if (fs_bind[i].used && fs_bind[i].dst.deviceID == dstCell->deviceID &&
             fs_bind[i].dst.groupID == dstCell->groupID) {
-            srcCell->deviceID = DEV_ID_FS;
-            srcCell->groupID = fs_bind[i].fs_chn;
-            srcCell->outputID = 0;
+            *srcCell = fs_bind[i].src;
             rc = 0;
             break;
         }

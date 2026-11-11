@@ -28,30 +28,61 @@
 #include "t23/openimp_t23_osd.h"
 #include "t23/openimp_t23_osd_abi.h"
 #include "t23/openimp_t23_osd_pack.h"
+#if defined(PLATFORM_T32)
+#include "t32/openimp_t32_abi.h"
+#include "t32/openimp_t32_fs.h"
+/* the T32 2.x region attribute pinned in openimp_t32_abi.h (#286) */
+_Static_assert(sizeof(IMPOSDRgnAttr) == sizeof(T32OSDRgnAttrABI), "T32 IMPOSDRgnAttr size");
+_Static_assert(offsetof(IMPOSDRgnAttr, fontData) == offsetof(T32OSDRgnAttrABI, fontData),
+               "T32 IMPOSDRgnAttr fontData");
+_Static_assert(offsetof(IMPOSDRgnAttr, mosaicAttr) == offsetof(T32OSDRgnAttrABI, mosaicAttr),
+               "T32 IMPOSDRgnAttr mosaicAttr");
+_Static_assert(offsetof(IMPOSDRgnAttr, bitAttr) == offsetof(T32OSDRgnAttrABI, twobit_mask),
+               "T32 IMPOSDRgnAttr bitAttr");
+#endif
 
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
-/* I2D output pitch by physical address (openimp_p1.c); 0 = not an I2D frame */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
+/* I2D output pitch by physical address (openimp_p1.c); 0 = not an I2D frame
+ * (T32: the FrameSource line pitch, openimp_t32_fs.c) */
 extern uint32_t OpenIMP_FS_FramePitch(uint32_t physical) __attribute__((weak));
 #endif
 
+#if defined(PLATFORM_T32)
+/* vendor libimp 2.2.0 osd.c: groups < 12, region handles < 128 */
+#define T23_OSD_GROUPS  12
+#define T23_OSD_REGIONS 128
+#else
 #define T23_OSD_GROUPS  9
 #define T23_OSD_REGIONS 512
+#endif
 #define T23_OSD_MAX_IPU_ERRORS 10
 
 #define T23_IPU_START            0x2000496aUL   /* _IO('I', 106) */
 #define T23_IPU_FMT_BGRA_8888    5u
 #define T23_IPU_FMT_NV12         0x18u
+#define T23_IPU_FMT_2BIT         0x1cu  /* T32 jz_ipu_v13 HAL_PIXEL_FORMAT_2BIT */
 
 struct t23_ipu_osd_ch {
     uint32_t fmt, para, bak_argb, pos_x, pos_y, src_w, src_h, buf_p;
+#if defined(PLATFORM_T32)
+    /* T32 kernel 4.4.94 ingenic_ipu_v13.h osd_chN_2bit_{bit0_fmt,bit1_fmt,mask} */
+    uint32_t bit0_fmt, bit1_fmt, bit_mask;
+#endif
 };
 
 struct t23_ipu_param {
     uint32_t cmd, bg_w, bg_h, bg_fmt, bg_buf_p, out_fmt;
     struct t23_ipu_osd_ch ch[4];
 };
+#if defined(PLATFORM_T32)
+/* T32: 11 words per OSD channel; vendor 2.2.0 ipu_osd memsets 200 bytes and
+ * the kernel copies sizeof(struct ipu_param) = 200 */
+_Static_assert(sizeof(struct t23_ipu_param) == 200,
+               "T32 jz_ipu_v13 struct ipu_param (2-bit OSD fields)");
+#else
 _Static_assert(sizeof(struct t23_ipu_param) == 0x98,
                "jz_ipu_v13 struct ipu_param (T23 ipu_osd memset size)");
+#endif
 
 struct t23_osd_bitmap {
     uint8_t *virt;
@@ -68,6 +99,9 @@ struct t23_osd_region {
     int last;                       /* bitmap[] written last, -1 none */
     uint32_t pic_phys;              /* IPU source of the active picture */
     uint32_t pic_pitch;             /* its pitch in pixels = IPU src_w */
+#if defined(PLATFORM_T32)
+    int pic_2bit;                   /* PIX_FMT_2BIT picture (IPU 2-bit OSD) */
+#endif
     uint32_t cover_word;            /* A,Y,U,V for COVER */
     uint8_t line_y, line_u, line_v, line_visible;
 };
@@ -75,7 +109,7 @@ struct t23_osd_region {
 struct t23_osd_group {
     int created;
     int started;
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
     /* T40/T41 IMP_OSD_SetGroupCallback: called with every frame after the
      * group was drawn into it (vendor osd_update) */
     int (*callback)(int group, IMPFrameInfo *frame);
@@ -91,12 +125,13 @@ static int osd_ipu_errors;
 static int osd_ipu_disabled;
 static int osd_state;               /* 0 unknown, 1 on, -1 off */
 
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
 /* T41 and T40 build this OSD for their IPU path (/dev/ipu, the same
  * jz_ipu_v13 as T23 and T31; the vendor T40 1.3.1 ipu_osd, ipu_init and
  * _ipu_set_osdx_para are instruction-identical to T41 1.2.6).  The ISP OSD
  * (OSD_REG_ISP_*) has its own ioctls and is not implemented: those regions
- * are accepted and not drawn. */
+ * are accepted and not drawn.  T32 likewise: the open-tx-isp driver/t32
+ * has the MSCA OSD register pusher but no request that reaches it (#297). */
 static int IMP_OSD_SetRgnAttr_ISP(IMPOSDRgnAttr *attr, int show)
 {
     static int reported;
@@ -233,6 +268,10 @@ static int picture_format_ok(int type, int fmt)
 {
     if (type == OSD_REG_BITMAP)
         return 1;                   /* 1 bpp, whatever fmt says */
+#if defined(PLATFORM_T32)
+    if (fmt == T23_OSD_PIX_2BIT)
+        return 1;                   /* 2 bpp, the IPU draws it as is */
+#endif
     return fmt == T23_OSD_PIX_BGRA || fmt == T23_OSD_PIX_ARGB ||
            fmt == T23_OSD_PIX_RGBA || fmt == T23_OSD_PIX_ABGR ||
            fmt == T23_OSD_PIX_RGB555LE || fmt == T23_OSD_PIX_BGR555LE;
@@ -259,6 +298,10 @@ static void load_region(struct t23_osd_region *r)
     case OSD_REG_SLASH:
         argb_to_yuv(a->data.lineRectData.color, &r->line_y, &r->line_u,
                     &r->line_v);
+#if defined(PLATFORM_T32)
+        /* vendor 2.2.0 osd_draw_line: the cover formula, Y without +16 */
+        r->line_y = (uint8_t)(cover_word(a->data.lineRectData.color) >> 16);
+#endif
         r->line_visible = (a->data.lineRectData.color >> 24) != 0u;
         return;
     case OSD_REG_PIC:
@@ -275,6 +318,60 @@ static void load_region(struct t23_osd_region *r)
     r->pic_phys = 0;
     if (rect_size(a, &w, &h) != 0 || !picture_format_ok(a->type, a->fmt))
         return;
+#if defined(PLATFORM_T32)
+    /*
+     * T32 2-bit OSD (vendor 2.x IMPOSD2BitAttr, PIX_FMT_2BIT): 4 pixels a
+     * byte, w * h / 4 bytes (vendor CreateRgn / SetRgnAttr size), drawn by the
+     * IPU itself (format 0x1c, line stride w / 4) in the two colours of
+     * bitAttr; kept as is in rmem instead of converted to BGRA.
+     */
+    r->pic_2bit = a->type != OSD_REG_BITMAP && a->fmt == T23_OSD_PIX_2BIT;
+    if (r->pic_2bit) {
+        uintptr_t p = (uintptr_t)a->data.picData.pData;
+        uint32_t phys;
+
+        if ((w & 3u) || !p)
+            return;
+        size = w * h / 4u;
+        if (a->type == OSD_REG_PIC_RMEM) {
+            phys = DMA_VirtToPhys((const void *)p);
+            src = phys == (uint32_t)p ? DMA_PhysToVirt(phys) : (const uint8_t *)p;
+            phys = src ? DMA_VirtToPhys(src) : 0;
+            if (phys && phys != (uint32_t)(uintptr_t)src) {
+                DMA_RmemFlushCache((void *)(uintptr_t)src, size, 1);
+                r->pic_phys = phys;
+                r->pic_pitch = w;
+                r->active = 2;
+            }
+            return;
+        }
+        src = (const uint8_t *)p;
+        next = r->last == 0 ? 1 : 0;
+        b = &r->bitmap[next];
+        if (b->size < size) {
+            IMPDMABufferInfo info;
+
+            if (b->phys)
+                DMA_FreePhys(b->phys);
+            memset(b, 0, sizeof(*b));
+            memset(&info, 0, sizeof(info));
+            if (DMA_AllocDescriptor(&info, (int)size, "osd-2bit") != 0 ||
+                !info.virt_addr || !info.phys_addr) {
+                IMP_LOG(LOG_WARNING, "OSD", "no rmem for a %ux%u 2-bit OSD picture", w, h);
+                return;
+            }
+            b->virt = (uint8_t *)(uintptr_t)info.virt_addr;
+            b->phys = info.phys_addr;
+            b->size = size;
+        }
+        memcpy(b->virt, src, size);
+        DMA_RmemFlushCache(b->virt, size, 1);
+        r->active = r->last = next;
+        r->pic_phys = b->phys;
+        r->pic_pitch = w;
+        return;
+    }
+#endif
     if (a->type == OSD_REG_PIC_RMEM) {
         /* The picture already is in rmem (IMP_OSD_Alloc returns its
          * physical address; a virtual rmem address is accepted too). */
@@ -406,6 +503,14 @@ static void draw_line_region(T23Frame *f, const struct t23_osd_region *r,
         fill_box(f, x0, y0, x0 + lw - 1, y0 + len - 1, Y, U, V);
         break;
     case OSD_REG_RECT:
+#if defined(PLATFORM_T32)
+        /* vendor 2.2.0 osd_draw_rect: four lines lw wide centred on the
+         * edges (edge - lw/2 .. edge - lw/2 + lw - 1), checked in QEMU */
+        x0 -= lw / 2;
+        y0 -= lw / 2;
+        x1 += lw - 1 - lw / 2;
+        y1 += lw - 1 - lw / 2;
+#endif
         fill_box(f, x0, y0, x1, y0 + lw - 1, Y, U, V);
         fill_box(f, x0, y1 - lw + 1, x1, y1, Y, U, V);
         fill_box(f, x0, y0, x0 + lw - 1, y1, Y, U, V);
@@ -521,7 +626,7 @@ static void osd_apply_draw(int group, void *frame)
      * draw with that stride and clip at the visible width.  The vendor OSD
      * group gets the same rotated frame after the FrameSource I2D pass. */
     pitch = width;
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
     if (OpenIMP_FS_FramePitch && phys) {
         uint32_t p = OpenIMP_FS_FramePitch(phys);
 
@@ -560,9 +665,15 @@ static void osd_apply_draw(int group, void *frame)
     }
     if (count > 0 && (!phys || ipu_open_locked() != 0))
         count = 0;
-    for (i = 0; i < count; i += 4) {
+#if defined(PLATFORM_T32)
+    /* vendor 2.2.0 issues one IPU job per region (channel 0 only) */
+#define T23_OSD_IPU_PER_JOB 1
+#else
+#define T23_OSD_IPU_PER_JOB 4
+#endif
+    for (i = 0; i < count; i += T23_OSD_IPU_PER_JOB) {
         struct t23_ipu_param p;
-        int n = count - i < 4 ? count - i : 4;
+        int n = count - i < T23_OSD_IPU_PER_JOB ? count - i : T23_OSD_IPU_PER_JOB;
 
         memset(&p, 0, sizeof(p));
         p.bg_w = pitch;
@@ -584,6 +695,49 @@ static void osd_apply_draw(int group, void *frame)
             c->pos_y = (uint32_t)r->attr.rect.p0.y;
             c->src_w = w;
             c->src_h = h;
+#if defined(PLATFORM_T32)
+            /*
+             * Vendor libimp 2.2.0 (osd.c OSD_Draw_Layer_Cover_Pic_RectLine,
+             * jz_ipu_hal.c ipu_osd / _ipu_set_osdx_para, NV12 background):
+             *   cover: para = fgAlhpa << 3 | 0x02800003, bak_argb = the cover
+             *          word, its alpha scaled by fgAlhpa + 1 with gAlphaEn;
+             *   picture: alpha word aw = fgAlhpa (gAlphaEn), else
+             *          fgAlhpa | 0x100 (odd) or | 0x80 (even); para =
+             *          (aw & 0xff) << 3 | fmt bits | (aw & 0x100 ? 5 : 3),
+             *          fmt bits 0x02034000 for BGRA, 0x02002800 for 2-bit
+             *          (with the bitAttr colours and mask in the channel).
+             * The 16-pixel picture pitch of the T23 path is kept (same IPU).
+             */
+            if (r->attr.type == OSD_REG_COVER) {
+                uint32_t word = r->cover_word, a = word >> 24;
+
+                if (global) {
+                    a = (((uint32_t)g->fgAlhpa & 0xffu) + 1u) * a >> 8;
+                    word = (word & 0x00ffffffu) | (a > 255u ? 255u : a) << 24;
+                }
+                c->para = ((uint32_t)g->fgAlhpa & 0xffu) << 3 | 0x02800003u;
+                c->bak_argb = word;
+            } else {
+                uint32_t fg = (uint32_t)g->fgAlhpa;
+                uint32_t aw = global ? fg : fg | ((fg & 1u) ? 0x100u : 0x80u);
+                uint32_t low = (aw & 0x100u) ? 5u : 3u;
+
+                if (r->pic_2bit) {
+                    c->fmt = T23_IPU_FMT_2BIT;
+                    c->para = (aw & 0xffu) << 3 | 0x02002800u | low;
+                    c->bit0_fmt = r->attr.bitAttr.twobit_bit0_fmt;
+                    c->bit1_fmt = r->attr.bitAttr.twobit_bit1_fmt;
+                    c->bit_mask = r->attr.bitAttr.twobit_mask;
+                } else {
+                    c->para = (aw & 0xffu) << 3 | 0x02034000u | low;
+                }
+                c->buf_p = r->pic_phys;
+                c->src_w = r->pic_pitch;
+                if (c->pos_x + c->src_w > width)
+                    c->pos_x = width - c->src_w;
+            }
+            (void)alpha;
+#else
             if (r->attr.type == OSD_REG_COVER) {
                 /* stock _ipu_set_osdx_mask */
                 uint32_t word = r->cover_word, a = word >> 24;
@@ -607,6 +761,7 @@ static void osd_apply_draw(int group, void *frame)
                 if (c->pos_x + c->src_w > width)
                     c->pos_x = width - c->src_w;
             }
+#endif
             p.cmd |= 1u << k;
         }
         if (ioctl(osd_ipu_fd, T23_IPU_START, &p) < 0) {
@@ -820,7 +975,7 @@ int IMP_OSD_GetRegionLuma(IMPRgnHandle handle, IMPOSDRgnAttr *attr)
 
 void openimp_t23_osd_apply(int group, void *frame)
 {
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
     int (*callback)(int, IMPFrameInfo *) = NULL;
 #endif
 
@@ -828,7 +983,7 @@ void openimp_t23_osd_apply(int group, void *frame)
     osd_luma_note(group, frame);
 #endif
     osd_apply_draw(group, frame);
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
     if (!frame || !valid_group(group))
         return;
     pthread_mutex_lock(&osd_lock);
@@ -840,7 +995,7 @@ void openimp_t23_osd_apply(int group, void *frame)
 #endif
 }
 
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* Vendor T40 1.3.1 IMP_OSD_SetGroupCallback (0xbda40): group < 6 and
  * created (-1 otherwise), the callback (NULL clears it) is stored in the
  * group, 0.  Header: after CreateGroup, before FrameSource_EnableChn.
@@ -848,6 +1003,8 @@ void openimp_t23_osd_apply(int group, void *frame)
  * signed "< 4" only; a negative group is refused here as well). */
 #if defined(PLATFORM_T41)
 #define OSD_CALLBACK_GROUPS 4
+#elif defined(PLATFORM_T32)
+#define OSD_CALLBACK_GROUPS 12          /* vendor 2.2.0 osd.c: group < 12 */
 #else
 #define OSD_CALLBACK_GROUPS 6
 #endif
@@ -866,10 +1023,26 @@ int IMP_OSD_SetGroupCallback(int grpNum, int (*callback)(int group_index, IMPFra
 }
 #endif
 
+#if defined(PLATFORM_T32)
+/* T32: an OSD group is a FrameSource receiver (openimp_t32_fs.c); a frame
+ * bound FS -> OSD group -> encoder is drawn here first and then handed on */
+static int osd_t32_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
+{
+    (void)fs_chn;
+    openimp_t23_osd_apply((int)(intptr_t)ctx, frame);
+    return 0;
+}
+#endif
+
 int IMP_OSD_CreateGroup(int group)
 {
     if (!valid_group(group))
         return T23_OSD_ERR_CHNID;
+#if defined(PLATFORM_T32)
+    if (OpenIMP_FrameSource_RegisterSink(DEV_ID_OSD, group, osd_t32_sink,
+                                         (void *)(intptr_t)group) != 0)
+        return T23_OSD_ERR_RESOURCE;
+#endif
     pthread_mutex_lock(&osd_lock);
     osd_groups[group].created = 1;
     pthread_mutex_unlock(&osd_lock);
@@ -894,6 +1067,9 @@ int IMP_OSD_DestroyGroup(int group)
     }
     memset(&osd_groups[group], 0, sizeof(osd_groups[group]));
     pthread_mutex_unlock(&osd_lock);
+#if defined(PLATFORM_T32)
+    (void)OpenIMP_FrameSource_RegisterSink(DEV_ID_OSD, group, NULL, NULL);
+#endif
     return 0;
 }
 
@@ -930,7 +1106,11 @@ IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *attr)
     }
     if (handle == T23_OSD_REGIONS) {
         pthread_mutex_unlock(&osd_lock);
+#if defined(PLATFORM_T32)
+        return T23_OSD_ERR_UNEXIST;     /* vendor 2.2.0: "freerlist is empty" */
+#else
         return T23_OSD_ERR_NOMEM;
+#endif
     }
     r = calloc(1, sizeof(*r));
     if (!r) {

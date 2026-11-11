@@ -269,7 +269,7 @@ void t_isp(void)
 #if HAS_IMP_ISP_Tuning_GetAeWeight && !defined(PLATFORM_T41)
     ISPGET(IMP_ISP_Tuning_GetAeWeight, IMPISPWeight, "weight[7][7] %u", p->weight[7][7])
 #endif
-#if HAS_IMP_ISP_Tuning_GetAwbWeight
+#if HAS_IMP_ISP_Tuning_GetAwbWeight && !defined(APITEST_T32)   /* T32 1.0.6 header types differ; T32 ISP tuning: planned */
     ISPGET(IMP_ISP_Tuning_GetAwbWeight, IMPISPWeight, "weight[7][7] %u", p->weight[7][7])
 #endif
 #if HAS_IMP_ISP_Tuning_GetAfWeight
@@ -306,7 +306,7 @@ void t_isp(void)
 #endif
 
     /* --------------------------------------------------- misc (new families) */
-#if HAS_IMP_ISP_GetDefaultBinPath
+#if HAS_IMP_ISP_GetDefaultBinPath && !defined(APITEST_T32)   /* T32 1.0.6 header types differ; T32 ISP tuning: planned */
     NEED(IMP_ISP_GetDefaultBinPath) {
         char *path = (char *)gnew(256);
         r = IMP_ISP_GetDefaultBinPath(V0 path); gchk(path);
@@ -432,7 +432,7 @@ void t_isp(void)
 #if HAS_IMP_ISP_Tuning_GetTmoCurve
     ISPGET(IMP_ISP_Tuning_GetTmoCurve, IMPISPTmoCurve, "tmo curve read")
 #endif
-#if HAS_IMP_ISP_GetISPBypass
+#if HAS_IMP_ISP_GetISPBypass && !defined(APITEST_T32)   /* T32 1.0.6 header types differ; T32 ISP tuning: planned */
     ISPGET(IMP_ISP_GetISPBypass, IMPISPTuningOpsMode, "bypass %d", (int)*p)
 #endif
 #if HAS_IMP_ISP_GetInternalChnAttr

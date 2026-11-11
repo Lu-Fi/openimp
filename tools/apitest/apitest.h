@@ -61,9 +61,14 @@
 #include "apitest_weak.h"
 
 /* ------------------------------------------------------------------ SoC */
-/* T40 = T41 API family: build with -DPLATFORM_T41 -DAPITEST_T40 (T40 1.3.1 headers) */
+/* T40 = T41 API family: build with -DPLATFORM_T41 -DAPITEST_T40 (T40 1.3.1 headers).
+ * T32 (planned, #300) = T41 family for ISP / FrameSource / OSD / IVS / audio
+ * with the T23-family encoder API (IMPEncoderCHNAttr): build with
+ * -DPLATFORM_T41 -DAPITEST_T32 (T32 1.0.6 headers; structs = 2.x, PLAN) */
 #if defined(APITEST_T40)
 # define SOC "T40"
+#elif defined(APITEST_T32)
+# define SOC "T32"
 #elif defined(PLATFORM_T10)
 # define SOC "T10"
 #elif defined(PLATFORM_T20)
@@ -84,7 +89,7 @@
 
 /* encoder API family: T10/T20/T21/T23 IMPEncoderCHNAttr (per-codec rc unions),
  * T31/T41 IMPEncoderChnAttr (SetDefaultParam, profile based) */
-#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+#if (defined(PLATFORM_T31) || defined(PLATFORM_T41)) && !defined(APITEST_T32)
 # define ENC_NEW 1
 #else
 # define ENC_OLD 1

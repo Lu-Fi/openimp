@@ -111,6 +111,10 @@ compile t32_ivs_move src/t31/openimp_t31_ivs_move.c -O2 -I"$project_dir/src/t31"
 compile t32_ivs_move_v2 src/t31/openimp_ivs_move_v2.c -O2 -I"$project_dir/src/t31"
 # IMP_Buf_* pools, MemPoolRequest/Free, Read/WriteReg32 (#299)
 compile t32_sys src/t32/openimp_t32_sys.c
+# OSD (#297): the shared T23-family IPU OSD in the T32 2.x layout (272-byte
+# region attribute, 200-byte jz_ipu_v13 request with the 2-bit OSD fields),
+# OSD groups as FrameSource receivers (FS -> OSD -> encoder)
+compile t32_osd src/t23/openimp_t23_osd.c -O2
 # Audio (#298): AI/AO on the OSS3 /dev/dsp ABI of the T32 2.x kernel, which is
 # the T41 one (vendor 2.0.0 drivers/audio/oss3 audio_dsp.h); the T41 paths of
 # the shared modules with PLATFORM_T32: P3 AI/AO, DMIC (OSS3 variant), AENC/ADEC,
