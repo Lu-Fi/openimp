@@ -2482,12 +2482,15 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         (void)AL_Codec_Encode_SetGopParam(ch->codec, &eff);
     }
 #endif
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || \
+    defined(PLATFORM_T30)
     /* The codec parameter block has no room for the Helix rate-control
      * extras (staticTime, changePos, qualityLvl, QP steps, iBiasLvl, SMART):
      * hand them over as the OEM CreateChn hands its encoder the whole
      * rate-control attribute.  T20: the OEM CreateChn runs SMART as i264e
-     * method 3 (its own SMART controller), not as VBR. */
+     * method 3 (its own SMART controller), not as VBR.  T30: without this
+     * the T30 eprc ran with the i264e defaults (frmQPStep 3, iBiasLvl 0,
+     * qualityLvl 4) whatever the application set (#271). */
     (void)AL_Codec_Encode_SetRcExtras(ch->codec, &attr->rcAttr.attrRcMode);
 #endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21)

@@ -928,6 +928,36 @@ static void test_runtime_parameters(void)
     OpenIMP_T30_HelixDestroy(encoder);
 }
 
+#if defined(PLATFORM_T30)
+/* FIXQP (#271): the T30 1.0.5 library codes I pictures at QP - 3 and P pictures at QP although the channel's range
+ * is [qp, qp] (T30X b55 slice QPs: FixQP 25 -> I 22 / P 25, FixQP 35 -> I 32 / P 35) */
+static void test_t30_fixqp(void)
+{
+    HWEncoderParams params;
+    T30HelixEncoder *encoder = NULL;
+    PictureInfo info;
+    unsigned int n, idrs = 0;
+
+    memset(&params, 0, sizeof(params));
+    params.width = 640;
+    params.height = 360;
+    params.fps_num = 25;
+    params.fps_den = 1;
+    params.gop_length = 10;
+    params.rc_mode = HW_RC_MODE_FIXQP;
+    params.qp = 25;
+    params.min_qp = params.max_qp = 25;
+    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+    for (n = 0; n < 25u; n++) {
+        assert(encode(encoder, &info) == 0);
+        assert(info.qp == (info.idr ? 22u : 25u));
+        idrs += info.idr != 0;
+    }
+    assert(idrs == 3u);
+    OpenIMP_T30_HelixDestroy(encoder);
+}
+#endif
+
 #if defined(PLATFORM_T20)
 /* FIXQP (#191): the OEM i264e_ratecontrol_init codes I pictures at QP - 3, P pictures at QP, whatever
  * the QP range; the encoder front end hands a FIXQP channel the range [qp, qp] */
@@ -2513,6 +2543,9 @@ int main(void)
     test_eprc_mbrc();
     test_fisheye_t21();
     test_chroma_clamp_t21();
+#endif
+#if defined(PLATFORM_T30)
+    test_t30_fixqp();
 #endif
 #if defined(PLATFORM_T20)
     test_t20_fixqp();

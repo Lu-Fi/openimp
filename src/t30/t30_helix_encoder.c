@@ -2020,12 +2020,14 @@ static void helix_eprc_drop(T30HelixEncoder *encoder)
  * of a FIXQP channel is [qp, qp] (the encoder front end sets min = max =
  * qp), so the clamp would undo the 3 steps: the OEM T10 / T20 library
  * (3.12.0, i264e_ratecontrol_init 0x4ab38: I = qp - 3, P = qp, no range) does
- * not clamp, the T20 build keeps only 0..51 (#191). */
+ * not clamp, the T20 build keeps only 0..51 (#191).  The T30 1.0.5 library
+ * does not clamp either (T30X b55: FixQP 25 -> I 22, FixQP 35 -> I 32, P at
+ * the QP; #271). */
 static uint32_t t30_fixqp_idr_qp(const HWEncoderParams *params)
 {
     uint32_t qp = params->qp > 3u ? params->qp - 3u : 0u;
 
-#if !defined(PLATFORM_T20)
+#if !defined(PLATFORM_T20) && !defined(PLATFORM_T30)
     if (qp < params->min_qp)
         qp = params->min_qp;
     if (qp > params->max_qp)
