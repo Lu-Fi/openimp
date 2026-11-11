@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -709,12 +710,123 @@ int IMP_OSD_SetPoolSize(int size)
  * callback (vendor osd_update: osd_process, then callback(group, frame) if
  * one is set; its return value is ignored).  The callback runs without the
  * OSD lock, so it may call OSD functions. */
+#if defined(PLATFORM_T41)
+/*
+ * IMP_OSD_GetRegionLuma (T41 1.0.1/1.1.0-zrt/1.1.1, not in 1.2.x; 1.1.1
+ * 0xc680c, frame recorded by osd_process 0xc5a98): per character of a
+ * timestamp region, is the picture under it brighter than a threshold?
+ * The caller then draws those characters in the inverse colour.
+ *
+ * osd_process stores the frame it is called with: group 0 in one slot,
+ * every other group in a second one.  GetRegionLuma's "handle" is that slot
+ * (0 or 1), not a region handle.  For character i (i = 0..length, the vendor
+ * loop is inclusive) it samples the luma plane at
+ *   x = p0.x + fontWidth/2 + i*fontWidth,  y = p0.y + fontHeight/2:
+ * the pixel, x-2, x+2, y-4, y+4; avg = (int)(sum / 5.0f + 0.5);
+ * colType[i] = avg > luminance (luminance >= 256 counts as 200).
+ * Order of the checks as the vendor: attr NULL 0x80020040; slot 0/1 without
+ * a frame 0x80020008; istimestamp 0 -> 0; type not BITMAP/PIC/PIC_RMEM
+ * 0x80020040; invertColorSwitch 0 -> 0.
+ *
+ * Better than the vendor (documented): a slot other than 0/1 answers
+ * 0x80020008 instead of reading from address 0 (the vendor faults), samples
+ * outside the frame give colType 0 instead of reading past the buffer, at
+ * most 64 entries (colType[64]) are written, and the stride is the frame's
+ * line pitch (I2D-rotated frames) instead of its width.
+ */
+struct osd_luma_frame {
+    uint32_t width, height, pitch, virt;
+};
+static struct osd_luma_frame osd_luma[2];
+
+static void osd_luma_note(int group, const void *frame)
+{
+    const uint8_t *fi = frame;
+    struct osd_luma_frame f;
+
+    if (!frame || !valid_group(group))
+        return;
+    memcpy(&f.width, fi + 0x08, 4);
+    memcpy(&f.height, fi + 0x0c, 4);
+    memcpy(&f.virt, fi + 0x1c, 4);
+    f.pitch = f.width;
+    if (OpenIMP_FS_FramePitch) {
+        uint32_t phys, p;
+
+        memcpy(&phys, fi + 0x18, 4);
+        p = phys ? OpenIMP_FS_FramePitch(phys) : 0;
+        if (p >= f.width)
+            f.pitch = p;
+    }
+    pthread_mutex_lock(&osd_lock);
+    if (osd_groups[group].created)
+        osd_luma[group ? 1 : 0] = f;
+    pthread_mutex_unlock(&osd_lock);
+}
+
+int IMP_OSD_GetRegionLuma(IMPRgnHandle handle, IMPOSDRgnAttr *attr)
+{
+    struct osd_luma_frame f;
+    const IMPOSDFontAttrData *fd;
+    uint32_t lum, i, n;
+    int64_t x, y;
+
+    if (!attr)
+        return T23_OSD_ERR_NOT_SUPPORT;
+    memset(&f, 0, sizeof(f));
+    if (handle == 0 || handle == 1) {
+        pthread_mutex_lock(&osd_lock);
+        f = osd_luma[handle];
+        pthread_mutex_unlock(&osd_lock);
+        if (!f.virt)
+            return T23_OSD_ERR_UNEXIST;
+    }
+    fd = &attr->fontData;
+    if (!fd->istimestamp)
+        return 0;
+    if (attr->type != OSD_REG_BITMAP && attr->type != OSD_REG_PIC &&
+        attr->type != OSD_REG_PIC_RMEM) {
+        IMP_LOG(LOG_ERR, "OSD", "GetRegionLuma: region type %d is not a picture",
+                (int)attr->type);
+        return T23_OSD_ERR_NOT_SUPPORT;
+    }
+    if (!fd->invertColorSwitch)
+        return 0;
+    if (!f.virt)
+        return T23_OSD_ERR_UNEXIST;
+    lum = fd->luminance < 256u ? fd->luminance : 200u;
+    n = fd->length < 64u ? fd->length + 1u : 64u;
+    y = (int64_t)attr->rect.p0.y + (int32_t)fd->data.fontHeight / 2;
+    x = (int64_t)attr->rect.p0.x + (int32_t)fd->data.fontWidth / 2;
+    for (i = 0; i < n; i++, x += fd->data.fontWidth) {
+        const uint8_t *p;
+        uint32_t sum;
+
+        if (x < 2 || x + 2 >= (int64_t)f.width || y < 4 ||
+            y + 4 >= (int64_t)f.height) {
+            attr->fontData.colType[i] = 0;
+            continue;
+        }
+        p = (const uint8_t *)(uintptr_t)f.virt + (size_t)y * f.pitch + (size_t)x;
+        sum = (uint32_t)p[0] + p[-2] + p[2] + p[-4 * (ptrdiff_t)f.pitch] +
+              p[4 * (ptrdiff_t)f.pitch];
+        /* (int)(sum / 5.0f + 0.5): sum / 5 never ends in .5, so this is
+         * the integer rounding */
+        attr->fontData.colType[i] = (2u * sum + 5u) / 10u > lum;
+    }
+    return 0;
+}
+#endif
+
 void openimp_t23_osd_apply(int group, void *frame)
 {
 #if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     int (*callback)(int, IMPFrameInfo *) = NULL;
 #endif
 
+#if defined(PLATFORM_T41)
+    osd_luma_note(group, frame);
+#endif
     osd_apply_draw(group, frame);
 #if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     if (!frame || !valid_group(group))

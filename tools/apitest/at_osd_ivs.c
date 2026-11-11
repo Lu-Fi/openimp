@@ -90,9 +90,37 @@ static void osd_flow(void)
         }
 #if HAS_IMP_OSD_GetRegionLuma
         NEED(IMP_OSD_GetRegionLuma) {
+#if defined(PLATFORM_T41)
+            /* T41 (vendor 1.1.1): the handle is the frame slot (0 = OSD group 0, 1 = any other group);
+             * per character of a PIC timestamp region: centre luma (5 samples) > luminance. Vendor
+             * early returns: NULL attr 0x80020040, istimestamp 0 -> 0. */
+            G(IMPOSDRgnAttr, g);
+            int slot = OGRP ? 1 : 0, r0, rn, ones = 0, bad = 0, k;
+            enc_pull_h264(5);                                /* frames pass the OSD group (encoder polling) */
+            g->type = OSD_REG_PIC; g->rect.p0.x = 256; g->rect.p0.y = 200; g->rect.p1.x = 256 + 16 * 8 - 1; g->rect.p1.y = 231;
+            g->fontData.invertColorSwitch = 1; g->fontData.istimestamp = 1; g->fontData.luminance = 128;
+            g->fontData.length = 7; g->fontData.data.fontWidth = 16; g->fontData.data.fontHeight = 32;
+            for (k = 0; k < 8; k++) g->fontData.colType[k] = 7;
+            r = IMP_OSD_GetRegionLuma(slot, g);
+            for (k = 0; k < 8; k++) { if (g->fontData.colType[k] == 1) ones++; else if (g->fontData.colType[k] != 0) bad++; }
+            /* threshold ends on the real frame: 255 -> no character brighter, 0 -> all of a lit scene */
+            int z255 = 0, z0 = 0, r255, rz;
+            g->fontData.luminance = 255; r255 = IMP_OSD_GetRegionLuma(slot, g);
+            for (k = 0; k < 8; k++) z255 += g->fontData.colType[k];
+            g->fontData.luminance = 0; rz = IMP_OSD_GetRegionLuma(slot, g);
+            for (k = 0; k < 8; k++) z0 += g->fontData.colType[k];
+            if (r255 || rz || z255 != 0) bad++;
+            rn = IMP_OSD_GetRegionLuma(slot, NULL);
+            g->fontData.istimestamp = 0; g->fontData.colType[0] = 7;
+            r0 = IMP_OSD_GetRegionLuma(slot, g);
+            gchk(g);
+            CHECK(IMP_OSD_GetRegionLuma, r, bad == 0 && rn == (int)0x80020040 && r0 == 0 && g->fontData.colType[0] == 7,
+                  "slot %d: 8 chars at (256,200) 16x32: lum 128 -> %d bright, lum 255 -> %d, lum 0 -> %d; NULL attr 0x%x, istimestamp 0 -> %d", slot, ones, z255, z0, rn, r0);
+#else
             G(IMPOSDRgnAttr, g);
             r = IMP_OSD_GetRegionLuma(h2, g); gchk(g);
             RET0(IMP_OSD_GetRegionLuma, r, "region luma query");
+#endif
             gfree(g);
         }
 #endif
