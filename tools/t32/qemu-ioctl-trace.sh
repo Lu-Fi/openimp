@@ -19,6 +19,10 @@
 # LIBIMP      optional libimp.so to install instead of the rootfs one
 # PORT/MPORT  console / monitor TCP ports (default 3391/3392)
 # CPUS        taskset CPU list for QEMU (default 4-15; the host is shared)
+# SNAP=1      after the run, save the frame the sample announces ("T32F snap
+#             pa=... size=...", modes none/bind) with the QEMU monitor's
+#             pmemsave to OUT/snap.nv12 (tools/t32/nv12png.py makes a PNG;
+#             pictures stay local)
 # QEMU_EXTRA  extra QEMU arguments, e.g. "-trace ingenic_isp_write,file=OUT/isp.trace"
 #             (driver register writes for the vendor-vs-OpenIMP comparison, #289)
 set -eu
@@ -87,6 +91,16 @@ con 60 "cat /tmp/s.out" | tr -d '\r' > "$OUT/sample.txt"
 con 600 "echo __LOG_BEGIN; cat /tmp/t.log; echo __LOG_END" | tr -d '\r' |
     awk '/^__LOG_BEGIN/{f=1;next}/^__LOG_END/{f=0}f' > "$OUT/raw.log"
 con 60 "dmesg" | tr -d '\r' > "$OUT/dmesg.txt"
+if [ "${SNAP:-0}" = 1 ] && snap=$(grep -m1 '^T32F snap ' "$OUT/sample.txt"); then
+    pa=$(echo "$snap" | sed 's/.*pa=\(0x[0-9a-f]*\).*/\1/'); sz=$(echo "$snap" | sed 's/.*size=\([0-9]*\).*/\1/')
+    rm -f "$OUT/snap.nv12"
+    python3 - "$MPORT" "pmemsave $pa $sz \"$OUT/snap.nv12\"" <<'PY'
+import socket, sys, time
+s = socket.create_connection(("127.0.0.1", int(sys.argv[1])))
+s.sendall((sys.argv[2] + "\n").encode()); time.sleep(2); s.close()
+PY
+    echo "$snap" > "$OUT/snap.txt"
+fi
 kill $QPID 2>/dev/null || true; wait $QPID 2>/dev/null || true; trap - EXIT
 grep '^T32S' "$OUT/sample.txt" || true
 python3 "$REPO/tools/t32/t32_ioctl_seq.py" norm "$OUT/raw.log" \

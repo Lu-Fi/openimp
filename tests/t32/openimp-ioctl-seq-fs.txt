@@ -1,0 +1,51 @@
+# OpenIMP T32 ioctl sequence (#290), t32_trace_sample none 5, build/t32/libimp.so, same QEMU setup as
+# vendor-2.2.0-ioctl-seq-fs.txt.  EnableTuning is not on T32 yet (its isp-m0 request is ignored in the check);
+# the per-frame /dev/rmem cache invalidate before the depth copy is ignored too.
+@ IMP_ISP_Open()
+= tx-isp DRIVER_VERSION 80045401 rc=0
+@ IMP_ISP_AddSensor(IMPVI_MAIN, &si)
+= tx-isp REGISTER_SENSOR 80745405 rc=0
+= tx-isp DEFAULT_BIN c00454c9 rc=0 x3
+= tx-isp MEMORY_MALLOC 800c543a rc=0 x2
+= tx-isp SET_TIZIANO_PAR c00454c8 rc=0
+= tx-isp ENUMINPUT c0045402 rc=0
+= tx-isp ENUMINPUT c0045402 rc=-1:EINVAL
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp GET_ISP_IPC_MEM_INFO 800c5439 rc=0
+= tx-isp SET_ISP_IPC_MEM_INFO 800c5438 rc=0
+= tx-isp GET_ISP_MEM_INFO 800c5410 rc=0
+= tx-isp SET_ISP_MEM_INFO 800c540f rc=0
+@ IMP_ISP_EnableSensor(IMPVI_MAIN, &si)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp STREAMON 80085407 rc=0
+= tx-isp CREATE_SUBDEV_LINKS 80085409 rc=0
+= tx-isp LINKS_STREAMON c008540b rc=0
+@ IMP_System_Init()
+= misc-ivdc GET_DIRECT c0045471 rc=0 x2
+@ IMP_FrameSource_EnableChn(0)
+= framechan0 GET_FRAME_FORMAT c0045484 rc=0
+= framechan0 SET_FRAME_FORMAT c0045483 rc=0
+= framechan0 REQBUFS c0145485 rc=0
+= framechan0 QBUF c0605487 rc=0 x2
+= framechan0 FRAME_STREAMON c0045489 rc=0
+@ frames
+~ framechan0 DQBUF c0605488 rc=0 n=5
+~ framechan0 LISTEN_BUF c004548c rc=0 n=5
+~ framechan0 QBUF c0605487 rc=0 n=4
+~ rmem ? c00c7200 rc=0 n=5
+@ IMP_FrameSource_SetFrameDepth(0, 0)
+= rmem ? c00c7200 rc=0
+@ IMP_FrameSource_DisableChn(0)
+= framechan0 FRAME_STREAMOFF c004548a rc=0
+= framechan0 REQBUFS c0145485 rc=0
+= rmem ? c00c7200 rc=0 x2
+@ IMP_ISP_DisableSensor(IMPVI_MAIN)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp LINKS_STREAMOFF c008540c rc=0
+= tx-isp DESTROY_SUBDEV_LINKS 8008540a rc=0
+= tx-isp STREAMOFF 80085408 rc=0
+@ IMP_ISP_DelSensor(IMPVI_MAIN, &si)
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp RELEASE_SENSOR 80745406 rc=0
+= tx-isp MEMORY_FREE 800c543b rc=0 x2
+= rmem ? c00c7200 rc=0

@@ -63,6 +63,8 @@ compile t32_skeleton src/t32/openimp_t32_skeleton.c
 compile t32_isp src/t32/openimp_t32_isp.c
 # userspace IQ-bin loader, day/night bins (#289)
 compile t32_bin src/t32/openimp_t32_bin.c
+# FrameSource on the 2.x framechan ABI, System bind (#290)
+compile t32_fs src/t32/openimp_t32_fs.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects

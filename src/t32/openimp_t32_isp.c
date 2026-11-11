@@ -17,12 +17,13 @@
  *   IMP_ISP_DisableSensor G_INPUT, LINKS_STREAMOFF, DESTROY_SUBDEV_LINKS, STREAMOFF
  *   IMP_ISP_DelSensor   S_INPUT off, RELEASE_SENSOR, free the ISP memory
  *   IMP_System_Init     IVDC direct-mode query (system core and FrameSource
- *                       module each ask; 0 = not in direct mode)
+ *                       module each ask; 0 = not in direct mode); the answer
+ *                       is kept for FrameSource (#290)
  *
  * The userspace IQ-bin loader (DEFAULT_BIN, MEMORY_MALLOC/FREE,
  * SET_TIZIANO_PAR between REGISTER_SENSOR and ENUMINPUT, day/night) is
  * openimp_t32_bin.c (#289).  Not here (later T32 issues): tuning on
- * /dev/isp-m0, FrameSource, bind.
+ * /dev/isp-m0.  FrameSource and bind: openimp_t32_fs.c (#290).
  *
  * The ISP memory comes from the shared reserved-arena allocator
  * (src/dma_alloc.c, as on T21/T23/T30/T31).
@@ -61,6 +62,7 @@ static struct {
     int isp_fd;
     int open;
     int system_init;
+    int ivdc_direct;            /* GET_DIRECT answer at System_Init */
     int sensor_added;
     int sensor_enabled;
     IMPVI_NUM vinum;
@@ -119,6 +121,11 @@ int OpenIMP_T32_IvdcDirect(void)
     return direct != 0;
 }
 
+int OpenIMP_T32_IvdcDirectMode(void)
+{
+    return t32.system_init && t32.ivdc_direct;
+}
+
 /* ---- System ------------------------------------------------------------ */
 int IMP_System_Init(void)
 {
@@ -126,7 +133,9 @@ int IMP_System_Init(void)
     if (!t32.system_init) {
         /* system core and FrameSource module both learn whether the ISP
          * feeds the encoder directly (IVDC); PRJ007 driver: never */
-        if (OpenIMP_T32_IvdcDirect() || OpenIMP_T32_IvdcDirect())
+        t32.ivdc_direct = OpenIMP_T32_IvdcDirect();
+        t32.ivdc_direct |= OpenIMP_T32_IvdcDirect();
+        if (t32.ivdc_direct)
             IMP_LOG_WARN(TAG, "IVDC direct mode reported; not supported yet, using memory mode");
         t32.system_init = 1;
     }
