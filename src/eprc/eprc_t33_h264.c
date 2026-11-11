@@ -1459,3 +1459,108 @@ p0964:
     ST_S8(st + 0x94, c17);
     return (int8_t)((int8_t)q_p + (int8_t)c43);
 }
+
+/* P budget share per position class, row 1 when st+0x68 < 51 (0x1e9c44);
+ * the size estimate of class k scales by row[k - 1] */
+static const uint8_t t33_pclass_share[2][5] = { { 80, 95, 100, 95, 100 }, { 100, 100, 100, 100, 100 } };
+/* GOP-2 (st+0x30 == 2) dQP steps over the motion level (0x1e9718) */
+static const uint8_t t33_g2_level[11] = { 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+
+static int64_t t33_pos1(int64_t v)
+{
+    return v < 1 ? 1 : v;
+}
+
+/* QP of a P picture (get_P_frame_qp, 0x191960): refresh the class budgets
+ * (st+0x140..) and size estimates (st+0x118..) at a class boundary, then
+ * the fixed QP before the first I picture (st+0x398 == 0), the GOP-2 level
+ * step (st+0x30 == 2) or estimate_qp. */
+static int32_t e33_p_qp(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t out)
+{
+    uint32_t cfg = LD_U32(rc), gop = LD_U32(cfg + 0xc), pic = LD_U32(out + 0x20);
+    int64_t sec = (int64_t)LD_S32(st + 0x358), r360 = LD_S64(st + 0x360), a = LD_S64(st + 0x50), imin;
+    int64_t t1 = r360 * sec;
+    int32_t pos = LD_S32(st + 0x2c), row = LD_S32(st + 0x68) < 51, k, idx;
+    uint32_t lv;
+
+    ST_U8(st + 0x99, LD_S8(inst + 0x7c) != 0 && LD_U8(pic + 8) == 0 && LD_S8(st + 0x98) != 0);
+    for (k = 0; k < 5; k++) {
+        int64_t s = 0, b, e, tot, lim1, lim2, pk;
+        int32_t j, dd;
+        uint32_t d = gop - 1 - (uint32_t)pos;
+
+        if (LD_S32(st + 0x190 + k * 4) != pos)
+            continue;
+        if (k == 0) {
+            if (gop == 1)
+                return 0;   /* the vendor asserts */
+            b = t33_pos1(t1 - a) * (int64_t)LD_S32(st + 0x194) / (int64_t)(gop - 1);
+            ST_S64(st + 0x140, t33_pos1((int64_t)((uint64_t)b * t33_pclass_share[row][0]) / 100));
+            ST_S64(st + 0x118, t1);
+            continue;
+        }
+        for (j = 0; j < k; j++)
+            s += LD_S64(st + 0x168 + j * 8);
+        b = t33_pos1(t1 - a - s);
+        if (k < 4)
+            b = b * (int64_t)(LD_S32(st + 0x194 + k * 4) - pos) / (int64_t)d;
+        ST_S64(st + 0x140 + k * 8, t33_pos1((int64_t)((uint64_t)b * t33_pclass_share[row][k]) / 100));
+        e = (int64_t)((uint64_t)LD_S64(st + 0x160 + k * 8) * 100) / t33_pclass_share[row][k - 1];
+        e = (int64_t)((uint64_t)e * d);
+        dd = pos - LD_S32(st + 0x18c + k * 4);
+        e /= dd < 1 ? 1 : dd;
+        tot = e + s + a;
+        lim1 = (r360 + LD_S64(st + 0x370)) / 2 * sec;
+        lim2 = (r360 + LD_S64(st + 0x378)) / 2 * sec;
+        pk = LD_S64(st + 0x110 + k * 8);
+        if (k == 4) {
+            if (tot > lim1 && pk < t1)
+                ;
+            else if (tot < lim2)
+                pk = pk > t1 ? pk : t1;
+            else
+                pk = t1;
+        } else if (tot > lim1) {
+            pk = (int64_t)((double)pk * 0.98);
+        } else if (tot < lim2) {
+            pk = (int64_t)((double)pk * 1.02);
+        }
+        ST_S64(st + 0x118 + k * 8, pk);
+    }
+    if (LD_S8(inst + 0x7f) == 3)
+        ST_U8(st + 0x9a, LD_S8(pic + 0x1c) < 51 ? 2 : 1);
+
+    imin = LD_S64(inst + 0x20);
+    if (LD_S32(st + 0x398) == 0) {
+        /* no I picture yet: the per-picture budgets and the start QP */
+        int32_t q;
+        int8_t c;
+
+        if (gop == 1)
+            return 0;       /* the vendor asserts */
+        ST_S64(st + 0x88, t33_max64(t33_pos1(LD_S64(st + 0x370) * sec) / (int64_t)gop, imin));
+        ST_S64(st + 0x80, t33_max64(t33_pos1(t1) / (int64_t)gop, imin));
+        c = LD_S8(st + 0xdc);
+        if (c > 0)
+            return c;
+        q = LD_S32(st + 0x5c);
+        return q < 1 ? LD_S8(st + 0x60) : (int8_t)q;
+    }
+    if (LD_S8(st + 0x30) != 2)
+        return e33_estimate_qp(X, rc, inst, st, out);
+    lv = gop < 30 ? LD_U32(st + 0x68) : gop * LD_U32(st + 0x68) / (((gop - 30) >> 1) + 30);
+    if (LD_S32(st + 0x14) != 1 && (LD_S8(inst + 0x4c) != 0 || LD_S8(pic + 0x1c) > 9))
+        return e33_estimate_qp(X, rc, inst, st, out);
+    for (idx = 0; idx < 11 && (int32_t)lv >= t33_g2_level[idx]; idx++)
+        ;
+    idx = idx < 11 ? idx - 3 : 8;
+    if (gop == 1)
+        return 0;           /* the vendor asserts */
+    {
+        int64_t i38 = LD_S64(st + 0x38);
+
+        ST_S64(st + 0x88, t33_max64(t33_pos1(LD_S64(st + 0x370) * sec - i38) / (int64_t)(gop - 1), imin));
+        ST_S64(st + 0x80, t33_max64(t33_pos1(t1 - i38) / (int64_t)(gop - 1), imin));
+    }
+    return (int8_t)(LD_S32(st + 0x58) + idx);
+}
