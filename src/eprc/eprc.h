@@ -237,4 +237,33 @@ int EPRC30_FrameEnd(Eprc30 *rc, uint32_t bytes,
                     const uint32_t regs[EPRC30_STAT_REGS], uint32_t cmpx,
                     EprcPicture *pic, int may_repeat);
 
+/* H264E_T30_SliceInit (T30 1.0.5, 0x45590): the macroblock rate-control
+ * fields of the H.264 slice-parameter block (h264_get_mb_qp output) as
+ * Helix register words (Lu-Fi/openimp#217 step 2).  qp_flags is 0x40074
+ * without its QP fields (slice +0x184/+0x185/+0x186 at bits 8/24/16; the
+ * OEM ORs the signed bytes +0x1e0, +0x1c8, +0x1e1 in unmasked, as here);
+ * reg[] are 0x4007c, 0x40080, 0x40084, 0x40088, 0x4008c, 0x40090,
+ * 0x40078, 0x400a4, 0x400a8, 0x400ac, 0x400b0, 0x400b4, 0x400c8 (the
+ * OEM order); qpmap is 0x4006c (the QP-map table itself, slice +0x18c, is
+ * not set on the T30 H.264 and not emitted).  bu_on: a P slice with the
+ * basic unit (+0x1e8 > 1, +0x1c7): bu_n target words (+0x1d8, at most
+ * 128) go to 0x80800 + 4 k, bu[] to 0x80158, 0x8010c, 0x80108, 0x80104,
+ * 0x80100.  The OEM reads its targets through +0x1e4, the address of
+ * h264_get_mb_qp's (stack) target array; OpenIMP keeps them in
+ * Eprc30.bu_tgt.  h264_get_mb_qp leaves the basic-unit fields of an
+ * earlier picture in place when it returns early (S+0 == 0, most P
+ * pictures), and the OEM then reads +0x1e4 of that earlier call, a stack
+ * frame long gone: bu_fresh 0, and OpenIMP sends zero targets there. */
+#define EPRC30_MBRC_REGS 13
+extern const uint32_t EPRC30_MbRcRegAddr[EPRC30_MBRC_REGS];
+typedef struct {
+    uint32_t qp_flags;
+    uint32_t reg[EPRC30_MBRC_REGS];
+    uint32_t qpmap;
+    int bu_on, bu_fresh;
+    uint32_t bu_n;
+    uint32_t bu[5];
+} Eprc30MbRc;
+void EPRC30_MbRcRegs(const uint8_t *slice, int p_slice, Eprc30MbRc *out);
+
 #endif

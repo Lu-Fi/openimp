@@ -57,6 +57,21 @@ typedef struct {
      * (OPENIMP_T30_FSC=<hex>, read once in t30_fill_slice). */
     uint8_t fsc_override;
     uint32_t fsc_word;
+    /* T30 only (#217): the macroblock rate control of the OEM
+     * H264E_T30_SliceInit (src/eprc EPRC30_MbRcRegs).  mbrc != 0 ORs
+     * mbrc_qp_flags into 0x40074 and writes mbrc_regs[] into 0x4007c,
+     * 0x40080, 0x40084, 0x40088, 0x4008c, 0x40090, 0x40078, 0x400a4,
+     * 0x400a8, 0x400ac, 0x400b0, 0x400b4, 0x400c8 (0 without); a P slice
+     * with mbrc_bu_on also gets mbrc_bu_n basic-unit targets at 0x80800 +
+     * 4 k (mbrc_bu_tgt, NULL: zero) and mbrc_bu[] at 0x80158, 0x8010c,
+     * 0x80108, 0x80104, 0x80100, after 0x8007c as the OEM. */
+    uint8_t mbrc;
+    uint8_t mbrc_bu_on;
+    uint16_t mbrc_bu_n;
+    uint32_t mbrc_qp_flags;
+    uint32_t mbrc_regs[13];
+    uint32_t mbrc_bu[5];
+    const int32_t *mbrc_bu_tgt;
 } T30H264SliceConfig;
 
 

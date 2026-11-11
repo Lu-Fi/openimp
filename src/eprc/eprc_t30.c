@@ -1252,6 +1252,9 @@ static void e30_mb_qp(Eprc30 *rc)
     int32_t u, cnt, mad, acc, k, base, t, nb;
 
     b[499] = 1;
+    /* +484 (the OEM's target-array address): 1 once this call computed
+     * targets, 0 otherwise (EPRC30_MbRcRegs, bu_fresh) */
+    EU32(b, 484) = 0;
     if (n0 == 0) {
         S8(1308) = 0;
         S32(1312) = 0;
@@ -1347,6 +1350,70 @@ static void e30_mb_qp(Eprc30 *rc)
      * targets stay in rc->bu_tgt, +484 = 1 marks them as this picture's */
     EU32(b, 484) = 1;
 }
+
+/* H264E_T30_SliceInit (0x45590): the macroblock rate-control words of the
+ * slice-parameter block (eprc.h, Eprc30MbRc).  The OEM reads +0x1ae,
+ * +0x1b2 and +0x1b6 as unaligned words (lwl/lwr). */
+const uint32_t EPRC30_MbRcRegAddr[EPRC30_MBRC_REGS] = {
+    0x4007c, 0x40080, 0x40084, 0x40088, 0x4008c, 0x40090, 0x40078,
+    0x400a4, 0x400a8, 0x400ac, 0x400b0, 0x400b4, 0x400c8 };
+
+static uint32_t e30_u32(const uint8_t *b, unsigned int o)
+{
+    return (uint32_t)b[o] | (uint32_t)b[o + 1] << 8 | (uint32_t)b[o + 2] << 16 |
+           (uint32_t)b[o + 3] << 24;
+}
+
+static uint32_t e30_6bit4(const uint8_t *b, unsigned int o)
+{
+    return (b[o] & 0x3fu) | (b[o + 1] & 0x3fu) << 8 | (b[o + 2] & 0x3fu) << 16 |
+           (uint32_t)(b[o + 3] & 0x3fu) << 24;
+}
+
+/* a signed slice byte as the OEM ORs it in (sign-extended, unmasked) */
+#define E30_SB(o, n) ((uint32_t)(int32_t)(int8_t)b[o] << (n))
+
+void EPRC30_MbRcRegs(const uint8_t *b, int p_slice, Eprc30MbRc *out)
+{
+    uint32_t i, n;
+
+    memset(out, 0, sizeof(*out));
+    if (!b)
+        return;
+    out->qp_flags = (uint32_t)b[0x190] | (uint32_t)b[0x191] << 1 |
+                    (uint32_t)b[0x192] << 2 | (uint32_t)b[0x193] << 3 |
+                    E30_SB(0x1e0, 4) | E30_SB(0x1c8, 7) | E30_SB(0x1e1, 14);
+    out->reg[0] = e30_u32(b, 0x194);
+    out->reg[1] = e30_u32(b, 0x198);
+    out->reg[2] = e30_u32(b, 0x19c);
+    out->reg[3] = (uint32_t)b[0x1a0] | (uint32_t)b[0x1a1] << 8;
+    out->reg[4] = e30_6bit4(b, 0x1a2);
+    out->reg[5] = e30_6bit4(b, 0x1a6);
+    out->reg[6] = (uint32_t)b[0x1ab] | (uint32_t)b[0x1ac] << 4 |
+                  (uint32_t)b[0x1aa] << 8;
+    out->reg[7] = e30_u32(b, 0x1ae);
+    out->reg[8] = e30_u32(b, 0x1b2);
+    out->reg[9] = e30_u32(b, 0x1b6);
+    out->reg[10] = e30_6bit4(b, 0x1ba);
+    out->reg[11] = e30_6bit4(b, 0x1be);
+    for (i = 0; i < 5u; i++)
+        out->reg[12] |= (b[0x1c2 + i] & 7u) << (4u * i);
+    out->qpmap = (e30_u32(b, 0x188) & 0x7ffu) << 20 | 0xc5800u |
+                 (uint32_t)b[0x187] << 31;
+    /* 0x46bb8: P slices with the basic unit on */
+    if (!p_slice || (int32_t)e30_u32(b, 0x1e8) <= 1 || b[0x1c7] == 0)
+        return;
+    out->bu_on = 1;
+    out->bu_fresh = e30_u32(b, 0x1e4) == 1u;
+    n = e30_u32(b, 0x1d8);
+    out->bu_n = n > 128u ? 128u : n;
+    out->bu[0] = e30_u32(b, 0x1cc);
+    out->bu[1] = e30_u32(b, 0x1d0);
+    out->bu[2] = e30_u32(b, 0x1d4);
+    out->bu[3] = (n & 0x7fu) << 14 | (e30_u32(b, 0x1dc) & 0x3fffu);
+    out->bu[4] = b[0x1c7] & 3u;
+}
+#undef E30_SB
 
 /* .rodata 0x170000 - 0x584 .. - 0x524: the mode-decision constants of
  * h265_api_enc */

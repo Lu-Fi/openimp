@@ -20,6 +20,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-11 (late): T41 IMP_ISP_RAW_RwControl device-tested (#320)
 
 - T41: the RAW ring works with open-tx-isp `claude/t41-320b` (RDMA frame-done handler fixed in the module, ring served by default). Device (Vanhua T55A, gc5603): codes and RAW16x2 -4094 as the vendor, RAW8 x1 callback 2880x1620 at 12.7/s, read-back proof (callback blackens the RAW top half -> ISP output top third luma 102 -> 16 -> 110), 5/5 enable/disable cycles, kill -9 -> ring stopped on fd release, 0 oops. Matrix cell T41 err -> dev. No library change.
+## 2026-11-11 (night): T30 H264E_T30_SliceInit macroblock rate-control registers (#217 step 2, #343)
+
+- `EPRC30_MbRcRegs` (`src/eprc/eprc_t30.c`) encodes the macroblock rate-control fields of the T30 H.264 slice block as the vendor `H264E_T30_SliceInit` does: the 0x40074 flag bits (with the signed bytes OR-ed in unmasked, as the vendor does), 0x4007c..0x40090, 0x40078, 0x400a4..0x400c8 and 0x4006c, and for P slices the basic-unit block (targets at 0x80800 + 4k, plus 0x80158/0x8010c/0x80108/0x80104/0x80100). The T30 command list (`t30_h264_descriptor.c`) carries them when `OPENIMP_EPRC_MBRC=1` or `IMP_Encoder_SetMbRC` switches the macroblock RC on. It is **off by default** until the device A/B (step 3) is done. `OPENIMP_EPRC_MBRC_LOG=<n>` logs the words.
+- The vendor `h264_get_mb_qp` returns early for most P pictures and leaves the basic-unit fields of an earlier picture in place. `SliceInit` then reads the target array through a stale stack pointer (+0x1e4). In that case OpenIMP sends zero targets (`bu_fresh`).
+- Oracle: `tools/eprc_t30_oracle.py --regs` writes one `W` line per coding try. It runs the vendor `SliceInit` on the slice block that try is coded with. `--regs-fuzz SEED N` runs it on random blocks. Results: `eprc_t30_regs_vectors.txt` 970/970 and `eprc_t30_sliceinit_vectors.txt` 250/250 equal, and a local 20000-block fuzz run has 0 differences. The new descriptor test in `tests/t30` checks the order and the values of the words.
+- #343: the shared oracle emulator (`tools/eprc_oracle.py`) returned 0 for the vendor's libgcc `__divdi3`/`__moddi3`/`__udivdi3`/`__umoddi3`. This is fixed. The step-1 basic-unit targets had never been compared. With the fix they are equal to the vendor.
+- Host tests and a T30 cross-build only, plus a QEMU stream decode. No camera.
 
 ## 2026-11-11 (late): test pattern mode 5 on T31 and T21, T23 chroma (#103)
 

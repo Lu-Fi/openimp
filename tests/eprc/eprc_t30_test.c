@@ -81,6 +81,31 @@ static uint32_t picture_bytes(uint32_t frame, uint32_t qp, int idr,
     return size < 20u ? 20u : (uint32_t)size;
 }
 
+/* The 'W' line fields (#217 step 2, tools/eprc_t30_oracle.py --regs):
+ * 0x40074, the 13 macroblock rate-control registers, 0x4006c, basic unit
+ * on, target count, its five registers, CRC-32 of the targets (zero
+ * targets when this try computed none, eprc.h) */
+#define W_WORDS 23
+static void mbrc_words(const uint8_t *b, int p_slice, const int32_t *tgt,
+                       uint32_t got[W_WORDS])
+{
+    static const int32_t zero[128];
+    Eprc30MbRc m;
+    int i;
+
+    EPRC30_MbRcRegs(b, p_slice, &m);
+    got[0] = m.qp_flags | (uint32_t)b[0x184] << 8 | (uint32_t)b[0x186] << 16 |
+             (uint32_t)b[0x185] << 24;
+    memcpy(got + 1, m.reg, sizeof(m.reg));
+    got[14] = m.qpmap;
+    got[15] = (uint32_t)m.bu_on;
+    got[16] = m.bu_on ? m.bu_n : 0u;
+    for (i = 0; i < 5; i++)
+        got[17 + i] = m.bu_on ? m.bu[i] : 0u;
+    got[22] = crc32((const uint8_t *)(m.bu_fresh ? tgt : zero),
+                    m.bu_on ? 4u * m.bu_n : 0u);
+}
+
 int main(int argc, char **argv)
 {
     const char *path = argc > 1 ? argv[1] : "eprc_t30_vectors.txt";
@@ -91,6 +116,12 @@ int main(int argc, char **argv)
     static uint8_t qpmap[0x10000];
     EprcParams p;
     int scenario = -1, frame = 0, active = 0, real = 0;
+    /* 'W' lines (#217 step 2): the register words of the slice block of
+     * the last picture (last_p: a P picture), or of the last 'Z' block */
+    static uint8_t zslice[0x1204];
+    static int32_t ztgt[128];
+    static uint32_t wq[16][W_WORDS];   /* per coding try of the last picture */
+    int wn = 0, wk = 0, zp = 0, zmode = 0;
     long checked = 0, failed = 0;
 
     if (!f) {
@@ -223,6 +254,52 @@ int main(int argc, char **argv)
                 fprintf(stderr, "%s: scenario %d picture %d: parameter block / QP map differ\n",
                         path, scenario, frame);
             frame++;
+        } else if (line[0] == 'Z') {
+            /* --regs-fuzz: a random slice block, +0x184..+0x1f3 */
+            char *t = line + 1;
+            uint32_t i, salt;
+
+            zp = (int)strtol(t, &t, 10);
+            while (*t == ' ')
+                t++;
+            memset(zslice, 0, sizeof(zslice));
+            for (i = 0x184; i < 500u && t[0] && t[1]; i++, t += 2) {
+                char h[3] = {t[0], t[1], 0};
+                zslice[i] = (uint8_t)strtoul(h, NULL, 16);
+            }
+            salt = (uint32_t)zslice[0x1cc] | (uint32_t)zslice[0x1cd] << 8 |
+                   (uint32_t)zslice[0x1ce] << 16 | (uint32_t)zslice[0x1cf] << 24;
+            for (i = 0; i < 128u; i++)      /* fuzz_target() of the oracle */
+                ztgt[i] = (int32_t)(i * 0x9e3779b1u + salt);
+            zslice[0x1e4] = 1;              /* the oracle passes the targets */
+            zslice[0x1e5] = zslice[0x1e6] = zslice[0x1e7] = 0;
+            mbrc_words(zslice, zp, ztgt, wq[0]);
+            wn = 1;
+            wk = 0;
+            zmode = 1;
+        } else if (line[0] == 'W' && (active || zmode)) {
+            unsigned long want[W_WORDS];
+            char *t = line + 1;
+            int i;
+
+            for (i = 0; i < W_WORDS; i++)
+                want[i] = strtoul(t, &t, i == 15 || i == 16 ? 10 : 16);
+            checked++;
+            if (wk >= wn) {
+                if (failed++ < 10)
+                    fprintf(stderr, "%s: scenario %d picture %d: extra W line\n",
+                            path, scenario, frame - 1);
+                continue;
+            }
+            for (i = 0; i < W_WORDS; i++)
+                if (wq[wk][i] != (uint32_t)want[i])
+                    break;
+            if (i < W_WORDS && failed++ < 10)
+                fprintf(stderr, "%s: scenario %d picture %d try %d: SliceInit word %d "
+                        "%08x, OEM %08lx\n", path, scenario, frame - 1, wk, i,
+                        wq[wk][i], want[i]);
+            wk++;
+            zmode = 0;
         } else if (line[0] == 'B' && active) {
             /* the slice-parameter block after the picture (h264_get_mb_qp
              * output); +0x1e4 holds an OEM stack address */
@@ -270,6 +347,9 @@ int main(int argc, char **argv)
             }
             idr = since % (int)p.gop == 0;
             EPRC30_FrameStart(&rc, idr, &pic);
+            mbrc_words(slice, !idr, rc.bu_tgt, wq[0]);
+            wn = 1;
+            wk = 0;
             if (real)
                 cmpx = real_statistics((uint32_t)frame, p.width, p.height, regs);
             else
@@ -287,6 +367,8 @@ int main(int argc, char **argv)
                 memset(slice + 0x1e4, 0, 4);  /* as the oracle: set by a basic-unit run */
                 if (EPRC30_FrameEnd(&rc, bytes, regs, cmpx, &pic, 1) != 1)
                     break;
+                if (wn < 16)
+                    mbrc_words(slice, !idr, rc.bu_tgt, wq[wn++]);
                 bytes = bytes / 2u < 20u ? 20u : bytes / 2u;
             }
             if (i + 1 < n && failed++ < 10)
