@@ -1180,29 +1180,172 @@ static void e30_api_enc(Eprc30 *rc)
     EU32(p, 0xc0) = 0x400;
 }
 
-/* h264_get_mb_qp (0x12b570), the part that the picture-level decisions
- * depend on: the mode word A+152 (0x230 for P, 0x30 for IDR pictures, 0 for
- * FIXQP) selects the per-macroblock QP map (bits 0..3, 0 here: cleared), the
- * SAS offsets (bits 4..7) and the basic-unit targets (bits 8..11), whose
- * setup forces a zero MAD (S+892) to 2.  The slice-block fields of the
- * macroblock rate control are not produced yet (the T30 command list does
- * not program them). */
-static void e30_mb_qp(Eprc30 *rc)
+/* h264_get_mb_qp (0x12b570): the macroblock-level fields of the H.264
+ * slice-parameter block.  A+152 (E+28) is 0x230 (P), 0x30 (IDR) or 0
+ * (FIXQP) on the T30: nibble 0 the QP map (0: none), nibble 1 the SAS
+ * offsets (3: by the flat-block shares, 0: off), nibble 2 the basic unit
+ * (2: bit targets per basic unit, 0: off).  QP-map modes 1..3 only clear
+ * their state here, SAS modes 1 (h264_crp_ofst) and 2 (h264_sas_ofst) are
+ * not set by the T30 i264e and not ported (their SAS bytes stay). */
+
+static void e30_put_u16s(uint8_t *b, const uint16_t *v, int n);
+
+/* h264_sasm_ofst (.rodata): 4 x-classes x QP flag x 4 y/z classes, 7 bytes */
+static const int8_t e30_sasm[32][7] = {
+    {-5, -3, -2, 0, 0, 1, 2}, {-5, -3, -2, 0, 0, 1, 2}, {-5, -3, -1, 0, 1, 1, 2},
+    {-4, -3, -1, 0, 0, 1, 2}, {-5, -3, -2, 0, 0, 1, 2}, {-5, -2, -1, 0, 0, 1, 2},
+    {-5, -2, -1, 0, 1, 2, 2}, {-5, -2, -1, 0, 0, 1, 2}, {-6, -4, -2, 0, 1, 2, 3},
+    {-6, -4, -2, 0, 1, 2, 3}, {-6, -4, -2, 0, 1, 2, 3}, {-6, -4, -2, 0, 1, 2, 3},
+    {-6, -5, -2, 0, 1, 2, 3}, {-6, -4, -1, 0, 1, 2, 3}, {-6, -4, -1, 0, 1, 2, 3},
+    {-6, -4, -1, 0, 1, 2, 3}, {-7, -5, -3, 0, 0, 3, 4}, {-7, -5, -3, 0, 1, 2, 3},
+    {-7, -5, -3, 0, 2, 3, 4}, {-7, -5, -3, 0, 2, 3, 3}, {-7, -4, -3, 0, 1, 3, 3},
+    {-7, -4, -2, 0, 1, 3, 3}, {-7, -4, -2, 0, 1, 3, 4}, {-7, -4, -2, 0, 1, 3, 4},
+    {-8, -5, -3, 0, 2, 3, 4}, {-8, -5, -3, 0, 2, 3, 4}, {-8, -5, -3, 0, 2, 3, 4},
+    {-8, -5, -3, 0, 2, 3, 4}, {-8, -5, -2, 0, 2, 4, 5}, {-8, -5, -2, 0, 2, 4, 5},
+    {-8, -5, -2, 1, 2, 4, 5}, {-8, -5, -2, 1, 2, 3, 5},
+};
+
+/* The SAS row of h264_get_mb_qp, SAS mode 3 (0x12c1d8): x, y, z the shares
+ * (percent of the macroblocks) of the three flat-block counts S+1968/1972/
+ * 1976.  x picks one of four classes ([12, 22), [22, 52), [52, 82),
+ * [82, 92); outside, or QP < 20: no offsets); in each class y and z against
+ * two thresholds give three flags, and the y/z class is 3 when none is set.
+ * With a flag set the OEM indexes its 9-byte class table at 9..15, past its
+ * end, and reads whatever an earlier call left on the stack there (other
+ * functions' locals, or on a re-encode its own basic-unit targets): the
+ * port takes 0 there, the value of the table's other unused entries
+ * (the oracle zeroes those stack bytes, tools/eprc_t30_oracle.py). */
+static void e30_h264_sas(Eprc30 *rc)
 {
+    static const float hi[4] = {80.0f, 70.0f, 40.0f, 16.0f};
+    static const float lo[4] = {40.0f, 35.0f, 20.0f, 7.0f};
     uint8_t *A = rc->blk;
     uint8_t *S = rc->blk + 0x120;
-    uint32_t mw = AU32(152);
+    float n = (float)A32(56);
+    float x = (float)(double)SU32(1968) * 100.0f / n;
+    float y = (float)(double)SU32(1972) * 100.0f / n;
+    float z = (float)(double)SU32(1976) * 100.0f / n;
+    uint32_t q = (uint32_t)(SS8(80) - 20) & 0xffu, f, cy;
+    int32_t c;
 
-    rc->slice[499] = 1;
-    if ((mw & 0xfu) == 0) {
+    if (!(x >= 12.0f) || x >= 92.0f || SS8(80) < 20) {
+        memset(S + 2172, 0, 7);
+        return;
+    }
+    c = x < 22.0f ? 0 : x < 52.0f ? 1 : x < 82.0f ? 2 : 3;
+    f = (uint32_t)(hi[c] < z) | (uint32_t)(lo[c] < y && lo[c] < z) << 1 |
+        (uint32_t)(hi[c] < y) << 2;
+    cy = f == 0 ? 3u : 0u;
+    memcpy(S + 2172, e30_sasm[(cy & 3u) | (uint32_t)(q < (c == 3 ? 13u : 16u)) << 2 |
+                              (uint32_t)c << 3], 7);
+}
+
+static void e30_mb_qp(Eprc30 *rc)
+{
+    static const uint16_t t1ae[6] = {150, 300, 400, 1000, 2000, 4000};
+    static const uint16_t t194[7] = {300, 600, 1000, 1500, 2500, 5000, 10000};
+    static const uint8_t t1c2[5] = {2, 3, 4, 4, 4};
+    uint8_t *A = rc->blk;
+    uint8_t *S = rc->blk + 0x120;
+    uint8_t *b = rc->slice;
+    uint32_t mw = AU32(152), n0 = mw & 15u, n1 = (mw >> 4) & 15u, n2 = (mw >> 8) & 15u;
+    int32_t u, cnt, mad, acc, k, base, t, nb;
+
+    b[499] = 1;
+    if (n0 == 0) {
         S8(1308) = 0;
         S32(1312) = 0;
-        memset(S + 2020, 0, 112);
     }
-    if (S32(0) == 0)
+    if (n0 <= 1 || n0 == 3)
+        memset(S + 2020, 0, 112);
+    if ((n0 == 2 || n0 == 3) && S32(1316) == 0)
+        S8(1308) = 0;
+    if (n1 == 3)
+        e30_h264_sas(rc);
+    /* 0x12b7e0 */
+    b[391] = S8(1308);
+    memcpy(b + 392, S + 1312, 8);
+    memcpy(b + 276, S + 2020, 112);
+    if (S32(0) == 0) {
+        memset(b + 418, 0, 8);
+        memset(b + 442, 0, 8);
         return;
-    if (((mw >> 8) & 0xfu) - 1u < 3u && S32(892) == 0)
+    }
+    if (n1 == 1) {
+        b[400] = 0;
+        b[401] = b[402] = 1;
+        b[403] = 0;
+        b[426] = 8;
+        b[427] = b[428] = 2;
+        memcpy(b + 418, S + 2132, 8);
+        e30_put_u16s(b + 404, t194, 7);
+    } else if (n1 == 2 || n1 == 3) {
+        b[400] = 1;
+        b[401] = b[402] = 0;
+        b[403] = n1 == 3;
+        memcpy(b + 442, S + 2172, 8);
+        e30_put_u16s(b + 430, t1ae, 6);
+        memcpy(b + 450, t1c2, 5);
+    } else if (n1 == 0) {
+        b[400] = b[401] = b[403] = 0;
+    }
+    /* 0x12bc34: the basic unit */
+    memset(rc->bu_tgt, 0, sizeof(rc->bu_tgt));
+    if (n2 == 0) {
+        b[455] = b[456] = 0;
+        b[480] = 1;
+        b[481] = 3;
+        EU32(b, 476) = EU32(b, 472) = EU32(b, 460) = EU32(b, 464) = 0;
+        EU32(b, 468) = EU32(b, 484) = 0;
+        return;
+    }
+    if (n2 > 3)
+        return;
+    EI32(b, 488) = A32(16);
+    if (S32(40) == 1) {
+        b[455] = 1;
+        b[456] = S32(188) != 0 && S32(192) != 0 && A32(16) != 1;
+    } else {
+        b[455] = b[456] = 0;
+        EU32(b, 484) = 0;
+    }
+    if (S32(892) == 0) {
+        b[456] = 0;
         S32(892) = 2;
+    }
+    b[480] = 1;
+    nb = A32(44) < 1 ? 1 : A32(44);
+    EI32(b, 476) = nb;
+    b[481] = 3;
+    cnt = (nb + A32(56) - 1) / nb;
+    if (cnt < 1)
+        cnt = 1;
+    EI32(b, 472) = cnt;
+    u = S32(188);
+    EI32(b, 464) = (u * 24) / 32;
+    EI32(b, 468) = (u * 40) / 32;
+    EI32(b, 460) = u / cnt;
+    if (b[455] != 1)
+        return;
+    if (b[456] == 0) {
+        EI32(b, 464) = 0;
+        EI32(b, 468) = 0x7fffffff;
+    }
+    mad = S32(892);
+    acc = 0;
+    for (k = 0; k < cnt && k < 128; k++) {
+        if (mad == 0) {
+            S32(892) = 1;
+            mad = 1;
+        }
+        acc += EI32(rc->y, 4 * k);
+        base = (cnt - k - 1) * u / cnt;
+        t = (int32_t)((int64_t)u * (int64_t)(uint32_t)(mad - acc) / (int64_t)(uint32_t)mad) - base;
+        rc->bu_tgt[k] = t / 4 + base;
+    }
+    /* +484: the OEM stores the address of its (stack) target array; the
+     * targets stay in rc->bu_tgt, +484 = 1 marks them as this picture's */
+    EU32(b, 484) = 1;
 }
 
 /* .rodata 0x170000 - 0x584 .. - 0x524: the mode-decision constants of
@@ -1808,6 +1951,7 @@ store_pos:
         e30_lcu_qp(rc);
         return;
     }
+    S32(1316) = EI32(e, 140);       /* FRAME_START_T30 0x133348 */
     e30_api_enc(rc);
     e30_mb_qp(rc);
 }

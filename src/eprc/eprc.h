@@ -204,6 +204,8 @@ typedef struct Eprc30 {
                                  * the caller, EPRC30_SLICE_SIZE bytes */
     uint8_t *qpmap;             /* H.265 CU QP map (E+140), EPRC30_QpMapSize
                                  * bytes, NULL: none */
+    int32_t bu_tgt[128];        /* H.264 basic-unit bit targets of the last
+                                 * picture (h264_get_mb_qp's local array) */
 } Eprc30;
 
 /* The 25 Helix registers the OEM T30 encoder reads after each picture
