@@ -1546,6 +1546,8 @@ static const Case cases[] = {
     { "sinter-0", c_sinter, 0, SET, 0 },
     { "sinter-255", c_sinter, 255, SET, 0 },
     { "temper-0", c_temper, 0, SET, 0 },
+    { "temper-64", c_temper, 64, SET, 0 },
+    { "temper-128", c_temper, 128, SET, 0 },
     { "temper-255", c_temper, 255, SET, 0 },
 # if defined(H_DPC) || defined(H_DPSTR)
     { "dpc-0", c_dpc, 0, SET, 0 },
