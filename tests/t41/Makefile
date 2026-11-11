@@ -1,6 +1,10 @@
 CC ?= cc
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
+# Vendor T41 1.2.0 headers for p3-controls.  Without T41_HEADERS it was skipped
+# silently (#351), so auto-detect the thingino-raptor-hal tree of a local build.
+# isp-osd/rawvic keep needing an explicit T41_HEADERS (they do not build with 1.2.0).
+T41_P3_HEADERS := $(or $(T41_HEADERS),$(lastword $(sort $(wildcard $(PROJECT_DIR)/../../thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en $(HOME)/thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en /mnt/NVMe/git/thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T41/1.2.0/en))))
 COMMAND_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-command-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rate-control-test
 EP1_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-ep1-layout-test
@@ -229,14 +233,14 @@ else
 endif
 
 p3-controls:
-ifneq ($(T41_HEADERS),)
+ifneq ($(T41_P3_HEADERS),)
 	mkdir -p "$(dir $(P3_CONTROLS_TEST_BIN))"
-	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -I$(T41_HEADERS) \
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-comment -DPLATFORM_T41 -I$(T41_P3_HEADERS) \
 		p3_controls_test.c $(PROJECT_DIR)/src/t40/openimp_p3_controls.c \
 		-o "$(P3_CONTROLS_TEST_BIN)"
 	$(P3_CONTROLS_TEST_BIN)
 else
-	@echo "t41 p3 controls test skipped (set T41_HEADERS)"
+	@echo "WARNING: t41 p3 controls test SKIPPED (set T41_HEADERS to the vendor T41 1.2.0 en headers)"
 endif
 
 # IMP_Encoder_SetbufshareChn (vendor argument checks, return codes, stored

@@ -1939,7 +1939,7 @@ int32_t IMP_ISP_SetISPBypass(IMPVI_NUM num, IMPISPTuningOpsMode *enable)
         errno != ENODEV) {
         syslog(LOG_WARNING, "libimp: SetISPBypass value=%u refused by the driver (errno %d)",
                request[0], errno);
-        return -1;
+        return -4095;   /* vendor 0x47418 */
     }
     p3_t41_bypass[num] = *enable;
     return 0;
