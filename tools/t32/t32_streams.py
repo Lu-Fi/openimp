@@ -6,8 +6,8 @@ middle rows (the QEMU colour bars).  Pictures stay local.
 
 usage: t32_streams.py OUT [ext]   (Pillow + ffmpeg)
 
-ext h264 (#293): the streams are one H.264 elementary stream, OUT/stream.h264;
-ffmpeg decodes it (errors, frame count, picture types) and every frame's band
+ext h264 (#293) / h265 (#294): the streams are one H.264 / H.265 elementary
+stream, OUT/stream.<ext>; ffmpeg decodes it (errors, frame count, picture types) and every frame's band
 means are printed from OUT/frame-<n>.png (pictures stay local).
 """
 import io
@@ -37,23 +37,25 @@ def bands_of(im):
     return "%dx%d bands(Y,U,V): %s" % (w, h, " ".join(bands))
 
 
-if ext == "h264":
+if ext in ("h264", "h265"):
     import glob
     from PIL import Image
     data = open(os.path.join(out, "streams.bin"), "rb").read()
-    path = os.path.join(out, "stream.h264")
+    path = os.path.join(out, "stream." + ext)
+    fmt = ["-f", "hevc" if ext == "h265" else "h264"]
     open(path, "wb").write(data)
     for f in glob.glob(os.path.join(out, "frame-*.png")):
         os.remove(f)
-    err = subprocess.run(["ffmpeg", "-v", "error", "-i", path, os.path.join(out, "frame-%03d.png")],
+    err = subprocess.run(["ffmpeg", "-v", "error"] + fmt + ["-i", path, os.path.join(out, "frame-%03d.png")],
                          capture_output=True, text=True).stderr.strip()
-    types = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "frame=pict_type,pkt_size",
+    types = subprocess.run(["ffprobe", "-v", "error"] + fmt + ["-show_entries", "frame=pict_type,pkt_size",
                             "-of", "csv=p=0", path], capture_output=True, text=True).stdout.split()
     frames = sorted(glob.glob(os.path.join(out, "frame-*.png")))
     for n, f in enumerate(frames):
         print("frame %d %s: %s" % (n, types[n] if n < len(types) else "?", bands_of(Image.open(f))))
-    print("h264: %d bytes, %d frames, ffmpeg=%s" % (len(data), len(frames), "ok" if not err else "ERR " + err[:300]))
+    print("%s: %d bytes, %d frames, ffmpeg=%s" % (ext, len(data), len(frames), "ok" if not err else "ERR " + err[:300]))
     sys.exit(1 if err or not frames else 0)
+fmt = []
 data = open(os.path.join(out, "streams.bin"), "rb").read()
 sizes = [int(m.group(2)) for m in re.finditer(r"^T32J (\d+) (\d+)", open(os.path.join(out, "sample.txt"), errors="replace").read(), re.M)]
 pos, bad = 0, 0
@@ -62,7 +64,7 @@ for n, size in enumerate(sizes):
     pos += size
     path = os.path.join(out, "stream-%d.%s" % (n, ext))
     open(path, "wb").write(chunk)
-    err = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-f", "null", "-"],
+    err = subprocess.run(["ffmpeg", "-v", "error"] + fmt + ["-i", path, "-f", "null", "-"],
                          capture_output=True, text=True).stderr.strip()
     line = "stream %d: %d bytes soi=%s eoi=%s ffmpeg=%s" % (
         n, size, chunk[:2] == b"\xff\xd8", chunk[-2:] == b"\xff\xd9", "ok" if not err else "ERR " + err[:120])
