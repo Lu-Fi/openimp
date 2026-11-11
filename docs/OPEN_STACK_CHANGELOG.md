@@ -7,6 +7,20 @@ Last update: 2026-11-07 (condensed section 2026-10-25 to 2026-11-07: RC2, T30 la
 
 Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20 and cam-J a second T21.
 
+## 2026-11-08 to 2026-11-11 (condensed): after RC3, T30 matrix, T32 bring-up in QEMU, matrix round
+
+Condensed; per-day detail with numbers: `CHANGELOG.md` of OpenIMP and open-tx-isp, per-cell texts in [FEATURE_MATRIX.md](FEATURE_MATRIX.md), history of the cell symbols in [status/history.md](status/history.md). Everything below is in `next` of both repositories; no tag since RC3 (`v2026.11.07-rc3`), Release 1 needs 14 days without an unplanned reset on the RC3 image.
+
+- **Matrix and docs:** release badges per interval, today / yesterday badges (cells and API tables), GitHub Pages start page, AI assistant guide (`AGENTS.md`, `docs/ai/`), planned-test lines in the soak summary. State of the API cells on 2026-11-11 (works / total): T10 323/329, T20 323/329, T21 328/333, T23 439/457, T30 294/350, T31 381/401, T40 372/389, T41 408/427. Cell code `nohw` (done, not verified on hardware: no RTC, ADC or AES/DES device on the board, the vendor library answers the same) added by the user decision of 2026-11-11; SU RTC/ADC/DES also checked in QEMU (#327, #328).
+- **T30 (lab camera):** matrix rows device-tested on the T30X in batches b53-b57 (anti-flicker snap, CCM/LSC register identical to the vendor, SetDPStrength fixed #269); RC parameters reach the encoder and FixQP I pictures at QP-3 (#271, #275); the vendor `REG_MCE_FSC` word in the P command list (#236); module size 662551 -> 565047 bytes of text (#274); the AE state machine reaches `ae_calculate_exposure` like the OEM (#283, host test only).
+- **T10 / T20 / T21:** software rotation device-tested, T21 never probes MXU2 (#240); T20 contrast follows the gain again (#246); T20 `EnableChn` on kernels without the legacy crop ioctls; the T20 light-box protocol against the vendor stack (#230, #248) with classified findings; T10 channel 1 layout (#235) and brightness hunting (#267) fixed in the driver (flip guard on by default, beyond vendor); manual analog gain and the analog reserve in the OEM order on T10/T20 (#285, #284; T20X proof equal to the vendor stack).
+- **T23:** AWB runs on every AWB statistics interrupt like stock (#233; first convergence 0.59 -> 0.35 s), ISP picture OSD under ISP flip is vendor-equal (#207), no more padframe teardown stall found in nine runs (#198).
+- **T31:** matrix gaps and device tests against the vendor 1.1.6 stack (#309); temper tables follow the day/night bank and Get(Temper|Sinter)Strength return the live ratio (#323, #331); ALSA PCM audio backend for mainline kernels (#258).
+- **T40 / T41:** `SU_CIPHER_*` like the vendor libsysutils (#310); `IMP_OSD_GetRegionLuma` (#318); T41 `IMP_ISP_SetVicDoneCbFunc` works like the vendor 1.2.5 and the RAW ring controls exist but are off by default (`t41_raw_ring=0`, the ring resets the board after the first RDMA start, #320); a ring left enabled by a dying process is stopped on release of the tuning fd (beyond vendor).
+- **Audio:** OSS2 capture without 0.95 s of silence at start (#266, T20X).
+- **Kernel review:** T20/T30 low findings L2/L4/L7 fixed (#251, cross-build and host tests).
+- **T32 (planned, QEMU only, no camera):** platform skeleton, ioctl ABI table and trace oracle (#286, #287), ISP open / sensor lifecycle (#288), IQ-bin loader (#289), FrameSource and System bind (#290), soc_vpu channel layer and JPEG (#291, #292, first OpenIMP stream on T32), H.264 and H.265 on HERA (#293, #294: command lists and header bytes equal the vendor's), ISP tuning table with 88 `IMP_ISP_Tuning_*` calls (#296, 97 steps identical, driver serves only the frame rate id so far), IVS, IMP_Buf pools, MemPool and audio paths (#298, #299). No T32 cell moved: no hardware.
+
 ## 2026-10-25 to 2026-11-07 (condensed): RC2, T30 lab camera, RC3 released
 
 Condensed; per-day detail with numbers: `CHANGELOG.md` of OpenIMP and open-tx-isp, release notes [RELEASE_NOTES_RC2.md](RELEASE_NOTES_RC2.md) and [releases/RC3.md](releases/RC3.md).

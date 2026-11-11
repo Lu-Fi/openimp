@@ -3,10 +3,19 @@
 **Where to read what**
 
 - **This file**: release-oriented summary per area (what changed against the vendor stack and against the original upstream line, [opensensor/openimp](https://github.com/opensensor/openimp)), followed by the condensed OpenIMP-only log by date.
-- **Full campaign log**: [docs/OPEN_STACK_CHANGELOG.md](docs/OPEN_STACK_CHANGELOG.md): every change of OpenIMP, open-tx-isp and the thingino integration since 2026-09-30, per session, with device-test evidence and numbers (condensed for 2026-10-25 to 2026-11-07). The wiki page *Changelog* carries the per-day log of both repositories up to the newest release.
+- **Full campaign log**: [docs/OPEN_STACK_CHANGELOG.md](docs/OPEN_STACK_CHANGELOG.md): every change of OpenIMP, open-tx-isp and the thingino integration since 2026-09-30, per session, with device-test evidence and numbers (condensed for 2026-10-25 to 2026-11-11). The wiki page *Changelog* carries the per-day log of both repositories up to the newest release.
 - **Current state per feature and SoC**: [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) (HTML view: [docs/feature-matrix.html](docs/feature-matrix.html)); what goes beyond the vendor: [docs/OPENIMP_BEYOND_VENDOR.md](docs/OPENIMP_BEYOND_VENDOR.md).
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
+
+## 2026-11-11 (afternoon): T31 temper after day/night, T10/T20 manual gain, QEMU SU checks, T30 AE FSM, kernel review lows (#323, #331, #285, #284, #283, #251, #327, #328, #235, #267)
+
+- #323 / #331 (open-tx-isp, T31L device-tested): the temper (MDNS) Y tables follow the day/night bank after a mode switch and a non-neutral `IMP_ISP_Tuning_SetTemperStrength` is reapplied like stock; `Get(Temper|Sinter)Strength` return the live ratio (they read 0 until the first set). OpenIMP side: apitest cases `temper-64` / `temper-128` (picture area), api_evidence `ISP_Tuning_SetTemperStrength` T31 with the register-level proof; T31 API 377 -> 381 of 401 works.
+- #285 / #284 (open-tx-isp, T10/T20): manual analog gain in the OEM order and the AE reserve before the gain caps; T20X device check equal to the vendor stack (details in the open-tx-isp changelog). #283 (T30 AE state machine) and #251 (T20/T30 kernel review lows) are build and host tested only.
+- #327 / #328: the SU RTC, ADC and CIPHER cells of T10 and T31 are `nohw`, T30 `qemu` (QEMU model with the apitest `su` cases; `at_su.c` merge fixed). The open libsysutils `SU_CIPHER_*` against the kernel AES driver is tracked in #328.
+- #235 (T10 channel 1 layout) and #267 (T10 brightness hunting) are closed: both were open-tx-isp causes fixed in `next` (DS1 top-register write-back; flip guard on by default), device-proven against the vendor reference; no OpenIMP change.
+- #307 (T23 audit-only cells): `SU_Base_Reboot` and `SU_Key_ReadEvent` dev on the Jooan A6M, notes for Suspend/LED/Key Enable-Disable; the issue stays open for the remaining cells.
+- Matrix: today / yesterday badges (see below); API evidence T41 `IMP_ISP_SetVicDoneCbFunc` is `dev` (#320).
 
 ## 2026-11-11: T23 AWB cadence, ISP picture OSD under ISP flip, padframe teardown (#233, #207, #198)
 
