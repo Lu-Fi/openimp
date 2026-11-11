@@ -435,6 +435,9 @@ int main(int argc, char **argv)
 #if defined(APITEST_T40) || defined(PLATFORM_T41)
     algo_post_t40();
 #endif
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+    rawvic_post_t41();
+#endif
 
 summary:
     for (i = 0; i < g_nfn; i++) { if (g_fn[i].tested) tested++; else na_only++; }

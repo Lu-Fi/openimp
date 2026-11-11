@@ -8,13 +8,9 @@
  *    -4084, tuning not enabled -4091, failed ioctl -4090;
  *  - ISP-device ioctls (the vendor ISPDevice fd): ISP not open -4088, NULL
  *    -4087, sensor >= 2 -4084, failed ioctl -4095 (the WDR and GPIO calls -4090);
- *  - two calls that need a user-space callback thread fed by the ISP module
- *    (SetVicDoneCbFunc) or a RAW frame exchange with rmem buffers
- *    (RAW_RwControl) are exported as a documented ENOTSUP (-1, errno
- *    ENOTSUP): the open T41 module has no event path for them, and a program
- *    that links them fails at the first call instead of at load time.
- *    SetAeAlgoFunc / SetAwbAlgoFunc follow the vendor protocol
- *    (openimp_p1_algo.c).
+ *  - the callback-thread calls live elsewhere: SetVicDoneCbFunc and
+ *    RAW_RwControl in openimp_t41_rawvic.c, SetAeAlgoFunc / SetAwbAlgoFunc
+ *    in openimp_p1_algo.c (vendor protocols).
  *
  * Whether the running ISP module serves a control is the module's business:
  * the open-tx-isp T41 module answers EPERM to a tuning control it does not
@@ -263,29 +259,6 @@ int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
     return T41X_E_PARAM;
 }
 
-/* ---- documented ENOTSUP -------------------------------------------------- */
-
-static int32_t t41x_unsupported(void)
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
 /* SetAeAlgoFunc / SetAwbAlgoFunc: src/t40/openimp_p1_algo.c (vendor callback protocol, shared with T40). */
 
-/* SetVicDoneCbFunc: a callback thread fed by the VIC frame-done event of the
- * ISP module (ioctl 0xc0045431); the open module has no such event path. */
-int32_t IMP_ISP_SetVicDoneCbFunc(void (*cb)(void))
-{
-    (void)cb;
-    return t41x_unsupported();
-}
-
-/* RAW_RwControl: RAW frames in and out of the ISP through rmem buffers and a
- * frame-done thread (control 0x80000a7); the open module has no RAW path. */
-int32_t IMP_ISP_RAW_RwControl(IMPVI_NUM num, IMPISPRawRwAttr *attr)
-{
-    (void)num;
-    (void)attr;
-    return t41x_unsupported();
-}
+/* SetVicDoneCbFunc / RAW_RwControl: src/t40/openimp_t41_rawvic.c (vendor thread model, #320). */

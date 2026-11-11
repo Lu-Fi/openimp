@@ -28,7 +28,7 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path fs-pool osd-luma
+.PHONY: check clean rawvic p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path fs-pool osd-luma
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
@@ -40,6 +40,7 @@ check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(MAKE) p3-controls
 	$(MAKE) isp-osd
 	$(MAKE) osd-luma
+	$(MAKE) rawvic
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
 	$(MAKE) p3-ao-mute
@@ -211,6 +212,20 @@ ifneq ($(T41_HEADERS),)
 	$(ISP_OSD_TEST_BIN)
 else
 	@echo "t41 isp osd test skipped (set T41_HEADERS)"
+endif
+
+# IMP_ISP_SetVicDoneCbFunc / IMP_ISP_RAW_RwControl (vendor 1.2.5 codes, ioctls,
+# worker threads, cancel while the driver sleeps) on a fake driver (#320).
+RAWVIC_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rawvic-test
+rawvic:
+ifneq ($(T41_HEADERS),)
+	mkdir -p "$(dir $(RAWVIC_TEST_BIN))"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -I$(T41_HEADERS) \
+		-I$(PROJECT_DIR)/src -fno-pie -no-pie rawvic_test.c \
+		$(PROJECT_DIR)/src/t40/openimp_t41_rawvic.c -pthread -o "$(RAWVIC_TEST_BIN)"
+	$(RAWVIC_TEST_BIN)
+else
+	@echo "t41 rawvic test skipped (set T41_HEADERS)"
 endif
 
 p3-controls:

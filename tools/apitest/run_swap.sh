@@ -44,6 +44,7 @@ SENS=$(grep -oE "^sensor_[a-z0-9_]*" "$OUT/before.txt" | awk '!seen[$0]++' | tr 
 # the sensor modules' own arguments from /etc/modules.d (e.g. sensor_resolution=300 on the T30X, shvflip=1 on T10/T21):
 # a bare modprobe would bring the sensor up in another mode (T30X: 2304x1536 instead of 2048x1536)
 SENSLOAD=$(for m in $SENS; do a=$(grep -E "^$m( |$)" "$OUT/before.txt" | grep -vE "^$m +[0-9]+ +[0-9]" | head -1 | cut -s -d' ' -f2-); printf 'modprobe %s %s || echo FAIL-sensor; ' "$m" "$a"; done)
+SENSLOAD=${SENSLOAD%; }      # no trailing "; ": the remote shell refuses the ";;" it makes in front of the next "; cmd"
 STREAMER=$(grep -oE "^S[0-9]+(timps|prudynt|raptor)[A-Za-z0-9_-]*" "$OUT/before.txt" | grep -v -E "motion|onvif|webui" | head -1)
 KR=$(grep -E "^[0-9]+\.[0-9]+\.[0-9]+" "$OUT/before.txt" | head -1)
 STOCK=$($SSH "find /lib/modules /usr/lib/modules -name '${ISPMOD//_/-}.ko' 2>/dev/null | head -1")
