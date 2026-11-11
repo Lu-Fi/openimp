@@ -1,9 +1,12 @@
-# OpenIMP T32 ioctl sequence (#288), ISP / sensor lifecycle (t32_trace_sample isp 1), build/t32/libimp.so,
+# OpenIMP T32 ioctl sequence (#288, #289 IQ bin), ISP / sensor lifecycle (t32_trace_sample isp 1), build/t32/libimp.so,
 # same QEMU setup as vendor-2.2.0-ioctl-seq-isp.txt.  Checked against it in make -C tests/t32 check.
 @ IMP_ISP_Open()
 = tx-isp DRIVER_VERSION 80045401 rc=0
 @ IMP_ISP_AddSensor(IMPVI_MAIN, &si)
 = tx-isp REGISTER_SENSOR 80745405 rc=0
+= tx-isp DEFAULT_BIN c00454c9 rc=0 x3
+= tx-isp MEMORY_MALLOC 800c543a rc=0 x2
+= tx-isp SET_TIZIANO_PAR c00454c8 rc=0
 = tx-isp ENUMINPUT c0045402 rc=0
 = tx-isp ENUMINPUT c0045402 rc=-1:EINVAL
 = tx-isp S_INPUT c0085404 rc=0
@@ -26,4 +29,5 @@
 @ IMP_ISP_DelSensor(IMPVI_MAIN, &si)
 = tx-isp S_INPUT c0085404 rc=0
 = tx-isp RELEASE_SENSOR 80745406 rc=0
+= tx-isp MEMORY_FREE 800c543b rc=0 x2
 = rmem ? c00c7200 rc=0

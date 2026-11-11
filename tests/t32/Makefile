@@ -14,11 +14,13 @@ OPEN_TX_ISP ?= $(PROJECT_DIR)/../open-tx-isp
 DRV_REF ?= origin/claude/t32-ds-batch
 DRV_EXTRACT := $(BUILD)/t32-drv-abi
 
-# OpenIMP ISP lifecycle (#288) = vendor minus the IQ-bin requests (#289) and
-# the shared allocator's rmem cache write-back when the ISP memory is freed
+# OpenIMP ISP lifecycle (#288) incl. the IQ-bin loader (#289) = vendor plus the
+# shared allocator's rmem cache write-back when the ISP memory is freed; the
+# day/night bin run also ignores vendor EnableTuning's isp-m0 request (later issue)
 # #302: compile-time IMPEncoderProfile check, 32-bit layout (MIPS o32 aligns int64 to 8)
 PROFILE_FLAGS := -m32 -malign-double -ffreestanding -fsyntax-only -std=gnu99 -Wall -Wextra -Werror
-OI_ISP_PENDING := DEFAULT_BIN,MEMORY_MALLOC,SET_TIZIANO_PAR,MEMORY_FREE,rmem
+OI_ISP_PENDING := rmem
+OI_BIN_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
 .PHONY: check check-drv
 check: $(TEST_BIN)
@@ -28,6 +30,8 @@ check: $(TEST_BIN)
 	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py check vendor-2.2.0-ioctl-seq-*.txt
 	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-isp.txt \
 		openimp-ioctl-seq-isp.txt --ignore $(OI_ISP_PENDING)
+	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-bin.txt \
+		openimp-ioctl-seq-bin.txt --ignore $(OI_BIN_PENDING)
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

@@ -1,6 +1,6 @@
 # Vendor libimp 2.2.0 ioctl reference, T32 PRJ007 (#288), ISP / sensor lifecycle only (t32_trace_sample isp 1).
 # Recorded in QEMU -M ingenic-t32 (gtxaspec 0.7.14) with tools/t32/qemu-ioctl-trace.sh, cv8001 model,
-# open-tx-isp driver/t32 1729253a.  OpenIMP (#288) gives the same sequence minus the IQ-bin requests (#289).
+# open-tx-isp driver/t32 1729253a.  OpenIMP (#288, #289) gives the same sequence (plus the shared allocator rmem flush).
 @ IMP_ISP_Open()
 = tx-isp DRIVER_VERSION 80045401 rc=0
 @ IMP_ISP_AddSensor(IMPVI_MAIN, &si)
