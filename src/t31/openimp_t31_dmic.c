@@ -1127,6 +1127,10 @@ struct DmicT32Effects {
 };
 
 static struct DmicT32Effects dmic_t32;
+/* held by the record thread while it runs the effects; Disable* take it to
+ * free a handle (dmic_wait_idle() cannot be used: the record thread sets
+ * "reading" again before it drops dmic.lock) */
+static pthread_mutex_t dmic_t32_fx_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static int dmic_t32_load(void)
 {
@@ -1183,6 +1187,7 @@ static void dmic_t32_effects(int16_t *samples, int count)
     struct DmicT32Effects *e = &dmic_t32;
     int offset, i;
 
+    pthread_mutex_lock(&dmic_t32_fx_lock);
     if (e->ns_enabled && e->ns && e->ns_frame > 0) {
         float input[160];
         float output[160];
@@ -1212,6 +1217,7 @@ static void dmic_t32_effects(int16_t *samples, int count)
     }
     if (e->hpf_enabled)
         (void)e->hpf_process(e->hpf_state, samples, count);
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
 }
 
 int IMP_DMIC_EnableNs(IMPDmicAttr *attr, int mode)
@@ -1250,12 +1256,11 @@ int IMP_DMIC_DisableNs(void)
 
     if (!e->ns)
         return 0;
-    pthread_mutex_lock(&dmic.lock);
+    pthread_mutex_lock(&dmic_t32_fx_lock);
     e->ns_enabled = 0;
-    dmic_wait_idle();
-    pthread_mutex_unlock(&dmic.lock);
     e->ns_free(e->ns);
     e->ns = NULL;
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
     return 0;
 }
 
@@ -1290,13 +1295,12 @@ int IMP_DMIC_DisableAgc(void)
 {
     struct DmicT32Effects *e = &dmic_t32;
 
-    pthread_mutex_lock(&dmic.lock);
+    pthread_mutex_lock(&dmic_t32_fx_lock);
     e->agc_enabled = 0;
-    dmic_wait_idle();
-    pthread_mutex_unlock(&dmic.lock);
     if (e->agc)
         e->agc_free(e->agc);
     e->agc = NULL;
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
     return 0;
 }
 
