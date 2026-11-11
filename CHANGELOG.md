@@ -44,6 +44,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Oracle: `tools/eprc_t30_oracle.py --regs` writes one `W` line per coding try. It runs the vendor `SliceInit` on the slice block that try is coded with. `--regs-fuzz SEED N` runs it on random blocks. Results: `eprc_t30_regs_vectors.txt` 970/970 and `eprc_t30_sliceinit_vectors.txt` 250/250 equal, and a local 20000-block fuzz run has 0 differences. The new descriptor test in `tests/t30` checks the order and the values of the words.
 - #343: the shared oracle emulator (`tools/eprc_oracle.py`) returned 0 for the vendor's libgcc `__divdi3`/`__moddi3`/`__udivdi3`/`__umoddi3`. This is fixed. The step-1 basic-unit targets had never been compared. With the fix they are equal to the vendor.
 - Host tests and a T30 cross-build only, plus a QEMU stream decode. No camera.
+- #343 follow-up: `tools/rc_t20_oracle.py` (own copy of the emulator, used for the T10/T20 rate-control vectors) had the same missing `__divdi3` family stubs and now models them. All vendor vectors of every other oracle that uses the shared emulator or this one (eprc T21/T23/T30 incl. H.265, mbrc, demask, fisheye, hskip, rc_t10/rc_t20 variants, T32 eprc T33 revision) were regenerated with the fixed emulators: byte-identical to the committed ones, no port differs from the vendor. No test or vector changes.
 
 ## 2026-11-11 (late): test pattern mode 5 on T31 and T21, T23 chroma (#103)
 
