@@ -64,6 +64,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Device: `ISP_GetRaw` and `OSD_AttachToGroup` T40 cells dev (open and vendor alike); findings #322 (ioctl 0xc0045430 oopses tx_isp_t40 in QEMU), #324 (WDR_OPEN LINEAR -1 vs vendor 0), #321 (vendor Raw2SUTime).
 - apitest: area `su` alone runs without the ISP (the vendor libimp + libsysutils can run it), `APITEST_SU_NOHW=1` calls the RTC/ADC functions on a board without the nodes, `APITEST_SU_NOKEY=1`; T40 cipher checks with the vendor codes; t40dev phase `2000000` (argument checks of SetPreDqtime/GetHLDCAttr/GetRaw/WDR_OPEN/SetCameraInputMode/OSD_*RgnAttr_ISP plus SetPreDqtime 0 and GetHLDCAttr).
 - Device (Eufy T40XP, QEMU T40 first): OpenIMP and the vendor libsysutils give the same answers for the cipher, RTC and ADC calls on this board (no `/dev/aes`, `/dev/jz-des`, `/dev/rtc0`, ADC node): cells `nohw`.
+## 2026-11-11, T10-T31: SU RTC / ADC / DES verified in QEMU (#327, #328)
+
+- apitest area `su` (QEMU or `APITEST_SU_HW=1` only): RTC set/read-back, alarm armed 3 s ahead and waited for (past alarm refused), AES-128 ECB/CBC known-answer vectors with round trip, DES_Init/Test/Exit. Run in QEMU 0.7.14 (ingenic-t10/t20/t21/t23/t30/t31, kernels rebuilt with RTC, SADC, JZ_DES, JZ_AES) against the image libsysutils and the vendor libsysutils of each SoC: RTC and ADC pass and are vendor-equal or better.
+- Open finding: the open libsysutils `SU_CIPHER_ConfigHandle/Encrypt/Decrypt` use ioctl numbers the kernel AES driver does not know (silent no-op, #328). Matrix: T10/T31 RTC, ADC and handle-level cipher cells `nohw`, T30 RTC/ADC and T31 DES `qemu`.
 
 ## 2026-11-11, T32 (planned): FrameSource on the 2.x framechan ABI, System bind (#290)
 
