@@ -213,8 +213,10 @@ int ioctl(int fd, unsigned long req, ...)
     /* device nodes only; the vendor log device is noise */
     traced = log_file && !strncmp(path, "/dev/", 5) && strcmp(path, "/dev/log_main");
     n = size;
-    if (req == 0x80045401UL)            /* DRIVER_VERSION: 64-byte buffer */
-        n = 64;
+    if (req == 0x80045401UL)            /* DRIVER_VERSION: 64 bytes, the vendor ko copies 96 */
+        n = 96;
+    else if (req == 0xc0045483UL || req == 0xc0045484UL)
+        n = 116;                        /* SET/GET_FRAME_FORMAT: frame_image_format (#301) */
     else if (req == 0xc0045402UL)       /* ENUMINPUT: 36-byte buffer */
         n = 36;
     else if (req == 0xc00454c9UL)       /* DEFAULT_BIN: 880-byte buffer */

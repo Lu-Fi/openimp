@@ -17,8 +17,8 @@
  *   IMP_ISP_DisableSensor G_INPUT, LINKS_STREAMOFF, DESTROY_SUBDEV_LINKS, STREAMOFF
  *   IMP_ISP_DelSensor   S_INPUT off, RELEASE_SENSOR, free the ISP memory
  *   IMP_System_Init     IVDC direct-mode query (system core and FrameSource
- *                       module each ask; 0 = not in direct mode); the answer
- *                       is kept for FrameSource (#290)
+ *                       module each ask; 0 = not in direct mode); direct mode
+ *                       (#301): openimp_t32_ivdc.c
  *
  * The userspace IQ-bin loader (DEFAULT_BIN, MEMORY_MALLOC/FREE,
  * SET_TIZIANO_PAR between REGISTER_SENSOR and ENUMINPUT, day/night) is
@@ -44,6 +44,7 @@
 #include "imp_log_int.h"
 #include "t32/openimp_t32_ioctl.h"
 #include "t32/openimp_t32_isp.h"
+#include "t32/openimp_t32_ivdc.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_isp.c is the PLATFORM_T32 build only"
@@ -55,6 +56,8 @@
 #define T32_DRIVER_SOC     "PRJ007"
 #define T32_DRIVER_VERSION "20251107a"
 
+#define T32_DRIVER_VERSION_ROOM 96   /* vendor ko copy size */
+
 #define T32_MAX_INPUTS 4        /* ENUMINPUT walk bound (driver: 1-2 VIs) */
 
 static struct {
@@ -62,7 +65,7 @@ static struct {
     int isp_fd;
     int open;
     int system_init;
-    int ivdc_direct;            /* GET_DIRECT answer at System_Init */
+    int ivdc_direct;            /* GET_DIRECT answer at System_Init (mode 0..4) */
     int sensor_added;
     int sensor_enabled;
     IMPVI_NUM vinum;
@@ -126,15 +129,20 @@ int OpenIMP_T32_IvdcDirect(void)
 
     if (fd < 0)
         return 0;               /* no IVDC node: never direct */
-    if (T32_IOCTL(fd, GET_DIRECT, &direct) < 0)
+    if (T32_IOCTL(fd, GET_DIRECT, &direct) < 0 || direct < 0)
         direct = 0;
     close(fd);
-    return direct != 0;
+    return direct;
 }
 
 int OpenIMP_T32_IvdcDirectMode(void)
 {
-    return t32.system_init && t32.ivdc_direct;
+    return t32.system_init ? t32.ivdc_direct : 0;
+}
+
+int OpenIMP_T32_SystemInitDone(void)
+{
+    return t32.system_init;
 }
 
 /* ---- System ------------------------------------------------------------ */
@@ -147,12 +155,13 @@ int IMP_System_Init(void)
 {
     pthread_mutex_lock(&t32.lock);
     if (!t32.system_init) {
-        /* system core and FrameSource module both learn whether the ISP
-         * feeds the encoder directly (IVDC); PRJ007 driver: never */
-        t32.ivdc_direct = OpenIMP_T32_IvdcDirect();
-        t32.ivdc_direct |= OpenIMP_T32_IvdcDirect();
-        if (t32.ivdc_direct)
-            IMP_LOG_WARN(TAG, "IVDC direct mode reported; not supported yet, using memory mode");
+        /* FrameSource and encoder modules both learn whether the ISP feeds
+         * the encoder directly (IVDC, the kernel's direct_mode; #301) */
+        int fs_mode = OpenIMP_T32_IvdcDirect(), enc_mode = OpenIMP_T32_IvdcDirect();
+
+        t32.ivdc_direct = fs_mode ? fs_mode : enc_mode;
+        if (t32.ivdc_direct && OpenIMP_T32_IvdcSystemInit(t32.ivdc_direct) != 0)
+            IMP_LOG_ERR(TAG, "IVDC direct mode %d: setup incomplete", t32.ivdc_direct);
         t32.system_init = 1;
         if (IMP_OSD_Init_ISP() < 0)
             IMP_LOG_ERR(TAG, "ISP OSD pool not allocated; ISP OSD regions unavailable");
@@ -164,9 +173,12 @@ int IMP_System_Init(void)
 int IMP_System_Exit(void)
 {
     pthread_mutex_lock(&t32.lock);
-    if (t32.system_init)
+    if (t32.system_init) {
         IMP_OSD_Exit_ISP();
+        OpenIMP_T32_IvdcSystemExit();
+    }
     t32.system_init = 0;
+    t32.ivdc_direct = 0;
     pthread_mutex_unlock(&t32.lock);
     return 0;
 }
@@ -185,7 +197,13 @@ static int t32_version_ok(const T32IocDriverVersion *v)
 
 int IMP_ISP_Open(void)
 {
-    T32IocDriverVersion ver;
+    /* the vendor tx-isp-t32.ko copies 96 bytes (its driver_version buffer),
+     * the open driver 64: room for both (#301: 64 overran the stack) */
+    union {
+        T32IocDriverVersion v;
+        uint8_t room[T32_DRIVER_VERSION_ROOM];
+    } u;
+    T32IocDriverVersion *vp = &u.v;
     int fd;
 
     pthread_mutex_lock(&t32.lock);
@@ -199,8 +217,8 @@ int IMP_ISP_Open(void)
         pthread_mutex_unlock(&t32.lock);
         return -1;
     }
-    memset(&ver, 0, sizeof(ver));
-    if (T32_IOCTL(fd, DRIVER_VERSION, &ver) < 0 || !t32_version_ok(&ver) ||
+    memset(&u, 0, sizeof(u));
+    if (T32_IOCTL(fd, DRIVER_VERSION, vp) < 0 || !t32_version_ok(vp) ||
         OpenIMP_T32_BinOpen() < 0) {
         close(fd);
         pthread_mutex_unlock(&t32.lock);

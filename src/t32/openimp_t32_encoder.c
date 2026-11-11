@@ -71,6 +71,7 @@
 #include "t32/openimp_t32_hera.h"
 #include "t32/openimp_t32_rc.h"
 #include "t32/openimp_t32_hera_h265.h"
+#include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
 
 #if !defined(PLATFORM_T32)
@@ -169,6 +170,7 @@ struct t32_enc_chn {
     int pipefd[2];
     uint32_t frames, encoded, skipped, retries, errors;
     int size_logged;
+    int ivdc;                           /* fed by the IVDC direct channel (#301) */
 };
 
 struct t32_enc_grp {
@@ -208,13 +210,36 @@ static int vpu_test_mode(void)
     return mode;
 }
 
+/* ---- the picture's source ------------------------------------------------- */
+/* NV12 as FrameSource lays it out (UV after ALIGN16(height) rows), or, for a
+ * frame over IVDC (#301), the IVDC's addresses; the soc_vpu node says which
+ * (the kernel's radix / helix driver starts the IVDC reader for the job) */
+static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y, uint32_t *c,
+                       uint32_t *stride)
+{
+    int ivdc = f->phyAddr == OI_T32_IVDC_SRC_Y;
+
+    if (ivdc) {
+        *y = OI_T32_IVDC_SRC_Y;
+        *c = OI_T32_IVDC_SRC_C;
+        *stride = OI_T32_IVDC_STRIDE;
+    } else {
+        *stride = ALIGN16(f->width);
+        *y = f->phyAddr;
+        *c = f->phyAddr + *stride * ALIGN16(f->height);
+    }
+    e->vpu.node.frame_type = ivdc ? OI_T32_FRAME_TYPE_IVDC : 0;
+    e->vpu.node.sensor_id = 0;          /* one sensor (direct mode 1) */
+}
+
 /* ---- the JPEG job --------------------------------------------------------- */
 static void jpeg_fill_job(struct t32_enc_chn *e, const IMPFrameInfo *f, const T32VpuBuf *bs,
                           uint32_t index)
 {
     T32IocJpegRegInfo *j = t32_vpu_buf_va(&e->job);
-    uint32_t w = f->width, h = f->height, stride = ALIGN16(w), i;
+    uint32_t w = f->width, h = f->height, stride, y, c, i;
 
+    enc_source(e, f, &y, &c, &stride);
     memset(j, 0, T32_JPEG_JOB_BYTES);
     for (i = 0; i < 16; i++) {
         j->qmem[i] = (uint32_t)jpeg_base_luma[4 * i] | (uint32_t)jpeg_base_luma[4 * i + 1] << 8 |
@@ -230,8 +255,8 @@ static void jpeg_fill_job(struct t32_enc_chn *e, const IMPFrameInfo *f, const T3
     j->nmcu = (ALIGN16(w) / 16u) * (ALIGN16(h) / 16u) - 1u;
     j->frm_info = h << 16 | w;
     j->stride = stride;
-    j->y_addr = f->phyAddr;
-    j->c_addr = f->phyAddr + stride * ALIGN16(h);       /* NV12 as FrameSource lays it out */
+    j->y_addr = y;
+    j->c_addr = c;
     j->bs_addr = t32_vpu_buf_pa(bs);
     j->pixel_num = ALIGN16(w) * ALIGN16(h) * 3u / 2u;
     j->limit_bs_len = bs->size;
@@ -398,7 +423,7 @@ static void rc_picture_lost(struct t32_enc_chn *e)
 static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
-    uint32_t w = ALIGN16(f->width), h = ALIGN16(f->height), stride = ALIGN16(f->width);
+    uint32_t w = ALIGN16(f->width), h = ALIGN16(f->height);
     uint32_t rs = t32_hera_ring_stride(w), rows = t32_hera_ring_rows(f->height);
     uint32_t aux[4], at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
@@ -411,9 +436,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.height = h;
     p.p_frame = !idr;
     p.qp = rc_picture_qp(e, idr);
-    p.src_y = f->phyAddr;
-    p.src_c = f->phyAddr + stride * ALIGN16(f->height);  /* NV12 as FrameSource lays it out */
-    p.src_stride = stride;
+    enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
     p.ring_y = t32_vpu_buf_pa(&a->ring);
     p.ring_y_end = p.ring_c = p.ring_y + rs * rows;
     p.ring_c_end = p.ring_c + rs * rows / 2u;
@@ -530,7 +553,7 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
 static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
-    uint32_t w = ALIGN16(f->width), h = (f->height + 7u) & ~7u, stride = ALIGN16(f->width);
+    uint32_t w = ALIGN16(f->width), h = (f->height + 7u) & ~7u;
     uint32_t rs = t32_hera_ring_stride(w), rows = t32_hera_ring_rows(h);
     uint32_t at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
@@ -545,9 +568,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.after_p = !idr && a->last_p;
     p.first = a->pictures == 0;
     p.qp = rc_picture_qp(e, idr);
-    p.src_y = f->phyAddr;
-    p.src_c = f->phyAddr + stride * ALIGN16(f->height);  /* NV12 as FrameSource lays it out */
-    p.src_stride = stride;
+    enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
     p.ring_y = t32_vpu_buf_pa(&a->ring);
     p.ring_y_end = p.ring_c = p.ring_y + rs * rows;
     p.ring_c_end = p.ring_c + rs * rows / 2u;
@@ -1110,11 +1131,22 @@ fail_open:
     return -1;
 }
 
+static int chn_ivdc_codec(const struct t32_enc_chn *e)
+{
+    return e->hevc ? OI_T32_IVDC_H265 : e->h264 ? OI_T32_IVDC_H264 : OI_T32_IVDC_JPEG;
+}
+
 static void chn_stop_locked(struct t32_enc_chn *e)
 {
+    int was = e->recv;
+
     e->recv = 0;
     while (e->pending || e->busy)
         pthread_cond_wait(&e->done, &enc_lock);
+    if (was && OpenIMP_T32_IvdcMode())
+        OpenIMP_T32_IvdcEncStop(chn_ivdc_codec(e), e->ivdc);
+    if (was)
+        e->ivdc = 0;
 }
 
 int IMP_Encoder_DestroyChn(int encChn)
@@ -1362,11 +1394,28 @@ int IMP_Encoder_UnRegisterChn(int encChn)
 int IMP_Encoder_StartRecvPic(int encChn)
 {
     struct t32_enc_chn *e;
-    int rc = -1;
+    int rc = -1, grp = -1, fs = -1;
+
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    if (e && e->registered)
+        grp = e->grp;
+    pthread_mutex_unlock(&enc_lock);
+    /* IVDC direct mode (#301): a channel fed by FrameSource channel 0
+     * (also through OSD) codes its pictures over IVDC */
+    if (grp >= 0 && OpenIMP_T32_IvdcMode())
+        fs = OpenIMP_T32_FsSourceOf(DEV_ID_ENC, grp);
 
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e && e->registered) {
+        if (!e->recv && OpenIMP_T32_IvdcMode()) {
+            e->ivdc = OpenIMP_T32_IvdcMode() == 1 && fs == 0;
+            OpenIMP_T32_IvdcEncStart(chn_ivdc_codec(e), e->attr.encAttr.picWidth,
+                                     e->attr.encAttr.picHeight, e->ivdc);
+            if (e->ivdc)
+                IMP_LOG_INFO(TAG, "chn %d: pictures over IVDC (direct mode)", encChn);
+        }
         e->recv = 1;
         e->rate_acc = 0;
         e->src_fs = -1;

@@ -9,8 +9,9 @@
  * tools/t32/qemu-ioctl-trace.sh); no vendor code copied.
  *
  *   CreateChn     check and keep the attributes, open /dev/framechanN
- *   EnableChn     GET/SET_FRAME_FORMAT (an int, 1: there is no format
- *                 struct on T32), REQBUFS {nrVBs, 1, 2 = user pointer},
+ *   EnableChn     GET/SET_FRAME_FORMAT (struct frame_image_format, 116 B:
+ *                 the vendor ko takes the channel geometry from it, the open
+ *                 driver only reads type 1), REQBUFS {nrVBs, 1, 2 = user pointer},
  *                 nrVBs NV12 buffers from the reserved arena, QBUF each
  *                 (96 B: Y pa, length, UV pa, stride, h << 16 | w: the
  *                 driver takes the channel geometry from these words only),
@@ -32,8 +33,17 @@
  * the capture buffer itself through a sink (openimp_t32_fs.h); a sink that
  * keeps a frame delays its requeue until ReleaseSinkFrame.
  *
- * IVDC direct mode (System_Init's GET_DIRECT != 0) is not supported: the
- * PRJ007 driver answers 0, and EnableChn refuses a direct-mode ISP.
+ * IVDC direct mode (#301, System_Init's GET_DIRECT = 1): channel 0 goes to
+ * the encoder over the IVDC line buffer.  EnableChn then asks MEM_LINE,
+ * allocates the DDR overflow ring (width rounded up to 64 x lines x 3/2,
+ * lines = half the picture when the driver says 0), hands it over with
+ * SET_PADDR and queues the nrVBs buffers with the IVDC source address
+ * 0x80000000 instead of frame memory, once: as the vendor library, the frame
+ * thread does not queue them back (the driver hands them out again).  Its
+ * frames carry no picture (phyAddr 0x80000000, virAddr 0): they reach bound
+ * encoder groups only (also through OSD groups, which cannot draw on them),
+ * and SetFrameDepth / GetFrame refuse the channel.  Direct modes 2..4
+ * (several sensors) are refused.
  * Not here (later T32 issues): crop / mirror (no request seen on this ABI
  * yet), rotation, joint/sub-stream channels, SnapFrame.
  */
@@ -57,6 +67,7 @@
 #include "t32/openimp_t32_ioctl.h"
 #include "t32/openimp_t32_isp.h"
 #include "t32/openimp_t32_fs.h"
+#include "t32/openimp_t32_ivdc.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_fs.c is the PLATFORM_T32 build only"
@@ -96,6 +107,8 @@ struct t32_fs_slot {
 
 struct t32_fs_chn {
     int created, enabled;
+    int direct;                 /* frames over IVDC (#301), set at EnableChn */
+    IMPDMABufferInfo ivdc;      /* the IVDC DDR overflow ring */
     IMPFSChnAttr attr;
     int fd;
     /* geometry of the enabled channel */
@@ -203,8 +216,8 @@ static void fs_fill_frame(const struct t32_fs_chn *c, int chn, int index,
     f->height = c->height;
     f->pixfmt = PIX_FMT_NV12;
     f->size = c->length;
-    f->phyAddr = d->phys_addr;
-    f->virAddr = d->virt_addr;
+    f->phyAddr = c->direct ? OI_T32_IVDC_SRC_Y : d->phys_addr;
+    f->virAddr = c->direct ? 0 : d->virt_addr;
 }
 
 static void fs_fill_qbuf(const struct t32_fs_chn *c, struct t32_fs_buf *b, int index)
@@ -215,9 +228,9 @@ static void fs_fill_qbuf(const struct t32_fs_chn *c, struct t32_fs_buf *b, int i
     q->index = (uint32_t)index;
     q->type = T32_BUF_TYPE_CAPTURE;
     q->memory = T32_BUF_MEMORY_USERPTR;
-    q->m = b->dma.phys_addr;
+    q->m = c->direct ? OI_T32_IVDC_SRC_Y : b->dma.phys_addr;
     q->length = c->length;
-    q->uv_addr = b->dma.phys_addr + c->stride * ALIGN_UP(c->height, 16);
+    q->uv_addr = c->direct ? 0 : b->dma.phys_addr + c->stride * ALIGN_UP(c->height, 16);
     q->stride = c->stride;
     q->state = 1;
     q->geom = c->height << 16 | c->width;
@@ -318,7 +331,8 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
                 continue;
             for (j = 0; j < T32_FS_MAX_SINKS && nsinks < T32_FS_MAX_BINDS; j++)
                 if (fs_sink[j].used && fs_sink[j].dev == (int)fs_bind[i].dst.deviceID &&
-                    fs_sink[j].grp == (int)fs_bind[i].dst.groupID) {
+                    fs_sink[j].grp == (int)fs_bind[i].dst.groupID &&
+                    (!c->direct || fs_sink[j].dev == DEV_ID_ENC)) {
                     sinks[nsinks].fn = fs_sink[j].fn;
                     sinks[nsinks].ctx = fs_sink[j].ctx;
                     nsinks++;
@@ -327,7 +341,7 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
             if (fs_bind[i].dst.deviceID == DEV_ID_OSD && nfrom <= T32_FS_MAX_BINDS)
                 from[nfrom++] = fs_bind[i].dst;
         }
-    slot = fs_pick_slot_locked(c);
+    slot = c->direct ? NULL : fs_pick_slot_locked(c);
     if (slot)
         slot->state = SLOT_FILLING;
     pthread_mutex_unlock(&fs_lock);
@@ -363,6 +377,22 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
     pthread_mutex_unlock(&fs_lock);
 }
 
+/* a blocking framechan request the channel's stop may cancel: the vendor
+ * tx-isp-t32.ko does not end LISTEN_BUF / DQBUF at the stream-off, and the
+ * vendor library cancels its frame thread there too (#301); no lock is held
+ * across it */
+static int fs_wait_ioctl(int fd, uint32_t req, void *arg)
+{
+    int st, ty, rc;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &st);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &ty);
+    rc = ioctl(fd, req, arg);
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &ty);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &st);
+    return rc;
+}
+
 static void *fs_thread(void *arg)
 {
     int chn = (int)(intptr_t)arg;
@@ -370,14 +400,16 @@ static void *fs_thread(void *arg)
     /* LISTEN_BUF's word goes in as -1 first and then as the last answer
      * (the driver only writes it), as the vendor library passes it */
     int32_t count = -1;
+    int cst;
 
     openimp_thread_setnamef("oimp-fs-%d", chn);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cst);
     while (c->run) {
         T32IocBuffer q;
         struct t32_fs_buf *b;
         int requeue;
 
-        if (ioctl(c->fd, OI_T32_IOC_LISTEN_BUF, &count) < 0) {
+        if (fs_wait_ioctl(c->fd, OI_T32_IOC_LISTEN_BUF, &count) < 0) {
             if (errno != EINTR && c->run) {
                 IMP_LOG_ERR(TAG, "framechan%d LISTEN_BUF: %s", chn, strerror(errno));
                 usleep(10000);
@@ -391,16 +423,18 @@ static void *fs_thread(void *arg)
         memset(&q, 0, sizeof(q));
         q.type = T32_BUF_TYPE_CAPTURE;
         q.memory = T32_BUF_MEMORY_USERPTR;
-        if (ioctl(c->fd, OI_T32_IOC_DQBUF, &q) < 0)
+        if (fs_wait_ioctl(c->fd, OI_T32_IOC_DQBUF, &q) < 0)
             continue;               /* -EAGAIN: taken by the stream-off */
-        if (q.index >= (uint32_t)c->nbufs || q.m != c->buf[q.index].dma.phys_addr) {
+        if (q.index >= (uint32_t)c->nbufs ||
+            q.m != (c->direct ? OI_T32_IVDC_SRC_Y : c->buf[q.index].dma.phys_addr)) {
             IMP_LOG_ERR(TAG, "framechan%d DQBUF: unknown buffer %u pa 0x%08x", chn, q.index, q.m);
             continue;
         }
         b = &c->buf[q.index];
         b->out = 1;
         b->frame.timeStamp = (int64_t)fs_now_us();
-        DMA_RmemFlushCache((void *)(uintptr_t)b->dma.virt_addr, c->alloc, 2);
+        if (!c->direct)
+            DMA_RmemFlushCache((void *)(uintptr_t)b->dma.virt_addr, c->alloc, 2);
         pthread_mutex_lock(&fs_lock);
         c->frames++;
         c->seq = q.sequence;
@@ -411,11 +445,48 @@ static void *fs_thread(void *arg)
         if (!requeue)
             fs_deliver(chn, c, b);
         pthread_mutex_lock(&fs_lock);
-        if (c->run && b->out && !b->holds)
+        if (c->direct)
+            b->out = 0;             /* the driver hands it out again by itself */
+        else if (c->run && b->out && !b->holds)
             fs_qbuf(c, b);
         pthread_mutex_unlock(&fs_lock);
     }
     return NULL;
+}
+
+/* ---- IVDC direct mode (#301) ---------------------------------------------- */
+/* MEM_LINE, the DDR overflow ring, SET_PADDR: 0 or -1 */
+static int fs_ivdc_ring(struct t32_fs_chn *c)
+{
+    int32_t lines = 0, pa;
+    uint32_t w64 = ALIGN_UP(c->width, 64), size;
+
+    if (OpenIMP_T32_IvdcIoctl(OI_T32_IOC_MEM_LINE, &lines, "MEM_LINE") != 0)
+        return -1;
+    size = lines > 0 ? w64 * (uint32_t)lines * 3u / 2u : w64 * c->height * 3u / 4u;
+    if (fs_alloc(&c->ivdc, size, "ivdc") < 0)
+        return -1;
+    pa = (int32_t)c->ivdc.phys_addr;
+    if (OpenIMP_T32_IvdcIoctl(OI_T32_IOC_SET_PADDR, &pa, "SET_PADDR") != 0) {
+        fs_free_dma(&c->ivdc);
+        return -1;
+    }
+    IMP_LOG_INFO(TAG, "chn 0: IVDC direct, %u-byte DDR ring at 0x%08x (mem line %d)", size,
+                 c->ivdc.phys_addr, (int)lines);
+    return 0;
+}
+
+int OpenIMP_T32_FsChnDirect(int chn)
+{
+    struct t32_fs_chn *c = fs_get(chn);
+    int d;
+
+    if (!c)
+        return 0;
+    pthread_mutex_lock(&fs_lock);
+    d = c->enabled && c->direct;
+    pthread_mutex_unlock(&fs_lock);
+    return d;
 }
 
 /* ---- channel API ---------------------------------------------------------- */
@@ -551,7 +622,8 @@ int IMP_FrameSource_EnableChn(int chnNum)
 {
     struct t32_fs_chn *c = fs_get(chnNum);
     T32IocReqBufs rq;
-    int32_t fmt, on = T32_BUF_TYPE_CAPTURE;
+    T32IocFrameFormat fmt;
+    int32_t on = T32_BUF_TYPE_CAPTURE;
     uint32_t sw, sh;
     int i;
 
@@ -567,9 +639,12 @@ int IMP_FrameSource_EnableChn(int chnNum)
         pthread_mutex_unlock(&fs_lock);
         return 0;
     }
-    if (OpenIMP_T32_IvdcDirectMode()) {
+    c->direct = chnNum == 0 && OpenIMP_T32_IvdcDirectMode() != 0;
+    if (c->direct && OpenIMP_T32_IvdcDirectMode() != 1) {
         pthread_mutex_unlock(&fs_lock);
-        IMP_LOG_ERR(TAG, "EnableChn chn %d: IVDC direct mode not supported", chnNum);
+        IMP_LOG_ERR(TAG, "EnableChn chn %d: IVDC direct mode %d (several sensors) not supported",
+                    chnNum, OpenIMP_T32_IvdcDirectMode());
+        c->direct = 0;
         return -1;
     }
     if (OpenIMP_T32_SensorSize(&sw, &sh) == 0 &&
@@ -584,11 +659,33 @@ int IMP_FrameSource_EnableChn(int chnNum)
     c->stride = ALIGN_UP(c->width, 16);
     c->length = c->width * c->height * 3 / 2;
     c->alloc = c->stride * ALIGN_UP(c->height, 16) * 3 / 2;
+    if (c->direct && fs_ivdc_ring(c) < 0)
+        goto fail;
+    if (c->direct)
+        c->alloc = 0;           /* no frame memory: frames come over IVDC */
 
-    fmt = T32_FORMAT_NV12;
+    /* the driver's format, then the channel's geometry in it (as the vendor
+     * library: type capture, field 4, colorspace 8, scaler as the attribute,
+     * every frame passed: rate bits 0 mask 1; the rate drop is ours) */
+    memset(&fmt, 0, sizeof(fmt));
+    fmt.type = T32_FORMAT_NV12;
     if (FS_IOCTL(c->fd, GET_FRAME_FORMAT, &fmt) < 0)
         goto fail;
-    fmt = T32_FORMAT_NV12;
+    fmt.type = T32_FORMAT_NV12;
+    fmt.width = c->width;
+    fmt.height = c->height;
+    if (!fmt.field)
+        fmt.field = 4;
+    if (!fmt.colorspace)
+        fmt.colorspace = 8;
+    fmt.crop_enable = 0;
+    fmt.scaler_enable = c->attr.scaler.enable != 0;
+    fmt.scaler_out_width = c->attr.scaler.enable ? (uint32_t)c->attr.scaler.outwidth : 0;
+    fmt.scaler_out_height = c->attr.scaler.enable ? (uint32_t)c->attr.scaler.outheight : 0;
+    fmt.rate_bits = 0;
+    fmt.rate_mask = 1;
+    fmt.fcrop_enable = 0;
+    fmt.mirr_enable = 0;
     if (FS_IOCTL(c->fd, SET_FRAME_FORMAT, &fmt) < 0)
         goto fail;
     memset(&rq, 0, sizeof(rq));
@@ -605,7 +702,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
     for (i = 0; i < c->nbufs; i++) {
         struct t32_fs_buf *b = &c->buf[i];
 
-        if (fs_alloc(&b->dma, c->alloc, "fs-chn") < 0)
+        if (!c->direct && fs_alloc(&b->dma, c->alloc, "fs-chn") < 0)
             goto fail_bufs;
         fs_fill_frame(c, chnNum, i, &b->dma, &b->frame);
         fs_fill_qbuf(c, b, i);
@@ -641,6 +738,8 @@ fail_reqbufs:
     rq.memory = T32_BUF_MEMORY_USERPTR;
     FS_IOCTL(c->fd, REQBUFS, &rq);
 fail:
+    fs_free_dma(&c->ivdc);
+    c->direct = 0;
     pthread_mutex_unlock(&fs_lock);
     return -1;
 }
@@ -660,21 +759,25 @@ int IMP_FrameSource_DisableChn(int chnNum)
         return 0;
     }
     c->run = 0;
-    /* stream-off wakes the listener (the driver ends LISTEN_BUF when the
-     * channel stops) */
+    /* stream-off, then REQBUFS 0 as the vendor library: the open driver
+     * ends LISTEN_BUF at the stream-off, the vendor tx-isp-t32.ko only when
+     * the buffers go (#301); the buffers are freed after the thread is gone */
     rc = FS_IOCTL(c->fd, FRAME_STREAMOFF, &off);
-    pthread_cond_broadcast(&c->ready);
-    pthread_mutex_unlock(&fs_lock);
-    pthread_join(c->thread, NULL);
-
-    pthread_mutex_lock(&fs_lock);
     memset(&rq, 0, sizeof(rq));
     rq.type = T32_BUF_TYPE_CAPTURE;
     rq.memory = T32_BUF_MEMORY_USERPTR;
     if (FS_IOCTL(c->fd, REQBUFS, &rq) < 0)
         rc = -1;
+    pthread_cond_broadcast(&c->ready);
+    pthread_mutex_unlock(&fs_lock);
+    pthread_cancel(c->thread);          /* only takes effect in a blocking request */
+    pthread_join(c->thread, NULL);
+
+    pthread_mutex_lock(&fs_lock);
     fs_release_bufs_locked(c);
+    fs_free_dma(&c->ivdc);
     c->enabled = 0;
+    c->direct = 0;
     fs_slots_sync_locked(c);
     IMP_LOG_INFO(TAG, "chn %d off: %u frames, %u dropped (rate), %u copies, %u to sinks",
                  chnNum, c->frames, c->dropped, c->copied, c->sink_frames);
@@ -693,6 +796,12 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
         /* as the vendor library (0x80010040 before EnableChn, QEMU fs3 run) */
         pthread_mutex_unlock(&fs_lock);
         IMP_LOG_ERR(TAG, "SetFrameDepth chn %d: channel not enabled", chnNum);
+        return -1;
+    }
+    if (c->direct && depth > 0) {
+        pthread_mutex_unlock(&fs_lock);
+        IMP_LOG_ERR(TAG, "SetFrameDepth chn %d: IVDC direct channel, its frames carry no picture",
+                    chnNum);
         return -1;
     }
     c->depth = depth;
@@ -832,7 +941,7 @@ int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn_num, IMPFrameInfo *frame)
         frame == &c->buf[frame->index].frame) {
         struct t32_fs_buf *b = &c->buf[frame->index];
 
-        if (b->holds > 0 && --b->holds == 0 && b->out && c->run)
+        if (b->holds > 0 && --b->holds == 0 && b->out && c->run && !c->direct)
             fs_qbuf(c, b);
         rc = 0;
     }
@@ -846,6 +955,33 @@ int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn_num, IMPFrameInfo *frame)
 static int same_cell(const IMPCell *a, const IMPCell *b)
 {
     return a->deviceID == b->deviceID && a->groupID == b->groupID;
+}
+
+int OpenIMP_T32_FsSourceOf(int devID, int grpID)
+{
+    IMPCell at;
+    int i, hops, found;
+
+    at.deviceID = devID;
+    at.groupID = grpID;
+    at.outputID = 0;
+    pthread_mutex_lock(&fs_lock);
+    for (hops = 0; hops <= T32_FS_MAX_BINDS; hops++) {
+        if (at.deviceID == DEV_ID_FS) {
+            pthread_mutex_unlock(&fs_lock);
+            return at.groupID;
+        }
+        for (i = 0, found = 0; i < T32_FS_MAX_BINDS && !found; i++)
+            if (fs_bind[i].used && fs_bind[i].dst.deviceID == at.deviceID &&
+                fs_bind[i].dst.groupID == at.groupID) {
+                at = fs_bind[i].src;
+                found = 1;
+            }
+        if (!found)
+            break;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return -1;
 }
 
 int IMP_System_Bind(IMPCell *srcCell, IMPCell *dstCell)
