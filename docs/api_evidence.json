@@ -17189,7 +17189,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17215,7 +17215,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17241,7 +17241,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17267,7 +17267,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17293,7 +17293,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17319,7 +17319,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17345,7 +17345,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17371,7 +17371,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17518,7 +17518,7 @@
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
         "T41": "SU test 2026-11-11 on the Vanhua T41 test camera (gc5603, open-stack image) (#318): image libsysutils (neo-sysutils) and vendor T41 1.2.6 libsysutils (from /tmp, vendor libalog preloaded) give the same answer: -1 with errno ENOENT for GetTime, SetTime, SetAlarm, GetAlarm, EnableAlarm, DisableAlarm, PollingAlarm(50): no /dev/rtc0 (the rtc platform device has no bound driver on either T41 board)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17557,7 +17557,7 @@
         "T10": "dev",
         "T20": "dev",
         "T21": "dev",
-        "T23": "aud",
+        "T23": "dev",
         "T30": "aud",
         "T31": "aud",
         "T32": "nob",
@@ -17572,7 +17572,8 @@
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: SU_Base_Reboot called for real with the vendor 5.4.0 library and with the image library: both return 0 and send kill(1, 15) (shim check, same signal), the camera rebooted and came back with the streamer running, no oops (#311)",
         "T20": "sutool + apitest su t20-mx 2026-11-11 .107 (SU_Base_Reboot with board and vendor libsysutils: ret 0, camera rebooted to the flashed stack)",
         "T10": "sutool + apitest su t10-mx 2026-11-11 .31 (SU_Base_Reboot with board and vendor libsysutils: ret 0, camera rebooted to the flashed stack)",
-        "T41": "SU test 2026-11-11 on the Vanhua T41 test camera (gc5603, open-stack image) (#318): SU_Base_Reboot called for real with the image libsysutils (neo-sysutils) and with the vendor T41 1.2.6 libsysutils loaded from /tmp: both return 0 (sync(), kill(1, 15) in both codes), the camera rebooted each time (ping down after 7-8 s, ssh back after 31-32 s, new boot_id), came back on the flashed stack with the streamer running, no oops"
+        "T41": "SU test 2026-11-11 on the Vanhua T41 test camera (gc5603, open-stack image) (#318): SU_Base_Reboot called for real with the image libsysutils (neo-sysutils) and with the vendor T41 1.2.6 libsysutils loaded from /tmp: both return 0 (sync(), kill(1, 15) in both codes), the camera rebooted each time (ping down after 7-8 s, ssh back after 31-32 s, new boot_id), came back on the flashed stack with the streamer running, no oops",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: SU_Base_Reboot called for real with the image library and with the vendor library: both return 0, the camera went down after ~7 s and came back after ~25 s with a new boot id, same libimp and timpsd, streamer running, tx_isp_t23 loaded, no oops (#307)"
       }
     },
     "SU_Base_SUTime2Raw": {
@@ -17660,7 +17661,8 @@
       "ref": {
         "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: SU_Base_Suspend -1 errno 2 with all three (no /sys/power on this kernel); stays aud: a real suspend cannot be proven on this board"
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: SU_Base_Suspend -1 errno 2 with all three (no /sys/power on this kernel); stays aud: a real suspend cannot be proven on this board",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud: the kernel has no /sys/power (no suspend support), so there is no state to enter and no wake source to come back from; the call is not run"
       }
     },
     "SU_Battery_GetCapacity": {
@@ -17745,7 +17747,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17769,7 +17771,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17851,7 +17853,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17875,7 +17877,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17899,7 +17901,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17923,7 +17925,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)"
@@ -17947,7 +17949,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+        "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw Same on the Jooan A6M (2026-11-11): no /dev/rtc0, no ADC node, no /dev/aes or /dev/jz-des (#307).",
         "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw",
         "T20": "Wyze Cam v2 (T20X) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#306)",
         "T10": "Secuplug SP1 (T10, jxh42) 2026-11-11: no RTC/ADC/AES node on the board; board and vendor 3.12.0 libsysutils return the same error (#316)",
@@ -17997,7 +17999,8 @@
       "ref": {
         "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud"
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud (finding #313): Disable(28) -> -1 EINVAL with both libraries; Enable returns -1 EACCES with the image library (writes the read-only keys list) and 0 with the vendor library; Disable of a key not in the list answers 0 with both"
       }
     },
     "SU_Key_EnableEvent": {
@@ -18018,7 +18021,8 @@
       "ref": {
         "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud"
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud (finding #313): Disable(28) -> -1 EINVAL with both libraries; Enable returns -1 EACCES with the image library (writes the read-only keys list) and 0 with the vendor library; Disable of a key not in the list answers 0 with both"
       }
     },
     "SU_Key_OpenEvent": {
@@ -18052,7 +18056,7 @@
         "T10": "aud",
         "T20": "aud",
         "T21": "dev",
-        "T23": "aud",
+        "T23": "dev",
         "T30": "aud",
         "T31": "aud",
         "T32": "nob",
@@ -18064,7 +18068,8 @@
       "ref": {
         "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: key press injected through /dev/input/event0 (button daemon stopped): SU_Key_OpenEvent + ReadEvent give key 28 press (1) then release (0) with all three libraries (#311)"
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: key press injected through /dev/input/event0 (button daemon stopped): SU_Key_OpenEvent + ReadEvent give key 28 press (1) then release (0) with all three libraries (#311)",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: key press injected through /dev/input/event0 (gpio-keys, key 28; the board button daemon kept running): SU_Key_OpenEvent + ReadEvent give key 28 press (1) then release (0) with both libraries (#307)"
       }
     },
     "SU_LED_Command": {
@@ -18085,7 +18090,8 @@
       "ref": {
         "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /proc/board/power/led* node: -1 errno 2 with the vendor libraries; the board LEDs sit behind leds-gpio, a call would drive a guessed pin, none made; stays aud"
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /proc/board/power/led* node: -1 errno 2 with the vendor libraries; the board LEDs sit behind leds-gpio, a call would drive a guessed pin, none made; stays aud",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud: the board LEDs (led_g, led_r) sit behind leds-gpio; the thingino board config lists no LED pin number (ir850, ircut, white and the wlan pin only), so the sysfs-GPIO call would drive a guessed pin; not run"
       }
     },
     "System_Bind": {
