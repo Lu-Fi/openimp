@@ -5605,6 +5605,14 @@ int IMP_ISP_EnableTuning(void)
         return -1;
     }
     if (isp->tuning != NULL) return 0;  /* already enabled */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_T21)
+    {
+        extern void openimp_tp_ispmid_reset(void) __attribute__((weak));
+
+        if (openimp_tp_ispmid_reset)
+            openimp_tp_ispmid_reset();  /* mode-5 hold of a crashed process (isp_mid_ref.c) */
+    }
+#endif
 #if defined(PLATFORM_T30)
     tseries_t30_process_cached = 0;     /* the vendor tuning block starts zeroed */
     tseries_t30_freeze_cached = 0;

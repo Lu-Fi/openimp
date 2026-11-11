@@ -21,6 +21,7 @@
 #include "dma_alloc.h"
 
 void OpenIMP_P1_VicDoneStop(void);
+void OpenIMP_P1_RawStop(void);
 
 /* tuning request as the library builds it (word size of the host) */
 typedef struct { int32_t vinum, is_get; uint32_t id; uintptr_t payload; } Req;
@@ -239,10 +240,33 @@ int main(void)
 
     ctl_fail = 1;
     a.mode = IMPISP_OPS_MODE_ENABLE;
+    freed = 0;
+    i = raw_gets;
     assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == -4090);
+    assert(freed == (uintptr_t)rmem);   /* refused control: block back (F5) */
+    usleep(20 * 1000);
+    assert(raw_gets == i);              /* and no thread started */
     a.mode = IMPISP_OPS_MODE_DISABLE;
     assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == -4090);
     ctl_fail = 0;
+
+    /* after a refused enable the next enable really starts the ring */
+    a.mode = IMPISP_OPS_MODE_ENABLE;
+    i = ctl_n;
+    assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == 0);
+    assert(ctl_n == i + 1 && ctl_seen[i][0] == 1);
+    wait_count(&raw_sets, raw_sets + 3);
+
+    /* DisableTuning/DisableSensor hook: ring left on is stopped (F1) */
+    freed = 0;
+    block_forever = 1;                  /* thread asleep in the driver */
+    usleep(20 * 1000);
+    OpenIMP_P1_RawStop();
+    block_forever = 0;
+    assert(ctl_n == i + 2 && ctl_seen[i + 1][0] == 0 && ctl_seen[i + 1][1] == 1);
+    assert(freed == (uintptr_t)rmem);
+    OpenIMP_P1_RawStop();               /* off: nothing */
+    assert(ctl_n == i + 2);
 
     printf("t41 rawvic test: ok (vic cb %d, raw cb %d)\n", cb_count, raw_cb_count);
     return 0;

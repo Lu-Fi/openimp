@@ -794,6 +794,7 @@ int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info)
 extern void OpenIMP_P1_AlgoStart(int fd, int num) __attribute__((weak));   /* weak: host tests link p1.c alone */
 extern void OpenIMP_P1_AlgoStop(int fd, int num) __attribute__((weak));
 extern void OpenIMP_P1_VicDoneStop(void) __attribute__((weak));
+extern void OpenIMP_P1_RawStop(void) __attribute__((weak));
 #endif
 
 int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info)
@@ -848,6 +849,9 @@ int IMP_ISP_DisableSensor(IMPVI_NUM num)
      * the worker while frames still arrive; it takes the P1 lock itself */
     if (OpenIMP_P1_VicDoneStop)
         OpenIMP_P1_VicDoneStop();
+    /* a RAW ring left on (beyond vendor, review 2026-11-11 F1) */
+    if (OpenIMP_P1_RawStop)
+        OpenIMP_P1_RawStop();
 #endif
     lock_p1();
     prepare_p1();
@@ -974,6 +978,12 @@ int IMP_ISP_Tuning_SetVideoDrop(void *attr)
 
 int IMP_ISP_DisableTuning(void)
 {
+#if defined(PLATFORM_T41)
+    /* stop a RAW ring left on while the tuning node is still open (beyond
+     * vendor, review 2026-11-11 F1): its thread sleeps in the driver */
+    if (OpenIMP_P1_RawStop)
+        OpenIMP_P1_RawStop();
+#endif
     lock_p1();
     prepare_p1();
     if (p1.tuning_fd >= 0)

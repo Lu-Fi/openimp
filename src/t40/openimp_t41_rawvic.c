@@ -42,6 +42,12 @@
  * A process that dies without a disable: the open-tx-isp T41 module stops
  * the ring when the tuning fd that enabled it is released (beyond vendor,
  * user OK 2026-11-11; the vendor module keeps the ISP writing into rmem).
+ * Review 2026-11-11 (F1/F5): IMP_ISP_DisableTuning and DisableSensor stop
+ * a ring still on (OpenIMP_P1_RawStop) before the tuning node closes; the
+ * enable sends the control before it starts the thread, so a refused
+ * control frees the block and leaves nothing running, and a failed
+ * pthread_create switches the ring off again and returns -4095 (the
+ * vendor leaves the ring on without a consumer and returns 0).
  */
 #include <errno.h>
 #include <pthread.h>
@@ -63,6 +69,7 @@ extern int OpenIMP_P1_IspIsOpen(void);
 extern int IMP_Free(uintptr_t address);
 
 void OpenIMP_P1_VicDoneStop(void);
+void OpenIMP_P1_RawStop(void);
 
 #define RV_E_GENERIC (-4095)
 #define RV_E_IOCTL   (-4090)
@@ -238,11 +245,69 @@ static void *raw_thread(void *arg)
     return NULL;
 }
 
-int32_t IMP_ISP_RAW_RwControl(IMPVI_NUM num, IMPISPRawRwAttr *attr)
+/* tuning control 0x80000a7 (enable sleeps about one second in the driver:
+ * not under the P1 lock) */
+static int rv_raw_control(int num, uint32_t mode, uint32_t dtype, uint32_t mtype,
+                          const uint32_t *paddr)
 {
     RvRawCtl ctl;
     RvTuning request;
+
+    memset(&ctl, 0, sizeof(ctl));
+    ctl.mode = mode;
+    ctl.dtype = dtype;
+    ctl.mtype = mtype;
+    if (paddr)
+        memcpy(ctl.paddr, paddr, sizeof(ctl.paddr));
+    request.vinum = num;
+    request.is_get = 0;
+    request.id = TISP_RAW_RW_CONTROL;
+    request.payload = (uintptr_t)&ctl;
+    return OpenIMP_P1_TuningWaitIOCtl(TISP_TUNING_IOCTL, &request) != 0 ? RV_E_IOCTL : 0;
+}
+
+static void rv_raw_free(void)
+{
+    if (raw_buf.virt_addr)
+        IMP_Free(raw_buf.virt_addr);
+    memset(&raw_buf, 0, sizeof(raw_buf));
+}
+
+/* rv_lock held: thread, ring and rmem block of a running sensor off */
+static int rv_raw_stop(int num)
+{
+    int result;
+
+    pthread_cancel(raw[num].thread);
+    pthread_join(raw[num].thread, NULL);
+    raw[num].running = 0;
+    result = rv_raw_control(num, IMPISP_OPS_MODE_DISABLE, raw[num].info.dtype,
+                            TISP_RAW_MODULE_START, NULL);
+    rv_raw_free();
+    return result;
+}
+
+/* IMP_ISP_DisableTuning / IMP_ISP_DisableSensor (beyond vendor, review
+ * 2026-11-11 F1): a ring the application left on is stopped while the
+ * tuning node is still open; the vendor keeps its raw thread sleeping in
+ * the driver through the ISP teardown. */
+void OpenIMP_P1_RawStop(void)
+{
+    int num;
+
+    pthread_mutex_lock(&rv_lock);
+    for (num = 0; num < RV_SENSORS; num++)
+        if (raw[num].running) {
+            syslog(LOG_WARNING, "libimp: RAW ring of sensor %d still on at ISP teardown: stopped", num);
+            (void)rv_raw_stop(num);
+        }
+    pthread_mutex_unlock(&rv_lock);
+}
+
+int32_t IMP_ISP_RAW_RwControl(IMPVI_NUM num, IMPISPRawRwAttr *attr)
+{
     IMPISPSENSORAttr sensor;
+    uint32_t paddr[RV_BUFS];
     uint32_t frame, i;
     int result = 0;
 
@@ -260,52 +325,51 @@ int32_t IMP_ISP_RAW_RwControl(IMPVI_NUM num, IMPISPRawRwAttr *attr)
         return RV_E_NRVBS;
 
     pthread_mutex_lock(&rv_lock);
-    memset(&ctl, 0, sizeof(ctl));
+    if (attr->mode == IMPISP_OPS_MODE_DISABLE) {
+        if (raw[num].running) {
+            result = rv_raw_stop(num);
+        } else {
+            result = rv_raw_control(num, attr->mode, attr->dtype, attr->mtype, NULL);
+            rv_raw_free();
+        }
+        goto out;
+    }
+    if (raw[num].running)
+        goto out;                       /* see the header: no second ring */
     memset(&sensor, 0, sizeof(sensor));
     (void)IMP_ISP_Tuning_GetSensorAttr(num, &sensor);
-    if (attr->mode != IMPISP_OPS_MODE_DISABLE) {
-        if (raw[num].running)
-            goto out;                   /* see the header: no second ring */
-        frame = sensor.width * sensor.height * ((uint32_t)attr->dtype + 1U);
+    frame = sensor.width * sensor.height * ((uint32_t)attr->dtype + 1U);
+    memset(&raw_buf, 0, sizeof(raw_buf));
+    if (DMA_AllocDescriptor(&raw_buf, (int)(frame * attr->nrvbs), "raw") != 0 ||
+        !raw_buf.phys_addr) {
         memset(&raw_buf, 0, sizeof(raw_buf));
-        if (DMA_AllocDescriptor(&raw_buf, (int)(frame * attr->nrvbs), "raw") != 0 ||
-            !raw_buf.phys_addr) {
-            memset(&raw_buf, 0, sizeof(raw_buf));
-            result = RV_E_NOMEM;
-            goto out;
-        }
-        for (i = 0; i < attr->nrvbs; i++)
-            ctl.paddr[i] = raw_buf.phys_addr + i * frame;
-        raw[num].info.vinum = num;
-        raw[num].info.width = sensor.width;
-        raw[num].info.height = sensor.height;
-        raw[num].info.dtype = attr->dtype;
-        raw[num].info.vaddr = 0;
-        raw[num].frame_done = attr->frame_done;
-        if (pthread_create(&raw[num].thread, NULL, raw_thread,
-                           (void *)(intptr_t)num) == 0)
-            raw[num].running = 1;
-    } else if (raw[num].running) {
-        pthread_cancel(raw[num].thread);
-        pthread_join(raw[num].thread, NULL);
-        raw[num].running = 0;
+        result = RV_E_NOMEM;
+        goto out;
     }
-
-    ctl.mode = attr->mode;
-    ctl.dtype = attr->dtype;
-    ctl.mtype = attr->mtype;
-    request.vinum = num;
-    request.is_get = 0;
-    request.id = TISP_RAW_RW_CONTROL;
-    request.payload = (uintptr_t)&ctl;
-    /* enable sleeps about one second in the driver: not under the P1 lock */
-    if (OpenIMP_P1_TuningWaitIOCtl(TISP_TUNING_IOCTL, &request) != 0)
-        result = RV_E_IOCTL;
-
-    if (attr->mode == IMPISP_OPS_MODE_DISABLE && raw_buf.virt_addr) {
-        IMP_Free(raw_buf.virt_addr);
-        memset(&raw_buf, 0, sizeof(raw_buf));
+    memset(paddr, 0, sizeof(paddr));
+    for (i = 0; i < attr->nrvbs; i++)
+        paddr[i] = raw_buf.phys_addr + i * frame;
+    raw[num].info.vinum = num;
+    raw[num].info.width = sensor.width;
+    raw[num].info.height = sensor.height;
+    raw[num].info.dtype = attr->dtype;
+    raw[num].info.vaddr = 0;
+    raw[num].frame_done = attr->frame_done;
+    /* ring first, then the thread: a refused control (older driver,
+     * t41_raw_ring=0) leaves nothing behind (review 2026-11-11 F5) */
+    result = rv_raw_control(num, attr->mode, attr->dtype, attr->mtype, paddr);
+    if (result) {
+        rv_raw_free();
+        goto out;
     }
+    if (pthread_create(&raw[num].thread, NULL, raw_thread, (void *)(intptr_t)num) != 0) {
+        /* no consumer: the ring would freeze the picture */
+        (void)rv_raw_control(num, IMPISP_OPS_MODE_DISABLE, attr->dtype, attr->mtype, NULL);
+        rv_raw_free();
+        result = RV_E_GENERIC;
+        goto out;
+    }
+    raw[num].running = 1;
 out:
     pthread_mutex_unlock(&rv_lock);
     return result;

@@ -6365,13 +6365,14 @@ static void cs_t30pass2(void) {}
  * comes back when it stops; disable -> full rate again; 5 enable/disable cycles).  RAWVIC_HOLD=<s>: enable the ring and sleep
  * (the host kills the process with -9 for the recovery test).  Nothing is saved, no picture leaves the camera. */
 #if defined(PLATFORM_T41) && !defined(APITEST_T40) && !defined(APITEST_T32)
-static volatile int g_vic_cnt, g_raw_cnt, g_raw_zero, g_raw_bad;
+static volatile int g_vic_cnt, g_raw_cnt, g_raw_zero, g_raw_bad, g_raw_block;
 static volatile uint32_t g_raw_w, g_raw_h;
 static int g_vic_on;
 static void vic_cb_t41(void) { g_vic_cnt++; }
 static int32_t raw_cb_t41(IMPISPRawRwInfo *i)
 {
     if (!i->vaddr || !i->width || !i->height) { g_raw_bad++; return 0; }
+    if (g_raw_block) usleep(5000000);   /* no frame goes back: the RDMA never runs */
     g_raw_w = i->width; g_raw_h = i->height;
     if (g_raw_zero) memset((void *)(uintptr_t)i->vaddr, 0, (size_t)i->width * i->height * (i->dtype + 1) / 2);
     g_raw_cnt++;
@@ -6428,6 +6429,34 @@ static void cs_rawvic_t41(void)
     double exp_n, top0, bot0, top1, bot1, top2, bot2, rate_on, rate_off, cbr;
     const char *hold = getenv("RAWVIC_HOLD");
 
+    /* #345: RAWVIC_QUICK=1 enable + disable with no frame ever handed back (first run after a module load: the
+     * RDMA frame-done count is 0) -> the disable must return within the driver limit and tuning calls must work;
+     * RAWVIC_LEAVE=1 enable and return: the apitest teardown (DisableTuning, DisableSensor) runs with the ring on */
+    if (getenv("RAWVIC_QUICK")) {
+        int bri_ok = 0; unsigned char bri = 0; int64_t worst = 0;
+
+        for (i = 0, ok = 0; i < 3; i++) {
+            raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1); g_raw_block = 1;
+            r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+            a.mode = IMPISP_OPS_MODE_DISABLE; t0 = now_us(); r2 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a); t1 = now_us();
+            g_raw_block = 0;
+            if (t1 - t0 > worst) worst = t1 - t0;
+            bri_ok += IMP_ISP_Tuning_GetBrightness(IMPVI_MAIN, &bri) == 0;
+            if (r == 0 && r2 == 0 && t1 - t0 < 2500000 && flow()) ok++;
+            printf("[T] rawvic quick %d: enable %d disable %d in %lld ms\n", i, r, r2, (long long)((t1 - t0) / 1000));
+        }
+        rep(LBL("RAW_RwControl quick disable"), 0, ok == 3 && bri_ok == 3 ? V_PASS : V_FAIL,
+            "%d of 3 enable/disable with no frame handed back returned in time (worst %lld ms, limit 2500), GetBrightness ok %d/3, frames flow",
+            ok, (long long)(worst / 1000), bri_ok);
+        return;
+    }
+    if (getenv("RAWVIC_LEAVE")) {
+        raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1);
+        r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+        usleep(2000000);
+        printf("[T] rawvic leave: RAW8 x1 enable ret %d, %d callbacks; teardown with the ring on\n", r, g_raw_cnt); fflush(stdout);
+        return;
+    }
     if (hold) {
         raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1);
         r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
