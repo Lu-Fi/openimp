@@ -122,7 +122,7 @@ static int32_t e33_refer_qp_bpp(E33 *X, uint32_t cfg, uint32_t pixels, uint32_t 
 {
     float fps_num = (float)(double)LD_U32(cfg + 0x10), fps_den = (float)(double)LD_U32(cfg + 0x14);
     float r, f, bpp;
-    uint32_t qp;
+    int32_t qp;
     int k;
 
     if (fps_num == 0.0f)
@@ -140,10 +140,9 @@ static int32_t e33_refer_qp_bpp(E33 *X, uint32_t cfg, uint32_t pixels, uint32_t 
     if (k == 7)
         qp = 51;
     else
-        qp = (uint32_t)(int32_t)((float)t33_bpp_slope[k] * bpp + (float)t33_bpp_ofs[k]);
-    if (qp < LD_U8(cfg + 0x19))
-        return (int8_t)LD_U8(cfg + 0x19);
-    return (int8_t)(qp <= LD_U8(cfg + 0x18) ? qp : LD_U8(cfg + 0x18));
+        qp = (int32_t)((float)t33_bpp_slope[k] * bpp + (float)t33_bpp_ofs[k]);
+    /* signed: a large bpp gives a negative QP, which ends at the minimum (slt, 0x18f6c4) */
+    return (int8_t)clip_s(qp, LD_U8(cfg + 0x19), LD_U8(cfg + 0x18));
 }
 
 /* dQP for a size ratio @b / @a in steps of 6 per doubling (update_qp,
@@ -201,15 +200,14 @@ static int32_t e33_refer_qp_size(E33 *X, uint32_t cfg, int32_t pixels, int32_t g
 {
     int32_t a = e33_ratio_dqp(X, 1024000, bits), b = e33_ratio_dqp(X, 921600, pixels);
     int32_t num = LD_S32(cfg + 0x10), k;
-    uint32_t den = LD_U32(cfg + 0x14), qp;
+    uint32_t den = LD_U32(cfg + 0x14);
+    int32_t qp;
 
     (void)unused;
     k = den > (uint32_t)(num * 30) ? -2 : den > (uint32_t)(num * 25) ? -1 : den > (uint32_t)(num * 20) ? 0
       : den > (uint32_t)(num * 15) ? 1 : den > (uint32_t)(num * 10) ? 2 : 3;
-    qp = (uint32_t)((int8_t)a + (int8_t)b + k + (int8_t)(gop_pos < 3 ? gop_pos : 2) + 37);
-    if (qp < LD_U8(cfg + 0x19))
-        return (int8_t)LD_U8(cfg + 0x19);
-    return (int8_t)(qp <= LD_U8(cfg + 0x18) ? qp : LD_U8(cfg + 0x18));
+    qp = (int8_t)a + (int8_t)b + k + (int8_t)(gop_pos < 3 ? gop_pos : 2) + 37;
+    return (int8_t)clip_s(qp, LD_U8(cfg + 0x19), LD_U8(cfg + 0x18));
 }
 
 /* dQP of a P picture from its predicted size against the target

@@ -9,7 +9,7 @@ from unicorn.mips_const import UC_MIPS_REG_RA, UC_MIPS_REG_A0
 
 LIB = '/mnt/NVMe/git/scratch-clones/session-110bf918/audit/issue295/gh/libimp-2.2.0.so'
 SO = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get('E33SO','libe33.so')))
-PB, PS = HEAP, 0x30000
+PB, PS = HEAP, 0x180000
 BB, BS = HEAP + 0x1000000, 0x10000
 GB, GS = 0x1b0000, 0x80000
 FRAME = HEAP + 0x8000
@@ -40,8 +40,6 @@ class Harness:
             return orig(lib, fn, *a, **k)
         O.Lib.call = call
         self.t = O.T33(LIB, mode, kbps, **kw)
-        self.L.w32(self.t.Hh + 0xf9c, HEAP + 0x20000)   # slice info block
-        self.L.w32(HEAP + 0x20000 + 0x250, HEAP + 0x22000)   # its MB QP map
 
     def snap(self):
         L = self.L
@@ -66,10 +64,11 @@ class Harness:
         self.calls += 1
         bad = []
         for (nm, base, v, m) in (('P', PB, after[0], mine[0]), ('B', BB, after[1], mine[1]), ('G', GB, after[2], mine[2])):
-            lim = len(v)
-            if nm == 'P':
-                lim = 0x8000          # frame scratch above
-            d = [i for i in range(lim) if v[i] != m[i]]
+            if v == m:
+                continue
+            # P: skip the C build's frame scratch (FRAME .. +0x8000)
+            rng = [(0, 0x8000), (0x10000, len(v))] if nm == 'P' else [(0, len(v))]
+            d = [i for a0, a1 in rng if v[a0:a1] != m[a0:a1] for i in range(a0, a1) if v[i] != m[i]]
             if d:
                 bad.append((nm, base, d, v, m))
         if fault and not bad:
@@ -110,6 +109,17 @@ class Harness:
                     st[j] = (lo | hi << 16) & 0xffffffff
                 for j in range(22, 39):
                     st[j] = rr.randint(0, 1 << 20)
+                # regs 43 + 44: picture complexity sum (i264e_ratecontrol_end -> P+0x5b0, the
+                # controller's st+0xa0 = sum * 2048 / (bit rate >> 10)); spread it over all
+                # I-share rate classes (st+0xa0 / 10000 up to ~12000)
+                cls = cplx / 60.0 * rr.uniform(0.3, 1.7) * 3000.0
+                x = min(int(cls * 10000.0 * self.kbps / 2048.0), 0x7fffffff)
+                st[43] = x // 2 + rr.randint(0, 1000)
+                st[44] = max(0, x - st[43])
+                # the still / motion map of P+0x260 (one byte per block, a class 0..7)
+                if self.L.r32(t.P + 0x260) == HEAP + 0x30000:
+                    lvl = 0 if still else min(7, int(cplx / 40.0))
+                    self.L.wr(HEAP + 0x30000, bytes(min(7, max(0, lvl + rr.randint(-1, 1))) for _ in range(0x8000)))
             t.end(nb, st)
             seq.append(qp)
         return seq

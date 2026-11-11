@@ -12,3 +12,8 @@ Nothing from the vendor library is stored here; every tool reads the library / G
 - `diff.py` / `rand.py`: per-call differential test (vendor under unicorn vs the C build, memory compared byte for
   byte over E, the controller block B and the library globals). Needs the oracle slice block (Hh+0xf9c) and its
   +0x250 map, which `tools/eprc_t33_oracle.py` does not set yet.
+- `rand3.py` (+ `rand.py`, `rand_rate.py`; `reg.sh SO OUT` runs all 96): scenarios that reach every I-QP branch:
+  GOP 1, no initial QP, 5..60 fps, run-time bit-rate changes, SMART/AVBR still-scene knobs (+0x25c, +0x260 still map,
+  +0x26c/+0x26d, +0x168, +0x264) and the HERA complexity sum (regs 43/44). A scenario passes only with 0 differing calls.
+  Coverage: build the swap oracle with `-O0 --coverage` and run gcov on `eprc_t33_h264.c`; compare results only with the
+  `-O1` build (the generated C has uninitialised locals in the P path that differ at -O0).

@@ -52,7 +52,7 @@ def model_stats(qp, nbytes, mbs):
 
 class T33:
     def __init__(self, path, mode, kbps, rev=6, w=W, h=H, gop=GOP, fps=FPS, minqp=15, maxqp=48,
-                 initqp=30):
+                 initqp=30, extra=None):
         L = self.L = Lib(path, generic=True)
         lo = L.syms['get_history_iqp'] if 'get_history_iqp' in L.syms else 0
         hi = L.syms['librc_h264_get_version'] + 0x100
@@ -75,6 +75,10 @@ class T33:
         L.w32(P + 0xfc, maxqp); L.w32(P + 0x100, minqp)
         if mode == 4:                                     # CVBR long-term bounds
             L.w32(P + 0x178, kbps); L.w32(P + 0x17c, kbps // 4)
+        # further i264e parameters {offset: (struct format, value)}, e.g. the SMART/AVBR
+        # still-scene knobs +0x25c (on), +0x260, +0x26c (mode), +0x26d (level), +0x168
+        for o, (f, v) in (extra or {}).items():
+            L.wr(P + o, struct.pack('<' + f, v))
         L.call('i264e_ratecontrol_init', P)
         Hh = self.Hh
         L.w32(Hh + 0x1540, P); L.w32(Hh + 0x3f0, self.X); L.w32(Hh + 0x400, self.S)
@@ -84,11 +88,23 @@ class T33:
         # controller writes through a NULL pointer into low memory
         self.SL = HEAP + 0x20000
         L.w32(Hh + 0xf9c, self.SL)
+        # the encoder's per-MB maps (one byte per MB) that i264e_ratecontrol_start hands to
+        # the controller (+0x1444.. -> P+0x7e0..0x7fc, read by VPI_set_sliceinfo as the
+        # SMART / ROI maps); without them the controller writes through NULL into low memory
+        self.MAPS = HEAP + 0x40000
+        for i, o in enumerate((0x1444, 0x1448, 0x1a0c, 0x1a10, 0x1b7c, 0x1b80, 0x1cec, 0x1cf0)):
+            L.w32(P + o, self.MAPS + 0x4000 * i)
+        # the VPU work buffer the slice block maps are laid out in (P+0x3088 -> P+0x7dc ->
+        # VPI_set_sliceinfo: MB QP map, slice table, ... about 30 bytes per MB)
+        L.w32(P + 0x3088, HEAP + 0x100000)
         self.n = 0
+        self.gop = gop
 
     def start(self):
         L = self.L
-        L.w32(self.Hh, self.n)
+        # Hh+0 counts the pictures since the last IDR (i264e_ratecontrol_start makes an
+        # IDR only when it is 0); the encoder restarts it every GOP
+        L.w32(self.Hh, self.n % self.gop if self.gop else self.n)
         r = L.call('i264e_ratecontrol_start', self.Hh)
         return r, L.r32(self.Hh + 0x354), L.rd(self.P + 0xb71, 1)[0]
 

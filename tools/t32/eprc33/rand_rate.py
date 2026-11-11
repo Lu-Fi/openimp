@@ -25,6 +25,6 @@ for k in range(K0,K0+n):
         if still[0]>0: still[0]-=1; return 1.0+r.random()
         return max(0.5, lvl[0]*(0.8+0.4*r.random()))
     seq=hh.run(pics,cpl)
-    tot+=1; bad+= hh.ndiff>1
+    tot+=1; bad+= hh.ndiff>0
     print('scen %d mode %d %dk %dx%d gop %d fps %d qp %d..%d init %d pics %d: calls %d diff %d  qp[-5:] %s'%(k,mode,kbps,w,h,gop,fps,minqp,maxqp,initqp,pics,hh.calls,hh.ndiff,seq[-5:]),flush=True)
 print('TOTAL',tot,'bad',bad)
