@@ -1422,10 +1422,13 @@
         "T31": "n.a.",
         "T32": "n.a.",
         "T33": "n.a.",
-        "T40": "host",
+        "T40": "dev",
         "T41": "n.a."
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case). T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (num 4 -4, NULL -9); the valid call (ioctl 0xc0045430) oopses our tx_isp_t40 in QEMU (#322), so by the QEMU-first rule it was not sent on the camera. OpenIMP now answers -1 on a failing ioctl like the vendor (was -6)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case). T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (num 4 -4, NULL -9); the valid call (ioctl 0xc0045430) oopses our tx_isp_t40 in QEMU (#322), so by the QEMU-first rule it was not sent on the camera. OpenIMP now answers -1 on a failing ioctl like the vendor (was -6). 2026-11-11 (#322): fixed in open-tx-isp (graph slot 4 = frame source like the OEM), dev.",
+      "ref": {
+        "T40": "apitest t40dev 2000000 2026-11-11 (Eufy T40XP sc830ai, runtime swap of open-tx-isp claude/t40-fix 66dcbe8f + test libimp, then vendor 1.3.1 libimp on the vendor tx-isp-t40.ko; dead-man, sysrq back): num 4 -4, NULL -9, dqtime 0 rc 0 on both, 21 frames/s after, no oops. Before the fix the valid call oopsed the open module in QEMU (#322: frame source missing in graph slot 4); QEMU T40 now rc 0, no oops."
+      }
     },
     "ISP_SetScalerLv": {
       "area": "ISP tuning",
@@ -4711,13 +4714,14 @@
         "T31": "n.a.",
         "T32": "nob",
         "T33": "nob",
-        "T40": "host",
+        "T40": "dev",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): linear start with imode DOL returns 0, frames flow; the module stores the non-zero mode byte like the stock module, mode 0 is refused with EFAULT as stock (-4090); no visible effect on this linear sensor (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): linear start with imode DOL returns 0, frames flow; the module stores the non-zero mode byte like the stock module, mode 0 is refused with EFAULT as stock (-4090); no visible effect on this linear sensor (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T40": "apitest t40dev 1000 2026-11-11 (Eufy T40XP sc830ai, runtime swap of open-tx-isp claude/t40-fix 66dcbe8f + test libimp, then vendor 1.3.1 on the vendor module; QEMU T40 too): LINEAR with imode DOL before AddSensor returns 0 on both (open module stores the mode byte at core_priv+1564 like the OEM, imode 0 -EFAULT like the OEM). Difference: the vendor stream then stays at 0 frames (its ISP init takes the WDR mode on a linear sensor), the open stream runs on (21 frames/s, Y 81) (#324)."
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run. T40 2026-11-11 (#310): stays host: argument checks equal (NULL -8, rmode 7 -9); LINEAR before AddSensor: OpenIMP -1 (the open module refuses ioctl 0xc0045432, stream runs on), vendor 0 but its stream then stays at 0 frames in that run (#324)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run. T40 2026-11-11 (#310): stays host: argument checks equal (NULL -8, rmode 7 -9); LINEAR before AddSensor: OpenIMP -1 (the open module refuses ioctl 0xc0045432, stream runs on), vendor 0 but its stream then stays at 0 frames in that run (#324). 2026-11-11 (#324): ioctl fixed (the lift returned an address instead of storing the byte), rc equal, dev; the vendor's no-frames result with a WDR imode on a linear sensor is not reproduced (open keeps streaming), noted on #324."
     },
     "ISP_SetAeAlgoFunc": {
       "area": "AE / AWB / AF",

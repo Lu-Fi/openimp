@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-11: T40 SetPreDqtime and WDR_OPEN device-tested (#322, #324)
+
+- open-tx-isp fixes (T40 module): ioctl 0xc0045430 no longer oopses (frame source in graph slot 4), ioctl 0xc0045432 stores the WDR init byte and returns 0 like the vendor module. Eufy T40XP: `IMP_ISP_SetPreDqtime` and `IMP_ISP_WDR_OPEN` (LINEAR) return the vendor results; T40 cells dev. apitest t40dev 2000000 now sends the valid SetPreDqtime call by default (`T40D_PREDQ=0` skips it for an older module).
+
 ## 2026-11-11: date badges in the feature matrix
 
 - `tools/gen_feature_matrix_html.py`: two date-based baselines on top of the release ones: "today" (state of `docs/FEATURE_MATRIX.md` at the last commit before today 00:00) and "yday" (last commit before yesterday 00:00 against the one before today), from git history at generation time (Pages workflow: full history, `TZ=Europe/Berlin`). Cells get a small badge (filled = improved, outlined = changed), a "Changed" filter, legend entries and summary counts; the API function tables mark cells whose `docs/api_evidence.json` code differs between the same commits and have a "changed today / yesterday" filter. Release badges unchanged.
