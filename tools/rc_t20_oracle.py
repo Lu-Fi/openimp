@@ -175,6 +175,20 @@ class Lib:
             else:
                 r = math.sqrt(x) if x >= 0 else math.nan
             self.setd(0, r)
+        elif name in ('__divdi3', '__moddi3', '__udivdi3', '__umoddi3'):
+            # libgcc 64-bit division (o32: a0/a1 and a2/a3 the operands,
+            # v0/v1 the result); a missing stub returned 0 (#343)
+            x = a[0] | a[1] << 32
+            y = a[2] | a[3] << 32
+            if name in ('__divdi3', '__moddi3'):
+                x -= (x >> 63) << 64
+                y -= (y >> 63) << 64
+            if y == 0:
+                raise RuntimeError('%s by zero' % name)
+            q = abs(x) // abs(y) * (1 if (x < 0) == (y < 0) else -1)
+            r = (q if name in ('__divdi3', '__udivdi3') else x - q * y) & (2 ** 64 - 1)
+            ret = r & 0xffffffff
+            uc.reg_write(UC_MIPS_REG_V1, r >> 32)
         elif name == 'access':
             ret = 0xffffffff        # no debug files
         elif name == 'exit':
