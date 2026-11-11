@@ -68,10 +68,10 @@ or the converted driver block for anti-flicker, CCM, CSC and wait-frame).
 | IMP_ISP_Tuning_GetAwbOnlyReadAttr | 0x08000015 | get | 4 | gap (ENOTTY) |
 | IMP_ISP_Tuning_SetAutoZoom | 0x08000077 | set | 60 | gap (ENOTTY) |
 | IMP_ISP_Tuning_GetAutoZoom | 0x08000077 | get | 60 | gap (ENOTTY) |
-| IMP_ISP_Tuning_SetOSDAttr | 0x080000a1 | set | 32 | gap (ENOTTY) |
-| IMP_ISP_Tuning_GetOSDAttr | 0x080000a1 | get | 32 | gap (ENOTTY) |
-| IMP_ISP_Tuning_SetOSDBlock | 0x080000a2 | set | 20 | gap (ENOTTY) |
-| IMP_ISP_Tuning_GetOSDBlock | 0x080000a2 | get | 20 | gap (ENOTTY) |
+| IMP_ISP_Tuning_SetOSDAttr | 0x080000a1 | set | 32 | driver (#336) |
+| IMP_ISP_Tuning_GetOSDAttr | 0x080000a1 | get | 32 | driver (#336) |
+| IMP_ISP_Tuning_SetOSDBlock | 0x080000a2 | set | 20 | driver (#336) |
+| IMP_ISP_Tuning_GetOSDBlock | 0x080000a2 | get | 20 | driver (#336) |
 | IMP_ISP_Tuning_SetWdrOutputMode | 0x08000054 | set | 4 | gap (ENOTTY) |
 | IMP_ISP_Tuning_GetWdrOutputMode | 0x08000054 | get | 4 | gap (ENOTTY) |
 | IMP_ISP_Tuning_SetScalerLv | 0x080000a6 | set | 12 | gap (ENOTTY) |
@@ -97,10 +97,10 @@ or the converted driver block for anti-flicker, CCM, CSC and wait-frame).
 | IMP_ISP_HB_GetAttr | 0x080000a7 | get | 2 | gap (ENOTTY) |
 | IMP_ISP_Tuning_SetAeStartAttr | tx-isp c0045436 | - | - | gap (ENOTTY) |
 | IMP_ISP_Tuning_GetAeStartAttr | tx-isp c0045437 | - | - | gap (ENOTTY) |
-| IMP_ISP_Tuning_SetMaskBlock | 0x08000074 | set | 24 | gap (ENOTTY) |
-| IMP_ISP_Tuning_GetMaskBlock | 0x08000074 | get | 24 | gap (ENOTTY) |
-| IMP_ISP_Tuning_SetDrawBlock | 0x080000a0 | set | 36 | gap (ENOTTY) |
-| IMP_ISP_Tuning_GetDrawBlock | 0x080000a0 | get | 36 | gap (ENOTTY) |
+| IMP_ISP_Tuning_SetMaskBlock | 0x08000074 | set | 24 | driver (#336) |
+| IMP_ISP_Tuning_GetMaskBlock | 0x08000074 | get | 24 | driver (#336) |
+| IMP_ISP_Tuning_SetDrawBlock | 0x080000a0 | set | 36 | driver (#336) |
+| IMP_ISP_Tuning_GetDrawBlock | 0x080000a0 | get | 36 | driver (#336) |
 | IMP_ISP_Tuning_GetSensorAttr | 0x08000033 | get | 20 | gap (ENOTTY) |
 | IMP_ISP_Tuning_GetAfStatistics | 0x08000031 | get | 5400 | gap (ENOTTY) |
 | IMP_ISP_Tuning_WaitFrameDone | 0x08000091 | get | 24 | gap (ENOTTY) |
@@ -117,7 +117,9 @@ Conversions (vendor behaviour kept, RE of libimp 2.2.0):
   asymmetric scale); other modes send only the mode word (vendor: rest of its stack block
   uninitialised, zero here).
 - Wait-frame: driver block = the caller's timeout word, words 2..4 come back.
-- Mask / draw block: an RGB colour gets its BT.601 YUV next to it (bytes +3..+5 of the colour).
+- Mask / draw block: an RGB colour gets its BT.601 YUV next to it (bytes +3..+5 of the colour). The last
+  Set is kept per VI (mask: entry chx * pinum, draw: one slot) and Get puts its colour type and RGB
+  bytes back, as the vendor (#336; draw only for pinum 0, the vendor reads past its slot otherwise).
 - Sensor fps: value word `num << 16 | den` (no pointer); `IMP_ISP_EnableTuning` reads it once per
   streaming sensor (the vendor hands it to FrameSource; the T32 FrameSource reads the rate per frame).
 - AE start (`IMP_ISP_Tuning_Set/GetAeStartAttr`): `/dev/tx-isp` `0xc0045436/7` with `{vinum, w0, w1}`,
@@ -125,6 +127,6 @@ Conversions (vendor behaviour kept, RE of libimp 2.2.0):
 - Multi-sensor effect: Set always on VI 0, Get on any VI without a range check.
 
 Not in this table: `IMP_ISP_Tuning_SetISPRunningMode/GetISPRunningMode/SwitchBin` (IQ bin, #289),
-the ISP OSD regions (`IMP_ISP_Tuning_*OsdRgn*`, `SetOsdPoolSize`: OSD issue), `SetVideoDrop` (no
+the ISP OSD regions (`IMP_ISP_Tuning_*OsdRgn*`, `SetOsdPoolSize`: `src/t32/openimp_t32_isp_osd.c`, #336), `SetVideoDrop` (no
 request; the callback is stored), the vendor's multi-process server mode and its
 `/tmp/isp_tuning_func` file.
