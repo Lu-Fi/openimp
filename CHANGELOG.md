@@ -16,6 +16,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - #235 (T10 channel 1 layout) and #267 (T10 brightness hunting) are closed: both were open-tx-isp causes fixed in `next` (DS1 top-register write-back; flip guard on by default), device-proven against the vendor reference; no OpenIMP change.
 - #307 (T23 audit-only cells): `SU_Base_Reboot` and `SU_Key_ReadEvent` dev on the Jooan A6M, notes for Suspend/LED/Key Enable-Disable; the issue stays open for the remaining cells.
 - Matrix: today / yesterday badges (see below); API evidence T41 `IMP_ISP_SetVicDoneCbFunc` is `dev` (#320).
+## 2026-11-11, T32 (planned): rate control on HERA (#295, partial)
+
+- `src/t32/openimp_t32_rc.c`: CBR, VBR, SMART, CVBR, AVBR and QVBR channels (H.264 and H.265) get a per-picture QP from `src/eprc` (T23 controller revision) with the T32 attributes mapped onto it; the HERA statistics (the first 25 of the 48 registers vendor 2.2.0 reads are the Helix ones) and the coded size go back after each picture; `SetChnAttrRcMode` restarts it at the next IDR; maxIQp/minIQp bound the IDR QP. FIXQP unchanged. Details and limits in [docs/T32_RC.md](docs/T32_RC.md).
+- Vendor reference: `tools/eprc_t33_oracle.py` runs the vendor 2.2.0 controller (eprc T33 revision) under unicorn; `tests/t32/vendor-2.2.0-rc-h264.txt` + `rc_test` in `make -C tests/t32 check`: CBR/VBR/CVBR within 12 % of the vendor rate, mean QP difference <= 3 (1.2..2.8); SMART/AVBR reported (still-scene rules of the T33 revision not ported yet).
+- QEMU: CBR H.264 and H.265 streams decode clean, QP follows the coded size, EFE_FRM_QP of every list = slice QP. Open: T33 controller port, re-encoding, macroblock QP, device proof. T31 and T41 libimp.so byte-identical before/after.
 
 ## 2026-11-11: T23 AWB cadence, ISP picture OSD under ISP flip, padframe teardown (#233, #207, #198)
 
