@@ -183,6 +183,7 @@ typedef struct {                /* soc_vpu channel_node, 64 bytes */
 #define OI_T32_VPU_CODEC_H264ENC 0x00000u
 #define OI_T32_VPU_CODEC_H265ENC 0x00010u
 #define OI_T32_VPU_CODEC_JPEGENC 0x10000u
+#define OI_T32_VPU_CODEC_JPEGDEC 0x10001u    /* 2.0.0 SDK kernel only (#301) */
 #define OI_T32_VPU_WORK_OPEN    0u              /* channel_node.workphase */
 #define OI_T32_VPU_WORK_WORKING 1u
 #define OI_T32_VPU_WORK_CLOSE   2u
@@ -222,6 +223,32 @@ typedef struct {
     uint32_t bsfull_jpeg_intr_size;
 } T32IocJpegRegInfo;
 #define T32_JPEG_JOB_BYTES 256u
+
+/*
+ * The 2.0.0 SDK kernel's whole jpeg_reg_info (184 bytes), as the vendor
+ * libimp 2.0.0 decoder (T32P_JPEGD_SliceInit) fills it for a codecdir
+ * JPEGDEC job (#301): helix.c vpu_start writes qmem, ctrl, nmcu, frm_info,
+ * stride, y_addr (the decoded picture), bs_addr (the scan), pixel_num,
+ * decode_mode and marker_en << 0 | marker_num << 16, then TRIG bit 9 with
+ * the start; the decoded length is read back from 0x16c.  The thingino
+ * PRJ007 4.4.94 kernel has no decode path (the job times out).
+ */
+typedef struct {
+    uint32_t qmem[32];
+    uint32_t jpeg_ctrl;
+    uint32_t nmcu;
+    uint32_t frm_info;
+    uint32_t stride;
+    uint32_t y_addr, c_addr, bs_addr;
+    uint32_t pixel_num;
+    uint32_t marker_en, marker_num;
+    uint32_t limit_bs_len;
+    uint32_t bsfull_jpeg_intr_size;
+    uint32_t timeout_thrd;
+    uint32_t decode_mode;
+} T32IocJpegDecRegInfo;
+_Static_assert(sizeof(T32IocJpegDecRegInfo) == 184 && sizeof(T32IocJpegDecRegInfo) <= T32_JPEG_JOB_BYTES,
+               "T32 2.0.0 jpeg_reg_info");
 
 _Static_assert(sizeof(T32IocInitArg) == 8, "T32 initarg");
 _Static_assert(sizeof(T32IocBufInfo) == 12, "T32 isp_buf_info");

@@ -36,6 +36,8 @@
 #             (a moving scene for IVS, qemu/README-scene)
 # EXTRA_LIBS  libraries copied into the guest /usr/lib before the run (e.g. the
 #             vendor libsysutils 2.x for an SU_* reference run)
+# EXTRA_FILES data files copied into the guest /usr/share/t32 (e.g. the JPEGs
+#             tools/t32/t32_dec_sample.c decodes, #301)
 # MODPROBE    extra modules loaded after the ISP and sensor (e.g. "audio" for
 #             the OSS3 /dev/dsp driver, #298); ":" separates module
 #             parameters: "audio:dmic_enable=1" also registers the DMIC
@@ -62,6 +64,8 @@ mkdir -p "$OUT"; rm -rf "$OUT/rootfs"; cp -a "$BASE_ROOTFS" "$OUT/rootfs"
 cp "$ISP_KO" "$OUT/rootfs/lib/modules/4.4.94/ingenic/tx-isp-t32.ko"
 [ -n "${LIBIMP:-}" ] && cp "$LIBIMP" "$OUT/rootfs/usr/lib/libimp.so"
 for l in ${EXTRA_LIBS:-}; do cp "$l" "$OUT/rootfs/usr/lib/"; done
+[ -n "${EXTRA_FILES:-}" ] && mkdir -p "$OUT/rootfs/usr/share/t32"
+for l in ${EXTRA_FILES:-}; do cp "$l" "$OUT/rootfs/usr/share/t32/"; done
 md5sum "$ISP_KO" "$OUT/rootfs/usr/lib/libimp.so" > "$OUT/inputs.md5"
 rm -f "$OUT/rootfs.bin"
 "$T32_BUILD/host/bin/mksquashfs" "$OUT/rootfs" "$OUT/rootfs.bin" -comp xz -b 262144 \

@@ -41,13 +41,19 @@ OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 # + the /dev/rmem write-back of the new stream buffers; JPEG job register image
 OI_ENC_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
+# IMP_Decoder (#301): header parse + engine job of the vendor 2.0.0 decoder
+DEC_BIN := $(BUILD)/t32-dec-test
+DEC_SRC := dec_test.c $(PROJECT_DIR)/src/t32/openimp_t32_jpegd.c
+DEC_DEPS := $(DEC_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_jpegd.h $(PROJECT_DIR)/src/t32/openimp_t32_ioctl.h
+
 AUDIO_BIN := $(BUILD)/t32-audio2x-test
 AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
 
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(AUDIO_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(AUDIO_BIN) $(DEC_BIN)
 	$(TEST_BIN)
+	$(DEC_BIN)
 	$(RC_BIN) vendor-2.2.0-rc-h264.txt
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)
@@ -66,6 +72,13 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(AUDIO_BIN)
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_FS_PENDING) || exit 1; done
 	for s in vpu jpeg h264 h265 ivdc; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_ENC_PENDING) || exit 1; done
+	# IMP_Decoder (#301): vendor libimp 2.0.0 (QEMU, 2.0.0 helix decode path) vs OpenIMP
+	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.0.0-ioctl-seq-dec.txt \
+		openimp-ioctl-seq-dec.txt --ignore rmem
+	grep -v '^#' vendor-2.0.0-dec-job.txt > $(BUILD)/t32-dec-job-vendor.txt
+	grep -v '^#' openimp-dec-job.txt > $(BUILD)/t32-dec-job-openimp.txt
+	diff $(BUILD)/t32-dec-job-vendor.txt $(BUILD)/t32-dec-job-openimp.txt && \
+		echo "JPEG decode job register image (3 pictures): identical"
 	grep -v '^#' vendor-2.2.0-jpeg-job.txt > $(BUILD)/t32-jpeg-job-vendor.txt
 	grep -v '^#' openimp-jpeg-job.txt > $(BUILD)/t32-jpeg-job-openimp.txt
 	diff $(BUILD)/t32-jpeg-job-vendor.txt $(BUILD)/t32-jpeg-job-openimp.txt && \
@@ -73,6 +86,10 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(AUDIO_BIN)
 	# ISP tuning (#296): id, direction, VI and payload of every IMP_ISP_Tuning_*
 	# request and the return codes, vendor 2.2.0 vs OpenIMP
 	python3 $(PROJECT_DIR)/tools/t32/t32_tuning_table.py diff vendor-2.2.0-tuning.txt openimp-tuning.txt --rc
+
+$(DEC_BIN): $(DEC_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ $(DEC_SRC)
 
 $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)

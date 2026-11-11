@@ -1,0 +1,9 @@
+# Vendor libimp 2.0.0 (T32Pro SDK; the only vendor T32 libimp with IMP_Decoder) ioctl reference (#301), decoder
+# channel 0, 1920x1080 BAYER_RGGB8, nrKeepStream 2, three 4:2:2 baseline JPEGs (tools/t32/t32_dec_sample.c dec 3).
+# QEMU -M ingenic-t32 0.7.14, thingino 4.4.94 kernel + the 2.0.0 SDK helix decode path (test kernel, audit/issue301/dec).
+@ start
+~ misc-ivdc GET_DIRECT c0045471 rc=0 n=2
+~ soc_vpu CHANNEL_FLUSH_CACHE c0406305 rc=0 n=9
+~ soc_vpu CHANNEL_REL c0406301 rc=0 n=1
+~ soc_vpu CHANNEL_REQ c0406300 rc=0 n=1
+~ soc_vpu CHANNEL_RUN c0406302 rc=0 n=3
