@@ -132,6 +132,9 @@ int main(int argc, char **argv)
             memset(slice, 0, sizeof(slice));
             if (EPRC30_Init(&rc, &p, slice) != 0)
                 return 2;
+            /* the oracle's macroblock input block (i264e handle +0xba4 ->
+             * E+140, copied into the slice parameters at +0x18c) */
+            EPRC30_SetQpMap(&rc, qpmap, 0x50040000u);
             active = 1;
             scenario++;
             frame = 0;
@@ -220,6 +223,36 @@ int main(int argc, char **argv)
                 fprintf(stderr, "%s: scenario %d picture %d: parameter block / QP map differ\n",
                         path, scenario, frame);
             frame++;
+        } else if (line[0] == 'B' && active) {
+            /* the slice-parameter block after the picture (h264_get_mb_qp
+             * output); +0x1e4 holds an OEM stack address */
+            char *t = line + 1;
+            unsigned long want = strtoul(t, &t, 16), want_t = strtoul(t, NULL, 16);
+            const char *dump = getenv("EPRC30_DUMP");
+            int32_t nt = (int32_t)(slice[0x1d8] | slice[0x1d9] << 8 | slice[0x1da] << 16 |
+                                   (uint32_t)slice[0x1db] << 24);
+            uint32_t tgt_crc;
+            int have_tgt = slice[0x1e4] != 0;
+
+            memset(slice + 0x1e4, 0, 4);
+            if (dump) {
+                char fn[512];
+                FILE *o;
+
+                snprintf(fn, sizeof(fn), "%s/%d_%d.bin", dump, scenario, frame - 1);
+                o = fopen(fn, "wb");
+                if (o) {
+                    fwrite(slice, 1, sizeof(slice), o);
+                    fclose(o);
+                }
+            }
+            /* the targets exist when the basic unit runs (+0x1c7) */
+            tgt_crc = crc32((const uint8_t *)rc.bu_tgt,
+                            have_tgt && nt > 0 ? 4u * (uint32_t)(nt < 128 ? nt : 128) : 0u);
+            checked++;
+            if ((crc32(slice, sizeof(slice)) != want || tgt_crc != want_t) && failed++ < 10)
+                fprintf(stderr, "%s: scenario %d picture %d: slice parameters differ\n",
+                        path, scenario, frame - 1);
         } else if (line[0] == 'F' && active) {
             int want[16], n = 0, since, i, idr;
             char *s = line + 1;
@@ -251,6 +284,7 @@ int main(int argc, char **argv)
                                 path, scenario, frame, i, pic.qp, i < n ? want[i] : -1);
                     break;
                 }
+                memset(slice + 0x1e4, 0, 4);  /* as the oracle: set by a basic-unit run */
                 if (EPRC30_FrameEnd(&rc, bytes, regs, cmpx, &pic, 1) != 1)
                     break;
                 bytes = bytes / 2u < 20u ? 20u : bytes / 2u;

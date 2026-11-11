@@ -14,6 +14,9 @@ picture-size and statistics models are those of tools/eprc_oracle.py.
 
     tools/eprc_t30_oracle.py T30/lib/1.0.5/uclibc/4.7.2/libimp.so > tests/eprc/eprc_t30_vectors.txt
     tools/eprc_t30_oracle.py LIB --real [--random SEED N [FRAMES]]
+    tools/eprc_t30_oracle.py LIB [--real] --slice [--dump DIR] ...  (H.264: a 'B'
+        line per picture, CRC-32 of the slice-parameter block and of the
+        basic-unit targets of h264_get_mb_qp, Lu-Fi/openimp#217)
     tools/eprc_t30_oracle.py LIB --h265 [--random SEED N [FRAMES]]  (H.265, I265eRatectrl)
     tools/eprc_t30_oracle.py LIB --h265-reconf [SEED N]  (H.265 run-time change: I265e::reset)
 
@@ -44,6 +47,7 @@ at i264e parameters + 0x9044c):
 import os
 import struct
 import sys
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eprc_oracle import (Lib, HEAP, SCENARIOS, picture_bytes, random_scenarios,
@@ -95,6 +99,17 @@ class SimT30:
         for i, o in enumerate(STAT_REGS):
             L.w32(self.TB + 8 * i, o)
         self.E = R + E_OFF
+        # h264_get_mb_qp (SAS mode 3) indexes its 9-byte class table on the
+        # stack at 9..15, past its end, and reads what earlier calls left
+        # there; zero those 7 bytes (sp - 608 + 33) on entry so that the
+        # slice block is defined (OpenIMP takes 0 for them, eprc_t30.c)
+        from unicorn import UC_HOOK_CODE
+        from unicorn.mips_const import UC_MIPS_REG_SP
+        def _zero_sas_stack(uc, addr, size, data):
+            uc.mem_write(uc.reg_read(UC_MIPS_REG_SP) - 608 + 33, bytes(7))
+        a = L.syms.get('h264_get_mb_qp')
+        if a is not None:
+            L.uc.hook_add(UC_HOOK_CODE, _zero_sas_stack, begin=a, end=a)
 
     def qp(self):
         return self.L.rd(self.E + 0x228, 1)[0]
@@ -155,6 +170,18 @@ def main():
     real = '--real' in args
     if real:
         args.remove('--real')
+    # --slice: after each picture a 'B' line, the CRC-32 of the slice-parameter
+    # block (0x1204 bytes, +0x1e4 zeroed: h264_get_mb_qp stores a stack address
+    # there) and of the basic-unit targets it points to; --dump DIR also writes
+    # each block to DIR/<scenario>_<picture>.bin
+    slice_crc = '--slice' in args
+    if slice_crc:
+        args.remove('--slice')
+    dump = None
+    if '--dump' in args:
+        i = args.index('--dump')
+        dump = args[i + 1]
+        del args[i:i + 2]
     frames = 200 if real else 120
     scenarios = SCENARIOS
     if len(args) > 1 and args[0] == '--sc':
@@ -184,6 +211,9 @@ def main():
             else:
                 regs = statistics(f)
             while True:
+                if slice_crc or dump:
+                    L_ = s.L
+                    L_.w32(s.SL + 0x1e4, 0)     # set again only by a basic-unit run
                 r = s.end(size, regs, is_idr, qp)
                 if r != 1:
                     break
@@ -191,6 +221,18 @@ def main():
                 out.append(qp)
                 size = max(size // 2, 20)
             print('F', since, ' '.join(str(v) for v in out))
+            if slice_crc or dump:
+                blk = bytearray(s.L.rd(s.SL, 0x1204))
+                # +0x1e4: the address of h264_get_mb_qp's basic-unit target
+                # array (on its stack, still intact right after the call)
+                tp = struct.unpack_from('<I', blk, 0x1e4)[0]
+                nt = min(struct.unpack_from('<i', blk, 0x1d8)[0], 128)
+                tg = s.L.rd(tp, 4 * nt) if tp and nt > 0 else b''   # 0: none this picture
+                blk[0x1e4:0x1e8] = bytes(4)
+                if slice_crc:
+                    print('B %08x %08x' % (zlib.crc32(bytes(blk)), zlib.crc32(tg)))
+                if dump:
+                    open(os.path.join(dump, '%d_%d.bin' % (n, f)), 'wb').write(bytes(blk))
 
 
 
