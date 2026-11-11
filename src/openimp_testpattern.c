@@ -225,6 +225,7 @@ static int tp_sensor_switch(const OpenIMPTestPatternParams *p)
 int openimp_tp_ispmid_on(uint32_t *w, uint32_t *h, uint32_t *stride) __attribute__((weak));
 int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h) __attribute__((weak));
 void openimp_tp_ispmid_off(void) __attribute__((weak));
+int openimp_tp_ispmid_hmirror(void) __attribute__((weak));   /* 1: store the picture mirrored (ISP flips later) */
 
 int openimp_tp_ispmid_v;                 /* 1 while mode 5 runs (frame path: one relaxed load) */
 static pthread_mutex_t mid_lock = PTHREAD_MUTEX_INITIALIZER;   /* tick vs Set/off only */
@@ -236,6 +237,28 @@ static void mid_free(void)
 {
     free(mid_cache);
     mid_cache = NULL;
+}
+
+/* Mirror an NV12 picture horizontally in place (Y bytes, UV pairs). */
+static void mid_hmirror(uint8_t *nv12, uint32_t w, uint32_t h, uint32_t st)
+{
+    uint32_t r, a, b;
+    uint8_t t;
+
+    for (r = 0; r < h; r++) {
+        uint8_t *y = nv12 + (size_t)r * st;
+
+        for (a = 0, b = w - 1; a < b; a++, b--) {
+            t = y[a]; y[a] = y[b]; y[b] = t;
+        }
+    }
+    for (r = 0; r < h / 2; r++) {
+        uint16_t *c = (uint16_t *)(void *)(nv12 + (size_t)st * h + (size_t)r * st), u;
+
+        for (a = 0, b = w / 2 - 1; a < b; a++, b--) {
+            u = c[a]; c[a] = c[b]; c[b] = u;
+        }
+    }
 }
 
 /* mid_lock held */
@@ -253,6 +276,8 @@ static int mid_build(uint32_t logo)
         return -1;
     }
     openimp_testpattern_nv12_logo(mid_cache, mid_cache + (size_t)st * h, w, h, st, logo);
+    if (openimp_tp_ispmid_hmirror && openimp_tp_ispmid_hmirror())
+        mid_hmirror(mid_cache, w, h, st);
     mid_w = w; mid_h = h; mid_stride = st; mid_logo = logo;
     return 0;
 }

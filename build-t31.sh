@@ -91,6 +91,7 @@ compile framesource src/framesource/framesource_tseries.c
 compile nv12_rotate src/framesource/nv12_rotate.c $hot_flags -Werror
 compile core_mxu2 src/core/openimp_mxu2.c -Werror
 compile isp src/isp/isp_tseries.c
+compile isp_mid_ref src/isp/isp_mid_ref.c -Werror
 compile t31_compat src/t31/openimp_t31_compat.c
 compile t31_state src/t31/openimp_t31_state.c -Werror
 compile t31_services src/t31/openimp_t31_services.c $hot_flags -Werror
@@ -139,6 +140,7 @@ compile t31_extras src/t31/openimp_t31_extras.c -Werror
     "$output_dir/nv12_rotate.o" \
     "$output_dir/core_mxu2.o" \
     "$output_dir/isp.o" \
+    "$output_dir/isp_mid_ref.o" \
     "$output_dir/t31_compat.o" \
     "$output_dir/t31_state.o" \
     "$output_dir/t31_services.o" \

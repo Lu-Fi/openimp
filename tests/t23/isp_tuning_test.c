@@ -44,6 +44,7 @@ ISPDevice *gISP;
 #define ioctl test_ioctl
 int test_ioctl(int fd, unsigned long nr, ...);
 #include "../../src/isp/isp_t23_tuning.c"
+#include "../../src/isp/isp_mid_ref.c"
 #include "../fake_rmem.h"
 #undef ioctl
 
@@ -836,12 +837,12 @@ static void test_ispmid(void)
     CHECK(openimp_tp_ispmid_on(&w, &h, &st) == 0 && w == W && h == H && st == ST, "ispmid: geometry %u %u %u", w, h, st);
     memset(pic, 0x5a, sizeof pic);
     CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0, "ispmid: put");
-    CHECK(R(0x799c) == 0x00ffffff && R(0x7a6c) == 0x00ffffff, "ispmid: weights held");
+    CHECK(R(0x799c) == 0xffffffff && R(0x7a6c) == 0xffffffff, "ispmid: weights held");
     CHECK(mem[0x100] == 0x5a && mem[0x100 + SZ - 1] == 0x5a && mem[0xff] == 0 && mem[0x100 + SZ] == 0,
           "ispmid: Y+C written, nothing outside");
     CHECK(openimp_tp_ispmid_put(pic, ST, H + 16) == -1, "ispmid: size mismatch refused");
     R(0x799c) = 0x00dc14ff;                    /* the driver overwrote it at a gain step */
-    CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0x00ffffff, "ispmid: re-asserted");
+    CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0xffffffff, "ispmid: re-asserted");
     R(0x7828) = 0x3000000 + 0x100 + ST * H + 64;   /* layout changed under us */
     CHECK(openimp_tp_ispmid_put(pic, ST, H) == -1, "ispmid: layout change refused");
     R(0x7828) = 0x3000000 + 0x100 + ST * H;
@@ -859,13 +860,13 @@ static void test_ispmid(void)
             R(0x799c) = 0x00dc14ff; R(0x7a6c) = 0x00dc14ff;
             CHECK(openimp_tp_ispmid_on(&w, &h, &st) == 0 && mid_hold_set, "ispmid: hold on");
             CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '1', "ispmid: hold param written");
-            CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0x00dc14ff &&
-                  R(0x7a6c) == 0x00dc14ff, "ispmid: hold: no register write");
+            CHECK(openimp_tp_ispmid_put(pic, ST, H) == 0 && R(0x799c) == 0xffffffff &&
+                  R(0x7a6c) == 0xffffffff, "ispmid: hold: weights incl. b_min still written per frame");
             openimp_tp_ispmid_off();
             memset(buf, 0, sizeof buf);
             CHECK(pread(hfd, buf, sizeof buf - 1, 0) > 0 && buf[0] == '0' && !mid_hold_set,
                   "ispmid: hold released");
-            CHECK(R(0x799c) == 0x00dc14ff, "ispmid: hold: registers untouched on off");
+            CHECK(R(0x799c) == 0x00dc14ff && R(0x7a6c) == 0x00dc14ff, "ispmid: hold: saved weights back on off");
             close(hfd);
             unlink(hp);
             mid_hold_path = "/nonexistent/mdns_ref_hold";   /* parameter missing: register fallback above */

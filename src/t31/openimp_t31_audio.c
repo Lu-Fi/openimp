@@ -78,6 +78,9 @@
 #define T31_CAPTURE_MAX_DEPTH     50
 #define T31_CAPTURE_RETRY_US      20000
 #define T31_CAPTURE_STOP_MS       500U
+/* late-audio catch-up and active-consumer windows (as the non-T23 block below) */
+#define T31_CAPTURE_CATCHUP_MS    100U
+#define T31_CAPTURE_CONSUMER_MS   300U
 
 typedef struct {
     int32_t seconds;

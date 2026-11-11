@@ -24,7 +24,7 @@
  *           AE/AWB to the state before mode 4.  -1 with
  *           errno ENOTSUP when the sensor has no table entry, EIO when the
  *           register access fails (sensor not running).
- *   mode 5  ISP-middle test picture (T23): the pattern (same generator as mode 1) is written
+ *   mode 5  ISP-middle test picture (T21, T23, T31): the pattern (same generator as mode 1) is written
  *           into the ISP's MDNS (temporal-NR) reference frame buffer every frame, and OpenIMP
  *           holds the MDNS reference weight (luma 0x799c and chroma 0x7a6c) at maximum, so the
  *           picture enters the ISP behind the demosaic/colour/gamma stages and runs through

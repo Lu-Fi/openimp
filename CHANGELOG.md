@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-11 (late): test pattern mode 5 on T31 and T21, T23 chroma (#103)
+
+- Mode 5 (ISP-middle picture via the MDNS reference buffer) moves to `src/isp/isp_mid_ref.c` and now runs on T31 and T21 as well as T23. Device-tested: T31L Y/U/V SSIM 0.89/0.96/0.98, T21 0.85/0.89/0.90. The weight words are written with `b_min` = 0xff, which completes the T23 chroma path (U/V 0.87/0.89 -> 0.96). On T31 the picture is stored mirrored while the ISP hflip is on.
+- T23 build: the audio capture catch-up constants are defined for the T23 path too. `next` did not build for T23 since #266.
+
 ## 2026-11-11 (afternoon): T31 temper after day/night, T10/T20 manual gain, QEMU SU checks, T30 AE FSM, kernel review lows (#323, #331, #285, #284, #283, #251, #327, #328, #235, #267)
 
 - #323 / #331 (open-tx-isp, T31L device-tested): the temper (MDNS) Y tables follow the day/night bank after a mode switch and a non-neutral `IMP_ISP_Tuning_SetTemperStrength` is reapplied like stock; `Get(Temper|Sinter)Strength` return the live ratio (they read 0 until the first set). OpenIMP side: apitest cases `temper-64` / `temper-128` (picture area), api_evidence `ISP_Tuning_SetTemperStrength` T31 with the register-level proof; T31 API 377 -> 381 of 401 works.

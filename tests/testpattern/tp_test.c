@@ -85,6 +85,13 @@ int openimp_tp_ispmid_put(const uint8_t *nv12, uint32_t stride, uint32_t h)
     return 0;
 }
 
+static int mid_mirror;
+
+int openimp_tp_ispmid_hmirror(void)
+{
+    return mid_mirror;
+}
+
 void openimp_tp_ispmid_off(void)
 {
     mid_off_n++;
@@ -310,6 +317,28 @@ int main(void)
             assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && mid_wy == 0x00dc14ff);
         }
         assert(mid_on_n == mid_off_n && !mid_running);
+        {   /* ISP flips behind MDNS (T31 hflip): the picture is stored mirrored (Y bytes, UV pairs) */
+            static uint8_t ref[MW * MH * 3 / 2];
+            OpenIMPTestPatternState g;
+            int bad = 0;
+
+            mid_mirror = 1;
+            assert(OpenIMP_TestPattern_Set(5, NULL) == 0);
+            openimp_tp_ispmid_tick();
+            g.size = sizeof g;
+            assert(OpenIMP_TestPattern_Get(&g) == 0);
+            openimp_testpattern_nv12_logo(ref, ref + MW * MH, MW, MH, MW, g.params.logo);
+            for (int r = 0; r < MH && !bad; r++)
+                for (int c = 0; c < MW; c++)
+                    bad |= mid_buf[r * MW + c] != ref[r * MW + (MW - 1 - c)];
+            for (int r = 0; r < MH / 2 && !bad; r++)
+                for (int c = 0; c < MW / 2; c++)
+                    bad |= mid_buf[MW * MH + r * MW + 2 * c] != ref[MW * MH + r * MW + 2 * (MW / 2 - 1 - c)] ||
+                           mid_buf[MW * MH + r * MW + 2 * c + 1] != ref[MW * MH + r * MW + 2 * (MW / 2 - 1 - c) + 1];
+            assert(!bad && memcmp(ref, mid_buf, sizeof ref) != 0);
+            assert(OpenIMP_TestPattern_Set(0, NULL) == 0);
+            mid_mirror = 0;
+        }
     }
     puts("tp_test: ok");
     return 0;

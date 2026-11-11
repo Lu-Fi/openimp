@@ -29,7 +29,35 @@ decides the picture size, every channel gets its own counter. Mode 4 does not to
 sets a test pattern bit in the sensor (register table per sensor, written through the ISP sensor
 register ioctl; the chip ID is read first and the write is verified by a readback).
 
-### Mode 5 details (T23)
+### Mode 5 details (T23, T31, T21)
+
+T21, T23 and T31 (2026-11-11). The hooks are in `src/isp/isp_mid_ref.c`. T23 and T31 share the MDNS
+register block (`0x7820` Y, `0x7824` stride, `0x7828` C, weights `0x799c` / `0x7a6c`). On T21 the
+block is at `0x1b10` Y, `0x1b14` stride, `0x1b20` C, and the weights `0x1cdc` / `0x1e38` are
+`max << 16 | min`. The weight words are written with all fields at 0xff, including `b_min`. With
+`b_min` 0, the old value `0x00ffffff`, the T31 luma reference weight stays near 0.6 and the T23 chroma
+reaches only U/V 0.87/0.89. With `b_min` 0xff a still block keeps the reference. The T31 ISP applies
+its horizontal flip behind MDNS, so on T31 the picture is stored mirrored while
+`IMP_ISP_Tuning_GetISPHflip` is on. The vertical flip of the device acts before MDNS and needs nothing.
+The picture is refreshed once per channel-0 frame that the streamer takes. While no consumer pulls
+frames, nothing is written.
+
+Device runs (2026-11-11, H.264 main stream, SSIM against the mode 1 picture, rows above the OSD; pictures
+stay local):
+
+| SoC (sensor) | live alone Y/U/V | mode 5 Y/U/V | on/off cycles |
+|---|---|---|---|
+| T31L (sc2336, hflip+vflip) | 0.47 / 0.77 / 0.80 | 0.888 / 0.964 / 0.981 (live share 0) | 3 ok, weights restored |
+| T21 PC420 (jxf23) | 0.38 / 0.87 / 0.86 | 0.852 / 0.894 / 0.902 (no live scene visible) | 3 ok |
+| T23 (sc1a4t), installed driver, `b_min` 0xff by register | 0.57 / 0.86 / 0.86 | 0.947 / 0.962 / 0.965 | - |
+| T23, `open-tx-isp` hold with `b_min` (branch claude/tp5-103) | 0.58 / 0.86 / 0.86 | 0.963 / 0.899 / 0.908 | 3 ok |
+
+The rest of the gap to 1.0 comes after MDNS: the T31 spatial filter and sharpening, and the H.264
+encoding. With the newer T23 driver, the night-mode chroma behind MDNS is weaker (UV 0.90 instead of
+0.96, tracked separately). An installed T23 driver whose `mdns_ref_hold` writes `0x00ffffff` overrides
+the library's `b_min` write, so the chroma gain needs the updated driver.
+
+Older T23 notes (2026-10-25):
 
 The T23 ISP reads one full-size NV12 reference picture per frame (previous denoised frame) from the
 rmem buffer OpenIMP allocates in `IMP_ISP_AddSensor` ("ncubuf", programmed through `TX_ISP_SET_BUF`).
@@ -74,7 +102,7 @@ OpenIMP_TestPattern_Set(OPENIMP_TP_OFF, NULL);
 - `OpenIMP_TestPattern_Get(state)`: `state->size` must be set. Returns the mode, the active
   parameters, frames replaced since the last Set, mode 3 objects shown and visible now.
 - `OpenIMP_TestPattern_Supported(mode)`: 1 when the mode can be used here (build, SoC, running
-  sensor for mode 4, ISP-middle hooks for mode 5 = T23 so far), 0 when not; nothing is switched.
+  sensor for mode 4, ISP-middle hooks for mode 5 = T21, T23, T31), 0 when not; nothing is switched.
   For greying out UI switches up front. Unknown mode: 0 with `EINVAL`.
 - `OpenIMP_TestPattern_SensorInfo(name, reg, mask, desc)`: sensor name, test pattern register,
   mask and a short description of the running sensor (mode 4).
@@ -201,7 +229,7 @@ test, ❓ open.
 | Mode 2 moving | ✅ | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 3 motion test | ✅ (objects shown) | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 4 sensor pattern | 🔧 (jxh42) | ✅ (jxf23) | ✅ (jxf23, sensor exposure hold) | ✅ (sc2336p) | 🔧 | 🔧 (register by hand ✅) | ⏳ (sc830ai) | ✅ gc5603 (colour bars, 72 s stable) / 🔧 sc5336 |
-| Mode 5 ISP-middle picture | ❌ | ❌ | 🔧 | ✅ (luma, sc1a4t .30; chroma partly) | ❌ | 🔧 | 🔧 | 🔧 |
+| Mode 5 ISP-middle picture | ❌ | ❌ | ✅ (jxf23, Y 0.85 / UV 0.89-0.90) | ✅ (sc1a4t, Y 0.95-0.96 / UV 0.96 with b_min) | ❌ | ✅ (sc2336, Y 0.89 / UV 0.96-0.98) | 🔧 | 🔧 |
 | Own picture before the ISP | 🔧 Apical TPG | ✅ Apical TPG + VIC colour bars (register level, not in the API yet) | ❌ | ❌ | 🔧 Apical TPG | ❌ (VIC bars, CSI, mux tested: no) | ❓ | ⏳ RAW from DDR (v3 module pending) |
 
 Notes:
