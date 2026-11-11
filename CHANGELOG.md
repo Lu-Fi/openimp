@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-11: T41 SetISPBypass returns -4095 on a refused ioctl, t41 header tests auto-detect headers (#351)
+
+- Commit 246bf938 (#125) changed the comment and the host test to the vendor -4095 (libimp 1.2.6 0x47418) but not the code, which still returned -1; `tests/t41 p3-controls` failed since. Code now returns -4095. The test was silently skipped by `make check` without `T41_HEADERS`; tests/t41/Makefile now auto-detects the vendor T41 1.2.0 headers in the thingino-out tree and the skip message is a WARNING.
+
 ## 2026-11-11 (night): DMIC AEC switches no longer hang while capturing (#342)
 
 - T30, T31, T40, T41 (shared DMIC, `src/t31/openimp_t31_dmic.c`): `IMP_DMIC_DisableAec` and `IMP_DMIC_DisableAecRefFrame` waited for the record thread to be idle, which it never is while frames flow (it starts the next read before it drops the lock), so they hung during capture. They now wait for the read cycle in flight to finish (cycle counter); later cycles already run without the reference buffer and the AEC handle. AEC data path unchanged; the T32 NS/AGC/HPF effects keep their own lock (#329). Host test `tests/t31/dmic_switch_test.c` (T31 and OSS3/T41 builds, fake `/dev/dsp`, 80 switches during capture): hung before, worst switch now about one frame.
