@@ -1361,7 +1361,7 @@ features:
       text: volume/mute work, whole OSS fragments (tested on cam-A); `IMP_AO` enable/`SendFrame`, speaker playback of a known signal at several volumes and `SetVol`, recorded back by the microphone (2026-10-10 AEC test, device-tested)
     T32:
       sym: 📋
-      text: '2026-11-11 night: AO like vendor libimp 2.x (40 ms block queue, cache on by default, Flush/Clear, soft mute ramp, QueryChnStat) in QEMU, wav levels equal to the vendor (#329); the Flush/Clear tail and attribute write-back differ from the vendor, pending a user decision (beyond vendor candidate, not counted). Earlier: planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-11 night: AO like vendor libimp 2.x (40 ms block queue, cache on by default, Flush/Clear, soft mute ramp, QueryChnStat) in QEMU, wav levels equal to the vendor (#329); the Flush/Clear tail and attribute write-back differ from the vendor (beyond vendor, user-approved 2026-11-11, not counted). Earlier: planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
     T33:

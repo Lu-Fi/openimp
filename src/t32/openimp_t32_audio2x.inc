@@ -31,8 +31,8 @@
  *   AGC, NS), then DRC/EQ.  Both only with 16-bit samples and blocks of a
  *   10 ms multiple.  The algorithms are libaudioProcess entry points.
  *
- * Differences (OpenIMP better or simpler).  PENDING USER DECISION (#329,
- * beyond-vendor, keep or switch to the vendor behaviour): (1) the caller's
+ * Differences (OpenIMP better or simpler).  USER-APPROVED 2026-11-11 (#329,
+ * beyond vendor, kept): (1) the caller's
  * IMPAudioIOAttr is not rewritten (the vendor writes the 40 ms block size
  * back into it in IMP_AO_SetPubAttr / IMP_AI_SetPubAttr); (2) after Flush and
  * Clear the open block starts empty (the vendor keeps its fill pointer and
