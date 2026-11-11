@@ -24,6 +24,7 @@
 
 #include "imp_log_int.h"
 #include "t32/openimp_t32_abi.h"
+#include "t32/openimp_t32_ioctl.h"      /* request table asserts on the target (#287) */
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_skeleton.c is the PLATFORM_T32 build only"
