@@ -14,7 +14,9 @@
  * (prefix T32P), then System_Exit, DisableSensor, DelSensor, ISP close;
  * "isp N" repeats the whole cycle N times in one process.
  * "bin" is "isp" plus a night and a day IMP_ISP_Tuning_SetISPRunningMode
- * (IQ-bin switch, #289) between System_Init and the teardown.
+ * (IQ-bin switch, #289) between System_Init and the teardown; "bin N" ends
+ * each of the N-1 extra cycles at night (what the driver reports after a
+ * sensor release, #303).
  * "none" takes N frames with IMP_FrameSource_GetFrame (depth 1); the first
  * frame's colour bands are printed (T32F: mean Y/U/V of 8 vertical bands,
  * NV12 with UV after ALIGN16(height) rows) and its buffer address
@@ -109,7 +111,11 @@ static int test_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
 static void proc_status(void)
 {
     char line[160];
-    FILE *f = fopen("/proc/jz/isp/isp-m0", "r");
+    FILE *f;
+
+    if (getenv("T32_NO_PROC"))          /* vendor tx-isp-t32.ko oopses reading it */
+        return;
+    f = fopen("/proc/jz/isp/isp-m0", "r");
 
     if (!f) {
         printf("T32P no /proc/jz/isp/isp-m0\n");
@@ -181,6 +187,12 @@ int main(int argc, char **argv)
             MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
             MUST(IMP_System_Init());
             proc_status();
+            if (bin_test) {             /* "bin N": leave each extra cycle at night (#303) */
+                IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
+                STEP(IMP_ISP_EnableTuning());
+                STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
+                STEP(IMP_ISP_DisableTuning());
+            }
             MUST(IMP_System_Exit());
             MUST(IMP_ISP_DisableSensor(IMPVI_MAIN));
             MUST(IMP_ISP_DelSensor(IMPVI_MAIN, &si));
@@ -194,6 +206,11 @@ int main(int argc, char **argv)
     if (bin_test) {                     /* #289: day/night bin switch */
         IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
         STEP(IMP_ISP_EnableTuning());   /* vendor needs it; OpenIMP T32: stub */
+        if (getenv("T32_BIN_GET_FIRST")) {      /* #303: the mode before any switch */
+            IMPISPRunningMode before = (IMPISPRunningMode)-1;
+            STEP(IMP_ISP_Tuning_GetISPRunningMode(IMPVI_MAIN, &before));
+            printf("T32S running mode before %d\n", (int)before);
+        }
         STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
         STEP(IMP_ISP_Tuning_GetISPRunningMode(IMPVI_MAIN, &rm));
         printf("T32S running mode %d\n", (int)rm);
