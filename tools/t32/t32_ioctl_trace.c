@@ -8,25 +8,32 @@
  * oi_trace_mark(text) (looked up by the sample with dlsym) writes
  *   M <seq> <tid> <text>
  * so the log carries the API step that issued each request.
+ * With T32_TRACE_VPU=<bytes>, a /dev/soc_vpu CHANNEL_RUN / CHANNEL_START
+ * also logs the job's register image (channel_node.dma_addr, a physical
+ * address; read through /dev/mem before the call):  V <seq> <pa> <words>.
  * Output: $T32_TRACE_LOG (default /tmp/t32-ioctl.log).  Diagnostic tool,
  * never part of libimp.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
 static FILE *log_file;
 static unsigned dump_bytes;
+static unsigned vpu_bytes;
 static unsigned long seq;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t once = PTHREAD_ONCE_INIT;
+static int safe_copy(void *dst, const void *src, unsigned n);
 static int (*real_ioctl)(int, unsigned long, ...);
 static int copy_pipe[2] = { -1, -1 };
 
@@ -42,6 +49,42 @@ static void trace_init(void)
     dump_bytes = dump ? (unsigned)strtoul(dump, NULL, 0) : 0;
     if (dump_bytes > 1024)
         dump_bytes = 1024;
+    dump = getenv("T32_TRACE_VPU");
+    vpu_bytes = dump ? (unsigned)strtoul(dump, NULL, 0) : 0;
+    if (vpu_bytes > 1024)
+        vpu_bytes = 1024;
+}
+
+/* the soc_vpu job's register image: channel_node word 9 is its pa */
+static void dump_vpu_job(unsigned long s, const void *arg)
+{
+    unsigned char node[64], buf[1024];
+    unsigned pa, i;
+    int fd;
+
+    if ((unsigned long)arg < 0x1000 || safe_copy(node, arg, sizeof node))
+        return;
+    memcpy(&pa, node + 36, 4);
+    fd = open("/dev/mem", O_RDONLY | O_SYNC);
+    if (fd < 0)
+        return;
+    /* mmap: read() of /dev/mem stops at the end of kernel RAM (rmem is past it) */
+    {
+        unsigned off = pa & 4095u;
+        void *m = mmap(NULL, off + vpu_bytes, PROT_READ, MAP_SHARED, fd, (off_t)(pa - off));
+        if (m != MAP_FAILED) {
+            memcpy(buf, (const unsigned char *)m + off, vpu_bytes);
+            munmap(m, off + vpu_bytes);
+            fprintf(log_file, "V %lu %08x", s, pa);
+            for (i = 0; i + 4 <= vpu_bytes; i += 4) {
+                unsigned v;
+                memcpy(&v, buf + i, 4);
+                fprintf(log_file, " %08x", v);
+            }
+            fputc('\n', log_file);
+        }
+    }
+    close(fd);
 }
 
 /* copy through a pipe: a bad pointer gives EFAULT instead of a crash */
@@ -118,6 +161,8 @@ int ioctl(int fd, unsigned long req, ...)
         s = ++seq;
         if (dir & 4)
             dump_words(s, "in", arg, n);
+        if (vpu_bytes && (req == 0xc0406302UL || req == 0xc0406303UL))
+            dump_vpu_job(s, arg);
         pthread_mutex_unlock(&lock);
     }
     rc = real_ioctl(fd, req, arg);

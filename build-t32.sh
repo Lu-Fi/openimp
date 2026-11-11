@@ -65,6 +65,8 @@ compile t32_isp src/t32/openimp_t32_isp.c
 compile t32_bin src/t32/openimp_t32_bin.c
 # FrameSource on the 2.x framechan ABI, System bind (#290)
 compile t32_fs src/t32/openimp_t32_fs.c
+# soc_vpu channel layer (#291)
+compile t32_vpu src/t32/openimp_t32_vpu.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects
