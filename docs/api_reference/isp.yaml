@@ -1399,3 +1399,92 @@ functions:
     returns: "0 on success; -4087 NULL, -4084 sensor 2 or more, -4091 tuning not enabled, -4090 module error."
     notes: "T41: the structure goes to the ISP module unchanged (tuning control 0x8000062, 56 bytes). Return codes as the vendor library: -4087 for a NULL pointer, -4084 for a sensor number of 2 or more, -4091 when tuning is not enabled, -4090 when the module refuses the control. The open T41 module answers EPERM to a control it does not route (see the matrix cell)."
     soc: "T41 only."
+  ISP_HB_Get/SetAttr:
+    group: sys
+    summary: "Writes or reads one 16-bit value that the T32 ISP driver keeps under its own control id. OpenIMP passes the value through and gives it no meaning of its own (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Pointer to a 16-bit value."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    notes: "Call `ISP_EnableTuning` first."
+    soc: "T32"
+  ISP_Tuning_Get/SetAeLightCompensation:
+    group: ae
+    summary: "Writes or reads the AE light compensation setting. The structure is handed to the T32 ISP driver unchanged (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Light compensation structure (`IMPISPAeLightCompensationAttr`)."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    notes: "OpenIMP does not check the fields; the driver decides which values it accepts."
+    soc: "T32"
+  ISP_Tuning_Get/SetAeTargetAttr:
+    group: ae
+    summary: "Writes or reads the target the AE steers the picture brightness to. The structure is handed to the T32 ISP driver unchanged (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Target structure (`IMPISPAeTargetAttr`)."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    notes: "OpenIMP does not check the fields."
+    soc: "T32"
+  ISP_Tuning_GetAeOnlyReadAttr:
+    group: stat
+    summary: "Reads the read-only AE state block that the T32 ISP driver fills (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Receives the structure (`IMPISPAeOnlyReadAttr`)."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    notes: "There is no Set counterpart."
+    soc: "T32"
+  ISP_Tuning_GetAwbOnlyReadAttr:
+    group: stat
+    summary: "Reads the read-only AWB state block that the T32 ISP driver fills (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Receives the structure (`IMPISPAwbOnlyReadAttr`)."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    notes: "There is no Set counterpart."
+    soc: "T32"
+  ISP_Tuning_Get/SetAeStartAttr:
+    group: ae
+    summary: "Sets or reads the 8-byte structure that controls how the AE starts at stream start (`IMPISPAeStartAttr`, T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Start structure."
+    returns: "0 on success; 0xfffff008 when the ISP device is not open or the pointer is NULL, 0xfffff005 for a VI number of 4 or more or a sensor that is not set up, 0xfffff001 when the driver refuses the call."
+    notes: "It goes to the ISP device directly and works without `ISP_EnableTuning`."
+    soc: "T32"
+  ISP_Tuning_Get/SetBcshRGBOffsetAttr:
+    group: color
+    summary: "Writes or reads the RGB offsets of the brightness/contrast/saturation/hue stage. The structure is handed to the T32 ISP driver unchanged (T32)."
+    params:
+      num: "Sensor (VI) number, 0 to 3."
+      attr: "Offset structure (`IMPISPBCSHRGBOffsetAttr`)."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer, 0xfffff00c for a VI number of 4 or more; otherwise the driver's result."
+    soc: "T32"
+  ISP_Tuning_Get/SetMultiSensorAeEffect:
+    group: ae
+    summary: "Sets or reads how the AE of one sensor follows the other in a two-sensor setup (`IMPISPSensorSyncEffect`, T32)."
+    params:
+      num: "`Get` only: sensor (VI) number. `Set` has no number and always addresses sensor 0."
+      attr: "Synchronisation structure."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer; otherwise the driver's result."
+    notes: "`Get` does not check the VI number; the driver decides."
+    soc: "T32"
+  ISP_Tuning_Get/SetMultiSensorAWBEffect:
+    group: awb
+    summary: "Sets or reads how the white balance of one sensor follows the other in a two-sensor setup (`IMPISPSensorSyncEffect`, T32)."
+    params:
+      num: "`Get` only: sensor (VI) number. `Set` has no number and always addresses sensor 0."
+      attr: "Synchronisation structure."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer; otherwise the driver's result."
+    notes: "`Get` does not check the VI number; the driver decides."
+    soc: "T32"
+  ISP_Tuning_Get/SetMultiSensorEffect:
+    group: dn
+    summary: "Sets or reads the general synchronisation between the two sensors of a two-sensor setup (`IMPISPSensorSyncEffect`, T32)."
+    params:
+      num: "`Get` only: sensor (VI) number. `Set` has no number and always addresses sensor 0."
+      attr: "Synchronisation structure."
+    returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer; otherwise the driver's result."
+    notes: "`Get` does not check the VI number; the driver decides."
+    soc: "T32"

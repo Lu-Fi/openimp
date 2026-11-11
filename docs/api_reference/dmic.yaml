@@ -115,3 +115,48 @@ functions:
     summary: "Stops the delivery of the playback reference frames started with `EnableAecRefFrame`."
     returns: "0 on success; -1 for an invalid device or channel, when the device or channel is not enabled, or when the reference delivery was not enabled."
     notes: "The AO device and channel arguments are accepted and ignored."
+  DMIC_EnableNs:
+    group: level
+    summary: "Switches on noise suppression on the microphone signal (T32)."
+    params:
+      attr: "The capture format; the block length must be a multiple of 10 ms."
+      mode: "Strength 0 to 3; larger values are treated as 3."
+    returns: "0 on success and when already on. -1 for an invalid attribute, a sample rate other than 8000, 16000, 32000 or 48000, or when the audio processing library is missing."
+    notes: "Runs in the record thread, in the order noise suppression, AGC, high-pass, before the software volume."
+    soc: "T32"
+  DMIC_DisableNs:
+    group: level
+    summary: "Switches noise suppression off and frees it (T32)."
+    returns: "0."
+    soc: "T32"
+  DMIC_EnableAgc:
+    group: level
+    summary: "Switches on automatic gain control on the microphone signal (T32)."
+    params:
+      attr: "The capture format; the block length must be a multiple of 10 ms."
+      agcConfig: "Target level in dBFS and compression gain in dB."
+    returns: "-1 for an invalid attribute, an unsupported sample rate, a missing library or when the DMIC device is not enabled; otherwise 0."
+    soc: "T32"
+  DMIC_DisableAgc:
+    group: level
+    summary: "Switches automatic gain control off and frees it (T32)."
+    returns: "0."
+    soc: "T32"
+  DMIC_SetHpfCoFrequency:
+    group: level
+    summary: "Stores the cut-off frequency in Hz that the next `DMIC_EnableHpf` uses (T32)."
+    returns: "0, or -1 when the DMIC device is not enabled."
+    notes: "It does not change a filter that is already running."
+    soc: "T32"
+  DMIC_EnableHpf:
+    group: level
+    summary: "Switches on a high-pass filter on the microphone signal; it removes rumble below the cut-off frequency (T32)."
+    params:
+      attr: "The capture format; the block length must be a multiple of 10 ms."
+    returns: "0 on success. -1 for an invalid attribute, a cut-off below 0 or above the sample rate, a missing library or when the DMIC device is not enabled."
+    soc: "T32"
+  DMIC_DisableHpf:
+    group: level
+    summary: "Switches the high-pass filter off (T32)."
+    returns: "0."
+    soc: "T32"

@@ -469,3 +469,84 @@ functions:
     group: adec
     summary: Drops all decoded blocks that have not been taken.
     returns: -1 for an invalid or not created channel.
+  AI_Get/SetAlgoOrder:
+    group: algo
+    summary: "Sets or reads the order in which the three capture effects (noise suppression, AGC, high-pass) run on each block (T32)."
+    params:
+      order: "Array of three `AudioAI_Type` values. Without a `Set`, `Get` returns the default order of the enum."
+    returns: "-1 for an invalid device or channel or a NULL array."
+    notes: "The order is stored only; the values are not checked. These three effects run before DRC/EQ and the low-pass filter."
+    soc: "T32"
+  AI_EnableLpf:
+    group: aifx
+    summary: "Switches on a low-pass filter on the microphone signal; it removes content above the cut-off frequency (T32)."
+    params:
+      attr: "The capture format (16 bit, block length a multiple of 10 ms)."
+    returns: "0 on success and when already on. -1 for an invalid attribute, a cut-off above the sample rate or negative, or when the audio processing library lacks the filter."
+    notes: "Set the cut-off with `AI_SetLpfCoFrequency` first. When the AI device is not enabled yet the call returns 0 but the filter stays off. It runs after DRC/EQ."
+    soc: "T32"
+  AI_DisableLpf:
+    group: aifx
+    summary: "Switches the low-pass filter off (T32)."
+    returns: "0."
+    soc: "T32"
+  AI_SetLpfCoFrequency:
+    group: aifx
+    summary: "Stores the cut-off frequency in Hz that the next `AI_EnableLpf` uses (T32)."
+    returns: "0; when the AI device is not enabled the value is dropped and an error is logged."
+    notes: "It does not change a filter that is already running."
+    soc: "T32"
+  AI_EnableDrcAndEq:
+    group: aifx
+    summary: "Switches on dynamic range compression and an equaliser on the microphone signal (T32)."
+    params:
+      attr: "The capture format (16 bit, block length a multiple of 10 ms)."
+      config: "Compressor and equaliser settings."
+      drc_enable: "Non-zero switches the compressor on."
+      eq_enable: "Non-zero switches the equaliser on."
+    returns: "-1 for an invalid attribute or NULL configuration, a missing library function or a failed setup. 0 otherwise, also for a sample rate other than 8000 or 16000 (logged, nothing is enabled)."
+    notes: "Works on blocks of 160 samples. The effect is active only when the AI device is enabled."
+    soc: "T32"
+  AI_DisableDrcAndEq:
+    group: aifx
+    summary: "Switches the compressor and equaliser off and frees them (T32)."
+    returns: "0."
+    soc: "T32"
+  AO_Get/SetAlgoOrder:
+    group: aofx
+    summary: "Sets or reads the order in which the three playback effects (high-pass, AGC, noise suppression) run on each block (T32)."
+    params:
+      order: "Array of three `AudioAO_Type` values. Without a `Set`, `Get` returns the default order of the enum."
+    returns: "-1 for device other than 0, a channel other than 0 or a NULL array."
+    notes: "The order is stored only; the values are not checked."
+    soc: "T32"
+  AO_EnableNs:
+    group: aofx
+    summary: "Switches on noise suppression on the playback signal (T32)."
+    params:
+      attr: "The playback format (16 bit, block length a multiple of 10 ms)."
+      mode: "Strength 0 to 3; larger values are treated as 3."
+    returns: "0 on success and when already on. -1 for an invalid attribute, a sample rate other than 8000, 16000, 32000 or 48000, or when the audio processing library is missing."
+    notes: "The effect is active only when the AO device is enabled."
+    soc: "T32"
+  AO_DisableNs:
+    group: aofx
+    summary: "Switches noise suppression off and frees it (T32)."
+    returns: "0."
+    soc: "T32"
+  AO_EnableDrcAndEq:
+    group: aofx
+    summary: "Switches on dynamic range compression and an equaliser on the playback signal (T32)."
+    params:
+      attr: "The playback format (16 bit, block length a multiple of 10 ms)."
+      config: "Compressor and equaliser settings."
+      drc_enable: "Non-zero switches the compressor on."
+      eq_enable: "Non-zero switches the equaliser on."
+    returns: "-1 for an invalid attribute or NULL configuration, a missing library function or a failed setup. 0 otherwise, also for a sample rate other than 8000 or 16000 (logged, nothing is enabled)."
+    notes: "Works on blocks of 160 samples. The effect is active only when the AO device is enabled."
+    soc: "T32"
+  AO_DisableDrcAndEq:
+    group: aofx
+    summary: "Switches the compressor and equaliser off and frees them (T32)."
+    returns: "0."
+    soc: "T32"
