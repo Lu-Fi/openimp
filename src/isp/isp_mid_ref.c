@@ -64,7 +64,13 @@ static const IMPDMABufferInfo *mid_ncu(const ISPDevice *isp)
  * 0xff a still block keeps the reference (Y 0.89 on T31, U/V 0.97 on T23, devices 2026-11-11). */
 #define MID_WEIGHT_MAX 0xffffffffu
 #endif
+#if defined(PLATFORM_T23)
+/* T23: bit 0 alone leaves about 30 % live chroma in colour day mode (U/V 0.90): the chroma fake/mv (0x7a68) and
+ * r (0x7a70) weights react to live colour.  Bits 1|2 hold them too: U/V 0.97 day and night (#340). */
+#define MID_HOLD_VALUE "7"
+#else
 #define MID_HOLD_VALUE "1"
+#endif
 
 static volatile uint32_t *mid_regs;      /* MID_PAGE base: register r at (r - (MID_PAGE & 0xffff)) / 4 */
 #if defined(PLATFORM_T23)
