@@ -24,7 +24,7 @@
  *           AE/AWB to the state before mode 4.  -1 with
  *           errno ENOTSUP when the sensor has no table entry, EIO when the
  *           register access fails (sensor not running).
- *   mode 5  ISP-middle test picture (T21, T23, T31): the pattern (same generator as mode 1) is written
+ *   mode 5  ISP-middle test picture (T21, T23, T31, T41): the pattern (same generator as mode 1) is written
  *           into the ISP's MDNS (temporal-NR) reference frame buffer every frame, and OpenIMP
  *           holds the MDNS reference weight (luma 0x799c and chroma 0x7a6c) at maximum, so the
  *           picture enters the ISP behind the demosaic/colour/gamma stages and runs through
@@ -32,7 +32,11 @@
  *           frames are not replaced, the sensor keeps running.  Leaving the mode restores the
  *           weight registers.  -1 with errno ENOTSUP on SoCs/builds without it, ENODEV when
  *           the ISP is not running (no sensor added / tuning not enabled), EIO when the MDNS
- *           buffer layout is not the expected one.
+ *           buffer layout is not the expected one.  T41: the picture is drawn once into the MDNS
+ *           reference (7 MB at 2880x1620, more than a frame time allows) and the block's gate,
+ *           weight and motion fields are held so that it keeps it; a driver rewrite of those
+ *           fields (gain step, day/night) is set again and the picture redrawn on the next frame.
+ *           T40: not available (its MDNS reference is a coded stream).
  *
  * OpenIMP_TestPattern_Set may be called at any time, also while streaming;
  * the next frame uses the new state.  Environment OPENIMP_TEST_PATTERN=0..3
@@ -131,7 +135,7 @@ extern const int OpenIMP_Cap_TestPattern;   /* 1 */
 /* Which modes can be used here, without switching anything: returns 1 when mode works on this
  * build, SoC and (mode 4) running sensor, 0 when not (unknown mode: 0 with errno EINVAL).
  * Modes 0-3: always 1; mode 4: the running sensor has a test pattern table entry (0 while no sensor
- * runs); mode 5: the platform has the ISP-middle hooks (T23 so far).  Since 2026-10-25; detect the
+ * runs); mode 5: the platform has the ISP-middle hooks (T21, T23, T31, T41).  Since 2026-10-25; detect the
  * function with dlsym or a weak reference on older builds. */
 int OpenIMP_TestPattern_Supported(int mode);
 

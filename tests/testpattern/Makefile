@@ -5,8 +5,9 @@ BUILD := $(PROJECT_DIR)/build/tests
 
 .PHONY: check clean
 
-check: $(BUILD)/tp_test $(BUILD)/tp_hold
+check: $(BUILD)/tp_test $(BUILD)/tp_hold $(BUILD)/tp_inplace
 	$(BUILD)/tp_test
+	$(BUILD)/tp_inplace
 	$(CC) -O2 -Wall -Wextra -Werror -o $(BUILD)/tpctl $(PROJECT_DIR)/tools/testpattern/tpctl.c
 	sh ctl_test.sh $(BUILD)
 
@@ -22,4 +23,9 @@ clean:
 $(BUILD)/tp_hold: tp_hold.c $(PROJECT_DIR)/src/openimp_testpattern.c $(PROJECT_DIR)/src/openimp_testpattern_gen.h
 	@mkdir -p $(BUILD)
 	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -o $@ tp_hold.c \
+		$(PROJECT_DIR)/src/openimp_testpattern.c -lpthread
+
+$(BUILD)/tp_inplace: tp_inplace.c $(PROJECT_DIR)/src/openimp_testpattern.c $(PROJECT_DIR)/src/openimp_testpattern_gen.h
+	@mkdir -p $(BUILD)
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src -o $@ tp_inplace.c \
 		$(PROJECT_DIR)/src/openimp_testpattern.c -lpthread

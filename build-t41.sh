@@ -187,6 +187,11 @@ done
     -c "$project_dir/src/t40/openimp_t41_rawvic.c" \
     -o "$output_dir/openimp_t41_rawvic.o"
 
+# test pattern mode 5 (ISP-middle picture in the MDNS reference, #103)
+"$compiler" $strict_flags $hot_flags $repo_includes \
+    -c "$project_dir/src/t40/openimp_t4x_ispmid.c" \
+    -o "$output_dir/openimp_t4x_ispmid.o"
+
 # custom AE/AWB callbacks (IMP_ISP_SetAeAlgoFunc / SetAwbAlgoFunc), the vendor protocol shared with T40 (#76)
 "$compiler" $strict_flags -I"$T41_HEADERS" -I"$project_dir/src" \
     -c "$project_dir/src/t40/openimp_p1_algo.c" \
@@ -241,6 +246,7 @@ done
     "$output_dir/openimp_t41_isp_osd.o" \
     "$output_dir/openimp_t41_isp_extra.o" \
     "$output_dir/openimp_t41_rawvic.o" \
+    "$output_dir/openimp_t4x_ispmid.o" \
     "$output_dir/openimp_p1_algo.o" \
     "$output_dir/t41_osd.o" \
     "$output_dir/t41_ivs.o" \

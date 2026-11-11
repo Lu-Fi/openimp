@@ -150,6 +150,11 @@ do
         -o "$output_dir/$source.o"
 done
 
+# test pattern mode 5 (ISP-middle picture in the MDNS reference, #103)
+"$compiler" $strict_flags -I"$T40_HEADERS" -I"$project_dir/include" -I"$project_dir/src" \
+    -c "$project_dir/src/t40/openimp_t4x_ispmid.c" \
+    -o "$output_dir/openimp_t4x_ispmid.o"
+
 # custom AE/AWB callbacks (IMP_ISP_SetAeAlgoFunc / SetAwbAlgoFunc)
 "$compiler" $strict_flags -I"$T40_HEADERS" -I"$project_dir/src" \
     -c "$project_dir/src/t40/openimp_p1_algo.c" \
@@ -198,6 +203,7 @@ done
     "$output_dir/openimp_p3_compat.o" \
     "$output_dir/openimp_t40_isp_osd.o" \
     "$output_dir/openimp_p1_algo.o" \
+    "$output_dir/openimp_t4x_ispmid.o" \
     "$output_dir/t40_osd.o" \
     "$output_dir/t40_ivs.o" \
     "$output_dir/t40_ivs_move.o" \
