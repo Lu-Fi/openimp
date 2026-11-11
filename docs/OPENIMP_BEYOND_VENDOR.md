@@ -370,7 +370,7 @@ Complete description (modes 0-4, API, tpctl, host tools, per-SoC status table, l
 
 For streamers and test setups: `#include "openimp_testpattern.h"`, `OpenIMP_TestPattern_Set(mode, &params)` replaces the encoder/IVS input by a synthetic picture (1 pattern with the OpenIMP logo in the middle, 2 moving square + frame counter, 3 motion test with object size/contrast/speed or script), `OpenIMP_TestPattern_Get` reads the state back; switchable while streaming, no lock in the frame path. Detect: symbol `OpenIMP_Cap_TestPattern` (absent on vendor libimp, use `dlsym`/weak). Status: T23 device-tested (switching during one stream); other SoCs build + host test. Outside a streamer: `OPENIMP_TEST_PATTERN_CTL=<socket>` and `tools/testpattern/tpctl`.
 
-Mode 5 (T23): known picture **inside** the ISP. `OpenIMP_TestPattern_Set(5, NULL)` writes the pattern into the ISP's temporal-NR reference frame every frame and holds the reference weight at 1.0, so streamers can test their own chain behind the ISP front half (MDNS, BCSH, scaler, encoder, OSD) with a known input, with no driver change and no RAW access; sensor frames keep flowing. Complements mode 4 (sensor pattern = whole ISP, fixed content). The vendor library has no equivalent. Status: T23 device-tested (luma SSIM 0.94-0.96 vs the ideal picture, chroma partly); other SoCs return ENOTSUP.
+Mode 5 (T21, T23, T31, T40, T41): known picture **inside** the ISP. `OpenIMP_TestPattern_Set(5, NULL)` writes the pattern into the ISP's temporal-NR reference frame every frame and holds the reference weight at 1.0, so streamers can test their own chain behind the ISP front half (MDNS, BCSH, scaler, encoder, OSD) with a known input, with no driver change and no RAW access; sensor frames keep flowing. Complements mode 4 (sensor pattern = whole ISP, fixed content). The vendor library has no equivalent. Status: device-tested on T21, T23, T31 (luma SSIM 0.85-0.96 vs the ideal picture, chroma 0.87-0.98) and, with the MDNS reference fields held, T40 and T41 in the night (luma 0.84 / 0.92; T41 colour at maximum gain in the dark open); T10, T20 and T30 return ENOTSUP. Details and per-SoC table: [TESTPATTERN.md](TESTPATTERN.md).
 
 ### 6.2 Fallback frame when the sensor stops (extension, T40/T41, default ON since 26.10.)
 
@@ -444,7 +444,7 @@ set in production.
 | `OPENIMP_T41_ROI` | `0` refuses the T41 ROI calls (default on, all rate-control modes) | on | debug-only |
 | `OPENIMP_T40_ROI` | `1` enables the experimental T40 ROI table (cross-built, not device-tested) | off | debug-only |
 | `OPENIMP_T20_RC` | `0` disables the T20 OEM rate controller (needs kernel patch 0101) and falls back to the GOP controller | on (as vendor) | user-facing |
-| `OPENIMP_EPRC_MBRC` | `1` enables the eprc macroblock RC on T21/T23 (device test pending) | off | user-facing (opt-in) |
+| `OPENIMP_EPRC_MBRC` | `1` enables the eprc macroblock RC on T21/T23, and on T30 the `H264E_T30_SliceInit` macroblock registers in the command list (T30: host test only, device A/B pending, #217) | off | user-facing (opt-in) |
 | `OPENIMP_T10_RC` | `0` disables the T10 OEM-style rate controller | on | user-facing |
 | `OPENIMP_T10_RC_SUPERFRM` | `0` restores vendor-exact T10 VBR behaviour (super-frame fix off); only inside the OEM controller | on | user-facing |
 | `OPENIMP_T20_RC_IAWARE` | `0` = vendor P budget, `1` also for VBR/SMART; only inside the OEM controller | on for CBR | user-facing |
@@ -473,6 +473,7 @@ set in production.
 | `OPENIMP_T41_STREAM_COPY_MODE`, `OPENIMP_T41_RATE_CONTROL_COUPLING`, `OPENIMP_T41_UNCACHED_COMMAND_RING`, `OPENIMP_T41_UNCACHED_EP3_RING` | `=0` rolls back T41 behaviour for A/B (docs/T41_STATUS.md, PROFILING.md) | new behaviour on | debug-only |
 | `OPENIMP_T32_HERA_SECTION_KB` | T32 (planned, QEMU only): size of one HERA bitstream section in KiB; test hook for the BSFULL path (#293) | engine default | debug-only |
 | `OPENIMP_T32_VPU_TEST` | T32 (planned, QEMU only): `1` runs the JPEG channel through START + WAIT_COMPLETE and WOR_VPU_REG instead of RUN (#292) | off | debug-only |
+| `OPENIMP_AO_CACHE` | T32 (planned, QEMU only): unset = AO cache on like vendor libimp 2.x, `0` = off (on the other SoCs unset = off, `1` = on); see 6.5 (#329) | cache on | debug-only |
 
 Further `OPENIMP_*` knobs exist in the source. The rmem, reference-sharing tuning, startup-trace, Helix SoC/timeout
 and per-SoC statistics variables are listed in the wiki page "Environment variables"; the remaining bring-up/trace

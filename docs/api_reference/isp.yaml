@@ -87,6 +87,7 @@ functions:
     group: life
     summary: "Stops the sensor and unlinks it from the ISP data path."
     returns: "0 on success. -1 on T10 to T31 when the ISP is not open, no sensor was selected, or a driver request fails. On T40 and T41 -1 for a video input out of range or a failing driver request; calling it when the sensor is not enabled returns 0."
+    diff: "On T41 a RAW ring the application left on (`IMP_ISP_RAW_RwControl`) is stopped here, before the sensor goes away (beyond the vendor, #345)."
     see_also: [ISP_EnableSensor]
   ISP_EnableTuning:
     group: life
@@ -96,6 +97,7 @@ functions:
   ISP_DisableTuning:
     group: life
     summary: Ends the tuning session.
+    diff: "On T41 a RAW ring the application left on is stopped before the tuning node closes (beyond the vendor, #345)."
   ISP_Tuning_Get/SetSensorFPS:
     group: life
     summary: "Sets or reads the frame rate of the sensor as a fraction (numerator and denominator, each packed into 16 bits for the driver)."

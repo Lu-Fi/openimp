@@ -74,7 +74,7 @@ reference (cached `/dev/mem` mapping, written back; 0.5 s per pass on a T41LQ, t
 block writes back while they are drawn) and the block keeps it by itself. The channel-0 frame tick sets the
 fields again when the driver rewrote them, and a worker thread draws the picture again when that happened or
 when 64 sample points of the reference moved away for three frames (timps stops the stream between clients,
-and the restart programs the block anew). With open-tx-isp `claude/tp5-103c` the T41 module parameter
+and the restart programs the block anew). With open-tx-isp `next` (merged 2026-11-11) the T41 module parameter
 `mdns_ref_hold` (set by the library while the mode runs) makes the driver's own MDNS writer keep the bits;
 it rewrites the block on nearly every gain update.
 
@@ -271,7 +271,7 @@ test, ❓ open.
 | Mode 2 moving | ✅ | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 3 motion test | ✅ (objects shown) | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 4 sensor pattern | 🔧 (jxh42) | ✅ (jxf23) | ✅ (jxf23, sensor exposure hold) | ✅ (sc2336p) | 🔧 | 🔧 (register by hand ✅) | ⏳ (sc830ai) | ✅ gc5603 (colour bars, 72 s stable) / 🔧 sc5336 |
-| Mode 5 ISP-middle picture | ❌ | ❌ | ✅ (jxf23, Y 0.85 / UV 0.89-0.90) | ✅ (sc1a4t, Y 0.95-0.96 / UV 0.96 with b_min) | ❌ | ✅ (sc2336, Y 0.89 / UV 0.96-0.98) | 🔧 | 🔧 |
+| Mode 5 ISP-middle picture | ❌ | ❌ | ✅ (jxf23, Y 0.85 / UV 0.89-0.90) | ✅ (sc1a4t, Y 0.95-0.96 / UV 0.96 with b_min) | ❌ | ✅ (sc2336, Y 0.89 / UV 0.96-0.98) | ✅ night (sc830ai, Y 0.84 / UV 0.87; colour forced 0.84) | ✅ night (gc5603, Y 0.92 / UV 0.87; colour at maximum gain in the dark fails, open) |
 | Own picture before the ISP | 🔧 Apical TPG | ✅ Apical TPG + VIC colour bars (register level, not in the API yet) | ❌ | ❌ | 🔧 Apical TPG | ❌ (VIC bars, CSI, mux tested: no) | ❓ | ⏳ RAW from DDR (v3 module pending) |
 
 Notes:
