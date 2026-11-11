@@ -6,7 +6,8 @@
  * exports the System / ISP / FrameSource / Encoder / OSD entry points of
  * the stream path.  The entry points not implemented yet log once per
  * function and return -1; the ISP / sensor lifecycle and System_Init/Exit
- * are real (openimp_t32_isp.c, #288).  The real code follows in the T32 issues
+ * are real (openimp_t32_isp.c, #288), FrameSource and bind too
+ * (openimp_t32_fs.c, #290).  The real code follows in the T32 issues
  * (ioctl table, ISP lifecycle, IQ bin, FrameSource, soc_vpu, JPEG, HERA).
  */
 #include <stdint.h>
@@ -94,8 +95,7 @@ uint64_t IMP_System_GetTimeStamp(void)
 }
 
 /* IMP_System_Init/Exit: openimp_t32_isp.c (#288) */
-T32_STUB(IMP_System_Bind, (IMPCell *srcCell, IMPCell *dstCell))
-T32_STUB(IMP_System_UnBind, (IMPCell *srcCell, IMPCell *dstCell))
+/* IMP_System_Bind/UnBind: openimp_t32_fs.c (#290) */
 T32_STUB(IMP_System_RebaseTimeStamp, (uint64_t basets))
 
 /* ---- ISP (vendor 2.x: /dev/tx-isp, /dev/isp-m0) ------------------------- */
@@ -106,15 +106,8 @@ T32_STUB(IMP_ISP_Tuning_SetSensorFPS, (uint32_t fps_num, uint32_t fps_den))
 T32_STUB(IMP_ISP_Tuning_GetSensorFPS, (uint32_t *fps_num, uint32_t *fps_den))
 
 /* ---- FrameSource (vendor 2.x: /dev/framechanN, base 130) ---------------- */
-T32_STUB(IMP_FrameSource_CreateChn, (int chnNum, IMPFSChnAttr *chn_attr))
-T32_STUB(IMP_FrameSource_DestroyChn, (int chnNum))
-T32_STUB(IMP_FrameSource_SetChnAttr, (int chnNum, IMPFSChnAttr *chn_attr))
-T32_STUB(IMP_FrameSource_GetChnAttr, (int chnNum, IMPFSChnAttr *chn_attr))
-T32_STUB(IMP_FrameSource_EnableChn, (int chnNum))
-T32_STUB(IMP_FrameSource_DisableChn, (int chnNum))
-T32_STUB(IMP_FrameSource_SetFrameDepth, (int chnNum, int depth))
-T32_STUB(IMP_FrameSource_GetFrame, (int chnNum, void **frame))
-T32_STUB(IMP_FrameSource_ReleaseFrame, (int chnNum, void *frame))
+/* Create/Destroy/Set/GetChnAttr, Enable/DisableChn, Set/GetFrameDepth,
+ * GetFrame/ReleaseFrame: openimp_t32_fs.c (#290) */
 
 /* ---- Encoder (T23-family API; HERA + JPEG v1.2 behind /dev/soc_vpu) ----- */
 T32_STUB(IMP_Encoder_CreateGroup, (int encGroup))

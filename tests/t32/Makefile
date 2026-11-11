@@ -21,6 +21,8 @@ DRV_EXTRACT := $(BUILD)/t32-drv-abi
 PROFILE_FLAGS := -m32 -malign-double -ffreestanding -fsyntax-only -std=gnu99 -Wall -Wextra -Werror
 OI_ISP_PENDING := rmem
 OI_BIN_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
+# FrameSource (#290): + the /dev/rmem cache invalidate before each depth copy
+OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
 .PHONY: check check-drv
 check: $(TEST_BIN)
@@ -32,6 +34,8 @@ check: $(TEST_BIN)
 		openimp-ioctl-seq-isp.txt --ignore $(OI_ISP_PENDING)
 	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-bin.txt \
 		openimp-ioctl-seq-bin.txt --ignore $(OI_BIN_PENDING)
+	for s in fs fs3; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
+		openimp-ioctl-seq-$$s.txt --ignore $(OI_FS_PENDING) || exit 1; done
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)
