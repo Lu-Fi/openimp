@@ -39,6 +39,11 @@
  *
  * T32_ENC_QP=<n> is SetDefaultParam's iInitialQP (default -1; the JPEG qp);
  * the channel attribute it gives is printed as "T32A <words>".
+ * T32_ENC_RC=<n> is SetDefaultParam's rc mode (IMPEncoderRcMode number;
+ * default FIXQP for jpeg, CBR otherwise; #293 compares H.264 at FIXQP).
+ * T32_ENC_W / T32_ENC_H: FrameSource channel 0 and encoder size (1920x1080).
+ * T32_ENC_QPS=a-b repeats the FrameSource + encoder channel cycle (N
+ * streams each) for every initial QP a..b in one process ("T32Q <qp> done").
  *
  * usage: t32_trace_sample [h264|h265|jpeg|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
  */
@@ -221,9 +226,15 @@ int main(int argc, char **argv)
     IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, 0, 0 };
     IMPEncoderProfile prof = !strcmp(codec, "jpeg") ? T32_PROFILE_JPEG :
                              !strcmp(codec, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
-    IMPEncoderRcMode rc = prof == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
+    IMPEncoderRcMode rc = getenv("T32_ENC_RC") ? (IMPEncoderRcMode)atoi(getenv("T32_ENC_RC")) :
+                          prof == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
+    int enc_w = getenv("T32_ENC_W") ? atoi(getenv("T32_ENC_W")) : 1920;
+    int enc_h = getenv("T32_ENC_H") ? atoi(getenv("T32_ENC_H")) : 1080;
+    int qp_cur = getenv("T32_ENC_QP") ? atoi(getenv("T32_ENC_QP")) : -1, qp_last = qp_cur;
     int i, got = 0;
 
+    if (getenv("T32_ENC_QPS"))          /* "a-b" */
+        sscanf(getenv("T32_ENC_QPS"), "%d-%d", &qp_cur, &qp_last);
     mark = (void (*)(const char *))dlsym(RTLD_DEFAULT, "oi_trace_mark");
 
     memset(&si, 0, sizeof si);
@@ -236,12 +247,12 @@ int main(int argc, char **argv)
     si.switch_gpio = -1;
 
     memset(&fs, 0, sizeof fs);
-    fs.picWidth = 1920;
-    fs.picHeight = 1080;
+    fs.picWidth = enc_w;
+    fs.picHeight = enc_h;
     fs.pixFmt = PIX_FMT_NV12;
     fs.scaler.enable = 1;
-    fs.scaler.outwidth = 1920;
-    fs.scaler.outheight = 1080;
+    fs.scaler.outwidth = enc_w;
+    fs.scaler.outheight = enc_h;
     fs.outFrmRateNum = 15;
     fs.outFrmRateDen = 1;
     fs.nrVBs = 2;
@@ -349,12 +360,12 @@ int main(int argc, char **argv)
         got = ok ? streams : 0;
         goto teardown;
     }
+again:
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
-        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, 1920, 1080, 15, 1, 15, 0,
-                                         getenv("T32_ENC_QP") ? atoi(getenv("T32_ENC_QP")) : -1, 1000));
+        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, 1000));
         {                               /* the default channel attribute, as words */
             const uint32_t *w = (const uint32_t *)(const void *)&ea;
             unsigned k;
@@ -437,6 +448,14 @@ int main(int argc, char **argv)
         STEP(IMP_FrameSource_DisableChn(0));
     }
     STEP(IMP_FrameSource_DestroyChn(0));
+    if (enc && qp_cur < qp_last) {      /* T32_ENC_QPS: the next QP's channel cycle */
+        if (got != streams)
+            goto fail;
+        printf("T32Q %d done\n", qp_cur);
+        qp_cur++;
+        got = 0;
+        goto again;
+    }
 teardown:
     STEP(IMP_ISP_DisableTuning());
     STEP(IMP_System_Exit());

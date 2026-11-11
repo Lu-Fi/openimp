@@ -112,8 +112,8 @@ T32_STUB(IMP_ISP_Tuning_GetSensorFPS, (uint32_t *fps_num, uint32_t *fps_den))
 
 /* ---- Encoder (T23-family API; HERA + JPEG v1.2 behind /dev/soc_vpu) ----- */
 /* groups, channels, streams, JPEG on the JPEG v1.2 engine: openimp_t32_encoder.c
- * (#292) over the soc_vpu channel layer openimp_t32_vpu.c (#291); H.264/H.265
- * (HERA) follow in later T32 issues */
+ * (#292) over the soc_vpu channel layer openimp_t32_vpu.c (#291); H.264 on HERA
+ * (#293: openimp_t32_hera.c, openimp_t32_h264.c); H.265 follows in a later issue */
 
 /* ---- OSD (IPU OSD; T32 region attribute is 272 bytes, see abi.h) -------- */
 T32_STUB(IMP_OSD_SetPoolSize, (int size))

@@ -51,15 +51,16 @@ static void trace_init(void)
         dump_bytes = 1024;
     dump = getenv("T32_TRACE_VPU");
     vpu_bytes = dump ? (unsigned)strtoul(dump, NULL, 0) : 0;
-    if (vpu_bytes > 1024)
-        vpu_bytes = 1024;
+    if (vpu_bytes > 16384)              /* HERA command lists: ~1200 pairs (#293) */
+        vpu_bytes = 16384;
 }
 
 /* the soc_vpu job's register image: channel_node word 9 is its pa */
 static void dump_vpu_job(unsigned long s, const void *arg)
 {
-    unsigned char node[64], buf[1024];
-    unsigned pa, i;
+    unsigned char node[64];
+    static unsigned char buf[16384];      /* under the lock */
+    unsigned pa, i, vpu_bytes_now;
     int fd;
 
     if ((unsigned long)arg < 0x1000 || safe_copy(node, arg, sizeof node))
@@ -70,7 +71,20 @@ static void dump_vpu_job(unsigned long s, const void *arg)
         return;
     /* mmap: read() of /dev/mem stops at the end of kernel RAM (rmem is past it) */
     {
-        unsigned off = pa & 4095u;
+        /* never past the end of RAM (128 MiB in QEMU -m 128M): a HERA list at
+         * the top of rmem is shorter than the dump size, and reading the
+         * unassigned space behind it is a bus error (#293) */
+        unsigned want = vpu_bytes;
+        const char *ram = getenv("T32_TRACE_RAM_END");
+        unsigned long end = ram ? strtoul(ram, NULL, 0) : 0x8000000UL;
+        if (pa >= end)
+            want = 0;
+        else if (pa + want > end)
+            want = (unsigned)(end - pa);
+        vpu_bytes_now = want;
+    }
+    if (vpu_bytes_now) {
+        unsigned off = pa & 4095u, vpu_bytes = vpu_bytes_now;
         void *m = mmap(NULL, off + vpu_bytes, PROT_READ, MAP_SHARED, fd, (off_t)(pa - off));
         if (m != MAP_FAILED) {
             memcpy(buf, (const unsigned char *)m + off, vpu_bytes);
