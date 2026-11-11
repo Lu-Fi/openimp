@@ -892,3 +892,55 @@ int IMP_System_UnBind(IMPCell *srcCell, IMPCell *dstCell)
                     srcCell->groupID, dstCell->deviceID, dstCell->groupID);
     return rc;
 }
+
+/* Vendor 2.x sys_interface.c: the cell bound to dstCell (any output of the
+ * source); 0, or -1 when nothing is bound to it.  The IVS framework follows
+ * this to the FrameSource channel that feeds a group. */
+int IMP_System_GetBindbyDest(IMPCell *dstCell, IMPCell *srcCell)
+{
+    int i, rc = -1;
+
+    if (!dstCell || !srcCell)
+        return -1;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    for (i = 0; i < T32_FS_MAX_BINDS; i++)
+        if (fs_bind[i].used && fs_bind[i].dst.deviceID == dstCell->deviceID &&
+            fs_bind[i].dst.groupID == dstCell->groupID) {
+            srcCell->deviceID = DEV_ID_FS;
+            srcCell->groupID = fs_bind[i].fs_chn;
+            srcCell->outputID = 0;
+            rc = 0;
+            break;
+        }
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+/* Y stride of a frame this FrameSource handed out (capture buffer or a
+ * GetFrame copy), found by its physical address; 0 when unknown.  Used by
+ * the IVS framework (src/t31/openimp_t31_ivs.c) for widths that are not a
+ * multiple of 16. */
+uint32_t OpenIMP_FS_FramePitch(uint32_t physical)
+{
+    uint32_t pitch = 0;
+    int chn, i;
+
+    if (!physical)
+        return 0;
+    pthread_mutex_lock(&fs_lock);
+    for (chn = 0; chn < T32_FS_CHANNELS && !pitch; chn++) {
+        struct t32_fs_chn *c = &fs_chn[chn];
+
+        if (!c->enabled)
+            continue;
+        for (i = 0; i < c->nbufs && !pitch; i++)
+            if (c->buf[i].dma.phys_addr == physical)
+                pitch = c->stride;
+        for (i = 0; i < T32_FS_MAX_DEPTH && !pitch; i++)
+            if (c->slot[i].dma.phys_addr == physical)
+                pitch = c->stride;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return pitch;
+}

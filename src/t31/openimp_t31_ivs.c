@@ -30,6 +30,11 @@
  * take part in a comparison; base move: the luma of capture frames); the
  * comparison runs in the channel thread, outside any encoder lock.
  *
+ * T32 (PLATFORM_T32, 2.x ABI = the T41 objects): no capture thread hook;
+ * an IVS group registers a FrameSource sink (src/t32/openimp_t32_fs.h) and
+ * the T32 frame thread calls openimp_t31_ivs_capture() through it for every
+ * delivered frame of the bound channel (the buffer is held for the call).
+ *
  * Interfaces created elsewhere (streamer-defined algorithms) get
  * preProcessSync on the capture frame and processAsync on a private NV12
  * copy, since OpenIMP cannot hold a capture buffer for them. */
@@ -64,6 +69,21 @@
 
 extern int IMP_System_GetBindbyDest(IMPCell *destination, IMPCell *source);
 
+#if defined(PLATFORM_T32)
+/* T32: FrameSource hands its frames to bound modules through sinks
+ * (src/t32/openimp_t32_fs.h); an IVS group is the receiving end of a bind
+ * once it exists.  The sink only runs the capture hook on the capture
+ * buffer (held for the call) and gives it back at once. */
+#include "t32/openimp_t32_fs.h"
+
+static int ivs_t32_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
+{
+    (void)ctx;
+    openimp_t31_ivs_capture(fs_chn, frame);
+    return 0;
+}
+#endif
+
 /* Public prototypes (the generic include/imp/imp_ivs*.h do not match the
  * T31 ABI and are not included here). */
 IMPIVSInterface *IMP_IVS_CreateMoveInterface(IMP_IVS_MoveParam *param);
@@ -91,15 +111,17 @@ int IMP_IVS_SetParam(int channel, void *param);
  * (stride == width, the UV plane follows at width * ALIGN16(height)); the
  * frame record carries no separate stride. Every copy below goes row by
  * row through this value, so a different stride only needs changing here. */
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* T40/T41: an I2D (rotate/flip/mirror) output has its own pitch
- * (src/t40/p1_i2d.h); FrameSource reports it, 0 for other frames. */
+ * (src/t40/p1_i2d.h); FrameSource reports it, 0 for other frames.
+ * T32: the capture buffers have the Y stride ALIGN16(width)
+ * (src/t32/openimp_t32_fs.c). */
 extern uint32_t OpenIMP_FS_FramePitch(uint32_t physical) __attribute__((weak));
 #endif
 
 static uint32_t ivs_frame_stride(const T31IVSFrameInfo *frame)
 {
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
     uint32_t pitch = OpenIMP_FS_FramePitch ?
         OpenIMP_FS_FramePitch(frame->phyAddr) : 0u;
 
@@ -136,6 +158,15 @@ static int ivs_frame_ok(const T31IVSFrameInfo *frame, uint32_t width,
     }
     return 0;
 }
+
+/* preProcessSync's success value: the vendor T32 2.x move and base-move
+ * preprocess return 1 (imp_move_preprocess / imp_base_move_preprocess);
+ * the framework only checks for < 0. */
+#if defined(PLATFORM_T32)
+#define IVS_PREPROCESS_OK 1
+#else
+#define IVS_PREPROCESS_OK 0
+#endif
 
 /* ======================= move interface ======================= */
 
@@ -174,7 +205,7 @@ struct t31_move_priv {
     struct t31_move_v2 v2;
 };
 
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
 extern int IMP_ISP_Tuning_GetISPRunningMode(int num, int *mode)
     __attribute__((weak));
 #else
@@ -238,7 +269,7 @@ static void v2_poll_isp(struct t31_move_v2 *v, int64_t now)
         return;
     if ((v->isp_ok & 1) && IMP_ISP_Tuning_GetISPRunningMode) {
         int mode = 0;
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
         if (IMP_ISP_Tuning_GetISPRunningMode(0, &mode) == 0)
 #else
         if (IMP_ISP_Tuning_GetISPRunningMode(&mode) == 0)
@@ -247,7 +278,7 @@ static void v2_poll_isp(struct t31_move_v2 *v, int64_t now)
         else
             v->isp_ok &= ~1;
     }
-#if !defined(PLATFORM_T41) && !defined(PLATFORM_T40)
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T40) && !defined(PLATFORM_T32)
     if ((v->isp_ok & 2) && IMP_ISP_Tuning_GetTotalGain) {
         uint32_t gain = 0;
 
@@ -360,7 +391,7 @@ static int move_preprocess(IMPIVSInterface *inf, T31IVSFrameInfo *frame)
         p->v2.fed = 1;
     }
     p->pending = 1;
-    return 0;
+    return IVS_PREPROCESS_OK;
 }
 
 static int move_process(IMPIVSInterface *inf, T31IVSFrameInfo *frame)
@@ -592,6 +623,18 @@ static int base_preprocess(IMPIVSInterface *inf, T31IVSFrameInfo *frame)
         return -1;
     p->pending = 0;
     t31_ivs_base_move_frame_size(p->alg, &width, &height);
+#if defined(PLATFORM_T32)
+    /* T32: the instance runs on ALIGN16(height) rows (see
+     * IMP_IVS_CreateBaseMoveInterface); a frame of the unaligned height
+     * carries those rows (FrameSource puts UV after ALIGN16(height) rows) */
+    if (frame->height != height && ((frame->height + 15u) & ~15u) == height) {
+        T31IVSFrameInfo padded = *frame;
+
+        padded.height = height;
+        if (!ivs_frame_ok(&padded, width, height, &p->warned, "base move"))
+            return -1;
+    } else
+#endif
     if (!ivs_frame_ok(frame, width, height, &p->warned, "base move"))
         return -1;
     stride = ivs_frame_stride(frame);
@@ -602,7 +645,7 @@ static int base_preprocess(IMPIVSInterface *inf, T31IVSFrameInfo *frame)
                            need ? (const uint8_t *)(uintptr_t)frame->virAddr : NULL,
                            stride);
     p->pending = 1;
-    return 0;
+    return IVS_PREPROCESS_OK;
 }
 
 static int base_process(IMPIVSInterface *inf, T31IVSFrameInfo *frame)
@@ -662,6 +705,11 @@ IMPIVSInterface *IMP_IVS_CreateBaseMoveInterface(IMP_IVS_BaseMoveParam *param)
     b = calloc(1, sizeof(*b));
     if (!b)
         return NULL;
+#if defined(PLATFORM_T32)
+    /* vendor 2.x: the frame height is rounded up to 16 in the caller's
+     * parameters (written back), so the map has ALIGN16(height) / 8 rows */
+    param->frameInfo.height = (param->frameInfo.height + 15u) & ~15u;
+#endif
     b->param = *param;
     b->inf.param = &b->param;
     b->inf.paramSize = (int)sizeof(b->param);
@@ -1118,6 +1166,10 @@ int IMP_IVS_CreateGroup(int group)
                       group);
     ivs_groups[group] = 1;
     pthread_mutex_unlock(&ivs_lock);
+#if defined(PLATFORM_T32)
+    if (OpenIMP_FrameSource_RegisterSink(DEV_ID_IVS, group, ivs_t32_sink, NULL) != 0)
+        IMP_LOG_ERR("IVS", "group %d: no FrameSource sink slot, bind will fail", group);
+#endif
     return 0;
 }
 
@@ -1148,6 +1200,9 @@ int IMP_IVS_DestroyGroup(int group)
     }
     ivs_groups[group] = 0;
     pthread_mutex_unlock(&ivs_lock);
+#if defined(PLATFORM_T32)
+    (void)OpenIMP_FrameSource_RegisterSink(DEV_ID_IVS, group, NULL, NULL);
+#endif
     return 0;
 }
 

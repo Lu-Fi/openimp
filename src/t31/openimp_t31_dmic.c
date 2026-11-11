@@ -49,11 +49,11 @@
 #include <unistd.h>
 
 #include <imp/imp_dmic.h>
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 #include <linux/ioctl.h>
 #endif
 
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* T40/T41: OSS3 /dev/dsp ABI shared with the analog microphone (_IOR 'P'
  * on MIPS = direction READ).  libimp 1.3.1 / 1.2.5 dmic.c:
  *   SET_PARAM {rate, format, channels(= microphones)} (0x73), then
@@ -98,7 +98,7 @@ typedef struct {
     uint32_t size;
     void *aec;
     uint32_t aec_size;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
     void *timestamp;       /* kernel timeval, may stay NULL */
 #endif
 } DmicStream;
@@ -118,12 +118,18 @@ typedef struct {
 #endif
 
 #if UINTPTR_MAX == 0xffffffffu
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
 _Static_assert(sizeof(DmicStream) == 20, "DMIC stream ABI mismatch");
 #elif defined(PLATFORM_T40)
 _Static_assert(sizeof(DmicStream) == 16, "DMIC stream ABI mismatch");
 #else
 _Static_assert(sizeof(DmicStream) == 12, "DMIC stream ABI mismatch");
+#endif
+#if defined(PLATFORM_T32)
+/* the T32 2.x OSS3 driver (vendor 2.0.0 audio_dsp.h, PRJ007, kernel 4.4) */
+_Static_assert(DMIC_SET_PARAM == 0x40085073UL && DMIC_ENABLE_STREAM == 0x4004506aUL &&
+               DMIC_GET_STREAM == 0x40145069UL && DMIC_SET_GAIN == 0x40045057UL,
+               "T32 DMIC ioctl mismatch");
 #endif
 _Static_assert(sizeof(IMPDmicFrame) == 32, "IMPDmicFrame ABI mismatch");
 _Static_assert(sizeof(IMPDmicChnFrame) == 64, "IMPDmicChnFrame ABI mismatch");

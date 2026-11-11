@@ -5,6 +5,7 @@
 #ifndef OPENIMP_T32_FS_H
 #define OPENIMP_T32_FS_H
 
+#include <stdint.h>
 #include <imp/imp_common.h>
 
 /*
@@ -20,5 +21,7 @@ typedef int (*OpenIMP_T32_FrameSink)(void *ctx, int fs_chn, IMPFrameInfo *frame)
 int OpenIMP_FrameSource_RegisterSink(int devID, int grpID, OpenIMP_T32_FrameSink sink, void *ctx);
 /* give back a frame a sink kept (returned 1 for) */
 int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn, IMPFrameInfo *frame);
+/* Y stride of a frame handed out by FrameSource (by physical address), 0 if unknown */
+uint32_t OpenIMP_FS_FramePitch(uint32_t physical);
 
 #endif

@@ -29,6 +29,15 @@
 #             (T32_STREAM_DUMP); the sample copies it to physical 0x7800000
 #             (top of rmem, after the teardown) and pmemsave writes it to
 #             OUT/streams.bin; tools/t32/t32_streams.py splits it (local only)
+# SAMPLE_SRC  sample source to build instead of tools/t32/t32_trace_sample.c
+#             (e.g. tools/t32/t32_misc_sample.c, #299/#298); installed under
+#             the same name
+# SENSOR_OPTS extra image-sensor properties, e.g. ",scene=/path/clip.y4m"
+#             (a moving scene for IVS, qemu/README-scene)
+# EXTRA_LIBS  libraries copied into the guest /usr/lib before the run (e.g. the
+#             vendor libsysutils 2.x for an SU_* reference run)
+# MODPROBE    extra modules loaded after the ISP and sensor (e.g. "audio" for
+#             the OSS3 /dev/dsp driver, #298)
 # QEMU_EXTRA  extra QEMU arguments, e.g. "-trace ingenic_isp_write,file=OUT/isp.trace"
 #             (driver register writes for the vendor-vs-OpenIMP comparison, #289)
 set -eu
@@ -41,13 +50,14 @@ mkdir -p "$OUT"; rm -rf "$OUT/rootfs"; cp -a "$BASE_ROOTFS" "$OUT/rootfs"
 
 # sample + recorder (own code), module and optional libimp under test
 "$CC" -std=gnu99 -O1 -Wall -Wextra -Werror -DPLATFORM_T32 -I"$REPO/include" \
-    -o "$OUT/rootfs/usr/bin/t32_trace_sample" "$REPO/tools/t32/t32_trace_sample.c" \
+    -o "$OUT/rootfs/usr/bin/t32_trace_sample" "$REPO/${SAMPLE_SRC:-tools/t32/t32_trace_sample.c}" \
     -L"$SYSROOT/usr/lib" -L"$SYSROOT/lib" -Wl,--no-as-needed -limp -lalog -lsysutils \
     -luclibcshim -lpthread -lrt -ldl -lm -Wl,--allow-shlib-undefined
 "$CC" -std=gnu99 -O2 -Wall -Wextra -Werror -fPIC -shared \
     -o "$OUT/rootfs/usr/lib/libt32trace.so" "$REPO/tools/t32/t32_ioctl_trace.c" -ldl -lpthread
 cp "$ISP_KO" "$OUT/rootfs/lib/modules/4.4.94/ingenic/tx-isp-t32.ko"
 [ -n "${LIBIMP:-}" ] && cp "$LIBIMP" "$OUT/rootfs/usr/lib/libimp.so"
+for l in ${EXTRA_LIBS:-}; do cp "$l" "$OUT/rootfs/usr/lib/"; done
 md5sum "$ISP_KO" "$OUT/rootfs/usr/lib/libimp.so" > "$OUT/inputs.md5"
 rm -f "$OUT/rootfs.bin"
 "$T32_BUILD/host/bin/mksquashfs" "$OUT/rootfs" "$OUT/rootfs.bin" -comp xz -b 262144 \
@@ -60,7 +70,7 @@ taskset -c "$CPUS" nice -n 19 "$QEMU" -M ingenic-t32 -m 128M -display none \
     -drive file="$OUT/rootfs.bin",format=raw,if=none,id=flash0 -kernel "$KERNEL" -append "$CMDLINE" \
     -serial null -chardev socket,id=con,host=127.0.0.1,port=$PORT,server=on,wait=off,logfile="$OUT/console.log" \
     -serial chardev:con -monitor tcp:127.0.0.1:$MPORT,server=on,wait=off \
-    -device image-sensor,model=cv8001,bus=i2c0 -no-reboot ${QEMU_EXTRA:-} > "$OUT/qemu.stdout" 2>&1 &
+    -device image-sensor,model=cv8001,bus=i2c0${SENSOR_OPTS:-} -no-reboot ${QEMU_EXTRA:-} > "$OUT/qemu.stdout" 2>&1 &
 QPID=$!
 trap 'kill $QPID 2>/dev/null || true' EXIT
 
@@ -94,6 +104,7 @@ con() { python3 "$OUT/con.py" "$PORT" "$1" "$2"; }
 timeout 120 bash -c "until grep -q 'job control' '$OUT/console.log' 2>/dev/null; do sleep 1; done"
 con 20 "dmesg -n 1; mount -t proc p /proc; mount -t tmpfs t /tmp; mount -t sysfs s /sys; mkdir -p /dev/shm; mount -t tmpfs shm /dev/shm" > /dev/null
 con 120 "modprobe tx_isp_t32 && modprobe sensor_cv8001_t32" > "$OUT/modprobe.txt"
+for m in ${MODPROBE:-}; do con 120 "modprobe $m; ls -l /dev/dsp* 2>&1" >> "$OUT/modprobe.txt"; done
 SDUMP=; [ "${STREAMS_OUT:-0}" = 1 ] && SDUMP=T32_STREAM_DUMP=/tmp/streams.bin
 con 900 "cd /tmp; ${SAMPLE_ENV:-} $SDUMP T32_TRACE_LOG=/tmp/t.log T32_TRACE_DUMP=${DUMP:-0} LD_PRELOAD=/usr/lib/libt32trace.so t32_trace_sample $CODEC $STREAMS > /tmp/s.out 2>&1" > /dev/null
 con 60 "cat /tmp/s.out" | tr -d '\r' > "$OUT/sample.txt"

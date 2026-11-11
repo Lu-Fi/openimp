@@ -94,6 +94,23 @@ int IMP_System_MemPoolRequest(int poolId, size_t size, const char *name);
  */
 int IMP_System_MemPoolFree(int poolId);
 
+#if defined(PLATFORM_T32)
+/*
+ * T32 2.x client rmem buffer pools (vendor imp_system.h of SDK 2.0.0).
+ * alignsize: non-zero multiple of 16; poolID: the handle CreatePool gives;
+ * Alloc falls back to a lookup by name, Free (invalid poolID) to all pools.
+ * Errors: 0x800a0013 (parameters), 0x800a0004 (unknown pool), 0x800a000d
+ * (out of memory); Alloc returns NULL.  OpenIMP: src/t32/openimp_t32_sys.c.
+ */
+int32_t IMP_Buf_CreatePool(uint32_t *poolID, uint32_t size, const char *name, uint32_t alignsize);
+int32_t IMP_Buf_DestroyPool(uint32_t poolID, const char *name);
+void *IMP_Buf_Alloc(uint32_t poolID, const char *poolname, uint32_t size, const char *name,
+                    uint32_t alignsize);
+int32_t IMP_Buf_Free(uint32_t poolID, void *addr);
+uint32_t IMP_Buf_Vaddr2Paddr(void *vaddr);
+void *IMP_Buf_Paddr2Vaddr(uint32_t paddr);
+#endif
+
 /**
  * Read a 32-bit hardware register
  */
