@@ -139,6 +139,14 @@ typedef int (*P3AgcFree)(void *);
  * BLOCK callers consume the same FIFO so order is preserved. */
 #define P3_CAPTURE_FRAMES 16
 #define P3_CAPTURE_RETRY_US 10000
+#if defined(PLATFORM_T32)
+/* T32 2.x: the vendor record queue is usrFrmDepth deep (IMP_AI_EnableChn) */
+#define P3_CAPTURE_SLOTS 64
+#define P3_CAPTURE_DEPTH p3_audio.cap_depth
+#else
+#define P3_CAPTURE_SLOTS P3_CAPTURE_FRAMES
+#define P3_CAPTURE_DEPTH P3_CAPTURE_FRAMES
+#endif
 
 static struct {
     int fd;
@@ -201,7 +209,10 @@ static struct {
     unsigned int cap_count;
     unsigned int cap_head;
     unsigned char *cap_data;
-    int64_t cap_time[P3_CAPTURE_FRAMES];
+    int64_t cap_time[P3_CAPTURE_SLOTS];
+#if defined(PLATFORM_T32)
+    unsigned int cap_depth;
+#endif
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
 #if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
                .ai_volume = 60    /* vendor 1.3.1 reads 60 before any SetVol */
@@ -256,16 +267,26 @@ static void *p3_capture_main(void *argument)
             pthread_mutex_lock(&p3_cap_lock);
             continue;
         }
-        if (p3_audio.cap_count == P3_CAPTURE_FRAMES) {
-            p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+        if (p3_audio.cap_count == P3_CAPTURE_DEPTH) {
+            p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_DEPTH;
             p3_audio.cap_count--;
         }
         {
             unsigned int slot = (p3_audio.cap_head + p3_audio.cap_count) %
-                                P3_CAPTURE_FRAMES;
+                                P3_CAPTURE_DEPTH;
 
             memcpy(p3_audio.cap_data + (size_t)slot * bytes, chunk, bytes);
+#if defined(PLATFORM_T32)
+            /* vendor 2.x: the driver's (raw monotonic) capture time of the
+             * fragment, less 20 ms */
+            p3_audio.cap_time[slot] =
+                capture_timestamp.seconds || capture_timestamp.microseconds
+                    ? (int64_t)capture_timestamp.seconds * 1000000 +
+                          capture_timestamp.microseconds - 20000
+                    : (int64_t)IMP_System_GetTimeStamp();
+#else
             p3_audio.cap_time[slot] = IMP_System_GetTimeStamp();
+#endif
             p3_audio.cap_count++;
         }
         p3_audio.cap_error = 0;
@@ -283,7 +304,7 @@ static int p3_capture_start(size_t bytes)
 {
     pthread_t thread;
     unsigned char *chunk = malloc(bytes);
-    unsigned char *data = malloc(bytes * P3_CAPTURE_FRAMES);
+    unsigned char *data = malloc(bytes * P3_CAPTURE_DEPTH);
 
     if (!chunk || !data) {
         free(chunk);
@@ -442,6 +463,7 @@ static void p3_process_effects(int16_t *samples, int count)
     }
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AI_SetPubAttr(int device, IMPAudioIOAttr *attribute)
 {
     (void)device;
@@ -470,6 +492,7 @@ int IMP_AI_Enable(int device)
     p3_audio.ai_enabled = 1;
     return 0;
 }
+#endif
 
 int IMP_AI_Disable(int device)
 {
@@ -490,6 +513,7 @@ int IMP_AI_Disable(int device)
     return result;
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AI_EnableChn(int device, int channel)
 {
     (void)device;
@@ -498,6 +522,7 @@ int IMP_AI_EnableChn(int device, int channel)
     p3_audio.ai_channel_enabled = 1;
     return 0;
 }
+#endif
 
 int IMP_AI_DisableChn(int device, int channel)
 {
@@ -528,6 +553,7 @@ int IMP_AI_GetChnParam(int device, int channel, IMPAudioIChnParam *parameter)
     return 0;
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AI_PollingFrame(int device, int channel, unsigned int timeout_ms)
 {
     (void)device;
@@ -537,6 +563,7 @@ int IMP_AI_PollingFrame(int device, int channel, unsigned int timeout_ms)
                ? 0
                : -1;
 }
+#endif
 
 /* src/t23/openimp_t23_audio_ext.c (weak: host tests link without it) */
 extern void openimp_t23_ai_pre_effects(int16_t *samples, int count,
@@ -544,6 +571,9 @@ extern void openimp_t23_ai_pre_effects(int16_t *samples, int count,
 
 static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
                            IMPAudioFrame *raw, IMPBlock block);
+#if defined(PLATFORM_T32)
+static void t32_ai_effects(int16_t *samples, int count);
+#endif
 
 int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
                     IMPBlock block)
@@ -603,7 +633,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         memcpy(p3_audio.frame_buffer,
                p3_audio.cap_data + (size_t)p3_audio.cap_head * bytes, bytes);
         stamp = p3_audio.cap_time[p3_audio.cap_head];
-        p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_FRAMES;
+        p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_DEPTH;
         p3_audio.cap_count--;
         pthread_mutex_unlock(&p3_cap_lock);
         capture_stamp = stamp;
@@ -630,6 +660,12 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         }
         memcpy(p3_audio.raw_buffer, p3_audio.frame_buffer, bytes);
     }
+#if defined(PLATFORM_T32)
+    /* vendor 2.x record chain: NS/AGC/HPF in IMP_AI_SetAlgoOrder order,
+     * DRC/EQ, LPF, howling suppression, then the software volume */
+    t32_ai_effects((int16_t *)p3_audio.frame_buffer,
+                   (int)(bytes / sizeof(int16_t)));
+#else
     /* IMP_AI_EnableHs: howling suppression ahead of the other effects */
     if (openimp_t23_ai_pre_effects)
         openimp_t23_ai_pre_effects((int16_t *)p3_audio.frame_buffer,
@@ -639,6 +675,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
                        (int)(bytes / sizeof(int16_t)));
     if (p3_audio.ai_mute)
         memset(p3_audio.frame_buffer, 0, bytes);
+#endif
     memset(frame, 0, sizeof(*frame));
     frame->bitwidth = p3_audio.ai_attr.bitwidth;
     frame->soundmode = p3_audio.ai_attr.soundmode;
@@ -677,6 +714,7 @@ static int p3_set_volume(int command, int channel, int value)
     return ioctl(p3_audio.fd, command, &volume);
 }
 
+#if !defined(PLATFORM_T32)
 static int p3_get_volume(int command, int channel, int *value)
 {
     P3AudioVolume volume;
@@ -722,7 +760,7 @@ static int p3_volume_from_raw(int value, int raw_unity)
     return value;
 }
 
-#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
+#if defined(PLATFORM_T41)
 int IMP_AI_SetVol(int device, int channel, int value)
 {
     int result;
@@ -826,11 +864,13 @@ int IMP_AI_GetGain(int device, int channel, int *value)
 }
 
 #endif
+#endif /* !PLATFORM_T32 */
 
 /* The vendor T41 libimp keeps the mute as software state (the volume of its
  * processing chain goes to zero, the codec is not touched; the audio driver
  * has no mute ioctl that works on this board): captured frames are silent
  * while muted. */
+#if !defined(PLATFORM_T32)
 int IMP_AI_SetVolMute(int device, int channel, int mute)
 {
     if (device < 0 || device > 1 || channel != 0 || (mute != 0 && mute != 1))
@@ -838,6 +878,7 @@ int IMP_AI_SetVolMute(int device, int channel, int mute)
     p3_audio.ai_mute = mute;
     return 0;
 }
+#endif
 
 /* libaudioProcess-neo's HPF state is a float biquad (7 floats over the
  * 32 bytes); it designs 300 Hz at 16 kHz itself while b0 is zero.  A
@@ -1004,6 +1045,7 @@ int IMP_AI_GetFrameAndRef(int device, int channel, IMPAudioFrame *frame,
     return result;
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AO_SetPubAttr(int device, IMPAudioIOAttr *attribute)
 {
     (void)device;
@@ -1012,6 +1054,7 @@ int IMP_AO_SetPubAttr(int device, IMPAudioIOAttr *attribute)
     p3_audio.ao_attr = *attribute;
     return 0;
 }
+#endif
 
 int IMP_AO_GetPubAttr(int device, IMPAudioIOAttr *attribute)
 {
@@ -1022,6 +1065,7 @@ int IMP_AO_GetPubAttr(int device, IMPAudioIOAttr *attribute)
     return 0;
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AO_Enable(int device)
 {
     (void)device;
@@ -1148,6 +1192,7 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
                                    p3_ao_bytes_per_sec(), p3_ao_driver_write,
                                    NULL);
 }
+#endif /* !PLATFORM_T32 */
 
 /* T40 and T41 IMP_AI/AO_Set/GetDigitalGain (T41 1.2.5 ai.c.o 0x74d0 /
  * ao.c.o 0x444c: the same checks, clamp and ioctls as T40; the volume record
@@ -1206,6 +1251,7 @@ int IMP_AO_GetDigitalGain(int device, int channel, int *dgain)
     return 0;
 }
 
+#if !defined(PLATFORM_T32)
 int IMP_AO_SetVol(int device, int channel, int value)
 {
     int result;
@@ -1358,6 +1404,7 @@ int IMP_AO_DisableAgc(void)
 {
     return IMP_AI_DisableAgc();
 }
+#endif /* !PLATFORM_T32 */
 
 /* ---- T41 1.2.6 audio extras -------------------------------------------- */
 
@@ -1442,3 +1489,8 @@ int IMP_Audio_Select_Codec(int device, int channel, int codec)
 }
 #endif
 
+#if defined(PLATFORM_T32)
+/* T32 2.x vendor semantics (#329): software volume, AO queue and play
+ * thread, algorithm order, LPF, DRC/EQ, AO effects */
+#include "../t32/openimp_t32_audio2x.inc"
+#endif

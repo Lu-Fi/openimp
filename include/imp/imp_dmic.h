@@ -73,6 +73,17 @@ int IMP_DMIC_EnableAecRefFrame(int dmicDevId, int dmicChnId, int audioAoDevId, i
 int IMP_DMIC_DisableAecRefFrame(int dmicDevId, int dmicChnId, int audioAoDevId, int aoChn);
 int IMP_DMIC_GetFrameAndRef(int dmicDevId, int dmicChnId, IMPDmicChnFrame *chnFrm, IMPDmicFrame *ref, IMPBlock block);
 
+#if defined(PLATFORM_T32)
+/* T32 2.x (vendor 2.0.0 imp_dmic.h) DMIC effects (#329) */
+int IMP_DMIC_EnableNs(IMPDmicAttr *attr, int mode);
+int IMP_DMIC_DisableNs(void);
+int IMP_DMIC_EnableAgc(IMPDmicAttr *attr, IMPAudioAgcConfig agcConfig);
+int IMP_DMIC_DisableAgc(void);
+int IMP_DMIC_EnableHpf(IMPDmicAttr *attr);
+int IMP_DMIC_SetHpfCoFrequency(int cofrequency);
+int IMP_DMIC_DisableHpf(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

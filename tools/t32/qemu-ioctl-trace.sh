@@ -37,7 +37,9 @@
 # EXTRA_LIBS  libraries copied into the guest /usr/lib before the run (e.g. the
 #             vendor libsysutils 2.x for an SU_* reference run)
 # MODPROBE    extra modules loaded after the ISP and sensor (e.g. "audio" for
-#             the OSS3 /dev/dsp driver, #298)
+#             the OSS3 /dev/dsp driver, #298); ":" separates module
+#             parameters: "audio:dmic_enable=1" also registers the DMIC
+#             route (#330: without it the DMIC ioctls oops in the driver)
 # QEMU_EXTRA  extra QEMU arguments, e.g. "-trace ingenic_isp_write,file=OUT/isp.trace"
 #             (driver register writes for the vendor-vs-OpenIMP comparison, #289)
 set -eu
@@ -104,7 +106,7 @@ con() { python3 "$OUT/con.py" "$PORT" "$1" "$2"; }
 timeout 120 bash -c "until grep -q 'job control' '$OUT/console.log' 2>/dev/null; do sleep 1; done"
 con 20 "dmesg -n 1; mount -t proc p /proc; mount -t tmpfs t /tmp; mount -t sysfs s /sys; mkdir -p /dev/shm; mount -t tmpfs shm /dev/shm" > /dev/null
 con 120 "modprobe tx_isp_t32 && modprobe sensor_cv8001_t32" > "$OUT/modprobe.txt"
-for m in ${MODPROBE:-}; do con 120 "modprobe $m; ls -l /dev/dsp* 2>&1" >> "$OUT/modprobe.txt"; done
+for m in ${MODPROBE:-}; do con 120 "modprobe ${m//:/ }; ls -l /dev/dsp* 2>&1" >> "$OUT/modprobe.txt"; done
 SDUMP=; [ "${STREAMS_OUT:-0}" = 1 ] && SDUMP=T32_STREAM_DUMP=/tmp/streams.bin
 con 900 "cd /tmp; ${SAMPLE_ENV:-} $SDUMP T32_TRACE_LOG=/tmp/t.log T32_TRACE_DUMP=${DUMP:-0} LD_PRELOAD=/usr/lib/libt32trace.so t32_trace_sample $CODEC $STREAMS > /tmp/s.out 2>&1" > /dev/null
 con 60 "cat /tmp/s.out" | tr -d '\r' > "$OUT/sample.txt"

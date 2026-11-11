@@ -27,6 +27,13 @@
  *   audio N       AI (+ AENC G.711) capture of N frames and AO playback of
  *                 N silent frames, volumes/gains; "T32A ..." (#298)
  *   dmic N        IMP_DMIC_* capture of N frames ("T32D ...")
+ *   audiox N      vendor 2.x audio extras and timing (#329): AI device 1
+ *                 (the vendor's LPF/DRC flags only act on device 1) in N-frame
+ *                 phases (plain, volume 50, mute, LPF 500 Hz, DRC/EQ, NS,
+ *                 algorithm order), AO tone phases (volume 50, NS, DRC/EQ)
+ *                 with send/flush times and queue states ("T32X ..."); the AO
+ *                 tone goes to the QEMU audiodev (a wav file), no real sound
+ *   dmicx N       dmic N plus IMP_DMIC_Enable Ns/Agc/Hpf phases (#329/#330)
  *
  * usage: t32_trace_sample <mode> [n]   (installed under that name)
  */
@@ -556,6 +563,7 @@ static int audio_test(int n)
     printf("T32A ai attr %d %d %d %d %d %d\n", attr.samplerate, attr.bitwidth, attr.soundmode,
            attr.frmNum, attr.numPerFrm, attr.chnCnt);
     STEP(IMP_AI_Enable(0));
+    memset(&cp, 0, sizeof cp);
     cp.usrFrmDepth = 20;
     STEP(IMP_AI_SetChnParam(0, 0, &cp));
     STEP(IMP_AI_EnableChn(0, 0));
@@ -645,6 +653,7 @@ static int dmic_test(int n)
     STEP(IMP_DMIC_SetUserInfo(0, 0, 0));
     STEP(IMP_DMIC_SetPubAttr(0, &attr));
     STEP(IMP_DMIC_Enable(0));
+    memset(&cp, 0, sizeof cp);
     cp.usrFrmDepth = 20;
     STEP(IMP_DMIC_SetChnParam(0, 0, &cp));
     STEP(IMP_DMIC_EnableChn(0, 0));
@@ -681,6 +690,254 @@ static int dmic_test(int n)
     return got == n ? 0 : 2;
 }
 
+/* ---- audio extras and timing (#329) -------------------------------------- */
+static int64_t now_us(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+}
+
+/* n frames from AI device dev: stats of the last one, frame spacing (us) */
+static int ai_phase(int dev, const char *tag, int n)
+{
+    int64_t first = 0, last = 0, t0 = now_us(), wait_first = -1;
+    int i, got = 0;
+
+    for (i = 0; i < n; i++) {
+        IMPAudioFrame f;
+
+        if (IMP_AI_PollingFrame(dev, 0, 1000) || IMP_AI_GetFrame(dev, 0, &f, BLOCK)) {
+            printf("T32X ai %s %d none\n", tag, i);
+            continue;
+        }
+        if (!got) {
+            first = f.timeStamp;
+            wait_first = now_us() - t0;
+        }
+        last = f.timeStamp;
+        if (i == n - 1)
+            pcm_stats(tag, i, &f);
+        got++;
+        IMP_AI_ReleaseFrame(dev, 0, &f);
+    }
+    printf("T32X ai %s frames %d/%d spacing_us %lld first_wait_ms %lld\n", tag, got, n,
+           got > 1 ? (long long)((last - first) / (got - 1)) : -1LL,
+           (long long)(wait_first / 1000));
+    return got == n;
+}
+
+static int ao_phase(const char *tag, int n, int16_t *pcm, int samples)
+{
+    IMPAudioOChnState st;
+    int64_t t0 = now_us(), t1, t2;
+    int i, got = 0;
+
+    for (i = 0; i < n; i++) {
+        IMPAudioFrame f;
+
+        memset(&f, 0, sizeof f);
+        f.bitwidth = AUDIO_BIT_WIDTH_16;
+        f.soundmode = AUDIO_SOUND_MODE_MONO;
+        f.virAddr = (uint32_t *)pcm;
+        f.len = samples * 2;
+        got += IMP_AO_SendFrame(0, 0, &f, BLOCK) == 0;
+    }
+    t1 = now_us();
+    memset(&st, 0, sizeof st);
+    IMP_AO_QueryChnStat(0, 0, &st);
+    printf("T32X ao %s sent %d/%d send_ms %lld stat %d/%d/%d", tag, got, n,
+           (long long)((t1 - t0) / 1000), st.chnTotalNum, st.chnFreeNum, st.chnBusyNum);
+    i = IMP_AO_FlushChnBuf(0, 0);
+    t2 = now_us();
+    memset(&st, 0, sizeof st);
+    IMP_AO_QueryChnStat(0, 0, &st);
+    printf(" flush rc=%d ms %lld stat %d/%d/%d\n", i, (long long)((t2 - t1) / 1000),
+           st.chnTotalNum, st.chnFreeNum, st.chnBusyNum);
+    return got == n;
+}
+
+static int audiox_test(int n)
+{
+    static float eq_table[20];
+    static int16_t tone[320], quiet[320];
+    IMPAudioDrcEqConfig drc = { 500, 1000000, 0.3f, 0, 0, 8000, 20, eq_table };
+    IMPAudioIOAttr attr;
+    IMPAudioIChnParam cp;
+    AudioAI_Type order[3] = { AI_MODULE_HPF, AI_MODULE_NS, AI_MODULE_AGC }, got_order[3];
+    AudioAO_Type ao_order[3];
+    int ok = 1, i, vol = -1;
+    const int dev = 1;
+
+    memset(&attr, 0, sizeof attr);
+    attr.samplerate = AUDIO_SAMPLE_RATE_16000;
+    attr.bitwidth = AUDIO_BIT_WIDTH_16;
+    attr.soundmode = AUDIO_SOUND_MODE_MONO;
+    attr.frmNum = 20;
+    attr.numPerFrm = 320;
+    attr.chnCnt = 1;
+    STEP(IMP_AI_SetPubAttr(dev, &attr));
+    STEP(IMP_AI_GetPubAttr(dev, &attr));
+    printf("T32X ai attr %d %d %d %d %d %d\n", attr.samplerate, attr.bitwidth, attr.soundmode,
+           attr.frmNum, attr.numPerFrm, attr.chnCnt);
+    STEP(IMP_AI_Enable(dev));
+    memset(&cp, 0, sizeof cp);
+    cp.usrFrmDepth = 20;
+    STEP(IMP_AI_SetChnParam(dev, 0, &cp));
+    STEP(IMP_AI_EnableChn(dev, 0));
+    STEP(IMP_AI_GetVol(dev, 0, &vol));
+    printf("T32X ai vol after EnableChn %d\n", vol);
+    memset(got_order, 0xff, sizeof got_order);
+    STEP(IMP_AI_GetAlgoOrder(dev, 0, got_order));
+    printf("T32X ai order %d %d %d\n", got_order[0], got_order[1], got_order[2]);
+    if (mark)
+        mark("ai plain");
+    ok &= ai_phase(dev, "plain", n);
+    STEP(IMP_AI_SetVol(dev, 0, 50));
+    ok &= ai_phase(dev, "vol50", n);
+    STEP(IMP_AI_SetVolMute(dev, 0, 1));
+    ok &= ai_phase(dev, "mute", n);
+    STEP(IMP_AI_SetVolMute(dev, 0, 0));
+    STEP(IMP_AI_GetVol(dev, 0, &vol));
+    printf("T32X ai vol after unmute %d\n", vol);
+    STEP(IMP_AI_SetVol(dev, 0, 60));
+    STEP(IMP_AI_SetLpfCoFrequency(500));
+    STEP(IMP_AI_EnableLpf(&attr));
+    ok &= ai_phase(dev, "lpf500", n);
+    STEP(IMP_AI_DisableLpf());
+    STEP(IMP_AI_EnableDrcAndEq(&attr, &drc, 1, 1));
+    ok &= ai_phase(dev, "drceq", n);
+    STEP(IMP_AI_DisableDrcAndEq());
+    STEP(IMP_AI_EnableNs(&attr, 2));
+    ok &= ai_phase(dev, "ns2", n);
+    STEP(IMP_AI_SetAlgoOrder(dev, 0, order));
+    STEP(IMP_AI_GetAlgoOrder(dev, 0, got_order));
+    printf("T32X ai order %d %d %d\n", got_order[0], got_order[1], got_order[2]);
+    ok &= ai_phase(dev, "ns2-order", n);
+    STEP(IMP_AI_DisableNs());
+    ok &= ai_phase(dev, "after", n);
+    STEP(IMP_AI_DisableChn(dev, 0));
+    STEP(IMP_AI_Disable(dev));
+
+    /* AO: a 1 kHz tone (-12 dBFS) into the QEMU wav, no device */
+    for (i = 0; i < 320; i++) {
+        static const int16_t q[16] = { 0, 3135, 5793, 7568, 8191, 7568, 5793, 3135,
+                                       0, -3135, -5793, -7568, -8191, -7568, -5793, -3135 };
+        tone[i] = q[i % 16];
+    }
+    memset(&attr, 0, sizeof attr);
+    attr.samplerate = AUDIO_SAMPLE_RATE_16000;
+    attr.bitwidth = AUDIO_BIT_WIDTH_16;
+    attr.soundmode = AUDIO_SOUND_MODE_MONO;
+    attr.frmNum = 20;
+    attr.numPerFrm = 320;
+    attr.chnCnt = 1;
+    STEP(IMP_AO_SetPubAttr(0, &attr));
+    STEP(IMP_AO_GetPubAttr(0, &attr));
+    printf("T32X ao attr numPerFrm %d\n", attr.numPerFrm);
+    STEP(IMP_AO_Enable(0));
+    STEP(IMP_AO_EnableChn(0, 0));
+    STEP(IMP_AO_GetVol(0, 0, &vol));
+    printf("T32X ao vol after EnableChn %d\n", vol);
+    memset(ao_order, 0xff, sizeof ao_order);
+    STEP(IMP_AO_GetAlgoOrder(0, 0, ao_order));
+    printf("T32X ao order %d %d %d\n", ao_order[0], ao_order[1], ao_order[2]);
+    if (mark)
+        mark("ao phases");
+    ok &= ao_phase("quiet", 5, quiet, 320);
+    ok &= ao_phase("tone60", n, tone, 320);
+    ok &= ao_phase("quiet", 5, quiet, 320);
+    STEP(IMP_AO_SetVol(0, 0, 50));
+    ok &= ao_phase("tone50", n, tone, 320);
+    ok &= ao_phase("quiet", 5, quiet, 320);
+    STEP(IMP_AO_SetVol(0, 0, 60));
+    STEP(IMP_AO_EnableNs(&attr, 2));
+    ok &= ao_phase("ns2", n, tone, 320);
+    STEP(IMP_AO_DisableNs());
+    ok &= ao_phase("quiet", 5, quiet, 320);
+    STEP(IMP_AO_EnableDrcAndEq(&attr, &drc, 1, 1));
+    ok &= ao_phase("drceq", n, tone, 320);
+    STEP(IMP_AO_DisableDrcAndEq());
+    ok &= ao_phase("quiet", 5, quiet, 320);
+    STEP(IMP_AO_CacheSwitch(0, 0, 0));
+    ok &= ao_phase("nocache", n, tone, 320);
+    STEP(IMP_AO_DisableChn(0, 0));
+    STEP(IMP_AO_Disable(0));
+    printf("T32S end ok=%d\n", ok);
+    return ok ? 0 : 2;
+}
+
+static int dmicx_phase(const char *tag, int n)
+{
+    int i, got = 0;
+
+    for (i = 0; i < n; i++) {
+        IMPDmicChnFrame f;
+
+        if (IMP_DMIC_PollingFrame(0, 0, 1000) || IMP_DMIC_GetFrame(0, 0, &f, BLOCK)) {
+            printf("T32D %s %d none\n", tag, i);
+            continue;
+        }
+        if (i == n - 1) {
+            IMPAudioFrame a;
+
+            memset(&a, 0, sizeof a);
+            a.virAddr = f.rawFrame.virAddr;
+            a.len = f.rawFrame.len;
+            a.seq = f.rawFrame.seq;
+            pcm_stats(tag, i, &a);
+        }
+        got++;
+        IMP_DMIC_ReleaseFrame(0, 0, &f);
+    }
+    printf("T32D %s frames %d/%d\n", tag, got, n);
+    return got == n;
+}
+
+static int dmicx_test(int n)
+{
+    IMPDmicAttr attr;
+    IMPDmicChnParam cp;
+    IMPAudioAgcConfig agc = { 3, 15 };
+    int ok = 1;
+
+    memset(&attr, 0, sizeof attr);
+    attr.samplerate = DMIC_SAMPLE_RATE_16000;
+    attr.bitwidth = DMIC_BIT_WIDTH_16;
+    attr.soundmode = DMIC_SOUND_MODE_MONO;
+    attr.frmNum = 20;
+    attr.numPerFrm = 320;
+    attr.chnCnt = 1;
+    STEP(IMP_DMIC_EnableNs(&attr, 2));          /* device not enabled yet */
+    STEP(IMP_DMIC_SetUserInfo(0, 0, 0));
+    STEP(IMP_DMIC_SetPubAttr(0, &attr));
+    STEP(IMP_DMIC_Enable(0));
+    memset(&cp, 0, sizeof cp);
+    cp.usrFrmDepth = 20;
+    STEP(IMP_DMIC_SetChnParam(0, 0, &cp));
+    STEP(IMP_DMIC_EnableChn(0, 0));
+    STEP(IMP_DMIC_SetVol(0, 0, 70));
+    ok &= dmicx_phase("dmic-vol70", n);
+    STEP(IMP_DMIC_SetVol(0, 0, 60));
+    ok &= dmicx_phase("dmic-plain", n);
+    STEP(IMP_DMIC_EnableNs(&attr, 2));
+    ok &= dmicx_phase("dmic-ns2", n);
+    STEP(IMP_DMIC_DisableNs());
+    STEP(IMP_DMIC_EnableAgc(&attr, agc));
+    ok &= dmicx_phase("dmic-agc", n);
+    STEP(IMP_DMIC_DisableAgc());
+    STEP(IMP_DMIC_SetHpfCoFrequency(0));
+    STEP(IMP_DMIC_EnableHpf(&attr));
+    ok &= dmicx_phase("dmic-hpf", n);
+    STEP(IMP_DMIC_DisableHpf());
+    ok &= dmicx_phase("dmic-after", n);
+    STEP(IMP_DMIC_DisableChn(0, 0));
+    STEP(IMP_DMIC_Disable(0));
+    printf("T32S end ok=%d\n", ok);
+    return ok ? 0 : 2;
+}
+
 int main(int argc, char **argv)
 {
     const char *mode = argc > 1 ? argv[1] : "buf";
@@ -699,6 +956,10 @@ int main(int argc, char **argv)
         return audio_test(n);
     if (!strcmp(mode, "dmic"))
         return dmic_test(n);
+    if (!strcmp(mode, "audiox"))
+        return audiox_test(n);
+    if (!strcmp(mode, "dmicx"))
+        return dmicx_test(n);
     printf("T32S unknown mode %s\n", mode);
     return 1;
 }
