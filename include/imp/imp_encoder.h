@@ -18,11 +18,21 @@ extern "C" {
 /**
  * Encoder type
  */
+#if defined(PLATFORM_T32)
+/* T32 (vendor 2.x API): the profile type byte is the IMPPayloadType
+ * (PT_JPEG 0, PT_H264 1, PT_H265 2), not the T23/T31 numbering (#302). */
+typedef enum {
+    IMP_ENC_TYPE_JPEG     = PT_JPEG,
+    IMP_ENC_TYPE_AVC      = PT_H264,
+    IMP_ENC_TYPE_HEVC     = PT_H265,
+} IMPEncoderEncType;
+#else
 typedef enum {
     IMP_ENC_TYPE_AVC      = 0,
     IMP_ENC_TYPE_HEVC     = 1,
     IMP_ENC_TYPE_JPEG     = 4,
 } IMPEncoderEncType;
+#endif
 
 /**
  * Profile IDC values (match H.264/H.265 spec)
@@ -40,8 +50,14 @@ typedef enum {
     IMP_ENC_PROFILE_AVC_MAIN      = ((IMP_ENC_TYPE_AVC << 24) | (IMP_ENC_AVC_PROFILE_IDC_MAIN)),       /**< H.264 Main = 0x0000004D = 77 */
     IMP_ENC_PROFILE_AVC_HIGH      = ((IMP_ENC_TYPE_AVC << 24) | (IMP_ENC_AVC_PROFILE_IDC_HIGH)),       /**< H.264 High = 0x00000064 = 100 */
     IMP_ENC_PROFILE_HEVC_MAIN     = ((IMP_ENC_TYPE_HEVC << 24) | (IMP_ENC_HEVC_PROFILE_IDC_MAIN)),     /**< H.265 Main = 0x01000001 */
-    IMP_ENC_PROFILE_JPEG          = (IMP_ENC_TYPE_JPEG << 24),                                          /**< JPEG = 0x04000000 */
+    IMP_ENC_PROFILE_JPEG          = (IMP_ENC_TYPE_JPEG << 24),                                          /**< JPEG = 0x04000000 (T32: 0) */
 } IMPEncoderProfile;
+
+#if defined(PLATFORM_T32)
+_Static_assert(IMP_ENC_PROFILE_JPEG == 0x00000000, "T32 IMP_ENC_PROFILE_JPEG");
+_Static_assert(IMP_ENC_PROFILE_AVC_MAIN == 0x0100004d, "T32 IMP_ENC_PROFILE_AVC_MAIN");
+_Static_assert(IMP_ENC_PROFILE_HEVC_MAIN == 0x02000001, "T32 IMP_ENC_PROFILE_HEVC_MAIN");
+#endif
 
 /**
  * Rate control mode

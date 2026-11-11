@@ -4,8 +4,9 @@
  * Builds against the OpenIMP public headers with PLATFORM_T32 so that every
  * T32 layout assert in include/imp and openimp_t32_abi.h is checked, and
  * exports the System / ISP / FrameSource / Encoder / OSD entry points of
- * the stream path.  Nothing talks to the kernel yet: each call logs once
- * per function and returns -1.  The real code follows in the T32 issues
+ * the stream path.  The entry points not implemented yet log once per
+ * function and return -1; the ISP / sensor lifecycle and System_Init/Exit
+ * are real (openimp_t32_isp.c, #288).  The real code follows in the T32 issues
  * (ioctl table, ISP lifecycle, IQ bin, FrameSource, soc_vpu, JPEG, HERA).
  */
 #include <stdint.h>
@@ -92,19 +93,13 @@ uint64_t IMP_System_GetTimeStamp(void)
     return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
 }
 
-T32_STUB(IMP_System_Init, (void))
-T32_STUB(IMP_System_Exit, (void))
+/* IMP_System_Init/Exit: openimp_t32_isp.c (#288) */
 T32_STUB(IMP_System_Bind, (IMPCell *srcCell, IMPCell *dstCell))
 T32_STUB(IMP_System_UnBind, (IMPCell *srcCell, IMPCell *dstCell))
 T32_STUB(IMP_System_RebaseTimeStamp, (uint64_t basets))
 
 /* ---- ISP (vendor 2.x: /dev/tx-isp, /dev/isp-m0) ------------------------- */
-T32_STUB(IMP_ISP_Open, (void))
-T32_STUB(IMP_ISP_Close, (void))
-T32_STUB(IMP_ISP_AddSensor, (IMPVI_NUM num, IMPSensorInfo *info))
-T32_STUB(IMP_ISP_DelSensor, (IMPVI_NUM num, IMPSensorInfo *info))
-T32_STUB(IMP_ISP_EnableSensor, (IMPVI_NUM num, IMPSensorInfo *info))
-T32_STUB(IMP_ISP_DisableSensor, (IMPVI_NUM num))
+/* Open/Close, Add/Del/Enable/DisableSensor: openimp_t32_isp.c (#288) */
 T32_STUB(IMP_ISP_EnableTuning, (void))
 T32_STUB(IMP_ISP_DisableTuning, (void))
 T32_STUB(IMP_ISP_Tuning_SetSensorFPS, (uint32_t fps_num, uint32_t fps_den))
