@@ -55,6 +55,8 @@ jobs:
       - name: Validate status data
         run: python3 tools/status_data.py --check
       - name: Generate
+        env:
+          TZ: Europe/Berlin   # the "today" / "yesterday" badges count from local midnight
         run: |
           python3 tools/gen_feature_matrix_html.py
           mkdir -p _site
