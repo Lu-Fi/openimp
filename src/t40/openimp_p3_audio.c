@@ -36,7 +36,7 @@ typedef struct {
     uint32_t size;
     void *aec;
     uint32_t aec_size;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
     /* T41 OSS3 appends a pointer to its 32-bit kernel timeval. */
     struct {
         int32_t seconds;
@@ -88,14 +88,27 @@ typedef struct {
 #define AMIC_AI_GET_GAIN P3_SIOR(85, P3AudioVolume)
 #define AMIC_SPK_GET_VOLUME P3_SIOR(84, P3AudioVolume)
 #define AMIC_SPK_GET_GAIN P3_SIOR(83, P3AudioVolume)
+#if defined(PLATFORM_T32)
+/* T32 2.x OSS3 (vendor 2.0.0 audio_dsp.h): the mute requests carry an int;
+ * unused here (software mute, as the vendor library) */
+#define AMIC_AI_SET_MUTE P3_SIOR(78, int)
+#define AMIC_SPK_SET_MUTE P3_SIOR(77, int)
+#else
 #define AMIC_AI_SET_MUTE P3_SIOR(78, P3AudioMute)
 #define AMIC_SPK_SET_MUTE P3_SIOR(77, P3AudioMute)
+#endif
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
 _Static_assert(sizeof(P3AudioInputStream) == 20,
                "T41 audio input stream ABI mismatch");
 _Static_assert(AMIC_AI_GET_STREAM == 0x40145062UL,
                "T41 AMIC_AI_GET_STREAM ioctl mismatch");
+#if defined(PLATFORM_T32)
+/* T32 2.x OSS3 = the T41 numbers (vendor 2.0.0 audio_dsp.h, PRJ007, kernel 4.4) */
+_Static_assert(AMIC_AI_SET_PARAM == 0x40085071UL && AMIC_AO_SET_STREAM == 0x40085063UL &&
+               AMIC_AI_SET_GAIN == 0x400c505aUL && AMIC_AI_SET_MUTE == 0x4004504eUL,
+               "T32 /dev/dsp ioctl mismatch");
+#endif
 #else
 _Static_assert(sizeof(P3AudioInputStream) == 16,
                "T40 audio input stream ABI mismatch");
@@ -190,7 +203,7 @@ static struct {
     unsigned char *cap_data;
     int64_t cap_time[P3_CAPTURE_FRAMES];
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
-#if !defined(PLATFORM_T41)
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
                .ai_volume = 60    /* vendor 1.3.1 reads 60 before any SetVol */
 #endif
 };
@@ -220,7 +233,7 @@ static void *p3_capture_main(void *argument)
     while (!p3_audio.cap_stop) {
         P3AudioInputStream stream;
         int result;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
         typeof(*stream.timestamp) capture_timestamp = { 0, 0 };
 #endif
 
@@ -228,7 +241,7 @@ static void *p3_capture_main(void *argument)
         memset(&stream, 0, sizeof(stream));
         stream.data = chunk;
         stream.size = (uint32_t)bytes;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
         stream.timestamp = &capture_timestamp;
 #endif
         result = ioctl(fd, AMIC_AI_GET_STREAM, &stream);
@@ -545,7 +558,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
                            IMPAudioFrame *raw, IMPBlock block)
 {
     P3AudioInputStream stream;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
     typeof(*stream.timestamp) capture_timestamp = { 0, 0 };
 #endif
     size_t bytes;
@@ -599,7 +612,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         memset(&stream, 0, sizeof(stream));
         stream.data = p3_audio.frame_buffer;
         stream.size = (uint32_t)bytes;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
         stream.timestamp = &capture_timestamp;
 #endif
         if (ioctl(p3_audio.fd, AMIC_AI_GET_STREAM, &stream) != 0)
@@ -709,7 +722,7 @@ static int p3_volume_from_raw(int value, int raw_unity)
     return value;
 }
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
 int IMP_AI_SetVol(int device, int channel, int value)
 {
     int result;
@@ -1370,7 +1383,7 @@ void openimp_p3_set_ai_agc_mode(int mode)
     p3_audio.agc_mode = mode;
 }
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* T41 1.2.6 IMP_AI_EnableGetRaw / DisableGetRaw (0x97e74 / 0x97fd0):
  * device >= 2 or channel > 0 is -1, else a per-channel flag; no other
  * state is checked.  IMP_AI_GetFrameAndRaw (0x9868c): device >= 2,

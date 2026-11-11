@@ -1,0 +1,33 @@
+# OpenIMP T32 (T41 OSS3 path) /dev/dsp sequence, same run as vendor-2.2.0-dsp-seq-audio.txt (#298; differences: see CHANGELOG)
+@ IMP_AI_SetPubAttr(0, &attr)
+= dsp ? 40085071 rc=0
+@ IMP_AI_Enable(0)
+= dsp ? 40045060 rc=0
+@ IMP_AI_SetVol(0, 0, 70)
+= dsp ? 400c505b rc=0
+@ IMP_AI_GetVol(0, 0, &vol)
+= dsp ? 400c5056 rc=0
+@ IMP_AI_SetGain(0, 0, 20)
+= dsp ? 400c505a rc=0
+@ IMP_AI_GetGain(0, 0, &gain)
+= dsp ? 400c5055 rc=0
+@ ai frames
+= dsp ? 40145062 rc=0 x10
+@ IMP_AI_Disable(0)
+= dsp ? 40045061 rc=0
+@ IMP_AO_SetPubAttr(0, &attr)
+= dsp ? 4008506f rc=0
+@ IMP_AO_Enable(0)
+= dsp ? 4004505e rc=0
+@ IMP_AO_SetVol(0, 0, 0)
+= dsp ? 400c5059 rc=0
+@ IMP_AO_GetVol(0, 0, &vol)
+= dsp ? 400c5054 rc=0
+@ IMP_AO_GetGain(0, 0, &gain)
+= dsp ? 400c5053 rc=0
+@ ao frames
+= dsp ? 40085063 rc=0 x10
+@ IMP_AO_FlushChnBuf(0, 0)
+= dsp ? 40045065 rc=0
+@ IMP_AO_Disable(0)
+= dsp ? 4004505f rc=0

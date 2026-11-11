@@ -70,9 +70,11 @@ typedef struct {
 
 /* openimp_p1.c's frame record is the whole public IMPFrameInfo. */
 #define T31_IVS_FRAME_RECORD_BYTES sizeof(T31IVSFrameInfo)
-#elif defined(PLATFORM_T41)
+#elif defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* Vendor IMPFrameInfo (imp_common.h, T41 1.2.0): direct_phyAddr and the
- * frame's pool follow virAddr, the timestamp is at 0x28. */
+ * frame's pool follow virAddr, the timestamp is at 0x28.  T32 2.x: the same
+ * 48 bytes, and the T32 IVS headers (imp_ivs.h, imp_ivs_move.h,
+ * imp_ivs_base_move.h of SDK 2.0.0) declare the T41 objects member for member. */
 typedef struct {
     int index;
     int pool_idx;
@@ -159,7 +161,7 @@ typedef struct {
 /* T40: the 1.3.1 header omits the member, but the vendor libimp fills the
  * output exactly like T41's (BaseMoveGetResult is the same code), and the
  * result record is owned by OpenIMP, so the public field stays. */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T40) || \
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32) || \
     ((defined(PLATFORM_T21) || defined(PLATFORM_T30)) && !defined(PLATFORM_T20))
 #define OPENIMP_IVS_BASE_MOVE_TIMESTAMP 1
 #else
@@ -218,9 +220,9 @@ _Static_assert(sizeof(IMP_IVS_BaseMoveOutput) == 0x18 || sizeof(void *) != 4,
                "vendor IMP_IVS_BaseMoveOutput is 0x18 bytes");
 _Static_assert(offsetof(IMP_IVS_BaseMoveOutput, timeStamp) == 0x10 || sizeof(void *) != 4,
                "BaseMoveOutput.timeStamp at 0x10");
-#elif defined(PLATFORM_T41) || defined(PLATFORM_T40)
+#elif defined(PLATFORM_T41) || defined(PLATFORM_T40) || defined(PLATFORM_T32)
 _Static_assert(sizeof(T31IVSFrameInfo) == 0x30, "vendor IMPFrameInfo is 0x30 bytes");
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
 _Static_assert(offsetof(T31IVSFrameInfo, direct_phyAddr) == 0x20, "IMPFrameInfo.direct_phyAddr at 0x20");
 #else
 _Static_assert(offsetof(T31IVSFrameInfo, pool) == 0x20, "T40 IMPFrameInfo.pool at 0x20");

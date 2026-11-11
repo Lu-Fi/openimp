@@ -54,12 +54,12 @@
  *   stream with gettimeofday() in microseconds; the others leave it
  *   untouched, here it carries the frame's time stamp. IMP_ADEC_GetStream
  *   never stamps it (all SoCs); here it carries the input stream's. */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 #define OPENIMP_ACODEC_G726_32K       1
 #else
 #define OPENIMP_ACODEC_G726_32K       0
 #endif
-#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 #define OPENIMP_ACODEC_WALLCLOCK_TS   1
 #else
 #define OPENIMP_ACODEC_WALLCLOCK_TS   0

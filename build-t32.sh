@@ -47,7 +47,8 @@ compile()
 {
     object=$1
     source=$2
-    "$compiler" $strict_flags $repo_includes \
+    shift 2
+    "$compiler" $strict_flags $repo_includes "$@" \
         -c "$project_dir/$source" -o "$output_dir/$object.o"
     objects="$objects $output_dir/$object.o"
 }
@@ -80,6 +81,25 @@ compile t32_hera_h265 src/t32/openimp_t32_hera_h265.c
 compile t32_h265 src/t32/openimp_t32_h265.c
 compile t32_hevc_syntax src/t30/radix/t30_radix_hevc.c
 compile t32_hevc_cabac src/t30/radix/t30_radix_cabac.c
+# IVS (#299): the shared framework and move / base-move algorithms on the
+# T41 frame ABI (T32 2.x IMPFrameInfo = T41), fed through a FrameSource sink
+compile t32_ivs src/t31/openimp_t31_ivs.c -I"$project_dir/src/t31"
+compile t32_ivs_move src/t31/openimp_t31_ivs_move.c -O2 -I"$project_dir/src/t31"
+compile t32_ivs_move_v2 src/t31/openimp_ivs_move_v2.c -O2 -I"$project_dir/src/t31"
+# IMP_Buf_* pools, MemPoolRequest/Free, Read/WriteReg32 (#299)
+compile t32_sys src/t32/openimp_t32_sys.c
+# Audio (#298): AI/AO on the OSS3 /dev/dsp ABI of the T32 2.x kernel, which is
+# the T41 one (vendor 2.0.0 drivers/audio/oss3 audio_dsp.h); the T41 paths of
+# the shared modules with PLATFORM_T32: P3 AI/AO, DMIC (OSS3 variant), AENC/ADEC,
+# EnableAlgo/Hs and the IMPDBG entry points
+compile t32_audio src/t40/openimp_p3_audio.c
+compile t32_dmic src/t31/openimp_t31_dmic.c
+compile t32_audio_ext src/t23/openimp_t23_audio_ext.c
+compile t32_audio_codec src/audio/openimp_audio_codec.c
+compile t32_audio_enc_dec src/audio/openimp_audio_enc_dec.c
+# SU_*: not in libimp on T32.  The T32 SDK keeps them in libsysutils (vendor
+# libimp 2.x exports none) and the T32 firmware ships its own libsysutils, so
+# libimp does not shadow it (#299: QEMU check in tools/t32/t32_misc_sample.c su)
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects

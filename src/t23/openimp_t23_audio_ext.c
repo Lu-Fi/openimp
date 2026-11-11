@@ -32,7 +32,7 @@
 
 extern const char *openimp_t23_audio_profile(void);
 extern void openimp_audio_set_ao_agc_mode(int mode);
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 extern void openimp_p3_set_ai_agc_mode(int mode);
 #define IMP_AI_SetAgcMode(mode) openimp_p3_set_ai_agc_mode(mode)
 #endif
