@@ -1,0 +1,9 @@
+# OpenIMP T32 IMP_Decoder ioctl sequence (#301), same run as vendor-2.0.0-ioctl-seq-dec.txt with build/t32/libimp.so;
+# the /dev/rmem cache write-back of the new buffers is ignored in the check.
+@ start
+~ misc-ivdc GET_DIRECT c0045471 rc=0 n=2
+~ rmem ? c00c7200 rc=0 n=5
+~ soc_vpu CHANNEL_FLUSH_CACHE c0406305 rc=0 n=9
+~ soc_vpu CHANNEL_REL c0406301 rc=0 n=1
+~ soc_vpu CHANNEL_REQ c0406300 rc=0 n=1
+~ soc_vpu CHANNEL_RUN c0406302 rc=0 n=3

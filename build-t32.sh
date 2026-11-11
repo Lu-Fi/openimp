@@ -98,6 +98,10 @@ compile t32_ivdc src/t32/openimp_t32_ivdc.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)
 compile t32_vpu src/t32/openimp_t32_vpu.c
 compile t32_encoder src/t32/openimp_t32_encoder.c
+# IMP_Decoder (#301): the 2.0.0 SDK JPEG decoder on the same engine (codecdir
+# JPEGDEC; needs the 2.0.0 kernel's helix decode path)
+compile t32_jpegd src/t32/openimp_t32_jpegd.c
+compile t32_decoder src/t32/openimp_t32_decoder.c
 # rate control (#295): the T32 attributes on the eprc controller (src/eprc,
 # T23 revision; HERA keeps the Helix statistics registers)
 compile t32_rc src/t32/openimp_t32_rc.c
