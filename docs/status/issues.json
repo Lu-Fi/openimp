@@ -3371,7 +3371,7 @@
   },
   {
    "number": 239,
-   "title": "[T40] AE analog gain stops at 4095 vs vendor 5247 at high exposure compensation",
+   "title": "T40: AE at comp 200 stays ~6 % below its own aim (IT at cap, gain bands in gamma domain)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/239",
    "labels": [
@@ -3651,7 +3651,7 @@
   {
    "number": 283,
    "title": "[T30] open-tx-isp: AE_fsm_switch_state never reaches ae_calculate_exposure (missing braces after the event 4 branch)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/283",
    "labels": [
     "area:Driver",
@@ -3819,7 +3819,7 @@
   {
    "number": 297,
    "title": "T32: OSD (IPU + 2-bit ISP/MSCA OSD, 272 B region attr)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/297",
    "labels": [
     "soc:T32"
@@ -3855,7 +3855,7 @@
   {
    "number": 300,
    "title": "T32: apitest column + matrix \"planned\" rows",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/300",
    "labels": [
     "soc:T32"
@@ -4113,7 +4113,7 @@
   {
    "number": 320,
    "title": "[T41] SetVicDoneCbFunc / RAW_RwControl: recovered kernel paths broken or unrouted, OpenIMP stub",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/320",
    "labels": [],
    "created": "2026-11-11T10:35:43Z",
@@ -4138,9 +4138,19 @@
    "milestone": null
   },
   {
+   "number": 322,
+   "title": "[T40] ISP ioctl 0xc0045430 (SetPreDqtime) oopses tx_isp_t40 (NULL +0x10c)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/322",
+   "labels": [],
+   "created": null,
+   "closed": null,
+   "milestone": null
+  },
+  {
    "number": 324,
    "title": "[T40] IMP_ISP_WDR_OPEN LINEAR: open module refuses ioctl 0xc0045432 (-1), vendor answers 0",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/324",
    "labels": [
     "area:Driver",
@@ -4253,7 +4263,7 @@
   {
    "number": 334,
    "title": "[T20] OpenIMP IMP_ISP_Tuning_SetMaxAgain(128) returns -1 right after SetMaxAgain(32)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/334",
    "labels": [],
    "created": "2026-11-11T13:56:53Z",
@@ -4263,10 +4273,36 @@
   {
    "number": 335,
    "title": "[T40] open-tx-isp next: T40 module build stops on the Tiziano_adr_fpga self-loop check",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/335",
    "labels": [],
    "created": "2026-11-11T14:04:00Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 336,
+   "title": "[T32] driver: no ioctl reaches the MSCA ISP OSD code (IMP_OSD_*_ISP stay stubs)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/336",
+   "labels": [],
+   "created": null,
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 338,
+   "title": "[T30] open-tx-isp: OEM AE (simple_3a=0) gets a non-zero accumulator and a too-high exposure limit",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/338",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-11T14:35:21Z",
    "closed": null,
    "milestone": null
   }
