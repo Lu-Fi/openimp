@@ -17163,7 +17163,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17176,7 +17176,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_ADC_EnableChn": {
@@ -17184,7 +17185,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17197,7 +17198,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_ADC_Exit": {
@@ -17205,7 +17207,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17218,7 +17220,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_ADC_GetChnValue": {
@@ -17226,7 +17229,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17239,7 +17242,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no ADC node): SU_ADC_Init -1 with board and vendor T23 1.3.0 libsysutils, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no ADC node (kernel without SADC aux): SU_ADC_Init -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_DisableAlarm": {
@@ -17247,7 +17251,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17260,7 +17264,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_EnableAlarm": {
@@ -17268,7 +17273,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17281,7 +17286,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_Get/SetAlarm": {
@@ -17289,7 +17295,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17302,7 +17308,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_Get/SetTime": {
@@ -17310,7 +17317,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17323,7 +17330,8 @@
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_GetDevID": {
@@ -17451,7 +17459,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17465,7 +17473,8 @@
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
     "T41": "board limit: no RTC clock (no 32 kHz oscillator; RTC registers write/read back, counter does not tick, alarm never fires)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/rtc0): board and vendor T23 1.3.0 libsysutils both answer -1, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/rtc0 (kernel without RTC_CLASS): GetTime/SetTime/GetAlarm/DisableAlarm/PollingAlarm -1 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Base_Raw2SUTime": {
@@ -17499,7 +17508,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "dev",
     "T23": "aud",
     "T30": "aud",
     "T31": "aud",
@@ -17511,7 +17520,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (reboots the machine); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): never called on a camera. Code comparison only: the vendor T10 3.12.0 libsysutils and the image's libsysutils both run sync() and then kill(1, 15) (SIGTERM, busybox init reboots); the calls come from the board's libsysutils, not from OpenIMP. Stays aud: vendor-equal by code, no device call.  T20 (2026-11-04): never called on a camera; the vendor 3.12.0 libsysutils is the same file for T10 and T20, so the T10 code comparison above holds (sync(), then kill(1, 15)). Stays aud. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: never called on a camera (reboots, suspends or powers it off); the vendor libraries send the same sequence (see the T10 pass of 2026-11-03).  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): never called on a camera. Code comparison of the libsysutils shipped in the camera image (neo-sysutils-1.0, not the vendor T21 library, which is not available here): SU_Base_Reboot runs sync() and kill(1, 15) (SIGTERM, busybox init reboots). Stays aud: no device call. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: never called on a camera (reboot/suspend/power-off rule), judged by code only; the function is not part of a device PASS.  T23 2026-11-04: not called on a camera (apitest SKIP: reboots / suspends the camera, running observation cameras); stays aud by code only.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: SU_Base_Reboot called for real with the vendor 5.4.0 library and with the image library: both return 0 and send kill(1, 15) (shim check, same signal), the camera rebooted and came back with the streamer running, no oops (#311)"
    }
   },
   "SU_Base_SUTime2Raw": {
@@ -17576,7 +17586,10 @@
     "T40": "host",
     "T41": "host"
    },
-   "note": "2026-11-04 (#206): the default is now the vendor behaviour: sync(), then kill(1, SIGUSR2) = signal 17 on MIPS (busybox init powers off); vendor libsysutils T40 ISVP 1.3.1 SU_Base_Shutdown @0x16a8 and T41 ISVP 1.2.5 @0x1768: sync via GOT, `li a1,17`, kill(1,17), returns 0. `OPENIMP_SU_SHUTDOWN=reboot` keeps the old SIGTERM; `vendor` is an alias of the default. Host test with a fake kill, also built for mipsel and run in qemu-mipsel user mode with the fake kill (SIGUSR2 == 17 checked); never called on a camera. Stays host: no safe device proof. Older text follows. agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD T10 (2026-11-03): never called on a camera. Code comparison against the vendor libsysutils of T10, T20, T21, T23, T31 and T41: sync() and then kill(1, 17); on MIPS signal 17 is SIGUSR2 (busybox init powers off), not SIGCHLD (18) as written above, which is what the image's own libsysutils sends. OpenIMP defaults to SIGTERM (reboot, deliberate), OPENIMP_SU_SHUTDOWN=poweroff sends the vendor's SIGUSR2; the mode named vendor sends SIGCHLD. Stays host.  T20 (2026-11-04): never called on a camera; the vendor 3.12.0 libsysutils (T10 and T20 share it) sends kill(1, 17) = SIGUSR2 on MIPS after sync(), see above. Stays host. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: never called on a camera (reboots, suspends or powers it off); the vendor libraries send the same sequence (see the T10 pass of 2026-11-03).  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): never called on a camera. Code comparison of the image's libsysutils (neo-sysutils-1.0): sync(), then kill(1, 18) = SIGCHLD on MIPS (the vendor 3.12.0 libraries of T10/T20 send 17 = SIGUSR2, see above). Stays host. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: never called on a camera (reboot/suspend/power-off rule), judged by code only; the function is not part of a device PASS.  T23 2026-11-04: not called on a camera (apitest SKIP: powers the camera off); stays host (host test with a fake kill)."
+   "note": "2026-11-04 (#206): the default is now the vendor behaviour: sync(), then kill(1, SIGUSR2) = signal 17 on MIPS (busybox init powers off); vendor libsysutils T40 ISVP 1.3.1 SU_Base_Shutdown @0x16a8 and T41 ISVP 1.2.5 @0x1768: sync via GOT, `li a1,17`, kill(1,17), returns 0. `OPENIMP_SU_SHUTDOWN=reboot` keeps the old SIGTERM; `vendor` is an alias of the default. Host test with a fake kill, also built for mipsel and run in qemu-mipsel user mode with the fake kill (SIGUSR2 == 17 checked); never called on a camera. Stays host: no safe device proof. Older text follows. agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD agg-37: OpenIMP exports it in `libimp.so` on every SoC (sync, then SIGTERM to init = reboot by default; `OPENIMP_SU_SHUTDOWN=poweroff` sends SIGUSR2, `=vendor` the vendor SIGCHLD); host test with a fake kill, not run on a camera. Before agg-37: kill(1,SIGCHLD) does not power off busybox init; fix in neo PR #1 (SIGUSR2), unmerged; no streamer uses it; class d: lives in libsysutils (not OpenIMP); the vendor does sync() + kill(1, SIGCHLD) exactly like it, busybox init ignores SIGCHLD T10 (2026-11-03): never called on a camera. Code comparison against the vendor libsysutils of T10, T20, T21, T23, T31 and T41: sync() and then kill(1, 17); on MIPS signal 17 is SIGUSR2 (busybox init powers off), not SIGCHLD (18) as written above, which is what the image's own libsysutils sends. OpenIMP defaults to SIGTERM (reboot, deliberate), OPENIMP_SU_SHUTDOWN=poweroff sends the vendor's SIGUSR2; the mode named vendor sends SIGCHLD. Stays host.  T20 (2026-11-04): never called on a camera; the vendor 3.12.0 libsysutils (T10 and T20 share it) sends kill(1, 17) = SIGUSR2 on MIPS after sync(), see above. Stays host. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: never called on a camera (reboots, suspends or powers it off); the vendor libraries send the same sequence (see the T10 pass of 2026-11-03).  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): never called on a camera. Code comparison of the image's libsysutils (neo-sysutils-1.0): sync(), then kill(1, 18) = SIGCHLD on MIPS (the vendor 3.12.0 libraries of T10/T20 send 17 = SIGUSR2, see above). Stays host. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: never called on a camera (reboot/suspend/power-off rule), judged by code only; the function is not part of a device PASS.  T23 2026-11-04: not called on a camera (apitest SKIP: powers the camera off); stays host (host test with a fake kill).",
+   "ref": {
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: kill() shim on the camera: OpenIMP libimp SU_Base_Shutdown (default, poweroff and vendor modes) sends kill(1, 17), equal to vendor 4.7.2/5.4.0; the image libsysutils sends 18 (issue #312); the real power-off was not run (needs a person to power-cycle); stays host"
+   }
   },
   "SU_Base_Suspend": {
    "area": "System",
@@ -17595,7 +17608,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (suspends the machine); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): never called on a camera. Code comparison only: the vendor T10 3.12.0 libsysutils writes \"mem\" to /sys/power/state (with the wake-lock and wakeup_count handling around it), the image's libsysutils writes \"mem\" to the same file; the calls come from the board's libsysutils, not from OpenIMP. Stays aud: no device call.  T20 (2026-11-04): never called on a camera; same vendor 3.12.0 libsysutils as T10 (\"mem\" to /sys/power/state), code comparison above. Stays aud. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: never called on a camera (reboots, suspends or powers it off); the vendor libraries send the same sequence (see the T10 pass of 2026-11-03).  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): never called on a camera. Code comparison of the image's libsysutils (neo-sysutils-1.0): the call writes \"mem\" to /sys/power/state. Stays aud: no device call. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: never called on a camera (reboot/suspend/power-off rule), judged by code only; the function is not part of a device PASS.  T23 2026-11-04: not called on a camera (apitest SKIP: reboots / suspends the camera, running observation cameras); stays aud by code only.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: SU_Base_Suspend -1 errno 2 with all three (no /sys/power on this kernel); stays aud: a real suspend cannot be proven on this board"
    }
   },
   "SU_Battery_GetCapacity": {
@@ -17667,7 +17681,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17680,7 +17694,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_CreateHandle": {
@@ -17688,7 +17703,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17701,7 +17716,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_DES_Exit": {
@@ -17766,7 +17782,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17779,7 +17795,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_DestroyHandle": {
@@ -17787,7 +17804,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17800,7 +17817,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_Encrypt": {
@@ -17808,7 +17826,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17821,7 +17839,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_Exit": {
@@ -17829,7 +17848,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17842,7 +17861,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_CIPHER_Init": {
@@ -17850,7 +17870,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "nohw",
     "T23": "nohw",
     "T30": "aud",
     "T31": "aud",
@@ -17863,7 +17883,8 @@
    "ref": {
     "T40": "apitest area su in QEMU T40 2026-10-31: -1 / ENOTSUP PASS for all 10 calls",
     "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw"
+    "T23": "apitest su 2026-11-11 T23 Tapo C500 (no /dev/aes, no jz-des node): board and vendor lib lack the engine, same result; nohw",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /dev/aes, /dev/jz-des (kernel without JZ_AES, jz-aes.ko shipped but not usable): SU_CIPHER_Init -11 errno 2 with all three, same result; nohw"
    }
   },
   "SU_Key_CloseEvent": {
@@ -17908,7 +17929,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (masks a hardware key); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): the camera has the gpio-keys device (keys 28 and 102). With APITEST_KEYMASK=1 the apitest asks the kernel to mask key 28 first: the sysfs write to disabled_keys is refused (EINVAL, the board's buttons are not maskable), so SU_Key_DisableEvent/EnableEvent answer -1 as they would with the vendor library (apitest N/A, QEMU and camera alike). Stays aud: it needs a board with a maskable key.  T20 (2026-11-04, APITEST_KEYMASK=1 on the T20 camera, QEMU T20 first): SU_Key_OpenEvent/CloseEvent PASS; masking the first gpio-keys key (28) is refused by the kernel (sysfs disabled_keys write: EINVAL), the call answers -1; apitest N/A. Stays aud. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: APITEST_KEYMASK=1 run, the kernel refuses to mask the gpio-keys key 28 (sysfs disabled_keys write: EINVAL, not a maskable button on this board), so the calls answer -1; SU_Key_OpenEvent answered -1 on this board ('no gpio_keys input device').  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): APITEST_KEYMASK=1 on the T21 camera (QEMU T21 first): SU_Key_OpenEvent/CloseEvent PASS; masking the first gpio-keys key (28) is refused by the kernel (sysfs disabled_keys write: EINVAL), the call answers -1; apitest N/A. Stays aud. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no input device on either camera (the gpio_keys platform device has no bound driver: no /sys/class/input, no /dev/input, no disabled_keys), SU_Key_OpenEvent answers -1 (apitest N/A); ReadEvent also needs a key press.  T23 2026-11-04 (both cameras, input device gpio-keys on event0): SU_Key_OpenEvent / CloseEvent PASS; DisableEvent N/A: the kernel refuses to mask key 28 (sysfs disabled_keys write: EINVAL), the button is not maskable on these boards. Stays aud.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud"
    }
   },
   "SU_Key_EnableEvent": {
@@ -17928,7 +17950,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (masks a hardware key); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): see SU_Key_DisableEvent: the kernel refuses to mask the board's buttons (EINVAL), the call answers -1; apitest N/A. Stays aud.  T20 (2026-11-04, APITEST_KEYMASK=1 on the T20 camera, QEMU T20 first): SU_Key_OpenEvent/CloseEvent PASS; masking the first gpio-keys key (28) is refused by the kernel (sysfs disabled_keys write: EINVAL), the call answers -1; apitest N/A. Stays aud. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: APITEST_KEYMASK=1 run, the kernel refuses to mask the gpio-keys key 28 (sysfs disabled_keys write: EINVAL, not a maskable button on this board), so the calls answer -1; SU_Key_OpenEvent answered -1 on this board ('no gpio_keys input device').  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): APITEST_KEYMASK=1 on the T21 camera (QEMU T21 first): SU_Key_OpenEvent/CloseEvent PASS; masking the first gpio-keys key (28) is refused by the kernel (sysfs disabled_keys write: EINVAL), the call answers -1; apitest N/A. Stays aud. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no input device on either camera (the gpio_keys platform device has no bound driver: no /sys/class/input, no /dev/input, no disabled_keys), SU_Key_OpenEvent answers -1 (apitest N/A); ReadEvent also needs a key press.  T23 2026-11-04: same as DisableEvent (key 28 not maskable, EINVAL); stays aud.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud"
    }
   },
   "SU_Key_OpenEvent": {
@@ -17961,7 +17984,7 @@
    "cells": {
     "T10": "aud",
     "T20": "aud",
-    "T21": "aud",
+    "T21": "dev",
     "T23": "aud",
     "T30": "aud",
     "T31": "aud",
@@ -17973,7 +17996,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (blocks until a key is pressed); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): SU_Key_OpenEvent/CloseEvent PASS on the camera (gpio-keys event node); ReadEvent blocks until a physical key press and was not run. Stays aud: it needs a person pressing the board key.  T20 (2026-11-04): SU_Key_OpenEvent/CloseEvent PASS on the T20 camera (gpio-keys event node); ReadEvent blocks until a physical key press and was not run. Stays aud: it needs a person pressing the board key. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: blocks until a key is pressed (a physical action on the camera's gpio-keys button).  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): SU_Key_OpenEvent/CloseEvent PASS on the T21 camera (gpio-keys event node); ReadEvent blocks until a physical key press and was not run. Stays aud: it needs a person pressing the board key. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no input device on either camera (the gpio_keys platform device has no bound driver: no /sys/class/input, no /dev/input, no disabled_keys), SU_Key_OpenEvent answers -1 (apitest N/A); ReadEvent also needs a key press.  T23 2026-11-04: blocks until a key is pressed, apitest SKIP; nobody presses the button on the observation cameras; stays aud.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: key press injected through /dev/input/event0 (button daemon stopped): SU_Key_OpenEvent + ReadEvent give key 28 press (1) then release (0) with all three libraries (#311)"
    }
   },
   "SU_LED_Command": {
@@ -17993,7 +18017,8 @@
    "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): SKIP (device values not published). Not run (drives the board LED); the vendor library code is the same one the T21/T23/T31 cells rate at audit level. T10 (2026-11-03): the library drives /proc/board/power/led<N> (vendor T10 libsysutils and the image's libsysutils alike); that node does not exist on this camera (only /sys/class/leds/led_r, which the library does not use), so no device call. Stays aud: it needs a board with the proc LED nodes.  T20 (2026-11-04, camera check): no /proc/board/power/led* node (the board libsysutils drives it); OpenIMP's own SU_LED_Command exports sysfs GPIO <N>, and this camera's LEDs (/sys/class/leds/led_b, led_y) sit behind the leds-gpio driver, so a call would drive a guessed board pin; no call made. Stays aud: it needs a known LED pin on a board that has the node. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: not run, drives the board LED; the camera has no /proc/board/power/led* node.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): no /proc/board/power/led* node (the library drives it); the board LEDs (/sys/class/leds/led_g, led_r) sit behind the leds-gpio driver and OpenIMP's own SU_LED_Command exports a sysfs GPIO <N>, so a call would drive a guessed board pin; no call made. Stays aud: it needs a known LED pin on a board that has the node. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: not run (drives the board LED); neither camera has the /proc/board LED nodes (the Cinnado has /sys/class/leds/led_r and led_b only); the pin/node is unknown, so no device call.  T23 2026-11-04: not called. The cameras have the sysfs LEDs led_g and led_r, but the board LEDs sit behind leds-gpio and a call would drive a guessed pin; stays aud.",
    "ref": {
     "T40": "host test tests/core/su_sysutils_test.c (fake ioctl and temp files, 2026-10-31); ported from the vendor libsysutils 1.3.1 disassembly; no camera run yet (the Eufy .184 may have no RTC / ADC / gpio_keys / LED, apitest reports N/A there)",
-    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+    "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
+    "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: no /proc/board/power/led* node: -1 errno 2 with the vendor libraries; the board LEDs sit behind leds-gpio, a call would drive a guessed pin, none made; stays aud"
    }
   },
   "System_Bind": {
