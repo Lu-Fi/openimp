@@ -1,0 +1,63 @@
+# OpenIMP T32 ioctl sequence (#291), t32_trace_sample vpu 5, build/t32/libimp.so, same QEMU setup as
+# vendor-2.2.0-ioctl-seq-vpu.txt (rmem and EnableTuning's isp-m0 request ignored in the check).
+@ IMP_ISP_Open()
+= tx-isp DRIVER_VERSION 80045401 rc=0
+@ IMP_ISP_AddSensor(IMPVI_MAIN, &si)
+= tx-isp REGISTER_SENSOR 80745405 rc=0
+= tx-isp DEFAULT_BIN c00454c9 rc=0 x3
+= tx-isp MEMORY_MALLOC 800c543a rc=0 x2
+= tx-isp SET_TIZIANO_PAR c00454c8 rc=0
+= tx-isp ENUMINPUT c0045402 rc=0
+= tx-isp ENUMINPUT c0045402 rc=-1:EINVAL
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp GET_ISP_IPC_MEM_INFO 800c5439 rc=0
+= tx-isp SET_ISP_IPC_MEM_INFO 800c5438 rc=0
+= tx-isp GET_ISP_MEM_INFO 800c5410 rc=0
+= tx-isp SET_ISP_MEM_INFO 800c540f rc=0
+@ IMP_ISP_EnableSensor(IMPVI_MAIN, &si)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp STREAMON 80085407 rc=0
+= tx-isp CREATE_SUBDEV_LINKS 80085409 rc=0
+= tx-isp LINKS_STREAMON c008540b rc=0
+@ IMP_System_Init()
+= misc-ivdc GET_DIRECT c0045471 rc=0 x2
+@ IMP_Encoder_CreateChn(0, &va)
+= soc_vpu CHANNEL_REQ c0406300 rc=0
+= rmem ? c00c7200 rc=0 x3
+@ IMP_Encoder_DestroyChn(0)
+= rmem ? c00c7200 rc=0 x4
+= soc_vpu CHANNEL_REL c0406301 rc=0
+@ IMP_Encoder_CreateChn(0, &va)
+= soc_vpu CHANNEL_REQ c0406300 rc=0
+= rmem ? c00c7200 rc=0 x3
+@ IMP_Encoder_DestroyChn(0)
+= rmem ? c00c7200 rc=0 x4
+= soc_vpu CHANNEL_REL c0406301 rc=0
+@ IMP_Encoder_CreateChn(0, &va)
+= soc_vpu CHANNEL_REQ c0406300 rc=0
+= rmem ? c00c7200 rc=0 x3
+@ IMP_Encoder_DestroyChn(0)
+= rmem ? c00c7200 rc=0 x4
+= soc_vpu CHANNEL_REL c0406301 rc=0
+@ IMP_Encoder_CreateChn(0, &va)
+= soc_vpu CHANNEL_REQ c0406300 rc=0
+= rmem ? c00c7200 rc=0 x3
+@ IMP_Encoder_DestroyChn(0)
+= rmem ? c00c7200 rc=0 x4
+= soc_vpu CHANNEL_REL c0406301 rc=0
+@ IMP_Encoder_CreateChn(0, &va)
+= soc_vpu CHANNEL_REQ c0406300 rc=0
+= rmem ? c00c7200 rc=0 x3
+@ IMP_Encoder_DestroyChn(0)
+= rmem ? c00c7200 rc=0 x4
+= soc_vpu CHANNEL_REL c0406301 rc=0
+@ IMP_ISP_DisableSensor(IMPVI_MAIN)
+= tx-isp G_INPUT 80085403 rc=0
+= tx-isp LINKS_STREAMOFF c008540c rc=0
+= tx-isp DESTROY_SUBDEV_LINKS 8008540a rc=0
+= tx-isp STREAMOFF 80085408 rc=0
+@ IMP_ISP_DelSensor(IMPVI_MAIN, &si)
+= tx-isp S_INPUT c0085404 rc=0
+= tx-isp RELEASE_SENSOR 80745406 rc=0
+= tx-isp MEMORY_FREE 800c543b rc=0 x2
+= rmem ? c00c7200 rc=0

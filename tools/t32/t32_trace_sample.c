@@ -28,10 +28,25 @@
  * "fs3" runs channels 0-2 at once (1920x1080, 1280x720, 640x360, the
  * driver's three framechans) and takes N GetFrame frames from each.
  *
- * usage: t32_trace_sample [h264|h265|jpeg|none|bind|fs3|isp|bin] [streams] [sensor] [i2c addr]
+ * "vpu N" (#291) runs N encoder channel cycles (CreateGroup, JPEG
+ * CreateChn, Register/UnRegister, DestroyChn, DestroyGroup: soc_vpu
+ * CHANNEL_REQ / CHANNEL_REL) between the ISP bring-up and the teardown.
+ *
+ * T32_STREAM_DUMP=<file> appends every encoder stream (all packs, in order)
+ * to the file and prints "T32J <n> <bytes> packs <k> seq <s>" (#292: the
+ * trace script copies the file out, the host decodes and checks the JPEGs;
+ * pictures stay local).
+ *
+ * T32_ENC_QP=<n> is SetDefaultParam's iInitialQP (default -1; the JPEG qp);
+ * the channel attribute it gives is printed as "T32A <words>".
+ *
+ * usage: t32_trace_sample [h264|h265|jpeg|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -87,6 +102,57 @@ static void frame_report(const char *tag, const IMPFrameInfo *f)
     }
     printf("\n");
     fflush(stdout);
+}
+
+/* T32_STREAM_DUMP=<file>: every stream's bytes appended to the file */
+static void stream_dump(int n, const IMPEncoderStream *st)
+{
+    static FILE *f;
+    uint32_t total = 0, p;
+
+    if (!f)
+        f = fopen(getenv("T32_STREAM_DUMP"), "wb");
+    for (p = 0; p < st->packCount; p++) {
+        total += st->pack[p].length;
+        if (f)
+            fwrite((const void *)(uintptr_t)st->pack[p].virAddr, 1, st->pack[p].length, f);
+    }
+    if (f)
+        fflush(f);
+    printf("T32J %d %u packs %u seq %u\n", n, total, st->packCount, st->seq);
+    fflush(stdout);
+}
+
+/* after the teardown: the dump file to physical 0x7800000 (rmem top, unused
+ * now) for the host's pmemsave (/dev/mem read/write stop at kernel RAM's
+ * end; mmap does not) */
+static void stream_copy_out(void)
+{
+    const char *path = getenv("T32_STREAM_DUMP");
+    FILE *f = path ? fopen(path, "rb") : NULL;
+    long size;
+    int fd;
+    void *m;
+
+    if (!f)
+        return;
+    fseek(f, 0, SEEK_END);
+    size = ftell(f);
+    rewind(f);
+    fd = open("/dev/mem", O_RDWR | O_SYNC);
+    m = fd < 0 || size <= 0 ? MAP_FAILED :
+        mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x7800000);
+    if (m != MAP_FAILED) {
+        size_t n = fread(m, 1, (size_t)size, f);
+        msync(m, (size_t)size, MS_SYNC);
+        munmap(m, (size_t)size);
+        printf("T32J out %ld copied %zu\n", size, n);
+    } else {
+        printf("T32J out failed\n");
+    }
+    if (fd >= 0)
+        close(fd);
+    fclose(f);
 }
 
 /* "bind": the test receiver behind DEV_ID_ENC group 0 */
@@ -146,8 +212,9 @@ int main(int argc, char **argv)
     int bin_test = !strcmp(codec, "bin");
     int bind_test = !strcmp(codec, "bind");
     int fs3 = !strcmp(codec, "fs3");
+    int vpu_cycles = !strcmp(codec, "vpu");
     int isp_only = !strcmp(codec, "isp") || bin_test;
-    int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only;
+    int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only && !vpu_cycles;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
     static IMPEncoderCHNAttr ea;
@@ -230,6 +297,23 @@ int main(int argc, char **argv)
         return 0;
     }
     STEP(IMP_ISP_EnableTuning());       /* OpenIMP T32: stub until the tuning issue */
+    if (vpu_cycles) {                   /* #291: soc_vpu request/release cycles */
+        int ok = 1;
+        static IMPEncoderCHNAttr va;
+        for (i = 0; i < streams && ok; i++) {
+            ok &= STEP(IMP_Encoder_CreateGroup(0)) == 0;
+            ok &= STEP(IMP_Encoder_SetDefaultParam(&va, T32_PROFILE_JPEG, IMP_ENC_RC_MODE_FIXQP,
+                                                   1920, 1080, 15, 1, 15, 0, -1, 0)) == 0;
+            ok &= STEP(IMP_Encoder_CreateChn(0, &va)) == 0;
+            ok &= STEP(IMP_Encoder_RegisterChn(0, 0)) == 0;
+            ok &= STEP(IMP_Encoder_UnRegisterChn(0)) == 0;
+            ok &= STEP(IMP_Encoder_DestroyChn(0)) == 0;
+            ok &= STEP(IMP_Encoder_DestroyGroup(0)) == 0;
+        }
+        printf("T32S vpu cycles %d/%d\n", ok ? streams : i - 1, streams);
+        got = ok ? streams : 0;
+        goto teardown;
+    }
     if (fs3) {                          /* #290: the three framechans at once */
         static const int sz[3][2] = { { 1920, 1080 }, { 1280, 720 }, { 640, 360 } };
         int c, ok = 1;
@@ -269,7 +353,16 @@ int main(int argc, char **argv)
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
-        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, 1920, 1080, 15, 1, 15, 0, -1, 1000));
+        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, 1920, 1080, 15, 1, 15, 0,
+                                         getenv("T32_ENC_QP") ? atoi(getenv("T32_ENC_QP")) : -1, 1000));
+        {                               /* the default channel attribute, as words */
+            const uint32_t *w = (const uint32_t *)(const void *)&ea;
+            unsigned k;
+            printf("T32A");
+            for (k = 0; k < sizeof ea / 4; k++)
+                printf(" %08x", w[k]);
+            printf("\n");
+        }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
         MUST(IMP_System_Bind(&src, &dst));
@@ -283,6 +376,8 @@ int main(int argc, char **argv)
             IMPEncoderStream st;
             if (IMP_Encoder_PollingStream(0, 3000) || IMP_Encoder_GetStream(0, &st, 1))
                 continue;
+            if (getenv("T32_STREAM_DUMP"))
+                stream_dump(got, &st);
             got++;
             IMP_Encoder_ReleaseStream(0, &st);
         }
@@ -348,6 +443,7 @@ teardown:
     STEP(IMP_ISP_DisableSensor(IMPVI_MAIN));
     STEP(IMP_ISP_DelSensor(IMPVI_MAIN, &si));
     STEP(IMP_ISP_Close());
+    stream_copy_out();
     printf("T32S end ok=%d\n", got == streams);
     return got == streams ? 0 : 2;
 fail:

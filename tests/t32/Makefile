@@ -23,6 +23,9 @@ OI_ISP_PENDING := rmem
 OI_BIN_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 # FrameSource (#290): + the /dev/rmem cache invalidate before each depth copy
 OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
+# soc_vpu channel layer (#291) + JPEG encoder (#292): the VPU part equals the vendor's;
+# + the /dev/rmem write-back of the new stream buffers; JPEG job register image
+OI_ENC_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
 .PHONY: check check-drv
 check: $(TEST_BIN)
@@ -36,6 +39,12 @@ check: $(TEST_BIN)
 		openimp-ioctl-seq-bin.txt --ignore $(OI_BIN_PENDING)
 	for s in fs fs3; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_FS_PENDING) || exit 1; done
+	for s in vpu jpeg; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
+		openimp-ioctl-seq-$$s.txt --ignore $(OI_ENC_PENDING) || exit 1; done
+	grep -v '^#' vendor-2.2.0-jpeg-job.txt > $(BUILD)/t32-jpeg-job-vendor.txt
+	grep -v '^#' openimp-jpeg-job.txt > $(BUILD)/t32-jpeg-job-openimp.txt
+	diff $(BUILD)/t32-jpeg-job-vendor.txt $(BUILD)/t32-jpeg-job-openimp.txt && \
+		echo "JPEG job register image (jpegQp -1/30/80): identical"
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

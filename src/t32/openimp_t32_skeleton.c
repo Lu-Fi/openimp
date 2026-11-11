@@ -7,7 +7,8 @@
  * the stream path.  The entry points not implemented yet log once per
  * function and return -1; the ISP / sensor lifecycle and System_Init/Exit
  * are real (openimp_t32_isp.c, #288), FrameSource and bind too
- * (openimp_t32_fs.c, #290).  The real code follows in the T32 issues
+ * (openimp_t32_fs.c, #290), the soc_vpu layer and the JPEG encoder too
+ * (openimp_t32_vpu.c #291, openimp_t32_encoder.c #292).  The real code follows in the T32 issues
  * (ioctl table, ISP lifecycle, IQ bin, FrameSource, soc_vpu, JPEG, HERA).
  */
 #include <stdint.h>
@@ -110,24 +111,9 @@ T32_STUB(IMP_ISP_Tuning_GetSensorFPS, (uint32_t *fps_num, uint32_t *fps_den))
  * GetFrame/ReleaseFrame: openimp_t32_fs.c (#290) */
 
 /* ---- Encoder (T23-family API; HERA + JPEG v1.2 behind /dev/soc_vpu) ----- */
-T32_STUB(IMP_Encoder_CreateGroup, (int encGroup))
-T32_STUB(IMP_Encoder_DestroyGroup, (int encGroup))
-T32_STUB(IMP_Encoder_CreateChn, (int encChn, IMPEncoderCHNAttr *attr))
-T32_STUB(IMP_Encoder_DestroyChn, (int encChn))
-T32_STUB(IMP_Encoder_GetChnAttr, (int encChn, IMPEncoderChnAttr *attr))
-T32_STUB(IMP_Encoder_RegisterChn, (int encGroup, int encChn))
-T32_STUB(IMP_Encoder_UnRegisterChn, (int encChn))
-T32_STUB(IMP_Encoder_StartRecvPic, (int encChn))
-T32_STUB(IMP_Encoder_StopRecvPic, (int encChn))
-T32_STUB(IMP_Encoder_PollingStream, (int encChn, uint32_t timeoutMsec))
-T32_STUB(IMP_Encoder_GetStream, (int encChn, IMPEncoderStream *stream, int block))
-T32_STUB(IMP_Encoder_ReleaseStream, (int encChn, IMPEncoderStream *stream))
-T32_STUB(IMP_Encoder_RequestIDR, (int encChn))
-T32_STUB(IMP_Encoder_FlushStream, (int encChn))
-T32_STUB(IMP_Encoder_SetDefaultParam, (IMPEncoderChnAttr *attr, IMPEncoderProfile profile,
-                                       IMPEncoderRcMode rcMode, int width, int height,
-                                       int fpsNum, int fpsDen, int gopLen,
-                                       int maxSameSceneCnt, int quality, int bitrate))
+/* groups, channels, streams, JPEG on the JPEG v1.2 engine: openimp_t32_encoder.c
+ * (#292) over the soc_vpu channel layer openimp_t32_vpu.c (#291); H.264/H.265
+ * (HERA) follow in later T32 issues */
 
 /* ---- OSD (IPU OSD; T32 region attribute is 272 bytes, see abi.h) -------- */
 T32_STUB(IMP_OSD_SetPoolSize, (int size))

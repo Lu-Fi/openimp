@@ -28,6 +28,7 @@
 #ifndef OPENIMP_T32_IOCTL_H
 #define OPENIMP_T32_IOCTL_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define OI_T32_DIR_NONE 1u
@@ -152,6 +153,58 @@ typedef struct {                /* soc_vpu channel_node, 64 bytes */
     uint32_t hw_time;
 } T32IocChannelNode;
 
+/*
+ * soc_vpu payloads beside channel_node (kernel 4.4.94 ingenic_vpu
+ * channel_vpu.h; the 2.0.0 SDK kernels 4.4.94 and 3.10.14 have the same
+ * channel_node, #291).  FLUSH_CACHE's size field says channel_node, the
+ * kernel copies only the 12-byte flush_cache_info; WOR_VPU_REG takes the
+ * 12-byte reg_info (paddr, value, dir).
+ */
+#define OI_T32_VPU_HELIX_ID     (1u << 25)      /* JPEG v1.2 engine, "helix0" */
+#define OI_T32_VPU_RADIX_ID     (1u << 26)      /* HERA, "radix0" */
+#define OI_T32_VPU_CODEC_H264ENC 0x00000u
+#define OI_T32_VPU_CODEC_H265ENC 0x00010u
+#define OI_T32_VPU_CODEC_JPEGENC 0x10000u
+#define OI_T32_VPU_WORK_OPEN    0u              /* channel_node.workphase */
+#define OI_T32_VPU_WORK_WORKING 1u
+#define OI_T32_VPU_WORK_CLOSE   2u
+#define OI_T32_VPU_RET_JPEG_BSLESS 0x10000004   /* positive ioctl result: over limit_bs_len */
+#define OI_T32_VPU_RET_HERA_BSFULL 0x10000003
+#define OI_T32_VPU_FLUSH_WBACK  1u              /* DMA_TO_DEVICE */
+#define OI_T32_VPU_FLUSH_INV    2u              /* DMA_FROM_DEVICE */
+
+typedef struct {                /* FLUSH_CACHE: user virtual address */
+    uint32_t addr, len, dir;
+} T32IocFlushCache;
+
+typedef struct {                /* WOR_VPU_REG */
+    uint32_t paddr, value, dir; /* dir 0 read, 1 write */
+} T32IocVpuReg;
+
+/*
+ * JPEG v1.2 job ("jpeg_reg_info", 176 bytes): the helix driver reads it at
+ * phys_to_virt(channel_node.dma_addr) and writes it to the engine
+ * (helix.c vpu_start).  qmem = base quant tables, luma words 0-15, chroma
+ * 16-31, zigzag order, four 7-bit entries a word, first entry in the low
+ * byte; jpeg_ctrl bits: table numbers (U/V use 1), 16 limit enable,
+ * 24:18 quality index (0-98), 25 frame-end and 26 over-limit interrupt.
+ * The 2.0.0 SDK kernel appends timeout_thrd and decode_mode (T32Pro
+ * decoder): jobs are allocated with T32_JPEG_JOB_BYTES so both read 0.
+ */
+typedef struct {
+    uint32_t qmem[32];
+    uint32_t jpeg_ctrl;
+    uint32_t nmcu;              /* MCUs - 1 */
+    uint32_t frm_info;          /* height << 16 | width */
+    uint32_t stride;
+    uint32_t y_addr, c_addr, bs_addr;
+    uint32_t pixel_num;
+    uint32_t marker_en, marker_num;
+    uint32_t limit_bs_len;
+    uint32_t bsfull_jpeg_intr_size;
+} T32IocJpegRegInfo;
+#define T32_JPEG_JOB_BYTES 256u
+
 _Static_assert(sizeof(T32IocInitArg) == 8, "T32 initarg");
 _Static_assert(sizeof(T32IocBufInfo) == 12, "T32 isp_buf_info");
 _Static_assert(sizeof(T32IocDbgRegister) == 64, "T32 dbg_register");
@@ -165,6 +218,27 @@ _Static_assert(sizeof(T32IocTuning) == 16, "T32 tuning default ctrl");
 _Static_assert(sizeof(T32IocReqBufs) == 20, "T32 requestbuffers");
 _Static_assert(sizeof(T32IocBuffer) == 96, "T32 tisp_buffer");
 _Static_assert(sizeof(T32IocChannelNode) == 64, "T32 soc_vpu channel_node");
+_Static_assert(offsetof(T32IocChannelNode, mdelay) == 8 &&
+               offsetof(T32IocChannelNode, vpu_id) == 16 &&
+               offsetof(T32IocChannelNode, codecdir) == 20 &&
+               offsetof(T32IocChannelNode, workphase) == 24 &&
+               offsetof(T32IocChannelNode, status) == 28 &&
+               offsetof(T32IocChannelNode, output_len) == 32 &&
+               offsetof(T32IocChannelNode, dma_addr) == 36 &&
+               offsetof(T32IocChannelNode, thread_id) == 40 &&
+               offsetof(T32IocChannelNode, ncu_addr) == 52 &&
+               offsetof(T32IocChannelNode, video_type) == 56 &&
+               offsetof(T32IocChannelNode, frame_type) == 59 &&
+               offsetof(T32IocChannelNode, hw_time) == 60,
+               "T32 soc_vpu channel_node layout");
+_Static_assert(sizeof(T32IocFlushCache) == 12, "T32 soc_vpu flush_cache_info");
+_Static_assert(sizeof(T32IocVpuReg) == 12, "T32 soc_vpu reg_info");
+_Static_assert(sizeof(T32IocJpegRegInfo) == 176 &&
+               offsetof(T32IocJpegRegInfo, jpeg_ctrl) == 128 &&
+               offsetof(T32IocJpegRegInfo, y_addr) == 144 &&
+               offsetof(T32IocJpegRegInfo, limit_bs_len) == 168,
+               "T32 jpeg_reg_info (JPEG v1.2)");
+_Static_assert(T32_JPEG_JOB_BYTES >= sizeof(T32IocJpegRegInfo) + 8, "T32 JPEG job incl. 2.0.0 fields");
 
 #if defined(PLATFORM_T32)
 #include <imp/imp_common.h>
