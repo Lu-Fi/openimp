@@ -1,9 +1,11 @@
 #!/bin/bash
-# Build apitest_<soc> for T10 T20 T21 T23 T30 T31 T40 T41: ONE binary per SoC (areas sys..cases, picture = former imgfx, t40dev = former t40_devtest).
+# Build apitest_<soc> for T10 T20 T21 T23 T30 T31 T32 T40 T41: ONE binary per SoC (areas sys..cases, picture = former imgfx, t40dev = former t40_devtest).
 # Usage: build.sh [SOC...]   (default: all)   OUT=<dir> for the binaries (default tools/apitest/build)
 # The binaries link dynamically against the libimp of the camera they run on (the flashed one); the build
 # only needs a toolchain and a libimp.so to link against: taken from a thingino-out tree of the SoC.
 # Vendor headers: HDR (vendor SDK include root). T40 = T41 API family: -DPLATFORM_T41 -DAPITEST_T40.
+# T32 (planned, QEMU only): T41 family + T23-family encoder, -DPLATFORM_T41 -DAPITEST_T32, T32 1.0.6 headers
+# (2.x structs are the same), LIBDIR=<OpenIMP build/t32> (the QEMU rootfs has the vendor libimp).
 HDR=${HDR:?set HDR=<vendor SDK include root>}
 TO=${TO:?set TO=<thingino build output dir>}
 GEN=${GEN:-agg46}
@@ -31,3 +33,4 @@ w T30 && build T30 T30/1.0.5/zh qemu_t30x-t30qemu -DPLATFORM_T30
 w T31 && build T31 T31/1.1.6/en wuuk_y0510_t31x_sc4336p_ssv6158 -DPLATFORM_T31
 w T40 && build T40 T40/1.3.1/en eufy_t8416_t40xp_sc830_aic8800d40 "-DPLATFORM_T41 -DAPITEST_T40"
 w T41 && build T41 T41/1.2.6/zh vanhua_t55a_t41lq_gc5603_eth "-DPLATFORM_T41"
+w T32 && build T32 T32/1.0.6/en qemu_t32nq-k44-t32plan "-DPLATFORM_T41 -DAPITEST_T32"

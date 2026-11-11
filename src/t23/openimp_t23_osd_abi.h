@@ -53,6 +53,7 @@ enum {
     T23_OSD_PIX_BGRA = 17,
     T23_OSD_PIX_RGB555LE = 21,
     T23_OSD_PIX_BGR555LE = 25,
+    T23_OSD_PIX_2BIT = 43,          /* T32 2.x PIX_FMT_2BIT (IPU 2-bit OSD) */
 };
 
 typedef struct {
@@ -87,9 +88,15 @@ typedef union {
 } IMPOSDRgnAttrData;
 
 /* ISP block attributes (imp_isp.h), opaque here: they are handed to the ISP
- * tuning layer unchanged.  The OSD picture block is read for its address. */
+ * tuning layer unchanged.  The OSD picture block is read for its address.
+ * T32 2.x: IMPISPDrawBlockAttr is 36 bytes (vendor 2.0.0 imp_isp.h, measured
+ * with the T32 toolchain), 4 more than T23/T41. */
 typedef struct {
+#if defined(PLATFORM_T32)
+    uint32_t words[9];
+#else
     uint32_t words[8];
+#endif
 } T23ISPDrawBlockAttr;
 
 typedef struct {
@@ -104,8 +111,8 @@ typedef struct {
 } T23ISPOSDBlockAttr;
 
 typedef struct {
-#if defined(PLATFORM_T41)
-    uint32_t words[6];              /* T41 1.2.0: a leading chx byte */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
+    uint32_t words[6];              /* T41 1.2.0, T32 2.x: a leading chx byte */
 #else
     uint32_t words[5];
 #endif
@@ -143,7 +150,11 @@ typedef struct {
     unsigned int length;
     IMPOSDFontSizeAttrData data;
     unsigned int istimestamp;
+#if defined(PLATFORM_T32)
+    unsigned int colType[20];       /* T32 2.x: 20 characters (104 bytes) */
+#else
     unsigned int colType[64];
+#endif
 } IMPOSDFontAttrData;
 
 typedef struct {
@@ -156,6 +167,16 @@ typedef struct {
     int mosaic_min_size;
 } IMPOSDMosaicAttr;
 
+#if defined(PLATFORM_T32)
+/* T32 2.x IMPOSD2BitAttr: the two colours of a PIX_FMT_2BIT picture and the
+ * mask word, handed to the IPU (jz_ipu_v13 osd_chN_2bit_*) */
+typedef struct {
+    uint32_t twobit_mask;
+    uint32_t twobit_bit0_fmt;       /* 0xAARRGGBB for pixel value 1 (bit0) */
+    uint32_t twobit_bit1_fmt;       /* 0xAARRGGBB for pixel value 2 (bit1) */
+} IMPOSD2BitAttr;
+#endif
+
 typedef struct {
     IMPOsdRgnType type;
     T23OSDRect rect;
@@ -165,6 +186,9 @@ typedef struct {
     IMPOSDIspDraw osdispdraw;
     IMPOSDFontAttrData fontData;
     IMPOSDMosaicAttr mosaicAttr;
+#if defined(PLATFORM_T32)
+    IMPOSD2BitAttr bitAttr;
+#endif
 } IMPOSDRgnAttr;
 
 typedef struct {
@@ -220,10 +244,20 @@ _Static_assert(sizeof(IMPOSDIspDraw) == 1592, "T40 IMPOSDIspDraw");
  * with a 24-byte IMPISPMaskBlockAttr, so the ISP draw block is 4 bytes
  * longer and fontData/mosaicAttr move by 4. */
 _Static_assert(sizeof(IMPOSDIspDraw) == 76, "T41 IMPOSDIspDraw");
+#elif defined(PLATFORM_T32)
+/* T32 2.x (vendor 2.0.0 imp_osd.h / imp_isp.h, measured with the T32
+ * toolchain): draw block 36, picture block at 36, mask block (24) at 56 */
+_Static_assert(sizeof(IMPOSDIspDraw) == 80, "T32 IMPOSDIspDraw");
+_Static_assert(__builtin_offsetof(IMPOSDIspDraw, stpicAttr) == 36, "T32 IMPOSDIspDraw pic");
+_Static_assert(__builtin_offsetof(IMPOSDIspDraw, stCoverAttr) == 56, "T32 IMPOSDIspDraw mask");
 #else
 _Static_assert(sizeof(IMPOSDIspDraw) == 72, "T23 IMPOSDIspDraw");
 #endif
+#if defined(PLATFORM_T32)
+_Static_assert(sizeof(IMPOSDFontAttrData) == 104, "T32 IMPOSDFontAttrData");
+#else
 _Static_assert(sizeof(IMPOSDFontAttrData) == 280, "T23 IMPOSDFontAttrData");
+#endif
 _Static_assert(sizeof(IMPOSDMosaicAttr) == 28, "T23 IMPOSDMosaicAttr");
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fmt) == 28, "T23 OSD fmt");
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, data) == 32, "T23 OSD data");
@@ -235,6 +269,9 @@ _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 1640,
 #elif defined(PLATFORM_T41)
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 124,
                "T41 OSD fontData");
+#elif defined(PLATFORM_T32)
+_Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 128,
+               "T32 OSD fontData");
 #else
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, fontData) == 120,
                "T23 OSD fontData");
@@ -245,6 +282,9 @@ _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 1920,
 #elif defined(PLATFORM_T41)
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 404,
                "T41 OSD mosaicAttr");
+#elif defined(PLATFORM_T32)
+_Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 232,
+               "T32 OSD mosaicAttr");
 #else
 _Static_assert(__builtin_offsetof(IMPOSDRgnAttr, mosaicAttr) == 400,
                "T23 OSD mosaicAttr");
@@ -303,6 +343,11 @@ _Static_assert(sizeof(IMPOSDRgnAttr) == 1948, "T40 IMPOSDRgnAttr");
 _Static_assert(T23_OSD_RGN_ATTR_T41_MIN <= sizeof(IMPOSDRgnAttr),
                "T41 IMPOSDRgnAttr is smaller than the readable prefix");
 _Static_assert(sizeof(IMPOSDRgnAttr) == 432, "T41 IMPOSDRgnAttr");
+#elif defined(PLATFORM_T32)
+/* T32 2.x: one layout (vendor 2.0.0 header = libimp 2.2.0, which copies 272
+ * bytes in IMP_OSD_CreateRgn / GetRgnAttr), so plain struct copies */
+_Static_assert(__builtin_offsetof(IMPOSDRgnAttr, bitAttr) == 260, "T32 OSD bitAttr");
+_Static_assert(sizeof(IMPOSDRgnAttr) == 272, "T32 IMPOSDRgnAttr");
 #else
 _Static_assert(sizeof(IMPOSDRgnAttr) == 428, "T23 IMPOSDRgnAttr");
 #endif

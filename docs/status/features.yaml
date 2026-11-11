@@ -53,10 +53,13 @@ features:
       sym: ✅
       text: reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
     T32:
-      sym: 🔧
-      text: 'QEMU only, no camera: open-tx-isp `driver/t32` reaches AddSensor to EnableTuning in the QEMU T32 image (stages S1-S3), driven by the vendor libimp 2.2.0; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      sym: 📋
+      text: 'planned: ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer follow in #296. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 97
+      - 288
+      - 289
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -95,8 +98,10 @@ features:
       sym: ✅+
       text: 10x reload with kill -9; vmalloc leak of 252 KB/cycle fixed; residual drift ~45 KB/cycle
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -132,8 +137,10 @@ features:
       sym: ✅
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -178,8 +185,10 @@ features:
       issues:
       - 95
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -219,8 +228,10 @@ features:
       sym: ✅
       text: 'device-tested: ae_comp (Y +13/−21), backlight (Y +19), highlight (Y −13) Re-tested 2026-10-10: OEM formula, luma 55 / 100 / 160 for 0 / 128 / 255; the AE is slow (about 6 s dead time, 25 to 30 s to settle), tests need at least 30 s settle'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -265,8 +276,10 @@ features:
       issues:
       - 119
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -300,8 +313,10 @@ features:
       sym: ✅
       text: 'device-tested with 22 ms IT cap: IT 1000/900/750 lines off/50/60 Hz, gain compensates; daylight test pending'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -340,8 +355,10 @@ features:
       sym: ✅
       text: '2026-10-24: the AWB statistics sweeps run through the MXU2 vector unit by default in next (`t31_awb_impl=2`, chosen after a load-time self-test against the C code; `t31_awb_impl=0/1` switches it off): bit-exact against the C implementation, device-tested on a T31X (.21) and a T31L (.29), about 2.4 times faster sweeps (96 sweeps: 1229 us in C, 504 us with MXU2). Earlier (history): device-tested: manual R/B gains + presets 3/4/7 read back; chroma follows (Cb/Cr), auto restores'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -388,8 +405,10 @@ features:
       issues:
       - 105
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -428,8 +447,11 @@ features:
       sym: ✅
       text: 13 switches in the 4.5 h soak
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the day/night IQ-bin switch (SetISPRunningMode) runs in QEMU (#289); the ISP-side tuning is #296. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 289
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -467,8 +489,10 @@ features:
       sym: ✅
       text: 'device-tested: daynight night/day switches ircut + ir940 (no ir850 pin on this cam), ISP follows'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -504,8 +528,10 @@ features:
       sym: ✅
       text: defaults 0x80
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -543,8 +569,10 @@ features:
       sym: ✅
       text: sc4336p vflip no longer reports an error [-all-13]; MSCA flip takes effect only at the next channel start, as with the vendor
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -580,8 +608,10 @@ features:
       sym: ✅
       text: WDR buffer lazy; AE1 (short frame) stub = vendor no-op without WDR sensor
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -619,8 +649,10 @@ features:
       sym: ✅
       text: 'device-tested: defog 255 (Y −10, laplacian +193). 2026-11-04 (open-tx-isp c8e3d4d3): the 29 defog tables now come from the active tuning-bin bank like the vendor (`tiziano_defog_load_bank`), device-proven on the T31X light-box camera; fleet image agg67 still has the old tables'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -664,8 +696,10 @@ features:
       issues:
       - 106
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -711,8 +745,10 @@ features:
       issues:
       - 106
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -748,8 +784,10 @@ features:
       sym: ✅
       text: 'device-tested: as T23 (claude/t23-t31-scene-colorfx, not yet in an aggregate)'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -783,8 +821,10 @@ features:
       sym: ✅
       text: as vendor, follows mirror/flip; emulator 400/400 identical; cam-A black+red ok [-all-13]
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -820,8 +860,10 @@ features:
       issues:
       - 124
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -859,8 +901,10 @@ features:
       sym: ✅
       text: 704×1280 correct, 9 ms/frame @15 fps, before OSD/IVS/encoder
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -898,10 +942,11 @@ features:
       sym: ✅
       text: soak 2 h 53, 260,648 frames, 1030/1030 snapshots, 0 errors
     T32:
-      sym: 🔧
-      text: 'QEMU only, no camera: H.264 bound and encoded in the QEMU T32 image with the vendor libimp (stage S3), not with OpenIMP; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      sym: 📋
+      text: 'planned: H.264 on HERA, decodable I+P stream in QEMU, command lists equal to vendor libimp 2.2.0 except addresses, fixed QP (#293); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
-      - 97
+      - 293
+      - 295
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -939,8 +984,11 @@ features:
       sym: ✅
       text: real HEVC on AVPU (VPS/SPS/PPS, CABAC); 2×900 frames, 0 errors
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 294
+      - 295
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -975,10 +1023,10 @@ features:
       sym: ✅
       text: HW JPEG, own MJPEG channel ok (24 B/5 s, before 0 bytes)
     T32:
-      sym: 🔧
-      text: 'QEMU only, no camera: JPEG bound in the QEMU T32 image with the vendor libimp (stage S3), not with OpenIMP; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      sym: 📋
+      text: 'planned: JPEG on the JPEG v1.2 engine bound to FrameSource in QEMU, pictures decode and look right (#292). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
-      - 97
+      - 292
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1016,8 +1064,10 @@ features:
       sym: ✅
       text: cam-A 25 fps ch0+ch1 4.5 h
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: FrameSource channels 0-2 (1920x1080, 1280x720, 640x360) in QEMU (#290). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 290
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1057,8 +1107,10 @@ features:
       sym: ✅
       text: 'all modes via the vendor Allegro core (default): CBR 1210 kbit/s at 1200 target and 2973 at 3000 (legacy controller 1511 / 3786, +26 % with large peaks); VBR 1163, CappedVBR 1177, CappedQuality 1174 at 1200; decode clean, 0 oops [claude/t31-allegro-cbr]. CappedVBR/CappedQuality set at CreateChn now keep their mode and cap (were VBR with max = target): cap 38 dB at 3000/4000 → 507 kbit/s at encoder PSNR 38.5 (VBR 3108), SSIM 0.963 vs FixQP 12 [claude/capped-rc-followup]. No filler NAL is written (filler=0 in the logs also at 3000), so in practice there was no difference.'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: rate control (eprc T32/T33 defaults, CBR/VBR/capped, statistics) is #295; QEMU''s HERA has no RC statistics. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 295
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1098,8 +1150,10 @@ features:
       sym: ✅
       text: T31 defaults like the vendor (max QP 48, max bitrate 4/3, ...) [-all-13] (claude/rc-modes-2)
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned: rate control parameters follow with #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 295
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1135,8 +1189,10 @@ features:
       sym: ✅
       text: 'IPU OSD; lines/rectangles; rotation: no OSD clamp in timps'
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: IPU OSD in QEMU (#297): BGRA text picture, cover, rectangle and 2-bit picture through FS -> OSD -> encoder; the /dev/ipu requests equal vendor libimp 2.2.0 except buffer addresses, the text and the rectangle checked in the H.264 picture (QEMU''s IPU model draws no covers and no 2-bit pictures); the ISP (MSCA) OSD waits for a request path in open-tx-isp driver/t32. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 297
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1173,8 +1229,10 @@ features:
       sym: ✅+
       text: 'sub-stream default: ~85 % less IVS CPU (compared with vendor libimp)'
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 299
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1212,10 +1270,11 @@ features:
       sym: ✅
       text: 'device-tested: concurrent streams ok'
     T32:
-      sym: 🔧
-      text: 'QEMU only, no camera: FrameSource channels 0-2 enabled in the QEMU T32 image with the vendor libimp; no OpenIMP T32 build yet (T32NQ test module ordered)'
+      sym: 📋
+      text: 'planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
-      - 97
+      - 290
+      - 299
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1253,8 +1312,10 @@ features:
       issues:
       - 131
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: AI on the OSS3 /dev/dsp ABI, a tone recorded in QEMU (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 298
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1292,8 +1353,10 @@ features:
       sym: ✅
       text: volume/mute work, whole OSS fragments (tested on cam-A); `IMP_AO` enable/`SendFrame`, speaker playback of a known signal at several volumes and `SetVol`, recorded back by the microphone (2026-10-10 AEC test, device-tested)
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 298
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1331,8 +1394,11 @@ features:
       sym: ✅+
       text: 'real AECM: echo −18 dB, ERLE 44 dB (loopback); before: fake success'
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: the vendor 2.x software volume / gain / AEC extras are #329. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 298
+      - 329
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1369,8 +1435,10 @@ features:
       sym: ✅+
       text: ~0.57 MB
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1418,8 +1486,10 @@ features:
       - 223
       - 231
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1457,8 +1527,10 @@ features:
       issues:
       - 92
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1496,8 +1568,10 @@ features:
       sym: —
       text: not in this SoC's encoder (vendor has none either)
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1531,8 +1605,10 @@ features:
       sym: ✅
       text: '2026-10-24 the AWB statistics sweeps are about 2.4 times faster (MXU2, `t31_awb_impl=2` by default, bit-exact, see #8). Earlier (history): 2026-10-21 fleet figures (60 s windows, OpenIMP + open-tx-isp + timps 1.10.1): timpsd 8.0-8.4 % of a core with two clients on the Cinnado T31L cameras against 17.7-18.4 % with the vendor libimp (2026-08-30); 2026-10-24 night A/B on .25: timpsd 8.1 % against the vendor 17.2 %, system CPU 16 % against 23 %, ISP interrupts 109 against 228 per s. Earlier (history): rotation 9 ms/frame @15 fps'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1572,8 +1648,10 @@ features:
       sym: —
       text: SOC_VPU not built
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1607,8 +1685,10 @@ features:
       sym: ✅+
       text: 'DeepSeek review verified; fixes on claude/avpu-review-fixes (minor-number leak, use-after-free on sysfs unbind, uninitialised dma-buf list mutex, flush clamp); kernel patch 0100 validates the rmem flush ioctl (invalid direction no longer crashes the kernel); tested on cam-A: reload, kill -9, 5× rmmod/insmod, 0 oops [-all-13]'
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: —
+      text: 'T32 has no AVPU: H.264/H.265 on HERA and JPEG on the JPEG v1.2 engine behind the in-kernel /dev/soc_vpu (#291)'
+      issues:
+      - 291
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1650,8 +1730,10 @@ features:
       - 93
       - 94
     T32:
-      sym: '?'
-      text: 'not examined: no T32 hardware yet; the open driver only runs in QEMU and OpenIMP has no T32 build'
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1693,8 +1775,10 @@ features:
       sym: ✅+
       text: removed
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 299
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1736,8 +1820,10 @@ features:
       - 117
       - 118
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned: the ISP tuning table is #296; the OpenIMP T32 IMP_ISP_Tuning_* calls are stubs until then. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 296
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1773,8 +1859,10 @@ features:
       sym: ✅+
       text: '2026-10-27: `GetChnEvalInfo` returns the header layout of `IMPEncoderStreamInfo` (`iNumBytes` first, then the counters, QP at 28/30/32) instead of the vendor''s one-word-shifted bytes: beyond vendor, a deliberate ABI difference a streamer must not compensate for (AVC: iNumBytes 3993 of a 4003-byte access unit; JPEG: size and quality 75); apitest enc on the T31L camera PASS 122 / FAIL 0. Earlier: ditto'
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'
@@ -1809,8 +1897,10 @@ features:
       sym: ✅+
       text: 'beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; 2026-10-10: 20 phases valid in VA-API and strict ffmpeg (`-err_detect`); known deviation: under FixQP 42 an absolute 5 or relative -25 window drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream valid); `OPENIMP_T31_ROI=0` refuses the call'
     T32:
-      sym: ❌
-      text: no OpenIMP T32 build yet (the function would need one); no T32 hardware yet
+      sym: 📋
+      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      issues:
+      - 300
     T33:
       sym: 📋
       text: 'planned, not started: no T33 driver, OpenIMP build or hardware yet (T33L test module ordered)'

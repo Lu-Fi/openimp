@@ -384,7 +384,12 @@ int main(int argc, char **argv)
     if (ret < 0) return 1;
     ret = IMP_ISP_EnableTuning();
     RET0(IMP_ISP_EnableTuning, ret, "");
+#if defined(APITEST_T32)
+    /* T32 (planned): the ISP tuning layer is a later T32 issue; the stream areas run without it */
+    if (ret < 0) printf("[T] T32: EnableTuning %d, areas continue without tuning\n", ret);
+#else
     if (ret < 0) return 1;
+#endif
     /* as the vendor samples (sample-common.c): the FrameSource channels run at
      * the sensor rate, their outFrmRate (15/1 here) does not drop frames */
 #if defined(APITEST_T40)

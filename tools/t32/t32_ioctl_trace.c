@@ -168,12 +168,16 @@ int ioctl(int fd, unsigned long req, ...)
         n = 880;
     else if (req == 0xc00454c8UL)       /* SET_TIZIANO_PAR: 20-byte switch-bin attr */
         n = 20;
+    else if (req == 0x2000496aUL)       /* jz_ipu_v13 IOCTL_IPU_START (_IO): T32 200-byte ipu_param (#297) */
+        n = 200;
+    else if (req == 0x20004976UL)       /* IOCTL_IPU_BUF_FLUSH_CACHE (_IO): { addr, size } */
+        n = 8;
     if (n > dump_bytes)
         n = dump_bytes;
     if (traced) {
         pthread_mutex_lock(&lock);
         s = ++seq;
-        if (dir & 4)
+        if ((dir & 4) || req == 0x2000496aUL || req == 0x20004976UL)
             dump_words(s, "in", arg, n);
         if (vpu_bytes && (req == 0xc0406302UL || req == 0xc0406303UL))
             dump_vpu_job(s, arg);

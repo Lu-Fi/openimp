@@ -16,9 +16,9 @@
  *   IMPAudioIOAttr 24, IMPAudioFrame 32, IMPAudioIChnParam 12
  *                                openimp_t32_skeleton.c (T41 layout)
  * The OSD region attribute is laid out below; the public imp_osd.h type is
- * the generic 72-byte one on every SoC (the OSD module keeps its vendor
- * layouts in src/t23/openimp_t23_osd_abi.h), so the T32 layout is pinned
- * here until the T32 OSD issue moves it there.
+ * the generic 72-byte one on every SoC.  The OSD module keeps its vendor
+ * layouts in src/t23/openimp_t23_osd_abi.h (PLATFORM_T32 there since #297)
+ * and asserts them against this one.
  */
 #ifndef OPENIMP_T32_ABI_H
 #define OPENIMP_T32_ABI_H

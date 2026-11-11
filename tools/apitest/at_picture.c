@@ -1,6 +1,7 @@
 #include <stdio.h>
-#if defined(APITEST_T40)   /* no picture cases on T40: its image functions are covered by area t40dev */
-int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr, "picture: not built for T40 (use area t40dev)\n"); return 2; }
+#if defined(APITEST_T40) || defined(APITEST_T32)   /* no picture cases on T40: its image functions are covered by area t40dev;
+                                                         T32 (planned): no picture cases until the ISP tuning layer exists */
+int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr, "picture: not built for T40 (use area t40dev) or T32\n"); return 2; }
 #else
 /* imgfx - device test: one picture per image-changing IMP function/case.
  *
@@ -1973,4 +1974,4 @@ int picture_main(int argc, char **argv)
     return rc;
 }
 
-#endif /* APITEST_T40 */
+#endif /* APITEST_T40 || APITEST_T32 */

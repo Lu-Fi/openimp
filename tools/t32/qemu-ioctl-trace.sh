@@ -49,7 +49,7 @@ CC=$T32_BUILD/host/bin/mipsel-linux-gcc; SYSROOT=$T32_BUILD/target
 mkdir -p "$OUT"; rm -rf "$OUT/rootfs"; cp -a "$BASE_ROOTFS" "$OUT/rootfs"
 
 # sample + recorder (own code), module and optional libimp under test
-"$CC" -std=gnu99 -O1 -Wall -Wextra -Werror -DPLATFORM_T32 -I"$REPO/include" \
+"$CC" -std=gnu99 -O1 -Wall -Wextra -Werror -DPLATFORM_T32 -I"$REPO/include" -I"$REPO/src" \
     -o "$OUT/rootfs/usr/bin/t32_trace_sample" "$REPO/${SAMPLE_SRC:-tools/t32/t32_trace_sample.c}" \
     -L"$SYSROOT/usr/lib" -L"$SYSROOT/lib" -Wl,--no-as-needed -limp -lalog -lsysutils \
     -luclibcshim -lpthread -lrt -ldl -lm -Wl,--allow-shlib-undefined

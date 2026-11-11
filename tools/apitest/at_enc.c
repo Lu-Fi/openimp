@@ -383,6 +383,20 @@ static void fill_attr(EAttr *a, int codec, int gop)
             a->rcAttr.attrRcMode.attrCbr.iMinQP = 20; a->rcAttr.attrRcMode.attrCbr.iMaxQP = 45;
         }
     }
+#elif defined(APITEST_T32)
+    /* T32: the T23-family IMPEncoderCHNAttr with the 2.x rc unions, filled by SetDefaultParam (as the T32 stream samples) */
+    {
+        IMPEncoderProfile prof = codec == CODEC_H264 ? IMP_ENC_PROFILE_AVC_MAIN :
+                                 codec == CODEC_H265 ? IMP_ENC_PROFILE_HEVC_MAIN : IMP_ENC_PROFILE_JPEG;
+        IMPEncoderRcMode rc = codec == CODEC_JPEG ? ENC_RC_MODE_FIXQP : ENC_RC_MODE_CBR;
+        NEED(IMP_Encoder_SetDefaultParam) {
+            int r = IMP_Encoder_SetDefaultParam(a, prof, rc, EW, EH, EFPS, 1, codec == CODEC_JPEG ? 0 : gop, 0, -1,
+                                                codec == CODEC_JPEG ? 0 : BITRATE);
+            CHECK(IMP_Encoder_SetDefaultParam, r, a->encAttr.picWidth == EW && a->encAttr.picHeight == EH &&
+                  a->rcAttr.attrRcMode.rcMode == rc, "%s %ux%u rc %d", cname[codec], a->encAttr.picWidth,
+                  a->encAttr.picHeight, (int)a->rcAttr.attrRcMode.rcMode);
+        }
+    }
 #else
     a->encAttr.picWidth = EW; a->encAttr.picHeight = EH; a->encAttr.bufSize = 0;
     if (codec == CODEC_JPEG) { a->encAttr.enType = PT_JPEG; a->encAttr.profile = 2; return; }
@@ -623,7 +637,7 @@ static void live_common(int chn, int codec)
     }
 #endif
     /* QP bounds etc. (new API) */
-#if HAS_IMP_Encoder_SetChnQpBounds
+#if HAS_IMP_Encoder_SetChnQpBounds && !defined(APITEST_T32)
     NEED(IMP_Encoder_SetChnQpBounds) {
         r = IMP_Encoder_SetChnQpBounds(chn, 22, 44);
         RB_SETTLE(chn, codec);
@@ -666,7 +680,7 @@ static void live_common(int chn, int codec)
     NEED(IMP_Encoder_SetChnResizeMode) { r = IMP_Encoder_SetChnResizeMode(chn, 0); RET0(IMP_Encoder_SetChnResizeMode, r, "off (no getter)"); }
 #endif
     /* ROI */
-#if HAS_IMP_Encoder_SetChnROI
+#if HAS_IMP_Encoder_SetChnROI && !defined(APITEST_T32)
     NEED(IMP_Encoder_SetChnROI) {
         G(IMPEncoderROICfg, g);
         IMPEncoderROICfg c;
@@ -979,7 +993,7 @@ static void live_old(int chn, int codec)
     RT_INT(IMP_Encoder_SetChangeRef, IMP_Encoder_GetChangeRef, 1, "ChangeRef")
 #  endif
 # endif
-# if HAS_IMP_Encoder_SetQpgMode
+# if HAS_IMP_Encoder_SetQpgMode && !defined(APITEST_T32)
     NEED(IMP_Encoder_SetQpgMode) {
         G(IMPEncoderQpgMode, g); G(IMPEncoderQpgMode, o);
         IMPEncoderQpgMode n = ENC_QPG_CRP; int r2, r3;
@@ -1423,7 +1437,7 @@ static void test_jpeg_body(int jchn, int share_with)
 /* ------------------------------------------- software JPEG / YUV encoder API */
 static void test_swenc(void)
 {
-#if HAS_IMP_Encoder_VbmAlloc
+#if HAS_IMP_Encoder_VbmAlloc && !defined(APITEST_T32)
     size_t nv12 = (size_t)EW * EH * 3 / 2;
     unsigned char *src = NULL, *dst = NULL;
     unsigned char *snap = gnew(nv12);
@@ -1517,7 +1531,7 @@ static void test_swenc(void)
     }
     gfree(snap); gfree(fi);
 #endif
-#if HAS_IMP_Encoder_VbmAlloc_Ex && defined(PLATFORM_T41)
+#if HAS_IMP_Encoder_VbmAlloc_Ex && defined(PLATFORM_T41) && !defined(APITEST_T32)
     /* T41 _Ex set: same flow as above through the second VPU instance's entry points (VbmAlloc_Ex -> InputJpege_Ex JPEG, YuvInit_Ex ->
      * YuvEncode_Ex H.264 IDR -> YuvExit_Ex, VbmFree_Ex); the frame is a snapshot of ch1 */
     {
@@ -1695,7 +1709,7 @@ void t_enc(void)
  *   HSKIP_MAIN=1 (the encoder reads FrameSource ch0 at the sensor size, ch1 is not set up)  HSKIP_SMART=1 (SMART rate control, HSKIP_BITRATE = maximum kbit/s)  HSKIP_MAXTYPE (maxHSkipType at CreateChn, default 6)  HSKIP_RT=1 (set through IMP_Encoder_SetChnHSkip after the first IDR
  *   instead of at CreateChn)  HSKIP_GOP (default 30)  HSKIP_FRAMES (default 240)  HSKIP_DUMP=<file>  HSKIP_BITRATE (kbit/s)
  * ------------------------------------------------------------------------------------------ */
-#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetChnHSkip
+#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetChnHSkip && !defined(APITEST_T32)
 static int hs_env(const char *n, int d) { const char *v = getenv(n); return v && *v ? atoi(v) : d; }
 
 static void hs_nals(const unsigned char *b, size_t n, char *out, size_t cap)
@@ -2002,7 +2016,7 @@ int enc_fisheye_run(void) { return -1; }
  *   TRANS_QP (default 30)  TRANS_GOP (default 15)  TRANS_FRAMES (default 100)  TRANS_JPEG=1 (Set/Get on a JPEG channel 1)  TRANS_DUMP=<file>
  *   HSKIP_MAIN=1 (ch0 at the sensor size)
  * ------------------------------------------------------------------------------------------ */
-#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetH264TransCfg
+#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetH264TransCfg && !defined(APITEST_T32)
 static void trans_set(int chn, int v, const char *when)
 {
     IMPEncoderH264TransCfg c, o;

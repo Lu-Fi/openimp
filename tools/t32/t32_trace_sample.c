@@ -45,7 +45,13 @@
  * T32_ENC_QPS=a-b repeats the FrameSource + encoder channel cycle (N
  * streams each) for every initial QP a..b in one process ("T32Q <qp> done").
  *
- * usage: t32_trace_sample [h264|h265|jpeg|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
+ * "osd" (#297) is "h264" with an OSD group between FrameSource channel 0
+ * and the encoder (Bind FS -> OSD 0 -> encoder 0): a BGRA text picture, a
+ * cover, a rectangle and a 2-bit picture, plus the region-attribute and
+ * error-code checks (lines "T32O ..."); the same run with vendor libimp
+ * 2.2.0 is the reference for the /dev/ipu requests (T32_TRACE_DUMP=200).
+ *
+ * usage: t32_trace_sample [h264|h265|jpeg|osd|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -64,6 +70,24 @@
 #include <imp/imp_isp.h>
 #include <imp/imp_framesource.h>
 #include <imp/imp_encoder.h>
+/* the T32 2.x OSD types (272-byte IMPOSDRgnAttr), OpenIMP's copy of the
+ * vendor layout; the generic imp_osd.h is not the T32 ABI */
+#include "t23/openimp_t23_osd_abi.h"
+
+int IMP_OSD_SetPoolSize(int size);
+int IMP_OSD_CreateGroup(int grpNum);
+int IMP_OSD_DestroyGroup(int grpNum);
+IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *prAttr);
+void IMP_OSD_DestroyRgn(IMPRgnHandle handle);
+int IMP_OSD_RegisterRgn(IMPRgnHandle handle, int grpNum, IMPOSDGrpRgnAttr *pgrAttr);
+int IMP_OSD_UnRegisterRgn(IMPRgnHandle handle, int grpNum);
+int IMP_OSD_SetRgnAttr(IMPRgnHandle handle, IMPOSDRgnAttr *prAttr);
+int IMP_OSD_GetRgnAttr(IMPRgnHandle handle, IMPOSDRgnAttr *prAttr);
+int IMP_OSD_GetGrpRgnAttr(IMPRgnHandle handle, int grpNum, IMPOSDGrpRgnAttr *pgrAttr);
+int IMP_OSD_ShowRgn(IMPRgnHandle handle, int grpNum, int showFlag);
+int IMP_OSD_Start(int grpNum);
+int IMP_OSD_Stop(int grpNum);
+int IMP_OSD_RgnCreate_Query(IMPRgnHandle handle, IMPOSDRgnCreateStat *pstStatus);
 
 #if !defined(PLATFORM_T32)
 #error "build with -DPLATFORM_T32"
@@ -198,6 +222,153 @@ static void proc_status(void)
     fflush(stdout);
 }
 
+/* ---- "osd" (#297) ------------------------------------------------------- */
+#define OSD_TEXT_W 320                  /* multiple of 16: same IPU src_w as the vendor */
+#define OSD_TEXT_H 36
+#define OSD_2BIT_W 128
+#define OSD_2BIT_H 32
+#define OSD_NRGN 4
+static IMPRgnHandle osd_rgn[OSD_NRGN];
+static uint32_t osd_text[OSD_TEXT_W * OSD_TEXT_H];
+static uint8_t osd_2bit[OSD_2BIT_W * OSD_2BIT_H / 4];
+
+/* 5x7 glyphs, rows top down, bit 4 = left column */
+static const struct { char c; uint8_t row[7]; } osd_font[] = {
+    { '0', { 14, 17, 19, 21, 25, 17, 14 } }, { '1', { 4, 12, 4, 4, 4, 4, 14 } },
+    { '2', { 14, 17, 1, 2, 4, 8, 31 } },     { '3', { 31, 2, 4, 2, 1, 17, 14 } },
+    { '4', { 2, 6, 10, 18, 31, 2, 2 } },     { '5', { 31, 16, 30, 1, 1, 17, 14 } },
+    { '6', { 6, 8, 16, 30, 17, 17, 14 } },   { '7', { 31, 1, 2, 4, 8, 8, 8 } },
+    { '8', { 14, 17, 17, 14, 17, 17, 14 } }, { '9', { 14, 17, 17, 15, 1, 2, 12 } },
+    { ':', { 0, 12, 12, 0, 12, 12, 0 } },    { '-', { 0, 0, 0, 31, 0, 0, 0 } },
+    { 'D', { 28, 18, 17, 17, 17, 18, 28 } }, { 'O', { 14, 17, 17, 17, 17, 17, 14 } },
+    { 'S', { 15, 16, 16, 14, 1, 1, 30 } },   { 'T', { 31, 4, 4, 4, 4, 4, 4 } },
+};
+
+/* white text (scale 4) on a half-transparent black box, BGRA bytes */
+static void osd_render_text(const char *text)
+{
+    int i, x0 = 8, k;
+
+    for (i = 0; i < OSD_TEXT_W * OSD_TEXT_H; i++)
+        osd_text[i] = 0x80000000u;              /* A=0x80, black */
+    for (; *text && x0 + 20 <= OSD_TEXT_W; text++, x0 += 24)
+        for (k = 0; k < (int)(sizeof osd_font / sizeof osd_font[0]); k++) {
+            int r, c;
+            if (osd_font[k].c != *text)
+                continue;
+            for (r = 0; r < 7 * 4; r++)
+                for (c = 0; c < 5 * 4; c++)
+                    if (osd_font[k].row[r / 4] & (16 >> (c / 4)))
+                        osd_text[(r + 4) * OSD_TEXT_W + x0 + c] = 0xffffffffu;
+        }
+}
+
+static void osd_attr_print(const char *tag, const IMPOSDRgnAttr *a, const IMPOSDRgnAttr *b)
+{
+    const uint32_t *x = (const uint32_t *)(const void *)a, *y = (const uint32_t *)(const void *)b;
+    unsigned k;
+
+    printf("T32O %s size %u diff:", tag, (unsigned)sizeof *a);
+    for (k = 0; k < sizeof *a / 4; k++)
+        if (x[k] != y[k])
+            printf(" w%u", k);
+    printf("\n");
+}
+
+static int step(const char *name, int rc);
+#define STEP(call) (mark ? mark(#call) : (void)0, step(#call, (call)))
+
+/* regions + group 0; returns 0 when every step worked */
+static int osd_setup(void)
+{
+    IMPOSDRgnAttr a[OSD_NRGN], back;
+    IMPOSDGrpRgnAttr g;
+    IMPOSDRgnCreateStat cs;
+    int i, ok = 1;
+
+    memset(a, 0, sizeof a);
+    osd_render_text("T32 OSD 11-11");
+    a[0].type = OSD_REG_PIC;
+    a[0].fmt = T23_OSD_PIX_BGRA;
+    a[0].rect.p0.x = 64;
+    a[0].rect.p0.y = 64;
+    a[0].rect.p1.x = 64 + OSD_TEXT_W - 1;
+    a[0].rect.p1.y = 64 + OSD_TEXT_H - 1;
+    a[0].data.picData.pData = osd_text;
+    a[1].type = OSD_REG_COVER;
+    a[1].fmt = T23_OSD_PIX_BGRA;
+    a[1].rect.p0.x = 640;
+    a[1].rect.p0.y = 240;
+    a[1].rect.p1.x = 640 + 255;
+    a[1].rect.p1.y = 240 + 159;
+    a[1].data.coverData.color = 0xff00ff00u;
+    a[2].type = OSD_REG_RECT;
+    a[2].fmt = T23_OSD_PIX_MONOWHITE;     /* vendor 2.2.0 draws lines only with fmt 8 */
+    a[2].rect.p0.x = 1100;
+    a[2].rect.p0.y = 500;
+    a[2].rect.p1.x = 1499;
+    a[2].rect.p1.y = 799;
+    a[2].data.lineRectData.color = 0xffff0000u;
+    a[2].data.lineRectData.linewidth = 6;
+    a[3].type = OSD_REG_PIC;
+    a[3].fmt = T23_OSD_PIX_2BIT;
+    a[3].rect.p0.x = 64;
+    a[3].rect.p0.y = 800;
+    a[3].rect.p1.x = 64 + OSD_2BIT_W - 1;
+    a[3].rect.p1.y = 800 + OSD_2BIT_H - 1;
+    for (i = 0; i < (int)sizeof osd_2bit; i++)
+        osd_2bit[i] = (uint8_t)((i / (OSD_2BIT_W / 16)) & 1 ? 0x55 : 0xaa);
+    a[3].data.picData.pData = osd_2bit;
+    a[3].bitAttr.twobit_mask = 0x3;
+    a[3].bitAttr.twobit_bit0_fmt = 0xffffff00u;
+    a[3].bitAttr.twobit_bit1_fmt = 0xff0000ffu;
+
+    ok &= STEP(IMP_OSD_CreateGroup(0)) == 0;
+    for (i = 0; i < OSD_NRGN; i++) {
+        osd_rgn[i] = IMP_OSD_CreateRgn(NULL);
+        printf("T32O create %d -> %d\n", i, osd_rgn[i]);
+        ok &= osd_rgn[i] >= 0;
+        ok &= STEP(IMP_OSD_SetRgnAttr(osd_rgn[i], &a[i])) == 0;
+        memset(&back, 0x5a, sizeof back);
+        printf("T32O getattr %d rc=0x%x\n", i, (unsigned)IMP_OSD_GetRgnAttr(osd_rgn[i], &back));
+        osd_attr_print(i == 0 ? "pic" : i == 1 ? "cover" : i == 2 ? "rect" : "2bit", &a[i], &back);
+        memset(&g, 0, sizeof g);
+        g.show = 1;
+        g.gAlphaEn = 0;
+        g.fgAlhpa = 0xff;
+        g.layer = i;
+        g.scalex = g.scaley = 1.0f;
+        ok &= STEP(IMP_OSD_RegisterRgn(osd_rgn[i], 0, &g)) == 0;
+    }
+    /* error codes (vendor 2.2.0 reference) */
+    printf("T32O rc getattr(200)=0x%x getattr(100)=0x%x creategroup(12)=0x%x register(.,12)=0x%x"
+           " show(100,0)=0x%x start(12)=0x%x\n",
+           (unsigned)IMP_OSD_GetRgnAttr(200, &back), (unsigned)IMP_OSD_GetRgnAttr(100, &back),
+           (unsigned)IMP_OSD_CreateGroup(12), (unsigned)IMP_OSD_RegisterRgn(osd_rgn[0], 12, &g),
+           (unsigned)IMP_OSD_ShowRgn(100, 0, 1), (unsigned)IMP_OSD_Start(12));
+    memset(&cs, 0, sizeof cs);
+    printf("T32O query(%d)=0x%x status %d\n", osd_rgn[0],
+           (unsigned)IMP_OSD_RgnCreate_Query(osd_rgn[0], &cs), cs.status);
+    memset(&g, 0, sizeof g);
+    printf("T32O getgrp rc=0x%x show %d layer %d fg %d\n",
+           (unsigned)IMP_OSD_GetGrpRgnAttr(osd_rgn[2], 0, &g), g.show, g.layer, g.fgAlhpa);
+    ok &= STEP(IMP_OSD_Start(0)) == 0;
+    return ok ? 0 : -1;
+}
+
+static void osd_teardown(void)
+{
+    int i;
+
+    STEP(IMP_OSD_Stop(0));
+    for (i = 0; i < OSD_NRGN; i++) {
+        STEP(IMP_OSD_ShowRgn(osd_rgn[i], 0, 0));
+        STEP(IMP_OSD_UnRegisterRgn(osd_rgn[i], 0));
+        IMP_OSD_DestroyRgn(osd_rgn[i]);
+    }
+    STEP(IMP_OSD_DestroyGroup(0));
+}
+
 static int step(const char *name, int rc)
 {
     printf("T32S %-40s rc=%d\n", name, rc);
@@ -205,7 +376,6 @@ static int step(const char *name, int rc)
     return rc;
 }
 
-#define STEP(call) (mark ? mark(#call) : (void)0, step(#call, (call)))
 #define MUST(call) do { if (STEP(call)) goto fail; } while (0)
 
 int main(int argc, char **argv)
@@ -218,12 +388,13 @@ int main(int argc, char **argv)
     int bind_test = !strcmp(codec, "bind");
     int fs3 = !strcmp(codec, "fs3");
     int vpu_cycles = !strcmp(codec, "vpu");
+    int osd = !strcmp(codec, "osd");
     int isp_only = !strcmp(codec, "isp") || bin_test;
     int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only && !vpu_cycles;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
     static IMPEncoderCHNAttr ea;
-    IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, 0, 0 };
+    IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, 0, 0 }, ocell = { DEV_ID_OSD, 0, 0 };
     IMPEncoderProfile prof = !strcmp(codec, "jpeg") ? T32_PROFILE_JPEG :
                              !strcmp(codec, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
     IMPEncoderRcMode rc = getenv("T32_ENC_RC") ? (IMPEncoderRcMode)atoi(getenv("T32_ENC_RC")) :
@@ -280,6 +451,8 @@ int main(int argc, char **argv)
     MUST(IMP_ISP_Open());
     MUST(IMP_ISP_AddSensor(IMPVI_MAIN, &si));
     MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
+    if (osd)
+        STEP(IMP_OSD_SetPoolSize(512 * 1024));
     MUST(IMP_System_Init());
     if (bin_test) {                     /* #289: day/night bin switch */
         IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
@@ -376,7 +549,13 @@ again:
         }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
-        MUST(IMP_System_Bind(&src, &dst));
+        if (osd) {
+            MUST(osd_setup());
+            MUST(IMP_System_Bind(&src, &ocell));
+            MUST(IMP_System_Bind(&ocell, &dst));
+        } else {
+            MUST(IMP_System_Bind(&src, &dst));
+        }
     }
     MUST(IMP_FrameSource_EnableChn(0));
     if (enc) {
@@ -395,7 +574,13 @@ again:
         printf("T32S streams %d/%d\n", got, streams);
         STEP(IMP_Encoder_StopRecvPic(0));
         STEP(IMP_FrameSource_DisableChn(0));
-        STEP(IMP_System_UnBind(&src, &dst));
+        if (osd) {
+            STEP(IMP_System_UnBind(&ocell, &dst));
+            STEP(IMP_System_UnBind(&src, &ocell));
+            osd_teardown();
+        } else {
+            STEP(IMP_System_UnBind(&src, &dst));
+        }
         STEP(IMP_Encoder_UnRegisterChn(0));
         STEP(IMP_Encoder_DestroyChn(0));
         STEP(IMP_Encoder_DestroyGroup(0));
