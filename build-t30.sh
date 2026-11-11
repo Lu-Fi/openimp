@@ -126,6 +126,11 @@ compile t30_rate_control src/t40/t31_rate_control.c -Werror
 # the emulator comparison models MIPS32r2 madd.fmt as unfused
 compile t30_eprc src/eprc/eprc_t30.c $hot_flags -Werror -ffp-contract=off -fwrapv
 compile t30_helix_jpeg src/t30/helix_jpeg.c -Werror
+# IMP_Decoder_*: the vendor T30 1.0.5 decodes JPEG with ijpegd on the VPU,
+# as T21 1.0.33; OpenIMP decodes in software in the calling thread, the
+# T10/T20/T21 decoder (same API: channel 0, JPEG to YUV420P/NV12/NV21).
+compile t30_decoder src/t23/openimp_t23_decoder.c -Werror -DOPENIMP_DECODER_SW_ONLY
+compile t30_jpegdec src/t23/openimp_t23_jpegdec.c -Werror
 # H.265 on Radix (docs/T30_HEVC.md), CreateChn(PT_H265) only with OPENIMP_T30_H265=1
 compile t30_radix_encoder src/t30/radix/t30_radix_encoder.c -Werror
 compile t30_radix_cmdlist src/t30/radix/t30_radix_cmdlist.c -Werror
@@ -188,6 +193,8 @@ compile t30_dmic src/t31/openimp_t31_dmic.c -Werror
     "$output_dir/t30_rate_control.o" \
     "$output_dir/t30_eprc.o" \
     "$output_dir/t30_helix_jpeg.o" \
+    "$output_dir/t30_decoder.o" \
+    "$output_dir/t30_jpegdec.o" \
     "$output_dir/t30_radix_encoder.o" \
     "$output_dir/t30_radix_cmdlist.o" \
     "$output_dir/t30_radix_cabac.o" \

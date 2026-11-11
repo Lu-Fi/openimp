@@ -3,7 +3,8 @@
  * 2026-10-10: SetDPStrength (T20, T21), SetAntiFogAttr (T21), Set/GetWDRAttr
  * and Set/GetISPHVflip (T20/T10).  src/isp/isp_tseries.c against a fake
  * tuning device (--wrap=ioctl); the expected controls and the caching are
- * those of the vendor libimp (T20 3.12.0, T21 1.0.33).
+ * those of the vendor libimp (T20 3.12.0, T21 1.0.33).  T30 (1.0.5) also
+ * SetISPLDC: the link ioctl sequence on the ISP device.
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -57,6 +58,10 @@ static int tbl_calls, tbl_set_table;
 static uint16_t tbl_last[3][2];
 #if defined(PLATFORM_T30)
 static int temper_calls, temper_dir;
+#define ISP_FD 78
+static unsigned long link_req[8], link_fail;
+static int32_t link_arg[8];
+static int link_n;
 #endif
 
 int __real_ioctl(int fd, unsigned long request, ...);
@@ -68,6 +73,20 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
     va_start(ap, request);
     arg = va_arg(ap, void *);
     va_end(ap);
+#if defined(PLATFORM_T30)
+    if (fd == ISP_FD) {                 /* link ioctls of SetISPLDC */
+        if (link_n < 8) {
+            link_req[link_n] = request;
+            link_arg[link_n] = arg ? *(int32_t *)arg : 0x7fffffff;
+        }
+        link_n++;
+        if (link_fail && request == link_fail) {
+            errno = EPERM;
+            return -1;
+        }
+        return 0;
+    }
+#endif
     if (fd != TUNING_FD) {
         errno = EBADF;
         return -1;
@@ -375,6 +394,30 @@ int main(void)
         CHECK(IMP_ISP_Tuning_SetFWFreeze(0) == -1);
         CHECK(IMP_ISP_Tuning_SetShading((void *)(intptr_t)1) == -1);
         isp.tuning_state = 2;
+    }
+    {
+        /* SetISPLDC (T30 1.0.5 0xd56f0): link stream off, destroy (&-1), create
+         * link 2 (on) / 0 (off), link stream on, on the ISP device; the sensor
+         * is started first while the library has not done it yet */
+        isp.fd = ISP_FD;
+        link_n = 0;
+        CHECK(IMP_ISP_Tuning_SetISPLDC(IMPISP_TUNING_OPS_MODE_ENABLE) == 0 && link_n == 5);
+        CHECK(link_req[0] == 0x80045612 && link_req[1] == 0x800456d3 &&
+              link_req[2] == 0x800456d1 && link_arg[2] == -1 &&
+              link_req[3] == 0x800456d0 && link_arg[3] == 2 && link_req[4] == 0x800456d2);
+        link_n = 0;
+        CHECK(IMP_ISP_Tuning_SetISPLDC(IMPISP_TUNING_OPS_MODE_DISABLE) == 0 && link_n == 4);
+        CHECK(link_req[0] == 0x800456d3 && link_req[2] == 0x800456d0 && link_arg[2] == 0 &&
+              link_req[3] == 0x800456d2);
+        link_n = 0;
+        CHECK(IMP_ISP_Tuning_SetISPLDC((IMPISPTuningOpsMode)7) == 0 && link_arg[2] == 2);
+        link_fail = 0x800456d1;           /* a failing step: -1, nothing after it */
+        link_n = 0;
+        CHECK(IMP_ISP_Tuning_SetISPLDC(IMPISP_TUNING_OPS_MODE_ENABLE) == -1 && link_n == 2);
+        link_fail = 0;
+        gISP = NULL;
+        CHECK(IMP_ISP_Tuning_SetISPLDC(IMPISP_TUNING_OPS_MODE_ENABLE) == -1);
+        gISP = &isp;
     }
 #endif
     if (failures) {

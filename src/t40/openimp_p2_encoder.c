@@ -384,6 +384,13 @@ typedef struct {
     IMPEncoderAttrFrmUsed frm_used;
     int fisheye;
     int change_ref;
+#if defined(P2_T30_NATIVE)
+    /* IMP_Encoder_SetChnCrop on an H.265 channel: the vendor T30 1.0.5 hands
+     * x, y, w, h (pixels, no enable word) to i265e parameter 1 and reads them
+     * back; kept here for the getter (the Radix encoder codes no crop) */
+    uint32_t h265_crop[4];
+    int h265_crop_set;
+#endif
 #if defined(PLATFORM_T20)
     /* IMP_Encoder_SetChnDemask: the vendor's per-picture strategy and its
      * ISP sharpness word (src/demask), zero at CreateChn like the record */
@@ -511,7 +518,7 @@ static uint32_t p2_fill_t31_packs(P2EncoderChannel *channel,
 
 static int p2_initialized;
 static int p2_groups[P2_MAX_GROUPS];
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
 /* IMP_Encoder_PadFrame (pad frames, see p2_pad_select) */
 typedef struct {
     void *frame;
@@ -2857,6 +2864,7 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 #endif
 #if defined(P2_T30_NATIVE)
     p2_t30_superframe_defaults(ch);
+    ch->h265_crop_set = 0;          /* a new i265e has no crop */
 #endif
     ch->created = 1;
 #if defined(PLATFORM_T31)
@@ -3020,7 +3028,7 @@ static int p2_destroy_chn(int channel)
 #if defined(PLATFORM_T31)
     p2_group_slot_drop(channel);
 #endif
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     p2_pad_flush(channel);
 #endif
 #if defined(P2_JPEG_LEND)
@@ -3270,7 +3278,7 @@ static void t23_pace_account(int channel, uint64_t start_us,
 }
 #endif
 
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
 /* ---- pad frames -----------------------------------------------------------
  * Stock T23 1.3.0 IMP_Encoder_SetPadFrameAttr (0x548dc) / IMP_Encoder_PadFrame
  * (0x54a3c) / do_channel_process, the same in T21 1.0.33 and T20/T10 3.12.0
@@ -3286,7 +3294,11 @@ static void t23_pace_account(int channel, uint64_t start_us,
  * else a newer pad frame waits for its capture (this capture is skipped)
  * and an older one is released and the next one is tried.  The queue waits
  * up to one frame interval for a pad frame / for room.  Pad frames use the
- * encoder's input layout (luma width x align16(height), chroma after it). */
+ * encoder's input layout (luma width x align16(height), chroma after it).
+ * T30 1.0.5 (SetPadFrameAttr 0xc2bcc, PadFrame 0xc2d2c, do_channel_process_h264e
+ * in the Ghidra numbering of project t30lib): the T21 design, six channels, the
+ * 32-byte attribute in the channel record, time stamp at +0x20 (the T21 frame
+ * layout), the same tolerance test and refusal order. */
 #define P2_PAD_DEPTH 8
 #if defined(PLATFORM_T23)
 #define P2_PAD_CHANNELS 9
@@ -3617,7 +3629,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     uint32_t fps_num;
     uint32_t fps_den;
     uint64_t interval_us;
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     P2PadNode pad = {0};
     int pad_sel = 0;
     int pad_pending = 0;
@@ -3917,7 +3929,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         (void)AL_Codec_Encode_SetJpegSrcPitch(ch->codec, ch->jpeg_src_pitch);
         (void)AL_Codec_Encode_SetJpegSkip(ch->codec, jpeg_may_skip);
     }
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     /* IMP_Encoder_PadFrame: while pad frames are enabled the matching pad
      * frame is encoded instead of the captured one, and a capture without
      * one is not encoded (stock do_channel_process) */
@@ -3939,7 +3951,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         pthread_mutex_unlock(&ch->lock);
     }
 #endif
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     if (pad_sel > 0) {
         process_result = AL_Codec_Encode_Process(ch->codec, pad.frame, pad.frame);
         /* the hardware still reads the pad buffer: hand it back at the
@@ -4021,7 +4033,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         frame != &ch->synthetic_frame &&
         p2_release_source_frame(ch->source_channel, frame) == 0)
         frame = NULL;
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     if (pad_pending) {
         p2_pad_release(&pad);
         pad_pending = 0;
@@ -4089,7 +4101,7 @@ done:
         AL_Codec_Encode_ReleaseStream(ch->codec, stream, user);
     if (frame && frame != &ch->synthetic_frame)
         p2_release_source_frame(ch->source_channel, frame);
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */
     if (pad_pending)
         p2_pad_release(&pad);
 #endif
@@ -6547,7 +6559,7 @@ int IMP_Encoder_GetChnHSkip(int channel, IMPEncoderAttrHSkip *attr)
 }
 #endif
 
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T23) /* T21, T20 and the real T30 */
 extern int AL_Codec_Encode_SetCrop(void *codec, int enable, uint32_t x, uint32_t y,
                                    uint32_t w, uint32_t h);
 extern int AL_Codec_Encode_GetCrop(void *codec, int *enable, uint32_t *x, uint32_t *y,
@@ -6559,7 +6571,11 @@ extern int AL_Codec_Encode_GetCrop(void *codec, int *enable, uint32_t *x, uint32
  * answers 0 and does nothing; on a created channel the rectangle (in macroblocks)
  * goes to the H.264 encoder's crop parameter, which here is the SPS frame
  * cropping of the Helix encoder: the visible rectangle of the stream, applied
- * between pictures, the next picture is an IDR.  Other codecs: 0, no effect. */
+ * between pictures, the next picture is an IDR.  Other codecs: 0, no effect.
+ * T30 1.0.5 (0xc0b18 / GetChnCrop 0xc0de0, Ghidra project t30lib): the same
+ * code for H.264 (channel < 6, the 16-pixel check also with enable 0, i264e
+ * parameter 1 in macroblocks); an H.265 channel hands x, y, w, h in pixels to
+ * i265e parameter 1 and GetChnCrop answers them with enable 0. */
 int IMP_Encoder_SetChnCrop(int channel, const IMPEncoderCropCfg *cfg)
 {
     P2EncoderChannel *ch;
@@ -6567,11 +6583,24 @@ int IMP_Encoder_SetChnCrop(int channel, const IMPEncoderCropCfg *cfg)
 
     if (!p2_valid_channel(channel) || !cfg)
         return -1;
+#if defined(P2_T30_NATIVE)
+    if (channel >= 6)               /* T30 1.0.5: six encoder channels */
+        return -1;
+#endif
     if ((cfg->x | cfg->y | cfg->w | cfg->h) & 15u)
         return -1;
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(P2_T30_NATIVE)
+    if (ch->created && ch->codec_type == IMP_ENC_TYPE_HEVC) {
+        ch->h265_crop[0] = cfg->x;
+        ch->h265_crop[1] = cfg->y;
+        ch->h265_crop[2] = cfg->w;
+        ch->h265_crop[3] = cfg->h;
+        ch->h265_crop_set = 1;
+    }
+#endif
     if (ch->created && ch->codec_type == IMP_ENC_TYPE_AVC && ch->codec) {
         if (cfg->enable && (!cfg->w || !cfg->h ||
                             cfg->x + cfg->w > ch->attr.encAttr.picWidth ||
@@ -6594,10 +6623,22 @@ int IMP_Encoder_GetChnCrop(int channel, IMPEncoderCropCfg *cfg)
 
     if (!p2_valid_channel(channel) || !cfg)
         return -1;
+#if defined(P2_T30_NATIVE)
+    if (channel >= 6)
+        return -1;
+#endif
     memset(cfg, 0, sizeof(*cfg));
     EncoderInit();
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(P2_T30_NATIVE)
+    if (ch->created && ch->codec_type == IMP_ENC_TYPE_HEVC && ch->h265_crop_set) {
+        cfg->x = ch->h265_crop[0];
+        cfg->y = ch->h265_crop[1];
+        cfg->w = ch->h265_crop[2];
+        cfg->h = ch->h265_crop[3];
+    }
+#endif
     if (ch->created && ch->codec_type == IMP_ENC_TYPE_AVC && ch->codec) {
         int en = 0;
         uint32_t x = 0, y = 0, w = 0, h = 0;

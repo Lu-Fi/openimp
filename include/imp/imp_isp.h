@@ -447,6 +447,11 @@ int IMP_ISP_Tuning_GetISPRunningMode(IMPISPRunningMode *pmode);
  * @return 0 on success, negative on error
  */
 int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable);
+#if defined(PLATFORM_T30)
+/* T30 only (vendor 1.0.5): lens distortion correction on/off by rebuilding the
+ * ISP link graph (link 2 with the LDC block, link 0 without it). */
+int IMP_ISP_Tuning_SetISPLDC(IMPISPTuningOpsMode enable);
+#endif
 
 /**
  * Set horizontal flip

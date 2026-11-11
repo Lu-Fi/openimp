@@ -370,7 +370,7 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20 \
-	p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 dmic_t30_test radix_cmdlist_test radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test codec_rc_helix_test
+	p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test radix_cmdlist_test radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test codec_rc_helix_test
 	./codec_rc_helix_test
 	./radix_cmdlist_test
 	./radix_cabac_test
@@ -424,6 +424,7 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	./p2_gap_test_t30
 	./osd_attach_test_t30
 	./isp_gap_test_t30
+	./decoder_test_t30
 	./dmic_t30_test
 	./check_exports.sh
 
@@ -486,6 +487,13 @@ isp_gap_test_t20: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
 		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T20 -DPLATFORM_T21 -o $@ \
 		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c -lpthread
 
+# IMP_Decoder_* on T30 (2026-11-11, #308): the T10/T20/T21 software decoder test
+# (tests/t20/decoder_test.c) against the T30 frame layout
+decoder_test_t30: ../t20/decoder_test.c $(ROOT)/src/t23/openimp_t23_decoder.c $(ROOT)/src/t23/openimp_t23_jpegdec.c
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -fno-pie -no-pie '-D_Static_assert(a,b)=' -DPLATFORM_T30 \
+		-DOPENIMP_DECODER_SW_ONLY -I$(ROOT)/src -I$(ROOT)/include -o $@ ../t20/decoder_test.c \
+		$(ROOT)/src/t23/openimp_t23_decoder.c $(ROOT)/src/t23/openimp_t23_jpegdec.c -lpthread
+
 isp_gap_test_t30: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
 	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
 		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T30 -o $@ \
@@ -499,7 +507,7 @@ dmic_t30_test: dmic_t30_test.c $(ROOT)/src/t31/openimp_t31_dmic.c
 
 clean:
 	$(RM) codec_rc_helix_test p2_t30_enc_test radix_cmdlist_test radix_diff radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test radix_smoke radix_hevc_headers.265 hevc_diff hevc_cfg_diff
-	$(RM) p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 dmic_t30_test
+	$(RM) p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test
 	$(RM) isp_t31_movestate_test isp_t20_movestate_test isp_t21_movestate_test isp_t30_movestate_test isp_t31_awbzone_test isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \

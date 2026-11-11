@@ -119,6 +119,22 @@ any of the applications using the IMP API that were checked.
   `ISP_Tuning_SetISPLDC` (need a T30 device or driver work);
   `Encoder_Enable/DisableAllNCUDenoise`, `PadFrame`, `SetPadFrameAttr`,
   `Get/SetRencFirstFrameMult` (not worth it: closed-encoder or chip-specific).
+- 2026-11-12 (#308, branch `claude/t30-gaps`): 13 of these are exported now, 330 of 334
+  (left: `Encoder_Enable/DisableAllNCUDenoise`, `Get/SetRencFirstFrameMult`).
+  `Decoder_*`: the T10/T20/T21 software JPEG decoder (the vendor 1.0.5 uses ijpegd on the
+  VPU, as T21; same API). `Get/SetChnCrop`: the T21 code (SPS frame cropping of the Helix
+  encoder, six channels; an H.265 channel keeps the window for the getter only, the Radix
+  encoder codes no crop). `SetPadFrameAttr`/`PadFrame`: the T21 pad-frame queue (the vendor
+  1.0.5 has the same design, time stamp at +0x20). `ISP_Tuning_SetISPLDC`: the vendor link
+  rebuild (stream off, destroy, create link 2 with the LDC block or link 0, stream on); the
+  open driver serves the three OEM links. Host tests `p2_t30_enc_test`, `isp_gap_test_t30`,
+  `decoder_test_t30`; QEMU T30: apitest cases `decoder_t2x`, `padframe_t23`, `enchelp_t23`,
+  `ldc_t30` (see FEATURE_MATRIX.md). Still stored only: `Get/SetChnHSkip`,
+  `SetChnHSkipBlackEnhance` (the vendor 1.0.5 carries the same i264e skip-structure code as
+  T21: `i264e_init_skip_header`, `i264e_decide_slice_type_and_rd`, `i264e_icodec_black`; OpenIMP
+  codes it only with the T21 slice/descriptor syntax) and `Get/SetFisheyeEnableStatus` (the
+  vendor CreateChn hands the flag to i264e, whose `i264e_icodec_enc` reads it; the T30 ROI
+  registers of the command list are not known, see `SetChnROI`).
 
 On 2026-10-10 nothing in this list had run on a T30 camera. Since 2026-11-03 the
 T30X lab camera runs these calls (see the device section at the top); the current
