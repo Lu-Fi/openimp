@@ -12,10 +12,13 @@ int OpenIMP_T32_IspFd(void);
 int OpenIMP_T32_SensorSize(uint32_t *width, uint32_t *height);
 /* sensor of VI num: 0 none, 1 added, 2 enabled (streaming) */
 int OpenIMP_T32_SensorState(int num);
-/* /dev/misc-ivdc GET_DIRECT: 1 when the ISP feeds the encoder directly */
+/* /dev/misc-ivdc GET_DIRECT: the direct mode (0 = frames via memory, 1 = the
+ * ISP feeds the encoder directly, 2..4 several sensors) */
 int OpenIMP_T32_IvdcDirect(void);
 /* the answer IMP_System_Init got (0 before System_Init) */
 int OpenIMP_T32_IvdcDirectMode(void);
+/* 1 between IMP_System_Init and IMP_System_Exit */
+int OpenIMP_T32_SystemInitDone(void);
 
 /* IQ-bin loader (openimp_t32_bin.c, #289) */
 #include <imp/imp_common.h>

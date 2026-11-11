@@ -316,6 +316,14 @@ int IMP_EmuFrameSource_CreateChn(uint32_t chn_num, IMPFSChnAttr *chn_attr);
 int IMP_EmuFrameSource_DestroyChn(uint32_t chn_num);
 #endif
 
+#if defined(PLATFORM_T32)
+/* T32 2.x IVDC direct mode (#301): the mode System_Init found, the kernel's
+ * mode for the next System_Init (0..4), the IVDC line count (0..6480) */
+int IMP_FrameSource_GetDirectMode(int *direct_mode);
+int IMP_FrameSource_SetDirectMode(int direct_mode);
+int IMP_FrameSource_SetIvdcMemLine(int ivdc_mem_line);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

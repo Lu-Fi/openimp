@@ -18,9 +18,11 @@
  *    used yet by libimp in the reference flows nor served by the driver).
  *
  * MIPS ioctl encoding: dir bits 31:29 (1 none, 2 read, 4 write, 6 both),
- * size 28:16, type 15:8, nr 7:0.  Three requests carry a buffer larger
- * than their size field (DRIVER_VERSION 64 B, ENUMINPUT 36 B, DEFAULT_BIN
- * 880 B): the table's payload column is the real buffer.
+ * size 28:16, type 15:8, nr 7:0.  Some requests carry a buffer larger
+ * than their size field (DRIVER_VERSION 64 B (the vendor ko copies 96),
+ * ENUMINPUT 36 B, DEFAULT_BIN 880 B, GET/SET_FRAME_FORMAT 116 B: the vendor
+ * ko copies a struct frame_image_format, #301): the table's payload column
+ * is the real buffer.
  *
  * Each literal below is asserted against OI_T32_IOC(dir, type, nr,
  * sizeof(payload struct)), so a struct size change breaks the build.
@@ -66,6 +68,22 @@ typedef struct {                /* SET/GET_SENSOR_REGISTER */
 typedef struct {                /* REGISTER/RELEASE_SENSOR (= IMPSensorInfo) */
     uint8_t bytes[116];
 } T32IocSensorReg;
+
+/* GET/SET_FRAME_FORMAT (size field 4; the vendor ko copies these 116 bytes,
+ * the open driver the first word only; #301) */
+typedef struct {
+    uint32_t type;              /* 1: capture */
+    uint32_t width, height, pixelformat;
+    uint32_t field;             /* 4 (0 = 4 for the vendor ko) */
+    uint32_t bytesperline, sizeimage;   /* driver's answer */
+    uint32_t colorspace;        /* 8 */
+    uint32_t priv, flags, ycbcr_enc, quantization, xfer_func;
+    uint32_t crop_enable, crop_top, crop_left, crop_width, crop_height;
+    uint32_t scaler_enable, scaler_out_width, scaler_out_height;
+    uint32_t rate_bits, rate_mask;
+    uint32_t fcrop_enable, fcrop_top, fcrop_left, fcrop_width, fcrop_height;
+    uint32_t mirr_enable;
+} T32IocFrameFormat;
 
 typedef struct {                /* DRIVER_VERSION (size field 4) */
     char soc[32];               /* "PRJ007" */
@@ -217,6 +235,7 @@ _Static_assert(sizeof(T32IocCtrl) == 8, "T32 tisp_control");
 _Static_assert(sizeof(T32IocTuning) == 16, "T32 tuning default ctrl");
 _Static_assert(sizeof(T32IocReqBufs) == 20, "T32 requestbuffers");
 _Static_assert(sizeof(T32IocBuffer) == 96, "T32 tisp_buffer");
+_Static_assert(sizeof(T32IocFrameFormat) == 116, "T32 frame_image_format");
 _Static_assert(sizeof(T32IocChannelNode) == 64, "T32 soc_vpu channel_node");
 _Static_assert(offsetof(T32IocChannelNode, mdelay) == 8 &&
                offsetof(T32IocChannelNode, vpu_id) == 16 &&
@@ -327,7 +346,7 @@ _Static_assert(sizeof(IMPSensorInfo) == sizeof(T32IocSensorReg),
 #define OI_T32_IOC_SET_MEM_LINE                   0xc0045476u
 
 /* /dev/framechanN, FS base 130 */
-#define OI_T32_IOC_SET_FRAME_FORMAT               0xc0045483u  /* int (libimp passes 1); no format struct on T32 */
+#define OI_T32_IOC_SET_FRAME_FORMAT               0xc0045483u  /* size field int; buffer T32IocFrameFormat (116 B) */
 #define OI_T32_IOC_GET_FRAME_FORMAT               0xc0045484u
 #define OI_T32_IOC_REQBUFS                        0xc0145485u  /* {count, type 1, memory 2 = userptr, 0, 0} */
 #define OI_T32_IOC_QUERYBUF                       0xc0605486u
@@ -450,12 +469,12 @@ enum { OI_T32_DEV_ISP, OI_T32_DEV_M0, OI_T32_DEV_IVDC, OI_T32_DEV_FS, OI_T32_DEV
     X(IVDC, OI_T32_IOC_SET_H264_H265, NONE, 'T', 112, 0, 0, 0) \
     X(IVDC, OI_T32_IOC_GET_DIRECT, RW, 'T', 113, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN|OI_T32_F_DRV) \
     X(IVDC, OI_T32_IOC_SET_DIRECT, RW, 'T', 114, sizeof(int32_t), sizeof(int32_t), OI_T32_F_DRV) \
-    X(IVDC, OI_T32_IOC_SET_PADDR, RW, 'T', 115, sizeof(int32_t), sizeof(int32_t), 0) \
-    X(IVDC, OI_T32_IOC_MEM_LINE, RW, 'T', 116, sizeof(int32_t), sizeof(int32_t), 0) \
+    X(IVDC, OI_T32_IOC_SET_PADDR, RW, 'T', 115, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN) \
+    X(IVDC, OI_T32_IOC_MEM_LINE, RW, 'T', 116, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN) \
     X(IVDC, OI_T32_IOC_MAX_STRIDE, RW, 'T', 117, sizeof(int32_t), sizeof(int32_t), 0) \
     X(IVDC, OI_T32_IOC_SET_MEM_LINE, RW, 'T', 118, sizeof(int32_t), sizeof(int32_t), 0) \
-    X(FS, OI_T32_IOC_SET_FRAME_FORMAT, RW, 'T', 131, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN|OI_T32_F_DRV) \
-    X(FS, OI_T32_IOC_GET_FRAME_FORMAT, RW, 'T', 132, sizeof(int32_t), sizeof(int32_t), OI_T32_F_SEEN|OI_T32_F_DRV) \
+    X(FS, OI_T32_IOC_SET_FRAME_FORMAT, RW, 'T', 131, sizeof(int32_t), sizeof(T32IocFrameFormat), OI_T32_F_SEEN|OI_T32_F_DRV) \
+    X(FS, OI_T32_IOC_GET_FRAME_FORMAT, RW, 'T', 132, sizeof(int32_t), sizeof(T32IocFrameFormat), OI_T32_F_SEEN|OI_T32_F_DRV) \
     X(FS, OI_T32_IOC_REQBUFS, RW, 'T', 133, sizeof(T32IocReqBufs), sizeof(T32IocReqBufs), OI_T32_F_SEEN|OI_T32_F_DRV) \
     X(FS, OI_T32_IOC_QUERYBUF, RW, 'T', 134, sizeof(T32IocBuffer), sizeof(T32IocBuffer), OI_T32_F_DRV) \
     X(FS, OI_T32_IOC_QBUF, RW, 'T', 135, sizeof(T32IocBuffer), sizeof(T32IocBuffer), OI_T32_F_SEEN|OI_T32_F_DRV) \

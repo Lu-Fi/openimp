@@ -58,7 +58,7 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN)
 		openimp-ioctl-seq-bin.txt --ignore $(OI_BIN_PENDING)
 	for s in fs fs3; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_FS_PENDING) || exit 1; done
-	for s in vpu jpeg h264 h265; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
+	for s in vpu jpeg h264 h265 ivdc; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_ENC_PENDING) || exit 1; done
 	grep -v '^#' vendor-2.2.0-jpeg-job.txt > $(BUILD)/t32-jpeg-job-vendor.txt
 	grep -v '^#' openimp-jpeg-job.txt > $(BUILD)/t32-jpeg-job-openimp.txt

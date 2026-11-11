@@ -93,6 +93,8 @@ objects="$objects $output_dir/t32_tuning.o"
 objects="$objects $output_dir/t32_isp_osd.o"
 # FrameSource on the 2.x framechan ABI, System bind (#290)
 compile t32_fs src/t32/openimp_t32_fs.c
+# IVDC direct mode (#301): ISP channel 0 -> encoder without frame buffers
+compile t32_ivdc src/t32/openimp_t32_ivdc.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)
 compile t32_vpu src/t32/openimp_t32_vpu.c
 compile t32_encoder src/t32/openimp_t32_encoder.c

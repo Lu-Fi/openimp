@@ -704,6 +704,8 @@ again:
                 printf(" %08x", w[k]);
             printf("\n");
         }
+        if (getenv("T32_ENC_IVDC"))     /* #301: ISP -> encoder direct (IVDC) */
+            ea.bEnableIvdc = atoi(getenv("T32_ENC_IVDC")) != 0;
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
         if (osd) {
