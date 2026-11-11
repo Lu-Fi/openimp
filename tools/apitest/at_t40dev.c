@@ -1727,11 +1727,12 @@ int t40dev_main(int argc, char **argv)
         int a1, a2, a3, b1, b2, c1, c2, c3, d1, d2, f1, f2, f3, sh = 0; unsigned char rgn[2048];
         a1 = IMP_ISP_SetPreDqtime((IMPVI_NUM)4, &dq);
         a2 = IMP_ISP_SetPreDqtime(IMPVI_MAIN, NULL);
-        /* the valid call (ioctl 0xc0045430) oopses our tx_isp_t40 in QEMU (2026-11-11, NULL op at +0x10c): only with T40D_PREDQ=1 */
-        a3 = getenv("T40D_PREDQ") && !strcmp(getenv("T40D_PREDQ"), "1") ? IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) : -77;
+        /* the valid call (ioctl 0xc0045430) oopsed tx_isp_t40 before #322 (frame source missing in graph slot 4);
+         * T40D_PREDQ=0 skips it for an older module */
+        a3 = getenv("T40D_PREDQ") && !strcmp(getenv("T40D_PREDQ"), "0") ? -77 : IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq);
         stream_for(1.0, &e);
         R("ISP_SetPreDqtime", a3 == -77 ? (a1 == -4 && a2 == -9 ? "PART" : "FAIL") : OK(a1 == -4 && a2 == -9 && a3 == 0 && e.frames > 10),
-          "num 4 rc=%d (-4), NULL rc=%d (-9), dqtime 0 rc=%d (0; -77 = not sent, T40D_PREDQ=1); %u frames/1 s after", a1, a2, a3, e.frames);
+          "num 4 rc=%d (-4), NULL rc=%d (-9), dqtime 0 rc=%d (0; -77 = not sent, T40D_PREDQ=0); %u frames/1 s after", a1, a2, a3, e.frames);
         memset(&hl, 0x5a, sizeof hl);
         b1 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hl);
         b2 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, NULL);
