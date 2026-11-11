@@ -273,6 +273,16 @@ int IMP_ISP_Open(void);
  */
 int IMP_ISP_Close(void);
 
+#if defined(PLATFORM_T32)
+/*
+ * T32 2.x sensor lifecycle: every call takes the VI number (as the T41
+ * vendor library does); IMP_ISP_AddSensor writes it into info->sensor_id.
+ */
+int IMP_ISP_AddSensor(IMPVI_NUM num, IMPSensorInfo *info);
+int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info);
+int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info);
+int IMP_ISP_DisableSensor(IMPVI_NUM num);
+#else
 /**
  * Add sensor to ISP (T21/T23/T31/C100)
  *
@@ -337,6 +347,7 @@ int IMP_ISP_DisableSensor(void);
  * @return 0 on success, negative on error
  */
 int IMP_ISP_DisableSensor_VI(IMPVI vi);
+#endif /* PLATFORM_T32 */
 
 /**
  * Enable ISP tuning

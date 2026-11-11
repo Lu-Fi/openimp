@@ -84,6 +84,7 @@ You can specify the target platform with the `PLATFORM` variable:
 - `T23` - Ingenic T23
 - `T30` - Ingenic T30 (builds against a real T30 kernel; not device-verified here)
 - `T31` - Ingenic T31 (default)
+- `T32` - Ingenic T32 PRJ007, **planned**: platform skeleton only (`build-t32.sh`, vendor 2.x kernel ABI as open-tx-isp `driver/t32`); the T32 layouts are asserted at build time, every entry point is a stub that logs and returns -1. Toolchain: `TOOLCHAIN_PREFIX=<T32 build>/host/bin/mipsel-linux` or a `thingino-out/*t32*` build next to the repository.
 - `T40` - Ingenic T40
 - `T41` - Ingenic T41
 

@@ -46,6 +46,29 @@ typedef enum {
 /**
  * Rate control mode
  */
+#if defined(PLATFORM_T32)
+/* T32 (vendor 2.x API): T23-family modes plus CVBR/AVBR/QVBR; the
+ * sentinel moves to 7 (QVBR is listed for PRJ009/PRJ010 only). */
+typedef enum {
+    IMP_ENC_RC_MODE_FIXQP = 0,
+    IMP_ENC_RC_MODE_CBR = 1,
+    IMP_ENC_RC_MODE_VBR = 2,
+    IMP_ENC_RC_MODE_SMART = 3,
+    IMP_ENC_RC_MODE_CVBR = 4,
+    IMP_ENC_RC_MODE_AVBR = 5,
+    IMP_ENC_RC_MODE_QVBR = 6,
+    IMP_ENC_RC_MODE_INV = 7,
+} IMPEncoderRcMode;
+
+#define ENC_RC_MODE_FIXQP IMP_ENC_RC_MODE_FIXQP
+#define ENC_RC_MODE_CBR IMP_ENC_RC_MODE_CBR
+#define ENC_RC_MODE_VBR IMP_ENC_RC_MODE_VBR
+#define ENC_RC_MODE_SMART IMP_ENC_RC_MODE_SMART
+#define ENC_RC_MODE_CVBR IMP_ENC_RC_MODE_CVBR
+#define ENC_RC_MODE_AVBR IMP_ENC_RC_MODE_AVBR
+#define ENC_RC_MODE_QVBR IMP_ENC_RC_MODE_QVBR
+#define ENC_RC_MODE_INV IMP_ENC_RC_MODE_INV
+#else
 typedef enum {
     IMP_ENC_RC_MODE_FIXQP = 0,          /**< Fixed QP */
     IMP_ENC_RC_MODE_CBR = 1,            /**< Constant bitrate */
@@ -66,6 +89,7 @@ typedef enum {
 #define ENC_RC_MODE_SMART IMP_ENC_RC_MODE_SMART
 #define ENC_RC_MODE_INV IMP_ENC_RC_MODE_INV
 #endif
+#endif /* PLATFORM_T32 */
 
 /**
  * GOP mode
@@ -266,7 +290,9 @@ _Static_assert(offsetof(IMPEncoderChnAttr, rcAttr) == 0x34, "T41 IMPEncoderChnAt
 _Static_assert(offsetof(IMPEncoderChnAttr, gopAttr) == 0x60, "T41 IMPEncoderChnAttr.gopAttr ABI mismatch");
 _Static_assert(offsetof(IMPEncoderChnAttr, bEnableIvdc) == 0x78, "T41 IMPEncoderChnAttr.bEnableIvdc ABI mismatch");
 _Static_assert(sizeof(IMPEncoderChnAttr) == 0x7c, "T41 IMPEncoderChnAttr ABI mismatch");
-#elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T32)
+#if !defined(PLATFORM_T32)
 typedef struct {
     uint32_t qp;
 } IMPEncoderAttrH264FixQP;
@@ -326,6 +352,7 @@ typedef struct {
 } IMPEncoderAttrH265VBR;
 
 typedef IMPEncoderAttrH265VBR IMPEncoderAttrH265Smart;
+#endif /* !PLATFORM_T32 */
 
 typedef struct {
     bool enable;
@@ -377,6 +404,197 @@ typedef struct {
     IMPSkipType maxHSkipType;
 } IMPEncoderAttrInitHSkip;
 
+#if defined(PLATFORM_T32)
+/*
+ * T32 rate-control attributes (vendor 2.x API, PRJ007).  Layout measured
+ * with the mipsel compiler (sizes and offsets in the asserts below); QPs
+ * are bytes, H.265 uses the same layouts as H.264.  The union is 60 bytes
+ * (CVBR is the largest member), the mode attribute 64.
+ */
+typedef struct {
+    uint32_t IQp;
+    uint32_t PQp;
+    uint32_t BQp;
+    bool blkQpEn;
+} IMPEncoderAttrH264FixQP;          /* 16 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    bool blkQpEn;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint32_t outBitRate;            /* 0x08 */
+    int8_t iBiasLvl;                /* 0x0c */
+    uint16_t IPfrmQPDelta;          /* 0x0e */
+    uint16_t PPfrmQPDelta;          /* 0x10 */
+    uint32_t staticTime;            /* 0x14 */
+    uint8_t flucLvl;                /* 0x18 */
+    uint32_t qualityLvl;            /* 0x1c */
+    uint32_t maxIprop;
+    uint32_t minIprop;
+    uint32_t maxIPictureSize;
+    uint32_t maxPPictureSize;       /* 0x2c */
+} IMPEncoderAttrH264CBR;            /* 48 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    bool blkQpEn;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint32_t maxBitRate;            /* 0x08 */
+    int8_t iBiasLvl;                /* 0x0c */
+    uint32_t changePos;             /* 0x10 */
+    uint32_t staticTime;
+    uint32_t qualityLvl;
+    uint32_t maxIprop;
+    uint32_t minIprop;
+    uint32_t maxIPictureSize;
+    uint32_t maxPPictureSize;       /* 0x28 */
+} IMPEncoderAttrH264VBR;            /* 44 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    bool blkQpEn;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint32_t maxBitRate;            /* 0x08 */
+    int8_t iBiasLvl;                /* 0x0c */
+    uint32_t changePos;             /* 0x10 */
+    uint32_t staticTime;
+    uint32_t qualityLvl;
+    uint32_t maxIprop;
+    uint32_t minIprop;              /* 0x20 */
+    uint8_t minStillRate;           /* 0x24 */
+    uint8_t maxStillQp;
+    bool superSmartEn;
+    uint8_t supSmtStillLvl;
+    uint8_t supSmtStillRateLvl;     /* 0x28 */
+    uint8_t maxSupSmtStillRate;
+    uint32_t maxIPictureSize;       /* 0x2c */
+    uint32_t maxPPictureSize;       /* 0x30 */
+} IMPEncoderAttrH264Smart;          /* 52 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    bool blkQpEn;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint32_t maxBitRate;            /* 0x08 */
+    uint32_t longMaxBitRate;
+    uint32_t longMinBitRate;
+    int8_t iBiasLvl;                /* 0x14 */
+    uint32_t changePos;             /* 0x18 */
+    uint32_t shortStatTime;
+    uint32_t longStatTime;
+    uint32_t qualityLvl;
+    uint32_t maxIprop;
+    uint32_t minIprop;              /* 0x2c */
+    uint16_t extraBitRate;          /* 0x30 */
+    uint32_t maxIPictureSize;       /* 0x34 */
+    uint32_t maxPPictureSize;       /* 0x38 */
+} IMPEncoderAttrH264CVBR;           /* 60 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    bool blkQpEn;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint32_t maxBitRate;            /* 0x08 */
+    int8_t iBiasLvl;                /* 0x0c */
+    uint32_t changePos;             /* 0x10 */
+    uint32_t staticTime;
+    uint32_t qualityLvl;
+    uint32_t maxIprop;
+    uint32_t minIprop;              /* 0x20 */
+    uint8_t minStillRate;           /* 0x24 */
+    uint8_t maxStillQp;
+    uint32_t maxIPictureSize;       /* 0x28 */
+    uint32_t maxPPictureSize;       /* 0x2c */
+} IMPEncoderAttrH264AVBR;           /* 48 */
+
+typedef struct {
+    uint8_t maxQp;
+    uint8_t minQp;
+    uint8_t initialQp;
+    uint8_t maxIQp;
+    uint8_t minIQp;
+    uint8_t maxReEncodeTimes;
+    uint32_t targetBitrate;         /* 0x08 */
+    int8_t iBiasLvl;                /* 0x0c */
+    uint32_t staticTime;            /* 0x10 */
+    uint32_t maxIPictureSize;
+    uint32_t maxPPictureSize;       /* 0x18 */
+    uint16_t maxbrPct;              /* 0x1c */
+    uint16_t maxPsnr;
+    uint16_t minPsnr;
+    uint16_t targetPsnr;            /* 0x22 */
+} IMPEncoderAttrH264QVBR;           /* 36 */
+
+typedef IMPEncoderAttrH264FixQP IMPEncoderAttrH265FixQP;
+typedef IMPEncoderAttrH264CBR IMPEncoderAttrH265CBR;
+typedef IMPEncoderAttrH264VBR IMPEncoderAttrH265VBR;
+typedef IMPEncoderAttrH264Smart IMPEncoderAttrH265Smart;
+typedef IMPEncoderAttrH264CVBR IMPEncoderAttrH265CVBR;
+typedef IMPEncoderAttrH264AVBR IMPEncoderAttrH265AVBR;
+typedef IMPEncoderAttrH264QVBR IMPEncoderAttrH265QVBR;
+
+typedef struct {
+    uint32_t qp;
+} IMPEncoderAttrJPEGFixQP;
+
+typedef struct {
+    IMPEncoderRcMode rcMode;
+    union {
+        IMPEncoderAttrH264FixQP attrH264FixQp;
+        IMPEncoderAttrH264CBR attrH264Cbr;
+        IMPEncoderAttrH264VBR attrH264Vbr;
+        IMPEncoderAttrH264Smart attrH264Smart;
+        IMPEncoderAttrH264CVBR attrH264CVbr;
+        IMPEncoderAttrH264AVBR attrH264AVbr;
+        IMPEncoderAttrH264QVBR attrH264QVbr;
+        IMPEncoderAttrH265FixQP attrH265FixQp;
+        IMPEncoderAttrH265CBR attrH265Cbr;
+        IMPEncoderAttrH265VBR attrH265Vbr;
+        IMPEncoderAttrH265Smart attrH265Smart;
+        IMPEncoderAttrH265CVBR attrH265CVbr;
+        IMPEncoderAttrH265AVBR attrH265AVbr;
+        IMPEncoderAttrH265QVBR attrH265QVbr;
+        IMPEncoderAttrJPEGFixQP attrJPEGFixQp;
+    };
+} IMPEncoderAttrRcMode;
+
+_Static_assert(sizeof(IMPEncoderAttrH264FixQP) == 16, "T32 IMPEncoderAttrH264FixQP ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264CBR) == 48 &&
+               offsetof(IMPEncoderAttrH264CBR, outBitRate) == 0x08 &&
+               offsetof(IMPEncoderAttrH264CBR, IPfrmQPDelta) == 0x0e &&
+               offsetof(IMPEncoderAttrH264CBR, flucLvl) == 0x18 &&
+               offsetof(IMPEncoderAttrH264CBR, maxPPictureSize) == 0x2c,
+               "T32 IMPEncoderAttrH264CBR ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264VBR) == 44 &&
+               offsetof(IMPEncoderAttrH264VBR, changePos) == 0x10,
+               "T32 IMPEncoderAttrH264VBR ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264Smart) == 52 &&
+               offsetof(IMPEncoderAttrH264Smart, maxIPictureSize) == 0x2c,
+               "T32 IMPEncoderAttrH264Smart ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264CVBR) == 60 &&
+               offsetof(IMPEncoderAttrH264CVBR, extraBitRate) == 0x30,
+               "T32 IMPEncoderAttrH264CVBR ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264AVBR) == 48, "T32 IMPEncoderAttrH264AVBR ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrH264QVBR) == 36 &&
+               offsetof(IMPEncoderAttrH264QVBR, maxbrPct) == 0x1c,
+               "T32 IMPEncoderAttrH264QVBR ABI mismatch");
+_Static_assert(sizeof(IMPEncoderAttrRcMode) == 64, "T32 IMPEncoderAttrRcMode ABI mismatch");
+#else
 typedef struct {
     IMPEncoderRcMode rcMode;
     union {
@@ -390,6 +608,7 @@ typedef struct {
         IMPEncoderAttrH265Smart attrH265Smart;
     };
 } IMPEncoderAttrRcMode;
+#endif /* PLATFORM_T32 */
 
 #if defined(PLATFORM_T20)
 /* T20 3.12.0 header: a demask attribute sits between attrFrmUsed and
@@ -541,14 +760,23 @@ _Static_assert(sizeof(IMPEncoderROICfg) == 0x1c,
 _Static_assert(sizeof(IMPEncoderSuperFrmCfg) == 0x14,
                "legacy IMPEncoderSuperFrmCfg ABI mismatch");
 
+#if !defined(PLATFORM_T32)
 _Static_assert(sizeof(IMPEncoderAttrRcMode) == 0x2c,
                "legacy IMPEncoderAttrRcMode ABI mismatch");
+#endif
 #if defined(PLATFORM_T20)
 _Static_assert(sizeof(IMPEncoderRcAttr) == 124 &&
                offsetof(IMPEncoderRcAttr, attrDemask) == 68 &&
                offsetof(IMPEncoderRcAttr, attrDenoise) == 80 &&
                offsetof(IMPEncoderRcAttr, attrHSkip) == 96,
                "T20 IMPEncoderRcAttr ABI mismatch");
+#elif defined(PLATFORM_T32)
+_Static_assert(sizeof(IMPEncoderRcAttr) == 132 &&
+               offsetof(IMPEncoderRcAttr, attrRcMode) == 12 &&
+               offsetof(IMPEncoderRcAttr, attrFrmUsed) == 76 &&
+               offsetof(IMPEncoderRcAttr, attrDenoise) == 88 &&
+               offsetof(IMPEncoderRcAttr, attrHSkip) == 104,
+               "T32 IMPEncoderRcAttr ABI mismatch (vendor 2.x: 132 bytes)");
 #else
 _Static_assert(sizeof(IMPEncoderRcAttr) == 0x70,
                "legacy IMPEncoderRcAttr ABI mismatch");
@@ -563,6 +791,11 @@ _Static_assert(sizeof(IMPEncoderCHNAttr) == 172,
 #elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
 _Static_assert(sizeof(IMPEncoderCHNAttr) == 0xa0,
                "T21/T30 IMPEncoderCHNAttr ABI mismatch");
+#elif defined(PLATFORM_T32)
+_Static_assert(offsetof(IMPEncoderCHNAttr, bEnableIvdc) == 180,
+               "T32 IMPEncoderCHNAttr.bEnableIvdc ABI mismatch");
+_Static_assert(sizeof(IMPEncoderCHNAttr) == 184,
+               "T32 IMPEncoderCHNAttr ABI mismatch (vendor 2.x: 184 bytes)");
 #else
 _Static_assert(offsetof(IMPEncoderCHNAttr, bEnableIvdc) == 0xa0,
                "T23 IMPEncoderCHNAttr.bEnableIvdc ABI mismatch");
@@ -921,7 +1154,8 @@ typedef enum {
     IMP_ENC_SLICE_MAX_ENUM,
 } IMPEncoderSliceType;
 
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T32)
 typedef union {
     IMPEncoderH264NaluType h264Type;
     IMPEncoderH265NaluType h265Type;
@@ -1044,7 +1278,7 @@ typedef struct {
 _Static_assert(sizeof(IMPEncoderJpegeQl) == 257,
                "IMPEncoderJpegeQl T20 ABI mismatch");
 #elif defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
-    defined(PLATFORM_T41)
+    defined(PLATFORM_T32) || defined(PLATFORM_T41)
 /* T21 1.0.33 / T23 / T30 libimp: 129 bytes; T41 1.2.x has the same form */
 typedef struct {
     bool user_ql_en;
@@ -1320,7 +1554,8 @@ int IMP_Encoder_GetChnEvalInfo(int encChn, void *info);
 /* Additional encoder functions (raptor-hal parity) */
 int IMP_Encoder_GetStreamBufSize(int encChn, int *size);
 int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt);
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T32)
 int IMP_Encoder_SetChnFrmRate(int encChn, const IMPEncoderFrmRate *rate);
 int IMP_Encoder_GetChnFrmRate(int encChn, IMPEncoderFrmRate *rate);
 int IMP_Encoder_SetGOPSize(int encChn, const IMPEncoderGOPSizeCfg *gop);
@@ -1371,7 +1606,8 @@ int IMP_Encoder_SetChnQpBoundsPerFrame(int encChn, int minQpI, int maxQpI,
 int IMP_Encoder_SetChnMaxPictureSize(int encChn, uint32_t maxPictureSizeI,
                                     uint32_t maxPictureSizeP);
 int IMP_Encoder_SetChnQpIPDelta(int encChn, int delta);
-#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T32)
 int IMP_Encoder_GetChnEncType(int encChn, IMPPayloadType *encType);
 #else
 int IMP_Encoder_GetChnEncType(int encChn, IMPEncoderEncType *encType);

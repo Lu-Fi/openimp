@@ -42,7 +42,18 @@ typedef enum {
 typedef enum {
     IMPVI_MAIN = 0,     /**< Main video input */
     IMPVI_SEC = 1       /**< Secondary video input */
+#if defined(PLATFORM_T32)
+    ,
+    IMPVI_THR = 2,      /**< T32 2.x: third video input */
+    IMPVI_FOUR = 3,     /**< T32 2.x: fourth video input */
+    IMPVI_BUTT,         /**< T32 2.x: number of video inputs */
+#endif
 } IMPVI;
+
+#if defined(PLATFORM_T32)
+/* T32 2.x names the sensor/VI number type IMPVI_NUM */
+typedef IMPVI IMPVI_NUM;
+#endif
 
 /**
  * Pixel format
@@ -231,9 +242,9 @@ _Static_assert(offsetof(IMPFrameInfo, timeStamp) == 0x28,
 _Static_assert(sizeof(IMPFrameInfo) == 0x30,
                "T40 IMPFrameInfo ABI mismatch");
 #endif
-#elif defined(PLATFORM_T41)
+#elif defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /**
- * Vendor T41 1.2.5/1.2.6 imp_common.h: 0x30 bytes, direct_phyAddr at 0x20,
+ * Vendor T41 1.2.5/1.2.6 imp_common.h: 0x30 bytes (T32 2.x: the same 48 bytes), direct_phyAddr at 0x20,
  * pool at 0x24. Same layout as the private copy in src/t40/openimp_p1.c.
  */
 typedef struct {
@@ -350,6 +361,59 @@ typedef struct {
     int sensor_id;                          /**< Sensor ID (80-83) */
     /* Total: 32+4+4+24+4+4+4+4+4 = 84 bytes */
 } IMPSensorInfo;
+#elif defined(PLATFORM_T32)
+/**
+ * T32 (vendor 2.x API, PRJ007): 116 bytes (0x74).  The T41 layout plus
+ * the MIPI switch GPIO pair after power_gpio and the initial sensor frame
+ * rate at the end.  Vendor libimp 2.2.0 IMP_ISP_AddSensor(vinum, info)
+ * writes vinum into sensor_id (sh at 0x5c), keeps a 116-byte copy and
+ * hands the caller's object unchanged to REGISTER_SENSOR (0x80745405,
+ * size field 0x74), so public and kernel layouts are the same object.
+ */
+typedef struct {
+    uint32_t num;                       /**< fps numerator (16 bits used) */
+    uint32_t den;                       /**< fps denominator (16 bits used) */
+} IMPISPSensorFps;
+
+typedef struct {
+    char name[32];                      /**< Sensor name (0x00-0x1f) */
+    TXSensorControlBusType cbus_type;   /**< Control bus type (0x20) */
+    union {
+        TXSNSI2CConfig i2c;             /**< I2C bus information */
+        struct {
+            char modalias[32];          /**< SPI modalias */
+            int bus_num;                /**< SPI bus number */
+        } spi;
+    };                                  /**< 0x24-0x47 */
+    int rst_gpio;                       /**< Reset GPIO (0x48) */
+    int pwdn_gpio;                      /**< Power down GPIO (0x4c) */
+    int power_gpio;                     /**< Power GPIO (0x50) */
+    int switch_gpio;                    /**< MIPI switch GPIO, multi-sensor (0x54) */
+    int switch_gpio_state;              /**< MIPI switch level for this sensor (0x58) */
+    unsigned short sensor_id;           /**< Sensor ID = VI number (0x5c) */
+    short _reserved_pad;                /**< padding to 0x60 */
+    int video_interface;                /**< IMPSensorVinType (0x60) */
+    int mclk;                           /**< IMPSensorMclk (0x64) */
+    int default_boot;                   /**< Default boot setting (0x68) */
+    IMPISPSensorFps fps;                /**< Initial frame rate (0x6c) */
+} IMPSensorInfo;
+
+_Static_assert(offsetof(IMPSensorInfo, cbus_type) == 0x20,
+               "T32 IMPSensorInfo.cbus_type ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, rst_gpio) == 0x48,
+               "T32 IMPSensorInfo.rst_gpio ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, switch_gpio) == 0x54,
+               "T32 IMPSensorInfo.switch_gpio ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, sensor_id) == 0x5c,
+               "T32 IMPSensorInfo.sensor_id ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, video_interface) == 0x60,
+               "T32 IMPSensorInfo.video_interface ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, default_boot) == 0x68,
+               "T32 IMPSensorInfo.default_boot ABI mismatch");
+_Static_assert(offsetof(IMPSensorInfo, fps) == 0x6c,
+               "T32 IMPSensorInfo.fps ABI mismatch");
+_Static_assert(sizeof(IMPSensorInfo) == 0x74,
+               "T32 IMPSensorInfo ABI mismatch (vendor 2.x: 116 bytes)");
 #elif defined(PLATFORM_T40) || defined(PLATFORM_T41)
 /**
  * Vendor T40 1.3.1 / T41 1.2.5 imp_isp.h: 100 bytes (0x64).

@@ -21,7 +21,7 @@ ifdef OPENIMP_T23_HELIX_BRIDGE
 export OPENIMP_T23_HELIX_BRIDGE
 endif
 
-.PHONY: all t20 t21 t23 t30 t31 t40 t41 check export-check release-check clean install apitest
+.PHONY: all t20 t21 t23 t30 t31 t32 t40 t41 check export-check release-check clean install apitest
 
 all:
 	./build-for-device.sh $(PLATFORM)
@@ -40,6 +40,10 @@ t30:
 
 t31:
 	./build-t31.sh
+
+# T32 platform skeleton (planned, #286): stub libimp, layout asserts only
+t32:
+	./build-t32.sh
 
 t40:
 	./build-t40.sh
@@ -108,7 +112,7 @@ release-check:
 	./tools/release-check.sh
 
 clean:
-	$(RM) -r build/t20 build/t21 build/t23 build/t30 build/t31 build/t40 build/t41
+	$(RM) -r build/t20 build/t21 build/t23 build/t30 build/t31 build/t32 build/t40 build/t41
 
 install: all
 	install -d "$(DESTDIR)$(PREFIX)/include/imp"

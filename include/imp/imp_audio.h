@@ -68,7 +68,7 @@ typedef struct {
 /**
  * Audio input channel parameters
  */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 /* T23 1.1.0-1.3.0 and T41 1.x: the vendor struct has the AEC channel select
  * between the depth and Rev (12 bytes); with the 8-byte struct IMP_AI_GetChnParam
  * left the caller's Rev unset and SetChnParam took aecChn for Rev. */
