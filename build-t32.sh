@@ -42,6 +42,25 @@ base_flags="$base_flags -DOPENIMP_DEBUG=${OPENIMP_DEBUG:-0}"
 strict_flags="$base_flags -Wall -Wextra -Werror"
 repo_includes="-I$project_dir/include -I$project_dir/src"
 
+# Vendor T32 2.2.0 public headers (ingenic-headers T32/2.2.0/en, as the T41
+# build uses its 1.2.0 headers): the tuning API's prototypes and layouts
+if [ -z "${T32_HEADERS:-}" ]; then
+    for candidate in \
+        ${THINGINO_DIR:+"$THINGINO_DIR"/dl/thingino-raptor-hal/git/ingenic-headers/T32/2.2.0/en} \
+        ${THINGINO_DIR:+"$THINGINO_DIR"/output/*/*/build/thingino-raptor-hal-*/ingenic-headers/T32/2.2.0/en} \
+        "$project_dir"/../thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T32/2.2.0/en \
+        "$project_dir"/../../thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T32/2.2.0/en \
+        "$project_dir"/../../../thingino-out/*/build/thingino-raptor-hal-*/ingenic-headers/T32/2.2.0/en
+    do
+        if [ -f "$candidate/imp/imp_isp.h" ]; then
+            T32_HEADERS=$candidate
+            break
+        fi
+    done
+fi
+: "${T32_HEADERS:?set T32_HEADERS to the vendor T32 2.2.0 header root (ingenic-headers T32/2.2.0/en)}"
+test -f "$T32_HEADERS/imp/imp_isp.h"
+
 objects=
 compile()
 {
@@ -64,6 +83,10 @@ compile t32_skeleton src/t32/openimp_t32_skeleton.c
 compile t32_isp src/t32/openimp_t32_isp.c
 # userspace IQ-bin loader, day/night bins (#289)
 compile t32_bin src/t32/openimp_t32_bin.c
+# ISP tuning on /dev/isp-m0 (#296): vendor 2.2.0 headers instead of include/
+"$compiler" $strict_flags -I"$T32_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t32/openimp_t32_tuning.c" -o "$output_dir/t32_tuning.o"
+objects="$objects $output_dir/t32_tuning.o"
 # FrameSource on the 2.x framechan ABI, System bind (#290)
 compile t32_fs src/t32/openimp_t32_fs.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)

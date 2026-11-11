@@ -57,6 +57,9 @@ check: $(TEST_BIN) $(HERA_BIN)
 	grep -v '^#' openimp-jpeg-job.txt > $(BUILD)/t32-jpeg-job-openimp.txt
 	diff $(BUILD)/t32-jpeg-job-vendor.txt $(BUILD)/t32-jpeg-job-openimp.txt && \
 		echo "JPEG job register image (jpegQp -1/30/80): identical"
+	# ISP tuning (#296): id, direction, VI and payload of every IMP_ISP_Tuning_*
+	# request and the return codes, vendor 2.2.0 vs OpenIMP
+	python3 $(PROJECT_DIR)/tools/t32/t32_tuning_table.py diff vendor-2.2.0-tuning.txt openimp-tuning.txt --rc
 
 $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)
