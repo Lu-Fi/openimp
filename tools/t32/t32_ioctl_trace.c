@@ -15,6 +15,8 @@
  * DEFAULT_CMD_ISP_TUNING (0xc0105467): its value word is a pointer, and the
  * n bytes behind it are logged before and after the call as
  *   P <seq> in|out <id> <hex bytes>   (one shot; 0 disarms).
+ * T32_TRACE_OSD=1 (#336) logs that payload for every ISP OSD request (ids
+ * 0x08000074 / 0x080000a0..a2) without arming.
  * Output: $T32_TRACE_LOG (default /tmp/t32-ioctl.log).  Diagnostic tool,
  * never part of libimp.
  */
@@ -41,6 +43,7 @@ static int safe_copy(void *dst, const void *src, unsigned n);
 static int (*real_ioctl)(int, unsigned long, ...);
 static int copy_pipe[2] = { -1, -1 };
 static unsigned tuning_bytes;           /* oi_trace_tuning_size(), one shot */
+static int osd_ids;                     /* T32_TRACE_OSD (#336) */
 
 static void trace_init(void)
 {
@@ -52,6 +55,7 @@ static void trace_init(void)
     if (log_file)
         setvbuf(log_file, NULL, _IOLBF, 0);
     dump_bytes = dump ? (unsigned)strtoul(dump, NULL, 0) : 0;
+    osd_ids = getenv("T32_TRACE_OSD") != NULL;
     if (dump_bytes > 1024)
         dump_bytes = 1024;
     dump = getenv("T32_TRACE_VPU");
@@ -148,6 +152,24 @@ void oi_trace_tuning_size(unsigned n)
     pthread_mutex_unlock(&lock);
 }
 
+/* T32_TRACE_OSD=1 (#336): the ISP OSD ids always log their payload
+ * (mask 24, draw 36, OSD attribute 32, OSD block 20 bytes) */
+
+static unsigned osd_tuning_size(const void *arg)
+{
+    unsigned w[4];
+
+    if ((unsigned long)arg < 0x1000 || safe_copy(w, arg, sizeof w))
+        return 0;
+    switch (w[2]) {
+    case 0x08000074: return 24;
+    case 0x080000a0: return 36;
+    case 0x080000a1: return 32;
+    case 0x080000a2: return 20;
+    default: return 0;
+    }
+}
+
 /* the payload behind a tuning request's value pointer (#296) */
 static void dump_tuning(unsigned long s, const char *tag, const void *arg, unsigned n)
 {
@@ -212,8 +234,11 @@ int ioctl(int fd, unsigned long req, ...)
             dump_words(s, "in", arg, n);
         if (vpu_bytes && (req == 0xc0406302UL || req == 0xc0406303UL))
             dump_vpu_job(s, arg);
-        if (req == 0xc0105467UL && tuning_bytes) {
-            tun = tuning_bytes;
+        if (req == 0xc0105467UL && !tuning_bytes && osd_ids)
+            tun = osd_tuning_size(arg);
+        if (req == 0xc0105467UL && (tuning_bytes || tun)) {
+            if (!tun)
+                tun = tuning_bytes;
             tuning_bytes = 0;
             dump_tuning(s, "in", arg, tun);
         }

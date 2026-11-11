@@ -51,7 +51,16 @@
  * error-code checks (lines "T32O ..."); the same run with vendor libimp
  * 2.2.0 is the reference for the /dev/ipu requests (T32_TRACE_DUMP=200).
  *
- * usage: t32_trace_sample [h264|h265|jpeg|osd|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
+ * "isposd" (#336) is "jpeg" with the ISP-drawn OSD: IMP_ISP_Tuning_SetOsdPoolSize
+ * before System_Init, then (FrameSource channel 0 running) region handles
+ * until the library refuses one, an ARGB8888 and an ARGB1555 picture
+ * (IMP_ISP_Tuning_Set/Get/ShowOsdRgn), a line, a range and a cover
+ * (IMP_OSD_SetRgnAttr_ISP), the error paths, IMP_OSD_GetRgnAttr_ISP (lines
+ * "T32I ..."), N streams, then hide and destroy the pictures.  Vendor libimp
+ * 2.2.0 on the vendor and on the open tx-isp-t32.ko is the reference for the
+ * isp-m0 requests and the MSCA register writes.
+ *
+ * usage: t32_trace_sample [h264|h265|jpeg|osd|isposd|none|bind|fs3|vpu|isp|bin] [streams] [sensor] [i2c addr]
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -369,6 +378,151 @@ static void osd_teardown(void)
     STEP(IMP_OSD_DestroyGroup(0));
 }
 
+/* ---- "isposd" (#336): pictures, lines/rects and covers drawn by the ISP --- */
+/* vendor 2.2.0 layouts, filled by byte offset (imp_isp.h / imp_osd.h 2.x):
+ * IMPIspOsdAttrAsm 56 B = type, IMPISPOSDAttr (32) at 4, IMPISPOSDBlockAttr
+ * (20) at 36; IMPISPDrawBlockAttr 36 B (pinum, msk_size, type @4,
+ * color_type @8, cfg @12); IMPISPMaskBlockAttr 24 B; region attribute 272 B
+ * with the draw block at 48 and the mask block at 104. */
+int IMP_ISP_Tuning_SetOsdPoolSize(int size);
+int IMP_ISP_Tuning_CreateOsdRgn(int chn, void *attr);
+int IMP_ISP_Tuning_SetOsdRgnAttr(int chn, int handle, void *attr);
+int IMP_ISP_Tuning_GetOsdRgnAttr(int chn, int handle, void *attr);
+int IMP_ISP_Tuning_ShowOsdRgn(int chn, int handle, int show);
+int IMP_ISP_Tuning_DestroyOsdRgn(int chn, int handle);
+int IMP_OSD_SetRgnAttr_ISP(int sensornum, IMPOSDRgnAttr *attr, int show);
+int IMP_OSD_GetRgnAttr_ISP(int sensornum, IMPOSDRgnAttr *attr, int *show);
+
+#define ISPOSD_MAXRGN 10
+#define ISPOSD_W0 64                    /* picture 0: ARGB8888 BGRA 64x32 */
+#define ISPOSD_H0 32
+#define ISPOSD_W1 32                    /* picture 1: ARGB1555 32x32, group 1 */
+#define ISPOSD_H1 32
+static int isposd_h[ISPOSD_MAXRGN], isposd_n;
+static uint32_t isposd_pic0[ISPOSD_W0 * ISPOSD_H0];
+static uint16_t isposd_pic1[ISPOSD_W1 * ISPOSD_H1];
+
+static void put16(uint8_t *p, unsigned v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
+static void put32(uint8_t *p, uint32_t v) { put16(p, v & 0xffff); put16(p + 2, v >> 16); }
+
+static void isposd_pic_attr(uint8_t *a, int type, int group, int pinum, int x, int y,
+                            int w, int h, const void *data, int stride)
+{
+    memset(a, 0, 56);
+    put32(a, 1);                        /* ISP_OSD_REG_PIC */
+    put32(a + 4, (uint32_t)type);       /* osd_type: 0 ARGB8888, 1 ARGB1555 */
+    put32(a + 8, 0);                    /* IMP_ISP_ARGB_TYPE_BGRA */
+    put32(a + 12, 0);                   /* osd_pixel_alpha_disable: off */
+    a[33] = (uint8_t)group;             /* osd_group (osd_overlap at 32: 0) */
+    a[36] = (uint8_t)pinum;
+    a[37] = 1;
+    put16(a + 38, (unsigned)x);
+    put16(a + 40, (unsigned)y);
+    put16(a + 42, (unsigned)w);
+    put16(a + 44, (unsigned)h);
+    put32(a + 48, (uint32_t)(uintptr_t)data);
+    put16(a + 52, (unsigned)stride);
+}
+
+static void isposd_dump(const char *tag, const uint8_t *p, int n)
+{
+    int k;
+
+    printf("T32I %s", tag);
+    for (k = 0; k < n; k++)
+        printf("%s%02x", k % 4 ? "" : " ", p[k]);
+    printf("\n");
+}
+
+static int isposd_setup(void)
+{
+    static uint8_t a[56], back[56];
+    static IMPOSDRgnAttr r;
+    uint8_t *d = (uint8_t *)&r + 48, *m = (uint8_t *)&r + 104;
+    int i, show = -1, ok = 1;
+
+    for (i = 0; i < ISPOSD_W0 * ISPOSD_H0; i++)  /* BGRA bytes: white/blue bars */
+        isposd_pic0[i] = (i % ISPOSD_W0) / 8 & 1 ? 0xff0000ffu : 0xffffffffu;
+    for (i = 0; i < ISPOSD_W1 * ISPOSD_H1; i++)  /* 1555: opaque checker */
+        isposd_pic1[i] = ((i % ISPOSD_W1) / 8 + (i / ISPOSD_W1) / 8) & 1 ? 0x801f : 0x83e0;
+    /* region handles until the library says no (its limit per sensor) */
+    for (isposd_n = 0; isposd_n < ISPOSD_MAXRGN; isposd_n++) {
+        isposd_h[isposd_n] = IMP_ISP_Tuning_CreateOsdRgn(0, NULL);
+        printf("T32I create %d -> %d\n", isposd_n, isposd_h[isposd_n]);
+        if (isposd_h[isposd_n] < 0)
+            break;
+    }
+    printf("T32I handles %d\n", isposd_n);
+    for (i = isposd_n - 1; i >= 2; i--)  /* keep two */
+        STEP(IMP_ISP_Tuning_DestroyOsdRgn(0, isposd_h[i]));
+    isposd_n = isposd_n < 2 ? isposd_n : 2;
+    if (isposd_n < 2)
+        return -1;
+    printf("T32I create attr %d\n", IMP_ISP_Tuning_CreateOsdRgn(0, a));
+    printf("T32I set bad chn %d\n", IMP_ISP_Tuning_SetOsdRgnAttr(5, isposd_h[0], a));
+    printf("T32I show free %d\n", IMP_ISP_Tuning_ShowOsdRgn(0, 7, 1));
+
+    isposd_pic_attr(a, 0, 0, isposd_h[0], 64, 48, ISPOSD_W0, ISPOSD_H0, isposd_pic0, ISPOSD_W0 * 4);
+    ok &= STEP(IMP_ISP_Tuning_SetOsdRgnAttr(0, isposd_h[0], a)) == 0;
+    ok &= STEP(IMP_ISP_Tuning_ShowOsdRgn(0, isposd_h[0], 1)) == 0;
+    /* pinum != handle first (the library skips such a picture), then pinum = handle */
+    isposd_pic_attr(a, 1, 1, isposd_h[1] + 4, 400, 200, ISPOSD_W1, ISPOSD_H1, isposd_pic1, ISPOSD_W1 * 2);
+    ok &= STEP(IMP_ISP_Tuning_SetOsdRgnAttr(0, isposd_h[1], a)) == 0;
+    ok &= STEP(IMP_ISP_Tuning_ShowOsdRgn(0, isposd_h[1], 1)) == 0;
+    isposd_pic_attr(a, 1, 1, isposd_h[1], 400, 200, ISPOSD_W1, ISPOSD_H1, isposd_pic1, ISPOSD_W1 * 2);
+    ok &= STEP(IMP_ISP_Tuning_SetOsdRgnAttr(0, isposd_h[1], a)) == 0;
+    ok &= STEP(IMP_ISP_Tuning_ShowOsdRgn(0, isposd_h[1], 1)) == 0;
+    memset(back, 0xee, sizeof back);
+    printf("T32I getattr rc=%d\n", IMP_ISP_Tuning_GetOsdRgnAttr(0, isposd_h[0], back));
+    isposd_dump("attr0", back, 56);
+    isposd_pic_attr(a, 0, 0, isposd_h[0], 1900, 48, ISPOSD_W0, ISPOSD_H0, isposd_pic0, ISPOSD_W0 * 4);
+    printf("T32I set outside %d\n", IMP_ISP_Tuning_SetOsdRgnAttr(0, isposd_h[0], a));
+
+    /* ISP draw blocks: a line (pinum 0) and a range (pinum 1), then a cover */
+    memset(&r, 0, sizeof r);
+    r.type = OSD_REG_ISP_LINE_RECT;
+    d[0] = 0;                           /* pinum */
+    put32(d + 4, 2);                    /* IMP_ISP_DRAW_LINE */
+    put32(d + 8, 1);                    /* IMPISP_MASK_TYPE_YUV */
+    d[12] = 1;
+    put16(d + 14, 200); put16(d + 16, 600); put16(d + 18, 800); put16(d + 20, 600);
+    d[25] = 255; d[26] = 0; d[27] = 0;  /* y, u, v */
+    d[28] = 5; d[29] = 4;               /* width, alpha */
+    ok &= STEP(IMP_OSD_SetRgnAttr_ISP(0, &r, 1)) == 0;
+    memset(d, 0, 36);
+    d[0] = 1;
+    put32(d + 4, 1);                    /* IMP_ISP_DRAW_RANGE */
+    put32(d + 8, 0);                    /* RGB colour, the library adds the YUV */
+    d[12] = 1;
+    put16(d + 14, 1200); put16(d + 16, 600); put16(d + 18, 300); put16(d + 20, 200);
+    d[22] = 0; d[23] = 255; d[24] = 0;  /* green */
+    d[28] = 5; d[29] = 4; put16(d + 30, 50);
+    ok &= STEP(IMP_OSD_SetRgnAttr_ISP(0, &r, 1)) == 0;
+    memset(&r, 0, sizeof r);
+    r.type = OSD_REG_ISP_COVER;
+    m[0] = 0; m[1] = 0; m[2] = 1;       /* chx, pinum, enable */
+    put16(m + 4, 300); put16(m + 6, 900); put16(m + 8, 200); put16(m + 10, 120);
+    put32(m + 12, 1);                   /* YUV */
+    m[19] = 40; m[20] = 200; m[21] = 60;
+    ok &= STEP(IMP_OSD_SetRgnAttr_ISP(0, &r, 1)) == 0;
+    r.type = OSD_REG_ISP_PIC;
+    printf("T32I set isp-pic %d\n", IMP_OSD_SetRgnAttr_ISP(0, &r, 1));
+    memset(&r, 0xee, sizeof r);
+    printf("T32I getattr isp rc=%d show=%d\n", IMP_OSD_GetRgnAttr_ISP(0, &r, &show), show);
+    isposd_dump("draw", (uint8_t *)&r + 48, 80);
+    return ok ? 0 : -1;
+}
+
+static void isposd_teardown(void)
+{
+    int i;
+
+    for (i = 0; i < isposd_n; i++) {
+        STEP(IMP_ISP_Tuning_ShowOsdRgn(0, isposd_h[i], 0));
+        STEP(IMP_ISP_Tuning_DestroyOsdRgn(0, isposd_h[i]));
+    }
+}
+
 static int step(const char *name, int rc)
 {
     printf("T32S %-40s rc=%d\n", name, rc);
@@ -389,13 +543,14 @@ int main(int argc, char **argv)
     int fs3 = !strcmp(codec, "fs3");
     int vpu_cycles = !strcmp(codec, "vpu");
     int osd = !strcmp(codec, "osd");
+    int isposd = !strcmp(codec, "isposd");
     int isp_only = !strcmp(codec, "isp") || bin_test;
     int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only && !vpu_cycles;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
     static IMPEncoderCHNAttr ea;
     IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, 0, 0 }, ocell = { DEV_ID_OSD, 0, 0 };
-    IMPEncoderProfile prof = !strcmp(codec, "jpeg") ? T32_PROFILE_JPEG :
+    IMPEncoderProfile prof = !strcmp(codec, "jpeg") || isposd ? T32_PROFILE_JPEG :
                              !strcmp(codec, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
     IMPEncoderRcMode rc = getenv("T32_ENC_RC") ? (IMPEncoderRcMode)atoi(getenv("T32_ENC_RC")) :
                           prof == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
@@ -453,6 +608,8 @@ int main(int argc, char **argv)
     MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
     if (osd)
         STEP(IMP_OSD_SetPoolSize(512 * 1024));
+    if (isposd)
+        STEP(IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024));
     MUST(IMP_System_Init());
     if (bin_test) {                     /* #289: day/night bin switch */
         IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
@@ -558,6 +715,11 @@ again:
         }
     }
     MUST(IMP_FrameSource_EnableChn(0));
+    if (isposd) {
+        if (mark)
+            mark("isposd");
+        MUST(isposd_setup());
+    }
     if (enc) {
         MUST(IMP_Encoder_StartRecvPic(0));
         if (mark)
@@ -572,6 +734,8 @@ again:
             IMP_Encoder_ReleaseStream(0, &st);
         }
         printf("T32S streams %d/%d\n", got, streams);
+        if (isposd)
+            isposd_teardown();
         STEP(IMP_Encoder_StopRecvPic(0));
         STEP(IMP_FrameSource_DisableChn(0));
         if (osd) {
