@@ -1,0 +1,49 @@
+{
+ "tag": "t31-open-grey",
+ "ok": true,
+ "info": {
+  "rows": 41,
+  "span_s": 87.3,
+  "row_interval_s": 2.18,
+  "loop": "open (sensor model has no exposure model)",
+  "final_Y": 40.0,
+  "final_EV": 18094.0,
+  "tol": 2171.3,
+  "judged_signal": "ev",
+  "ae_rail_at_end": null,
+  "target_from": "self (reference run)",
+  "target_Y": 40.0
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 89.867,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "convergence_s",
+   "value": 31.467,
+   "limit": "<= 45 s from stream start (ev)",
+   "ok": true
+  },
+  {
+   "name": "steady_EV_spread_pct",
+   "value": 0.0,
+   "limit": "<= 15 %",
+   "ok": true
+  },
+  {
+   "name": "awb_steady_pct",
+   "value": 0.0,
+   "limit": "<= 5 %",
+   "ok": true
+  }
+ ]
+}

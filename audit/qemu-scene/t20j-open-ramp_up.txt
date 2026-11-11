@@ -1,0 +1,7 @@
+t20j-open-ramp_up: PASS
+  {"rows": 24, "note": "sampling began 33 s into the clip (stream restart, console and daemon start-up)", "span_s": 54.7, "row_interval_s": 2.38, "loop": "closed (exposure moves the picture); no AE luma on this SoC, judged on the exposure", "final_Y": NaN, "final_EV": 318.0, "tol": 38.2, "judged_signal": "ev", "ae_rail_at_end": null, "target_Y": null}
+  coverage_end_s               88.133     ok   (limit samples reach >= 80 s of the clip)
+  stayed_in_day_mode           0          ok   (limit 0 rows in ISP Night mode)
+  ae_not_railed                0          ok   (limit AE ends between its limits)
+  exposure_vs_scene_rho        -1.0       ok   (limit <= -0.85 (exposure falls as the scene brightens))
+  exposure_direction           0.384      ok   (limit EV falls over the ramp)

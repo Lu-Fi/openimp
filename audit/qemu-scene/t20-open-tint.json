@@ -1,0 +1,56 @@
+{
+ "tag": "t20-open-tint",
+ "ok": false,
+ "info": {
+  "rows": 73,
+  "span_s": 85.9,
+  "row_interval_s": 1.19,
+  "loop": "open (sensor model has no exposure model); no AE luma on this SoC, judged on the exposure",
+  "final_Y": NaN,
+  "final_EV": 69627.0,
+  "tol": 8355.2,
+  "judged_signal": "ev",
+  "ae_rail_at_end": null,
+  "target_Y": null,
+  "rb_warm": 0.792,
+  "rb_cool": 0.792,
+  "ct_warm": 5000.0,
+  "ct_cool": 5000.0,
+  "warm_window_s": [
+   8.8,
+   19.3
+  ]
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 88.667,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "rg_over_bg_cool_vs_warm",
+   "value": 1.0,
+   "limit": ">= 1.1 (red gain falls, blue rises under warm light)",
+   "ok": false
+  },
+  {
+   "name": "rg_over_bg_vs_time_rho",
+   "value": NaN,
+   "limit": ">= 0.85",
+   "ok": false
+  },
+  {
+   "name": "ct_warm_below_cool",
+   "value": 0.0,
+   "limit": "colour temperature rises",
+   "ok": false
+  }
+ ]
+}

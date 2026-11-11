@@ -1,0 +1,7 @@
+t20-open-step: PASS
+  {"rows": 77, "span_s": 87.3, "row_interval_s": 1.15, "loop": "open (sensor model has no exposure model); no AE luma on this SoC, judged on the exposure", "final_Y": NaN, "final_EV": 2.0, "tol": 0.2, "judged_signal": "ev", "ae_rail_at_end": "floor", "target_Y": null, "pre_Y": NaN, "pre_EV": 69627.0}
+  coverage_end_s               89.0       ok   (limit samples reach >= 80 s of the clip)
+  stayed_in_day_mode           0          ok   (limit 0 rows in ISP Night mode)
+  settle_after_step_s          43.467     ok   (limit <= 45 s (ev))
+  overshoot_pct                -0.0       ok   (limit <= 25 % (ev))
+  exposure_follows_step        34813.5    ok   (limit >= 1.5 x)

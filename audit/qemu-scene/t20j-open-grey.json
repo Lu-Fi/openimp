@@ -1,0 +1,56 @@
+{
+ "tag": "t20j-open-grey",
+ "ok": true,
+ "info": {
+  "rows": 53,
+  "note": "sampling began 25 s into the clip (stream restart, console and daemon start-up)",
+  "span_s": 64.5,
+  "row_interval_s": 1.24,
+  "loop": "closed (exposure moves the picture); no AE luma on this SoC, judged on the exposure",
+  "final_Y": NaN,
+  "final_EV": 1099.0,
+  "tol": 131.9,
+  "judged_signal": "ev",
+  "ae_rail_at_end": null,
+  "target_from": "self (reference run)",
+  "target_Y": NaN
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 89.8,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "ae_not_railed",
+   "value": 0,
+   "limit": "AE ends between its limits",
+   "ok": true
+  },
+  {
+   "name": "convergence_s",
+   "value": 0.0,
+   "limit": "<= 45 s from stream start (ev)",
+   "ok": true
+  },
+  {
+   "name": "steady_EV_spread_pct",
+   "value": 0.0,
+   "limit": "<= 15 %",
+   "ok": true
+  },
+  {
+   "name": "awb_steady_pct",
+   "value": 0.0,
+   "limit": "<= 5 %",
+   "ok": true
+  }
+ ]
+}

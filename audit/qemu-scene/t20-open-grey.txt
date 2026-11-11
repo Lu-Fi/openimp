@@ -1,0 +1,7 @@
+t20-open-grey: PASS
+  {"rows": 82, "span_s": 84.5, "row_interval_s": 1.04, "loop": "open (sensor model has no exposure model); no AE luma on this SoC, judged on the exposure", "final_Y": NaN, "final_EV": 69627.0, "tol": 8355.2, "judged_signal": "ev", "ae_rail_at_end": null, "target_from": "self (reference run)", "target_Y": NaN}
+  coverage_end_s               87.4       ok   (limit samples reach >= 80 s of the clip)
+  stayed_in_day_mode           0          ok   (limit 0 rows in ISP Night mode)
+  convergence_s                30.733     ok   (limit <= 45 s from stream start (ev))
+  steady_EV_spread_pct         0.0        ok   (limit <= 15 %)
+  awb_steady_pct               0.0        ok   (limit <= 5 %)

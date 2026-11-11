@@ -1,0 +1,58 @@
+{
+ "tag": "t31-open-step",
+ "ok": true,
+ "info": {
+  "rows": 65,
+  "span_s": 85.2,
+  "row_interval_s": 1.33,
+  "loop": "open (sensor model has no exposure model)",
+  "final_Y": 149.0,
+  "final_EV": 1.0,
+  "tol": 0.1,
+  "judged_signal": "ev",
+  "ae_rail_at_end": "floor",
+  "target_Y": null,
+  "step_seen_at_s": 35.1,
+  "pre_Y": 7.0,
+  "pre_EV": 390960.0,
+  "Y_right_after_step": 149.0
+ },
+ "checks": [
+  {
+   "name": "coverage_end_s",
+   "value": 89.4,
+   "limit": "samples reach >= 80 s of the clip",
+   "ok": true
+  },
+  {
+   "name": "stayed_in_day_mode",
+   "value": 0,
+   "limit": "0 rows in ISP Night mode",
+   "ok": true
+  },
+  {
+   "name": "step_seen_near_30s",
+   "value": 35.067,
+   "limit": "30 +- 8 s",
+   "ok": true
+  },
+  {
+   "name": "settle_after_step_s",
+   "value": 11.133,
+   "limit": "<= 45 s (ev)",
+   "ok": true
+  },
+  {
+   "name": "overshoot_pct",
+   "value": -0.0,
+   "limit": "<= 25 % (ev)",
+   "ok": true
+  },
+  {
+   "name": "exposure_follows_step",
+   "value": 390960.0,
+   "limit": ">= 1.5 x",
+   "ok": true
+  }
+ ]
+}
