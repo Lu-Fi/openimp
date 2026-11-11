@@ -1881,3 +1881,280 @@ static void e33_default_set(E33 *X, uint32_t e)
     ST_U32(e + 0x8ac, 0x87000);
     ST_U32(e + 0x8b0, 0x87000);
 }
+
+/* ---------------------------------------------------------- picture end */
+
+/* SMART: a P/I picture coded with the motion ROI (inst+0x7f > 0, no motion
+ * rule, pic+0x43c == 0, pic kind 7) counts its QP raised by the ROI offset */
+static int t33_roi_qp(E33 *X, uint32_t inst, uint32_t pic)
+{
+    return LD_S8(inst + 0x7f) > 0 && LD_S8(inst + 0x7d) == 0 && LD_S8(pic + 0x43c) == 0 && LD_S8(pic) == 7;
+}
+
+/* P-share bookkeeping after an I/P picture: per-picture P size beyond the I */
+static void t33_p_avg(E33 *X, uint32_t cfg, uint32_t st, uint32_t bits)
+{
+    int32_t g = LD_S32(cfg + 0xc), d;
+
+    if (g == 1)
+        return;
+    d = (int32_t)(bits - LD_U32(st + 0x50));
+    ST_S32(st + 0x108, d);
+    ST_S32(st + 0x104, d / (g - 1));
+}
+
+/* shift a byte history of @n entries at @a up by one, newest @v at @a */
+static void t33_hist8(E33 *X, uint32_t a, int n, uint8_t v)
+{
+    for (int i = n - 1; i > 0; i--)
+        ST_U8(a + i, LD_U8(a + i - 1));
+    ST_U8(a, v);
+}
+
+/* JZ_VPU_RC_FRAME_END_H264_T33 (0x19c520): account the coded picture */
+static void e33_frame_end(E33 *X, uint32_t e)
+{
+    uint32_t st, inst, ps, cur, prev, cfg, pos, fps, bits, units;
+    int32_t n, roi, mode;
+    int8_t kind;
+    int64_t qb;
+
+    ST_U8(e + 0x50, LD_U8(e + 0x810));
+    ST_U8(e + 0x52, LD_U8(e + 0x811));
+    if (LD_S8(e + 0x30) == 0)
+        e33_frame_feature(X, e);
+    st = LD_U32(e + 0x868);
+    inst = LD_U32(e + 0x864);
+    ps = LD_U32(e + 0x870);
+    cur = LD_U32(ps + 0x1c);
+    cfg = LD_U32(e + 0x820);
+    n = LD_S32(st + 0x14) != 0xfffffff ? LD_S32(st + 0x14) + 1 : 10;
+    ST_S32(st + 0x14, n);
+    ST_U32(st + 0x60, LD_U8(cur + 0x1c));
+    /* ROI QP offset per coding unit (32x32 * 4 for HEVC-style, else MB) */
+    if (LD_S8(cfg + 8) == 1)
+        units = ((LD_U16(cfg) + 0x1f) >> 5) * ((LD_U16(cfg + 2) + 0x1f) >> 5) * 4;
+    else if (LD_S8(cfg + 8) == 0)
+        units = ((LD_U16(cfg) + 0xf) >> 4) * ((LD_U16(cfg + 2) + 0xf) >> 4);
+    else
+        units = 1;
+    if (units == 0)
+        return;                 /* the vendor traps */
+    roi = (int8_t)(LD_S32(cur + 0x220) / (int32_t)units);
+    ST_S8(st + 0xad, roi);
+    if (t33_roi_qp(X, inst, cur))
+        ST_U32(st + 0x60, LD_U8(cur + 0x1c) + roi);
+    if (LD_S8(st + 0x7b) == 6) {
+        ST_U8(st + 0x30, 6);
+        kind = 6;
+    } else {
+        kind = LD_S8(cur + 0x1e);
+        ST_S8(st + 0x30, kind);
+    }
+    mode = LD_S8(e + 0x824);
+    if (mode == 0) {
+        pos = LD_U32(st + 0x398) + 1;
+        ST_U32(st + 0x398, pos == LD_U32(cfg + 0xc) ? 0 : pos);
+        return;
+    }
+    fps = LD_U32(st + 0x358);
+    if (fps == 0)
+        return;                 /* the vendor traps */
+    pos = LD_U32(st + 0x398) + 1;
+    ST_U32(st + 0x398, pos);
+    if (LD_S32(st + 0x28) == (6 / (int32_t)fps) * LD_S32(cfg + 0xc)) {
+        ST_U32(st + 0x28, 0);
+        ST_U64(st + 0x20, 0);
+        ST_U8(st + 0x1c, 0);
+    }
+    prev = LD_U32(ps + 0x20);
+    if (n != 1)
+        ST_S32(st + 0x3a0, LD_S32(st + 0x3a0) + LD_S8(prev + 0x1c));
+    if (mode == 3)
+        ST_U64(st + 0x388, LD_U64(st + 0x388) + LD_U32(cur + 0x18));
+    /* complexity per kbit/s: (pic+0x21c << 11) / (bit rate >> 10) */
+    qb = t33_div64((int64_t)((uint64_t)LD_U32(cur + 0x21c) << 11), LD_S32(inst + 8) >> 10);
+    ST_S64(st + 0xa0, qb);
+    ST_U8(st + 0x7a, LD_U8(st + 0xab));
+    ST_U8(st + 0xab, 0);
+    bits = LD_U32(cur + 0x18);
+
+    if (kind == 2) {                    /* I picture */
+        uint64_t r;
+
+        ST_U32(st + 0x58, LD_U8(cur + 0x1c));
+        if (t33_roi_qp(X, inst, cur))
+            ST_U32(st + 0x58, LD_U8(cur + 0x1c) + roi);
+        if (n == 1)
+            ST_U64(st + 0x3b0, LD_U64(st + 0x3b0) + bits);
+        else
+            t33_p_avg(X, cfg, st, bits);
+        ST_U64(st + 0x38, bits);
+        ST_U64(st + 0x50, bits);
+        ST_U64(st + 0x380, LD_U64(st + 0x380) + bits);
+        ST_S64(st + 0x70, qb);
+        if (n != 0) {
+            ST_U8(st + 0x1c, LD_U8(prev + 0x1c));
+            ST_U32(st + 0x28, 1);
+            ST_S64(st + 0x20, LD_S8(prev + 0x1c));
+        }
+        ST_U8(st + 0x95, 1);
+        r = LD_U64(st + 0x360);
+        if (r == 0)
+            return;             /* the vendor asserts */
+        /* I/P size ratio in percent of the mean P picture */
+        ST_S32(st + 0x68, (int32_t)t33_div64((int64_t)((uint64_t)bits * 100), (int64_t)(int32_t)fps * (int64_t)r));
+        ST_U32(st + 0x2c, 0);
+        e33_update_pwin(X, cfg, st);
+        for (uint32_t o = 0x218; o > 0x1d0; o -= 8)     /* I size history */
+            ST_U64(st + o, LD_U64(st + o - 8));
+        ST_U8(st + 0x78, LD_U8(st + 0xa8));
+        ST_U32(st + 0x10c, 0);
+        ST_U64(st + 0x1d0, bits);
+        t33_hist8(X, st + 0x22a, 10, (uint8_t)LD_U32(st + 0x58));
+    } else if (kind == 6) {             /* skipped picture */
+        int64_t m = LD_S64(st + 0x38);
+        int8_t q;
+
+        t33_p_avg(X, cfg, st, bits);
+        if (m < (int64_t)bits)
+            m = bits;
+        ST_U64(st + 0x380, LD_U64(st + 0x380) + (uint64_t)m);
+        ST_U64(st + 0x50, bits);
+        q = LD_S8(prev + 0x1c);
+        if (LD_S8(st + 0x1c) < q)
+            ST_S8(st + 0x1c, q);
+        ST_S64(st + 0x20, LD_S64(st + 0x20) + q);
+        ST_S32(st + 0x28, LD_S32(st + 0x28) + 1);
+        ST_U32(st + 0x2c, 0);
+        e33_update_pwin(X, cfg, st);
+        ST_U8(st + 0x78, LD_U8(st + 0xa8));
+    } else if (kind == 0) {             /* P picture */
+        uint32_t qp = LD_U8(cur + 0x1c);
+        int32_t k;
+        int8_t q;
+        int b;
+
+        ST_U32(st + 0x5c, qp);
+        if (t33_roi_qp(X, inst, cur)) {
+            qp = LD_U8(cur + 0x1c) + roi;
+            ST_U32(st + 0x5c, qp);
+        }
+        ST_U32(st + 0xe0, LD_U32(st + 0xe0) + qp);
+        ST_U64(st + 0x48, bits);
+        ST_U64(st + 0x380, LD_U64(st + 0x380) + bits);
+        q = LD_S8(prev + 0x1c);
+        if (LD_S8(st + 0x1c) < q)
+            ST_S8(st + 0x1c, q);
+        ST_S64(st + 0x20, LD_S64(st + 0x20) + q);
+        /* P size by position window within the GOP (0x190..0x1a0) */
+        k = LD_S32(st + 0x2c);
+        for (b = 4; b >= 0 && k < LD_S32(st + 0x190 + b * 4); b--)
+            ;
+        if (b >= 0)
+            ST_U64(st + 0x168 + b * 8, LD_U64(st + 0x168 + b * 8) + bits);
+        ST_U8(st + 0x78, LD_U8(st + 0xa8));
+        ST_S32(st + 0x28, LD_S32(st + 0x28) + 1);
+        ST_S32(st + 0x2c, k + 1);
+        if (pos == 1) {
+            t33_p_avg(X, cfg, st, bits);
+            ST_U64(st + 0x50, bits);
+            ST_U32(st + 0x2c, 0);
+            e33_update_pwin(X, cfg, st);
+            qp = LD_U32(st + 0x5c);
+        } else {
+            ST_S64(st + 0x3b0, LD_S64(st + 0x3b0) + bits + (int64_t)LD_S32(st + 0x104) - LD_U32(st + 0x100));
+        }
+        for (uint32_t o = 0x1cc; o > 0x1a8; o -= 4)     /* P size history */
+            ST_U32(st + o, LD_U32(st + o - 4));
+        ST_U32(st + 0x1a8, bits);
+        t33_hist8(X, st + 0x220, 10, (uint8_t)qp);
+    }
+    t33_hist8(X, st + 0x234, 10, LD_U8(prev + 0x1c));
+    t33_hist8(X, st + 0x23e, 10, LD_U8(prev + 0x1d));
+
+    /* VBV fullness, clamped to [0, size] unless inst+0x38 */
+    {
+        int64_t v = LD_S64(st + 0x428) + bits - LD_S64(st + 0x438);
+
+        ST_S64(st + 0x428, v);
+        if (LD_S32(inst + 0x38) == 0) {
+            if (v < 0)
+                ST_U64(st + 0x428, 0);
+            else if (v > LD_S64(st + 0x420))
+                ST_U64(st + 0x428, LD_U64(st + 0x420));
+        }
+    }
+    if (mode == 4)                      /* AVBR window budget */
+        ST_S64(st + 0x288, LD_S64(st + 0x288) + bits -
+               t33_div64(LD_S64(st + 0x270) * (int64_t)(int32_t)fps, (int64_t)LD_U32(cfg + 0xc)));
+    if (pos == LD_U32(cfg + 0xc)) {     /* end of the GOP */
+        int32_t f = LD_S32(st + 0x358);
+        int64_t avg;
+
+        ST_U32(st + 0x398, 0);
+        ST_S32(st + 0x338, LD_S32(st + 0x338) + f);
+        avg = t33_div64(LD_S64(st + 0x380), f);
+        ST_S64(st + 0x368, avg);
+        if (pos == 1) {
+            ST_U8(st + 0xdc, 0);
+            ST_U32(st + 0x100, 0);
+        } else {
+            uint32_t lo = LD_U32(st + 0x3b0), d = lo - LD_U32(st + 0x50), g1, q, t;
+
+            ST_S8(st + 0xdc, (int8_t)((LD_U32(st + 0xe0) - 2 + pos) / (pos - 1)));
+            g1 = LD_U32(cfg + 0xc) - 1;
+            if (g1 == 0)
+                return;         /* the vendor traps */
+            q = d / g1;
+            ST_U32(st + 0x100, q);
+            t = LD_U32(st + 0x108) - g1 * LD_U32(st + 0x104);
+            ST_S64(st + 0x3b0, LD_S64(st + 0x3b0) - (int64_t)(uint64_t)(d - g1 * q) + (int64_t)(int32_t)t);
+        }
+        ST_S64(st + 0xf8, avg);
+        if (mode == 4)
+            ST_S32(st + 0x2b8, LD_S32(st + 0x2b8) + f);
+        {
+            uint32_t g = LD_U32(cfg + 0xc);
+
+            t33_hist8(X, st + 0x248, 10,
+                      (uint8_t)t33_div64(LD_S64(st + 0x20) + (int64_t)g - 1, (int64_t)g));
+        }
+        OEM_memset(X, st + 0x1a8, 0, 0x28);
+        OEM_memset(X, st + 0x220, 0, 10);
+        pos = 0;
+    }
+    if (pos == 0) {                     /* bit-rate statistics window */
+        int64_t a = LD_S64(st + 0x380), b = a;
+        int32_t c;
+
+        if (mode == 3)
+            a = LD_S64(st + 0x388);
+        ST_S64(st + 0x330, LD_S64(st + 0x330) + a);
+        ST_S64(st + 0x318, LD_S64(st + 0x318) - b);
+        ST_S64(st + 0x328, LD_S64(st + 0x328) - b);
+        c = LD_S32(st + 0x338);
+        if (c == LD_S32(st + 0x2d8)) {
+            ST_U32(st + 0x338, 0);
+            ST_S64(st + 0x2e8, t33_div64(LD_S64(st + 0x330), c));
+            ST_U32(st + 0x344, LD_U32(inst + 0x40));
+        } else {
+            ST_S32(st + 0x344, LD_S32(st + 0x344) - 1);
+            ST_S64(st + 0x320, t33_div64(LD_S64(st + 0x318), LD_S32(st + 0x2d8) - c));
+        }
+    }
+    if (mode == 4 && LD_S32(st + 0x338) == 0) {
+        int64_t s = LD_S64(st + 0x330);
+        int32_t c = LD_S32(st + 0x2b8);
+
+        ST_S64(st + 0x2a8, LD_S64(st + 0x2a8) - s);
+        ST_S64(st + 0x2b0, LD_S64(st + 0x2b0) + s);
+        if (c == LD_S32(st + 0x258)) {
+            ST_U64(st + 0x288, 0);
+            ST_U32(st + 0x2b8, 0);
+            ST_S64(st + 0x268, t33_div64(LD_S64(st + 0x2b0), c));
+        } else {
+            ST_S64(st + 0x280, t33_div64(LD_S64(st + 0x2a8), LD_S32(st + 0x258) - c));
+        }
+    }
+}
