@@ -3274,28 +3274,46 @@ static void cs_switchbin_t40(void) {}
 
 /* ------------------------------------------------------------------- older-SoC ISP calls (backlog T31 / T23, 2026-10-29) */
 #if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAe_IT_MAX && HAS_IMP_ISP_Tuning_GetAE_IT_MAX
-/* SetAe_IT_MAX (lines) must read back through GetAE_IT_MAX; a quarter of the limit darkens a scene that runs at long
- * integration times (effect), a bright scene keeps its luma (rt).  The original limit is restored and read back. */
+/* SetAe_IT_MAX (lines) must read back through GetAE_IT_MAX.  Effect: the limit is set to half of the RUNNING integration
+ * time (GetExpr, where the SoC has it; a quarter of the old limit otherwise), so the AE must cut the exposure even in a
+ * bright scene: the running integration time must then stay at or below the limit (a scene at long integration times
+ * also darkens).  The original limit is restored and read back. */
+static int itmax_cur(void)
+{
+#if HAS_IMP_ISP_Tuning_GetExpr && !defined(PLATFORM_T41)
+    IMPISPExpr e;
+    memset(&e, 0, sizeof(e));
+    if (IMP_ISP_Tuning_GetExpr && IMP_ISP_Tuning_GetExpr(&e) == 0) return e.g_attr.integration_time;
+#endif
+    return -1;
+}
+
 static void cs_itmax(void)
 {
     NEED(IMP_ISP_Tuning_SetAe_IT_MAX) NEED(IMP_ISP_Tuning_GetAE_IT_MAX) {
         unsigned int m0 = 0, m1 = 0, m2 = 0, v;
-        int r0, r1, r2, r3, r4, ms;
+        int r0, r1, r2, r3, r4, ms, c0, c1, c2;
         Fst base, lo, back;
 
         r0 = IMP_ISP_Tuning_GetAE_IT_MAX(&m0);
-        v = m0 / 4 < 8 ? 8 : m0 / 4;
         base = fst(800);
+        c0 = itmax_cur();
+        v = c0 > 16 ? (unsigned int)c0 / 2 : m0 / 4;
+        if (v < 8) v = 8;
         r1 = IMP_ISP_Tuning_SetAe_IT_MAX(v); lo = fst(2000);
+        c1 = itmax_cur();
         r2 = IMP_ISP_Tuning_GetAE_IT_MAX(&m1);
         r3 = IMP_ISP_Tuning_SetAe_IT_MAX(m0); back = recover(base.y, &ms);
+        c2 = itmax_cur();
         r4 = IMP_ISP_Tuning_GetAE_IT_MAX(&m2);
         {
-            int eff = lo.ok && base.ok && lo.y < base.y - 3;
+            int held = c0 > 16 && c1 > 0 && (unsigned int)c1 <= v;
+            int eff = held || (lo.ok && base.ok && lo.y < base.y - 3);
             rep(FN(IMP_ISP_Tuning_GetAE_IT_MAX), r0 | r2 | r4, (r0 == 0 && r2 == 0 && r4 == 0 && m0 > 0 && m1 == v && m2 == m0) ? V_PASS : V_FAIL,
                 "initial %u lines; after Set(%u): %u; after restore: %u", m0, v, m1, m2);
             rep(FN(IMP_ISP_Tuning_SetAe_IT_MAX), r1 | r3, (r1 == 0 && r3 == 0 && m1 == v && m2 == m0 && lo.ok && ms >= 0 && flow()) ? V_PASS : V_FAIL,
-                "%slimit %u -> %u lines: Y %.1f -> %.1f; restored: back to Y %.1f in %d ms, frames flow", RTMSG(eff), m0, v, base.y, lo.y, back.y, ms);
+                "%slimit %u -> %u lines: running integration time %d -> %d (%s), Y %.1f -> %.1f; restored: it %d, Y %.1f in %d ms, frames flow",
+                RTMSG(eff), m0, v, c0, c1, held ? "held at or below the limit" : c0 > 16 ? "NOT held" : "not readable", base.y, lo.y, c2, back.y, ms);
         }
     }
 }

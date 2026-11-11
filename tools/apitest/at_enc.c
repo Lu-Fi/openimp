@@ -2220,7 +2220,7 @@ void enc_chain_down(void)
     grp_down(0);
 }
 
-#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || (defined(PLATFORM_T41) && !defined(APITEST_T40))
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T31) || (defined(PLATFORM_T41) && !defined(APITEST_T40))
 /* IMP_OSD_AttachToGroup (deprecated vendor call): FS -> ENC is bound, the call inserts the OSD group between them
  * (src->to becomes src->from->to); the encoder then runs through the OSD group.  Returns 0 when the call was exercised. */
 int enc_attach_osd(void)
