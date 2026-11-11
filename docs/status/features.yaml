@@ -335,10 +335,10 @@ features:
   cells:
     T10:
       sym: ✅
-      text: 'device-tested: manual R/B gains, Cb/Cr −21..−28'
+      text: 'device-tested: manual R/B gains, Cb/Cr −21..−28. 2026-11-11 (#353): the T10 AWB shares the T20 driver code; IQ bins with other than 2 calibrated light sources kept it off, fixed (the T10 bins of the fleet have 2 rows: unaffected; QEMU/host only)'
     T20:
       sym: ✅
-      text: 'default simple AWB; daylight A/B vs vendor chain: gains 492/393 vs 488/395, neutral ROIs within 0.007, both converge < 4 s; artificial light sweep 2200-6500 K (2026-10-04, smart bulbs): AWB follows (CT estimate 2300/2300/2500/4100 K), 4000 K neutral (R/G 0.99), very warm light stays slightly warm (lower limit ~2300 K, typical)'
+      text: '2026-11-11 (#353, QEMU T20X jxf22 only, no camera run): the simple AWB now accepts any number of calibrated light sources; before it ran only with IQ bins that have exactly 2 (jxf23), so it stayed off with jxf22 (4), sc2235 and ps5250 (3); warm-to-cool scene: red gain 289 -> 401, blue 225 -> 174 (Q8). Earlier: default simple AWB; daylight A/B vs vendor chain: gains 492/393 vs 488/395, neutral ROIs within 0.007, both converge < 4 s; artificial light sweep 2200-6500 K (2026-10-04, smart bulbs): AWB follows (CT estimate 2300/2300/2500/4100 K), 4000 K neutral (R/G 0.99), very warm light stays slightly warm (lower limit ~2300 K, typical)'
     T21:
       sym: ✅+
       text: AWB lifted (10/10 scenes register-identical) + hysteresis + IR night freeze; dusk test open
