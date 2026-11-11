@@ -3980,6 +3980,30 @@ static void cs_ispdraw_t23(void)
     }
 }
 
+/* the same for FS ch0 (PGM, every 4th pixel), tag "<tag>-ch0" */
+static void snap_y0(const char *tag)
+{
+    const char *d = getenv("APITEST_SNAPDIR");
+    IMPFrameInfo *fr = NULL;
+    char path[256];
+    FILE *f;
+    int k;
+
+    if (!d || !IMP_FrameSource_GetFrame) return;
+    for (k = 0; k < 3; k++) if (IMP_FrameSource_GetFrame(0, &fr) == 0 && fr) { if (k < 2) { IMP_FrameSource_ReleaseFrame(0, fr); fr = NULL; } }
+    if (!fr) return;
+    snprintf(path, sizeof(path), "%s/%s-ch0.pgm", d, tag);
+    if ((f = fopen(path, "wb"))) {
+        const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
+        int w = fr->width, h = fr->height, i, j;
+
+        fprintf(f, "P5\n%d %d\n255\n", w / 4, h / 4);
+        for (j = 0; j < h / 4; j++) for (i = 0; i < w / 4; i++) fputc(y[(size_t)(4 * j) * w + 4 * i], f);
+        fclose(f);
+    }
+    IMP_FrameSource_ReleaseFrame(0, fr);
+}
+
 /* ISP flip bits of the open T23 driver (module parameter msca_flip_state: 4 = ISP mirror, 8 = ISP flip), 0 when the parameter is absent */
 static int t23_isp_flip_bits(void)
 {
@@ -3999,9 +4023,18 @@ static void cs_isppicupd_t23(void)
         T23IspPic a;
         int hdl = -1, x = 256, y = 128, i, r1 = -1, r2 = -1, r3 = -1, rbad, rnul;
         double base = 0, on = 0, upd = 0;
-        int fl = t23_isp_flip_bits(), mx = x, my = y;
+        int fl, mx = x, my = y, want = getenv("APITEST_PIC_ISPFLIP") ? atoi(getenv("APITEST_PIC_ISPFLIP")) & 3 : -1;
+        IMPISPTuningOpsMode oh = IMPISP_TUNING_OPS_MODE_DISABLE, ov = IMPISP_TUNING_OPS_MODE_DISABLE;
+        double req_on = -1;
 
         if (!white || !black) { rep(FN(IMP_OSD_UpdateRgnAttrData_ISP), -1, V_SKIP, "no memory"); free(white); free(black); return; }
+        /* APITEST_PIC_ISPFLIP=0..3 (bit 0 ISP mirror, bit 1 ISP flip): set the ISP flip for this case only (openimp #207 proof) */
+        if (want >= 0 && IMP_ISP_Tuning_SetISPHflip && IMP_ISP_Tuning_GetISPHflip && IMP_ISP_Tuning_SetISPVflip && IMP_ISP_Tuning_GetISPVflip) {
+            IMP_ISP_Tuning_GetISPHflip(&oh); IMP_ISP_Tuning_GetISPVflip(&ov);
+            IMP_ISP_Tuning_SetISPHflip((IMPISPTuningOpsMode)(want & 1)); IMP_ISP_Tuning_SetISPVflip((IMPISPTuningOpsMode)((want >> 1) & 1));
+            usleep(500000);
+        }
+        fl = t23_isp_flip_bits();
         if (fl & 4) mx = g_sw - x - PW;           /* ISP mirror (msca_flip_state bits 2/3): the picture is placed before it, so it appears at the mirrored position */
         if (fl & 8) my = g_sh - y - PH;
         for (i = 0; i < PW * PH; i++) { white[i] = 0xffffffffU; black[i] = 0xff000000U; }
@@ -4017,6 +4050,8 @@ static void cs_isppicupd_t23(void)
         if (hdl >= 0) {
             r1 = IMP_OSD_SetRgnAttr_PicISP(0, hdl, &a) | IMP_OSD_ShowRgn_ISP(0, hdl, 1);
             on = reg_luma(0, mx + 4, my + 4, mx + PW - 4, my + PH - 4);
+            if (fl & 12) req_on = reg_luma(0, x + 4, y + 4, x + PW - 4, y + PH - 4);
+            snap_y0("isppic_on");
             a.pic.osd_image = (char *)black;
             r2 = IMP_OSD_UpdateRgnAttrData_ISP(0, hdl, &a);
             upd = reg_luma(0, mx + 4, my + 4, mx + PW - 4, my + PH - 4);
@@ -4028,8 +4063,9 @@ static void cs_isppicupd_t23(void)
             rbad = -2;
         }
         rnul = IMP_OSD_UpdateRgnAttrData_ISP(0, 7, NULL);
+        if (want >= 0 && IMP_ISP_Tuning_SetISPHflip && IMP_ISP_Tuning_SetISPVflip) { IMP_ISP_Tuning_SetISPHflip(oh); IMP_ISP_Tuning_SetISPVflip(ov); }
         rep(FN(IMP_OSD_SetRgnAttr_PicISP), r1, (hdl >= 0 && r1 == 0 && on > base + 30) ? V_PASS : V_FAIL,
-            "handle %d white %dx%d requested at (%d,%d), ISP flip bits %d -> measured at (%d,%d): luma %.1f -> %.1f", hdl, PW, PH, x, y, fl, mx, my, base, on);
+            "handle %d white %dx%d requested at (%d,%d), ISP flip bits %d -> measured at (%d,%d): luma %.1f -> %.1f (requested place while shown: %.1f)", hdl, PW, PH, x, y, fl, mx, my, base, on, req_on);
         rep(FN(IMP_OSD_UpdateRgnAttrData_ISP), r2, (hdl >= 0 && r1 == 0 && r2 == 0 && r3 == 0 && on > base + 30 && upd < on - 60 && rbad == -1 && rnul == -1 && flow()) ? V_PASS : V_FAIL,
             "handle %d white %dx%d at (%d,%d) (ISP flip bits %d -> measured at (%d,%d)): luma %.1f -> %.1f; updated to black: %.1f; other size -> %d, NULL -> %d%s", hdl, PW, PH, x, y, fl, mx, my, base, on, upd, rbad, rnul, t23_drv_info());
         free(white); free(black);
