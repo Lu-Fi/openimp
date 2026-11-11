@@ -496,7 +496,7 @@ int main(void)
             assert(IMP_ISP_SetPreDqtime((IMPVI_NUM)4, &dq) == -4);
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, NULL) == -9);
             ispnode.result = -1; ispnode.err = EIO;
-            assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -6);
+            assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -1);           /* vendor 1.3.1 0x8aa04: -1 when the ioctl fails */
             ispnode.err = ENODEV;
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -8);
             ispnode.result = 0;

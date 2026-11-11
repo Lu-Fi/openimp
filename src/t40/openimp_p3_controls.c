@@ -1604,7 +1604,7 @@ int IMP_OSD_GetRgnAttr_ISP(int sensornum, void *prAttr, int *pbosdshow)
 
 /* Vendor IMP_ISP_SetPreDqtime (T40 1.3.1 0x8aa04): the caller's pointer goes
  * to the ISP node as ioctl 0xc0045430 (TISP_VIDIOC_SET_PREDQTIME); sensor
- * number >= 4 is -4, no ISP device -8, NULL -9, a failing ioctl -6. */
+ * number >= 4 is -4, no ISP device -8, NULL -9, a failing ioctl -1. */
 #define TISP_IOCTL_SET_PREDQTIME 0xc0045430U
 
 int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
@@ -1614,7 +1614,7 @@ int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
     if (!dqtime)
         return -9;           /* vendor: ISP device check (-8) comes first */
     if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_PREDQTIME, dqtime) != 0)
-        return errno == ENODEV ? -8 : -6;
+        return errno == ENODEV ? -8 : -1;
     return 0;
 }
 

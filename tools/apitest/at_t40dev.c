@@ -17,6 +17,7 @@
  *           4000 wip cells ISP (AE scene/caps, SensorFPS, CCM/LSC, flip modes, WDR/DRC, NR ratio, mask, getters)
  *           8000 encoder telemetry (Query histogram, telemetry, AveBitrate; 10000 adds the sensor flip modes to 4000)
  *           2000 GetRaw, one 8-bit sensor frame (about 8 MB rmem; on its own, last)
+ *           2000000 matrix #310: argument checks of SetPreDqtime/GetHLDCAttr/GetRaw/WDR_OPEN/SetCameraInputMode/OSD_*RgnAttr_ISP + SetPreDqtime 0, GetHLDCAttr
  *           1000000 AE API on the open frame AE (ExprInfo layout/manual/freeze/min gain, statistics,
  *                   histThresh, target comp, weights, speed, face AE, antiflicker) */
 #include <errno.h>
@@ -1715,6 +1716,51 @@ int t40dev_main(int argc, char **argv)
         R("ISP_GetRaw", OK(!rr && rc.buf.paddr && nz > rc.buf.buf_size / 64 / 2 && mean > 3 && mean < 252 && e.frames > 10),
           "sensor %ux%u (rc %d); GetRaw 8 bit rc=%d buf phys=0x%x size=%u; sampled mean %.1f, non-zero %u of %u; stream after %u frames/1 s",
           sa.width, sa.height, rs, rr, rc.buf.paddr, rc.buf.buf_size, mean, nz, rc.buf.buf_size / 64, e.frames);
+    }
+
+    if (mask & 0x2000000) {
+        /* matrix 2026-11-11 (#310): argument checks of the vendor 1.3.1 ISP calls (no ioctl reached) plus the safe
+         * valid calls, open and vendor libimp alike: SetPreDqtime 0 (soft-interrupt delay of the single-frame
+         * scheduling, 0 = none), GetHLDCAttr (read only).  Never: a valid SetCameraInputMode (switches the
+         * dual-sensor input), SetHLDCAttr, a valid ISP OSD region (the ISP-OSD controls oops in QEMU). */
+        uint32_t dq = 0; IMPISPHLDCAttr hl; IMPISPGETRawiConfig gr; IMPISPWdrOpenAttr wo; uint32_t cim[6];
+        int a1, a2, a3, b1, b2, c1, c2, c3, d1, d2, f1, f2, f3, sh = 0; unsigned char rgn[2048];
+        a1 = IMP_ISP_SetPreDqtime((IMPVI_NUM)4, &dq);
+        a2 = IMP_ISP_SetPreDqtime(IMPVI_MAIN, NULL);
+        /* the valid call (ioctl 0xc0045430) oopses our tx_isp_t40 in QEMU (2026-11-11, NULL op at +0x10c): only with T40D_PREDQ=1 */
+        a3 = getenv("T40D_PREDQ") && !strcmp(getenv("T40D_PREDQ"), "1") ? IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) : -77;
+        stream_for(1.0, &e);
+        R("ISP_SetPreDqtime", a3 == -77 ? (a1 == -4 && a2 == -9 ? "PART" : "FAIL") : OK(a1 == -4 && a2 == -9 && a3 == 0 && e.frames > 10),
+          "num 4 rc=%d (-4), NULL rc=%d (-9), dqtime 0 rc=%d (0; -77 = not sent, T40D_PREDQ=1); %u frames/1 s after", a1, a2, a3, e.frames);
+        memset(&hl, 0x5a, sizeof hl);
+        b1 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hl);
+        b2 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, NULL);
+        R("ISP_Tuning_GetHLDCAttr", OK(b1 == 0), "rc=%d strength %d %dx%d centre %d,%d; NULL rc=%d (vendor -9)", b1, hl.strength, hl.width, hl.height, hl.center_w, hl.center_h, b2);
+        memset(&gr, 0, sizeof gr); gr.raw_width = 64; gr.raw_height = 64; gr.raw_bit = 12;
+        c1 = IMP_ISP_GetRaw((IMPVI_NUM)4, &gr);
+        c2 = IMP_ISP_GetRaw(IMPVI_MAIN, &gr);
+        gr.raw_bit = 8; gr.raw_width = 0;
+        c3 = IMP_ISP_GetRaw(IMPVI_MAIN, &gr);
+        R("ISP_GetRaw_args", OK(c1 == -4 && c2 == -1 && c3 == -1), "num 4 rc=%d (-4), raw_bit 12 rc=%d (-1), width 0 rc=%d", c1, c2, c3);
+        memset(&wo, 0, sizeof wo); wo.rmode = (IMPISPRunningMode)7;
+        d1 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, NULL);
+        d2 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wo);
+        R("ISP_WDR_OPEN_args", OK(d1 == -8 && d2 == -9), "NULL rc=%d (-8), rmode 7 rc=%d (-9)", d1, d2);
+        memset(cim, 0, sizeof cim);
+        f1 = IMP_ISP_SetCameraInputMode(NULL);
+        cim[0] = 4; f2 = IMP_ISP_SetCameraInputMode((IMPISPCameraInputMode *)cim);
+        cim[0] = 0; cim[5] = 0x1111; f3 = IMP_ISP_SetCameraInputMode((IMPISPCameraInputMode *)cim);
+        R("ISP_SetCameraInputMode_args", OK(f1 == -9 && f2 == -4 && f3 == -4), "NULL rc=%d (-9), sensor_num 4 rc=%d (-4), joint 0x1111 rc=%d (-4); valid modes not sent (switch the dual-sensor input)", f1, f2, f3);
+        memset(rgn, 0, sizeof rgn);
+        { uint32_t t = 9; memcpy(rgn, &t, 4); }
+        f1 = IMP_OSD_SetRgnAttr_ISP(2, (IMPOSDRgnAttr *)rgn, 0);
+        f2 = IMP_OSD_SetRgnAttr_ISP(0, NULL, 0);
+        f3 = IMP_OSD_SetRgnAttr_ISP(0, (IMPOSDRgnAttr *)rgn, 0);
+        a1 = IMP_OSD_GetRgnAttr_ISP(2, (IMPOSDRgnAttr *)rgn, &sh);
+        a2 = IMP_OSD_GetRgnAttr_ISP(0, NULL, &sh);
+        R("OSD_RgnAttr_ISP_args", OK(f1 == -1 && f2 == -1 && f3 == -1 && a1 == -1 && a2 == -1), "Set: sensor 2 rc=%d, NULL rc=%d, type 9 rc=%d; Get: sensor 2 rc=%d, NULL rc=%d (all -1); valid regions not drawn", f1, f2, f3, a1, a2);
+        stream_for(1.0, &e);
+        R("t40mx_stream_after", OK(e.frames > 10), "%u frames/1 s after the argument checks", e.frames);
     }
 
     if (mask & 0x1000) {

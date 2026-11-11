@@ -349,6 +349,10 @@ int main(int argc, char **argv)
            (int)g_sensor.video_interface, g_sensor.default_boot, g_sensor.rst_gpio);
 #endif
 
+    if (areas && !strcmp(areas, "su")) {        /* SU_* only: no ISP / sensor needed, so the vendor libimp + libsysutils can run it on the open driver */
+        t_su();
+        goto summary;
+    }
     if (areas && !strcmp(areas, "dmic")) {      /* IMP_DMIC_*: no ISP / sensor needed (area dmic = the case of area cases) */
         rep_area("dmic");
         t_dmic();
