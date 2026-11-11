@@ -10,7 +10,7 @@
   "T32": {
    "proven": 1569,
    "total": 1591,
-   "branch": "claude/t32-counter",
+   "branch": "claude/t32-ds-batch",
    "date": "2026-11-11",
    "note": "bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested"
   }
