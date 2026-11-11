@@ -42,6 +42,9 @@ FIXED_CONTRAST_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-fixed-contrast-test
 EVAL_INFO_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-eval-info-test
 BIN_PATH_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-bin-path-test
 LOG_SINK_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-sink-test
+# #342: the shared DMIC (T31 build and the OSS3 T41 build)
+DMIC_SWITCH_TEST_BINS := $(PROJECT_DIR)/build/tests/dmic-switch-test-t31 \
+	$(PROJECT_DIR)/build/tests/dmic-switch-test-t41
 
 .PHONY: check clean sanitize p2-jpeg-source bench
 
@@ -52,8 +55,10 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(ALSA_PCM_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
-	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN) $(LOG_SINK_TEST_BIN)
+	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN) $(LOG_SINK_TEST_BIN) \
+	$(DMIC_SWITCH_TEST_BINS)
 	$(STREAM_LAYOUT_TEST_BIN)
+	for bin in $(DMIC_SWITCH_TEST_BINS); do $$bin || exit 1; done
 	$(AL_RC_TRACE_TEST_BIN) traces
 	$(AL_RC_OVERLOAD_TEST_BIN)
 	$(RATE_CONTROL_TEST_BIN)
@@ -362,6 +367,14 @@ $(HEVC_HEADERS_TEST_BIN): hevc_headers_test.c \
 		$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
 		-o "$@"
 
+$(PROJECT_DIR)/build/tests/dmic-switch-test-%: dmic_switch_test.c \
+	$(PROJECT_DIR)/src/t31/openimp_t31_dmic.c
+	mkdir -p "$(dir $@)"
+	$(CC) $(filter-out -std=c99,$(CFLAGS)) -std=gnu99 -D_GNU_SOURCE \
+		-DPLATFORM_$(shell echo $* | tr a-z A-Z) -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src -Wl,--wrap=open,--wrap=close,--wrap=ioctl \
+		dmic_switch_test.c -o "$@" -pthread -ldl
+
 clean:
 	$(RM) $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 		$(READY_EVENT_TEST_BIN) $(ACODEC_TEST_BIN) $(ACODEC_SOC_TEST_BINS) $(FRAME_PIN_TEST_BIN) \
@@ -370,7 +383,8 @@ clean:
 		$(AI_LIFECYCLE_TEST_BIN)-asan $(AI_LIFECYCLE_TEST_BIN)-tsan \
 		$(FAKE_AUDIO_PROCESS) \
 		$(OSD_DRAW_TEST_BIN) $(OSD_THICK_BENCH_BIN) \
-		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(EVAL_INFO_TEST_BIN)
+		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(EVAL_INFO_TEST_BIN) \
+		$(DMIC_SWITCH_TEST_BINS)
 
 # A JPEG channel that is the only one on its framesource (timps' jpeg.*
 # channel) gets frames from PollingStream (p2_jpeg_frames_from_fanout), and

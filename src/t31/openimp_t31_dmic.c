@@ -185,6 +185,7 @@ static struct {
     int thread_running;
     int stop;
     int reading;           /* the record thread uses ref buffer / aec */
+    unsigned int cycles;   /* record cycles finished (#342) */
     int16_t *ref;          /* depth * numPerFrm samples, indexed by node */
     int ref_enabled;
     int aec_enabled;
@@ -398,6 +399,7 @@ static void *dmic_record_main(void *argument)
 
         pthread_mutex_lock(&dmic.lock);
         dmic.reading = 0;
+        dmic.cycles++;
         if (ret == 0) {
             node->seq = dmic.seq++;
             list_push(&dmic.ready_list, node);
@@ -415,10 +417,17 @@ static void *dmic_record_main(void *argument)
     return NULL;
 }
 
-/* lock held; waits until the record thread is outside its ioctl/AEC step */
+/* lock held; waits until the record cycle in flight (ioctl + AEC step) has
+ * finished.  The caller has already cleared ref_enabled / aec_enabled under
+ * the lock, so every later cycle runs without the ref buffer and AEC handle.
+ * Waiting for "reading == 0" alone never returns while frames flow: the
+ * record thread sets reading again for the next frame before it drops
+ * dmic.lock (#342), hence the cycle counter. */
 static void dmic_wait_idle(void)
 {
-    while (dmic.reading)
+    unsigned int cycle = dmic.cycles;
+
+    while (dmic.reading && dmic.cycles == cycle)
         pthread_cond_wait(&dmic.cond, &dmic.lock);
 }
 
