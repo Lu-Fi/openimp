@@ -105,6 +105,7 @@ extern int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame,
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_osd.h"
 #include "t23/openimp_t23_encoder.h"
+#include "t23/t23_multisection.h"
 #elif defined(PLATFORM_T41) || defined(PLATFORM_T40)
 #include "t23/openimp_t23_osd.h"
 #endif
@@ -341,6 +342,17 @@ typedef struct {
     IMPEncoderRoiAttr roi_attr;     /* IMP_Encoder_SetChnRoiAttr */
 #endif
     IMPEncoderPack packs[P2_MAX_PUBLIC_PACKS];
+#if defined(PLATFORM_T23)
+    /* IMP_Encoder_SetMultiSectionMode 2 (t23/t23_multisection.h): window
+     * bytes latched at CreateChn (0 = off), the section of ms_raw that
+     * GetStream hands out next, and the seq of its picture. */
+    uint32_t ms_section;
+    uint32_t ms_index;
+    uint32_t ms_count;
+    uint32_t ms_seq;
+    int64_t ms_ts;
+    const void *ms_raw;
+#endif
 #if defined(PLATFORM_T31)
     uint8_t eval_info[36];          /* IMP_Encoder_GetChnEvalInfo record (under lock) */
 #endif
@@ -1356,6 +1368,54 @@ static uint32_t p2_fill_legacy_packs(P2EncoderChannel *channel,
         channel->packs[count - 1u].frameEnd = true;
     return count;
 }
+
+#if defined(PLATFORM_T23)
+/* IMP_Encoder_SetMultiSectionMode 2: the packs of section ch->ms_index of
+ * the picture (t23/t23_multisection.h): the first section = the NAL units
+ * up to the window end, every further one = one pack of the slice NAL
+ * unit; pack[0].frameEnd is 1 only on the section that completes the
+ * picture, the last pack's frameEnd is 1 as the OEM stream thread sets
+ * it.  Called only for pictures with more than one section. */
+static uint32_t t23_fill_section_packs(P2EncoderChannel *channel,
+                                       const P2HWStream *raw)
+{
+    const uint8_t *data = (const uint8_t *)(uintptr_t)raw->virt_addr;
+    uint32_t slice = t23_ms_slice_offset(data, raw->length);
+    uint32_t begin, end, count;
+    int last = channel->ms_index + 1u >= channel->ms_count;
+
+    t23_ms_range(data, raw->length, channel->ms_section, channel->ms_index,
+                 &begin, &end);
+    if (channel->ms_index == 0u) {
+        P2HWStream head = *raw;
+
+        head.length = end;
+        count = p2_fill_legacy_packs(channel, &head);
+        if (!count)
+            return 0;
+    } else {
+        IMPEncoderPack *pack = &channel->packs[0];
+
+        memset(channel->packs, 0, sizeof(channel->packs));
+        pack->phyAddr = raw->phys_addr ? raw->phys_addr + begin : 0u;
+        pack->virAddr = raw->virt_addr + begin;
+        pack->length = end - begin;
+        pack->timestamp = raw->timestamp
+            ? (int64_t)raw->timestamp : (int64_t)p2_monotonic_us();
+        pack->dataType.h264Type =
+            (IMPEncoderH264NaluType)(data[slice + 4u] & 0x1fu);
+        count = 1;
+    }
+    /* the OEM keeps the first section's timestamp for the whole picture */
+    if (channel->ms_index == 0u)
+        channel->ms_ts = channel->packs[0].timestamp;
+    else
+        channel->packs[0].timestamp = channel->ms_ts;
+    channel->packs[count - 1u].frameEnd = count > 1u;
+    channel->packs[0].frameEnd = last;
+    return count;
+}
+#endif
 #endif
 
 extern int AL_Codec_Encode_SetDefaultParam(void *param);
@@ -2501,6 +2561,12 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     /* OEM T23 1.3.0 CreateChn: the channel flag (+0x1dc of the record) becomes i264e parameter +0x1d4,
      * read by i264e_icodec_enc for every picture (src/fisheye) */
     (void)AL_Codec_Encode_SetFisheye(ch->codec, openimp_t23_enc_fisheye(channel));
+    /* OEM T23 1.3.0 CreateChn: multi-section mode -> i264e bitstream-full
+     * window (H.264 only) */
+    ch->ms_section = p2_attr_codec_type(attr) == IMP_ENC_TYPE_AVC
+        ? openimp_t23_enc_section_bytes() : 0u;
+    ch->ms_index = ch->ms_count = 0u;
+    ch->ms_raw = NULL;
 #endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21)
     {
@@ -4138,14 +4204,45 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
 #endif
     memset(stream, 0, P2_ENCODER_STREAM_ABI_SIZE);
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T23)
+    if (ch->ms_section && ch->codec_type == IMP_ENC_TYPE_AVC) {
+        if (ch->ms_raw != raw) {
+            ch->ms_raw = raw;
+            ch->ms_index = 0u;
+            ch->ms_count = t23_ms_sections(
+                (const uint8_t *)(uintptr_t)raw->virt_addr, raw->length,
+                ch->ms_section);
+        }
+    } else {
+        ch->ms_raw = NULL;
+        ch->ms_count = 0u;
+    }
+    if (ch->ms_raw && ch->ms_count > 1u)
+        pack_count = t23_fill_section_packs(ch, raw);
+    else
+#endif
     pack_count = p2_fill_legacy_packs(ch, raw);
     if (!pack_count) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#if defined(PLATFORM_T23)
+    /* OEM: a picture that fits one window is complete in its first
+     * stream, pack[0].frameEnd = 1 as on the last section */
+    if (ch->ms_raw && ch->ms_count == 1u)
+        ch->packs[0].frameEnd = true;
+#endif
     stream->pack = ch->packs;
     stream->packCount = pack_count;
+#if defined(PLATFORM_T23)
+    /* every section of a picture carries the picture's seq */
+    if (ch->ms_raw && ch->ms_index > 0u)
+        stream->seq = ch->ms_seq;
+    else
+        ch->ms_seq = stream->seq = ch->sequence++;
+#else
     stream->seq = ch->sequence++;
+#endif
     stream->refType = is_idr ? IMP_Encoder_FSTYPE_IDR
                              : IMP_Encoder_FSTYPE_SBASE;
     if (__sync_add_and_fetch(&t23_get_trace_count, 1u) <= 16u)
@@ -4223,6 +4320,9 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     stream->isVI = false;
 #endif
     ch->raw_stream_out = 1;
+#if defined(PLATFORM_T23)
+    if (!(ch->ms_raw && ch->ms_index > 0u))
+#endif
     {
         uint64_t t = p2_monotonic_us();
 
@@ -4316,6 +4416,22 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
         return -1;
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T23)
+    /* OEM 1.3.0 ReleaseStream, multi-section mode 2: a stream whose
+     * pack[0].frameEnd is 0 is a section of an unfinished picture; it only
+     * lets the encoder go on (i264e_release_bitstream_bsfull) and the
+     * picture stays.  Here the next GetStream hands out the next section. */
+    if (ch->ms_raw && ch->ms_raw == ch->raw_stream && ch->raw_stream_out &&
+        ch->ms_index + 1u < ch->ms_count && stream->pack &&
+        stream->packCount && !stream->pack[0].frameEnd) {
+        ch->ms_index++;
+        ch->raw_stream_out = 0;
+        pthread_mutex_unlock(&ch->lock);
+        return 0;
+    }
+    ch->ms_raw = NULL;
+    ch->ms_index = ch->ms_count = 0u;
+#endif
     raw = ch->raw_stream;
     user = ch->codec_user;
     frame = ch->source_frame;
@@ -4886,6 +5002,10 @@ static void p2_drop_unread_stream(P2EncoderChannel *ch)
         ch->raw_stream = NULL;
         ch->codec_user = NULL;
         ch->source_frame = NULL;
+#if defined(PLATFORM_T23)
+        ch->ms_raw = NULL;
+        ch->ms_index = ch->ms_count = 0u;
+#endif
         p2_evt_clear(ch);
     }
     pthread_mutex_unlock(&ch->lock);

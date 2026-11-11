@@ -25,6 +25,7 @@ AUDIO_ABI := $(BUILD)/t23-audio-abi-test
 P2_ROI := $(BUILD)/t23-p2-roi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 FRAMELOSS := $(BUILD)/t23-frameloss-test
+P2_MULTISECTION := $(BUILD)/t23-p2-multisection-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c \
 	$(PROJECT_DIR)/src/t30/h264enc/cabac.c \
@@ -48,8 +49,9 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS) $(P2_MULTISECTION)
 	$(P2_ROI)
+	$(P2_MULTISECTION)
 	$(FRAMELOSS) frameloss_vectors.txt
 	@if python3 -c 'import PIL' 2>/dev/null; then python3 jpegdec_check.py $(JPEGDEC_CLI); \
 	else echo 'jpegdec_check: Pillow not installed, skipped'; fi
@@ -267,6 +269,18 @@ $(IVS_MOVE_V2): ivs_move_v2_test.c $(IVS_SRC)/openimp_t31_ivs.c \
 
 ivs-move-v2: $(IVS_MOVE_V2)
 	$(IVS_MOVE_V2)
+
+# SetMultiSectionMode 2: section streams through GetStream/ReleaseStream
+# against a stub codec (vendor 1.3.0, t23/t23_multisection.h)
+$(P2_MULTISECTION): p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
+		$(PROJECT_DIR)/src/t23/t23_multisection.h \
+		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-parameter \
+		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
+		p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
+		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \
+		-lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
 
 # SetChnROI / GetChnROI of the T23 encoder against a stub codec (vendor 1.3.0)
 $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \

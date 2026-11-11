@@ -51,5 +51,8 @@ int openimp_t23_enc_set_lossthd(int channel, uint32_t bytes);
 /* IMP_Encoder_SetFisheyeEnableStatus flag of a channel (0/1), read by
  * CreateChn for the encoder. */
 int openimp_t23_enc_fisheye(int channel);
+/* IMP_Encoder_SetMultiSectionMode: the section window in bytes that an
+ * H.264 channel created now uses (0 = whole pictures). */
+uint32_t openimp_t23_enc_section_bytes(void);
 
 #endif
