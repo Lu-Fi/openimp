@@ -2158,3 +2158,390 @@ static void e33_frame_end(E33 *X, uint32_t e)
         }
     }
 }
+
+/* ---------------------------------------------------------- configuration */
+
+static void t33_clip_s8(E33 *X, uint32_t a, int8_t lo, int8_t hi)
+{
+    int8_t v = LD_S8(a);
+
+    if (v < lo)
+        ST_S8(a, lo);
+    else if (hi < v)
+        ST_S8(a, hi);
+}
+
+static void t33_clip_u32(E33 *X, uint32_t a, uint32_t lo, uint32_t hi)
+{
+    uint32_t v = LD_U32(a);
+
+    if (v < lo)
+        ST_U32(a, lo);
+    else if (hi < v)
+        ST_U32(a, hi);
+}
+
+/* statistics window in seconds: max(GOP duration, e+0x82c), 1..60 */
+static void t33_cfg_window(E33 *X, uint32_t e, uint32_t cfg)
+{
+    uint32_t t = (uint32_t)(LD_S32(cfg + 0xc) * LD_S32(cfg + 0x10)) / LD_U32(cfg + 0x14);
+
+    if (t < LD_U32(e + 0x82c))
+        t = LD_U32(e + 0x82c);
+    ST_U32(e + 0x82c, t == 0 ? 1 : t > 60 ? 60 : t);
+    t33_clip_u32(X, e + 0x830, 2, 0x19000);       /* bit rate, kbit/s */
+}
+
+/* clamp the user parameters of the mode (0x1e97c4 jump table) */
+static int t33_cfg_clamp(E33 *X, uint32_t e, uint32_t mode)
+{
+    uint32_t cfg = LD_U32(e + 0x820);
+    uint8_t lo, hi;
+
+    if (mode == 0) {                    /* fixed QP: I/P/B QP */
+        t33_clip_u8(X, e + 0x82c, 0, 51);
+        t33_clip_u8(X, e + 0x82d, 0, 51);
+        t33_clip_u8(X, e + 0x82e, 0, 51);
+        return 0;
+    }
+    if (LD_U32(cfg + 0x14) == 0)
+        return -1;                      /* the vendor traps */
+    t33_cfg_window(X, e, cfg);
+    lo = LD_U8(cfg + 0x19);
+    hi = LD_U8(cfg + 0x18);
+    if (mode == 1) {                    /* CBR */
+        t33_clip_u8(X, e + 0x834, 0, 8);
+        t33_clip_u8(X, e + 0x845, 0, 3);
+        t33_clip_u8(X, e + 0x844, 0, 7);
+        t33_clip_s8(X, e + 0x846, -10, 10);
+        t33_clip_u8(X, e + 0x840, 1, 100);
+        if (LD_U8(e + 0x840) < LD_U8(e + 0x841))
+            ST_U8(e + 0x841, LD_U8(e + 0x840));
+        t33_clip_u8(X, e + 0x843, lo, hi);
+        t33_clip_u8(X, e + 0x842, lo, hi);
+        return 0;
+    }
+    t33_clip_u8(X, e + 0x840, 50, 100);
+    t33_clip_u8(X, e + 0x843, 0, 7);
+    t33_clip_u8(X, e + 0x844, 0, 3);
+    t33_clip_s8(X, e + 0x845, -10, 10);
+    if (mode == 4) {                    /* AVBR */
+        t33_clip_u32(X, e + 0x834, 1, 0x5a0);
+        t33_clip_u32(X, e + 0x838, 2, 0x19000);
+        t33_clip_u32(X, e + 0x83c, 2, 0x19000);
+        if (LD_U16(e + 0x846) > 1000)
+            ST_U16(e + 0x846, 1000);
+    } else if (mode != 2) {             /* SMART */
+        t33_clip_u8(X, e + 0x846, 1, 100);
+    }
+    t33_clip_u8(X, e + 0x841, 1, 100);
+    if (LD_U8(e + 0x841) < LD_U8(e + 0x842))
+        ST_U8(e + 0x842, LD_U8(e + 0x841));
+    if (mode == 2) {                    /* VBR */
+        t33_clip_u8(X, e + 0x847, lo, hi);
+        t33_clip_u8(X, e + 0x846, lo, hi);
+    } else if (mode == 4) {
+        if (LD_U16(e + 0x848) == 0)
+            ST_U16(e + 0x848, 1);
+        else if (LD_U16(e + 0x848) > 0x708)
+            ST_U16(e + 0x848, 0x708);
+        t33_clip_u8(X, e + 0x84b, lo, hi);
+        t33_clip_u8(X, e + 0x84a, lo, hi);
+    } else {
+        t33_clip_u8(X, e + 0x847, lo, hi);
+        t33_clip_u8(X, e + 0x849, lo, hi);
+        t33_clip_u8(X, e + 0x848, lo, hi);
+        t33_clip_u8(X, e + 0x84a, 0, 2);
+        t33_clip_u8(X, e + 0x84b, 0, 3);
+        t33_clip_u8(X, e + 0x84c, 0, 1);
+        t33_clip_u8(X, e + 0x84d, 0, 10);
+        t33_clip_u8(X, e + 0x84e, 0, 3);
+        t33_clip_u8(X, e + 0x84f, 1, 100);
+    }
+    return 0;
+}
+
+/* bit-rate class by picture size: low / high edge (0x1e9cfc) */
+static const int32_t t33_size_rate[3][2] = { { 400000, 1000000 }, { 800000, 4000000 }, { 2000000, 2000000 } };
+
+/* JZ_VPU_RC_VIDEO_CFG_H264_T33 (0x1990f0): state blocks, parameter clamps,
+ * per-mode instance setup */
+static void e33_video_cfg(E33 *X, uint32_t e)
+{
+    uint32_t S = LD_U32(e), u, cfg, mode, fn, fd, gs, p34 = e + 0x34;
+    int32_t px, n40 = 1;
+    uint8_t ext, i_qp;
+
+    u = (((LD_U16(e + 4) + 0x1f) >> 5) * ((LD_U16(e + 6) + 0x1f) >> 5) * 4 + 0xfu) & ~0xfu;
+    if (S == 0) {
+        S = OEM_calloc(X, u * 2 + 0x7b0, 1);
+        ST_U32(e, S);
+        if (S == 0)
+            return;
+    }
+    ST_U32(e + 0x864, S);
+    ST_U32(e + 0x868, S + 0x90);
+    ST_U32(e + 0x86c, S + 0x500);
+    ST_U32(e + 0x870, S + 0x540);
+    ST_U32(e + 0x878, S + 0x570);
+    ST_U32(e + 0x87c, S + 0x640);
+    ST_U32(S + 0x570, S + 0x660);
+    ST_U32(S + 0x574, S + 0x680);
+    ST_U32(S + 0x650, S + 0x6a0);
+    ST_U32(S + 0x590, S + 0x7b0);
+    ST_U32(S + 0x594, S + u + 0x7b0);
+    ST_U32(e + 0x88c, S + 0x6c0);
+    ST_U32(e + 0x890, S + 0x7a0);
+    ST_U32(e + 0x8b4, S + 0x770);
+    ST_U32(e + 0x8b8, S + 0x790);
+    ST_U32(S + 0x560, S + 0x570);
+    ST_U32(S + 0x564, S + 0x7a0);
+    ST_U32(S + 0x55c, p34);
+    ST_U32(S + 0x640, p34);
+    ST_U32(S + 0x644, S + 0x500);
+    ST_U32(S + 0x648, S + 0x7a0);
+    ST_U32(S + 0x6c4, p34);
+    ST_U32(S + 0x6c8, S + 0x500);
+    ST_U32(S + 0x6cc, S + 0x570);
+    ST_U32(S + 0x77c, p34);
+    ST_U32(S + 0x780, S + 0x500);
+    ST_U32(S + 0x784, S + 0x570);
+    ST_U32(S + 0x788, S + 0x7a0);
+
+    /* stream parameters */
+    t33_clip_u32(X, e + 0x10, 1, 0xffff);
+    t33_clip_u32(X, e + 0x18, 1, 0xf0);
+    t33_clip_u32(X, e + 0x14, 1, LD_U32(e + 0x18));
+    t33_clip_u8(X, e + 0x1c, 0, 51);
+    if (LD_U8(e + 0x1c) < LD_U8(e + 0x1d))
+        ST_U8(e + 0x1d, LD_U8(e + 0x1c));
+    t33_clip_u8(X, e + 0xc, 0, 1);
+    t33_clip_u8(X, e + 0x1e, 0, 1);
+    t33_clip_u8(X, e + 0x826, 0, 6);
+    t33_clip_u8(X, e + 0x824, 0, 5);
+    t33_clip_u8(X, e + 0x827, 0, 1);
+    t33_clip_u8(X, e + 0x828, 0, 1);
+    t33_clip_s8(X, e + 0x825, -1, 51);
+    if (!(LD_S32(e + 0x85c) < 0xc350001))
+        ST_S32(e + 0x85c, 0xc350000);
+    if (LD_S32(e + 0x860) > 0xc350000)
+        ST_S32(e + 0x860, 0xc350000);
+    if (LD_U8(e + 0x828)) {
+        t33_clip_s8(X, e + 0x825, 1, 30);
+        t33_clip_u8(X, e + 0x859, 0, 2);
+    }
+    ext = LD_U8(e + 0x827);
+    if (ext == 1) {
+        if (LD_S32(e + 0x850) == 0)
+            ST_S32(e + 0x850, 1);
+        else if (!(LD_S32(e + 0x850) < 0x3d))
+            ST_S32(e + 0x850, 0x3c);
+        t33_clip_s8(X, e + 0x854, 0, 30);
+        t33_clip_s8(X, e + 0x855, 0, 30);
+        t33_clip_s8(X, e + 0x856, 0, 30);
+    } else {
+        t33_clip_s8(X, e + 0x850, 0, 30);
+        t33_clip_s8(X, e + 0x851, 0, 30);
+    }
+    mode = LD_U8(e + 0x824);
+    if (t33_cfg_clamp(X, e, mode))
+        return;
+    t33_clip_u8(X, e + 0x829, 0, 3);
+    {
+        uint32_t g = LD_U32(e + 0x894);
+        uint32_t m = (uint32_t)(((int32_t)(LD_U16(g) * LD_U16(g + 2) * 3) >> 1) << 3);
+
+        if (m < LD_U32(e + 0x8a8))
+            ST_U32(e + 0x8a8, m);
+        if (m < LD_U32(e + 0x8ac))
+            ST_U32(e + 0x8ac, m);
+    }
+    t33_clip_u8(X, e + 0x899, 0, 2);
+    if (LD_U32(e + 0x89c) < 64000)
+        ST_U32(e + 0x89c, 64000);
+    if (LD_U32(e + 0x8a0) > 0xffff)
+        ST_U32(e + 0x8a0, 0xffff);
+    if (ext == 1) {
+        ST_U8(S + 0x558, LD_U8(e + 0x854));
+        ST_U8(S + 0x55a, LD_U8(e + 0x855));
+        ST_U8(S + 0x559, LD_U8(e + 0x856));
+    } else {
+        ST_U8(S + 0x558, LD_U8(e + 0x850));
+        ST_U8(S + 0x559, LD_U8(e + 0x851));
+    }
+
+    /* mode bit rates (bit/s) and QP limits into the instance block */
+    switch (mode) {                     /* 0x1e97dc */
+    case 0:
+        ST_U8(S + 0x541, LD_U8(e + 0x82c));
+        ST_U8(S + 0x540, LD_U8(e + 0x82c));
+        break;
+    case 1:
+        ST_U64(S + 0x548, (uint32_t)(LD_S32(e + 0x830) << 10));
+        ST_U8(S + 0x541, LD_U8(e + 0x843));
+        ST_U8(S + 0x540, LD_U8(e + 0x842));
+        break;
+    case 4:
+        ST_U64(S + 0x550, (uint32_t)(LD_S32(e + 0x830) << 10));
+        ST_U64(S + 0x548, (uint32_t)(((LD_S32(e + 0x838) + LD_S32(e + 0x83c)) >> 1) << 10));
+        ST_U8(S + 0x541, LD_U8(e + 0x84b));
+        ST_U8(S + 0x540, LD_U8(e + 0x84a));
+        break;
+    default:                            /* VBR, SMART: max and mean */
+        ST_U64(S + 0x550, (uint32_t)(LD_S32(e + 0x830) << 10));
+        ST_S64(S + 0x548, (int64_t)(((uint64_t)LD_U32(e + 0x830) << 10) * LD_U8(e + 0x840)) / 100);
+        ST_U8(S + 0x541, LD_U8(e + (mode == 2 ? 0x847 : 0x849)));
+        ST_U8(S + 0x540, LD_U8(e + (mode == 2 ? 0x846 : 0x848)));
+        break;
+    }
+    OEM_memset(X, S + 0x90, 0, 0x468);
+    ST_U8(S + 0x108, 4);
+    ST_U8(S + 0x138, 4);
+    ST_U8(S + 0x7d, 0);
+    ST_U8(S + 0x7f, 0);
+    cfg = LD_U32(e + 0x820);
+    px = LD_U16(cfg) * LD_U16(cfg + 2);
+    ST_S32(S + 8, px);
+    if (mode != 0) {
+        int cls = px < 0xe1001 ? px >= 0x38400 : 2;
+        int64_t br = LD_S64(S + 0x548);
+        uint32_t units = 0;
+
+        fn = LD_U32(cfg + 0x10);
+        fd = LD_U32(cfg + 0x14);
+        if (fn * 30 == 0)
+            return;                     /* the vendor asserts */
+        /* rate class: 2 above the high edge, 0 below the low edge */
+        if (br > (int64_t)(int32_t)(fd * (uint32_t)t33_size_rate[cls][1] / (fn * 30)))
+            ST_U32(S + 4, 2);
+        else
+            ST_U32(S + 4, br < (int64_t)(int32_t)((uint32_t)t33_size_rate[cls][0] * fd / (fn * 30)) ? 0 : 1);
+        if (LD_S8(cfg + 8) == 1)
+            units = (uint32_t)((((px + 0x400) >> 10) * 3) >> 2);
+        else if (LD_S8(cfg + 8) == 0)
+            units = (uint32_t)((((px + 0xff) >> 8) * 3) >> 2);
+        ST_U64(S + 0x20, units);
+        ST_U64(S + 0x98, LD_U32(e + 0x85c));
+        ST_U32(S + 0x28, 3);
+        ST_U8(S + 0x80, 0);
+        ST_U8(S + 0x54, 0);
+        ST_U32(S + 0x40, 1);
+        ST_U64(S + 0x440, 0);
+        ST_U64(S + 0x190, 0);
+        if (fd == 0)
+            return;                     /* the vendor traps */
+        gs = (fn * LD_U32(cfg + 0xc) + (fd - 1)) / fd;  /* GOP length in s */
+        ST_U32(S + 0x3e8, gs);
+        ST_S32(S + 0x368, LD_S32(e + 0x82c));
+        ST_U8(S + 0x4c, 0);
+        ST_U8(S + 0x4d, 2);
+        ST_U32(S + 0x50, 2);
+        ST_U8(S + 0x55, 1);
+        ST_U32(S + 0x58, 0x1f);
+        ST_U8(S + 0x7c, 0);
+        ST_U32(S + 0x38, 0);
+        switch (mode) {                 /* 0x1e980c */
+        case 1:
+            if (gs == 0)
+                return;                 /* the vendor traps */
+            n40 = LD_S32(e + 0x82c) / (int32_t)gs;
+            if (n40 == 0)
+                n40 = 1;
+            ST_S32(S + 0x40, n40);
+            ST_U32(S + 0x38, 1);
+            ST_U32(S + 0x10, LD_U8(e + 0x840));
+            ST_U32(S + 0x14, LD_U8(e + 0x841));
+            i_qp = LD_U8(e + 0x844);
+            ST_S64(S + 0x90, LD_S8(e + 0x846));
+            break;
+        case 2:
+            ST_U32(S + 0x44, 3);
+            if (LD_S32(S + 0x48) < 1) {
+                int64_t mx = LD_S64(S + 0x550);
+
+                ST_U32(S + 0x48, mx > 2000000 ? 20 : mx > 1000000 ? 15 : mx > 500000 ? 10 : 5);
+            } else if (LD_S32(S + 0x48) > 100) {
+                ST_U32(S + 0x48, 100);
+            }
+            ST_U32(S + 0x10, LD_U8(e + 0x841));
+            ST_U32(S + 0x14, LD_U8(e + 0x842));
+            i_qp = LD_U8(e + 0x843);
+            ST_S64(S + 0x90, LD_S8(e + 0x845));
+            break;
+        case 4: {
+            uint32_t f = LD_U32(e + 0x834), w = LD_U16(e + 0x848), lo_br = LD_U32(e + 0x838) * 0x400;
+            uint32_t v = LD_U16(e + 0x846) * w * f;
+
+            ST_U32(S + 0x2e8, w * f);
+            ST_U64(S + 0x300, lo_br);
+            ST_U64(S + 0x308, (uint32_t)(LD_S32(e + 0x83c) << 10));
+            ST_S64(S + 0x60, (int64_t)(int32_t)v * (int64_t)lo_br / 1000);
+            ST_U32(S + 0x10, LD_U8(e + 0x841));
+            ST_U32(S + 0x14, LD_U8(e + 0x842));
+            ST_U32(S + 0x50, 1);
+            i_qp = LD_U8(e + 0x843);
+            ST_S64(S + 0x90, LD_S8(e + 0x845));
+            break;
+        }
+        default: {                      /* SMART (3, 5) */
+            int64_t mean = LD_S64(S + 0x550) * LD_U8(e + 0x840) / 100;
+
+            ST_S64(S + 0x68, mean * LD_U8(e + 0x846) / 100);
+            ST_U32(S + 0x78, LD_S8(S + 0x540) <= LD_U8(e + 0x847) ? LD_S8(S + 0x540) : LD_U8(e + 0x847));
+            ST_U32(S + 0x10, LD_U8(e + 0x841));
+            ST_U32(S + 0x14, LD_U8(e + 0x842));
+            i_qp = LD_U8(e + 0x843);
+            ST_U8(S + 0x7d, LD_U8(e + 0x84a));
+            ST_U8(S + 0x7e, LD_U8(e + 0x84b));
+            if (mode == 3) {
+                uint32_t c = LD_U32(e + 0x820);
+
+                if (LD_U32(c + 0x10) == 0)
+                    return;             /* the vendor traps */
+                ST_U32(S + 0x3c, (uint32_t)(LD_S32(e + 0x850) * LD_S32(c + 0x14)) / LD_U32(c + 0x10));
+                ST_U8(S + 0x7c, LD_U8(e + 0x84c));
+                if (LD_S8(e + 0x84c) != 0) {
+                    ST_S64(S + 0x70, mean * LD_U8(e + 0x84f) / 100);
+                    ST_U8(S + 0x80, LD_U8(e + 0x84e));
+                    ST_U8(S + 0x81, LD_U8(e + 0x84d));
+                }
+            }
+            ST_S64(S + 0x90, LD_S8(e + 0x845));
+            break;
+        }
+        }
+        ST_U8(S + 0x18, i_qp);
+        ST_U8(S + 0x19, i_qp);
+        ST_S32(S + 0x3d4, n40);
+        OEM_memset(X, S + 0x238, 0, 0x8c);
+        OEM_memset(X, S + 0x434, 0, 8);
+        OEM_memset(X, S + 0x3d8, 0, 8);
+        OEM_memset(X, S + 0x360, 0, 8);
+        OEM_memset(X, S + 0x2c4, 0xff, 0x1e);
+        if (n40 < 0)
+            ST_U32(S + 0x40, 0);
+        else if (n40 > 60)
+            ST_U32(S + 0x40, 60);
+    }
+
+    /* picture defaults, slice block, mode word of the HW block */
+    {
+        uint32_t p = LD_U32(e + 0x878), q = LD_U32(e + 0x88c), r = LD_U32(e + 0x8b4);
+
+        ST_U32(LD_U32(e + 0x87c) + 0xc, LD_U32(e + 0x47c));
+        ST_U8(p + 9, 7);
+        ST_U8(p + 8, 7);
+        for (int i = 0; i < 0x20; i++)
+            ST_U8(LD_U32(p + 4) + i, 7);
+        ST_U8(q, 1);
+        ST_U8(q + 1, 0);
+        ST_U8(q + 2, 1);
+        ST_U8(q + 3, 1);
+        ST_U8(q + 0xa4, 1);
+        ST_U32(q + 0x10, LD_U32(e + 0x47c));
+        if (mode == 1)
+            ST_U32(r + 8, LD_U8(e + 0x845));
+        else if (mode != 0)
+            ST_U32(r + 8, LD_U8(e + 0x844));
+    }
+}
