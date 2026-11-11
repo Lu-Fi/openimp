@@ -15,9 +15,8 @@
  *   SU_Key_*                      the input device named "gpio_keys"; Enable/DisableEvent edit the gpio_keys
  *                                 sysfs lists (keys, disabled_keys)
  *   SU_LED_Command(n, cmd)        sysfs GPIO n: export, active_low 0, direction out, value, unexport for cmd 2
- *   SU_CIPHER_*                   not provided by the open stack: the vendor functions need the Ingenic AES/DES
- *                                 kernel drivers (/dev/aes, /dev/jz-des) which the open stack does not ship; they
- *                                 answer -1 with errno ENOTSUP (the vendor answers -1 on a kernel without them)
+ *   SU_CIPHER_*                   the vendor cipher.c flow: /dev/aes (GET_PBUFF, /dev/mem 2 MB mapping,
+ *                                 SET_PARA, START_EN/DE) and /dev/jz-des (driver self tests), su_cipher.h codes
  *
  * Differences to the vendor library (documented): a NULL argument is -1 instead of a fault; the
  * key lookup returns -1 when no gpio_keys device exists (the vendor opens an uninitialised path);
@@ -34,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -594,28 +594,307 @@ int SU_LED_Command(int ledNum, int cmd)
     return su_sysfs_write(path, val, "unexport");
 }
 
-/* ---- cipher: no AES/DES kernel driver in the open stack ---- */
-static int su_cipher_unsupported(void)
+/* ---- cipher: the vendor libsysutils 1.3.x cipher.c flow ----
+ * AES: /dev/aes (ioctl GET_PBUFF gives the physical address of a 2 MB DMA buffer, mapped through
+ * /dev/mem; per handle 1 MB in / 1 MB out are shared by all 16 handle slots), SET_PARA hands the
+ * slot of the handle to the driver, START_EN/DE_PROCESSING runs it.  DES: /dev/jz-des, only the
+ * driver self tests (ioctl 'B' 0x73..0x82).  Return codes are the ones of sysutils/su_cipher.h.
+ * Differences to the vendor (documented, all on error paths): every mutex is released on error,
+ * Init closes what it opened when a later step fails, Exit / DES_Exit forget the closed fds (the
+ * vendor answers REINIT to the next Init), handle numbers are range-checked (the vendor indexes
+ * its slot array unchecked), CreateHandle stops at 16 slots, DES_Test answers UNINIT before
+ * DES_Init (the vendor runs the ioctls on fd -1 and reports every self test as passed). */
+#ifndef OPENIMP_SU_AES
+#define OPENIMP_SU_AES "/dev/aes"
+#endif
+#ifndef OPENIMP_SU_DES
+#define OPENIMP_SU_DES "/dev/jz-des"
+#endif
+#ifndef OPENIMP_SU_MEM
+#define OPENIMP_SU_MEM "/dev/mem"
+#endif
+#ifndef OPENIMP_SU_MMAP
+#define OPENIMP_SU_MMAP mmap
+#endif
+#ifndef OPENIMP_SU_MUNMAP
+#define OPENIMP_SU_MUNMAP munmap
+#endif
+
+#define SU_CIPHER_REINIT (-10)
+#define SU_CIPHER_INIT_FAILED (-11)
+#define SU_CIPHER_FAILED_GETHANDLE (-12)
+#define SU_CIPHER_INVALID_PARA (-13)
+#define SU_CIPHER_SET_PARA_FAILED (-14)
+#define SU_CIPHER_FAILURE (-15)
+#define SU_CIPHER_SET_DATALEN_ERR (-16)
+#define SU_CIPHER_EXIT_ERR (-17)
+#define SU_CIPHER_UNINIT (-18)
+#define SU_CIPHER_FAILED_DESHANDLE (-19)
+
+#define SU_AES_GET_PBUFF 0x2000416eU          /* _IO('A', 110) */
+#define SU_AES_SET_PARA 0x2000416fU           /* _IO('A', 111) */
+#define SU_AES_START_EN 0x20004170U           /* _IO('A', 112) */
+#define SU_AES_START_DE 0x20004171U           /* _IO('A', 113) */
+#define SU_CIPHER_SLOTS 16
+#define SU_CIPHER_MAP_LEN 0x200000u
+#define SU_CIPHER_HALF 0x100000u
+
+/* IN_UNF_CIPHER_CTRL of sysutils/su_cipher.h (13 words) */
+typedef struct {
+    unsigned int key[4], iv[4], len, alg, bitwidth, mode, keylen;
+} su_cipher_ctrl;
+
+/* one handle slot, 76 bytes on the camera: the record SET_PARA passes to the driver */
+struct su_cipher_slot {
+    unsigned int pbuff;                        /* GET_PBUFF writes the buffer address here (slot 0) */
+    unsigned int used;
+    unsigned int key[4], iv[4];
+    unsigned int src_p;
+    unsigned char *src_v;
+    unsigned int dst_p;
+    unsigned char *dst_v;
+    unsigned int alg, bitwidth, mode, keylen;
+    unsigned int datalen;
+};
+#if defined(__mips__) && !defined(__LP64__)
+typedef char su_cipher_slot_size_check[sizeof(struct su_cipher_slot) == 0x4c ? 1 : -1];
+#endif
+
+static int su_aes_fd = -1, su_des_fd = -1, su_mem_fd = -1, su_cipher_last = -1, su_cipher_count;
+static unsigned char *su_cipher_map;
+static struct su_cipher_slot su_cipher_para[SU_CIPHER_SLOTS];
+static pthread_mutex_t su_cipher_handle_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t su_cipher_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int SU_CIPHER_Init(void)
 {
-    errno = ENOTSUP;
-    return -1;
+    unsigned int phys;
+    void *m;
+    int i;
+
+    if (su_aes_fd >= 0) {
+        SU_ERR("SU_CIPHER_Init: you have already init cipher before!");
+        return SU_CIPHER_REINIT;
+    }
+    su_aes_fd = open(OPENIMP_SU_AES, O_RDONLY);
+    if (su_aes_fd < 0) {
+        SU_ERR("SU_CIPHER_Init: open %s: %s", OPENIMP_SU_AES, strerror(errno));
+        return SU_CIPHER_INIT_FAILED;
+    }
+    if (OPENIMP_SU_IOCTL(su_aes_fd, SU_AES_GET_PBUFF, &su_cipher_para[0]) != 0) {
+        SU_ERR("SU_CIPHER_Init: ioctl IOCTL_AES_GET_PBUFF error");
+        goto fail;
+    }
+    su_mem_fd = open(OPENIMP_SU_MEM, O_RDWR | O_DSYNC);    /* vendor flags 0x12 (MIPS O_RDWR|O_DSYNC) */
+    if (su_mem_fd < 0) {
+        SU_ERR("SU_CIPHER_Init: open %s: %s", OPENIMP_SU_MEM, strerror(errno));
+        goto fail;
+    }
+    phys = su_cipher_para[0].pbuff;
+    m = OPENIMP_SU_MMAP(NULL, SU_CIPHER_MAP_LEN, PROT_READ | PROT_WRITE, MAP_SHARED, su_mem_fd,
+                        (off_t)(phys & 0x1fffffffu));
+    if (m == MAP_FAILED) {                     /* the vendor does not check the mapping */
+        SU_ERR("SU_CIPHER_Init: mmap failed: %s", strerror(errno));
+        goto fail;
+    }
+    su_cipher_map = m;
+    for (i = 0; i < SU_CIPHER_SLOTS; i++) {
+        su_cipher_para[i].src_p = phys;
+        su_cipher_para[i].src_v = su_cipher_map;
+        su_cipher_para[i].dst_p = phys + SU_CIPHER_HALF;
+        su_cipher_para[i].dst_v = su_cipher_map + SU_CIPHER_HALF;
+    }
+    return 0;
+fail:
+    if (su_mem_fd >= 0)
+        close(su_mem_fd);
+    su_mem_fd = -1;
+    close(su_aes_fd);
+    su_aes_fd = -1;
+    return SU_CIPHER_INIT_FAILED;
 }
 
-int SU_CIPHER_Init(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_Exit(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_DES_Init(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_DES_Exit(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_DES_Test(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_CreateHandle(void) { return su_cipher_unsupported(); }
-int SU_CIPHER_DestroyHandle(int fd) { (void)fd; return su_cipher_unsupported(); }
-int SU_CIPHER_ConfigHandle(int h, void *ctrl) { (void)h; (void)ctrl; return su_cipher_unsupported(); }
+int SU_CIPHER_Exit(void)
+{
+    if (su_aes_fd < 0) {
+        SU_ERR("SU_CIPHER_Exit: you aren't init cipher before!");
+        return SU_CIPHER_UNINIT;
+    }
+    if (su_cipher_count != 0) {
+        SU_ERR("SU_CIPHER_Exit: Cipher module are used to other module now!");
+        return SU_CIPHER_EXIT_ERR;
+    }
+    close(su_aes_fd);
+    close(su_mem_fd);
+    OPENIMP_SU_MUNMAP(su_cipher_map, SU_CIPHER_MAP_LEN);
+    su_cipher_map = NULL;
+    su_aes_fd = su_mem_fd = -1;
+    return 0;
+}
+
+int SU_CIPHER_DES_Init(void)
+{
+    if (su_des_fd >= 0) {
+        SU_ERR("SU_CIPHER_DES_Init: you have already init cipher des before!");
+        return SU_CIPHER_REINIT;
+    }
+    su_des_fd = open(OPENIMP_SU_DES, O_RDONLY);
+    if (su_des_fd < 0) {
+        SU_ERR("SU_CIPHER_DES_Init: open %s: %s", OPENIMP_SU_DES, strerror(errno));
+        return SU_CIPHER_INIT_FAILED;
+    }
+    return 0;
+}
+
+int SU_CIPHER_DES_Exit(void)
+{
+    if (su_des_fd < 0) {
+        SU_ERR("SU_CIPHER_DES_Exit: you aren't init cipher des before!");
+        return SU_CIPHER_UNINIT;
+    }
+    close(su_des_fd);
+    su_des_fd = -1;
+    return 0;
+}
+
+/* the driver self tests in the vendor order; the vendor counts a non-zero ioctl answer as "pass" */
+int SU_CIPHER_DES_Test(void)
+{
+    static const struct { unsigned char nr; const char *name; } t[] = {
+        {0x73, "DES_EBC_CPU_EN"}, {0x74, "DES_EBC_CPU_DE"}, {0x75, "DES_CBC_CPU_EN"},
+        {0x76, "DES_CBC_CPU_DE"}, {0x7b, "DES_EBC_CPU_EN_TDES"}, {0x7c, "DES_EBC_CPU_DE_TDES"},
+        {0x7d, "DES_CBC_CPU_EN_TDES"}, {0x7e, "DES_CBC_CPU_DE_TDES"}, {0x77, "DES_EBC_DMA_EN"},
+        {0x78, "DES_EBC_DMA_DE"}, {0x79, "DES_CBC_DMA_EN"}, {0x7a, "DES_CBC_DMA_DE"},
+        {0x7f, "DES_EBC_DMA_EN_TDES"}, {0x80, "DES_EBC_DMA_DE_TDES"}, {0x81, "DES_CBC_DMA_EN_TDES"},
+        {0x82, "DES_CBC_DMA_DE_TDES"},
+    };
+    unsigned int i;
+
+    if (su_des_fd < 0) {
+        SU_ERR("SU_CIPHER_DES_Test: you aren't init cipher des before!");
+        return SU_CIPHER_UNINIT;
+    }
+    for (i = 0; i < sizeof(t) / sizeof(t[0]); i++) {
+        if (OPENIMP_SU_IOCTL(su_des_fd, 0x20004200U | t[i].nr, NULL) == 0) {
+            printf("%s failed!\n", t[i].name);
+            return -1;
+        }
+        printf("%s pass!\n", t[i].name);
+    }
+    return 0;
+}
+
+int SU_CIPHER_CreateHandle(void)
+{
+    int i;
+
+    pthread_mutex_lock(&su_cipher_handle_mutex);
+    if (su_aes_fd < 0) {
+        pthread_mutex_unlock(&su_cipher_handle_mutex);
+        SU_ERR("SU_CIPHER_CreateHandle: %s not open, CreateHandle error", OPENIMP_SU_AES);
+        return SU_CIPHER_FAILED_GETHANDLE;
+    }
+    for (i = 0; i <= su_cipher_last; i++)
+        if (!su_cipher_para[i].used)
+            break;
+    if (i > su_cipher_last) {
+        if (su_cipher_last + 1 >= SU_CIPHER_SLOTS) {
+            pthread_mutex_unlock(&su_cipher_handle_mutex);
+            SU_ERR("SU_CIPHER_CreateHandle: all %d handles in use", SU_CIPHER_SLOTS);
+            return SU_CIPHER_FAILED_GETHANDLE;
+        }
+        i = ++su_cipher_last;
+    }
+    su_cipher_para[i].used = 1;
+    su_cipher_count++;
+    pthread_mutex_unlock(&su_cipher_handle_mutex);
+    return i;
+}
+
+int SU_CIPHER_DestroyHandle(int fd)
+{
+    pthread_mutex_lock(&su_cipher_handle_mutex);
+    if (su_cipher_count == 0) {
+        pthread_mutex_unlock(&su_cipher_handle_mutex);
+        SU_ERR("SU_CIPHER_DestroyHandle: There is no handle need destroy!");
+        return SU_CIPHER_FAILED_DESHANDLE;
+    }
+    if (fd < 0 || fd >= SU_CIPHER_SLOTS || !su_cipher_para[fd].used) {
+        pthread_mutex_unlock(&su_cipher_handle_mutex);
+        SU_ERR("SU_CIPHER_DestroyHandle: handle %d is not open", fd);
+        return SU_CIPHER_FAILED_DESHANDLE;
+    }
+    su_cipher_count--;
+    su_cipher_para[fd].used = 0;
+    pthread_mutex_unlock(&su_cipher_handle_mutex);
+    return 0;
+}
+
+int SU_CIPHER_ConfigHandle(int h, void *ctrl)
+{
+    const su_cipher_ctrl *c = ctrl;
+    struct su_cipher_slot *s;
+
+    if (!c) {
+        SU_ERR("SU_CIPHER_ConfigHandle: para is NULL, set para error!");
+        return SU_CIPHER_SET_PARA_FAILED;
+    }
+    if (h < 0 || h >= SU_CIPHER_SLOTS) {
+        SU_ERR("SU_CIPHER_ConfigHandle: invalid handle %d", h);
+        return SU_CIPHER_INVALID_PARA;
+    }
+    s = &su_cipher_para[h];
+    memcpy(s->key, c->key, sizeof(s->key));
+    memcpy(s->iv, c->iv, sizeof(s->iv));
+    s->alg = c->alg;
+    s->bitwidth = c->bitwidth;
+    s->mode = c->mode;
+    s->keylen = c->keylen;
+    s->datalen = c->len;
+    return 0;
+}
+
+static int su_cipher_run(int h, const unsigned int *src, unsigned int *dst, unsigned int len,
+                         unsigned int cmd, const char *what)
+{
+    struct su_cipher_slot *s;
+    int rc = 0;
+
+    if (len - 16u >= 0xffff1u) {               /* 16 <= len <= 1 MB */
+        SU_ERR("%s: dataLen is not suitable, 16 <= dataLen <= 1024*1024", what);
+        return SU_CIPHER_SET_DATALEN_ERR;
+    }
+    if (h < 0 || h >= SU_CIPHER_SLOTS) {
+        SU_ERR("%s: invalid handle %d", what, h);
+        return SU_CIPHER_INVALID_PARA;
+    }
+    pthread_mutex_lock(&su_cipher_mutex);
+    s = &su_cipher_para[h];
+    s->datalen = len;
+    if (OPENIMP_SU_IOCTL(su_aes_fd, SU_AES_SET_PARA, s) != 0) {
+        SU_ERR("%s: ioctl IOCTL_AES_SET_PARA error", what);
+        rc = SU_CIPHER_SET_PARA_FAILED;
+    } else if (!src || !dst) {
+        rc = SU_CIPHER_INVALID_PARA;
+    } else {
+        memcpy(s->src_v, src, len);
+        if (OPENIMP_SU_IOCTL(su_aes_fd, cmd, NULL) != 0) {
+            SU_ERR("%s: ioctl processing error", what);
+            rc = SU_CIPHER_FAILURE;
+        } else {
+            memcpy(dst, s->dst_v, len);
+        }
+    }
+    pthread_mutex_unlock(&su_cipher_mutex);
+    return rc;
+}
+
 int SU_CIPHER_Encrypt(int h, unsigned int *src, unsigned int *dst, unsigned int len)
 {
-    (void)h; (void)src; (void)dst; (void)len;
-    return su_cipher_unsupported();
+    return su_cipher_run(h, src, dst, len, SU_AES_START_EN, "SU_CIPHER_Encrypt");
 }
+
 int SU_CIPHER_Decrypt(int h, unsigned int *src, unsigned int *dst, unsigned int len)
 {
-    (void)h; (void)src; (void)dst; (void)len;
-    return su_cipher_unsupported();
+    return su_cipher_run(h, src, dst, len, SU_AES_START_DE, "SU_CIPHER_Decrypt");
 }

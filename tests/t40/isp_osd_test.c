@@ -270,6 +270,9 @@ int main(void)
         assert(IMP_ISP_GetRaw((IMPVI_NUM)4, &r) == -4 && r.sensor_id == 4);
         assert(IMP_ISP_GetRaw(IMPVI_MAIN, NULL) == -1);
         r.raw_bit = 8;
+        { uint32_t w = r.raw_width; r.raw_width = 0;
+          assert(IMP_ISP_GetRaw(IMPVI_MAIN, &r) == -2);              /* vendor: 0-byte allocation fails */
+          r.raw_width = w; }
         rawio.result = ENODEV;
         assert(IMP_ISP_GetRaw(IMPVI_MAIN, &r) == -8);
         rawio.result = EIO;

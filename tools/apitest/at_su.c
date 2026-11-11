@@ -33,6 +33,30 @@ static int have_gpio_keys(void)
     return found;
 }
 
+#ifdef APITEST_T40
+#include <sys/wait.h>
+/* run fn(arg) in a child process, return its result (-1000 when it does not end within 3 s) */
+static int su_in_child(int (*fn)(int), int arg)
+{
+    int pfd[2], rc = -1000, st, i;
+    pid_t pid;
+
+    if (pipe(pfd)) return -1000;
+    fflush(stdout); fflush(stderr);
+    pid = fork();
+    if (pid == 0) { int r = fn(arg); (void)!write(pfd[1], &r, sizeof(r)); _exit(0); }
+    close(pfd[1]);
+    for (i = 0; pid > 0 && i < 30; i++) {
+        if (waitpid(pid, &st, WNOHANG) == pid) { pid = 0; break; }
+        usleep(100000);
+    }
+    if (pid > 0) { kill(pid, SIGKILL); waitpid(pid, &st, 0); }
+    else if (read(pfd[0], &rc, sizeof(rc)) != sizeof(rc)) rc = -1000;
+    close(pfd[0]);
+    return rc;
+}
+#endif
+
 void t_su(void)
 {
     int r;
@@ -79,7 +103,23 @@ void t_su(void)
         }
         gfree(ft); gfree(raw); gfree(back);
     }
-    if (!has_rtc) {
+    /* APITEST_SU_NOHW=1: on a board without the RTC / ADC, call the functions anyway and report what they answer
+     * (PASS = -1, the failure the vendor libsysutils gives on the same board; used for the nohw matrix rating). */
+    int nohw = getenv("APITEST_SU_NOHW") && !strcmp(getenv("APITEST_SU_NOHW"), "1");
+    if (!has_rtc && nohw) {
+        G(SUTime, t);
+        t->year = 2030; t->mon = 1; t->mday = 1; t->hour = 12;
+#define NOHW_RC(name, call) do { SUNEED(name) { int rc_ = (call); rep(FN(name), rc_, rc_ == -1 ? V_PASS : V_FAIL, "no /dev/rtc0: %d (expected -1)", rc_); } } while (0)
+        NOHW_RC(SU_Base_GetTime, f_SU_Base_GetTime(t));
+        NOHW_RC(SU_Base_SetTime, f_SU_Base_SetTime(t));
+        NOHW_RC(SU_Base_SetAlarm, f_SU_Base_SetAlarm(t));
+        NOHW_RC(SU_Base_GetAlarm, f_SU_Base_GetAlarm(t));
+        NOHW_RC(SU_Base_EnableAlarm, f_SU_Base_EnableAlarm());
+        NOHW_RC(SU_Base_DisableAlarm, f_SU_Base_DisableAlarm());
+        NOHW_RC(SU_Base_PollingAlarm, f_SU_Base_PollingAlarm(50));
+#undef NOHW_RC
+        gfree(t);
+    } else if (!has_rtc) {
         rep(FN(SU_Base_GetTime), -1, V_NA, "%s", no_rtc);
         rep(FN(SU_Base_SetTime), -1, V_NA, "%s", no_rtc);
         rep(FN(SU_Base_SetAlarm), -1, V_NA, "%s", no_rtc);
@@ -113,11 +153,11 @@ void t_su(void)
         gfree(a); gfree(g);
     }
     }
-    rep(FN(SU_Base_EnableAlarm), 0, V_SKIP, "an enabled RTC alarm can wake/power the camera");
+    if (has_rtc || !nohw) rep(FN(SU_Base_EnableAlarm), 0, V_SKIP, "an enabled RTC alarm can wake/power the camera");
     if (has_rtc) {
         /* the vendor function returns 0 after the timeout as well (it only logs "select timeout"): a 50 ms poll is safe */
         SUNEED(SU_Base_PollingAlarm) { int r4 = f_SU_Base_PollingAlarm(50); RET0(SU_Base_PollingAlarm, r4, "50 ms poll"); }
-    } else
+    } else if (!nohw)
         rep(FN(SU_Base_PollingAlarm), -1, V_NA, "%s", no_rtc);
     rep(FN(SU_Base_Shutdown), 0, V_SKIP, "powers the camera off");
     rep(FN(SU_Base_Reboot), 0, V_SKIP, "reboots the camera");
@@ -142,7 +182,17 @@ void t_su(void)
     /* misc / ADC / battery / cipher / key / LED */
 #if HAS_SU_ADC_Init
     int has_adc = access("/dev/ingenic_adc_aux_0", F_OK) == 0 || access("/dev/jz_adc_aux_0", F_OK) == 0;
-    if (!has_adc) rep(FN(SU_ADC_Init), -1, V_NA, "no /dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0 (no ADC driver; the vendor libsysutils opens the same nodes)");
+    if (!has_adc && nohw) {
+        G(int, v);
+#define NOHW_RC(name, call, want) do { SUNEED(name) { int rc_ = (call); rep(FN(name), rc_, rc_ == (want) ? V_PASS : V_FAIL, "no ADC node: %d (expected %d)", rc_, (want)); } } while (0)
+        NOHW_RC(SU_ADC_Init, f_SU_ADC_Init(), -1);
+        NOHW_RC(SU_ADC_EnableChn, f_SU_ADC_EnableChn(0), -1);
+        NOHW_RC(SU_ADC_GetChnValue, f_SU_ADC_GetChnValue(0, v), -1);
+        NOHW_RC(SU_ADC_DisableChn, f_SU_ADC_DisableChn(0), -1);
+        NOHW_RC(SU_ADC_Exit, f_SU_ADC_Exit(), 0);       /* nothing open: 0 (vendor too) */
+#undef NOHW_RC
+        gfree(v);
+    } else if (!has_adc) rep(FN(SU_ADC_Init), -1, V_NA, "no /dev/ingenic_adc_aux_0 or /dev/jz_adc_aux_0 (no ADC driver; the vendor libsysutils opens the same nodes)");
     else {
     SUNEED(SU_ADC_Init) {
         r = f_SU_ADC_Init(); RET0(SU_ADC_Init, r, "");
@@ -168,6 +218,10 @@ void t_su(void)
     SUNEED(SU_Battery_GetStatus) { G(SUBatStatus, v); r = f_SU_Battery_GetStatus(v); gchk(v); RET0(SU_Battery_GetStatus, r, "status %d", (int)*v); gfree(v); }
     rep(FN(SU_Battery_GetEvent), 0, V_SKIP, "blocks until a battery event");
 #endif
+    if (getenv("APITEST_SU_NOKEY") && !strcmp(getenv("APITEST_SU_NOKEY"), "1")) {
+        /* the vendor SU_Key_OpenEvent faults on a board without an input device named gpio_keys (uninitialised path) */
+        rep(FN(SU_Key_OpenEvent), 0, V_SKIP, "APITEST_SU_NOKEY=1");
+    } else {
     SUNEED(SU_Key_OpenEvent) {
         int fd = f_SU_Key_OpenEvent();
 
@@ -227,21 +281,75 @@ void t_su(void)
             }
         }
     }
+    }
     rep(FN(SU_LED_Command), 0, V_SKIP, "drives the board LED");
 #ifdef APITEST_T40
-    /* T40 open stack: no AES/DES kernel driver, the SU_CIPHER_* of libimp answer -1 / ENOTSUP (a vendor libsysutils.so is not loaded first) */
-#define CIPHER_ENOTSUP(call, name) do { errno = 0; int rc_ = (call); \
-        rep(FN(name), rc_, (rc_ == -1 && errno == ENOTSUP) ? V_PASS : V_FAIL, "-1 / ENOTSUP expected (no /dev/aes in the open stack), got %d errno %d", rc_, errno); } while (0)
-    SUNEED(SU_CIPHER_Init) { CIPHER_ENOTSUP(f_SU_CIPHER_Init(), SU_CIPHER_Init); }
-    SUNEED(SU_CIPHER_Exit) { CIPHER_ENOTSUP(f_SU_CIPHER_Exit(), SU_CIPHER_Exit); }
-    SUNEED(SU_CIPHER_CreateHandle) { CIPHER_ENOTSUP(f_SU_CIPHER_CreateHandle(), SU_CIPHER_CreateHandle); }
-    SUNEED(SU_CIPHER_DestroyHandle) { CIPHER_ENOTSUP(f_SU_CIPHER_DestroyHandle(-1), SU_CIPHER_DestroyHandle); }
-    SUNEED(SU_CIPHER_ConfigHandle) { CIPHER_ENOTSUP(f_SU_CIPHER_ConfigHandle(-1, NULL), SU_CIPHER_ConfigHandle); }
-    SUNEED(SU_CIPHER_Encrypt) { CIPHER_ENOTSUP(f_SU_CIPHER_Encrypt(-1, NULL, NULL, 0), SU_CIPHER_Encrypt); }
-    SUNEED(SU_CIPHER_Decrypt) { CIPHER_ENOTSUP(f_SU_CIPHER_Decrypt(-1, NULL, NULL, 0), SU_CIPHER_Decrypt); }
-    SUNEED(SU_CIPHER_DES_Init) { CIPHER_ENOTSUP(f_SU_CIPHER_DES_Init(), SU_CIPHER_DES_Init); }
-    SUNEED(SU_CIPHER_DES_Exit) { CIPHER_ENOTSUP(f_SU_CIPHER_DES_Exit(), SU_CIPHER_DES_Exit); }
-    SUNEED(SU_CIPHER_DES_Test) { CIPHER_ENOTSUP(f_SU_CIPHER_DES_Test(), SU_CIPHER_DES_Test); }
+    /* T40: the vendor cipher.c flow (/dev/aes, /dev/mem, /dev/jz-des) in OpenIMP's libimp or the vendor libsysutils.
+     * Without the nodes both answer the su_cipher.h codes: Init/DES_Init INIT_FAILED -11, Exit/DES_Exit UNINIT -18,
+     * CreateHandle FAILED_GETHANDLE -12, DestroyHandle FAILED_DESHANDLE -19, ConfigHandle(NULL) SET_PARA_FAILED -14,
+     * Encrypt/Decrypt with 8 bytes SET_DATALEN_ERR -16.  DES_Test without DES_Init: OpenIMP UNINIT -18, the vendor
+     * runs the ioctls on fd -1 and reports all self tests passed (0).  With /dev/aes: AES-128 ECB round trip. */
+    {
+        int has_aes = access("/dev/aes", F_OK) == 0, has_des = access("/dev/jz-des", F_OK) == 0;
+        unsigned int buf[16], out[16], back[16];
+        IN_UNF_CIPHER_CTRL ctrl;
+        int i, h;
+#define CIPHER_RC(name, call, want, what) do { int rc_ = (call); \
+        rep(FN(name), rc_, rc_ == (want) ? V_PASS : V_FAIL, "%s: %d (expected %d)", what, rc_, (want)); } while (0)
+        memset(&ctrl, 0, sizeof(ctrl));
+        for (i = 0; i < 4; i++) ctrl.key[i] = 0x03020100u + 0x04040404u * (unsigned int)i;   /* FIPS-197 key 00..0f */
+        ctrl.enDataLen = sizeof(buf); ctrl.enAlg = IN_UNF_CIPHER_ALG_AES; ctrl.enWorkMode = IN_UNF_CIPHER_WORK_MODE_ECB;
+        for (i = 0; i < 16; i++) buf[i] = 0x33221100u + 0x44444444u * (unsigned int)(i & 3);
+        if (!has_aes) {
+            SUNEED(SU_CIPHER_Init) { CIPHER_RC(SU_CIPHER_Init, f_SU_CIPHER_Init(), -11, "no /dev/aes, INIT_FAILED"); }
+            /* the vendor leaves its handle mutex locked on these two error paths (the next handle call blocks): each runs in a child */
+            SUNEED(SU_CIPHER_CreateHandle) { CIPHER_RC(SU_CIPHER_CreateHandle, su_in_child((int (*)(int))(void *)f_SU_CIPHER_CreateHandle, 0), -12, "not initialised, FAILED_GETHANDLE"); }
+            SUNEED(SU_CIPHER_DestroyHandle) { CIPHER_RC(SU_CIPHER_DestroyHandle, su_in_child(f_SU_CIPHER_DestroyHandle, 0), -19, "no handle, FAILED_DESHANDLE"); }
+            SUNEED(SU_CIPHER_ConfigHandle) { CIPHER_RC(SU_CIPHER_ConfigHandle, f_SU_CIPHER_ConfigHandle(0, NULL), -14, "NULL ctrl, SET_PARA_FAILED"); }
+            SUNEED(SU_CIPHER_Encrypt) { CIPHER_RC(SU_CIPHER_Encrypt, f_SU_CIPHER_Encrypt(0, buf, out, 8), -16, "8 bytes, SET_DATALEN_ERR"); }
+            SUNEED(SU_CIPHER_Decrypt) { CIPHER_RC(SU_CIPHER_Decrypt, f_SU_CIPHER_Decrypt(0, buf, out, 8), -16, "8 bytes, SET_DATALEN_ERR"); }
+            SUNEED(SU_CIPHER_Exit) { CIPHER_RC(SU_CIPHER_Exit, f_SU_CIPHER_Exit(), -18, "not initialised, UNINIT"); }
+        } else {
+            SUNEED(SU_CIPHER_Init) {
+                int ri = f_SU_CIPHER_Init();
+                RET0(SU_CIPHER_Init, ri, "/dev/aes");
+                if (ri == 0) {
+                    __typeof__(&SU_CIPHER_CreateHandle) fch = SUSYM(SU_CIPHER_CreateHandle);
+                    __typeof__(&SU_CIPHER_ConfigHandle) fcf = SUSYM(SU_CIPHER_ConfigHandle);
+                    __typeof__(&SU_CIPHER_Encrypt) fen = SUSYM(SU_CIPHER_Encrypt);
+                    __typeof__(&SU_CIPHER_Decrypt) fde = SUSYM(SU_CIPHER_Decrypt);
+                    __typeof__(&SU_CIPHER_DestroyHandle) fds = SUSYM(SU_CIPHER_DestroyHandle);
+                    __typeof__(&SU_CIPHER_Exit) fex = SUSYM(SU_CIPHER_Exit);
+                    h = fch ? fch() : -1;
+                    rep(FN(SU_CIPHER_CreateHandle), h, h >= 0 ? V_PASS : V_FAIL, "handle %d", h);
+                    if (h >= 0 && fcf && fen && fde) {
+                        int rc = fcf(h, &ctrl), re, rd;
+                        RET0(SU_CIPHER_ConfigHandle, rc, "AES-128 ECB");
+                        re = fen(h, buf, out, sizeof(buf));
+                        rep(FN(SU_CIPHER_Encrypt), re, re == 0 && memcmp(buf, out, sizeof(buf)) ? V_PASS : V_FAIL, "64 bytes, out[0] %08x", out[0]);
+                        rd = fde(h, out, back, sizeof(buf));
+                        rep(FN(SU_CIPHER_Decrypt), rd, rd == 0 && !memcmp(buf, back, sizeof(buf)) ? V_PASS : V_FAIL, "round trip %s", memcmp(buf, back, sizeof(buf)) ? "differs" : "equal");
+                    }
+                    if (h >= 0 && fds) { int r2 = fds(h); RET0(SU_CIPHER_DestroyHandle, r2, "handle %d", h); }
+                    if (fex) { int r2 = fex(); RET0(SU_CIPHER_Exit, r2, ""); }
+                }
+            }
+        }
+        SUNEED(SU_CIPHER_DES_Init) {
+            int rdi = f_SU_CIPHER_DES_Init();
+            if (!has_des) {
+                rep(FN(SU_CIPHER_DES_Init), rdi, rdi == -11 ? V_PASS : V_FAIL, "no /dev/jz-des, INIT_FAILED: %d (expected -11)", rdi);
+                SUNEED(SU_CIPHER_DES_Test) { int rt = f_SU_CIPHER_DES_Test();
+                    rep(FN(SU_CIPHER_DES_Test), rt, rt == -18 || rt == 0 ? V_PASS : V_FAIL, "not initialised: %d (OpenIMP UNINIT -18; the vendor runs the ioctls on fd -1 and answers 0)", rt); }
+                SUNEED(SU_CIPHER_DES_Exit) { CIPHER_RC(SU_CIPHER_DES_Exit, f_SU_CIPHER_DES_Exit(), -18, "not initialised, UNINIT"); }
+            } else {
+                RET0(SU_CIPHER_DES_Init, rdi, "/dev/jz-des");
+                rep(FN(SU_CIPHER_DES_Test), 0, V_SKIP, "driver self tests (DMA engine), not run");
+                SUNEED(SU_CIPHER_DES_Exit) { int r2 = rdi == 0 ? f_SU_CIPHER_DES_Exit() : -1; RET0(SU_CIPHER_DES_Exit, r2, ""); }
+            }
+        }
+#undef CIPHER_RC
+    }
 #else
     rep(FN(SU_CIPHER_Init), 0, V_SKIP, "hardware AES/DES DMA engine, not part of the base/misc set");
     rep(FN(SU_CIPHER_Exit), 0, V_SKIP, "see CIPHER_Init");

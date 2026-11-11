@@ -477,6 +477,8 @@ int main(void)
         EXPECT(IMP_ISP_Tuning_GetFaceAwb(IMPVI_MAIN, &face), 1, 0x08000014, &face);
         EXPECT(IMP_ISP_Tuning_SetHLDCAttr(IMPVI_MAIN, &hldc), 0, 0x08000097, &hldc);
         EXPECT(IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hldc), 1, 0x08000097, &hldc);
+        assert(IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, NULL) == -9);
+        assert(IMP_ISP_Tuning_SetHLDCAttr((IMPVI_NUM)4, &hldc) == -4);
         EXPECT(IMP_ISP_Tuning_SetAeExpList(IMPVI_MAIN, &explist), 0, 0x08000099, &explist);
         EXPECT(IMP_ISP_Tuning_GetAeExpList(IMPVI_MAIN, &explist), 1, 0x08000099, &explist);
         EXPECT(IMP_ISP_Tuning_SetAeSpeed(IMPVI_MAIN, &speed), 0, 0x0800009a, &speed);
@@ -496,7 +498,7 @@ int main(void)
             assert(IMP_ISP_SetPreDqtime((IMPVI_NUM)4, &dq) == -4);
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, NULL) == -9);
             ispnode.result = -1; ispnode.err = EIO;
-            assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -6);
+            assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -1);           /* vendor 1.3.1 0x8aa04: -1 when the ioctl fails */
             ispnode.err = ENODEV;
             assert(IMP_ISP_SetPreDqtime(IMPVI_MAIN, &dq) == -8);
             ispnode.result = 0;

@@ -671,7 +671,7 @@ int32_t IMP_ISP_GetRaw(IMPVI_NUM num, IMPISPGETRawiConfig *attr)
     else
         return -1;
     if (!size)
-        return -1;
+        return -2;           /* vendor: the allocation of 0 bytes fails (camera A/B 2026-11-11) */
     pthread_mutex_lock(&isp_raw_lock);
     b = &isp_raw_buf[num];
     if (b->phys_addr && b->size < size) {

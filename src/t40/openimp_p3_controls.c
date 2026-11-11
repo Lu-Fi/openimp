@@ -1497,7 +1497,25 @@ P3_T40_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode,
 
 P3_T40_POINTER_PAIR(FaceAe, IMPISPFaceAttr, TISP_CID_FACE_AE)
 P3_T40_POINTER_PAIR(FaceAwb, IMPISPFaceAttr, TISP_CID_FACE_AWB)
-P3_T40_POINTER_PAIR(HLDCAttr, IMPISPHLDCAttr, TISP_CID_HLDC)
+/* HLDC: the vendor codes of 1.3.1 0x8acdc / 0x8b180 for the argument checks: sensor number >= 4 -4, NULL -9
+ * (camera A/B 2026-11-11, #310); the request itself as the other pointer pass-throughs. */
+int32_t IMP_ISP_Tuning_SetHLDCAttr(IMPVI_NUM num, IMPISPHLDCAttr *attr)
+{
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    return p3_tuning_pointer(num, 0, TISP_CID_HLDC, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetHLDCAttr(IMPVI_NUM num, IMPISPHLDCAttr *attr)
+{
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    return p3_tuning_pointer(num, 1, TISP_CID_HLDC, attr);
+}
 P3_T40_POINTER_PAIR(AeExpList, IMPISPAeExpListAttr, TISP_CID_AE_EXP_LIST)
 P3_T40_POINTER_PAIR(AeSpeed, IMPISPAeSpeedAttr, TISP_CID_AE_SPEED)
 
@@ -1604,7 +1622,7 @@ int IMP_OSD_GetRgnAttr_ISP(int sensornum, void *prAttr, int *pbosdshow)
 
 /* Vendor IMP_ISP_SetPreDqtime (T40 1.3.1 0x8aa04): the caller's pointer goes
  * to the ISP node as ioctl 0xc0045430 (TISP_VIDIOC_SET_PREDQTIME); sensor
- * number >= 4 is -4, no ISP device -8, NULL -9, a failing ioctl -6. */
+ * number >= 4 is -4, no ISP device -8, NULL -9, a failing ioctl -1. */
 #define TISP_IOCTL_SET_PREDQTIME 0xc0045430U
 
 int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
@@ -1614,7 +1632,7 @@ int32_t IMP_ISP_SetPreDqtime(IMPVI_NUM num, uint32_t *dqtime)
     if (!dqtime)
         return -9;           /* vendor: ISP device check (-8) comes first */
     if (OpenIMP_P1_IspIOCtl(TISP_IOCTL_SET_PREDQTIME, dqtime) != 0)
-        return errno == ENODEV ? -8 : -6;
+        return errno == ENODEV ? -8 : -1;
     return 0;
 }
 
