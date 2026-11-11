@@ -47,18 +47,18 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-07, RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-11, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
-| T10 | 329 | 304 (92.4 %) | 25 | 0 | 0 | RC3 gate |
-| T20 | 329 | 304 (92.4 %) | 25 | 0 | 0 | RC3 gate |
-| T21 | 333 | 308 (92.5 %) | 25 | 0 | 0 | RC3 gate |
-| T23 | 457 | 419 (91.7 %) | 33 | 5 | 0 | RC3 gate |
-| T30 | 350 | 286 (81.7 %) | 44 | 19 | 1 | RC3 gate |
-| T31 | 406 | 365 (89.9 %) | 34 | 7 | 0 | RC3 gate |
-| T40 | 389 | 349 (89.7 %) | 28 | 12 | 0 | RC3 gate |
-| T41 | 427 | 392 (91.8 %) | 32 | 3 | 0 | RC3 gate |
+| T10 | 329 | 323 (98.2 %) | 6 | 0 | 0 | RC3 gate |
+| T20 | 329 | 323 (98.2 %) | 6 | 0 | 0 | RC3 gate |
+| T21 | 333 | 328 (98.5 %) | 5 | 0 | 0 | RC3 gate |
+| T23 | 457 | 437 (95.6 %) | 15 | 5 | 0 | RC3 gate |
+| T30 | 350 | 294 (84.0 %) | 37 | 19 | 0 | RC3 gate |
+| T31 | 401 | 377 (94.0 %) | 22 | 2 | 0 | RC3 gate |
+| T40 | 389 | 372 (95.6 %) | 15 | 2 | 0 | RC3 gate |
+| T41 | 427 | 407 (95.3 %) | 18 | 2 | 0 | RC3 gate |
 | T32, T33 | – | – | – | – | – | planned (QEMU) |
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
