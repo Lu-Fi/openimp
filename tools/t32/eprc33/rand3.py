@@ -18,6 +18,7 @@ for k in range(K0,K0+n):
         ex[0x25c]=('B',1); ex[0x260]=('I',r.choice([0,HEAP+0x30000,HEAP+0x30000]))
         ex[0x26c]=('B',r.choice([0,1,1,2])); ex[0x26d]=('B',r.randint(0,7))
         ex[0x168]=('B',r.choice([0,1,1])); ex[0x264]=('I',r.choice([0,0,8,16,40]))
+    if r.random()<0.7: ex[0x138]=('i',r.choice([0,1,2,3,4,5,7,8]))   # -> inst+0x18
     O.W,O.H,O.GOP,O.FPS=w,h,gop,fps
     hh=Harness(mode,kbps,verbose=VB,w=w,h=h,gop=gop,fps=fps,minqp=minqp,maxqp=maxqp,initqp=initqp,extra=ex)
     pics=r.choice([80,150,250])

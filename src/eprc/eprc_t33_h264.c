@@ -1105,3 +1105,357 @@ out:
     }
     return LD_S32(inst + 0x78) < qp ? (int8_t)LD_S32(inst + 0x78) : qp;
 }
+
+/* ---------------------------------------------------------- P picture QP */
+
+/* I-share curve over the complexity when no I picture follows (0x1e9cd4) */
+static const int8_t t33_pshare_base[5] = { 10, 40, 60, 70, 80 };
+static const int8_t t33_pshare_slope[5] = { 5, 30, 20, 10, 10 };
+
+static int64_t t33_max64(int64_t a, int64_t b)
+{
+    return a < b ? b : a;
+}
+
+static int64_t t33_min64(int64_t a, int64_t b)
+{
+    return b < a ? b : a;
+}
+
+static int64_t t33_div64(int64_t a, int64_t b)
+{
+    return b ? a / b : 0;
+}
+
+static int32_t t33_pdqp(E33 *X, uint32_t inst, uint32_t st, uint32_t out, int64_t bits, int32_t row)
+{
+    return e33_adjust_p_dqp(X, inst, st, out, 0, (uint32_t)bits, (int32_t)(bits >> 32), (int8_t)row);
+}
+
+/* QP of a P picture from the remaining GOP budget (estimate_qp, 0x18ff78):
+ * @rc rate block (+0 -> cfg, +4 mode), @inst instance parameters (+0x18
+ * budget rule 0..7, +0x20 int64 minimum bits, +0x55/+0x58 QP floor rule,
+ * +0x60 CVBR long-term bits), @st statistics (+0x2c position in the GOP,
+ * +0x190.. five position thresholds with their budgets (+0x140) and
+ * estimates (+0x118), +0x5c last P QP, +0x97 hold counter), @out picture
+ * block (+0x20 -> picture state, +9 scene cut).  Returns the QP; the
+ * budgets go to st+0x80.., the direction to st+0x94. */
+static int32_t e33_estimate_qp(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t out)
+{
+    uint32_t cfg = LD_U32(rc), gop = LD_U32(cfg + 0xc), pic;
+    int64_t sec = (int64_t)LD_S32(st + 0x358), a, s, v1, v2, d, l3, l5, l6, l59, l60, c59, c60, imin;
+    int32_t pos, cls, a4, dqp, q_p, c43, share, pct, mode;
+    uint8_t b;
+    int8_t c17;
+    float f57;
+
+    if (LD_S64(st + 0x2f0) * (int64_t)LD_S32(st + 0x2d8) < LD_S64(st + 0x380) + LD_S64(st + 0x330)
+        && LD_S8(inst + 0x18) < 7) {
+        int32_t v = 4 - LD_S8(inst + 0x18);
+        int8_t c;
+
+        ST_U8(st + 0x96, 1);
+        if (v < LD_S8(st + 0x97))
+            v = LD_S8(st + 0x97);
+        c = (int8_t)v;
+        ST_S8(st + 0x97, c < 0 ? 0 : c < 5 ? c : 4);
+    }
+    pos = LD_S32(st + 0x2c);
+    ST_U8(st + 0x96, 0);    /* the vendor clears it in a delay slot (0x190038) */
+    cls = pos >= LD_S32(st + 0x1a0) ? 4 : pos >= LD_S32(st + 0x19c) ? 3 : pos >= LD_S32(st + 0x198) ? 2
+        : pos >= LD_S32(st + 0x194) ? 1 : 0;
+    if (LD_S8(st + 0xab) != 0 || LD_S8(st + 0x7a) != 0) {
+        q_p = LD_S32(st + 0x5c);
+        ST_U32(st + 0x1a4, 0);
+        ST_S8(st + 0x94, 0);
+        return (int8_t)q_p;
+    }
+
+    /* the bits left for the rest of the GOP, per picture */
+    mode = LD_S8(rc + 4);
+    a = LD_S64(st + 0x50);
+    v1 = LD_S64(st + 0x370) * sec - a;
+    v2 = LD_S64(st + 0x378) * sec - a;
+    if (mode == T33_CVBR && LD_S64(inst + 0x60) <= LD_S64(st + 0x288))
+        v1 = LD_S64(st + 0x270) * sec - a;
+    s = LD_S64(st + 0x168) + LD_S64(st + 0x170) + LD_S64(st + 0x178) + LD_S64(st + 0x180) + LD_S64(st + 0x188);
+    v1 -= s;
+    v2 -= s;
+    d = (int32_t)(gop - 1) - pos;
+    if (d < 1)
+        d = 1;
+    imin = LD_S64(inst + 0x20);
+    l3 = t33_max64(imin, (v1 < 1 ? 1 : v1) / d);
+    if (gop == 0 || (float)(uint32_t)(gop * 100 - 100) == 0.0f)
+        return 0;           /* the vendor asserts */
+    f57 = (float)(uint32_t)(gop * 100 - 100);
+
+    /* budget and size estimate of the position class */
+    pic = LD_U32(out + 0x20);
+    if (cls == 4) {
+        int32_t m;
+
+        share = e33_i_share(X, rc, inst, st, pic) & 0xff;
+        if (LD_S8(st + 0x99) != 1 && gop > 29)
+            share = ((((gop - 30) >> 1) + 30) * (uint32_t)share / gop) & 0xff;
+        m = (int32_t)gop - LD_S32(st + 0x1a0);
+        f57 = (float)(int32_t)(100 - share) / f57;
+        if (m == 1)
+            return 0;       /* the vendor asserts */
+        c59 = t33_div64(LD_S64(st + 0x160), (int64_t)(uint32_t)(m - 1));
+        c60 = (int64_t)((float)LD_S64(st + 0x138) * f57);
+        a4 = 4;
+    } else {
+        int32_t v = LD_S8(pic + 0x1c), lo, seg, t_hi, t_lo;
+
+        if (v > 50)
+            lo = 50, seg = 0;
+        else if (v > 20)
+            lo = 20, seg = 1;
+        else if (v > 10)
+            lo = 10, seg = 2;
+        else if (v > 5)
+            lo = 5, seg = 3;
+        else
+            lo = 0, seg = 4;
+        share = 80;
+        if (v > 0)
+            share = t33_pshare_base[seg] - t33_pshare_slope[seg] * (v - lo) / (t33_ishare_knot[seg] - lo);
+        {
+            int32_t qi = LD_S8(st + 0xdc);
+
+            if (qi != -1 && qi < 37 && share > 5)
+                share -= (int32_t)((uint32_t)(37 - qi < 30 ? 37 - qi : 30) * (uint32_t)(share - 5)) / 30;
+        }
+        pct = 95;
+        if (LD_S8(st + 0x99) != 1) {
+            if (share < 0)
+                share = 0, pct = 0;
+            else {
+                if (share > 100)
+                    share = 100;
+                pct = share & 0xff;
+            }
+            if (gop > 29)
+                pct = ((((gop - 30) >> 1) + 30) * (uint32_t)share / gop) & 0xff;
+        }
+        t_hi = LD_S32(st + cls * 4 + 0x194);
+        t_lo = LD_S32(st + cls * 4 + 0x190);
+        f57 = (float)(int32_t)(100 - pct) / f57;
+        if (t_hi == t_lo)
+            return 0;       /* the vendor asserts */
+        c59 = t33_div64(LD_S64(st + cls * 8 + 0x140), t_hi - t_lo < 1 ? 1 : t_hi - t_lo);
+        c60 = (int64_t)((float)LD_S64(st + cls * 8 + 0x118) * f57);
+        a4 = cls;
+    }
+    l59 = c59;
+    l60 = c60;
+    b = LD_U8(inst + 0x18);
+
+    if (mode == T33_CBR && b >= 8) {
+        l59 = imin < 0 ? 0 : imin;
+        dqp = t33_pdqp(X, inst, st, out, l59, a4);
+        if (dqp >= 0)
+            goto p0904;
+        goto p0f60;
+    }
+    /* the budget rule of inst+0x18 (jump tables 0x1e96d8 / 0x1e96f8) */
+    l6 = mode == T33_CBR ? t33_min64(l59, l3) : t33_min64(t33_max64(l60, l59), l3);
+    if (b >= 8) {
+        l6 = 0;
+    } else {
+        l59 = l6;
+        switch (b) {
+        case 0: {
+            int64_t x = LD_S64(st + 0x360) * sec - LD_S64(st + 0x380);
+
+            l59 = t33_div64(x < 1 ? 1 : x, (int64_t)(uint32_t)(gop - LD_S32(st + 0x398)));
+            l60 = t33_max64(l59, t33_min64(l60, l6) / 2);
+            l6 = t33_min64(l60, (l6 + l3) / 2);
+            break;
+        }
+        case 1:
+            l6 = t33_min64(l6, (l6 + l3) / 2);
+            break;
+        case 2: {
+            int64_t r;
+
+            l5 = t33_max64(l6, l60 < 1 ? 1 : l60);
+            l59 = l5;
+            if (cls == 4) {
+                r = t33_div64((l6 < l60 ? l60 - l6 : l6 - l60) * 100, l5);
+                l59 = r < 50 ? l60 : l5;
+            }
+            l6 = t33_min64(l59, (l3 + l6) / 2);
+            break;
+        }
+        case 3:
+        case 4: {
+            int8_t c = LD_S8(pic + 9);
+
+            l5 = l59;
+            if (c == 0) {
+                if (l60 < l59) {
+                    l59 = (l59 + l60) / 2;
+                    goto tail34;
+                }
+            } else if (l59 < l60) {
+                int64_t r;
+
+                if (l59 < 1)
+                    l5 = 1;
+                r = t33_div64((l5 < l60 ? l60 - l5 : l5 - l60) * 100, l5);
+                l59 = r < 50 ? (l60 + l5) / 2 : t33_div64(l60 + l5 * 4, 5);
+            }
+            if (cls == 4) {
+                if (l60 < l5)
+                    l59 = (l5 + l60) / 2;
+                else
+                    l59 = c == 0 ? l5 : l60;
+            }
+tail34:
+            l6 = t33_min64(l59, (l3 + l5) / 2);
+            break;
+        }
+        case 5:
+            b = 5;
+            l6 = t33_min64(t33_max64(l60, l6), (l3 + l6) / 2);
+            break;
+        case 6:
+            l6 = t33_min64(t33_max64(l60, l6), (l6 + l3) / 2);
+            break;
+        case 7:
+            l6 = t33_max64(l6, l60);
+            break;
+        }
+    }
+    l59 = t33_max64(l6, imin);
+    dqp = t33_pdqp(X, inst, st, out, l59, a4);
+    if (mode == T33_CVBR) {
+        int32_t lim = LD_S32(st + 0x290);
+
+        q_p = LD_S32(st + 0x5c);
+        if (lim < dqp + q_p) {
+            int64_t l62;
+
+            if (LD_S64(inst + 0x60) <= LD_S64(st + 0x288)) {
+                int64_t x = LD_S64(st + 0x270) * sec - a - s;
+
+                l3 = t33_max64((x < 1 ? 1 : x) / d, imin);
+            }
+            {
+                double d59 = (double)l59, d3 = (double)l3;
+
+                l62 = d59 < d3 * 0.8 ? (int64_t)(d3 * 0.8) : (int64_t)d59;
+            }
+            dqp = t33_pdqp(X, inst, st, out, l62, a4);
+            if (dqp + q_p < lim)
+                dqp = (int8_t)((int8_t)lim - (int8_t)q_p);
+        }
+        if (dqp < 0)
+            goto p0f6c;
+        if (dqp == 0) {
+            if (LD_S8(st + 0x97) < 1)
+                goto p0d88;
+        } else {
+            goto p0920;
+        }
+        goto p118c;
+    }
+    if (dqp < 0) {
+        if (mode == T33_CBR)
+            goto p0f60;
+        goto p0f6c;
+    }
+p0904:
+    q_p = LD_S32(st + 0x5c);
+    if (dqp < 1)
+        goto p1114;
+    if (mode != T33_CBR)
+        goto p0920;
+    if ((int8_t)b >= 5 && LD_S8(pic + 9) != 0)
+        goto p0920;
+    c43 = LD_S8(st + 0x97);
+    goto p0954;
+p0920:
+    q_p = LD_S32(st + 0x5c);
+    if (t33_pdqp(X, inst, st, out, l3, a4) > 0) {
+        c43 = LD_S8(st + 0x97);
+        goto p0954;
+    }
+p118c:
+    q_p = LD_S32(st + 0x5c);
+    c43 = 0;
+    dqp = 0;
+    goto p0964;
+p0954:
+    (void)c43;
+p0d88:
+    c43 = dqp;
+    goto p0964;
+p0f60:
+    if ((int8_t)b > 4)
+        goto p0f6c;
+    q_p = LD_S32(st + 0x5c);
+    goto p1114;
+p0f6c:
+    q_p = LD_S32(st + 0x5c);
+    if (LD_S8(pic + 9) == 0) {
+        /* no scene cut: the QP the size of the last I picture asks for */
+        int64_t a0 = LD_S64(st + 0xa0), a7 = LD_S64(st + 0x70), u61, per;
+        int32_t n = a0 <= 0 ? 1 : (int32_t)a0, den;
+        int32_t x, q;
+
+        if (a7 <= 0)
+            den = 1;
+        else if ((den = (int32_t)a7) == 0)
+            return 0;       /* the vendor asserts */
+        u61 = (int64_t)((float)(LD_S64(st + 0x38) >> 10) * ((float)n / (float)den));
+        per = (LD_S64(st + 0x360) * sec) >> 10;
+        x = (int32_t)t33_div64(u61 * 100, per);
+        q = e33_iratio_idqp(X, st + 0xa0, x, 50);
+        if (q_p <= q + LD_S32(st + 0x58)) {
+            if (t33_pdqp(X, inst, st, out, (v2 < 1 ? 1 : v2) / d, a4) >= 0)
+                dqp = 0;
+        }
+    }
+p1114:
+    if (LD_S8(st + 0x97) < 1) {
+        if (dqp >= 0) {
+            c43 = dqp;
+            goto p0964;
+        }
+    } else {
+        if (dqp == 0 || q_p < (int32_t)LD_U8(cfg + 0x18) - 1)
+            goto p118c;
+        dqp = -1;
+    }
+    if (LD_S8(inst + 0x55) == 0)
+        goto p0d88;
+    {
+        int32_t m = LD_S32(inst + 0x58);
+
+        if (q_p < m) {
+            c43 = -1;
+            dqp = -1;
+        } else {
+            if (m <= dqp + q_p)
+                goto p0d88;
+            c43 = (int8_t)((int8_t)m - 1 - (int8_t)q_p);
+            dqp = c43;
+        }
+    }
+p0964:
+    ST_S64(st + 0x80, l59);
+    ST_S64(st + 0xc0, c59);
+    ST_S64(st + 0xb8, c60);
+    ST_S64(st + 0x88, l3);
+    ST_S64(st + 0xb0, l3);
+    ST_S32(st + 0xd8, a4);
+    ST_S64(st + 0xd0, LD_S64(st + a4 * 8 + 0x140));
+    ST_S64(st + 0xc8, LD_S64(st + a4 * 8 + 0x118));
+    ST_S32(st + 0x1a4, dqp);
+    c17 = dqp >= 1 ? 1 : dqp != 0 ? -1 : 0;
+    ST_S8(st + 0x94, c17);
+    return (int8_t)((int8_t)q_p + (int8_t)c43);
+}
