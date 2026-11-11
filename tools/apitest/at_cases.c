@@ -5223,8 +5223,8 @@ static void cs_t41isp(void)
     /* the library paths are proven by APITEST_CASES=customalgo_t41; here only the argument check (the vendor dereferences a NULL record) */
     NEED(IMP_ISP_SetAeAlgoFunc) { r = IMP_ISP_SetAeAlgoFunc(IMPVI_MAIN, NULL); e1 = 0; rep(FN(IMP_ISP_SetAeAlgoFunc), r, (r == -1) ? V_PASS : V_FAIL, "rt: NULL record refused with -1 (vendor: NULL dereference); library path: APITEST_CASES=customalgo_t41, ret %d", r); }
     NEED(IMP_ISP_SetAwbAlgoFunc) { r = IMP_ISP_SetAwbAlgoFunc(IMPVI_MAIN, NULL); e2 = 0; rep(FN(IMP_ISP_SetAwbAlgoFunc), r, (r == -1) ? V_PASS : V_FAIL, "rt: NULL record refused with -1 (vendor: NULL dereference); library path: APITEST_CASES=customalgo_t41, ret %d", r); }
-    NEED(IMP_ISP_SetVicDoneCbFunc) { errno = 0; r = IMP_ISP_SetVicDoneCbFunc(NULL); e = errno; rep(FN(IMP_ISP_SetVicDoneCbFunc), r, (r == -1 && e == ENOTSUP) ? V_PASS : V_FAIL, "ret %d errno %d", r, e); }
-    NEED(IMP_ISP_RAW_RwControl) { errno = 0; r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, NULL); e = errno; rep(FN(IMP_ISP_RAW_RwControl), r, (r == -1 && e == ENOTSUP && flow()) ? V_PASS : V_FAIL, "ret %d errno %d, frames still flow", r, e); }
+    /* SetVicDoneCbFunc / RAW_RwControl: callback threads, proven by APITEST_CASES=rawvic_t41 (#320); here only the NULL check */
+    NEED(IMP_ISP_RAW_RwControl) { r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, NULL); rep(FN(IMP_ISP_RAW_RwControl), r, (r == -4087 && flow()) ? V_PASS : V_FAIL, "NULL attr %d (vendor -4087), frames still flow; ring: APITEST_CASES=rawvic_t41", r); }
 }
 #else
 static void cs_t41isp(void) {}
@@ -6304,9 +6304,145 @@ static void cs_t30pass_csc(void) {}
 static void cs_t30pass2(void) {}
 #endif
 
+/* T41 only (on T40 0xc0045431 is BYPASS_BIND): case rawvic_t41 (#320), run only when selected (APITEST_CASES=rawvic_t41):
+ * IMP_ISP_SetVicDoneCbFunc (one callback per VIC frame, compared with the sensor rate; a second call -4091; the close in
+ * IMP_ISP_DisableSensor is checked by rawvic_post_t41) and IMP_ISP_RAW_RwControl (vendor codes; RAW8 x1 ring: callback rate,
+ * frames flow, read-back proof: the callback blackens the top half of every RAW frame -> the ISP output top half goes dark and
+ * comes back when it stops; disable -> full rate again; 5 enable/disable cycles).  RAWVIC_HOLD=<s>: enable the ring and sleep
+ * (the host kills the process with -9 for the recovery test).  Nothing is saved, no picture leaves the camera. */
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+static volatile int g_vic_cnt, g_raw_cnt, g_raw_zero, g_raw_bad;
+static volatile uint32_t g_raw_w, g_raw_h;
+static int g_vic_on;
+static void vic_cb_t41(void) { g_vic_cnt++; }
+static int32_t raw_cb_t41(IMPISPRawRwInfo *i)
+{
+    if (!i->vaddr || !i->width || !i->height) { g_raw_bad++; return 0; }
+    g_raw_w = i->width; g_raw_h = i->height;
+    if (g_raw_zero) memset((void *)(uintptr_t)i->vaddr, 0, (size_t)i->width * i->height * (i->dtype + 1) / 2);
+    g_raw_cnt++;
+    return 0;
+}
+/* mean luma of the top and bottom third of one FS ch1 frame (after dropping 3) */
+static int halves_t41(double *top, double *bot)
+{
+    IMPFrameInfo *fr = NULL;
+    const unsigned char *y;
+    int k, i, j, w, h;
+    double st = 0, sb = 0, nt = 0, nb = 0;
+
+    for (k = 0; k < 3; k++) if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) IMP_FrameSource_ReleaseFrame(1, fr);
+    fr = NULL;
+    if (IMP_FrameSource_GetFrame(1, &fr) < 0 || !fr) return -1;
+    y = (const unsigned char *)(uintptr_t)fr->virAddr; w = fr->width; h = fr->height;
+    for (j = 0; j < h; j += 2)
+        for (i = 0; i < w; i += 4) {
+            if (j < h / 3) { st += y[(size_t)j * w + i]; nt++; }
+            else if (j >= 2 * h / 3) { sb += y[(size_t)j * w + i]; nb++; }
+        }
+    IMP_FrameSource_ReleaseFrame(1, fr);
+    *top = nt ? st / nt : 0; *bot = nb ? sb / nb : 0;
+    return 0;
+}
+/* frames of FS ch1 per second over ms */
+static double fsrate_t41(int ms)
+{
+    int64_t t0 = now_us(); int n = 0;
+
+    while (now_us() - t0 < (int64_t)ms * 1000) { IMPFrameInfo *fr = NULL; if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) { IMP_FrameSource_ReleaseFrame(1, fr); n++; } }
+    return n * 1e6 / (double)(now_us() - t0);
+}
+static void raw_attr_t41(IMPISPRawRwAttr *a, int on, int dtype, int nrvbs)
+{
+    memset(a, 0, sizeof(*a));
+    a->mode = on ? IMPISP_OPS_MODE_ENABLE : IMPISP_OPS_MODE_DISABLE;
+    a->dtype = dtype; a->mtype = TISP_RAW_MODULE_START; a->nrvbs = nrvbs; a->frame_done = raw_cb_t41;
+}
+void rawvic_post_t41(void)
+{
+    int n0;
+
+    if (!g_vic_on) return;
+    n0 = g_vic_cnt; usleep(500000);
+    rep(LBL("vicdone_close_t41"), 0, g_vic_cnt == n0 ? V_PASS : V_FAIL, "after DisableSensor: callback count %d -> %d in 0.5 s (want unchanged)", n0, g_vic_cnt);
+}
+static void cs_rawvic_t41(void)
+{
+    IMPISPRawRwAttr a;
+    int r, r2, n0, n1, i, ok;
+    int64_t t0, t1;
+    double exp_n, top0, bot0, top1, bot1, top2, bot2, rate_on, rate_off, cbr;
+    const char *hold = getenv("RAWVIC_HOLD");
+
+    if (hold) {
+        raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1);
+        r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+        printf("[T] rawvic hold: RAW8 x1 enable ret %d, sleeping %s s (kill -9 now)\n", r, hold); fflush(stdout);
+        sleep(atoi(hold));
+        return;
+    }
+    if (!getenv("RAWVIC_NOVIC")) NEED(IMP_ISP_SetVicDoneCbFunc) {
+        r = IMP_ISP_SetVicDoneCbFunc(vic_cb_t41);
+        usleep(300000);
+        n0 = g_vic_cnt; t0 = now_us(); sleep(10); n1 = g_vic_cnt; t1 = now_us();
+        exp_n = g_fps * (t1 - t0) / 1e6;
+        r2 = IMP_ISP_SetVicDoneCbFunc(vic_cb_t41);
+        g_vic_on = r == 0;
+        rep(FN(IMP_ISP_SetVicDoneCbFunc), r, (r == 0 && fabs((n1 - n0) - exp_n) <= 3 && r2 == -4091 && flow()) ? V_PASS : V_FAIL,
+            "dev: %d callbacks in %.2f s (sensor %d fps -> %.1f expected, +-3), second call %d (want -4091), frames flow",
+            n1 - n0, (t1 - t0) / 1e6, g_fps, exp_n, r2);
+    }
+    if (!getenv("RAWVIC_NORAW")) NEED(IMP_ISP_RAW_RwControl) {
+        int c1, c2, c3, c4, r16;
+
+        raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1);
+        c1 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, NULL); c2 = IMP_ISP_RAW_RwControl((IMPVI_NUM)2, &a);
+        a.mtype = TISP_RAW_MODULE_BUTT; c3 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a); a.mtype = TISP_RAW_MODULE_START;
+        a.nrvbs = 5; c4 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a); a.nrvbs = 1;
+        rep(LBL("IMP_ISP_RAW_RwControl codes"), 0, (c1 == -4087 && c2 == -4084 && c3 == -4091 && c4 == -4092) ? V_PASS : V_FAIL,
+            "NULL %d, sensor 2 %d, mtype BUTT %d, nrvbs 5 %d (vendor -4087 -4084 -4091 -4092)", c1, c2, c3, c4);
+        /* RAW16 x2 = 2 x 2 bytes per pixel: the vendor needs the rmem for it (-4094 when it does not fit) */
+        raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW16, 2);
+        r16 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+        if (r16 == 0) { usleep(1500000); n0 = g_raw_cnt; usleep(2000000); n1 = g_raw_cnt; ok = flow(); a.mode = IMPISP_OPS_MODE_DISABLE; r2 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+            rep(LBL("RAW_RwControl RAW16x2"), r16, (n1 > n0 && ok && r2 == 0) ? V_PASS : V_FAIL, "enable 0, %d callbacks in 2 s, frames flow %d, disable %d", n1 - n0, ok, r2); }
+        else rep(LBL("RAW_RwControl RAW16x2"), r16, r16 == -4094 ? V_PASS : V_FAIL, "enable %d: rmem block %ux%ux2x2 does not fit (vendor -4094 likewise)", r16, (unsigned)g_sw, (unsigned)g_sh);
+
+        rate_off = fsrate_t41(2000);
+        halves_t41(&top0, &bot0);
+        raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1);
+        n0 = g_raw_cnt;
+        r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+        usleep(1500000);
+        n1 = g_raw_cnt; t0 = now_us(); usleep(3000000); cbr = (g_raw_cnt - n1) * 1e6 / (double)(now_us() - t0);
+        rate_on = fsrate_t41(2000);
+        g_raw_zero = 1; usleep(1000000); halves_t41(&top1, &bot1); g_raw_zero = 0; usleep(1000000); halves_t41(&top2, &bot2);
+        ok = flow();
+        a.mode = IMPISP_OPS_MODE_DISABLE; r2 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a);
+        usleep(1000000);
+        rep(FN(IMP_ISP_RAW_RwControl), r, (r == 0 && r2 == 0 && n1 > n0 && cbr > 1 && ok && !g_raw_bad && g_raw_w == (uint32_t)g_sw && g_raw_h == (uint32_t)g_sh &&
+                                           top1 < 30 && top1 + 15 < top2 && fsrate_t41(2000) > 0.8 * rate_off) ? V_PASS : V_FAIL,
+            "dev: RAW8 x1 enable %d / disable %d, callback %ux%u at %.1f/s (ch1 %.1f fps on, %.1f off), read-back: top third luma %.0f -> %.0f with the "
+            "callback blackening the RAW top half -> %.0f after (bottom %.0f %.0f %.0f), frames flow", r, r2, (unsigned)g_raw_w, (unsigned)g_raw_h, cbr,
+            rate_on, rate_off, top0, top1, top2, bot0, bot1, bot2);
+        for (i = 0, ok = 0; i < 5; i++) {
+            raw_attr_t41(&a, 1, TISP_RAW_DTYPE_RAW8, 1); n0 = g_raw_cnt;
+            r = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a); usleep(1500000);
+            a.mode = IMPISP_OPS_MODE_DISABLE; r2 = IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a); usleep(300000);
+            if (r == 0 && r2 == 0 && g_raw_cnt > n0 && flow()) ok++;
+            printf("[T] rawvic cycle %d: enable %d disable %d callbacks %d\n", i, r, r2, g_raw_cnt - n0);
+        }
+        rep(LBL("RAW_RwControl cycles"), 0, ok == 5 ? V_PASS : V_FAIL, "%d of 5 enable/disable cycles with callbacks and flowing frames", ok);
+    }
+}
+#else
+void rawvic_post_t41(void) {}
+static void cs_rawvic_t41(void) {}
+#endif
+
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -6451,5 +6587,6 @@ void t_cases(void)
     if (cs_on("t41isp")) { cs_t41isp(); wdog("cases", 90); }
     if (cs_on("rgnisp")) { cs_rgnisp(); wdog("cases", 90); }
     if (cs_on("customalgo" CA_SFX)) cs_customalgo_t40(); wdog("cases", 150);
+    if (getenv("APITEST_CASES") && cs_on("rawvic_t41")) { wdog("cases", 120); cs_rawvic_t41(); }
     wdog("cases", 60);
 }

@@ -793,6 +793,7 @@ int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info)
 /* custom AE/AWB callbacks (openimp_p1_algo.c) */
 extern void OpenIMP_P1_AlgoStart(int fd, int num) __attribute__((weak));   /* weak: host tests link p1.c alone */
 extern void OpenIMP_P1_AlgoStop(int fd, int num) __attribute__((weak));
+extern void OpenIMP_P1_VicDoneStop(void) __attribute__((weak));
 #endif
 
 int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info)
@@ -842,6 +843,12 @@ int IMP_ISP_DisableSensor(IMPVI_NUM num)
 
     if (num < IMPVI_MAIN || num >= IMPVI_BUTT)
         return -1;
+#if defined(PLATFORM_T41)
+    /* vendor IMP_ISP_SetVicDoneCbFunc_close (openimp_t41_rawvic.c): stop
+     * the worker while frames still arrive; it takes the P1 lock itself */
+    if (OpenIMP_P1_VicDoneStop)
+        OpenIMP_P1_VicDoneStop();
+#endif
     lock_p1();
     prepare_p1();
     if (!p1.sensor_enabled) {
@@ -3551,6 +3558,35 @@ int OpenIMP_P1_IspIOCtlOpened(uint32_t command, void *argument)
     result = record_ioctl(p1.isp_fd, command, argument);
     unlock_p1();
     return result;
+}
+
+/* A private duplicate of the ISP device fd (tuning = 0) or the tuning fd
+ * (tuning = 1) for a worker that sleeps in the driver (VIC done, RAW ring)
+ * without the P1 lock; -1 / ENODEV when that node is not open. */
+int OpenIMP_P1_DupFd(int tuning)
+{
+    int fd = -1;
+
+    lock_p1();
+    prepare_p1();
+    if (tuning ? (p1.tuning_enabled && p1.tuning_fd >= 0) :
+                 (p1.isp_open && p1.isp_fd >= 0))
+        fd = fcntl(tuning ? p1.tuning_fd : p1.isp_fd, F_DUPFD_CLOEXEC, 0);
+    unlock_p1();
+    if (fd < 0)
+        errno = ENODEV;
+    return fd;
+}
+
+int OpenIMP_P1_IspIsOpen(void)
+{
+    int open_;
+
+    lock_p1();
+    prepare_p1();
+    open_ = p1.isp_open && p1.isp_fd >= 0;
+    unlock_p1();
+    return open_;
 }
 
 /* The sensor the ISP runs: name (32 bytes) and control bus type. */

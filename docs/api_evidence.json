@@ -1307,7 +1307,7 @@
         "T40": "n.a.",
         "T41": "err"
       },
-      "note": "T41: the vendor library allocates rmem buffers and runs a frame-done thread on tuning control 0x80000a7 to move RAW frames in and out of the ISP; the open T41 module has no such event or RAW path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): classified (no issue): documented limit, both cameras answer -1 / errno 122 (EOPNOTSUPP) by design, frames keep flowing; the open module has no RAW path. | T41 matrix1111 2026-11-11 (#318): stays err (documented ENOTSUP): a vendor-equal port needs the VIC frame-done event (ISP-device ioctl 0xc0045431 plus the vendor callback thread) and the RAW ring of tuning control 0x80000a7 in the open T41 module first; scoped in #318.",
+      "note": "T41 (#320, 2026-11-11): library side as the vendor 1.2.5 code (checks -4088/-4087/-4084/-4091/-4092, rmem block -4094, control 0x80000a7, ring thread on 0x80000a8 get/set; on the device the codes and RAW16x2 -4094 equal the vendor's), but the open-tx-isp T41 ring resets the board after the first RDMA start, so the module serves the controls only with t41_raw_ring=1 (default off: -4090). Stays err until #320 is fixed. | earlier: T41: the vendor library allocates rmem buffers and runs a frame-done thread on tuning control 0x80000a7 to move RAW frames in and out of the ISP; the open T41 module has no such event or RAW path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): classified (no issue): documented limit, both cameras answer -1 / errno 122 (EOPNOTSUPP) by design, frames keep flowing; the open module has no RAW path. | T41 matrix1111 2026-11-11 (#318): stays err (documented ENOTSUP): a vendor-equal port needs the VIC frame-done event (ISP-device ioctl 0xc0045431 plus the vendor callback thread) and the RAW ring of tuning control 0x80000a7 in the open T41 module first; scoped in #318.",
       "action": {
         "T41": "enotsup"
       },
@@ -1489,14 +1489,14 @@
         "T32": "n.a.",
         "T33": "n.a.",
         "T40": "n.a.",
-        "T41": "err"
+        "T41": "dev"
       },
-      "note": "T41: the vendor library runs a callback thread fed by the VIC frame-done event (ISP-device ioctl 0xc0045431); the open T41 module has no such event or RAW path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): classified (no issue): documented limit, both cameras answer -1 / errno 122 (EOPNOTSUPP) by design; the open module has no VIC frame-done event. | T41 matrix1111 2026-11-11 (#318): stays err (documented ENOTSUP): a vendor-equal port needs the VIC frame-done event (ISP-device ioctl 0xc0045431 plus the vendor callback thread) and the RAW ring of tuning control 0x80000a7 in the open T41 module first; scoped in #318.",
+      "note": "T41 (#320, 2026-11-11): vendor 1.2.5 thread model rebuilt (ISP-device ioctl 0xc0045431 arm, worker blocks on 0xc0045432, callback in the worker thread, close from DisableSensor; codes -4091 not enabled/already on, -4090 ioctl, -4087 thread). Needs open-tx-isp T41 with #320 (older modules refuse 0xc0045431: -4090). T40 n.a.: 0xc0045431 is BYPASS_BIND there. | earlier: T41: the vendor library runs a callback thread fed by the VIC frame-done event (ISP-device ioctl 0xc0045431); the open T41 module has no such event or RAW path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): classified (no issue): documented limit, both cameras answer -1 / errno 122 (EOPNOTSUPP) by design; the open module has no VIC frame-done event. | T41 matrix1111 2026-11-11 (#318): stays err (documented ENOTSUP): a vendor-equal port needs the VIC frame-done event (ISP-device ioctl 0xc0045431 plus the vendor callback thread) and the RAW ring of tuning control 0x80000a7 in the open T41 module first; scoped in #318.",
       "action": {
         "T41": "enotsup"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): -1 with errno ENOTSUP, frames still flow, documented ENOTSUP (no VIC-done callback / RAW exchange path in the open module)"
+        "T41": "apitest 2026-11-11 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp claude/t41-320 and OpenIMP claude/t41-320 libimp, APITEST_CASES=rawvic_t41, #320): 250 callbacks in 10.00 s at 25 fps (250 expected), second call -4091, frames flow, none after DisableSensor"
       }
     },
     "ISP_StartNightMode": {

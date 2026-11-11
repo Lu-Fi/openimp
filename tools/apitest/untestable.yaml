@@ -28,9 +28,9 @@ entries:
   - match: ["IMP_ISP_MultiCamera*", "IMP_ISP_Bypass_Bind"]
     category: own-topology
     reason: "multi-camera / bypass-bind topology, test cameras have one sensor"
-  - match: ["IMP_ISP_SET_GPIO_*", "IMP_ISP_SetVicDoneCbFunc", "IMP_ISP_RAW_RwControl", "IMP_ISP_SetCameraInputMode", "IMP_ISP_GetCameraInputMode", "IMP_ISP_SetCameraInputSelect", "IMP_ISP_SetPreDqtime"]
+  - match: ["IMP_ISP_SET_GPIO_*", "IMP_ISP_SetCameraInputMode", "IMP_ISP_GetCameraInputMode", "IMP_ISP_SetCameraInputSelect", "IMP_ISP_SetPreDqtime"]
     category: hardware
-    reason: "sensor GPIO / VIC callback / RAW read-write / camera input select: change the sensor interface itself"
+    reason: "sensor GPIO / camera input select: change the sensor interface itself"
   - match: ["IMP_ISP_SetAeAlgoFunc*", "IMP_ISP_SetAwbAlgoFunc*"]
     category: own-topology
     reason: "replaces the ISP 3A algorithm with a user callback set; needs a custom algorithm library"

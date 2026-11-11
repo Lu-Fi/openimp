@@ -182,6 +182,11 @@ do
         -o "$output_dir/$source.o"
 done
 
+# IMP_ISP_SetVicDoneCbFunc / IMP_ISP_RAW_RwControl worker threads (vendor 1.2.5 protocol, #320)
+"$compiler" $strict_flags -I"$T41_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t40/openimp_t41_rawvic.c" \
+    -o "$output_dir/openimp_t41_rawvic.o"
+
 # custom AE/AWB callbacks (IMP_ISP_SetAeAlgoFunc / SetAwbAlgoFunc), the vendor protocol shared with T40 (#76)
 "$compiler" $strict_flags -I"$T41_HEADERS" -I"$project_dir/src" \
     -c "$project_dir/src/t40/openimp_p1_algo.c" \
@@ -235,6 +240,7 @@ done
     "$output_dir/openimp_p3_compat.o" \
     "$output_dir/openimp_t41_isp_osd.o" \
     "$output_dir/openimp_t41_isp_extra.o" \
+    "$output_dir/openimp_t41_rawvic.o" \
     "$output_dir/openimp_p1_algo.o" \
     "$output_dir/t41_osd.o" \
     "$output_dir/t41_ivs.o" \
