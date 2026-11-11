@@ -85,6 +85,10 @@ typedef struct {
      * to the frames of frame source channel 0 (i264e picture +0x1e0/+0x1e4,
      * eprc E+641/E+672).  NULL: none (other channels, the T21 revision). */
     const uint32_t *ae_zone;
+    /* T23: the forced QP of a requested IDR (OEM picture +0x1a4 ->
+     * i264e_update_fenc -> rc E+1828, IMP_Encoder_Setframelossthd); 0: none
+     * (the OEM's 0xff) */
+    int32_t frame_qp;
 } EprcFrameIn;
 
 #define EPRC_AE_ZONES 225u

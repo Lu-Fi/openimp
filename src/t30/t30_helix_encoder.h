@@ -48,6 +48,12 @@ int OpenIMP_T30_HelixSetRoi(T30HelixEncoder *encoder,
  * a no-op; zero fields keep the current value. */
 int OpenIMP_T30_HelixReconfigure(T30HelixEncoder *encoder,
                                  const HWEncoderParams *params);
+/* IMP_Encoder_Setframelossthd (src/t23/t23_frameloss.h): request an IDR
+ * coded at `qp` (1..51; 0 = the rate control's QP), as the OEM channel
+ * thread hands picture +0x1a4 to i264e with the IDR request. */
+int OpenIMP_T30_HelixRequestIDRQp(T30HelixEncoder *encoder, int qp);
+/* The slice QP of the last coded picture (0 before the first). */
+int OpenIMP_T30_HelixLastQp(const T30HelixEncoder *encoder);
 #endif
 /* Consecutive failed pictures since the last good one. */
 uint32_t OpenIMP_T30_HelixFailures(const T30HelixEncoder *encoder);

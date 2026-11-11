@@ -1607,6 +1607,8 @@ int EPRC_FrameStart(Eprc *rc, const EprcFrameIn *in, EprcPicture *pic)
     EU32(E, 668) = 0;
     EU8(E, 1829) = 0;
     EI8(E, 1828) = -1;
+    if (in->frame_qp > 0)       /* i264e_update_fenc: at most 51 */
+        EI8(E, 1828) = (int8_t)(in->frame_qp > 51 ? 51 : in->frame_qp);
     EU32(E, 312) = in->frames_since_idr == 0;
     EU32(E, 16) = in->gop_ctrl;
     EU32(E, 308) = in->r2820;

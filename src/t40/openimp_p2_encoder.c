@@ -2497,6 +2497,10 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     /* OEM CreateChn: the fisheye flag is an i264e parameter (src/fisheye; T10/T20 word 0x72, T21 1.0.33 the same
      * flag two words further) */
     (void)AL_Codec_Encode_SetFisheye(ch->codec, ch->fisheye);
+#elif defined(PLATFORM_T23)
+    /* OEM T23 1.3.0 CreateChn: the channel flag (+0x1dc of the record) becomes i264e parameter +0x1d4,
+     * read by i264e_icodec_enc for every picture (src/fisheye) */
+    (void)AL_Codec_Encode_SetFisheye(ch->codec, openimp_t23_enc_fisheye(channel));
 #endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21)
     {
