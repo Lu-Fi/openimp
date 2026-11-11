@@ -46,7 +46,7 @@ typedef struct {
  * structure at the very start of IMPFSChnAttr; T31 1.1.6 and older do not
  * have it at all (their picWidth is the first member).
  */
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 typedef struct {
     int i2d_enable;         /**< Output rotate enable */
     int flip_enable;        /**< Output flip enable */
@@ -60,7 +60,7 @@ typedef struct {
  * Frame source channel attributes
  */
 typedef struct {
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
     IMPFSI2DAttr i2dattr;   /**< T40/T41: I2D block comes first */
 #endif
     int picWidth;           /**< Picture width */
@@ -75,11 +75,12 @@ typedef struct {
 #if defined(PLATFORM_T23)
     int mirr_enable;        /**< T23 1.3.0 mirror flag */
     IMPFSChnCrop fcrop;     /**< T23 frame crop */
-#elif defined(PLATFORM_T31) || defined(PLATFORM_C100) || defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#elif defined(PLATFORM_T31) || defined(PLATFORM_C100) || defined(PLATFORM_T40) || defined(PLATFORM_T41) || \
+    defined(PLATFORM_T32)
     IMPFSChnCrop fcrop;     /**< Frame crop (newer platforms) */
 #endif
-#if defined(PLATFORM_T41)
-    int mirr_enable;        /**< T41 1.2.6 mirror flag, after fcrop */
+#if defined(PLATFORM_T41) || defined(PLATFORM_T32)
+    int mirr_enable;        /**< T41 1.2.6 / T32 2.x mirror flag, after fcrop */
 #endif
 } IMPFSChnAttr;
 
@@ -96,6 +97,18 @@ _Static_assert(offsetof(IMPFSChnAttr, picWidth) == 0x14,
                "T40 IMPFSChnAttr.picWidth ABI mismatch");
 _Static_assert(sizeof(IMPFSChnAttr) == 0x64,
                "T40 IMPFSChnAttr ABI mismatch");
+#elif defined(PLATFORM_T32)
+/* T32 2.x: the T41 1.2.6 layout, 104 bytes */
+_Static_assert(offsetof(IMPFSChnAttr, picWidth) == 0x14,
+               "T32 IMPFSChnAttr.picWidth ABI mismatch");
+_Static_assert(offsetof(IMPFSChnAttr, nrVBs) == 0x48,
+               "T32 IMPFSChnAttr.nrVBs ABI mismatch");
+_Static_assert(offsetof(IMPFSChnAttr, fcrop) == 0x50,
+               "T32 IMPFSChnAttr.fcrop ABI mismatch");
+_Static_assert(offsetof(IMPFSChnAttr, mirr_enable) == 0x64,
+               "T32 IMPFSChnAttr.mirr_enable ABI mismatch");
+_Static_assert(sizeof(IMPFSChnAttr) == 0x68,
+               "T32 IMPFSChnAttr ABI mismatch (vendor 2.x: 104 bytes)");
 #elif defined(PLATFORM_T41)
 _Static_assert(offsetof(IMPFSChnAttr, picWidth) == 0x14,
                "T41 IMPFSChnAttr.picWidth ABI mismatch");
