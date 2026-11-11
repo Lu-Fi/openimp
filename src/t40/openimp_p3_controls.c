@@ -1497,7 +1497,25 @@ P3_T40_POINTER_PAIR(WdrOutputMode, IMPISPWdrOutputMode,
 
 P3_T40_POINTER_PAIR(FaceAe, IMPISPFaceAttr, TISP_CID_FACE_AE)
 P3_T40_POINTER_PAIR(FaceAwb, IMPISPFaceAttr, TISP_CID_FACE_AWB)
-P3_T40_POINTER_PAIR(HLDCAttr, IMPISPHLDCAttr, TISP_CID_HLDC)
+/* HLDC: the vendor codes of 1.3.1 0x8acdc / 0x8b180 for the argument checks: sensor number >= 4 -4, NULL -9
+ * (camera A/B 2026-11-11, #310); the request itself as the other pointer pass-throughs. */
+int32_t IMP_ISP_Tuning_SetHLDCAttr(IMPVI_NUM num, IMPISPHLDCAttr *attr)
+{
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    return p3_tuning_pointer(num, 0, TISP_CID_HLDC, attr);
+}
+
+int32_t IMP_ISP_Tuning_GetHLDCAttr(IMPVI_NUM num, IMPISPHLDCAttr *attr)
+{
+    if ((uint32_t)num >= 4U)
+        return -4;
+    if (!attr)
+        return -9;
+    return p3_tuning_pointer(num, 1, TISP_CID_HLDC, attr);
+}
 P3_T40_POINTER_PAIR(AeExpList, IMPISPAeExpListAttr, TISP_CID_AE_EXP_LIST)
 P3_T40_POINTER_PAIR(AeSpeed, IMPISPAeSpeedAttr, TISP_CID_AE_SPEED)
 

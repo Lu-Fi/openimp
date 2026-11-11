@@ -11,7 +11,8 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-11, T40: SU_CIPHER_* like the vendor libsysutils, matrix gaps (#310)
 
 - `src/core/su_sysutils.c`: `SU_CIPHER_*` follow the vendor libsysutils 1.3.x cipher flow instead of answering -1/ENOTSUP: `/dev/aes` (ioctl GET_PBUFF, 2 MB `/dev/mem` mapping, 16 handle slots, SET_PARA, START_EN/DE_PROCESSING), `/dev/jz-des` (driver self tests), the `su_cipher.h` return codes. Better than the vendor on error paths only: mutexes are released (the vendor leaves the handle mutex locked after a failed CreateHandle/DestroyHandle), Init cleans up, Exit forgets the closed fds, handle numbers are range-checked, DES_Test answers UNINIT before DES_Init (the vendor reports all self tests passed on fd -1). Host test drives the whole flow with a fake driver.
-- `IMP_ISP_SetPreDqtime`: a failing ioctl is -1 as in the vendor library (was -6).
+- Vendor return codes (camera A/B): `IMP_ISP_SetPreDqtime` failing ioctl -1 (was -6), `IMP_ISP_Tuning_Get/SetHLDCAttr` num >= 4 -4 and NULL -9 (was -1), `IMP_ISP_GetRaw` with a zero size -2 (was -1).
+- Device: `ISP_GetRaw` and `OSD_AttachToGroup` T40 cells dev (open and vendor alike); findings #322 (ioctl 0xc0045430 oopses tx_isp_t40 in QEMU), #324 (WDR_OPEN LINEAR -1 vs vendor 0), #321 (vendor Raw2SUTime).
 - apitest: area `su` alone runs without the ISP (the vendor libimp + libsysutils can run it), `APITEST_SU_NOHW=1` calls the RTC/ADC functions on a board without the nodes, `APITEST_SU_NOKEY=1`; T40 cipher checks with the vendor codes; t40dev phase `2000000` (argument checks of SetPreDqtime/GetHLDCAttr/GetRaw/WDR_OPEN/SetCameraInputMode/OSD_*RgnAttr_ISP plus SetPreDqtime 0 and GetHLDCAttr).
 - Device (Eufy T40XP, QEMU T40 first): OpenIMP and the vendor libsysutils give the same answers for the cipher, RTC and ADC calls on this board (no `/dev/aes`, `/dev/jz-des`, `/dev/rtc0`, ADC node): cells `nohw`.
 

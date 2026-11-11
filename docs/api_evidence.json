@@ -1172,10 +1172,13 @@
     "T31": "n.a.",
     "T32": "n.a.",
     "T33": "n.a.",
-    "T40": "host",
+    "T40": "dev",
     "T41": "n.a."
    },
-   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case)."
+   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case). T40 2026-11-11 (#310): t40dev 2000: one 8-bit 3840x2160 raw frame, OpenIMP rc 0, 8294400 bytes, sampled mean 133.8, stream runs on (21 frames/s); vendor rc 0, same size, mean 49.2 (other exposure state), stream runs on. Argument checks equal (num 4 -4, raw_bit 12 -1, width 0 -2 after aligning OpenIMP, was -1). QEMU T40 first (no oops; the model writes no raw data).",
+   "ref": {
+    "T40": "apitest t40dev 400/2000/2000000 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP on tx_isp_t40 vs vendor 1.3.1 libimp on the vendor module, QEMU T40 first"
+   }
   },
   "ISP_LDC_Get/SetAttr": {
    "area": "ISP tuning",
@@ -1367,7 +1370,7 @@
     "T40": "host",
     "T41": "n.a."
    },
-   "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select."
+   "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board)."
   },
   "ISP_SetCameraInputSelect": {
    "area": "ISP tuning",
@@ -1422,7 +1425,7 @@
     "T40": "host",
     "T41": "n.a."
    },
-   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case)."
+   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case). T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (num 4 -4, NULL -9); the valid call (ioctl 0xc0045430) oopses our tx_isp_t40 in QEMU (#322), so by the QEMU-first rule it was not sent on the camera. OpenIMP now answers -1 on a failing ioctl like the vendor (was -6)."
   },
   "ISP_SetScalerLv": {
    "area": "ISP tuning",
@@ -2268,7 +2271,7 @@
     "T40": "host",
     "T41": "n.a."
    },
-   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have)."
+   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have). T40 2026-11-11 (#310): Get device-equal (OpenIMP and vendor both rc 0, strength 128, 1920x1080, centre 960,540; NULL -9 / num >= 4 -4 after aligning OpenIMP, was -1); Set not run (rule: reprograms the lens-correction back end), so the pair stays host."
   },
   "ISP_Tuning_Get/SetHVFLIP": {
    "area": "ISP tuning",
@@ -4713,7 +4716,7 @@
    "ref": {
     "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): linear start with imode DOL returns 0, frames flow; the module stores the non-zero mode byte like the stock module, mode 0 is refused with EFAULT as stock (-4090); no visible effect on this linear sensor (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
    },
-   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run."
+   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run. T40 2026-11-11 (#310): stays host: argument checks equal (NULL -8, rmode 7 -9); LINEAR before AddSensor: OpenIMP -1 (the open module refuses ioctl 0xc0045432, stream runs on), vendor 0 but its stream then stays at 0 frames in that run (#324)."
   },
   "ISP_SetAeAlgoFunc": {
    "area": "AE / AWB / AF",
@@ -11117,16 +11120,17 @@
     "T31": "aud",
     "T32": "nob",
     "T33": "nob",
-    "T40": "host",
+    "T40": "dev",
     "T41": "dev"
    },
-   "note": "T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10 2026-11-03: new apitest case (APITEST_ATTACH=1, T10/T20/T21): FS -> ENC is bound, the OSD group is created, IMP_OSD_AttachToGroup(osd, enc) returns 0, GetBindbyDest shows ENC <- OSD and OSD <- FS, and 5 H.264 frames flow through the OSD group; run in the T10 QEMU first (PASS, no oops), then on the T10 camera (PASS). Device PASS.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): the same case (APITEST_ATTACH=1): attach returns 0, bind table FS -> OSD -> ENC, 5 frames through the OSD group, no oops; device PASS. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, deprecated; the apitest attach test (APITEST_ATTACH) is built for T10/T20/T21 only.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): the same case (APITEST_ATTACH=1): attach returns 0, bind table FS -> OSD -> ENC, 5 frames through the OSD group, no oops; device PASS. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): attach test enabled for T41 (APITEST_ATTACH=1, QEMU first): FS->ENC becomes FS->OSD->ENC, 5 frames through the OSD group.  T23 2026-11-04 (T23 cameras; apitest APITEST_ATTACH=1 now built for T23, QEMU T23 first, no oops): attach returns 0, bind table FS -> OSD -> ENC, 5 H.264 frames through the OSD group, on both cameras. Device PASS.",
+   "note": "T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10/T20/T21: system_attach() as the vendor wrapper (src->to becomes src->from->to, rolled back on error, -1); host test with a fake bind table; the apitest skips it (deprecated, the chain is built with IMP_System_Bind); T30 1.0.5: the same system_attach() wrapper as T21 (disassembly compared); the T21 host test with a fake bind table also runs against the T30 build T10 2026-11-03: new apitest case (APITEST_ATTACH=1, T10/T20/T21): FS -> ENC is bound, the OSD group is created, IMP_OSD_AttachToGroup(osd, enc) returns 0, GetBindbyDest shows ENC <- OSD and OSD <- FS, and 5 H.264 frames flow through the OSD group; run in the T10 QEMU first (PASS, no oops), then on the T10 camera (PASS). Device PASS.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): the same case (APITEST_ATTACH=1): attach returns 0, bind table FS -> OSD -> ENC, 5 frames through the OSD group, no oops; device PASS. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, deprecated; the apitest attach test (APITEST_ATTACH) is built for T10/T20/T21 only.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): the same case (APITEST_ATTACH=1): attach returns 0, bind table FS -> OSD -> ENC, 5 frames through the OSD group, no oops; device PASS. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): attach test enabled for T41 (APITEST_ATTACH=1, QEMU first): FS->ENC becomes FS->OSD->ENC, 5 frames through the OSD group.  T23 2026-11-04 (T23 cameras; apitest APITEST_ATTACH=1 now built for T23, QEMU T23 first, no oops): attach returns 0, bind table FS -> OSD -> ENC, 5 H.264 frames through the OSD group, on both cameras. Device PASS. T40 2026-11-11 (#310): t40dev 400: FS -> ENC bound, IMP_OSD_AttachToGroup inserts the OSD group (GetBindbyDest of the encoder = OSD group 1), 41 group callbacks during 41 encoded frames in 2 s, with OpenIMP and with the vendor library alike. QEMU T40 first (30/30).",
    "ref": {
     "T10": "apitest t10wrench 2026-11-03 .31",
     "T20": "apitest t20pass 2026-11-04 .107",
     "T21": "apitest t21pass 2026-11-04 .24",
     "T41": "apitest t41pass 2026-11-04 .34 .32",
-    "T23": "apitest t23pass 2026-11-04 .30"
+    "T23": "apitest t23pass 2026-11-04 .30",
+    "T40": "apitest t40dev 400/2000/2000000 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP on tx_isp_t40 vs vendor 1.3.1 libimp on the vendor module, QEMU T40 first"
    }
   },
   "OSD_CreateGroup": {
@@ -11676,7 +11680,7 @@
     "T23": "apitest t23pass 2026-11-04 .30",
     "T41": "apitest t41pass 2026-11-04 .34"
    },
-   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS."
+   "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU)."
   },
   "OSD_GetRegionLuma": {
    "area": "OSD",

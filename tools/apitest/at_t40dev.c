@@ -1735,13 +1735,13 @@ int t40dev_main(int argc, char **argv)
         memset(&hl, 0x5a, sizeof hl);
         b1 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hl);
         b2 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, NULL);
-        R("ISP_Tuning_GetHLDCAttr", OK(b1 == 0), "rc=%d strength %d %dx%d centre %d,%d; NULL rc=%d (vendor -9)", b1, hl.strength, hl.width, hl.height, hl.center_w, hl.center_h, b2);
+        R("ISP_Tuning_GetHLDCAttr", OK(b1 == 0 && b2 == -9), "rc=%d strength %d %dx%d centre %d,%d; NULL rc=%d (vendor -9)", b1, hl.strength, hl.width, hl.height, hl.center_w, hl.center_h, b2);
         memset(&gr, 0, sizeof gr); gr.raw_width = 64; gr.raw_height = 64; gr.raw_bit = 12;
         c1 = IMP_ISP_GetRaw((IMPVI_NUM)4, &gr);
         c2 = IMP_ISP_GetRaw(IMPVI_MAIN, &gr);
         gr.raw_bit = 8; gr.raw_width = 0;
         c3 = IMP_ISP_GetRaw(IMPVI_MAIN, &gr);
-        R("ISP_GetRaw_args", OK(c1 == -4 && c2 == -1 && c3 == -1), "num 4 rc=%d (-4), raw_bit 12 rc=%d (-1), width 0 rc=%d", c1, c2, c3);
+        R("ISP_GetRaw_args", OK(c1 == -4 && c2 == -1 && c3 == -2), "num 4 rc=%d (-4), raw_bit 12 rc=%d (-1), width 0 rc=%d (-2)", c1, c2, c3);
         memset(&wo, 0, sizeof wo); wo.rmode = (IMPISPRunningMode)7;
         d1 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, NULL);
         d2 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wo);
