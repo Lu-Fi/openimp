@@ -12,6 +12,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Mode 5 (ISP-middle picture via the MDNS reference buffer) moves to `src/isp/isp_mid_ref.c` and now runs on T31 and T21 as well as T23. Device-tested: T31L Y/U/V SSIM 0.89/0.96/0.98, T21 0.85/0.89/0.90. The weight words are written with `b_min` = 0xff, which completes the T23 chroma path (U/V 0.87/0.89 -> 0.96). On T31 the picture is stored mirrored while the ISP hflip is on.
 - T23 build: the audio capture catch-up constants are defined for the T23 path too. `next` did not build for T23 since #266.
+## 2026-11-11, T32 (planned): ISP-drawn OSD (#336)
+
+- New `src/t32/openimp_t32_isp_osd.c` (vendor 2.2.0 headers): `IMP_OSD_Init/Exit/SetPoolSize/CreateRgn/DestroyRgn/SetRgnAttr_PicISP/GetRgnAttr_ISPPic/ShowRgn/UpdateRgnAttrData_ISP` and the `IMP_ISP_Tuning_*OsdRgn` / `SetOsdPoolSize` wrappers in the vendor flow (8 slots per channel, free/used lists, picture copy into one rmem pool allocated by `IMP_System_Init`, SetRgnAttr sends nothing, ShowRgn hides overlapping pictures of the same group and sends `SetOSDAttr` + `SetOSDBlock` for every slot whose pinum equals its handle); `IMP_OSD_SetRgnAttr_ISP` / `GetRgnAttr_ISP` to the draw / mask blocks with the vendor error codes. Tuning layer: the vendor's per-VI mask / draw cache puts the colour form back on Get (draw: pinum 0 only); `SetDrawBlock` sends unknown types unconverted like the vendor.
+- QEMU (`tools/t32/t32_trace_sample isposd`, recorder `T32_TRACE_OSD=1`; open-tx-isp `claude/t32-ispOSD`): 20/20 ISP OSD requests (id, VI, direction, payload, picture address masked) identical to vendor libimp 2.2.0; sample output identical except pool addresses; final MSCA OSD register state identical; JPEG check (local): both pictures and the cover drawn by the QEMU model (it draws no T32 lines/ranges: register proof only). No other SoC sources touched.
 
 ## 2026-11-11 (afternoon): T31 temper after day/night, T10/T20 manual gain, QEMU SU checks, T30 AE FSM, kernel review lows (#323, #331, #285, #284, #283, #251, #327, #328, #235, #267)
 

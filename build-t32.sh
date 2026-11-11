@@ -87,6 +87,10 @@ compile t32_bin src/t32/openimp_t32_bin.c
 "$compiler" $strict_flags -I"$T32_HEADERS" -I"$project_dir/src" \
     -c "$project_dir/src/t32/openimp_t32_tuning.c" -o "$output_dir/t32_tuning.o"
 objects="$objects $output_dir/t32_tuning.o"
+# ISP-drawn OSD (#336): picture regions, ISP lines / covers, same headers
+"$compiler" $strict_flags -I"$T32_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t32/openimp_t32_isp_osd.c" -o "$output_dir/t32_isp_osd.o"
+objects="$objects $output_dir/t32_isp_osd.o"
 # FrameSource on the 2.x framechan ABI, System bind (#290)
 compile t32_fs src/t32/openimp_t32_fs.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)

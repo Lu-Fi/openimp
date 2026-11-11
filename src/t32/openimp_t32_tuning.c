@@ -303,8 +303,6 @@ PASS_GET(IMP_ISP_Tuning_GetAFMetricesInfo, IMPISPAFMetricsInfo, ID_AF_METRICS)
 PASS_GET(IMP_ISP_Tuning_GetAEFlickerFlag, IMPISPFlickerFlag, ID_AE_FLICKER_FLAG)
 PASS_GET(IMP_ISP_Tuning_GetAwbOnlyReadAttr, IMPISPAwbOnlyReadAttr, ID_AWB_ONLY_READ)
 PASS_GET(IMP_ISP_Tuning_GetFaceAeLuma, IMPISPFaceAeLuma, ID_FACE_AE_LUMA)
-PASS_GET(IMP_ISP_Tuning_GetMaskBlock, IMPISPMaskBlockAttr, ID_MASK_BLOCK)
-PASS_GET(IMP_ISP_Tuning_GetDrawBlock, IMPISPDrawBlockAttr, ID_DRAW_BLOCK)
 PASS_GET(IMP_ISP_Tuning_GetHVFLIP, IMPISPHVFLIPAttr, ID_HVFLIP)
 PASS_GET(IMP_ISP_Tuning_GetGammaAttr, IMPISPGammaAttr, ID_GAMMA)
 /* the vendor's other statistics layout (state word 0 == 1, a 0x1518-byte
@@ -576,10 +574,26 @@ static void tun_rgb_yuv(uint8_t *c)
     c[5] = t[2];
 }
 
+/*
+ * The vendor keeps the last Set mask / draw block per VI and puts the caller's
+ * colour form back on Get (the driver answers YUV only), #336:
+ *  - mask: entry chx * pinum (the vendor's index; 12 entries of 24 bytes per
+ *    VI), Get takes mask_type (+12) and the RGB bytes (+16..+18) of the entry
+ *    the driver's chx / pinum bytes select;
+ *  - draw: one 36-byte slot per VI (Set always writes it), Get takes
+ *    color_type (+8) and the RGB bytes (+22..+24) of slot "pinum"; the vendor
+ *    reads past its slot for pinum > 0 (other data), here only pinum 0 is
+ *    answered from the cache, others keep what the driver returned.
+ */
+#define T32_MASK_CACHE 12
+static uint8_t tun_mask_cache[T32_VI_MAX][T32_MASK_CACHE][24];
+static uint8_t tun_draw_cache[T32_VI_MAX][36];
+
 int32_t IMP_ISP_Tuning_SetMaskBlock(IMPVI_NUM num, IMPISPMaskBlockAttr *mask)
 {
     uint8_t *b = (uint8_t *)mask;
     int32_t type;
+    unsigned e;
     int32_t rc = tun_check(num, mask);
 
     if (rc)
@@ -587,7 +601,26 @@ int32_t IMP_ISP_Tuning_SetMaskBlock(IMPVI_NUM num, IMPISPMaskBlockAttr *mask)
     memcpy(&type, b + 12, 4);
     if (b[2] && type == 0)      /* enabled, colour given as RGB */
         tun_rgb_yuv(b + 16);
+    e = (unsigned)b[0] * b[1];
+    if (e < T32_MASK_CACHE)
+        memcpy(tun_mask_cache[num][e], b, 24);
     return tun_ptr(num, T32_SET, ID_MASK_BLOCK, mask);
+}
+
+int32_t IMP_ISP_Tuning_GetMaskBlock(IMPVI_NUM num, IMPISPMaskBlockAttr *mask)
+{
+    uint8_t *b = (uint8_t *)mask;
+    unsigned e;
+    int32_t rc = tun_pass(num, T32_GET, ID_MASK_BLOCK, mask);
+
+    if (rc)
+        return rc;
+    e = (unsigned)b[0] * b[1];
+    if (e < T32_MASK_CACHE) {
+        memcpy(b + 12, tun_mask_cache[num][e] + 12, 4);
+        memcpy(b + 16, tun_mask_cache[num][e] + 16, 3);
+    }
+    return 0;
 }
 
 int32_t IMP_ISP_Tuning_SetDrawBlock(IMPVI_NUM num, IMPISPDrawBlockAttr *draw)
@@ -599,12 +632,27 @@ int32_t IMP_ISP_Tuning_SetDrawBlock(IMPVI_NUM num, IMPISPDrawBlockAttr *draw)
     if (rc)
         return rc;
     memcpy(&type, b + 4, 4);
-    if (type < 0 || type > 3)   /* window, range, line, or (T32) the 4th type */
-        return E_FIELD;
+    /* window, range, line and (T32) cover get the RGB -> YUV conversion; any
+     * other type goes to the driver as it is (vendor 2.2.0) */
     memcpy(&rgb, b + 8, 4);
-    if (b[12] && rgb == 0)
+    if (type >= 0 && type <= 3 && b[12] && rgb == 0)
         tun_rgb_yuv(b + 22);
+    memcpy(tun_draw_cache[num], b, 36);
     return tun_ptr(num, T32_SET, ID_DRAW_BLOCK, draw);
+}
+
+int32_t IMP_ISP_Tuning_GetDrawBlock(IMPVI_NUM num, IMPISPDrawBlockAttr *draw)
+{
+    uint8_t *b = (uint8_t *)draw;
+    int32_t rc = tun_pass(num, T32_GET, ID_DRAW_BLOCK, draw);
+
+    if (rc)
+        return rc;
+    if (b[0] == 0) {
+        memcpy(b + 8, tun_draw_cache[num] + 8, 4);
+        memcpy(b + 22, tun_draw_cache[num] + 22, 3);
+    }
+    return 0;
 }
 
 /* ---- AE start (on /dev/tx-isp, needs no tuning) ---------------------------- */

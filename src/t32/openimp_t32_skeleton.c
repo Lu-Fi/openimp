@@ -117,18 +117,5 @@ T32_STUB(IMP_System_RebaseTimeStamp, (uint64_t basets))
 /* IPU OSD (groups, regions, covers, pictures incl. 2-bit, CPU lines and
  * mosaics, the FS -> OSD -> encoder chain): the shared src/t23 OSD module in
  * the T32 2.x layout (272-byte IMPOSDRgnAttr, 200-byte jz_ipu_v13 request), #297.
- * ISP-drawn OSD (MSCA OSD windows): open-tx-isp driver/t32 has the register
- * pusher (tx_isp_t32_msca_osd.h) but no request that reaches it yet, so these
- * stay stubs (#297 note). */
-T32_STUB(IMP_OSD_SetRgnAttr_ISP, (int sensornum, IMPOSDRgnAttr *prAttr, int bosdshow))
-T32_STUB(IMP_OSD_GetRgnAttr_ISP, (int sensornum, IMPOSDRgnAttr *prAttr, int *pbosdshow))
-T32_STUB(IMP_OSD_Init_ISP, (void))
-T32_STUB(IMP_OSD_SetPoolSize_ISP, (int size))
-T32_STUB(IMP_OSD_CreateRgn_ISP, (int chn, IMPIspOsdAttrAsm *attr))
-T32_STUB(IMP_OSD_DestroyRgn_ISP, (int chn, IMPRgnHandle handle))
-T32_STUB(IMP_OSD_SetRgnAttr_PicISP, (int chn, IMPRgnHandle handle, IMPIspOsdAttrAsm *attr))
-T32_STUB(IMP_OSD_GetRgnAttr_ISPPic, (int chn, IMPRgnHandle handle, IMPIspOsdAttrAsm *attr))
-T32_STUB(IMP_OSD_ShowRgn_ISP, (int chn, IMPRgnHandle handle, int showFlag))
-void IMP_OSD_Exit_ISP(void)
-{
-}
+ * ISP-drawn OSD (pictures, lines / rectangles, covers on the MSCA OSD windows,
+ * open-tx-isp driver/t32): openimp_t32_isp_osd.c (#336). */

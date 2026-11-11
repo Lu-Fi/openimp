@@ -138,6 +138,11 @@ int OpenIMP_T32_IvdcDirectMode(void)
 }
 
 /* ---- System ------------------------------------------------------------ */
+/* ISP-drawn OSD region pool (openimp_t32_isp_osd.c, #336): the vendor's
+ * system init allocates it (OSD module init), its exit frees it */
+int IMP_OSD_Init_ISP(void);
+void IMP_OSD_Exit_ISP(void);
+
 int IMP_System_Init(void)
 {
     pthread_mutex_lock(&t32.lock);
@@ -149,6 +154,8 @@ int IMP_System_Init(void)
         if (t32.ivdc_direct)
             IMP_LOG_WARN(TAG, "IVDC direct mode reported; not supported yet, using memory mode");
         t32.system_init = 1;
+        if (IMP_OSD_Init_ISP() < 0)
+            IMP_LOG_ERR(TAG, "ISP OSD pool not allocated; ISP OSD regions unavailable");
     }
     pthread_mutex_unlock(&t32.lock);
     return 0;
@@ -157,6 +164,8 @@ int IMP_System_Init(void)
 int IMP_System_Exit(void)
 {
     pthread_mutex_lock(&t32.lock);
+    if (t32.system_init)
+        IMP_OSD_Exit_ISP();
     t32.system_init = 0;
     pthread_mutex_unlock(&t32.lock);
     return 0;
