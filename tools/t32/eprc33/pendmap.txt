@@ -1,1 +1,0 @@
-e33_init_inst init_inst_param

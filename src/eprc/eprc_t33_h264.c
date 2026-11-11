@@ -340,6 +340,226 @@ static const uint8_t t33_cbr_min_pct[9] = { 100, 90, 80, 80, 80, 80, 80, 80, 80 
 
 enum { T33_FIXQP, T33_CBR, T33_VBR, T33_SMART, T33_CVBR, T33_AVBR };
 
+
+static int64_t t33_max64(int64_t a, int64_t b)
+{
+    return a < b ? b : a;
+}
+
+static int64_t t33_min64(int64_t a, int64_t b)
+{
+    return b < a ? b : a;
+}
+
+static int64_t t33_div64(int64_t a, int64_t b)
+{
+    return b ? a / b : 0;
+}
+
+/* I-QP correction by motion class (inst+0x7d 1/2), QP class and the
+ * inst+0x7e level (0x1e9bfc: index qcls * 8 + rule * 4 + level); levels
+ * 4..7 of the last row read on into the next vendor table (the bpp slopes
+ * -10, -25 as bytes), kept for levels up to 7 */
+static const int8_t t33_iadj[48] = {
+    30, 40, 50, 60, 30, 45, 60, 75, 10, 20, 20, 20, 30, 40, 55, 70, 15, 25, 35, 45, 30, 40, 50, 65,
+    20, 30, 40, 50, 35, 45, 55, 65, 30, 40, 50, 60, 10, 20, 20, 20, 30, 40, 50, 60, -10, -1, -25, -1,
+};
+
+static void t33_clip_u8(E33 *X, uint32_t a, uint8_t lo, uint8_t hi)
+{
+    uint8_t v = LD_U8(a);
+
+    if (v < lo)
+        ST_U8(a, lo);
+    else if (hi < v)
+        ST_U8(a, hi);
+}
+
+static int64_t t33_clip64(int64_t v, int64_t lo, int64_t hi)
+{
+    return v < lo ? lo : v > hi ? hi : v;
+}
+
+/* the I-picture bit share of mode 3/5 (SMART/AVBR, init_inst_param
+ * 0x1967d8): from the last ten I/P ratios (st+0x248..), the bit rate and
+ * the motion rule; returns the 32-bit I target */
+static int32_t t33_smart_ibits(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t out, int32_t n)
+{
+    int64_t b = LD_S64(st + 0x2f0), c = LD_S64(st + 0x2f8), i, q, d;
+    int32_t v0 = LD_S8(st + 0x248), sum = 0, mx = 0, avg, j, rule;
+    float f = (float)(LD_U8(rc + 0x20) + 100) / 200.0f, f1, f2;
+
+    for (j = 0; j < n; j++) {
+        int32_t v = LD_S8(st + 0x248 + j);
+
+        sum += v;
+        if (mx < v)
+            mx = v;
+    }
+    avg = sum / n;
+    avg = avg < 5 ? 5 : avg > 10 ? 10 : avg;
+    if (v0 < avg) {
+        i = (int64_t)(((f * (float)b - (float)c) * 0.5f * (float)v0) / (float)avg + (float)c);
+    } else {
+        f1 = v0 + mx - 2 * avg < 2 ? 1.0f : (float)(v0 + mx - 2 * avg);
+        f2 = mx - avg < 2 ? 1.0f : (float)(mx - avg);
+        i = (int64_t)(((f * (float)b - (float)c) * 0.5f * f1) / f2 + (float)c);
+    }
+    /* high bit rates: at least C + 100/80/60/40 % of (B - C) */
+    q = LD_S64(st + 0xa0) / 10000;
+    d = b - c;
+    if (q > 8000)
+        i = t33_max64(i, (int64_t)(float)d + c);
+    if (q > 6000)
+        i = t33_max64(i, (int64_t)((float)d * 0.8f) + c);
+    if (q > 4000)
+        i = t33_max64(i, (int64_t)((float)d * 0.6f) + c);
+    if (q > 2000)
+        i = t33_max64(i, (int64_t)((float)d * 0.4f) + c);
+    rule = LD_S8(inst + 0x7d);
+    if (rule == 1 || rule == 2) {
+        int32_t h = (LD_S8(st + 0xdc) + LD_S32(st + 0x58)) >> 1, cls, cnt, t, m;
+        uint32_t r = LD_U32(LD_S32(out + 0x1c) + 0x21c) / 0xfa000;
+        int64_t s = 0, a;
+
+        if (r > 100)
+            r = 100;
+        /* QP class; above 51 the vendor falls back to class 3 */
+        cls = h < 11 ? 0 : h < 21 ? 1 : h < 33 ? 2 : h < 46 ? 3 : h > 51 ? 3 : 4;
+        cnt = 10;
+        for (j = 0; j < 10; j++) {
+            int32_t v = LD_S8(st + 0x23e + j);
+
+            if (v == -1)
+                cnt = (int8_t)(cnt - 1);
+            else
+                s += v;
+        }
+        a = s / (cnt == 0 ? 1 : cnt);
+        t = LD_S8(inst + 0x7e) + cls * 8 + rule * 4;
+        t = t >= 0 && t < 48 ? t33_iadj[t] : 0;     /* levels above 7: not modelled */
+        m = (int32_t)((uint32_t)t * r) / 100 + t / 2;
+        a = rule == 1 ? a * m / -100 : (100 - a) * m / 100;
+        i = (a + 100) * (int64_t)(int32_t)i / 100;
+    }
+    return (int32_t)i;
+}
+
+/* per-GOP instance targets (init_inst_param, 0x1964d8): clamp the QP
+ * limits and bit rates, copy the mode QP range to @out, then set the I
+ * (st+0x360), P (+0x370) and low (+0x378) picture targets of the mode */
+static void e33_init_inst(E33 *X, uint32_t rc, uint32_t inst, uint32_t st, uint32_t out)
+{
+    static const uint8_t qfield[6] = { 0, 0x22, 0x26, 0x28, 0x2a, 0x28 };
+    uint32_t cfg = LD_U32(rc);
+    uint8_t mode, mx, f;
+    int64_t i, p, l, b, c;
+
+    if (LD_U8(cfg + 0x18) > 51)
+        ST_U8(cfg + 0x18, 51);
+    if (LD_U8(cfg + 0x18) < LD_U8(cfg + 0x19))
+        ST_U8(cfg + 0x19, LD_U8(cfg + 0x18));
+    if (LD_U32(rc + 0x3c) > 0xc350000)
+        ST_U32(rc + 0x3c, 0xc350000);
+    if (LD_U32(rc + 0x40) > 0xc350000)
+        ST_U32(rc + 0x40, 0xc350000);
+    mode = LD_U8(rc + 4);
+    if (mode == 0 || mode > 5)
+        goto tail;
+    /* the mode's max/min QP pair, max inside the picture limits, min up to max */
+    f = qfield[mode];
+    mx = LD_U8(cfg + 0x18);
+    t33_clip_u8(X, rc + f + 1, LD_U8(cfg + 0x19), mx);
+    t33_clip_u8(X, rc + f, LD_U8(rc + f + 1), mx);
+    ST_U8(out + 1, LD_U8(rc + f + 1));
+    ST_U8(out, LD_U8(rc + f));
+
+    b = LD_S64(st + 0x2f0);
+    c = LD_S64(st + 0x2f8);
+    switch (mode) {
+    case 1:                 /* jump table 0x1e977c */
+        i = LD_S64(st + 0x2e0);
+        p = b;
+        l = c;
+        if (LD_S32(st + 0x14) != 0 && LD_S32(st + 0x344) != 0) {
+            int32_t n = LD_S32(st + 0x344) * LD_S32(st + 0x358);
+            int64_t off;
+
+            if (n == 0)
+                return;     /* the vendor asserts */
+            off = LD_S64(st + 0x420) * (int64_t)LD_S32(st + 0x430) / -100;
+            off = (off + LD_S64(st + 0x428)) / n;
+            i -= off;
+            p -= off;
+            l -= off;
+        }
+        /* P and low target inside [C, B] of the unshifted targets, I inside [low, P] */
+        p = t33_clip64(p, c, b);
+        l = t33_clip64(l, c, b);
+        i = i < l ? l : i > p ? p : i;
+        ST_S64(st + 0x360, i);
+        ST_S64(st + 0x370, p);
+        ST_S64(st + 0x378, l);
+        break;
+    case 2:
+        ST_S64(st + 0x360, LD_S64(st + 0x2e0));
+        ST_S64(st + 0x370, b);
+        ST_S64(st + 0x378, c);
+        break;
+    case 3:
+    case 5: {
+        int32_t n = 0, j;
+
+        ST_S64(st + 0x370, b);
+        ST_S64(st + 0x378, c);
+        if (LD_S32(st + 0x14) == 0) {
+            ST_S64(st + 0x360, LD_S64(st + 0x2e0));
+            break;
+        }
+        for (j = 0; j < 10; j++)
+            n += LD_S8(st + 0x248 + j) != -1;
+        if (n == 0) {
+            i = LD_S64(st + 0x2e0);
+            ST_S64(st + 0x360, i);
+        } else {
+            i = t33_smart_ibits(X, rc, inst, st, out, n);
+            ST_S64(st + 0x360, i);
+            ST_U8(st + 0x98, 0);
+            if (mode == 3 && LD_S8(inst + 0x7c) != 0 && LD_S8(st + 0x248) < LD_S8(inst + 0x81)
+                && LD_U8(LD_U32(out + 0x20) + 8) == 0) {
+                /* still scene: the fixed I target, no low target */
+                i = LD_S64(inst + 0x70);
+                c = 0;
+                ST_S64(st + 0x378, 0);
+                ST_U8(st + 0x98, 1);
+                ST_S64(st + 0x360, i);
+            }
+        }
+        i = i < c ? c : i > LD_S64(st + 0x370) ? LD_S64(st + 0x370) : i;
+        ST_S64(st + 0x360, i);
+        break;
+    }
+    case 4:
+        ST_S64(st + 0x360, LD_S64(st + 0x2e0));
+        ST_S64(st + 0x370, b);
+        ST_S64(st + 0x378, c);
+        if (LD_S32(st + 0x14) == 0) {
+            if (LD_S8(inst + 0x54) == 0)
+                ST_S32(st + 0x290, (int8_t)(e33_refer_qp_bpp(X, cfg, inst + 8, out + 8) + 6));
+            else
+                ST_S32(st + 0x290, (int8_t)(e33_refer_qp_size(X, cfg, LD_S32(inst + 8), LD_S32(st + 0x358), 16,
+                                                             LD_S32(out + 8)) + 4));
+        }
+        break;
+    }
+tail:
+    ST_U8(st + 0x95, 0);
+    ST_S64(st + 0x380, 0);
+    ST_S64(st + 0x388, 0);
+    ST_U32(st + 0x3a0, 0);
+    ST_U32(st + 0xe0, 0);
+}
+
 /* (re)derive the rate budgets of the mode (init_stat_param, 0x18ef74):
  * @cfg controller parameters (+4 mode, +0x10 kbit/s), @inst instance
  * block, @st statistics block, @r rate block (+8 target, +0x10 maximum) */
@@ -1111,21 +1331,6 @@ out:
 /* I-share curve over the complexity when no I picture follows (0x1e9cd4) */
 static const int8_t t33_pshare_base[5] = { 10, 40, 60, 70, 80 };
 static const int8_t t33_pshare_slope[5] = { 5, 30, 20, 10, 10 };
-
-static int64_t t33_max64(int64_t a, int64_t b)
-{
-    return a < b ? b : a;
-}
-
-static int64_t t33_min64(int64_t a, int64_t b)
-{
-    return b < a ? b : a;
-}
-
-static int64_t t33_div64(int64_t a, int64_t b)
-{
-    return b ? a / b : 0;
-}
 
 static int32_t t33_pdqp(E33 *X, uint32_t inst, uint32_t st, uint32_t out, int64_t bits, int32_t row)
 {
