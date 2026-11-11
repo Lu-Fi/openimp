@@ -25,6 +25,10 @@
 #             pictures stay local)
 # SAMPLE_ENV  extra environment for the sample, e.g. T32_NO_PROC=1 (skip the
 #             /proc/jz/isp/isp-m0 reads; the vendor tx-isp-t32.ko oopses there)
+# STREAMS_OUT=1  the sample writes every encoder stream to /tmp/streams.bin
+#             (T32_STREAM_DUMP); the sample copies it to physical 0x7800000
+#             (top of rmem, after the teardown) and pmemsave writes it to
+#             OUT/streams.bin; tools/t32/t32_streams.py splits it (local only)
 # QEMU_EXTRA  extra QEMU arguments, e.g. "-trace ingenic_isp_write,file=OUT/isp.trace"
 #             (driver register writes for the vendor-vs-OpenIMP comparison, #289)
 set -eu
@@ -88,9 +92,10 @@ PY
 con() { python3 "$OUT/con.py" "$PORT" "$1" "$2"; }
 
 timeout 120 bash -c "until grep -q 'job control' '$OUT/console.log' 2>/dev/null; do sleep 1; done"
-con 20 "mount -t proc p /proc; mount -t tmpfs t /tmp; mount -t sysfs s /sys; mkdir -p /dev/shm; mount -t tmpfs shm /dev/shm" > /dev/null
+con 20 "dmesg -n 1; mount -t proc p /proc; mount -t tmpfs t /tmp; mount -t sysfs s /sys; mkdir -p /dev/shm; mount -t tmpfs shm /dev/shm" > /dev/null
 con 120 "modprobe tx_isp_t32 && modprobe sensor_cv8001_t32" > "$OUT/modprobe.txt"
-con 900 "cd /tmp; ${SAMPLE_ENV:-} T32_TRACE_LOG=/tmp/t.log T32_TRACE_DUMP=${DUMP:-0} LD_PRELOAD=/usr/lib/libt32trace.so t32_trace_sample $CODEC $STREAMS > /tmp/s.out 2>&1" > /dev/null
+SDUMP=; [ "${STREAMS_OUT:-0}" = 1 ] && SDUMP=T32_STREAM_DUMP=/tmp/streams.bin
+con 900 "cd /tmp; ${SAMPLE_ENV:-} $SDUMP T32_TRACE_LOG=/tmp/t.log T32_TRACE_DUMP=${DUMP:-0} LD_PRELOAD=/usr/lib/libt32trace.so t32_trace_sample $CODEC $STREAMS > /tmp/s.out 2>&1" > /dev/null
 con 60 "cat /tmp/s.out" | tr -d '\r' > "$OUT/sample.txt"
 con 600 "echo __LOG_BEGIN; cat /tmp/t.log; echo __LOG_END" | tr -d '\r' |
     awk '/^__LOG_BEGIN/{f=1;next}/^__LOG_END/{f=0}f' > "$OUT/raw.log"
@@ -104,6 +109,17 @@ s = socket.create_connection(("127.0.0.1", int(sys.argv[1])))
 s.sendall((sys.argv[2] + "\n").encode()); time.sleep(2); s.close()
 PY
     echo "$snap" > "$OUT/snap.txt"
+fi
+if [ "${STREAMS_OUT:-0}" = 1 ]; then
+    ssz=$(con 30 "wc -c < /tmp/streams.bin" | tr -d '\r' | grep -m1 '^[0-9][0-9]*$' || echo 0)
+    if [ "$ssz" -gt 0 ]; then
+        rm -f "$OUT/streams.bin"
+        python3 - "$MPORT" "pmemsave 0x7800000 $ssz \"$OUT/streams.bin\"" <<'PY'
+import socket, sys, time
+s = socket.create_connection(("127.0.0.1", int(sys.argv[1])))
+s.sendall((sys.argv[2] + "\n").encode()); time.sleep(3); s.close()
+PY
+    fi
 fi
 kill $QPID 2>/dev/null || true; wait $QPID 2>/dev/null || true; trap - EXIT
 grep '^T32S' "$OUT/sample.txt" || true

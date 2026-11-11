@@ -1622,6 +1622,13 @@ int IMP_Encoder_SetChnQpBoundsPerFrame(int encChn, int minQpI, int maxQpI,
 int IMP_Encoder_SetChnMaxPictureSize(int encChn, uint32_t maxPictureSizeI,
                                     uint32_t maxPictureSizeP);
 int IMP_Encoder_SetChnQpIPDelta(int encChn, int delta);
+#if defined(PLATFORM_T32)
+/* T32 (vendor 2.x): JPEG quality as jpegQp 0..98 (higher = better),
+ * stream buffer size for JPEG channels created afterwards */
+int IMP_Encoder_SetJpegQp(int encChn, int jpegQp);
+int IMP_Encoder_GetJpegQp(int encChn, int *jpegQp);
+int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize);
+#endif
 #if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30) || \
     defined(PLATFORM_T32)
 int IMP_Encoder_GetChnEncType(int encChn, IMPPayloadType *encType);
