@@ -574,6 +574,50 @@ int IMP_AO_EnableAgc(IMPAudioIOAttr *attr, IMPAudioAgcConfig config);
 int IMP_AO_DisableAgc(void);
 int IMP_AO_SetHpfCoFrequency(int freq);
 
+#if defined(PLATFORM_T32)
+/* T32 2.x (vendor 2.0.0 imp_audio.h) audio extras (#329) */
+typedef enum {
+    AI_MODULE_NS = 0,
+    AI_MODULE_AGC,
+    AI_MODULE_HPF,
+    AI_MODULE_BUTT
+} AudioAI_Type;
+
+typedef enum {
+    AO_MODULE_HPF = 0,
+    AO_MODULE_AGC,
+    AO_MODULE_NS,
+    AO_MODULE_BUTT
+} AudioAO_Type;
+
+typedef struct {
+    int threshold_low;
+    int threshold_high;
+    float ratio;
+    int eq_type;
+    int freq_low;
+    int freq_high;
+    int size;
+    float *EqTable;
+} IMPAudioDrcEqConfig;
+
+int IMP_AI_SetAlgoOrder(int audioDevId, int aiChn, AudioAI_Type order[]);
+int IMP_AI_GetAlgoOrder(int audioDevId, int aiChn, AudioAI_Type order[]);
+int IMP_AO_SetAlgoOrder(int audioDevId, int aoChn, AudioAO_Type order[]);
+int IMP_AO_GetAlgoOrder(int audioDevId, int aoChn, AudioAO_Type order[]);
+int IMP_AI_EnableLpf(IMPAudioIOAttr *attr);
+int IMP_AI_SetLpfCoFrequency(int cofrequency);
+int IMP_AI_DisableLpf(void);
+int IMP_AI_EnableDrcAndEq(IMPAudioIOAttr *attr, IMPAudioDrcEqConfig *drcEqConfig,
+                          int drc_enable, int eq_enable);
+int IMP_AI_DisableDrcAndEq(void);
+int IMP_AO_EnableNs(IMPAudioIOAttr *attr, int mode);
+int IMP_AO_DisableNs(void);
+int IMP_AO_EnableDrcAndEq(IMPAudioIOAttr *attr, IMPAudioDrcEqConfig *drcEqConfig,
+                          int drc_enable, int eq_enable);
+int IMP_AO_DisableDrcAndEq(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

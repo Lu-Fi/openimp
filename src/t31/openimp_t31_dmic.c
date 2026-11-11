@@ -249,12 +249,38 @@ static size_t dmic_frame_bytes(void)
     return dmic_mic_bytes() * (size_t)dmic.attr.chnCnt;
 }
 
+#if defined(PLATFORM_T32)
+#include <math.h>
+#endif
+
 /* IMP volume in half-decibels, 60 = unity (same curve as IMP_AI_SetVol) */
 static void dmic_apply_volume(int16_t *samples, int count, int volume)
 {
     int steps = volume - 60;
     uint64_t gain = 65536;
     int i;
+
+#if defined(PLATFORM_T32)
+    /* vendor 2.x: factor 10^((vol * 0.5 - 30) / 20) on every sample, the
+     * product truncated and clipped to -32767..32767 (_audio_set_volume) */
+    {
+        double factor = volume <= -30 ? 0.0
+                        : pow(10.0, ((double)volume * 0.5 - 30.0) / 20.0);
+
+        (void)steps;
+        (void)gain;
+        for (i = 0; i < count; i++) {
+            int value = (int)((double)samples[i] * factor);
+
+            if (value >= 0x8000)
+                value = 0x7fff;
+            else if (value < -0x7fff)
+                value = -0x7fff;
+            samples[i] = (int16_t)value;
+        }
+        return;
+    }
+#endif
 
     if (!steps)
         return;
@@ -289,6 +315,10 @@ static int64_t dmic_timestamp(void)
     return IMP_System_GetTimeStamp();
 }
 
+#if defined(PLATFORM_T32)
+static void dmic_t32_effects(int16_t *samples, int count);
+#endif
+
 static void *dmic_record_main(void *argument)
 {
     (void)argument;
@@ -297,6 +327,9 @@ static void *dmic_record_main(void *argument)
     while (!dmic.stop) {
         DmicNode *node = list_pop(&dmic.free_list);
         DmicStream stream;
+#if defined(PLATFORM_T32)
+        int32_t capture_time[2] = { 0, 0 };   /* kernel timeval */
+#endif
         int16_t *ref = NULL;
         int aec = 0;
         int volume;
@@ -331,6 +364,11 @@ static void *dmic_record_main(void *argument)
 #if defined(DMIC_OSS3)
         stream.aec_size = ref ? (uint32_t)dmic_mic_bytes() : 0;
 #endif
+#if defined(PLATFORM_T32)
+        /* the T32 2.x driver copies the capture time back and answers EIO
+         * when the pointer is NULL (#330); T41 ignores that copy */
+        stream.timestamp = capture_time;
+#endif
         ret = ioctl(dmic.fd, DMIC_GET_STREAM, &stream);
         if (ret == 0) {
             node->timestamp = dmic_timestamp();
@@ -352,6 +390,9 @@ static void *dmic_record_main(void *argument)
                 if (node->has_aec)
                     dmic_apply_volume(node->aec, dmic.attr.numPerFrm, volume);
             }
+#if defined(PLATFORM_T32)
+            dmic_t32_effects(node->raw, node->len / 2);
+#endif
             dmic_apply_volume(node->raw, node->len / 2, volume);
         }
 
@@ -1032,3 +1073,263 @@ int IMP_DMIC_DisableAecRefFrame(int dmicDevId, int dmicChnId,
     pthread_mutex_unlock(&dmic.lock);
     return 0;
 }
+
+#if defined(PLATFORM_T32)
+/* ---- T32 2.x DMIC effects (#329) --------------------------------------
+ * Vendor 2.0.0 dmic.c: IMP_DMIC_EnableNs / EnableAgc / EnableHpf take the
+ * DMIC attributes, need blocks of a 10 ms multiple, run libaudioProcess
+ * audio_process_{ns,agc,hpf}_* in the record thread in the order NS, AGC,
+ * HPF ahead of the software volume, and fail (-1) while the DMIC device is
+ * not enabled; NS mode is clamped to 3, NS/AGC frames are 80 samples at
+ * 8 kHz and 160 otherwise; SetHpfCoFrequency needs the device enabled.  The
+ * HPF uses the OpenIMP AI calling convention of libaudioProcess
+ * (src/t40/openimp_p3_audio.c). */
+typedef void (*DmicHpfCreate)(int16_t *, int16_t *, int16_t, int16_t, int, int);
+typedef int (*DmicHpfProcess)(int16_t *, int16_t *, int);
+typedef void *(*DmicNsCreate)(void);
+typedef int (*DmicNsSetConfig)(void *, int, int);
+typedef void (*DmicNsProcess)(void *, const float *const *, int,
+                              float *const *);
+typedef int (*DmicNsFree)(void *);
+typedef struct {
+    int16_t target_level_dbfs;
+    int16_t compression_gain_db;
+    uint8_t limiter_enable;
+} DmicAgcConfig;
+typedef void *(*DmicAgcCreate)(void);
+typedef int (*DmicAgcSetConfig)(void *, int, int, int, int, DmicAgcConfig);
+typedef int (*DmicAgcProcess)(void *, const int16_t *const *, size_t, size_t,
+                              int16_t *const *, int32_t, int32_t *, int16_t,
+                              uint8_t *);
+typedef int (*DmicAgcFree)(void *);
+
+struct DmicT32Effects {
+    void *library;
+    DmicHpfCreate hpf_create;
+    DmicHpfProcess hpf_process;
+    DmicNsCreate ns_create;
+    DmicNsSetConfig ns_set_config;
+    DmicNsProcess ns_process;
+    DmicNsFree ns_free;
+    DmicAgcCreate agc_create;
+    DmicAgcSetConfig agc_set_config;
+    DmicAgcProcess agc_process;
+    DmicAgcFree agc_free;
+    void *ns;
+    int ns_frame;
+    int ns_enabled;
+    void *agc;
+    int agc_frame;
+    int agc_enabled;
+    int16_t hpf_state[16];
+    int hpf_cutoff;
+    int hpf_enabled;
+};
+
+static struct DmicT32Effects dmic_t32;
+/* held by the record thread while it runs the effects; Disable* take it to
+ * free a handle (dmic_wait_idle() cannot be used: the record thread sets
+ * "reading" again before it drops dmic.lock) */
+static pthread_mutex_t dmic_t32_fx_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static int dmic_t32_load(void)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+
+    if (e->library)
+        return 0;
+    e->library = dlopen("libaudioProcess.so", RTLD_NOW | RTLD_LOCAL);
+    if (!e->library)
+        return -1;
+#define DMIC_T32_SYM(field, name) \
+    *(void **)&e->field = dlsym(e->library, name)
+    DMIC_T32_SYM(hpf_create, "audio_process_hpf_create");
+    DMIC_T32_SYM(hpf_process, "audio_process_hpf_process");
+    DMIC_T32_SYM(ns_create, "audio_process_ns_create");
+    DMIC_T32_SYM(ns_set_config, "audio_process_ns_set_config");
+    DMIC_T32_SYM(ns_process, "audio_process_ns_process");
+    DMIC_T32_SYM(ns_free, "audio_process_ns_free");
+    DMIC_T32_SYM(agc_create, "audio_process_agc_create");
+    DMIC_T32_SYM(agc_set_config, "audio_process_agc_set_config");
+    DMIC_T32_SYM(agc_process, "audio_process_agc_process");
+    DMIC_T32_SYM(agc_free, "audio_process_agc_free");
+#undef DMIC_T32_SYM
+    if (!e->hpf_create || !e->hpf_process || !e->ns_create ||
+        !e->ns_set_config || !e->ns_process || !e->ns_free ||
+        !e->agc_create || !e->agc_set_config || !e->agc_process ||
+        !e->agc_free) {
+        dlclose(e->library);
+        memset(e, 0, sizeof(*e));
+        return -1;
+    }
+    return 0;
+}
+
+static int dmic_t32_attr_ok(const IMPDmicAttr *attr)
+{
+    return attr && attr->samplerate > 0 &&
+           ((unsigned)attr->numPerFrm * 1000U / (unsigned)attr->samplerate) %
+                   10U == 0;
+}
+
+static int dmic_t32_rate_frame(int rate)
+{
+    if (rate == 8000)
+        return 80;
+    if (rate == 16000 || rate == 32000 || rate == 48000)
+        return 160;
+    return 0;
+}
+
+/* record thread, lock not held */
+static void dmic_t32_effects(int16_t *samples, int count)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+    int offset, i;
+
+    pthread_mutex_lock(&dmic_t32_fx_lock);
+    if (e->ns_enabled && e->ns && e->ns_frame > 0) {
+        float input[160];
+        float output[160];
+        const float *inputs[1] = { input };
+        float *outputs[1] = { output };
+
+        for (offset = 0; offset + e->ns_frame <= count; offset += e->ns_frame) {
+            for (i = 0; i < e->ns_frame; i++)
+                input[i] = (float)samples[offset + i];
+            memset(output, 0, sizeof(output));
+            e->ns_process(e->ns, inputs, 1, outputs);
+            for (i = 0; i < e->ns_frame; i++)
+                samples[offset + i] = (int16_t)(int)output[i];
+        }
+    }
+    if (e->agc_enabled && e->agc && e->agc_frame > 0) {
+        for (offset = 0; offset + e->agc_frame <= count;
+             offset += e->agc_frame) {
+            const int16_t *inputs[1] = { samples + offset };
+            int16_t *outputs[1] = { samples + offset };
+            int32_t level = 0;
+            uint8_t saturated = 0;
+
+            (void)e->agc_process(e->agc, inputs, 1, (size_t)e->agc_frame,
+                                 outputs, 127, &level, 0, &saturated);
+        }
+    }
+    if (e->hpf_enabled)
+        (void)e->hpf_process(e->hpf_state, samples, count);
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
+}
+
+int IMP_DMIC_EnableNs(IMPDmicAttr *attr, int mode)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+    int frame;
+
+    if (!dmic_t32_attr_ok(attr))
+        return -1;
+    if ((unsigned)mode > 3U)
+        mode = 3;
+    if (e->ns_enabled)
+        return 0;
+    frame = dmic_t32_rate_frame(attr->samplerate);
+    if (dmic_t32_load() != 0 || !frame)
+        return -1;
+    if (!e->ns)
+        e->ns = e->ns_create();
+    if (!e->ns)
+        return -1;
+    if (e->ns_set_config(e->ns, attr->samplerate, mode) != 0) {
+        e->ns_free(e->ns);
+        e->ns = NULL;
+        return -1;
+    }
+    e->ns_frame = frame;
+    if (!dmic.enabled)
+        return -1;
+    e->ns_enabled = 1;
+    return 0;
+}
+
+int IMP_DMIC_DisableNs(void)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+
+    if (!e->ns)
+        return 0;
+    pthread_mutex_lock(&dmic_t32_fx_lock);
+    e->ns_enabled = 0;
+    e->ns_free(e->ns);
+    e->ns = NULL;
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
+    return 0;
+}
+
+int IMP_DMIC_EnableAgc(IMPDmicAttr *attr, IMPAudioAgcConfig agcConfig)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+    DmicAgcConfig config;
+    int frame;
+
+    if (!dmic_t32_attr_ok(attr))
+        return -1;
+    frame = dmic_t32_rate_frame(attr->samplerate);
+    if (dmic_t32_load() != 0 || !frame)
+        return -1;
+    if (!e->agc)
+        e->agc = e->agc_create();
+    if (!e->agc)
+        return -1;
+    config.target_level_dbfs = (int16_t)agcConfig.TargetLevelDbfs;
+    config.compression_gain_db = (int16_t)agcConfig.CompressionGaindB;
+    config.limiter_enable = 1;
+    if (e->agc_set_config(e->agc, 0, 255, 2, attr->samplerate, config) != 0)
+        return -1;
+    e->agc_frame = frame;
+    if (!dmic.enabled)
+        return -1;
+    e->agc_enabled = 1;
+    return 0;
+}
+
+int IMP_DMIC_DisableAgc(void)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+
+    pthread_mutex_lock(&dmic_t32_fx_lock);
+    e->agc_enabled = 0;
+    if (e->agc)
+        e->agc_free(e->agc);
+    e->agc = NULL;
+    pthread_mutex_unlock(&dmic_t32_fx_lock);
+    return 0;
+}
+
+int IMP_DMIC_SetHpfCoFrequency(int cofrequency)
+{
+    if (!dmic.enabled)
+        return -1;
+    dmic_t32.hpf_cutoff = cofrequency;
+    return 0;
+}
+
+int IMP_DMIC_EnableHpf(IMPDmicAttr *attr)
+{
+    struct DmicT32Effects *e = &dmic_t32;
+
+    if (!dmic_t32_attr_ok(attr) || e->hpf_cutoff < 0 ||
+        e->hpf_cutoff > (int)attr->samplerate || dmic_t32_load() != 0)
+        return -1;
+    memset(e->hpf_state, 0, sizeof(e->hpf_state));
+    e->hpf_create(e->hpf_state, e->hpf_state + 8, 0, 0, 8, 8);
+    if (!dmic.enabled)
+        return -1;
+    e->hpf_enabled = 1;
+    return 0;
+}
+
+int IMP_DMIC_DisableHpf(void)
+{
+    dmic_t32.hpf_enabled = 0;
+    return 0;
+}
+#endif

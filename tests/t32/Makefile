@@ -41,10 +41,16 @@ OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 # + the /dev/rmem write-back of the new stream buffers; JPEG job register image
 OI_ENC_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
+AUDIO_BIN := $(BUILD)/t32-audio2x-test
+AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
+	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
+
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(AUDIO_BIN)
 	$(TEST_BIN)
 	$(RC_BIN) vendor-2.2.0-rc-h264.txt
+	# audio (#329): vendor 2.x software volume, AO block queue, extras
+	$(AUDIO_BIN)
 	# H.264 (#293) and H.265 (#294) on HERA: command lists + parameter sets / slice
 	# headers vs vendor 2.2.0
 	gzip -dc vendor-2.2.0-hera-h264.txt.gz vendor-2.2.0-hera-h265.txt.gz > $(BUILD)/t32-hera-lists.txt
@@ -78,6 +84,11 @@ $(RC_BIN): $(RC_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -o $@ $(RC_SRC) -lm
+
+$(AUDIO_BIN): $(AUDIO_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -Wno-unused-function $(INC) -o $@ audio2x_test.c \
+		$(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -lm
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

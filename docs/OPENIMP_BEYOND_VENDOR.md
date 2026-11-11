@@ -417,6 +417,10 @@ backend.
 - Driver-side fix (not ours to ship, ingenic-sdk): let the guard see how far the DMA moved since the last worker run, e.g. pass the
   previous `dma_tracer` and move the read index only when `(prev - io) mod cnt + (current - prev) mod cnt >= cnt - 5`.
 
+### 6.5 T32 AO block queue: caller attributes and Flush/Clear tail (T32, planned, PENDING USER DECISION)
+
+Vendor libimp 2.x (T32) writes its internal 40 ms block size back into the caller's `IMPAudioIOAttr` in `IMP_AI/AO_SetPubAttr`, and after `IMP_AO_FlushChnBuf` / `IMP_AO_ClearChnBuf` keeps the fill pointer of its open block, so the next frames are queued behind the stale padded tail (about 30 ms of old audio played again in QEMU, #329). OpenIMP T32 leaves the caller's attributes unchanged and starts a fresh block after Flush/Clear. Not decided yet whether to keep this or switch to the vendor behaviour (`src/t32/openimp_t32_audio2x.inc`, header note). Also T32-only: `OPENIMP_AO_CACHE` unset means cache on (vendor default), `OPENIMP_AO_CACHE=0` off; on the other SoCs unset means off.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**
