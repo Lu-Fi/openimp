@@ -92,6 +92,7 @@ static void su_from_epoch(long e, SUTime *t)
     t->sec = tm.tm_sec; t->min = tm.tm_min; t->hour = tm.tm_hour; t->mday = tm.tm_mday; t->mon = tm.tm_mon + 1; t->year = tm.tm_year + 1900;
 }
 
+#ifndef APITEST_T40   /* the T40 cipher cases go through su_in_child, not these helpers */
 /* AES known-answer vectors: FIPS-197 C.1 (ECB) and NIST SP 800-38A F.2.1 (CBC, two blocks) */
 static const unsigned char kat_ecb_key[16] = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 static const unsigned char kat_ecb_pt[16] = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff };
@@ -101,7 +102,7 @@ static const unsigned char kat_cbc_iv[16] = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
 static const unsigned char kat_cbc_pt[32] = { 0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a,
                                               0xae,0x2d,0x8a,0x57,0x1e,0x03,0xac,0x9c,0x9e,0xb7,0x6f,0xac,0x45,0xaf,0x8e,0x51 };
 static const unsigned char kat_cbc_ct[32] = { 0x76,0x49,0xab,0xac,0x81,0x19,0xb2,0x46,0xce,0xe9,0x8e,0x9b,0x12,0xe9,0x19,0x7d,
-                                              0x50,0x86,0xcb,0x9b,0x50,0x72,0x19,0xee,0x95,0xdb,0x11,0x3a,0x91,0x76,0x78,0x4f };
+                                              0x50,0x86,0xcb,0x9b,0x50,0x72,0x19,0xee,0x95,0xdb,0x11,0x3a,0x91,0x76,0x78,0xb2 };
 
 /* one AES run through the SU_CIPHER_* calls: key/IV/data are handed over as bytes (swap = 1: every 4 bytes reversed, the byte order of a
  * little-endian word interface).  Returns 0, or the step that failed (1 create, 2 config, 3 encrypt, 4 config, 5 decrypt) with its return
@@ -154,6 +155,7 @@ out:
     free(src); free(dst); free(back); free(ref);
     return rc;
 }
+#endif /* !APITEST_T40 */
 
 void t_su(void)
 {
@@ -251,11 +253,6 @@ void t_su(void)
         gfree(a); gfree(g);
     }
     }
-    if (has_rtc || !nohw) rep(FN(SU_Base_EnableAlarm), 0, V_SKIP, "an enabled RTC alarm can wake/power the camera");
-    if (has_rtc) {
-        /* the vendor function returns 0 after the timeout as well (it only logs "select timeout"): a 50 ms poll is safe */
-        SUNEED(SU_Base_PollingAlarm) { int r4 = f_SU_Base_PollingAlarm(50); RET0(SU_Base_PollingAlarm, r4, "50 ms poll"); }
-    } else if (!nohw)
     if (has_rtc && su_hw_tests()) {
         /* QEMU / APITEST_SU_HW=1: set a different time, read it back after 2 s, arm an alarm 3 s ahead, wait for it, restore the clock */
         __typeof__(&SU_Base_GetTime) f_SU_Base_GetTime = SUSYM(SU_Base_GetTime);
@@ -308,6 +305,8 @@ void t_su(void)
             f_SU_Base_SetTime(t1);
             gfree(t0); gfree(t1); gfree(t2);
         }
+    } else if (!has_rtc && nohw) {
+        /* already answered by the NOHW calls above */
     } else if (!has_rtc && su_hw_tests())
         rep(FN(SU_Base_EnableAlarm), -1, V_NA, "%s", no_rtc);
     else
@@ -315,7 +314,7 @@ void t_su(void)
     if (has_rtc && !su_hw_tests()) {
         /* the vendor function returns 0 after the timeout as well (it only logs "select timeout"): a 50 ms poll is safe */
         SUNEED(SU_Base_PollingAlarm) { int r4 = f_SU_Base_PollingAlarm(50); RET0(SU_Base_PollingAlarm, r4, "50 ms poll"); }
-    } else if (!has_rtc)
+    } else if (!has_rtc && !nohw)
         rep(FN(SU_Base_PollingAlarm), -1, V_NA, "%s", no_rtc);
     rep(FN(SU_Base_Shutdown), 0, V_SKIP, "powers the camera off");
     rep(FN(SU_Base_Reboot), 0, V_SKIP, "reboots the camera");
