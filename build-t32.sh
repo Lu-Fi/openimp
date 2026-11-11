@@ -92,6 +92,11 @@ compile t32_fs src/t32/openimp_t32_fs.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)
 compile t32_vpu src/t32/openimp_t32_vpu.c
 compile t32_encoder src/t32/openimp_t32_encoder.c
+# rate control (#295): the T32 attributes on the eprc controller (src/eprc,
+# T23 revision; HERA keeps the Helix statistics registers)
+compile t32_rc src/t32/openimp_t32_rc.c
+compile t32_eprc src/eprc/eprc.c -O2 -ffp-contract=off
+compile t32_eprc_mbrc src/eprc/eprc_mbrc.c -O2 -ffp-contract=off
 # H.264 on HERA (#293): command lists, parameter sets / slice headers, the
 # CABAC context tables shared with the T30 encoder
 compile t32_hera src/t32/openimp_t32_hera.c

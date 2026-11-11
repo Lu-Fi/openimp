@@ -34,11 +34,12 @@
  *                      CHANNEL_SET_BSFULL_REG lets the engine go on, the end
  *                      of the picture gives the last part; the engine's 48
  *                      statistics registers are read back (WOR_VPU_REG) as the
- *                      vendor does, for the rate control of a later issue
+ *                      vendor does and fed to the rate control (#295)
  *   GetStream          IDR: SPS, PPS, IDR slice (3 packs); P: the slice
  * GOP = rcAttr.maxGop, I then P with one reference; one QP a picture (FIXQP
- * IQp / PQp; CBR / VBR channels code at their initial QP: no rate control
- * yet).  OPENIMP_T32_HERA_SECTION_KB=<n> sets the half size (test: BSFULL).
+ * IQp / PQp; CBR / VBR / SMART / CVBR / AVBR / QVBR: the QP of the rate
+ * control, openimp_t32_rc.c, docs/T32_RC.md; no re-encoding, no macroblock
+ * QP).  OPENIMP_T32_HERA_SECTION_KB=<n> sets the half size (test: BSFULL).
  *
  * H.265 (#294) runs the same flow: CHANNEL_REQ H265ENC, the picture's CTB-64
  * list (openimp_t32_hera_h265.c), VPS / SPS / PPS (openimp_t32_h265.c) in
@@ -68,6 +69,7 @@
 #include "t32/openimp_t32_h264.h"
 #include "t32/openimp_t32_h265.h"
 #include "t32/openimp_t32_hera.h"
+#include "t32/openimp_t32_rc.h"
 #include "t32/openimp_t32_hera_h265.h"
 #include "t32/openimp_t32_vpu.h"
 
@@ -137,6 +139,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t ref_y, ref_c;              /* the last reconstruction */
     uint32_t sections, overflows;
     uint32_t stats[T32_HERA_STATS];     /* the engine's statistics of the last picture */
+    T32Rc rc;                           /* rate control (#295), off at FIXQP */
+    int rc_restart;                     /* SetChnAttrRcMode: restart at the next IDR */
 };
 
 struct t32_enc_chn {
@@ -344,6 +348,53 @@ static void h264_pack(struct t32_enc_slot *s, uint32_t off, uint32_t len, int ty
 static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_t cap, uint32_t *at,
                     int *esc, const uint32_t *stat_regs, unsigned nstats);
 
+/* (re)start the channel's rate control from @m (#295) */
+static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m)
+{
+    struct t32_h264 *a = &e->avc;
+    const IMPEncoderCHNAttr *at = &e->attr;
+
+    if (t32_rc_init(&a->rc, m, ALIGN16(at->encAttr.picWidth), ALIGN16(at->encAttr.picHeight), a->gop,
+                    at->rcAttr.outFrmRate.frmRateNum, at->rcAttr.outFrmRate.frmRateDen, e->hevc) != 0)
+        IMP_LOG_WARN(TAG, "rate control init failed: fixed QP %d", a->qp_p);
+    else if (a->rc.on)
+        IMP_LOG_INFO(TAG, "%s rate control: mode %d -> eprc %u, %u kbit/s, qp [%u,%u], gop %u",
+                     e->hevc ? "H.265" : "H.264", (int)m->rcMode, a->rc.params.rc_mode,
+                     a->rc.params.rc_mode == EPRC_MODE_CBR ? a->rc.params.bitrate : a->rc.params.max_bitrate,
+                     a->rc.params.min_qp, a->rc.params.max_qp, a->gop);
+}
+
+/* the picture's QP: the controller's, else the fixed / initial QP */
+static int rc_picture_qp(struct t32_enc_chn *e, int idr)
+{
+    struct t32_h264 *a = &e->avc;
+    int qp = idr ? a->qp_i : a->qp_p, q;
+
+    if (idr) {
+        IMPEncoderAttrRcMode m;
+        int restart;
+
+        pthread_mutex_lock(&enc_lock);
+        restart = a->rc_restart;
+        a->rc_restart = 0;
+        m = e->attr.rcAttr.attrRcMode;
+        pthread_mutex_unlock(&enc_lock);
+        if (restart)
+            rc_setup(e, &m);
+    }
+    if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
+        qp = q;
+    return qp;
+}
+
+/* a picture the engine did not finish: accounted as the full stream window
+ * without statistics (as the T23 Helix path does) */
+static void rc_picture_lost(struct t32_enc_chn *e)
+{
+    if (e->avc.rc.on)
+        t32_rc_end(&e->avc.rc, 2u * e->avc.section_kb * 1024u, NULL, 0);
+}
+
 static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
@@ -359,7 +410,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.width = w;
     p.height = h;
     p.p_frame = !idr;
-    p.qp = idr ? a->qp_i : a->qp_p;
+    p.qp = rc_picture_qp(e, idr);
     p.src_y = f->phyAddr;
     p.src_c = f->phyAddr + stride * ALIGN16(f->height);  /* NV12 as FrameSource lays it out */
     p.src_stride = stride;
@@ -387,6 +438,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     n = (uint32_t)t32_hera_h264_list(&p, t32_vpu_buf_va(&a->list));
     if (!n) {
         IMP_LOG_ERR(TAG, "HERA list: %ux%u qp %d refused", w, h, p.qp);
+        rc_picture_lost(e);
         return -1;
     }
 
@@ -407,8 +459,12 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     i = at;
     at += (uint32_t)t32_h264_slice_head(&a->seq, &sl, out + at, &esc);
 
-    if (hera_run(e, n, out, cap, &at, &esc, hera_stat_regs, T32_HERA_STATS) != 0)
+    if (hera_run(e, n, out, cap, &at, &esc, hera_stat_regs, T32_HERA_STATS) != 0) {
+        rc_picture_lost(e);
         return -1;
+    }
+    /* FRAME_END: the slice's size and the statistics the engine left */
+    t32_rc_end(&a->rc, at - i, a->stats, T32_HERA_STATS);
     h264_pack(s, i, at - i, idr ? IMP_H264_NAL_SLICE_IDR : IMP_H264_NAL_SLICE, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;
@@ -488,7 +544,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.p_frame = !idr;
     p.after_p = !idr && a->last_p;
     p.first = a->pictures == 0;
-    p.qp = idr ? a->qp_i : a->qp_p;
+    p.qp = rc_picture_qp(e, idr);
     p.src_y = f->phyAddr;
     p.src_c = f->phyAddr + stride * ALIGN16(f->height);  /* NV12 as FrameSource lays it out */
     p.src_stride = stride;
@@ -512,6 +568,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     n = (uint32_t)t32_hera_h265_list(&p, t32_vpu_buf_va(&a->list));
     if (!n) {
         IMP_LOG_ERR(TAG, "HERA H.265 list: %ux%u qp %d refused", w, h, p.qp);
+        rc_picture_lost(e);
         return -1;
     }
 
@@ -533,8 +590,12 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     sl.qp = p.qp;
     i = at;
     at += (uint32_t)t32_h265_slice_head(&a->seq5, &sl, out + at, &esc);
-    if (hera_run(e, n, out, cap, &at, &esc, hera5_stat_regs, T32_HERA5_STATS) != 0)
+    if (hera_run(e, n, out, cap, &at, &esc, hera5_stat_regs, T32_HERA5_STATS) != 0) {
+        rc_picture_lost(e);
         return -1;
+    }
+    /* H.265 reads no Helix-family statistics: the size only */
+    t32_rc_end(&a->rc, at - i, NULL, 0);
     h265_pack(s, i, at - i, idr ? IMP_H265_NAL_SLICE_IDR_W_RADL : IMP_H265_NAL_SLICE_TRAIL_R, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;
@@ -851,6 +912,7 @@ static void h264_free(struct t32_enc_chn *e)
     OpenIMP_T32_VpuBufFree(&e->avc.ebs);
     for (i = 0; i < T32_HERA5_AUX; i++)
         OpenIMP_T32_VpuBufFree(&e->avc.aux[i]);
+    t32_rc_free(&e->avc.rc);
 }
 
 /* the H.265 channel's analysis buffers and parameter sets: 0 or -1 */
@@ -879,8 +941,7 @@ static int h265_setup(struct t32_enc_chn *e)
     a->pps_len = t32_h265_pps(&a->seq5, a->pps);
     if (!a->vps_len || !a->sps_len || !a->pps_len)
         return -1;
-    if (at->rcAttr.attrRcMode.rcMode != IMP_ENC_RC_MODE_FIXQP)
-        IMP_LOG_WARN(TAG, "H.265 rate control is not implemented on T32 yet: fixed QP %d", a->qp_i);
+    rc_setup(e, &at->rcAttr.attrRcMode);
     return 0;
 }
 
@@ -919,8 +980,7 @@ static int h264_setup(struct t32_enc_chn *e)
     a->seq.init_qp = a->qp_i;
     a->sps_len = t32_h264_sps(&a->seq, a->sps);
     a->pps_len = t32_h264_pps(&a->seq, a->pps);
-    if (at->rcAttr.attrRcMode.rcMode != IMP_ENC_RC_MODE_FIXQP)
-        IMP_LOG_WARN(TAG, "H.264 rate control is not implemented on T32 yet: fixed QP %d", a->qp_i);
+    rc_setup(e, &at->rcAttr.attrRcMode);
     return 0;
 }
 
@@ -1169,6 +1229,7 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     if (e && e->h264) {
         e->attr.rcAttr.attrRcMode = *rcMode;
         h264_set_qp(e, rcMode);
+        e->avc.rc_restart = 1;          /* the controller restarts at the next IDR, as i264e */
         rc = 0;
     } else if (e && rcMode->rcMode == IMP_ENC_RC_MODE_FIXQP) {
         e->attr.rcAttr.attrRcMode = *rcMode;

@@ -15,6 +15,12 @@ HERA_SRC := hera_list_test.c $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT
 HERA_DEPS := $(HERA_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_hera.h $(PROJECT_DIR)/src/t32/openimp_t32_hera_tab.h \
 	$(PROJECT_DIR)/src/t32/openimp_t32_h264.h $(PROJECT_DIR)/src/t32/openimp_t32_h265.h \
 	$(PROJECT_DIR)/src/t32/openimp_t32_hera_h265.h $(PROJECT_DIR)/src/t32/openimp_t32_hera_h265_tab.h
+# rate control (#295): attribute mapping, closed loop, vendor 2.2.0 sequences
+RC_BIN := $(BUILD)/t32-rc-test
+RC_SRC := rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_rc.c $(PROJECT_DIR)/src/eprc/eprc.c \
+	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c
+RC_DEPS := $(RC_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/eprc/eprc.h \
+	$(PROJECT_DIR)/src/eprc/eprc_internal.h
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
 INC := -DPLATFORM_T32 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src
 DEPS := ioctl_abi_test.c $(PROJECT_DIR)/src/t32/openimp_t32_ioctl.h
@@ -36,8 +42,9 @@ OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 OI_ENC_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN)
 	$(TEST_BIN)
+	$(RC_BIN) vendor-2.2.0-rc-h264.txt
 	# H.264 (#293) and H.265 (#294) on HERA: command lists + parameter sets / slice
 	# headers vs vendor 2.2.0
 	gzip -dc vendor-2.2.0-hera-h264.txt.gz vendor-2.2.0-hera-h265.txt.gz > $(BUILD)/t32-hera-lists.txt
@@ -64,6 +71,13 @@ check: $(TEST_BIN) $(HERA_BIN)
 $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(HERA_SRC) -lm
+
+# host build: the 32-bit stream ABI asserts of imp_encoder.h do not hold on
+# a 64-bit host (the rate-control attributes hold no pointers)
+$(RC_BIN): $(RC_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src -o $@ $(RC_SRC) -lm
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)
