@@ -581,6 +581,8 @@ description in the source.
 | `t40_ae_af_night_bin` | bool | 0644 | `true` | - |
 | `t40_ae_af_step_now` | uint | 0444 | `off */ ...` | integration lines per half mains period in use, 0 = off |
 | `t40_ae_api` | callback | 0444 | `computed` | - |
+| `t40_ae_fine_trim` | uint | 0644 | `1` | OEM fine convergence of the frame AE (#239): trims the ISP digital gain toward target/luma at the integration ceiling; 0 = old behaviour |
+| `t40_ae_fine_trims` | uint | 0444 | `0 (not initialised)` | fine-trim moves done (diagnostic) |
 | `t40_ae_hi_thr` | uint | 0644 | `0 (not initialised)` | - |
 | `t40_ae_max_again_index_eff` | uint | 0444 | `0 (not initialised)` | - |
 | `t40_ae_split_legacy` | uint | 0644 | `0 (not initialised)` | - |
@@ -795,6 +797,7 @@ description in the source.
 | `t41_native_awb_error` | int | 0444 | `-ENODEV` | - |
 | `t41_native_awb_frames` | uint | 0444 | `~0U, t41_native_awb_dropped = ~0U` | - |
 | `t41_proc_watch` | int | 0444 | `1` | Watch (report only, no restore) the /proc/jz/isp entries every 50 ms (default 1) |
+| `t41_raw_ring` | bool | 0644 | `true` | serve the RAW ring controls 0x80000a7/0x80000a8 (`IMP_ISP_RAW_RwControl`); 0 answers -EPERM (default 1 since #320) |
 | `t41_rawinject_mb` | uint | 0444 | `10 << 20` | at load time, before memory fragments |
 | `t41_reboot_quiesce` | bool | 0644 | `true` | stop and soft-reset the ISP bus master before restart/halt (default 1) |
 | `t41_runtime_trace` | int | 0644 | `0 (not initialised)` | enable verbose T41 frame/remote-event/IRQ recovery tracing |
