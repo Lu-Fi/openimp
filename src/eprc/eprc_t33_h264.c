@@ -2545,3 +2545,575 @@ static void e33_video_cfg(E33 *X, uint32_t e)
             ST_U32(r + 8, LD_U8(e + 0x844));
     }
 }
+
+/* ---------------------------------------------------------- picture start */
+
+/* Still-map region vote (FRAME_START, 0x1abc..): the encoder's still map
+ * (cur+0x7a8, one class byte per bs x bs block, bs = cur+0x7ad) is mapped
+ * onto the macroblocks.  Each MB takes the class (1 .. n-1, n = cur+0x7ae)
+ * covered by most blocks that overlap it by at least min(bs*bs/2, 64)
+ * pixels (ties: the higher class; none: class 0), marked with 0x10 in the
+ * MB map ms+0x20; ms+0x38 counts MBs per class, ms+0x1d is the class-0
+ * share in percent.  ms = e+0x878, the vendor's map statistics block. */
+static void t33_still_vote(E33 *X, uint32_t e, uint32_t cur, uint32_t ms)
+{
+    uint32_t cfg = LD_U32(e + 0x874), bs = LD_U8(cur + 0x7ad);
+    int32_t mbw, mbh, bw, bh, thr, units;
+
+    for (int i = 0; i < 8; i++)
+        ST_U8(ms + 0x38 + i, 0);
+    if (bs == 0)
+        return;                         /* the vendor traps */
+    ST_U16(ms + 0x2e, (uint16_t)(LD_U16(cfg) / bs));
+    ST_U16(ms + 0x30, (uint16_t)(LD_U16(cfg + 2) / bs));
+    if (LD_S8(cur + 0x474) == 0)
+        ST_U32(ms + 0x34, LD_U32(cur + 0x7a8));
+    else if (LD_S8(cur + 0x482) != 0)
+        return;                         /* map from a file: the vendor fopen()s or exits */
+    bw = LD_U16(ms + 0x2e);
+    bh = LD_U16(ms + 0x30);
+    thr = bs * bs < 0x80 ? (int32_t)(bs * bs) >> 1 : 0x40;
+    mbh = LD_U16(cfg + 6);
+    for (int32_t my = 0; my < mbh; my++) {
+        int32_t y0 = my * 16, y1 = y0 + 15;
+
+        mbw = LD_U16(cfg + 4);
+        for (int32_t mx = 0; mx < mbw; mx++) {
+            int32_t x0 = mx * 16, x1 = x0 + 15, r0 = y0 / (int32_t)bs, c0 = x0 / (int32_t)bs;
+            uint32_t idx = (uint32_t)(mbw * my + mx), mb, n;
+            uint8_t cnt[16] = { 0 }, best, cls;
+
+            if (r0 < bh && (int32_t)(bs * r0) <= y1) {
+                for (int32_t r = r0;; r++) {
+                    int32_t ya = (int32_t)(bs * r), yb = ya + (int32_t)bs - 1, rows;
+
+                    if (yb > y1)
+                        yb = y1;
+                    if (ya < y0)
+                        ya = y0;
+                    rows = yb - ya + 1;
+                    for (int32_t c = c0; c < bw; c++) {
+                        int32_t xa = (int32_t)(bs * c), xb = xa + (int32_t)bs - 1;
+
+                        if (xa > x1)
+                            break;
+                        if (xa < x0)
+                            xa = x0;
+                        if (xb > x1)
+                            xb = x1;
+                        if (thr <= (xb - xa + 1) * rows) {
+                            uint8_t v = LD_U8(LD_U32(ms + 0x34) + c + r * bw);
+
+                            if (v < 16)
+                                cnt[v]++;
+                        }
+                    }
+                    if (r + 1 == bh || (int32_t)(bs * (r + 1)) > y1)
+                        break;
+                }
+            }
+            n = LD_U8(cur + 0x7ae);
+            cls = 0;
+            best = 1;
+            for (uint32_t i = 1; i < n && i < 16; i++)
+                if (cnt[i] >= best) {
+                    best = cnt[i];
+                    cls = (uint8_t)i;
+                }
+            ST_U8(LD_U32(ms + 0x20) + idx, cls);
+            if (LD_S8(cur + 0x7af) != 0) {          /* hysteresis against the previous map */
+                uint32_t p = LD_U32(ms + 0x24) + idx, m = LD_U32(ms + 0x20) + idx;
+                uint8_t v = LD_U8(m);
+
+                if (LD_U8(p) != 0 && v == 0) {
+                    ST_U8(m, (uint8_t)n);
+                    ST_U8(p, 0);
+                } else {
+                    ST_U8(p, v < n ? v : 0);
+                }
+            }
+            mb = LD_U32(ms + 0x20) + idx;
+            ST_U8(mb, LD_U8(mb) | 0x10);
+            ST_S16(ms + 0x38 + (LD_U8(mb) & 0xf) * 2, LD_S16(ms + 0x38 + (LD_U8(mb) & 0xf) * 2) + 1);
+        }
+    }
+    units = (int32_t)(((((int32_t)LD_U16(cfg) + 0xf) >> 4) * (((int32_t)LD_U16(cfg + 2) + 0xf) >> 4)) & 0xffff);
+    if (units == 0)
+        units = 1;
+    ST_S8(ms + 0x1d, (int8_t)((uint32_t)LD_U16(ms + 0x38) * 100 / (uint32_t)units));
+}
+
+/* Motion level from the last five P sizes (FRAME_START, 0x1aab3c ..): with
+ * all five windows (st+0x1a8 .. 0x1b8) filled, compare their mean (or the
+ * last P size when st+0x79 is set) with the per-P budget left in the GOP,
+ * and the mean QP of the last five P pictures (st+0x220) with the maximum
+ * QP; step st+0xa8 (level) and st+0x97 by one.  Returns the level (4..8),
+ * or -1 where the vendor asserts. */
+static int32_t t33_motion_level(E33 *X, uint32_t e, uint32_t inst, uint32_t st)
+{
+    uint32_t cfg = LD_U32(e + 0x820), fps = LD_U32(st + 0x358), rem, left;
+    int64_t r6 = LD_S64(inst + 0x30) * 6 / 5, avg, half;
+    int32_t n, lvl, mq, q97;
+
+    rem = fps * (uint32_t)(int32_t)r6 - LD_U32(st + 0x50) - LD_U32(st + 0x168) - LD_U32(st + 0x170) -
+          LD_U32(st + 0x178) - LD_U32(st + 0x180) - LD_U32(st + 0x188);
+    if ((int32_t)rem < 1)
+        rem = 1;
+    left = (uint32_t)(LD_S32(cfg + 0xc) - LD_S32(st + 0x2c));
+    if (left == 1)
+        return -1;                      /* the vendor asserts */
+    rem /= left - 1;
+    n = (LD_S32(st + 0x1ac) != 0 ? 5 : 4) - (LD_U32(st + 0x1b0) == 0);
+    if (LD_U32(st + 0x1b4) == 0)
+        n--;
+    if (LD_U32(st + 0x1b8) == 0 || n != 5)
+        return LD_S8(st + 0xa8);
+    mq = (int32_t)(((double)(LD_S8(st + 0x220) + LD_S8(st + 0x221) + LD_S8(st + 0x222) + LD_S8(st + 0x223) +
+                             LD_S8(st + 0x224)) + 0.5) / 5.0);
+    avg = ((int64_t)LD_S32(st + 0x1a8) + LD_S32(st + 0x1ac) + LD_S32(st + 0x1b0) + LD_S32(st + 0x1b4) +
+           LD_S32(st + 0x1b8)) / 5;
+    if (LD_S8(st + 0x79) != 0)
+        avg = LD_S64(st + 0x48);
+    half = (int64_t)((uint64_t)LD_S64(st + 0xb0) + rem) / 2;
+    if (mq >= (int32_t)LD_U8(cfg + 0x18) && avg > (int64_t)rem) {
+        q97 = LD_S8(st + 0x97) + 1;
+        lvl = (int8_t)(LD_S8(st + 0xa8) + 1);
+    } else if (mq < (int32_t)LD_U8(cfg + 0x18) - 1 || avg < half) {
+        q97 = LD_S8(st + 0x97) - 1;
+        lvl = (int8_t)(LD_S8(st + 0xa8) - 1);
+    } else {
+        q97 = LD_S8(st + 0x97);
+        lvl = LD_S8(st + 0xa8);
+        ST_U8(st + 0x79, 0);
+        goto clamp;
+    }
+    ST_S8(st + 0x97, (int8_t)q97);
+    ST_S8(st + 0xa8, (int8_t)lvl);
+    ST_U8(st + 0x79, 1);
+clamp:
+    if ((int8_t)q97 < 0)
+        ST_S8(st + 0x97, 0);
+    else if ((int8_t)q97 > 4)
+        ST_S8(st + 0x97, 4);
+    if (lvl < 4) {
+        ST_S8(st + 0xa8, 4);
+        lvl = 4;
+    } else if (lvl > 8) {
+        ST_S8(st + 0xa8, 8);
+        lvl = 8;
+    }
+    return lvl;
+}
+
+/* Budget ladder of the motion level (FRAME_START, 0x1aab9c ..): the bits
+ * left in the statistics window (st+0x3b0 - fps * st+0x2f0) against 1..4
+ * fifths of the window budget R raise st+0xa8 / st+0xa9 / st+0x97; the
+ * level stays within one step of the last picture's (st+0x78) and is then
+ * bounded by the encoder's motion mode (cur+0x7d4: 0 off, 1..3). */
+static void t33_level_ladder(E33 *X, uint32_t inst, uint32_t st, uint32_t cur, uint32_t rate, uint32_t fps,
+                             int32_t lvl)
+{
+    static const uint8_t cap[4] = { 8, 7, 6, 5 };       /* level bound per step k = 4 .. 1 */
+    uint32_t R = (rate - LD_U32(st + 0x2f0)) * fps;
+    int64_t D = (int64_t)((uint64_t)LD_S64(st + 0x3b0) - (uint64_t)((int64_t)(int32_t)fps * LD_S64(st + 0x2f0)));
+    uint8_t b27 = LD_U8(cur + 0x7d4) / 3;
+    int32_t k, m78;
+
+    for (k = 4; k >= 1; k--)
+        if (D > (int64_t)((int32_t)(R * (uint32_t)k) / 5))
+            break;
+    if (k >= 1) {
+        int8_t q = LD_S8(st + 0x97);
+
+        ST_S8(st + 0x97, q < k ? (int8_t)k : q);
+        if (lvl < cap[4 - k])
+            lvl = (int8_t)(lvl + 1);
+        ST_S8(st + 0xa8, (int8_t)lvl);
+        ST_U8(st + 0xa9, (uint8_t)(b27 + k));
+        if (k == 4 && LD_S8(cur + 0x7d5) != 0) {
+            int64_t v = (int64_t)(int32_t)R - D - (int64_t)LD_U32(st + 0x100);
+
+            if (v < (int64_t)((uint64_t)LD_S64(inst + 0x20) << 1))
+                ST_U8(st + 0xab, 1);
+        }
+    } else {
+        ST_U8(st + 0xa9, D > 0 ? b27 : 0);
+    }
+    m78 = LD_S8(st + 0x78);
+    if (lvl < m78 - 1) {
+        lvl = (int8_t)(m78 - 1);
+        ST_S8(st + 0xa8, (int8_t)lvl);
+    } else if (lvl > m78 + 1) {
+        lvl = (int8_t)(m78 + 1);
+        ST_S8(st + 0xa8, (int8_t)lvl);
+    }
+    if (lvl < 0) {
+        ST_S8(st + 0xa8, 0);
+        lvl = 0;
+    } else if (lvl > 8) {
+        ST_S8(st + 0xa8, 8);
+        lvl = 8;
+    }
+    switch (LD_S8(cur + 0x7d4)) {
+    case 0:
+        ST_S8(st + 0xa8, 4);
+        ST_S8(st + 0xa9, 0);
+        ST_S8(st + 0x97, 0);
+        break;
+    case 1:
+    case 2:
+    case 3: {
+        int m = LD_S8(cur + 0x7d4);
+        int8_t hi9 = m == 1 ? 2 : m == 2 ? 3 : 5, hi97 = m == 3 ? 4 : 2;
+
+        if (m != 3 && lvl > 6)
+            ST_S8(st + 0xa8, 6);
+        t33_clip_s8(X, st + 0xa9, 0, hi9);
+        t33_clip_s8(X, st + 0x97, 0, hi97);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+/* Forced-intra flag (st+0xab, counted in st+0x10c) from the encoder's
+ * request cur+0x7d6 and hold period cur+0x7d8 (FRAME_START, 0x1aacf0). */
+static void t33_force_intra(E33 *X, uint32_t st, uint32_t cur)
+{
+    int32_t hold = LD_S32(cur + 0x7d8);
+    int on;
+
+    if ((hold < 0 || LD_S32(st + 0x10c) < hold) && LD_S8(st + 0xab) != 0)
+        on = 1;
+    else
+        on = LD_S8(cur + 0x7d6) != 0;
+    ST_U8(st + 0xab, (uint8_t)on);
+    if (on)
+        ST_S32(st + 0x10c, LD_S32(st + 0x10c) + 1);
+    else
+        ST_U32(st + 0x10c, 0);
+}
+
+/* Intra refresh (FRAME_START, 0x1aaec8 ..; on with e+0x7f0): every period
+ * (st+0x444, 3 .. 0x10000) pictures a band of MB rows (out+0x34 .. +0x38)
+ * is coded intra, spread over st+0x448 pictures (2 .. 10, at most the MB
+ * rows; cur+0x7c4: at most the period).  st+0x454 / st+0x458 count the
+ * pictures of the band and of the period.  Returns 0 when the picture
+ * counter st+0x460 is to be advanced without the band bookkeeping. */
+static void t33_refresh(E33 *X, uint32_t e, uint32_t st, uint32_t out, uint32_t cur)
+{
+    int32_t a = LD_S32(cur + 0x7c8), per = LD_S32(cur + 0x7cc), cnt, v;
+
+    ST_S8(st + 0x440, LD_S8(cur + 0x7bd));
+    ST_S8(st + 0x441, LD_S8(cur + 0x7c4));
+    if (per <= a)
+        per = a + 1;
+    ST_S32(st + 0x444, per);
+    ST_U32(st + 0x448, LD_U32(cur + 0x7c0));
+    ST_S32(st + 0x44c, a);
+    ST_U8(st + 0x442, 0);
+    ST_U8(out + 0x30, 0);
+    if (per <= 2)
+        ST_U32(st + 0x444, 3);
+    else if (per > 0x10000)
+        ST_U32(st + 0x444, 0x10000);
+    if (LD_S8(st + 0x7b) == 2) {        /* IDR: restart */
+        ST_U32(st + 0x458, 0);
+        ST_U32(st + 0x450, 0);
+        ST_U32(st + 0x45c, 0);
+        cnt = 0;
+    } else if (LD_S8(st + 0xab) != 0) { /* forced intra picture: the band restarts */
+        ST_U32(st + 0x454, 0);
+        ST_U32(st + 0x450, 0);
+        ST_U32(st + 0x458, LD_U32(st + 0x444));
+        ST_U32(st + 0x45c, 0);
+        ST_U8(st + 0x442, 0);
+        ST_U8(out + 0x30, 0);
+        return;
+    } else {
+        int32_t rows = (int32_t)LD_U16(LD_U32(e + 0x820) + 2) >> 4, n, lim = 0;
+        int8_t lim_per;
+        int go = 1;
+
+        if (rows <= 1)
+            return;
+        if (LD_S8(st + 0x440) == 0) {
+            lim_per = LD_S8(st + 0x441);
+            n = LD_S32(st + 0x450);
+            cnt = LD_S32(st + 0x454);
+        } else {
+            n = LD_S32(st + 0x448);
+            ST_U32(st + 0x454, 0);
+            ST_U32(st + 0x45c, 0);
+            n = n < 2 ? 2 : n > 9 ? 10 : n;
+            lim_per = LD_S8(st + 0x441);
+            if (rows <= n)
+                n = rows;
+            ST_S32(st + 0x448, n);
+            if (lim_per != 0) {
+                if (LD_S32(st + 0x444) < n)
+                    n = LD_S32(st + 0x444);
+                ST_S32(st + 0x448, n);
+            }
+            ST_S32(st + 0x450, n);
+            cnt = 0;
+        }
+        if (lim_per == 0) {
+            if (n > 0)
+                lim = LD_S32(st + 0x448);
+            else
+                go = 0;
+        } else {
+            int32_t p = LD_S32(st + 0x444), q = LD_S32(st + 0x44c);
+
+            if (p == 0)
+                return;               /* the vendor traps */
+            cnt %= p;
+            if (q < 2)
+                q = 2;
+            if (q > p)
+                q = p;
+            lim = q <= rows ? q : rows;
+            ST_S32(st + 0x44c, lim);
+            if (n > 0)
+                lim = LD_S32(st + 0x448);
+        }
+        if (go && ((cnt < lim && LD_S32(st + 0x444) <= LD_S32(st + 0x458)) || n > 0)) {
+            int32_t s, y, n2 = LD_S32(st + 0x450);
+
+            if (cnt == 0) {
+                ST_U8(st + 0x442, 1);
+                ST_U32(st + 0x45c, 0);
+                s = 0;
+            } else {
+                s = LD_S32(st + 0x45c);
+                ST_U8(st + 0x442, 2);
+            }
+            ST_U8(out + 0x30, 1);
+            y = LD_S32(st + 0x45c);
+            if (lim - cnt == 0)
+                return;               /* the vendor traps */
+            ST_S32(out + 0x34, y);
+            y += ((((int32_t)LD_U16(LD_U32(e + 0x820) + 2) + 0xf) >> 4) - s) / (lim - cnt);
+            ST_S32(out + 0x38, y);
+            ST_S32(st + 0x45c, y);
+            if (n2 > 0)
+                ST_S32(st + 0x450, n2 - 1);
+        }
+        cnt = LD_S32(st + 0x454);
+        if (cnt < -1) {
+            int32_t p = LD_S32(st + 0x444);
+
+            if (p == 0)
+                return;               /* the vendor traps */
+            ST_S32(st + 0x454, cnt % p + p + 1);
+            goto period;
+        }
+    }
+    ST_S32(st + 0x454, cnt + 1);
+period:
+    v = LD_S32(st + 0x458);
+    if (v < -1) {
+        int32_t p = LD_S32(st + 0x444);
+
+        if (p == 0)
+            return;                   /* the vendor traps */
+        ST_S32(st + 0x458, v % p + p + 1);
+    } else {
+        ST_S32(st + 0x458, v + 1);
+    }
+}
+
+/* picture QP into st+0x90 (FRAME_START, 0x1ab0bc / 0x1aad6c) */
+static uint32_t t33_start_qp(E33 *X, uint32_t e, uint32_t inst, uint32_t st, uint32_t ps)
+{
+    int8_t k = LD_S8(st + 0x7b);
+
+    if (LD_S8(e + 0x824) == T33_FIXQP) {
+        static const uint16_t fix[7] = { 0x82d, 0x82e, 0x82c, 0, 0, 0, 0x82c };    /* by kind */
+
+        if (k == 2)
+            ST_U32(st + 0x398, 0);
+        if (k == 0 || k == 1 || k == 2 || k == 6)
+            ST_U32(st + 0x90, LD_U8(e + fix[k]));
+        return LD_U32(st + 0x90);
+    }
+    if (LD_S8(e + 0x30) != 0 && LD_S8(e + 0x53) == 0) {
+        /* the encoder set the QP (cur+0x1c) */
+        if (k == 0 || k == 2 || k == 6)
+            ST_S32(st + 0x90, LD_S8(LD_U32(ps + 0x1c) + 0x1c));
+    } else if (k == 0 && LD_S32(st + 0x398) != 0) {
+        ST_S32(st + 0x90, e33_p_qp(X, e + 0x820, inst, st, ps));
+    } else {
+        e33_frc_bitrate(X, e + 0x820, inst, st, ps);
+        k = LD_S8(st + 0x7b);
+        if (k == 2 || k == 6)
+            ST_S32(st + 0x90, e33_iqp(X, e + 0x820, inst, st, ps));
+        else if (k == 0)
+            ST_S32(st + 0x90, e33_p_qp(X, e + 0x820, inst, st, ps));
+    }
+    e33_limit_qp(X, LD_U32(e + 0x820), e + 0x860, st, ps);
+    return LD_U32(st + 0x90);
+}
+
+/* the highest QP of the 16 ROI regions (cur+0x3ae, 9 bytes each: on, mode,
+ * QP; mode 1 absolute, 2 relative, 3 relative + 4), at least qp + 4, at
+ * most 51 (FRAME_START, 0x1aad94) */
+static int32_t t33_roi_max(E33 *X, uint32_t cur, uint32_t qp)
+{
+    int32_t mx = (int32_t)qp + 4;
+
+    for (int i = 0; i < 16; i++) {
+        uint32_t r = cur + 0x3ae + 9 * i;
+        int32_t v = LD_S8(r + 2);
+
+        if (LD_S8(r) == 0)
+            continue;
+        switch (LD_S8(r + 1)) {
+        case 1: break;
+        case 2: v += (int32_t)qp; break;
+        case 3: v += (int32_t)qp + 4; break;
+        default: continue;
+        }
+        if (mx < v)
+            mx = v;
+    }
+    return mx > 0x33 ? 0x33 : mx;
+}
+
+/* the picture parameters for the encoder (FRAME_START, 0x1ab1c4 ..) */
+static void t33_start_output(E33 *X, uint32_t e, uint32_t inst, uint32_t st, uint32_t out, uint32_t ps,
+                             uint32_t qp)
+{
+    uint32_t cfg = LD_U32(e + 0x820);
+    int8_t mode = LD_S8(e + 0x824), k, f;
+
+    ST_U8(inst + 0x7f, (uint8_t)(LD_S8(cfg + 0x2e) - 3) < 3);
+    if (mode != T33_FIXQP && LD_S8(inst + 0x18) < 4 && LD_S8(inst + 0x7f) == 0 && LD_S32(e + 0x85c) == 0 &&
+        LD_S32(e + 0x860) == 0)
+        ST_U8(inst + 0x7f, 1);
+    ST_U32(out, LD_U32(st + 0x14));
+    ST_U32(out + 4, LD_U32(st + 0x460));
+    ST_U32(out + 8, LD_U32(st + 0x90));
+    ST_S8(out + 0x20, LD_S8(st + 0x7b));
+    for (int i = 0; i < 4; i++)
+        ST_U32(out + 0x10 + 4 * i, LD_U32(st + 0x80 + 4 * i));
+    ST_S8(out + 0x21, LD_S8(st + 0x97));
+    ST_U8(out + 0x22, LD_U8(inst + 0x7d));
+    ST_U8(out + 0x23, LD_U8(inst + 0x7e));
+    f = LD_S8(inst + 0x7f);
+    ST_S8(out + 0x24, f == 0 || f == 1 || f == 2 ? f : LD_S8(st + 0x9a));
+    ST_S8(out + 0x25, LD_S8(st + 0x99));
+    ST_U8(out + 0x26, LD_U8(inst + 0x80));
+    /* QP range: P from the configuration, I from the encoder (ps+0 / ps+1) */
+    if (LD_S8(st + 0x7b) == 0) {
+        if (mode == T33_FIXQP) {
+            for (int i = 0x27; i <= 0x2a; i++)
+                ST_U8(out + i, LD_U8(e + 0x82d));
+        } else {
+            ST_U8(out + 0x27, LD_U8(cfg + 0x18));
+            ST_U8(out + 0x28, LD_U8(cfg + 0x19));
+            ST_U8(out + 0x29, LD_U8(cfg + 0x18));
+            ST_U8(out + 0x2a, LD_U8(cfg + 0x19));
+        }
+    } else {
+        if (LD_S32(st + 0x14) == 0 && LD_S8(e + 0x825) != -1 && mode != T33_FIXQP) {
+            ST_U8(out + 0x27, (uint8_t)qp);
+            ST_U8(out + 0x28, (uint8_t)qp);
+        } else {
+            ST_S8(out + 0x27, LD_S8(ps));
+            ST_S8(out + 0x28, LD_S8(ps + 1));
+        }
+        ST_S8(out + 0x29, LD_S8(ps));
+        ST_S8(out + 0x2a, LD_S8(ps + 1));
+    }
+    /* fixed picture size of the encoder (e+0x85c I, e+0x860 P) */
+    k = LD_S8(st + 0x7b);
+    if (mode != T33_FIXQP && (k == 2 || k == 0 || k == 6)) {
+        int32_t sz = LD_S32(e + (k == 2 ? 0x85c : 0x860));
+
+        if (sz != 0) {
+            ST_S32(out + 0x18, sz);
+            ST_U32(out + 0x1c, 0);
+            ST_U8(out + 0x24, 1);
+            ST_U8(inst + 0x7f, 1);
+        }
+    }
+    ST_U8(out + 0x2b, LD_U8(inst + 0x18));
+    ST_U8(out + 0x2c, mode == T33_SMART && LD_S8(inst + 0x7c) == 1 ? LD_U8(inst + 0x81) : 4);
+    ST_S8(out + 0x2d, LD_S8(st + 0xa8));
+    ST_S8(out + 0x2e, LD_S8(st + 0xa9));
+    ST_S8(out + 0x2f, LD_S8(st + 0xaa));
+    ST_S8(out + 0x3c, LD_S8(st + 0xab));
+    ST_S8(out + 0x3d, LD_S8(st + 0xac));
+}
+
+/* JZ_VPU_RC_FRAME_START (0x1aa9xx): picture kind, still-map vote, motion
+ * level, forced intra / intra refresh, picture QP and the parameters for
+ * the encoder (out = e+0x86c), then the slice info and the output block. */
+static void e33_frame_start(E33 *X, uint32_t e)
+{
+    uint32_t sm = LD_U32(e + 0x87c), ps = LD_U32(e + 0x870), inst = LD_U32(e + 0x864);
+    uint32_t st = LD_U32(e + 0x868), out = LD_U32(e + 0x86c), cur, rate, fps, qp;
+    int32_t lvl;
+    int8_t k, m;
+
+    if (LD_S8(LD_U32(sm + 8)) != 1 && LD_S8(LD_U32(sm) + 0x7ac) != 0)
+        t33_still_vote(X, e, LD_U32(sm), LD_U32(e + 0x878));
+    sm = LD_U32(e + 0x87c);
+    ST_U8(e + 0x50, LD_U8(e + 0x810));
+    ST_U8(e + 0x52, LD_U8(e + 0x811));
+    ST_U32(LD_U32(e + 0x88c) + 0x10, LD_U32(e + 0x47c));
+    ST_U32(sm + 0xc, LD_U32(e + 0x47c));
+    cur = LD_U32(ps + 0x1c);
+
+    /* picture kind: 2 IDR, 0 P, 6 P at the start of a SMART GOP */
+    rate = LD_U32(inst + 0x30);
+    fps = LD_U32(st + 0x358);
+    lvl = LD_S8(st + 0xa8);
+    if (LD_S32(cur + 0x14) == 0) {
+        ST_U8(st + 0x7b, 0);
+        if (LD_S8(e + 0x827) == 1 && LD_S32(st + 0x398) == 0)
+            ST_U8(st + 0x7b, 6);
+    } else {
+        ST_U8(st + 0x7b, 2);
+        ST_U8(inst + 0x18, LD_U8(inst + 0x19));
+        if (LD_S32(cur + 0x14) == 2) {
+            ST_U8(st + 0xa9, 0);
+            ST_U8(st + 0x78, 4);
+            ST_U8(st + 0xa8, 4);
+            ST_U8(st + 0x97, 0);
+            ST_U64(st + 0x3b0, 0);
+            ST_U32(st + 0x100, 0);
+            ST_U64(st + 0x50, 0);
+            lvl = 4;
+        }
+    }
+    if (LD_S8(st + 0x7b) != 6 && LD_S32(st + 0x398) >= 1) {
+        lvl = t33_motion_level(X, e, inst, st);
+        if (lvl < 0)
+            return;                     /* the vendor asserts */
+        rate = LD_U32(inst + 0x30);
+    }
+    t33_level_ladder(X, inst, st, cur, rate, fps, lvl);
+
+    /* forced intra, intra refresh, picture counter */
+    t33_force_intra(X, st, cur);
+    if (LD_S8(e + 0x7f0) != 0)
+        t33_refresh(X, e, st, out, cur);
+    k = LD_S8(st + 0x7b);
+    ST_U32(st + 0x460, k == 2 ? 0 : LD_U32(st + 0x460) + 1);
+    m = LD_S8(e + 0x824);
+    if (m == T33_SMART || m == T33_AVBR) {
+        ST_U8(inst + 0x7d, LD_U8(e + 0x84a));
+        ST_U8(inst + 0x7e, LD_U8(e + 0x84b));
+    }
+
+    qp = t33_start_qp(X, e, inst, st, ps);
+    ST_S8(st + 0xac, (int8_t)t33_roi_max(X, LD_U32(ps + 0x1c), qp));
+    ST_U8(inst + 0x7f, 0);
+    t33_start_output(X, e, inst, st, out, ps, qp);
+    e33_set_sliceinfo(X, e);
+    e33_output_param(X, e, 0);
+}

@@ -20,3 +20,4 @@ eprc_default_set_H264_T33 e33_default_set
 init_inst_param e33_init_inst
 JZ_VPU_RC_FRAME_END_H264_T33 e33_frame_end
 JZ_VPU_RC_VIDEO_CFG_H264_T33 e33_video_cfg
+JZ_VPU_RC_FRAME_START_H264_T33 e33_frame_start

@@ -15,5 +15,9 @@ Nothing from the vendor library is stored here; every tool reads the library / G
 - `rand3.py` (+ `rand.py`, `rand_rate.py`; `reg.sh SO OUT` runs all 96): scenarios that reach every I-QP branch:
   GOP 1, no initial QP, 5..60 fps, run-time bit-rate changes, SMART/AVBR still-scene knobs (+0x25c, +0x260 still map,
   +0x26c/+0x26d, +0x168, +0x264) and the HERA complexity sum (regs 43/44). A scenario passes only with 0 differing calls.
+- `rand4.py` (in `reg.sh`, 144 scenarios in all): FRAME_START / FRAME_END / VIDEO_CFG branches: fixed QP, forced IDR
+  periods that differ from the GOP, small still-map blocks and class counts, ROI regions, intra refresh and the
+  per-picture motion knobs (X+0x151.., X+0x164..), out-of-range configuration values. Inputs that i264e would not
+  produce are poked at function entry (`Harness.poke`, before the snapshot), so both sides still get the same input.
   Coverage: build the swap oracle with `-O0 --coverage` and run gcov on `eprc_t33_h264.c`; compare results only with the
   `-O1` build (the generated C has uninitialised locals in the P path that differ at -O0).

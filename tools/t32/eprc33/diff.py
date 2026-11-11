@@ -50,6 +50,10 @@ class Harness:
             return
         e = uc.reg_read(UC_MIPS_REG_A0)
         assert e == PB + 0x360, hex(e)
+        # optional input perturbation (rand4.py): written before the snapshot, so the
+        # vendor and the C build see the same input
+        if getattr(self, 'poke', None):
+            self.poke(name, self)
         self.pending = (name, uc.reg_read(UC_MIPS_REG_RA), self.snap())
 
     def ret(self, uc, addr, size, _):
