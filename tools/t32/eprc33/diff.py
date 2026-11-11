@@ -8,7 +8,7 @@ from unicorn import UC_HOOK_CODE
 from unicorn.mips_const import UC_MIPS_REG_RA, UC_MIPS_REG_A0
 
 LIB = '/mnt/NVMe/git/scratch-clones/session-110bf918/audit/issue295/gh/libimp-2.2.0.so'
-SO = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].endswith('.so') else 'libe33.so'))
+SO = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.environ.get('E33SO','libe33.so')))
 PB, PS = HEAP, 0x30000
 BB, BS = HEAP + 0x1000000, 0x10000
 GB, GS = 0x1b0000, 0x80000
@@ -72,7 +72,9 @@ class Harness:
             d = [i for i in range(lim) if v[i] != m[i]]
             if d:
                 bad.append((nm, base, d, v, m))
-        if bad or fault:
+        if fault and not bad:
+            self.nfault = getattr(self, 'nfault', 0) + 1
+        if bad:
             self.ndiff += 1
             if self.verbose and self.ndiff <= self.verbose:
                 print('DIFF call %d %s fault=%d' % (self.calls, name, fault))

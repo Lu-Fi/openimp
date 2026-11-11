@@ -13,6 +13,7 @@ path you pass.  The emulator has no HERA: statistics are synthetic.
     tools/eprc_t33_oracle.py LIB MODE [KBPS] [PICTURES]      'F' lines
     tools/eprc_t33_oracle.py LIB --compare MODE KBPS PICS OPENIMP_TRACE
     tools/eprc_t33_oracle.py LIB --defaults                  i264e defaults
+    tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
 
 MODE: the T32 IMPEncoderRcMode (1 CBR, 2 VBR, 3 SMART, 4 CVBR, 5 AVBR).
 i264e parameter offsets (vendor 2.2.0, from i264e_param_default and the
@@ -79,6 +80,10 @@ class T33:
         L.w32(Hh + 0x1540, P); L.w32(Hh + 0x3f0, self.X); L.w32(Hh + 0x400, self.S)
         L.w32(Hh + 0xbac, self.TB)
         L.w32(self.X + 0x4c, 0xffffffff)                  # no FRAME_REPEATE_JUDGE (no re-encoding)
+        # the i264e slice block the controller fills (Hh+0xf9c -> P+0x6cc); without it the
+        # controller writes through a NULL pointer into low memory
+        self.SL = HEAP + 0x20000
+        L.w32(Hh + 0xf9c, self.SL)
         self.n = 0
 
     def start(self):
@@ -112,6 +117,64 @@ def run(path, mode, kbps, pics, out=sys.stdout):
     return seq
 
 
+def xorshift32(x):
+    x ^= (x << 13) & 0xffffffff
+    x ^= x >> 17
+    x ^= (x << 5) & 0xffffffff
+    return x
+
+
+class Scene:
+    """deterministic complexity sequence (scene cuts, still periods); tests/t32/rc_test.c has the same"""
+    LEVELS = (5.0, 20.0, 60.0, 120.0, 250.0)
+
+    def __init__(self, seed):
+        self.x = seed or 1
+        self.lvl = 60.0
+        self.still = 0
+
+    def next(self):
+        self.x = u = xorshift32(self.x)
+        if u % 100 < 3:
+            self.lvl = self.LEVELS[(u >> 8) % 5]
+        if (u >> 16) % 100 < 2:
+            self.still = 10 + (u >> 20) % 50
+        if self.still > 0:
+            self.still -= 1
+            return 1.0 + ((u >> 4) & 255) / 256.0
+        return max(0.5, self.lvl * (0.8 + 0.4 * ((u >> 12) & 1023) / 1024.0))
+
+
+def scenario(path, seed):
+    """one random scenario: 'S' header line and its 'F' lines"""
+    x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
+    pick = []
+    for _ in range(10):
+        x = xorshift32(x)
+        pick.append(x)
+    mode = 1 + pick[0] % 5
+    kbps = (256, 500, 1000, 2000, 3000, 4000, 6000, 8000)[pick[1] % 8]
+    w, h = ((1920, 1088), (1280, 720), (640, 368), (2560, 1440), (2304, 1296))[pick[2] % 5]
+    gop = (10, 25, 30, 50, 60)[pick[3] % 5]
+    fps = (10, 15, 20, 25, 30)[pick[4] % 5]
+    minqp = (10, 15, 20, 25)[pick[5] % 4]
+    maxqp = (38, 42, 45, 48, 51)[pick[6] % 5]
+    initqp = (25, 30, 35)[pick[7] % 3]
+    pics = (80, 150, 250)[pick[8] % 3]
+    t = T33(path, mode, kbps, w=w, h=h, gop=gop, fps=fps, minqp=minqp, maxqp=maxqp, initqp=initqp)
+    sc = Scene(pick[9])
+    mbs = (w // 16) * (h // 16)
+    out = ['S %d %d %d %d %d %d %d %d %d %d %u' % (mode, kbps, w, h, gop, fps, minqp, maxqp, initqp, pics, pick[9])]
+    for i in range(pics):
+        cplx = sc.next()
+        r, qp, typ = t.start()
+        idr = i % gop == 0
+        nb = model_bytes(qp, idr, mbs, cplx)
+        t.end(nb, model_stats(qp, nb, mbs))
+        out.append('F %d %d %d %d' % (i, 2 if idr else 0, qp, nb))
+    return out
+
+
 def summary(name, seq):
     bits = sum(s[3] for s in seq) * 8
     p = [s[2] for s in seq if s[1] != 2]
@@ -125,6 +188,10 @@ def main():
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
+        return
+    if len(a) >= 4 and a[1] == '--scenarios':
+        for k in range(int(a[2]), int(a[2]) + int(a[3])):
+            print('\n'.join(scenario(a[0], k)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])

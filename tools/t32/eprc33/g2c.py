@@ -126,7 +126,13 @@ class Conv:
         if n.type == 'char':
             return n, ('i', 1, True)
         if n.type == 'string':
-            return const(0), INT
+            import ast as _ast
+            raw = _ast.literal_eval(n.value).encode('latin-1')
+            hits = [i for i in range(len(IMG)) if IMG.startswith(raw, i)] if len(raw) > 3 else []
+            if len(hits) != 1:
+                print('STRING const not unique (%d): %r' % (len(hits), raw[:40]), file=sys.stderr)
+                return const(0), INT
+            return const(IMG_BASE + hits[0] + 0x10000), ptr(('i', 1, True))
         v = n.value.lower().rstrip('ul')
         t = ('i', 4, 'u' not in n.value.lower())
         if 'll' in n.value.lower():
@@ -449,9 +455,24 @@ def clean(body):
     return body
 
 
+IMG = b''
+IMG_BASE = 0
+
+
+def load_img():
+    global IMG, IMG_BASE
+    from elftools.elf.elffile import ELFFile
+    f = open('/mnt/NVMe/git/scratch-clones/session-110bf918/audit/issue295/gh/libimp-2.2.0.so', 'rb')
+    for s in ELFFile(f).iter_segments():
+        if s['p_type'] == 'PT_LOAD' and s['p_vaddr'] == 0:
+            IMG = s.data()
+
+
 def main():
+    load_img()
     src, gotfile, out = sys.argv[1], sys.argv[2], sys.argv[3]
-    skip = set(sys.argv[4].split(',')) if len(sys.argv) > 4 else set()
+    skip = set(sys.argv[4].split(',')) if len(sys.argv) > 4 and sys.argv[4] else set()
+    ext = set(sys.argv[5].split(',')) if len(sys.argv) > 5 else set()
     got = {}
     for l in open(gotfile):
         m = re.match(r'\s+([0-9a-f]{8}) -?\d+\(gp\)\s+([0-9a-f]{8})', l)
@@ -493,6 +514,8 @@ def main():
             sig, code = cv.func(fd)
         except Exception as ex:
             print('CONV FAIL', cname, ex, file=sys.stderr)
+            continue
+        if cname in ext:
             continue
         protos.append(sig + ';')
         bodies.append('/* OEM %s @ 0x%x */\n%s' % (cname, addr - 0x10000, code))

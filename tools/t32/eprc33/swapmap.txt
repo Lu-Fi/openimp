@@ -1,0 +1,11 @@
+get_iratio_idqp_isra_24 e33_iratio_idqp
+limit_frm_qp_isra_33 e33_limit_qp
+get_refer_qp_mode0_isra_60 e33_refer_qp_bpp
+update_qp_constprop_82 e33_ratio_dqp
+get_refer_qp_mode1_isra_61 e33_refer_qp_size
+adjust_P_frame_dqp e33_adjust_p_dqp
+update_pwin_isra_66 e33_update_pwin
+RC_output_param e33_output_param
+vbv_init_isra_54 e33_vbv_init
+init_stat_param e33_init_stat
+FRC_get_bitrate e33_frc_bitrate
