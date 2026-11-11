@@ -7,6 +7,11 @@ CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror
 PROJECT_DIR := ../..
 BUILD := $(PROJECT_DIR)/build/tests
 TEST_BIN := $(BUILD)/t32-ioctl-abi-test
+HERA_BIN := $(BUILD)/t32-hera-list-test
+HERA_SRC := hera_list_test.c $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t32/openimp_t32_h264.c \
+	$(PROJECT_DIR)/src/t30/h264enc/cabac.c $(PROJECT_DIR)/src/t30/h264enc/common.c
+HERA_DEPS := $(HERA_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_hera.h $(PROJECT_DIR)/src/t32/openimp_t32_hera_tab.h \
+	$(PROJECT_DIR)/src/t32/openimp_t32_h264.h
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
 INC := -DPLATFORM_T32 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src
 DEPS := ioctl_abi_test.c $(PROJECT_DIR)/src/t32/openimp_t32_ioctl.h
@@ -28,8 +33,11 @@ OI_FS_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 OI_ENC_PENDING := rmem,DEFAULT_CMD_ISP_TUNING
 
 .PHONY: check check-drv
-check: $(TEST_BIN)
+check: $(TEST_BIN) $(HERA_BIN)
 	$(TEST_BIN)
+	# H.264 on HERA (#293): command lists + SPS/PPS/slice headers vs vendor 2.2.0
+	gzip -dc vendor-2.2.0-hera-h264.txt.gz > $(BUILD)/t32-hera-h264.txt
+	$(HERA_BIN) $(BUILD)/t32-hera-h264.txt vendor-2.2.0-h264-headers.txt
 	for p in T32 T31 T41 T23; do $(CC) $(PROFILE_FLAGS) -DPLATFORM_$$p -I$(PROJECT_DIR)/include \
 		encoder_profile_test.c || exit 1; done; echo "encoder profile numbering (T32 2.x, T31/T41/T23): ok"
 	python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py check vendor-2.2.0-ioctl-seq-*.txt
@@ -39,12 +47,16 @@ check: $(TEST_BIN)
 		openimp-ioctl-seq-bin.txt --ignore $(OI_BIN_PENDING)
 	for s in fs fs3; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_FS_PENDING) || exit 1; done
-	for s in vpu jpeg; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
+	for s in vpu jpeg h264; do python3 $(PROJECT_DIR)/tools/t32/t32_ioctl_seq.py diff vendor-2.2.0-ioctl-seq-$$s.txt \
 		openimp-ioctl-seq-$$s.txt --ignore $(OI_ENC_PENDING) || exit 1; done
 	grep -v '^#' vendor-2.2.0-jpeg-job.txt > $(BUILD)/t32-jpeg-job-vendor.txt
 	grep -v '^#' openimp-jpeg-job.txt > $(BUILD)/t32-jpeg-job-openimp.txt
 	diff $(BUILD)/t32-jpeg-job-vendor.txt $(BUILD)/t32-jpeg-job-openimp.txt && \
 		echo "JPEG job register image (jpegQp -1/30/80): identical"
+
+$(HERA_BIN): $(HERA_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ $(HERA_SRC)
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

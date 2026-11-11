@@ -1,8 +1,8 @@
 /*
- * OpenIMP T32 encoder: JPEG on the JPEG v1.2 engine (#292, planned; not a
- * release gate).  T23-family API with the T32 2.x layouts (imp_encoder.h:
- * IMPEncoderCHNAttr 184 bytes, profile type byte JPEG 0 / AVC 1 / HEVC 2).
- * H.264 / H.265 (HERA) are later T32 issues: CreateChn refuses them.
+ * OpenIMP T32 encoder: JPEG on the JPEG v1.2 engine (#292) and H.264 on
+ * HERA (#293; planned, not release gates).  T23-family API with the T32
+ * 2.x layouts (imp_encoder.h: IMPEncoderCHNAttr 184 bytes, profile type
+ * byte JPEG 0 / AVC 1 / HEVC 2).  H.265 is a later T32 issue.
  *
  * Flow (as vendor libimp 2.2.0 in the QEMU trace, own code):
  *   CreateGroup        registers the group as a FrameSource sink (bind target)
@@ -22,6 +22,23 @@
  * does), limit = stream buffer size, frame-end + over-limit interrupts.
  * A picture over the limit is coded again with a lower quality (index + 8)
  * instead of the vendor's assert at the end of its range.
+ *
+ * H.264 (vendor 2.2.0's flow in the QEMU trace, own code):
+ *   CreateChn          CHANNEL_REQ (H264ENC); command list, reconstruction ring,
+ *                      analysis outputs, a 2 x 250 KiB engine stream buffer,
+ *                      stream slots; SPS / PPS (openimp_t32_h264.c)
+ *   frame              the picture's command list (openimp_t32_hera.c),
+ *                      FLUSH_CACHE (write back), CHANNEL_START on radix0, then
+ *                      CHANNEL_WAIT_BSFULL_COMPLETE: each full 250 KiB half
+ *                      (VPU_RET_HERA_BSFULL) is escaped into the slot and
+ *                      CHANNEL_SET_BSFULL_REG lets the engine go on, the end
+ *                      of the picture gives the last part; the engine's 48
+ *                      statistics registers are read back (WOR_VPU_REG) as the
+ *                      vendor does, for the rate control of a later issue
+ *   GetStream          IDR: SPS, PPS, IDR slice (3 packs); P: the slice
+ * GOP = rcAttr.maxGop, I then P with one reference; one QP a picture (FIXQP
+ * IQp / PQp; CBR / VBR channels code at their initial QP: no rate control
+ * yet).  OPENIMP_T32_HERA_SECTION_KB=<n> sets the half size (test: BSFULL).
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -43,6 +60,8 @@
 #include "imp_log_int.h"
 #include "core/thread_name.h"
 #include "t32/openimp_t32_fs.h"
+#include "t32/openimp_t32_h264.h"
+#include "t32/openimp_t32_hera.h"
 #include "t32/openimp_t32_vpu.h"
 
 #if !defined(PLATFORM_T32)
@@ -62,6 +81,12 @@
 #define T32_JPEG_BS_MIN     65536u
 #define T32_JPEG_VPU_ID     (OI_T32_VPU_HELIX_ID | 1u)
 #define T32_JPEG_VERSION_REG 0x132f0200u
+
+#define T32_HERA_VPU_ID     OI_T32_VPU_RADIX_ID  /* the vendor's START: no instance bit */
+#define T32_HERA_SECTION_KB 250u        /* vendor: two halves of 250 KiB */
+#define T32_H264_DEF_QP     30          /* an initial QP outside 0..51 */
+#define T32_H264_PACKS      3           /* SPS, PPS, slice */
+#define T32_HERA_STATS      48
 
 #define ALIGN16(x) (((x) + 15u) & ~15u)
 
@@ -83,9 +108,24 @@ enum { SLOT_FREE, SLOT_READY, SLOT_USER };
 
 struct t32_enc_slot {
     T32VpuBuf bs;
-    IMPEncoderPack pack;
+    IMPEncoderPack pack[T32_H264_PACKS];
+    uint32_t npacks, length;
+    IMPRefType ref;
     uint32_t seq;
     int state;
+};
+
+struct t32_h264 {                       /* H.264 channel state */
+    T32VpuBuf list, ring, ebs, aux[4];
+    T32H264Seq seq;
+    uint8_t sps[64], pps[64];
+    size_t sps_len, pps_len;
+    int qp_i, qp_p;
+    uint32_t gop, gop_pos, idr_pic_id, section_kb;
+    int have_ref, idr_req;
+    uint32_t ref_y, ref_c;              /* the last reconstruction */
+    uint32_t sections, overflows;
+    uint32_t stats[T32_HERA_STATS];     /* the engine's statistics of the last picture */
 };
 
 struct t32_enc_chn {
@@ -93,6 +133,8 @@ struct t32_enc_chn {
     int grp;
     IMPEncoderCHNAttr attr;
     int qp;                             /* jpegQp 0..98 */
+    int h264;                           /* PT_H264 on HERA */
+    struct t32_h264 avc;
     T32VpuChannel vpu;
     T32VpuBuf job;
     struct t32_enc_slot slot[T32_ENC_MAX_STREAMS];
@@ -214,6 +256,179 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     }
 }
 
+/* ---- H.264 on HERA ---------------------------------------------------------- */
+/* the statistics registers vendor 2.2.0 reads after each picture (VMAU, DBLK,
+ * MD, EFE, ODMA: bits, SSE, QP sums, analysis counts), in its order */
+static const uint32_t hera_stat_regs[T32_HERA_STATS] = {
+    0x13280120, 0x13280124, 0x13280128, 0x1328012c, 0x13280130, 0x13280134, 0x13280138, 0x1328013c,
+    0x13280140, 0x13280144, 0x13280148, 0x1328014c, 0x132500e8, 0x132500ec, 0x132500f0, 0x13280080,
+    0x13240094, 0x13240098, 0x1324009c, 0x132400a0, 0x132800e8, 0x132800ec, 0x132800e4, 0x132800e0,
+    0x13280168, 0x13280114, 0x13280118, 0x1328011c, 0x13280034, 0x132800d8, 0x132800dc, 0x13280084,
+    0x13280088, 0x1328008c, 0x13280090, 0x13280094, 0x132800f0, 0x132800f4, 0x132800f8, 0x13220140,
+    0x13220144, 0x13220148, 0x1322014c, 0x132203a4, 0x132203a8, 0x13210168, 0x1321016c, 0x132203ac,
+};
+
+static int h264_qp(uint32_t qp)
+{
+    return qp <= 51u ? (int)qp : T32_H264_DEF_QP;
+}
+
+static void h264_set_qp(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *rc)
+{
+    switch (rc->rcMode) {
+    case IMP_ENC_RC_MODE_FIXQP:
+        e->avc.qp_i = h264_qp(rc->attrH264FixQp.IQp);
+        e->avc.qp_p = h264_qp(rc->attrH264FixQp.PQp);
+        break;
+    case IMP_ENC_RC_MODE_CBR:
+        e->avc.qp_i = e->avc.qp_p = h264_qp(rc->attrH264Cbr.initialQp);
+        break;
+    default:
+        e->avc.qp_i = e->avc.qp_p = h264_qp(rc->attrH264Vbr.initialQp);
+        break;
+    }
+}
+
+/* the engine's next part (bytes @from..@to of the picture, in half @half)
+ * escaped onto the slot: 0, -1 when the slot is full */
+static int h264_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t *at,
+                     uint32_t from, uint32_t to, int half, int *esc)
+{
+    uint32_t half_bytes = e->avc.section_kb * 1024u, n = to - from;
+    const uint8_t *src = (const uint8_t *)t32_vpu_buf_va(&e->avc.ebs) + (half ? half_bytes : 0u);
+
+    if (to < from || n > half_bytes)
+        return -1;
+    if (!n)
+        return 0;
+    if (*at + n + n / 2u + 1u > cap)
+        return -1;
+    OpenIMP_T32_VpuFlush(src, n, OI_T32_VPU_FLUSH_INV);
+    *at += (uint32_t)t32_h264_escape(out + *at, src, n, esc);
+    return 0;
+}
+
+static void h264_pack(struct t32_enc_slot *s, uint32_t off, uint32_t len, int type, int64_t ts)
+{
+    IMPEncoderPack *k = &s->pack[s->npacks++];
+
+    memset(k, 0, sizeof(*k));
+    k->phyAddr = t32_vpu_buf_pa(&s->bs) + off;
+    k->virAddr = (uint32_t)(uintptr_t)t32_vpu_buf_va(&s->bs) + off;
+    k->length = len;
+    k->timestamp = ts;
+    k->dataType.h264Type = (IMPEncoderH264NaluType)type;
+}
+
+static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
+{
+    struct t32_h264 *a = &e->avc;
+    uint32_t w = ALIGN16(f->width), h = ALIGN16(f->height), stride = ALIGN16(f->width);
+    uint32_t rs = t32_hera_ring_stride(w), rows = t32_hera_ring_rows(f->height);
+    uint32_t aux[4], at = 0, taken = 0, cap = s->bs.size, n, i;
+    uint8_t *out = t32_vpu_buf_va(&s->bs);
+    int idr = a->idr_req || !a->have_ref || a->gop_pos == 0, half = 0, esc = 0, full = 0;
+    T32HeraH264Pic p;
+    T32H264Slice sl;
+    T32VpuResult r;
+
+    memset(&p, 0, sizeof(p));
+    p.width = w;
+    p.height = h;
+    p.p_frame = !idr;
+    p.qp = idr ? a->qp_i : a->qp_p;
+    p.src_y = f->phyAddr;
+    p.src_c = f->phyAddr + stride * ALIGN16(f->height);  /* NV12 as FrameSource lays it out */
+    p.src_stride = stride;
+    p.ring_y = t32_vpu_buf_pa(&a->ring);
+    p.ring_y_end = p.ring_c = p.ring_y + rs * rows;
+    p.ring_c_end = p.ring_c + rs * rows / 2u;
+    if (idr) {
+        p.recon_y = p.ring_y;
+        p.recon_c = p.ring_c;
+    } else {
+        p.ref_y = a->ref_y;
+        p.ref_c = a->ref_c;
+        p.recon_y = t32_hera_ring_prev(a->ref_y, p.ring_y, p.ring_y_end, rs * T32_HERA_RING_EXTRA);
+        p.recon_c = t32_hera_ring_prev(a->ref_c, p.ring_c, p.ring_c_end, rs * T32_HERA_RING_EXTRA / 2u);
+    }
+    p.bs0 = t32_vpu_buf_pa(&a->ebs);
+    p.bs1 = p.bs0 + a->section_kb * 1024u;
+    p.section_kb = a->section_kb;
+    for (i = 0; i < 4; i++)
+        aux[i] = t32_vpu_buf_pa(&a->aux[i]);
+    p.cps = aux[0];
+    p.ai = aux[1];
+    p.qpt = aux[2];
+    p.ipc = aux[3];
+    n = (uint32_t)t32_hera_h264_list(&p, t32_vpu_buf_va(&a->list));
+    if (!n) {
+        IMP_LOG_ERR(TAG, "HERA list: %ux%u qp %d refused", w, h, p.qp);
+        return -1;
+    }
+
+    /* headers first: the engine's slice data follows them */
+    s->npacks = 0;
+    if (idr) {
+        memcpy(out, a->sps, a->sps_len);
+        h264_pack(s, 0, (uint32_t)a->sps_len, IMP_H264_NAL_SPS, f->timeStamp);
+        memcpy(out + a->sps_len, a->pps, a->pps_len);
+        h264_pack(s, (uint32_t)a->sps_len, (uint32_t)a->pps_len, IMP_H264_NAL_PPS, f->timeStamp);
+        at = (uint32_t)(a->sps_len + a->pps_len);
+    }
+    memset(&sl, 0, sizeof(sl));
+    sl.idr = idr;
+    sl.frame_num = idr ? 0u : a->gop_pos % (1u << T32_H264_LOG2_MAX_FRAME_NUM);
+    sl.idr_pic_id = a->idr_pic_id;
+    sl.qp = p.qp;
+    i = at;
+    at += (uint32_t)t32_h264_slice_head(&a->seq, &sl, out + at, &esc);
+
+    OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&a->list), n * 8u, OI_T32_VPU_FLUSH_WBACK);
+    a->have_ref = 0;                    /* the reconstruction overwrites the reference */
+    if (OpenIMP_T32_VpuStart(&e->vpu, T32_HERA_VPU_ID, t32_vpu_buf_pa(&a->list)) != 0)
+        return -1;
+    for (;;) {
+        if (OpenIMP_T32_VpuWaitBsFull(&e->vpu, &r) != 0)
+            return -1;
+        if (r.rc != OI_T32_VPU_RET_HERA_BSFULL)
+            break;
+        /* a full half: take it, let the engine go on (it ends its picture
+         * even when the slot is full: that picture is dropped then) */
+        if (h264_take(e, out, cap, &at, taken, r.output_len, half, &esc) != 0)
+            full = 1;
+        taken = r.output_len;
+        half ^= 1;
+        a->sections++;
+        if (OpenIMP_T32_VpuSetBsFull(&e->vpu) != 0)
+            return -1;
+    }
+    for (n = 0; n < T32_HERA_STATS; n++)
+        OpenIMP_T32_VpuReadReg(hera_stat_regs[n], &a->stats[n]);
+    if (r.rc != 0 || !r.output_len || full ||
+        h264_take(e, out, cap, &at, taken, r.output_len, half, &esc) != 0) {
+        if (full || r.rc == 0)
+            a->overflows++;
+        IMP_LOG_ERR(TAG, "HERA picture: result 0x%lx status 0x%x length %u%s", r.rc, r.status,
+                    r.output_len, full || r.rc == 0 ? " (stream slot full)" : "");
+        return -1;
+    }
+    h264_pack(s, i, at - i, idr ? IMP_H264_NAL_SLICE_IDR : IMP_H264_NAL_SLICE, f->timeStamp);
+    s->pack[s->npacks - 1].frameEnd = 1;
+    s->length = at;
+    s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_LBASE;
+    a->ref_y = p.recon_y;
+    a->ref_c = p.recon_c;
+    a->have_ref = 1;
+    if (idr) {
+        a->idr_req = 0;
+        a->gop_pos = 0;
+        a->idr_pic_id = (a->idr_pic_id + 1u) & 0xffffu;
+    }
+    a->gop_pos = a->gop ? (a->gop_pos + 1u) % a->gop : a->gop_pos + 1u;
+    return 0;
+}
+
 /* ---- channel thread ------------------------------------------------------- */
 static int slot_free_locked(struct t32_enc_chn *e)
 {
@@ -228,7 +443,7 @@ static int slot_free_locked(struct t32_enc_chn *e)
 static void *enc_thread(void *arg)
 {
     struct t32_enc_chn *e = arg;
-    openimp_thread_setnamef("oimp-jpeg-%d", (int)(e - enc_chn));
+    openimp_thread_setnamef(e->h264 ? "oimp-h264-%d" : "oimp-jpeg-%d", (int)(e - enc_chn));
     pthread_mutex_lock(&enc_lock);
     for (;;) {
         struct t32_enc_grp *g;
@@ -248,18 +463,26 @@ static void *enc_thread(void *arg)
         si = slot_free_locked(e);       /* reserved by the sink */
         pthread_mutex_unlock(&enc_lock);
 
-        ok = si >= 0 && frame && jpeg_encode(e, frame, &e->slot[si], &len) == 0;
+        if (e->h264)
+            ok = si >= 0 && frame && h264_encode(e, frame, &e->slot[si]) == 0;
+        else
+            ok = si >= 0 && frame && jpeg_encode(e, frame, &e->slot[si], &len) == 0;
 
         pthread_mutex_lock(&enc_lock);
         if (ok) {
             struct t32_enc_slot *s = &e->slot[si];
 
-            memset(&s->pack, 0, sizeof(s->pack));
-            s->pack.phyAddr = t32_vpu_buf_pa(&s->bs);
-            s->pack.virAddr = (uint32_t)(uintptr_t)t32_vpu_buf_va(&s->bs);
-            s->pack.length = len;
-            s->pack.timestamp = frame->timeStamp;
-            s->pack.frameEnd = 1;
+            if (!e->h264) {
+                memset(&s->pack[0], 0, sizeof(s->pack[0]));
+                s->pack[0].phyAddr = t32_vpu_buf_pa(&s->bs);
+                s->pack[0].virAddr = (uint32_t)(uintptr_t)t32_vpu_buf_va(&s->bs);
+                s->pack[0].length = len;
+                s->pack[0].timestamp = frame->timeStamp;
+                s->pack[0].frameEnd = 1;
+                s->npacks = 1;
+                s->length = len;
+                s->ref = IMP_Encoder_FSTYPE_IDR;
+            }
             s->seq = e->seq++;
             s->state = SLOT_READY;
             e->ready[(e->rhead + e->rcount) % T32_ENC_MAX_STREAMS] = si;
@@ -484,6 +707,64 @@ static uint32_t jpeg_bs_size(const IMPEncoderCHNAttr *a)
     return size < T32_JPEG_BS_MIN ? T32_JPEG_BS_MIN : (uint32_t)size;
 }
 
+static uint32_t h264_bs_size(const IMPEncoderCHNAttr *a)
+{
+    uint32_t size = a->encAttr.bufSize ? a->encAttr.bufSize :
+                    (uint32_t)ALIGN16(a->encAttr.picWidth) * ALIGN16(a->encAttr.picHeight);
+
+    size = (size + 4095u) & ~4095u;
+    return size < 262144u ? 262144u : size;
+}
+
+static void h264_free(struct t32_enc_chn *e)
+{
+    int i;
+
+    OpenIMP_T32_VpuBufFree(&e->avc.list);
+    OpenIMP_T32_VpuBufFree(&e->avc.ring);
+    OpenIMP_T32_VpuBufFree(&e->avc.ebs);
+    for (i = 0; i < 4; i++)
+        OpenIMP_T32_VpuBufFree(&e->avc.aux[i]);
+}
+
+/* the H.264 channel's engine buffers and parameter sets: 0 or -1 */
+static int h264_setup(struct t32_enc_chn *e)
+{
+    static const char *const aux_tag[4] = { "t32_hera_cps", "t32_hera_ai", "t32_hera_qpt", "t32_hera_ipc" };
+    struct t32_h264 *a = &e->avc;
+    const IMPEncoderCHNAttr *at = &e->attr;
+    uint32_t w = ALIGN16(at->encAttr.picWidth), sizes[4];
+    const char *env = getenv("OPENIMP_T32_HERA_SECTION_KB");
+    int i;
+
+    a->section_kb = T32_HERA_SECTION_KB;
+    if (env && atoi(env) > 0 && atoi(env) <= 4096)
+        a->section_kb = (uint32_t)atoi(env);
+    a->gop = at->rcAttr.maxGop;
+    h264_set_qp(e, &at->rcAttr.attrRcMode);
+    t32_hera_aux_sizes(w, ALIGN16(at->encAttr.picHeight), sizes);
+    if (OpenIMP_T32_VpuBufAlloc(&a->list, T32_HERA_LIST_BYTES, "t32_hera_list") != 0 ||
+        OpenIMP_T32_VpuBufAlloc(&a->ring, t32_hera_ring_stride(w) * t32_hera_ring_rows(at->encAttr.picHeight) * 3u / 2u,
+                                "t32_hera_ring") != 0 ||
+        OpenIMP_T32_VpuBufAlloc(&a->ebs, 2u * a->section_kb * 1024u, "t32_hera_bs") != 0)
+        return -1;
+    for (i = 0; i < 4; i++)
+        if (OpenIMP_T32_VpuBufAlloc(&a->aux[i], sizes[i], aux_tag[i]) != 0)
+            return -1;
+    a->seq.width = at->encAttr.picWidth;
+    a->seq.height = at->encAttr.picHeight;
+    a->seq.fps_num = at->rcAttr.outFrmRate.frmRateNum;
+    a->seq.fps_den = at->rcAttr.outFrmRate.frmRateDen;
+    a->seq.bitrate = at->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR ?
+                     at->rcAttr.attrRcMode.attrH264Cbr.outBitRate * 1000u : 0u;
+    a->seq.init_qp = a->qp_i;
+    a->sps_len = t32_h264_sps(&a->seq, a->sps);
+    a->pps_len = t32_h264_pps(&a->seq, a->pps);
+    if (at->rcAttr.attrRcMode.rcMode != IMP_ENC_RC_MODE_FIXQP)
+        IMP_LOG_WARN(TAG, "H.264 rate control is not implemented on T32 yet: fixed QP %d", a->qp_i);
+    return 0;
+}
+
 static void chn_free_bufs(struct t32_enc_chn *e)
 {
     int i;
@@ -522,8 +803,8 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 
     if (encChn < 0 || encChn >= T32_ENC_CHNS || !attr)
         return -1;
-    if (attr->encAttr.enType != PT_JPEG) {
-        IMP_LOG_ERR(TAG, "chn %d: payload %d: H.264/H.265 on HERA are not implemented on T32 yet",
+    if (attr->encAttr.enType != PT_JPEG && attr->encAttr.enType != PT_H264) {
+        IMP_LOG_ERR(TAG, "chn %d: payload %d: H.265 on HERA is not implemented on T32 yet",
                     encChn, (int)attr->encAttr.enType);
         return -1;
     }
@@ -544,19 +825,22 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     memset(e, 0, sizeof(*e));
     e->created = 1;                     /* reserved; the rest outside the lock */
     e->attr = *attr;
-    e->qp = jpeg_qp_of((int)attr->rcAttr.attrRcMode.attrJPEGFixQp.qp);
+    e->h264 = attr->encAttr.enType == PT_H264;
+    e->qp = e->h264 ? 0 : jpeg_qp_of((int)attr->rcAttr.attrRcMode.attrJPEGFixQp.qp);
     e->max_streams = T32_ENC_DEF_STREAMS;
-    e->bs_size = jpeg_bs_size(attr);
+    e->bs_size = e->h264 ? h264_bs_size(attr) : jpeg_bs_size(attr);
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
     pthread_mutex_unlock(&enc_lock);
 
     if (OpenIMP_T32_VpuOpen() != 0)
         goto fail_open;
-    if (OpenIMP_T32_VpuRequest(&e->vpu, OI_T32_VPU_CODEC_JPEGENC) != 0)
+    if (OpenIMP_T32_VpuRequest(&e->vpu, e->h264 ? OI_T32_VPU_CODEC_H264ENC : OI_T32_VPU_CODEC_JPEGENC) != 0)
         goto fail_req;
-    if (OpenIMP_T32_VpuBufAlloc(&e->job, T32_JPEG_JOB_BYTES, "t32_jpeg_job") != 0 ||
-        chn_alloc_bufs(e, e->max_streams) != 0)
+    if (e->h264 ? h264_setup(e) != 0 :
+        OpenIMP_T32_VpuBufAlloc(&e->job, T32_JPEG_JOB_BYTES, "t32_jpeg_job") != 0)
+        goto fail_bufs;
+    if (chn_alloc_bufs(e, e->max_streams) != 0)
         goto fail_bufs;
     if (pipe2(e->pipefd, O_CLOEXEC | O_NONBLOCK) != 0)
         goto fail_bufs;
@@ -565,6 +849,13 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     if (pthread_create(&e->thread, NULL, enc_thread, e) != 0)
         goto fail_thread;
     e->thread_up = 1;
+    if (e->h264) {
+        IMP_LOG_INFO(TAG, "chn %d: H.264 %ux%u QP I %d P %d GOP %u, %d stream buffers of %u bytes, "
+                     "%u KiB sections, vpu channel %u", encChn, attr->encAttr.picWidth,
+                     attr->encAttr.picHeight, e->avc.qp_i, e->avc.qp_p, e->avc.gop, e->nslots,
+                     e->bs_size, e->avc.section_kb, e->vpu.node.channel_id);
+        return 0;
+    }
     if (vpu_test_mode() && OpenIMP_T32_VpuReadReg(T32_JPEG_VERSION_REG, &version) == 0)
         IMP_LOG_INFO(TAG, "JPEG engine version register 0x%08x", version);
     IMP_LOG_INFO(TAG, "chn %d: JPEG %ux%u jpegQp %d, %d stream buffers of %u bytes, vpu channel %u",
@@ -580,6 +871,7 @@ fail_thread:
 fail_bufs:
     chn_free_bufs(e);
     OpenIMP_T32_VpuBufFree(&e->job);
+    h264_free(e);
     OpenIMP_T32_VpuRelease(&e->vpu);
 fail_req:
     OpenIMP_T32_VpuClose();
@@ -616,14 +908,16 @@ int IMP_Encoder_DestroyChn(int encChn)
         pthread_join(e->thread, NULL);
     chn_free_bufs(e);
     OpenIMP_T32_VpuBufFree(&e->job);
+    h264_free(e);
     OpenIMP_T32_VpuRelease(&e->vpu);
     OpenIMP_T32_VpuClose();
     close(e->pipefd[0]);
     close(e->pipefd[1]);
     pthread_cond_destroy(&e->work);
     pthread_cond_destroy(&e->done);
-    IMP_LOG_INFO(TAG, "chn %d off: %u frames, %u coded, %u skipped, %u over-limit retries, %u errors",
-                 encChn, e->frames, e->encoded, e->skipped, e->retries, e->errors);
+    IMP_LOG_INFO(TAG, "chn %d off: %u frames, %u coded, %u skipped, %u over-limit retries, %u errors"
+                 ", %u BSFULL sections, %u stream overflows", encChn, e->frames, e->encoded, e->skipped,
+                 e->retries, e->errors, e->avc.sections, e->avc.overflows);
     pthread_mutex_lock(&enc_lock);
     memset(e, 0, sizeof(*e));
     pthread_mutex_unlock(&enc_lock);
@@ -640,7 +934,8 @@ int IMP_Encoder_GetChnAttr(int encChn, IMPEncoderChnAttr *attr)
     e = chn_get(encChn);
     if (e) {
         *attr = e->attr;
-        attr->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)e->qp;
+        if (!e->h264)
+            attr->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)e->qp;
     }
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
@@ -703,7 +998,11 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
         return -1;
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
-    if (e && rcMode->rcMode == IMP_ENC_RC_MODE_FIXQP) {
+    if (e && e->h264) {
+        e->attr.rcAttr.attrRcMode = *rcMode;
+        h264_set_qp(e, rcMode);
+        rc = 0;
+    } else if (e && rcMode->rcMode == IMP_ENC_RC_MODE_FIXQP) {
         e->attr.rcAttr.attrRcMode = *rcMode;
         e->qp = jpeg_qp_of((int)rcMode->attrJPEGFixQp.qp);
         rc = 0;
@@ -722,7 +1021,8 @@ int IMP_Encoder_GetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     e = chn_get(encChn);
     if (e) {
         *rcMode = e->attr.rcAttr.attrRcMode;
-        rcMode->attrJPEGFixQp.qp = (uint32_t)e->qp;
+        if (!e->h264)
+            rcMode->attrJPEGFixQp.qp = (uint32_t)e->qp;
     }
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
@@ -922,10 +1222,10 @@ int IMP_Encoder_GetStream(int encChn, IMPEncoderStream *stream, int block)
     if (read(e->pipefd[0], &c, 1) != 1)
         IMP_LOG_DBG(TAG, "stream notify pipe empty");
     memset(stream, 0, sizeof(*stream));
-    stream->pack = &s->pack;
-    stream->packCount = 1;
+    stream->pack = s->pack;
+    stream->packCount = s->npacks;
     stream->seq = s->seq;
-    stream->refType = IMP_Encoder_FSTYPE_IDR;
+    stream->refType = s->ref;
     pthread_mutex_unlock(&enc_lock);
     return 0;
 }
@@ -940,7 +1240,7 @@ int IMP_Encoder_ReleaseStream(int encChn, IMPEncoderStream *stream)
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     for (i = 0; e && i < e->nslots; i++)
-        if (stream->pack == &e->slot[i].pack && e->slot[i].state == SLOT_USER) {
+        if (stream->pack == e->slot[i].pack && e->slot[i].state == SLOT_USER) {
             e->slot[i].state = SLOT_FREE;
             rc = 0;
             break;
@@ -983,9 +1283,9 @@ int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
         stat->registered = e->registered;
         stat->leftPics = (uint32_t)(e->pending + e->busy);
         for (i = 0; i < e->rcount; i++)
-            stat->leftStreamBytes += e->slot[e->ready[(e->rhead + i) % T32_ENC_MAX_STREAMS]].pack.length;
+            stat->leftStreamBytes += e->slot[e->ready[(e->rhead + i) % T32_ENC_MAX_STREAMS]].length;
         stat->leftStreamFrames = (uint32_t)e->rcount;
-        stat->curPacks = e->rcount ? 1 : 0;
+        stat->curPacks = e->rcount ? e->slot[e->ready[e->rhead]].npacks : 0;
         stat->work_done = e->recv ? 0 : 1;
     }
     pthread_mutex_unlock(&enc_lock);
@@ -1007,10 +1307,12 @@ int IMP_Encoder_GetFd(int encChn)
 
 int IMP_Encoder_RequestIDR(int encChn)
 {
-    int ok;
+    struct t32_enc_chn *e;
 
     pthread_mutex_lock(&enc_lock);
-    ok = chn_get(encChn) != NULL;       /* every JPEG picture stands alone */
+    e = chn_get(encChn);
+    if (e && e->h264)                   /* every JPEG picture stands alone */
+        e->avc.idr_req = 1;
     pthread_mutex_unlock(&enc_lock);
-    return ok ? 0 : -1;
+    return e ? 0 : -1;
 }

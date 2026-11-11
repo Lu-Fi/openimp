@@ -68,6 +68,12 @@ compile t32_fs src/t32/openimp_t32_fs.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)
 compile t32_vpu src/t32/openimp_t32_vpu.c
 compile t32_encoder src/t32/openimp_t32_encoder.c
+# H.264 on HERA (#293): command lists, parameter sets / slice headers, the
+# CABAC context tables shared with the T30 encoder
+compile t32_hera src/t32/openimp_t32_hera.c
+compile t32_h264 src/t32/openimp_t32_h264.c
+compile t32_h264_cabac src/t30/h264enc/cabac.c
+compile t32_h264_common src/t30/h264enc/common.c
 
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects
