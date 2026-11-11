@@ -88,7 +88,7 @@ check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(JPEG_QL)
 
 $(ISP_TUNING_TEST_BIN): isp_tuning_test.c \
-	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c
+	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c $(PROJECT_DIR)/src/isp/isp_mid_ref.c
 	mkdir -p "$(dir $@)"
 	$(CC) $(CFLAGS) -fno-pie -no-pie -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src isp_tuning_test.c -lpthread -o "$@"
@@ -223,7 +223,7 @@ DEVICE_TEST_BIN := $(BUILD)/t23_isp_tuning_device_test
 device: $(DEVICE_TEST_BIN)
 
 $(DEVICE_TEST_BIN): isp_tuning_device_test.c \
-	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c
+	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c $(PROJECT_DIR)/src/isp/isp_mid_ref.c
 	mkdir -p "$(dir $@)"
 	$(CROSS_COMPILE)gcc -static -std=gnu99 -O2 -Wall -Wextra -Werror \
 		-Wno-cast-function-type -DPLATFORM_T23 \
