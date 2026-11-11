@@ -39,9 +39,9 @@
  * first and leaves the ISP writing into it for up to one frame); a second
  * enable of a running sensor is a no-op returning 0 (the vendor allocates
  * and starts a second thread; its kernel ignores the repeated control).
- * Not done (needs the user's OK, beyond vendor): stopping the ring when the
- * process dies without a disable (the ISP keeps writing into the freed
- * block until the next enable/disable).
+ * A process that dies without a disable: the open-tx-isp T41 module stops
+ * the ring when the tuning fd that enabled it is released (beyond vendor,
+ * user OK 2026-11-11; the vendor module keeps the ISP writing into rmem).
  */
 #include <errno.h>
 #include <pthread.h>
