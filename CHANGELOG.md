@@ -8,6 +8,16 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: apitest builds again for T10/T20/T21
+
+- tools/apitest: the explicit-only `extchn_t31` case call is now guarded by `PLATFORM_T31`; the unguarded call broke the T10/T20/T21 apitest build (found with #367).
+
+## 2026-11-12: one GetFrame no longer pauses the capture of a channel nobody else reads (#374)
+
+- A pull marks a channel as read for 1 s (`VBM_PULL_IDLE_MS`); with no reader the ready queue, together with the frames the frame-depth FIFO holds, took every buffer, the driver ran dry and DQBUF stopped until the idle recycle: the capture of that channel (ext feed #370, IVS, `SetChnCallback`) paused for about 1 s after a single `IMP_FrameSource_GetFrame`. libimp 1.1.6 serves frame-depth copies and its capture keeps running.
+- `VBMKernelDequeue` now keeps one buffer with the driver: when none is left, the oldest ready frame goes back first (T31, T23, T21, T20/T10, T30 share the code). A running reader polls far faster than the window and is unaffected.
+- T31L camera, `extchn_t31` with one `GetFrame(1)` during the FS3 -> ENC5 run: 36 streams in 3 s before, 46 after (vendor 46). Host test `single_pull_capture` in `fs_lifecycle_test` (T20/T21/T23/T30/T31): fails before, passes after. apitest: `APITEST_EXTCHN_PULL1=1`.
+
 ## 2026-11-12: T30 QEMU apitest FAILs sorted (#368), apitest only
 
 - No OpenIMP code change: all three FAILs were test or QEMU limits. `GetChangeRef` -1 on a created channel is the T30 1.0.5 behaviour (same code as T21/T23); the apitest now expects it on T30 as on T21/T23.

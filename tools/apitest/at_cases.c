@@ -3441,7 +3441,7 @@ static void cs_extchn_t31(void)
 #endif
             static unsigned char dbuf[1 << 18];
             int64_t t0 = now_us();
-            int rb2 = -1, nstr = 0, nlate = 0;
+            int rb2 = -1, nstr = 0, nlate = 0, pulled = 0;
             int64_t tfirst = -1;
 
             if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
@@ -3463,6 +3463,13 @@ static void cs_extchn_t31(void)
                             if (dump) { int trunc = 0; size_t n = at_stream_gather(&es, dbuf, sizeof(dbuf), &trunc); if (!trunc) fwrite(dbuf, 1, n, dump); }
                             if (tfirst < 0) tfirst = now_us() - t0;
                             if (now_us() - t0 >= 1000000) nlate++;
+                            if (!pulled && getenv("APITEST_EXTCHN_PULL1") && now_us() - t0 >= 1000000) {
+                                /* #374: one snapshot pull of the otherwise unread source ch1 must not pause its capture */
+                                IMPFrameInfo *p1 = NULL;
+
+                                pulled = 1;
+                                if (IMP_FrameSource_GetFrame(EXT_SRC, &p1) == 0 && p1) IMP_FrameSource_ReleaseFrame(EXT_SRC, p1);
+                            }
                             nstr++; IMP_Encoder_ReleaseStream(5, &es);
                         }
                     }
@@ -6900,7 +6907,9 @@ void t_cases(void)
     if (cs_on("ncu_t31")) cs_ncu_t31(); wdog("cases", 60);
     if (cs_on("fsset_t31")) cs_fsset_t31(); wdog("cases", 60);
     if (cs_on("fscb_t31")) cs_fscb_t31(); wdog("cases", 60);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
     if (getenv("APITEST_CASES") && (cs_on("extchn_t31") || cs_on("extchn_t30"))) cs_extchn_t31(); wdog("cases", 60);   /* explicit only (#309) */
+#endif
     if (cs_on("evstart_t31")) cs_evstart_t31(); wdog("cases", 60);
     if (cs_on("shading_t31")) cs_shading_t31(); wdog("cases", 90);
     if (cs_on("meshscale")) cs_meshscale(); wdog("cases", 90);
