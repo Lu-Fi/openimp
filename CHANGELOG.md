@@ -14,6 +14,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - OpenIMP now does the same (`OpenIMP_T30_HelixUpdateParams` marks the restart, the next IDR runs `EPRC30_Reinit` on the same controller and slice block from that QP); no division guard added (vendor has none).
 - Oracle `tools/eprc_t30_oracle.py --h264-reconf` (vendor controller under unicorn, frame-rate-only changes 25 <-> 10 fps plus random rate-control changes): new host vectors `tests/eprc/eprc_t30_reconf_vectors.txt`, 21 scenarios, 4083 decisions, 0 differ.
 - T21/T23 were not affected: their Helix eprc path already applies run-time changes at the next IDR (`helix_eprc_start`, `eprc_restart_pending`).
+## 2026-11-12: T31 FrameSource ext channel measured against the vendor (#309, #370)
+
+- New apitest case `extchn_t31` (explicit only): `FS_EXT_CHANNEL` channel 3 + `IMP_FrameSource_SetSource(3, 1)` + Enable, argument rules, FS3 -> ENC5 H.264 for 3 s. On the T31L camera the vendor libimp 1.1.6 (with its module) gives 45 streams in 3 s, OpenIMP delivers nothing (the source is only stored): `FrameSource_SetSource` T31 `aud` -> `err`, gap issue #370. No library change.
 
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 
