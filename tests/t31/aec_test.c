@@ -200,6 +200,52 @@ static int run(int rate, size_t frame, int report_cpu, double delay_ms)
     return failed;
 }
 
+/* Lab signals (issue #272): AECM adapts its echo channel only while the far
+ * end is "active" (energy above a tracked minimum, see farEnergyVAD in
+ * aecm_core.c).  A stationary tone or noise burst never is, so the filter
+ * stays at zero and ERLE is 0 dB on any echo; the same signals amplitude
+ * modulated like speech (3 Hz) are cancelled.  Echo: far end * 0.1 after
+ * 1 ms, microphone noise 10 LSB.  Only the modulated case is checked, the
+ * stationary result is printed as the known limit. */
+static int lab(int rate, int tone, double am_hz)
+{
+    size_t n = (size_t)rate * 12, frame = (size_t)rate * 4 / 100, i;
+    int16_t *far = calloc(n, 2), *mic = calloc(n, 2), *in = calloc(n, 2);
+    OpenimpAec *aec = openimp_aec_create(rate);
+    double erle;
+
+    if (!far || !mic || !in || !aec)
+        return 1;
+    for (i = 0; i < n; i++) {
+        double f = tone ? 9830.0 * sin(2 * M_PI * 1000.0 * i / rate)
+                        : 8192.0 * frand();
+
+        if (am_hz > 0)
+            f *= 0.5 - 0.5 * cos(2 * M_PI * am_hz * i / rate);
+        far[i] = sat(f);
+    }
+    for (i = 0; i < n; i++) {
+        double e = i >= (size_t)rate / 1000 ? far[i - rate / 1000] * 0.1 : 0;
+
+        mic[i] = in[i] = sat(e + 10.0 * frand());
+    }
+    for (i = 0; i + frame <= n; i += frame)
+        if (openimp_aec_process(aec, far + i, mic + i, frame) != 0)
+            return 1;
+    erle = 10 * log10(energy16(in, n * 2 / 3, n) /
+                      energy16(mic, n * 2 / 3, n));
+    printf("aec lab %5d Hz %s %s: ERLE %.1f dB\n", rate,
+           tone ? "1 kHz tone" : "noise burst",
+           am_hz > 0 ? "modulated 3 Hz" : "stationary", erle);
+    openimp_aec_free(aec);
+    free(far); free(mic); free(in);
+    if (am_hz > 0 && erle < 15.0) {
+        fprintf(stderr, "aec lab: modulated ERLE %.1f < 15 dB\n", erle);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     int failed = 0;
@@ -212,5 +258,11 @@ int main(void)
     failed |= run(16000, 160, 0, 1.5); /* 10 ms */
     failed |= run(16000, 640, 0, 40.0);
     failed |= run(8000, 320, 1, 1.5);
+    for (int rate = 8000; rate <= 16000; rate += 8000) {
+        failed |= lab(rate, 1, 0);
+        failed |= lab(rate, 1, 3);
+        failed |= lab(rate, 0, 0);
+        failed |= lab(rate, 0, 3);
+    }
     return failed;
 }
