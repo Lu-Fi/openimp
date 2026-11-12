@@ -12,8 +12,10 @@ into OpenIMP; it is read from the path you pass.
     tools/watermark_oracle.py T31/lib/1.1.6/uclibc/5.4.0/libimp.so 357 120 > tests/watermark/watermark_vectors.txt
 
 The same command on T10/T20 3.12.0, T21 1.0.33 (both gcc builds), T23 1.3.0, T30 1.0.5 (both), T31 1.1.6 (both) and T40
-1.3.1 prints the same lines apart from the header (T40: o32 FP64, the script sets Status.FR; its madd.s/madd.d are the
-unfused MIPS32 R2 ones).  T41 1.2.6 has no watermark.  A mipsel shared object built from src/watermark/watermark.c
+1.3.1 prints the same lines apart from the header (T40: o32 FP64, the script sets Status.FR).  Unicorn rounds madd.s twice;
+the Ingenic FPU rounds it once, so these vectors are the result of the builds without madd.s (gcc 5.4: T21/T23/T30/T31
+5.4.0) only; the gcc 4.7.2 and 7.2 builds were checked on the cameras (tools/watermark_devcheck.c,
+tests/watermark/watermark_vectors_fused.txt).  T41 1.2.6 has no watermark.  A mipsel shared object built from src/watermark/watermark.c
 (it exports watermark_embed) runs in place of the vendor library, which checks the cross-compiled code under the same
 CPU model:
 

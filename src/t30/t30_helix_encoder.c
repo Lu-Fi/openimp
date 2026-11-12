@@ -91,6 +91,7 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #if defined(PLATFORM_T20) || defined(HELIX_T21_HSKIP) || defined(PLATFORM_T23)
 #include "fisheye/fisheye.h"
 #endif
+#include "watermark/watermark.h"
 
 #if defined(PLATFORM_T23)
 /* Runtime capability marker for streamers: present (and 1) only in a libimp
@@ -1031,6 +1032,31 @@ static void t30_mbrc_set(T30HelixEncoder *encoder, uint32_t mb_rc)
                  on ? "on" : "off");
 }
 #endif
+
+/* IMP_Encoder_SetFisheyeEnableStatus, picture part (#357, #397): the vendor
+ * hwicodec H.264 encoders (T10/T20 3.12.0 hwicodec_pf_h264e_t10/t20_enc, T21
+ * 1.0.33 and T23 1.3.0 hwicodec_pf_h264e_t21_enc, T30 1.0.5
+ * hwicodec_pf_h264e_t30_enc) call embed_watermark(ctx, luma, mb_width * 16,
+ * mb_height * 16) on the source picture of every hardware run of an I slice
+ * while the flag is set (watermark_init at channel creation), so a re-encoded
+ * I picture is marked again.  The luma is rewritten in place (src/watermark):
+ * sync those rows for the CPU first (dir 2, as the T20 rate control does
+ * before it reads the luma), write them back after. */
+static void helix_watermark(const T30HelixEncoder *encoder,
+                            const IMPFrameInfo *frame, int idr)
+{
+    uint8_t *luma;
+    uint32_t stride, bytes;
+
+    if (!encoder->params.fisheye || !idr || !frame->virAddr)
+        return;
+    luma = (uint8_t *)(uintptr_t)frame->virAddr;
+    stride = (uint32_t)encoder->sps.i_mb_width * 16u;
+    bytes = stride * (WATERMARK_HEIGHT - 1u) + WATERMARK_WIDTH;
+    (void)DMA_RmemFlushCache(luma, bytes, 2);
+    if (watermark_embed(luma, (int)stride, encoder->sps.i_mb_height * 16) == 0)
+        (void)DMA_RmemFlushCache(luma, bytes, 1);
+}
 
 static void t30_fill_slice(T30HelixEncoder *encoder,
                            const IMPFrameInfo *frame, uint32_t qp,
@@ -4154,6 +4180,7 @@ again:
         t30_chroma_qp_idr(encoder);
     }
 #endif
+    helix_watermark(encoder, frame, idr);
     t30_fill_slice(encoder, frame, qp, idr, output_index);
 #if defined(PLATFORM_T20)
     if (encoder->t20rc_on) {

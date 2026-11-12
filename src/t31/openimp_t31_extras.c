@@ -49,9 +49,22 @@ static int extras_enc_created(int channel)
     return IMP_Encoder_Query(channel, stat) == 0;
 }
 
-/* The fisheye correction lives in Ingenic's closed IVS fisheye module;
- * OpenIMP keeps the flag so applications can read back what they set. Like
- * libimp it must be set before the channel exists. */
+/* No fisheye correction: in libimp 1.1.6 the flag makes the encoder mark
+ * every I picture with the vendor's invisible luma watermark (src/watermark;
+ * CreateChn hands it to the codec, openimp_t31_enc_fisheye).  Like libimp it
+ * must be set before the channel exists. */
+int openimp_t31_enc_fisheye(int encChn)
+{
+    int enable;
+
+    if (!extras_enc_valid(encChn))
+        return 0;
+    pthread_mutex_lock(&extras_lock);
+    enable = extras_enc[encChn].fisheye;
+    pthread_mutex_unlock(&extras_lock);
+    return enable;
+}
+
 int IMP_Encoder_SetFisheyeEnableStatus(int encChn, int enable)
 {
     if (!extras_enc_valid(encChn) || extras_enc_created(encChn))

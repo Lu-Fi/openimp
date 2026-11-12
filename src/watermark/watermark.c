@@ -1,5 +1,6 @@
 /* See watermark.h: the vendor's luma watermark behind SetFisheyeEnableStatus. */
 #include <stdint.h>
+#include <math.h>
 #include <string.h>
 
 #include "watermark.h"
@@ -54,16 +55,33 @@ static const float wm_mark[32] = {
     24.0f, 126.0f, 102.0f, 102.0f, 127.0f, 6.0f, 102.0f, 126.0f,
 };
 
-/* The result must match the vendor bit for bit: every product is rounded to
- * single precision on its own (the vendor uses separate multiply and add
- * instructions, the T40 build the unfused MIPS32 R2 madd.s).  The volatile
- * store keeps a compiler from fusing a*b+c into one rounding (an FMA on a
- * host, and gcc 16 contracts despite -ffp-contract pragmas). */
-static float wm_mul(float a, float b)
+/* The result must match the vendor bit for bit, and the vendor builds differ
+ * in one point: the multiply-adds of the DCTs and of the mark gain.
+ *   - unfused (fused = 0): the product is rounded to single precision, then
+ *     added (separate mul.s/add.s: the gcc 5.4 builds T21/T23/T30/T31);
+ *   - fused (fused = 1): madd.s, which the Ingenic FPU computes with one
+ *     rounding (the gcc 4.7.2 builds, the only one of T10/T20 3.12.0, and the
+ *     gcc 7.2 T40 build): measured on the T20 camera, where the vendor result
+ *     equals fmaf() and differs from the two-rounding result.
+ * On the camera the fused form is the madd.s instruction itself; elsewhere
+ * (host tests) fmaf().  The volatile store keeps a compiler from fusing the
+ * unfused form (gcc 16 contracts despite -ffp-contract pragmas). */
+static float wm_madd(float c, float a, float b, int fused)
 {
-    volatile float p = a * b;
+    if (fused) {
+#if defined(__mips__) && !defined(__mips_soft_float)
+        float r;
 
-    return p;
+        __asm__("madd.s %0, %1, %2, %3" : "=f"(r) : "f"(c), "f"(a), "f"(b));
+        return r;
+#else
+        return fmaf(a, b, c);
+#endif
+    } else {
+        volatile float p = a * b;
+
+        return c + p;
+    }
 }
 
 static float wm_fabs(float x)
@@ -72,7 +90,7 @@ static float wm_fabs(float x)
 }
 
 /* coef = D * pix * D^T; each sum runs from 0 over the inner index in order */
-static void wm_forward(const float pix[WM_N], float coef[WM_N])
+static void wm_forward(const float pix[WM_N], float coef[WM_N], int fused)
 {
     float t[WM_N];
     int i, j, k;
@@ -82,9 +100,7 @@ static void wm_forward(const float pix[WM_N], float coef[WM_N])
             float s = 0.0f;
 
             for (j = 0; j < 8; j++) {
-                float p = wm_mul(wm_dct[i * 8 + j], pix[j * 8 + k]);
-
-                s = s + p;
+                s = wm_madd(s, wm_dct[i * 8 + j], pix[j * 8 + k], fused);
             }
             t[i * 8 + k] = s;
         }
@@ -93,16 +109,14 @@ static void wm_forward(const float pix[WM_N], float coef[WM_N])
             float s = 0.0f;
 
             for (j = 0; j < 8; j++) {
-                float p = wm_mul(wm_dct[k * 8 + j], t[i * 8 + j]);
-
-                s = s + p;
+                s = wm_madd(s, wm_dct[k * 8 + j], t[i * 8 + j], fused);
             }
             coef[i * 8 + k] = s;
         }
 }
 
 /* pix = D^T * coef * D */
-static void wm_inverse(const float coef[WM_N], float pix[WM_N])
+static void wm_inverse(const float coef[WM_N], float pix[WM_N], int fused)
 {
     float t[WM_N];
     int i, j, k;
@@ -112,9 +126,7 @@ static void wm_inverse(const float coef[WM_N], float pix[WM_N])
             float s = 0.0f;
 
             for (j = 0; j < 8; j++) {
-                float p = wm_mul(wm_dct[j * 8 + k], coef[i * 8 + j]);
-
-                s = s + p;
+                s = wm_madd(s, wm_dct[j * 8 + k], coef[i * 8 + j], fused);
             }
             t[i * 8 + k] = s;
         }
@@ -123,9 +135,7 @@ static void wm_inverse(const float coef[WM_N], float pix[WM_N])
             float s = 0.0f;
 
             for (j = 0; j < 8; j++) {
-                float p = wm_mul(wm_dct[j * 8 + i], t[j * 8 + k]);
-
-                s = s + p;
+                s = wm_madd(s, wm_dct[j * 8 + i], t[j * 8 + k], fused);
             }
             pix[i * 8 + k] = s;
         }
@@ -178,7 +188,7 @@ static uint8_t wm_pixel(float x)
     return (uint8_t)(int32_t)v;
 }
 
-static void wm_block(float coef[WM_N], int block)
+static void wm_block(float coef[WM_N], int block, int fused)
 {
     float mag[WM_N], sorted[WM_N];
     double s_a, s_b, s_r0, s_r2;
@@ -210,15 +220,13 @@ static void wm_block(float coef[WM_N], int block)
     /* the stores go in this order: a coefficient found twice takes the last */
     coef[k2] = (float)((double)wm_fabs(coef[k1]) * s_r2);
 
-    g = wm_mul(WM_STRENGTH, wm_mark[2 * block]);
-    g = g + 1.0f;
+    g = wm_madd(1.0f, WM_STRENGTH, wm_mark[2 * block], fused);
     coef[WM_COEF_A] = (float)((double)g * ((double)wm_fabs(coef[k2]) * s_a));
-    g = wm_mul(wm_mark[2 * block + 1], WM_STRENGTH);
-    g = g + 1.0f;
+    g = wm_madd(1.0f, wm_mark[2 * block + 1], WM_STRENGTH, fused);
     coef[WM_COEF_B] = (float)((double)g * ((double)wm_fabs(coef[k2]) * s_b));
 }
 
-int watermark_embed(uint8_t *luma, int stride, int height)
+int watermark_embed_mode(uint8_t *luma, int stride, int height, int fused)
 {
     float pix[WM_N], coef[WM_N];
     int by, bx, i;
@@ -231,11 +239,16 @@ int watermark_embed(uint8_t *luma, int stride, int height)
 
             for (i = 0; i < WM_N; i++)
                 pix[i] = (float)p[(i >> 3) * stride + (i & 7)];
-            wm_forward(pix, coef);
-            wm_block(coef, bx / 8 + (by / 8) * 8);
-            wm_inverse(coef, pix);
+            wm_forward(pix, coef, fused);
+            wm_block(coef, bx / 8 + (by / 8) * 8, fused);
+            wm_inverse(coef, pix, fused);
             for (i = 0; i < WM_N; i++)
                 p[(i >> 3) * stride + (i & 7)] = wm_pixel(pix[i]);
         }
     return 0;
+}
+
+int watermark_embed(uint8_t *luma, int stride, int height)
+{
+    return watermark_embed_mode(luma, stride, height, WATERMARK_FUSED_MADD);
 }

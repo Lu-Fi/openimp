@@ -8,11 +8,12 @@ SRC := $(PROJECT_DIR)/src/watermark/watermark.c $(PROJECT_DIR)/src/watermark/wat
 .PHONY: check clean
 
 check: $(WATERMARK_TEST)
-	$(WATERMARK_TEST) watermark_vectors.txt
+	$(WATERMARK_TEST) watermark_vectors.txt 0
+	$(WATERMARK_TEST) watermark_vectors_fused.txt 1
 
 $(WATERMARK_TEST): watermark_test.c $(SRC)
 	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src -o $@ watermark_test.c $(PROJECT_DIR)/src/watermark/watermark.c
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src -o $@ watermark_test.c $(PROJECT_DIR)/src/watermark/watermark.c -lm
 
 clean:
 	$(RM) $(WATERMARK_TEST)

@@ -37,6 +37,7 @@
 #include "t30/radix/t30_radix_cabac.h"
 #include "t30/radix/t30_radix_cmdlist.h"
 #include "t30/radix/t30_radix_hevc.h"
+#include "watermark/watermark.h"
 #include "t30/radix/t30_radix_sliceinfo.h"
 
 #define RADIX_CHANNEL_REQUEST 0xc0386300u
@@ -609,6 +610,15 @@ int OpenIMP_T30_RadixEncode(T30RadixEncoder *e, const IMPFrameInfo *frame,
         return -1;
     }
     qp = e->block[RSI_FRAME_QP];        /* = pic.qp, the QP the block codes */
+    /* IMP_Encoder_SetFisheyeEnableStatus (#357): hwicodec_pf_h265e_t30_enc
+     * marks the source luma of an I picture like the H.264 encoders,
+     * embed_watermark(ctx, luma, ALIGN16(w), ALIGN16(h)) (src/watermark);
+     * the write-back below publishes it */
+    if (e->params.fisheye && idr && frame->virAddr) {
+        (void)DMA_RmemFlushCache((void *)(uintptr_t)frame->virAddr,
+                                 w16 * (WATERMARK_HEIGHT - 1u) + WATERMARK_WIDTH, 2);
+        (void)watermark_embed((uint8_t *)(uintptr_t)frame->virAddr, (int)w16, (int)h16);
+    }
     if (frame->virAddr)
         (void)DMA_RmemFlushCache((void *)(uintptr_t)frame->virAddr,
                                  w16 * h16 * 3u / 2u, 1);

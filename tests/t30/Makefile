@@ -32,7 +32,7 @@ nv12_compact_test: nv12_compact_test.c $(ROOT)/src/framesource/nv12_compact.h
 # addresses in 32-bit fields: low mappings, no PIE, no mmap-backed malloc.
 HELIX_SOURCES := \
 	helix_encoder_test.c \
-	$(ROOT)/src/t30/t30_helix_encoder.c \
+	$(ROOT)/src/t30/t30_helix_encoder.c $(ROOT)/src/watermark/watermark.c \
 	$(ROOT)/src/t30/t30_h264_descriptor.c \
 	$(ROOT)/src/t30/h264enc/cabac.c \
 	$(ROOT)/src/t30/h264enc/common.c \
@@ -326,7 +326,7 @@ radix_cabac_test: radix/radix_cabac_test.c $(ROOT)/src/t30/radix/t30_radix_cabac
 radix_hevc_test: radix/radix_hevc_test.c radix/hevc_case.h $(ROOT)/src/t30/radix/t30_radix_hevc.c $(ROOT)/src/t30/radix/t30_radix_hevc.h
 	$(CC) $(CFLAGS) -I$(ROOT)/src -Iradix -o $@ radix/radix_hevc_test.c $(ROOT)/src/t30/radix/t30_radix_hevc.c -lm
 
-RADIX_ENCODER_SOURCES := radix_encoder_test.c $(ROOT)/src/t30/radix/t30_radix_encoder.c \
+RADIX_ENCODER_SOURCES := radix_encoder_test.c $(ROOT)/src/t30/radix/t30_radix_encoder.c $(ROOT)/src/watermark/watermark.c \
 	$(ROOT)/src/t30/radix/t30_radix_hevc.c $(ROOT)/src/t30/radix/t30_radix_cabac.c \
 	$(ROOT)/src/t30/radix/t30_radix_cmdlist.c $(ROOT)/src/eprc/eprc_t30.c
 
@@ -362,7 +362,7 @@ QEMU_MIPSEL ?= qemu-mipsel
 radix-smoke:
 	$(O)/host/bin/mipsel-linux-gcc -std=gnu99 -O2 -Wall -Wextra -Werror -mabi=32 -march=mips32r2 \
 		-DPLATFORM_T30 -fwrapv -ffp-contract=off -I$(ROOT)/include -I$(ROOT)/src radix/radix_smoke.c \
-		$(ROOT)/src/t30/radix/t30_radix_encoder.c $(ROOT)/src/t30/radix/t30_radix_hevc.c \
+		$(ROOT)/src/t30/radix/t30_radix_encoder.c $(ROOT)/src/watermark/watermark.c $(ROOT)/src/t30/radix/t30_radix_hevc.c \
 		$(ROOT)/src/t30/radix/t30_radix_cabac.c $(ROOT)/src/t30/radix/t30_radix_cmdlist.c \
 		$(ROOT)/src/eprc/eprc_t30.c $(ROOT)/src/dma_alloc.c $(ROOT)/src/core/imp_log_emit.c \
 		-lpthread -lm -o radix_smoke

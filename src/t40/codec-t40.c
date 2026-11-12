@@ -52,6 +52,7 @@
 #include <pthread.h>
 static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
+
 #include "imp_log_int.h"
 #include "kernel_interface.h"
 #include "openimp_profile.h"
@@ -109,6 +110,7 @@ static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/syscall.h> /* for SYS_ioctl */
+#include "watermark/watermark.h"
 
 /*
  * T41 reuses the T4 encoder implementation, EP tables, IRQ owner and device
@@ -3950,6 +3952,65 @@ static void avpu_t31_roi_apply(ALAvpuContext *ctx)
                              0x40u + mb);
 }
 
+/* IMP_Encoder_SetFisheyeEnableStatus, picture part (#357): the vendor
+ * Allegro encode1 (T31 1.1.6, T40 1.3.1), for a channel created with the flag
+ * (AL_Common_Encoder_CreateChannel runs watermark_init):
+ *   - every picture: clears QP table entries 0..12 (EP2 + 0x40) and sets the
+ *     picture's "use QP table" and "relative" options (cmd[9] bits 25, 24);
+ *   - an I picture: embed_watermark(ctx, source luma, ALIGN16(width),
+ *     ALIGN16(height)) on the source frame in place (src/watermark), then
+ *     H.264: entries 0..3, the four top-left macroblocks, = 0x21 (relative
+ *     -31, the macroblocks that carry the mark coded at the lowest QP).
+ * The vendor's H.265 entries (CTB table layout) are not written here: the
+ * H.265 picture gets the luma part only.  The H.264 entries are off by
+ * default (OPENIMP_WM_PARTS below, docs/WATERMARK.md). */
+static void avpu_watermark(ALAvpuContext *ctx, uint32_t virt_addr, int is_idr)
+{
+    uint32_t stride, height, bytes, off;
+    uint8_t *table;
+
+    static int parts = -1;
+
+    if (parts < 0) {
+        /* bit 0 the luma mark, bit 1 the vendor's QP table entries.  The QP
+         * part is off by default: on the T31 (open stack) the first IDR
+         * with both parts fails in Enc1 (status done=0, no payload) and the
+         * channel stalls; each part alone codes fine (#357, #402). */
+        const char *e = getenv("OPENIMP_WM_PARTS");
+
+        parts = e && *e ? atoi(e) : 1;
+    }
+    ctx->wm_table_on = 0;
+    if (!ctx->watermark)
+        return;
+    if ((parts & 1) && is_idr && virt_addr) {
+        uint8_t *luma = (uint8_t *)(uintptr_t)virt_addr;
+
+        stride = (ctx->enc_w + 15u) & ~15u;
+        height = (ctx->enc_h + 15u) & ~15u;
+        bytes = stride * (WATERMARK_HEIGHT - 1u) + WATERMARK_WIDTH;
+        (void)avpu_flush_cache(-1, luma, bytes, 2 /* as the source sync */);
+        if (watermark_embed(luma, (int)stride, (int)height) == 0)
+            (void)avpu_flush_cache(-1, luma, bytes, 1 /* WBACK */);
+        LOG_CODEC("AVPU: watermark frame=%u luma=%p stride=%u height=%u "
+                  "first=%02x%02x%02x%02x", ctx->frame_number, (void *)luma,
+                  stride, height, luma[0], luma[1], luma[2], luma[3]);
+    }
+    if (!(parts & 2) || ctx->codec_hevc || !ctx->interm_buf.map)
+        return;
+    off = ctx->interm_ep1_size + ctx->interm_wpp_size + 0x40u;
+    if (ctx->interm_ep2_size < 0x40u + 13u)
+        return;
+    table = (uint8_t *)ctx->interm_buf.map + off;
+    pthread_mutex_lock(&avpu_roi_lock);
+    memset(table, 0, 13u);
+    if (is_idr)
+        memset(table, 0x21, 4u);
+    pthread_mutex_unlock(&avpu_roi_lock);
+    ctx->wm_table_on = 1;
+    (void)avpu_flush_dma_buf(ctx->fd, "wm_table", &ctx->interm_buf, off + 13u);
+}
+
 /* After the command is built: an absolute window follows the picture QP. */
 static void avpu_t31_roi_track_qp(ALAvpuContext *ctx, const uint32_t *cmd)
 {
@@ -5350,7 +5411,7 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         /* ROI: QP table in EP2 (avpu_t31_roi_apply), the same two bits as
          * the T31 command (vendor SliceParamToCmdRegsEnc1: SliceParam+0x6c
          * -> cmd[9] bit 25 use the table, +0x6b -> bit 24 relative) */
-        if (!ctx->codec_hevc && ctx->roi_table_on)
+        if (!ctx->codec_hevc && (ctx->roi_table_on || ctx->wm_table_on))
             cmd[0x09] |= 0x03000000u;
 #endif
 #if defined(PLATFORM_T31)
@@ -5496,7 +5557,7 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
          * use the table (vendor SliceParam+0x6c, picture option
          * AL_OPT_USE_QP_TABLE), bit 24 = table relative (SliceParam+0x6b,
          * channel option bit 0). */
-        if (!ctx->codec_hevc && ctx->roi_table_on)
+        if (!ctx->codec_hevc && (ctx->roi_table_on || ctx->wm_table_on))
             cmd[0x09] |= 0x03000000u;
         if (ctx->codec_hevc)
             avpu_t31_hevc_fill_cmd(ctx, cmd, is_idr);
@@ -9203,6 +9264,16 @@ static void codec_param_write_qp_bounds(uint8_t *param, uint32_t initial_qp,
     *(uint16_t *)(param + 0x88) = (uint16_t)clamp_qp_u32(max_qp);
 }
 
+/* IMP_Encoder_SetFisheyeEnableStatus: Helix QP region (src/fisheye) and the
+ * luma watermark of every family (src/watermark) */
+int AL_Codec_Encode_SetFisheye(void *codec, int enable)
+{
+    if (codec == NULL)
+        return -1;
+    ((AL_CodecEncode *)codec)->hw_params.fisheye = enable ? 1u : 0u;
+    return 0;
+}
+
 static void avpu_sync_runtime_encode_state(AL_CodecEncode *enc)
 {
     uint32_t profile_idc;
@@ -9220,6 +9291,7 @@ static void avpu_sync_runtime_encode_state(AL_CodecEncode *enc)
     enc->avpu.min_qp = enc->hw_params.min_qp;
     enc->avpu.max_qp = enc->hw_params.max_qp;
     enc->avpu.entropy_mode = enc->entropy_mode;
+    enc->avpu.watermark = enc->hw_params.fisheye != 0u;
 #if defined(OPENIMP_AL_ALLEGRO_RC)
     enc->avpu.t31_quality_cap_x100 = enc->rc_quality_cap_x100;
     /* The lazy AVPU init memsets enc->avpu at the first picture; keep the
@@ -9613,13 +9685,6 @@ int AL_Codec_Encode_SetChangeRef(void *codec, int enable)
     return 0;
 }
 
-int AL_Codec_Encode_SetFisheye(void *codec, int enable)
-{
-    if (codec == NULL)
-        return -1;
-    ((AL_CodecEncode *)codec)->hw_params.fisheye = enable ? 1u : 0u;
-    return 0;
-}
 
 #if defined(PLATFORM_T23)
 /* IMP_Encoder_Setframelossthd: bytes, 0 = off (src/t23/t23_frameloss.h) */
@@ -12206,7 +12271,11 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             uint32_t init_qp = codec_param_read_initial_qp(enc->codec_param);
             uint32_t max_qp = codec_param_read_max_qp(enc->codec_param);
             uint32_t min_qp = codec_param_read_min_qp(enc->codec_param);
+            /* IMP_Encoder_SetFisheyeEnableStatus is handed over at CreateChn
+             * (AL_Codec_Encode_SetFisheye), before this first picture */
+            uint32_t fisheye = enc->hw_params.fisheye;
             memset(&enc->hw_params, 0, sizeof(enc->hw_params));
+            enc->hw_params.fisheye = fisheye;
             enc->hw_params.codec_type = codec_type;
             enc->hw_params.width = width;
             enc->hw_params.height = height;
@@ -13527,6 +13596,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 
 #if defined(PLATFORM_T31) || defined(AVPU_T40_NATIVE)
                 avpu_t31_roi_apply(ctx);
+                avpu_watermark(ctx, virt_addr, is_idr);
 #endif
                 fill_cmd_regs_enc1(ctx, cmd, buf_idx, phys_addr, hdr_offset,
                                    is_idr, ref_phys);

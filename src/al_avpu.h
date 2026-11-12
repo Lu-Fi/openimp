@@ -416,6 +416,11 @@ typedef struct ALAvpuContext {
     volatile int roi_pending;
     int roi_table_on;
     int roi_absolute;      /* T31: a window has an absolute QP */
+    /* IMP_Encoder_SetFisheyeEnableStatus (T31/T40): the vendor luma
+     * watermark (src/watermark) and its EP2 QP entries; wm_table_on: the
+     * picture uses the QP table for them (avpu_watermark) */
+    int watermark;
+    int wm_table_on;
     int8_t *roi_map;       /* T41 SetChnMapRoi: QP delta per 16x16 block
                             * (0: none), applied over the windows */
     uint32_t roi_map_n;

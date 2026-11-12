@@ -1,5 +1,8 @@
 /* tests/watermark: src/watermark against the vendor embed_watermark
- * (tools/watermark_oracle.py, the vendor routine run under unicorn).
+ * (tools/watermark_oracle.py, the vendor routine run under unicorn: the
+ * builds with separate multiply and add) and against the fused-madd builds as
+ * measured on a camera (watermark_vectors_fused.txt, tools/watermark_devcheck.c).
+ * Usage: watermark-test VECTORS [fused]
  * Vector line: 'W stride height ret : <64x16 input hex> : <64x16 output hex>'
  * ('-' for both blocks when the vendor refused the plane). */
 #include <stdio.h>
@@ -30,9 +33,10 @@ int main(int argc, char **argv)
     unsigned char in[BLK], want[BLK];
     unsigned long n = 0, bad = 0;
     FILE *f;
+    int fused = argc > 2 && atoi(argv[2]) != 0;
 
-    if (argc != 2 || !(f = fopen(argv[1], "r"))) {
-        fprintf(stderr, "usage: %s watermark_vectors.txt\n", argv[0]);
+    if (argc < 2 || !(f = fopen(argv[1], "r"))) {
+        fprintf(stderr, "usage: %s watermark_vectors.txt [fused]\n", argv[0]);
         return 2;
     }
     while (fgets(line, sizeof(line), f)) {
@@ -59,7 +63,7 @@ int main(int argc, char **argv)
             for (y = 0; y < WATERMARK_HEIGHT; y++)
                 memcpy(plane + y * stride, in + y * WATERMARK_WIDTH, WATERMARK_WIDTH);
         }
-        got = watermark_embed(plane, stride, height);
+        got = watermark_embed_mode(plane, stride, height, fused);
         if (got != ret) {
             fprintf(stderr, "line %lu: ret %d, vendor %d\n", n, got, ret);
             bad++;
@@ -86,6 +90,6 @@ int main(int argc, char **argv)
         free(plane);
     }
     fclose(f);
-    printf("watermark: %lu vectors, %lu mismatches\n", n, bad);
+    printf("watermark (%s): %lu vectors, %lu mismatches\n", fused ? "fused" : "unfused", n, bad);
     return bad || !n ? 1 : 0;
 }
