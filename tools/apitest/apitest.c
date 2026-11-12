@@ -384,6 +384,7 @@ int main(int argc, char **argv)
 #else
     ret = IMP_ISP_Open();
     rep(FN(IMP_ISP_Open), ret, ret < 0 ? V_FAIL : V_PASS, "");
+    if (ret >= 0) sec_t2x(0);              /* case secsensor_t23 / _t31: second-sensor calls before AddSensor */
     if (ret >= 0) { ret = IMP_ISP_AddSensor(&g_sensor); RET0(IMP_ISP_AddSensor, ret, "sensor %s", g_sensor.name); }
     if (ret >= 0) algo_pre_t2x();          /* custom AE/AWB records (case customalgo_t23 / _t31): the vendor starts them at EnableSensor */
     if (ret >= 0) { ret = IMP_ISP_EnableSensor(); RET0(IMP_ISP_EnableSensor, ret, ""); }

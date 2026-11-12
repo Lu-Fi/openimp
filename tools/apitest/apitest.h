@@ -167,6 +167,7 @@ void algo_pre_t40(void);
 void algo_post_t40(void);
 void algo_pre_t2x(void);   /* case customalgo_t23 / customalgo_t31 */
 void algo_post_t2x(void);
+void sec_t2x(int ph);       /* case secsensor_t23 / secsensor_t31 */
 void rawvic_post_t41(void);
 void t_dmic(void);        /* IMP_DMIC_* round trips (at_cases.c); area "dmic" runs it without the ISP, case "dmic" inside area cases */
 void t_binpath_pre(void);  /* IMP_ISP_Set/GetDefaultBinPath, between ISP_Open and AddSensor (T41 family) */

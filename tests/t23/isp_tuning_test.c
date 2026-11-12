@@ -748,6 +748,15 @@ static void test_misc(void)
           IMP_ISP_SetFrameDrop_Sec(buf) == 0 && last_nr == 0xc00456ea &&
           IMP_ISP_GetFrameDrop_Sec(buf) == 0 && last_nr == 0xc00456eb,
           "device requests");
+    /* switch-gpio record: handed to the driver (stock ioctl 0xc00456ee), NULL refused, driver error -1 */
+    reset();
+    CHECK(IMP_ISP_MultiCamera_SetSwitchgpio(buf) == 0 && last_nr == 0xc00456ee && last_fd == 7 && calls == 1,
+          "switchgpio ioctl");
+    reset();
+    CHECK(IMP_ISP_MultiCamera_SetSwitchgpio(NULL) == -1 && calls == 0, "switchgpio NULL");
+    ioctl_ret = -1;
+    CHECK(IMP_ISP_MultiCamera_SetSwitchgpio(buf) == -1, "switchgpio ioctl error");
+    reset();
     CHECK(IMP_ISP_MultiCamera_SetSensorRegister(0, 1, 2) == 0 &&
           IMP_ISP_MultiCamera_GetFrameDrop(4, buf) == -4092 &&
           IMP_ISP_SetDefaultBinPath_Sec("x") == -1, "unsupported calls");

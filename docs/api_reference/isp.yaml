@@ -1325,8 +1325,8 @@ functions:
   ISP_SetSwitchgpio:
     group: sys
     summary: "Selects the GPIO that switches between two sensors on a multi-camera board."
-    returns: "0."
-    notes: "OpenIMP exports only the `IMP_ISP_MultiCamera_SetSwitchgpio` spelling, on T23. A one-sensor T23 has no sensor switch, so the call does nothing and returns 0."
+    returns: "-1 for NULL or when the ISP is not open, otherwise the driver result (ioctl 0xc00456ee), like the stock call."
+    notes: "OpenIMP exports only the `IMP_ISP_MultiCamera_SetSwitchgpio` spelling, on T23 (the T21/T30 builds keep a stub that returns 0). A one-sensor T23 has no sensor switch: a record with enable 0 is accepted and changes nothing."
     soc: "T23 only."
   ISP_SetPreDqtime:
     group: sys
