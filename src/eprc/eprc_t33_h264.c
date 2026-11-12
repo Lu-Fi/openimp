@@ -2322,9 +2322,9 @@ static void e33_video_cfg(E33 *X, uint32_t e)
     t33_clip_u8(X, e + 0x827, 0, 1);
     t33_clip_u8(X, e + 0x828, 0, 1);
     t33_clip_s8(X, e + 0x825, -1, 51);
-    if (!(LD_S32(e + 0x85c) < 0xc350001))
+    if (LD_U32(e + 0x85c) > 0xc350000)             /* fixed picture sizes: unsigned compares */
         ST_S32(e + 0x85c, 0xc350000);
-    if (LD_S32(e + 0x860) > 0xc350000)
+    if (LD_U32(e + 0x860) > 0xc350000)
         ST_S32(e + 0x860, 0xc350000);
     if (LD_U8(e + 0x828)) {
         t33_clip_s8(X, e + 0x825, 1, 30);
@@ -2334,7 +2334,7 @@ static void e33_video_cfg(E33 *X, uint32_t e)
     if (ext == 1) {
         if (LD_S32(e + 0x850) == 0)
             ST_S32(e + 0x850, 1);
-        else if (!(LD_S32(e + 0x850) < 0x3d))
+        else if (LD_U32(e + 0x850) > 0x3c)         /* unsigned (0x1ac.., sltiu) */
             ST_S32(e + 0x850, 0x3c);
         t33_clip_s8(X, e + 0x854, 0, 30);
         t33_clip_s8(X, e + 0x855, 0, 30);
