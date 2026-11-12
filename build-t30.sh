@@ -125,6 +125,10 @@ compile t30_rate_control src/t40/t31_rate_control.c -Werror
 # OEM T30 picture rate control (docs/T23_EPRC.md "T30"); no contraction,
 # the emulator comparison models MIPS32r2 madd.fmt as unfused
 compile t30_eprc src/eprc/eprc_t30.c $hot_flags -Werror -ffp-contract=off -fwrapv
+# IMP_Encoder_SetChnHSkip reference structures (src/hskip): the T30 1.0.5
+# i264e is the T10/T20 one (docs/T30_HSKIP.md)
+compile hskip src/hskip/hskip.c -Werror
+compile hskip_black src/hskip/hskip_black.c -Werror
 compile t30_helix_jpeg src/t30/helix_jpeg.c -Werror
 # IMP_Decoder_*: the vendor T30 1.0.5 decodes JPEG with ijpegd on the VPU,
 # as T21 1.0.33; OpenIMP decodes in software in the calling thread, the
@@ -197,6 +201,8 @@ compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
     "$output_dir/t30_h264_slice.o" \
     "$output_dir/t30_rate_control.o" \
     "$output_dir/t30_eprc.o" \
+    "$output_dir/hskip.o" \
+    "$output_dir/hskip_black.o" \
     "$output_dir/t30_helix_jpeg.o" \
     "$output_dir/t30_decoder.o" \
     "$output_dir/t30_jpegdec.o" \

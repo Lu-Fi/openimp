@@ -39,7 +39,9 @@ HELIX_SOURCES := \
 	$(ROOT)/src/t30/h264enc/set.c \
 	$(ROOT)/src/t30/h264enc/slice.c \
 	$(ROOT)/src/t40/t31_rate_control.c \
-	$(ROOT)/src/eprc/eprc_t30.c
+	$(ROOT)/src/eprc/eprc_t30.c \
+	$(ROOT)/src/hskip/hskip.c \
+	$(ROOT)/src/hskip/hskip_black.c
 
 helix_encoder_test: $(HELIX_SOURCES) $(ROOT)/src/t30/t30_annexb.h $(ROOT)/src/t30/t30_h264_level.h \
 		$(ROOT)/src/t30/t30_start_qp.h $(ROOT)/src/t30/t30_black_start.h
@@ -48,7 +50,7 @@ helix_encoder_test: $(HELIX_SOURCES) $(ROOT)/src/t30/t30_annexb.h $(ROOT)/src/t3
 		-Wl,--wrap=open,--wrap=close,--wrap=ioctl \
 	 $(ROOT)/src/core/imp_log_emit.c	-o $@ $(HELIX_SOURCES) -lm
 
-HELIX_T21_SOURCES := $(filter-out %/t30_h264_descriptor.c %/eprc_t30.c,$(HELIX_SOURCES)) \
+HELIX_T21_SOURCES := $(filter-out %/t30_h264_descriptor.c %/eprc_t30.c %/hskip.c %/hskip_black.c,$(HELIX_SOURCES)) \
 	$(ROOT)/src/t21/t21_h264_descriptor.c $(ROOT)/src/t30/helix_bitstream.c \
 	$(ROOT)/src/eprc/eprc.c $(ROOT)/src/eprc/eprc_t21.c $(ROOT)/src/eprc/eprc_mbrc.c \
 	$(ROOT)/src/hskip/hskip.c $(ROOT)/src/hskip/hskip_black.c $(ROOT)/src/fisheye/fisheye.c
@@ -92,7 +94,7 @@ t21_front_crop_test: t21_front_crop_test.c $(ROOT)/src/isp/isp_front_crop.h $(RO
 
 # T20 builds the T21 userspace with PLATFORM_T20 and the T30 descriptor.
 HELIX_T20_SOURCES := $(HELIX_SOURCES) $(ROOT)/src/t30/helix_bitstream.c $(ROOT)/src/rc_t20/rc_t20.c \
-	$(ROOT)/src/rc_t20/rc_t20_mb.c $(ROOT)/src/rc_t10/rc_t10.c $(ROOT)/src/hskip/hskip.c $(ROOT)/src/hskip/hskip_black.c \
+	$(ROOT)/src/rc_t20/rc_t20_mb.c $(ROOT)/src/rc_t10/rc_t10.c \
 	$(ROOT)/src/fisheye/fisheye.c
 
 helix_encoder_test_t20: $(HELIX_T20_SOURCES) $(ROOT)/src/t30/t30_annexb.h $(ROOT)/src/t30/t30_h264_level.h \
@@ -311,9 +313,10 @@ p2_t1x_test_t20: $(P2_T1X_SOURCES) $(ROOT)/src/demask/demask.c
 p2_t1x_test_t21: $(P2_T1X_SOURCES)
 	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T21 $(ROOT)/src/core/imp_log_emit.c -o $@ $(P2_T1X_SOURCES) -lpthread
 
-p2_t30_enc_test: p2_t30_enc_test.c $(ROOT)/src/t40/openimp_p2_encoder.c
+p2_t30_enc_test: p2_t30_enc_test.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/hskip/hskip.c
 	$(CC) $(CFLAGS) -DPLATFORM_T30 $(P2_T1X_FLAGS) $(ROOT)/src/core/imp_log_emit.c -o $@ p2_t30_enc_test.c \
-		$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/t40/t31_stream_layout.c -lpthread
+		$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/t40/t31_stream_layout.c \
+		$(ROOT)/src/hskip/hskip.c -lpthread
 
 # T30 Radix (H.265) command list builder against 64 vendor lists (#208).
 RADIX_SOURCES := radix/radix_cmdlist_test.c $(ROOT)/src/t30/radix/t30_radix_cmdlist.c
