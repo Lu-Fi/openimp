@@ -1320,8 +1320,16 @@ static void cs_aestrategy(void)
         { IMPISPITAttr t; memset(&t, 0, sizeof(t)); if (IMP_ISP_Tuning_GetIntegrationTime && IMP_ISP_Tuning_GetIntegrationTime(&t) == 0) it1 = (int)t.integration_time; }
 #endif
         r6 = IMP_ISP_Tuning_SetAeStrategy(o); usleep(1500000); IMP_ISP_Tuning_GetAeStrategy(&c);
+#ifdef PLATFORM_T21
+        /* T21 (#422): the vendor tx-isp-t21 g_ctrl answers 0x8000022 with 0 and leaves the value alone (0x8000020..23 fall
+         * through to "return 0"), the vendor 1.0.33 GetAeStrategy then hands back an uninitialised stack word: there is
+         * no AE strategy on T21.  OpenIMP (value 0 sent) reads 0; the check is that every call succeeds and nothing moves. */
+        rep(FN(IMP_ISP_Tuning_GetAeStrategy), r1, (r1 == 0 && r3 == 0 && r5 == 0 && o == 0 && a == 0 && b == 0 && c == 0) ? V_PASS : V_FAIL,
+            "vendor-equal: no AE strategy in the T21 kernel, reads 0 (initial %d; set 0 reads %d, set 1 reads %d, restored %d)", (int)o, (int)a, (int)b, (int)c);
+#else
         rep(FN(IMP_ISP_Tuning_GetAeStrategy), r1, (r1 == 0 && r3 == 0 && a == IMPISP_AE_STRATEGY_SPLIT_BALANCED && r5 == 0 && b == IMPISP_AE_STRATEGY_SPLIT_INTEGRATION_PRIORITY && c == o) ? V_PASS : V_FAIL,
             "initial %d; set 0 reads %d, set 1 reads %d, restored %d", (int)o, (int)a, (int)b, (int)c);
+#endif
         rep(FN(IMP_ISP_Tuning_SetAeStrategy), r2 | r4 | r6, (r2 == 0 && r4 == 0 && r6 == 0 && s0.ok && s1.ok && s0.y > 5 && s1.y > 5 && flow()) ? V_PASS : V_FAIL,
             "%sintegration time %d (balanced) -> %d (integration priority), Y %.1f -> %.1f", RTMSG(it1 > it0 && it0 > 0), it0, it1, s0.y, s1.y);
     }

@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T21 AE strategy is a vendor-equal no-op (#422)
+
+- The vendor tx-isp-t21 module has no AE strategy: its tuning g_ctrl returns 0 for 0x8000022 without writing the value, and the vendor 1.0.33 `IMP_ISP_Tuning_GetAeStrategy` hands back an uninitialised stack word. OpenIMP reads 0 after Set 0/1 with rc 0 and no exposure change. apitest case `aestrategy` checks exactly that on T21 (T20 keeps the full round trip). Device: T21 .27 PASS, T20 .107 PASS (agg68 image).
+
 ## 2026-11-12: apitest base encoder case follows the T10/T20/T21/T30 latch (#421)
 
 - `tools/apitest/at_enc.c`: on T10/T20/T21/T30 the base case reads `GetChnFrmRate` / `GetGOPSize` back after two pictures (the vendor glue latches both to the next picture, #367) and expects the GOP rounded up to a multiple of the frame rate (set 25 at 15 fps reads 30, like the vendor). Library unchanged. Device check (area enc, agg68 image): T10, T20, T21 FAIL 0 (before: 4 FAIL each).
