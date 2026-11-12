@@ -21,6 +21,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `tools/apitest/at_enc.c`: on T10/T20/T21/T30 the base case reads `GetChnFrmRate` / `GetGOPSize` back after two pictures (the vendor glue latches both to the next picture, #367) and expects the GOP rounded up to a multiple of the frame rate (set 25 at 15 fps reads 30, like the vendor). Library unchanged. Device check (area enc, agg68 image): T10, T20, T21 FAIL 0 (before: 4 FAIL each).
 
+## 2026-11-12: T33 platform skeleton: first OpenIMP T33 build (#390, #394; planned, QEMU only)
+
+- New `build-t33.sh`: the T32 platform (`PLATFORM_T32`) plus `PLATFORM_T33` on the T33 libimp 2.0.2.1 API (vendor headers T33/2.0.2.1 for the tuning and ISP-OSD units). T33 deltas: DRIVER_VERSION SoC `PRJ008`, IQ bins `<sensor>-PRJ008-<mode>.bin` in a 0x25800-byte buffer; the BCSH RGB offset and multi-sensor effect calls are not built (the 2.0.2.1 API has no such types). The T32 build is unchanged.
+- QEMU (`-M ingenic-t33`, t33l, cv2005, vendor 3.10.14 kernel, open `tx-isp-t33.ko` of open-tx-isp `claude/t32-ds-batch`): ISP open, AddSensor, EnableSensor, System_Init, IQ bin, FrameSource 20/20 NV12 frames with the colour bars, clean close, 0 oopses. apitest (`PLATFORM=T33`, the T32 apitest on the 2.0.2.1 headers): 207 PASS / 58 FAIL over sys, fs, enc, osd, ivs, isp, cases, 0 oopses; the ISP tuning failures are expected (the T33 module has no tuning ids yet, #389). No T33 camera runs the open stack yet; all T33 cells stay planned.
+
 ## 2026-11-12: `SU_LED_Command` checked with the LED pins of the thingino profiles
 
 - LED GPIOs taken from the thingino camera profiles (dtsi gpio-leds, defconfig `BR2_THINGINO_LED_*`) and confirmed on each test camera (gpio owner labels, thingino_leds parameters, device tree). Vendor flow from the libsysutils disassembly: `/proc/board/power/led<N>` on T10/T20/T21/T23/T41 (T31 1.1.6 does not export it), sysfs GPIO only on T40 1.3.1; no version has a blink command.
