@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T40 HLDC Set device-equal with the open driver (#432)
+
+- open-tx-isp now runs the vendor HLDC set path. Before, `tisp_s_hldc_attr` was an empty tail call; now it is a port of `tisp_hldc_set_attr` and its helpers, with the HLDC init where the vendor calls it. Device run on the T40 test camera: the HLDC registers of the whole `SetHLDCAttr` sequence are identical to the vendor module's, Get reads back like the vendor, and strength changes the picture. Matrix T40 `ISP_Tuning_Get/SetHLDCAttr` err -> dev; no OpenIMP code change.
+
 ## 2026-11-12: T23 GetStream sets pack[0].frameEnd on a complete picture like the vendor (#363)
 
 - The vendor stream thread (`update_h264_one_frmstrm`, T23 1.3.0) sets `frameEnd = 1` on the last pack and then overwrites `pack[0].frameEnd` with the "picture complete" flag, so a whole IDR (SPS, PPS, IDR slice) has 1/0/1. OpenIMP only flagged the last pack outside multi-section mode.

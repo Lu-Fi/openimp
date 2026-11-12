@@ -4745,7 +4745,7 @@
   {
    "number": 433,
    "title": "[T40] C5 guarded device run: SetCameraInputMode, HLDC Set, OSD_Get/SetRgnAttr_ISP",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/433",
    "labels": [
     "area:ISP",
@@ -4756,6 +4756,23 @@
     "type:gap"
    ],
    "created": "2026-11-12T22:40:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 435,
+   "title": "[T41] host test t41_awb_algo_host fails intermittently (assertion at awb_algo_host.c:183)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/435",
+   "labels": [
+    "area:tests",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-11-12T23:55:40Z",
    "closed": null,
    "milestone": null
   }
