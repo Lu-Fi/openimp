@@ -80,11 +80,27 @@ VIDEO_CFG again on the live controller without clearing it, as rcInit does. Proo
 - ROI on H.265: vendor `SetChnROI` (H.265 branch) packs up to 16 regions (7 bytes, coordinates / 16) into
   `I265eReconfig::setRoi`; `ReconfigPFrame` copies them to the i265e parameters, `codec_enc` into block 0x3b (the command
   list builder already programs them). timps: ROI is H.264 only and its tier on T30 is "unsupported" (`src/roi_caps.h`), prudynt sets no ROI.
-- User data SEI on H.265: vendor `InsertUserData` queues it for H.265 channels too (`SEIUserDataUnregistered`); no call in
-  timps or prudynt.
 - The eprc ROI offsets / Gaussian SAS map (E+148/149) and the other A+152 variants: debug switches only, 0 in every
   vendor T30 path (`eprc_default_set_T30`, rcInit does not set them).
 raptor was not checked (UNVERIFIED).
+
+## User data SEI and chroma QP offsets (#399)
+
+Vendor libimp 1.0.5, Ghidra. `IMP_Encoder_InsertUserData` (0xc3ed4) copies the payload into a cache buffer of the channel's
+user-data queue (H.265: the length word, then the bytes; H.264 puts the H.264 UUID in front instead). The encoder group thread
+(`on_encoder_group_data_update`) drains the whole queue before every picture into `i265e` (entry: size, payload type 5, bytes);
+`I265e::sliceEncap` writes, after VPS/SPS/PPS of an IDR and the HRD SEIs, per entry `SEI::write` (payload type 5, size
+16 + length in 0xff steps, `SEIUserDataUnregistered::writeSEI`: the 16-byte `m_uuid_iso_iec_11578` = 2ca2de09-b517-47db-bb55-a4fe7fc2fc4e,
+then the bytes), `writeByteAlignment`, `NALList::serialize` with NAL type 0x27 (prefix SEI), then the slice. OpenIMP:
+`OpenIMP_T30_RadixSetUserData` (the queue of up to 2 payloads of 1024 bytes the channel attribute allows, handed over before each
+picture) and `radix_user_sei`.
+
+`IMP_Encoder_Set/GetH265TransCfg` (0xc5688 / 0xc585c) pass `{cb, cr}` to `i265e_set_param/get_param` 0xe: `I265eReconfig::setTrans`
+stores the pair and flags 0x4000, `ReconfigIdrFrame` copies it to the i265e parameters and `I265e::reset` -> `initPPS` writes it
+into the PPS (`pps_cb_qp_offset` / `pps_cr_qp_offset`) at the next IDR; `getTrans` reads the coded values (default -3 / -3,
+`i265e_param_default`). No range check. OpenIMP: `OpenIMP_T30_RadixSetChromaQp/GetChromaQp`, applied on the next IDR (also
+after a rate-control change); a Set before the first picture is applied when the encoder is created. The Radix command list
+takes the cb offset as before (`RSI_FRAME_CQP_OFFSET`). Host test: `radix_encoder_test`.
 
 ## QEMU proof (2026-11-06)
 

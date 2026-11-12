@@ -8664,6 +8664,9 @@ struct AL_CodecEncode {
     uint32_t t30_radix_restarts;
     int t30_radix_stopped;
     uint64_t t30_radix_retry_ms;
+    /* SetH265TransCfg before the encoder exists (codec_lock-free: API thread
+     * under the channel lock, encoder thread reads at creation) */
+    int h265_cr_qp, h265_cb_qp, h265_qp_set;
 #endif
 #endif
 #if defined(PLATFORM_T23)
@@ -9795,6 +9798,59 @@ static void codec_push_user_data(AL_CodecEncode *enc, T30HelixEncoder *helix)
 }
 #endif
 
+#if defined(CODEC_T30_RADIX)
+/* IMP_Encoder_SetH265TransCfg / GetH265TransCfg (#399): the PPS chroma QP
+ * offsets.  Set is latched (before the first picture the encoder is created
+ * with it, afterwards the next IDR codes it); Get returns what is coded now. */
+int AL_Codec_Encode_SetH265ChromaQp(void *codec, int cr, int cb)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc)
+        return -1;
+    pthread_mutex_lock(&enc->ud_lock);
+    enc->h265_cr_qp = cr;
+    enc->h265_cb_qp = cb;
+    enc->h265_qp_set = 1;
+    if (enc->t30_radix)
+        (void)OpenIMP_T30_RadixSetChromaQp(enc->t30_radix, cr, cb);
+    pthread_mutex_unlock(&enc->ud_lock);
+    return 0;
+}
+
+int AL_Codec_Encode_GetH265ChromaQp(void *codec, int *cr, int *cb)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+    int ret = 0;
+
+    if (!enc || !cr || !cb)
+        return -1;
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->t30_radix)
+        ret = OpenIMP_T30_RadixGetChromaQp(enc->t30_radix, cr, cb);
+    else {
+        /* nothing coded yet: the vendor's I265e exists from CreateChn on
+         * with the defaults (a Set shows after the first IDR) */
+        *cr = -3;
+        *cb = -3;
+    }
+    pthread_mutex_unlock(&enc->ud_lock);
+    return ret;
+}
+
+/* encoder thread, before a picture: the queue into the Radix encoder */
+static void codec_push_user_data_radix(AL_CodecEncode *enc)
+{
+    pthread_mutex_lock(&enc->ud_lock);
+    if (enc->ud_count &&
+        OpenIMP_T30_RadixSetUserData(enc->t30_radix, enc->ud_count, enc->ud_len,
+                                     (const uint8_t (*)[T30_RADIX_USER_DATA_MAX_SIZE])
+                                     enc->ud_data) == 0)
+        enc->ud_count = 0;
+    pthread_mutex_unlock(&enc->ud_lock);
+}
+#endif
+
 int AL_Codec_Encode_SetMbRC(void *codec, int enable)
 {
     if (codec == NULL)
@@ -10538,6 +10594,10 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     memset(enc, 0, sizeof(AL_CodecEncode));
 #if defined(PLATFORM_T30) || defined(PLATFORM_T23)
     pthread_mutex_init(&enc->ud_lock, NULL);
+#endif
+#if defined(CODEC_T30_RADIX)
+    enc->h265_cr_qp = -3;       /* i265e_param_default: chroma QP offsets */
+    enc->h265_cb_qp = -3;
 #endif
     CODEC_STARTUP_MARKER("openimp/codec marker A2 memset returned\n");
     codec_startup_trace("openimp/codec startup: encoder memset done\n");
@@ -11982,6 +12042,12 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             enc->t30_radix_width = width;
             enc->t30_radix_height = height;
             enc->use_hardware = 3;
+            pthread_mutex_lock(&enc->ud_lock);
+            if (enc->h265_qp_set)   /* Set before the encoder existed */
+                (void)OpenIMP_T30_RadixSetChromaQp(enc->t30_radix,
+                                                   enc->h265_cr_qp,
+                                                   enc->h265_cb_qp);
+            pthread_mutex_unlock(&enc->ud_lock);
         }
         {
             /* setters write hw_params on the API thread: a snapshot, as
@@ -11990,6 +12056,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 
             (void)OpenIMP_T30_RadixUpdateParams(enc->t30_radix, &current);
         }
+        codec_push_user_data_radix(enc);
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_RadixRequestIDR(enc->t30_radix);
         if (OpenIMP_T30_RadixEncode(enc->t30_radix,

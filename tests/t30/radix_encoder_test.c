@@ -23,6 +23,7 @@
 
 #include "dma_alloc.h"
 #include "t30/radix/t30_radix_encoder.h"
+#include "t30/radix/t30_radix_hevc.h"
 
 #define FAKE_FD 78
 
@@ -378,6 +379,129 @@ int main(void)
             free((void *)(uintptr_t)s->virt_addr);
             free(s);
         }
+    }
+
+    /* #399 vendor I265eReconfig::setTrans/getTrans: the default chroma QP
+     * offsets are -3/-3, Set is coded from the next IDR on (PPS and Get) */
+    {
+        int cr = 0, cb = 0;
+        HWStreamBuffer *s = NULL;
+        T30HevcChannel tc;
+        T30HevcVps tv;
+        T30HevcSps ts;
+        T30HevcPps tp;
+        uint8_t pbuf[64], want[128];
+        T30HevcBits pb;
+        size_t wl;
+        const uint8_t *pps;
+        uint32_t pps_len = 0;
+
+        assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == -3 && cb == -3);
+        assert(OpenIMP_T30_RadixSetChromaQp(e, 5, -7) == 0);
+        assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == -3 && cb == -3);
+        /* a P picture: still the old values */
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        assert(s->frame_type == HW_FRAME_TYPE_P);
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
+        assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == -3 && cb == -3);
+        assert(OpenIMP_T30_RadixRequestIDR(e) == 0);
+        s = NULL;
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        assert(s->frame_type == HW_FRAME_TYPE_I);
+        assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == 5 && cb == -7);
+        /* the PPS NAL carries them: same writer, same channel, new offsets */
+        memset(&tc, 0, sizeof(tc));
+        tc.width = 640;
+        tc.height = 360;
+        tc.fps_num = 15;
+        tc.fps_den = 1;
+        tc.rc_mode = 1;
+        tc.bitrate = 40000;
+        t30_hevc_channel_params(&tc, &tv, &ts, &tp);
+        tp.cb_qp_offset = -7;
+        tp.cr_qp_offset = 5;
+        t30_hevc_bits_init(&pb, pbuf, sizeof(pbuf));
+        t30_hevc_write_pps(&pb, &tp);
+        t30_hevc_trailing(&pb);
+        wl = t30_hevc_nal(want, sizeof(want), 34, pbuf, pb.len, 1);
+        assert(wl > 4u);
+        pps = nal_find((const uint8_t *)(uintptr_t)s->virt_addr, s->length, 34u, &pps_len);
+        assert(pps && pps_len == wl - 4u && !memcmp(pps, want + 4, pps_len));
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
+        /* a new rate-control change keeps them */
+        {
+            HWEncoderParams up = hp;
+
+            up.bitrate = 2000000;
+            assert(OpenIMP_T30_RadixUpdateParams(e, &up) == 0);
+            assert(OpenIMP_T30_RadixRequestIDR(e) == 0);
+            s = NULL;
+            assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+            assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == 5 && cb == -7);
+            free((void *)(uintptr_t)s->virt_addr);
+            free(s);
+        }
+    }
+
+    /* #399 InsertUserData on an H.265 channel (vendor sliceEncap): one prefix
+     * SEI NAL (type 39) per payload between the parameter sets and the slice:
+     * payload type 5, size 16 + len, the i265e UUID, the bytes, 0x80; the
+     * queue is consumed with that picture */
+    {
+        static const uint8_t uuid[16] = {
+            0x2c, 0xa2, 0xde, 0x09, 0xb5, 0x17, 0x47, 0xdb,
+            0xbb, 0x55, 0xa4, 0xfe, 0x7f, 0xc2, 0xfc, 0x4e };
+        uint32_t lens[2] = { 5, 300 };
+        static uint8_t ud[2][1024];
+        HWStreamBuffer *s = NULL;
+        unsigned int types[8], n;
+        const uint8_t *slice = NULL, *au, *sei;
+        uint32_t slice_len = 0, sl = 0;
+
+        memset(ud, 0, sizeof(ud));
+        memcpy(ud[0], "hello", 5);
+        memset(ud[1], 0xa5, 300);
+        assert(OpenIMP_T30_RadixSetUserData(e, 3, lens, (const uint8_t (*)[1024])ud) != 0);
+        lens[1] = 1025;
+        assert(OpenIMP_T30_RadixSetUserData(e, 2, lens, (const uint8_t (*)[1024])ud) != 0);
+        lens[1] = 300;
+        assert(OpenIMP_T30_RadixSetUserData(e, 2, lens, (const uint8_t (*)[1024])ud) == 0);
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        au = (const uint8_t *)(uintptr_t)s->virt_addr;
+        n = nal_types(au, s->length, types, &slice, &slice_len);
+        assert(s->frame_type == HW_FRAME_TYPE_P);
+        assert(n == 3u && types[0] == 39u && types[1] == 39u && types[2] == 1u);
+        sei = nal_find(au, s->length, 39u, &sl);
+        assert(sei && sl == 2u + 1u + 1u + 16u + 5u + 1u);
+        assert(sei[0] == (39u << 1) && sei[1] == 1u && sei[2] == 5u &&
+               sei[3] == 21u && !memcmp(sei + 4, uuid, 16) &&
+               !memcmp(sei + 20, "hello", 5) && sei[25] == 0x80);
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
+        s = NULL;
+        /* consumed: the next picture has none */
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        n = nal_types((const uint8_t *)(uintptr_t)s->virt_addr, s->length, types,
+                      &slice, &slice_len);
+        assert(n == 1u && types[0] == 1u);
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
+        /* on an IDR: VPS SPS PPS, then the SEI, then the slice */
+        lens[0] = 300;
+        assert(OpenIMP_T30_RadixSetUserData(e, 1, lens, (const uint8_t (*)[1024])ud) == 0);
+        assert(OpenIMP_T30_RadixRequestIDR(e) == 0);
+        s = NULL;
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        n = nal_types((const uint8_t *)(uintptr_t)s->virt_addr, s->length, types,
+                      &slice, &slice_len);
+        assert(n == 5u && types[0] == 32u && types[1] == 33u && types[2] == 34u &&
+               types[3] == 39u && types[4] == 19u);
+        sei = nal_find((const uint8_t *)(uintptr_t)s->virt_addr, s->length, 39u, &sl);
+        assert(sei && sei[2] == 5u && sei[3] == 255u && sei[4] == 61u);   /* 316 */
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
     }
 
     /* a failed RUN: no stream, counted, the next picture works again */

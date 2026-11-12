@@ -85,8 +85,14 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
 }
 void VBMWakeReaders(int chn) { (void)chn; }
 #endif
+static int ud_calls;
 int AL_Codec_Encode_InsertUserData(void *c, const void *d, unsigned int s, unsigned int n, unsigned int m)
-{ (void)c; (void)d; (void)s; (void)n; (void)m; return 0; }
+{ (void)c; (void)d; (void)s; (void)n; (void)m; ud_calls++; return 0; }
+static int h265_calls, h265_cr = -3, h265_cb = -3;
+int AL_Codec_Encode_SetH265ChromaQp(void *c, int cr, int cb)
+{ (void)c; h265_calls++; h265_cr = cr; h265_cb = cb; return 0; }
+int AL_Codec_Encode_GetH265ChromaQp(void *c, int *cr, int *cb)
+{ (void)c; *cr = h265_cr; *cb = h265_cb; return 0; }
 int AL_Codec_Encode_SetJpegSkip(void *c, int a) { (void)c; (void)a; return 0; }
 int AL_Codec_Encode_SetJpegSrcPitch(void *c, uint32_t p) { (void)c; (void)p; return 0; }
 static int jql_calls, jql_en = -1;
@@ -251,6 +257,40 @@ int main(void)
         memset(&sf, 0x5a, sizeof(sf));
         CHECK(IMP_Encoder_GetSuperFrameCfg(2, &sf) == 0 && sf.superIFrmBitsThr == 0x5a5a5a5au);
         CHECK(IMP_Encoder_SetSuperFrameCfg(2, &sf) == 0);
+    }
+
+    /* ---- #399 H.265 channel (T30 1.0.5 0xc5688/0xc585c, InsertUserData 0xc3ed4) ---- */
+    {
+        IMPEncoderCHNAttr hattr;
+        IMPEncoderH265TransCfg tc;
+        char ud[] = "user data";
+
+        make_attr(&hattr, 0);
+        hattr.encAttr.enType = PT_H265;
+        if (IMP_Encoder_CreateChn(3, &hattr) == 0) {
+            int calls0 = h265_calls, ud0 = ud_calls;
+
+            memset(&tc, 0x5a, sizeof(tc));
+            CHECK(IMP_Encoder_GetH265TransCfg(3, &tc) == 0 &&
+                  tc.chroma_cr_qp_offset == -3 && tc.chroma_cb_qp_offset == -3);
+            tc.chroma_cr_qp_offset = 5; tc.chroma_cb_qp_offset = -20;     /* no range check */
+            CHECK(IMP_Encoder_SetH265TransCfg(3, &tc) == 0 && h265_calls == calls0 + 1 &&
+                  h265_cr == 5 && h265_cb == -20);
+            memset(&tc, 0, sizeof(tc));
+            CHECK(IMP_Encoder_GetH265TransCfg(3, &tc) == 0 &&
+                  tc.chroma_cr_qp_offset == 5 && tc.chroma_cb_qp_offset == -20);
+            CHECK(IMP_Encoder_SetH265TransCfg(3, NULL) == -1 && IMP_Encoder_GetH265TransCfg(3, NULL) == -1);
+            /* an H.264 channel: Set does nothing, Get zeros */
+            h265_calls = calls0;
+            CHECK(IMP_Encoder_SetH265TransCfg(0, &tc) == 0 && h265_calls == calls0);
+            memset(&tc, 0x5a, sizeof(tc));
+            CHECK(IMP_Encoder_GetH265TransCfg(0, &tc) == 0 &&
+                  tc.chroma_cr_qp_offset == 0 && tc.chroma_cb_qp_offset == 0);
+            CHECK(IMP_Encoder_InsertUserData(3, ud, (uint32_t)strlen(ud)) == 0 && ud_calls == ud0 + 1);
+            CHECK(IMP_Encoder_DestroyChn(3) == 0);
+        } else {
+            printf("p2_t30_enc_test: H.265 channel not created (skipped)\n");
+        }
     }
 
     /* ---- Get/SetChnCrop (T30 1.0.5 0xc0b18 / 0xc0de0): the T21 code, six channels ---- */

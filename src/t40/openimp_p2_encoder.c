@@ -1460,6 +1460,11 @@ extern int AL_Codec_Encode_SetColor2Grey(void *codec, int enable);
 extern int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
                                   const uint8_t entry[7]);
 extern int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
+#if defined(P2_T30_NATIVE)
+/* IMP_Encoder_Set/GetH265TransCfg on the Radix encoder (#399) */
+extern int AL_Codec_Encode_SetH265ChromaQp(void *codec, int cr, int cb);
+extern int AL_Codec_Encode_GetH265ChromaQp(void *codec, int *cr, int *cb);
+#endif
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
 extern int AL_Codec_Encode_GetChromaQpOffset(void *codec, int *offset);
 #endif
@@ -6518,7 +6523,14 @@ int IMP_Encoder_InsertUserData(int channel, void *data, uint32_t size)
         int ret = -1;
 
         pthread_mutex_lock(&ch->lock);
-        if (ch->codec && ch->codec_type == IMP_ENC_TYPE_AVC)
+        /* libimp 1.0.5 (0xc3ed4): an H.265 channel queues the payload as
+         * well (i265e writes it as a prefix SEI in front of the next
+         * picture's slice, #399) */
+        if (ch->codec && (ch->codec_type == IMP_ENC_TYPE_AVC
+#if defined(P2_T30_NATIVE)
+                          || ch->codec_type == IMP_ENC_TYPE_HEVC
+#endif
+                          ))
             ret = AL_Codec_Encode_InsertUserData(
                 ch->codec, data, size, ch->attr.encAttr.userData.maxUserDataCnt,
                 ch->attr.encAttr.userData.maxUserDataSize);
@@ -7303,7 +7315,30 @@ int IMP_Encoder_GetH264TransCfg(int channel,
 int IMP_Encoder_SetH265TransCfg(int channel,
                                const IMPEncoderH265TransCfg *config)
 {
-#if defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(P2_T30_NATIVE)
+    /* Vendor T30 libimp 1.0.5 (0xc5688, #399): channel below 6, a pointer;
+     * an H.265 channel hands {cb, cr} to i265e (set_param 0xe,
+     * I265eReconfig::setTrans: no range check, coded from the next IDR on),
+     * every other channel returns 0 and does nothing. */
+    {
+        P2EncoderChannel *ch;
+        int ret = 0;
+
+        if (!p2_valid_channel(channel) || channel >= 6 ||
+            !config)
+            return -1;
+        EncoderInit();
+        ch = &p2_channels[channel];
+        pthread_mutex_lock(&ch->lock);
+        if (ch->created && ch->codec && ch->codec_type == IMP_ENC_TYPE_HEVC &&
+            AL_Codec_Encode_SetH265ChromaQp(ch->codec,
+                                            config->chroma_cr_qp_offset,
+                                            config->chroma_cb_qp_offset) != 0)
+            ret = -1;
+        pthread_mutex_unlock(&ch->lock);
+        return ret;
+    }
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
     /* Vendor T21 libimp (1.0.33, disassembled): channel number and pointer
      * are checked, nothing else happens (no range check, nothing stored);
      * T21 has no HEVC encoder.  T30 1.0.5 (0xc5688): the same for every
@@ -7334,7 +7369,33 @@ int IMP_Encoder_SetH265TransCfg(int channel,
 int IMP_Encoder_GetH265TransCfg(int channel,
                                IMPEncoderH265TransCfg *config)
 {
-#if defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#if defined(P2_T30_NATIVE)
+    /* Vendor T30 libimp 1.0.5 (0xc585c, #399): zeroes the 8 bytes; an H.265
+     * channel then reads what i265e codes with now (I265eReconfig::getTrans:
+     * the PPS offsets, default -3 / -3; a Set shows after the next IDR). */
+    {
+        P2EncoderChannel *ch;
+        int ret = 0, cr = 0, cb = 0;
+
+        if (!p2_valid_channel(channel) || channel >= 6 ||
+            !config)
+            return -1;
+        EncoderInit();
+        ch = &p2_channels[channel];
+        memset(config, 0, sizeof(*config));
+        pthread_mutex_lock(&ch->lock);
+        if (ch->created && ch->codec && ch->codec_type == IMP_ENC_TYPE_HEVC) {
+            if (AL_Codec_Encode_GetH265ChromaQp(ch->codec, &cr, &cb) == 0) {
+                config->chroma_cr_qp_offset = cr;
+                config->chroma_cb_qp_offset = cb;
+            } else {
+                ret = -1;
+            }
+        }
+        pthread_mutex_unlock(&ch->lock);
+        return ret;
+    }
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
     /* Vendor T21: clears the 8 bytes and returns 0; T30 1.0.5 (0xc585c)
      * does that for every channel below 6 that is not an H.265 channel */
     if (!p2_valid_channel(channel) || !config)
