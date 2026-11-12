@@ -682,6 +682,19 @@ static void live_common(int chn, int codec)
 #if HAS_IMP_Encoder_SetChnResizeMode
     NEED(IMP_Encoder_SetChnResizeMode) { r = IMP_Encoder_SetChnResizeMode(chn, 0); RET0(IMP_Encoder_SetChnResizeMode, r, "off (no getter)"); }
 #endif
+#if !HAS_IMP_Encoder_SetChnResizeMode && defined(PLATFORM_T30)
+    {   /* T30 1.0.5: exported without a header; any non-zero value = on, a valid channel is never refused (0xc44c8), channel >= 6 -> -1 */
+        int (*rm)(int, int) = (int (*)(int, int))dlsym(dlopen(NULL, RTLD_NOW), "IMP_Encoder_SetChnResizeMode");
+
+        if (rm && codec == CODEC_H264) {
+            int r1 = GATE("resize_on", rm(chn, 1)), r0 = GATE("resize_off", rm(chn, 0)), r5 = GATE("resize_5", rm(chn, 5)), rb = GATE("resize_chn99", rm(99, 0));
+
+            rm(chn, 0);
+            rep(LBL("IMP_Encoder_SetChnResizeMode"), r1 | r0 | r5, (r1 == 0 && r0 == 0 && r5 == 0 && rb == -1) ? V_PASS : V_FAIL,
+                "on %d, off %d, value 5 %d (any non-zero = on), chn 99 %d (no getter)", r1, r0, r5, rb);
+        } else if (!rm) rep_na(LBL("IMP_Encoder_SetChnResizeMode"));
+    }
+#endif
     /* ROI */
 #if HAS_IMP_Encoder_SetChnROI && !defined(APITEST_T32)
     NEED(IMP_Encoder_SetChnROI) {
@@ -1112,13 +1125,13 @@ static void live_old(int chn, int codec)
             IMP_Encoder_RequestIDR(chn); pull(chn, codec, 40, 2, 0, &si, 3000); w0 = si.w; h0 = si.h;
             g->enable = 1; g->x = 16; g->y = 16; g->w = 576; g->h = 320;
             b1->enable = 1; b1->x = 8; b1->y = 0; b1->w = 576; b1->h = 320;
-            bad1 = cset(chn, b1);                                              /* not a multiple of 16 */
+            bad1 = GATE("crop_x8", cset(chn, b1));                                              /* not a multiple of 16 */
             b1->x = 64; b1->w = 1600;
-            bad2 = cset(chn, b1);                                              /* outside the picture */
-            bad3 = cset(chn, NULL);
-            bad4 = cset(99, g);                                                /* invalid channel */
-            rs = cset(chn, g);
-            rg = cget(chn, g2);
+            bad2 = GATE("crop_outside", cset(chn, b1));                                              /* outside the picture */
+            bad3 = GATE("crop_null", cset(chn, NULL));
+            bad4 = GATE("crop_chn99", cset(99, g));                                                /* invalid channel */
+            rs = GATE("crop_set", cset(chn, g));
+            rg = GATE("crop_get", cget(chn, g2));
             for (k = 0; k < 6; k++) { IMP_Encoder_RequestIDR(chn); pull(chn, codec, 40, 2, 0, &si, 3000); if (si.w == 576 && si.h == 320) break; }
             s_w = si.w; s_h = si.h;
             if (getenv("APITEST_CROP_DUMP") && s_w == 576 && s_h == 320 && (g_dump = fopen(getenv("APITEST_CROP_DUMP"), "wb"))) {
