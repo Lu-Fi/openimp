@@ -4319,7 +4319,7 @@
   {
    "number": 363,
    "title": "T23 GetStream: vendor sets pack[0].frameEnd = 1 on a complete picture, OpenIMP only on the last pack",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/363",
    "labels": [],
    "created": "2026-11-11T23:28:40Z",
@@ -4329,7 +4329,7 @@
   {
    "number": 383,
    "title": "T33: driver build skeleton (tx-isp-t33.ko from driver/t32)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/383",
    "labels": [
     "prio:long-term",
@@ -4345,7 +4345,7 @@
   {
    "number": 384,
    "title": "T33: QEMU T33 image + vendor trace oracle",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/384",
    "labels": [
     "prio:long-term",
@@ -4361,7 +4361,7 @@
   {
    "number": 386,
    "title": "T33: vendor libimp 2.0.2.1 on our tx-isp-t33.ko in QEMU",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/386",
    "labels": [
     "prio:long-term",
@@ -4377,7 +4377,7 @@
   {
    "number": 387,
    "title": "T33: IQ bin PRJ008 section table + parser test",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/387",
    "labels": [
     "prio:long-term",
@@ -4525,7 +4525,7 @@
   {
    "number": 413,
    "title": "T33: IVDC direct mode on the open T33 module",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/413",
    "labels": [
     "prio:long-term",
@@ -4573,7 +4573,7 @@
   {
    "number": 420,
    "title": "[T10/T20] IVS gets no frames after an encoder session in the same process since #374 (VBM keep-one-buffer)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/420",
    "labels": [
     "area:FrameSource",
@@ -4591,7 +4591,7 @@
   {
    "number": 421,
    "title": "apitest enc: base GOP/frame-rate round trip expects immediate read-back, T10/T20/T21 latch since #367",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/421",
    "labels": [
     "area:Encoder",
@@ -4610,7 +4610,7 @@
   {
    "number": 422,
    "title": "[T21] SetAeStrategy does not round trip (set 1 reads 0, no exposure change)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/422",
    "labels": [
     "area:AE-AWB",
@@ -4626,7 +4626,7 @@
   {
    "number": 423,
    "title": "[T41] apitest: AF statistics -4090 (FAIL vs N/A label), SetFaceAe weak on gc5603",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/423",
    "labels": [
     "area:ISP",
@@ -4644,7 +4644,7 @@
   {
    "number": 424,
    "title": "[T40] t40dev W6_AeMaxIntegrationTime: IT cap accepted, running integration time unchanged",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/424",
    "labels": [
     "area:AE-AWB",
@@ -4706,6 +4706,56 @@
     "type:bug"
    ],
    "created": "2026-11-12T20:18:49Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 429,
+   "title": "T32/T33: /dev/tx-isp G_REGISTER, frame drop and internal channel attr ioctls of the vendor libimp not served",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/429",
+   "labels": [
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-12T21:08:17Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 432,
+   "title": "[T40] SetHLDCAttr: strength never applied (tisp_s_hldc_attr is an empty tail call)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/432",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-11-12T22:38:48Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 433,
+   "title": "[T40] C5 guarded device run: SetCameraInputMode, HLDC Set, OSD_Get/SetRgnAttr_ISP",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/433",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-11-12T22:40:10Z",
    "closed": null,
    "milestone": null
   }

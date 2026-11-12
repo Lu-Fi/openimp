@@ -474,6 +474,19 @@ int t40dev_main(int argc, char **argv)
         wo.rmode = IMPISP_TYPE_RUN_LINEAR; wo.imode = IMPISP_TYPE_WDR_DOL;
         wdr_open_rc = IMP_ISP_WDR_OPEN(IMPVI_MAIN, &wo);
     }
+    static int camin_rc = -99, camin_grc = -99; static IMPISPCameraInputMode camin_get;
+    if (mask & 0x4000000) {
+        /* C5 (user-approved guarded device run 2026-11-12): the documented place (after ISP_Open, before AddSensor),
+         * the single-sensor setting of this board's running stack: one sensor, bypass (no dual mode), no switch,
+         * not joint.  No dual mode and no joint mode are sent (they reroute the second sensor input). */
+        IMPISPCameraInputMode cm;
+        memset(&cm, 0, sizeof cm);
+        cm.sensor_num = IMPISP_TOTAL_ONE; cm.dual_mode = IMPISP_DUALSENSOR_SIGLE_BYPASS_MODE;
+        cm.dual_mode_switch.en = IMPISP_TUNING_OPS_MODE_DISABLE; cm.joint_mode = IMPISP_NOT_JOINT;
+        MK(); camin_rc = IMP_ISP_SetCameraInputMode(&cm);
+        memset(&camin_get, 0x5a, sizeof camin_get);
+        camin_grc = IMP_ISP_GetCameraInputMode ? IMP_ISP_GetCameraInputMode(&camin_get) : -1000;
+    }
     r = IMP_ISP_AddSensor(IMPVI_MAIN, &sinfo);    R("ISP_AddSensor", OK(!r), "rc=%d", r);
     r = IMP_ISP_EnableSensor(IMPVI_MAIN, &sinfo); R("ISP_EnableSensor", OK(!r), "rc=%d", r);
     if (r) goto down;
@@ -1762,6 +1775,113 @@ int t40dev_main(int argc, char **argv)
         R("OSD_RgnAttr_ISP_args", OK(f1 == -1 && f2 == -1 && f3 == -1 && a1 == -1 && a2 == -1), "Set: sensor 2 rc=%d, NULL rc=%d, type 9 rc=%d; Get: sensor 2 rc=%d, NULL rc=%d (all -1); valid regions not drawn", f1, f2, f3, a1, a2);
         stream_for(1.0, &e);
         R("t40mx_stream_after", OK(e.frames > 10), "%u frames/1 s after the argument checks", e.frames);
+    }
+
+    if (mask & 0x4000000) {
+        stream_for(2.0, &e);
+        R("ISP_SetCameraInputMode", OK(camin_rc == 0 && camin_grc == 0 && camin_get.sensor_num == IMPISP_TOTAL_ONE && camin_get.dual_mode == 0 &&
+                                       camin_get.joint_mode == 0 && e.frames > 20),
+          "before AddSensor: one sensor/bypass/no switch/not joint rc=%d; Get rc=%d sensor_num %d dual_mode %d switch en %d joint 0x%x; sensor up, %u frames/2 s",
+          camin_rc, camin_grc, (int)camin_get.sensor_num, (int)camin_get.dual_mode, (int)camin_get.dual_mode_switch.en, (unsigned)camin_get.joint_mode, e.frames);
+    }
+
+    if (mask & 0x8000000) {
+        /* C5 HLDC Set (guarded device run): Get the default, Set the same values back (round trip), then strength 255
+         * and 0 with the default centre (picture change measured against the frame-to-frame noise), then the
+         * default again.  Module control read around each Set (the vendor s_ctrl clears bypass bit 20 = HLDC). */
+        static uint8_t ref[ (FW / 4) * (FH / 4) ], cur[ (FW / 4) * (FH / 4) ];
+        IMPISPHLDCAttr h0, hs, hg; IMPISPModuleCtl mc0, mc1; int g0, s1, g1, s2, s3, s4, g4, rm0, rm1;
+        double n0, d255, d0, dback;
+        #define SNAPY(buf) do { IMPFrameInfo *f_ = NULL; unsigned x_, y_; drain_stale(); usleep(200000); drain_stale(); \
+            if (!IMP_FrameSource_GetFrame(CH, &f_) && f_) { const uint8_t *Y_ = (const uint8_t *)(uintptr_t)f_->virAddr; \
+              for (y_ = 0; y_ < FH / 4; y_++) for (x_ = 0; x_ < FW / 4; x_++) (buf)[y_ * (FW / 4) + x_] = Y_[(y_ * 4) * f_->width + x_ * 4]; \
+              IMP_FrameSource_ReleaseFrame(CH, f_); } } while (0)
+        #define YDIFF(a, b) ({ double s_ = 0; unsigned k_; for (k_ = 0; k_ < sizeof(a); k_++) s_ += fabs_d((double)(a)[k_] - (b)[k_]); s_ / sizeof(a); })
+        memset(&h0, 0, sizeof h0); memset(&mc0, 0, sizeof mc0); memset(&mc1, 0, sizeof mc1);
+        g0 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &h0);
+        rm0 = IMP_ISP_Tuning_GetModuleControl ? IMP_ISP_Tuning_GetModuleControl(IMPVI_MAIN, &mc0) : -1000;
+        SNAPY(ref); usleep(500000); SNAPY(cur); n0 = YDIFF(ref, cur);
+        hs = h0; MK(); s1 = IMP_ISP_Tuning_SetHLDCAttr(IMPVI_MAIN, &hs);
+        memset(&hg, 0, sizeof hg); g1 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hg);
+        rm1 = IMP_ISP_Tuning_GetModuleControl ? IMP_ISP_Tuning_GetModuleControl(IMPVI_MAIN, &mc1) : -1000;
+        usleep(1000000); SNAPY(cur); { double dsame = YDIFF(ref, cur);
+        printf("  C5 HLDC default %d %dx%d centre %d,%d (rc %d); same-value Set rc=%d Get rc=%d -> %d %dx%d %d,%d; bypass HLDC %d -> %d (rc %d/%d); diff noise %.2f same %.2f\n",
+               h0.strength, h0.width, h0.height, h0.center_w, h0.center_h, g0, s1, g1, hg.strength, hg.width, hg.height, hg.center_w, hg.center_h,
+               mc0.bitBypassHLDC, mc1.bitBypassHLDC, rm0, rm1, n0, dsame); }
+        hs = h0; hs.strength = 255; MK(); s2 = IMP_ISP_Tuning_SetHLDCAttr(IMPVI_MAIN, &hs);
+        memset(&hg, 0, sizeof hg); IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hg); { int st255 = hg.strength;
+        usleep(1500000); SNAPY(cur); d255 = YDIFF(ref, cur);
+        hs = h0; hs.strength = 0; MK(); s3 = IMP_ISP_Tuning_SetHLDCAttr(IMPVI_MAIN, &hs);
+        memset(&hg, 0, sizeof hg); IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hg); { int st0 = hg.strength;
+        usleep(1500000); SNAPY(cur); d0 = YDIFF(ref, cur);
+        hs = h0; MK(); s4 = IMP_ISP_Tuning_SetHLDCAttr(IMPVI_MAIN, &hs);
+        memset(&hg, 0, sizeof hg); g4 = IMP_ISP_Tuning_GetHLDCAttr(IMPVI_MAIN, &hg);
+        usleep(1500000); SNAPY(cur); dback = YDIFF(ref, cur);
+        stream_for(2.0, &e);
+        {
+            int rcok = !g0 && !s1 && !g1 && !s2 && !s3 && !s4 && !g4;
+            int rbok = st255 == 255 && st0 == 0 && hg.strength == h0.strength;
+            int eff = d255 > n0 * 2 + 1.0 || d0 > n0 * 2 + 1.0;
+            R("ISP_Tuning_SetHLDCAttr", (rcok && rbok && eff && dback < n0 * 2 + 1.0 && e.frames > 20) ? "PASS" : (rcok && e.frames > 20 ? "PART" : "FAIL"),
+              "rc get/set-same/get/255/0/default/get %d/%d/%d/%d/%d/%d/%d; read back 255->%d 0->%d default->%d (want %d); picture diff vs default: noise %.2f, strength 255 %.2f, 0 %.2f, back %.2f; %u frames/2 s",
+              g0, s1, g1, s2, s3, s4, g4, st255, st0, hg.strength, h0.strength, n0, d255, d0, dback, e.frames);
+        } } }
+        #undef SNAPY
+        #undef YDIFF
+    }
+
+    if (mask & 0x10000000) {
+        /* C5 IMP_OSD_Set/GetRgnAttr_ISP (guarded device run): OSD_REG_ISP_COVER (white cover on ch1 block 0) and
+         * OSD_REG_ISP_LINE_RECT (green window on ch1 unit 0) set through the OSD wrapper, measured in the picture,
+         * Get after each (reads the draw, the ISP OSD and the mask parts; the ISP OSD getter oopsed in QEMU, so it
+         * comes last), then both off. */
+        static IMPOSDRgnAttr ra, rg;
+        IMPISP_MASK_BLOCK_PAR *mb = &ra.osdispdraw.stCoverAttr.mask_chx[CH][0];
+        IMPISPDrawUnitAttr *du = &ra.osdispdraw.stDrawAttr.draw_chx[CH][0];
+        int rs1, rs2, rs3, rs4, rgc = -99, rgd = -99, sh = -1, sh2 = -1; double cy0, cy1, cy2, wy0, wu0, wv0, wy1, wu1, wv1, wy2, wu2, wv2, ey, eu, ev;
+        int m0, m1, m2;
+        cy0 = region_y(MX(0.3125), MY(0.278), MX(0.234), MY(0.278));
+        memset(&ra, 0, sizeof ra); ra.type = OSD_REG_ISP_COVER;
+        mb->mask_en = 1; mb->mask_pos_left = MX(0.3125); mb->mask_pos_top = MY(0.278); mb->mask_width = MX(0.234); mb->mask_height = MY(0.278);
+        mb->mask_type = IMPISP_MASK_TYPE_RGB; mb->mask_value.mask_argb.r_value = 255; mb->mask_value.mask_argb.g_value = 255; mb->mask_value.mask_argb.b_value = 255;
+        MK(); rs1 = IMP_OSD_SetRgnAttr_ISP(0, &ra, 0);
+        usleep(1500000);
+        cy1 = region_y(MX(0.3125), MY(0.278), MX(0.234), MY(0.278));
+        printf("  C5 RgnISP cover set rc=%d region Y %.1f -> %.1f\n", rs1, cy0, cy1);
+        m0 = rect_mean(200, 500, 400, 4, &wy0, &wu0, &wv0);
+        memset(&ra, 0, sizeof ra); ra.type = OSD_REG_ISP_LINE_RECT;
+        du->type = IMP_ISP_DRAW_WIND; du->color_type = IMPISP_MASK_TYPE_RGB; du->draw_cfg.wind.wind_enable = 1;
+        du->draw_cfg.wind.wind_left = 200; du->draw_cfg.wind.wind_top = 500; du->draw_cfg.wind.wind_width = 400; du->draw_cfg.wind.wind_height = 150;
+        du->draw_cfg.wind.wind_color.mask_argb.g_value = 255; du->draw_cfg.wind.wind_line_width = 4; du->draw_cfg.wind.wind_alpha = 4;
+        MK(); rs2 = IMP_OSD_SetRgnAttr_ISP(0, &ra, 1);
+        ey = du->draw_cfg.wind.wind_color.mask_ayuv.y_value; eu = du->draw_cfg.wind.wind_color.mask_ayuv.u_value; ev = du->draw_cfg.wind.wind_color.mask_ayuv.v_value;
+        usleep(800000);
+        m1 = rect_mean(200, 500, 400, 4, &wy1, &wu1, &wv1);
+        printf("  C5 RgnISP rect set rc=%d top edge Y/U/V %.1f/%.1f/%.1f -> %.1f/%.1f/%.1f (lib yuv %.0f/%.0f/%.0f)\n", rs2, wy0, wu0, wv0, wy1, wu1, wv1, ey, eu, ev);
+        if (!getenv("T40D_NO_RGNGET")) {
+            memset(&rg, 0, sizeof rg); MK(); rgc = IMP_OSD_GetRgnAttr_ISP(0, &rg, &sh);
+            printf("  C5 RgnISP get rc=%d show %d cover en %d %ux%u at %u,%u; draw en %d %ux%u at %u,%u G %u\n", rgc, sh,
+                   rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_en, rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_width, rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_height,
+                   rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_pos_left, rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_pos_top,
+                   rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_enable, rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_width,
+                   rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_height, rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_left,
+                   rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_top, rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_color.mask_argb.g_value);
+            rgd = !(rgc == 0 && sh == 1 && rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_en == 1 && rg.osdispdraw.stCoverAttr.mask_chx[CH][0].mask_width == MX(0.234) &&
+                    rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_enable == 1 && rg.osdispdraw.stDrawAttr.draw_chx[CH][0].draw_cfg.wind.wind_width == 400);
+        }
+        memset(&ra, 0, sizeof ra); ra.type = OSD_REG_ISP_LINE_RECT; MK(); rs3 = IMP_OSD_SetRgnAttr_ISP(0, &ra, 0);
+        memset(&ra, 0, sizeof ra); ra.type = OSD_REG_ISP_COVER; MK(); rs4 = IMP_OSD_SetRgnAttr_ISP(0, &ra, 0);
+        usleep(1500000);
+        cy2 = region_y(MX(0.3125), MY(0.278), MX(0.234), MY(0.278));
+        m2 = rect_mean(200, 500, 400, 4, &wy2, &wu2, &wv2);
+        if (!getenv("T40D_NO_RGNGET")) { memset(&rg, 0, sizeof rg); IMP_OSD_GetRgnAttr_ISP(0, &rg, &sh2); }
+        stream_for(2.0, &e);
+        R("OSD_SetRgnAttr_ISP", OK(!rs1 && !rs2 && !rs3 && !rs4 && !m0 && !m1 && !m2 && fabs_d(cy1 - 235) < 40 && fabs_d(cy2 - cy0) < 25 &&
+                                   ((ey || eu || ev) ? (fabs_d(wy1 - ey) < 6 && fabs_d(wu1 - eu) < 6 && fabs_d(wv1 - ev) < 6) : (wu1 < wu0 - 20 && wv1 < wv0 - 20)) && fabs_d(wu2 - wu0) + fabs_d(wv2 - wv0) < 30 && e.frames > 20),
+          "cover rc=%d region Y %.1f -> %.1f -> off %.1f; rect rc=%d top edge Y/U/V %.1f/%.1f/%.1f -> %.1f/%.1f/%.1f (want %.0f/%.0f/%.0f) -> off %.1f/%.1f/%.1f; off rc=%d/%d; %u frames/2 s",
+          rs1, cy0, cy1, cy2, rs2, wy0, wu0, wv0, wy1, wu1, wv1, ey, eu, ev, wy2, wu2, wv2, rs3, rs4, e.frames);
+        if (getenv("T40D_NO_RGNGET")) R("OSD_GetRgnAttr_ISP", "SKIP", "T40D_NO_RGNGET set");
+        else R("OSD_GetRgnAttr_ISP", OK(!rgd && sh2 == 0), "rc=%d show %d (want 1) cover/rect read back %s; after off show %d (want 0)", rgc, sh, rgd ? "WRONG" : "equal", sh2);
     }
 
     if (mask & 0x1000) {

@@ -3482,6 +3482,11 @@ api_links:
   - Virt_to_Phys
 - soc: T40
   issues:
+  - 432
+  functions:
+  - ISP_Tuning_Get/SetHLDCAttr
+- soc: T40
+  issues:
   - 61
   functions:
   - DMIC_*
