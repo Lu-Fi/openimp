@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T30 H.265 Set/GetChnROI vendor-equal (#404)
+
+- Vendor T30 libimp 1.0.5 (Ghidra): H.265 `SetChnROI` goes to a pending i265e table (`I265eReconfig::setRoi`, index 0..15), a picture adopts it (`ReconfigPFrame`) and `codec_enc` hands the live table to the Radix command list; `GetChnROI` reads the live table, so it is zero until a picture was encoded. OpenIMP stored nothing for H.265 and showed the region of an earlier H.264 channel in the same slot (apitest `enc`, T30X b62/b63).
+- Fix: the same pending/live tables in codec-t40.c, `OpenIMP_T30_RadixSetRoi` feeds the live table to the command list every picture (the ROI is now programmed into the H.265 picture as the vendor does), and a new channel clears its ROI table. Host tests: p2_t30_enc_test (H.265 Set, zero Get before a picture, region after, index rules) and radix_encoder_test (control byte and box in the command list).
+
 ## 2026-11-12: T31 H.265 FixQP picture no longer garbage (#403)
 
 - Cause: for FixQP the T31 PPS had `cu_qp_delta_enabled_flag` 0 (tied to the hardware RC, which FixQP turns off), but the T31 HEVC core codes `cu_qp_delta_abs` in every CU anyway (as found earlier on T40/T41). Decoders misparsed the IDR from the first CTB on (ffmpeg silent, VA-API failed, picture garbage). Vendor libimp 1.1.6 FixQP PPS (capture on cam-A): `cu_qp_delta_enabled_flag` 1, `diff_cu_qp_delta_depth` 0.

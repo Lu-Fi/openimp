@@ -42,6 +42,10 @@ int OpenIMP_T30_RadixUpdateParams(T30RadixEncoder *encoder,
  * initPPS); Get returns what the encoder codes with now.  No range check, as
  * the vendor. */
 int OpenIMP_T30_RadixSetChromaQp(T30RadixEncoder *encoder, int cr, int cb);
+/* IMP_Encoder_SetChnROI on an H.265 channel (#404): the live i265e ROI table
+ * (16 x {enable, relative, qp s8, x0, x1, y0, y1}, macroblocks), copied to
+ * the slice info of every picture (vendor codec_enc).  Call between pictures. */
+int OpenIMP_T30_RadixSetRoi(T30RadixEncoder *encoder, const uint8_t roi[16][7]);
 int OpenIMP_T30_RadixGetChromaQp(const T30RadixEncoder *encoder, int *cr,
                                  int *cb);
 /* IMP_Encoder_InsertUserData on an H.265 channel (#399): the queue the
