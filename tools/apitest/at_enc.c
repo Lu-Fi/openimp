@@ -528,8 +528,8 @@ static void live_common(int chn, int codec)
         pull(chn, codec, 40, 1, 0, &si, 2000);
         CHECK(IMP_Encoder_RequestIDR, r, si.idr > 0, "%s: IDR %s within %d frames", cname[codec], si.idr ? "seen" : "NOT seen", si.frames);
     }
-    /* frame rate */
-    NEED(IMP_Encoder_SetChnFrmRate) {
+    /* frame rate (APITEST_SKIP_FRMRATE=1 leaves it out: T30 SIGFPE after a frame-rate change, #366) */
+    if (!getenv("APITEST_SKIP_FRMRATE")) NEED(IMP_Encoder_SetChnFrmRate) {
         G(IMPEncoderFrmRate, f);
         IMPEncoderFrmRate nf = { 10, 1 }, of = { EFPS, 1 };
         int r2;
@@ -1094,7 +1094,7 @@ static void live_old(int chn, int codec)
         gfree(g); gfree(g2);
     }
 # endif
-# if !HAS_IMP_Encoder_GetChnCrop && (defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21))
+# if !HAS_IMP_Encoder_GetChnCrop && (defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30))
     {   /* IMP_Encoder_Get/SetChnCrop: exported by the T10/T20/T21 libimp without a header, so resolved with dlsym.  The window (multiples of 16) is the visible
          * rectangle of the stream (SPS frame cropping); the check reads the SPS size back from the stream */
         typedef struct { unsigned char enable, pad[3]; uint32_t x, y, w, h; } CropCfg;

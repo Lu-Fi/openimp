@@ -3,7 +3,9 @@
  * through the P2 API (src/t40/openimp_p2_encoder.c against a stub codec),
  * the values of the vendor T30 1.0.5 libimp (camera A/B audit/t30/b1-all,
  * disassembly: IMP_Encoder_SetChnROI 0xc1ec0, GetChnROI 0xc22e8,
- * SetSuperFrameCfg 0xc4c60, GetSuperFrameCfg 0xc4eb8).
+ * SetSuperFrameCfg 0xc4c60, GetSuperFrameCfg 0xc4eb8); Get/SetChnCrop and
+ * SetPadFrameAttr/PadFrame (2026-11-11, #308: 0xc0b18/0xc0de0, 0xc2bcc/0xc2d2c
+ * in the Ghidra numbering of project t30lib).
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -143,6 +145,11 @@ int AL_Codec_Encode_SetCrop(void *c, int e, uint32_t x, uint32_t y, uint32_t w, 
 { (void)c; crop_calls++; crop_en = e; crop_v[0] = x; crop_v[1] = y; crop_v[2] = w; crop_v[3] = h; return 0; }
 int AL_Codec_Encode_GetCrop(void *c, int *e, uint32_t *x, uint32_t *y, uint32_t *w, uint32_t *h)
 { (void)c; *e = crop_en; *x = crop_v[0]; *y = crop_v[1]; *w = crop_v[2]; *h = crop_v[3]; return 0; }
+int IMP_Encoder_SetPadFrameAttr(int channel, int enable, const void *attr);
+int IMP_Encoder_PadFrame(int channel, void *frame, void *priv,
+                         void (*release)(void *frame, void *priv));
+static int pad_released;
+static void pad_release(void *frame, void *priv) { (void)frame; (void)priv; pad_released++; }
 static int trig_calls, trig_mode;
 static float trig_level;
 int AL_Codec_Encode_SetRcTrig(void *c, float l, int m)
@@ -243,6 +250,60 @@ int main(void)
         memset(&sf, 0x5a, sizeof(sf));
         CHECK(IMP_Encoder_GetSuperFrameCfg(2, &sf) == 0 && sf.superIFrmBitsThr == 0x5a5a5a5au);
         CHECK(IMP_Encoder_SetSuperFrameCfg(2, &sf) == 0);
+    }
+
+    /* ---- Get/SetChnCrop (T30 1.0.5 0xc0b18 / 0xc0de0): the T21 code, six channels ---- */
+    {
+        IMPEncoderCropCfg cc, rc;
+
+        memset(&cc, 0, sizeof(cc));
+        cc.enable = 1; cc.x = 16; cc.y = 16; cc.w = 576; cc.h = 320;
+        CHECK(IMP_Encoder_SetChnCrop(0, NULL) == -1 && IMP_Encoder_SetChnCrop(6, &cc) == -1);
+        CHECK(IMP_Encoder_GetChnCrop(6, &rc) == -1);
+        cc.y = 8;                                   /* not a multiple of 16 */
+        CHECK(IMP_Encoder_SetChnCrop(0, &cc) == -1 && crop_calls == 0);
+        cc.enable = 0;                              /* the check also with enable 0 */
+        CHECK(IMP_Encoder_SetChnCrop(0, &cc) == -1 && crop_calls == 0);
+        cc.enable = 1; cc.y = 16; cc.w = 1600;      /* outside the 640x360 picture */
+        CHECK(IMP_Encoder_SetChnCrop(0, &cc) == -1 && crop_calls == 0);
+        cc.w = 576;
+        CHECK(IMP_Encoder_SetChnCrop(5, &cc) == 0 && crop_calls == 0);   /* never created: 0 */
+        memset(&rc, 0xff, sizeof(rc));
+        CHECK(IMP_Encoder_GetChnCrop(5, &rc) == 0 && !rc.enable && !rc.x && !rc.y && !rc.w && !rc.h);
+        CHECK(IMP_Encoder_SetChnCrop(0, &cc) == 0);
+        CHECK(crop_calls == 1 && crop_en == 1 && crop_v[0] == 16 && crop_v[1] == 16 &&
+              crop_v[2] == 576 && crop_v[3] == 320);
+        memset(&rc, 0, sizeof(rc));
+        CHECK(IMP_Encoder_GetChnCrop(0, &rc) == 0 && rc.enable && rc.x == 16 && rc.y == 16 &&
+              rc.w == 576 && rc.h == 320);
+        cc.enable = 0;
+        CHECK(IMP_Encoder_SetChnCrop(0, &cc) == 0 && crop_calls == 2 && crop_en == 0);
+        CHECK(IMP_Encoder_GetChnCrop(0, NULL) == -1);
+    }
+
+    /* ---- SetPadFrameAttr / PadFrame (T30 1.0.5 0xc2bcc / 0xc2d2c): T21 design ---- */
+    {
+        uint32_t pattr[8] = { 0, 1, 1000, 0, 0, 0, 0, 0 };
+        IMPFrameInfo pf;
+
+        memset(&pf, 0, sizeof(pf));
+        CHECK(IMP_Encoder_SetPadFrameAttr(6, 1, pattr) == -1);
+        CHECK(IMP_Encoder_SetPadFrameAttr(5, 1, pattr) == 0);           /* idle: 0, nothing stored */
+        CHECK(IMP_Encoder_SetPadFrameAttr(0, 1, pattr) == 0);
+        /* not registered to a group / not receiving: refused, frame handed back */
+        pad_released = 0;
+        CHECK(IMP_Encoder_PadFrame(0, &pf, NULL, pad_release) == -1 && pad_released == 1);
+        CHECK(IMP_Encoder_PadFrame(6, &pf, NULL, pad_release) == -1 && pad_released == 2);
+        CHECK(IMP_Encoder_PadFrame(0, NULL, NULL, pad_release) == -1 && pad_released == 3);
+        if (IMP_Encoder_RegisterChn(0, 0) == 0 && IMP_Encoder_StartRecvPic(0) == 0) {
+            CHECK(IMP_Encoder_PadFrame(0, &pf, NULL, pad_release) == 0 && pad_released == 3);
+            CHECK(IMP_Encoder_SetPadFrameAttr(0, 0, NULL) == 0);
+            /* disabled: refused and released */
+            CHECK(IMP_Encoder_PadFrame(0, &pf, NULL, pad_release) == -1 && pad_released == 4);
+            CHECK(IMP_Encoder_StopRecvPic(0) == 0);
+        } else {
+            CHECK(!"RegisterChn/StartRecvPic");
+        }
     }
 
     if (failures) {

@@ -4192,7 +4192,7 @@ static void cs_secprobe_t23(void) {}
 
 /* T23 / T21-family encoder helpers without a header (stock T23 1.3.0, T21 1.0.33, T20 + T10 3.12.0): checks and results of
  * the stock calls */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10) || defined(PLATFORM_T30)
 extern int IMP_Encoder_SetRdBufShare(int chn, int enable);
 extern int IMP_Encoder_SetPoolSize(int size);
 extern int IMP_Encoder_EnableAllNCUDenoise(void);
@@ -4862,7 +4862,7 @@ static void cs_sensorattr_t40(void) {}
  * a black NV12 picture (rmem) as pad frame.  Free mode (attr word 1 = 0): the black picture is encoded instead of the scene -> much smaller
  * frames, every pad frame released.  Time-stamp mode with stale pad frames (time stamp 1): nothing encoded, the pad frames come back.
  * Pad off: the scene again. */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || defined(PLATFORM_T10) || defined(PLATFORM_T30)
 static volatile int g_pad_run, g_pad_rel, g_pad_inflight;
 static uint64_t g_pad_ts;
 static IMPFrameInfo g_pad_fi[4];
@@ -5446,7 +5446,7 @@ static void cs_osdalloc_t23(void) {}
 #endif
 
 
-#if defined(PLATFORM_T23) || defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
 /* IMP_Decoder_* (#11; T10/T20/T21 #3 #5 #7): JPEG decode on channel 0 (stock: ijpegd on the VPU; OpenIMP without the OEM worker: its own baseline decoder).
  * A 32x24 JFIF 4:2:0 picture, left half yellow (Y 208, Cb 33, Cr 143), right half blue (Y 70, Cb 201, Cr 107), decoded to NV12. */
 static const unsigned char at_dec_jpg[] = {
@@ -5632,6 +5632,29 @@ static void cs_decoder_t23(void) {}
 #endif
 
 
+#if defined(PLATFORM_T30)
+/* IMP_ISP_Tuning_SetISPLDC (T30 1.0.5 0xd56f0, #308): the link graph is rebuilt with link 2 (LDC block) for ENABLE and
+ * link 0 for DISABLE (link ioctls d3, d1, d0, d2).  The case checks the return codes and that frames flow after each call
+ * (QEMU: no LDC picture effect is modelled). */
+static void cs_ldc_t30(void)
+{
+    int (*set)(int) = (int (*)(int))dsym("IMP_ISP_Tuning_SetISPLDC");
+
+    if (set) {
+        Fst base = fst(800), on, off;
+        int r1, f1, r0, f0, ms = 0;
+
+        r1 = set(1); on = recover(base.y, &ms); f1 = flow();
+        r0 = set(0); off = recover(base.y, &ms); f0 = flow();
+        rep(LBL("IMP_ISP_Tuning_SetISPLDC"), r1 | r0, (r1 == 0 && r0 == 0 && f1 && f0) ? V_PASS : V_FAIL,
+            "rt: ENABLE -> %d (frames %s, Y %.1f), DISABLE -> %d (frames %s, Y %.1f), base Y %.1f",
+            r1, f1 ? "flow" : "STOP", on.y, r0, f0 ? "flow" : "STOP", off.y, base.y);
+    } else rep_na(LBL("IMP_ISP_Tuning_SetISPLDC"));
+}
+#else
+static void cs_ldc_t30(void) {}
+#endif
+
 #if defined(PLATFORM_T23)
 /* ISP_Tuning_SetWB_ALGO (#10, control 0x800000c): no getter.  Stock 1.3.0 passes the algorithm number through (num < 4 checked per sensor);
  * the open driver stores 0..2 and always returns 0 (no picture effect, class d, documented), so the case checks the return codes and that
@@ -5655,7 +5678,7 @@ static void cs_wbalgo_t23(void) {}
 
 
 /* IMP_Decoder_* on T10/T20/T21: the same case as T23 (OpenIMP's software JPEG decoder), run under the case name decoder_t2x. */
-#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
 static void cs_decoder_t2x(void) { cs_decoder_t23(); }
 #else
 static void cs_decoder_t2x(void) {}
@@ -6609,7 +6632,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -6743,6 +6766,7 @@ void t_cases(void)
     if (cs_on("decoder_t23")) cs_decoder_t23(); wdog("cases", 60);
 #endif
     if (cs_on("wbalgo_t23")) cs_wbalgo_t23(); wdog("cases", 90);
+    if (cs_on("ldc_t30")) cs_ldc_t30(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("framedrop_t40")) cs_framedrop_t40(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("ratiohang_t40")) cs_ratiohang_t40(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("awbctstart_t40")) cs_awbctstart_t40(); wdog("cases", 60);

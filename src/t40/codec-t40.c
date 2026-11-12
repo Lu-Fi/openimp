@@ -48,7 +48,7 @@
 #include "device_pool.h"
 #include "dma_alloc.h"
 
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T30) /* T10/T20/T21 and the real T30 */
 #include <pthread.h>
 static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
@@ -9546,8 +9546,8 @@ int AL_Codec_Encode_SetRcExtras(void *codec, const void *rcMode)
     return 0;
 }
 
-#if defined(PLATFORM_T21)
-/* IMP_Encoder_SetChnCrop / GetChnCrop (T10/T20/T21): stored here, applied by the
+#if defined(PLATFORM_T30) /* T10/T20/T21 and the real T30 */
+/* IMP_Encoder_SetChnCrop / GetChnCrop (T10/T20/T21, T30): stored here, applied by the
  * encoding thread between pictures (SPS frame cropping, the next picture is
  * an IDR).  The caller validated the rectangle. */
 int AL_Codec_Encode_SetCrop(void *codec, int enable, uint32_t x, uint32_t y,
@@ -10383,7 +10383,7 @@ static int codec_t30_helix_create(AL_CodecEncode *enc, uint32_t width,
     enc->t30_helix_width = width;
     enc->t30_helix_height = height;
     enc->use_hardware = 3;
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T30) /* T10/T20/T21 and the real T30 */
     /* a re-created encoder starts without the crop: hand it over again */
     pthread_mutex_lock(&codec_crop_lock);
     enc->crop_pending = enc->crop_enable;
@@ -11970,7 +11970,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             uint8_t roi[8][7];
 
             (void)OpenIMP_T30_HelixUpdateParams(enc->t30_helix, &current);
-#if defined(PLATFORM_T21)
+#if defined(PLATFORM_T30) /* T10/T20/T21 and the real T30 */
             {
                 int cp, ce;
                 uint32_t cx, cy, cw, ch;

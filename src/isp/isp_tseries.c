@@ -2218,6 +2218,53 @@ int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable)
     return -1;
 }
 
+#if defined(PLATFORM_T30)
+/* T30 1.0.5 IMP_ISP_Tuning_SetISPLDC (0xd56f0 in the Ghidra numbering of
+ * project t30lib): four ioctls on the ISP device, each failure logged and -1:
+ * link stream off (0x800456d3, no argument), destroy the links (0x800456d1,
+ * &-1), create link 2 (with the LDC block) for any non-zero mode or link 0
+ * for 0 (0x800456d0), link stream on (0x800456d2).  No S_CTRL, no state kept
+ * in the library.  The open tx_isp_t30 driver serves links 0..2 (OEM configs
+ * table).  As in SetISPBypass the open library starts the sensor at the first
+ * EnableChn, so the sensor is started first when that has not happened. */
+int IMP_ISP_Tuning_SetISPLDC(IMPISPTuningOpsMode enable)
+{
+    ISPDevice *isp;
+    int32_t destroy_arg = -1;
+    int32_t link_arg;
+    int step = 0;
+
+    if (tseries_get_isp(&isp) != 0) {
+        imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+            "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x4ed,
+            "IMP_ISP_Tuning_SetISPLDC", "ISP device is not opened\n");
+        return -1;
+    }
+    if (tseries_isp_stream_started == 0) {
+        ++step;
+        if (ioctl(isp->fd, TISP_VIDIOC_ENABLE_SENSOR, 0) != 0)
+            goto fail;
+    }
+    link_arg = enable ? 2 : 0;
+    if ((++step, ioctl(isp->fd, TISP_VIDIOC_DISABLE_LINKS, 0)) != 0 ||
+        (++step, ioctl(isp->fd, TISP_VIDIOC_DESTROY_LINKS, &destroy_arg)) != 0 ||
+        (++step, ioctl(isp->fd, TISP_VIDIOC_CREATE_LINKS, &link_arg)) != 0 ||
+        (++step, ioctl(isp->fd, TISP_VIDIOC_ENABLE_LINKS, 0)) != 0)
+        goto fail;
+    tseries_bypass_graph_active = 0;
+    tseries_bypass_link_setup_done = 1;
+    tseries_isp_stream_started = 1;
+    kmsg_trace("libimp/ISP: SetISPLDC link %d ok\n", link_arg);
+    return 0;
+fail:
+    imp_log_fun(6, IMP_Log_Get_Option(), 2, "IMP-ISP",
+        "/home/user/git/proj/sdk-lv3/src/imp/isp/isp_tseries.c", 0x4f3,
+        "IMP_ISP_Tuning_SetISPLDC", "SetISPLDC: link rebuild failed at step %d (errno %d)\n",
+        step, errno);
+    return -1;
+}
+#endif
+
 int ISP_EnsureLinkStreamOn(int32_t sensor_idx)
 {
     ISPDevice *isp;
