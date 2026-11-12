@@ -175,6 +175,24 @@ void t_fs_post(void)
     at_td_step("IMP_FrameSource_DestroyChn(0)"); r = IMP_FrameSource_DestroyChn(0); RET0(IMP_FrameSource_DestroyChn, r, "ch0");
 }
 
+int at_gate(const char *name)
+{
+    const char *sk = getenv("APITEST_SKIP");
+    size_t n = strlen(name);
+
+    if (getenv("APITEST_TRACE")) { fprintf(stderr, "[trace] %s\n", name); fflush(stderr); }
+    while (sk && *sk) {
+        const char *e = strchr(sk, ',');
+        size_t l = e ? (size_t)(e - sk) : strlen(sk);
+
+        if (l == n && !strncmp(sk, name, n)) return 1;
+        sk += l + (e ? 1 : 0);
+    }
+    return 0;
+}
+
+int at_stock(void) { const char *v = getenv("APITEST_VENDOR"); return v && *v == '1'; }
+
 /* one frame of FS channel ch: size and timestamp (frame released again) */
 int fs_peek(int ch, int *w, int *h, int64_t *ts)
 {
