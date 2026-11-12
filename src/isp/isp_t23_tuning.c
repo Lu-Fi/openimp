@@ -1279,9 +1279,8 @@ int openimp_t23_isp_is_day(void)
 }
 
 /* Sensor frame rate: packed (num << 16 | den), no tuning state check; the
- * result also retimes the frame source.  The stock library additionally
- * notifies a registered custom AE algorithm; OpenIMP's custom AE hook does
- * not take that callback. */
+ * result also retimes the frame source and, like the stock library,
+ * notifies an active custom AE library (IMP_ISP_SetAeAlgoFunc). */
 int IMP_ISP_MultiCamera_Tuning_SetSensorFPS(int num, uint32_t fps_num,
                                             uint32_t fps_den)
 {
@@ -1299,6 +1298,7 @@ int IMP_ISP_MultiCamera_Tuning_SetSensorFPS(int num, uint32_t fps_num,
     t23_fps_num = fps_num;
     t23_fps_den = fps_den;
     set_framesource_fps((int32_t)fps_num, (int32_t)fps_den);
+    tseries_algo_notify_fps();      /* vendor 0x63378: an active custom AE gets FPS_CHANGE */
     return 0;
 }
 

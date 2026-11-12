@@ -385,6 +385,7 @@ int main(int argc, char **argv)
     ret = IMP_ISP_Open();
     rep(FN(IMP_ISP_Open), ret, ret < 0 ? V_FAIL : V_PASS, "");
     if (ret >= 0) { ret = IMP_ISP_AddSensor(&g_sensor); RET0(IMP_ISP_AddSensor, ret, "sensor %s", g_sensor.name); }
+    if (ret >= 0) algo_pre_t2x();          /* custom AE/AWB records (case customalgo_t23 / _t31): the vendor starts them at EnableSensor */
     if (ret >= 0) { ret = IMP_ISP_EnableSensor(); RET0(IMP_ISP_EnableSensor, ret, ""); }
 #endif
     if (ret < 0) { printf("[E] ISP open/add/enable sensor failed\n"); return 1; }
@@ -450,6 +451,9 @@ int main(int argc, char **argv)
     at_td_disarm();
 #if defined(APITEST_T40) || defined(PLATFORM_T41)
     algo_post_t40();
+#endif
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    algo_post_t2x();
 #endif
 #if defined(PLATFORM_T41) && !defined(APITEST_T40)
     rawvic_post_t41();

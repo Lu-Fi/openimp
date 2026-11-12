@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/prctl.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -1446,10 +1447,12 @@ static IMPISPModuleCtl tseries_module_ctl;
 static IMPISPFrontCrop tseries_front_crop;
 static IMPISPAETargetList tseries_ae_target_list;
 #endif /* !PLATFORM_T23 */
+#if !defined(PLATFORM_T23) && !defined(PLATFORM_T31) /* T23/T31: ts_algo_* (vendor custom algo flow) */
 static void *tseries_ae_func_tmp;
 static void *tseries_awb_func_tmp;
 static int32_t tseries_ae_algo_en;
 static int32_t tseries_awb_algo_en;
+#endif
 
 static int tseries_get_isp(ISPDevice **out);
 #if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
@@ -1983,6 +1986,9 @@ int IMP_ISP_Tuning_SetSensorFPS(uint32_t fps_num, uint32_t fps_den)
     if (result == 0) {
         tseries_sensor_fps_num = fps_num;
         tseries_sensor_fps_den = fps_den;
+#if defined(PLATFORM_T31)
+        tseries_algo_notify_fps();
+#endif
     }
     return result;
 }
@@ -5024,6 +5030,277 @@ int IMP_ISP_SetFixedContraster(int mode)
 }
 #endif
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+/* Custom AE / AWB algorithm library (IMP_ISP_SetAeAlgoFunc / IMP_ISP_SetAwbAlgoFunc), the
+ * flow of the vendor libimp T23 1.3.0 and T31 1.1.6 (Ghidra headless, 2026-11-12; same code on
+ * both, T23 0x7173c.. / T31 0xa7a90..):
+ *   SetAe/AwbAlgoFunc(func)        copy the 5-pointer record {priv, open, close, handle, notify},
+ *                                  mark it pending, return 0 (no ioctl).
+ *   IMP_ISP_EnableSensor           *_internal for a pending record before the sensor ioctls:
+ *                                  AE  ioctl 0x800456dd {0x336ac, 0, IMPISPAeInitAttr} (the driver
+ *                                      fills the init attribute), open(priv, init), worker;
+ *                                  AWB ioctl 0xc00456e3 (no argument), open(priv), worker.
+ *                                  Refused (-1) while the sensor is already enabled.
+ *   AE worker (impisp_algo_thread1) ioctl 0x800456db: buffer {cookie, 0, IMPISPAeInfo} (0x7d8),
+ *                                  handle(priv, info, attr), integration time in us (unit 1) ->
+ *                                  lines with the sensor words at info+1984 / +1988, ioctl
+ *                                  0x800456dc {cookie, 0, IMPISPAeAttr}; ends on an ioctl error.
+ *   AWB worker (impisp_algo_thread5) ioctl 0xc00456e1 {cookie, 0, IMPISPAwbInfo} (0x2c3),
+ *                                  handle(priv, info, attr), ioctl 0xc00456e2 {cookie, 0, attr}.
+ *   IMP_ISP_DisableSensor          *_close: cancel + join the worker, ioctl 0x800456de /
+ *                                  0xc00456e4, close(priv), the record is gone.
+ *   IMP_ISP_Tuning_SetSensorFPS    notify(priv, IMPISP_AE_NOTIFY_FPS_CHANGE, NULL) of an active AE.
+ * Differences (documented): NULL records are refused with -1 and a missing callback is skipped (the
+ * vendor dereferences them); the AE open gets priv_data like every other callback (the vendor passes
+ * the address of its copy of priv_data, a slip); a us -> lines divisor of 0 leaves the time as it
+ * is (the vendor traps: SIGFPE); a failed registration leaves nothing pending for DisableSensor (the
+ * vendor joins a thread it never started).  OPENIMP_ISP_ALGO_FUNC=0 answers -1 / ENOTSUP (as T40/T41).
+ * Statistics, the write-back and the effect are the ISP driver's (open-tx-isp T23 / T31). */
+#define TS_ALGO_COOKIE 0x336acU
+#define TS_AE_GET 0x800456dbU
+#define TS_AE_SET 0x800456dcU
+#define TS_AE_OPEN 0x800456ddU
+#define TS_AE_CLOSE 0x800456deU
+#define TS_AWB_GET 0xc00456e1U
+#define TS_AWB_SET 0xc00456e2U
+#define TS_AWB_OPEN 0xc00456e3U
+#define TS_AWB_CLOSE 0xc00456e4U
+#define TS_AE_INFO_BYTES 0x7d8          /* whole get buffer, header included */
+#define TS_AWB_INFO_BYTES 0x2c3
+#define TS_AE_VTS_OFF 0x7c8             /* buffer offsets the vendor worker divides by */
+#define TS_AE_FPS_OFF 0x7cc
+
+typedef struct {
+    void *priv;
+    void (*open)(void);             /* AE: int (*)(priv, init); AWB: int (*)(priv) */
+    void (*close)(void *priv);
+    void (*handle)(void *priv, const void *info, void *attr);
+    int (*notify)(void *priv, int what, void *data);
+} TSeriesAlgoRec;
+
+typedef struct {
+    TSeriesAlgoRec rec;
+    int pending;                    /* vendor ae/awb flag: set by SetAlgoFunc, cleared by the close */
+    int running;                    /* worker started */
+    pthread_t thread;
+    int fd;
+} TSeriesAlgo;
+
+static TSeriesAlgo ts_algo_ae, ts_algo_awb;
+static uint32_t ts_algo_ae_open_buf[32];        /* {cookie, 0, IMPISPAeInitAttr} (0x80 bytes) */
+static pthread_mutex_t ts_algo_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static int ts_algo_enabled(void)
+{
+    const char *e = getenv("OPENIMP_ISP_ALGO_FUNC");
+
+    return !e || atoi(e) != 0;
+}
+
+static int ts_algo_set(TSeriesAlgo *a, const void *func)
+{
+    if (!ts_algo_enabled()) {
+        errno = ENOTSUP;
+        return -1;
+    }
+    if (func == NULL)
+        return -1;
+    pthread_mutex_lock(&ts_algo_lock);
+    memcpy(&a->rec, func, sizeof(a->rec));
+    a->pending = 1;
+    pthread_mutex_unlock(&ts_algo_lock);
+    return 0;
+}
+
+int IMP_ISP_SetAeAlgoFunc(void *func)
+{
+    return ts_algo_set(&ts_algo_ae, func);
+}
+
+int IMP_ISP_SetAwbAlgoFunc(void *func)
+{
+    return ts_algo_set(&ts_algo_awb, func);
+}
+
+static uint32_t ts_rd32(const unsigned char *p)
+{
+    uint32_t v;
+
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+
+static void *ts_algo_ae_worker(void *arg)
+{
+    TSeriesAlgo *a = arg;
+    uint32_t buf[(TS_AE_INFO_BYTES + 3) / 4];
+    uint32_t set[14];               /* cookie, 0, IMPISPAeAttr (12 words) */
+    uint32_t *attr = set + 2;
+
+    prctl(PR_SET_NAME, (unsigned long)"impisp_algo", 0, 0, 0);
+    memset(buf, 0, sizeof(buf));
+    memset(set, 0, sizeof(set));
+    buf[0] = TS_ALGO_COOKIE;
+    set[0] = TS_ALGO_COOKIE;
+    for (;;) {
+        pthread_testcancel();
+        if (ioctl(a->fd, TS_AE_GET, buf) != 0) {
+            fprintf(stderr, "openimp-algo: AE get handle ioctl failed: %s\n", strerror(errno));
+            break;
+        }
+        if (a->rec.handle)
+            a->rec.handle(a->rec.priv, (const unsigned char *)buf + 8, attr);
+        if (attr[1] == 1) {         /* AeIntegrationTimeUnit == ISP_CORE_EXPR_UNIT_US */
+            uint32_t vts = ts_rd32((const unsigned char *)buf + TS_AE_VTS_OFF);
+            uint32_t fps = ts_rd32((const unsigned char *)buf + TS_AE_FPS_OFF);
+            uint32_t d = vts ? (((fps & 0xffffU) * 1000000U) / vts) * (fps >> 16) : 0;
+
+            if (d) {
+                attr[2] /= d;       /* AeIntegrationTime */
+                attr[6] /= d;       /* AeShortIntegrationTime */
+            }
+        }
+        if (ioctl(a->fd, TS_AE_SET, set) != 0) {
+            fprintf(stderr, "openimp-algo: AE set handle ioctl failed: %s\n", strerror(errno));
+            break;
+        }
+    }
+    return NULL;
+}
+
+static void *ts_algo_awb_worker(void *arg)
+{
+    TSeriesAlgo *a = arg;
+    uint32_t buf[(TS_AWB_INFO_BYTES + 3) / 4 + 1];
+    uint32_t set[6];                /* cookie, 0, IMPISPAwbAttr (4 words) */
+
+    prctl(PR_SET_NAME, (unsigned long)"impisp_algo", 0, 0, 0);
+    memset(buf, 0, sizeof(buf));
+    memset(set, 0, sizeof(set));
+    buf[0] = TS_ALGO_COOKIE;
+    set[0] = TS_ALGO_COOKIE;
+    for (;;) {
+        pthread_testcancel();
+        if (ioctl(a->fd, TS_AWB_GET, buf) != 0) {
+            fprintf(stderr, "openimp-algo: AWB get handle ioctl failed: %s\n", strerror(errno));
+            break;
+        }
+        if (a->rec.handle)
+            a->rec.handle(a->rec.priv, (const unsigned char *)buf + 8, set + 2);
+        if (ioctl(a->fd, TS_AWB_SET, set) != 0) {
+            fprintf(stderr, "openimp-algo: AWB set handle ioctl failed: %s\n", strerror(errno));
+            break;
+        }
+    }
+    return NULL;
+}
+
+static int ts_algo_internal(TSeriesAlgo *a, int ae)
+{
+    ISPDevice *isp;
+    int ret = -1;
+
+    if (tseries_get_isp(&isp) != 0 || isp->opened >= 2) {
+        pthread_mutex_lock(&ts_algo_lock);
+        a->pending = 0;
+        pthread_mutex_unlock(&ts_algo_lock);
+        return -1;
+    }
+    pthread_mutex_lock(&ts_algo_lock);
+    if (!a->pending || a->running) {
+        pthread_mutex_unlock(&ts_algo_lock);
+        return a->running ? 0 : -1;
+    }
+    a->fd = isp->fd;
+    if (ae) {
+        memset(ts_algo_ae_open_buf, 0, sizeof(ts_algo_ae_open_buf));
+        ts_algo_ae_open_buf[0] = TS_ALGO_COOKIE;
+        if (ioctl(isp->fd, TS_AE_OPEN, ts_algo_ae_open_buf) == 0) {
+            if (a->rec.open)
+                ((int (*)(void *, void *))a->rec.open)(a->rec.priv, ts_algo_ae_open_buf + 2);
+            ret = 0;
+        }
+    } else if (ioctl(isp->fd, TS_AWB_OPEN, 0) == 0) {
+        if (a->rec.open)
+            ((int (*)(void *))a->rec.open)(a->rec.priv);
+        ret = 0;
+    }
+    if (ret == 0 && pthread_create(&a->thread, NULL, ae ? ts_algo_ae_worker : ts_algo_awb_worker, a) == 0) {
+        a->running = 1;
+    } else {
+        fprintf(stderr, "openimp-algo: %s open failed: %s\n", ae ? "AE" : "AWB", strerror(errno));
+        a->pending = 0;
+        ret = -1;
+    }
+    pthread_mutex_unlock(&ts_algo_lock);
+    return ret;
+}
+
+int IMP_ISP_SetAeAlgoFunc_internal(void *func)
+{
+    (void)func;                     /* the pending record */
+    return ts_algo_internal(&ts_algo_ae, 1);
+}
+
+int IMP_ISP_SetAwbAlgoFunc_internal(void *func)
+{
+    (void)func;
+    return ts_algo_internal(&ts_algo_awb, 0);
+}
+
+static int ts_algo_close(TSeriesAlgo *a, unsigned int close_cmd)
+{
+    uint32_t req[2] = { TS_ALGO_COOKIE, 0 };
+    int ret = 0;
+
+    pthread_mutex_lock(&ts_algo_lock);
+    if (!a->running) {
+        a->pending = 0;
+        pthread_mutex_unlock(&ts_algo_lock);
+        return 0;
+    }
+    pthread_cancel(a->thread);
+    pthread_join(a->thread, NULL);
+    a->running = 0;
+    if (ioctl(a->fd, close_cmd, req) == 0) {
+        a->pending = 0;
+        if (a->rec.close)
+            a->rec.close(a->rec.priv);
+    } else {
+        fprintf(stderr, "openimp-algo: close ioctl 0x%x failed: %s\n", close_cmd, strerror(errno));
+        ret = -1;
+    }
+    pthread_mutex_unlock(&ts_algo_lock);
+    return ret;
+}
+
+int IMP_ISP_SetAeAlgoFunc_close(void)
+{
+    return ts_algo_close(&ts_algo_ae, TS_AE_CLOSE);
+}
+
+int IMP_ISP_SetAwbAlgoFunc_close(void)
+{
+    return ts_algo_close(&ts_algo_awb, TS_AWB_CLOSE);
+}
+
+/* IMP_ISP_Tuning_SetSensorFPS succeeded (vendor: notify(priv, 0, NULL) while the AE flag is set) */
+void tseries_algo_notify_fps(void)
+{
+    int (*notify)(void *, int, void *) = NULL;
+    void *priv = NULL;
+
+    pthread_mutex_lock(&ts_algo_lock);
+    if (ts_algo_ae.pending && ts_algo_ae.running) {
+        notify = ts_algo_ae.rec.notify;
+        priv = ts_algo_ae.rec.priv;
+    }
+    pthread_mutex_unlock(&ts_algo_lock);
+    if (notify)
+        notify(priv, 0, NULL);
+}
+
+#else /* !(T23 || T31) */
 int IMP_ISP_SetAeAlgoFunc(void *func)
 {
     if (func == NULL) {
@@ -5133,6 +5410,7 @@ int IMP_ISP_SetAwbAlgoFunc_close(void)
 
     return 0;
 }
+#endif /* T23 || T31 custom algo */
 
 #if defined(PLATFORM_T30)
 int32_t IMP_Alloc(void *info, int32_t size, const char *name);
@@ -5201,6 +5479,13 @@ int IMP_ISP_EnableSensor(void)
         return -1;
     }
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    /* vendor: the pending custom AE / AWB records are registered before the sensor ioctls */
+    if (ts_algo_ae.pending)
+        IMP_ISP_SetAeAlgoFunc_internal(NULL);
+    if (ts_algo_awb.pending)
+        IMP_ISP_SetAwbAlgoFunc_internal(NULL);
+#else
     if (tseries_ae_algo_en != 0 && tseries_ae_func_tmp != NULL) {
         IMP_ISP_SetAeAlgoFunc_internal(tseries_ae_func_tmp);
     }
@@ -5208,6 +5493,7 @@ int IMP_ISP_EnableSensor(void)
     if (tseries_awb_algo_en != 0 && tseries_awb_func_tmp != NULL) {
         IMP_ISP_SetAwbAlgoFunc_internal(tseries_awb_func_tmp);
     }
+#endif
 
 #if defined(PLATFORM_T20)
     if (ioctl(isp->fd, 0x40045626U, &sensor_index) != 0 || sensor_index < 0) {
@@ -5302,6 +5588,12 @@ int IMP_ISP_DisableSensor(void)
         return -1;
     }
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    if (ts_algo_ae.pending)
+        IMP_ISP_SetAeAlgoFunc_close();
+    if (ts_algo_awb.pending)
+        IMP_ISP_SetAwbAlgoFunc_close();
+#else
     if (tseries_ae_algo_en != 0) {
         IMP_ISP_SetAeAlgoFunc_close();
     }
@@ -5309,6 +5601,7 @@ int IMP_ISP_DisableSensor(void)
     if (tseries_awb_algo_en != 0) {
         IMP_ISP_SetAwbAlgoFunc_close();
     }
+#endif
 
     if (ioctl(isp->fd, TISP_VIDIOC_DISABLE_LINKS, 0) != 0) {
         kmsg_trace("libimp/ISP: DisableSensor DISABLE_LINKS failed errno=%d\n", errno);

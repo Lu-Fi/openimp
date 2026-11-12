@@ -5023,6 +5023,182 @@ void algo_pre_t40(void) {}
 void algo_post_t40(void) {}
 #endif
 
+/* T23 / T31 (same vendor flow, single sensor API): case customalgo_t23 / customalgo_t31.  IMP_ISP_SetAeAlgoFunc /
+ * IMP_ISP_SetAwbAlgoFunc register before IMP_ISP_EnableSensor (algo_pre_t2x in the main flow), the case checks open / handle /
+ * notify and that the callback results move the exposure (IMP_ISP_Tuning_GetExpr + picture luma) and the white balance (picture
+ * chroma), algo_post_t2x the close after DisableSensor.  The libraries start with "no change" (change = 0). */
+#if (defined(PLATFORM_T23) || defined(PLATFORM_T31)) && !defined(APITEST_T40) && !defined(PLATFORM_T41)
+#ifdef PLATFORM_T23
+#define C2_SFX "_t23"
+#else
+#define C2_SFX "_t31"
+#endif
+static volatile int g2_ae_open, g2_ae_close, g2_ae_handle, g2_ae_notify, g2_awb_open, g2_awb_close, g2_awb_handle;
+static volatile int g2_ae_phase, g2_awb_phase;
+static volatile uint32_t g2_ae_req_it, g2_ae_req_ag, g2_awb_req_r, g2_awb_req_b;
+static volatile uint32_t g2_init_it, g2_init_ag, g2_init_maxit, g2_init_maxag, g2_info_it, g2_info_ag, g2_awb_info_r, g2_awb_info_b;
+static int g2_reg_ae = -99, g2_reg_awb = -99, g2_gate_rc = -99, g2_gate_errno;
+
+static int ae2_open(void *p, IMPISPAeInitAttr *a) { (void)p; g2_init_it = a->AeIntegrationTime; g2_init_ag = a->AeAGain; g2_init_maxit = a->AeMaxIntegrationTime; g2_init_maxag = a->AeMaxAGain; g2_ae_open++; return 0; }
+static void ae2_close(void *p) { (void)p; g2_ae_close++; }
+static void ae2_handle(void *p, const IMPISPAeInfo *i, IMPISPAeAttr *a)
+{
+    (void)p;
+    g2_info_it = i->AeIntegrationTime; g2_info_ag = i->AeAGain;
+    memset(a, 0, sizeof(*a));
+    if (g2_ae_phase) {
+        a->change = 1; a->AeIntegrationTimeUnit = ISP_CORE_EXPR_UNIT_LINE;
+        a->AeIntegrationTime = g2_ae_req_it; a->AeAGain = g2_ae_req_ag; a->AeDGain = 1024; a->AeIspDGain = 1024;
+    }
+    g2_ae_handle++;
+}
+static int ae2_notify(void *p, IMPISPAeNotify n, void *d) { (void)p; (void)d; if (n == IMPISP_AE_NOTIFY_FPS_CHANGE) g2_ae_notify++; return 0; }
+static int awb2_open(void *p) { (void)p; g2_awb_open++; return 0; }
+static void awb2_close(void *p) { (void)p; g2_awb_close++; }
+static void awb2_handle(void *p, const IMPISPAwbInfo *i, IMPISPAwbAttr *a)
+{
+    (void)p;
+    g2_awb_info_r = i->cur_r_gain; g2_awb_info_b = i->cur_b_gain;
+    memset(a, 0, sizeof(*a));
+    if (g2_awb_phase) { a->change = 1; a->r_gain = g2_awb_req_r; a->b_gain = g2_awb_req_b; }
+    g2_awb_handle++;
+}
+static int awb2_notify(void *p, IMPISPAwbNotify n, void *d) { (void)p; (void)n; (void)d; return 0; }
+
+void algo_pre_t2x(void)
+{
+    static IMPISPAeAlgoFunc ae = { NULL, ae2_open, ae2_close, ae2_handle, ae2_notify };
+    static IMPISPAwbAlgoFunc awb = { NULL, awb2_open, awb2_close, awb2_handle, awb2_notify };
+
+    if (!getenv("APITEST_CASES") || !strstr(getenv("APITEST_CASES"), "customalgo" C2_SFX))
+        return;
+    setenv("OPENIMP_ISP_ALGO_FUNC", "0", 1);      /* switched off: -1 / ENOTSUP, nothing is registered */
+    if (IMP_ISP_SetAeAlgoFunc) { errno = 0; g2_gate_rc = IMP_ISP_SetAeAlgoFunc(&ae); g2_gate_errno = errno; }
+    unsetenv("OPENIMP_ISP_ALGO_FUNC");
+    if (IMP_ISP_SetAeAlgoFunc) g2_reg_ae = IMP_ISP_SetAeAlgoFunc(&ae);
+    if (IMP_ISP_SetAwbAlgoFunc) g2_reg_awb = IMP_ISP_SetAwbAlgoFunc(&awb);
+}
+
+void algo_post_t2x(void)
+{
+    if (g2_reg_ae == -99 && g2_reg_awb == -99)
+        return;
+    rep(LBL("customalgo_close" C2_SFX), 0, (g2_ae_close == 1 && g2_awb_close == 1) ? V_PASS : V_FAIL,
+        "after DisableSensor: AE close called %d, AWB close called %d (want 1 and 1), handle calls AE %d AWB %d", g2_ae_close, g2_awb_close, g2_ae_handle, g2_awb_handle);
+}
+
+static long g2_it(void)
+{
+    IMPISPExpr e;
+
+    memset(&e, 0, sizeof(e));
+    if (!IMP_ISP_Tuning_GetExpr || IMP_ISP_Tuning_GetExpr(&e) != 0) return -1;
+    return e.g_attr.integration_time;
+}
+
+static void cs_customalgo_t2x(void)
+{
+    int i, n0, n1;
+
+    if (g2_reg_ae == -99 && g2_reg_awb == -99) {
+        rep(LBL("customalgo" C2_SFX), 0, V_SKIP, "records are installed before EnableSensor: select this case with APITEST_CASES=customalgo" C2_SFX);
+        return;
+    }
+    rep(LBL("customalgo_gate" C2_SFX), g2_gate_rc, g2_gate_rc == 0 ? V_NA : (g2_gate_rc == -1 && g2_gate_errno == ENOTSUP) ? V_PASS : V_FAIL,
+        "with OPENIMP_ISP_ALGO_FUNC=0 SetAeAlgoFunc answers -1 / ENOTSUP (got %d, errno %d; ret 0 = the vendor library, no switch: not measurable)", g2_gate_rc, g2_gate_errno);
+    for (i = 0; i < 50 && (g2_ae_handle < 5 || g2_awb_handle < 5); i++) usleep(100000);
+    n0 = g2_ae_handle; usleep(1000000); n1 = g2_ae_handle;
+    printf("[I] customalgo%s: init it %u ag %u max it %u max ag %u; info it %u ag %u; awb info r %u b %u; handle AE %d (+%d in 1 s) AWB %d\n", C2_SFX,
+           g2_init_it, g2_init_ag, g2_init_maxit, g2_init_maxag, g2_info_it, g2_info_ag, g2_awb_info_r, g2_awb_info_b, g2_ae_handle, n1 - n0, g2_awb_handle);
+    NEED(IMP_ISP_SetAeAlgoFunc) {
+        rep(FN(IMP_ISP_SetAeAlgoFunc), g2_reg_ae, (g2_reg_ae == 0 && g2_ae_open == 1 && g2_ae_handle >= 5 && n1 > n0 && n1 - n0 < 200 && flow()) ? V_PASS : V_FAIL,
+            "registered before EnableSensor: ret %d, open called %d (init it %u ag %u max it %u), handle called %d times (%d in 1 s; < 200 = paced by the frames), frames flow",
+            g2_reg_ae, g2_ae_open, g2_init_it, g2_init_ag, g2_init_maxit, g2_ae_handle, n1 - n0);
+    }
+    NEED(IMP_ISP_SetAwbAlgoFunc) {
+        rep(FN(IMP_ISP_SetAwbAlgoFunc), g2_reg_awb, (g2_reg_awb == 0 && g2_awb_open == 1 && g2_awb_handle >= 5 && flow()) ? V_PASS : V_FAIL,
+            "registered before EnableSensor: ret %d, open called %d, handle called %d times, frames flow", g2_reg_awb, g2_awb_open, g2_awb_handle);
+    }
+    NEED(IMP_ISP_Tuning_SetSensorFPS) {
+        uint32_t on = 0, od = 0;
+        int g = IMP_ISP_Tuning_GetSensorFPS ? IMP_ISP_Tuning_GetSensorFPS(&on, &od) : -1;
+        int r = IMP_ISP_Tuning_SetSensorFPS(15, 1);
+
+        usleep(500000);
+        if (g == 0 && on && od) IMP_ISP_Tuning_SetSensorFPS(on, od);
+        rep(LBL("customalgo_notify" C2_SFX), r, (r == 0 && g2_ae_notify >= 1) ? V_PASS : V_FAIL,
+            "SetSensorFPS 15/1 -> the active AE library got IMPISP_AE_NOTIFY_FPS_CHANGE %d time(s) (vendor: notify(priv, 0, NULL) after a successful set); fps %u/%u restored",
+            g2_ae_notify, on, od);
+    }
+    if (g2_reg_ae == 0 && g2_ae_handle >= 5) {
+        static const int div[] = { 32, 16, 8, 4, 2, 1 };
+        Fst yb = { 0 }, yd, yg, yr;
+        long it_b, it_d, it_g, it_r;
+        uint32_t maxit = g2_init_maxit ? g2_init_maxit : 1000, base = 2, dark, gain = 1024 * 6;
+        int k, ok1, ok2, ok3, found = 0;
+        IMPISPExpr ex;
+
+        memset(&ex, 0, sizeof(ex));             /* no limit in the init attribute (a fresh module): the sensor's from GetExpr */
+        if (!g2_init_maxit && IMP_ISP_Tuning_GetExpr && IMP_ISP_Tuning_GetExpr(&ex) == 0 && ex.g_attr.integration_time_max)
+            maxit = ex.g_attr.integration_time_max;
+
+        usleep(1500000);
+        for (k = 0; k < 6; k++) {                       /* ramp the requested integration time until the picture is well exposed */
+            base = maxit / div[k] > 2 ? maxit / div[k] : 2;
+            g2_ae_req_it = base; g2_ae_req_ag = 1024; g2_ae_phase = 1;
+            usleep(2500000);
+            yb = fst(500);
+            if (yb.ok && yb.y >= 60.0) { found = 1; break; }
+        }
+        it_b = g2_it();
+        dark = base / 6 > 2 ? base / 6 : 1;
+        g2_ae_req_it = dark; usleep(3000000);           /* a sixth of the exposure time */
+        yd = fst(1000); it_d = g2_it();
+        ok1 = found && yd.ok && yd.y < yb.y * 0.7 && it_d >= (long)dark * 85 / 100 && it_d <= (long)dark * 115 / 100 + 1;
+        if (g2_init_maxag && gain > g2_init_maxag) gain = g2_init_maxag;
+        g2_ae_req_ag = gain; usleep(3000000);           /* the short exposure with ~6x analog gain */
+        yg = fst(1000); it_g = g2_it();
+        ok2 = yg.ok && yd.ok && yg.y > yd.y + 15.0;
+        g2_ae_req_it = base; g2_ae_req_ag = 1024; usleep(3000000);   /* back to the base exposure */
+        yr = fst(1000); it_r = g2_it();
+        ok3 = yr.ok && yb.ok && dabs(yr.y - yb.y) < 0.25 * yb.y + 8;
+        g2_ae_phase = 0;
+        rep(LBL("customalgo_ae_effect" C2_SFX), 0, (found && ok1 && ok2 && ok3 && flow()) ? V_PASS : V_FAIL,
+            "AE callback result vs sensor: base req it %u ag 1024 (GetExpr it %ld) luma %.1f%s | req it %u -> GetExpr it %ld luma %.1f (want < 0.7x base) | req it %u ag %u -> it %ld luma %.1f (want > +15) | back to base -> it %ld luma %.1f (base %.1f) | steps %d/%d/%d",
+            base, it_b, yb.y, found ? "" : " (NO well exposed base found)", dark, it_d, yd.y, dark, gain, it_g, yg.y, it_r, yr.y, yb.y, ok1, ok2, ok3);
+        usleep(2000000);                                /* the own AE takes over again only at the close: hold "no change" */
+    }
+    if (g2_reg_awb == 0 && g2_awb_handle >= 5) {
+        IMPISPWB wb;
+        Fst yb, yr, yu, yz;
+        uint32_t cr = 0x100, cb = 0x100;
+        int okr, okb, okz;
+
+        memset(&wb, 0, sizeof(wb));
+        if (IMP_ISP_Tuning_GetWB && IMP_ISP_Tuning_GetWB(&wb) == 0 && wb.rgain && wb.bgain) { cr = wb.rgain; cb = wb.bgain; }
+        if (g2_awb_info_r && g2_awb_info_b) { cr = g2_awb_info_r; cb = g2_awb_info_b; }
+        yb = fst(1000);
+        g2_awb_req_r = cr * 2; g2_awb_req_b = cb / 2 ? cb / 2 : 1; g2_awb_phase = 1; usleep(2500000);   /* strong red, weak blue */
+        yr = fst(500);
+        g2_awb_req_r = cr / 2 ? cr / 2 : 1; g2_awb_req_b = cb * 2; usleep(2500000);                    /* weak red, strong blue */
+        yu = fst(500);
+        g2_awb_req_r = cr; g2_awb_req_b = cb; usleep(2500000);
+        yz = fst(500);
+        g2_awb_phase = 0;
+        okr = yr.ok && yu.ok && yr.v > yu.v + 4;
+        okb = yr.ok && yu.ok && yu.u > yr.u + 4;
+        okz = yz.ok && yb.ok && dabs(yz.u - yb.u) + dabs(yz.v - yb.v) < 8;
+        rep(LBL("customalgo_awb_effect" C2_SFX), 0, (okr && okb && okz && flow()) ? V_PASS : V_FAIL,
+            "AWB callback result vs picture: base gains r %u b %u (U %.1f V %.1f) | r x2 b /2 -> U %.1f V %.1f | r /2 b x2 -> U %.1f V %.1f | back -> U %.1f V %.1f | red phase V higher %s, blue phase U higher %s, back %s",
+            cr, cb, yb.u, yb.v, yr.u, yr.v, yu.u, yu.v, yz.u, yz.v, okr ? "yes" : "NO", okb ? "yes" : "NO", okz ? "yes" : "NO");
+    }
+}
+#else
+static void cs_customalgo_t2x(void) {}
+void algo_pre_t2x(void) {}
+void algo_post_t2x(void) {}
+#endif
+
 #if !defined(APITEST_T40)
 static void cs_t140c(void) {}
 static void cs_awbctstart_t40(void) {}
@@ -6957,6 +7133,9 @@ void t_cases(void)
     if (cs_on("t41isp")) { cs_t41isp(); wdog("cases", 90); }
     if (cs_on("rgnisp")) { cs_rgnisp(); wdog("cases", 90); }
     if (cs_on("customalgo" CA_SFX)) cs_customalgo_t40(); wdog("cases", 150);
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+    if (cs_on("customalgo" C2_SFX)) cs_customalgo_t2x(); wdog("cases", 150);
+#endif
     if (getenv("APITEST_CASES") && cs_on("rawvic_t41")) { wdog("cases", 120); cs_rawvic_t41(); }
     wdog("cases", 60);
 }
