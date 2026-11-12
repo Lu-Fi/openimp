@@ -1890,6 +1890,8 @@ extern void openimp_fs_rotate_capture(int chn, void *frame)
  * captured frame, also one nobody pulls or that waits in the delay FIFO */
 extern void openimp_fs_chn_callback(int chn, void *frame)
     __attribute__((weak));
+#endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
 /* FS_EXT_CHANNEL software scale (framesource_tseries.c, #370) */
 extern void openimp_fs_ext_feed(int chn, const void *frame)
     __attribute__((weak));
@@ -2379,7 +2381,9 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
 #if defined(PLATFORM_T31)
     if (openimp_fs_chn_callback)
         openimp_fs_chn_callback(chn, &pool->frames[idx]);
-    /* extension channels sourced from this one (SetSource, #370) */
+#endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+    /* extension channels fed from this one (SetSource on T31, ch0 on T30, #370) */
     if (openimp_fs_ext_feed)
         openimp_fs_ext_feed(chn, &pool->frames[idx]);
 #endif
