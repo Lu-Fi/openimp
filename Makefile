@@ -56,6 +56,7 @@ check:
 	$(MAKE) -f tests/core/su_base_shutdown.mk check
 	$(MAKE) -f tests/core/su_base_wkup.mk check
 	$(MAKE) -f tests/core/su_sysutils.mk check
+	$(MAKE) -f tests/su_time/su_time.mk check
 	$(MAKE) -C tests/eprc check
 	$(MAKE) -C tests/rc_t20 check
 	$(MAKE) -C tests/rc_t10 check
