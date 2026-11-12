@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T30 macroblock rate control on by default, as the vendor (#217)
+
+- The T30 H.264 command list now carries the macroblock rate-control words of `H264E_T30_SliceInit` by default: the 0x40074 flags, 0x40078..0x400c8, and on P slices the basic-unit targets and registers 0x80100..0x80158. The vendor library always sends them, and its `IMP_Encoder_SetMbRC` has no effect. The vendor T30X streams (CBR 2000 kbit/s) vary the QP per macroblock in 56 of 60 pictures; the open stack had one QP per picture. `OPENIMP_EPRC_MBRC=0` or `IMP_Encoder_SetMbRC` off switch it off (OpenIMP extra). T21/T23 are unchanged (opt-in).
+- Host: new `tests/t30` helix_encoder_test `t30_mbrc_case`. With the default, `=1` and `=0`, every picture's list words equal what `EPRC30_MbRcRegs` makes of a second controller's slice block, and SetMbRC switches from the next picture. The register encoding itself was already proven against the vendor in the emulator (#217 step 2). Device A/B on the T30X lab camera pending.
+
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 
 - The OpenIMP T30 build now exports 330 of the 334 vendor T30 1.0.5 names (was 317); still missing: `Encoder_Enable/DisableAllNCUDenoise`, `Get/SetRencFirstFrameMult`. Behaviour read from the vendor libimp 1.0.5 (Ghidra project t30lib, no vendor code copied):

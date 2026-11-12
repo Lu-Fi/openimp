@@ -446,7 +446,7 @@ set in production.
 | `OPENIMP_T41_ROI` | `0` refuses the T41 ROI calls (default on, all rate-control modes) | on | debug-only |
 | `OPENIMP_T40_ROI` | `1` enables the experimental T40 ROI table (cross-built, not device-tested) | off | debug-only |
 | `OPENIMP_T20_RC` | `0` disables the T20 OEM rate controller (needs kernel patch 0101) and falls back to the GOP controller | on (as vendor) | user-facing |
-| `OPENIMP_EPRC_MBRC` | `1` enables the eprc macroblock RC on T21/T23, and on T30 the `H264E_T30_SliceInit` macroblock registers in the command list (T30: host test only, device A/B pending, #217) | off | user-facing (opt-in) |
+| `OPENIMP_EPRC_MBRC` | `1` enables the eprc macroblock RC on T21/T23 (default off there). On T30 the `H264E_T30_SliceInit` macroblock registers are in the command list by default, as on the vendor; `0` switches them off (#217, host test, device A/B pending) | T21/T23 off, T30 on | user-facing (opt-in) |
 | `OPENIMP_T10_RC` | `0` disables the T10 OEM-style rate controller | on | user-facing |
 | `OPENIMP_T10_RC_SUPERFRM` | `0` restores vendor-exact T10 VBR behaviour (super-frame fix off); only inside the OEM controller | on | user-facing |
 | `OPENIMP_T20_RC_IAWARE` | `0` = vendor P budget, `1` also for VBR/SMART; only inside the OEM controller | on for CBR | user-facing |
