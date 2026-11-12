@@ -120,7 +120,7 @@ any of the applications using the IMP API that were checked.
   `Encoder_Enable/DisableAllNCUDenoise`, `PadFrame`, `SetPadFrameAttr`,
   `Get/SetRencFirstFrameMult` (not worth it: closed-encoder or chip-specific).
 - 2026-11-12 (#308, branch `claude/t30-gaps`): 13 of these are exported now, 330 of 334
-  (left: `Encoder_Enable/DisableAllNCUDenoise`, `Get/SetRencFirstFrameMult`).
+  (left: `Get/SetRencFirstFrameMult`; `Encoder_Enable/DisableAllNCUDenoise` exported since #416, -1 as the vendor 1.0.5).
   `Decoder_*`: the T10/T20/T21 software JPEG decoder (the vendor 1.0.5 uses ijpegd on the
   VPU, as T21; same API). `Get/SetChnCrop`: the T21 code (SPS frame cropping of the Helix
   encoder, six channels; an H.265 channel keeps the window for the getter only, the Radix

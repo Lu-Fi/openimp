@@ -155,6 +155,9 @@ int main(void)
     CHECK(IMP_Encoder_SetChnResizeMode(1, 0) == 0 && p2_channels[1].resize_mode == 0);
     CHECK(IMP_Encoder_SetChnResizeMode(-1, 1) == -1);
     /* --- SetPoolSize, SetChnRcTrigLevel (T30 only) ----------------------- */
+    /* NCU denoise: vendor -1 on the T30X (b67), both calls, no state change */
+    CHECK(IMP_Encoder_EnableAllNCUDenoise() == -1);
+    CHECK(IMP_Encoder_DisableAllNCUDenoise() == -1);
     CHECK(IMP_Encoder_SetPoolSize(0) == -1);
     CHECK(IMP_Encoder_SetPoolSize(-5) == -1);
     CHECK(IMP_Encoder_SetPoolSize(4 << 20) == 0 && p2_pool_size == (4 << 20));

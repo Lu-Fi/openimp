@@ -1,4 +1,2 @@
-IMP_Encoder_DisableAllNCUDenoise
-IMP_Encoder_EnableAllNCUDenoise
 IMP_Encoder_GetRencFirstFrameMult
 IMP_Encoder_SetRencFirstFrameMult

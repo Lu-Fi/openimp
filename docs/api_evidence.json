@@ -51,9 +51,7 @@
     "Audio_Record",
     "Audio_RecordDeinit",
     "Audio_RecordInit",
-    "Encoder_DisableAllNCUDenoise",
     "Encoder_DiscardInitialFrame",
-    "Encoder_EnableAllNCUDenoise",
     "Encoder_GetRencFirstFrameMult",
     "Encoder_GetStream_Impl",
     "Encoder_GroupWhichChnRegisted",
@@ -19986,6 +19984,44 @@
         "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): enchelp_t23: idle channel 0, channel 99 -1, vendor and open identical"
       },
       "note": "T10/T20: SetChnRcTrigLevel is a controller input, not a stored value, and the call itself changes nothing in the running stream: the vendor keeps the pair and takes it over at the next natural IDR (i264e_idr_reconfig), where i264e_validate_parameters clamps it (level to an integer 2..10, new maximum QP from the application maximum to 51) and the controller is set up again; while a GOP uses more than level times its budget the controller lifts the QP cap from the application maximum to the new maximum (default 3.0 / 51). OpenIMP does the same (issue #194; before it restarted the controller at once with an extra IDR). Host oracle (tools/rc_t20_oracle.py --trig-wide and --trig-restart, vendor library under unicorn): 24 + 24 scenarios per SoC, 0 differences for T10 and T20. Camera 2026-11-03, vendor 3.12.0 and OpenIMP next via LD_LIBRARY_PATH (log markers checked, libalog preloaded, ISP day/night stable): a call at picture 40 now gives no extra IDR and no size burst (T20 28.6 kB against 38.3 kB vendor for 120 pictures, was 188 kB; T10 equal pictures 40 to 44 and IDR 60, QP 35 then 40 as the vendor); lift ceilings of a starved stream equal on T20 (36 / 36, was 48 against 37), within 1 to 3 QP on T10 (41-42 against 39-41). The T20 run without any call differs between the libraries (night scene, not the trigger). The 2026-11-02 runs used the installed libimp (OpenIMP) and are withdrawn. T21: no trigger in the vendor controller. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run on a device (no apitest case for T30); 2026-11-11: host-tested return codes only (cell host). Vendor 1.0.5 (0xc1994) passes the pair to i264e parameter 4 for an H.264 channel; OpenIMP stores/forwards it in the T30 build."
+    },
+    "Encoder_EnableAllNCUDenoise": {
+      "area": "Encoder",
+      "cells": {
+        "T10": "?",
+        "T20": "?",
+        "T21": "?",
+        "T23": "?",
+        "T30": "host",
+        "T31": "n.a.",
+        "T32": "n.a.",
+        "T33": "n.a.",
+        "T40": "n.a.",
+        "T41": "n.a."
+      },
+      "auto": true,
+      "ref": {
+        "T30": "host test p2_gap_test_t30 (2026-11-12, #416): -1 as the vendor libimp 1.0.5 (Ghidra t30lib 0xc8bc0 / 0xc8e08: -1 unless cpu id 3..5 and the NCU parameter set exists) and as the vendor run on the T30X in b67; no OpenIMP device run yet, so host not dev. T10/T20/T21/T23: exported with the same -1 stub, device result not tracked here"
+      }
+    },
+    "Encoder_DisableAllNCUDenoise": {
+      "area": "Encoder",
+      "cells": {
+        "T10": "?",
+        "T20": "?",
+        "T21": "?",
+        "T23": "?",
+        "T30": "host",
+        "T31": "n.a.",
+        "T32": "n.a.",
+        "T33": "n.a.",
+        "T40": "n.a.",
+        "T41": "n.a."
+      },
+      "auto": true,
+      "ref": {
+        "T30": "host test p2_gap_test_t30 (2026-11-12, #416): -1 as the vendor libimp 1.0.5 (Ghidra t30lib 0xc8bc0 / 0xc8e08: -1 unless cpu id 3..5 and the NCU parameter set exists) and as the vendor run on the T30X in b67; no OpenIMP device run yet, so host not dev. T10/T20/T21/T23: exported with the same -1 stub, device result not tracked here"
+      }
     },
     "Encoder_SetChnRfcDropFrameLines": {
       "area": "Encoder",

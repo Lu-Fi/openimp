@@ -7128,8 +7128,13 @@ int IMP_Encoder_SetChnRcTrigLevel(int channel, float level, int mode)
 }
 #endif
 
-#if defined(PLATFORM_T21)
-/* T21 1.0.33 IMP_Encoder_Enable/DisableAllNCUDenoise (0x4c6a0): the NCU
+#if defined(PLATFORM_T21) || (defined(PLATFORM_T30) && !defined(PLATFORM_T23))
+/* T30 1.0.5 IMP_Encoder_EnableAllNCUDenoise (0xc8bc0) / DisableAllNCUDenoise (0xc8e08) have the
+ * same code as the T20 / T10 3.12.0 and T21 ones below (no arguments; -1 unless
+ * get_cpu_id() is 3..5 and get_ncu_params() holds a parameter set; Disable
+ * additionally clears the per-channel flag, sleeps 2 x 100 ms and clears bit 0x400
+ * of 0x13380040, only past those checks); the T30X b67 run: vendor -1 for both.
+ * T21 1.0.33 IMP_Encoder_Enable/DisableAllNCUDenoise (0x4c6a0): the NCU
  * denoise exists for CPU ids 3..5 only; on a T21 both log and return -1.
  * T20 / T10 3.12.0 (0x4e000 / 0x4e1cc) do have it, and return -1 as well
  * unless get_ncu_params() (0x55638) holds the NCU parameter set (read from

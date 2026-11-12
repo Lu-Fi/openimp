@@ -638,12 +638,12 @@ functions:
     soc: "T10 to T31 and T40 (effect on T10 and T20, none by design on T21); the T41 vendor library has no such call."
   Encoder_EnableAllNCUDenoise:
     group: misc
-    summary: "NCU denoise exists on T30-class SoCs only; on T23 the call fails."
-    returns: "-1 on T23."
+    summary: "NCU denoise exists on CPU ids 3..5 only and needs the NCU parameter set of the tuning bin; on T23 and T30 the call logs and fails, the NCU path itself is not implemented (#144, #416)."
+    returns: "-1 on T23, T30 (as the vendor, T30X b67), T21, T20 and T10."
   Encoder_DisableAllNCUDenoise:
     group: misc
-    summary: "NCU denoise exists on T30-class SoCs only; on T23 the call fails."
-    returns: "-1 on T23."
+    summary: "NCU denoise exists on CPU ids 3..5 only and needs the NCU parameter set of the tuning bin; on T23 and T30 the call logs and fails, the NCU path itself is not implemented (#144, #416)."
+    returns: "-1 on T23, T30 (as the vendor, T30X b67), T21, T20 and T10."
   Encoder_PadFrame:
     group: misc
     summary: "Hands a processed copy of a captured frame (with a release callback) to the encoder. While pad frames are enabled with `SetPadFrameAttr`, every captured frame is encoded from the pad frame that matches it instead, and a captured frame without one is not encoded."
