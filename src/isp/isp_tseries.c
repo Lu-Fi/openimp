@@ -1396,7 +1396,10 @@ enum {
      * (T20 3.12.0 SetISPProcess/SetFWFreeze/SetShading). */
     TISP_CID_ISP_PROCESS = 0x0098e907,
     TISP_CID_FW_FREEZE = 0x0098e908,
-    TISP_CID_SHADING = 0x0098e90a
+    TISP_CID_SHADING = 0x0098e90a,
+    /* IMAGE_TUNING_CID_CUSTOM_BASE + 6 (enum isp_image_tuning_cmd_id in the T10/T20 SDK
+     * apical-isp/tx-isp-core-tuning.h): the V4L2 menu control "Test pattern" 0..4 */
+    TISP_CID_TEST_PATTERN = 0x0098e906
 #else
     TISP_CID_ISP_PROCESS = 0x8000164,
     TISP_CID_FW_FREEZE = 0x8000165,
@@ -2115,6 +2118,31 @@ int IMP_ISP_Tuning_GetISPRunningMode(IMPISPRunningMode *pmode)
     return result;
 }
 #endif /* !PLATFORM_T23 */
+
+#if defined(PLATFORM_T20)
+/* Test pattern mode 6 (src/openimp_testpattern.c): the Apical core's video test generator.  The
+ * driver's menu control "Test pattern" (apical_isp_test_s_control, T10/T20 SDK tx-isp-core-tuning.c)
+ * takes 0 = sensor input (top bypass_video_test_gen 1, generator off) or 1..4 = pattern type 0..3
+ * (flat field, horizontal gradient, vertical gradient, vertical bars) with the generator on and the
+ * bypass cleared (core 0x40 bit 0, 0x9c0 bit 0, 0x9c4 bits 7:0).  The stock libimp has no caller of
+ * it (no 0x98e906 in T20 3.12.0), the control is the vendor driver's own interface. */
+int openimp_tp_ispin_set(uint32_t pattern)
+{
+    if (pattern > 4) {
+        errno = EINVAL;
+        return -1;
+    }
+    errno = 0;
+    if (tseries_v4l2_set(TISP_CID_TEST_PATTERN, (int32_t)pattern) != 0) {
+        kmsg_trace("libimp/ISP: test pattern S_CTRL 0x98e906=%u failed errno=%d\n", pattern, errno);
+        if (errno == 0)
+            errno = ENODEV;
+        return -1;
+    }
+    kmsg_trace("libimp/ISP: test pattern S_CTRL 0x98e906=%u ok\n", pattern);
+    return 0;
+}
+#endif
 
 int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable)
 {

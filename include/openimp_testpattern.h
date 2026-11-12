@@ -37,10 +37,20 @@
  *           weight and motion fields are held so that it keeps it; a driver rewrite of those
  *           fields (gain step, day/night) is set again and the picture redrawn on the next frame.
  *           T40: not available (its MDNS reference is a coded stream).
+ *   mode 6  ISP-input test picture (T10, T20): the ISP core's own video test generator replaces
+ *           the sensor's raw frame at the input of the ISP, so the picture runs through the whole
+ *           raw pipeline (BLC, LSC, demosaic, WB, CCM, gamma, NR, sharpening) and the encoder; the
+ *           sensor keeps running.  The pattern is the hardware's (isp_pattern: 1 flat field,
+ *           2 horizontal gradient, 3 vertical gradient, 4 vertical bars), not the mode 1 picture.
+ *           Switched like the vendor driver's "Test pattern" tuning control (V4L2 control
+ *           IMAGE_TUNING_CID_CUSTOM_TEST_PATTERN 0x98e906 on the tuning device); mode 0 (or any
+ *           other mode) sets it back to 0 (sensor input).  -1 with errno ENOTSUP on other SoCs,
+ *           ENODEV without a running ISP tuning session, else the driver's error (EPERM: ISP
+ *           not started).
  *
  * OpenIMP_TestPattern_Set may be called at any time, also while streaming;
  * the next frame uses the new state.  Environment OPENIMP_TEST_PATTERN=0..3
- * is only the start value (0..3; modes 4 and 5 need a running sensor, use Set).
+ * is only the start value (0..3; modes 4, 5 and 6 need a running sensor, use Set).
  * A build that has this API exports the constant OpenIMP_Cap_TestPattern (1).
  *
  * ABI: the structs start with a size field (the caller sets sizeof of ITS
@@ -65,6 +75,7 @@ extern "C" {
 #define OPENIMP_TP_MOTION  3
 #define OPENIMP_TP_SENSOR  4
 #define OPENIMP_TP_ISP_MID 5
+#define OPENIMP_TP_ISP_IN  6
 
 #define OPENIMP_TP_LOGO_NONE 0
 #define OPENIMP_TP_LOGO_OPENIMP 1       /* default: OpenIMP banner (dot grid + lettering) */
@@ -93,12 +104,15 @@ typedef struct OpenIMPTestPatternParams {
                                step.  Mode 0 restores the saved AE state.  0 = AE keeps running */
     uint32_t awb_hold;      /* mode 4: 0 (default) = AWB keeps running (AWB on the pattern),
                                1 = AWB gains frozen (colour measurement with fixed gains) */
+    uint32_t isp_pattern;   /* mode 6 (appended 2026-11-12): hardware pattern 1 flat field,
+                               2 horizontal gradient, 3 vertical gradient, 4 vertical bars;
+                               0 = default (4) */
 } OpenIMPTestPatternParams;
 
 typedef struct OpenIMPTestPatternState {
     uint32_t size;          /* sizeof(OpenIMPTestPatternState) of the caller */
     uint32_t abi;           /* OPENIMP_TESTPATTERN_ABI */
-    int32_t  mode;          /* 0..4 */
+    int32_t  mode;          /* 0..6 */
     uint32_t reserved;
     uint64_t frames;        /* frames replaced since the last Set (all channels) */
     uint64_t objects_shown; /* mode 3: object appearances since the last Set */
@@ -135,7 +149,8 @@ extern const int OpenIMP_Cap_TestPattern;   /* 1 */
 /* Which modes can be used here, without switching anything: returns 1 when mode works on this
  * build, SoC and (mode 4) running sensor, 0 when not (unknown mode: 0 with errno EINVAL).
  * Modes 0-3: always 1; mode 4: the running sensor has a test pattern table entry (0 while no sensor
- * runs); mode 5: the platform has the ISP-middle hooks (T21, T23, T31, T41).  Since 2026-10-25; detect the
+ * runs); mode 5: the platform has the ISP-middle hooks (T21, T23, T31, T41); mode 6: the platform has the
+ * ISP-input test generator (T10, T20).  Since 2026-10-25; detect the
  * function with dlsym or a weak reference on older builds. */
 int OpenIMP_TestPattern_Supported(int mode);
 

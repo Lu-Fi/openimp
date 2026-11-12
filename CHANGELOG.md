@@ -23,6 +23,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-12: T31 FrameSource ext channel measured against the vendor (#309, #370)
 
 - New apitest case `extchn_t31` (explicit only): `FS_EXT_CHANNEL` channel 3 + `IMP_FrameSource_SetSource(3, 1)` + Enable, argument rules, FS3 -> ENC5 H.264 for 3 s. On the T31L camera the vendor libimp 1.1.6 (with its module) gives 45 streams in 3 s, OpenIMP delivers nothing (the source is only stored): `FrameSource_SetSource` T31 `aud` -> `err`, gap issue #370. No library change.
+## 2026-11-12: test pattern mode 6, the ISP's own test generator on T10/T20 (#103)
+
+- `OpenIMP_TestPattern_Set(6, p)` (T10, T20): the Apical ISP core's video test generator replaces the sensor's raw frame at the ISP input, so a sensor-independent picture runs through the whole ISP and the encoder. New appended parameter `isp_pattern` (1 flat field, 2 horizontal bands, 3 vertical bands, 4 vertical bars; default 4), `tpctl set 6 isp_pattern=N`. OpenIMP sends the driver's own tuning control "Test pattern" (V4L2 `0x98e906`, `IMAGE_TUNING_CID_CUSTOM_BASE + 6` of the T10/T20 SDK); any other mode sends 0. The stock libimp has no caller of this control. ENOTSUP on other SoCs; `OpenIMP_TestPattern_Supported(6)`.
+- QEMU T20 and T10: the core registers follow (`0x40` bit 0 cleared, `0x9c0` = 1, `0x9c4` = type; mode 0 restores bypass and generator off). Device T20X (jxf23): 3 cycles of all 4 patterns, the expected pictures with identical frame statistics, live scene back 3 s after mode 0, 0 oops. AE, AWB and the streamer's day/night logic keep running on the pattern (as with the vendor control). Host tests: `tests/testpattern` mode 6 cases. Details: docs/TESTPATTERN.md.
 
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 
