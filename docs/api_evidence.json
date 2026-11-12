@@ -7111,7 +7111,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "qemu",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
         "T33": "nob",
@@ -7124,7 +7124,7 @@
         "T10": "apitest issue357 2026-11-01 .31 (crop 16,16 576x320 read back, SPS visible size 576x320, misaligned/outside/NULL/bad channel -1, crop off restores; stream of the cropped window decodes clean with ffmpeg strict mode and VA-API, 45 frames, real picture: luma spread and neutral chroma, no flat/green areas)",
         "T20": "apitest issue357 2026-11-01 .107 (crop 16,16 576x320 read back, SPS visible size 576x320, misaligned/outside/NULL/bad channel -1, crop off restores; stream of the cropped window decodes clean with ffmpeg strict mode and VA-API, 45 frames, real picture: luma spread and neutral chroma, no flat/green areas)",
         "T21": "apitest issue357 2026-11-01 .24 (crop 16,16 576x320 read back, SPS visible size 576x320, misaligned/outside/NULL/bad channel -1, crop off restores; stream of the cropped window decodes clean with ffmpeg strict mode and VA-API, 45 frames, real picture: luma spread and neutral chroma, no flat/green areas)",
-        "T30": "apitest enc 2026-11-12 QEMU T30 (APITEST_SKIP_FRMRATE=1 because of #366; OpenIMP claude/t30-gaps, sc4236 model): crop 16,16 576x320 read back, SPS visible size 576x320 (was 640x360); x=8, outside the picture, NULL, chn 99 -1; crop off restores 640x360"
+        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): crop 16,16 576x320 read back, SPS visible size 576x320 (was 640x360), x=8 / outside the picture / chn 99 -1, NULL -1, crop off restores 640x360: open PASS. The vendor lib reads the same window back but returns -99 for NULL where the apitest expects -1 (FAIL there, the vendor does not crash); open equal or better. Earlier: apitest enc 2026-11-12 QEMU T30 (APITEST_SKIP_FRMRATE=1 because of #366; OpenIMP claude/t30-gaps, sc4236 model): crop 16,16 576x320 read back, SPS visible size 576x320 (was 640x360); x=8, outside the picture, NULL, chn 99 -1; crop off restores 640x360"
       }
     },
     "Encoder_Get/SetChnDemask": {
@@ -7560,7 +7560,10 @@
           "r†"
         ]
       },
-      "note": "T21+T23: checked and dropped like the vendor libimp, Get returns zeros (T23 vendor 1.3.0: channel below 9 and non-NULL return 0, nothing stored, Get zero-fills the 8 bytes; matched 2026-10-10, device-tested on a T23 camera). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. ALIGNED with the vendor: 1.0.5 (0xc5688/0xc585c) only checks channel and pointer and does nothing for a channel that is not H.265 (the Get clears the struct); OpenIMP stored the values and range-checked them. Host test p2_gap_test_t30. T30 has no H.265 encoder here."
+      "note": "T21+T23: checked and dropped like the vendor libimp, Get returns zeros (T23 vendor 1.3.0: channel below 9 and non-NULL return 0, nothing stored, Get zero-fills the 8 bytes; matched 2026-10-10, device-tested on a T23 camera). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. ALIGNED with the vendor: 1.0.5 (0xc5688/0xc585c) only checks channel and pointer and does nothing for a channel that is not H.265 (the Get clears the struct); OpenIMP stored the values and range-checked them. Host test p2_gap_test_t30. T30 has no H.265 encoder here.",
+      "ref": {
+        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): round trip PASS on both stacks, but the default differs: vendor chroma_cr/cb_qp_offset -3/-3, open 0/0 (#399), so the cell stays host."
+      }
     },
     "Encoder_Get/SetJpegeQl": {
       "area": "Encoder",
@@ -8211,7 +8214,7 @@
         "T20": "apitest agg63 2026-10-31 .107",
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231 ; b62 2026-11-12: H.264 PASS on open and vendor, H.265 pass: vendor finds the SEI, open does not (#399)."
       }
     },
     "Encoder_PollingModuleStream": {
@@ -8974,7 +8977,7 @@
         "T20": "n.a.",
         "T21": "n.a.",
         "T23": "n.a.",
-        "T30": "host",
+        "T30": "dev",
         "T31": "dev",
         "T32": "miss",
         "T33": "nob",
@@ -8986,7 +8989,7 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "static audit + host test p2_gap_test_t30 2026-11-01 (OpenIMP claude/t30-audit)"
+        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): on 0, off 0, value 5 0 (any non-zero = on), chn 99 -1: PASS on open and vendor, vendor-equal. Earlier: static audit + host test p2_gap_test_t30 2026-11-01 (OpenIMP claude/t30-audit)"
       }
     },
     "Encoder_SetDefaultParam": {
@@ -10847,7 +10850,7 @@
       "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Static: channel bound (< 5) and source bound (< 3) equal to the vendor 1.0.5 (0xe3f7c); the vendor additionally clears three per-channel depth counters and sets a source-map flag, OpenIMP stores the source channel. No apitest case. T31 (#370): an ext channel is a software-scaled copy of its source channel (libimp 1.1.6 nv12_scaler_16 equivalent, filled in the source capture thread); T30 (#370): libimp 1.0.5 (Ghidra, 0xe3f7c, on_framesource_group_data_update) stores the source in a flag table nothing reads: every enabled ext channel is cut out (its own crop attribute) and scaled with sw_resize (c_resize_c, bilinear 1/16 steps) from the channel 0 capture path, GetFrame serves its depth list; OpenIMP T30 does the same (ext pool filled in the ch0 dequeue hook), source stored only.",
       "ref": {
         "T31": "apitest extchn_t31 2026-11-12 T31L (#370): ext ch 3 (FS_EXT_CHANNEL 320x180) + SetSource(3,1): FS3->ENC5 46 H.264 streams in 3 s on OpenIMP (libimp of claude/t31-370 from /tmp) and 46 on the vendor libimp 1.1.6 + module; ext picture = scaled ch1 picture (decoded, checked); SetSource ext 5 / source 3 -1, source -1 stored (0), GetFrame(3) 0 without a frame on both",
-        "T30": "host test fs_lifecycle_test_t30 ext_channel (c_resize_c bit-exact reference: scale, crop, copy) + QEMU ingenic-t30 apitest extchn_t30 2026-11-12 (#370): ext ch3 320x180 from ch0 2304x1536, GetFrame(3) 20 frames, FS3->ENC5 35 streams in 3 s, ext picture = scaled ch0 (luma mean abs diff 0.00), 4 runs PASS, origin/next FAILs the case (Enable -1); no T30X device run"
+        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): ext channel with encoder stage: open 640x360 and 320x192 PASS (46 H.264 streams in 3 s, 15 fps, ext picture = scaled ch0 by 16x16 block means), open 320x180 stalls after 2 streams (#400); vendor ext GetFrame(3) gives 0 frames and the vendor VPU faulted at 320x180 in b61. The cell stays host until 320x180 is decided. Earlier: host test fs_lifecycle_test_t30 ext_channel (c_resize_c bit-exact reference: scale, crop, copy) + QEMU ingenic-t30 apitest extchn_t30 2026-11-12 (#370): ext ch3 320x180 from ch0 2304x1536, GetFrame(3) 20 frames, FS3->ENC5 35 streams in 3 s, ext picture = scaled ch0 (luma mean abs diff 0.00), 4 runs PASS, origin/next FAILs the case (Enable -1); no T30X device run"
       }
     },
     "FrameSource_SetYuvAlign": {
