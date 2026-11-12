@@ -216,6 +216,10 @@ static int fake_stock_dq;
  * timestamp of the last one (40 ms apart, from 40 ms) */
 static int fake_frame_budget = -1;
 static unsigned int fake_frames_done;
+/* #405: the T10/T20 ISP writes a bank ring and stops its DMA while the
+ * next bank has no buffer: with one buffer queued nothing completes */
+static int fake_need_two;
+static uint64_t fake_done_ms[256];   /* wall time of frame n (n % 256) */
 
 int __real_open(const char *path, int flags, ...);
 int __real_close(int fd);
@@ -286,7 +290,8 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
         for (waited = 0; waited < 4000 && !ready; waited++) {
             pthread_mutex_lock(&fake_lock);
             ready = fd < 0 || fd >= FAKE_FDS || !fake[fd].open ||
-                    !fake[fd].streaming || fake[fd].queued;
+                    !fake[fd].streaming ||
+                    fake[fd].queued > (fake_need_two ? 1 : 0);
             pthread_mutex_unlock(&fake_lock);
             if (!ready)
                 usleep(1000);
@@ -362,7 +367,8 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
 #else
             ret = fake_fail(EINVAL);
 #endif
-        } else if (!c->queued || fake_frame_budget == 0) {
+        } else if (!c->queued || fake_frame_budget == 0 ||
+                   (fake_need_two && c->queued < 2)) {
             ret = fake_fail(EAGAIN);
         } else {
             uint64_t ts_us;
@@ -370,6 +376,7 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
             if (fake_frame_budget > 0)
                 fake_frame_budget--;
             ts_us = 40000ull * ++fake_frames_done;
+            fake_done_ms[fake_frames_done % 256] = now_ms();
             words[0] = (uint32_t)c->queue[0];
             words[0x14 / 4] = (uint32_t)(ts_us / 1000000u);
             words[0x18 / 4] = (uint32_t)(ts_us % 1000000u);
@@ -428,7 +435,7 @@ int __wrap_select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *tv)
         for (fd = 0; fd < n && fd < FAKE_FDS; fd++)
             if (r && FD_ISSET(fd, r) &&
                 (!fake[fd].open || !fake[fd].streaming ||
-                 (fake[fd].queued && fake_frame_budget != 0)))
+                 (fake[fd].queued > (fake_need_two ? 1 : 0) && fake_frame_budget != 0)))
                 ready = 1;
         pthread_mutex_unlock(&fake_lock);
         if (ready)
@@ -2160,10 +2167,12 @@ static void test_ext_channel(void)
 
 /* #374: one GetFrame on a channel nobody else reads marks it pulled for the
  * pull window; capture (driver DQBUFs) must keep running meanwhile instead of
- * stopping until the idle recycle. */
+ * stopping until the idle recycle.  Three buffers: the T10/T20/T30 bank ring
+ * needs two in the driver (#405), a 2-buffer pool keeps its frames for the
+ * reader until the idle recycle. */
 static void test_single_pull_capture(void)
 {
-    IMPFSChnAttr a = attr_for(640, 360, 2);
+    IMPFSChnAttr a = attr_for(640, 360, 3);
     void *frame = NULL;
     unsigned int before, waited;
 
@@ -2187,6 +2196,60 @@ static void test_single_pull_capture(void)
     CHECK(IMP_FrameSource_DisableChn(0) == 0, "single pull: disable");
     CHECK(IMP_FrameSource_DestroyChn(0) == 0, "single pull: destroy");
     check_clean("single pull");
+}
+
+/* #405: GetFrame after a pause (inside and beyond the pull window) returns a
+ * current frame, never one captured before the pause: the vendor serves
+ * its depth copies of the newest captures.  Paced driver (10 ms per DQBUF). */
+static void check_fresh_after_pause(int vbs, int need_two)
+{
+    IMPFSChnAttr a = attr_for(640, 360, vbs);
+    static const unsigned int pause_ms[] = { 0, 150, 400, 1500, 3000 };
+    IMPFrameInfo *fi = NULL;
+    unsigned int k;
+
+    fake_stock_dq = need_two == 2;      /* select always ready, DQBUF sleeps */
+    fake_frame_budget = -1;
+    fake_dqbuf_delay_us = 10000;
+    fake_need_two = need_two;
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "fresh %d: create", vbs);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "fresh %d: enable", vbs);
+    for (k = 0; k < sizeof(pause_ms) / sizeof(pause_ms[0]); k++) {
+        unsigned int done, seq;
+        uint64_t age;
+        int r;
+
+        sleep_ms(pause_ms[k]);
+        fi = NULL;
+        r = IMP_FrameSource_GetFrame(0, (void **)&fi);
+        done = frames_done();
+        CHECK(r == 0 && fi != NULL, "fresh %d: GetFrame after %u ms", vbs, pause_ms[k]);
+        if (r != 0 || !fi)
+            continue;
+        seq = (unsigned int)(fi->timeStamp / 40000);
+        age = now_ms() - fake_done_ms[seq % 256];
+        /* captured after the pause began (a few 10 ms frames back at most) */
+        CHECK(done - seq <= (unsigned int)vbs + 1 && age < 100,
+              "fresh %d%s: after a %u ms pause GetFrame gave frame %u (%llu ms old), newest %u (stale)",
+              vbs, need_two == 2 ? " bank+stock" : need_two ? " bank" : "", pause_ms[k], seq, (unsigned long long)age, done);
+        IMP_FrameSource_ReleaseFrame(0, fi);
+    }
+    fake_dqbuf_delay_us = 0;
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "fresh %d: disable", vbs);
+    fake_need_two = 0;
+    fake_stock_dq = 0;
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "fresh %d: destroy", vbs);
+    check_clean("fresh after pause");
+}
+
+static __attribute__((unused)) void test_fresh_after_pause(void)
+{
+    int two;
+
+    for (two = 0; two < 3; two++) {
+        check_fresh_after_pause(3, two);
+        check_fresh_after_pause(4, two);
+    }
 }
 
 int main(void)
@@ -2225,6 +2288,11 @@ int main(void)
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
     RUN(single_pull_capture);
+#if !defined(PLATFORM_T31)
+    /* T31 stamps frames from its own clock (fs_frame_timestamp), the
+     * check below reads the fake driver's frame number from the stamp */
+    RUN(fresh_after_pause);
+#endif
 #if !defined(PLATFORM_T31)
     /* T31: timed frames and rotation limits differ (own tests) */
     RUN(delay_fifo);
