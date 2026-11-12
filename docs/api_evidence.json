@@ -4035,7 +4035,7 @@
         "T20": "rt",
         "T21": "rt",
         "T23": "n.a.",
-        "T30": "qemu",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "n.a.",
         "T33": "n.a.",
@@ -4047,7 +4047,7 @@
         "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
         "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
-        "T30": "apitest agg47-cases 2026-10-26 QEMU (no camera)"
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): process case: ENABLE written, frames flow, vendor and open PASS identical (DISABLE = ISP bypass not run)"
       }
     },
     "ISP_Tuning_SetMaskBlock": {
@@ -4432,7 +4432,7 @@
         "T20": "rt",
         "T21": "rt",
         "T23": "n.a.",
-        "T30": "host",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "n.a.",
         "T33": "n.a.",
@@ -4444,7 +4444,7 @@
         "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
         "T21": "apitest agg47-cases 2026-10-26 .24 (API round trip, no visible effect expected)",
-        "T30": "host test tests/t30/isp_gap_test.c (since 2026-11-07, #202): SetTemperDnsCtl sends tuning SET 0x8000083 with the 8-byte attribute, NULL -1, no call while the tuning state is not 2"
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): temper case: current type 1 written, frames flow, vendor and open PASS with identical return codes"
       }
     },
     "ISP_Tuning_SetTemperStrength": {
@@ -7495,7 +7495,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "host",
+        "T30": "dev",
         "T31": "dev",
         "T32": "miss",
         "T33": "nob",
@@ -7510,7 +7510,7 @@
         "T21": "apitest case fisheye 2026-11-02 .24 (vendor library 1.0.33 and OpenIMP on the same camera, 7 scenarios of 100 pictures: no region and no ROI effect with the flag in either library; the vendor T21 hardware path never reads the i264e table, see note); watermark: devcheck 4000/4000 byte-exact on .27 2026-11-12 (vendor 1.0.33 4.7.2, fused)",
         "T23": "apitest case fisheye 2026-11-12 T23 Jooan A6M (sc1a4t, open stack, OpenIMP native Helix libimp from /tmp), 640x360 FixQP 30, GOP 40, 15 fps, 100 pictures per scenario, macroblock QPs from the dump (tools/fisheye_mbqp.py): flag on: Set before CreateChn 0, after it -1, Get 1; the top-left 64x32 region is coded below the slice QP exactly on the IDR pictures (0, 40, 80) and the whole seconds (15, 30, 60, 75, 90; 45 = all region macroblocks skipped, so no QP in the stream), nowhere else; flag on + SetChnROI -6 over the picture: the application ROI is gone (every other macroblock at 30), the same region pictures (45 included); flag off: no region. The region QP is 18, not the table's 15: the T21-family slice QP floor (vendor h264_api_enc slice +810 = QP - 12, src/t21/t21_h264_descriptor.c) holds it, as in the vendor's own register programming (host vectors: tests/fisheye on the vendor T23 1.3.0 i264e_icodec_enc). The vendor libimp cannot run on the open ISP module, so the comparison is against the vendor rule, not a vendor run on the same camera; watermark: devcheck 4000/4000 byte-exact on .30 2026-11-12 (vendor 1.3.0)",
         "T31": "2026-11-12 .26: devcheck 4000/4000 byte-exact on the camera CPU (vendor 1.1.6 5.4.0 build); apitest case fisheye with OpenIMP: avpu_watermark runs on every IDR (trace: frame 0 and 5, 640x368 plane); the textured scene keeps the vendor detector below its threshold for both libraries (vendor 0.05..0.40, OpenIMP 0.04..0.35, flag off 0.06..0.29), see note",
-        "T30": "host: tests/watermark (unfused oracle) + fused form measured on T20/T21/T40 (same 4.7.2 build type as T30); no T30 camera run"
+        "T30": "apitest enc T30X b62 2026-11-10 and b65 2026-11-11 (vendor 1.0.5 and OpenIMP): Set on a created channel -1 (stock refuses), idle channel set 1 -> get 1, set 0 -> get 0, identical on both; the flag is only stored (no effect: the closed fisheye motion search of the vendor encoder is not in the Helix path, class d); earlier host: tests/watermark"
       }
     },
     "Encoder_Get/SetGDRCfg": {
@@ -11267,7 +11267,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "aud",
+        "T30": "dev",
         "T31": "dev",
         "T32": "aud",
         "T33": "nob",
@@ -11282,7 +11282,8 @@
         "T41": "apitest t41pass 2026-11-04 .34 .32",
         "T23": "apitest t23pass 2026-11-04 .30",
         "T31": "apitest t31-mx 2026-11-11 .26 (open stack and vendor 1.1.6 ko + libimp on the same camera, same scene)",
-        "T40": "apitest t40dev 400/2000/2000000 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP on tx_isp_t40 vs vendor 1.3.1 libimp on the vendor module, QEMU T40 first"
+        "T40": "apitest t40dev 400/2000/2000000 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP on tx_isp_t40 vs vendor 1.3.1 libimp on the vendor module, QEMU T40 first",
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): attach_t30: FS -> ENC became FS -> OSD -> ENC, 5 frames through the OSD group, vendor and open identical"
       }
     },
     "OSD_CreateGroup": {
@@ -19849,7 +19850,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "rt",
-        "T30": "qemu",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
         "T33": "nob",
@@ -19862,7 +19863,7 @@
         "T21": "apitest t2xcov 2026-10-29 .24 (case padframe_t23: free mode encodes the pad frames, scene 8132 B, black pad frames 26 B; stale frames in time-stamp mode are refused and released)",
         "T10": "apitest t2xcov 2026-10-29 .31 (case padframe_t23: free mode encodes the pad frames, scene 1032 B, black pad frames 51 B; stale frames in time-stamp mode are refused and released)",
         "T20": "apitest t2xcov 2026-10-29 .107 (case padframe_t23: free mode encodes the pad frames, scene 3120 B, black pad frames 39 B; stale frames in time-stamp mode are refused and released)",
-        "T30": "apitest padframe_t23 + enchelp_t23 2026-11-12 QEMU T30 (OpenIMP claude/t30-gaps): free mode: 12 pad frames encoded and released; time-stamp mode with stale pad frames: none encoded, 5 released; none in flight after DestroyChn; an unregistered channel refuses and hands the frame back (enchelp_t23 PASS). The two size checks of padframe_t23 report FAIL in QEMU only: the model's scene encodes as small as the black pad frames (32 B against 24 B)"
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): padframe_t23: vendor and open PASS; difference by design: stock vendor hands pad frames back (0 black pad frames encoded, 99 released), open encodes them (31 frames, 40 B avg) = same API contract, open does more"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp; NOT exported by OpenIMP's T30 build. Vendor-exported (6 channels, same queue design as T21), not exported by OpenIMP's T30 build; the pad-frame code of the P2 encoder is compiled for T21/T23 only and the T30 frame record layout is unchecked. 2026-11-11 (#308): vendor-exported on T30 1.0.5 (fixture); effort M (pad-frame queue exists for T21/T23 only, T30 frame record layout unchecked). T30 2026-11-12 (#308, claude/t30-gaps): exported, the T21 pad-frame queue built for the real T30. Vendor 1.0.5 PadFrame 0xc2d2c / do_channel_process_h264e (Ghidra project t30lib): six channels, refusal order (frame NULL, group not registered or not receiving -> release callback and -1; channel not created 0; pad mode off -> release and -1), time stamp at +0x20 and the T21 tolerance test. Host test p2_t30_enc_test."
     },
@@ -19969,7 +19970,7 @@
         "T20": "dev",
         "T21": "no-op",
         "T23": "rt",
-        "T30": "host",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
         "T33": "nob",
@@ -19982,7 +19983,7 @@
         "T21": "apitest t2xcov 2026-10-29 .24 (return codes as stock: idle channel 0, channel 99 -1; the pair is kept; the vendor 1.0.33 controller never reads it, host oracle with five different pairs on seven scenarios: 0 differences, so the stored-only behaviour equals the vendor)",
         "T10": "apitest case rctrig 2026-11-03 .31 (real A/B: vendor libimp 3.12.0 and OpenIMP next via LD_LIBRARY_PATH, library checked by md5 and log markers; starved CBR 640x360, 6 scenarios of 120/150 pictures, call at picture 40 and before the first picture: no restart burst, QP trend and lift ceilings equal to the vendor, see note; the 2026-11-02 runs had OpenIMP on both sides)",
         "T20": "apitest case rctrig 2026-11-03 .107 (real A/B: vendor libimp 3.12.0 and OpenIMP next via LD_LIBRARY_PATH, library checked by md5 and log markers; starved CBR 640x360, 6 scenarios of 120/150 pictures, call at picture 40 and before the first picture: no restart burst, QP trend and lift ceilings equal to the vendor, see note; the 2026-11-02 runs had OpenIMP on both sides)",
-        "T30": "host test tests/t30/p2_gap_test.c (2026-11-11 source review, no camera): channel 99 -1, idle channel 0 and ignored, created channel 0 with the pair kept; no device run on T30. Open: whether the vendor 1.0.5 i264e controller reads parameter 4 (OpenIMP T30 keeps the pair only, the Helix/eprc T30 controller has no trigger); a Ghidra check of i264e parameter 4 in the T30 1.0.5 libimp (project t30lib) and a device A/B decide ?"
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): enchelp_t23: idle channel 0, channel 99 -1, vendor and open identical"
       },
       "note": "T10/T20: SetChnRcTrigLevel is a controller input, not a stored value, and the call itself changes nothing in the running stream: the vendor keeps the pair and takes it over at the next natural IDR (i264e_idr_reconfig), where i264e_validate_parameters clamps it (level to an integer 2..10, new maximum QP from the application maximum to 51) and the controller is set up again; while a GOP uses more than level times its budget the controller lifts the QP cap from the application maximum to the new maximum (default 3.0 / 51). OpenIMP does the same (issue #194; before it restarted the controller at once with an extra IDR). Host oracle (tools/rc_t20_oracle.py --trig-wide and --trig-restart, vendor library under unicorn): 24 + 24 scenarios per SoC, 0 differences for T10 and T20. Camera 2026-11-03, vendor 3.12.0 and OpenIMP next via LD_LIBRARY_PATH (log markers checked, libalog preloaded, ISP day/night stable): a call at picture 40 now gives no extra IDR and no size burst (T20 28.6 kB against 38.3 kB vendor for 120 pictures, was 188 kB; T10 equal pictures 40 to 44 and IDR 60, QP 35 then 40 as the vendor); lift ceilings of a starved stream equal on T20 (36 / 36, was 48 against 37), within 1 to 3 QP on T10 (41-42 against 39-41). The T20 run without any call differs between the libraries (night scene, not the trigger). The 2026-11-02 runs used the installed libimp (OpenIMP) and are withdrawn. T21: no trigger in the vendor controller. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run on a device (no apitest case for T30); 2026-11-11: host-tested return codes only (cell host). Vendor 1.0.5 (0xc1994) passes the pair to i264e parameter 4 for an H.264 channel; OpenIMP stores/forwards it in the T30 build."
     },
@@ -21666,7 +21667,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "qemu",
+        "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
         "T33": "nob",
@@ -21680,7 +21681,7 @@
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
-        "T30": "apitest t30audit 2026-10-31 QEMU (no camera)",
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): alloc case: phys+100 maps to the expected virtual address on vendor and open",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (phys+100 -> 0x760b6064 (expected 0x760b6064)). T10 2026-11-03 on the T10 camera (OpenIMP T20 build as the T10 library, loaded from /tmp, installed library untouched): apitest case alloc PASS (phys+100 maps to the virtual address +100 of the same buffer). Same for Virt_to_Phys, Sp_Alloc (second reference, first free keeps the buffer, last free releases it, NULL/phys 0 refused), PoolVirt_to_Phys and PoolPhys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS."
@@ -22357,7 +22358,7 @@
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
-        "T30": "apitest t30audit 2026-10-31 QEMU (no camera)",
+        "T30": "apitest T30X b67 2026-11-12: open PASS (4096 bytes written and freed); vendor 1.0.5 FAILs (IMP_Sp_Alloc -1, Alloc_Set_Attr -99): vendor crash/fail, no vendor line, cell stays qemu",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (4096 bytes at 0x760b6000 written and freed). T10 2026-11-03 on the T10 camera: apitest case alloc PASS; see Phys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS."
@@ -22369,7 +22370,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "qemu",
+        "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
         "T33": "nob",
@@ -22383,7 +22384,7 @@
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
-        "T30": "apitest t30audit 2026-10-31 QEMU (no camera)",
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): alloc case: virt+100 maps back to descriptor phys+100 on vendor and open",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (virt+100 -> 0x77d0064 (descriptor phys+100 = 0x77d0064)). T10 2026-11-03 on the T10 camera: apitest case alloc PASS (virt+100 gives the descriptor's physical address +100); see Phys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS."

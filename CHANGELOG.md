@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T30X b67 run applied to the API matrix
+
+- T30X run b67 (vendor 1.0.5 first, then OpenIMP, one power cycle, 0 oopses, relay off): vendor and open PASS equal for `ISP_Tuning_SetTemperDnsCtl`, `SetISPProcess`, `Encoder_PadFrame`, `Encoder_SetChnRcTrigLevel`, `Phys_to_Virt`, `Virt_to_Phys`, `OSD_AttachToGroup`, plus `Encoder_Get/SetFisheyeEnableStatus` (b62/b65): T30 cells now `dev` (8 gone from host/aud/qemu). `Sp_Alloc` stays qemu (vendor allocator fails, no vendor line); SU_* cells unchanged (no libsysutils on the camera, N/A on both libraries).
+
 ## 2026-11-12: apitest T30 cases for the remaining 🔧 cells (b67 slot prepared, not run)
 
 - `tools/apitest`: new T30 case `attach_t30` (`IMP_OSD_AttachToGroup`: FS -> ENC becomes FS -> OSD -> ENC, frames flow; `enc_attach_osd` is now built for T30). `SU_Base_Raw2SUTime` accepts the `struct tm` form of the T30 libsysutils (year-1900, month 0..11, vendor and OpenIMP alike). With `APITEST_SU_NOHW=1` the T30 run treats `SU_Base_GetDevID` -1 as the vendor-equal answer on a board without a device-ID source and checks the no-node cipher codes (-11/-12/-14/-16/-18/-19) of `SU_CIPHER_*` (no /dev/aes on the T30X). `qemu_run.py` prints the `IMP_OSD_AttachToGroup` line. QEMU ingenic-t30: attach_t30, enchelp_t23, process, temper, alloc, SU area run; make check exit 0.
