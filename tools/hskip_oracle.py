@@ -15,6 +15,9 @@ the vendor library is copied into OpenIMP; it is read from the path you pass.
     tools/hskip_oracle.py T20/lib/3.12.0/uclibc/4.7.2/libimp.so --changeref > tests/hskip/changeref_vectors.txt
     tools/hskip_oracle.py T20/lib/3.12.0/uclibc/4.7.2/libimp.so --scenecut > tests/hskip/scenecut_vectors.txt
 
+T30 (issue #24): the default run and '--black' with T30/lib/1.0.5/uclibc/4.7.2/libimp.so print the T10/T20 vectors
+(hskip_vectors.txt, black_vectors.txt) byte for byte: the T30 i264e is the T10/T20 one.
+
 T21 (issue #7): the same options with T21/lib/1.0.33/uclibc/5.4.0/libimp.so, results in tests/hskip/*_t21.txt;
 '--validate' prints what i264e_validate_parameters makes of the skip attributes per rate-control mode
 (tests/hskip/validate_t21.txt); '--sceneidr' prints the scene-cut IDR decisions (tests/hskip/sceneidr_t21.txt).
@@ -40,10 +43,20 @@ LAY21 = dict(SH=0xa8c, FR=0xae0, FRS=0x1e8, CTX=0x3ca8, E=0x12b0,
              FTYPE=0x47a, BYTES=0xf30, NEW=0x12a4, OLD=0x129c, FLAG=0x1284,
              SC=0xb8, FPSN=0x194, FPSD=0x198, LASTIDR=0x8e4, QPIDR=None,
              MBW=0x91c, MBH=0x920, BSP=0x394, RECON=0xe4, SHARGS=lambda H: (2, H + 0x3f0000, H + 0x3f0010, 0, 0))
+# T30 1.0.5 (#24): the i264e of the T10/T20 3.12.0 generation (same code, other offsets in E and C): the same
+# picture decisions and the same black slice data as T10/T20 (tests/hskip/hskip_vectors.txt, black_vectors.txt, byte
+# for byte with the gcc 4.7.2 build of the library); its frame records are 0x118 bytes apart
+LAY30 = dict(LAY20, SH=0x90860, FR=0x908a8, FRS=0x118, CTX=0x92718, FTYPE=0x3e4,
+             E=0x1050, MBW=0x906f0, MBH=0x906f4, BYTES=0xcf8)
 LAY = LAY20
 def pick(L):
     global LAY
-    LAY = LAY21 if 'eprc_default_set_T21' in L.syms else LAY20
+    if 'eprc_default_set_T21' in L.syms:
+        LAY = LAY21
+    elif 'hwicodec_pf_h264e_t30_enc' in L.syms:
+        LAY = LAY30
+    else:
+        LAY = LAY20
     return LAY
 
 def init_skip(L, H, gop, typ, m, n, same):
@@ -61,7 +74,7 @@ def run(L, gop, typ, m, n, same, frames=240):
     L.wr(H, bytes(0x400000))
     L.w32(H + 40, gop)
     init_skip(L, H, gop, typ, m, n, same)
-    sh = [L.r32(H + LAY['SH'] + 4 * i) for i in range(6)] if LAY is LAY20 else [L.r32(H + LAY['SH'] + 4 * i) for i in (5, 6, 7)] * 2
+    sh = [L.r32(H + LAY['SH'] + 4 * i) for i in range(6)] if LAY is not LAY21 else [L.r32(H + LAY['SH'] + 4 * i) for i in (5, 6, 7)] * 2
     L.w32(H + LAY['CTX'], C)
     L.w32(C + 4 * 0xe0, P)
     L.w32(C, 0xffffffff)
