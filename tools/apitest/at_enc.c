@@ -1958,6 +1958,7 @@ int enc_demask_run(void) { return -1; }
  * top-left 64x16 source luma of each I picture (the watermark, src/watermark): decode the dump and run
  * tools/watermark_check.py on the I pictures.
  *   FISHEYE_ON (default 1)  FISHEYE_QP (FIXQP at that QP, default 30; 0: CBR)  FISHEYE_GOP (default 40)  FISHEYE_FRAMES (default 100)
+ *   FISHEYE_H265=1 (T31/T40: an H.265 channel)
  *   FISHEYE_ROI=1 (an application ROI, delta QP -6 over most of the picture, set before the first picture)  FISHEYE_DUMP=<file>
  *   HSKIP_MAIN=1 (T21: the encoder reads FrameSource ch0 at the sensor size, ch1 is not set up)
  *   FISHEYE_LOSSTHD=<bytes> (T23: IMP_Encoder_Setframelossthd after CreateChn; the delivered pictures are logged with
@@ -1977,7 +1978,12 @@ int enc_fisheye_run(void)
     unsigned long total = 0;
 
     if (grp_up(0, 0) != 0) { gfree(a); return -1; }
+#ifdef ENC_NEW
+    /* FISHEYE_H265=1 (T31/T40, #402): the same case on an H.265 channel */
+    fill_attr(a, (e = getenv("FISHEYE_H265")) && *e == '1' ? CODEC_H265 : CODEC_H264, gop);
+#else
     fill_attr(a, CODEC_H264, gop);
+#endif
 #ifdef ENC_NEW
     /* T31/T40 (#357): the Allegro encoders mark the I pictures with the vendor luma watermark */
     if (fixqp > 0) {

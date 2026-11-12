@@ -17,7 +17,22 @@ int openimp_t31_completion_payload_size(const void *status,
            (const uint8_t *)status +
                OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET,
            sizeof(*payload_size));
+    *payload_size &= OPENIMP_T31_COMPLETION_SIZE_MASK;
     return *payload_size ? 0 : -1;
+}
+
+int openimp_t31_completion_lcu_overflow(const void *status,
+                                        size_t status_size)
+{
+    uint32_t word;
+
+    if (!status || status_size < OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET +
+                                     sizeof(word))
+        return 0;
+    memcpy(&word, (const uint8_t *)status +
+                      OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET,
+           sizeof(word));
+    return (word & OPENIMP_T31_COMPLETION_LCU_OVERFLOW) != 0u;
 }
 
 int openimp_t31_stream_layout(uint32_t capacity, uint32_t payload_offset,

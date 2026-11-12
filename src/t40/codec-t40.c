@@ -3952,33 +3952,37 @@ static void avpu_t31_roi_apply(ALAvpuContext *ctx)
                              0x40u + mb);
 }
 
-/* IMP_Encoder_SetFisheyeEnableStatus, picture part (#357): the vendor
+/* IMP_Encoder_SetFisheyeEnableStatus, picture part (#357, #402): the vendor
  * Allegro encode1 (T31 1.1.6, T40 1.3.1), for a channel created with the flag
- * (AL_Common_Encoder_CreateChannel runs watermark_init):
- *   - every picture: clears QP table entries 0..12 (EP2 + 0x40) and sets the
- *     picture's "use QP table" and "relative" options (cmd[9] bits 25, 24);
+ * (AL_Common_Encoder_CreateChannel runs watermark_init), on every picture:
+ *   - clears QP table entries 0..12 (EP2 + 0x40);
  *   - an I picture: embed_watermark(ctx, source luma, ALIGN16(width),
- *     ALIGN16(height)) on the source frame in place (src/watermark), then
- *     H.264: entries 0..3, the four top-left macroblocks, = 0x21 (relative
- *     -31, the macroblocks that carry the mark coded at the lowest QP).
- * The vendor's H.265 entries (CTB table layout) are not written here: the
- * H.265 picture gets the luma part only.  The H.264 entries are off by
- * default (OPENIMP_WM_PARTS below, docs/WATERMARK.md). */
+ *     ALIGN16(height)) on the source frame in place (src/watermark); when it
+ *     fails the picture keeps the cleared table without the two options;
+ *     then H.264: entries 0..3 (the four top-left macroblocks) = 0x21,
+ *     H.265: entries 0..4 and 8..12 (the first two CTBs of the 8-byte
+ *     per-32x32 CTB layout, AL_GetAllocSizeEP2(HEVC) = align128(8 * CTBs)
+ *     + 0x40) = 0x21: relative -31, the blocks that carry the mark coded
+ *     at the lowest QP;
+ *   - sets the picture's "use QP table" and "relative" options (cmd[9] bits
+ *     25, 24).
+ * The -31 blocks raise the hardware's LCU overflow warning on textured
+ * scenes (status +0x104 bit 31, the vendor prints "Warning some LCU exceed
+ * the maximum allowed bits"); the picture is complete (EndEncoding masks the
+ * 30-bit byte count).  OPENIMP_WM_PARTS (default 3): bit 0 the luma mark,
+ * bit 1 the QP table entries. */
 static void avpu_watermark(ALAvpuContext *ctx, uint32_t virt_addr, int is_idr)
 {
     uint32_t stride, height, bytes, off;
     uint8_t *table;
+    int marked = 1;
 
     static int parts = -1;
 
     if (parts < 0) {
-        /* bit 0 the luma mark, bit 1 the vendor's QP table entries.  The QP
-         * part is off by default: on the T31 (open stack) the first IDR
-         * with both parts fails in Enc1 (status done=0, no payload) and the
-         * channel stalls; each part alone codes fine (#357, #402). */
         const char *e = getenv("OPENIMP_WM_PARTS");
 
-        parts = e && *e ? atoi(e) : 1;
+        parts = e && *e ? atoi(e) : 3;
     }
     ctx->wm_table_on = 0;
     if (!ctx->watermark)
@@ -3992,11 +3996,13 @@ static void avpu_watermark(ALAvpuContext *ctx, uint32_t virt_addr, int is_idr)
         (void)avpu_flush_cache(-1, luma, bytes, 2 /* as the source sync */);
         if (watermark_embed(luma, (int)stride, (int)height) == 0)
             (void)avpu_flush_cache(-1, luma, bytes, 1 /* WBACK */);
+        else
+            marked = 0;
         LOG_CODEC("AVPU: watermark frame=%u luma=%p stride=%u height=%u "
                   "first=%02x%02x%02x%02x", ctx->frame_number, (void *)luma,
                   stride, height, luma[0], luma[1], luma[2], luma[3]);
     }
-    if (!(parts & 2) || ctx->codec_hevc || !ctx->interm_buf.map)
+    if (!(parts & 2) || !ctx->interm_buf.map)
         return;
     off = ctx->interm_ep1_size + ctx->interm_wpp_size + 0x40u;
     if (ctx->interm_ep2_size < 0x40u + 13u)
@@ -4004,10 +4010,16 @@ static void avpu_watermark(ALAvpuContext *ctx, uint32_t virt_addr, int is_idr)
     table = (uint8_t *)ctx->interm_buf.map + off;
     pthread_mutex_lock(&avpu_roi_lock);
     memset(table, 0, 13u);
-    if (is_idr)
-        memset(table, 0x21, 4u);
+    if (is_idr && marked) {
+        if (ctx->codec_hevc) {
+            memset(table, 0x21, 5u);
+            memset(table + 8, 0x21, 5u);
+        } else {
+            memset(table, 0x21, 4u);
+        }
+    }
     pthread_mutex_unlock(&avpu_roi_lock);
-    ctx->wm_table_on = 1;
+    ctx->wm_table_on = !is_idr || marked;
     (void)avpu_flush_dma_buf(ctx->fd, "wm_table", &ctx->interm_buf, off + 13u);
 }
 
@@ -5411,7 +5423,7 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         /* ROI: QP table in EP2 (avpu_t31_roi_apply), the same two bits as
          * the T31 command (vendor SliceParamToCmdRegsEnc1: SliceParam+0x6c
          * -> cmd[9] bit 25 use the table, +0x6b -> bit 24 relative) */
-        if (!ctx->codec_hevc && (ctx->roi_table_on || ctx->wm_table_on))
+        if ((!ctx->codec_hevc && ctx->roi_table_on) || ctx->wm_table_on)
             cmd[0x09] |= 0x03000000u;
 #endif
 #if defined(PLATFORM_T31)
@@ -5557,7 +5569,7 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
          * use the table (vendor SliceParam+0x6c, picture option
          * AL_OPT_USE_QP_TABLE), bit 24 = table relative (SliceParam+0x6b,
          * channel option bit 0). */
-        if (!ctx->codec_hevc && (ctx->roi_table_on || ctx->wm_table_on))
+        if ((!ctx->codec_hevc && ctx->roi_table_on) || ctx->wm_table_on)
             cmd[0x09] |= 0x03000000u;
         if (ctx->codec_hevc)
             avpu_t31_hevc_fill_cmd(ctx, cmd, is_idr);
@@ -6662,6 +6674,18 @@ static void avpu_end_encoding_callback(void *user_data)
         }
         memcpy(status_regs.raw + OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET,
                &raw_size, sizeof(raw_size));
+        /* bit 31: some LCU exceeded the maximum allowed bits (vendor
+         * EntropyStatusRegsToSliceStatus, AL_WARN_LCU_OVERFLOW).  A
+         * warning only: the picture is complete, the byte count is bits
+         * 29:0.  The vendor watermark QP entries (relative -31) raise it on
+         * marked I pictures (#402). */
+        if (!avpu_t31_payload_size_is_error_fill(raw_size) &&
+            (raw_size & OPENIMP_T31_COMPLETION_LCU_OVERFLOW)) {
+            IMP_LOG_LIMITED(LOG_WARNING, "Codec",
+                            "Warning some LCU exceed the maximum allowed bits");
+        }
+        if (!avpu_t31_payload_size_is_error_fill(raw_size))
+            raw_size &= OPENIMP_T31_COMPLETION_SIZE_MASK;
         if (!avpu_t31_payload_size_is_error_fill(raw_size) &&
             ctx->stream_buf_size > (int)AVPU_T31_PAYLOAD_OFFSET) {
             if (raw_size <= (uint32_t)ctx->stream_buf_size -

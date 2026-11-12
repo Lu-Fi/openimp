@@ -5,6 +5,12 @@
 #include <stdint.h>
 
 #define OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET 0x104u
+/* The status word at +0x104 (vendor T31 1.1.6 EntropyStatusRegsToSliceStatus):
+ * bits 29:0 the entropy byte count, bit 31 "some LCU exceeded the maximum
+ * allowed bits" (slice status byte 0, AL_WARN_LCU_OVERFLOW: a warning, the
+ * picture is complete). */
+#define OPENIMP_T31_COMPLETION_SIZE_MASK 0x3fffffffu
+#define OPENIMP_T31_COMPLETION_LCU_OVERFLOW 0x80000000u
 
 typedef struct {
     uint32_t payload_end;
@@ -47,6 +53,9 @@ typedef struct {
 int openimp_t31_completion_payload_size(const void *status,
                                         size_t status_size,
                                         uint32_t *payload_size);
+/* 1 when the completion word carries the LCU overflow warning (bit 31) */
+int openimp_t31_completion_lcu_overflow(const void *status,
+                                        size_t status_size);
 int openimp_t31_stream_layout(uint32_t capacity, uint32_t payload_offset,
                               uint32_t header_size, uint32_t payload_size,
                               OpenIMPT31StreamLayout *layout);

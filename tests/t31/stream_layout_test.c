@@ -201,6 +201,33 @@ int main(void)
         failed = 1;
     }
 
+    /* #402: device status of a marked IDR (vendor watermark QP entries,
+     * relative -31): bit 31 = LCU overflow warning, bits 29:0 the size
+     * (vendor EntropyStatusRegsToSliceStatus). */
+    {
+        uint8_t st[0x168] = {0};
+        uint32_t word = 0x80005b2du;
+
+        memcpy(st + OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET, &word,
+               sizeof(word));
+        if (openimp_t31_completion_payload_size(st, sizeof(st),
+                                                 &payload_size) != 0 ||
+            payload_size != 0x5b2du ||
+            !openimp_t31_completion_lcu_overflow(st, sizeof(st))) {
+            fprintf(stderr, "LCU overflow completion not split: %u\n",
+                    payload_size);
+            failed = 1;
+        }
+        word = 0x5b2du;
+        memcpy(st + OPENIMP_T31_COMPLETION_PAYLOAD_SIZE_OFFSET, &word,
+               sizeof(word));
+        if (openimp_t31_completion_lcu_overflow(st, sizeof(st)) ||
+            openimp_t31_completion_lcu_overflow(st, 0x104u)) {
+            fprintf(stderr, "LCU overflow flag without bit 31\n");
+            failed = 1;
+        }
+    }
+
     if (openimp_t31_annexb_nals(idr_access_unit,
                                 sizeof(idr_access_unit), nals, 3u) != 3 ||
         nals[0].offset != 0u || nals[0].length != 7u ||
