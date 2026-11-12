@@ -35,6 +35,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-12: T30 H.264 ME window is the macroblock-aligned picture (#400; T30X proof pending)
 
 - A T30 ext channel 320x180 (FS3 -> ENC5) delivered 2 streams and then none on the T30X (b62), while 640x360 and 320x192 ran at 15 fps; the vendor stack faulted in the VPU at the same size (b61). The Helix command list set the motion-search window `0x50060` to the visible picture (179 rows); the T20 OEM list (soc_vpu capture, #191) and, by the same VPU core, the vendor use the macroblock-aligned picture. 180 is the only tested height that is not a multiple of 8 (192 and 360 are), which fits a window the search unit takes in 8-line steps. T30 now writes the aligned window (320x180 -> 191<<16 | 319; 640x360 -> 367<<16 | 639, as the T20 OEM). Host test `test_t30_me_window` (fails on the old code); QEMU cannot show the stall (its VPU model ran 320x180 at 35 streams before the change too). The vendor library does not refuse or round the size at CreateChn (it faults in the VPU), so there is no vendor behaviour to copy beyond the window.
+## 2026-11-12: T30 H.265 Set/GetChnROI vendor-equal (#404)
+
+- Vendor T30 libimp 1.0.5 (Ghidra): H.265 `SetChnROI` goes to a pending i265e table (`I265eReconfig::setRoi`, index 0..15), a picture adopts it (`ReconfigPFrame`) and `codec_enc` hands the live table to the Radix command list; `GetChnROI` reads the live table, so it is zero until a picture was encoded. OpenIMP stored nothing for H.265 and showed the region of an earlier H.264 channel in the same slot (apitest `enc`, T30X b62/b63).
+- Fix: the same pending/live tables in codec-t40.c, `OpenIMP_T30_RadixSetRoi` feeds the live table to the command list every picture (the ROI is now programmed into the H.265 picture as the vendor does), and a new channel clears its ROI table. Host tests: p2_t30_enc_test (H.265 Set, zero Get before a picture, region after, index rules) and radix_encoder_test (control byte and box in the command list).
 
 ## 2026-11-12: T31 H.265 FixQP picture no longer garbage (#403)
 

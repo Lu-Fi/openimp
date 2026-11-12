@@ -106,6 +106,7 @@ struct T30RadixEncoder {
     /* SetH265TransCfg (#399): latched, coded from the next IDR on */
     int32_t trans_cb, trans_cr;
     int trans_set;
+    uint8_t roi[16][RSI_ROI_STRIDE]; /* IMP_Encoder_SetChnROI table (live) */
     /* InsertUserData (#399): SEI payloads for the next picture */
     uint32_t ud_count;
     uint32_t ud_len[T30_RADIX_USER_DATA_MAX_CNT];
@@ -446,6 +447,14 @@ int OpenIMP_T30_RadixSetChromaQp(T30RadixEncoder *e, int cr, int cb)
     return 0;
 }
 
+int OpenIMP_T30_RadixSetRoi(T30RadixEncoder *e, const uint8_t roi[16][7])
+{
+    if (!e || !roi)
+        return -1;
+    memcpy(e->roi, roi, sizeof(e->roi));
+    return 0;
+}
+
 int OpenIMP_T30_RadixGetChromaQp(const T30RadixEncoder *e, int *cr, int *cb)
 {
     if (!e || !cr || !cb)
@@ -546,8 +555,9 @@ static void radix_picture_fields(T30RadixEncoder *e, const IMPFrameInfo *frame,
     uint32_t w16 = (e->width + 15u) & ~15u, h16 = (e->height + 15u) & ~15u;
     uint32_t pitch = w16;
 
-    /* ROI: the channel's table (none: zero), not the QP map's copy */
-    memset(b + RSI_ROI_INFO, 0, 16u * RSI_ROI_STRIDE);
+    /* ROI: codec_enc 0x6cf4c copies the i265e table (+0xc0, 16 x 7 bytes,
+     * zero until a Set is adopted) to the slice info every picture */
+    memcpy(b + RSI_ROI_INFO, e->roi, sizeof(e->roi));
     rsi_set_u16(b, RSI_FRAME_Y_STRIDE, (uint16_t)pitch);
     rsi_set_u16(b, RSI_FRAME_C_STRIDE, (uint16_t)pitch);
     rsi_set_u16(b, RSI_DST_Y_STRIDE, (uint16_t)e->width);

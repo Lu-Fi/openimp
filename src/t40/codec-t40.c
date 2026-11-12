@@ -8709,6 +8709,13 @@ struct AL_CodecEncode {
     /* SetH265TransCfg before the encoder exists (codec_lock-free: API thread
      * under the channel lock, encoder thread reads at creation) */
     int h265_cr_qp, h265_cb_qp, h265_qp_set;
+    /* IMP_Encoder_SetChnROI on H.265 (#404, vendor I265eReconfig::setRoi/
+     * getRoi): Set fills the pending table, the encoder adopts it into the
+     * live table at the next picture (ReconfigPFrame), Get reads the live
+     * one.  16 regions; guarded by codec_roi_lock. */
+    uint8_t h265_roi_pend[16][7];
+    uint8_t h265_roi[16][7];
+    int h265_roi_dirty;
 #endif
 #endif
 #if defined(PLATFORM_T23)
@@ -9922,6 +9929,17 @@ int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
 #if defined(PLATFORM_T30) || defined(PLATFORM_T23)
     AL_CodecEncode *enc = (AL_CodecEncode *)codec;
 
+#if defined(CODEC_T30_RADIX)
+    if (enc != NULL && entry != NULL && index < 16u &&
+        codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_HEVC) {
+        /* i265e setRoi: 16 regions, no clamp; applied with the next picture */
+        pthread_mutex_lock(&codec_roi_lock);
+        memcpy(enc->h265_roi_pend[index], entry, 7);
+        enc->h265_roi_dirty = 1;
+        pthread_mutex_unlock(&codec_roi_lock);
+        return 0;
+    }
+#endif
     if (enc == NULL || entry == NULL || index >= 8u)
         return -1;
     pthread_mutex_lock(&codec_roi_lock);
@@ -9935,6 +9953,22 @@ int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
     return -1;
 #endif
 }
+
+#if defined(CODEC_T30_RADIX)
+/* IMP_Encoder_GetChnROI on an H.265 channel: the live table (what the
+ * encoder adopted at a picture), zero before the first picture */
+int AL_Codec_Encode_GetRoi(void *codec, uint32_t index, uint8_t entry[7])
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (enc == NULL || entry == NULL || index >= 16u)
+        return -1;
+    pthread_mutex_lock(&codec_roi_lock);
+    memcpy(entry, enc->h265_roi[index], 7);
+    pthread_mutex_unlock(&codec_roi_lock);
+    return 0;
+}
+#endif
 
 int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset)
 {
@@ -12099,6 +12133,13 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             (void)OpenIMP_T30_RadixUpdateParams(enc->t30_radix, &current);
         }
         codec_push_user_data_radix(enc);
+        pthread_mutex_lock(&codec_roi_lock);    /* ReconfigPFrame: pending -> live */
+        if (enc->h265_roi_dirty) {
+            memcpy(enc->h265_roi, enc->h265_roi_pend, sizeof(enc->h265_roi));
+            enc->h265_roi_dirty = 0;
+        }
+        (void)OpenIMP_T30_RadixSetRoi(enc->t30_radix, enc->h265_roi);
+        pthread_mutex_unlock(&codec_roi_lock);
         if (__sync_lock_test_and_set(&enc->force_next_idr, 0))
             OpenIMP_T30_RadixRequestIDR(enc->t30_radix);
         if (OpenIMP_T30_RadixEncode(enc->t30_radix,
