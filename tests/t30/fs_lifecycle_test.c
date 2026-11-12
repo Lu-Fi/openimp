@@ -1584,6 +1584,7 @@ static void test_format_abi(void)
  * (1 s) is over instead of sleeping in DQBUF for good: IVS keeps getting
  * frames (T30 camera, apitest ivs: 3 results, then none). */
 int VBMGetFrame(int chn, void **frame);
+int VBMReleaseFrame(int chn, void *frame);
 static unsigned int ivs_hook_frames;
 
 void openimp_t31_ivs_capture(int fs_chn, const void *frame)
@@ -1614,7 +1615,13 @@ static void test_ivs_only_stock_dq(void)
     sleep_ms(100);
     __atomic_store_n(&puller_stop, 1, __ATOMIC_RELAXED);
     pthread_join(thread, NULL);
-    (void)VBMGetFrame(0, &frame);
+    /* This GetFrame only marks the pull.  It may return a frame (one that
+     * arrived since the puller left, a matter of scheduling): hand it back
+     * at once.  Kept forever, it leaves the driver of this 2-buffer pool
+     * with one buffer, below the two the bank ring needs (#405), and the
+     * channel correctly stays quiet until the reader gives it back. */
+    if (VBMGetFrame(0, &frame) == 0 && frame)
+        VBMReleaseFrame(0, frame);
     sleep_ms(300);
     at_start = __atomic_load_n(&ivs_hook_frames, __ATOMIC_RELAXED);
     CHECK(at_start >= 1, "ivs only: no frame at all");
@@ -1653,7 +1660,13 @@ static void test_ivs_only_stock_dq_delay(void)
     sleep_ms(100);
     __atomic_store_n(&puller_stop, 1, __ATOMIC_RELAXED);
     pthread_join(thread, NULL);
-    (void)VBMGetFrame(0, &frame);
+    /* This GetFrame only marks the pull.  It may return a frame (one that
+     * arrived since the puller left, a matter of scheduling): hand it back
+     * at once.  Kept forever, it leaves the driver of this 2-buffer pool
+     * with one buffer, below the two the bank ring needs (#405), and the
+     * channel correctly stays quiet until the reader gives it back. */
+    if (VBMGetFrame(0, &frame) == 0 && frame)
+        VBMReleaseFrame(0, frame);
     sleep_ms(300);
     at_start = __atomic_load_n(&ivs_hook_frames, __ATOMIC_RELAXED);
     CHECK(at_start >= 1, "ivs only delay: no frame at all");
