@@ -117,7 +117,17 @@ def scenario(seed, k, VB=1):
     w, h = r.choice([(1920, 1080), (1280, 720), (640, 360), (2560, 1440), (2304, 1296)])
     gop = r.choice([10, 25, 30, 50, 60]); fps = r.choice([10, 15, 20, 25, 30])
     iqp = r.choice([-1, 25, 30, 35])
-    blk = O.imp_block(LIB, mode, kbps, w, h, fps, gop, iqp)
+    mut = None
+    if seed >= 3:
+        # seed 3+: every rate-control attribute of the mode randomised as tools/eprc_t33_imp_oracle.py
+        # --random does (keep / 0 / in range / raw), through the vendor IMP checks
+        import eprc_t33_imp_oracle as I
+        mut = lambda a: I.mutate(a, (seed * 2654435761 + k * 40503) & 0xffffffff or 1)[0]
+    try:
+        blk = O.imp_block(LIB, mode, kbps, w, h, fps, gop, iqp, mutate=mut)
+    except RuntimeError:
+        print('scen %d: vendor rejects the attributes (no channel)' % k)
+        return 0
     hh = Harness(blk, verbose=VB)
     pics = r.choice([80, 150, 250])
     lvl = [60.0]; still = [0]
@@ -128,7 +138,7 @@ def scenario(seed, k, VB=1):
         if still[0] > 0:
             still[0] -= 1; return 1.0 + r.random()
         return max(0.5, lvl[0] * (0.8 + 0.4 * r.random()))
-    seq = hh.run(pics, cpl, random.Random(seed * 7 + k) if seed % 2 == 0 else None)
+    seq = hh.run(pics, cpl, random.Random(seed * 7 + k) if seed % 2 == 0 or seed >= 3 else None)
     print('scen %d mode %d %dk %dx%d gop %d fps %d init %d pics %d: calls %d diff %d fault %d qp[-5:] %s' % (
         k, mode, kbps, w, h, gop, fps, iqp, pics, hh.calls, hh.ndiff, hh.nfault, seq[-5:]), flush=True)
     return hh.ndiff
