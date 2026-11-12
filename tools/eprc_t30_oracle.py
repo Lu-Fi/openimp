@@ -23,6 +23,12 @@ picture-size and statistics models are those of tools/eprc_oracle.py.
         of the slice block that try is coded with, #217 step 2)
     tools/eprc_t30_oracle.py LIB --regs-fuzz SEED N  (H264E_T30_SliceInit on N
         random slice blocks: a 'Z' line with the input, then its 'W' line)
+    tools/eprc_t30_oracle.py LIB --replay SIZES [--sc "18 numbers"]  (open loop: a 'Y' line with the
+        coded size of each picture of SIZES (words 'I<bytes>' / 'P<bytes>', whitespace separated, one
+        scenario per file; default scenario H.264 VBR 1920x1080 25 fps max 2000 kbit/s, QP 15..45,
+        steps 3/15, static 2, change pos 80, quality 2, GOP 50 as the b58 device clips), then the 'F'
+        line of the QP the OEM controller picks; a picture of 'I'/'P' type only sets nothing, the IDR
+        positions are those of the controller (picture count % GOP), Lu-Fi/openimp issue "T30 VBR")
     tools/eprc_t30_oracle.py LIB --h265 [--random SEED N [FRAMES]]  (H.265, I265eRatectrl)
     tools/eprc_t30_oracle.py LIB --h265-reconf [SEED N]  (H.265 run-time change: I265e::reset)
     tools/eprc_t30_oracle.py LIB --h264-reconf [SEED N]  (H.264 run-time change:
@@ -464,9 +470,38 @@ def main_h264_gop(lib, args):
         print('I', ' '.join(str(i) for i in idrs))
 
 
+def main_replay(lib, args):
+    """--replay SIZES [--sc ...]: see the module help."""
+    sizes = [int(w[1:]) for w in open(args[0]).read().split()]
+    sc = (2, 1920, 1080, 50, 25, 15, 45, 2000, 2000, 3, 15, 0, 2, 80, 2, 0, -1, 50)
+    if len(args) > 2 and args[1] == '--sc':
+        sc = tuple(int(x) for x in args[2].split())
+    (mode, w, h, gop, fps, minqp, maxqp, br, mbr, fstep, gstep, bias, static,
+     cpos, qual, bgmul, initqp, idr) = sc[:18]
+    s = SimT30(lib, mode=mode, w=w, h=h, gop=gop, fps=(fps, 1), minqp=minqp, maxqp=maxqp,
+               bitrate=br, maxbitrate=mbr, frm_step=fstep, gop_step=gstep, bias=bias,
+               static_time=static, change_pos=cpos, quality=qual, initqp=initqp)
+    print('S', ' '.join(str(v) for v in sc) + ' 1')
+    for f, size in enumerate(sizes):
+        since = f % idr
+        is_idr = since % gop == 0
+        qp = s.start(since)
+        out = [qp]
+        regs, s.cmpx = real_statistics(f, w, h)
+        print('Y', size)
+        while s.end(size, regs, is_idr, qp) == 1:
+            qp = s.qp()
+            out.append(qp)
+            size = max(size // 2, 20)
+        print('F', since, ' '.join(str(v) for v in out))
+
+
 def main():
     lib = sys.argv[1]
     args = sys.argv[2:]
+    if '--replay' in args:
+        i = args.index('--replay')
+        return main_replay(lib, args[i + 1:])
     if '--h264-reconf' in args:
         args.remove('--h264-reconf')
         if '--gop' in args:

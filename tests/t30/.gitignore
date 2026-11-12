@@ -10,6 +10,7 @@ descriptor_test
 fs_lifecycle_test_t21
 fs_lifecycle_test_t20
 fs_lifecycle_test_t23
+fs_lifecycle_test_t31
 fs_lifecycle_test_t30
 ivs_framework_test_t30
 fs_lifecycle_asan_*

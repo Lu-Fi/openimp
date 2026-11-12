@@ -20,6 +20,8 @@ check: $(EPRC_TEST) $(EPRC30_TEST)
 	$(EPRC30_TEST) eprc_t30_real_vectors.txt
 	$(EPRC30_TEST) eprc_t30_random_vectors.txt
 	$(EPRC30_TEST) eprc_t30_static_vectors.txt
+	$(EPRC30_TEST) eprc_t30_vbr_replay_vectors.txt
+	$(EPRC30_TEST) eprc_t30_vbr_start_vectors.txt
 	$(EPRC30_TEST) eprc_t30_slice_random_vectors.txt
 	$(EPRC30_TEST) eprc_t30_regs_vectors.txt
 	$(EPRC30_TEST) eprc_t30_sliceinit_vectors.txt

@@ -128,6 +128,10 @@ int VBMDelaySetDelay(int chn, int delay);
 #if defined(PLATFORM_T20) || defined(PLATFORM_T30)
 int VBMBuffersInDriver(int chn);
 #endif
+/* #374/#405: hand the oldest ready frames (all but the newest keep_ready)
+ * back until the driver holds two buffers; returns how many it still
+ * lacks (0 enough, -1 untracked pool). */
+int VBMFeedDriver(int chn, int keep_ready);
 int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
                           void *framedata, void *info, size_t info_size);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \

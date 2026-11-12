@@ -25,6 +25,7 @@
 #include <sched.h>
 #include <semaphore.h>
 #include <signal.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1254,17 +1255,25 @@ static void *frame_pooling_thread(void *arg)
                      * channel delivered nothing more (an IVS group bound
                      * to it got no result after the FS channel had been
                      * pulled).  Without a buffer in the driver, hand idle
-                     * frames back first and dequeue only after that. */
-                    if (VBMBuffersInDriver(chn) == 0) {
+                     * frames back first and dequeue only after that.
+                     * #405: the bank ring of these ISPs completes no frame
+                     * with a single buffer queued either (its DMA stops
+                     * while the next bank is empty), so "dry" means fewer
+                     * than two: older ready frames go back first (the
+                     * newest stays for the reader), then the idle recycle;
+                     * a DQBUF with one buffer slept for good and the next
+                     * GetFrame got a frame from before the pause. */
+                    if (VBMFeedDriver(chn, INT_MAX) > 0) {   /* query only */
                         if (FS_TRYLOCK()) {
                             if (FS_FLAG_LOAD(ctx->running) &&
                                 fs_chan_get_state(chn) == 2) {
                                 FS_STEP(chn, FS_STEP_IDLE_RECYCLE);
+                                VBMFeedDriver(chn, 1);
                                 VBMRecycleIdleFrames(chn);
                             }
                             FS_UNLOCK();
                         }
-                        if (VBMBuffersInDriver(chn) == 0) {
+                        if (VBMFeedDriver(chn, INT_MAX) > 0) {
                             FS_STEP(chn, FS_STEP_DQ_EMPTY_SLEEP);
                             usleep(5000);
                             break;
