@@ -6,7 +6,11 @@
  * channel cmpx).  H / G lines are H.265 (tools/eprc_t30_oracle.py --h265):
  * per picture the QPs and the CRC-32 of the parameter block and the CU QP
  * map.  An R line (--h265-reconf) changes the rate-control fields of the
- * running H.265 controller before the next picture (EPRC30_Reinit). */
+ * running H.265 controller before the next picture (EPRC30_Reinit); in an
+ * H.264 scenario (--h264-reconf, #366) it is the change that the OEM
+ * i264e_idr_reconfig applies at the next (IDR) picture: that picture starts
+ * on the old controller, which is then re-initialised from its QP clipped
+ * to the new range and starts the picture again. */
 #include "eprc/eprc.h"
 
 #include <stdint.h>
@@ -114,8 +118,8 @@ int main(int argc, char **argv)
     Eprc30 rc;
     static uint8_t slice[0x1204];
     static uint8_t qpmap[0x10000];
-    EprcParams p;
-    int scenario = -1, frame = 0, active = 0, real = 0;
+    EprcParams p, p264;
+    int scenario = -1, frame = 0, active = 0, real = 0, reconf264 = 0;
     /* 'W' lines (#217 step 2): the register words of the slice block of
      * the last picture (last_p: a P picture), or of the last 'Z' block */
     static uint8_t zslice[0x1204];
@@ -169,6 +173,33 @@ int main(int argc, char **argv)
             active = 1;
             scenario++;
             frame = 0;
+        } else if (line[0] == 'R' && active && !p.codec) {
+            /* R (--h264-reconf, #366): the rate-control fields of a run-time
+             * change; the next F picture is the IDR where the OEM
+             * i264e_idr_reconfig applies it */
+            int v[18], i;
+            char *t = line + 1;
+
+            for (i = 0; i < 18; i++)
+                v[i] = (int)strtol(t, &t, 10);
+            memset(&p264, 0, sizeof(p264));
+            p264.rc_mode = (uint32_t)v[0];
+            p264.width = p.width;
+            p264.height = p.height;
+            p264.gop = (uint32_t)v[3];
+            p264.fps_num = (uint32_t)v[4];
+            p264.fps_den = 1;
+            p264.min_qp = (uint32_t)v[5];
+            p264.max_qp = (uint32_t)v[6];
+            p264.bitrate = (uint32_t)v[7];
+            p264.max_bitrate = (uint32_t)v[8];
+            p264.frm_qp_step = (uint32_t)v[9];
+            p264.gop_qp_step = (uint32_t)v[10];
+            p264.i_bias = v[11];
+            p264.static_time = (uint32_t)v[12];
+            p264.change_pos = (uint32_t)v[13];
+            p264.quality = (uint32_t)v[14];
+            reconf264 = 1;
         } else if (line[0] == 'H' || (line[0] == 'R' && active)) {
             int v[16], i, reinit = line[0] == 'R';
             char *t = line + 1;
@@ -344,6 +375,22 @@ int main(int argc, char **argv)
                     break;
                 want[n++] = (int)v;
                 s = e;
+            }
+            if (reconf264) {
+                /* i264e_idr_reconfig: the old controller starts the IDR,
+                 * ratecontrol_init from its QP clipped to the new range,
+                 * ratecontrol_start again */
+                int32_t q;
+
+                EPRC30_FrameStart(&rc, 1, &pic);
+                q = pic.qp;
+                q = q < (int32_t)p264.min_qp ? (int32_t)p264.min_qp :
+                    q > (int32_t)p264.max_qp ? (int32_t)p264.max_qp : q;
+                p264.init_qp = q;
+                p = p264;
+                reconf264 = 0;
+                if (EPRC30_Reinit(&rc, &p) != 0)
+                    return 2;
             }
             idr = since % (int)p.gop == 0;
             EPRC30_FrameStart(&rc, idr, &pic);

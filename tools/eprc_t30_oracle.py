@@ -25,6 +25,8 @@ picture-size and statistics models are those of tools/eprc_oracle.py.
         random slice blocks: a 'Z' line with the input, then its 'W' line)
     tools/eprc_t30_oracle.py LIB --h265 [--random SEED N [FRAMES]]  (H.265, I265eRatectrl)
     tools/eprc_t30_oracle.py LIB --h265-reconf [SEED N]  (H.265 run-time change: I265e::reset)
+    tools/eprc_t30_oracle.py LIB --h264-reconf [SEED N]  (H.264 run-time change:
+        i264e_idr_reconfig, Lu-Fi/openimp#366)
 
 The OEM T30 i264e codes an IDR whenever the picture count since the last
 IDR is a multiple of the GOP (i264e_ratecontrol_start: [0] % gop).  '--real'
@@ -136,6 +138,26 @@ class SimT30:
 
     def qp(self):
         return self.L.rd(self.E + 0x228, 1)[0]
+
+    def reconf(self, mode, gop, fps, minqp, maxqp, bitrate, maxbitrate, frm_step, gop_step,
+               bias, static_time, change_pos, quality, cqp=0):
+        """i264e_idr_reconfig (0x4b4e8), at an IDR picture after
+        i264e_ratecontrol_start of the running controller: the latched
+        fields (i264e_reconfig_fps_set 0x4d090: flag 0x20 -> [396]/[400];
+        the GOP flags 0x40/0x80 -> [40]; the rate-control flag 0x8 ->
+        [188]..[256]) go into the i264e parameters, then
+        i264e_ratecontrol_init(param, c_clip3(QP of this picture, [196],
+        [200])) and i264e_ratecontrol_start again on the same handle"""
+        L, R = self.L, self.R
+        qp_old = self.qp()
+        for o, v in ((40, gop), (188, mode), (192, cqp), (196, minqp), (200, maxqp),
+                     (216, bitrate), (228, bias), (232, frm_step), (236, gop_step),
+                     (244, static_time), (248, maxbitrate), (252, change_pos),
+                     (256, quality), (396, fps[0]), (400, fps[1])):
+            L.w32(R + o, v)
+        L.call('i264e_ratecontrol_init', R, min(max(qp_old, minqp), maxqp))
+        L.call('i264e_ratecontrol_start', self.H)
+        return self.qp()
 
     def slice_init_line(self, p_slice):
         """the 'W' line of the picture about to be coded: H264E_T30_SliceInit
@@ -277,9 +299,69 @@ def main_regs_fuzz(lib, seed, n):
         print(slice_init_regs(L, bytes(b), p, tg))
 
 
+def main_h264_reconf(lib, args):
+    """Run-time parameter changes on an H.264 channel (IMP_Encoder_SetChnFrmRate,
+    SetChnAttrRcMode, SetGOPSize: i264e_reconfig_*_set only latch the
+    change, i264e_encode runs i264e_idr_reconfig when the picture is an
+    IDR, #366).  Scenario A (S line) for some pictures, then 'R' + the 18
+    fields of scenario B (the size of A) before the IDR picture where the
+    change applies: its F line carries the QP of the restarted controller
+    (EPRC30_FrameStart, EPRC30_Reinit from the QP the old controller chose
+    for that picture, EPRC30_FrameStart).  The first pairs change only the
+    frame rate (the #366 case: 25 -> 10 and back), then random pairs."""
+    import random
+    seed, n = (int(args[0]), int(args[1])) if len(args) > 1 else (0x366, 16)
+    rnd = random.Random(seed)
+    pool = list(SCENARIOS) + random_scenarios(seed, n)
+    pairs = []
+    for a in SCENARIOS[:5]:
+        b = list(a)
+        b[4] = 10 if a[4] != 10 else 25
+        pairs.append((a, b))
+    for _ in range(n):
+        a, b = rnd.choice(pool), list(rnd.choice(pool))
+        pairs.append((a, b))
+    for k, (a, b) in enumerate(pairs):
+        b = list(b)
+        b[1], b[2] = a[1], a[2]
+        (mode, w, h, gop, fps, minqp, maxqp, br, mbr, fstep, gstep, bias, static,
+         cpos, qual, bgmul, initqp, idr) = a[:18]
+        s = SimT30(lib, mode=mode, w=w, h=h, gop=gop, fps=(fps, 1), minqp=minqp,
+                   maxqp=maxqp, bitrate=br, maxbitrate=mbr, frm_step=fstep, gop_step=gstep,
+                   bias=bias, static_time=static, change_pos=cpos, quality=qual,
+                   initqp=initqp)
+        print('S', ' '.join(str(v) for v in a))
+        # the request lands mid-GOP; the vendor applies it at the next IDR
+        change = gop * rnd.randint(1, 3)
+        frames = change + 2 * b[3] + rnd.randint(1, b[3])
+        g, f0 = gop, 0
+        for f in range(frames):
+            since = (f - f0) % g if f < change else f - change
+            if f >= change:
+                g = b[3]
+                since = (f - change) % g
+            is_idr = since % g == 0
+            qp = s.start(since)
+            if f == change:
+                print('R', ' '.join(str(v) for v in b))
+                qp = s.reconf(b[0], b[3], (b[4], 1), b[5], b[6], b[7], b[8], b[9], b[10],
+                              b[11], b[12], b[13], b[14])
+            out = [qp]
+            size = picture_bytes(f, qp, is_idr, w * h, k % 2)
+            regs = statistics(f)
+            while s.end(size, regs, is_idr, qp) == 1:
+                qp = s.qp()
+                out.append(qp)
+                size = max(size // 2, 20)
+            print('F', since, ' '.join(str(v) for v in out))
+
+
 def main():
     lib = sys.argv[1]
     args = sys.argv[2:]
+    if '--h264-reconf' in args:
+        args.remove('--h264-reconf')
+        return main_h264_reconf(lib, args)
     if '--h265-reconf' in args:
         args.remove('--h265-reconf')
         return main_h265_reconf(lib, args)

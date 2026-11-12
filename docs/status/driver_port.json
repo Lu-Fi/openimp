@@ -8,12 +8,12 @@
    "note": "paused, no recovered driver yet"
   },
   "T32": {
-   "proven": 1580,
+   "proven": 1591,
    "total": 1591,
    "branch": "claude/t32-ds-batch",
-   "date": "2026-11-11",
+   "date": "2026-11-12",
    "note": "bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested"
   }
  },
- "asof": "2026-11-11"
+ "asof": "2026-11-12"
 }

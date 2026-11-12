@@ -371,6 +371,10 @@ struct T30HelixEncoder {
     Eprc30 eprc30;
     uint8_t eprc30_slice[EPRC30_SLICE_SIZE];
     int eprc30_on;
+    /* a run-time change (UpdateParams) while pictures run: the OEM
+     * i264e_reconfig_*_set only latch it and i264e_encode applies it in
+     * i264e_idr_reconfig at the next IDR picture (#366) */
+    int eprc30_defer, eprc30_restart_pending;
     uint32_t eprc30_min_qp, eprc30_max_qp;  /* the application's QP range */
     uint32_t eprc30_reencodes, eprc30_stat_errors, eprc30_dropped;
     /* the statistics table of the OEM encoder: a failed read keeps the
@@ -2439,20 +2443,24 @@ static uint32_t t30_eprc_clip(uint32_t value, int32_t lo, int32_t hi)
 
 /* i264e_ratecontrol_init (T30 1.0.5, i264e parameter [0] = 3) from the
  * channel parameters, with the clamps of IMP_Encoder_CreateChn as on the
- * T20 (the same i264e). */
-static void t30_eprc_start(T30HelixEncoder *encoder)
+ * T20 (the same i264e).  restart_qp >= 0: i264e_idr_reconfig (0x4b4e8) at
+ * an IDR picture, on the running controller (EPRC30_Reinit) from the QP
+ * that controller chose for this picture, clipped to the new QP range. */
+static void t30_eprc_begin(T30HelixEncoder *encoder, int restart_qp)
 {
     const HWEncoderParams *hp = &encoder->params;
     int app = (hp->rc_flags & HW_RC_FLAG_APP) != 0;
     int smart = (hp->rc_flags & HW_RC_FLAG_SMART) != 0;
     const char *env = getenv("OPENIMP_T30_EPRC");
+    int reinit, vendor_qp;
     EprcParams p;
 
-    t30_eprc_stop(encoder);
     if ((env && env[0] == '0') ||
         (hp->rc_mode != HW_RC_MODE_CBR && hp->rc_mode != HW_RC_MODE_VBR) ||
-        !hp->fps_num || !hp->fps_den || !hp->gop_length)
+        !hp->fps_num || !hp->fps_den || !hp->gop_length) {
+        t30_eprc_stop(encoder);
         return;
+    }
     memset(&p, 0, sizeof(p));
     p.width = hp->width;
     p.height = hp->height;
@@ -2470,6 +2478,12 @@ static void t30_eprc_start(T30HelixEncoder *encoder)
     p.init_qp = t30_start_qp(getenv("OPENIMP_T30_START_QP"), hp->width,
                              hp->height, hp->fps_num, hp->fps_den,
                              hp->bitrate / 1000u);
+    /* the OpenIMP start QP (above) also starts a restarted controller;
+     * with OPENIMP_T30_START_QP=vendor the OEM value applies */
+    vendor_qp = restart_qp >= 0 && p.init_qp <= 0;
+    if (vendor_qp)
+        p.init_qp = restart_qp < (int)p.min_qp ? (int)p.min_qp :
+                    restart_qp > (int)p.max_qp ? (int)p.max_qp : restart_qp;
     if (app) {
         p.i_bias = (int32_t)t30_eprc_clip((uint32_t)hp->bias_level, -3, 3);
         p.frm_qp_step = t30_eprc_clip(hp->frm_qp_step, 2, 51);
@@ -2485,13 +2499,23 @@ static void t30_eprc_start(T30HelixEncoder *encoder)
         p.change_pos = 80u;
         p.quality = 4u;
     }
-    memset(encoder->eprc30_slice, 0, sizeof(encoder->eprc30_slice));
-    if (EPRC30_Init(&encoder->eprc30, &p, encoder->eprc30_slice) != 0) {
-        IMP_LOG_WARN("Encoder", "T30 eprc: init failed, using the GOP "
-                     "controller");
-        return;
+    /* the restart keeps the controller block and the slice block (the OEM
+     * i264e_ratecontrol_init runs on the same i264e parameters and handle) */
+    reinit = restart_qp >= 0 && encoder->eprc30_on &&
+             EPRC30_Reinit(&encoder->eprc30, &p) == 0;
+    if (!reinit) {
+        t30_eprc_stop(encoder);
+        memset(encoder->eprc30_slice, 0, sizeof(encoder->eprc30_slice));
+        if (EPRC30_Init(&encoder->eprc30, &p, encoder->eprc30_slice) != 0) {
+            IMP_LOG_WARN("Encoder", "T30 eprc: init failed, using the GOP "
+                         "controller");
+            return;
+        }
     }
-    if (p.init_qp > 0)
+    if (restart_qp >= 0)
+        IMP_LOG_INFO("Encoder", "T30 eprc: run-time change applied at this "
+                     "IDR (OEM i264e_idr_reconfig), start QP %d", p.init_qp);
+    if (!vendor_qp && p.init_qp > 0)
         IMP_LOG_INFO("Encoder", "T30 eprc: start QP %d (OPENIMP_T30_START_QP, "
                      "OpenIMP extra)", p.init_qp);
     /* OPENIMP_T30_START_FLOOR (default on, "0" off; OpenIMP extra, #216
@@ -2506,7 +2530,7 @@ static void t30_eprc_start(T30HelixEncoder *encoder)
      * next IDR. */
     encoder->eprc30_floor_left = 0u;
     env = getenv("OPENIMP_T30_START_FLOOR");
-    if (p.init_qp > 0 && !(env && env[0] == '0')) {
+    if (!vendor_qp && p.init_qp > 0 && !(env && env[0] == '0')) {
         uint8_t pm, im, f = (uint8_t)p.init_qp;
 
         EPRC30_GetMinQp(&encoder->eprc30, &pm, &im);
@@ -2518,6 +2542,7 @@ static void t30_eprc_start(T30HelixEncoder *encoder)
         }
     }
     encoder->eprc30_on = 1;
+    encoder->eprc30_restart_pending = 0;
     memset(encoder->eprc30_regs, 0, sizeof(encoder->eprc30_regs));
     env = getenv("OPENIMP_T30_EPRC_STATS");
     encoder->eprc30_stats_seconds = env ? (uint32_t)strtoul(env, NULL, 0) : 0u;
@@ -2718,7 +2743,14 @@ static void t30_start_rate_control(T30HelixEncoder *encoder,
     t20_rc_start(encoder);
 #endif
 #if defined(PLATFORM_T30)
-    t30_eprc_start(encoder);
+    if (encoder->eprc30_defer && encoder->have_reference)
+        /* a run-time change: the next IDR picture restarts the controller
+         * (OEM i264e_idr_reconfig); restarting it here, in the middle of a
+         * GOP, leaves its P budget count at 0 at the second P picture
+         * (SIGFPE in EPRC30_FrameStart, #366) */
+        encoder->eprc30_restart_pending = 1;
+    else
+        t30_eprc_begin(encoder, -1);
 #endif
 }
 
@@ -3874,6 +3906,18 @@ t20_again:
         EPRC30_FrameStart(&encoder->eprc30, idr, &pic);
         qp = pic.qp;
     }
+    if (idr && encoder->eprc30_restart_pending) {
+        /* i264e_encode -> i264e_idr_reconfig: the running controller has
+         * started this IDR; ratecontrol_init from its QP, start again */
+        encoder->eprc30_restart_pending = 0;
+        t30_eprc_begin(encoder, encoder->eprc30_on ? (int)qp : -1);
+        if (encoder->eprc30_on) {
+            EprcPicture pic;
+
+            EPRC30_FrameStart(&encoder->eprc30, idr, &pic);
+            qp = pic.qp;
+        }
+    }
 t30_again:
 #endif
 #if defined(PLATFORM_T23)
@@ -5005,7 +5049,8 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
         qp = next.max_qp;
 
 #if defined(PLATFORM_T30)
-    /* the OEM re-runs i264e_ratecontrol_init on every rate-control change */
+    /* the OEM re-runs i264e_ratecontrol_init on every rate-control change,
+     * at the next IDR picture */
     if (encoder->eprc30_on)
         model_changed = 1;
 #endif
@@ -5027,8 +5072,15 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
 #endif
     } else {
         encoder->params = next;
-        if (model_changed || !encoder->rate_control_enabled)
+        if (model_changed || !encoder->rate_control_enabled) {
+#if defined(PLATFORM_T30)
+            encoder->eprc30_defer = 1;
+#endif
             t30_start_rate_control(encoder, qp);
+#if defined(PLATFORM_T30)
+            encoder->eprc30_defer = 0;
+#endif
+        }
 #if defined(HELIX_T21_SYNTAX)
         else
             helix_eprc_start(encoder);
