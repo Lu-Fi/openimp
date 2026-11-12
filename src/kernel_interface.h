@@ -86,6 +86,11 @@ int VBMDestroyPoolParked(int chn);
 void VBMReleaseParked(int chn);
 int VBMFillPool(int chn);
 int VBMFlushFrame(int chn);
+/* Extension channel pool (FS_EXT_CHANNEL, #370): no driver behind it; its
+ * frames are filled in software from the source channel (VBMExtFill) and
+ * go free again when the consumer releases them. */
+int VBMSetExtPool(int chn);
+int VBMExtFill(int chn, int (*fill)(void *frame, void *ctx), void *ctx);
 /* Returns once no VBMReleaseFrame of chn is running: one that started
  * earlier may still have read the channel's previous frame-channel fd. */
 void VBMWaitReleases(int chn);
