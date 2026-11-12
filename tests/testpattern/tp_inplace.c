@@ -50,6 +50,8 @@ int main(void)
 
     OpenIMP_TestPattern_ParamsInit(&p);
     assert(OpenIMP_TestPattern_Supported(5) == 1);
+    assert(OpenIMP_TestPattern_Supported(6) == 0);      /* no ISP-input hook on this platform */
+    assert(OpenIMP_TestPattern_Set(6, &p) == -1 && errno == ENOTSUP);
     assert(OpenIMP_TestPattern_Set(5, &p) == 0 && openimp_tp_ispmid_active());
     assert(on_n == 1 && draw_n == 1 && last_logo == p.logo && off_n == 0);
     openimp_tp_ispmid_tick();                           /* held: put(NULL) only */

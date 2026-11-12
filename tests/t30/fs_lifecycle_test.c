@@ -1,7 +1,7 @@
 /*
  * FrameSource / VBM lifecycle test for the T-series frame-channel path
  * (src/framesource/framesource_tseries.c + src/kernel_interface.c), built
- * for T20, T21 and T23.
+ * for T20, T21, T23, T30 and T31.
  *
  * The frame channel is a fake driver behind --wrap=open,close,ioctl,select:
  * it keeps the REQBUFS/QBUF/DQBUF/STREAMON/STREAMOFF state per fd, completes
@@ -31,6 +31,15 @@
 #include "core/module.h"
 #include "dma_alloc.h"
 #include "../fake_rmem.h"
+
+#if defined(PLATFORM_T31)
+/* the T31 1.1.6 headers have no name for GetTimedFrame's argument */
+typedef struct {
+    uint64_t ts;
+    uint64_t minus;
+    uint64_t plus;
+} IMPFrameTimestamp;
+#endif
 
 /* ------------------------------------------------------------ helpers -- */
 
@@ -960,7 +969,20 @@ static void test_pull_during_disable(void)
     __atomic_store_n(&puller_stop, 0, __ATOMIC_RELAXED);
     pthread_create(&thread, NULL, puller, NULL);
     for (i = 0; i < 60; i++) {
+        unsigned int before = __atomic_load_n(&puller_frames, __ATOMIC_RELAXED);
+        uint64_t until;
+
         CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable");
+        /* Disable only once the puller has got a frame from this enable
+         * (bounded wait, not a fixed sleep: under host load the worker
+         * and the puller may not be scheduled within a few ms), then
+         * keep it pulling briefly so the disable hits a pull in flight. */
+        until = now_ms() + 5000;
+        while (__atomic_load_n(&puller_frames, __ATOMIC_RELAXED) == before &&
+               now_ms() < until)
+            sleep_ms(1);
+        CHECK(__atomic_load_n(&puller_frames, __ATOMIC_RELAXED) != before,
+              "puller got no frame in enable window %d", i);
         sleep_ms(2);
         CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
     }
@@ -1013,6 +1035,9 @@ static void give_frames(int n)
     sleep_ms(5);            /* the worker files the last one */
 }
 
+#if defined(PLATFORM_T31)
+__attribute__((unused))
+#endif
 static void test_delay_fifo(void)
 {
     IMPFSChnAttr a = attr_for(64, 40, 2);
@@ -1260,6 +1285,9 @@ static void ref_rotate(const uint8_t *src, uint8_t *dst, uint32_t w,
 /* T10/T20/T21/T23 SetChnRotate: geometry gate (16-aligned, sub-stream pixel
  * cap), the per-frame rotate on a frame record against the reference,
  * and the size the consumers see on a running channel. */
+#if defined(PLATFORM_T31)
+__attribute__((unused))
+#endif
 static void test_rotate(void)
 {
     static const struct { uint32_t w, h; int mode; } cases[] = {
@@ -1636,6 +1664,531 @@ static void test_ivs_only_stock_dq_delay(void)
 }
 #endif
 
+#if defined(PLATFORM_T31)
+/* FS_EXT_CHANNEL + SetSource (#370): the ext channel is a software-scaled
+ * copy of its source channel (libimp 1.1.6 nv12_scaler_16). */
+extern void openimp_fs_ext_feed(int chn, const void *frame);
+extern int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum);
+extern int VBMGetFrame(int chn, void **frame);
+extern int VBMReleaseFrame(int chn, void *frame);
+
+/* libimp 1.1.6 nv12_scaler_16 (0x23fb0) as decompiled, no clamping (the
+ * sizes below keep every sample inside the picture) */
+static void ref_scaler_16(const uint8_t *sy_, uint8_t *dy, const uint8_t *suv,
+                          uint8_t *duv, unsigned sw, unsigned sh, unsigned dw,
+                          unsigned dh)
+{
+    unsigned xs = (sw << 4) / dw, ys = (sh << 4) / dh, x, y, i;
+
+    for (y = 0; y < dh; y++) {
+        unsigned row = ((y * ys) >> 4) + 1;
+
+        for (x = 0; x < dw; x++) {
+            unsigned col = ((x * xs) >> 4) + 1;
+
+            if (y <= dh - 15 && x <= dw - 15) {
+                unsigned sum = 0, a, b;
+
+                for (a = 0; a < 4; a++)
+                    for (b = 0; b < 4; b++)
+                        sum += sy_[(row - 1 + a) * sw + col - 1 + b];
+                dy[y * dw + x] = (uint8_t)((sum & 0xffff) >> 4);
+            } else {
+                dy[y * dw + x] = sy_[row * sw + col];
+            }
+        }
+    }
+    for (y = 0; y < dh / 2; y++)
+        for (x = 0; x < dw / 2; x++) {
+            const uint8_t *q = suv + (((y * ys) >> 4) + 1) * sw +
+                               (((x * xs) >> 4) + 1) * 2;
+
+            duv[y * dw + 2 * x] = q[0];
+            duv[y * dw + 2 * x + 1] = q[1];
+        }
+    if (dh & 15) {
+        for (i = 0; i < 8; i++)
+            memcpy(dy + (dh + i) * dw, dy + (dh - 1) * dw, dw);
+        for (i = 0; i < 4; i++)
+            memcpy(duv + (dh / 2 + i) * dw, duv + (dh / 2 - 1) * dw, dw);
+    }
+}
+
+static void ext_src_record(uint8_t *rec, uint8_t *pic, uint32_t w, uint32_t h,
+                           int chn, int64_t ts, unsigned seed)
+{
+    uint32_t lines = (h + 15u) & ~15u, i, fourcc = 0x3231564eu;
+    uint32_t virt = (uint32_t)(uintptr_t)pic, size = w * lines * 3u / 2u;
+
+    for (i = 0; i < w * lines + w * h / 2u; i++)
+        pic[i] = (uint8_t)((i * 37u + seed * 101u) ^ (i >> 5));
+    memset(rec, 0, 0x428);
+    memcpy(rec + 0x04, &chn, 4);
+    memcpy(rec + 0x08, &w, 4);
+    memcpy(rec + 0x0c, &h, 4);
+    memcpy(rec + 0x10, &fourcc, 4);
+    memcpy(rec + 0x14, &size, 4);
+    memcpy(rec + 0x18, &virt, 4);
+    memcpy(rec + 0x1c, &virt, 4);
+    memcpy(rec + 0x20, &ts, 8);
+}
+
+static int64_t ext_rec_ts(const void *f)
+{
+    int64_t ts;
+
+    memcpy(&ts, (const uint8_t *)f + 0x20, 8);
+    return ts;
+}
+
+static void test_ext_channel(void)
+{
+    const uint32_t sw = 64, sh = 48, dw = 32, dh = 24;
+    const uint32_t sbytes = sw * 48u * 3u / 2u, dneed = dw * 32u + dw * dh / 2u;
+    IMPFSChnAttr ext = attr_for((int)dw, (int)dh, 2), src = attr_for(64, 48, 2);
+    IMPFSChnAttr bad = attr_for(32, 24, 2);
+    uint8_t rec[3][0x428], *pic[3], want[32 * 32 * 3 / 2];
+    void *f = NULL, *g = NULL, *sentinel = (void *)&sentinel;
+    uint32_t v, w, h;
+    int i, n;
+
+    for (i = 0; i < 3; i++) {
+        pic[i] = fake_rmem_map(sbytes);
+        ext_src_record(rec[i], pic[i], sw, sh, 1, 1000 + i, (unsigned)i);
+    }
+    ext.type = FS_EXT_CHANNEL;
+    bad.type = FS_EXT_CHANNEL;
+    bad.pixFmt = PIX_FMT_YUYV422;
+
+    /* argument rules of libimp 1.1.6 */
+    CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext");
+    CHECK(IMP_FrameSource_SetSource(5, 1) == -1, "ext 5");
+    CHECK(IMP_FrameSource_SetSource(3, 3) == -1, "source 3");
+    CHECK(IMP_FrameSource_SetSource(3, -1) == 0, "source -1 is stored (vendor)");
+    CHECK(IMP_FrameSource_SetSource(3, 1) == 0, "source 1");
+    CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext");
+    CHECK(fake_open_count == 0, "ext channel opened a frame device");
+    CHECK(dma_count() == 1, "ext pool: %d DMA blocks", dma_count());
+
+    /* GetFrame: 0 at once, frame left alone (libimp: no depth list) */
+    g = sentinel;
+    CHECK(IMP_FrameSource_GetFrame(3, &g) == 0 && g == sentinel,
+          "GetFrame(ext) %p", g);
+
+    /* one source frame -> one scaled frame, bit-exact with libimp */
+    openimp_fs_ext_feed(1, rec[0]);
+    CHECK(VBMGetFrame(3, &f) == 0 && f != NULL, "no ext frame");
+    if (f) {
+        memcpy(&w, (uint8_t *)f + 0x08, 4);
+        memcpy(&h, (uint8_t *)f + 0x0c, 4);
+        memcpy(&v, (uint8_t *)f + 0x1c, 4);
+        CHECK(w == dw && h == dh, "ext record %ux%u", w, h);
+        CHECK(ext_rec_ts(f) == 1000, "time stamp %lld", (long long)ext_rec_ts(f));
+        memset(want, 0, sizeof(want));
+        ref_scaler_16(pic[0], want, pic[0] + sw * 48u, want + dw * 32u,
+                      sw, sh, dw, dh);
+        CHECK(memcmp((void *)(uintptr_t)v, want, dneed) == 0,
+              "scaled picture differs from libimp nv12_scaler_16");
+        CHECK(VBMGetFrame(3, &g) != 0, "second frame without a second feed");
+        CHECK(VBMReleaseFrame(3, f) == 0 && VBMReleaseFrame(3, f) == 0,
+              "release (twice)");
+    }
+
+    /* no reader: the newest frames win, the oldest unread is reused */
+    for (i = 0; i < 3; i++)
+        openimp_fs_ext_feed(1, rec[i]);
+    CHECK(VBMGetFrame(3, &f) == 0 && f && ext_rec_ts(f) == 1001, "oldest kept %lld",
+          f ? (long long)ext_rec_ts(f) : -1LL);
+    CHECK(VBMGetFrame(3, &g) == 0 && g && ext_rec_ts(g) == 1002, "newest %lld",
+          g ? (long long)ext_rec_ts(g) : -1LL);
+    /* both held by the consumer: a new source frame is skipped */
+    openimp_fs_ext_feed(1, rec[0]);
+    {
+        void *x = NULL;
+
+        CHECK(VBMGetFrame(3, &x) != 0, "fill into a held frame");
+    }
+    VBMReleaseFrame(3, f);
+    openimp_fs_ext_feed(1, rec[0]);
+    CHECK(VBMGetFrame(3, &f) == 0 && f && ext_rec_ts(f) == 1000,
+          "fill after release");
+    VBMReleaseFrame(3, f);
+    VBMReleaseFrame(3, g);
+
+    /* another source: not fed by channel 1 */
+    CHECK(IMP_FrameSource_SetSource(3, 0) == 0, "source 0");
+    openimp_fs_ext_feed(1, rec[1]);
+    CHECK(VBMGetFrame(3, &f) != 0, "fed from a channel that is not the source");
+    CHECK(IMP_FrameSource_SetSource(3, 1) == 0, "source 1 again");
+
+    CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext");
+    openimp_fs_ext_feed(1, rec[2]);                /* pool gone: nothing */
+    CHECK(VBMGetFrame(3, &f) != 0, "frame after disable");
+    g = sentinel;
+    CHECK(IMP_FrameSource_GetFrame(3, &g) != 0 || g == NULL || g == sentinel,
+          "GetFrame after disable");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext");
+
+    /* CreateChn of an ext channel resets the source to 0 (libimp) */
+    CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext again");
+    CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext again");
+    openimp_fs_ext_feed(1, rec[0]);
+    CHECK(VBMGetFrame(3, &f) != 0, "source not reset by CreateChn");
+    openimp_fs_ext_feed(0, rec[0]);
+    CHECK(VBMGetFrame(3, &f) == 0 && f, "fed from ch0 after CreateChn");
+    if (f)
+        VBMReleaseFrame(3, f);
+    CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext 2");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext 2");
+
+    /* only NV12/NV21 is scaled */
+    CHECK(IMP_FrameSource_CreateChn(3, &bad) == 0, "create YUYV ext");
+    CHECK(IMP_FrameSource_EnableChn(3) == -1, "YUYV ext enabled");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy YUYV ext");
+
+    /* with the capture path: ch1 frames feed ch3 while a reader pulls it;
+     * both are stopped while frames flow */
+    dma_pattern = 1;
+    for (i = 0; i < 5; i++) {
+        uint64_t t0;
+
+        CHECK(IMP_FrameSource_CreateChn(1, &src) == 0, "create src");
+        CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext (run)");
+        CHECK(IMP_FrameSource_SetSource(3, 1) == 0, "source (run)");
+        CHECK(IMP_FrameSource_EnableChn(1) == 0, "enable src");
+        CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext (run)");
+        n = 0;
+        t0 = now_ms();
+        while (now_ms() - t0 < 100) {
+            if (VBMGetFrame(3, &f) == 0 && f) {
+                memcpy(&w, (uint8_t *)f + 0x08, 4);
+                CHECK(w == dw, "run: ext record width %u", w);
+                n++;
+                VBMReleaseFrame(3, f);
+            }
+            /* the source's own reader keeps its buffers cycling */
+            if (VBMGetFrame(1, &g) == 0 && g)
+                VBMReleaseFrame(1, g);
+            sleep_ms(1);
+        }
+        CHECK(n > 0, "run %d: no ext frame from the capture path", i);
+        if (i & 1) {
+            CHECK(IMP_FrameSource_DisableChn(1) == 0, "disable src first");
+            CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext second");
+        } else {
+            CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext first");
+            CHECK(IMP_FrameSource_DisableChn(1) == 0, "disable src second");
+        }
+        CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext (run)");
+        CHECK(IMP_FrameSource_DestroyChn(1) == 0, "destroy src");
+    }
+    dma_pattern = 0;
+    for (i = 0; i < 3; i++)
+        fake_rmem_unmap(pic[i], sbytes);
+    check_clean("ext channel");
+}
+#endif
+
+#if defined(PLATFORM_T30)
+/* FS_EXT_CHANNEL (#370) on T30: the ext channel is channel 0 cut out and
+ * scaled with libimp 1.0.5 c_resize_c (sw_resize).  Channel 0 feeds every
+ * enabled ext channel, SetSource is only stored. */
+extern void openimp_fs_ext_feed(int chn, const void *frame);
+extern int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum);
+extern int VBMGetFrame(int chn, void **frame);
+extern int VBMReleaseFrame(int chn, void *frame);
+
+/* c_resize_c (0x39750) written per output sample from the decompilation */
+static unsigned ref_w(unsigned i, int src, int dst, int *ix)
+{
+    float fx = (float)i * ((float)src / (float)dst);
+
+    *ix = (int)fx;
+    return (unsigned)(int)((double)((fx - (float)*ix) * 16.0f) + 0.5);
+}
+
+static uint8_t ref_samp(const uint8_t *s, int st, int row, int col)
+{
+    return s[row * st + col];
+}
+
+static void ref_resize(const uint8_t *src, uint8_t *dst, int st, int sh_al,
+                       int dw, int dh_al, int crop, int off, int cw0, int chh0)
+{
+    const uint8_t *s = crop ? src + off : src;
+    int cw = crop ? cw0 : st, chh = crop ? chh0 : sh_al;
+    int y0off = sh_al - off / (st * 2), x, y;
+
+    for (y = 0; y < dh_al; y++) {
+        int iy, ix;
+        unsigned wy = ref_w((unsigned)y, chh, dh_al, &iy);
+        int iy1 = iy < chh - 1 ? iy + 1 : iy;
+
+        for (x = 0; x < dw; x++) {
+            unsigned wx = ref_w((unsigned)x, cw, dw, &ix);
+            int ix1 = ix < cw - 1 ? ix + 1 : ix;
+            unsigned top = ref_samp(s, st, iy, ix1) * wx + ref_samp(s, st, iy, ix) * (16 - wx);
+
+            if (wy == 0)
+                dst[y * dw + x] = (uint8_t)(top >> 4);
+            else
+                dst[y * dw + x] = (uint8_t)((ref_samp(s, st, iy1, ix) * (16 - wx) * wy + top * (16 - wy) +
+                                             ref_samp(s, st, iy1, ix1) * wx * wy) >> 8);
+        }
+    }
+    for (y = 0; y < dh_al / 2; y++) {
+        int iy, ix;
+        unsigned wy = ref_w((unsigned)y, chh, dh_al, &iy);
+        int r0 = y0off + iy, r1 = iy < (chh >> 1) - 1 ? y0off + iy + 1 : y0off + iy;
+
+        for (x = 0; x < dw / 2; x++) {
+            unsigned wx = ref_w((unsigned)x, cw, dw, &ix);
+            int ix1 = ix < (cw >> 1) - 1 ? ix + 1 : ix, c;
+
+            for (c = 0; c < 2; c++) {
+                unsigned top = ref_samp(s, st, r0, ix1 * 2 + c) * wx + ref_samp(s, st, r0, ix * 2 + c) * (16 - wx);
+
+                dst[dw * dh_al + y * dw + 2 * x + c] = wy == 0 ? (uint8_t)(top >> 4) :
+                    (uint8_t)((ref_samp(s, st, r1, ix * 2 + c) * (16 - wx) * wy + top * (16 - wy) +
+                               ref_samp(s, st, r1, ix1 * 2 + c) * wx * wy) >> 8);
+            }
+        }
+    }
+}
+
+static void ext_src_record(uint8_t *rec, uint8_t *pic, uint32_t w, uint32_t h,
+                           int chn, int64_t ts, unsigned seed)
+{
+    uint32_t lines = (h + 15u) & ~15u, i, fourcc = 0x3231564eu;
+    uint32_t virt = (uint32_t)(uintptr_t)pic, size = w * lines * 3u / 2u;
+
+    for (i = 0; i < w * lines + w * h / 2u; i++)
+        pic[i] = (uint8_t)((i * 37u + seed * 101u) ^ (i >> 5));
+    memset(rec, 0, 0x428);
+    memcpy(rec + 0x04, &chn, 4);
+    memcpy(rec + 0x08, &w, 4);
+    memcpy(rec + 0x0c, &h, 4);
+    memcpy(rec + 0x10, &fourcc, 4);
+    memcpy(rec + 0x14, &size, 4);
+    memcpy(rec + 0x18, &virt, 4);
+    memcpy(rec + 0x1c, &virt, 4);
+    memcpy(rec + 0x20, &ts, 8);
+}
+
+static int64_t ext_rec_ts(const void *f)
+{
+    int64_t ts;
+
+    memcpy(&ts, (const uint8_t *)f + 0x20, 8);
+    return ts;
+}
+
+/* one ext channel (dw x dh, optional crop) fed by one source frame, compared
+ * with the reference */
+static void ext_picture_case(uint8_t *rec, const uint8_t *pic, uint32_t sw, uint32_t sh,
+                             int dw, int dh, int crop, int cl, int ct, int cwid, int chei,
+                             const char *what)
+{
+    IMPFSChnAttr ext = attr_for(dw, dh, 2);
+    uint32_t sh_al = (sh + 15u) & ~15u, dh_al = ((uint32_t)dh + 15u) & ~15u;
+    uint32_t need = (uint32_t)dw * dh_al * 3u / 2u, v;      /* what c_resize_c writes */
+    uint8_t *want = calloc(1, need + 64);
+    void *f = NULL;
+
+    ext.type = FS_EXT_CHANNEL;
+    ext.crop.enable = crop;
+    ext.crop.left = cl;
+    ext.crop.top = ct;
+    ext.crop.width = cwid;
+    ext.crop.height = chei;
+    CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "%s: create", what);
+    CHECK(IMP_FrameSource_EnableChn(3) == 0, "%s: enable", what);
+    openimp_fs_ext_feed(0, rec);
+    CHECK(VBMGetFrame(3, &f) == 0 && f != NULL, "%s: no ext frame", what);
+    if (f) {
+        memcpy(&v, (uint8_t *)f + 0x1c, 4);
+        ref_resize(pic, want, (int)sw, (int)sh_al, dw, (int)dh_al, crop,
+                   ct * (int)sw + cl, cwid, (chei + 15) & ~15);
+        CHECK(memcmp((void *)(uintptr_t)v, want, need) == 0,
+              "%s: picture differs from libimp c_resize_c", what);
+        CHECK(ext_rec_ts(f) == 1234, "%s: time stamp", what);
+        VBMReleaseFrame(3, f);
+    }
+    CHECK(IMP_FrameSource_DisableChn(3) == 0, "%s: disable", what);
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "%s: destroy", what);
+    free(want);
+}
+
+static void test_ext_channel(void)
+{
+    const uint32_t sw = 64, sh = 40, sh_al = 48, sbytes = sw * sh_al * 3u / 2u;
+    IMPFSChnAttr ext = attr_for(32, 24, 2), src = attr_for(64, 48, 2);
+    IMPFSChnAttr bad = attr_for(32, 24, 2);
+    uint8_t rec[3][0x428], *pic[3];
+    void *f = NULL, *g = NULL;
+    int i, n;
+    uint32_t w;
+
+    for (i = 0; i < 3; i++) {
+        pic[i] = fake_rmem_map(sbytes);
+        ext_src_record(rec[i], pic[i], sw, sh, 0, 1000 + i, (unsigned)i);
+    }
+    ext_src_record(rec[0], pic[0], sw, sh, 0, 1234, 7);
+    ext.type = FS_EXT_CHANNEL;
+    bad.type = FS_EXT_CHANNEL;
+    bad.pixFmt = PIX_FMT_YUYV422;
+
+    /* argument rules of libimp 1.0.5 (0xe3f7c) */
+    CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext");
+    CHECK(IMP_FrameSource_SetSource(5, 1) == -1, "ext 5");
+    CHECK(IMP_FrameSource_SetSource(3, 3) == -1, "source 3");
+    CHECK(IMP_FrameSource_SetSource(3, 2) == 0, "source 2 stored");
+    CHECK(IMP_FrameSource_SetSource(3, 0) == 0, "source 0 stored");
+    CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext");
+    CHECK(fake_open_count == 0, "ext channel opened a frame device");
+    CHECK(dma_count() == 1, "ext pool: %d DMA blocks", dma_count());
+
+    /* the source is not consulted: channel 0 feeds, another one does not */
+    CHECK(IMP_FrameSource_SetSource(3, 2) == 0, "source 2");
+    openimp_fs_ext_feed(2, rec[0]);
+    CHECK(VBMGetFrame(3, &f) != 0, "fed from channel 2");
+    openimp_fs_ext_feed(0, rec[0]);
+    CHECK(VBMGetFrame(3, &f) == 0 && f != NULL, "ch0 did not feed ext (source 2)");
+    if (f) {
+        memcpy(&w, (uint8_t *)f + 0x08, 4);
+        CHECK(w == 32, "ext record width %u", w);
+        VBMReleaseFrame(3, f);
+    }
+    /* no reader: the oldest unread frame is reused, the newest wins */
+    for (i = 0; i < 3; i++)
+        openimp_fs_ext_feed(0, rec[i]);
+    f = g = NULL;
+    CHECK(VBMGetFrame(3, &f) == 0 && f && ext_rec_ts(f) == 1001, "oldest kept %lld",
+          f ? (long long)ext_rec_ts(f) : -1LL);
+    CHECK(VBMGetFrame(3, &g) == 0 && g && ext_rec_ts(g) == 1002, "newest %lld",
+          g ? (long long)ext_rec_ts(g) : -1LL);
+    if (f)
+        VBMReleaseFrame(3, f);
+    if (g)
+        VBMReleaseFrame(3, g);
+    CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext");
+    openimp_fs_ext_feed(0, rec[2]);                /* pool gone: nothing */
+    CHECK(VBMGetFrame(3, &f) != 0, "frame after disable");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext");
+
+    /* pictures: downscale, upscale, crop, crop + copy, non-multiple-of-16 */
+    ext_picture_case(rec[0], pic[0], sw, sh, 32, 24, 0, 0, 0, 0, 0, "64x40 -> 32x24");
+    ext_picture_case(rec[0], pic[0], sw, sh, 96, 64, 0, 0, 0, 0, 0, "64x40 -> 96x64");
+    ext_picture_case(rec[0], pic[0], sw, sh, 32, 16, 1, 8, 4, 48, 20, "crop (8,4) 48x20 -> 32x16");
+    ext_picture_case(rec[0], pic[0], sw, sh, 32, 16, 1, 16, 8, 32, 16, "crop 32x16 copy");
+    ext_picture_case(rec[0], pic[0], sw, sh, 64, 48, 0, 0, 0, 0, 0, "64x40 -> 64x48 (stretch)");
+
+    /* a crop outside the picture: frames are skipped, no crash */
+    {
+        IMPFSChnAttr oc = attr_for(32, 16, 2);
+
+        oc.type = FS_EXT_CHANNEL;
+        oc.crop.enable = 1;
+        oc.crop.left = 48;
+        oc.crop.top = 0;
+        oc.crop.width = 32;
+        oc.crop.height = 16;
+        CHECK(IMP_FrameSource_CreateChn(3, &oc) == 0, "create bad crop");
+        CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable bad crop");
+        openimp_fs_ext_feed(0, rec[0]);
+        CHECK(VBMGetFrame(3, &f) != 0, "frame from a crop outside the picture");
+        CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable bad crop");
+        CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy bad crop");
+    }
+
+    /* GetFrame serves the ext channel like a physical one (depth list) */
+    CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext (getframe)");
+    CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext (getframe)");
+    openimp_fs_ext_feed(0, rec[0]);
+    f = NULL;
+    CHECK(IMP_FrameSource_GetFrame(3, &f) == 0 && f != NULL, "GetFrame(ext)");
+    if (f)
+        CHECK(IMP_FrameSource_ReleaseFrame(3, f) == 0, "ReleaseFrame(ext)");
+    CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext (getframe)");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext (getframe)");
+
+    /* only NV12/NV21 with even sizes is scaled */
+    CHECK(IMP_FrameSource_CreateChn(3, &bad) == 0, "create YUYV ext");
+    CHECK(IMP_FrameSource_EnableChn(3) == -1, "YUYV ext enabled");
+    CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy YUYV ext");
+
+    /* with the capture path: ch0 frames feed ch3 while a reader pulls it;
+     * both are stopped while frames flow */
+    dma_pattern = 1;
+    for (i = 0; i < 5; i++) {
+        uint64_t t0;
+
+        CHECK(IMP_FrameSource_CreateChn(0, &src) == 0, "create src");
+        CHECK(IMP_FrameSource_CreateChn(3, &ext) == 0, "create ext (run)");
+        CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable src");
+        CHECK(IMP_FrameSource_EnableChn(3) == 0, "enable ext (run)");
+        n = 0;
+        t0 = now_ms();
+        while (now_ms() - t0 < 100) {
+            if (VBMGetFrame(3, &f) == 0 && f) {
+                memcpy(&w, (uint8_t *)f + 0x08, 4);
+                CHECK(w == 32, "run: ext record width %u", w);
+                n++;
+                VBMReleaseFrame(3, f);
+            }
+            if (VBMGetFrame(0, &g) == 0 && g)
+                VBMReleaseFrame(0, g);
+            sleep_ms(1);
+        }
+        CHECK(n > 0, "run %d: no ext frame from the capture path", i);
+        if (i & 1) {
+            CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable src first");
+            CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext second");
+        } else {
+            CHECK(IMP_FrameSource_DisableChn(3) == 0, "disable ext first");
+            CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable src second");
+        }
+        CHECK(IMP_FrameSource_DestroyChn(3) == 0, "destroy ext (run)");
+        CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy src");
+    }
+    dma_pattern = 0;
+    for (i = 0; i < 3; i++)
+        fake_rmem_unmap(pic[i], sbytes);
+    check_clean("ext channel");
+}
+#endif
+
+/* #374: one GetFrame on a channel nobody else reads marks it pulled for the
+ * pull window; capture (driver DQBUFs) must keep running meanwhile instead of
+ * stopping until the idle recycle. */
+static void test_single_pull_capture(void)
+{
+    IMPFSChnAttr a = attr_for(640, 360, 2);
+    void *frame = NULL;
+    unsigned int before, waited;
+
+    fake_stock_dq = 0;
+    fake_frame_budget = -1;
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "single pull: create");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "single pull: enable");
+    CHECK(IMP_FrameSource_GetFrame(0, &frame) == 0 && frame != NULL,
+          "single pull: GetFrame");
+    if (frame)
+        CHECK(IMP_FrameSource_ReleaseFrame(0, frame) == 0, "single pull: release");
+    sleep_ms(100);
+    before = __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED);
+    for (waited = 0; waited < 500 &&
+         __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) < before + 20;
+         waited += 10)
+        sleep_ms(10);
+    CHECK(__atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) >= before + 20,
+          "single pull: only %u driver frames in 500 ms after one GetFrame (capture stalled)",
+          __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) - before);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "single pull: disable");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "single pull: destroy");
+    check_clean("single pull");
+}
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -1671,8 +2224,15 @@ int main(void)
     RUN(depth_during_disable);
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
+    RUN(single_pull_capture);
+#if !defined(PLATFORM_T31)
+    /* T31: timed frames and rotation limits differ (own tests) */
     RUN(delay_fifo);
     RUN(rotate);
+#endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+    RUN(ext_channel);
+#endif
 #if defined(PLATFORM_T30)
     RUN(format_abi);
 #endif

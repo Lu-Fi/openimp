@@ -393,10 +393,10 @@ struct T30HelixEncoder {
      * hwicodec_pf_h264e_t30_enc loop, which stops at the failure) */
     uint32_t eprc30_regs[EPRC30_STAT_REGS];
     /* the macroblock rate control of the controller's slice block in the
-     * command list (#217, OEM H264E_T30_SliceInit, EPRC30_MbRcRegs): off
-     * until device-tested (the OEM always sends it); OPENIMP_EPRC_MBRC=1
-     * or IMP_Encoder_SetMbRC switch it, OPENIMP_EPRC_MBRC_LOG=<n> logs
-     * every n-th picture's words */
+     * command list (#217, OEM H264E_T30_SliceInit, EPRC30_MbRcRegs): on
+     * by default as the OEM, which always sends it; OPENIMP_EPRC_MBRC=0 or
+     * IMP_Encoder_SetMbRC switch it off (the vendor SetMbRC has no effect),
+     * OPENIMP_EPRC_MBRC_LOG=<n> logs every n-th picture's words */
     int eprc30_mbrc_on;
     uint32_t eprc30_mbrc_log, eprc30_mbrc_pictures;
     uint32_t eprc30_stats_seconds;          /* OPENIMP_T30_EPRC_STATS */
@@ -2967,9 +2967,10 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #endif
 #if defined(PLATFORM_T30)
     {
+        /* on as the OEM (#217); OPENIMP_EPRC_MBRC=0 switches it off */
         const char *mbrc = getenv("OPENIMP_EPRC_MBRC");
 
-        encoder->eprc30_mbrc_on = mbrc && mbrc[0] == '1';
+        encoder->eprc30_mbrc_on = !(mbrc && mbrc[0] == '0');
         mbrc = getenv("OPENIMP_EPRC_MBRC_LOG");
         encoder->eprc30_mbrc_log = mbrc ? (uint32_t)strtoul(mbrc, NULL, 0) : 0u;
     }

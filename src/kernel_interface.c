@@ -1109,8 +1109,15 @@ typedef struct {
     int queue_count;        /* Number of frames in queue */
     pthread_mutex_t queue_mutex; /* Mutex for queue access */
     int fd;                 /* Kernel framechan fd for qbuf/dqbuf (-1 if unused) */
-    uint8_t *buf_in_userspace; /* Per-buffer: 1 if DQBUF'd, 0 if in kernel queue */
+    uint8_t *buf_in_userspace; /* Per-buffer: 1 if DQBUF'd, 0 if in kernel queue;
+                                * ext pool: VBM_EXT_FREE/QUEUED/HELD */
+    int ext;                /* extension channel pool, software filled (#370) */
 } VBMPool;
+
+/* Frame states of an extension channel pool (buf_in_userspace). */
+#define VBM_EXT_FREE   0
+#define VBM_EXT_QUEUED 1    /* filled, in the ready queue */
+#define VBM_EXT_HELD   2    /* being filled, or pulled by a consumer */
 
 /* Global VBM state */
 typedef struct {
@@ -1884,6 +1891,11 @@ extern void openimp_fs_rotate_capture(int chn, void *frame)
 extern void openimp_fs_chn_callback(int chn, void *frame)
     __attribute__((weak));
 #endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+/* FS_EXT_CHANNEL software scale (framesource_tseries.c, #370) */
+extern void openimp_fs_ext_feed(int chn, const void *frame)
+    __attribute__((weak));
+#endif
 
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || \
     defined(PLATFORM_T21) || defined(PLATFORM_T30)
@@ -2370,6 +2382,11 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     if (openimp_fs_chn_callback)
         openimp_fs_chn_callback(chn, &pool->frames[idx]);
 #endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+    /* extension channels fed from this one (SetSource on T31, ch0 on T30, #370) */
+    if (openimp_fs_ext_feed)
+        openimp_fs_ext_feed(chn, &pool->frames[idx]);
+#endif
     /* Mark buffer as in userspace — VBMReleaseFrame will only QBUF it back
      * if this flag is set, preventing double-QBUF. */
     if (pool->buf_in_userspace)
@@ -2419,6 +2436,34 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
      * accepts the source address.
      */
     VBM_DQ_STEP(chn, VBM_DQ_STEP_QUEUE);
+    /*
+     * #374: an occasional reader (one GetFrame) marks the channel pulled for
+     * VBM_PULL_IDLE_MS; without a reader the ready queue (plus the frames the
+     * delay FIFO holds for the frame depth) then took every buffer, the
+     * driver ran dry and capture stopped until the idle recycle (~1 s, also
+     * stalling ext feed / IVS / callbacks of that channel).  Keep one buffer
+     * with the driver: when none is left (this frame is the last one out of
+     * it), the oldest ready frame goes back to the driver first.  The vendor
+     * serves its depth copies and never stops capture.
+     */
+    if (pool->buf_in_userspace && !pool->ext) {
+        int old = -1, i, in_driver = 0;
+
+        pthread_mutex_lock(&pool->queue_mutex);
+        for (i = 0; i < pool->frame_count; i++)
+            if (!pool->buf_in_userspace[i])
+                in_driver++;
+        if (in_driver == 0 && pool->queue_count > 0) {
+            old = pool->available_queue[pool->queue_head];
+            pool->queue_head = (pool->queue_head + 1) % pool->frame_count;
+            pool->queue_count--;
+        }
+        pthread_mutex_unlock(&pool->queue_mutex);
+        if (old >= 0 && old < pool->frame_count) {
+            ki_trace("libimp/VBM: ready-drop-oldest ch=%d idx=%d\n", chn, old);
+            VBMReleaseFrame(chn, &pool->frames[old]);
+        }
+    }
     pthread_mutex_lock(&pool->queue_mutex);
     if (pool->queue_count >= pool->frame_count) {
         VBMFrame *captured = &pool->frames[idx];
@@ -2511,6 +2556,97 @@ static int vbm_fill_pool(int chn) {
     OPENIMP_TRACE_STDERR("[VBM] FillPool: queued %d frames\n", pool->queue_count);
 
     return pool->queue_count;
+}
+
+/*
+ * Extension channel pool (IMP_FrameSource_SetSource + FS_EXT_CHANNEL, #370).
+ * libimp 1.1.6 (T31) EnableChn of an ext channel opens no frame device: it
+ * creates the pool and a slot table; the source channel's capture thread
+ * scales every captured frame into a free slot (nv12_scaler_16) and hands it
+ * to the ext channel's consumers.  Here the ext pool's frames are FREE,
+ * QUEUED (in the ready queue VBMGetFrame pops) or HELD (being filled, or
+ * pulled by a consumer until VBMReleaseFrame).
+ */
+int VBMSetExtPool(int chn) {
+    VBMPool *pool;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return -1;
+    pthread_mutex_lock(&vbm_pool_lock[chn]);
+    pool = vbm_instance[chn];
+    if (pool == NULL || pool->buf_in_userspace == NULL) {
+        pthread_mutex_unlock(&vbm_pool_lock[chn]);
+        return -1;
+    }
+    pthread_mutex_lock(&pool->queue_mutex);
+    pool->ext = 1;
+    memset(pool->buf_in_userspace, VBM_EXT_FREE, (size_t)pool->frame_count);
+    pool->queue_head = 0;
+    pool->queue_tail = 0;
+    pool->queue_count = 0;
+    pthread_mutex_unlock(&pool->queue_mutex);
+    pthread_mutex_unlock(&vbm_pool_lock[chn]);
+    return 0;
+}
+
+/* Fills one frame of ext pool chn with fill() and publishes it.  Takes a
+ * free frame, else the oldest one nobody has pulled yet (the newest picture
+ * wins, as in the capture path's ready-queue-full case).  -1 when the pool
+ * is gone (DisableChn) or fill failed, -2 when every frame is held by
+ * consumers.
+ * Runs on the source channel's capture thread; the pool lock keeps
+ * DisableChn from freeing the buffer while it is written. */
+int VBMExtFill(int chn, int (*fill)(void *frame, void *ctx), void *ctx) {
+    VBMPool *pool;
+    int i, idx = -1, rc;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS || fill == NULL)
+        return -1;
+    pthread_mutex_lock(&vbm_pool_lock[chn]);
+    pool = vbm_instance[chn];
+    if (pool == NULL || !pool->ext) {
+        pthread_mutex_unlock(&vbm_pool_lock[chn]);
+        return -1;
+    }
+    pthread_mutex_lock(&pool->queue_mutex);
+    for (i = 0; i < pool->frame_count; i++) {
+        if (pool->buf_in_userspace[i] == VBM_EXT_FREE) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0 && pool->queue_count > 0) {
+        idx = pool->available_queue[pool->queue_head];
+        pool->queue_head = (pool->queue_head + 1) % pool->frame_count;
+        pool->queue_count--;
+    }
+    if (idx >= 0)
+        pool->buf_in_userspace[idx] = VBM_EXT_HELD;
+    pthread_mutex_unlock(&pool->queue_mutex);
+    if (idx < 0) {
+        pthread_mutex_unlock(&vbm_pool_lock[chn]);
+        return -2;
+    }
+
+    rc = fill(&pool->frames[idx], ctx);
+
+    pthread_mutex_lock(&pool->queue_mutex);
+    if (rc == 0 && pool->queue_count < pool->frame_count) {
+        pool->buf_in_userspace[idx] = VBM_EXT_QUEUED;
+        pool->available_queue[pool->queue_tail] = idx;
+        pool->queue_tail = (pool->queue_tail + 1) % pool->frame_count;
+        pool->queue_count++;
+    } else {
+        pool->buf_in_userspace[idx] = VBM_EXT_FREE;
+        rc = -1;
+    }
+    pthread_mutex_unlock(&pool->queue_mutex);
+    pthread_mutex_unlock(&vbm_pool_lock[chn]);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
+    if (rc == 0)
+        vbm_ready_notify(chn);
+#endif
+    return rc;
 }
 
 int VBMFlushFrame(int chn) {
@@ -2643,6 +2779,8 @@ static int vbm_get_frame(int chn, void **frame) {
     int frame_idx = pool->available_queue[pool->queue_head];
     pool->queue_head = (pool->queue_head + 1) % pool->frame_count;
     pool->queue_count--;
+    if (pool->ext && frame_idx >= 0 && frame_idx < pool->frame_count)
+        pool->buf_in_userspace[frame_idx] = VBM_EXT_HELD;
 
     pthread_mutex_unlock(&pool->queue_mutex);
 
@@ -2721,6 +2859,16 @@ static int vbm_release_frame(int chn, void *frame) {
                     chn, frame);
         }
         return -1;
+    }
+
+    if (pool->ext) {
+        /* software-filled: the frame is free for the next fill; a frame
+         * still in the ready queue (released twice) stays there */
+        pthread_mutex_lock(&pool->queue_mutex);
+        if (pool->buf_in_userspace[frame_idx] == VBM_EXT_HELD)
+            pool->buf_in_userspace[frame_idx] = VBM_EXT_FREE;
+        pthread_mutex_unlock(&pool->queue_mutex);
+        return 0;
     }
 
     if (trace_budget > 0) {

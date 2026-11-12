@@ -20,7 +20,7 @@ Header: `include/openimp_testpattern.h` (ABI 1). Detect support with the symbol
 | 3 | motion test | flat grey with +-1 LSB noise, logo, frame counter, objects of given size, contrast and speed (one built-in object or a script) | as mode 2, and the pattern also reaches **IVS** (motion detection input); the objects have a known time and place |
 | 4 | sensor pattern | the sensor outputs its own built-in test pattern; frames are not replaced | **through the whole ISP** (BLC, WB, CCM, gamma, NR, scaler, encoder), pattern content depends on the sensor |
 | 5 | ISP-middle picture (T23) | OpenIMP writes the mode 1 pattern at the ISP's native size into the ISP's MDNS (temporal NR) reference frame buffer every frame and holds the MDNS reference weights (luma `0x799c`, chroma `0x7a6c`) at maximum; sensor frames are not replaced | **behind the ISP front half**: MDNS, BCSH, scaler, encoder, then the OSD; not BLC..CSC (use mode 4 for those). Sharpening acts before the injection point. ENOTSUP on other SoCs |
-| 6 (planned) | ISP input / RAW | known Bayer picture from DDR or the Apical test generator | through the whole ISP with a known picture; not implemented in the API yet (see status table) |
+| 6 | ISP-input test picture (T10, T20, T41) | the Apical ISP core's own test generator replaces the sensor's raw frame at the ISP input (`isp_pattern`: 1 flat field, 2 horizontal bands with gradient, 3 vertical bands with gradient, 4 vertical bars, default 4); sensor frames are not replaced, the sensor keeps running | **through the whole ISP** (BLC, LSC, demosaic, WB, CCM, gamma, NR, sharpening, scaler, encoder) with a sensor-independent picture. Switched with the driver's own tuning control "Test pattern" (V4L2 `0x98e906`). T41: the library drives the vendor RAW ring (`IMP_ISP_RAW_RwControl`) and writes the same four pictures as Bayer data into each RAW frame before the ISP reads it back (output rate halved). ENOTSUP on other SoCs |
 
 Modes 1-3 replace each captured NV12 frame on the way to the encoder (T20-T31 in the capture
 path of `kernel_interface.c`, mode 3 before IVS; T40/T41 in the FrameSource path before the IVS
@@ -122,6 +122,32 @@ alone Y 0.42 / U 0.86 / V 0.86; mode 5 Y 0.943 mean (0.958 median; 3 % of the fr
 the driver rewrote the weights) / U 0.868 / V 0.893. Luma works; the chroma weights `0x7a6c` did not
 visibly purify chroma (see open points). Pictures stay local.
 
+### Mode 6 details (T10, T20; 2026-11-12)
+
+The Apical core (T10, T20) has a video test generator at the front of its raw pipeline. The vendor
+driver (and the open T10/T20 driver, same SDK code) exposes it as the V4L2 menu control "Test pattern"
+(`IMAGE_TUNING_CID_CUSTOM_TEST_PATTERN` = `IMAGE_TUNING_CID_CUSTOM_BASE + 6` = `0x98e906`, values 0..4):
+1..4 write the pattern type 0..3 to core `0x9c4`, set the generator on (`0x9c0` bit 0) and clear the
+top bypass bit `0x40` bit 0; 0 sets the bypass and the generator off (the type stays). The stock libimp
+3.12.0 never sends this control; OpenIMP mode 6 sends it on the tuning fd (`openimp_tp_ispin_set`,
+`src/isp/isp_tseries.c`), any other mode sends 0. AE, AWB and day/night keep running on the pattern
+(as with the vendor control): a streamer's own day/night logic can switch to day on the bright pattern.
+The pattern colours show only in day mode (night mode is monochrome). The menu names of the driver
+("horizontal gradient", "vertical gradient") do not describe what the T20 draws: 2 gives four horizontal
+bands (R, G, B, magenta to white), 3 four vertical bands with a vertical gradient.
+
+- QEMU (`ingenic-t20`, 0.7.14 model, open T20 driver of the agg image, OpenIMP libimp bind-mounted,
+  `tpctl` through the timps control socket): per pattern 1..4 the core reads `0x40` bit 0 = 0,
+  `0x9c0` = 1, `0x9c4` = 0..3; mode 0 gives `0x40` bit 0 = 1, `0x9c0` = 0. The model's AF zones read
+  0 contrast on the flat field (scene: non-zero). The model does not draw the pattern into the NV12
+  output, so the picture itself is a device check. QEMU `ingenic-t10` (T10L, jxh42, open T10 driver):
+  the same register values for patterns 1..4 and mode 0, AF zones 0 on the flat field.
+- Device (T20X Wyze v2, jxf23, night, H.264 main stream 1920x1080): 3 cycles of patterns 1..4 and
+  mode 0. Register values as in QEMU every time. Flat field: whole picture Y 255; bars: 4 columns
+  (white, grey, light grey, black), the same frame statistics in all 3 cycles; gradients as described.
+  Mode 0: live scene back 3 s later (frame mean Y 105-106 against 104 before, same column profile).
+  No stream stop, 0 oops, flashed stack restored afterwards.
+
 ## API
 
 ```c
@@ -144,7 +170,8 @@ OpenIMP_TestPattern_Set(OPENIMP_TP_OFF, NULL);
 - `OpenIMP_TestPattern_Get(state)`: `state->size` must be set. Returns the mode, the active
   parameters, frames replaced since the last Set, mode 3 objects shown and visible now.
 - `OpenIMP_TestPattern_Supported(mode)`: 1 when the mode can be used here (build, SoC, running
-  sensor for mode 4, ISP-middle hooks for mode 5 = T21, T23, T31, T40, T41), 0 when not; nothing is switched.
+  sensor for mode 4, ISP-middle hooks for mode 5 = T21, T23, T31, T40, T41, ISP-input generator for
+  mode 6 = T10, T20), 0 when not; nothing is switched.
   For greying out UI switches up front. Unknown mode: 0 with `EINVAL`.
 - `OpenIMP_TestPattern_SensorInfo(name, reg, mask, desc)`: sensor name, test pattern register,
   mask and a short description of the running sensor (mode 4).
@@ -168,6 +195,7 @@ Parameters (`OpenIMPTestPatternParams`):
 | `script` | 3 | object script file, lines `t=<s> cell=<cx>,<cy> size=<px> contrast=<dY> [dur=<s>] [speed=<px/s>]`; time counts from the Set; empty = `OPENIMP_TEST_PATTERN_EVENTS` or `/tmp/openimp_tp_events` |
 | `ae_hold` | 4 | 1 (default): fixed AE. T20-T31: neutral exposure (gain ceilings 1x, manual integration time = half of max; mode 0 restores the saved state), T40/T41: frozen at the current values; 0: AE keeps running |
 | `awb_hold` | 4 | 0 (default): AWB keeps running; 1: AWB gains frozen (colour measurement) |
+| `isp_pattern` | 6 | hardware pattern 1 flat field, 2 horizontal bands, 3 vertical bands, 4 vertical bars; 0 = default (4) |
 
 Leaving mode 4 clears the sensor bit (read-modify-write, correct also after a sensor restart)
 and restores AE/AWB to the state before mode 4. AE with `ae_hold=1` (T20/T21/T23/T31, T-series
@@ -272,7 +300,7 @@ test, ❓ open.
 | Mode 3 motion test | ✅ (objects shown) | 🔧 | ✅ | ✅ | 🔧 | ✅ | ✅ | 🔧 |
 | Mode 4 sensor pattern | 🔧 (jxh42) | ✅ (jxf23) | ✅ (jxf23, sensor exposure hold) | ✅ (sc2336p) | 🔧 | 🔧 (register by hand ✅) | ⏳ (sc830ai) | ✅ gc5603 (colour bars, 72 s stable) / 🔧 sc5336 |
 | Mode 5 ISP-middle picture | ❌ | ❌ | ✅ (jxf23, Y 0.85 / UV 0.89-0.90) | ✅ (sc1a4t, Y 0.95-0.96 / UV 0.96 with b_min) | ❌ | ✅ (sc2336, Y 0.89 / UV 0.96-0.98) | ✅ night (sc830ai, Y 0.84 / UV 0.87; colour forced 0.84) | ✅ night (gc5603, Y 0.92 / UV 0.87; colour at maximum gain in the dark fails, open) |
-| Own picture before the ISP | 🔧 Apical TPG | ✅ Apical TPG + VIC colour bars (register level, not in the API yet) | ❌ | ❌ | 🔧 Apical TPG | ❌ (VIC bars, CSI, mux tested: no) | ❓ | ⏳ RAW from DDR (v3 module pending) |
+| Mode 6 ISP-input test picture | 🔧 QEMU registers ✅ (same binary and driver control as T20; camera not run) | ✅ (jxf23, 4 patterns, 3 cycles; QEMU registers) | ❌ | ❌ | ❓ (Apical TPG, T30 path not built) | ❌ (VIC bars, CSI, mux tested: no) | ❓ | ⏳ RAW from DDR (v3 module pending) |
 
 Notes:
 
@@ -308,3 +336,38 @@ Notes:
 - Mode 4 in dark rooms: AE sits at maximum gain and the ramp saturates; measure in daylight or
   with a fixed exposure.
 - Pictures with a real scene must not be published; use only the synthetic pattern pictures.
+
+### Mode 6 on T41 (2026-11-12)
+
+The T41 ISP has no test generator at its input. The vendor way to put a picture of one's own choice in
+front of the ISP is the RAW ring of `IMP_ISP_RAW_RwControl` (vendor header: the callback runs after each RAW
+frame is written to DDR, and the frame is fed back into the ISP when the callback returns). Mode 6 starts that
+ring inside the library (`src/t40/openimp_t41_rawvic.c`, RAW8, one buffer: 4.7 MB of rmem at 2880x1620, the
+only size that fits next to a streamer with rmem=30M) and its callback overwrites every frame with the mode 6
+picture in the sensor's colour filter order, then writes the cache back. The order is read every frame from
+the ISP core register `0x13300088` bits 4:0 (written by the driver from the sensor's media bus code with the
+OEM map RGGB 0, BGGR 1, GRBG 2, GBRG 3; gc5603 reads `0x102` = GRBG), so a flip that moves the order is
+followed; other values (RGB-IR) give ENOTSUP. Pictures (`isp_pattern`): 1 flat field at half scale, 2 four
+horizontal bands red, green, blue, white with a left-to-right ramp, 3 four vertical bands with a top-to-bottom
+ramp, 4 eight bars at 75 % (white, yellow, cyan, green, magenta, red, blue, black). RAW8 black level 15.
+
+- The picture enters in front of BLC and LSC, so it runs through the whole ISP and the encoder. The sensor
+  keeps running; AE, AWB and the streamer's day/night logic keep running on the picture (as on T10/T20). The
+  ISP gains act on it: in the dark (maximum gain) the ramps clip early and a grey shows the AWB gains.
+- With one buffer the ISP writes and reads in turns: the output rate halves (gc5603 25 -> 12.3 frames/s, as
+  with the vendor ring). Leaving the mode stops the ring and frees the buffer; the rate is back at once.
+- An application ring has priority: mode 6 returns EBUSY while one runs; `IMP_ISP_RAW_RwControl` ENABLE
+  returns -4091 while mode 6 holds the ring, DISABLE stops it. ENOMEM without the rmem block, EIO with a
+  driver without the ring (needs open-tx-isp T41 with #320, `t41_raw_ring` 1), ENODEV without a running ISP.
+- Host test: `tests/t41` `make rawvic` (fake driver: ring control payload RAW8 x1, pictures in GRBG and RGGB,
+  order change followed, pattern switch without a new ring, EBUSY / -4091 / DISABLE interplay, cache
+  write-back per frame).
+- Device (T41LQ Vanhua T55A, gc5603, night, open-tx-isp `next` module swapped at runtime, test libimp
+  bind-mounted, timps, H.264 1920x1080): 3 cycles of patterns 1..4 and mode 0, all Set calls ok. Bars: the
+  eight bars in order (day: white, yellow, cyan, green, magenta, red, blue, black; night: eight grey steps
+  252 .. 0), cycles 2 and 3 with the same bar means (+-1). Bands and ramps as described. Flat field: the LSC
+  correction shows (edges brighter than the centre, faint rings from the RAW8 steps). 12.3 frames/s with the
+  ring, 24-25 without; timps 3-19 % CPU. Mode 0: live scene back 3 s later (frame means as before), RDMA type
+  register `0x21024` = 0. Colour forced (day mode at night): bars fully saturated, the flat field pink
+  (254/193/254), the ramps clip after about a quarter: the night gains act on the picture. 0 oops, stock
+  module and library restored. Pictures stay local.

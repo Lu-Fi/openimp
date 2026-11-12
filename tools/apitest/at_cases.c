@@ -3378,6 +3378,179 @@ extern int IMP_ISP_Tuning_SetSharpness_internal(unsigned int v, int mode);
 #  define FS_BAD_CHN 5
 # endif
 #endif
+/* Explicit only (APITEST_CASES=extchn_t31, #309/#370): IMP_FrameSource_SetSource.  Extended channel 3 (FS_EXT_CHANNEL, scaled copy
+ * of ch1, 320x180) is created, SetSource(3, 1) between CreateChn and EnableChn (vendor header), enabled and read as the vendor sample
+ * does: through an encoder (FS3 -> ENC5, H.264, 3 s).  libimp 1.1.6 on the T31L (#370): SetSource ext 5 / source 3 -1, source -1
+ * stored (0); GetFrame(3) returns 0 at once without a frame (its frame-depth list is only filled for physical channels);
+ * FS3 -> ENC5 45 streams in 3 s at 15 fps.  APITEST_EXTCHN_DIR=<dir>: ext.h264 (the FS3 stream) and ch1.nv12 (one ch1 frame,
+ * capture layout) for the picture check off the camera. */
+/* T30 (#370, QEMU): libimp 1.0.5 exports SetSource, its header does not declare it.  Source is channel 0 on T30 (every enabled ext
+ * channel is fed from the ch0 capture path); the ext channel is cut out and scaled with sw_resize, GetFrame serves its depth list. */
+#if defined(PLATFORM_T30)
+extern int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum) __attribute__((weak));
+#define EXT_SRC 0
+#define EXT_T30 1
+#else
+#define EXT_SRC 1
+#define EXT_T30 0
+#endif
+#if (defined(PLATFORM_T31) && HAS_IMP_FrameSource_SetSource) || defined(PLATFORM_T30)
+extern size_t at_stream_gather(const IMPEncoderStream *s, unsigned char *buf, size_t cap, int *trunc);
+static void cs_extchn_t31(void)
+{
+    IMPFSChnAttr ea;
+    int rc, rs, re, rg = -1, got = 0, ra, rb, rcx, rd, t, enc_streams = 0, pic_ok = 0;
+    const char *dir = getenv("APITEST_EXTCHN_DIR");
+    FILE *dump = NULL;
+    char path[256];
+    IMPFrameInfo *fr = (IMPFrameInfo *)&fr;     /* sentinel: GetFrame must leave it alone */
+
+    memset(&ea, 0, sizeof(ea));
+    ea.picWidth = 320; ea.picHeight = 180; ea.pixFmt = PIX_FMT_NV12;
+    ea.outFrmRateNum = 15; ea.outFrmRateDen = 1; ea.nrVBs = 2; ea.type = FS_EXT_CHANNEL;
+    ea.scaler.enable = 1; ea.scaler.outwidth = 320; ea.scaler.outheight = 180;
+    ra = IMP_FrameSource_SetSource(5, 1); rb = IMP_FrameSource_SetSource(3, 3); rcx = IMP_FrameSource_SetSource(3, -1);
+    rc = IMP_FrameSource_CreateChn(3, &ea);
+    rs = IMP_FrameSource_SetSource(3, EXT_SRC);
+    if (rc == 0) IMP_FrameSource_SetFrameDepth(3, 2);
+    re = rc == 0 ? IMP_FrameSource_EnableChn(3) : -99;
+    if (re == 0) {
+        for (t = 0; t < 20; t++) {
+            rg = IMP_FrameSource_GetFrame(3, &fr);
+            if (rg == 0 && fr && fr != (IMPFrameInfo *)&fr) {
+                if (!got) printf("[extchn] first frame %ux%u fmt 0x%x\n", (unsigned)fr->width, (unsigned)fr->height, (unsigned)fr->pixfmt);
+                if (EXT_T30 && (fr->width != 320 || fr->height != 180)) got += 100;
+                got++; IMP_FrameSource_ReleaseFrame(3, fr); fr = (IMPFrameInfo *)&fr;
+            }
+            usleep(50000);
+        }
+        printf("[extchn] GetFrame(3) x20: last ret %d, %d frames, frame pointer %s\n", rg, got,
+               fr == (IMPFrameInfo *)&fr ? "untouched" : "changed");
+        if (dir) {
+            snprintf(path, sizeof(path), "%s/ext.h264", dir);
+            dump = fopen(path, "wb");
+        }
+        {   /* the vendor sample reads an ext channel through an encoder: FS 3 -> ENC 5, H.264 320x180, 3 s */
+            /* APITEST_EXTCHN_BASE=1: the same through physical ch1 (640x360), the stack's own baseline */
+            int base = getenv("APITEST_EXTCHN_BASE") != NULL, bw = base ? 640 : 320, bh = base ? 360 : 180;
+            IMPCell fsx = { DEV_ID_FS, base ? EXT_SRC : 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
+#if defined(PLATFORM_T30)
+            IMPEncoderCHNAttr *ea2 = (IMPEncoderCHNAttr *)calloc(1, sizeof(*ea2));
+#else
+            IMPEncoderChnAttr *ea2 = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea2));
+#endif
+            static unsigned char dbuf[1 << 18];
+            int64_t t0 = now_us();
+            int rb2 = -1, nstr = 0, nlate = 0, pulled = 0;
+            int64_t tfirst = -1;
+
+            if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
+#if defined(PLATFORM_T30)
+                ea2->encAttr.picWidth = bw; ea2->encAttr.picHeight = bh; ea2->encAttr.enType = PT_H264; ea2->encAttr.profile = 1;
+                ea2->rcAttr.outFrmRate.frmRateNum = 15; ea2->rcAttr.outFrmRate.frmRateDen = 1; ea2->rcAttr.maxGop = 30;
+                ea2->rcAttr.attrRcMode.rcMode = ENC_RC_MODE_CBR;
+                ea2->rcAttr.attrRcMode.attrH264Cbr.maxQp = 45; ea2->rcAttr.attrRcMode.attrH264Cbr.minQp = 15;
+                ea2->rcAttr.attrRcMode.attrH264Cbr.outBitRate = 256; ea2->rcAttr.attrRcMode.attrH264Cbr.frmQPStep = 3;
+                ea2->rcAttr.attrRcMode.attrH264Cbr.gopQPStep = 15;
+#else
+                IMP_Encoder_SetDefaultParam(ea2, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, bw, bh, 15, 1, 30, 2, -1, 256);
+#endif
+                if (IMP_Encoder_CreateChn(5, ea2) == 0 && IMP_Encoder_RegisterChn(5, 5) == 0 && (rb2 = IMP_System_Bind(&fsx, &en5)) == 0) {
+                    IMP_Encoder_StartRecvPic(5);
+                    while (now_us() - t0 < 3000000) {
+                        IMPEncoderStream es;
+                        if (IMP_Encoder_PollingStream(5, 300) == 0 && IMP_Encoder_GetStream(5, &es, 0) == 0) {
+                            if (dump) { int trunc = 0; size_t n = at_stream_gather(&es, dbuf, sizeof(dbuf), &trunc); if (!trunc) fwrite(dbuf, 1, n, dump); }
+                            if (tfirst < 0) tfirst = now_us() - t0;
+                            if (now_us() - t0 >= 1000000) nlate++;
+                            if (!pulled && getenv("APITEST_EXTCHN_PULL1") && now_us() - t0 >= 1000000) {
+                                /* #374: one snapshot pull of the otherwise unread source ch1 must not pause its capture */
+                                IMPFrameInfo *p1 = NULL;
+
+                                pulled = 1;
+                                if (IMP_FrameSource_GetFrame(EXT_SRC, &p1) == 0 && p1) IMP_FrameSource_ReleaseFrame(EXT_SRC, p1);
+                            }
+                            nstr++; IMP_Encoder_ReleaseStream(5, &es);
+                        }
+                    }
+                    IMP_Encoder_StopRecvPic(5); IMP_System_UnBind(&fsx, &en5);
+                }
+                IMP_Encoder_UnRegisterChn(5); IMP_Encoder_DestroyChn(5); IMP_Encoder_DestroyGroup(5);
+            }
+            free(ea2);
+            if (dump) fclose(dump);
+            printf("[extchn] FS%d -> ENC5: bind %d, %d streams in 3 s (first after %lld ms, %d in the last 2 s)\n", fsx.groupID, rb2, nstr,
+                   (long long)(tfirst / 1000), nlate);
+            enc_streams = nstr;
+        }
+#if defined(PLATFORM_T30)
+        {   /* picture check in the process: the ext frame is the scaled ch0 picture.  Luma mean of both and the mean absolute
+             * difference to a nearest-sample reduction of the ch0 frame (the scene moves a little between the two pulls) */
+            IMPFrameInfo *f0 = NULL, *fe = NULL;
+            int k;
+
+            for (k = 0; k < 40 && !(f0 && fe); k++) {
+                if (!f0) { if (IMP_FrameSource_GetFrame(0, &f0) != 0) f0 = NULL; }
+                if (f0 && !fe) { if (IMP_FrameSource_GetFrame(3, &fe) != 0) fe = NULL; }
+                if (!(f0 && fe)) usleep(50000);
+            }
+            if (f0 && fe) {
+                const unsigned char *y0 = (const unsigned char *)(uintptr_t)f0->virAddr, *ye = (const unsigned char *)(uintptr_t)fe->virAddr;
+                long sum0 = 0, sume = 0, mad = 0, n = 0;
+                unsigned x, y;
+
+                for (y = 0; y < fe->height; y++)
+                    for (x = 0; x < fe->width; x++) {
+                        unsigned sx = (unsigned)(((2ULL * x + 1) * f0->width) / (2ULL * fe->width));
+                        unsigned sy = (unsigned)(((2ULL * y + 1) * f0->height) / (2ULL * fe->height));
+                        int a0 = y0[(size_t)sy * f0->width + sx], a1 = ye[(size_t)y * fe->width + x];
+
+                        sum0 += a0; sume += a1; mad += a0 > a1 ? a0 - a1 : a1 - a0; n++;
+                    }
+                printf("[extchn] ext %ux%u vs ch0 %ux%u: luma mean %.1f / %.1f, mean abs diff %.2f, time stamps %lld / %lld us\n",
+                       fe->width, fe->height, f0->width, f0->height, (double)sume / n, (double)sum0 / n, (double)mad / n,
+                       (long long)fe->timeStamp, (long long)f0->timeStamp);
+                pic_ok = n && dabs((double)sume / n - (double)sum0 / n) < 10 && (double)mad / n < 25;
+            }
+            if (f0) IMP_FrameSource_ReleaseFrame(0, f0);
+            if (fe) IMP_FrameSource_ReleaseFrame(3, fe);
+        }
+#endif
+        if (dir) {   /* one ch1 frame next to the ext stream: the ext picture must be its scaled copy.  After the encoder
+                      * run: on OpenIMP a pull marks ch1 as read, its buffers then wait in the ready queue for up to 1 s */
+            IMPFrameInfo *f1 = NULL;
+
+            snprintf(path, sizeof(path), "%s/ch1.nv12", dir);
+            if (IMP_FrameSource_GetFrame(EXT_SRC, &f1) == 0 && f1) {
+                FILE *o = fopen(path, "wb");
+
+                if (o) { fwrite((void *)(uintptr_t)f1->virAddr, 1, (size_t)f1->width * (((f1->height + 15) & ~15u) + f1->height / 2), o); fclose(o); }
+                printf("[extchn] ch%d frame %ux%u -> %s\n", EXT_SRC, f1->width, f1->height, path);
+                IMP_FrameSource_ReleaseFrame(EXT_SRC, f1);
+            }
+        }
+        IMP_FrameSource_DisableChn(3);
+    }
+    rd = rc == 0 ? IMP_FrameSource_DestroyChn(3) : -99;
+#if defined(PLATFORM_T30)
+    /* QEMU: the encoder is slow, so only that frames arrive (>= 5); GetFrame(3) serves the 320x180 depth list (libimp 1.0.5) */
+    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == 0 && rc == 0 && rs == 0 && re == 0 && got >= 1 && got < 100 &&
+        enc_streams >= 5 && pic_ok && rd == 0 && flow()) ? V_PASS : V_FAIL,
+        "rt: ext ch5 %d, src3 %d (-1), src-1 %d (0); Create(3, EXT) %d, SetSource(3,0) %d, Enable %d, GetFrame(3) %d frames (320x180; >= 1), "
+        "FS3 -> ENC5 %d streams in 3 s (>= 5), ext picture = scaled ch0 %d, Destroy %d, frames flow", ra, rb, rcx, rc, rs, re, got, enc_streams, pic_ok, rd);
+    (void)rg;
+#else
+    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == 0 && rc == 0 && rs == 0 && re == 0 && rg == 0 && got == 0 &&
+        enc_streams >= 30 && rd == 0 && flow()) ? V_PASS : V_FAIL,
+        "rt: ext ch5 %d, src3 %d (-1), src-1 %d (0, stored); Create(3, EXT) %d, SetSource(3,1) %d, Enable %d, GetFrame %d with %d frames "
+        "(vendor: 0, none); FS3 -> ENC5 %d streams in 3 s (>= 30 at 15 fps), Destroy %d, frames flow",
+        ra, rb, rcx, rc, rs, re, rg, got, enc_streams, rd);
+#endif
+}
+#else
+static void cs_extchn_t31(void) {}
+#endif
+
 #if defined(PLATFORM_T31)
 extern int IMP_Encoder_ClearPoolId(int encChn);
 extern int IMP_FrameSource_ClearPoolId(void);
@@ -3452,74 +3625,6 @@ static void cs_fscb_t31(void)
     }
 }
 
-/* Explicit only (APITEST_CASES=extchn_t31, #309): IMP_FrameSource_SetSource.  Extended channel 3 (FS_EXT_CHANNEL, scaled copy
- * of ch1) is created, SetSource(3, 1) between CreateChn and EnableChn (vendor header), enabled, 4 frames pulled and checked
- * (size, luma), then disabled/destroyed.  Argument rules: ext 5 / source 3 / source -1 refused.  Prints every return code so
- * the open and the vendor library can be compared line by line. */
-#if defined(PLATFORM_T31) && HAS_IMP_FrameSource_SetSource
-static void cs_extchn_t31(void)
-{
-    IMPFSChnAttr ea;
-    int rc, rs, re, rg = -1, got = 0, ra, rb, rcx, rd, w = 0, h = 0, k, enc_streams = 0;
-    double luma = 0;
-
-    memset(&ea, 0, sizeof(ea));
-    ea.picWidth = 320; ea.picHeight = 180; ea.pixFmt = PIX_FMT_NV12;
-    ea.outFrmRateNum = 15; ea.outFrmRateDen = 1; ea.nrVBs = 2; ea.type = FS_EXT_CHANNEL;
-    ea.scaler.enable = 1; ea.scaler.outwidth = 320; ea.scaler.outheight = 180;
-    ra = IMP_FrameSource_SetSource(5, 1); rb = IMP_FrameSource_SetSource(3, 3); rcx = IMP_FrameSource_SetSource(3, -1);
-    rc = IMP_FrameSource_CreateChn(3, &ea);
-    rs = IMP_FrameSource_SetSource(3, 1);
-    if (rc == 0) IMP_FrameSource_SetFrameDepth(3, 2);
-    re = rc == 0 ? IMP_FrameSource_EnableChn(3) : -99;
-    if (re == 0) {
-        for (k = 0; k < 4; k++) {
-            IMPFrameInfo *fr = NULL;
-            { int t; for (t = 0; t < 60; t++) { fr = NULL; rg = IMP_FrameSource_GetFrame(3, &fr); if (rg == 0 && fr) break; if (k == 0 && t == 0) printf("[extchn] first GetFrame ret %d frame %p\n", rg, (void *)fr); usleep(50000); } if (k == 0) printf("[extchn] after %d polls ret %d frame %p\n", t, rg, (void *)fr); }
-            if (0) printf("[extchn] GetFrame(3) ret %d frame %p\n", rg, (void *)fr);
-            if (rg == 0 && fr) {
-                const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
-                long i, n = (long)fr->width * fr->height, sum = 0;
-                w = fr->width; h = fr->height;
-                for (i = 0; y && i < n; i += 7) sum += y[i];
-                luma = n ? (double)sum / ((n + 6) / 7) : 0;
-                got++;
-                IMP_FrameSource_ReleaseFrame(3, fr);
-            }
-        }
-        {   /* the vendor sample reads an ext channel through an encoder: FS 3 -> ENC 5, H.264 320x180, 3 s */
-            IMPCell fsx = { DEV_ID_FS, 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
-            IMPEncoderChnAttr *ea2 = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea2));
-            int64_t t0 = now_us();
-            int rb2 = -1, nstr = 0;
-
-            if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
-                IMP_Encoder_SetDefaultParam(ea2, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, 320, 180, 15, 1, 30, 2, -1, 256);
-                if (IMP_Encoder_CreateChn(5, ea2) == 0 && IMP_Encoder_RegisterChn(5, 5) == 0 && (rb2 = IMP_System_Bind(&fsx, &en5)) == 0) {
-                    IMP_Encoder_StartRecvPic(5);
-                    while (now_us() - t0 < 3000000) {
-                        IMPEncoderStream es;
-                        if (IMP_Encoder_PollingStream(5, 300) == 0 && IMP_Encoder_GetStream(5, &es, 0) == 0) { nstr++; IMP_Encoder_ReleaseStream(5, &es); }
-                    }
-                    IMP_Encoder_StopRecvPic(5); IMP_System_UnBind(&fsx, &en5);
-                }
-                IMP_Encoder_UnRegisterChn(5); IMP_Encoder_DestroyChn(5); IMP_Encoder_DestroyGroup(5);
-            }
-            free(ea2);
-            printf("[extchn] FS3 -> ENC5: bind %d, %d streams in 3 s\n", rb2, nstr);
-            enc_streams = nstr;
-        }
-        IMP_FrameSource_DisableChn(3);
-    }
-    rd = rc == 0 ? IMP_FrameSource_DestroyChn(3) : -99;
-    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == -1 && rc == 0 && rs == 0 && re == 0 && got == 4 && w == 320 && h == 180 && luma > 5 && rd == 0 && flow()) ? V_PASS : V_FAIL,
-        "rt: ext ch5 %d, src3 %d, src-1 %d (all must be -1); Create(3, EXT) %d, SetSource(3,1) %d, Enable %d, GetFrame %d: %d of 4 frames %dx%d luma %.1f, Destroy %d, frames flow",
-        ra, rb, rcx, rc, rs, re, rg, got, w, h, luma, rd);
-    (void)enc_streams;
-}
-#else
-static void cs_extchn_t31(void) {}
-#endif
 
 /* AE start exposure through the tuning node (control 0x800003a): set, read back, restore */
 static void cs_evstart_t31(void)
@@ -6701,7 +6806,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -6802,7 +6907,9 @@ void t_cases(void)
     if (cs_on("ncu_t31")) cs_ncu_t31(); wdog("cases", 60);
     if (cs_on("fsset_t31")) cs_fsset_t31(); wdog("cases", 60);
     if (cs_on("fscb_t31")) cs_fscb_t31(); wdog("cases", 60);
-    if (getenv("APITEST_CASES") && cs_on("extchn_t31")) cs_extchn_t31(); wdog("cases", 60);   /* explicit only (#309) */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+    if (getenv("APITEST_CASES") && (cs_on("extchn_t31") || cs_on("extchn_t30"))) cs_extchn_t31(); wdog("cases", 60);   /* explicit only (#309) */
+#endif
     if (cs_on("evstart_t31")) cs_evstart_t31(); wdog("cases", 60);
     if (cs_on("shading_t31")) cs_shading_t31(); wdog("cases", 90);
     if (cs_on("meshscale")) cs_meshscale(); wdog("cases", 90);

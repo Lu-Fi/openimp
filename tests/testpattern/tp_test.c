@@ -99,6 +99,21 @@ void openimp_tp_ispmid_off(void)
     mid_wy = mid_wc = 0x00dc14ff;
 }
 
+/* mode 6 hook (T10/T20 driver control "Test pattern"): last value, call count, failure switch */
+static uint32_t ispin_val, ispin_n;
+static int ispin_fail;
+
+int openimp_tp_ispin_set(uint32_t pattern)
+{
+    ispin_n++;
+    if (ispin_fail) {
+        errno = EPERM;
+        return -1;
+    }
+    ispin_val = pattern;
+    return 0;
+}
+
 static int render(struct openimp_tp_chan *ch, int want3)
 {
     memset(buf, 0, sizeof buf);
@@ -339,6 +354,29 @@ int main(void)
             assert(OpenIMP_TestPattern_Set(0, NULL) == 0);
             mid_mirror = 0;
         }
+    }
+    {   /* mode 6: ISP-input generator through the platform hook */
+        OpenIMPTestPatternState g;
+
+        OpenIMP_TestPattern_ParamsInit(&p);
+        assert(OpenIMP_TestPattern_Supported(6) == 1);
+        p.isp_pattern = 5; assert(OpenIMP_TestPattern_Set(6, &p) == -1 && errno == EINVAL && ispin_n == 0);
+        p.isp_pattern = 0; assert(OpenIMP_TestPattern_Set(6, &p) == 0 && ispin_val == 4);   /* default bars */
+        g.size = sizeof g;
+        assert(OpenIMP_TestPattern_Get(&g) == 0 && g.mode == 6 && openimp_testpattern_mode() == 0);
+        assert(render(&ch, 0) == 0);                    /* no frame replacement */
+        p.isp_pattern = 1; assert(OpenIMP_TestPattern_Set(6, &p) == 0 && ispin_val == 1);
+        assert(OpenIMP_TestPattern_Set(1, &p) == 0 && ispin_val == 0 && render(&ch, 0) == 1);   /* other mode: off */
+        assert(OpenIMP_TestPattern_Get(&g) == 0 && g.mode == 1);
+        p.isp_pattern = 3; assert(OpenIMP_TestPattern_Set(6, &p) == 0 && ispin_val == 3);
+        assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && ispin_val == 0);
+        assert(OpenIMP_TestPattern_Get(&g) == 0 && g.mode == 0);
+        ispin_n = 0;
+        assert(OpenIMP_TestPattern_Set(0, NULL) == 0 && ispin_n == 0);   /* off stays off: no control write */
+        ispin_fail = 1;
+        assert(OpenIMP_TestPattern_Set(6, &p) == -1 && errno == EPERM);
+        assert(OpenIMP_TestPattern_Get(&g) == 0 && g.mode == 0);
+        ispin_fail = 0;
     }
     puts("tp_test: ok");
     return 0;

@@ -15,6 +15,45 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `IMP_Encoder_GetGOPSize` on T30 returns the GOP the encoder runs with (vendor `i264e_reconfig_gop_get` / i265e parameter 7: the rounded-up value after CreateChn, the rounded or rescaled value after the first picture past a change) instead of the value last set.
 - Since CreateChn and SetGOPSize round the GOP up to a multiple of the rate, the glue never reaches GOP 0 (the old "under one second" SIGFPE case); the guard stays in `t30_gop_rescale` and the beyond-vendor entry is dropped.
 - Oracle `tools/eprc_t30_oracle.py LIB --h264-reconf --gop` runs the vendor `encoder_get_fps_mask` under unicorn per source picture, now with the +0xe0 IDR request, and lists the IDR pictures; host vectors `tests/t30/t30_gop_vectors.txt` (26 scenarios, all equal in `helix_encoder_test`). `HWEncoderParams.gop_requests` counts GOP requests so that a request of the current value still counts (vendor channel +0xd8). Host only; T30X device A/B prepared, not run yet.
+## 2026-11-12: status check knows the area:tests label
+
+- tools/status_data.py: `area:tests` (created for #382) is a known label; the feature-matrix pages workflow failed on it.
+
+## 2026-11-12: host test `test_pull_during_disable` no longer flaky under load (#382)
+
+- Test fault, not a FrameSource/VBM race: the test enabled the channel for a fixed 2 ms 60 times and required one pulled frame in total; on a loaded host the frame worker and the puller were not scheduled in those windows (3 of about 10 runs failed on a loaded T30 build). Each enable window now waits (bounded, 5 s) for a frame the puller got from that enable before the 2 ms and the disable, so the disable still hits a pull in flight and every window is checked. No library code changed.
+
+## 2026-11-12: apitest builds again for T10/T20/T21
+
+- tools/apitest: the explicit-only `extchn_t31` case call is now guarded by `PLATFORM_T31`; the unguarded call broke the T10/T20/T21 apitest build (found with #367).
+
+## 2026-11-12: one GetFrame no longer pauses the capture of a channel nobody else reads (#374)
+
+- A pull marks a channel as read for 1 s (`VBM_PULL_IDLE_MS`); with no reader the ready queue, together with the frames the frame-depth FIFO holds, took every buffer, the driver ran dry and DQBUF stopped until the idle recycle: the capture of that channel (ext feed #370, IVS, `SetChnCallback`) paused for about 1 s after a single `IMP_FrameSource_GetFrame`. libimp 1.1.6 serves frame-depth copies and its capture keeps running.
+- `VBMKernelDequeue` now keeps one buffer with the driver: when none is left, the oldest ready frame goes back first (T31, T23, T21, T20/T10, T30 share the code). A running reader polls far faster than the window and is unaffected.
+- T31L camera, `extchn_t31` with one `GetFrame(1)` during the FS3 -> ENC5 run: 36 streams in 3 s before, 46 after (vendor 46). Host test `single_pull_capture` in `fs_lifecycle_test` (T20/T21/T23/T30/T31): fails before, passes after. apitest: `APITEST_EXTCHN_PULL1=1`.
+
+## 2026-11-12: T30 QEMU apitest FAILs sorted (#368), apitest only
+
+- No OpenIMP code change: all three FAILs were test or QEMU limits. `GetChangeRef` -1 on a created channel is the T30 1.0.5 behaviour (same code as T21/T23); the apitest now expects it on T30 as on T21/T23.
+- `JPEG size follows SetJpegeQl live`: the QEMU ramp scene is almost all header and DC, so table 2 and table 90 differ by about 1 %; the test also reads the DQT of the stream (2, then 90) and passes with a smaller size gap when the quantizers reached the stream; one retry for a starved JPEG channel.
+- `FlushStream` waits 4 s per picture after the IDR (1 flake in 5 runs on a loaded QEMU host).
+## 2026-11-12: T30 FrameSource ext channel delivers frames, like the vendor (#370)
+
+- `FS_EXT_CHANNEL` on T30 was stored only (frame device without a driver channel, `GetFrame` timeout, a bound encoder got nothing). libimp 1.0.5 (read with Ghidra, no vendor code copied) differs from T31: `EnableChn` of an ext channel creates the pool only; the data update of channel 0 (only channel 0) takes every enabled ext channel, cuts out its own crop attribute and scales into a free pool frame with `sw_resize` (`c_resize_c`: bilinear in 1/16 steps, nearest-row special case 1280x720 -> 1280x960, copy when the sizes match), copies the time stamp and hands the frame to the ext channel's group; `GetFrame` serves its depth list. `SetSource` only fills a flag table nothing reads.
+- OpenIMP T30 does the same through the T31 mechanism (`openimp_fs_ext_feed` in the dequeue hook, ext VBM pool), source always channel 0, `openimp_fs_ext_resize_c` is a port of `c_resize_c`, pool size nrVBs plus frame depth, `GetFrame` pulls from the ext pool. NV12/NV21 with even sizes only (other formats fail `EnableChn`), a crop outside the source skips the frames (libimp reads outside). `SetSource(ext, -1)` returns 0 and is ignored (libimp indexes its table out of range).
+- Host: `fs_lifecycle_test_t30` case `ext_channel` (bit-exact against a per-sample reference of `c_resize_c`: down/up scale, crop, copy, stretch). QEMU `ingenic-t30` apitest `extchn_t30`: see the matrix cell; no T30X device run (`FrameSource_SetSource` T30 `aud` -> `host`).
+## 2026-11-12: T31 FrameSource ext channel delivers frames, like the vendor (#370)
+
+- `FS_EXT_CHANNEL` + `IMP_FrameSource_SetSource` on T31 were stored only: the ext channel opened a frame device it has no driver channel for, `GetFrame` timed out and a bound encoder got nothing. libimp 1.1.6 (read with Ghidra, no vendor code copied): `EnableChn` of an ext channel opens no device and starts no thread, it only creates the pool; the capture thread of every physical channel scales each captured frame into a free frame of every enabled ext channel whose source it is (`nv12_scaler_16`: 1/16-pixel steps, 4x4 box mean for luma, nearest chroma pairs, last line repeated below a height that is not a multiple of 16) and hands it to the ext channel's group; no free frame: the frame is skipped.
+- OpenIMP now does the same: `openimp_fs_ext_feed` (FrameSource dequeue hook, after rotation) fills an ext VBM pool (`VBMSetExtPool` / `VBMExtFill`: frames free, queued or held; without a free frame the oldest unread one is reused); the encoder pulls it like a physical channel, IVS gets its copy through the capture hook. NV12/NV21 only (other formats fail `EnableChn`). Also vendor-equal: `GetFrame` on an ext channel returns 0 without a frame (its depth list is only filled for physical channels), `SetSource` stores a negative source (0), `CreateChn` of an ext channel resets the source to 0.
+- T31L camera, case `extchn_t31` (ext 320x180 from ch1 640x360, FS3 -> ENC5 H.264, 3 s): OpenIMP 46 streams, vendor libimp 1.1.6 46; the decoded ext picture is the scaled ch1 picture. `FrameSource_SetSource` T31 `err` -> `dev`.
+- Host test: `fs_lifecycle_test` now also built for T31 (`fs_lifecycle_test_t31`), new `ext_channel` test (bit-exact against the decompiled scaler, free/held/reuse rules, source change, disable while the source captures).
+- T30 shares the gap (vendor 1.0.5 exports `SetSource`, OpenIMP T30 stores it only); T23/T40/T41 vendor libraries have no `SetSource`.
+## 2026-11-12: T30 macroblock rate control on by default, as the vendor (#217)
+
+- The T30 H.264 command list now carries the macroblock rate-control words of `H264E_T30_SliceInit` by default: the 0x40074 flags, 0x40078..0x400c8, and on P slices the basic-unit targets and registers 0x80100..0x80158. The vendor library always sends them, and its `IMP_Encoder_SetMbRC` has no effect. The vendor T30X streams (CBR 2000 kbit/s) vary the QP per macroblock in 56 of 60 pictures; the open stack had one QP per picture. `OPENIMP_EPRC_MBRC=0` or `IMP_Encoder_SetMbRC` off switch it off (OpenIMP extra). T21/T23 are unchanged (opt-in).
+- Host: new `tests/t30` helix_encoder_test `t30_mbrc_case`. With the default, `=1` and `=0`, every picture's list words equal what `EPRC30_MbRcRegs` makes of a second controller's slice block, and SetMbRC switches from the next picture. The register encoding itself was already proven against the vendor in the emulator (#217 step 2). Device A/B on the T30X lab camera pending.
 
 ## 2026-11-12: T30 run-time rate-control changes at the next IDR, like the vendor (#366)
 
@@ -25,6 +64,15 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-12: T31 FrameSource ext channel measured against the vendor (#309, #370)
 
 - New apitest case `extchn_t31` (explicit only): `FS_EXT_CHANNEL` channel 3 + `IMP_FrameSource_SetSource(3, 1)` + Enable, argument rules, FS3 -> ENC5 H.264 for 3 s. On the T31L camera the vendor libimp 1.1.6 (with its module) gives 45 streams in 3 s, OpenIMP delivers nothing (the source is only stored): `FrameSource_SetSource` T31 `aud` -> `err`, gap issue #370. No library change.
+## 2026-11-12: test pattern mode 6 on T41 through the RAW ring (#103)
+
+- `OpenIMP_TestPattern_Set(6, p)` on T41: the library starts the vendor RAW ring (`IMP_ISP_RAW_RwControl` path, RAW8, one buffer) and overwrites every RAW frame with the mode 6 picture (`isp_pattern` 1..4) in the sensor's Bayer order (ISP core `0x88`), before the ISP reads it back. The picture runs through the whole ISP. The output rate halves while the mode runs (ring with one buffer, as the vendor). EBUSY while an application ring runs; `IMP_ISP_RAW_RwControl` ENABLE returns -4091 while mode 6 holds the ring. Beyond vendor (test pattern API).
+- Host test `tests/t41` rawvic (mode 6 cases). Device T41LQ gc5603: 3 cycles of all 4 pictures plus mode 0, expected pictures with the same statistics, 12.3 frames/s in the mode, live scene back after mode 0, 0 oops. Details: docs/TESTPATTERN.md.
+
+## 2026-11-12: test pattern mode 6, the ISP's own test generator on T10/T20 (#103)
+
+- `OpenIMP_TestPattern_Set(6, p)` (T10, T20): the Apical ISP core's video test generator replaces the sensor's raw frame at the ISP input, so a sensor-independent picture runs through the whole ISP and the encoder. New appended parameter `isp_pattern` (1 flat field, 2 horizontal bands, 3 vertical bands, 4 vertical bars; default 4), `tpctl set 6 isp_pattern=N`. OpenIMP sends the driver's own tuning control "Test pattern" (V4L2 `0x98e906`, `IMAGE_TUNING_CID_CUSTOM_BASE + 6` of the T10/T20 SDK); any other mode sends 0. The stock libimp has no caller of this control. ENOTSUP on other SoCs; `OpenIMP_TestPattern_Supported(6)`.
+- QEMU T20 and T10: the core registers follow (`0x40` bit 0 cleared, `0x9c0` = 1, `0x9c4` = type; mode 0 restores bypass and generator off). Device T20X (jxf23): 3 cycles of all 4 patterns, the expected pictures with identical frame statistics, live scene back 3 s after mode 0, 0 oops. AE, AWB and the streamer's day/night logic keep running on the pattern (as with the vendor control). Host tests: `tests/testpattern` mode 6 cases. Details: docs/TESTPATTERN.md.
 
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 

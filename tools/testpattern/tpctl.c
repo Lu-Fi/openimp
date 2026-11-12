@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     int fd, i;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: %s get | set <mode 0..5 (4 = sensor pattern, 5 = ISP-middle)> [key=value ...]\n", argv[0]);
+        fprintf(stderr, "usage: %s get | set <mode 0..6 (4 = sensor pattern, 5 = ISP-middle, 6 = ISP-input generator)> [key=value ...]\n", argv[0]);
         return 1;
     }
     for (i = 1; i < argc; i++) {

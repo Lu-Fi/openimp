@@ -765,6 +765,24 @@ typedef struct FsChnCtx {
 } FsChnCtx;
 
 static FsChnCtx g_fs_ctx[FS_MAX_CHANNELS];
+
+/* FS_EXT_CHANNEL (#370): an extension channel is a software-scaled copy of
+ * its source channel (see openimp_fs_ext_feed below).  T31: the SetSource
+ * channel; T30: channel 0 (libimp 1.0.5). */
+#if defined(PLATFORM_T31) || defined(PLATFORM_T30)
+#define FS_EXT_SW 1
+/* set while an ext channel is enabled; read by the source capture thread */
+static int g_fs_ext_on[FS_MAX_CHANNELS];
+static int fs_enable_ext_chn(int chn, FsChnCtx *ctx);
+#if defined(PLATFORM_T30)
+/* per ext channel: crop of the ext attribute and the resize tables */
+static struct {
+    int crop;
+    int left, top, width, height;
+    uint16_t *tab;
+} g_fs_ext_t30[FS_MAX_CHANNELS];
+#endif
+#endif
 static pthread_mutex_t g_fs_lock = PTHREAD_MUTEX_INITIALIZER;
 /* Who holds g_fs_lock (function name, for a stall report by OpenIMP_FS_DebugHolder). */
 static const char *volatile g_fs_lock_who;
@@ -1846,7 +1864,9 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
     }
 
     if (*(int32_t *)(chan + 0x58) == 1) {
+        /* libimp: CreateChn of an ext channel resets its source to ch0 */
         *(int32_t *)(chan + 0x240) = 0;
+        g_fs_ctx[chnNum].source_chn = 0;
     }
 
     {
@@ -2212,6 +2232,14 @@ int IMP_FrameSource_EnableChn(int chnNum)
     chan = fs_channel_base(chnNum);
     /* SetFrameDepth stores it under the channel lock, not g_fs_lock */
     frame_depth = __atomic_load_n(&ctx->frame_depth, __ATOMIC_RELAXED);
+#if defined(FS_EXT_SW)
+    if (ctx->attr.type == FS_EXT_CHANNEL) {
+        int rc = fs_enable_ext_chn(chnNum, ctx);
+
+        FS_UNLOCK();
+        return rc;
+    }
+#endif
     fs_trace("libimp/FS: enable start ch=%d state=%d ctx=%p fd=%d attr=%dx%d fmt=0x%x nrVBs=%d depth=%d\n",
              chnNum, fs_chan_get_state(chnNum), ctx, ctx->fd,
              ctx->attr.picWidth, ctx->attr.picHeight, ctx->attr.pixFmt,
@@ -2664,6 +2692,11 @@ int IMP_FrameSource_DisableChn(int chnNum)
     }
 
     FS_FLAG_STORE(ctx->running, 0);
+#if defined(FS_EXT_SW)
+    /* no more fills from the source channel; one in progress holds the
+     * pool lock, which VBMFlushFrame/VBMDestroyPool below wait for */
+    __atomic_store_n(&g_fs_ext_on[chnNum], 0, __ATOMIC_RELEASE);
+#endif
     FS_DSTAGE(chnNum, FS_DSTAGE_STREAMOFF);
 #if defined(PLATFORM_T31)
     /* STREAMOFF first, then let the worker leave by itself. Where the
@@ -2779,6 +2812,11 @@ int IMP_FrameSource_DisableChn(int chnNum)
     fs_close_chn_fd(chnNum, ctx);
     FS_DSTAGE(chnNum, FS_DSTAGE_POOL);
     VBMDestroyPoolParked(chnNum);
+#if defined(PLATFORM_T30)
+    /* ext channel: no fill runs any more (flag cleared, pool lock taken) */
+    free(g_fs_ext_t30[chnNum].tab);
+    g_fs_ext_t30[chnNum].tab = NULL;
+#endif
 
     fs_chan_set_state(chnNum, 1);
     FS_DSTAGE(chnNum, FS_DSTAGE_IDLE);
@@ -2786,14 +2824,29 @@ int IMP_FrameSource_DisableChn(int chnNum)
     return 0;
 }
 
+/* libimp 1.1.6 (T31, 0xa0998): extchn < 5 and sourcechn < 3, else -1; the
+ * source is only stored (chn + 0x240, read by the source channel's capture
+ * thread for every frame, so it may change while both run).  A negative
+ * source is accepted and stored as the vendor does: no channel feeds the
+ * ext channel then.  CreateChn of an ext channel resets it to 0.
+ * libimp 1.0.5 (T30, 0xe3f7c): same argument rules, but the source is only
+ * stored in a per-source flag table that nothing reads: the capture path of
+ * channel 0 feeds every enabled ext channel (on_framesource_group_data_update),
+ * so on T30 the ext channel is always a copy of channel 0.  A negative
+ * source indexes that table out of range there; it is accepted and ignored
+ * here. */
 int IMP_FrameSource_SetSource(int extchnNum, int sourcechnNum)
 {
     if (extchnNum < 0 || extchnNum >= FS_MAX_CHANNELS) return -1;
-    if (sourcechnNum < 0 || sourcechnNum >= 3) return -1;
+    if (sourcechnNum >= 3) return -1;
     if (gFrameSource == NULL) return -1;
+#if defined(PLATFORM_T30)
+    if (sourcechnNum < 0) return 0;
+#endif
 
     FS_LOCK();
-    *(int32_t *)(fs_channel_base(extchnNum) + 0x240) = sourcechnNum;
+    __atomic_store_n((int32_t *)(fs_channel_base(extchnNum) + 0x240),
+                     (int32_t)sourcechnNum, __ATOMIC_RELAXED);
     g_fs_ctx[extchnNum].source_chn = sourcechnNum;
     FS_UNLOCK();
     return 0;
@@ -2833,6 +2886,16 @@ static int fs_getframe_impl(int chnNum, void **frame, int compact)
                         chnNum, (void *)frame);
         return -1;
     }
+#if defined(FS_EXT_SW) && defined(PLATFORM_T31)
+    /* libimp 1.1.6: GetFrame serves a channel's frame-depth list, which only
+     * a physical channel's capture thread fills; on an ext channel it
+     * returns 0 at once and leaves *frame alone (device run #370).  Its
+     * frames go to bound modules (encoder, IVS).  (T30 1.0.5: the group
+     * update also fills the ext channel's depth list, so GetFrame pulls
+     * from the ext pool like on a physical channel.) */
+    if (__atomic_load_n(&g_fs_ext_on[chnNum], __ATOMIC_RELAXED))
+        return 0;
+#endif
 #if defined(FS_GETFRAME_TIMEOUT_MS)
     {
         uint32_t start = fs_now_ms();
@@ -3905,3 +3968,469 @@ int IMP_FrameSource_ChnStatQuery(int chnNum, void *stat)
 
 /* IMP_FrameSource_SetPool / IMP_FrameSource_ClearPoolId live in
  * src/video/imp_mempool.c (T77); no duplicate definition here. */
+
+#if defined(FS_EXT_SW)
+/* ---------------------------------------------------------------------
+ * FS_EXT_CHANNEL + IMP_FrameSource_SetSource (#370).
+ *
+ * libimp 1.1.6 (T31): EnableChn of an ext channel (attr.type 1) opens no
+ * frame device and starts no thread; it creates the frame pool and a slot
+ * table (chn + 0x23c) and marks the channel running.  The capture thread of
+ * every physical channel then walks all channels after each captured frame
+ * (0x9a654): for one that is enabled, of type ext and whose source
+ * (chn + 0x240) is this channel, it takes a free slot, scales the frame
+ * into that pool frame with nv12_scaler_16 (NV12; YUYV/RGBA/HSV only same
+ * size or through sw_resize), copies the time stamp and hands the frame to
+ * the ext channel's group (encoder, IVS).  No free slot: the frame is
+ * skipped.
+ *
+ * libimp 1.0.5 (T30, 0xdd... on_framesource_group_data_update): the same
+ * structure, but only the data update of channel 0 walks the channels, it
+ * takes every enabled ext channel (the SetSource table is not read), and the
+ * picture is cut out and scaled with sw_resize (c_resize_c, bilinear in 1/16
+ * steps) using the ext channel's own crop attribute; GetFrame on the ext
+ * channel serves its depth list like on a physical channel.
+ *
+ * Here the same runs from VBMKernelDequeue (openimp_fs_ext_feed) into an
+ * ext VBM pool (VBMExtFill); the encoder pulls it with VBMGetFrame as from
+ * a physical channel, IVS gets its copy through the capture hook.  NV12 and
+ * NV21 only (the scaler is the same for both); other formats fail EnableChn.
+ * ------------------------------------------------------------------- */
+#include "dma_alloc.h"
+
+#define FS_EXT_REC_W     0x08
+#define FS_EXT_REC_H     0x0c
+#define FS_EXT_REC_FMT   0x10
+#define FS_EXT_REC_SIZE  0x14
+#define FS_EXT_REC_VIRT  0x1c
+#define FS_EXT_REC_TS    0x20   /* T31 record: int64 time stamp */
+
+extern void openimp_t31_ivs_capture(int fs_chn, const void *frame)
+    __attribute__((weak));
+
+static uint32_t fs_ext_u32(const void *rec, unsigned int off)
+{
+    uint32_t v;
+
+    memcpy(&v, (const uint8_t *)rec + off, sizeof(v));
+    return v;
+}
+
+static int fs_ext_is_nv12(uint32_t f)
+{
+    return f == PIX_FMT_NV12 || f == PIX_FMT_NV21 ||
+           f == 0x3231564eu || f == 0x3132564eu;
+}
+
+/* Bytes of an NV12 picture in the capture layout: pitch = width, chroma
+ * after ALIGN16(height) luma lines. */
+static uint32_t fs_ext_nv12_bytes(uint32_t w, uint32_t h)
+{
+    return w * ((h + 15u) & ~15u) + w * (h / 2u);
+}
+
+/* libimp nv12_scaler_16 (0x23fb0): steps in 1/16 pixel, (src << 4) / dst;
+ * a luma sample is the 4x4 box mean around ((i * step) >> 4) + 1, except in
+ * the last 15 rows and columns (nearest sample there); chroma pairs are
+ * nearest samples.  A height that is not a multiple of 16 gets the last
+ * luma line repeated 8 times and the last chroma line 4 times below it.
+ * Sample positions are clamped to the picture here (libimp reads one past
+ * the last row/column at 1:1). */
+#if defined(PLATFORM_T31)
+void openimp_fs_ext_nv12_scale(const uint8_t *src, uint32_t sw, uint32_t sh,
+                               uint8_t *dst, uint32_t dw, uint32_t dh)
+{
+    const uint8_t *suv = src + ((sh + 15u) & ~15u) * sw;
+    uint8_t *duv = dst + ((dh + 15u) & ~15u) * dw;
+    uint32_t xs = (sw << 4) / dw, ys = (sh << 4) / dh;
+    uint32_t x, y, sx, sy, n;
+
+    for (y = 0; y < dh; y++) {
+        uint8_t *d = dst + y * dw;
+        int box_row;
+
+        sy = ((y * ys) >> 4) + 1u;
+        if (sy > sh - 1u)
+            sy = sh - 1u;
+        box_row = y + 15u <= dh && sy + 2u < sh;
+        for (x = 0; x < dw; x++) {
+            sx = ((x * xs) >> 4) + 1u;
+            if (sx > sw - 1u)
+                sx = sw - 1u;
+            if (box_row && x + 15u <= dw && sx + 2u < sw) {
+                const uint8_t *r0 = src + (sy - 1u) * sw + sx - 1u;
+                const uint8_t *r1 = r0 + sw, *r2 = r1 + sw, *r3 = r2 + sw;
+                unsigned int sum = r0[0] + r0[1] + r0[2] + r0[3] +
+                                   r1[0] + r1[1] + r1[2] + r1[3] +
+                                   r2[0] + r2[1] + r2[2] + r2[3] +
+                                   r3[0] + r3[1] + r3[2] + r3[3];
+
+                d[x] = (uint8_t)(sum >> 4);
+            } else {
+                d[x] = src[sy * sw + sx];
+            }
+        }
+    }
+    for (y = 0; y < dh / 2u; y++) {
+        uint8_t *d = duv + y * dw;
+
+        sy = ((y * ys) >> 4) + 1u;
+        if (sy > sh / 2u - 1u)
+            sy = sh / 2u - 1u;
+        for (x = 0; x < dw / 2u; x++) {
+            const uint8_t *s;
+
+            sx = ((x * xs) >> 4) + 1u;
+            if (sx > sw / 2u - 1u)
+                sx = sw / 2u - 1u;
+            s = suv + sy * sw + 2u * sx;
+            d[2u * x] = s[0];
+            d[2u * x + 1u] = s[1];
+        }
+    }
+    if (dh & 15u) {
+        uint32_t lines = ((dh + 15u) & ~15u) - dh;
+
+        for (n = 0; n < 8u && n < lines; n++)
+            memcpy(dst + (dh + n) * dw, dst + (dh - 1u) * dw, dw);
+        for (n = 0; n < 4u && n < lines / 2u; n++)
+            memcpy(duv + (dh / 2u + n) * dw, duv + (dh / 2u - 1u) * dw, dw);
+    }
+}
+#endif /* PLATFORM_T31 */
+
+#if defined(PLATFORM_T30)
+/* Table entries (uint16) c_resize_c needs for a dw x dh_al destination. */
+#define FS_EXT_TAB_ENTRIES(dw, dh) (4u * (uint32_t)(dw) + 4u * (uint32_t)(dh))
+
+/* One sample position of c_resize_c: x = i * (src / dst) in float, weight
+ * of the next sample (x - floor(x)) * 16 + 0.5 truncated (0..16). */
+static unsigned int fs_ext_pos(unsigned int i, int src, int dst, int *ix)
+{
+    float fx = (float)i * ((float)src / (float)dst);
+    int k = (int)fx;
+
+    *ix = k;
+    return (unsigned int)(int)((double)((fx - (float)k) * 16.0f) + 0.5);
+}
+
+/* libimp 1.0.5 c_resize_c (0x39750), sw_resize on a machine without SIMD128:
+ * NV12 -> NV12, optional crop, bilinear with 4-bit weights.
+ *   src, p3   source picture and its pitch (= width)
+ *   p4        source height, 16-aligned
+ *   dst, p5, p6  destination, width, 16-aligned height
+ *   crop      crop enabled; p8 = pitch * top + left, p9 / p10 = width and
+ *             16-aligned height of the cut-out
+ *   tab       FS_EXT_TAB_ENTRIES(p5, p6) uint16
+ * The tables are laid out as in libimp: weight of x0 (16 - w), weight of x1
+ * (w), vertical (16 - w), vertical w, x0, x1, y0, y1.  The chroma rows start
+ * at pitch * (p4 - (p8 / (2 * pitch))) below the cut-out origin (libimp).
+ * 1280x720 -> 1280x960 is libimp's nearest-row special case. */
+void openimp_fs_ext_resize_c(const uint8_t *src, uint8_t *dst, int p3, int p4,
+                             int p5, int p6, int crop, int p8, int p9, int p10,
+                             uint16_t *tab)
+{
+    const uint8_t *s = src;
+    int cw = p3, chh = p4, y0off, hh, i, j;
+    uint16_t *wa = tab, *wb = wa + p5, *vc = wb + p5, *vd = vc + p6;
+    uint16_t *e = vd + p6, *f = e + p5, *g = f + p5, *h = g + p6;
+
+    y0off = p4 - p8 / (p3 * 2);
+    if (crop) {
+        s = src + p8;
+        chh = p10;
+        cw = p9;
+    }
+    hh = chh >> 1;
+
+    if (cw == p5 && chh == p6) {
+        const uint8_t *cs;
+        uint8_t *cd = dst + (size_t)cw * chh;
+
+        for (j = 0; j < chh; j++)
+            memcpy(dst + (size_t)j * cw, s + (size_t)j * p3, (size_t)cw);
+        cs = s + (size_t)p3 * y0off;
+        for (j = 0; j < hh; j++)
+            memcpy(cd + (size_t)j * cw, cs + (size_t)j * p3, (size_t)cw);
+        return;
+    }
+    if (cw == 0x500 && p5 == 0x500 && chh == 0x2d0 && p6 == 0x3c0) {
+        for (j = 0; j < 0x3c0; j++)
+            memcpy(dst + (size_t)j * 0x500, s + (size_t)(int)((float)j * 0.75f) * p3,
+                   0x500);
+        for (j = 0; j < 0x1e0; j++)
+            memcpy(dst + (size_t)0x500 * 0x3c0 + (size_t)j * 0x500,
+                   s + (size_t)p3 * chh + (size_t)(int)((float)j * 0.75f) * p3, 0x500);
+        return;
+    }
+
+    /* luma tables */
+    for (i = 0; i < p5; i++) {
+        int k;
+        unsigned int w = fs_ext_pos((unsigned int)i, cw, p5, &k);
+
+        wb[i] = (uint16_t)w;
+        wa[i] = (uint16_t)(16u - w);
+        e[i] = (uint16_t)k;
+        f[i] = (uint16_t)(k < cw - 1 ? k + 1 : k);
+    }
+    for (j = 0; j < p6; j++) {
+        int k;
+        unsigned int w = fs_ext_pos((unsigned int)j, chh, p6, &k);
+
+        vd[j] = (uint16_t)w;
+        vc[j] = (uint16_t)(16u - w);
+        g[j] = (uint16_t)k;
+        h[j] = (uint16_t)(k < chh - 1 ? k + 1 : k);
+    }
+    for (j = 0; j < p6; j++) {
+        uint8_t *o = dst + (size_t)j * p5;
+        const uint8_t *r0 = s + (size_t)g[j] * p3, *r1 = s + (size_t)h[j] * p3;
+        unsigned int wy = vd[j], wc = vc[j];
+
+        for (i = 0; i < p5; i++) {
+            unsigned int a = wa[i], b = wb[i];
+
+            if (wy == 0)
+                o[i] = (uint8_t)((r0[f[i]] * b + r0[e[i]] * a) >> 4);
+            else
+                o[i] = (uint8_t)((r1[e[i]] * a * wy +
+                                  (r0[f[i]] * b + r0[e[i]] * a) * wc +
+                                  r1[f[i]] * b * wy) >> 8);
+        }
+    }
+
+    /* chroma tables (they reuse the same storage) */
+    for (i = 0; i < p5 / 2; i++) {
+        int k;
+        unsigned int w = fs_ext_pos((unsigned int)i, cw, p5, &k);
+
+        wb[2 * i] = wb[2 * i + 1] = (uint16_t)w;
+        wa[2 * i] = wa[2 * i + 1] = (uint16_t)(16u - w);
+        e[i] = (uint16_t)k;
+        f[i] = (uint16_t)(k < (cw >> 1) - 1 ? k + 1 : k);
+    }
+    for (j = 0; j < p6 / 2; j++) {
+        int k;
+        unsigned int w = fs_ext_pos((unsigned int)j, chh, p6, &k);
+
+        vd[j] = (uint16_t)w;
+        vc[j] = (uint16_t)(16u - w);
+        g[j] = (uint16_t)(y0off + k);
+        h[j] = (uint16_t)(k < hh - 1 ? y0off + k + 1 : y0off + k);
+    }
+    for (j = 0; j < p6 / 2; j++) {
+        uint8_t *o = dst + (size_t)p5 * p6 + (size_t)j * p5;
+        const uint8_t *r0 = s + (size_t)g[j] * p3, *r1 = s + (size_t)h[j] * p3;
+        unsigned int wy = vd[j], wc = vc[j];
+
+        for (i = 0; i < p5; i += 2) {
+            const uint8_t *p00 = r0 + 2u * e[i >> 1], *p01 = r0 + 2u * f[i >> 1];
+            const uint8_t *p10_ = r1 + 2u * e[i >> 1], *p11 = r1 + 2u * f[i >> 1];
+            int c;
+
+            for (c = 0; c < 2; c++) {
+                unsigned int a = wa[i + c], b = wb[i + c];
+
+                if (wy == 0)
+                    o[i + c] = (uint8_t)((p01[c] * b + p00[c] * a) >> 4);
+                else
+                    o[i + c] = (uint8_t)((p10_[c] * a * wy +
+                                          (p01[c] * b + p00[c] * a) * wc +
+                                          p11[c] * b * wy) >> 8);
+            }
+        }
+    }
+}
+
+#endif /* PLATFORM_T30 */
+
+struct fs_ext_fill_ctx {
+    const uint8_t *src;     /* source frame record */
+    int chn;                /* ext channel */
+};
+
+static int fs_ext_fill(void *frame, void *arg)
+{
+    const struct fs_ext_fill_ctx *c = arg;
+    uint8_t *f = frame;
+    uint32_t sw = fs_ext_u32(c->src, FS_EXT_REC_W);
+    uint32_t sh = fs_ext_u32(c->src, FS_EXT_REC_H);
+    uint32_t sv = fs_ext_u32(c->src, FS_EXT_REC_VIRT);
+    uint32_t dw = fs_ext_u32(f, FS_EXT_REC_W);
+    uint32_t dh = fs_ext_u32(f, FS_EXT_REC_H);
+    uint32_t dv = fs_ext_u32(f, FS_EXT_REC_VIRT);
+    uint32_t dsize = fs_ext_u32(f, FS_EXT_REC_SIZE);
+    uint32_t need = fs_ext_nv12_bytes(dw, dh);
+    static int announced[FS_MAX_CHANNELS];
+
+    if (!sv || !dv || sw < 4u || sh < 4u || dw < 2u || dh < 2u ||
+        dsize < need || !fs_ext_is_nv12(fs_ext_u32(c->src, FS_EXT_REC_FMT)))
+        return -1;
+#if defined(PLATFORM_T30)
+    {
+        uint32_t sh_al = (sh + 15u) & ~15u, ch_al;
+        int crop = g_fs_ext_t30[c->chn].crop, off = 0, cw = 0;
+
+        if (g_fs_ext_t30[c->chn].tab == NULL ||
+            dsize < dw * ((dh + 15u) & ~15u) * 3u / 2u)    /* c_resize_c writes all padded rows */
+            return -1;
+        ch_al = (uint32_t)((g_fs_ext_t30[c->chn].height + 15) & ~15);
+        if (crop) {
+            /* libimp does not check the cut-out; reading outside the
+             * picture is refused here */
+            if (g_fs_ext_t30[c->chn].left < 0 || g_fs_ext_t30[c->chn].top < 0 ||
+                g_fs_ext_t30[c->chn].width < 2 || g_fs_ext_t30[c->chn].height < 2 ||
+                (uint32_t)g_fs_ext_t30[c->chn].left + (uint32_t)g_fs_ext_t30[c->chn].width > sw ||
+                (uint32_t)g_fs_ext_t30[c->chn].top + ch_al > sh_al) {
+                static int warned[FS_MAX_CHANNELS];
+
+                if (!warned[c->chn]) {
+                    warned[c->chn] = 1;
+                    fprintf(stderr, "[FS] ext ch%d: crop (%d,%d) %dx%d is outside the %ux%u source, frames skipped\n",
+                            c->chn, g_fs_ext_t30[c->chn].left, g_fs_ext_t30[c->chn].top,
+                            g_fs_ext_t30[c->chn].width, g_fs_ext_t30[c->chn].height, sw, sh);
+                }
+                return -1;
+            }
+            off = (int)(sw * (uint32_t)g_fs_ext_t30[c->chn].top) + g_fs_ext_t30[c->chn].left;
+            cw = g_fs_ext_t30[c->chn].width;
+        }
+        openimp_fs_ext_resize_c((const uint8_t *)(uintptr_t)sv, (uint8_t *)(uintptr_t)dv,
+                                (int)sw, (int)sh_al, (int)dw, (int)((dh + 15u) & ~15u),
+                                crop, off, cw, (int)ch_al, g_fs_ext_t30[c->chn].tab);
+    }
+#else
+    openimp_fs_ext_nv12_scale((const uint8_t *)(uintptr_t)sv, sw, sh,
+                              (uint8_t *)(uintptr_t)dv, dw, dh);
+#endif
+    /* AVPU / IVS DMA read the picture from memory */
+    (void)DMA_RmemFlushCache((void *)(uintptr_t)dv, need, 1);
+    memcpy(f + FS_EXT_REC_TS, c->src + FS_EXT_REC_TS, 8);
+    if (openimp_t31_ivs_capture)
+        openimp_t31_ivs_capture(c->chn, f);
+    if (!announced[c->chn]) {
+        announced[c->chn] = 1;
+        fprintf(stderr, "[FS] ext ch%d: %ux%u scaled in software from ch%d %ux%u\n",
+                c->chn, dw, dh, (int)fs_ext_u32(c->src, 0x04), sw, sh);
+    }
+    return 0;
+}
+
+/* kernel_interface.c VBMKernelDequeue: frame of channel chn was captured
+ * (after rotation); fill every enabled ext channel whose source is chn. */
+void openimp_fs_ext_feed(int chn, const void *frame)
+{
+    struct fs_ext_fill_ctx c;
+    int e, invalidated = 0;
+
+    if (frame == NULL || gFrameSource == NULL)
+        return;
+    c.src = frame;
+#if defined(PLATFORM_T30)
+    /* libimp 1.0.5: only channel 0's data update feeds the ext channels */
+    if (chn != 0)
+        return;
+#endif
+    for (e = 0; e < FS_MAX_CHANNELS; e++) {
+        if (e == chn || !__atomic_load_n(&g_fs_ext_on[e], __ATOMIC_ACQUIRE))
+            continue;
+#if !defined(PLATFORM_T30)
+        if (__atomic_load_n((int32_t *)(fs_channel_base(e) + 0x240),
+                            __ATOMIC_RELAXED) != chn)
+            continue;
+#endif
+        if (!invalidated) {
+            /* ISP DMA wrote the source: drop stale cached lines first */
+            uint32_t sw = fs_ext_u32(frame, FS_EXT_REC_W);
+            uint32_t sh = fs_ext_u32(frame, FS_EXT_REC_H);
+            uint32_t sv = fs_ext_u32(frame, FS_EXT_REC_VIRT);
+
+            if (!sv)
+                return;
+            (void)DMA_RmemFlushCache((void *)(uintptr_t)sv,
+                                     fs_ext_nv12_bytes(sw, sh), 2);
+            invalidated = 1;
+        }
+        c.chn = e;
+        (void)VBMExtFill(e, fs_ext_fill, &c);
+    }
+}
+
+/* EnableChn of an ext channel, under g_fs_lock: pool only, no device. */
+static int fs_enable_ext_chn(int chn, FsChnCtx *ctx)
+{
+    uint8_t vbm_fmt[0xd0];
+    int count = ctx->attr.nrVBs < 1 ? 1 : ctx->attr.nrVBs;
+    int zero = 0;
+    Module *m;
+
+#if defined(PLATFORM_T30)
+    /* libimp 1.0.5: the pool holds nrVBs plus the frame depth */
+    {
+        int depth = __atomic_load_n(&ctx->frame_depth, __ATOMIC_RELAXED);
+
+        if (depth > 0)
+            count += depth;
+    }
+#endif
+    if (!fs_ext_is_nv12((uint32_t)ctx->attr.pixFmt) ||
+        ctx->attr.picWidth < 16 || ctx->attr.picHeight < 2 ||
+        (ctx->attr.picHeight & 1)
+#if defined(PLATFORM_T30)
+        || (ctx->attr.picWidth & 1)
+#endif
+        ) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "EnableChn(%d): ext channel %dx%d fmt %d: only NV12/NV21 "
+                        "with an even height is scaled in software", chn,
+                        ctx->attr.picWidth, ctx->attr.picHeight,
+                        (int)ctx->attr.pixFmt);
+        return -1;
+    }
+    memset(vbm_fmt, 0, sizeof(vbm_fmt));
+    memcpy(vbm_fmt + 0x00, &ctx->attr.picWidth, sizeof(int));
+    memcpy(vbm_fmt + 0x04, &ctx->attr.picHeight, sizeof(int));
+    memcpy(vbm_fmt + 0x08, &ctx->attr.pixFmt, sizeof(int));
+    memcpy(vbm_fmt + 0x0c, &zero, sizeof(int));     /* size from the format */
+    memcpy(vbm_fmt + 0x34, &count, sizeof(int));
+    if (VBMCreatePool(chn, vbm_fmt, NULL, gFrameSource) < 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "EnableChn(%d): cannot create the ext channel pool", chn);
+        return -1;
+    }
+    if (VBMSetExtPool(chn) < 0) {
+        VBMDestroyPool(chn);
+        return -1;
+    }
+#if defined(PLATFORM_T30)
+    g_fs_ext_t30[chn].tab = malloc(sizeof(uint16_t) *
+        FS_EXT_TAB_ENTRIES(ctx->attr.picWidth, (ctx->attr.picHeight + 15) & ~15));
+    if (g_fs_ext_t30[chn].tab == NULL) {
+        VBMDestroyPool(chn);
+        return -1;
+    }
+    g_fs_ext_t30[chn].crop = ctx->attr.crop.enable != 0;
+    g_fs_ext_t30[chn].left = ctx->attr.crop.left;
+    g_fs_ext_t30[chn].top = ctx->attr.crop.top;
+    g_fs_ext_t30[chn].width = ctx->attr.crop.width;
+    g_fs_ext_t30[chn].height = ctx->attr.crop.enable ? ctx->attr.crop.height : 0;
+#endif
+    ctx->fd = -1;
+    m = g_modules[0][chn];
+    if (m != NULL) {
+        *(uint32_t *)((char *)m + 0x134) = 1;
+        *(void **)((char *)m + 0x138) = NULL;
+        *(void **)((char *)m + 0x40) = (void *)framesource_bind;
+        *(void **)((char *)m + 0x44) = (void *)framesource_unbind;
+    }
+    FS_FLAG_STORE(ctx->running, 1);
+    fs_chan_set_state(chn, 2);
+    __atomic_store_n(&g_fs_ext_on[chn], 1, __ATOMIC_RELEASE);
+    fprintf(stderr, "[FS] EnableChn(%d): ext channel %dx%d, %d frames, source ch%d\n",
+            chn, ctx->attr.picWidth, ctx->attr.picHeight, count,
+            (int)__atomic_load_n((int32_t *)(fs_channel_base(chn) + 0x240),
+                                 __ATOMIC_RELAXED));
+    return 0;
+}
+#endif /* FS_EXT_SW */

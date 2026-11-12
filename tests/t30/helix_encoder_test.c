@@ -296,6 +296,14 @@ static uint32_t list_roi[10];
 static uint32_t list_chroma;
 static int list_chroma_seen;
 
+#if defined(PLATFORM_T30)
+/* the T30 macroblock rate-control words of the last command list (#217):
+ * 0x40074, EPRC30_MbRcRegAddr[], the basic-unit targets 0x80800.. and the
+ * basic-unit registers 0x80100..0x80158 */
+static uint32_t t30_list_40074;
+static uint32_t t30_list_mbrc[EPRC30_MBRC_REGS];
+static unsigned int t30_list_bu_tgt, t30_list_bu_regs;
+#endif
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
 /* 0x40074 and 0x40078..0x40090 of the last command list */
 static uint32_t list_mbrc[8];
@@ -358,6 +366,32 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
 #endif
     assert(request == T30_CHANNEL_RUN);
     runs++;
+#if defined(PLATFORM_T30)
+    {
+        const FakeAllocation *list = allocation("t30-helix-desc");
+        const uint32_t *w = (const uint32_t *)list->mapping;
+        size_t i, k;
+
+        t30_list_40074 = 0;
+        memset(t30_list_mbrc, 0xa5, sizeof(t30_list_mbrc));
+        t30_list_bu_tgt = t30_list_bu_regs = 0;
+        for (i = 0; i + 1u < list->size / 4u; i += 2u) {
+            uint32_t reg = w[i + 1u] & 0xffffcu;
+
+            if (reg == 0x40074u)
+                t30_list_40074 = w[i];
+            for (k = 0; k < EPRC30_MBRC_REGS; k++)
+                if (reg == (EPRC30_MbRcRegAddr[k] & 0xffffcu))
+                    t30_list_mbrc[k] = w[i];
+            if (reg >= 0x80800u && reg < 0x80a00u)
+                t30_list_bu_tgt++;
+            if (reg == 0x80158u || (reg >= 0x80100u && reg <= 0x8010cu))
+                t30_list_bu_regs++;
+            if (w[i + 1u] & 0x40000000u)
+                break;
+        }
+    }
+#endif
 #if defined(PLATFORM_T20)
     {
         const uint32_t *d =
@@ -2248,6 +2282,142 @@ static void test_t30_eprc(void)
     unsetenv("OPENIMP_T30_EPRC");
 }
 
+/* T30 eprc macroblock rate control in the command list (#217): with it on,
+ * every try carries the words EPRC30_MbRcRegs makes of the slice block of a
+ * controller fed the same inputs (0x40074 flag bits, 0x40078..0x400c8, the
+ * basic-unit block of P slices); off: all zero, no basic-unit block.
+ * IMP_Encoder_SetMbRC (HWEncoderParams.mb_rc) switches it from the next
+ * picture, HW_MBRC_DEFAULT keeps the current state.  mode: 0 = env unset
+ * (the default: on, as the OEM), 1 = OPENIMP_EPRC_MBRC=1, 2 =
+ * OPENIMP_EPRC_MBRC=0. */
+static void t30_mbrc_case(int mode, int expect_on)
+{
+    T30HelixEncoder *encoder;
+    Eprc30 rc;
+    EprcParams p;
+    PictureInfo info;
+    HWEncoderParams hp;
+    static uint8_t slice[EPRC30_SLICE_SIZE];
+    unsigned int i, j, k, on_pictures = 0, bu_pictures = 0;
+
+    if (mode == 1)
+        setenv("OPENIMP_EPRC_MBRC", "1", 1);
+    else if (mode == 2)
+        setenv("OPENIMP_EPRC_MBRC", "0", 1);
+    else
+        unsetenv("OPENIMP_EPRC_MBRC");
+    encoder = create(1280, 720, 25, 10);
+    memset(&p, 0, sizeof(p));
+    p.rc_mode = EPRC_MODE_CBR;
+    p.width = 1280;
+    p.height = 720;
+    p.gop = 10;
+    p.fps_num = 25;
+    p.fps_den = 1;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    p.bitrate = 2000;
+    p.max_bitrate = 2000;
+    p.frm_qp_step = 3;
+    p.gop_qp_step = 15;
+    p.static_time = 2;
+    p.change_pos = 80;
+    p.quality = 4;
+    p.init_qp = -1;
+    memset(slice, 0, sizeof(slice));     /* as the encoder's block */
+    assert(EPRC30_Init(&rc, &p, slice) == 0);
+    for (i = 0; i < 30u; i++) {
+        EprcPicture pic;
+        Eprc30MbRc m;
+        uint32_t regs[EPRC30_STAT_REGS];
+        unsigned int before = runs;
+
+        fill_payload(1500u + (i % 7u) * 2500u + (i > 15u ? 20000u : 0u), 30);
+        assert(encode(encoder, &info) == 0);
+        assert(runs == before + 1u);            /* one try per picture here */
+        assert(EPRC30_FrameStart(&rc, info.idr, &pic) == 0);
+        assert(info.qp == pic.qp);
+        EPRC30_MbRcRegs(slice, !info.idr, &m);
+        if (expect_on) {
+            int any = 0;
+
+            assert((t30_list_40074 & m.qp_flags) == m.qp_flags);
+            assert((t30_list_40074 & 0xffu) == (m.qp_flags & 0xffu));
+            for (k = 0; k < EPRC30_MBRC_REGS; k++) {
+                assert(t30_list_mbrc[k] == m.reg[k]);
+                any |= m.reg[k] != 0u;
+            }
+            on_pictures += any;
+            if (!info.idr && m.bu_on) {
+                assert(t30_list_bu_tgt == (m.bu_n > 128u ? 128u : m.bu_n));
+                assert(t30_list_bu_regs == 5u);
+                bu_pictures++;
+            } else {
+                assert(t30_list_bu_tgt == 0u && t30_list_bu_regs == 0u);
+            }
+        } else {
+            assert((t30_list_40074 & 0xffu) == 0u);
+            for (k = 0; k < EPRC30_MBRC_REGS; k++)
+                assert(t30_list_mbrc[k] == 0u);
+            assert(t30_list_bu_tgt == 0u && t30_list_bu_regs == 0u);
+        }
+        for (j = 0; j < EPRC30_STAT_REGS; j++)
+            regs[j] = ((0x13200000u + EPRC30_StatRegs[j]) * 2654435761u) >> 9;
+        assert(EPRC30_FrameEnd(&rc, info.slice_bytes, regs,
+                               payload_length * 37u, &pic, 1) == 0);
+    }
+    if (expect_on)
+        assert(on_pictures > 0u && bu_pictures > 0u);
+    /* SetMbRC: the other state from the next picture, DEFAULT keeps it */
+    for (k = 0; k < 2u; k++) {
+        memset(&hp, 0, sizeof(hp));
+        hp.width = 1280;
+        hp.height = 720;
+        hp.fps_num = 25;
+        hp.fps_den = 1;
+        hp.gop_length = 10;
+        hp.rc_mode = HW_RC_MODE_CBR;
+        hp.bitrate = 2000000;
+        hp.qp = 30;
+        hp.min_qp = 20;
+        hp.max_qp = 45;
+        hp.mb_rc = k ? HW_MBRC_DEFAULT : (expect_on ? HW_MBRC_OFF : HW_MBRC_ON);
+        assert(OpenIMP_T30_HelixUpdateParams(encoder, &hp) == 0);
+        fill_payload(1500u, 30);
+        assert(encode(encoder, &info) == 0);
+        {
+            EprcPicture pic;
+            Eprc30MbRc m;
+            uint32_t regs[EPRC30_STAT_REGS];
+
+            assert(EPRC30_FrameStart(&rc, info.idr, &pic) == 0);
+            EPRC30_MbRcRegs(slice, !info.idr, &m);
+            for (j = 0; j < EPRC30_MBRC_REGS; j++)
+                assert(t30_list_mbrc[j] == (expect_on ? 0u : m.reg[j]));
+            for (j = 0; j < EPRC30_STAT_REGS; j++)
+                regs[j] = ((0x13200000u + EPRC30_StatRegs[j]) * 2654435761u) >> 9;
+            assert(EPRC30_FrameEnd(&rc, info.slice_bytes, regs,
+                                   payload_length * 37u, &pic, 1) == 0);
+        }
+    }
+    OpenIMP_T30_HelixDestroy(encoder);
+    EPRC30_Free(&rc);
+    unsetenv("OPENIMP_EPRC_MBRC");
+}
+
+static void test_t30_mbrc(void)
+{
+    unsetenv("OPENIMP_T30_EPRC");
+    /* a bare vendor controller: no start QP, no start floor */
+    setenv("OPENIMP_T30_START_FLOOR", "0", 1);
+    setenv("OPENIMP_T30_START_QP", "vendor", 1);
+    t30_mbrc_case(0, 1);   /* default on, as the OEM */
+    t30_mbrc_case(1, 1);
+    t30_mbrc_case(2, 0);
+    unsetenv("OPENIMP_T30_START_QP");
+    unsetenv("OPENIMP_T30_START_FLOOR");
+}
+
 static T30HelixEncoder *create_rc(uint32_t width, uint32_t height,
                                   uint32_t fps, uint32_t gop,
                                   uint32_t mode, uint32_t flags)
@@ -2731,6 +2901,7 @@ int main(int argc, char **argv)
     test_roi_chroma(0);
 #if defined(PLATFORM_T30)
     test_t30_eprc();
+    test_t30_mbrc();
     test_t30_start_qp();
     test_t30_frmrate_366();
     test_t30_black_start();

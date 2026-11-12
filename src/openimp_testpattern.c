@@ -331,6 +331,30 @@ static int mid_switch(int on, uint32_t logo)
     return ret;
 }
 
+/* ---- mode 6: ISP-input test picture (the ISP core's own test generator).  Platform hook (T10/T20:
+ * src/isp/isp_tseries.c); absent elsewhere -> ENOTSUP.  pattern 0 = sensor input again, 1..4 = the
+ * hardware pattern.  No frame path work: the generator runs in the ISP by itself. */
+int openimp_tp_ispin_set(uint32_t pattern) __attribute__((weak));
+static uint32_t tp_ispin_v;              /* active hardware pattern, 0 = off (set_lock) */
+
+/* set_lock held */
+static int ispin_switch(uint32_t pattern)
+{
+    if (!openimp_tp_ispin_set) {
+        if (!pattern)
+            return 0;
+        errno = ENOTSUP;
+        return -1;
+    }
+    if (openimp_tp_ispin_set(pattern) != 0) {
+        if (!errno)
+            errno = EIO;
+        return -1;
+    }
+    tp_ispin_v = pattern;
+    return 0;
+}
+
 /* Frame path (channel 0 only, kernel_interface.c): refresh weights + picture once per frame. */
 void openimp_tp_ispmid_tick(void)
 {
@@ -357,6 +381,7 @@ void openimp_tp_ispmid_tick(void)
  *   get
  *   set <mode> [step=N] [logo=0..1] [noise=N] [obj_size=N] [obj_contrast=N] [obj_speed=N]
  *              [obj_cell=X,Y] [obj_on_ms=N] [obj_period_ms=N] [script=PATH]
+ *              [ae_hold=0..1] [awb_hold=0..1] [isp_pattern=0..4]
  * The reply (datagram to the sender) is "ok ..." or "error ...".  Started only when the variable is set. */
 static void tp_state_text(char *out, size_t n)
 {
@@ -366,11 +391,11 @@ static void tp_state_text(char *out, size_t n)
     OpenIMP_TestPattern_Get(&s);
     snprintf(out, n, "ok mode=%d frames=%llu objects_shown=%llu objects_active=%u step=%u logo=%u noise=%d "
              "obj_size=%u obj_contrast=%d obj_speed=%u obj_cell=%u,%u obj_on_ms=%u obj_period_ms=%u script=%s "
-             "ae_hold=%u awb_hold=%u",
+             "ae_hold=%u awb_hold=%u isp_pattern=%u",
              s.mode, (unsigned long long)s.frames, (unsigned long long)s.objects_shown, s.objects_active,
              s.params.step, s.params.logo, s.params.noise, s.params.obj_size, s.params.obj_contrast,
              s.params.obj_speed, s.params.obj_cell_x, s.params.obj_cell_y, s.params.obj_on_ms,
-             s.params.obj_period_ms, s.params.script, s.params.ae_hold, s.params.awb_hold);
+             s.params.obj_period_ms, s.params.script, s.params.ae_hold, s.params.awb_hold, s.params.isp_pattern);
 }
 
 static void tp_ctl_line(char *line, char *rep, size_t rn)
@@ -405,6 +430,7 @@ static void tp_ctl_line(char *line, char *rep, size_t rn)
             else if (!strcmp(tok, "script")) snprintf(p->script, sizeof p->script, "%s", v);
             else if (!strcmp(tok, "ae_hold")) p->ae_hold = (uint32_t)atoi(v);
             else if (!strcmp(tok, "awb_hold")) p->awb_hold = (uint32_t)atoi(v);
+            else if (!strcmp(tok, "isp_pattern")) p->isp_pattern = (uint32_t)atoi(v);
             else goto bad;
         }
         if (OpenIMP_TestPattern_Set(mode, &s.params) == 0)
@@ -485,7 +511,7 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
 {
     OpenIMPTestPatternParams n;
 
-    if (mode < 0 || mode > 5)
+    if (mode < 0 || mode > 6)
         goto inval;
     pthread_mutex_lock(&set_lock);
     n = slot[__atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)];
@@ -507,7 +533,7 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
         if (n.step < 2 || n.step > 4096 || n.logo > 1 || n.noise < 0 || n.noise > 16 ||
             n.obj_size > 640 || n.obj_contrast < -200 || n.obj_contrast > 200 ||
             n.obj_cell_x >= OPENIMP_TP_GX || n.obj_cell_y >= OPENIMP_TP_GY || n.ae_hold > 1 ||
-            n.awb_hold > 1) {
+            n.awb_hold > 1 || n.isp_pattern > 4) {
             pthread_mutex_unlock(&set_lock);
             goto inval;
         }
@@ -537,6 +563,19 @@ VIS int OpenIMP_TestPattern_Set(int mode, const OpenIMPTestPatternParams *p)
     } else if (openimp_tp_ispmid_v) {
         (void)mid_switch(0, 0);
     }
+    if (mode == 6) {                     /* also re-asserts the control after an ISP restart */
+        int err;
+
+        if (ispin_switch(n.isp_pattern ? n.isp_pattern : 4) != 0) {
+            err = errno;
+            pthread_mutex_unlock(&set_lock);
+            errno = err;
+            return -1;
+        }
+    } else if (tp_ispin_v) {
+        (void)ispin_switch(0);
+        tp_ispin_v = 0;                  /* even on error: an ISP restart starts with the sensor input */
+    }
     slot[1 - __atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)] = n;
     __atomic_store_n(&slot_idx, 1 - slot_idx, __ATOMIC_RELEASE);
     __atomic_store_n(&frames, 0, __ATOMIC_RELAXED);
@@ -564,7 +603,7 @@ VIS int OpenIMP_TestPattern_Get(OpenIMPTestPatternState *s)
     memset(&f, 0, sizeof f);
     f.size = (uint32_t)sizeof f;
     f.abi = OPENIMP_TESTPATTERN_ABI;
-    f.mode = tp_sensor_active ? 4 : openimp_tp_ispmid_v ? 5 : __atomic_load_n(&openimp_tp_mode_v, __ATOMIC_ACQUIRE);
+    f.mode = tp_sensor_active ? 4 : openimp_tp_ispmid_v ? 5 : tp_ispin_v ? 6 : __atomic_load_n(&openimp_tp_mode_v, __ATOMIC_ACQUIRE);
     f.params = slot[__atomic_load_n(&slot_idx, __ATOMIC_ACQUIRE)];
     f.frames = openimp_tp_ispmid_v ? mid_frames : __atomic_load_n(&frames, __ATOMIC_RELAXED);
     f.objects_shown = stats.objects_shown;
@@ -621,7 +660,7 @@ void openimp_tp_release(struct openimp_tp_chan *c)
 
 /* Up-front capability query (no switching, no register write): 1 = the mode can be used on this
  * build/SoC/sensor now, 0 = not.  Mode 4 needs a table entry for the running sensor, mode 5 the
- * ISP-middle hooks of the platform (T21, T23, T31, T41). */
+ * ISP-middle hooks of the platform (T21, T23, T31, T41), mode 6 the ISP-input generator (T10, T20). */
 VIS int OpenIMP_TestPattern_Supported(int mode)
 {
     char name[32];
@@ -636,6 +675,8 @@ VIS int OpenIMP_TestPattern_Supported(int mode)
         return tp_sensor_lookup(name) != NULL;
     case OPENIMP_TP_ISP_MID:
         return openimp_tp_ispmid_on != NULL;
+    case OPENIMP_TP_ISP_IN:
+        return openimp_tp_ispin_set != NULL;
     default:
         errno = EINVAL;
         return 0;
