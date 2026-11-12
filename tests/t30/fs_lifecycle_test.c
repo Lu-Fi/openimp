@@ -969,7 +969,20 @@ static void test_pull_during_disable(void)
     __atomic_store_n(&puller_stop, 0, __ATOMIC_RELAXED);
     pthread_create(&thread, NULL, puller, NULL);
     for (i = 0; i < 60; i++) {
+        unsigned int before = __atomic_load_n(&puller_frames, __ATOMIC_RELAXED);
+        uint64_t until;
+
         CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable");
+        /* Disable only once the puller has got a frame from this enable
+         * (bounded wait, not a fixed sleep: under host load the worker
+         * and the puller may not be scheduled within a few ms), then
+         * keep it pulling briefly so the disable hits a pull in flight. */
+        until = now_ms() + 5000;
+        while (__atomic_load_n(&puller_frames, __ATOMIC_RELAXED) == before &&
+               now_ms() < until)
+            sleep_ms(1);
+        CHECK(__atomic_load_n(&puller_frames, __ATOMIC_RELAXED) != before,
+              "puller got no frame in enable window %d", i);
         sleep_ms(2);
         CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable");
     }
