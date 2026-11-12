@@ -62,6 +62,7 @@ check:
 	$(MAKE) -C tests/hskip check
 	$(MAKE) -C tests/demask check
 	$(MAKE) -C tests/fisheye check
+	$(MAKE) -C tests/watermark check
 	$(MAKE) -C tests/t20 check
 	$(MAKE) -C tests/t23 check
 	$(MAKE) -C tests/t30 check

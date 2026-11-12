@@ -1951,17 +1951,19 @@ int enc_demask_run(void) { return -1; }
 #endif
 
 /* ------------------------------------------------------------------------------------------
- * Explicit case "fisheye" (APITEST_CASES=fisheye, issues #3 #5 #7, T10/T20/T21): H.264 chn 0 with IMP_Encoder_SetFisheyeEnableStatus
+ * Explicit case "fisheye" (APITEST_CASES=fisheye, issues #3 #5 #7, T10/T20/T21; #357 also T23/T30/T31/T40): H.264 chn 0 with IMP_Encoder_SetFisheyeEnableStatus
  * before CreateChn.  The vendor encoder (i264e_icodec_enc) clears the ROI table of every picture and codes the top-left 64x32
  * pixels at QP <= 15 on I slices and at whole seconds of the frame rate; the macroblock QPs are read from the stream dump on the
- * host (tools/fisheye_mbqp.c).  Every picture is logged as "pic <n> <bytes>".
+ * host (tools/fisheye_mbqp.c).  Every picture is logged as "pic <n> <bytes>".  On every family the vendor also rewrites the
+ * top-left 64x16 source luma of each I picture (the watermark, src/watermark): decode the dump and run
+ * tools/watermark_check.py on the I pictures.
  *   FISHEYE_ON (default 1)  FISHEYE_QP (FIXQP at that QP, default 30; 0: CBR)  FISHEYE_GOP (default 40)  FISHEYE_FRAMES (default 100)
  *   FISHEYE_ROI=1 (an application ROI, delta QP -6 over most of the picture, set before the first picture)  FISHEYE_DUMP=<file>
  *   HSKIP_MAIN=1 (T21: the encoder reads FrameSource ch0 at the sensor size, ch1 is not set up)
  *   FISHEYE_LOSSTHD=<bytes> (T23: IMP_Encoder_Setframelossthd after CreateChn; the delivered pictures are logged with
  *   their stream seq, so a dropped picture shows as a seq gap; the IDR QP after the drop is read from the dump)
  * ------------------------------------------------------------------------------------------ */
-#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetFisheyeEnableStatus
+#if HAS_IMP_Encoder_SetFisheyeEnableStatus
 int enc_fisheye_run(void)
 {
     G(EAttr, a);
@@ -1976,12 +1978,21 @@ int enc_fisheye_run(void)
 
     if (grp_up(0, 0) != 0) { gfree(a); return -1; }
     fill_attr(a, CODEC_H264, gop);
+#ifdef ENC_NEW
+    /* T31/T40 (#357): the Allegro encoders mark the I pictures with the vendor luma watermark */
+    if (fixqp > 0) {
+        a->rcAttr.attrRcMode.rcMode = IMP_ENC_RC_MODE_FIXQP;
+        a->rcAttr.attrRcMode.attrFixQp.iInitialQP = (int16_t)fixqp;
+    }
+    (void)roi;
+#else
     if (getenv("HSKIP_MAIN")) { a->encAttr.picWidth = g_sw; a->encAttr.picHeight = g_sh; }   /* ch0 at the sensor size (T21: no scaled channel) */
     if (fixqp > 0) {
         memset(&a->rcAttr.attrRcMode, 0, sizeof(a->rcAttr.attrRcMode));
         a->rcAttr.attrRcMode.rcMode = ENC_RC_MODE_FIXQP;
         a->rcAttr.attrRcMode.attrH264FixQp.qp = fixqp;
     }
+#endif
     r = IMP_Encoder_SetFisheyeEnableStatus(chn, on);
     printf("fisheye: SetFisheyeEnableStatus %d before CreateChn -> %d\n", on, r);
     r = IMP_Encoder_CreateChn(chn, a);
@@ -2002,7 +2013,7 @@ int enc_fisheye_run(void)
     }
 #endif
     r = IMP_Encoder_RegisterChn(GRP, chn);
-#if HAS_IMP_Encoder_SetChnROI
+#if HAS_IMP_Encoder_SetChnROI && !defined(ENC_NEW)
     if (roi) {
         IMPEncoderROICfg c;
 

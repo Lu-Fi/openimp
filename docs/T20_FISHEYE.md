@@ -1,5 +1,8 @@
 # T10 / T20: IMP_Encoder_SetFisheyeEnableStatus (issues #3, #5)
 
+> The flag also makes the encoder mark every I picture with an invisible luma watermark (top-left 64x16
+> pixels of the source frame); OpenIMP does that too: see docs/WATERMARK.md (#357, #397).
+
 The vendor libimp 3.12.0 (T10 and T20 are one binary) does not run a fisheye motion search or a lens
 correction for this flag.  `IMP_Encoder_SetFisheyeEnableStatus` stores a 0/1 flag in the channel record
 (+0x140, settable only while the channel is not created, -1 afterwards; `IMP_Encoder_CreateChn` keeps it

@@ -1438,6 +1438,11 @@ extern int AL_Codec_Encode_SetFrameRate(void *codec, void *fps);
 extern int AL_Codec_Encode_SetBitRate(void *codec, int target_bitrate,
                                      int max_bitrate);
 extern int AL_Codec_Encode_SetRcParam(void *codec, void *rc_attr);
+/* IMP_Encoder_SetFisheyeEnableStatus: the codec's QP region / watermark flag */
+extern int AL_Codec_Encode_SetFisheye(void *codec, int enable);
+#if defined(PLATFORM_T31)
+extern int openimp_t31_enc_fisheye(int channel);
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T20) || \
     defined(PLATFORM_T30)
 extern int AL_Codec_Encode_SetRcExtras(void *codec, const void *rc_mode);
@@ -1445,7 +1450,6 @@ extern int AL_Codec_Encode_SetSameSceneGops(void *codec, uint32_t gops);
 extern int AL_Codec_Encode_SetHSkip(void *codec, uint32_t type, uint32_t m, uint32_t n,
                                     int scenecut, int black);
 extern int AL_Codec_Encode_SetChangeRef(void *codec, int enable);
-extern int AL_Codec_Encode_SetFisheye(void *codec, int enable);
 #if defined(PLATFORM_T20)
 extern int AL_Codec_Encode_GetPictureQp(void *codec, int *qp);
 /* src/isp/isp_tseries.c: mode 2 = IMP_ISP_Tuning_SetSharpness, 1 = demask override, 0 = the application's value again */
@@ -2582,6 +2586,18 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         ? openimp_t23_enc_section_bytes() : 0u;
     ch->ms_index = ch->ms_count = 0u;
     ch->ms_raw = NULL;
+#elif defined(PLATFORM_T30)
+    /* OEM T30 1.0.5: i264e parameter 0x72 -> hwicodec +0x50; hwicodec_pf_h264e_t30_init and
+     * hwicodec_pf_h265e_t30_init run watermark_init, their _enc functions mark every I picture
+     * (src/watermark) */
+    (void)AL_Codec_Encode_SetFisheye(ch->codec, ch->fisheye);
+#elif defined(PLATFORM_T31)
+    /* OEM T31 1.1.6: AL_Common_Encoder_CreateChannel runs watermark_init for a channel created with the flag,
+     * encode1 marks every I picture (src/watermark, avpu_watermark) */
+    (void)AL_Codec_Encode_SetFisheye(ch->codec, openimp_t31_enc_fisheye(channel));
+#elif defined(PLATFORM_T40)
+    /* OEM T40 1.3.1: the same Allegro path as T31 (watermark_init, encode1 -> embed_watermark) */
+    (void)AL_Codec_Encode_SetFisheye(ch->codec, p2_channels[channel].fisheye);
 #endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21)
     {
@@ -7411,7 +7427,8 @@ int IMP_Encoder_GetQpgMode(int channel, IMPEncoderQpgMode *mode)
 #if defined(PLATFORM_T40)
 /* Vendor T40 1.3.1 (0x6bd44 / 0x6be40): a flag in the channel record, settable
  * only while the channel is not created (-1 afterwards); valid channels are
- * 0..12.  Its only reader is the vendor's fisheye motion search. */
+ * 0..12.  CreateChn hands it to the encoder: the vendor luma watermark on I
+ * pictures (src/watermark, codec-t40.c avpu_watermark). */
 int IMP_Encoder_SetFisheyeEnableStatus(int channel, int enable)
 {
     int ret = -1;

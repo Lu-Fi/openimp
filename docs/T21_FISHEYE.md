@@ -1,5 +1,8 @@
 # T21: IMP_Encoder_SetFisheyeEnableStatus (issues #3, #5, #7)
 
+> The flag also makes the encoder mark every I picture with an invisible luma watermark (top-left 64x16
+> pixels of the source frame); OpenIMP does that too: see docs/WATERMARK.md (#357, #397).
+
 The vendor libimp 1.0.33 (T21, built with gcc 4.7.2 and gcc 5.4.0) has the same fisheye code as the T10/T20 library 3.12.0
 (`docs/T20_FISHEYE.md`), but on the T21 it has **no effect on the stream**.  This page lists what was read, what the cameras show
 and what OpenIMP's T21 build does.

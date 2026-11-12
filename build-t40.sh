@@ -177,11 +177,18 @@ do
         -c "$source_path" -o "$output_dir/backend-$source.o"
 done
 
+# IMP_Encoder_SetFisheyeEnableStatus picture part: the vendor luma watermark
+# (src/watermark), without floating-point contraction like the vendor code
+"$compiler" $strict_flags $repo_includes -ffp-contract=off \
+    -c "$project_dir/src/watermark/watermark.c" \
+    -o "$output_dir/watermark.o"
+
 "$compiler" -shared -nostartfiles \
     -Wl,-soname,libimp.so -Wl,--gc-sections \
     -Wl,--version-script="$project_dir/src/t40/libimp.map" \
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
+    "$output_dir/watermark.o" \
     "$output_dir/core_imp_log_emit.o" \
     "$output_dir/core_imp_log.o" \
     "$output_dir/core_video_drop.o" \

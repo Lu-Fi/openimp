@@ -179,11 +179,16 @@ case " $platform_cppflags " in
         ;;
 esac
 
+# IMP_Encoder_SetFisheyeEnableStatus picture part: the vendor luma watermark
+# (src/watermark), without floating-point contraction like the vendor code
+compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
+
 "$compiler" -shared -nostartfiles \
     -Wl,-soname,libimp.so -Wl,--gc-sections \
     -Wl,--version-script="$project_dir/src/t40/libimp.map" \
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
+    "$output_dir/watermark.o" \
     "$output_dir/openimp_profile.o" \
     "$output_dir/openimp_testpattern.o" \
     "$output_dir/openimp_tuning.o" \

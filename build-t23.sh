@@ -163,11 +163,16 @@ compile t23_eprc_mbrc src/eprc/eprc_mbrc.c $hot_flags -Werror -ffp-contract=off
 compile t23_fisheye src/fisheye/fisheye.c -Werror
 compile t23_helix_jpeg src/t30/helix_jpeg.c -Werror
 
+# IMP_Encoder_SetFisheyeEnableStatus picture part: the vendor luma watermark
+# (src/watermark), without floating-point contraction like the vendor code
+compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
+
 "$compiler" -shared -nostartfiles \
     -Wl,-soname,libimp.so -Wl,--gc-sections \
     -Wl,--version-script="$project_dir/src/t40/libimp.map" \
     -o "$output_dir/libimp.so" \
     "$output_dir/openimp_p0.o" \
+    "$output_dir/watermark.o" \
     "$output_dir/openimp_profile.o" \
     "$output_dir/openimp_testpattern.o" \
     "$output_dir/openimp_tuning.o" \
@@ -244,7 +249,7 @@ compile t23_helix_jpeg src/t30/helix_jpeg.c -Werror
     "$output_dir/t23_h264_common.o" "$output_dir/t23_h264_cabac.o" \
     "$output_dir/t23_h264_set.o" "$output_dir/t23_h264_slice.o" \
     "$output_dir/t23_rate_control.o" "$output_dir/t23_eprc.o" \
-    "$output_dir/t23_eprc_mbrc.o" "$output_dir/t23_fisheye.o" \
+    "$output_dir/t23_eprc_mbrc.o" "$output_dir/t23_fisheye.o" "$output_dir/watermark.o" \
     "$output_dir/dma_alloc.o" "$output_dir/core_imp_log_emit.o" \
     -lpthread -lm -o "$output_dir/openimp-t23-helix-selftest"
 "$stripper" --strip-unneeded "$output_dir/openimp-t23-helix-selftest"

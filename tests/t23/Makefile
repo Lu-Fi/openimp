@@ -35,7 +35,7 @@ HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t40/t31_rate_control.c \
 	$(PROJECT_DIR)/src/eprc/eprc.c \
 	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c \
-	$(PROJECT_DIR)/src/fisheye/fisheye.c
+	$(PROJECT_DIR)/src/fisheye/fisheye.c $(PROJECT_DIR)/src/watermark/watermark.c
 # The IMP headers pin the 32-bit MIPS ABI with _Static_assert; the Helix
 # bridge host build (x86_64, both ends of the IPC built alike) only checks
 # the bridge's input path, so those layout checks are compiled out there.
