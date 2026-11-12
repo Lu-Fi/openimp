@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: `SU_LED_Command` checked with the LED pins of the thingino profiles
+
+- LED GPIOs taken from the thingino camera profiles (dtsi gpio-leds, defconfig `BR2_THINGINO_LED_*`) and confirmed on each test camera (gpio owner labels, thingino_leds parameters, device tree). Vendor flow from the libsysutils disassembly: `/proc/board/power/led<N>` on T10/T20/T21/T23/T41 (T31 1.1.6 does not export it), sysfs GPIO only on T40 1.3.1; no version has a blink command.
+- T40 (Eufy T40XP): vendor 1.3.1 and the OpenIMP libimp give equal results: -1 while thingino_leds owns the pin, rc 0 with GPIO read-back 1/0/1 and unexport for cmd 1/0/1/2 once it is free. Cell host -> dev.
+- T10/T20/T21/T23/T31/T41: vendor and image libsysutils both return -1 (ENOENT, no proc LED node on any thingino image), LEDs unchanged: cells aud -> nohw. OpenIMP exports `SU_LED_Command` only on T40; the T40 image's neo libsysutils uses the proc path instead (#419).
+
 ## 2026-11-12: colour-checker analysis tool (#102)
 
 - `tools/colorchecker.py` + `docs/COLORCHECKER.md`: SpyderCheckr 24 patch detection, sRGB -> Lab D50, dE00 per patch, grey neutrality and open-vs-vendor summary per run (reference values supplied locally, licensed). First results: T40 and T10 ch0 vendor-equal or better (open-vs-vendor mean 0.35 to 1.0 dE00); T40 sub stream at 3000 K +1.1 dE00 on clipped patches. No CCM changed.
