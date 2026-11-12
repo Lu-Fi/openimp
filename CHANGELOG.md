@@ -52,6 +52,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - T40 (Eufy T40XP): vendor 1.3.1 and the OpenIMP libimp give equal results: -1 while thingino_leds owns the pin, rc 0 with GPIO read-back 1/0/1 and unexport for cmd 1/0/1/2 once it is free. Cell host -> dev.
 - T10/T20/T21/T23/T31/T41: vendor and image libsysutils both return -1 (ENOENT, no proc LED node on any thingino image), LEDs unchanged: cells aud -> nohw. OpenIMP exports `SU_LED_Command` only on T40; the T40 image's neo libsysutils uses the proc path instead (#419).
 
+## 2026-11-12: tdwatch timing check robust against host load (#430)
+
+- `tests/tdwatch`: arm+disarm limit is now median of 20 < 2 ms plus worst < 50 ms (was worst < 5 ms, which failed once at 7.5 ms at load 16). A real slowdown shifts the median; a scheduler spike no longer fails the check.
+
 ## 2026-11-12: colour-checker analysis tool (#102)
 
 - `tools/colorchecker.py` + `docs/COLORCHECKER.md`: SpyderCheckr 24 patch detection, sRGB -> Lab D50, dE00 per patch, grey neutrality and open-vs-vendor summary per run (reference values supplied locally, licensed). First results: T40 and T10 ch0 vendor-equal or better (open-vs-vendor mean 0.35 to 1.0 dE00); T40 sub stream at 3000 K +1.1 dE00 on clipped patches. No CCM changed.

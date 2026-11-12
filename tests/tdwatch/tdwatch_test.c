@@ -60,8 +60,8 @@ int main(int argc, char **argv)
 {
     char json[300], rep[300], buf[16384];
     struct timespec a, b;
-    long worst = 0;
-    int i;
+    long worst = 0, us_all[20], med;
+    int i, j;
     pthread_t th;
 
     snprintf(g_dir, sizeof(g_dir), "%s", argc > 1 ? argv[1] : ".");
@@ -84,12 +84,22 @@ int main(int argc, char **argv)
         at_td_disarm();
         clock_gettime(CLOCK_MONOTONIC, &b);
         us = (b.tv_sec - a.tv_sec) * 1000000L + (b.tv_nsec - a.tv_nsec) / 1000;
+        us_all[i] = us;
         if (us > worst) worst = us;
     }
-    CHECK(worst < 5000, "arm+disarm worst %ld us (limit 5000)", worst);
+    /* A real regression slows EVERY call (median shifts); a scheduler preemption on a loaded host hits one or two
+     * samples (issue #430: 7.5 ms worst at load 16). So: tight limit on the median, loose cap on the worst
+     * (the watch itself fires at 300 ms, so 50 ms still catches a blocking arm/disarm). */
+    for (i = 1; i < 20; i++)
+        for (j = i; j > 0 && us_all[j - 1] > us_all[j]; j--) {
+            long t = us_all[j]; us_all[j] = us_all[j - 1]; us_all[j - 1] = t;
+        }
+    med = us_all[10];
+    CHECK(med < 2000, "arm+disarm median %ld us (limit 2000)", med);
+    CHECK(worst < 50000, "arm+disarm worst %ld us (limit 50000)", worst);
     CHECK(errsize() == 0, "stderr not empty after normal teardowns (%ld B)", errsize());
     CHECK(access(rep, F_OK) != 0, "report file written by a normal teardown");
-    printf("normal teardown: arm+disarm worst of 20 = %ld us\n", worst);
+    printf("normal teardown: arm+disarm worst of 20 = %ld us, median %ld us\n", worst, med);
 
     /* 2. disabled: a stall writes nothing */
     setenv("APITEST_NO_TEARDOWN_WATCH", "1", 1);
