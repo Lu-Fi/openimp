@@ -1,6 +1,7 @@
 /* apitest: ISP non-image functions (getters, statistics, running mode round trips).
  * Image-changing tuning functions are covered by tools/imgfx. */
 #include <unistd.h>
+#include <errno.h>
 #include "apitest.h"
 
 /* getter with a guarded out struct: PASS = ret 0 and guards intact; the reason shows fields */
@@ -15,6 +16,16 @@ static int skipfn(const char *n)       /* APITEST_SKIPFN=a,b: functions known to
 #define ISPGET(f, T, ...) \
     NEED(f) if (skipfn(#f)) rep(FN(f), 0, V_SKIP, "APITEST_SKIPFN: oopses the driver"); else { G(T, p); int r_ = f(V0 p); gchk(p); \
         rep(FN(f), r_, r_ == 0 ? V_PASS : V_FAIL, __VA_ARGS__); gfree(p); }
+/* T41 AF statistics getters (#423): open-tx-isp keeps the AF block off by default (t41_af=0) and answers EPERM (-4090);
+ * served with t41_af=1 (open-tx-isp #179).  Same N/A rule as the isp-rt area (T41X_NA). */
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+# define ISPGET_AF(f, T, ...) \
+    NEED(f) if (skipfn(#f)) rep(FN(f), 0, V_SKIP, "APITEST_SKIPFN: oopses the driver"); else { G(T, p); int r_, e_; errno = 0; r_ = f(V0 p); e_ = errno; gchk(p); \
+        if (r_ == -4090 && e_ == EPERM) rep(FN(f), r_, V_NA, "AF block off in the ISP module (open-tx-isp t41_af=0 default, errno %d)", e_); \
+        else rep(FN(f), r_, r_ == 0 ? V_PASS : V_FAIL, __VA_ARGS__); gfree(p); }
+#else
+# define ISPGET_AF ISPGET
+#endif
 /* getter of a single scalar */
 #define ISPGETU(f, T, ...) \
     NEED(f) if (skipfn(#f)) rep(FN(f), 0, V_SKIP, "APITEST_SKIPFN: oopses the driver"); else { G(T, p); int r_ = f(V0 p); gchk(p); \
@@ -397,10 +408,10 @@ void t_isp(void)
     ISPGET(IMP_ISP_Tuning_GetAwbAttr, IMPISPWBAttr, "awb attr read")
 #endif
 #if HAS_IMP_ISP_Tuning_GetAfStatistics
-    ISPGET(IMP_ISP_Tuning_GetAfStatistics, IMPISPAFStatisInfo, "af statistics read")
+    ISPGET_AF(IMP_ISP_Tuning_GetAfStatistics, IMPISPAFStatisInfo, "af statistics read")
 #endif
 #if HAS_IMP_ISP_Tuning_GetAFMetricesInfo
-    ISPGET(IMP_ISP_Tuning_GetAFMetricesInfo, IMPISPAFMetricsInfo, "af metrics read")
+    ISPGET_AF(IMP_ISP_Tuning_GetAFMetricesInfo, IMPISPAFMetricsInfo, "af metrics read")
 #endif
 #if HAS_IMP_ISP_Tuning_GetAEFlickerFlag
     ISPGET(IMP_ISP_Tuning_GetAEFlickerFlag, IMPISPFlickerFlag, "flicker flag read")
