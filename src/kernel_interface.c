@@ -2432,6 +2432,34 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
      * accepts the source address.
      */
     VBM_DQ_STEP(chn, VBM_DQ_STEP_QUEUE);
+    /*
+     * #374: an occasional reader (one GetFrame) marks the channel pulled for
+     * VBM_PULL_IDLE_MS; without a reader the ready queue (plus the frames the
+     * delay FIFO holds for the frame depth) then took every buffer, the
+     * driver ran dry and capture stopped until the idle recycle (~1 s, also
+     * stalling ext feed / IVS / callbacks of that channel).  Keep one buffer
+     * with the driver: when none is left (this frame is the last one out of
+     * it), the oldest ready frame goes back to the driver first.  The vendor
+     * serves its depth copies and never stops capture.
+     */
+    if (pool->buf_in_userspace && !pool->ext) {
+        int old = -1, i, in_driver = 0;
+
+        pthread_mutex_lock(&pool->queue_mutex);
+        for (i = 0; i < pool->frame_count; i++)
+            if (!pool->buf_in_userspace[i])
+                in_driver++;
+        if (in_driver == 0 && pool->queue_count > 0) {
+            old = pool->available_queue[pool->queue_head];
+            pool->queue_head = (pool->queue_head + 1) % pool->frame_count;
+            pool->queue_count--;
+        }
+        pthread_mutex_unlock(&pool->queue_mutex);
+        if (old >= 0 && old < pool->frame_count) {
+            ki_trace("libimp/VBM: ready-drop-oldest ch=%d idx=%d\n", chn, old);
+            VBMReleaseFrame(chn, &pool->frames[old]);
+        }
+    }
     pthread_mutex_lock(&pool->queue_mutex);
     if (pool->queue_count >= pool->frame_count) {
         VBMFrame *captured = &pool->frames[idx];

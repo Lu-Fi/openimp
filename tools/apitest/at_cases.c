@@ -3497,7 +3497,7 @@ static void cs_extchn_t31(void)
             IMPEncoderChnAttr *ea2 = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea2));
             static unsigned char dbuf[1 << 18];
             int64_t t0 = now_us();
-            int rb2 = -1, nstr = 0, nlate = 0;
+            int rb2 = -1, nstr = 0, nlate = 0, pulled = 0;
             int64_t tfirst = -1;
 
             if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
@@ -3510,6 +3510,13 @@ static void cs_extchn_t31(void)
                             if (dump) { int trunc = 0; size_t n = at_stream_gather(&es, dbuf, sizeof(dbuf), &trunc); if (!trunc) fwrite(dbuf, 1, n, dump); }
                             if (tfirst < 0) tfirst = now_us() - t0;
                             if (now_us() - t0 >= 1000000) nlate++;
+                            if (!pulled && getenv("APITEST_EXTCHN_PULL1") && now_us() - t0 >= 1000000) {
+                                /* #374: one snapshot pull of the otherwise unread source ch1 must not pause its capture */
+                                IMPFrameInfo *p1 = NULL;
+
+                                pulled = 1;
+                                if (IMP_FrameSource_GetFrame(1, &p1) == 0 && p1) IMP_FrameSource_ReleaseFrame(1, p1);
+                            }
                             nstr++; IMP_Encoder_ReleaseStream(5, &es);
                         }
                     }
