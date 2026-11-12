@@ -90,6 +90,7 @@ static unsigned int runs;
 static unsigned int reg_reads;
 #endif
 #if defined(PLATFORM_T30)
+static uint32_t run_50060;   /* #400: ME window of the last command list */
 #include "eprc/eprc.h"
 static unsigned int reg_reads;
 #endif
@@ -378,6 +379,8 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         for (i = 0; i + 1u < list->size / 4u; i += 2u) {
             uint32_t reg = w[i + 1u] & 0xffffcu;
 
+            if (reg == 0x50060u)
+                run_50060 = w[i];
             if (reg == 0x40074u)
                 t30_list_40074 = w[i];
             for (k = 0; k < EPRC30_MBRC_REGS; k++)
@@ -1028,6 +1031,36 @@ static void test_t30_fixqp(void)
     }
     assert(idrs == 3u);
     OpenIMP_T30_HelixDestroy(encoder);
+}
+#endif
+
+#if defined(PLATFORM_T30)
+/* #400: ME window of a P picture is the macroblock-aligned picture (320x180 -> 191<<16 | 319) */
+static void test_t30_me_window(void)
+{
+    static const struct { unsigned int w, h; uint32_t v; } c[] = {
+        { 320, 180, (191u << 16) | 319u }, { 320, 192, (191u << 16) | 319u }, { 640, 360, (367u << 16) | 639u },
+    };
+    unsigned int k;
+
+    for (k = 0; k < sizeof(c) / sizeof(c[0]); k++) {
+        HWEncoderParams params;
+        T30HelixEncoder *encoder = NULL;
+        PictureInfo info;
+
+        memset(&params, 0, sizeof(params));
+        params.width = c[k].w;
+        params.height = c[k].h;
+        params.fps_num = T30_FPS(15);
+        params.fps_den = 1;
+        params.gop_length = 15;
+        assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+        run_50060 = 0;
+        assert(encode(encoder, &info) == 0 && info.idr);
+        assert(encode(encoder, &info) == 0 && !info.idr);
+        assert(run_50060 == c[k].v);
+        OpenIMP_T30_HelixDestroy(encoder);
+    }
 }
 #endif
 
@@ -2951,6 +2984,9 @@ int main(int argc, char **argv)
 #if defined(HELIX_VENDOR_GOP)
     if (argc > 1)
         test_t30_gop_vectors(argv[1]);
+#endif
+#if defined(PLATFORM_T30)
+    test_t30_me_window();
 #endif
 #if defined(PLATFORM_T20)
     test_t20_fixqp();

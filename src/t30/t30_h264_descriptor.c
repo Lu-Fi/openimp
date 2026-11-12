@@ -151,10 +151,12 @@ static int t30_emit_motion_estimation(T30DescriptorWriter *writer,
     MOTION_EMIT(0x5010c, T30_VRAM_ME);
     MOTION_EMIT(0x50104, T30_VRAM_TOPMV);
     MOTION_EMIT(0x50108, 0x13200070u);
-#if defined(PLATFORM_T20)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30)
     /* T20 3.12.0 command list (soc_vpu capture of a P picture, 640x360):
      * the motion search window is the macroblock-aligned picture
-     * (0x016f027f), and 0x50040 has bit 27 set (0x8f3f5008). */
+     * (0x016f027f), and 0x50040 has bit 27 set (0x8f3f5008).  T30 (#400):
+     * the same window; the visible height of 180 (not a multiple of 8)
+     * stalled the VPU after two pictures on the T30X, 192 and 360 ran. */
     MOTION_EMIT(0x50060, ((uint32_t)config->mb_height * 16u - 1u) << 16 |
                          ((uint32_t)config->mb_width * 16u - 1u));
 #else
