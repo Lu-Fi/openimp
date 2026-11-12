@@ -52,8 +52,10 @@
  * (T20, T21, T23). */
 #define HELIX_SMALL_WINDOWS 1
 #endif
-#if defined(PLATFORM_T20) || (defined(HELIX_T21_SYNTAX) && !defined(PLATFORM_T23))
-/* IMP_Encoder_SetChnHSkip reference structures (src/hskip, docs/T20_HSKIP.md): T10/T20 and T21 */
+#if defined(PLATFORM_T20) || (defined(HELIX_T21_SYNTAX) && !defined(PLATFORM_T23)) || \
+    defined(PLATFORM_T30)
+/* IMP_Encoder_SetChnHSkip reference structures (src/hskip, docs/T20_HSKIP.md): T10/T20, T21 and T30
+ * (the T30 1.0.5 i264e is the T10/T20 3.12.0 code, docs/T30_HSKIP.md) */
 #define HELIX_HSKIP 1
 #if defined(HELIX_T21_SYNTAX)
 #define HELIX_T21_HSKIP 1       /* the T21 1.0.33 variant (no T23) */
@@ -3499,9 +3501,19 @@ uint32_t OpenIMP_T30_HelixFailures(const T30HelixEncoder *encoder)
  *
  * T10/T20 take the skip attributes as given.  The T21 1.0.33 library runs
  * them through i264e_validate_parameters (hskip_t21_validate): in SMART rate
- * control only, with m and n of its own. */
+ * control only, with m and n of its own.  The T30 1.0.5 library does the same
+ * (i264e_validate_parameters 0x48d04 of the 4.7.2 build: rate-control method
+ * param[0x2f] != 3 (SMART) -> memset of the six words param[0x28..0x2d], at
+ * CreateChn and in i264e_idr_reconfig; SMART: type 0..6, m/n by the same
+ * per-type table as T21, maxSameSceneCnt 0..100).  T30X b63: CBR streams of the
+ * vendor are plain IPPP for every skip type, also after a run-time
+ * SetChnHSkip; so the T30 structure runs in SMART only (#24). */
 
-#if defined(HELIX_T21_SYNTAX)
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T20) && !defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+#define HELIX_T30_HS_VALIDATE 1
+#endif
+
+#if defined(HELIX_T21_SYNTAX) || defined(HELIX_T30_HS_VALIDATE)
 static int hs_is_smart(const HWEncoderParams *hp)
 {
     return hp->rc_mode == HW_RC_MODE_VBR && (hp->rc_flags & HW_RC_FLAG_SMART) != 0u;
@@ -3529,6 +3541,21 @@ static void hs_attr(const HWEncoderParams *hp, HSkipAttr *a)
     a->same = (t == 0u || t == 5u || t == 6u) ? hp->same_scene_gops : 0u;
     a->scenecut = (hp->hskip_flags & HW_HSKIP_SCENECUT) != 0u;
     a->black = (hp->hskip_flags & HW_HSKIP_BLACK) != 0u;
+#if defined(HELIX_T30_HS_VALIDATE)
+    {
+        /* T30 1.0.5 i264e_validate_parameters: outside SMART the six words are zero (plain GOP, no black
+         * enhancement); in SMART m and n follow the type (as T21), maxSameSceneCnt 0..100 (T21 1..100: the
+         * same IDR period, both count only above 1) */
+        uint32_t same = hp->same_scene_gops;
+
+        hskip_t21_validate(a, hs_is_smart(hp), hp->gop_length);
+        if (!hs_is_smart(hp))
+            a->same = 0u;
+        else
+            a->same = same > 100u ? 100u : same;
+        a->same = (a->type == 0u || a->type == 5u || a->type == 6u) ? a->same : 0u;
+    }
+#endif
 #endif
 }
 
@@ -3539,6 +3566,11 @@ static int t20_hs_wanted(const HWEncoderParams *hp)
 
     hs_attr(hp, &a);
     return a.type != 0u;
+#elif defined(HELIX_T30_HS_VALIDATE)
+    HSkipAttr a;
+
+    hs_attr(hp, &a);
+    return a.type != 0u || (a.same > 1u && (hp->hskip_flags & HW_HSKIP_SET));
 #else
     return hp->hskip_type != 0u ||
            (hp->same_scene_gops > 1u && (hp->hskip_flags & HW_HSKIP_SET));
@@ -3719,6 +3751,24 @@ static int t20_scene_idr(const T30HelixEncoder *e)
 static int t20_hs_cond(const T30HelixEncoder *e)
 {
     return e->hs_on && hskip_rc_cond(&e->hs, &e->hs_pic, e->t10);
+}
+#elif defined(PLATFORM_T30)
+/* T30 1.0.5 i264e_ratecontrol_start (i264e parameter [0] = 3 on every T30 cpu id): the controller's GOP-start flag
+ * (E+0x904f4, EPRC30_FrameStart) is counter % gop == 0, also for a picture of an IDR period of several GOPs that is
+ * not an IDR; there is no HSkip class byte (that is the [0] = 1 branch) */
+static int t20_rc_gopstart(const T30HelixEncoder *e, int idr)
+{
+    if (e->hs_on && e->hs.gop)
+        return e->hs_pic.counter % e->hs.gop == 0;
+    return idr;
+}
+
+/* i264e_decide_slice_type_and_rd tests [0] in 2..3 and the scene class E+0x90428 == 4 (T30: [0] = 3); on T30 nothing
+ * writes E+0x90428 (only the T20 controller of [0] = 2 does), so the scene-cut IDR of the skip types never fires */
+static int t20_scene_idr(const T30HelixEncoder *e)
+{
+    (void)e;
+    return 0;
 }
 #else
 /* T21 1.0.33 i264e_decide_slice_type_and_rd: the class the controller gave the previous picture is 5 (scene change) */
@@ -4056,7 +4106,7 @@ t20_again:
         if (encoder->eprc30_floor_left && --encoder->eprc30_floor_left == 0u)
             EPRC30_SetMinQp(&encoder->eprc30, encoder->eprc30_min_p,
                             encoder->eprc30_min_i);
-        EPRC30_FrameStart(&encoder->eprc30, idr, &pic);
+        EPRC30_FrameStart(&encoder->eprc30, t20_rc_gopstart(encoder, idr), &pic);
         qp = pic.qp;
     }
     if (idr && encoder->eprc30_restart_pending) {
@@ -4067,7 +4117,7 @@ t20_again:
         if (encoder->eprc30_on) {
             EprcPicture pic;
 
-            EPRC30_FrameStart(&encoder->eprc30, idr, &pic);
+            EPRC30_FrameStart(&encoder->eprc30, t20_rc_gopstart(encoder, idr), &pic);
             qp = pic.qp;
         }
     }
@@ -4421,6 +4471,7 @@ again:
         encoder->hs_black_pics++;
     } else
 #endif
+    {
 #if defined(PLATFORM_T30)
     if (encoder->eprc30_on)
         pthread_mutex_lock(&t30_run_lock);
@@ -4444,10 +4495,30 @@ again:
     }
 #if defined(PLATFORM_T30)
     if (encoder->eprc30_on) {
-        EprcPicture pic;
-
         t30_eprc_statistics(encoder);
         pthread_mutex_unlock(&t30_run_lock);
+    }
+    /* T30 1.0.5 i264e_slice_write: i264e_decide_reset_slice_to_idr judges the first try of a picture before the
+     * re-encode judge (i264e_ratecontrol_is_reenc); a black picture reaches neither */
+    if (encoder->hs_on && !sc_force && t30_reencodes == 0u && !idr &&
+        hskip_scenecut(&encoder->hs, &encoder->hs_pic, (int)encoder->hs_scenecut, encoder->params.fps_num,
+                       encoder->params.fps_den, encoder->channel.output_len * 8u, encoder->hs_idr_bits)) {
+        /* this base picture is larger than the last IDR picture at a whole second: i264e_ratecontrol_init from the
+         * QP of this try, the structure restarts, the picture is coded as an IDR picture.  T30 ([0] = 3) keeps the
+         * controller's IDR QP: the "not below the first try" rule of T10/T20 (i264e_decide_slice_qp, [0] < 3) and
+         * the QP of the last IDR for base pictures do not apply */
+        sc_force = 1;
+        encoder->hs_scenecuts++;
+        if (encoder->hs_scenecuts <= 3u || encoder->hs_scenecuts % 100u == 0u)
+            IMP_LOG_INFO("Encoder", "Helix: frame=%u scene cut, %u bytes at qp=%u, coded again as an IDR picture (%u so far)",
+                         encoder->frame_number, encoder->channel.output_len, qp, encoder->hs_scenecuts);
+        if (encoder->eprc30_on)
+            t30_eprc_begin(encoder, (int)qp);
+        goto t20_picture;
+    }
+    if (encoder->eprc30_on) {
+        EprcPicture pic;
+
         /* the OEM counts the slice bytes (header and payload) */
         pic.qp = (uint8_t)qp;
         if (EPRC30_FrameEnd(&encoder->eprc30,
@@ -4471,6 +4542,7 @@ again:
         }
     }
 #endif
+    }
 #if defined(HELIX_T21_HSKIP)
     /* T21 1.0.33 i264e_slice_write: i264e_decide_reset_slice_to_idr judges the first try of a picture before the
      * re-encode judge; a black picture reaches neither the judge nor FRAME_END (i264e_icodec_black) */
@@ -4506,9 +4578,9 @@ again:
                   strerror(errno));
         return -1;
     }
-#if defined(HELIX_T21_HSKIP)
+#if defined(HELIX_T21_HSKIP) || defined(PLATFORM_T30)
     if (idr) {
-        /* i264e_ratecontrol_end of an IDR picture: its size (E+0x8e4) */
+        /* i264e_ratecontrol_end of an IDR picture: its size (T21 E+0x8e4, T30 E+0x906b8) */
         encoder->hs_idr_qp = qp;
         encoder->hs_idr_bits = encoder->channel.output_len * 8u;
     }
@@ -5179,6 +5251,12 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
         encoder->eprc30_min_qp = requested->min_qp;
         encoder->eprc30_max_qp = requested->max_qp;
     }
+    /* IMP_Encoder_SetChnHSkip (src/hskip): the structure starts with the next IDR (t20_hs_idr) */
+    next.same_scene_gops = requested->same_scene_gops;
+    next.hskip_type = requested->hskip_type;
+    next.hskip_m = requested->hskip_m;
+    next.hskip_n = requested->hskip_n;
+    next.hskip_flags = requested->hskip_flags;
 #endif
     t30_normalize_params(&next, &encoder->params);
 #if defined(HELIX_VENDOR_GOP)
@@ -5205,6 +5283,37 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
             encoder->params.hskip_flags = next.hskip_flags;
             encoder->params.change_ref_off = next.change_ref_off;
             t20_change_ref_apply(encoder);
+            return 0;
+        }
+    }
+#endif
+#if defined(PLATFORM_T30)
+    {
+        /* T30 1.0.5: i264e_reconfig_hskip_set marks the six words (E+0x913b4 bit 0x200); i264e_idr_reconfig takes
+         * them over with the next IDR picture (new skip header) and runs i264e_ratecontrol_init again there.
+         * i264e_reconfig_black_enhance_set (bit 0x400 of E+0x913b8) is applied by i264e_reconfig with the next
+         * picture, without a controller restart. */
+        HWEncoderParams cmp = next;
+
+        cmp.hskip_type = encoder->params.hskip_type;
+        cmp.hskip_m = encoder->params.hskip_m;
+        cmp.hskip_n = encoder->params.hskip_n;
+        cmp.same_scene_gops = encoder->params.same_scene_gops;
+        cmp.hskip_flags = encoder->params.hskip_flags;
+        if (!memcmp(&cmp, &encoder->params, sizeof(cmp))) {
+            int header = next.hskip_type != encoder->params.hskip_type ||
+                         next.hskip_m != encoder->params.hskip_m ||
+                         next.hskip_n != encoder->params.hskip_n ||
+                         next.same_scene_gops != encoder->params.same_scene_gops ||
+                         ((next.hskip_flags ^ encoder->params.hskip_flags) & ~HW_HSKIP_BLACK) != 0u;
+
+            encoder->params.hskip_type = next.hskip_type;
+            encoder->params.hskip_m = next.hskip_m;
+            encoder->params.hskip_n = next.hskip_n;
+            encoder->params.same_scene_gops = next.same_scene_gops;
+            encoder->params.hskip_flags = next.hskip_flags;
+            if (header && encoder->eprc30_on)
+                encoder->eprc30_restart_pending = 1;
             return 0;
         }
     }
