@@ -408,7 +408,7 @@ int main(int argc, char **argv)
 #elif defined(PLATFORM_T41)
     { IMPISPSensorFps sf = { 15, 1 }; ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(IMPVI_MAIN, &sf) : -1; }
 #else
-    ret = IMP_ISP_Tuning_SetSensorFPS ? IMP_ISP_Tuning_SetSensorFPS(15, 1) : -1;
+    ret = (IMP_ISP_Tuning_SetSensorFPS && !getenv("APITEST_KEEP_FPS")) ? IMP_ISP_Tuning_SetSensorFPS(15, 1) : -1;   /* APITEST_KEEP_FPS=1: leave the sensor rate (the T21 vendor sensor flavour serves 25 fps only) */
 #endif
     printf("[T] SetSensorFPS 15/1 -> %d\n", ret);
     if (IMP_ISP_Tuning_GetSensorFPS) {

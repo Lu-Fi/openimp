@@ -1485,6 +1485,11 @@ extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
 extern int AL_Codec_Encode_SetGopParam(void *codec, void *gop);
 extern int AL_Codec_Encode_SetGopLength(void *codec, int length);
+#if defined(PLATFORM_T30)
+extern int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop);
+extern int AL_Codec_Encode_GetRunningRate(void *codec, uint32_t *num,
+                                          uint32_t *den);
+#endif
 extern int AL_Codec_Encode_Destroy(void *codec);
 extern int AL_Codec_Encode_Process(void *codec, void *frame, void *user_data);
 extern int AL_Codec_Encode_GetStream(void *codec, void **stream, void **user_data);
@@ -5284,6 +5289,36 @@ int IMP_Encoder_GetChnFrmRate(int channel, IMPEncoderFrmRate *rate,
             return err;
     }
 #endif
+#if defined(PLATFORM_T21)
+    /* T20 3.12.0 / T21 1.0.33: i264e parameter 5, the rate the encoder runs
+     * with, reduced (#367).  T21: an idle channel answers 0 and leaves *rate
+     * alone, T20: -1 */
+    if (!p2_valid_channel(channel) || !rate)
+        return -1;
+    if (!p2_channels[channel].created)
+#if defined(PLATFORM_T20)
+        return -1;
+#else
+        return 0;
+#endif
+    {
+        uint32_t n = 0, d = 0;
+        int ret = -1;
+
+        pthread_mutex_lock(&p2_channels[channel].lock);
+        if (AL_Codec_Encode_GetRunningRate(p2_channels[channel].codec, &n,
+                                           &d) == 0) {
+            rate->frmRateNum = n;
+            rate->frmRateDen = d;
+            ret = 0;
+        } else {
+            *rate = p2_channels[channel].attr.rcAttr.outFrmRate;
+            ret = 0;
+        }
+        pthread_mutex_unlock(&p2_channels[channel].lock);
+        return ret;
+    }
+#endif
     if (!p2_valid_channel(channel) || !rate || !p2_channels[channel].created)
         return -1;
     *rate = p2_channels[channel].attr.rcAttr.outFrmRate;
@@ -6754,8 +6789,19 @@ int IMP_Encoder_GetGOPSize(int channel, IMPEncoderGOPSizeCfg *cfg)
         return -1;
     EncoderInit();
     pthread_mutex_lock(&p2_channels[channel].lock);
-    if (p2_channels[channel].created)
+    if (p2_channels[channel].created) {
+#if defined(PLATFORM_T30)
+        /* T30 1.0.5, T20 3.12.0, T21 1.0.33: i264e_reconfig_gop_get / i265e
+         * parameter 7, the GOP the glue handed over (rounded up to the rate,
+         * T30: in whole seconds, #367) */
+        uint32_t g = 0;
+
+        if (AL_Codec_Encode_GetGopLength(p2_channels[channel].codec, &g) == 0 && g)
+            cfg->gopsize = (int)g;
+        else
+#endif
         cfg->gopsize = (int)p2_channels[channel].attr.rcAttr.maxGop;
+    }
 #if defined(PLATFORM_T20)
     else
         ret = -1;

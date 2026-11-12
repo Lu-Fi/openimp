@@ -125,6 +125,10 @@ typedef struct {
     /* 0x88: T30 H.265 (Radix) flucLvl of IMPEncoderAttrH265CBR/VBR, valid
      * with HW_RC_FLAG_APP (vendor SetChnAttrRcMode: i265e_set_param 3) */
     uint32_t fluct_level;
+    /* 0x8c: T30 IMP_Encoder_SetGOPSize / SetChnGopLength count: a request
+     * of the GOP the channel already has still counts (vendor glue: channel
+     * +0xd8, #367) */
+    uint32_t gop_requests;
 } HWEncoderParams;
 
 #define HW_HSKIP_SCENECUT 1u    /* bEnableScenecut */
@@ -139,7 +143,7 @@ typedef struct {
 #define HW_SUPERFRM_NONE     1u
 #define HW_SUPERFRM_REENCODE 2u
 
-_Static_assert(sizeof(HWEncoderParams) == 0x8c, "HWEncoderParams size");
+_Static_assert(sizeof(HWEncoderParams) == 0x90, "HWEncoderParams size");
 _Static_assert(offsetof(HWEncoderParams, static_time) == 0x30 &&
                offsetof(HWEncoderParams, rc_flags) == 0x48,
                "HWEncoderParams rate-control extras layout");

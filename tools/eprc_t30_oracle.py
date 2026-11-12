@@ -27,6 +27,8 @@ picture-size and statistics models are those of tools/eprc_oracle.py.
     tools/eprc_t30_oracle.py LIB --h265-reconf [SEED N]  (H.265 run-time change: I265e::reset)
     tools/eprc_t30_oracle.py LIB --h264-reconf [SEED N]  (H.264 run-time change:
         i264e_idr_reconfig, Lu-Fi/openimp#366)
+    tools/eprc_t30_oracle.py LIB --h264-reconf --gop [SEED N]  (GOP and frame rate
+        at run time: the IMP glue encoder_get_fps_mask, the IDR pictures, #367)
 
 The OEM T30 i264e codes an IDR whenever the picture count since the last
 IDR is a multiple of the GOP (i264e_ratecontrol_start: [0] % gop).  '--real'
@@ -356,11 +358,120 @@ def main_h264_reconf(lib, args):
             print('F', since, ' '.join(str(v) for v in out))
 
 
+def main_h264_gop(lib, args):
+    """IDR pictures of an H.264 channel under IMP_Encoder_SetChnFrmRate and
+    SetGOPSize at run time (#367).  The vendor IMP glue encoder_get_fps_mask
+    (run here on a channel record: +8 type 1, +0x38/+0x3c frame rate, +0x40
+    GOP, +0xc0 mask, +0xc8/+0xcc source rate, +0xd0/+0xd4 rate and +0xd8 GOP
+    asked for, +0x394 the i264e handle) runs before every source picture and
+    hands frame rate and GOP to i264e_set_param 5 / 7; i264e_reconfig_fps_set
+    / _gop_set only latch them (handle +0x913b4 flags 0x20 / 0x80, GOP at
+    +0x91668), i264e_encode takes them in i264e_idr_reconfig when the picture
+    is an IDR, which it is when the pictures since the last IDR reach the GOP
+    (i264e_ratecontrol_start: [0] % gop) or when the glue's channel +0xe0
+    flag (set with every rate or GOP it sends) reaches the picture (+8, fenc
+    +0x44: i264e_decide_slice_type_and_rd forces an IDR).  Source 25/1; a picture is coded
+    when bit 0 of the mask is set.  Output per scenario:
+        G fps_num fps_den gop pictures      (CreateChn)
+        E picture r num den | E picture g gop   (before that coded picture)
+        I idr-picture ...
+    A scenario where the vendor reaches GOP 0 (under one second: its
+    i264e_ratecontrol_init divides by it) or a rate it builds no picture
+    mask for is left out ('#' line)."""
+    import random
+    seed, n = (int(args[0]), int(args[1])) if len(args) > 1 else (0x367, 24)
+    rnd = random.Random(seed)
+    L = Lib(lib)
+    CH, FR, H = HEAP + 0x200000, HEAP + 0x210000, HEAP + 0x300000
+    src = (25, 1)
+    fixed = [
+        ((25, 1), 50, [(60, 'r', 10, 1), (200, 'r', 25, 1)]),     # the issue's case
+        ((25, 1), 30, [(40, 'g', 60)]),
+        ((25, 1), 50, [(17, 'g', 30), (140, 'g', 75), (300, 'g', 100)]),
+        ((25, 1), 60, [(33, 'r', 15, 1), (150, 'g', 45)]),
+        ((15, 1), 30, [(20, 'r', 25, 2), (90, 'r', 20, 1)]),
+        ((25, 1), 50, [(10, 'r', 20, 1), (10, 'g', 20)]),         # both before one picture
+    ]
+    # the rate's den * the source's num at most 64: above, the glue builds
+    # no picture mask (log, -1) and the channel codes nothing
+    rates = [(25, 1), (20, 1), (15, 1), (10, 1), (5, 1), (25, 2), (12, 5)]
+    scen = list(fixed)
+    for _ in range(n):
+        fps = rnd.choice(rates)
+        ev, f = [], 0
+        for _ in range(rnd.randint(1, 4)):
+            f += rnd.randint(1, 120)
+            if rnd.random() < 0.5:
+                ev.append((f, 'r') + rnd.choice(rates))
+            else:
+                ev.append((f, 'g', rnd.randint(1, 8) * rnd.choice((5, 10, 25))))
+        scen.append((fps, rnd.randint(1, 6) * 25, ev))
+    from math import gcd
+    for fps, gop, ev in scen:
+        # CreateChn (T30X device b59: GOP 30 at 25/1 -> GetGOPSize 50): the
+        # GOP rounded up to a multiple of num * den of the reduced rate
+        gd = gcd(fps[0], fps[1])
+        unit = (fps[0] // gd) * (fps[1] // gd)
+        cgop = -(-gop // unit) * unit
+        L.wr(CH, bytes(0x1000)); L.wr(FR, bytes(0x100)); L.wr(H, bytes(0x93000))
+        L.w32(CH + 8, 1); L.w32(CH + 0x394, H)
+        for o, v in ((0x38, fps[0]), (0x3c, fps[1]), (0x40, cgop), (0xd0, fps[0]),
+                     (0xd4, fps[1]), (0xd8, cgop)):
+            L.w32(CH + o, v)
+        L.w32(FR + 0x28, src[0]); L.w32(FR + 0x2c, src[1])
+        pics, idrs, lines, applied, since, pend = 0, [], [], None, 0, None
+        bad = None
+        frames = (max(e[0] for e in ev) + 200) * 2
+        for f in range(frames):
+            for e in ev:
+                if e[0] == f:
+                    if e[1] == 'r':
+                        L.w32(CH + 0xd0, e[2]); L.w32(CH + 0xd4, e[3])
+                        lines.append('E %d r %d %d' % (pics, e[2], e[3]))
+                    else:
+                        L.w32(CH + 0xd8, e[2])
+                        lines.append('E %d g %d' % (pics, e[2]))
+            L.w32(H + 0x913b4, 0)
+            mask = L.call('encoder_get_fps_mask', CH, FR)
+            if L.r32(H + 0x913b4) & 0xc0:
+                pend = L.r32(H + 0x91668)
+            if mask == 0xffffffff:
+                bad = 'no picture mask (rate den * source num > 64)'
+                break
+            if not mask & 1:
+                continue
+            # channel +0xe0, set whenever the glue sent a rate or GOP, goes
+            # to the picture (+8 -> fenc +0x44): i264e_decide_slice_type_and_rd
+            # codes that picture as an IDR (and i264e_idr_reconfig applies)
+            force = L.r32(CH + 0xe0) != 0
+            L.w32(CH + 0xe0, 0)
+            if applied is None or since >= applied or force:
+                if pend is not None:
+                    applied, pend = pend, None
+                if not applied:
+                    bad = 'GOP 0'
+                    break
+                idrs.append(pics)
+                since = 0
+            since += 1
+            pics += 1
+        if bad:
+            print('# G %d %d %d: the vendor reaches %s' % (fps[0], fps[1], gop, bad))
+            continue
+        print('G %d %d %d %d' % (fps[0], fps[1], gop, pics))
+        for l in lines:
+            print(l)
+        print('I', ' '.join(str(i) for i in idrs))
+
+
 def main():
     lib = sys.argv[1]
     args = sys.argv[2:]
     if '--h264-reconf' in args:
         args.remove('--h264-reconf')
+        if '--gop' in args:
+            args.remove('--gop')
+            return main_h264_gop(lib, args)
         return main_h264_reconf(lib, args)
     if '--h265-reconf' in args:
         args.remove('--h265-reconf')

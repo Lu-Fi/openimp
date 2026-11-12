@@ -262,7 +262,7 @@ int main(void)
     memset(&hp, 0, sizeof(hp));
     hp.width = 640;
     hp.height = 360;
-    hp.fps_num = 25;
+    hp.fps_num = 10;
     hp.fps_den = 1;
     hp.gop_length = 10;
     hp.rc_mode = HW_RC_MODE_CBR;

@@ -398,13 +398,13 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	./annexb_test
 	./level_test
 	./nv12_compact_test
-	./helix_encoder_test
-	./helix_encoder_test_t21
+	./helix_encoder_test t30_gop_vectors.txt
+	./helix_encoder_test_t21 t21_gop_vectors.txt
 	./t21_rmem_layout_test
 	./t23_ring_layout_test
 	./t21_sinter_map_test
 	./t21_front_crop_test
-	./helix_encoder_test_t20
+	./helix_encoder_test_t20 t20_gop_vectors.txt
 	./helix_jpeg_test_t21
 	./helix_jpeg_test_t20
 	./helix_jpeg_test_t23

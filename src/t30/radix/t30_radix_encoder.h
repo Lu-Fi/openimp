@@ -38,6 +38,8 @@ int OpenIMP_T30_RadixUpdateParams(T30RadixEncoder *encoder,
                                   const HWEncoderParams *params);
 /* Consecutive failed pictures since the last good one. */
 uint32_t OpenIMP_T30_RadixFailures(const T30RadixEncoder *encoder);
+/* the GOP i265e parameter 7 reads (IMP_Encoder_GetGOPSize, #367) */
+uint32_t OpenIMP_T30_RadixGop(const T30RadixEncoder *encoder);
 void OpenIMP_T30_RadixDestroy(T30RadixEncoder *encoder);
 
 #endif
