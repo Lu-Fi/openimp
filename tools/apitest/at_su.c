@@ -34,7 +34,7 @@ static int have_gpio_keys(void)
     return found;
 }
 
-#ifdef APITEST_T40
+#if defined(APITEST_T40) || defined(PLATFORM_T30)
 #include <sys/wait.h>
 /* run fn(arg) in a child process, return its result (-1000 when it does not end within 3 s) */
 static int su_in_child(int (*fn)(int), int arg)
@@ -182,6 +182,11 @@ void t_su(void)
     SUNEED(SU_Base_GetDevID) {
         G(SUDevID, d);
         r = f_SU_Base_GetDevID(d); gchk(d);
+        /* APITEST_SU_NOHW=1 (board without a device-ID source: T30X b61, vendor 1.0.5 and OpenIMP both answer -1 with an untouched ID):
+         * the vendor answer is the contract, -1 PASSes (nohw matrix rating, same rule as the RTC / ADC functions below) */
+        if (r == -1 && getenv("APITEST_SU_NOHW") && !strcmp(getenv("APITEST_SU_NOHW"), "1"))
+            rep(FN(SU_Base_GetDevID), r, V_PASS, "no device-ID source: %d (expected -1, vendor-equal; APITEST_SU_NOHW=1)", r);
+        else
         CHECK(SU_Base_GetDevID, r, gtouched(d), "%02x%02x%02x%02x%02x%02x%02x%02x...", d->hex[0], d->hex[1], d->hex[2], d->hex[3], d->hex[4], d->hex[5], d->hex[6], d->hex[7]);
         gfree(d);
     }
@@ -198,7 +203,12 @@ void t_su(void)
         CHECK(SU_Base_SUTime2Raw, r2, *raw == 1000000000u, "2001-09-09 01:46:40 -> %u (expected 1000000000)", *raw);
         SUNEED(SU_Base_Raw2SUTime) {
             int r3 = f_SU_Base_Raw2SUTime(raw, back); gchk(back);
-            CHECK(SU_Base_Raw2SUTime, r3, back->year == 2001 && back->mon == 9 && back->mday == 9 && back->hour == 1 && back->min == 46 && back->sec == 40,
+            int cal = back->year == 2001 && back->mon == 9;
+#ifdef PLATFORM_T30
+            /* T30 libsysutils 1.0.5 (vendor and OpenIMP alike, T30X b61): Raw2SUTime returns struct tm fields (year since 1900, month 0..11) */
+            if (!cal && back->year == 101 && back->mon == 8) cal = 1;
+#endif
+            CHECK(SU_Base_Raw2SUTime, r3, cal && back->mday == 9 && back->hour == 1 && back->min == 46 && back->sec == 40,
                   "%u -> %04d-%02d-%02d %02d:%02d:%02d (round trip)", *raw, back->year, back->mon, back->mday, back->hour, back->min, back->sec);
         }
         gfree(ft); gfree(raw); gfree(back);
@@ -508,6 +518,25 @@ void t_su(void)
 #undef CIPHER_RC
     }
 #else
+#ifdef PLATFORM_T30
+    /* APITEST_SU_NOHW=1 on a T30 board without /dev/aes (T30X: none): what the libsysutils answers without the node.  The T30 codes are not
+     * the T40 su_cipher.h ones (QEMU, OpenIMP libsysutils: Create -18, Destroy 0, Config -13, Encrypt/Decrypt -15, Exit -17), so the verdict is
+     * only "answers without a crash" and the ret= value is compared between the vendor and the open run (ana67.py); Init -11 is the common code.
+     * The handle calls that may leave a lock run in a child. */
+    if (getenv("APITEST_SU_NOHW") && !strcmp(getenv("APITEST_SU_NOHW"), "1") && !su_hw_tests() && access("/dev/aes", F_OK) != 0) {
+        unsigned int cbuf[16] = { 0 }, cout[16];
+#define CIPHER_RC(name, call, want, what) do { int rc_ = (call); \
+        rep(FN(name), rc_, rc_ != -1000 ? V_PASS : V_FAIL, "%s: %d (T40 code %d; T30 codes compared vendor vs open)", what, rc_, (want)); } while (0)
+        SUNEED(SU_CIPHER_Init) { CIPHER_RC(SU_CIPHER_Init, f_SU_CIPHER_Init(), -11, "no /dev/aes, INIT_FAILED"); }
+        SUNEED(SU_CIPHER_CreateHandle) { CIPHER_RC(SU_CIPHER_CreateHandle, su_in_child((int (*)(int))(void *)f_SU_CIPHER_CreateHandle, 0), -12, "not initialised, FAILED_GETHANDLE"); }
+        SUNEED(SU_CIPHER_DestroyHandle) { CIPHER_RC(SU_CIPHER_DestroyHandle, su_in_child(f_SU_CIPHER_DestroyHandle, 0), -19, "no handle, FAILED_DESHANDLE"); }
+        SUNEED(SU_CIPHER_ConfigHandle) { CIPHER_RC(SU_CIPHER_ConfigHandle, f_SU_CIPHER_ConfigHandle(0, NULL), -14, "NULL ctrl, SET_PARA_FAILED"); }
+        SUNEED(SU_CIPHER_Encrypt) { CIPHER_RC(SU_CIPHER_Encrypt, f_SU_CIPHER_Encrypt(0, cbuf, cout, 8), -16, "8 bytes, SET_DATALEN_ERR"); }
+        SUNEED(SU_CIPHER_Decrypt) { CIPHER_RC(SU_CIPHER_Decrypt, f_SU_CIPHER_Decrypt(0, cbuf, cout, 8), -16, "8 bytes, SET_DATALEN_ERR"); }
+        SUNEED(SU_CIPHER_Exit) { CIPHER_RC(SU_CIPHER_Exit, f_SU_CIPHER_Exit(), -18, "not initialised, UNINIT"); }
+#undef CIPHER_RC
+    } else
+#endif
     if (!su_hw_tests() || access("/dev/aes", F_OK) != 0) {
         const char *why = !su_hw_tests() ? "hardware AES/DES DMA engine, runs in QEMU (APITEST_QEMU) or with APITEST_SU_HW=1" : "no /dev/aes (no AES driver; the vendor libsysutils opens the same node)";
         int na = su_hw_tests();     /* a run that wanted the engine but has no node: N/A, else SKIP */
