@@ -368,7 +368,9 @@ def main_h264_gop(lib, args):
     / _gop_set only latch them (handle +0x913b4 flags 0x20 / 0x80, GOP at
     +0x91668), i264e_encode takes them in i264e_idr_reconfig when the picture
     is an IDR, which it is when the pictures since the last IDR reach the GOP
-    (i264e_ratecontrol_start: [0] % gop).  Source 25/1; a picture is coded
+    (i264e_ratecontrol_start: [0] % gop) or when the glue's channel +0xe0
+    flag (set with every rate or GOP it sends) reaches the picture (+8, fenc
+    +0x44: i264e_decide_slice_type_and_rd forces an IDR).  Source 25/1; a picture is coded
     when bit 0 of the mask is set.  Output per scenario:
         G fps_num fps_den gop pictures      (CreateChn)
         E picture r num den | E picture g gop   (before that coded picture)
@@ -432,7 +434,12 @@ def main_h264_gop(lib, args):
                 break
             if not mask & 1:
                 continue
-            if applied is None or since >= applied:
+            # channel +0xe0, set whenever the glue sent a rate or GOP, goes
+            # to the picture (+8 -> fenc +0x44): i264e_decide_slice_type_and_rd
+            # codes that picture as an IDR (and i264e_idr_reconfig applies)
+            force = L.r32(CH + 0xe0) != 0
+            L.w32(CH + 0xe0, 0)
+            if applied is None or since >= applied or force:
                 if pend is not None:
                     applied, pend = pend, None
                 if not applied:

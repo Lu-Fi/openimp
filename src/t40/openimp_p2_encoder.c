@@ -1485,6 +1485,9 @@ extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
 extern int AL_Codec_Encode_SetGopParam(void *codec, void *gop);
 extern int AL_Codec_Encode_SetGopLength(void *codec, int length);
+#if defined(P2_T30_NATIVE)
+extern int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop);
+#endif
 extern int AL_Codec_Encode_Destroy(void *codec);
 extern int AL_Codec_Encode_Process(void *codec, void *frame, void *user_data);
 extern int AL_Codec_Encode_GetStream(void *codec, void **stream, void **user_data);
@@ -6739,8 +6742,18 @@ int IMP_Encoder_GetGOPSize(int channel, IMPEncoderGOPSizeCfg *cfg)
         return -1;
     EncoderInit();
     pthread_mutex_lock(&p2_channels[channel].lock);
-    if (p2_channels[channel].created)
+    if (p2_channels[channel].created) {
+#if defined(P2_T30_NATIVE)
+        /* T30 1.0.5: i264e_reconfig_gop_get / i265e parameter 7, the GOP
+         * the glue handed over (rounded / in whole seconds, #367) */
+        uint32_t g = 0;
+
+        if (AL_Codec_Encode_GetGopLength(p2_channels[channel].codec, &g) == 0 && g)
+            cfg->gopsize = (int)g;
+        else
+#endif
         cfg->gopsize = (int)p2_channels[channel].attr.rcAttr.maxGop;
+    }
 #if defined(PLATFORM_T20)
     else
         ret = -1;

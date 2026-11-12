@@ -897,25 +897,27 @@ static void test_runtime_parameters(void)
     params.max_qp = 45;
     assert(OpenIMP_T30_HelixUpdateParams(encoder, &params) == 0);
 #if defined(PLATFORM_T30)
-    /* T30 1.0.5 (#367): GOP 4 is rounded up to a multiple of the rate (25)
-     * and the running GOP of 10 ends first; the glue re-sends it before
-     * every picture (codec-t40.c calls UpdateParams per picture) */
+    /* T30 1.0.5 (#367): GOP 4 is rounded up to a multiple of the rate (25);
+     * the glue's +0xe0 flag makes the next picture an IDR, where the new
+     * GOP applies (codec-t40.c calls UpdateParams per picture) */
     for (i = 3u; i < 36u; i++) {
         assert(OpenIMP_T30_HelixUpdateParams(encoder, &params) == 0);
         assert(encode(encoder, &info) == 0);
-        assert(info.idr == (i == 10u || i == 35u));
+        assert(info.idr == (i == 3u || i == 28u));
         if (info.idr)
             assert(info.level == 40u);
+        assert(OpenIMP_T30_HelixGop(encoder) == 25u);
     }
-    /* 60 fps: GOP 25 = 1 s -> 60 pictures; the level 4.2 SPS waits for
-     * the next IDR (no extra IDR), from then on IDR every 60 pictures */
+    /* 60 fps: GOP 25 = 1 s -> 60 pictures; the rate change forces an IDR
+     * with the level 4.2 SPS, from then on IDR every 60 pictures */
     params.fps_num = 60;
     for (i = 36u; i < 121u; i++) {
         assert(OpenIMP_T30_HelixUpdateParams(encoder, &params) == 0);
         assert(encode(encoder, &info) == 0);
-        assert(info.idr == (i == 60u || i == 120u));
+        assert(info.idr == (i == 36u || i == 96u));
         if (info.idr)
             assert(info.level == 42u);
+        assert(OpenIMP_T30_HelixGop(encoder) == 60u);
     }
 #else
     assert(encode(encoder, &info) == 0);
@@ -2259,7 +2261,8 @@ static T30HelixEncoder *create_rc(uint32_t width, uint32_t height,
  * while the channel runs).  Restarting the controller there left its P budget
  * count at 0 at the second P picture (SIGFPE in EPRC30_FrameStart); the OEM
  * i264e latches the change and restarts the controller at the next IDR
- * (i264e_idr_reconfig), the GOP keeps its pictures. */
+ * (i264e_idr_reconfig), which the glue forces on the next picture; GOP 50
+ * = 2 s becomes 20 pictures at 10 fps (#367). */
 static void test_t30_frmrate_366(void)
 {
     T30HelixEncoder *encoder;
@@ -2268,7 +2271,7 @@ static void test_t30_frmrate_366(void)
     unsigned int i;
 
     unsetenv("OPENIMP_T30_EPRC");
-    encoder = create(1280, 720, 25, 20);
+    encoder = create(1280, 720, 25, 50);
     fill_payload(1500u, 30);
     for (i = 0; i < 7u; i++) {
         assert(encode(encoder, &info) == 0);
@@ -2279,7 +2282,7 @@ static void test_t30_frmrate_366(void)
     p.height = 720;
     p.fps_num = 10;
     p.fps_den = 1;
-    p.gop_length = 20;
+    p.gop_length = 50;
     p.rc_mode = HW_RC_MODE_CBR;
     p.bitrate = 2000000;
     p.qp = 30;
@@ -2288,7 +2291,8 @@ static void test_t30_frmrate_366(void)
     assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
     for (i = 7u; i < 70u; i++) {
         assert(encode(encoder, &info) == 0);
-        assert(info.idr == (i % 20u == 0u));
+        assert(info.idr == ((i - 7u) % 20u == 0u));
+        assert(OpenIMP_T30_HelixGop(encoder) == 20u);
         assert(info.qp >= 20u && info.qp <= 45u);
     }
     OpenIMP_T30_HelixDestroy(encoder);
@@ -2677,7 +2681,14 @@ static void test_t30_short_gop(void)
         assert(encode(encoder, &info) == 0);
         assert(info.idr == (i % 10u == 0u));
     }
+    assert(OpenIMP_T30_HelixGop(encoder) == 10u);
     OpenIMP_T30_HelixDestroy(encoder);
+    /* GetGOPSize before the first picture: the CreateChn GOP of the glue */
+    assert(OpenIMP_T30_GopCreate(30u, 25u, 1u) == 25u);
+    assert(OpenIMP_T30_GopCreate(50u, 25u, 1u) == 50u);
+    assert(OpenIMP_T30_GopCreate(60u, 25u, 1u) == 50u);
+    assert(OpenIMP_T30_GopCreate(30u, 15u, 1u) == 30u);
+    assert(OpenIMP_T30_GopCreate(10u, 25u, 1u) == 10u);   /* vendor: 0 */
 }
 #endif
 

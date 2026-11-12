@@ -24,6 +24,12 @@ int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
                             const IMPFrameInfo *frame,
                             HWStreamBuffer **stream);
 int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder);
+#if defined(PLATFORM_T30)
+/* the GOP i264e parameter 7 reads (IMP_Encoder_GetGOPSize, #367) */
+uint32_t OpenIMP_T30_HelixGop(const T30HelixEncoder *encoder);
+/* the CreateChn GOP of the vendor glue: whole seconds of num/den */
+uint32_t OpenIMP_T30_GopCreate(uint32_t gop, uint32_t num, uint32_t den);
+#endif
 /* SPS frame cropping (visible rectangle); next picture is an IDR. */
 int OpenIMP_T30_HelixSetCrop(T30HelixEncoder *encoder, int enable,
                              uint32_t x, uint32_t y, uint32_t w, uint32_t h);
