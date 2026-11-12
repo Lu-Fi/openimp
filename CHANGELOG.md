@@ -8,6 +8,19 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: matrix round r2: SU no-node cells, T41 audio select and wake-up mode, T30X slot b68 prepared
+
+- Fresh inventory of every remaining 🔧/⚠ cell (T32/T33 planned, excluded): API cells 76 -> 67 (incl. 2 T30 cache cells), feature cells 5 unchanged. Device runs on the agg68 test cameras (runtime /tmp libraries only, no flash, no sound):
+  - `SU_Key_DisableEvent` T10/T20/T21/T23/T31: image and vendor libsysutils equal (key 28 -1 EINVAL, not maskable; key 102 0 with no disabled_keys entry), aud -> nohw. `EnableEvent` stays aud: the image library answers -1/EACCES where the vendor answers 0, now also seen on T23/T31 (#313, #314).
+  - T41 `IMP_Audio_Select_Codec`: OpenIMP and the vendor 1.2.6 libimp both get -1/EPERM, the board's audio module logs "ioctl ... not supported" for 0x4004504a: host -> nohw. T41 `SU_Base_SetWkupMode`: OpenIMP and vendor 1.2.6 libsysutils -1 for modes 0/1/2 (no /dev/rtc0): host -> nohw.
+  - T31 `SU_CIPHER_DES_Init`: -11 with the image and the vendor 1.1.3 ZRT libsysutils (no /dev/jz-des): qemu -> nohw. Finding #426: the image library's other cipher error codes are one lower than the vendor's (-13/-15/-17 vs -14/-16/-18) and DES_Test before Init answers -18 (vendor 0).
+  - T40 `SU_CIPHER_DES_Test`: host -> nohw (user-approved error path, no DES node on the board).
+- New issues for code gaps: #427 (T30 HSkip Helix wiring, cells cache), #428 (T30 Iridix DRC strength above the vendor, feature row 14).
+- T30X slot b68 prepared, not run (audit, needs the user's go): SU cells with the vendor 1.0.5 libsysutils, keys, LED, SU_Base_Reboot as the final reboot, NCU denoise open run, SetISPLDC after #365.
+## 2026-11-12: apitest T41 AF statistics N/A rule in the isp area (#423)
+
+- `tools/apitest/at_isp.c`: on T41 `IMP_ISP_Tuning_GetAfStatistics` / `GetAFMetricesInfo` answering -4090 with EPERM report N/A (AF block off, open-tx-isp `t41_af=0` default; served with `t41_af=1`, #179), the same rule the isp-rt area already used. Device (agg68 image): T41 .32 (gc5603) and .34 (sc5336) isp area FAIL 0, N/A 2. Repeat of case `faceae` on the gc5603 camera: target 40 -> Y 126.9, target 180 -> Y 165.0, PASS (the agg68 FAIL was scene-dependent).
+
 ## 2026-11-12: T21 AE strategy is a vendor-equal no-op (#422)
 
 - The vendor tx-isp-t21 module has no AE strategy: its tuning g_ctrl returns 0 for 0x8000022 without writing the value, and the vendor 1.0.33 `IMP_ISP_Tuning_GetAeStrategy` hands back an uninitialised stack word. OpenIMP reads 0 after Set 0/1 with rc 0 and no exposure change. apitest case `aestrategy` checks exactly that on T21 (T20 keeps the full round trip). Device: T21 .27 PASS, T20 .107 PASS (agg68 image).
