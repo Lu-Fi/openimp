@@ -4,8 +4,10 @@
  * synthetic size model of tools/eprc_t33_oracle.py must give the vendor
  * 2.2.0 QP of every picture:
  *
- *   rc33_test [-m N] FILE ...   N: the per-picture motion mode of the runs
- *                               in the files after it (default 0)
+ *   rc33_test [-m N] [-r] FILE ...   N: the per-picture motion mode of the runs
+ *                               in the files after it (default 0); -r: the
+ *                               HERA per-row IDR slice sizes of the model go in
+ *                               and their sum (P+0x6bc) must equal the vendor's
  *
  * FILE: 'S mode kbps pictures' runs (oracle run(), vendor-2.2.0-rc-h264.txt)
  * or random scenarios (oracle scenario(), vendor-2.2.0-rc33-h264.txt).  The
@@ -77,8 +79,16 @@ struct cfg {
     uint32_t seed;              /* scene seed, 0: the run() model */
 };
 
+/* the per-row IDR slice sizes of the model (tools/eprc_t33_oracle.py model_rows) */
+static unsigned model_rows(uint32_t nbytes, int qp, unsigned n, uint32_t *rows)
+{
+    for (unsigned i = 0; i < n; i++)
+        rows[i] = (nbytes * 8u / n) * (6u + (i * 5u + (unsigned)qp) % 7u) / 9u;
+    return n;
+}
+
 /* one oracle run; returns the number of pictures whose QP differs */
-static int run(const struct cfg *c, FILE *ref, int *faults, int motion)
+static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with_rows)
 {
     T32Rc33 rc;
     uint32_t mbs = (uint32_t)(c->w / 16) * (uint32_t)(c->h / 16), st[T33_RC_STATS];
@@ -108,21 +118,25 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion)
     t32_rc33_set_motion(&rc, (uint8_t)motion);
     for (int i = 0; i < c->pics; i++) {
         double cplx = c->seed ? scene_next(&sc) : 60.0 * (c->pics / 3 <= i && i < 2 * c->pics / 3 ? 2.0 : 1.0);
-        int idr = i % c->gop == 0, qp, ri, rt, rq;
-        uint32_t nb;
-        unsigned long rb;
+        int idr = i % c->gop == 0, qp, ri, rt, rq, nf;
+        uint32_t nb, rows[T33_RC_ROWS];
+        unsigned long rb, rs = 0;
+        unsigned nrows;
 
         (void)t32_rc33_start(&rc, rc.n % (uint32_t)c->gop);
         qp = rc.qp;
         nb = model_bytes(qp, idr, mbs, cplx);
         model_stats(qp, nb, mbs, st);
-        t32_rc33_end(&rc, nb, st);
-        if (!fgets(line, sizeof(line), ref) || sscanf(line, "F %d %d %d %lu", &ri, &rt, &rq, &rb) != 4 || ri != i) {
+        nrows = with_rows ? t32_rc33_idr_rows(&rc) : 0u;
+        t32_rc33_end_rows(&rc, nb, st, rows, model_rows(nb, qp, nrows, rows));
+        if (!fgets(line, sizeof(line), ref) ||
+            (nf = sscanf(line, "F %d %d %d %lu %lu", &ri, &rt, &rq, &rb, &rs)) < 4 || ri != i) {
             printf("FAIL: reference ends at picture %d\n", i);
             bad += c->pics - i;
             break;
         }
-        if (rq != qp || rt != (idr ? 2 : 0) || rb != nb) {
+        /* with rows: the IDR slice size sum the controller keeps (P+0x6bc) */
+        if (rq != qp || rt != (idr ? 2 : 0) || rb != nb || (nf == 5 && rs != t32_rc33_get(&rc, 0x6bc))) {
             if (bad < 3)
                 printf("  picture %d: vendor type %d qp %d size %lu, OpenIMP qp %d size %u\n", i, rt, rq, rb, qp,
                        nb);
@@ -136,7 +150,7 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion)
 
 int main(int argc, char **argv)
 {
-    int runs = 0, failed = 0, pics = 0, faults = 0, motion = 0;
+    int runs = 0, failed = 0, pics = 0, faults = 0, motion = 0, with_rows = 0;
 
     for (int a = 1; a < argc; a++) {
         FILE *f;
@@ -144,6 +158,10 @@ int main(int argc, char **argv)
 
         if (!strcmp(argv[a], "-m") && a + 1 < argc) {
             motion = atoi(argv[++a]);
+            continue;
+        }
+        if (!strcmp(argv[a], "-r")) {
+            with_rows = 1;
             continue;
         }
         f = fopen(argv[a], "r");
@@ -174,7 +192,7 @@ int main(int argc, char **argv)
                 failed++;
                 continue;
             }
-            bad = run(&c, f, &faults, motion);
+            bad = run(&c, f, &faults, motion, with_rows);
             runs++;
             pics += c.pics;
             if (bad) {

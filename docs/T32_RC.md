@@ -54,8 +54,11 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
 - H.265 and QVBR: a rate-control change (`IMP_Encoder_SetChnAttrRcMode`) restarts the controller at the next IDR.
   QVBR: vendor 2.2.0 refuses it on PRJ007 (SetDefaultParam / CreateChn / SetChnAttrRcMode take modes 0..5 only);
   OpenIMP keeps running it as VBR (beyond vendor, unchanged).
-- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the per-row slice sizes the vendor reads
-  from HERA after an IDR (zero for now; the controller's IDR slice targets fall back to its split), the slice block
+- After an IDR the H.264 controller gets the coded size of every 64-line row from HERA, read the vendor way
+  (`i264e_ratecontrol_is_reenc`, revision 6: write 0x13240804 + 8 i to 0x13240044, read 0x13240804 + 8 i); its sum
+  feeds the IDR slice targets. Checked on the model (`vendor-2.2.0-rc33-rows-h264.txt`, rc33_test -r: QPs and the
+  controller's sum P+0x6bc equal); what HERA really returns there needs a device (the QEMU model has no such data).
+- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the slice block
   and MB QP map the T33 revision fills for the engine (computed, not yet put into the command list), macroblock QP
   (HERA QP generator stays off, P pictures get the window 1..51 as before), the H.265 T33 revision, the other
   run-time setters (SetChnBitRate, SetChnQpBounds, ...) on the reconfiguration copy, IVDC channels.

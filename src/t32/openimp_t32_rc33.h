@@ -75,4 +75,14 @@ int t32_rc33_start(T32Rc33 *c, uint32_t since_idr);
  * in bytes, @stats the T33_RC_STATS engine statistics or NULL */
 void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats);
 
+/* HERA (revision 6) after an IDR: vendor i264e_ratecontrol_is_reenc reads
+ * the coded size of every 64-line row, for row i by writing 0x13240804 + 8 i
+ * to 0x13240044 and reading 0x13240804 + 8 i.  t32_rc33_idr_rows gives the
+ * rows the picture in work needs (0: none), t32_rc33_end_rows takes them. */
+#define T33_RC_ROWS 64
+#define T33_HERA_ROW_SEL 0x13240044u
+#define T33_HERA_ROW(i) (0x13240804u + 8u * (uint32_t)(i))
+unsigned t32_rc33_idr_rows(T32Rc33 *c);
+void t32_rc33_end_rows(T32Rc33 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows);
+
 #endif

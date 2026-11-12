@@ -66,7 +66,8 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(AUDIO_BIN) 
 	$(TEST_BIN)
 	$(DEC_BIN)
 	$(RC_BIN) vendor-2.2.0-rc-imp-h264.txt
-	$(RC33_BIN) vendor-2.2.0-rc-h264.txt vendor-2.2.0-rc33-h264.txt -m 2 vendor-2.2.0-rc33-motion2-h264.txt
+	$(RC33_BIN) vendor-2.2.0-rc-h264.txt vendor-2.2.0-rc33-h264.txt -m 2 vendor-2.2.0-rc33-motion2-h264.txt \
+		-r vendor-2.2.0-rc33-rows-h264.txt
 	gzip -dc vendor-2.2.0-rc-imp.txt.gz | $(RC_IMP_BIN) vendor-2.2.0-rc-imp-defaults.txt /dev/stdin
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)

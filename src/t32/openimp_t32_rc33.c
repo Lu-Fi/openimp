@@ -451,14 +451,27 @@ static void t33_rc_end(E33 *X)
     }
 }
 
+unsigned t32_rc33_idr_rows(T32Rc33 *c)
+{
+    E33 *X = &c->X;
+    int32_t n = PS32(T33P_HEIGHT) >> 6;
+
+    if (P32(T33P_REV) != 6 || P32(0x3a8) == 0 || n <= 0)
+        return 0;
+    return n < T33_RC_ROWS ? (unsigned)n : T33_RC_ROWS;
+}
+
 /* i264e_ratecontrol_is_reenc (0x7966c), FRAME_REPEATE_JUDGE skipped (F+0x4c < 0) */
-void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats)
+void t32_rc33_end_rows(T32Rc33 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows)
 {
     E33 *X = &c->X;
     uint32_t rev, reg = A_REG;
 
     for (int i = 0; i < T33_RC_STATS; i++)
         e33_st_U32(X, A_TB + 8 * i + 4, stats ? stats[i] : 0);
+    /* the HERA window the per-row loop below reads (vendor: /dev/mem) */
+    for (unsigned i = 0; i < nrows && i < T33_RC_ROWS; i++)
+        e33_st_U32(X, reg + (0x201u + 2u * i) * 4u, rows[i]);
     e33_st_U32(X, A_H + 0xfa8, bytes);
     e33_st_U32(X, A_H + 0x350, 0);
     c->n++;
@@ -506,4 +519,9 @@ void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats)
         }
     }
     eprc_t33_h264_frame_end(X, E);
+}
+
+void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats)
+{
+    t32_rc33_end_rows(c, bytes, stats, NULL, 0);
 }

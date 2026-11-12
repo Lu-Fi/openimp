@@ -695,8 +695,20 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         rc_picture_lost(e);
         return -1;
     }
-    /* FRAME_END: the slice's size and the statistics the engine left */
-    t32_rc_end(&a->rc, at - i, a->stats, T32_HERA_STATS);
+    /* FRAME_END: the slice's size and the statistics the engine left; after
+     * an IDR also the per-row sizes, read the vendor way (select, then read) */
+    {
+        uint32_t rows[T33_RC_ROWS];
+        unsigned nrows = t32_rc_idr_rows(&a->rc), r;
+
+        for (r = 0; r < nrows; r++) {
+            rows[r] = 0;
+            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
+                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+                rows[r] = 0;
+        }
+        t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA_STATS, rows, nrows);
+    }
     h264_pack(s, i, at - i, idr ? IMP_H264_NAL_SLICE_IDR : IMP_H264_NAL_SLICE, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;

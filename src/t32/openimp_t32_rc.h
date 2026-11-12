@@ -91,4 +91,10 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos);
  * cannot code a picture again (FRAME_REPEATE_JUDGE skipped). */
 void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats);
 
+/* H.264 after an IDR: the HERA per-row coded sizes the controller wants
+ * (t32_rc_idr_rows rows, read as T33_HERA_ROW_SEL / T33_HERA_ROW) */
+unsigned t32_rc_idr_rows(T32Rc *rc);
+void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,
+                     unsigned nrows);
+
 #endif

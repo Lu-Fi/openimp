@@ -15,6 +15,8 @@ path you pass.  The emulator has no HERA: statistics are synthetic.
     tools/eprc_t33_oracle.py LIB --compare MODE KBPS PICS OPENIMP_TRACE
     tools/eprc_t33_oracle.py LIB --defaults                  i264e defaults
     tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
+    tools/eprc_t33_oracle.py LIB [--motion N] --rows --scenarios FIRST COUNT   the same with per-row IDR
+                                     slice sizes from HERA; 'F' lines end with the controller's sum
 
 MODE: the T32 IMPEncoderRcMode (1 CBR, 2 VBR, 3 SMART, 4 CVBR, 5 AVBR).
 i264e parameter offsets (vendor 2.2.0, from i264e_param_default and the
@@ -116,10 +118,14 @@ class T33:
         r = L.call('i264e_ratecontrol_start', self.Hh)
         return r, L.r32(self.Hh + 0x354), L.rd(self.P + 0xb71, 1)[0]
 
-    def end(self, nbytes, regs):
+    def end(self, nbytes, regs, rows=None):
         L = self.L
         for i, v in enumerate(regs):
             L.w32(self.TB + 8 * i + 4, v)
+        # HERA (revision 6) per-row slice sizes after an IDR: i264e_ratecontrol_is_reenc
+        # selects 0x13240804 + 8 i through +0x44 and reads it from the window
+        for i, v in enumerate(rows or ()):
+            L.w32(self.REG + (0x201 + 2 * i) * 4, v)
         L.w32(self.Hh + 0xfa8, nbytes); L.w32(self.Hh + 0x350, 0)
         L.call('i264e_ratecontrol_is_reenc', self.Hh)
         self.n += 1
@@ -184,7 +190,12 @@ class Scene:
         return max(0.5, self.lvl * (0.8 + 0.4 * ((u >> 12) & 1023) / 1024.0))
 
 
-def scenario(path, seed, motion=0):
+def model_rows(nbytes, qp, n):
+    """the per-row IDR slice sizes of the model (rc33_test.c has the same)"""
+    return [(nbytes * 8 // n) * (6 + (i * 5 + qp) % 7) // 9 for i in range(n)] if n else []
+
+
+def scenario(path, seed, motion=0, rows=False):
     """one random scenario: 'S' header line and its 'F' lines"""
     x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
     pick = []
@@ -209,6 +220,11 @@ def scenario(path, seed, motion=0):
         r, qp, typ = t.start()
         idr = i % gop == 0
         nb = model_bytes(qp, idr, mbs, cplx)
+        if rows:
+            t.end(nb, model_stats(qp, nb, mbs), model_rows(nb, qp, h >> 6) if idr else None)
+            # the IDR slice size sum the controller keeps (P+0x6bc)
+            out.append('F %d %d %d %d %d' % (i, 2 if idr else 0, qp, nb, t.L.r32(t.P + 0x6bc)))
+            continue
         t.end(nb, model_stats(qp, nb, mbs))
         out.append('F %d %d %d %d' % (i, 2 if idr else 0, qp, nb))
     return out
@@ -231,13 +247,16 @@ def main():
     imp = len(a) >= 2 and a[1] == '--imp'
     if imp:
         del a[1]
+    rows = len(a) >= 2 and a[1] == '--rows'
+    if rows:
+        del a[1]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
         return
     if len(a) >= 4 and a[1] == '--scenarios':
         for k in range(int(a[2]), int(a[2]) + int(a[3])):
-            print('\n'.join(scenario(a[0], k, motion)), flush=True)
+            print('\n'.join(scenario(a[0], k, motion, rows)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])

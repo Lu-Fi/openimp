@@ -752,7 +752,18 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos)
     return rc->qp;
 }
 
+unsigned t32_rc_idr_rows(T32Rc *rc)
+{
+    return rc->on && rc->t33 ? t32_rc33_idr_rows(rc->t33) : 0u;
+}
+
 void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats)
+{
+    t32_rc_end_rows(rc, bytes, stats, nstats, NULL, 0);
+}
+
+void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,
+                     unsigned nrows)
 {
     uint32_t regs[EPRC_STAT_REGS];
     EprcPicture pic;
@@ -765,7 +776,7 @@ void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstat
         memset(st, 0, sizeof(st));
         if (stats)
             memcpy(st, stats, (nstats < T33_RC_STATS ? nstats : T33_RC_STATS) * sizeof(st[0]));
-        t32_rc33_end(rc->t33, bytes, st);
+        t32_rc33_end_rows(rc->t33, bytes, st, rows, nrows);
         rc->pictures++;
         rc->bits += (uint64_t)bytes * 8u;
         return;
