@@ -1575,6 +1575,9 @@ int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt);
 int IMP_Encoder_SetChnFrmRate(int encChn, const IMPEncoderFrmRate *rate);
 int IMP_Encoder_GetChnFrmRate(int encChn, IMPEncoderFrmRate *rate);
 int IMP_Encoder_SetGOPSize(int encChn, const IMPEncoderGOPSizeCfg *gop);
+#if defined(PLATFORM_T32)
+int IMP_Encoder_GetGOPSize(int encChn, IMPEncoderGOPSizeCfg *cfg);
+#endif
 int IMP_Encoder_SetChnColor2Grey(int encChn,
                                 const IMPEncoderColor2GreyCfg *config);
 int IMP_Encoder_GetChnColor2Grey(int encChn,

@@ -31,6 +31,8 @@ RC33_HERA := $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/h2
 	$(PROJECT_DIR)/src/t30/h264enc/common.c
 # IMP attributes -> i264e parameters and SetDefaultParam (#295) vs vendor 2.2.0
 RC_IMP_BIN := $(BUILD)/t32-rc-imp-test
+# IMP frame rate / GOP glue (#295) vs vendor 2.2.0 encoder_get_fps_mask
+GOP33_BIN := $(BUILD)/t32-gop33-test
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
 INC := -DPLATFORM_T32 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src
 DEPS := ioctl_abi_test.c $(PROJECT_DIR)/src/t32/openimp_t32_ioctl.h
@@ -65,9 +67,10 @@ AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
 
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
 	$(TEST_BIN)
 	$(DEC_BIN)
+	gzip -dc vendor-2.2.0-gop33.txt.gz | $(GOP33_BIN) /dev/stdin
 	$(RC_BIN) vendor-2.2.0-rc-imp-h264.txt
 	$(RC33_BIN) vendor-2.2.0-rc-h264.txt vendor-2.2.0-rc33-h264.txt -m 2 vendor-2.2.0-rc33-motion2-h264.txt \
 		-r vendor-2.2.0-rc33-rows-h264.txt
@@ -139,6 +142,10 @@ $(RC_IMP_BIN): rc_imp_test.c $(RC_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -o $@ rc_imp_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
+
+$(GOP33_BIN): gop33_test.c $(PROJECT_DIR)/src/t32/t32_gop33.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src -o $@ gop33_test.c
 
 $(RC33_BIN): rc33_test.c $(RC33_SRC) $(RC33_HDR) $(RC33_HERA)
 	@mkdir -p $(BUILD)

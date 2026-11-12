@@ -7181,7 +7181,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b39 2026-11-06 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
         "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
@@ -7351,7 +7351,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
         "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
@@ -7995,7 +7995,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
         "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
@@ -8179,7 +8179,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
@@ -8190,7 +8190,8 @@
         "T20": "apitest agg63 2026-10-31 .107",
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
       }
     },
     "Encoder_GetStream": {
@@ -8860,7 +8861,7 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
       }
     },
     "Encoder_SetChnEntropyMode": {
@@ -9195,7 +9196,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
@@ -9223,7 +9224,8 @@
         "T20": "apitest agg63 2026-10-31 .107",
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
       }
     },
     "Encoder_SetIvpuBsSize": {

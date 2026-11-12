@@ -96,6 +96,17 @@ static unsigned t41_gop_rb(unsigned len, unsigned same, unsigned active)
 # define GOP_SET_RB(g) (g)
 #endif
 
+/* T32 vendor 2.2.0: GetChnAttrRcMode reads the encoder's live parameters (i264e_reconfig_rc_get);
+ * SetChnAttrRcMode / SetChnBitRate change them only at the next IDR (i264e_idr_reconfig), so the
+ * read-back is checked after a requested IDR, the value before it is shown (the old one) */
+#if defined(APITEST_T32) && HAS_IMP_Encoder_RequestIDR
+# define RB_IDR(chn, codec) do { IMP_Encoder_RequestIDR(chn); RB_SETTLE(chn, codec); } while (0)
+# define RB_AT_IDR 1
+#else
+# define RB_IDR(chn, codec) do { } while (0)
+# define RB_AT_IDR 0
+#endif
+
 /* quiet-after-first reporting: first=1 prints the line, later calls print only failures */
 #if defined(APITEST_T32)
 #define ENC_POOL_ID 3       /* requested by the encoder tests (#447) */
@@ -616,13 +627,22 @@ static void live_common(int chn, int codec)
             uint32_t want = (uint32_t)(384 * BR_UNIT);
             int r2;
 
+            uint32_t before;
+
             *rc_bitrate(rc, codec) = want;
             r2 = IMP_Encoder_SetChnAttrRcMode(chn, rc);
             RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
-            CHECK(IMP_Encoder_SetChnAttrRcMode, r2, r == 0 && *rc_bitrate(rc2, codec) == want, "bitrate 384 kbit/s, read back %u", *rc_bitrate(rc2, codec));
+            before = *rc_bitrate(rc2, codec);
+            RB_IDR(chn, codec);
+            r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
+            if (RB_AT_IDR)
+                CHECK(IMP_Encoder_SetChnAttrRcMode, r2, r == 0 && *rc_bitrate(rc2, codec) == want, "bitrate 384 kbit/s, read back %u before the next IDR, %u after it", before, *rc_bitrate(rc2, codec));
+            else
+                CHECK(IMP_Encoder_SetChnAttrRcMode, r2, r == 0 && *rc_bitrate(rc2, codec) == want, "bitrate 384 kbit/s, read back %u", *rc_bitrate(rc2, codec));
             *rc_bitrate(rc, codec) = (uint32_t)BITRATE;
             IMP_Encoder_SetChnAttrRcMode(chn, rc);
+            RB_IDR(chn, codec);
             gfree(rc2);
         }
 #endif
@@ -631,9 +651,18 @@ static void live_common(int chn, int codec)
             G(IMPEncoderAttrRcMode, rc2);
             int r2 = IMP_Encoder_SetChnBitRate(chn, 400 * BR_SET_UNIT, 400 * BR_SET_UNIT);
 
+            uint32_t before;
+
             RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
-            CHECK(IMP_Encoder_SetChnBitRate, r2, r == 0 && *rc_bitrate(rc2, codec) == (uint32_t)(400 * BR_UNIT), "400 kbit/s, read back %u", *rc_bitrate(rc2, codec));
+            before = *rc_bitrate(rc2, codec);
+            RB_IDR(chn, codec);
+            r = IMP_Encoder_GetChnAttrRcMode(chn, rc2); gchk(rc2);
+            if (RB_AT_IDR)
+                CHECK(IMP_Encoder_SetChnBitRate, r2, r == 0 && before == (uint32_t)BITRATE && *rc_bitrate(rc2, codec) == (uint32_t)(400 * BR_UNIT),
+                      "400 kbit/s, read back %u before the next IDR (vendor: the old %d), %u after it", before, BITRATE, *rc_bitrate(rc2, codec));
+            else
+                CHECK(IMP_Encoder_SetChnBitRate, r2, r == 0 && *rc_bitrate(rc2, codec) == (uint32_t)(400 * BR_UNIT), "400 kbit/s, read back %u", *rc_bitrate(rc2, codec));
             IMP_Encoder_SetChnBitRate(chn, 512 * BR_SET_UNIT, 512 * BR_SET_UNIT);
             gfree(rc2);
         }
@@ -646,13 +675,28 @@ static void live_common(int chn, int codec)
         G(IMPEncoderGOPSizeCfg, g);
         IMPEncoderGOPSizeCfg n; int r2;
 
+        int want = 25;
+
         n.gopsize = 25;
         r = IMP_Encoder_SetGOPSize(chn, &n);
+#if defined(APITEST_T32) && HAS_IMP_Encoder_GetChnFrmRate
+        /* T32 vendor 2.2.0: the IMP glue sends the GOP before the next picture (encoder_get_fps_mask),
+         * in whole seconds of the encoder's rate: ceil(den * 25 / num) * num / den */
+        {
+            IMPEncoderFrmRate fr;
+
+            RB_SETTLE(chn, codec);
+            if (IMP_Encoder_GetChnFrmRate(chn, &fr) == 0 && fr.frmRateNum && fr.frmRateDen)
+                want = (int)(((fr.frmRateDen * 25u + fr.frmRateNum - 1u) / fr.frmRateNum) * fr.frmRateNum / fr.frmRateDen);
+        }
+#else
         RB_SETTLE(chn, codec);
+        want = GOP_SET_RB(25);
+#endif
         NEED(IMP_Encoder_GetGOPSize) {
             r2 = IMP_Encoder_GetGOPSize(chn, g); gchk(g);
-            CHECK(IMP_Encoder_SetGOPSize, r, r2 == 0 && g->gopsize == GOP_SET_RB(25), "set 25, read back %d (expect %d)", g->gopsize, GOP_SET_RB(25));
-            CHECK(IMP_Encoder_GetGOPSize, r2, g->gopsize == GOP_SET_RB(25), "%d", g->gopsize);
+            CHECK(IMP_Encoder_SetGOPSize, r, r2 == 0 && g->gopsize == want, "set 25, read back %d (expect %d)", g->gopsize, want);
+            CHECK(IMP_Encoder_GetGOPSize, r2, g->gopsize == want, "%d", g->gopsize);
         }
         n.gopsize = EGOP; IMP_Encoder_SetGOPSize(chn, &n);
         gfree(g);

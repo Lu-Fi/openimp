@@ -113,8 +113,12 @@ static int check_param(const char *aline, const char *rline, char *pline, int *b
 
         if (sscanf(rline, "R %u %n", &s3, &k) != 1 || !k || s3 != seed || unhex(rline + k, (uint8_t *)&m, sizeof(m)))
             return -1;
-        /* SetChnAttrRcMode, taken at the next IDR */
-        if (t32_rc_reconfig(&rc, &m, pw, ph, w32(at, 4), w32(at, 0x38), w32(at, 0x30), w32(at, 0x34), 0) != 0)
+        /* SetChnAttrRcMode, taken at the next IDR, with the rate / GOP the encoder runs with
+         * (the encoder's rc_num / rc_den / gop: CreateChn's, reduced and rounded) */
+        uint32_t fn = w32(at, 0x30), fd = w32(at, 0x34), gop = w32(at, 0x38);
+
+        t32_rc_vendor_rate(&fn, &fd, &gop);
+        if (t32_rc_reconfig(&rc, &m, pw, ph, w32(at, 4), gop, fn, fd, 0) != 0)
             return -1;
     }
     if (!rc.t33) {

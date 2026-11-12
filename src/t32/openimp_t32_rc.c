@@ -638,6 +638,10 @@ int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, ui
         return t32_rc_init(rc, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, hevc);
     memcpy(stash, rc->stash, sizeof(stash));
     t33_runtime(stash, m);
+    /* i264e_idr_reconfig: a rate / GOP the IMP glue sent (fps +0x2a4/+0x2a8, keyint +0x2c) */
+    stash[T33P_GOP / 4] = gop;
+    stash[T33P_FPS_NUM / 4] = fps_num;
+    stash[T33P_FPS_DEN / 4] = fps_den;
     t32_rc_free(rc);
     memset(rc, 0, sizeof(*rc));
     memcpy(rc->stash, stash, sizeof(stash));

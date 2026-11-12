@@ -124,6 +124,23 @@ kept / 0 / in range / raw at random, sizes 352x288 .. 2560x1440, 5..30 fps, GOP 
 the vendor IMP layer makes (`vendor-2.2.0-rc-imp-h264.txt`, rc_test: the QP of every picture equal for every
 mode and rate). Finding on the way: the i264e default at +0x30c is 0x1001003f (the glue had 0x1000ff3f).
 
+Run-time read-back (2026-11-12): vendor `IMP_Encoder_GetChnAttrRcMode` reads the encoder's live parameters
+(`i264e_get_param` 3 = `i264e_reconfig_rc_get`, +0xdc..); `i264e_reconfig_bitrate_set` (and the QP / size /
+rate-control setters) only fill the reconfiguration copy, which `i264e_idr_reconfig` takes at the next IDR. OpenIMP
+shows the attribute as it was until that IDR (`rb_hold`). QEMU apitest, vendor and OpenIMP alike: `SetChnBitRate`
+400 reads 512 before the next IDR and 400 after it.
+
+Frame rate and GOP: the vendor IMP glue `encoder_get_fps_mask` (before every picture, H.264 and H.265) sends the
+rate (`i264e_set_param` 5, reduced, at most the source rate) and the GOP (7) and makes the next picture an IDR
+(channel +0x14c). A GOP asked for (`SetGOPSize`, and the created one before the first picture) becomes
+ceil(den * gop / num) * num / den; a new rate keeps the GOP in pictures unless a GOP was asked for within the last
+two pictures (then the whole seconds of the running GOP times the new rate). `i264e_idr_reconfig` takes both at the
+IDR (fps +0x2a4/+0x2a8, keyint +0x2c, parameter sets) and runs `i264e_ratecontrol_init`. `GetChnFrmRate` /
+`GetGOPSize` read what was sent (`i264e_reconfig_fps_get` / `_gop_get`). `src/t32/t32_gop33.h` is that glue;
+`tools/eprc_t33_gop_oracle.py` runs the vendor's under unicorn (CreateChn, then random `SetChnFrmRate` /
+`SetGOPSize` between pictures), `tests/t32/gop33_test.c`: 300 scenarios, 26403 pictures, 5128 sends equal. Under one
+second the vendor sends GOP 0 and `i264e_ratecontrol_start` divides by it (trap); OpenIMP keeps the GOP.
+
 ## QEMU (`-M ingenic-t32`, no RC statistics / motion search in the HERA model)
 
 Runs `run-oi-cbr264` / `run-oi-cbr265` (OpenIMP, CBR 1000 kbit/s, 1920x1080, GOP 15, 30 pictures): the

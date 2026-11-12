@@ -806,6 +806,24 @@ again:
             mark("streams");
         for (i = 0; i < streams; i++) {
             IMPEncoderStream st;
+            const char *ch = getenv("T32_ENC_CHANGES");     /* #295: "pic:F<n>/<d>,pic:G<g>,pic:I" */
+            while (ch && *ch) {
+                int at = -1, a = 0, b = 1, k = 0;
+                char t = 0;
+                if (sscanf(ch, "%d:%c%n", &at, &t, &k) == 2 && at == i) {
+                    if (t == 'F' && sscanf(ch + k, "%d/%d", &a, &b) == 2) {
+                        IMPEncoderFrmRate fr = { (uint32_t)a, (uint32_t)b };
+                        printf("T32C %d SetChnFrmRate %d/%d = %d\n", i, a, b, IMP_Encoder_SetChnFrmRate(0, &fr));
+                    } else if (t == 'G' && sscanf(ch + k, "%d", &a) == 1) {
+                        IMPEncoderGOPSizeCfg g = { a };
+                        printf("T32C %d SetGOPSize %d = %d\n", i, a, IMP_Encoder_SetGOPSize(0, &g));
+                    } else if (t == 'I') {
+                        printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
+                    }
+                }
+                ch = strchr(ch, ',');
+                ch = ch ? ch + 1 : NULL;
+            }
             struct timespec t0, t1;
             long ms;
             int prc;
@@ -818,6 +836,13 @@ again:
             if (prc || IMP_Encoder_GetStream(0, &st, 1)) {
                 printf("T32S stream %d missed (poll rc=%d after %ld ms)\n", i, prc, ms);
                 continue;
+            }
+            if (getenv("T32_ENC_CHANGES")) {
+                IMPEncoderFrmRate fr = { 0, 0 };
+                IMPEncoderGOPSizeCfg g = { 0 };
+                IMP_Encoder_GetChnFrmRate(0, &fr);
+                IMP_Encoder_GetGOPSize(0, &g);
+                printf("T32R %d ref %d fps %u/%u gop %d\n", i, (int)st.refType, fr.frmRateNum, fr.frmRateDen, g.gopsize);
             }
             if (getenv("T32_STREAM_DUMP"))
                 stream_dump(got, &st);
