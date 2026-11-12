@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: colour-checker analysis tool (#102)
+
+- `tools/colorchecker.py` + `docs/COLORCHECKER.md`: SpyderCheckr 24 patch detection, sRGB -> Lab D50, dE00 per patch, grey neutrality and open-vs-vendor summary per run (reference values supplied locally, licensed). First results: T40 and T10 ch0 vendor-equal or better (open-vs-vendor mean 0.35 to 1.0 dE00); T40 sub stream at 3000 K +1.1 dE00 on clipped patches. No CCM changed.
+
 ## 2026-11-12: T30 `IMP_Encoder_Enable/DisableAllNCUDenoise` exported (#416)
 
 - The T30 build exports `IMP_Encoder_EnableAllNCUDenoise` / `DisableAllNCUDenoise` (332 of 334 vendor names; only the Renc pair is left). Vendor 1.0.5 (Ghidra t30lib, 0xc8bc0 / 0xc8e08): no arguments, -1 unless `get_cpu_id()` is 3..5 and `get_ncu_params()` holds a parameter set (same as T20/T10/T21); the T30X b67 vendor run returned -1 for both. OpenIMP logs and returns -1 (NCU path not implemented, #144). Host test `p2_gap_test_t30`. The other vendor libs that export them (T10, T20, T21, T23) already had them; T31 and later do not.
