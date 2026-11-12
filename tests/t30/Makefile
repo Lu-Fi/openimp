@@ -313,9 +313,10 @@ p2_t1x_test_t20: $(P2_T1X_SOURCES) $(ROOT)/src/demask/demask.c
 p2_t1x_test_t21: $(P2_T1X_SOURCES)
 	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T21 $(ROOT)/src/core/imp_log_emit.c -o $@ $(P2_T1X_SOURCES) -lpthread
 
-p2_t30_enc_test: p2_t30_enc_test.c $(ROOT)/src/t40/openimp_p2_encoder.c
+p2_t30_enc_test: p2_t30_enc_test.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/hskip/hskip.c
 	$(CC) $(CFLAGS) -DPLATFORM_T30 $(P2_T1X_FLAGS) $(ROOT)/src/core/imp_log_emit.c -o $@ p2_t30_enc_test.c \
-		$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/t40/t31_stream_layout.c -lpthread
+		$(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/t40/t31_stream_layout.c \
+		$(ROOT)/src/hskip/hskip.c -lpthread
 
 # T30 Radix (H.265) command list builder against 64 vendor lists (#208).
 RADIX_SOURCES := radix/radix_cmdlist_test.c $(ROOT)/src/t30/radix/t30_radix_cmdlist.c

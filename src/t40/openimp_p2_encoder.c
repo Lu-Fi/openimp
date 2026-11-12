@@ -48,6 +48,9 @@
 #include "dma_alloc.h"
 #include "t30/helix_roi.h"
 #endif
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T23)
+#include "hskip/hskip.h"
+#endif
 #if defined(PLATFORM_T23)
 #include "t30/helix_roi.h"
 #endif
@@ -393,8 +396,11 @@ typedef struct {
     /* IMP_Encoder_GetChnHSkip of the vendor T30 1.0.5 (0xb39c0, 4.7.2 build) reads
      * i264e/i265e get_param(9) = the run-time staging words (i264e E+0x91608..0x9161c,
      * i264e_reconfig_hskip_get), not the CreateChn attribute: zero after CreateChn,
-     * the six words after SetChnHSkip, black word after SetChnHSkipBlackEnhance
-     * (T30X b63: GetChnHSkip after CreateChn type 2/0/6 -> all zero) */
+     * the six words after SetChnHSkip, black word after SetChnHSkipBlackEnhance.
+     * After CreateChn the words hold the attribute as i264e_validate_parameters
+     * left it (p2_t30_hs_created): all zero outside SMART (T30X b63, CBR), in
+     * SMART m/n by type, maxSameSceneCnt 0..100 (T30X b64: SMART type 0/2/6 ->
+     * m 29 n 1 same 3 / m 1 n 2 / m 29 n 1 black 1, gop 30) */
     IMPEncoderAttrHSkip hs_staged;
 #endif
 #if defined(PLATFORM_T20)
@@ -2475,6 +2481,36 @@ static int p2_t30_superframe_get(int channel, IMPEncoderSuperFrmCfg *config)
 #endif
 
 /* channel: a public channel or a hidden unbound-encoder slot (P2_YUV_SLOTS) */
+#if defined(P2_T30_NATIVE)
+/* T30 1.0.5 CreateChn: the GetChnHSkip staging words of a new i264e are the six
+ * skip words after i264e_validate_parameters (hskip_t21_validate; T30 keeps
+ * maxSameSceneCnt 0..100, docs/T30_HSKIP.md).  i265e: not measured, zero. */
+static void p2_t30_hs_created(P2EncoderChannel *ch, const IMPEncoderCHNAttr *attr)
+{
+    const IMPEncoderAttrHSkip *in = &attr->rcAttr.attrHSkip.hSkipAttr;
+    int smart = attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_SMART;
+    HSkipAttr a;
+
+    memset(&ch->hs_staged, 0, sizeof(ch->hs_staged));
+    if (ch->codec_type != IMP_ENC_TYPE_AVC || !smart)
+        return;
+    a.type = (uint32_t)in->skipType;
+    a.m = (uint32_t)in->m;
+    a.n = (uint32_t)in->n;
+    a.same = (uint32_t)in->maxSameSceneCnt;
+    a.scenecut = (uint32_t)in->bEnableScenecut;
+    a.black = (uint32_t)in->bBlackEnhance;
+    hskip_t21_validate(&a, 1, p2_attr_gop_length(attr));
+    ch->hs_staged.skipType = (IMPSkipType)a.type;
+    ch->hs_staged.m = (int)a.m;
+    ch->hs_staged.n = (int)a.n;
+    ch->hs_staged.maxSameSceneCnt = in->maxSameSceneCnt < 0 ? 0 :
+                                    in->maxSameSceneCnt > 100 ? 100 : in->maxSameSceneCnt;
+    ch->hs_staged.bEnableScenecut = (int)a.scenecut;
+    ch->hs_staged.bBlackEnhance = (int)a.black;
+}
+#endif
+
 static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 {
     P2EncoderChannel *ch;
@@ -2880,7 +2916,7 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 #if defined(P2_T30_NATIVE)
     p2_t30_superframe_defaults(ch);
     ch->h265_crop_set = 0;          /* a new i265e has no crop */
-    memset(&ch->hs_staged, 0, sizeof(ch->hs_staged));   /* a new i264e/i265e: staging all zero */
+    p2_t30_hs_created(ch, attr);
 #endif
     ch->created = 1;
 #if defined(PLATFORM_T31)

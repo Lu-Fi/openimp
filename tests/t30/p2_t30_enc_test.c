@@ -195,7 +195,7 @@ int main(void)
         IMPEncoderAttrHSkip hsk;
         extern int IMP_Encoder_SetChnHSkipBlackEnhance(int, const int);
 
-        /* vendor GetChnHSkip reads the i264e staging words: all zero after CreateChn (T30X b63: type 2/0/6 -> 0) */
+        /* vendor GetChnHSkip reads the i264e staging words: all zero after a CBR CreateChn (T30X b63: type 2/0/6 -> 0) */
         memset(&hsk, 0x5a, sizeof(hsk));
         CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.skipType == 0 && hsk.m == 0 && hsk.n == 0 &&
               hsk.maxSameSceneCnt == 0 && !hsk.bEnableScenecut && !hsk.bBlackEnhance);
@@ -264,7 +264,22 @@ int main(void)
     /* 1920x1080: I = area * 12 / 6, P = I / 1.4, B = P / 1.3 */
     make_attr(&attr, 0);
     attr.encAttr.picWidth = 1920; attr.encAttr.picHeight = 1080;
+    attr.rcAttr.attrRcMode.rcMode = IMP_ENC_RC_MODE_SMART;   /* HSkip read-back of a SMART channel (below) */
+    attr.rcAttr.attrHSkip.hSkipAttr.skipType = IMP_Encoder_STYPE_N4X;
+    attr.rcAttr.attrHSkip.hSkipAttr.m = 4;
+    attr.rcAttr.attrHSkip.hSkipAttr.n = 9;
+    attr.rcAttr.attrHSkip.hSkipAttr.maxSameSceneCnt = 0;
+    attr.rcAttr.attrHSkip.hSkipAttr.bBlackEnhance = 1;
     CHECK(IMP_Encoder_CreateChn(1, &attr) == 0);
+    {
+        /* SMART: GetChnHSkip after CreateChn = the words after i264e_validate_parameters (T30X b64: type 2 m 29 n 1
+         * -> m 1 n 2; type 0 same 3 -> m gop-1 n 1 same 3; type 6 black 1 -> m gop-1 n 1 black 1) */
+        IMPEncoderAttrHSkip hsk;
+
+        memset(&hsk, 0x5a, sizeof(hsk));
+        CHECK(IMP_Encoder_GetChnHSkip(1, &hsk) == 0 && hsk.skipType == IMP_Encoder_STYPE_N4X && hsk.m == 1 &&
+              hsk.n == 2 && hsk.maxSameSceneCnt == 0 && !hsk.bEnableScenecut && hsk.bBlackEnhance == 1);
+    }
     CHECK(IMP_Encoder_GetSuperFrameCfg(1, &sf) == 0 &&
           sf.superIFrmBitsThr == 1920u * 1088u * 2u && sf.superPFrmBitsThr == (uint32_t)((float)(1920 * 1088 * 2) / 1.4f));
     /* a JPEG channel: Set 0 and nothing, Get 0 and nothing */

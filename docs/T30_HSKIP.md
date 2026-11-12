@@ -18,7 +18,8 @@ decisions of the skip structures (`i264e_init_skip_header`, `i264e_decide_slice_
   maxSameSceneCnt 0..100. Device proof T30X b63 (CBR): vendor streams of the types 6, 2, 0 (CreateChn) and 5 (run-time
   SetChnHSkip) are plain IPPP, IDR every GOP, no long-term IDR.
 * `IMP_Encoder_GetChnHSkip` (0xb39c0): i264e/i265e `get_param(9)` = `i264e_reconfig_hskip_get`, the run-time staging
-  words E+0x91608..0x9161c, not the CreateChn attribute: all zero after CreateChn (b63: type 2/0/6 read back 0), the
+  words E+0x91608..0x9161c, not the CreateChn attribute: after CreateChn the validated words (b63 CBR: type 2/0/6 read back 0; b64 SMART: type 0
+  same 3 -> 0/29/1/3, type 2 -> 2/1/2, type 6 black 1 -> 6/29/1/0 black 1, GOP 30), the
   six words after SetChnHSkip (b63 hs5rt: 5/9/1/2), the black word after SetChnHSkipBlackEnhance (b63 hs6b: black 1).
   A JPEG channel answers zero.
 * `IMP_Encoder_SetChnHSkip`: skipType up to the channel's maxHSkipType; an H.264 channel goes to
@@ -46,7 +47,9 @@ decisions of the skip structures (`i264e_init_skip_header`, `i264e_decide_slice_
 
 * `src/t30/t30_helix_encoder.c`: `hs_attr` runs the T30 `i264e_validate_parameters` (`HELIX_T30_HS_VALIDATE`,
   `hskip_t21_validate`): the structure runs in SMART only. `src/t40/openimp_p2_encoder.c`: GetChnHSkip returns the
-  staging words (`hs_staged`).
+  staging words (`hs_staged`); after CreateChn these are the attribute as `i264e_validate_parameters` left it
+  (`p2_t30_hs_created`: zero outside SMART, SMART m/n by type, maxSameSceneCnt 0..100), measured on the T30X in b63
+  (CBR) and b64 run 2 (SMART). H.265: not measured, zero after CreateChn.
 * `src/t30/t30_helix_encoder.c`: `HELIX_HSKIP` is on for T30 (third reconstruction buffer, reference / reconstruction
   buffer per picture, SPS with two reference frames and frame_num gaps, IDR `long_term_reference_flag`, reference
   list modification and MMCO, black slices without a VPU run), with the T30 rules above: gop-start flag to
