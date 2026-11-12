@@ -20,6 +20,7 @@
  * here each encoder has its own window of one raw picture.
  */
 #include "t30/radix/t30_radix_encoder.h"
+#include "t30/t30_gop_glue.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -95,6 +96,8 @@ struct T30RadixEncoder {
     T30HevcPps pps;
     uint32_t frames_since_idr;
     int force_idr;
+    /* the glue's GOP (encoder_get_fps_mask, t30_gop_glue.h, #367) */
+    T30GopGlue gop;
     /* run-time changes (OpenIMP_T30_RadixUpdateParams), latched until the
      * next IDR as I265eReconfig does */
     HWEncoderParams pending;
@@ -239,6 +242,11 @@ int OpenIMP_T30_RadixCreate(T30RadixEncoder **encoder_out,
     }
     if (!e->params.gop_length)
         e->params.gop_length = 25u;
+    /* CreateChn: the GOP rounded up to a multiple of num * den (#367) */
+    e->params.gop_length = t30_gop_glue_create(&e->gop, e->params.gop_length,
+                                               e->params.gop_requests,
+                                               e->params.fps_num,
+                                               e->params.fps_den);
 
     radix_channel(&e->params, &ch);
     t30_hevc_channel_params(&ch, &e->vps, &e->sps, &e->pps);
@@ -359,16 +367,24 @@ int OpenIMP_T30_RadixUpdateParams(T30RadixEncoder *e,
         next.fps_num = cur->fps_num;
         next.fps_den = cur->fps_den;
     }
-    if (!next.gop_length)
-        next.gop_length = cur->gop_length;
+    {
+        /* encoder_get_fps_mask (t30_gop_glue.h): the GOP keeps its whole
+         * seconds on a new rate, a GOP asked for is rounded up to a
+         * multiple of the rate; what it sends to i265e (set_param 5 / 7)
+         * comes with channel +0xe0, an IDR request (picture +0x18) */
+        uint32_t g = t30_gop_glue_step(&e->gop, cur->fps_num, cur->fps_den,
+                                       next.fps_num, next.fps_den,
+                                       requested->gop_length,
+                                       requested->gop_requests);
+
+        next.gop_length = g ? g : cur->gop_length;
+        next.gop_requests = cur->gop_requests;
+        if (g)
+            e->force_idr = 1;
+    }
     if (!memcmp(&next, cur, sizeof(next)))
         return 0;
-    /* encoder_get_fps_mask: a new frame rate or GOP goes to i265e
-     * (set_param 5 / 7) together with an IDR request; an RC change
-     * (SetChnAttrRcMode, set_param 3) waits for the next IDR */
-    if (next.fps_num != cur->fps_num || next.fps_den != cur->fps_den ||
-        next.gop_length != cur->gop_length)
-        e->force_idr = 1;
+    /* an RC change (SetChnAttrRcMode, set_param 3) waits for the next IDR */
     e->pending = next;
     e->pending_set = 1;
     return 0;
@@ -404,6 +420,12 @@ static void radix_apply_pending(T30RadixEncoder *e)
     LOG_CODEC("T30 Radix: params fps=%u/%u gop=%u rc=%u bitrate=%u qp=%u [%u,%u]",
               next.fps_num, next.fps_den, next.gop_length, next.rc_mode,
               next.bitrate, next.qp, next.min_qp, next.max_qp);
+}
+
+/* i265e parameter 7 (IMP_Encoder_GetGOPSize, #367) */
+uint32_t OpenIMP_T30_RadixGop(const T30RadixEncoder *e)
+{
+    return e ? e->gop.vgop : 0u;
 }
 
 uint32_t OpenIMP_T30_RadixFailures(const T30RadixEncoder *e)

@@ -2248,6 +2248,117 @@ int enc_rctrig_run(void)
 int enc_rctrig_run(void) { return -1; }
 #endif
 
+/* ------------------------------------------------------------------------------------------
+ * Explicit case "gopfps" (APITEST_CASES=gopfps, #367, T10/T20/T21): the vendor IMP glue latches IMP_Encoder_SetChnFrmRate /
+ * SetGOPSize, rounds the GOP to the rate, forces an IDR on the next picture and GetGOPSize / GetChnFrmRate answer the running
+ * values.  Fixed scenarios (source 15 fps); output per scenario "SC <name> <num>/<den> gop <g>", "E <pic> r <n> <d> ret",
+ * "E <pic> g <gop> ret", "G <pic> <why> ret gop", "R <pic> <why> ret n/d", "I <picture indexes of IDR pictures>" (host: tools/gop_t2x.py).
+ * ------------------------------------------------------------------------------------------ */
+#if !defined(ENC_NEW) && HAS_IMP_Encoder_SetGOPSize && HAS_IMP_Encoder_GetGOPSize && \
+    (defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T10))
+typedef struct { int pic; char kind; int a, b; } GfEv;
+typedef struct { const char *name; int num, den, gop, pics; GfEv ev[4]; } GfSc;
+
+static int gf_idr(const unsigned char *p, size_t n)
+{
+    size_t i;
+
+    for (i = 0; i + 4 < n; i++)
+        if (p[i] == 0 && p[i + 1] == 0 && p[i + 2] == 1) {
+            int t = p[i + 3] & 0x1f;
+
+            if (t == 5) return 1;
+            if (t >= 1 && t <= 5) return 0;
+        }
+    return 0;
+}
+
+static void gf_get(int chn, int pic, const char *why)
+{
+    IMPEncoderGOPSizeCfg g;
+    IMPEncoderFrmRate f;
+    int r, r2;
+
+    g.gopsize = -7; f.frmRateNum = f.frmRateDen = 0xffff;
+    r = IMP_Encoder_GetGOPSize(chn, &g);
+    r2 = IMP_Encoder_GetChnFrmRate(chn, &f);
+    printf("G %d %s %d %d\nR %d %s %d %u/%u\n", pic, why, r, g.gopsize, pic, why, r2, f.frmRateNum, f.frmRateDen);
+}
+
+int enc_gopfps_run(void)
+{
+    static const GfSc sc[] = {
+        { "create",  15, 1, 20,  70, { { -1 } } },                                    /* GOP 20 at 15/1: CreateChn rounds up */
+        { "fps",     15, 1, 30, 100, { { 20, 'r', 5, 1 }, { 60, 'r', 15, 1 } } },     /* rate change: GOP rescaled, IDR forced */
+        { "gop",     15, 1, 30, 150, { { 15, 'g', 20, 0 }, { 70, 'g', 50, 0 } } },    /* GOP asked for: rounded to the rate */
+        { "same",    15, 1, 20,  70, { { 10, 'g', 20, 0 } } },                         /* the GOP the channel asked for already */
+        { "half",    15, 2, 40,  80, { { -1 } } },                                    /* 15/2: T20 rounds to 30, T21 to 15 */
+        { "both",    15, 1, 30,  60, { { 10, 'r', 5, 1 }, { 10, 'g', 20, 0 } } },
+    };
+    unsigned int si;
+    int chn = 0;
+    unsigned char *buf = malloc(STREAMCAP);
+
+    if (!buf) return -1;
+    for (si = 0; si < sizeof(sc) / sizeof(sc[0]); si++) {
+        const GfSc *c = &sc[si];
+        G(EAttr, a);
+        int r, k, e, idrs[400], nidr = 0;
+
+        if (grp_up(0, 0) != 0) { gfree(a); break; }
+        fill_attr(a, CODEC_H264, c->gop);
+        a->rcAttr.outFrmRate.frmRateNum = c->num; a->rcAttr.outFrmRate.frmRateDen = c->den;
+        a->rcAttr.maxGop = c->gop;
+        r = IMP_Encoder_CreateChn(chn, a);
+        printf("SC %s %d/%d gop %d CreateChn %d\n", c->name, c->num, c->den, c->gop, r);
+        if (r) { gfree(a); grp_down(0); continue; }
+        IMP_Encoder_RegisterChn(GRP, chn);
+        gf_get(chn, -1, "create");
+        IMP_Encoder_StartRecvPic(chn);
+        for (k = 0; k < c->pics; k++) {
+            G(IMPEncoderStream, s);
+            int trunc = 0;
+            size_t n;
+
+            for (e = 0; e < 4; e++) {
+                if (c->ev[e].pic != k || c->ev[e].kind == 0) continue;
+                if (c->ev[e].kind == 'r') {
+                    IMPEncoderFrmRate fr = { (uint32_t)c->ev[e].a, (uint32_t)c->ev[e].b };
+
+                    printf("E %d r %d %d %d\n", k, c->ev[e].a, c->ev[e].b, IMP_Encoder_SetChnFrmRate(chn, &fr));
+                } else {
+                    IMPEncoderGOPSizeCfg g = { c->ev[e].a };
+
+                    printf("E %d g %d %d\n", k, c->ev[e].a, IMP_Encoder_SetGOPSize(chn, &g));
+                }
+                gf_get(chn, k, "after-event");
+            }
+            if (IMP_Encoder_PollingStream(chn, 4000) != 0) { gfree(s); printf("poll timeout at picture %d\n", k); break; }
+            if (IMP_Encoder_GetStream(chn, s, true) != 0) { gfree(s); break; }
+            gchk(s);
+            n = gather(s, buf, STREAMCAP, &trunc);
+            if (gf_idr(buf, n) && nidr < 400) idrs[nidr++] = k;
+            IMP_Encoder_ReleaseStream(chn, s);
+            gfree(s);
+            if (k % 10 == 9 || k == 0) gf_get(chn, k, "later");
+        }
+        printf("I");
+        for (e = 0; e < nidr; e++) printf(" %d", idrs[e]);
+        printf("\n");
+        fflush(stdout);
+        IMP_Encoder_StopRecvPic(chn);
+        IMP_Encoder_UnRegisterChn(chn);
+        IMP_Encoder_DestroyChn(chn);
+        gfree(a);
+        grp_down(0);
+    }
+    free(buf);
+    return 0;
+}
+#else
+int enc_gopfps_run(void) { return -1; }
+#endif
+
 int enc_chain_up(void)          /* H.264 chn 0 + group 0 with an OSD group in between (used by the OSD test) */
 {
     if (grp_up(1, 0) != 0) return -1;

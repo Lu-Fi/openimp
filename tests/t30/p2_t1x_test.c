@@ -103,6 +103,8 @@ int AL_Codec_Encode_SetJpegQl(void *c, int a, const uint8_t *b)
 STUB0(AL_Codec_Encode_RequestIDR)
 STUB1(AL_Codec_Encode_SetEntropyMode, int)
 STUB1(AL_Codec_Encode_SetGopLength, int)
+int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop) { (void)codec; (void)gop; return -1; }
+int AL_Codec_Encode_GetRunningRate(void *codec, uint32_t *n, uint32_t *d) { (void)codec; (void)n; (void)d; return -1; }
 STUB1(AL_Codec_Encode_SetQp, void *)
 STUB1(AL_Codec_Encode_SetStreamBufferCount, int)
 STUB1(AL_Codec_Encode_SetStreamBufferSize, int)
