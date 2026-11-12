@@ -6837,7 +6837,9 @@ void t_cases(void)
     if (cs_on("ncu_t31")) cs_ncu_t31(); wdog("cases", 60);
     if (cs_on("fsset_t31")) cs_fsset_t31(); wdog("cases", 60);
     if (cs_on("fscb_t31")) cs_fscb_t31(); wdog("cases", 60);
+#if defined(PLATFORM_T31)
     if (getenv("APITEST_CASES") && cs_on("extchn_t31")) cs_extchn_t31(); wdog("cases", 60);   /* explicit only (#309) */
+#endif
     if (cs_on("evstart_t31")) cs_evstart_t31(); wdog("cases", 60);
     if (cs_on("shading_t31")) cs_shading_t31(); wdog("cases", 90);
     if (cs_on("meshscale")) cs_meshscale(); wdog("cases", 90);
