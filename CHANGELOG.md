@@ -14,6 +14,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - T23 `IMP_Encoder_SetFisheyeEnableStatus` device proof (T23 camera): the region is coded on the IDR and whole-second pictures only, and the application ROI is dropped, as in the vendor rule. The region QP is held at slice QP - 12, the vendor slice QP floor.
 - `SU_Key_ReadEvent` on T10/T20/T31: an evdev key injected while the button daemon is stopped gives the same press/release with the image libsysutils and the vendor libsysutils (one camera each).
 - apitest case `fisheye`: `FISHEYE_LOSSTHD` (Set/Getframelossthd) and the stream seq per picture.
+## 2026-11-12: SU_CIPHER_DES_Test keeps its error before DES_Init, documented as beyond vendor (#310)
+
+- User decision 2026-11-12: `SU_CIPHER_DES_Test` without `SU_CIPHER_DES_Init` keeps answering -18 (`SU_CIPHER_UNINIT`); the vendor runs the self tests on fd -1 and returns 0 (false pass). New row in `docs/OPENIMP_BEYOND_VENDOR.md` section 6, reason in the `ref` of the T40 cell of `docs/api_evidence.json`; the cell stays `host`. Docs only.
 
 ## 2026-11-12: status check knows the area:tests label
 
