@@ -13,4 +13,8 @@ void openimp_t31_ivs_capture(int fs_chn, const void *frame);
  * dequeues frames). */
 int openimp_t31_ivs_source_active(int fs_chn);
 
+/* Whether IVS channel number is idle (finished its last frame); for tests
+ * that must not feed a frame into a busy channel. */
+int openimp_t31_ivs_channel_idle(int number);
+
 #endif

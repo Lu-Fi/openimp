@@ -1031,6 +1031,17 @@ int openimp_t31_ivs_source_active(int fs_chn)
     return active;
 }
 
+/* Whether IVS channel number has finished its last frame and takes the
+ * next one (the frame would be dropped as busy otherwise). */
+int openimp_t31_ivs_channel_idle(int number)
+{
+    int v = 0;
+
+    if (number < 0 || number >= T31_IVS_CHANNELS)
+        return 0;
+    return sem_getvalue(&ivs_channels[number].sem_end, &v) == 0 && v > 0;
+}
+
 void openimp_t31_ivs_capture(int fs_chn, const void *frame)
 {
     T31IVSFrameInfo info;

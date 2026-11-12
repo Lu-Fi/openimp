@@ -205,7 +205,12 @@ static int chan_push(struct chan *ch, IMP_IVS_MoveOutput *out,
 {
     uint8_t rec[0x428];
     IMP_IVS_MoveOutput *r = NULL;
+    int i;
 
+    /* never feed a busy channel: under host load a frame can still be in
+     * process after the poll timeout of the previous one */
+    for (i = 0; i < 5000 && !openimp_t31_ivs_channel_idle(0); i++)
+        usleep(1000);
     make_record(rec, ch->frame, ch->index % 4, 1000000 + ch->index * 40000);
     ch->index++;
     openimp_t31_ivs_capture(FS_CHN, rec);
@@ -213,8 +218,6 @@ static int chan_push(struct chan *ch, IMP_IVS_MoveOutput *out,
      * a busy channel would drop the next frame */
     if (IMP_IVS_PollingResult(0, expect ? 2000 : 60) != 0)
         return 0;
-    /* the channel thread posts the result before it marks itself idle */
-    usleep(3000);
     CHECK(IMP_IVS_GetResult(0, (void **)&r) == 0 && r, "GetResult");
     if (!r)
         return 0;
@@ -294,8 +297,8 @@ static void test_identity(int mode, int skip, int sense)
                           W);
         r = t31_ivs_move_run(ref, expect);
         got = chan_push(&ch, &out, &ex, r == 0);
-        CHECK(got == (r == 0), "mode %d t=%d: result %d, reference %d",
-              mode, t, got, r);
+        CHECK(got == (r == 0), "mode %d t=%d: framework result %d, reference result %d",
+              mode, t, got, r == 0);
         if (!got || r != 0)
             continue;
         results++;
