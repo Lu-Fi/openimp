@@ -35,6 +35,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - T31L camera, case `extchn_t31` (ext 320x180 from ch1 640x360, FS3 -> ENC5 H.264, 3 s): OpenIMP 46 streams, vendor libimp 1.1.6 46; the decoded ext picture is the scaled ch1 picture. `FrameSource_SetSource` T31 `err` -> `dev`.
 - Host test: `fs_lifecycle_test` now also built for T31 (`fs_lifecycle_test_t31`), new `ext_channel` test (bit-exact against the decompiled scaler, free/held/reuse rules, source change, disable while the source captures).
 - T30 shares the gap (vendor 1.0.5 exports `SetSource`, OpenIMP T30 stores it only); T23/T40/T41 vendor libraries have no `SetSource`.
+## 2026-11-12: T30 macroblock rate control on by default, as the vendor (#217)
+
+- The T30 H.264 command list now carries the macroblock rate-control words of `H264E_T30_SliceInit` by default: the 0x40074 flags, 0x40078..0x400c8, and on P slices the basic-unit targets and registers 0x80100..0x80158. The vendor library always sends them, and its `IMP_Encoder_SetMbRC` has no effect. The vendor T30X streams (CBR 2000 kbit/s) vary the QP per macroblock in 56 of 60 pictures; the open stack had one QP per picture. `OPENIMP_EPRC_MBRC=0` or `IMP_Encoder_SetMbRC` off switch it off (OpenIMP extra). T21/T23 are unchanged (opt-in).
+- Host: new `tests/t30` helix_encoder_test `t30_mbrc_case`. With the default, `=1` and `=0`, every picture's list words equal what `EPRC30_MbRcRegs` makes of a second controller's slice block, and SetMbRC switches from the next picture. The register encoding itself was already proven against the vendor in the emulator (#217 step 2). Device A/B on the T30X lab camera pending.
 
 ## 2026-11-12: T30 run-time rate-control changes at the next IDR, like the vendor (#366)
 
