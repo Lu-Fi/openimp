@@ -19,7 +19,7 @@ OSD_CB_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-osd-callback-test
 DGAIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-dgain-test
 I2D_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-i2d-test
 
-check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-wait p2-pace
+check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-wait p2-pace audio-capture
 	$(QUERY_TEST_BIN)
 	$(SEI_TEST_BIN)
 	$(OSD_CB_TEST_BIN)
@@ -103,6 +103,18 @@ $(DGAIN_TEST_BIN): audio_dgain_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
 	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T40 \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		audio_dgain_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -o "$@"
+
+# #409: AI capture thread from EnableChn, stub driver with a backlog (T40 + T41 build)
+.PHONY: audio-capture
+audio-capture: audio_capture_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
+	mkdir -p "$(PROJECT_DIR)/build/tests"
+	for soc in T40 T41; do \
+		$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -Wno-unused-function -DPLATFORM_$$soc \
+			-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src audio_capture_test.c \
+			$(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl \
+			-o "$(PROJECT_DIR)/build/tests/audio-capture-test-$$soc" && \
+		"$(PROJECT_DIR)/build/tests/audio-capture-test-$$soc" || exit 1; \
+	done
 
 # host-only: private ioctl fixture, no camera
 $(CAMERA_INPUT_TEST_BIN): camera_input_test.c $(PROJECT_DIR)/src/t40/openimp_p1.c

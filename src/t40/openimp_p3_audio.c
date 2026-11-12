@@ -133,20 +133,19 @@ typedef int (*P3AgcProcess)(void *, const int16_t *const *, size_t, size_t,
 typedef int (*P3AgcFree)(void *);
 
 /* The OSS3 driver only offers a blocking GET_STREAM (one frame per ioctl,
- * ~numPerFrm/rate seconds).  For IMP_AI_GetFrame(NOBLOCK) a capture thread,
- * started on the first NOBLOCK call, feeds a bounded FIFO of whole frames;
- * the oldest frame is dropped when the consumer falls behind.  Once running,
- * BLOCK callers consume the same FIFO so order is preserved. */
-#define P3_CAPTURE_FRAMES 16
+ * ~numPerFrm/rate seconds).  Like the vendor _ai_record_thread (libimp T40
+ * 1.3.1 / T41 1.2.5 / T32 2.x: thread created by IMP_AI_Enable, reading from
+ * IMP_AI_EnableChn on into an audio_buf ring usrFrmDepth deep) a capture
+ * thread started by IMP_AI_EnableChn reads the driver all the time into a
+ * bounded FIFO of whole frames; the oldest frame is dropped when the consumer
+ * falls behind, GetFrame(NOBLOCK) returns -1 on an empty FIFO, BLOCK waits.
+ * Starting it only at the first GetFrame left the driver backlog collected
+ * since IMP_AI_Enable to be delivered as live audio (#409).  The start in
+ * p3_ai_get_frame() remains as a fallback (capture not running). */
+#define P3_CAPTURE_FRAMES 16    /* fallback depth when usrFrmDepth is unset */
 #define P3_CAPTURE_RETRY_US 10000
-#if defined(PLATFORM_T32)
-/* T32 2.x: the vendor record queue is usrFrmDepth deep (IMP_AI_EnableChn) */
 #define P3_CAPTURE_SLOTS 64
 #define P3_CAPTURE_DEPTH p3_audio.cap_depth
-#else
-#define P3_CAPTURE_SLOTS P3_CAPTURE_FRAMES
-#define P3_CAPTURE_DEPTH P3_CAPTURE_FRAMES
-#endif
 
 static struct {
     int fd;
@@ -210,9 +209,7 @@ static struct {
     unsigned int cap_head;
     unsigned char *cap_data;
     int64_t cap_time[P3_CAPTURE_SLOTS];
-#if defined(PLATFORM_T32)
-    unsigned int cap_depth;
-#endif
+    unsigned int cap_depth;         /* FIFO depth, usrFrmDepth (EnableChn) */
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
 #if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
                .ai_volume = 60    /* vendor 1.3.1 reads 60 before any SetVol */
@@ -300,11 +297,19 @@ static void *p3_capture_main(void *argument)
     return NULL;
 }
 
-static int p3_capture_start(size_t bytes)
+/* depth: FIFO frames (vendor usrFrmDepth), 0 = P3_CAPTURE_FRAMES */
+static int p3_capture_start(size_t bytes, unsigned int depth)
 {
     pthread_t thread;
-    unsigned char *chunk = malloc(bytes);
-    unsigned char *data = malloc(bytes * P3_CAPTURE_DEPTH);
+    unsigned char *chunk;
+    unsigned char *data;
+
+    if (!depth)
+        depth = P3_CAPTURE_FRAMES;
+    if (depth > P3_CAPTURE_SLOTS)
+        depth = P3_CAPTURE_SLOTS;
+    chunk = malloc(bytes);
+    data = malloc(bytes * depth);
 
     if (!chunk || !data) {
         free(chunk);
@@ -327,6 +332,7 @@ static int p3_capture_start(size_t bytes)
     p3_audio.cap_count = 0;
     p3_audio.cap_head = 0;
     p3_audio.cap_frame_bytes = bytes;
+    p3_audio.cap_depth = depth;
     free(p3_audio.cap_data);
     p3_audio.cap_data = data;
     p3_audio.cap_running = 1;
@@ -516,8 +522,22 @@ int IMP_AI_Disable(int device)
 #if !defined(PLATFORM_T32)
 int IMP_AI_EnableChn(int device, int channel)
 {
+    int depth = p3_audio.ai_channel.usrFrmDepth;
+    size_t bytes;
+
     (void)device;
     if (!p3_audio.ai_enabled || channel != 0)
+        return -1;
+    if (p3_audio.ai_channel_enabled)
+        return 0;                       /* vendor: "already enabled", 0 */
+    bytes = (size_t)p3_audio.ai_attr.numPerFrm *
+            (p3_audio.ai_attr.soundmode == AUDIO_SOUND_MODE_STEREO ? 2U : 1U) *
+            sizeof(int16_t);
+    /* vendor reads the driver from here on (#409); record ring usrFrmDepth
+     * deep (vendor: 2..frmNum, else -1; kept lenient here: unset ->
+     * P3_CAPTURE_FRAMES, clamped to P3_CAPTURE_SLOTS) */
+    if (bytes &&
+        p3_capture_start(bytes, depth > 0 ? (unsigned int)depth : 0U) != 0)
         return -1;
     p3_audio.ai_channel_enabled = 1;
     return 0;
@@ -612,7 +632,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
     pthread_mutex_lock(&p3_cap_lock);
     if (!p3_audio.cap_running && block == NOBLOCK) {
         pthread_mutex_unlock(&p3_cap_lock);
-        if (p3_capture_start(bytes) != 0)
+        if (p3_capture_start(bytes, 0) != 0)
             return -1;
         pthread_mutex_lock(&p3_cap_lock);
     }
