@@ -14884,10 +14884,11 @@ int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr)
     return 0;
 }
 
-#if defined(CODEC_T30_RADIX)
+#if defined(PLATFORM_T30)
 /* IMP_Encoder_GetGOPSize (#367): the GOP i264e parameter 7 reads.  H.264:
  * the Helix encoder's; before it exists, or for H.265, the CreateChn value
- * of the vendor glue (whole seconds) of the GOP set last */
+ * of the vendor glue of the GOP set last (T30: whole seconds; T20/T21:
+ * rounded up to the rate) */
 int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop)
 {
     AL_CodecEncode *enc = (AL_CodecEncode *)codec;
@@ -14896,14 +14897,47 @@ int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop)
         return -1;
     if (enc->t30_helix)
         *gop = OpenIMP_T30_HelixGop(enc->t30_helix);
+#if defined(CODEC_T30_RADIX)
     else if (enc->t30_radix)
         *gop = OpenIMP_T30_RadixGop(enc->t30_radix);
+#endif
     else
         *gop = OpenIMP_T30_GopCreate(enc->hw_params.gop_length,
                                      enc->hw_params.fps_num ? enc->hw_params.fps_num : 25u,
                                      enc->hw_params.fps_den ? enc->hw_params.fps_den : 1u);
     return 0;
 }
+
+#if !defined(CODEC_T30_RADIX)
+/* IMP_Encoder_GetChnFrmRate on T20/T21: i264e parameter 5, the rate the
+ * encoder runs with, reduced (#367); before the encoder exists the reduced
+ * rate asked for */
+int AL_Codec_Encode_GetRunningRate(void *codec, uint32_t *num, uint32_t *den)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    if (!enc || !num || !den)
+        return -1;
+    if (enc->t30_helix) {
+        OpenIMP_T30_HelixRate(enc->t30_helix, num, den);
+        return 0;
+    }
+    *num = enc->hw_params.fps_num ? enc->hw_params.fps_num : 25u;
+    *den = enc->hw_params.fps_den ? enc->hw_params.fps_den : 1u;
+    {
+        uint32_t a = *num, b = *den, t;
+
+        while (b) {
+            t = a % b;
+            a = b;
+            b = t;
+        }
+        *num /= a;
+        *den /= a;
+    }
+    return 0;
+}
+#endif
 #endif
 
 int AL_Codec_Encode_SetGopLength(void *codec, int gopLength)

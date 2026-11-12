@@ -2761,7 +2761,7 @@ static void test_t30_black_start(void)
 }
 #endif
 
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
 /* #367: IDR pictures under SetChnFrmRate / SetGOPSize at run time against
  * the vendor glue (tools/eprc_t30_oracle.py LIB --h264-reconf --gop >
  * tests/t30/t30_gop_vectors.txt): the new GOP and rate are latched and
@@ -2776,6 +2776,7 @@ static void test_t30_gop_vectors(const char *path)
 
     assert(f);
     unsetenv("OPENIMP_T30_EPRC");
+    unsetenv("OPENIMP_HELIX_VENDOR_GOP");   /* T20/T21: the vendor glue on */
     fill_payload(1500u, 30);
     while (fgets(line, sizeof(line), f)) {
         HWEncoderParams p;
@@ -2849,10 +2850,12 @@ static void test_t30_gop_vectors(const char *path)
     fclose(f);
     assert(scenarios > 0u);
     setenv("OPENIMP_T30_EPRC", "0", 1);
+    setenv("OPENIMP_HELIX_VENDOR_GOP", "0", 1);
     fill_payload(5000, 30);
     printf("T30 GOP vectors: %u scenarios equal\n", scenarios);
 }
 
+#if defined(PLATFORM_T30)
 /* #367: CreateChn rounds the GOP up to a multiple of the rate; only a later
  * rate change under one second makes the vendor glue's GOP 0 (its
  * i264e_ratecontrol_init then divides by 0); OpenIMP keeps the GOP. */
@@ -2876,6 +2879,27 @@ static void test_t30_short_gop(void)
     assert(OpenIMP_T30_GopCreate(10u, 25u, 1u) == 25u);
     assert(OpenIMP_T30_GopCreate(10u, 10u, 1u) == 10u);
 }
+#else
+/* #367, T20 3.12.0 / T21 1.0.33: CreateChn rounds the GOP up to a multiple of
+ * the reduced rate (T20 of num * den, T21 of num; 25/1 for a rate of 0) and
+ * hands it to i264e as it is.  The device values are in the vector files
+ * (apitest case gopfps, vendor libimp on a camera). */
+static void test_t2x_gop_create(void)
+{
+    assert(OpenIMP_T30_GopCreate(20u, 15u, 1u) == 30u);
+    assert(OpenIMP_T30_GopCreate(30u, 15u, 1u) == 30u);
+    assert(OpenIMP_T30_GopCreate(30u, 25u, 1u) == 50u);
+    assert(OpenIMP_T30_GopCreate(10u, 25u, 1u) == 25u);   /* no whole-second truncation */
+    assert(OpenIMP_T30_GopCreate(30u, 0u, 0u) == 50u);    /* rate 0: 25/1 */
+    assert(OpenIMP_T30_GopCreate(30u, 30u, 2u) == 30u);   /* reduced: 15/1 */
+#if defined(PLATFORM_T20)
+    assert(OpenIMP_T30_GopCreate(40u, 15u, 2u) == 60u);   /* measured: 15/2, GOP 40 -> 60 */
+#else
+    assert(OpenIMP_T30_GopCreate(40u, 15u, 2u) == 45u);
+#endif
+    printf("T2x GOP create: equal\n");
+}
+#endif
 #endif
 
 int main(int argc, char **argv)
@@ -2886,6 +2910,9 @@ int main(int argc, char **argv)
     (void)argv;
     /* Keep every heap block below 4 GiB for the 32-bit address fields. */
     mallopt(M_MMAP_THRESHOLD, 1 << 30);
+    /* T20/T21: the checks below use GOPs shorter than a second, which the vendor
+     * glue rounds up (#367); they run with the GOP applied as given */
+    setenv("OPENIMP_HELIX_VENDOR_GOP", "0", 1);
 #if defined(PLATFORM_T30)
     setenv("OPENIMP_T30_EPRC", "0", 1);    /* the checks before test_t30_eprc are of the GOP controller */
 #endif
@@ -2918,6 +2945,10 @@ int main(int argc, char **argv)
 #if defined(PLATFORM_T30)
     test_t30_fixqp();
     test_t30_short_gop();
+#else
+    test_t2x_gop_create();
+#endif
+#if defined(HELIX_VENDOR_GOP)
     if (argc > 1)
         test_t30_gop_vectors(argv[1]);
 #endif

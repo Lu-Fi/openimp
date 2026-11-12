@@ -14,7 +14,7 @@
  */
 
 #include "t30_helix_encoder.h"
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
 #include "t30_gop_glue.h"
 #endif
 
@@ -326,13 +326,14 @@ struct T30HelixEncoder {
     uint32_t frame_number;
     uint32_t max_output_len;
     uint32_t gop_position;
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
     /* the GOP of the OEM IMP glue (encoder_get_fps_mask, #367,
      * t30_gop_glue.h); gop_next / gop_pending and sps_pending: latched like
      * i264e_reconfig_gop_set / _fps_set, applied at the (forced) next IDR */
     T30GopGlue gop;
     uint32_t gop_next;
     int gop_pending, sps_pending;
+    int gop_legacy;     /* T20/T21: OPENIMP_HELIX_VENDOR_GOP=0, GOP and rate at once */
 #endif
     uint32_t idr_pic_id;
     unsigned int reference_index;
@@ -2765,8 +2766,14 @@ static void t30_start_rate_control(T30HelixEncoder *encoder,
 #endif
 }
 
-#if defined(PLATFORM_T30)
-/* GOP of the T30 1.0.5 IMP glue (#367).  encoder_get_fps_mask runs before
+#if defined(PLATFORM_T20)
+#define T2X_GOP_UNIT_NUM_DEN 1   /* T20 3.12.0 rounds to num * den */
+#else
+#define T2X_GOP_UNIT_NUM_DEN 0   /* T21 1.0.33 rounds to num */
+#endif
+
+#if defined(HELIX_VENDOR_GOP)
+/* GOP of the T30 1.0.5 / T20 3.12.0 / T21 1.0.33 IMP glue (#367).  encoder_get_fps_mask runs before
  * every picture: a new channel frame rate keeps the GOP's whole seconds
  * (gop * den / num, truncated) and rounds them up to pictures of the new
  * rate (CreateChn: the first picture does the same with the channel's own
@@ -2778,10 +2785,33 @@ static void t30_start_rate_control(T30HelixEncoder *encoder,
  * vendor library in tools/eprc_t30_oracle.py --h264-reconf --gop). */
 static void t30_gop_create(T30HelixEncoder *encoder)
 {
+#if !defined(PLATFORM_T30)
+    /* OPENIMP_HELIX_VENDOR_GOP=0 (tests, debugging): the GOP and the frame
+     * rate apply at once as before #367 */
+    {
+        const char *e = getenv("OPENIMP_HELIX_VENDOR_GOP");
+
+        encoder->gop_legacy = e && e[0] == '0';
+        if (encoder->gop_legacy) {
+            memset(&encoder->gop, 0, sizeof(encoder->gop));
+            encoder->gop.vgop = encoder->params.gop_length;
+            encoder->gop_pending = 0;
+            encoder->sps_pending = 0;
+            return;
+        }
+    }
+#endif
+#if defined(PLATFORM_T30)
     encoder->params.gop_length = t30_gop_glue_create(
         &encoder->gop, encoder->params.gop_length,
         encoder->params.gop_requests, encoder->params.fps_num,
         encoder->params.fps_den);
+#else
+    encoder->params.gop_length = t2x_gop_glue_create(
+        &encoder->gop, encoder->params.gop_length,
+        encoder->params.gop_requests, encoder->params.fps_num,
+        encoder->params.fps_den, T2X_GOP_UNIT_NUM_DEN);
+#endif
     encoder->gop_pending = 0;
     encoder->sps_pending = 0;
 }
@@ -2790,7 +2820,11 @@ static void t30_gop_create(T30HelixEncoder *encoder)
 static void t30_gop_update(T30HelixEncoder *encoder, HWEncoderParams *next,
                            uint32_t requested_gop, uint32_t requests)
 {
-    uint32_t g = t30_gop_glue_step(&encoder->gop, encoder->params.fps_num,
+    uint32_t g;
+
+    if (encoder->gop_legacy)
+        return;
+    g = t30_gop_glue_step(&encoder->gop, encoder->params.fps_num,
                                    encoder->params.fps_den, next->fps_num,
                                    next->fps_den, requested_gop, requests);
 
@@ -2829,9 +2863,13 @@ static void t30_idr_reconfig(T30HelixEncoder *encoder)
                       "i264e_idr_reconfig)", encoder->params.gop_length,
                       encoder->gop_next);
         encoder->params.gop_length = encoder->gop_next;
+#if defined(PLATFORM_T30)
         encoder->eprc30_defer = 1;
+#endif
         t30_start_rate_control(encoder, qp);
+#if defined(PLATFORM_T30)
         encoder->eprc30_defer = 0;
+#endif
     }
 }
 #endif
@@ -2988,7 +3026,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
     encoder->eprc30_max_qp = params->max_qp ? params->max_qp : 51u;
 #endif
     t30_normalize_params(&encoder->params, NULL);
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
     t30_gop_create(encoder);
 #endif
 #if defined(PLATFORM_T23)
@@ -3888,7 +3926,7 @@ t20_picture:
 #endif
           ;
 #endif
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
     if (idr)
         t30_idr_reconfig(encoder);
 #endif
@@ -4937,13 +4975,15 @@ int OpenIMP_T30_HelixSetUserData(T30HelixEncoder *encoder, uint32_t count,
     return 0;
 }
 
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
 /* IMP_Encoder_GetGOPSize: i264e parameter 7 (i264e_reconfig_gop_get), the
  * GOP the glue last handed over (rounded up at CreateChn, the rounded or
  * rescaled value after the first picture past a SetGOPSize/SetChnFrmRate),
  * also while it still waits for its IDR */
 uint32_t OpenIMP_T30_HelixGop(const T30HelixEncoder *encoder)
 {
+    if (encoder && encoder->gop_legacy)
+        return encoder->params.gop_length;
     return encoder ? encoder->gop.vgop : 0u;
 }
 
@@ -4951,7 +4991,24 @@ uint32_t OpenIMP_T30_GopCreate(uint32_t gop, uint32_t num, uint32_t den)
 {
     T30GopGlue g;
 
+#if defined(PLATFORM_T30)
     return t30_gop_glue_create(&g, gop, 0u, num, den);
+#else
+    return t2x_gop_glue_create(&g, gop, 0u, num, den, T2X_GOP_UNIT_NUM_DEN);
+#endif
+}
+
+/* IMP_Encoder_GetChnFrmRate: i264e parameter 5 (i264e_reconfig_fps_get), the
+ * running rate reduced like i264e_reduce_fraction */
+void OpenIMP_T30_HelixRate(const T30HelixEncoder *encoder, uint32_t *num,
+                           uint32_t *den)
+{
+    uint32_t n = encoder ? encoder->params.fps_num : 0u;
+    uint32_t d = encoder ? encoder->params.fps_den : 0u;
+
+    t30_gop_reduce(&n, &d);
+    *num = n;
+    *den = d;
 }
 #endif
 
@@ -5097,7 +5154,7 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
     }
 #endif
     t30_normalize_params(&next, &encoder->params);
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
     t30_gop_update(encoder, &next, requested->gop_length,
                    requested->gop_requests);
 #endif
@@ -5208,10 +5265,19 @@ int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
         || frame_rate_changed
 #endif
        ) {
-#if defined(PLATFORM_T30)
+#if defined(HELIX_VENDOR_GOP)
         /* i264e_reconfig_fps_set latches the rate: the new SPS comes with
          * the next IDR (t30_idr_reconfig; after a rate change the glue
-         * forces that IDR on the next picture, #367) */
+         * forces that IDR on the next picture, #367).  T20/T21: a level
+         * change without a rate change keeps the immediate new SPS */
+#if !defined(PLATFORM_T30)
+        if (!frame_rate_changed || encoder->gop_legacy) {
+            t30_init_parameter_sets(encoder);
+            if (t30_generate_headers(encoder) != 0)
+                return -1;
+            encoder->force_idr = 1;
+        } else
+#endif
         encoder->sps_pending = 1;
 #else
         t30_init_parameter_sets(encoder);

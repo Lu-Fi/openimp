@@ -74,6 +74,30 @@ static inline uint32_t t30_gop_glue_create(T30GopGlue *s, uint32_t gop,
     return s->vgop;
 }
 
+/* T20 3.12.0 / T21 1.0.33 CreateChn (channel_i264e_encoder_init, #367): no
+ * whole-second truncation; the GOP is rounded up to a multiple of the reduced
+ * rate, T20 of num * den, T21 of num (25/1 default for a rate of 0), and goes
+ * to i264e as it is.  The step function is the same as on T30. */
+static inline uint32_t t2x_gop_glue_create(T30GopGlue *s, uint32_t gop,
+                                           uint32_t requests, uint32_t num,
+                                           uint32_t den, int unit_is_num_den)
+{
+    uint32_t unit, g;
+
+    t30_gop_reduce(&num, &den);
+    if (!num || !den) {
+        num = 25u;
+        den = 1u;
+    }
+    unit = unit_is_num_den ? num * den : num;
+    g = gop % unit ? (gop / unit + 1u) * unit : gop;
+    s->gop_hw = gop;
+    s->gop_requests = requests;
+    s->vgop = g;
+    s->vgop_req = g;
+    return g;
+}
+
 /* before a picture, from the rate the encoder runs with (on/od) to the one
  * asked for (nn/nd) and the IMP GOP request: the GOP sent to the encoder
  * (which then forces an IDR), or 0 when nothing is sent */

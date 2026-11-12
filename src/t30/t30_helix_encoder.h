@@ -24,11 +24,21 @@ int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
                             const IMPFrameInfo *frame,
                             HWStreamBuffer **stream);
 int OpenIMP_T30_HelixRequestIDR(T30HelixEncoder *encoder);
-#if defined(PLATFORM_T30)
+/* The vendor IMP glue's GOP / frame-rate latching (#367): T30 1.0.5, T20 3.12.0
+ * (also T10) and T21 1.0.33 share it (encoder_get_fps_mask in do_channel_process). */
+#if !defined(PLATFORM_T23) && (defined(PLATFORM_T30) || defined(PLATFORM_T21) || \
+                                defined(PLATFORM_T20))
+#define HELIX_VENDOR_GOP 1
+#endif
+#if defined(HELIX_VENDOR_GOP)
 /* the GOP i264e parameter 7 reads (IMP_Encoder_GetGOPSize, #367) */
 uint32_t OpenIMP_T30_HelixGop(const T30HelixEncoder *encoder);
 /* the CreateChn GOP of the vendor glue: rounded up to a multiple of num * den */
 uint32_t OpenIMP_T30_GopCreate(uint32_t gop, uint32_t num, uint32_t den);
+/* the frame rate i264e parameter 5 reads (IMP_Encoder_GetChnFrmRate): the
+ * running rate, reduced */
+void OpenIMP_T30_HelixRate(const T30HelixEncoder *encoder, uint32_t *num,
+                           uint32_t *den);
 #endif
 /* SPS frame cropping (visible rectangle); next picture is an IDR. */
 int OpenIMP_T30_HelixSetCrop(T30HelixEncoder *encoder, int enable,

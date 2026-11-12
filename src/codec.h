@@ -179,8 +179,10 @@ int AL_Codec_Encode_RestartGop(void *codec);
 int AL_Codec_Encode_GetGopParam(void *codec, void *gopAttr);
 int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr);
 int AL_Codec_Encode_SetGopLength(void *codec, int gopLength);
-/* real T30 only (#367) */
+/* T30, T20, T21 (#367) */
 int AL_Codec_Encode_GetGopLength(void *codec, uint32_t *gop);
+/* T20, T21 (#367) */
+int AL_Codec_Encode_GetRunningRate(void *codec, uint32_t *num, uint32_t *den);
 int AL_Codec_Encode_SetInputResolution(void *codec, int width, int height);
 int AL_Codec_Encode_SetLoopFilterBetaOffset(void *codec, int offset);
 int AL_Codec_Encode_SetLoopFilterTcOffset(void *codec, int offset);
