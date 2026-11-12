@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T31 H.265 FixQP picture no longer garbage (#403)
+
+- Cause: for FixQP the T31 PPS had `cu_qp_delta_enabled_flag` 0 (tied to the hardware RC, which FixQP turns off), but the T31 HEVC core codes `cu_qp_delta_abs` in every CU anyway (as found earlier on T40/T41). Decoders misparsed the IDR from the first CTB on (ffmpeg silent, VA-API failed, picture garbage). Vendor libimp 1.1.6 FixQP PPS (capture on cam-A): `cu_qp_delta_enabled_flag` 1, `diff_cu_qp_delta_depth` 0.
+- Fix: T31 FixQP keeps the PPS flag set and still runs without the hardware RC (cmd[9] bit 16 and HWRC words clear); helpers `openimp_t31_hevc_pps_cu_qp_delta` / `openimp_t31_hevc_cmd_hwrc` in src/t40/t31_hevc_headers.h, host test in tests/t31 hevc_headers_test. `OPENIMP_T31_HEVC_FIXQP_CUQPD=0` restores the old PPS.
+- Device (cam-A, 640x360 H.265 FixQP 30, apitest case `fisheye`): OpenIMP and vendor back to back, both decode clean in ffmpeg (aggressive) and VA-API, SSIM against the vendor stream 0.95 (watermark off) and 0.96 (on); old PPS 0.05. CBR unchanged.
+
 ## 2026-11-12: T31/T40 watermark QP entries on by default; T31 LCU overflow no longer drops the picture (#402)
 
 - Vendor T31 1.1.6 / T40 1.3.1 `encode1` (Ghidra): with the fisheye flag every picture clears QP table entries 0..12 (EP2 + 0x40) and sets "use QP table" + "relative"; a marked I picture gets 0x21 (relative -31) in entries 0..3 (H.264) or 0..4 and 8..12 (H.265, 8 bytes per 32x32 CTB). OpenIMP now writes the H.265 entries too and sets the options on H.265 pictures; `OPENIMP_WM_PARTS` defaults to 3.
