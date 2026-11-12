@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: test pattern mode 6, the ISP's own test generator on T10/T20 (#103)
+
+- `OpenIMP_TestPattern_Set(6, p)` (T10, T20): the Apical ISP core's video test generator replaces the sensor's raw frame at the ISP input, so a sensor-independent picture runs through the whole ISP and the encoder. New appended parameter `isp_pattern` (1 flat field, 2 horizontal bands, 3 vertical bands, 4 vertical bars; default 4), `tpctl set 6 isp_pattern=N`. OpenIMP sends the driver's own tuning control "Test pattern" (V4L2 `0x98e906`, `IMAGE_TUNING_CID_CUSTOM_BASE + 6` of the T10/T20 SDK); any other mode sends 0. The stock libimp has no caller of this control. ENOTSUP on other SoCs; `OpenIMP_TestPattern_Supported(6)`.
+- QEMU T20 and T10: the core registers follow (`0x40` bit 0 cleared, `0x9c0` = 1, `0x9c4` = type; mode 0 restores bypass and generator off). Device T20X (jxf23): 3 cycles of all 4 patterns, the expected pictures with identical frame statistics, live scene back 3 s after mode 0, 0 oops. AE, AWB and the streamer's day/night logic keep running on the pattern (as with the vendor control). Host tests: `tests/testpattern` mode 6 cases. Details: docs/TESTPATTERN.md.
+
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 
 - The OpenIMP T30 build now exports 330 of the 334 vendor T30 1.0.5 names (was 317); still missing: `Encoder_Enable/DisableAllNCUDenoise`, `Get/SetRencFirstFrameMult`. Behaviour read from the vendor libimp 1.0.5 (Ghidra project t30lib, no vendor code copied):
