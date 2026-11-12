@@ -127,6 +127,10 @@ int VBMDelayConfigure(int chn, int max, int delay);
 int VBMDelaySetDelay(int chn, int delay);
 #if defined(PLATFORM_T20) || defined(PLATFORM_T30)
 int VBMBuffersInDriver(int chn);
+/* #420: ready frames older than max_age_ms go back to the bank ring (0 none
+ * ready, -1 the newest is younger, else the count; `query`: count only). */
+#define VBM_READY_MAX_AGE_MS 20u
+int VBMExpireReady(int chn, uint32_t max_age_ms, int query);
 #endif
 /* #374/#405: hand the oldest ready frames (all but the newest keep_ready)
  * back until the driver holds two buffers; returns how many it still

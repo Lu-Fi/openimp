@@ -1263,6 +1263,28 @@ static void *frame_pooling_thread(void *arg)
                      * newest stays for the reader), then the idle recycle;
                      * a DQBUF with one buffer slept for good and the next
                      * GetFrame got a frame from before the pause. */
+                    /* #420: a published frame no reader took within
+                     * VBM_READY_MAX_AGE_MS goes back before the ring needs
+                     * its bank (one bank short stops this ISP's DMA, and
+                     * DQBUF then sleeps for good): wait for a reader that
+                     * long, then hand it back, then dequeue. */
+                    {
+                        int expire = VBMExpireReady(chn, VBM_READY_MAX_AGE_MS, 1);
+
+                        if (expire < 0) {
+                            FS_STEP(chn, FS_STEP_DQ_EMPTY_SLEEP);
+                            usleep(2000);
+                            continue;
+                        }
+                        if (expire > 0 && FS_TRYLOCK()) {
+                            if (FS_FLAG_LOAD(ctx->running) &&
+                                fs_chan_get_state(chn) == 2) {
+                                FS_STEP(chn, FS_STEP_IDLE_RECYCLE);
+                                VBMExpireReady(chn, VBM_READY_MAX_AGE_MS, 0);
+                            }
+                            FS_UNLOCK();
+                        }
+                    }
                     if (VBMFeedDriver(chn, INT_MAX) > 0) {   /* query only */
                         if (FS_TRYLOCK()) {
                             if (FS_FLAG_LOAD(ctx->running) &&

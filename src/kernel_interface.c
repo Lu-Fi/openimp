@@ -2042,13 +2042,21 @@ int OpenIMP_FrameSource_DebugBuffers(int chn, int out[4])
 /* Return every frame still waiting in chn's ready queue to the driver while
  * no reader is pulling it.  Each index is popped under queue_mutex, so a
  * reader that races in can never receive a frame that is being recycled. */
+static int vbm_recycle_ready(int chn);
+
 int VBMRecycleIdleFrames(int chn)
+{
+    if (chn < 0 || chn >= MAX_VBM_POOLS || !vbm_pull_idle(chn))
+        return 0;
+    return vbm_recycle_ready(chn);
+}
+
+/* Every frame of chn's ready queue back to the driver (no idle check). */
+static int vbm_recycle_ready(int chn)
 {
     VBMPool *pool;
     int recycled = 0;
 
-    if (chn < 0 || chn >= MAX_VBM_POOLS || !vbm_pull_idle(chn))
-        return 0;
     pool = vbm_instance[chn];
     /* A buffer goes back to the driver either by QBUF on the pool's fd or,
      * when the FrameSource owns the fd (T23: pool fd -1), through the
@@ -2077,6 +2085,56 @@ int VBMRecycleIdleFrames(int chn)
     if (recycled)
         ki_trace("libimp/VBM: idle-recycle ch=%d frames=%d\n", chn, recycled);
     return recycled;
+}
+#endif
+
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30)
+/*
+ * #420: ready frames nobody picked up go back to the bank ring.  The
+ * T10/T20 (and T30) ISP writes a ring of DMA banks, one per nrVBs buffer,
+ * and disables its DMA when the bank after the one being written has no
+ * buffer.  Device trace (T20 .107, apitest enc,ivs, ch1 3 buffers + delay
+ * FIFO 2): after the encoder unbound, the newest frame stayed in the ready
+ * queue for the pull window (1 s), the driver held 2 of 3 banks, two
+ * frames later nothing completed again and the capture thread slept in
+ * the stock DQBUF (no timeout) for good, so the idle recycle never ran and
+ * the IVS group bound to the channel got no frame.  A reader that waits
+ * (encoder: frame-ready event, GetFrame: 5 ms poll) takes a published frame
+ * within a few ms, so one still there after VBM_READY_MAX_AGE_MS (well
+ * inside a frame interval) has no taker: it goes back before the ring needs
+ * the buffer, and the next capture is published for the next reader (fresh,
+ * #405).  The vendor never parks a capture buffer for an absent reader.
+ * Returns 0 with an empty ready queue, -1 while the newest ready frame is
+ * younger than max_age_ms, else the number of ready frames, given back to
+ * the driver unless `query`.
+ */
+static uint32_t vbm_publish_ms[MAX_VBM_POOLS];
+
+int VBMExpireReady(int chn, uint32_t max_age_ms, int query)
+{
+    VBMPool *pool;
+    int n;
+    uint32_t age;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return 0;
+    pool = vbm_instance[chn];
+    if (!pool || !pool->buf_in_userspace || pool->ext)
+        return 0;
+    pthread_mutex_lock(&pool->queue_mutex);
+    n = pool->queue_count;
+    age = vbm_now_ms() - vbm_publish_ms[chn];
+    pthread_mutex_unlock(&pool->queue_mutex);
+    if (n <= 0)
+        return 0;
+    if (age < max_age_ms)
+        return -1;
+    if (query)
+        return n;
+    n = vbm_recycle_ready(chn);
+    if (n)
+        ki_trace("libimp/VBM: ready-expired ch=%d frames=%d age=%u\n", chn, n, age);
+    return n;
 }
 #endif
 
@@ -2519,6 +2577,9 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     pool->available_queue[pool->queue_tail] = idx;
     pool->queue_tail = (pool->queue_tail + 1) % pool->frame_count;
     pool->queue_count++;
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30)
+    vbm_publish_ms[chn] = vbm_now_ms();
+#endif
     pthread_mutex_unlock(&pool->queue_mutex);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T23) || defined(PLATFORM_T21)
     vbm_ready_notify(chn);
