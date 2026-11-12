@@ -7554,7 +7554,7 @@
         "T20": "n.a.",
         "T21": "no-op",
         "T23": "no-op",
-        "T30": "host",
+        "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
         "T33": "nob",
@@ -7566,9 +7566,9 @@
           "r†"
         ]
       },
-      "note": "T21+T23: checked and dropped like the vendor libimp, Get returns zeros (T23 vendor 1.3.0: channel below 9 and non-NULL return 0, nothing stored, Get zero-fills the 8 bytes; matched 2026-10-10, device-tested on a T23 camera). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. ALIGNED with the vendor: 1.0.5 (0xc5688/0xc585c) only checks channel and pointer and does nothing for a channel that is not H.265 (the Get clears the struct); OpenIMP stored the values and range-checked them. Host test p2_gap_test_t30. T30 has no H.265 encoder here.",
+      "note": "T21+T23: checked and dropped like the vendor libimp, Get returns zeros (T23 vendor 1.3.0: channel below 9 and non-NULL return 0, nothing stored, Get zero-fills the 8 bytes; matched 2026-10-10, device-tested on a T23 camera). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. ALIGNED with the vendor: 1.0.5 (0xc5688/0xc585c) only checks channel and pointer and does nothing for a channel that is not H.265 (the Get clears the struct); OpenIMP stored the values and range-checked them. Host test p2_gap_test_t30. T30 has no H.265 encoder here. T30 #399 (2026-11-12): the Radix H.265 channel starts with cr/cb -3/-3 like the vendor i265e and takes Set at the next IDR; the vendor H.264/other channel behaviour above is unchanged.",
       "ref": {
-        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): round trip PASS on both stacks, but the default differs: vendor chroma_cr/cb_qp_offset -3/-3, open 0/0 (#399), so the cell stays host."
+        "T30": "T30X b63 2026-11-12 (lab camera, open stack by runtime swap, libimp 0c3ea363 = next 28b43c10 + claude/t30-399 2e4cd57a + claude/t30-hskip, apitest enc with OPENIMP_T30_H265=1): H.265 GetH265TransCfg cr -3 cb -3, SetH265TransCfg round trip PASS; vendor b62: -3/-3, round trip PASS (#399). b62 open: 0/0 before the fix."
       }
     },
     "Encoder_Get/SetJpegeQl": {
@@ -8220,7 +8220,7 @@
         "T20": "apitest agg63 2026-10-31 .107",
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
-        "T30": "apitest T30X lab 2026-11-03 .231 ; b62 2026-11-12: H.264 PASS on open and vendor, H.265 pass: vendor finds the SEI, open does not (#399)."
+        "T30": "apitest T30X lab 2026-11-03 .231 ; b62 2026-11-12: H.265 vendor finds the SEI, open did not (#399); b63 2026-11-12 (libimp 0c3ea363 with claude/t30-399): H.264 and H.265 PASS on open (prefix SEI found in the next 30 frames), vendor H.264 PASS (vendor H.265 = b62 PASS)."
       }
     },
     "Encoder_PollingModuleStream": {
