@@ -106,3 +106,7 @@ the `madd.s` instruction itself.
   IDRs decode; H.265 (CBR) codes and decodes.  A vendor T40 run needs the
   vendor stack and was not done.
 - Host: tests/t31 stream_layout_test (size mask and warning bit).
+
+## Data note
+
+The constant tables of the mark (DCT magnitude ranking, coefficient levels, QP region entries) are taken over from the vendor library as plain data (user decision 2026-11-12); the code around them (`src/watermark`) is hand-written C, equal to the vendor routine on the host oracle and on the devices listed in the changelog. This is vendor-equal behaviour, not a beyond-vendor item.
