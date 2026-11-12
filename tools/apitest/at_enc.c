@@ -61,8 +61,19 @@ static const char *cname[] = { "H264", "H265", "JPEG" };
 /* T41 vendor read-back of the GOP length: the IDR distance uGopLength * uMaxSameSenceCnt */
 # define GOP_RB(len, same) ((len) * ((same) > 1 ? (same) : 1))
 #else
-# define RB_SETTLE(chn, codec) do { } while (0)
 # define GOP_RB(len, same) (len)
+#endif
+/* T10/T20/T21/T30 (#367, #421): the vendor IMP glue latches SetChnFrmRate / SetGOPSize to the next picture,
+ * GetChnFrmRate / GetGOPSize answer the running values and a requested GOP is rounded up to a multiple of the
+ * reduced frame rate num*den.  The base case reads back after two pictures (latch timing: case gopfps). */
+#if !defined(ENC_NEW) && (defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30))
+# define RB_SETTLE(chn, codec) pull((chn), (codec), 2, 0, 0, &si, 1500)
+# define GOP_SET_RB(g) (((g) + EFPS - 1) / EFPS * EFPS)
+#else
+# ifndef RB_SETTLE
+#  define RB_SETTLE(chn, codec) do { } while (0)
+# endif
+# define GOP_SET_RB(g) (g)
 #endif
 
 /* quiet-after-first reporting: first=1 prints the line, later calls print only failures */
@@ -600,10 +611,11 @@ static void live_common(int chn, int codec)
 
         n.gopsize = 25;
         r = IMP_Encoder_SetGOPSize(chn, &n);
+        RB_SETTLE(chn, codec);
         NEED(IMP_Encoder_GetGOPSize) {
             r2 = IMP_Encoder_GetGOPSize(chn, g); gchk(g);
-            CHECK(IMP_Encoder_SetGOPSize, r, r2 == 0 && g->gopsize == 25, "set 25, read back %d", g->gopsize);
-            CHECK(IMP_Encoder_GetGOPSize, r2, g->gopsize == 25, "%d", g->gopsize);
+            CHECK(IMP_Encoder_SetGOPSize, r, r2 == 0 && g->gopsize == GOP_SET_RB(25), "set 25, read back %d (expect %d)", g->gopsize, GOP_SET_RB(25));
+            CHECK(IMP_Encoder_GetGOPSize, r2, g->gopsize == GOP_SET_RB(25), "%d", g->gopsize);
         }
         n.gopsize = EGOP; IMP_Encoder_SetGOPSize(chn, &n);
         gfree(g);

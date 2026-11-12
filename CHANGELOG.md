@@ -17,6 +17,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
   - T40 `SU_CIPHER_DES_Test`: host -> nohw (user-approved error path, no DES node on the board).
 - New issues for code gaps: #427 (T30 HSkip Helix wiring, cells cache), #428 (T30 Iridix DRC strength above the vendor, feature row 14).
 - T30X slot b68 prepared, not run (audit, needs the user's go): SU cells with the vendor 1.0.5 libsysutils, keys, LED, SU_Base_Reboot as the final reboot, NCU denoise open run, SetISPLDC after #365.
+## 2026-11-12: apitest base encoder case follows the T10/T20/T21/T30 latch (#421)
+
+- `tools/apitest/at_enc.c`: on T10/T20/T21/T30 the base case reads `GetChnFrmRate` / `GetGOPSize` back after two pictures (the vendor glue latches both to the next picture, #367) and expects the GOP rounded up to a multiple of the frame rate (set 25 at 15 fps reads 30, like the vendor). Library unchanged. Device check (area enc, agg68 image): T10, T20, T21 FAIL 0 (before: 4 FAIL each).
 
 ## 2026-11-12: `SU_LED_Command` checked with the LED pins of the thingino profiles
 
