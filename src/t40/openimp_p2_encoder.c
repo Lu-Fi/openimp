@@ -2921,7 +2921,9 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 #endif
     /* a new encoder starts with an empty ROI table (the slot keeps no region
      * of an earlier channel: #404, the H.265 read-back showed H.264's) */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     memset(ch->roi, 0, sizeof(ch->roi));
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     ch->rc_runtime = 0;
     if (ch->jpeg_quality.user_ql_en)
