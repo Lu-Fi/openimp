@@ -86,7 +86,7 @@ Separate from the streamer-function bars above: this counts functions of the rec
 
 | SoC | proven / all | progress | note |
 |---|--:|---|---|
-| T32 | 1580/1591 (99.3 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested; as of 2026-11-11 |
+| T32 | 1591/1591 (100.0 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested; as of 2026-11-12 |
 | T33 | 0 % (not started) | `░░░░░░░░░░░░░░░░░░░░` | paused, no recovered driver yet |
 
 

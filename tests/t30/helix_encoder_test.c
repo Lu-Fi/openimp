@@ -2232,6 +2232,45 @@ static T30HelixEncoder *create_rc(uint32_t width, uint32_t height,
     return encoder;
 }
 
+/* #366: a frame-rate change in the middle of a GOP (IMP_Encoder_SetChnFrmRate
+ * while the channel runs).  Restarting the controller there left its P budget
+ * count at 0 at the second P picture (SIGFPE in EPRC30_FrameStart); the OEM
+ * i264e latches the change and restarts the controller at the next IDR
+ * (i264e_idr_reconfig), the GOP keeps its pictures. */
+static void test_t30_frmrate_366(void)
+{
+    T30HelixEncoder *encoder;
+    PictureInfo info;
+    HWEncoderParams p;
+    unsigned int i;
+
+    unsetenv("OPENIMP_T30_EPRC");
+    encoder = create(1280, 720, 25, 20);
+    fill_payload(1500u, 30);
+    for (i = 0; i < 7u; i++) {
+        assert(encode(encoder, &info) == 0);
+        assert(info.idr == (i == 0u));
+    }
+    memset(&p, 0, sizeof(p));
+    p.width = 1280;
+    p.height = 720;
+    p.fps_num = 10;
+    p.fps_den = 1;
+    p.gop_length = 20;
+    p.rc_mode = HW_RC_MODE_CBR;
+    p.bitrate = 2000000;
+    p.qp = 30;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    assert(OpenIMP_T30_HelixUpdateParams(encoder, &p) == 0);
+    for (i = 7u; i < 70u; i++) {
+        assert(encode(encoder, &info) == 0);
+        assert(info.idr == (i % 20u == 0u));
+        assert(info.qp >= 20u && info.qp <= 45u);
+    }
+    OpenIMP_T30_HelixDestroy(encoder);
+}
+
 /* OPENIMP_T30_START_QP (#216, OpenIMP extra, default auto for CBR since b44). */
 static void test_t30_start_qp(void)
 {
@@ -2533,6 +2572,7 @@ int main(void)
 #if defined(PLATFORM_T30)
     test_t30_eprc();
     test_t30_start_qp();
+    test_t30_frmrate_366();
     test_t30_black_start();
 #endif
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
