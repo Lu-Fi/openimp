@@ -99,4 +99,26 @@ int openimp_t31_hevc_write_slice_header(uint8_t *dst, size_t capacity,
 int openimp_t31_hevc_write_parameter_sets(uint8_t *dst, size_t capacity,
                                           const OpenIMPT31HevcConfig *config);
 
+/*
+ * PPS cu_qp_delta_enabled_flag and Enc1 cmd[9] bit 16 (hardware RC) for the
+ * T31 HEVC core (#403).  The core codes cu_qp_delta_abs whenever it runs,
+ * also for FixQP with the hardware RC off, so FixQP keeps the PPS flag set
+ * like vendor libimp 1.1.6; only rate-controlled pictures enable the HWRC.
+ * hwrc_on: OPENIMP_T31_HEVC_HWRC; fixqp_cuqpd: OPENIMP_T31_HEVC_FIXQP_CUQPD
+ * (0 = the old FixQP PPS without cu_qp_delta, garbage picture).
+ */
+static inline uint8_t openimp_t31_hevc_pps_cu_qp_delta(int hwrc_on, int fixqp,
+                                                       int fixqp_cuqpd)
+{
+    if (!hwrc_on)
+        return 0u;
+    return fixqp ? (fixqp_cuqpd ? 1u : 0u) : 1u;
+}
+
+static inline int openimp_t31_hevc_cmd_hwrc(uint32_t pps_cu_qp_delta,
+                                            int fixqp)
+{
+    return pps_cu_qp_delta != 0u && !fixqp;
+}
+
 #endif

@@ -3176,6 +3176,22 @@ static int avpu_t31_hevc_hwrc_enabled(const ALAvpuContext *ctx)
         return fixqp;
     }
 #endif
+#if defined(PLATFORM_T31)
+    /* T31 FixQP: the HEVC core codes cu_qp_delta_abs also without the
+     * hardware RC (cmd[9] bit 16 clear), like T40/T41.  A PPS with
+     * cu_qp_delta_enabled_flag 0 made the decoder misparse the IDR from
+     * its first CTB on (garbage picture, #403); vendor libimp 1.1.6 FixQP
+     * PPS keeps the flag set.  OPENIMP_T31_HEVC_FIXQP_CUQPD=0 = old. */
+    if (ctx) {
+        static int fixqp_cuqpd = -1;
+
+        if (fixqp_cuqpd < 0)
+            fixqp_cuqpd =
+                avpu_t31_env_flag("OPENIMP_T31_HEVC_FIXQP_CUQPD", 1);
+        return openimp_t31_hevc_pps_cu_qp_delta(
+            enabled, ctx->rc_mode == HW_RC_MODE_FIXQP, fixqp_cuqpd);
+    }
+#endif
     return enabled && ctx && ctx->rc_mode != HW_RC_MODE_FIXQP;
 }
 
@@ -3319,8 +3335,10 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     uint32_t ctb_count = ctb_w * ctb_h;
     uint32_t picture_number =
         is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
-    /* HWRC follows the cu_qp_delta flag of the PPS in force. */
-    int hwrc = ctx->hevc_pps_cu_qp_delta != 0u;
+    /* HWRC follows the cu_qp_delta flag of the PPS in force; FixQP keeps
+     * the flag (#403) but runs without the hardware RC. */
+    int hwrc = openimp_t31_hevc_cmd_hwrc(ctx->hevc_pps_cu_qp_delta,
+                                         ctx->rc_mode == HW_RC_MODE_FIXQP);
     uint32_t space;
     uint64_t pcm_cap;
 

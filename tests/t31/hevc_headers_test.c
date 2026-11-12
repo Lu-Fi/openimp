@@ -560,6 +560,33 @@ static void dump_stream(const char *path)
     fclose(file);
 }
 
+/* #403: FixQP keeps PPS cu_qp_delta_enabled_flag (the core codes
+ * cu_qp_delta_abs whatever the HWRC bit says, vendor 1.1.6 PPS has it set)
+ * but runs without the hardware RC; HWRC=0 turns both off. */
+static void test_fixqp_cu_qp_delta(void)
+{
+    OpenIMPT31HevcConfig config;
+    uint8_t buffer[1024];
+    int pps;
+
+    /* hwrc_on, fixqp, fixqp_cuqpd */
+    CHECK_EQ(openimp_t31_hevc_pps_cu_qp_delta(1, 1, 1), 1);
+    CHECK_EQ(openimp_t31_hevc_pps_cu_qp_delta(1, 0, 1), 1);
+    CHECK_EQ(openimp_t31_hevc_pps_cu_qp_delta(1, 1, 0), 0);
+    CHECK_EQ(openimp_t31_hevc_pps_cu_qp_delta(0, 1, 1), 0);
+    CHECK_EQ(openimp_t31_hevc_pps_cu_qp_delta(0, 0, 1), 0);
+    CHECK_EQ(openimp_t31_hevc_cmd_hwrc(1u, 1), 0);
+    CHECK_EQ(openimp_t31_hevc_cmd_hwrc(1u, 0), 1);
+    CHECK_EQ(openimp_t31_hevc_cmd_hwrc(0u, 0), 0);
+
+    openimp_t31_hevc_default_config(&config, 640, 360, 15, 1);
+    config.cabac_init_present = 1;
+    config.cu_qp_delta_enabled = openimp_t31_hevc_pps_cu_qp_delta(1, 1, 1);
+    pps = openimp_t31_hevc_write_pps(buffer, sizeof(buffer), &config);
+    CHECK(pps > 0);
+    check_pps(buffer, pps, &config);
+}
+
 int main(void)
 {
     const char *dump = getenv("OPENIMP_HEVC_HEADERS_DUMP");
@@ -572,6 +599,7 @@ int main(void)
     test_access_units();
     test_emulation_prevention();
     test_levels();
+    test_fixqp_cu_qp_delta();
     if (dump && *dump)
         dump_stream(dump);
 
