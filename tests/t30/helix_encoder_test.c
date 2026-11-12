@@ -1002,10 +1002,12 @@ static void test_runtime_parameters(void)
 }
 
 #if defined(PLATFORM_T30)
-/* IMP_Encoder_SetChnHSkip, T30 (#24, docs/T30_HSKIP.md): the T30 1.0.5 i264e is the T10/T20 one, its decisions are
- * tests/hskip/hskip_vectors.txt (tools/hskip_oracle.py on the T30 library).  The pictures follow the vectors (IDR,
- * frame_num, long-term flag, list modification, MMCO) in every rate-control mode, with and without the T30 eprc
- * controller; BlackEnhance writes the ENHANCE pictures in software (no VPU run, QP 0). */
+/* IMP_Encoder_SetChnHSkip, T30 (#24, docs/T30_HSKIP.md): the T30 1.0.5 i264e is the T10/T20 one, but its
+ * i264e_validate_parameters keeps the skip words in SMART rate control only and sets m, n by the skip type (T30X b63:
+ * the vendor CBR streams are plain IPPP for every skip type).  SMART: the pictures follow
+ * tests/hskip/hskip_vectors_t30smart.txt (tools/hskip_oracle.py --smart30 on the T30 library: IDR, frame_num, long-term
+ * flag, list modification, MMCO), with and without the T30 eprc controller; BlackEnhance writes the ENHANCE pictures
+ * in software (no VPU run, QP 0).  FIXQP / CBR: the plain GOP, whatever the skip attributes. */
 typedef struct {
     unsigned int cnt, idr, ft, ltr, reo, mm;
 } T30HsVec;
@@ -1013,7 +1015,7 @@ typedef struct {
 static int t30_hs_vectors(unsigned int gop, unsigned int type, unsigned int m, unsigned int n, unsigned int same,
                           T30HsVec *v, unsigned int count)
 {
-    FILE *f = fopen("../hskip/hskip_vectors.txt", "r");
+    FILE *f = fopen("../hskip/hskip_vectors_t30smart.txt", "r");
     char line[256];
     unsigned int g, t, mm, nn, s, i = 0;
     int ref, rec, idc;
@@ -1035,7 +1037,8 @@ static int t30_hs_vectors(unsigned int gop, unsigned int type, unsigned int m, u
     return -1;
 }
 
-static void t30_hs_params(HWEncoderParams *params, unsigned int gop, int cbr)
+/* mode: 0 FIXQP, 1 CBR, 2 SMART */
+static void t30_hs_params(HWEncoderParams *params, unsigned int gop, int mode)
 {
     memset(params, 0, sizeof(*params));
     params->width = 640;
@@ -1043,18 +1046,29 @@ static void t30_hs_params(HWEncoderParams *params, unsigned int gop, int cbr)
     params->fps_num = gop < 15u ? gop : 15u;     /* CreateChn rounds the GOP up to a multiple of the rate (#367) */
     params->fps_den = 1;
     params->gop_length = gop;
-    params->rc_mode = cbr ? HW_RC_MODE_CBR : HW_RC_MODE_FIXQP;
+    params->rc_mode = mode == 2 ? HW_RC_MODE_VBR : mode ? HW_RC_MODE_CBR : HW_RC_MODE_FIXQP;
     params->bitrate = 500000;
     params->qp = 30;
     params->min_qp = 20;
     params->max_qp = 51;
-    params->rc_flags = HW_RC_FLAG_APP;
+    params->rc_flags = HW_RC_FLAG_APP | (mode == 2 ? HW_RC_FLAG_SMART : 0u);
+}
+
+/* T30 i264e_validate_parameters in SMART: m, n by the skip type */
+static void t30_hs_mn(unsigned int gop, unsigned int type, unsigned int *m, unsigned int *n)
+{
+    switch (type) {
+    case 1: *m = 1; *n = 1; break;
+    case 2: *m = 1; *n = 2; break;
+    case 3: case 4: *m = 1; *n = gop - 1u; break;
+    default: *m = gop - 1u; *n = 1; break;
+    }
 }
 
 static void test_t30_hskip(void)
 {
     static const unsigned int mns[4][3] = { { 7, 1, 0 }, { 7, 1, 3 }, { 4, 2, 0 }, { 3, 3, 5 } };
-    unsigned int type, k, black, eprc, frame, scenarios = 0;
+    unsigned int type, k, black, eprc, frame, scenarios = 0, mode;
 
     hs_parse = 1;
     for (eprc = 0; eprc < 2u; eprc++) {
@@ -1066,15 +1080,19 @@ static void test_t30_hskip(void)
                     T30HelixEncoder *encoder = NULL;
                     PictureInfo info;
                     T30HsVec v[48];
-                    unsigned int runs0, blacks = 0;
+                    unsigned int runs0, blacks = 0, m, n, same;
 
-                    assert(t30_hs_vectors(8u, type, mns[k][0], mns[k][1], mns[k][2], v, 48u) == 0);
-                    t30_hs_params(&params, 8u, (int)eprc);
+                    /* SMART: the application's m and n do not count, maxSameSceneCnt for N1X and H1M only */
+                    t30_hs_mn(8u, type, &m, &n);
+                    same = (type == 0u || type >= 5u) ? mns[k][2] : 0u;
+                    if (same != 0u && same != 3u)
+                        same = 3u;
+                    assert(t30_hs_vectors(8u, type, m, n, same, v, 48u) == 0);
+                    t30_hs_params(&params, 8u, 2);
                     params.hskip_type = type;
                     params.hskip_m = mns[k][0];
                     params.hskip_n = mns[k][1];
-                    /* CreateChn: maxSameSceneCnt counts for N1X and H1M only */
-                    params.same_scene_gops = (type == 0u || type >= 5u) ? mns[k][2] : 0u;
+                    params.same_scene_gops = same;
                     params.hskip_flags = HW_HSKIP_SET | (black ? HW_HSKIP_BLACK : 0u);
                     assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
                     runs0 = runs;
@@ -1103,6 +1121,33 @@ static void test_t30_hskip(void)
                 }
             }
         }
+        for (mode = 0; mode < 2u; mode++) {
+            /* FIXQP, CBR: i264e_validate_parameters clears the six words: the plain GOP (b63 vendor CBR: IPPP) */
+            for (type = 0; type <= 6u; type++) {
+                HWEncoderParams params;
+                T30HelixEncoder *encoder = NULL;
+                PictureInfo info;
+                unsigned int runs0;
+
+                t30_hs_params(&params, 8u, (int)mode);
+                params.hskip_type = type;
+                params.hskip_m = 4;
+                params.hskip_n = 2;
+                params.same_scene_gops = (type == 0u || type >= 5u) ? 3u : 0u;
+                params.hskip_flags = HW_HSKIP_SET | HW_HSKIP_BLACK | HW_HSKIP_SCENECUT;
+                assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+                runs0 = runs;
+                for (frame = 0; frame < 24u; frame++) {
+                    fill_payload(200u + frame, 20u);
+                    assert(encode(encoder, &info) == 0);
+                    assert(info.idr == (frame % 8u == 0u) && info.frame_num == frame % 8u);
+                    assert(!info.ltr && !info.reorder && !info.mmco && info.slice_bytes > 200u);
+                }
+                assert(runs - runs0 == 24u);
+                OpenIMP_T30_HelixDestroy(encoder);
+                scenarios++;
+            }
+        }
     }
     {
         /* IMP_Encoder_SetChnHSkip at run time: i264e_reconfig_hskip_set waits for the next IDR (frame 16) */
@@ -1113,7 +1158,7 @@ static void test_t30_hskip(void)
 
         unsetenv("OPENIMP_T30_EPRC");
         assert(t30_hs_vectors(8u, 5u, 7u, 1u, 0u, v, 32u) == 0);
-        t30_hs_params(&params, 8u, 1);
+        t30_hs_params(&params, 8u, 2);
         assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
         for (frame = 0; frame < 40u; frame++) {
             fill_payload(300u + frame, 20u);
@@ -1155,30 +1200,34 @@ static void test_t30_hskip(void)
         OpenIMP_T30_HelixDestroy(encoder);
     }
     for (eprc = 0; eprc < 2u; eprc++) {
-        /* bEnableScenecut (i264e_decide_reset_slice_to_idr): H1M_TRUE m 4 (a base picture every 5), 15 fps; the base
+        /* bEnableScenecut (i264e_decide_reset_slice_to_idr), SMART: H1M_TRUE (m 14 n 1 by i264e_validate_parameters),
+         * GOP 15, maxSameSceneCnt 3 (an LBASE picture opens every GOP of the 45-picture IDR period), 15 fps; the base
          * picture at the whole second (frame 15) is larger than the IDR picture: it is coded again as an IDR picture,
-         * the structure starts again there (next IDR one GOP later, frame 45) */
+         * the structure starts again there (next IDR one IDR period later, frame 60) */
         HWEncoderParams params;
         T30HelixEncoder *encoder = NULL;
         PictureInfo info;
         unsigned int runs0;
 
         setenv("OPENIMP_T30_EPRC", eprc ? "1" : "0", 1);
-        t30_hs_params(&params, 30u, (int)eprc);
+        t30_hs_params(&params, 15u, 2);
         params.hskip_type = 6;
         params.hskip_m = 4;
         params.hskip_n = 2;
+        params.same_scene_gops = 3;
         params.hskip_flags = HW_HSKIP_SET | HW_HSKIP_SCENECUT;
         assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
         runs0 = runs;
-        for (frame = 0; frame < 50u; frame++) {
+        for (frame = 0; frame < 65u; frame++) {
             fill_payload(frame == 15u ? 3000u : 300u, 20u);
             assert(encode(encoder, &info) == 0);
-            assert(info.idr == (frame == 0u || frame == 15u || frame == 45u));
-            assert(info.frame_num == (frame < 15u ? frame : frame < 45u ? frame - 15u : frame - 45u));
+            if (info.idr != (frame == 0u || frame == 15u || frame == 60u))
+                fprintf(stderr, "scenecut eprc %u frame %u idr %d fn %u\n", eprc, frame, info.idr, info.frame_num);
+            assert(info.idr == (frame == 0u || frame == 15u || frame == 60u));
+            assert(info.frame_num == (frame < 15u ? frame : frame < 60u ? frame - 15u : frame - 60u));
             assert(!info.idr || info.ltr);
         }
-        assert(runs - runs0 == 51u);                /* frame 15 ran twice */
+        assert(runs - runs0 == 66u);                /* frame 15 ran twice */
         OpenIMP_T30_HelixDestroy(encoder);
     }
     unsetenv("OPENIMP_T30_EPRC");

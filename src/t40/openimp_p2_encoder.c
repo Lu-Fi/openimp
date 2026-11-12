@@ -390,6 +390,12 @@ typedef struct {
      * back; kept here for the getter (the Radix encoder codes no crop) */
     uint32_t h265_crop[4];
     int h265_crop_set;
+    /* IMP_Encoder_GetChnHSkip of the vendor T30 1.0.5 (0xb39c0, 4.7.2 build) reads
+     * i264e/i265e get_param(9) = the run-time staging words (i264e E+0x91608..0x9161c,
+     * i264e_reconfig_hskip_get), not the CreateChn attribute: zero after CreateChn,
+     * the six words after SetChnHSkip, black word after SetChnHSkipBlackEnhance
+     * (T30X b63: GetChnHSkip after CreateChn type 2/0/6 -> all zero) */
+    IMPEncoderAttrHSkip hs_staged;
 #endif
 #if defined(PLATFORM_T20)
     /* IMP_Encoder_SetChnDemask: the vendor's per-picture strategy and its
@@ -2874,6 +2880,7 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
 #if defined(P2_T30_NATIVE)
     p2_t30_superframe_defaults(ch);
     ch->h265_crop_set = 0;          /* a new i265e has no crop */
+    memset(&ch->hs_staged, 0, sizeof(ch->hs_staged));   /* a new i264e/i265e: staging all zero */
 #endif
     ch->created = 1;
 #if defined(PLATFORM_T31)
@@ -6563,6 +6570,10 @@ int IMP_Encoder_SetChnHSkip(int channel, const IMPEncoderAttrHSkip *attr)
         return -1;
     }
     ch->attr.rcAttr.attrHSkip.hSkipAttr = *attr;
+#if defined(P2_T30_NATIVE)
+    if (ch->created && (ch->codec_type == IMP_ENC_TYPE_AVC || ch->codec_type == IMP_ENC_TYPE_HEVC))
+        ch->hs_staged = *attr;      /* i264e_reconfig_hskip_set / i265e_set_param(9) */
+#endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(P2_T30_NATIVE)
     /* i264e_reconfig_hskip_set (T30 1.0.5: i264e_set_param(9) of an H.264
      * channel; an H.265 channel goes to i265e_set_param(9), which the Radix
@@ -6597,7 +6608,15 @@ int IMP_Encoder_GetChnHSkip(int channel, IMPEncoderAttrHSkip *attr)
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
     if (ch->created) {
+#if defined(P2_T30_NATIVE)
+        /* the staging words of the encoder (see hs_staged); a JPEG channel answers zero */
+        if (ch->codec_type == IMP_ENC_TYPE_AVC || ch->codec_type == IMP_ENC_TYPE_HEVC)
+            *attr = ch->hs_staged;
+        else
+            memset(attr, 0, sizeof(*attr));
+#else
         *attr = ch->attr.rcAttr.attrHSkip.hSkipAttr;
+#endif
     } else {
 #if defined(PLATFORM_T20)
         pthread_mutex_unlock(&ch->lock);
@@ -6929,6 +6948,10 @@ int IMP_Encoder_SetChnHSkipBlackEnhance(int channel, const int enable)
     if (p2_channels[channel].created) {
         p2_channels[channel].attr.rcAttr.attrHSkip.hSkipAttr.bBlackEnhance =
             enable != 0;
+#if defined(P2_T30_NATIVE)
+        /* i264e_reconfig_black_enhance_set writes the staging black word (E+0x9161c) */
+        p2_channels[channel].hs_staged.bBlackEnhance = enable != 0;
+#endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(P2_T30_NATIVE)
         /* i264e_reconfig_black_enhance_set (applied by i264e_reconfig at the next
          * picture, not only at an IDR): drop-able pictures coded as all-skip slices */

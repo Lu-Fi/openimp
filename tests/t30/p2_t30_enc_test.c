@@ -195,11 +195,18 @@ int main(void)
         IMPEncoderAttrHSkip hsk;
         extern int IMP_Encoder_SetChnHSkipBlackEnhance(int, const int);
 
+        /* vendor GetChnHSkip reads the i264e staging words: all zero after CreateChn (T30X b63: type 2/0/6 -> 0) */
+        memset(&hsk, 0x5a, sizeof(hsk));
+        CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.skipType == 0 && hsk.m == 0 && hsk.n == 0 &&
+              hsk.maxSameSceneCnt == 0 && !hsk.bEnableScenecut && !hsk.bBlackEnhance);
         memset(&hsk, 0, sizeof(hsk));
-        CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.maxSameSceneCnt == 3);
+        hsk.maxSameSceneCnt = 3;
         hsk.bEnableScenecut = 1;
         CHECK(IMP_Encoder_SetChnHSkip(0, &hsk) == 0 && hs_calls == 2 && hs_scene == 1);
+        memset(&hsk, 0, sizeof(hsk));         /* after SetChnHSkip: the six words (b63 hs5rt: type 5 m 9 n 1 same 2) */
+        CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.maxSameSceneCnt == 3 && hsk.bEnableScenecut);
         CHECK(IMP_Encoder_SetChnHSkipBlackEnhance(0, 1) == 0 && hs_black == 1 && hs_calls == 3);
+        CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.bBlackEnhance && hsk.maxSameSceneCnt == 3);
         CHECK(IMP_Encoder_SetChnHSkipBlackEnhance(0, 0) == 0 && hs_black == 0);
         hsk.skipType = IMP_Encoder_STYPE_H1M_TRUE;     /* above maxHSkipType (0 here): refused, nothing sent */
         CHECK(IMP_Encoder_SetChnHSkip(0, &hsk) == -1 && hs_calls == 4);

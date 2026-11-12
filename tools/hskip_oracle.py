@@ -18,6 +18,9 @@ the vendor library is copied into OpenIMP; it is read from the path you pass.
 T30 (issue #24): the default run and '--black' with T30/lib/1.0.5/uclibc/4.7.2/libimp.so print the T10/T20 vectors
 (hskip_vectors.txt, black_vectors.txt) byte for byte: the T30 i264e is the T10/T20 one.
 
+'--smart30' with the T30 library: the structures of the skip attributes as T30 i264e_validate_parameters leaves them
+in SMART rate control (tests/hskip/hskip_vectors_t30smart.txt; outside SMART the T30 encoder runs no skip structure).
+
 T21 (issue #7): the same options with T21/lib/1.0.33/uclibc/5.4.0/libimp.so, results in tests/hskip/*_t21.txt;
 '--validate' prints what i264e_validate_parameters makes of the skip attributes per rate-control mode
 (tests/hskip/validate_t21.txt); '--sceneidr' prints the scene-cut IDR decisions (tests/hskip/sceneidr_t21.txt).
@@ -307,8 +310,15 @@ if __name__ == '__main__':
             for line in lines:
                 print(line)
         sys.exit(0)
+    scen = SCEN
+    if len(sys.argv) > 2 and sys.argv[2] == '--smart30':
+        # T30 1.0.5 (#24): i264e_validate_parameters keeps the skip words in SMART only and sets m, n by the type
+        # (0/5/6: gop-1, 1; 1: 1, 1; 2: 1, 2; 3/4: 1, gop-1): the structures OpenIMP runs in SMART
+        # (tests/hskip/hskip_vectors_t30smart.txt)
+        tab = lambda g, t: {1: (1, 1), 2: (1, 2), 3: (1, g - 1), 4: (1, g - 1)}.get(t, (g - 1, 1))
+        scen = [(g, t) + tab(g, t) + (s,) for g in (8, 30) for t in range(7) for s in (0, 3)]
     L = O.Lib(sys.argv[1]); pick(L)
-    for (gop, typ, m, n, same) in SCEN:
+    for (gop, typ, m, n, same) in scen:
         try:
             sh, lines = run(L, gop, typ, m, n, same)
         except Exception as e:          # the OEM traps (divide by zero) for a spacing of 0, e.g. HN1 with gop 2

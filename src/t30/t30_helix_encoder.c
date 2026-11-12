@@ -3475,9 +3475,19 @@ uint32_t OpenIMP_T30_HelixFailures(const T30HelixEncoder *encoder)
  *
  * T10/T20 take the skip attributes as given.  The T21 1.0.33 library runs
  * them through i264e_validate_parameters (hskip_t21_validate): in SMART rate
- * control only, with m and n of its own. */
+ * control only, with m and n of its own.  The T30 1.0.5 library does the same
+ * (i264e_validate_parameters 0x48d04 of the 4.7.2 build: rate-control method
+ * param[0x2f] != 3 (SMART) -> memset of the six words param[0x28..0x2d], at
+ * CreateChn and in i264e_idr_reconfig; SMART: type 0..6, m/n by the same
+ * per-type table as T21, maxSameSceneCnt 0..100).  T30X b63: CBR streams of the
+ * vendor are plain IPPP for every skip type, also after a run-time
+ * SetChnHSkip; so the T30 structure runs in SMART only (#24). */
 
-#if defined(HELIX_T21_SYNTAX)
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T20) && !defined(PLATFORM_T21) && !defined(PLATFORM_T23)
+#define HELIX_T30_HS_VALIDATE 1
+#endif
+
+#if defined(HELIX_T21_SYNTAX) || defined(HELIX_T30_HS_VALIDATE)
 static int hs_is_smart(const HWEncoderParams *hp)
 {
     return hp->rc_mode == HW_RC_MODE_VBR && (hp->rc_flags & HW_RC_FLAG_SMART) != 0u;
@@ -3505,6 +3515,21 @@ static void hs_attr(const HWEncoderParams *hp, HSkipAttr *a)
     a->same = (t == 0u || t == 5u || t == 6u) ? hp->same_scene_gops : 0u;
     a->scenecut = (hp->hskip_flags & HW_HSKIP_SCENECUT) != 0u;
     a->black = (hp->hskip_flags & HW_HSKIP_BLACK) != 0u;
+#if defined(HELIX_T30_HS_VALIDATE)
+    {
+        /* T30 1.0.5 i264e_validate_parameters: outside SMART the six words are zero (plain GOP, no black
+         * enhancement); in SMART m and n follow the type (as T21), maxSameSceneCnt 0..100 (T21 1..100: the
+         * same IDR period, both count only above 1) */
+        uint32_t same = hp->same_scene_gops;
+
+        hskip_t21_validate(a, hs_is_smart(hp), hp->gop_length);
+        if (!hs_is_smart(hp))
+            a->same = 0u;
+        else
+            a->same = same > 100u ? 100u : same;
+        a->same = (a->type == 0u || a->type == 5u || a->type == 6u) ? a->same : 0u;
+    }
+#endif
 #endif
 }
 
@@ -3515,6 +3540,11 @@ static int t20_hs_wanted(const HWEncoderParams *hp)
 
     hs_attr(hp, &a);
     return a.type != 0u;
+#elif defined(HELIX_T30_HS_VALIDATE)
+    HSkipAttr a;
+
+    hs_attr(hp, &a);
+    return a.type != 0u || (a.same > 1u && (hp->hskip_flags & HW_HSKIP_SET));
 #else
     return hp->hskip_type != 0u ||
            (hp->same_scene_gops > 1u && (hp->hskip_flags & HW_HSKIP_SET));
