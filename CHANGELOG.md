@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T30 AEC ERLE 0 dB explained: stationary lab signals, not a bug (#272)
+
+- Desk analysis, no device run. The OpenIMP path (`IMP_AI_EnableAec` -> reference from the driver in the same fragments as the microphone -> `openimp_aec_process` per 10 ms block) is correct: host ERLE 36-45 dB on speech-like signals, both 8 and 16 kHz, 1.5 and 40 ms echo delay (existing `aec_test`). The vendor libimp 1.0.5 uses a separate `libaudioProcess.so` (`audio_process_aec_create/process/free`), not part of the tree.
+- Cause of the b53 "0 dB": WebRTC AECM adapts its echo channel only while the far end is active (`farEnergyVAD` / `farEnergyMaxMin` in aecm_core.c). A stationary 1 kHz tone or noise burst never is, so any echo stays (host: ERLE 0.1 dB on both, 8 and 16 kHz); the same signals amplitude-modulated at 3 Hz give 36-46 dB. b55/b57 found no audible echo at the microphone at all on that unit.
+- Host: `tests/t31/aec_test.c` now also runs the four lab signals (stationary and 3 Hz modulated tone/noise) and fails when the modulated case stays under 15 dB. No code change; use speech, music or modulated noise for AEC device tests.
+
 ## 2026-11-12: first GetFrame / snapshot after a pause returned an old picture (#405, regression of #374)
 
 - #374 kept one buffer with the driver (oldest ready frame back when none was left). The T10/T20 (and T30) ISP writes a ring of DMA banks and stops its DMA while the next bank is empty, so one queued buffer completes no frame: capture stopped with frames from before the pause in the ready queue, the stock frame channel slept in DQBUF for good (no idle recycle) and the next `GetFrame` / JPEG snapshot got such a frame (T10 light box: first snapshot after an AE compensation step showed the previous step; NV12 noise frames came every 2nd frame).
