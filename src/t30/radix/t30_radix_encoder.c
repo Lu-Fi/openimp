@@ -102,6 +102,13 @@ struct T30RadixEncoder {
      * next IDR as I265eReconfig does */
     HWEncoderParams pending;
     int pending_set;
+    /* SetH265TransCfg (#399): latched, coded from the next IDR on */
+    int32_t trans_cb, trans_cr;
+    int trans_set;
+    /* InsertUserData (#399): SEI payloads for the next picture */
+    uint32_t ud_count;
+    uint32_t ud_len[T30_RADIX_USER_DATA_MAX_CNT];
+    uint8_t ud_data[T30_RADIX_USER_DATA_MAX_CNT][T30_RADIX_USER_DATA_MAX_SIZE];
     uint32_t failures;
     uint32_t reg_errors;
 };
@@ -250,6 +257,8 @@ int OpenIMP_T30_RadixCreate(T30RadixEncoder **encoder_out,
 
     radix_channel(&e->params, &ch);
     t30_hevc_channel_params(&ch, &e->vps, &e->sps, &e->pps);
+    e->trans_cb = e->pps.cb_qp_offset;      /* -3 (i265e_param_default) */
+    e->trans_cr = e->pps.cr_qp_offset;
     e->width = e->sps.width;
     e->height = e->sps.height;
     w16 = (e->width + 15u) & ~15u;
@@ -417,9 +426,80 @@ static void radix_apply_pending(T30RadixEncoder *e)
     e->vps = vps;
     e->sps = sps;
     e->pps = pps;
+    /* the parameter sets are rebuilt with the default offsets: keep the
+     * ones SetH265TransCfg gave (initPPS reads I265e +0x3c/+0x40) */
+    e->pps.cb_qp_offset = e->trans_cb;
+    e->pps.cr_qp_offset = e->trans_cr;
     LOG_CODEC("T30 Radix: params fps=%u/%u gop=%u rc=%u bitrate=%u qp=%u [%u,%u]",
               next.fps_num, next.fps_den, next.gop_length, next.rc_mode,
               next.bitrate, next.qp, next.min_qp, next.max_qp);
+}
+
+int OpenIMP_T30_RadixSetChromaQp(T30RadixEncoder *e, int cr, int cb)
+{
+    if (!e)
+        return -1;
+    e->trans_cr = cr;
+    e->trans_cb = cb;
+    e->trans_set = 1;
+    return 0;
+}
+
+int OpenIMP_T30_RadixGetChromaQp(const T30RadixEncoder *e, int *cr, int *cb)
+{
+    if (!e || !cr || !cb)
+        return -1;
+    *cr = e->pps.cr_qp_offset;
+    *cb = e->pps.cb_qp_offset;
+    return 0;
+}
+
+int OpenIMP_T30_RadixSetUserData(T30RadixEncoder *e, uint32_t count,
+                                 const uint32_t *lengths,
+                                 const uint8_t (*data)[T30_RADIX_USER_DATA_MAX_SIZE])
+{
+    uint32_t i;
+
+    if (!e || count > T30_RADIX_USER_DATA_MAX_CNT)
+        return -1;
+    for (i = 0; i < count; i++)
+        if (lengths[i] > T30_RADIX_USER_DATA_MAX_SIZE)
+            return -1;
+    for (i = 0; i < count; i++) {
+        e->ud_len[i] = lengths[i];
+        memcpy(e->ud_data[i], data[i], lengths[i]);
+    }
+    e->ud_count = count;
+    return 0;
+}
+
+/* SEIUserDataUnregistered (i265e m_uuid_iso_iec_11578, libimp 1.0.5 .rodata
+ * 0x157010) */
+static const uint8_t radix_sei_uuid[16] = {
+    0x2c, 0xa2, 0xde, 0x09, 0xb5, 0x17, 0x47, 0xdb,
+    0xbb, 0x55, 0xa4, 0xfe, 0x7f, 0xc2, 0xfc, 0x4e
+};
+
+/* sliceEncap: per queued payload SEI::write (payload type 5, size 16 + len in
+ * 0xff steps, UUID, bytes), byte alignment, NAL type 0x27 (prefix SEI) */
+static size_t radix_user_sei(const T30RadixEncoder *e, uint32_t i, uint8_t *out,
+                             size_t cap)
+{
+    uint8_t rbsp[8 + 16 + T30_RADIX_USER_DATA_MAX_SIZE + 1];
+    uint32_t rest = 16u + e->ud_len[i], n = 0;
+
+    rbsp[n++] = 5;
+    while (rest >= 255u) {
+        rbsp[n++] = 255;
+        rest -= 255u;
+    }
+    rbsp[n++] = (uint8_t)rest;
+    memcpy(rbsp + n, radix_sei_uuid, 16);
+    n += 16;
+    memcpy(rbsp + n, e->ud_data[i], e->ud_len[i]);
+    n += e->ud_len[i];
+    rbsp[n++] = 0x80;
+    return t30_hevc_nal(out, cap, 39, rbsp, n, 1);
 }
 
 /* i265e parameter 7 (IMP_Encoder_GetGOPSize, #367) */
@@ -604,6 +684,13 @@ int OpenIMP_T30_RadixEncode(T30RadixEncoder *e, const IMPFrameInfo *frame,
     /* I265e::reconfig: latched changes apply on an IDR only */
     if (idr && e->pending_set)
         radix_apply_pending(e);
+    if (idr && e->trans_set) {
+        /* ReconfigIdrFrame (flag 0x4000): the PPS carries the new offsets
+         * from this IDR on */
+        e->trans_set = 0;
+        e->pps.cb_qp_offset = e->trans_cb;
+        e->pps.cr_qp_offset = e->trans_cr;
+    }
     if (EPRC30_FrameStart(&e->rc, idr, &pic) != 0) {
         e->failures++;
         return -1;
@@ -651,7 +738,8 @@ int OpenIMP_T30_RadixEncode(T30RadixEncoder *e, const IMPFrameInfo *frame,
     }
     (void)DMA_RmemFlushCache((void *)(uintptr_t)e->bitstream.virt_addr, len, 2);
 
-    cap = 3u * RADIX_HEADER_BYTES + 64u + (size_t)len * 3u / 2u + 16u;
+    cap = 3u * RADIX_HEADER_BYTES + 64u + (size_t)len * 3u / 2u + 16u +
+          e->ud_count * (3u * (T30_RADIX_USER_DATA_MAX_SIZE + 32u));
     out = malloc(cap);
     rbsp = malloc(RADIX_HEADER_BYTES + (size_t)len);
     stream = calloc(1, sizeof(*stream));
@@ -659,6 +747,18 @@ int OpenIMP_T30_RadixEncode(T30RadixEncoder *e, const IMPFrameInfo *frame,
         goto fail;
     if (idr && !(n = radix_stream_headers(e, out, cap)))
         goto fail;
+    /* user data: one prefix SEI NAL each in front of the slice; the queue
+     * is consumed with this picture */
+    {
+        uint32_t ui;
+
+        for (ui = 0; ui < e->ud_count; ui++) {
+            if (!(k = radix_user_sei(e, ui, out + n, cap - n)))
+                goto fail;
+            n += k;
+        }
+        e->ud_count = 0;
+    }
     t30_hevc_bits_init(&b, rbsp, RADIX_HEADER_BYTES);
     if (radix_slice_header(e, idr, qp, &b) != 0 || b.overflow)
         goto fail;

@@ -36,6 +36,23 @@ int OpenIMP_T30_RadixRequestIDR(T30RadixEncoder *encoder);
  * a new frame rate or GOP requests that IDR.  Call between pictures. */
 int OpenIMP_T30_RadixUpdateParams(T30RadixEncoder *encoder,
                                   const HWEncoderParams *params);
+/* IMP_Encoder_SetH265TransCfg / GetH265TransCfg (vendor I265eReconfig::setTrans,
+ * getTrans, #399): the PPS chroma QP offsets, default -3 / -3.  Set latches
+ * the values and the next IDR codes them (ReconfigIdrFrame -> I265e::reset ->
+ * initPPS); Get returns what the encoder codes with now.  No range check, as
+ * the vendor. */
+int OpenIMP_T30_RadixSetChromaQp(T30RadixEncoder *encoder, int cr, int cb);
+int OpenIMP_T30_RadixGetChromaQp(const T30RadixEncoder *encoder, int *cr,
+                                 int *cb);
+/* IMP_Encoder_InsertUserData on an H.265 channel (#399): the queue the
+ * vendor's i265e takes per picture (all waiting payloads, up to 2 of 1024
+ * bytes), each written as a prefix SEI NAL (type 39, payload type 5 with the
+ * i265e UUID) between the parameter sets and the slice of that picture. */
+#define T30_RADIX_USER_DATA_MAX_CNT  2u
+#define T30_RADIX_USER_DATA_MAX_SIZE 1024u
+int OpenIMP_T30_RadixSetUserData(T30RadixEncoder *encoder, uint32_t count,
+                                 const uint32_t *lengths,
+                                 const uint8_t (*data)[T30_RADIX_USER_DATA_MAX_SIZE]);
 /* Consecutive failed pictures since the last good one. */
 uint32_t OpenIMP_T30_RadixFailures(const T30RadixEncoder *encoder);
 /* the GOP i265e parameter 7 reads (IMP_Encoder_GetGOPSize, #367) */
