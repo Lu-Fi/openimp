@@ -46,7 +46,7 @@ SYMBOLS = ["✅", "✅+", "⚠️", "🔧", "📋", "❌", "—", "?"]
 CELL_KEYS = {"sym", "text", "issues", "evidence", "table_sym"}
 FEATURE_KEYS = {"n", "title", "group", "detail_group", "group_head", "anchor", "vendor", "cells", "pre", "extra"}
 LABELS = ["soc:" + s for s in SOCS] + [
-    "area:" + a for a in ("ISP", "AE-AWB", "Encoder", "FrameSource", "OSD", "IVS", "Audio", "System", "Driver", "Docs")] + [
+    "area:" + a for a in ("ISP", "AE-AWB", "Encoder", "FrameSource", "OSD", "IVS", "Audio", "System", "Driver", "Docs", "tests")] + [
     "type:gap", "type:bug", "type:wip", "prio:release-gate", "prio:streamer", "prio:long-term",
     "repo:openimp", "repo:open-tx-isp"]
 
