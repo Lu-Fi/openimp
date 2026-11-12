@@ -40,6 +40,11 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   `ghidra/DecompRange.java OUT 1ad550 1c1db0`.
 - `patch265.py`: the three indirect adjust_P_frame_dqp calls in estimate_qp (stack arguments lost).
 - `diff265.py SEED N [K0 [VB]]`: per-call differential test (E = handle + 0x2088); `reg265.sh SO OUT [N]`
-  runs N scenarios (seed 1 synthetic statistics, seed 2 random statistics and per-row IDR sizes).
+  runs N scenarios (seed 1 synthetic statistics, seed 2 random statistics and per-row IDR sizes), seed 3 random
+  rate-control attributes) and the poke scenarios of `rand265p.py` (5 N / 2 in all).
+- `rand265p.py SEED N [K0 [VB]]`: the H.264 rand4 / rand5 knobs on the H.265 layout, poked at function entry:
+  out-of-range configuration values at VIDEO_CFG, HW revision e+0x34 (6 / 7), size-based reference QP
+  (inst+0x54), SMART motion level inst+0x7f / rule inst+0x7d, the per-picture flags e+0x30 / e+0x53,
+  st+0x398 back to 0 at FRAME_END, IDR periods that differ from the GOP, GOP 2.
 - `swap265.py` (in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
   controller with the functions of `swapmap265.txt` taken from `src/eprc/eprc_t33_h265.c`.
