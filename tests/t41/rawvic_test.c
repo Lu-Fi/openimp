@@ -78,6 +78,18 @@ int DMA_AllocDescriptor(IMPDMABufferInfo *info, int size, const char *tag)
 
 int IMP_Free(uintptr_t address) { freed = address; return 0; }
 
+/* test pattern mode 6: ISP core page (colour filter order at 0x88) and the
+ * cache write-back of the drawn frame */
+volatile uint32_t rawvic_test_isp[1024];
+static volatile int flushes;
+int DMA_RmemFlushCache(void *virt, uint32_t size, int dir)
+{
+    assert(virt == (void *)rmem && size == 64 * 32 && dir == 1);
+    flushes++;
+    return 0;
+}
+int openimp_tp_ispin_set(uint32_t pattern);
+
 int32_t IMP_ISP_Tuning_GetSensorAttr(IMPVI_NUM num, IMPISPSENSORAttr *attr)
 {
     (void)num;
@@ -267,6 +279,84 @@ int main(void)
     assert(freed == (uintptr_t)rmem);
     OpenIMP_P1_RawStop();               /* off: nothing */
     assert(ctl_n == i + 2);
+
+    /* ---- test pattern mode 6: RAW8 x1 ring of the library ---- */
+    {
+        const uint8_t *px = (const uint8_t *)rmem;
+        const uint8_t on = 15 + 750 * 240 / 1000, off = 15;
+#define RAMP(x) (uint8_t)(15 + ((x) * 1000 / 63) * 240 / 1000)
+
+        raw_nrvbs = 1;
+        rawvic_test_isp[0x88 / 4] = 0x12345605;      /* order 5: not a plain Bayer order */
+        errno = 0;
+        assert(openimp_tp_ispin_set(5) == -1 && errno == EINVAL);
+        assert(openimp_tp_ispin_set(4) == -1 && errno == ENOTSUP);
+        rawvic_test_isp[0x88 / 4] = 0x12345602;      /* GRBG (upper bits ignored) */
+        isp_open = 0;
+        assert(openimp_tp_ispin_set(4) == -1 && errno == ENODEV);
+        isp_open = 1;
+        i = ctl_n;
+        memset(rmem, 0x5a, sizeof(rmem));
+        assert(openimp_tp_ispin_set(4) == 0);
+        assert(ctl_n == i + 1);
+        assert(ctl_seen[i][0] == 1 && ctl_seen[i][1] == 0 && ctl_seen[i][2] == 0);
+        assert(ctl_seen[i][3] == PHYS && ctl_seen[i][4] == 0 && ctl_seen[i][6] == 0);
+        wait_count(&flushes, 3);
+        /* bars of 8 px: 0 white, 1 yellow, 6 blue, 7 black; GRBG: row 0 G R, row 1 B G */
+        assert(px[0] == on && px[1] == on && px[64] == on && px[65] == on);
+        assert(px[8] == on && px[9] == on && px[64 + 8] == off && px[64 + 9] == on);
+        assert(px[48] == off && px[49] == off && px[64 + 48] == on && px[64 + 49] == off);
+        assert(px[56] == off && px[57] == off && px[64 * 31 + 57] == off);
+        assert(px[64 * 30 + 9] == on);                /* every row drawn */
+        assert(raw_set_addr[(raw_sets - 1) % 64] == PHYS);  /* fed back */
+
+        a.mode = IMPISP_OPS_MODE_ENABLE;
+        assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == -4091);  /* held by mode 6 */
+        assert(ctl_n == i + 1);
+
+        assert(openimp_tp_ispin_set(2) == 0 && ctl_n == i + 1);  /* switch: no new ring */
+        flushes = 0;
+        wait_count(&flushes, 3);
+        /* bands of 8 rows red, green, blue, white with a ramp along x */
+        assert(px[63] == 255 && px[62] == off && px[64 + 63] == off);    /* row 0: R at odd x */
+        assert(px[64 * 9 + 63] == 255 && px[64 * 8 + 63] == off);        /* green band */
+        assert(px[64 * 17 + 62] == RAMP(62) && px[64 * 16 + 62] == off); /* blue band: B at row 1 x even */
+        assert(px[64 * 24 + 62] == RAMP(62) && px[64 * 25 + 63] == 255 && px[64 * 24] == off);
+        assert(openimp_tp_ispin_set(3) == 0);
+        flushes = 0;
+        wait_count(&flushes, 3);
+        assert(px[64 * 31 + 49] == 255 && px[64 * 0 + 49] == off);      /* white band, ramp down */
+        assert(px[64 * 16 + 1] > px[64 * 2 + 1]);                        /* red band ramps along y */
+        rawvic_test_isp[0x88 / 4] = 0;                /* order moved to RGGB: followed */
+        flushes = 0;
+        wait_count(&flushes, 3);
+        assert(px[64 * 30] > 200 && px[64 * 30 + 1] == off);          /* row 30 even: R at x even */
+
+        freed = 0;
+        assert(openimp_tp_ispin_set(0) == 0);
+        assert(ctl_n == i + 2 && ctl_seen[i + 1][0] == 0 && freed == (uintptr_t)rmem);
+        assert(openimp_tp_ispin_set(0) == 0 && ctl_n == i + 2);      /* off stays off */
+
+        /* an application ring has priority */
+        raw_nrvbs = 3;
+        a.frame_done = NULL;            /* raw_cb counts frames of its own ring only */
+        a.mode = IMPISP_OPS_MODE_ENABLE;
+        assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == 0);
+        assert(openimp_tp_ispin_set(1) == -1 && errno == EBUSY);
+        assert(openimp_tp_ispin_set(0) == 0 && ctl_n == i + 3);      /* not its ring */
+        a.mode = IMPISP_OPS_MODE_DISABLE;
+        assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == 0);
+        /* DISABLE by the application stops a mode 6 ring */
+        raw_nrvbs = 1;
+        assert(openimp_tp_ispin_set(1) == 0);
+        flushes = 0;
+        wait_count(&flushes, 2);
+        assert(px[0] == 15 + 500 * 240 / 1000 && px[64 * 31 + 63] == px[0]);
+        assert(IMP_ISP_RAW_RwControl(IMPVI_MAIN, &a) == 0);
+        assert(openimp_tp_ispin_set(1) == 0 && ctl_seen[ctl_n - 1][0] == 1);  /* free again */
+        OpenIMP_P1_RawStop();
+        assert(ctl_seen[ctl_n - 1][0] == 0);
+    }
 
     printf("t41 rawvic test: ok (vic cb %d, raw cb %d)\n", cb_count, raw_cb_count);
     return 0;

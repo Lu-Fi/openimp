@@ -233,7 +233,7 @@ rawvic:
 ifneq ($(T41_ISP_HEADERS),)
 	mkdir -p "$(dir $(RAWVIC_TEST_BIN))"
 	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_T41 -Wno-comment -I$(T41_ISP_HEADERS) \
-		-I$(PROJECT_DIR)/src -fno-pie -no-pie rawvic_test.c \
+		-DRAWVIC_HOST_TEST -I$(PROJECT_DIR)/src -fno-pie -no-pie rawvic_test.c \
 		$(PROJECT_DIR)/src/t40/openimp_t41_rawvic.c -pthread -o "$(RAWVIC_TEST_BIN)"
 	$(RAWVIC_TEST_BIN)
 else

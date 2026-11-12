@@ -23,6 +23,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-12: T31 FrameSource ext channel measured against the vendor (#309, #370)
 
 - New apitest case `extchn_t31` (explicit only): `FS_EXT_CHANNEL` channel 3 + `IMP_FrameSource_SetSource(3, 1)` + Enable, argument rules, FS3 -> ENC5 H.264 for 3 s. On the T31L camera the vendor libimp 1.1.6 (with its module) gives 45 streams in 3 s, OpenIMP delivers nothing (the source is only stored): `FrameSource_SetSource` T31 `aud` -> `err`, gap issue #370. No library change.
+## 2026-11-12: test pattern mode 6 on T41 through the RAW ring (#103)
+
+- `OpenIMP_TestPattern_Set(6, p)` on T41: the library starts the vendor RAW ring (`IMP_ISP_RAW_RwControl` path, RAW8, one buffer) and overwrites every RAW frame with the mode 6 picture (`isp_pattern` 1..4) in the sensor's Bayer order (ISP core `0x88`), before the ISP reads it back. The picture runs through the whole ISP. The output rate halves while the mode runs (ring with one buffer, as the vendor). EBUSY while an application ring runs; `IMP_ISP_RAW_RwControl` ENABLE returns -4091 while mode 6 holds the ring. Beyond vendor (test pattern API).
+- Host test `tests/t41` rawvic (mode 6 cases). Device T41LQ gc5603: 3 cycles of all 4 pictures plus mode 0, expected pictures with the same statistics, 12.3 frames/s in the mode, live scene back after mode 0, 0 oops. Details: docs/TESTPATTERN.md.
+
 ## 2026-11-12: test pattern mode 6, the ISP's own test generator on T10/T20 (#103)
 
 - `OpenIMP_TestPattern_Set(6, p)` (T10, T20): the Apical ISP core's video test generator replaces the sensor's raw frame at the ISP input, so a sensor-independent picture runs through the whole ISP and the encoder. New appended parameter `isp_pattern` (1 flat field, 2 horizontal bands, 3 vertical bands, 4 vertical bars; default 4), `tpctl set 6 isp_pattern=N`. OpenIMP sends the driver's own tuning control "Test pattern" (V4L2 `0x98e906`, `IMAGE_TUNING_CID_CUSTOM_BASE + 6` of the T10/T20 SDK); any other mode sends 0. The stock libimp has no caller of this control. ENOTSUP on other SoCs; `OpenIMP_TestPattern_Supported(6)`.
