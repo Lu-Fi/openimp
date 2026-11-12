@@ -28,3 +28,18 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   slice block. Group A keeps the inputs in the ranges the vendor encoder produces (rule 0..2 / level 0..3 through
   P+0x26c/0x26d with the still map on, out-of-range values at VIDEO_CFG, motion mode cur+0x7d4 0..71): 0 differing
   calls. Group B (`rand6.py SEED N K0 VB B`, exploratory) goes past the copied .data and differs by design.
+
+## H.265 (eprc_default_set_T33, JZ_VPU_RC_*_T33)
+
+- `../../eprc_t33_h265_oracle.py`: the vendor H.265 controller under unicorn through the vendor glue
+  (IMP_Encoder_CreateChn up to i265e_init for the parameters, I265e_configure, I265eRatectrl_rcInit /
+  _rcStart / _rcEnd with a synthetic picture, slice block, maps and VPU buffers); `--scenarios` 'S' + 'F' lines.
+- Ghidra (project with the 2.2.0 .so): `ghidra/SetSig.java ghidra/sig265.txt 10000`,
+  `ghidra/CommitParams.java 1ad550 1c1db0`, `ghidra/SwitchFixRa.java ghidra/swra265.txt 10000` (the two jump
+  tables dispatched through `jr ra`, which `sw.py` skips and Ghidra takes for returns), then
+  `ghidra/DecompRange.java OUT 1ad550 1c1db0`.
+- `patch265.py`: the three indirect adjust_P_frame_dqp calls in estimate_qp (stack arguments lost).
+- `diff265.py SEED N [K0 [VB]]`: per-call differential test (E = handle + 0x2088); `reg265.sh SO OUT [N]`
+  runs N scenarios (seed 1 synthetic statistics, seed 2 random statistics and per-row IDR sizes).
+- `swap265.py` (in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
+  controller with the functions of `swapmap265.txt` taken from `src/eprc/eprc_t33_h265.c`.
