@@ -140,126 +140,464 @@ int t32_rc_params(const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height
     return 0;
 }
 
-/* IMP attributes -> i264e parameter block.  The placement follows the
- * i264e defaults and the controller clamps they end in (i264e_ratecontrol_init
- * copies P+0x130.. to the controller block); the vendor's IMP -> i264e layer
- * (IMP_Encoder_SetChnAttrRcMode, i264e_reconfig_rc_set, i264e_idr_reconfig)
- * is not checked against it yet.  A 0 in a field whose valid range starts
- * above 0 (I share, change position, statistics times, picture sizes, still
- * rate / QP) or that would freeze the QP (the I/P and P/P QP steps) keeps the
- * i264e default, so channels set up with only the
- * basic fields (IMP_Encoder_SetDefaultParam) run on the vendor defaults. */
-static void t33_set_nz(T32Rc33 *c, uint32_t off, uint32_t v)
+/* IMP attributes -> i264e parameter block, as vendor 2.2.0 makes it:
+ * IMP_Encoder_CreateChn sizes the stream buffer (encAttr.bufSize, 0xdc574),
+ * channel_i264e_encoder_init (0xd527c) copies the attribute fields into
+ * i264e_param_default's block and i264e_validate_parameters (0x6c138,
+ * called by i264e_init) clamps them.  The vendor keeps no "0 = default"
+ * rule: a 0 goes in as 0 and only the clamps below lift it (static time,
+ * statistics times 1, change position 50, still rate 1, ...); the one
+ * exception is maxIPictureSize 0 = 1.5 x the rate.  The QP steps of a CBR
+ * channel (IPfrmQPDelta / PPfrmQPDelta) 0 stay 0.  Checked field by field
+ * against the vendor library (tools/eprc_t33_imp_oracle.py,
+ * tests/t32/rc_imp_test.c). */
+static int32_t clip3(int32_t v, int32_t lo, int32_t hi)
 {
-    if (v)
-        t32_rc33_set(c, off, v);
+    return v < lo ? lo : v > hi ? hi : v;
 }
 
-static void t33_head(T32Rc33 *c, uint8_t max_qp, uint8_t min_qp, uint8_t init_qp, uint8_t max_iqp, uint8_t min_iqp)
+/* c_reduce_fraction */
+static void reduce_fraction(uint32_t *n, uint32_t *d)
 {
-    if (max_qp > 51u)
-        max_qp = 51u;
-    if (min_qp > max_qp)
-        min_qp = max_qp;
-    t32_rc33_set(c, T33P_MAX_QP, max_qp);
-    t32_rc33_set(c, T33P_MIN_QP, min_qp);
-    t32_rc33_set(c, T33P_INIT_QP, init_qp > 0u && init_qp <= 51u ? init_qp : 0xffffffffu);
-    if (max_iqp > 0u && max_iqp <= 51u && min_iqp <= max_iqp) {
-        t32_rc33_set(c, T33P_MAX_IQP, max_iqp);
-        t32_rc33_set(c, T33P_MIN_IQP, min_iqp);
-    } else {
-        t32_rc33_set(c, T33P_MAX_IQP, max_qp);
-        t32_rc33_set(c, T33P_MIN_IQP, min_qp);
+    uint32_t a = *n, b = *d, r;
+
+    if (!a || !b)
+        return;
+    r = a % b;
+    while (r) {
+        a = b;
+        b = r;
+        r = a % b;
     }
+    *n /= b;
+    *d /= b;
 }
 
-static void t33_vbr(T32Rc33 *c, uint32_t kbps, int8_t ibias, uint32_t change_pos, uint32_t static_time,
-                    uint32_t quality, uint32_t max_iprop, uint32_t min_iprop, uint32_t max_ipic, uint32_t max_ppic)
+void t32_rc_vendor_rate(uint32_t *fps_num, uint32_t *fps_den, uint32_t *gop)
 {
-    t32_rc33_set(c, T33P_KBPS, kbps);
-    t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)ibias);
-    t33_set_nz(c, 0x134, change_pos);
-    t33_set_nz(c, 0x130, static_time);
-    t32_rc33_set(c, 0x138, quality);
-    t33_set_nz(c, 0x150, max_iprop);
-    t33_set_nz(c, 0x154, min_iprop);
-    t33_set_nz(c, 0x158, max_ipic);
-    t33_set_nz(c, 0x15c, max_ppic);
+    reduce_fraction(fps_num, fps_den);
+    if (!*fps_num || !*fps_den) {
+        *fps_num = 25;
+        *fps_den = 1;
+    }
+    /* the GOP becomes a multiple of the frame rate numerator */
+    if ((*gop * *fps_den) % *fps_num)
+        *gop = (*gop / *fps_num + 1u) * *fps_num;
+    if ((int32_t)*gop < 1)
+        *gop = (uint32_t)clip3((int32_t)*fps_num, 1, 1500);   /* i264e min / max keyint 1 / 1500 */
 }
 
-int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t gop, uint32_t fps_num, uint32_t fps_den)
+uint32_t t32_rc_vendor_bufsize(uint32_t width, uint32_t height, uint32_t bufsize)
 {
-    if (!gop || !fps_num || !fps_den)
-        return -1;
-    t32_rc33_set(c, T33P_GOP, gop);
-    t32_rc33_set(c, T33P_FPS_NUM, fps_num);
-    t32_rc33_set(c, T33P_FPS_DEN, fps_den);
+    double px = (double)width * (double)height;
+
+    if (!bufsize) {
+        double v = px * 3.0 * 0.5 + 8192.0 + 128.0;
+
+        bufsize = v < 2147483648.0 ? (uint32_t)(int32_t)v : (uint32_t)(int32_t)(v - 2147483648.0) | 0x80000000u;
+    } else {
+        /* at least what a picture needs (H.264, no IVDC) */
+        float f = width < 801u && height < 601u ? 2.0f : 3.0f;
+        int32_t min = (int32_t)(px * 3.0 * 0.5 / (double)f * 0.5 + 8192.0 + 128.0);
+
+        if (min < 0x4100)
+            min = 0x4100;
+        if (bufsize < (uint32_t)min)
+            bufsize = (uint32_t)min;
+    }
+    return (bufsize + 3u) & ~3u;
+}
+
+static void t33_head(T32Rc33 *c, const IMPEncoderAttrH264CBR *a)
+{
+    /* the six QP bytes sit at the same place in every rate-controlled mode */
+    t32_rc33_set(c, T33P_MIN_QP, a->minQp);
+    t32_rc33_set(c, T33P_MAX_QP, a->maxQp);
+    t32_rc33_set8(c, 0xf4, a->blkQpEn);
+    t32_rc33_set(c, T33P_INIT_QP, a->initialQp);
+    t32_rc33_set(c, T33P_MAX_IQP, a->maxIQp);
+    t32_rc33_set(c, T33P_MIN_IQP, a->minIQp);
+}
+
+static void t33_sizes(T32Rc33 *c, uint32_t kbps, uint32_t max_i, uint32_t max_p)
+{
+    t32_rc33_set(c, 0x158, max_i ? max_i : (kbps * 3u) >> 1);
+    t32_rc33_set(c, 0x15c, max_p);
+}
+
+/* i264e_validate_parameters, the rate-control part */
+static void t33_validate(T32Rc33 *c)
+{
+#define G(o) ((int32_t)t32_rc33_get(c, (o)))
+#define S(o, v) t32_rc33_set(c, (o), (uint32_t)(v))
+#define CL(o, lo, hi) S((o), clip3(G(o), (lo), (hi)))
+    int32_t w = G(T33P_WIDTH), h = G(T33P_HEIGHT), area, lo, k = w < 0x321 ? 3 : 6;
+    union { uint32_t u; float f; } r1, r2, qc;
+
+    CL(0x118, 1, 0x40000000);
+    CL(T33P_FIX_IQP, 0, 51);
+    CL(T33P_FIX_PQP, 0, 51);
+    CL(0xe8, 0, 51);
+    CL(T33P_MAX_QP, 0, 51);
+    CL(T33P_MIN_QP, 0, G(T33P_MAX_QP));
+    CL(T33P_INIT_QP, 0, 51);
+    CL(T33P_MAX_IQP, 0, 51);
+    CL(T33P_MIN_IQP, 0, 51);
+    CL(0x11c, -10, 10);
+    CL(0x120, 0, 15);
+    CL(0x124, 0, 15);
+    CL(0x128, 2, 51);
+    if (G(T33P_KBPS) < 0x80)
+        S(T33P_KBPS, 0x80);
+    if (G(0x130) < 1)
+        S(0x130, 1);
+    CL(0x134, 50, 100);
+    CL(0x13c, 0, 8);
+    CL(0x138, 0, 7);
+    CL(0x150, 0, 100);
+    CL(0x154, 0, G(0x150));
+    CL(0x160, 1, 100);
+    CL(0x164, 0, 51);
+    CL(0x16c, 0, 10);
+    CL(0x170, 0, 3);
+    CL(0x174, 1, 100);
+    if (G(0x180) < 1)
+        S(0x180, 1);
+    if (G(0x184) < 1)
+        S(0x184, 1);
+    CL(0x188, 0, 1000);
+    qc.u = t32_rc33_get(c, 0x140);
+    qc.f = (float)clip3((int32_t)qc.f, 2, 10);
+    S(0x140, qc.u);
+    CL(0x144, G(T33P_MAX_QP), 51);
+    /* VBV: between 3/50 and 12/3 (12/6 above 800 pixels wide) bits per pixel */
+    area = (int32_t)(((uint32_t)w + 15u) & ~15u) * (int32_t)(((uint32_t)h + 15u) & ~15u);
+    lo = area * 3 / 50;
+    CL(0x19c, 0, 3);
+    CL(0x1a0, lo, area * 12 / k);
+    r1.u = t32_rc33_get(c, 0x108);
+    r2.u = t32_rc33_get(c, 0x10c);
+    CL(0x1a4, lo, (int32_t)((float)G(0x1a0) / r1.f));
+    CL(0x1a8, lo, (int32_t)((float)G(0x1a4) / r2.f));
+    CL(0x114, 1, G(0x118));
+#undef CL
+#undef S
+#undef G
+}
+
+int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den)
+{
     switch (m->rcMode) {
+    case IMP_ENC_RC_MODE_FIXQP: {
+        const IMPEncoderAttrH264FixQP *a = &m->attrH264FixQp;
+
+        t32_rc33_set(c, T33P_MODE, 0);
+        t32_rc33_set(c, T33P_FIX_IQP, a->IQp);
+        t32_rc33_set(c, T33P_FIX_PQP, a->PQp);
+        t32_rc33_set(c, 0xe8, a->BQp);
+        t32_rc33_set8(c, 0xf4, a->blkQpEn);
+        break;
+    }
     case IMP_ENC_RC_MODE_CBR: {
         const IMPEncoderAttrH264CBR *a = &m->attrH264Cbr;
 
         t32_rc33_set(c, T33P_MODE, 1);
-        t33_head(c, a->maxQp, a->minQp, a->initialQp, a->maxIQp, a->minIQp);
-        t33_vbr(c, a->outBitRate, a->iBiasLvl, 80, a->staticTime, a->qualityLvl, a->maxIprop, a->minIprop,
-                a->maxIPictureSize, a->maxPPictureSize);
+        t33_head(c, a);
+        t32_rc33_set(c, T33P_KBPS, a->outBitRate);
+        t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc33_set(c, 0x120, a->IPfrmQPDelta);
+        t32_rc33_set(c, 0x124, a->PPfrmQPDelta);
+        t32_rc33_set(c, 0x130, a->staticTime);
         t32_rc33_set(c, 0x13c, a->flucLvl);
-        t33_set_nz(c, 0x120, a->IPfrmQPDelta);
-        t33_set_nz(c, 0x124, a->PPfrmQPDelta);
+        t32_rc33_set(c, 0x150, a->maxIprop);
+        t32_rc33_set(c, 0x154, a->minIprop);
+        t33_sizes(c, a->outBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        /* qualityLvl is not handed on (the i264e default stays) */
         break;
     }
     case IMP_ENC_RC_MODE_VBR: {
         const IMPEncoderAttrH264VBR *a = &m->attrH264Vbr;
 
         t32_rc33_set(c, T33P_MODE, 2);
-        t33_head(c, a->maxQp, a->minQp, a->initialQp, a->maxIQp, a->minIQp);
-        t33_vbr(c, a->maxBitRate, a->iBiasLvl, a->changePos, a->staticTime, a->qualityLvl, a->maxIprop,
-                a->minIprop, a->maxIPictureSize, a->maxPPictureSize);
+        t33_head(c, &m->attrH264Cbr);
+        t32_rc33_set(c, T33P_KBPS, a->maxBitRate);
+        t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc33_set(c, 0x134, a->changePos);
+        t32_rc33_set(c, 0x130, a->staticTime);
+        t32_rc33_set(c, 0x138, a->qualityLvl);
+        t32_rc33_set(c, 0x150, a->maxIprop);
+        t32_rc33_set(c, 0x154, a->minIprop);
+        t33_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
         break;
     }
     case IMP_ENC_RC_MODE_SMART: {
         const IMPEncoderAttrH264Smart *a = &m->attrH264Smart;
 
         t32_rc33_set(c, T33P_MODE, 3);
-        t33_head(c, a->maxQp, a->minQp, a->initialQp, a->maxIQp, a->minIQp);
-        t33_vbr(c, a->maxBitRate, a->iBiasLvl, a->changePos, a->staticTime, a->qualityLvl, a->maxIprop,
-                a->minIprop, a->maxIPictureSize, a->maxPPictureSize);
-        t33_set_nz(c, 0x160, a->minStillRate);
-        t33_set_nz(c, 0x164, a->maxStillQp);
+        t33_head(c, &m->attrH264Cbr);
+        t32_rc33_set(c, T33P_KBPS, a->maxBitRate);
+        t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc33_set(c, 0x134, a->changePos);
+        t32_rc33_set(c, 0x130, a->staticTime);
+        t32_rc33_set(c, 0x138, a->qualityLvl);
+        t32_rc33_set(c, 0x150, a->maxIprop);
+        t32_rc33_set(c, 0x154, a->minIprop);
+        t32_rc33_set(c, 0x160, a->minStillRate);
+        t32_rc33_set(c, 0x164, a->maxStillQp);
         t32_rc33_set8(c, 0x168, a->superSmartEn);
         t32_rc33_set(c, 0x16c, a->supSmtStillLvl);
         t32_rc33_set(c, 0x170, a->supSmtStillRateLvl);
         t32_rc33_set(c, 0x174, a->maxSupSmtStillRate);
+        t33_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
         break;
     }
     case IMP_ENC_RC_MODE_CVBR: {
         const IMPEncoderAttrH264CVBR *a = &m->attrH264CVbr;
 
         t32_rc33_set(c, T33P_MODE, 4);
-        t33_head(c, a->maxQp, a->minQp, a->initialQp, a->maxIQp, a->minIQp);
-        t33_vbr(c, a->maxBitRate, a->iBiasLvl, a->changePos, 2, a->qualityLvl, a->maxIprop, a->minIprop,
-                a->maxIPictureSize, a->maxPPictureSize);
+        t33_head(c, &m->attrH264Cbr);
+        t32_rc33_set(c, T33P_KBPS, a->maxBitRate);
         t32_rc33_set(c, T33P_LONG_MAX_KBPS, a->longMaxBitRate);
         t32_rc33_set(c, T33P_LONG_MIN_KBPS, a->longMinBitRate);
-        t33_set_nz(c, 0x180, a->shortStatTime);
-        t33_set_nz(c, 0x184, a->longStatTime);
+        t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc33_set(c, 0x134, a->changePos);
+        t32_rc33_set(c, 0x180, a->shortStatTime);
+        t32_rc33_set(c, 0x184, a->longStatTime);
+        t32_rc33_set(c, 0x138, a->qualityLvl);
+        t32_rc33_set(c, 0x150, a->maxIprop);
+        t32_rc33_set(c, 0x154, a->minIprop);
         t32_rc33_set(c, 0x188, a->extraBitRate);
+        t33_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
         break;
     }
     case IMP_ENC_RC_MODE_AVBR: {
         const IMPEncoderAttrH264AVBR *a = &m->attrH264AVbr;
 
         t32_rc33_set(c, T33P_MODE, 5);
-        t33_head(c, a->maxQp, a->minQp, a->initialQp, a->maxIQp, a->minIQp);
-        t33_vbr(c, a->maxBitRate, a->iBiasLvl, a->changePos, a->staticTime, a->qualityLvl, a->maxIprop,
-                a->minIprop, a->maxIPictureSize, a->maxPPictureSize);
-        t33_set_nz(c, 0x160, a->minStillRate);
-        t33_set_nz(c, 0x164, a->maxStillQp);
+        t33_head(c, &m->attrH264Cbr);
+        t32_rc33_set(c, T33P_KBPS, a->maxBitRate);
+        t32_rc33_set(c, 0x11c, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc33_set(c, 0x134, a->changePos);
+        t32_rc33_set(c, 0x130, a->staticTime);
+        t32_rc33_set(c, 0x138, a->qualityLvl);
+        t32_rc33_set(c, 0x150, a->maxIprop);
+        t32_rc33_set(c, 0x154, a->minIprop);
+        t32_rc33_set(c, 0x160, a->minStillRate);
+        t32_rc33_set(c, 0x164, a->maxStillQp);
+        t33_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
         break;
     }
     default:
-        return -1;              /* FIXQP: no controller; QVBR: T23 revision (PRJ009/PRJ010 only) */
+        return -1;              /* QVBR: the vendor refuses it on PRJ007 */
     }
+    t32_rc_vendor_rate(&fps_num, &fps_den, &gop);
+    t32_rc33_set(c, T33P_GOP, gop);
+    t32_rc33_set(c, T33P_FPS_NUM, fps_num);
+    t32_rc33_set(c, T33P_FPS_DEN, fps_den);
+    /* the VBV size in bits: the stream buffer less 8320 bytes */
+    t32_rc33_set(c, 0x1a0, (t32_rc_vendor_bufsize(width, height, bufsize) - 8320u) * 8u);
+    /* the bitstream-full handling (g_encoder_bsfull_*: mode 1, count 2, on, 250) */
+    t32_rc33_set(c, 0x2e4, 1);
+    t32_rc33_set(c, 0x2e8, 2);
+    t32_rc33_set8(c, 0x344, 1);
+    t32_rc33_set(c, 0x348, 250);
+    t33_validate(c);
     return 0;
+}
+
+/* IMP_Encoder_SetChnAttrRcMode on an H.264 channel (vendor 2.2.0): the
+ * attribute goes through i264e_reconfig_rc_set (0x707f0) into the encoder's
+ * reconfiguration copy of the parameters (seeded by i264e_reconfig_init
+ * from the validated block), which i264e_idr_reconfig copies back at the
+ * next IDR before i264e_validate_parameters and i264e_ratecontrol_init.
+ * Fields the new mode does not carry keep their last value; the clamps are
+ * i264e_reconfig_rc_set's.  Unlike the channel set-up a 0 maxIPictureSize
+ * stays 0, the CBR qualityLvl is taken, blkQpEn becomes 0/1, and (vendor
+ * code) the SMART supSmtStillRateLvl is taken from maxIprop clamped to 0..3. */
+static void t33_runtime(uint32_t *s, const IMPEncoderAttrRcMode *m)
+{
+#define W(o, v) (s[(o) / 4] = (uint32_t)(v))
+#define AT_LEAST1(v) ((int32_t)(v) > 0 ? (int32_t)(v) : 1)
+    const IMPEncoderAttrH264CBR *h = &m->attrH264Cbr;  /* the common head */
+    int32_t maxprop = 0;
+
+    W(T33P_MODE, m->rcMode);
+    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
+        W(T33P_FIX_IQP, clip3((int32_t)m->attrH264FixQp.IQp, 0, 51));
+        W(T33P_FIX_PQP, clip3((int32_t)m->attrH264FixQp.PQp, 0, 51));
+        W(0xe8, clip3((int32_t)m->attrH264FixQp.BQp, 0, 51));
+        W(0xf4, m->attrH264FixQp.blkQpEn);
+        return;
+    }
+    W(T33P_MAX_QP, clip3(h->maxQp, 0, 51));
+    W(T33P_MIN_QP, clip3(h->minQp, 0, 51));
+    W(0xf4, h->blkQpEn);
+    W(T33P_INIT_QP, clip3(h->initialQp, 0, 51));
+    W(T33P_MAX_IQP, clip3(h->maxIQp, 0, 51));
+    W(T33P_MIN_IQP, clip3(h->minIQp, 0, 51));
+#define IPROP(a) do { maxprop = clip3((int32_t)(a)->maxIprop, 0, 100); W(0x150, maxprop); \
+        W(0x154, clip3((int32_t)(a)->minIprop, 0, maxprop)); W(0x158, (a)->maxIPictureSize); \
+        W(0x15c, (a)->maxPPictureSize); } while (0)
+#define VBRS(a) do { W(T33P_KBPS, (a)->maxBitRate); W(0x11c, clip3((a)->iBiasLvl, -10, 10)); \
+        W(0x130, AT_LEAST1((a)->staticTime)); W(0x134, clip3((int32_t)(a)->changePos, 50, 100)); \
+        W(0x138, clip3((int32_t)(a)->qualityLvl, 0, 7)); IPROP(a); } while (0)
+    switch (m->rcMode) {
+    case IMP_ENC_RC_MODE_CBR:
+        W(T33P_KBPS, h->outBitRate);
+        W(0x11c, clip3(h->iBiasLvl, -10, 10));
+        W(0x120, clip3(h->IPfrmQPDelta, 0, 15));
+        W(0x124, clip3(h->PPfrmQPDelta, 0, 15));
+        W(0x130, AT_LEAST1(h->staticTime));
+        W(0x138, clip3((int32_t)h->qualityLvl, 0, 7));
+        W(0x13c, clip3(h->flucLvl, 0, 8));
+        IPROP(h);
+        break;
+    case IMP_ENC_RC_MODE_VBR:
+        VBRS(&m->attrH264Vbr);
+        break;
+    case IMP_ENC_RC_MODE_SMART: {
+        const IMPEncoderAttrH264Smart *a = &m->attrH264Smart;
+
+        VBRS(a);
+        W(0x160, clip3(a->minStillRate, 1, 100));
+        W(0x164, clip3(a->maxStillQp, 0, 51));
+        s[0x168 / 4] = (s[0x168 / 4] & ~0xffu) | a->superSmartEn;
+        W(0x16c, clip3(a->supSmtStillLvl, 0, 10));
+        W(0x170, clip3((int32_t)a->maxIprop, 0, 3));
+        W(0x174, clip3(a->maxSupSmtStillRate, 1, 100));
+        break;
+    }
+    case IMP_ENC_RC_MODE_CVBR: {
+        const IMPEncoderAttrH264CVBR *a = &m->attrH264CVbr;
+
+        W(T33P_KBPS, a->maxBitRate);
+        W(T33P_LONG_MAX_KBPS, a->longMaxBitRate);
+        W(T33P_LONG_MIN_KBPS, a->longMinBitRate);
+        W(0x11c, clip3(a->iBiasLvl, -10, 10));
+        W(0x134, clip3((int32_t)a->changePos, 50, 100));
+        W(0x180, AT_LEAST1(a->shortStatTime));
+        W(0x184, AT_LEAST1(a->longStatTime));
+        W(0x138, clip3((int32_t)a->qualityLvl, 0, 7));
+        W(0x188, clip3(a->extraBitRate, 0, 1000));
+        IPROP(a);
+        break;
+    }
+    case IMP_ENC_RC_MODE_AVBR: {
+        const IMPEncoderAttrH264AVBR *a = &m->attrH264AVbr;
+
+        VBRS(a);
+        W(0x160, clip3(a->minStillRate, 1, 100));
+        W(0x164, clip3(a->maxStillQp, 0, 51));
+        break;
+    }
+    default:
+        break;
+    }
+#undef VBRS
+#undef IPROP
+#undef AT_LEAST1
+#undef W
+}
+
+/* IMP_Encoder_SetDefaultParam, rate-control part (vendor 2.2.0, the same
+ * for H.264 and H.265): the full set of mode defaults; QPs are bytes (the
+ * initial QP as given, -1 = 0xff), picture size caps 6/5 and 18/25 of the
+ * rate in the vendor's 32-bit arithmetic. */
+void t32_rc_default_attr(IMPEncoderAttrRcMode *rc, IMPPayloadType type, int initqp, uint32_t kbps)
+{
+    IMPEncoderRcMode mode = rc->rcMode;
+    uint32_t ipic = kbps * 6u / 5u, ppic = ipic * 3u / 5u;
+    uint8_t iqp = (uint8_t)initqp;
+
+    memset(rc, 0, sizeof(*rc));
+    rc->rcMode = mode;
+    if (type == PT_JPEG) {
+        rc->attrJPEGFixQp.qp = (uint32_t)initqp;
+        return;
+    }
+    switch (mode) {
+    case IMP_ENC_RC_MODE_FIXQP:
+        rc->attrH264FixQp.IQp = rc->attrH264FixQp.PQp = (uint32_t)initqp;
+        return;
+    case IMP_ENC_RC_MODE_CBR: {
+        IMPEncoderAttrH264CBR *a = &rc->attrH264Cbr;
+
+        a->maxQp = a->maxIQp = 45;
+        a->minQp = a->minIQp = 15;
+        a->initialQp = iqp;
+        a->outBitRate = kbps;
+        a->IPfrmQPDelta = a->PPfrmQPDelta = 8;
+        a->staticTime = 2;
+        a->flucLvl = 2;
+        a->qualityLvl = 3;
+        a->maxIprop = 100;
+        a->minIprop = 1;
+        a->maxIPictureSize = ipic;
+        a->maxPPictureSize = ppic;
+        return;
+    }
+    case IMP_ENC_RC_MODE_CVBR: {
+        IMPEncoderAttrH264CVBR *a = &rc->attrH264CVbr;
+
+        a->maxQp = a->maxIQp = 45;
+        a->minQp = a->minIQp = 15;
+        a->initialQp = iqp;
+        a->maxBitRate = kbps;
+        a->longMaxBitRate = kbps * 4u / 5u;
+        a->longMinBitRate = kbps * 3u / 5u;
+        a->changePos = 80;
+        a->shortStatTime = 2;
+        a->longStatTime = 60;
+        a->qualityLvl = 6;
+        a->maxIprop = 100;
+        a->minIprop = 1;
+        a->extraBitRate = 5;
+        a->maxIPictureSize = ipic;
+        a->maxPPictureSize = ppic;
+        return;
+    }
+    case IMP_ENC_RC_MODE_VBR:
+    case IMP_ENC_RC_MODE_SMART:
+    case IMP_ENC_RC_MODE_AVBR: {
+        /* VBR, SMART and AVBR share the head up to minIprop */
+        IMPEncoderAttrH264VBR *a = &rc->attrH264Vbr;
+
+        a->maxQp = a->maxIQp = 45;
+        a->minQp = a->minIQp = 15;
+        a->initialQp = iqp;
+        a->maxBitRate = kbps;
+        a->changePos = 80;
+        a->staticTime = 2;
+        a->qualityLvl = 6;
+        a->maxIprop = 100;
+        a->minIprop = 1;
+        if (mode == IMP_ENC_RC_MODE_VBR) {
+            a->maxIPictureSize = ipic;
+            a->maxPPictureSize = ppic;
+        } else if (mode == IMP_ENC_RC_MODE_SMART) {
+            IMPEncoderAttrH264Smart *s = &rc->attrH264Smart;
+
+            s->minStillRate = 25;
+            s->maxStillQp = 35;
+            s->supSmtStillLvl = 5;
+            s->supSmtStillRateLvl = 2;
+            s->maxSupSmtStillRate = 20;
+            s->maxIPictureSize = ipic;
+            s->maxPPictureSize = ppic;
+        } else {
+            IMPEncoderAttrH264AVBR *v = &rc->attrH264AVbr;
+
+            v->minStillRate = 25;
+            v->maxStillQp = 35;
+            v->maxIPictureSize = ipic;
+            v->maxPPictureSize = ppic;
+        }
+        return;
+    }
+    default:
+        return;
+    }
 }
 
 void t32_rc_free(T32Rc *rc)
@@ -276,9 +614,10 @@ void t32_rc_free(T32Rc *rc)
     rc->on = 0;
 }
 
-int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height,
+int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32_t pic_h, uint32_t bufsize,
                 uint32_t gop, uint32_t fps_num, uint32_t fps_den, int hevc)
 {
+    uint32_t width = (pic_w + 15u) & ~15u, height = (pic_h + 15u) & ~15u;
     EprcParams p;
 
     t32_rc_free(rc);
@@ -286,28 +625,42 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t width, uint32
     rc->hevc = hevc;
     rc->mode = (int)m->rcMode;
     rc->i_min = rc->i_max = -1;
-    if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) != 0)
-        return 0;
     if (!hevc && m->rcMode != IMP_ENC_RC_MODE_QVBR) {
+        /* H.264: the vendor's i264e set-up, whatever the attribute holds */
         T32Rc33 *c = calloc(1, sizeof(*c));
 
         if (!c || t32_rc33_open(c, width, height) != 0) {
             free(c);
             return -1;
         }
-        if (t32_rc33_params(c, m, gop, fps_num, fps_den) != 0) {
+        if (t32_rc33_params(c, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den) != 0) {
+            t32_rc33_close(c);
+            free(c);
+            return 0;
+        }
+        /* i264e_reconfig_init: the copy SetChnAttrRcMode works on */
+        for (unsigned o = 0; o < T32_RC_PWORDS; o++)
+            rc->stash[o] = t32_rc33_get(c, 4u * o);
+        rc->stash[0xf4 / 4] &= 0xffu;
+        rc->have_stash = 1;
+        rc->width = width;
+        rc->height = height;
+        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
             t32_rc33_close(c);
             free(c);
             return 0;
         }
         t32_rc33_init(c);
+        if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) == 0)
+            rc->params = p;     /* for the log line only */
         rc->t33 = c;
-        rc->params = p;
         rc->min_qp = (int)t32_rc33_get(c, T33P_MIN_QP);
         rc->max_qp = (int)t32_rc33_get(c, T33P_MAX_QP);
         rc->on = 1;
         return 0;
     }
+    if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) != 0)
+        return 0;
     /* maxIQp / minIQp sit at the same place in every rate-controlled
      * attribute but QVBR (which has them one byte earlier) */
     {
@@ -330,6 +683,44 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t width, uint32
     rc->params = p;
     rc->min_qp = (int)p.min_qp;
     rc->max_qp = (int)p.max_qp;
+    rc->on = 1;
+    return 0;
+}
+
+int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32_t pic_h, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den, int hevc)
+{
+    uint32_t stash[T32_RC_PWORDS], width = rc->width, height = rc->height;
+    T32Rc33 *c;
+
+    if (hevc || !rc->have_stash || rc->hevc || m->rcMode > IMP_ENC_RC_MODE_AVBR)
+        return t32_rc_init(rc, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, hevc);
+    memcpy(stash, rc->stash, sizeof(stash));
+    t33_runtime(stash, m);
+    t32_rc_free(rc);
+    memset(rc, 0, sizeof(*rc));
+    memcpy(rc->stash, stash, sizeof(stash));
+    rc->have_stash = 1;
+    rc->width = width;
+    rc->height = height;
+    rc->mode = (int)m->rcMode;
+    rc->i_min = rc->i_max = -1;
+    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP)
+        return 0;
+    c = calloc(1, sizeof(*c));
+    if (!c || t32_rc33_open(c, width, height) != 0) {
+        free(c);
+        return -1;
+    }
+    /* i264e_idr_reconfig: the copy back (blkQpEn as 0/1), then the clamps */
+    for (unsigned o = 0; o < T32_RC_PWORDS; o++)
+        t32_rc33_set(c, 4u * o, stash[o]);
+    t32_rc33_set(c, 0xf4, stash[0xf4 / 4] != 0);
+    t33_validate(c);
+    t32_rc33_init(c);
+    rc->t33 = c;
+    rc->min_qp = (int)t32_rc33_get(c, T33P_MIN_QP);
+    rc->max_qp = (int)t32_rc33_get(c, T33P_MAX_QP);
     rc->on = 1;
     return 0;
 }

@@ -26,6 +26,8 @@ RC_DEPS := $(RC_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/
 	$(PROJECT_DIR)/src/eprc/eprc_internal.h $(RC33_HDR)
 # eprc T33 H.264 port (#295): QP of every picture vs the vendor 2.2.0 runs
 RC33_BIN := $(BUILD)/t32-rc33-test
+# IMP attributes -> i264e parameters and SetDefaultParam (#295) vs vendor 2.2.0
+RC_IMP_BIN := $(BUILD)/t32-rc-imp-test
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
 INC := -DPLATFORM_T32 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src
 DEPS := ioctl_abi_test.c $(PROJECT_DIR)/src/t32/openimp_t32_ioctl.h
@@ -60,11 +62,12 @@ AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
 
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
 	$(TEST_BIN)
 	$(DEC_BIN)
-	$(RC_BIN) vendor-2.2.0-rc-h264.txt
+	$(RC_BIN) vendor-2.2.0-rc-imp-h264.txt
 	$(RC33_BIN) vendor-2.2.0-rc-h264.txt vendor-2.2.0-rc33-h264.txt -m 2 vendor-2.2.0-rc33-motion2-h264.txt
+	gzip -dc vendor-2.2.0-rc-imp.txt.gz | $(RC_IMP_BIN) vendor-2.2.0-rc-imp-defaults.txt /dev/stdin
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)
 	# AENC/ADEC (#298): G.711A/U, G.726, ADPCM bytes == vendor 2.2.0, frame time stamps
@@ -123,6 +126,11 @@ $(ACODEC_BIN): $(ACODEC_SRC) $(PROJECT_DIR)/src/audio/openimp_audio_codec.h
 	@mkdir -p $(BUILD)
 	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror $(INC) -o $@ $(ACODEC_SRC) \
 		$(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -lm
+
+$(RC_IMP_BIN): rc_imp_test.c $(RC_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src -o $@ rc_imp_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
 
 $(RC33_BIN): rc33_test.c $(RC33_SRC) $(RC33_HDR)
 	@mkdir -p $(BUILD)

@@ -536,14 +536,18 @@ static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, 
 #endif
 }
 
-/* (re)start the channel's rate control from @m (#295) */
-static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m)
+/* start the channel's rate control from @m (#295); @again: a rate control
+ * set at run time (SetChnAttrRcMode), taken on top of the current one as
+ * the vendor's i264e does */
+static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m, int again)
 {
     struct t32_h264 *a = &e->avc;
     const IMPEncoderCHNAttr *at = &e->attr;
+    int r = (again ? t32_rc_reconfig : t32_rc_init)(&a->rc, m, at->encAttr.picWidth, at->encAttr.picHeight,
+                                                    at->encAttr.bufSize, a->gop, at->rcAttr.outFrmRate.frmRateNum,
+                                                    at->rcAttr.outFrmRate.frmRateDen, e->hevc);
 
-    if (t32_rc_init(&a->rc, m, ALIGN16(at->encAttr.picWidth), ALIGN16(at->encAttr.picHeight), a->gop,
-                    at->rcAttr.outFrmRate.frmRateNum, at->rcAttr.outFrmRate.frmRateDen, e->hevc) != 0)
+    if (r != 0)
         IMP_LOG_WARN(TAG, "rate control init failed: fixed QP %d", a->qp_p);
     else if (a->rc.on)
         IMP_LOG_INFO(TAG, "%s rate control: mode %d -> eprc %u, %u kbit/s, qp [%u,%u], gop %u",
@@ -568,7 +572,7 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         m = e->attr.rcAttr.attrRcMode;
         pthread_mutex_unlock(&enc_lock);
         if (restart)
-            rc_setup(e, &m);
+            rc_setup(e, &m, 1);
     }
     if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
         qp = q;
@@ -1103,7 +1107,9 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     memset(attr, 0, sizeof(*attr));
     attr->encAttr.enType = (IMPPayloadType)(((uint32_t)profile >> 24) & 0xffu);
     attr->encAttr.bufSize = (uint32_t)bufSize;
-    attr->encAttr.profile = (uint32_t)profile;
+    /* vendor 2.2.0: H.264 keeps the profile index 2 (High; the channel maps
+     * 0/1/2 to profile_idc 66/77/100), H.265 the profile as given */
+    attr->encAttr.profile = attr->encAttr.enType == PT_H264 ? 2u : (uint32_t)profile;
     attr->encAttr.picWidth = (uint16_t)width;
     attr->encAttr.picHeight = (uint16_t)height;
     attr->rcAttr.outFrmRate.frmRateNum = (uint32_t)fpsNum;
@@ -1111,32 +1117,12 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     attr->rcAttr.maxGop = (uint32_t)gopLen;
     rc = &attr->rcAttr.attrRcMode;
     rc->rcMode = rcMode;
-    if (attr->encAttr.enType == PT_JPEG) {
-        if (rcMode != IMP_ENC_RC_MODE_FIXQP) {
-            IMP_LOG_ERR(TAG, "JPEG takes FIXQP only");
-            return -1;
-        }
-        rc->attrJPEGFixQp.qp = (uint32_t)iInitialQP;  /* kept as given, -1 too */
-        return 0;
+    if (attr->encAttr.enType == PT_JPEG && rcMode != IMP_ENC_RC_MODE_FIXQP) {
+        IMP_LOG_ERR(TAG, "JPEG takes FIXQP only");
+        return -1;
     }
-    /* H.264 / H.265 (HERA, later issue): the basic fields */
-    switch (rcMode) {
-    case IMP_ENC_RC_MODE_FIXQP:
-        rc->attrH264FixQp.IQp = rc->attrH264FixQp.PQp = rc->attrH264FixQp.BQp = (uint32_t)iInitialQP;
-        break;
-    case IMP_ENC_RC_MODE_CBR:
-        rc->attrH264Cbr.outBitRate = (uint32_t)bitrate;
-        rc->attrH264Cbr.initialQp = (uint8_t)iInitialQP;
-        rc->attrH264Cbr.maxQp = 48;
-        rc->attrH264Cbr.minQp = 15;
-        break;
-    default:
-        rc->attrH264Vbr.maxBitRate = (uint32_t)bitrate;
-        rc->attrH264Vbr.initialQp = (uint8_t)iInitialQP;
-        rc->attrH264Vbr.maxQp = 48;
-        rc->attrH264Vbr.minQp = 15;
-        break;
-    }
+    /* the vendor's full set of mode defaults (JPEG: the QP as given, -1 too) */
+    t32_rc_default_attr(rc, attr->encAttr.enType, iInitialQP, (uint32_t)bitrate);
     return 0;
 }
 
@@ -1213,7 +1199,7 @@ static int h265_setup(struct t32_enc_chn *e)
     a->pps_len = t32_h265_pps(&a->seq5, a->pps);
     if (!a->vps_len || !a->sps_len || !a->pps_len)
         return -1;
-    rc_setup(e, &at->rcAttr.attrRcMode);
+    rc_setup(e, &at->rcAttr.attrRcMode, 0);
     return 0;
 }
 
@@ -1232,6 +1218,13 @@ static int h264_setup(struct t32_enc_chn *e)
     if (env && atoi(env) > 0 && atoi(env) <= 4096)
         a->section_kb = (uint32_t)atoi(env);
     a->gop = at->rcAttr.maxGop;
+    if (!e->hevc) {
+        /* vendor 2.2.0 channel_i264e_encoder_init: the IDR interval is a
+         * multiple of the frame rate numerator (0: the frame rate) */
+        uint32_t n = at->rcAttr.outFrmRate.frmRateNum, d = at->rcAttr.outFrmRate.frmRateDen;
+
+        t32_rc_vendor_rate(&n, &d, &a->gop);
+    }
     h264_set_qp(e, &at->rcAttr.attrRcMode);
 #ifdef PLATFORM_T33
     /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8 */
@@ -1256,7 +1249,7 @@ static int h264_setup(struct t32_enc_chn *e)
     a->seq.init_qp = a->qp_i;
     a->sps_len = t32_h264_sps(&a->seq, a->sps);
     a->pps_len = t32_h264_pps(&a->seq, a->pps);
-    rc_setup(e, &at->rcAttr.attrRcMode);
+    rc_setup(e, &at->rcAttr.attrRcMode, 0);
     return 0;
 }
 

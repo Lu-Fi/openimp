@@ -11,6 +11,7 @@ compared.  Nothing from the vendor library is copied; it is read from the
 path you pass.  The emulator has no HERA: statistics are synthetic.
 
     tools/eprc_t33_oracle.py LIB [--motion N] MODE [KBPS] [PICTURES]      'F' lines
+    tools/eprc_t33_oracle.py LIB --imp MODE [KBPS] [PICTURES]   the same, set up through the IMP layer
     tools/eprc_t33_oracle.py LIB --compare MODE KBPS PICS OPENIMP_TRACE
     tools/eprc_t33_oracle.py LIB --defaults                  i264e defaults
     tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
@@ -52,7 +53,7 @@ def model_stats(qp, nbytes, mbs):
 
 class T33:
     def __init__(self, path, mode, kbps, rev=6, w=W, h=H, gop=GOP, fps=FPS, minqp=15, maxqp=48,
-                 initqp=30, extra=None, motion=0):
+                 initqp=30, extra=None, motion=0, block=None):
         L = self.L = Lib(path, generic=True)
         lo = L.syms['get_history_iqp'] if 'get_history_iqp' in L.syms else 0
         hi = L.syms['librc_h264_get_version'] + 0x100
@@ -66,15 +67,19 @@ class T33:
         L.call('i264e_param_default', P)
         if mode is None:
             return
-        L.w32(P + 4, rev)
         L.w32(P + 0xc20, 1); L.w32(P + 0xc24, self.REG)     # the HERA register window (no /dev/mem)
-        L.w32(P + 0x2c, gop); L.w32(P + 0x3c, w); L.w32(P + 0x40, h)
-        L.w32(P + 0x2a4, fps); L.w32(P + 0x2a8, 1)
-        L.w32(P + 0xdc, mode); L.w32(P + 0x110, kbps)
-        L.w32(P + 0xec, minqp); L.w32(P + 0xf0, maxqp); L.w32(P + 0xf8, initqp)
-        L.w32(P + 0xfc, maxqp); L.w32(P + 0x100, minqp)
-        if mode == 4:                                     # CVBR long-term bounds
-            L.w32(P + 0x178, kbps); L.w32(P + 0x17c, kbps // 4)
+        if block is not None:
+            # the parameter block the vendor IMP layer made (tools/eprc_t33_imp_oracle.py)
+            L.wr(P, block)
+        else:
+            L.w32(P + 4, rev)
+            L.w32(P + 0x2c, gop); L.w32(P + 0x3c, w); L.w32(P + 0x40, h)
+            L.w32(P + 0x2a4, fps); L.w32(P + 0x2a8, 1)
+            L.w32(P + 0xdc, mode); L.w32(P + 0x110, kbps)
+            L.w32(P + 0xec, minqp); L.w32(P + 0xf0, maxqp); L.w32(P + 0xf8, initqp)
+            L.w32(P + 0xfc, maxqp); L.w32(P + 0x100, minqp)
+            if mode == 4:                                 # CVBR long-term bounds
+                L.w32(P + 0x178, kbps); L.w32(P + 0x17c, kbps // 4)
         # further i264e parameters {offset: (struct format, value)}, e.g. the SMART/AVBR
         # still-scene knobs +0x25c (on), +0x260, +0x26c (mode), +0x26d (level), +0x168
         for o, (f, v) in (extra or {}).items():
@@ -120,8 +125,23 @@ class T33:
         self.n += 1
 
 
-def run(path, mode, kbps, pics, out=sys.stdout, motion=0):
-    t = T33(path, mode, kbps, motion=motion)
+def imp_block(path, mode, kbps):
+    """the vendor IMP layer's parameter block for rc_test.c's channel: IMP_Encoder_SetDefaultParam
+    (1920x1088, 25 fps, GOP 50, initial QP 30, bufSize 0) with max QP / max I QP 48, then
+    IMP_Encoder_CreateChn up to i264e_init"""
+    from eprc_t33_imp_oracle import Imp, H264_MAIN
+    imp = Imp(path)
+    r, a = imp.default(H264_MAIN, mode, W, H, FPS, 1, GOP, 0, 30, kbps)
+    a = bytearray(a)
+    a[0x40] = a[0x44] = 48
+    r, v, blk = imp.param(bytes(a))
+    if r or v or blk is None:
+        raise RuntimeError('vendor channel set-up failed (%x %x)' % (r, v))
+    return blk
+
+
+def run(path, mode, kbps, pics, out=sys.stdout, motion=0, imp=False):
+    t = T33(path, mode, kbps, motion=motion, block=imp_block(path, mode, kbps) if imp else None)
     mbs = (W // 16) * (H // 16)
     seq = []
     for i in range(pics):
@@ -208,6 +228,9 @@ def main():
     if len(a) >= 3 and a[1] == '--motion':
         motion = int(a[2])
         del a[1:3]
+    imp = len(a) >= 2 and a[1] == '--imp'
+    if imp:
+        del a[1]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
@@ -227,7 +250,7 @@ def main():
         print('QP |diff| mean %.2f max %d, equal %d/%d' % (sum(d) / n, max(d), d.count(0), n))
         return
     mode = int(a[1]); kbps = int(a[2]) if len(a) > 2 else 2000; pics = int(a[3]) if len(a) > 3 else 250
-    run(a[0], mode, kbps, pics, motion=motion)
+    run(a[0], mode, kbps, pics, motion=motion, imp=imp)
 
 
 if __name__ == '__main__':

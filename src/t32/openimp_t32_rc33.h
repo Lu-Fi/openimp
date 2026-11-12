@@ -55,6 +55,8 @@ typedef struct {
  * then sets the parameters (t32_rc33_set) and calls t32_rc33_init.
  * 0, -1 on allocation failure. */
 int t32_rc33_open(T32Rc33 *c, uint32_t width, uint32_t height);
+/* the parameter words the controller reads (host test: IMP mapping vs vendor) */
+unsigned t32_rc33_param_words(const uint16_t **words);
 void t32_rc33_close(T32Rc33 *c);
 /* a 32-bit / 8-bit word of the i264e parameter block */
 void t32_rc33_set(T32Rc33 *c, uint32_t off, uint32_t v);

@@ -8,7 +8,8 @@
  *                           input format of tools/eprc_t33_oracle.py
  *                           --compare)
  *   rc_test FILE            also compare with the vendor 2.2.0 sequences of
- *                           FILE (vendor-2.2.0-rc-h264.txt, same model;
+ *                           FILE (vendor-2.2.0-rc-imp-h264.txt, same model,
+ *                           set up through the vendor IMP layer;
  *                           the device motion mode 2 gives the same QPs on
  *                           it as the harness's 0): H.264 runs the T33
  *                           revision through the attribute mapping, so the
@@ -56,71 +57,16 @@ struct run {
 
 /* the attributes of the vendor reference runs: i264e_param_default values
  * for everything the runs do not set (QP 15..48, initial QP 30) */
+/* the channel of the vendor runs (tools/eprc_t33_oracle.py --imp): the
+ * IMP_Encoder_SetDefaultParam defaults (initial QP 30) with max QP / max I QP 48 */
 static void fill(IMPEncoderAttrRcMode *m, int mode, uint32_t kbps)
 {
     memset(m, 0, sizeof(*m));
     m->rcMode = (IMPEncoderRcMode)mode;
+    t32_rc_default_attr(m, PT_H264, 30, kbps);
     /* the head is common to CBR/VBR/SMART/CVBR/AVBR */
     m->attrH264Cbr.maxQp = 48;
-    m->attrH264Cbr.minQp = 15;
-    m->attrH264Cbr.initialQp = 30;
     m->attrH264Cbr.maxIQp = 48;
-    m->attrH264Cbr.minIQp = 15;
-    switch (mode) {
-    case IMP_ENC_RC_MODE_CBR:
-        m->attrH264Cbr.outBitRate = kbps;
-        m->attrH264Cbr.staticTime = 2;
-        m->attrH264Cbr.qualityLvl = 6;
-        m->attrH264Cbr.flucLvl = 2;
-        m->attrH264Cbr.IPfrmQPDelta = 8;
-        m->attrH264Cbr.PPfrmQPDelta = 3;
-        m->attrH264Cbr.maxIprop = 100;
-        m->attrH264Cbr.minIprop = 1;
-        break;
-    case IMP_ENC_RC_MODE_VBR:
-        m->attrH264Vbr.maxBitRate = kbps;
-        m->attrH264Vbr.changePos = 80;
-        m->attrH264Vbr.staticTime = 2;
-        m->attrH264Vbr.qualityLvl = 6;
-        m->attrH264Vbr.maxIprop = 100;
-        m->attrH264Vbr.minIprop = 1;
-        break;
-    case IMP_ENC_RC_MODE_SMART:
-        m->attrH264Smart.maxBitRate = kbps;
-        m->attrH264Smart.changePos = 80;
-        m->attrH264Smart.staticTime = 2;
-        m->attrH264Smart.qualityLvl = 6;
-        m->attrH264Smart.maxIprop = 100;
-        m->attrH264Smart.minIprop = 1;
-        m->attrH264Smart.minStillRate = 25;
-        m->attrH264Smart.maxStillQp = 35;
-        m->attrH264Smart.supSmtStillLvl = 5;
-        m->attrH264Smart.supSmtStillRateLvl = 2;
-        m->attrH264Smart.maxSupSmtStillRate = 20;
-        break;
-    case IMP_ENC_RC_MODE_CVBR:
-        m->attrH264CVbr.maxBitRate = kbps;
-        m->attrH264CVbr.longMaxBitRate = kbps;
-        m->attrH264CVbr.longMinBitRate = kbps / 4u;
-        m->attrH264CVbr.changePos = 80;
-        m->attrH264CVbr.shortStatTime = 2;
-        m->attrH264CVbr.longStatTime = 60;
-        m->attrH264CVbr.qualityLvl = 6;
-        m->attrH264CVbr.maxIprop = 100;
-        m->attrH264CVbr.minIprop = 1;
-        m->attrH264CVbr.extraBitRate = 5;
-        break;
-    case IMP_ENC_RC_MODE_AVBR:
-        m->attrH264AVbr.maxBitRate = kbps;
-        m->attrH264AVbr.changePos = 80;
-        m->attrH264AVbr.staticTime = 2;
-        m->attrH264AVbr.qualityLvl = 6;
-        m->attrH264AVbr.maxIprop = 100;
-        m->attrH264AVbr.minIprop = 1;
-        m->attrH264AVbr.minStillRate = 25;
-        m->attrH264AVbr.maxStillQp = 35;
-        break;
-    }
 }
 
 static int qp_trace[4096];
@@ -139,7 +85,7 @@ static int simulate(int mode, uint32_t kbps, int hevc, uint32_t w, uint32_t h, u
     memset(&rc, 0, sizeof(rc));
     memset(r, 0, sizeof(*r));
     r->qmin = r->imin = 99;
-    if (t32_rc_init(&rc, &m, w, h, gop, 25, 1, hevc) != 0 || !rc.on)
+    if (t32_rc_init(&rc, &m, w, h, 0, gop, 25, 1, hevc) != 0 || !rc.on)
         return -1;
     for (i = 0; i < pics; i++) {
         int idr = gop_pos == 0, qp = t32_rc_start(&rc, idr, gop_pos);

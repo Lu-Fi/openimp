@@ -36,6 +36,12 @@ typedef struct {
     uint64_t bits;              /* coded bits since init (statistics) */
     EprcParams params;          /* what the controller was started with */
     T32Rc33 *t33;               /* H.264: the vendor's T33 revision (NULL: T23 revision) */
+    /* H.264: the i264e reconfiguration copy of the parameters (vendor
+     * i264e_reconfig_init / _rc_set) that SetChnAttrRcMode works on */
+#define T32_RC_PWORDS (0x360 / 4)
+    uint32_t stash[T32_RC_PWORDS];
+    int have_stash;
+    uint32_t width, height;     /* the coded size */
 } T32Rc;
 
 /* The EprcParams of a T32 channel (exposed for the host tests): 0, or -1
@@ -43,16 +49,36 @@ typedef struct {
 int t32_rc_params(const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t gop,
                   uint32_t fps_num, uint32_t fps_den, EprcParams *p);
 
-/* The i264e parameters of a T32 H.264 channel for the T33 revision (exposed
- * for the host tests): 0, -1 for FIXQP / QVBR / an unknown mode. */
-int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t gop, uint32_t fps_num, uint32_t fps_den);
+/* The i264e parameters of a T32 H.264 channel for the T33 revision, as
+ * vendor 2.2.0 makes them (exposed for the host tests): @width / @height the
+ * attribute's picture size, @bufsize its encAttr.bufSize, @gop maxGop.  0,
+ * -1 for FIXQP / QVBR / an unknown mode. */
+int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den);
+
+/* vendor 2.2.0 H.264 channel set-up: the frame rate reduced (0 -> 25/1) and
+ * the GOP rounded up to a multiple of its numerator (0 -> the frame rate),
+ * and the stream buffer size IMP_Encoder_CreateChn makes of encAttr.bufSize */
+void t32_rc_vendor_rate(uint32_t *fps_num, uint32_t *fps_den, uint32_t *gop);
+uint32_t t32_rc_vendor_bufsize(uint32_t width, uint32_t height, uint32_t bufsize);
+
+/* IMP_Encoder_SetDefaultParam's rate-control defaults for rc->rcMode
+ * (vendor 2.2.0); @type the payload (PT_JPEG: the FIXQP JPEG QP). */
+void t32_rc_default_attr(IMPEncoderAttrRcMode *rc, IMPPayloadType type, int initqp, uint32_t kbps);
 
 /* Start (or restart, after IMP_Encoder_SetChnAttrRcMode) the controller.
  * 0 with rc->on 0 for FIXQP, 0 with rc->on 1 for a rate-controlled mode,
  * -1 on allocation failure (rc->on 0: the caller codes at the initial QP). */
-int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height,
+int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32_t pic_h, uint32_t bufsize,
                 uint32_t gop, uint32_t fps_num, uint32_t fps_den, int hevc);
 void t32_rc_free(T32Rc *rc);
+
+/* IMP_Encoder_SetChnAttrRcMode at the next IDR: an H.264 channel set up
+ * by t32_rc_init takes @m as vendor 2.2.0 does (on top of its current
+ * parameters, i264e_reconfig_rc_set + i264e_idr_reconfig); anything else
+ * starts over (t32_rc_init).  Same returns as t32_rc_init. */
+int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32_t pic_h, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den, int hevc);
 
 /* The QP of the next picture (FRAME_START): @idr 1 for an IDR picture,
  * @gop_pos the pictures since the IDR.  -1 when no controller runs. */
