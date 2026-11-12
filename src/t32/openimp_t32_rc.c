@@ -788,3 +788,14 @@ void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned 
     rc->pictures++;
     rc->bits += (uint64_t)bytes * 8u;
 }
+
+const uint8_t *t32_rc_slice(T32Rc *rc)
+{
+    return rc->on && rc->t33 ? t32_rc33_slice(rc->t33) : NULL;
+}
+
+const uint8_t *t32_rc_map(T32Rc *rc, int which, uint32_t *len)
+{
+    *len = 0;
+    return rc->on && rc->t33 ? t32_rc33_map(rc->t33, which, len) : NULL;
+}

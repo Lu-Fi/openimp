@@ -58,9 +58,22 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
   (`i264e_ratecontrol_is_reenc`, revision 6: write 0x13240804 + 8 i to 0x13240044, read 0x13240804 + 8 i); its sum
   feeds the IDR slice targets. Checked on the model (`vendor-2.2.0-rc33-rows-h264.txt`, rc33_test -r: QPs and the
   controller's sum P+0x6bc equal); what HERA really returns there needs a device (the QEMU model has no such data).
-- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the slice block
-  and MB QP map the T33 revision fills for the engine (computed, not yet put into the command list), macroblock QP
-  (HERA QP generator stays off, P pictures get the window 1..51 as before), the H.265 T33 revision, the other
+- H.264 slice block: the T33 controller fills the vendor's slice block at every FRAME_START (`VPI_set_sliceinfo`
+  into the encoder's rc memory H+0xf9c, which `hwicodec_pf_h264e_t32v_enc` copies and `H264E_T32V_SliceInit`
+  packs into the HERA command list). OpenIMP's list takes from it what the vendor packs from the controller's
+  fields (revision 6): EFE_FRM_QP 0x2001c (QP, MB QP window s+0x826 / s+0x825), 0x2029c (MB QP clamp s+0x76e /
+  s+0x76f, map enables), the row-budget block 0x40100..0x40124 and, right after it, one 0x40900 + 4 i word per
+  64-line row (s+0x568, s+0x530 rows: 17 at 1088 lines, so the lists grow to 753 / 930 pairs as the vendor's).
+  The registers were found by running `H264E_T32V_SliceInit` under unicorn on the controller's block against
+  a FIXQP block at the same QP (every other word equal), the bytes each one reads by flipping every byte.
+  The per-MB maps the block points at (SMART map s+0x24c -> EMC 0x90028, MB QP / flag map s+0x250 -> 0x90030,
+  ROI map s+0x254 -> 0x90050) are copied into the buffers the list names when the controller uses them (SMART
+  still map, ROI map, intra-refresh / forced-intra flags); no OpenIMP T32 API turns those on yet, so they stay
+  zero as on the vendor without them. Checked: `tools/eprc_t33_oracle.py --slice` writes, after each picture's
+  'F' line, the words of the vendor `H264E_T32V_SliceInit` on the vendor controller's block
+  (`vendor-2.2.0-rc33-slice-h264.txt.gz`, 40 scenarios), `rc33_test -l` requires OpenIMP's list (built from the
+  port's block) to carry the same words in the same place for every picture.
+- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the H.265 T33 revision, the other
   run-time setters (SetChnBitRate, SetChnQpBounds, ...) on the reconfiguration copy, IVDC channels.
 
 ## Vendor reference (libimp 2.2.0, eprc T33 revision)
@@ -105,6 +118,9 @@ QP, both streams decode with ffmpeg without errors and show the colour bars. Dev
 
 T33 revision (H.264, 2026-11-12): the same CBR run gives the picture QPs 34 31 30 29 ... 18, then 15 from the second
 GOP on (sizes ~200 bytes, far below the budget), the sequence the vendor controller gives under unicorn for the same
-sizes; H.264 and H.265 decode with ffmpeg without errors. (That run predates the IMP-layer check: SetDefaultParam
-then filled only the basic fields and a 0 QP step kept the i264e default; both now follow the vendor, not re-run in
-QEMU yet.)
+sizes; H.264 and H.265 decode with ffmpeg without errors.
+
+After the IMP-layer check and with the slice block in the list (2026-11-12, `run-oi-cbr264` against the same run of
+vendor 2.2.0, `SetDefaultParam` defaults, initial QP -1): picture QPs 45 42 39 36 33 30 29 .. 21, 23 (IDR), 20 .. 15,
+equal to the vendor's QEMU run and to the vendor controller under unicorn on OpenIMP's coded sizes; all 30 command
+lists (753 / 930 pairs, 27546 in all) equal the vendor's but for the buffer addresses; decode clean.

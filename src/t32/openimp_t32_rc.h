@@ -97,4 +97,10 @@ unsigned t32_rc_idr_rows(T32Rc *rc);
 void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,
                      unsigned nrows);
 
+/* H.264 (T33 revision): the slice block of the picture in work (after
+ * t32_rc_start) for the HERA command list, NULL without it; and its per-MB
+ * maps (T33_MAP_*, NULL when not in use) */
+const uint8_t *t32_rc_slice(T32Rc *rc);
+const uint8_t *t32_rc_map(T32Rc *rc, int which, uint32_t *len);
+
 #endif

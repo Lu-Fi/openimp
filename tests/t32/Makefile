@@ -26,6 +26,9 @@ RC_DEPS := $(RC_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/
 	$(PROJECT_DIR)/src/eprc/eprc_internal.h $(RC33_HDR)
 # eprc T33 H.264 port (#295): QP of every picture vs the vendor 2.2.0 runs
 RC33_BIN := $(BUILD)/t32-rc33-test
+# ... and the HERA list words made from its slice block (-l)
+RC33_HERA := $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/h264enc/cabac.c \
+	$(PROJECT_DIR)/src/t30/h264enc/common.c
 # IMP attributes -> i264e parameters and SetDefaultParam (#295) vs vendor 2.2.0
 RC_IMP_BIN := $(BUILD)/t32-rc-imp-test
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
@@ -68,6 +71,8 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(AUDIO_BIN) 
 	$(RC_BIN) vendor-2.2.0-rc-imp-h264.txt
 	$(RC33_BIN) vendor-2.2.0-rc-h264.txt vendor-2.2.0-rc33-h264.txt -m 2 vendor-2.2.0-rc33-motion2-h264.txt \
 		-r vendor-2.2.0-rc33-rows-h264.txt
+	# ... and the HERA list words of the controller's slice block (vendor H264E_T32V_SliceInit)
+	gzip -dc vendor-2.2.0-rc33-slice-h264.txt.gz | $(RC33_BIN) -m 2 -r -l /dev/stdin
 	gzip -dc vendor-2.2.0-rc-imp.txt.gz | $(RC_IMP_BIN) vendor-2.2.0-rc-imp-defaults.txt /dev/stdin
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)
@@ -133,10 +138,10 @@ $(RC_IMP_BIN): rc_imp_test.c $(RC_DEPS)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -o $@ rc_imp_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
 
-$(RC33_BIN): rc33_test.c $(RC33_SRC) $(RC33_HDR)
+$(RC33_BIN): rc33_test.c $(RC33_SRC) $(RC33_HDR) $(RC33_HERA)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
-		-o $@ rc33_test.c $(RC33_SRC) -lm
+		-o $@ rc33_test.c $(RC33_SRC) $(RC33_HERA) -lm
 
 $(TEST_BIN): $(DEPS)
 	@mkdir -p $(BUILD)

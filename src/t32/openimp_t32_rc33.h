@@ -49,6 +49,7 @@ typedef struct {
     uint32_t n;                 /* pictures since init */
     int qp;                     /* QP of the last FRAME_START */
     int type;                   /* picture type of the last FRAME_START (2 IDR) */
+    int mb_flags;               /* the MB map carried flags at the last FRAME_START */
 } T32Rc33;
 
 /* Arena and i264e_param_default for a @width x @height channel; the caller
@@ -84,5 +85,21 @@ void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats);
 #define T33_HERA_ROW(i) (0x13240804u + 8u * (uint32_t)(i))
 unsigned t32_rc33_idr_rows(T32Rc33 *c);
 void t32_rc33_end_rows(T32Rc33 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows);
+
+/* The slice block the controller fills at every FRAME_START (vendor
+ * VPI_set_sliceinfo into the encoder's rc memory H+0xf9c, which
+ * hwicodec_pf_h264e_t32v_enc copies and H264E_T32V_SliceInit turns into the
+ * HERA command list): T33_SLICE_BYTES bytes in the vendor layout. */
+#define T33_SLICE_BYTES 0x878u
+const uint8_t *t32_rc33_slice(T32Rc33 *c);
+
+/* The per-MB maps the slice block points at, as the controller left them
+ * after FRAME_START (NULL with *len 0 when the picture does not use it):
+ * T33_MAP_SMART (s+0x24c, a byte a MB, on with s+0x159), T33_MAP_ROI (s+0x254,
+ * 16 bytes per 4 MBs, on with s+0x112), T33_MAP_MB (s+0x250, 16 bits a MB:
+ * intra-refresh / forced-intra flags; given while the controller writes
+ * flags and once more after it cleared them). */
+enum { T33_MAP_SMART, T33_MAP_ROI, T33_MAP_MB };
+const uint8_t *t32_rc33_map(T32Rc33 *c, int which, uint32_t *len);
 
 #endif

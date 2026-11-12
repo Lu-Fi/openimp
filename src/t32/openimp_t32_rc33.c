@@ -525,3 +525,49 @@ void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats)
 {
     t32_rc33_end_rows(c, bytes, stats, NULL, 0);
 }
+
+const uint8_t *t32_rc33_slice(T32Rc33 *c)
+{
+    return c->mem ? e33_at(&c->X, A_SL, T33_SLICE_BYTES) : NULL;
+}
+
+const uint8_t *t32_rc33_map(T32Rc33 *c, int which, uint32_t *len)
+{
+    E33 *X = &c->X;
+    uint32_t s = A_SL, n, a, vb;
+    int on;
+
+    *len = 0;
+    if (!c->mem)
+        return NULL;
+    n = (uint32_t)e33_ld_U16(X, s + 0xc) * e33_ld_U16(X, s + 0xe);
+    switch (which) {
+    case T33_MAP_SMART:
+        on = e33_ld_U8(X, s + 0x159) != 0;
+        a = e33_ld_U32(X, s + 0x24c);
+        break;
+    case T33_MAP_ROI:
+        on = e33_ld_U8(X, s + 0x112) != 0;
+        a = e33_ld_U32(X, s + 0x254);
+        n *= 4;
+        break;
+    case T33_MAP_MB:
+        /* vb+0xa4: the controller wrote flags (it clears the map at the
+         * next FRAME_START, which must reach the engine once as well) */
+        vb = P32(0xbec);
+        on = e33_ld_U8(X, vb + 0xa4) != 0;
+        if (!on && !c->mb_flags)
+            return NULL;
+        c->mb_flags = on;
+        on = 1;
+        a = e33_ld_U32(X, s + 0x250);
+        n *= 2;
+        break;
+    default:
+        return NULL;
+    }
+    if (!on || !n || a - R0 >= X->rs[0] || X->rs[0] - (a - R0) < n)
+        return NULL;
+    *len = n;
+    return c->mem + (a - R0);
+}

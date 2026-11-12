@@ -666,6 +666,25 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 #ifdef PLATFORM_T33
     n = t33_h264_list(e, &p, w, h, idr);
 #else
+    /* rate control (T33): the controller's slice block goes into the list,
+     * its per-MB maps (SMART, ROI, MB flags) into the buffers the list names,
+     * as the vendor engine reads them from the controller's memory */
+    p.rc_slice = t32_rc_slice(&a->rc);
+    {
+        static const int map_aux[3][2] = { { T33_MAP_SMART, 2 }, { T33_MAP_ROI, 1 }, { T33_MAP_MB, 3 } };
+
+        for (i = 0; i < 3; i++) {
+            uint32_t len;
+            const uint8_t *m = t32_rc_map(&a->rc, map_aux[i][0], &len);
+            T32VpuBuf *b = &a->aux[map_aux[i][1]];
+
+            if (m && len) {
+                len = len < b->size ? len : b->size;
+                memcpy(t32_vpu_buf_va(b), m, len);
+                OpenIMP_T32_VpuFlush(t32_vpu_buf_va(b), len, OI_T32_VPU_FLUSH_WBACK);
+            }
+        }
+    }
     n = (uint32_t)t32_hera_h264_list(&p, t32_vpu_buf_va(&a->list));
 #endif
     if (!n) {

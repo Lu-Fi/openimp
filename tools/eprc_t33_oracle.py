@@ -17,6 +17,10 @@ path you pass.  The emulator has no HERA: statistics are synthetic.
     tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
     tools/eprc_t33_oracle.py LIB [--motion N] --rows --scenarios FIRST COUNT   the same with per-row IDR
                                      slice sizes from HERA; 'F' lines end with the controller's sum
+    tools/eprc_t33_oracle.py LIB [--motion N] [--rows] --slice --scenarios FIRST COUNT   the same, each 'F'
+                                     line followed by an 'L' line: the HERA command-list words vendor
+                                     H264E_T32V_SliceInit makes from the controller's slice block (SLICE_REGS,
+                                     then the row count and the 0x40900 + 4 i words)
 
 MODE: the T32 IMPEncoderRcMode (1 CBR, 2 VBR, 3 SMART, 4 CVBR, 5 AVBR).
 i264e parameter offsets (vendor 2.2.0, from i264e_param_default and the
@@ -190,12 +194,43 @@ class Scene:
         return max(0.5, self.lvl * (0.8 + 0.4 * ((u >> 12) & 1023) / 1024.0))
 
 
+# the command-list registers H264E_T32V_SliceInit fills from the controller's slice block (revision 6)
+SLICE_REGS = (0x2001c, 0x2029c, 0x40100, 0x40104, 0x40108, 0x40114, 0x40118, 0x4011c, 0x40120, 0x40124)
+SLICE_BYTES = 0x878
+
+
+def slice_list(t):
+    """vendor H264E_T32V_SliceInit on a copy of the slice block the controller filled at FRAME_START
+    (hwicodec_pf_h264e_t32v_enc copies it and sets the buffer addresses; +0x1c is the list buffer):
+    the 'L' line words"""
+    L = t.L
+    cp, lb = HEAP + 0x2000000, HEAP + 0x2001000
+    L.wr(cp, L.rd(t.SL, SLICE_BYTES))
+    L.w32(cp + 0x1c, lb)
+    L.wr(lb, bytes(0x4000))
+    L.call('H264E_T32V_SliceInit', cp)
+    w = struct.unpack('<4096I', L.rd(lb, 0x4000))
+    pairs = []
+    for k in range(0, len(w), 2):
+        if not w[k + 1] & 0x80000000:
+            break
+        pairs.append((w[k + 1] & 0xffffc, w[k]))
+        if w[k + 1] & 0x40000000:
+            break
+    regs = dict(pairs)
+    k = [i for i, (r, _) in enumerate(pairs) if r == SLICE_REGS[-1]][0] + 1
+    rows = []
+    while k < len(pairs) and pairs[k][0] == 0x40900 + 4 * len(rows):
+        rows.append(pairs[k][1]); k += 1
+    return [regs[r] for r in SLICE_REGS] + [len(rows)] + rows
+
+
 def model_rows(nbytes, qp, n):
     """the per-row IDR slice sizes of the model (rc33_test.c has the same)"""
     return [(nbytes * 8 // n) * (6 + (i * 5 + qp) % 7) // 9 for i in range(n)] if n else []
 
 
-def scenario(path, seed, motion=0, rows=False):
+def scenario(path, seed, motion=0, rows=False, sl=False):
     """one random scenario: 'S' header line and its 'F' lines"""
     x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
     pick = []
@@ -220,13 +255,16 @@ def scenario(path, seed, motion=0, rows=False):
         r, qp, typ = t.start()
         idr = i % gop == 0
         nb = model_bytes(qp, idr, mbs, cplx)
+        words = slice_list(t) if sl else None
         if rows:
             t.end(nb, model_stats(qp, nb, mbs), model_rows(nb, qp, h >> 6) if idr else None)
             # the IDR slice size sum the controller keeps (P+0x6bc)
             out.append('F %d %d %d %d %d' % (i, 2 if idr else 0, qp, nb, t.L.r32(t.P + 0x6bc)))
-            continue
-        t.end(nb, model_stats(qp, nb, mbs))
-        out.append('F %d %d %d %d' % (i, 2 if idr else 0, qp, nb))
+        else:
+            t.end(nb, model_stats(qp, nb, mbs))
+            out.append('F %d %d %d %d' % (i, 2 if idr else 0, qp, nb))
+        if words is not None:
+            out.append('L ' + ' '.join('%x' % v for v in words))
     return out
 
 
@@ -250,13 +288,16 @@ def main():
     rows = len(a) >= 2 and a[1] == '--rows'
     if rows:
         del a[1]
+    sl = len(a) >= 2 and a[1] == '--slice'
+    if sl:
+        del a[1]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
         return
     if len(a) >= 4 and a[1] == '--scenarios':
         for k in range(int(a[2]), int(a[2]) + int(a[3])):
-            print('\n'.join(scenario(a[0], k, motion, rows)), flush=True)
+            print('\n'.join(scenario(a[0], k, motion, rows, sl)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])
