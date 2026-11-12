@@ -37,14 +37,18 @@
  *           weight and motion fields are held so that it keeps it; a driver rewrite of those
  *           fields (gain step, day/night) is set again and the picture redrawn on the next frame.
  *           T40: not available (its MDNS reference is a coded stream).
- *   mode 6  ISP-input test picture (T10, T20): the ISP core's own video test generator replaces
+ *   mode 6  ISP-input test picture (T10, T20, T41): the ISP core's own video test generator replaces
  *           the sensor's raw frame at the input of the ISP, so the picture runs through the whole
  *           raw pipeline (BLC, LSC, demosaic, WB, CCM, gamma, NR, sharpening) and the encoder; the
  *           sensor keeps running.  The pattern is the hardware's (isp_pattern: 1 flat field,
  *           2 horizontal gradient, 3 vertical gradient, 4 vertical bars), not the mode 1 picture.
  *           Switched like the vendor driver's "Test pattern" tuning control (V4L2 control
  *           IMAGE_TUNING_CID_CUSTOM_TEST_PATTERN 0x98e906 on the tuning device); mode 0 (or any
- *           other mode) sets it back to 0 (sensor input).  -1 with errno ENOTSUP on other SoCs,
+ *           other mode) sets it back to 0 (sensor input).  T41 (no generator in the ISP): the
+ *           vendor RAW ring (IMP_ISP_RAW_RwControl, RAW8, one buffer) is started by the library and
+ *           every RAW frame is overwritten with the same four pictures in the sensor's Bayer order
+ *           before the ISP reads it back (output rate halved, EBUSY while an application ring runs,
+ *           ENOMEM without 4.7 MB of rmem, EIO with a driver without the ring).  -1 with errno ENOTSUP on other SoCs,
  *           ENODEV without a running ISP tuning session, else the driver's error (EPERM: ISP
  *           not started).
  *

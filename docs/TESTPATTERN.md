@@ -20,7 +20,7 @@ Header: `include/openimp_testpattern.h` (ABI 1). Detect support with the symbol
 | 3 | motion test | flat grey with +-1 LSB noise, logo, frame counter, objects of given size, contrast and speed (one built-in object or a script) | as mode 2, and the pattern also reaches **IVS** (motion detection input); the objects have a known time and place |
 | 4 | sensor pattern | the sensor outputs its own built-in test pattern; frames are not replaced | **through the whole ISP** (BLC, WB, CCM, gamma, NR, scaler, encoder), pattern content depends on the sensor |
 | 5 | ISP-middle picture (T23) | OpenIMP writes the mode 1 pattern at the ISP's native size into the ISP's MDNS (temporal NR) reference frame buffer every frame and holds the MDNS reference weights (luma `0x799c`, chroma `0x7a6c`) at maximum; sensor frames are not replaced | **behind the ISP front half**: MDNS, BCSH, scaler, encoder, then the OSD; not BLC..CSC (use mode 4 for those). Sharpening acts before the injection point. ENOTSUP on other SoCs |
-| 6 | ISP-input test picture (T10, T20) | the Apical ISP core's own test generator replaces the sensor's raw frame at the ISP input (`isp_pattern`: 1 flat field, 2 horizontal bands with gradient, 3 vertical bands with gradient, 4 vertical bars, default 4); sensor frames are not replaced, the sensor keeps running | **through the whole ISP** (BLC, LSC, demosaic, WB, CCM, gamma, NR, sharpening, scaler, encoder) with a sensor-independent picture. Switched with the driver's own tuning control "Test pattern" (V4L2 `0x98e906`). ENOTSUP on other SoCs; T41 RAW from DDR is not in the API yet |
+| 6 | ISP-input test picture (T10, T20, T41) | the Apical ISP core's own test generator replaces the sensor's raw frame at the ISP input (`isp_pattern`: 1 flat field, 2 horizontal bands with gradient, 3 vertical bands with gradient, 4 vertical bars, default 4); sensor frames are not replaced, the sensor keeps running | **through the whole ISP** (BLC, LSC, demosaic, WB, CCM, gamma, NR, sharpening, scaler, encoder) with a sensor-independent picture. Switched with the driver's own tuning control "Test pattern" (V4L2 `0x98e906`). T41: the library drives the vendor RAW ring (`IMP_ISP_RAW_RwControl`) and writes the same four pictures as Bayer data into each RAW frame before the ISP reads it back (output rate halved). ENOTSUP on other SoCs |
 
 Modes 1-3 replace each captured NV12 frame on the way to the encoder (T20-T31 in the capture
 path of `kernel_interface.c`, mode 3 before IVS; T40/T41 in the FrameSource path before the IVS
@@ -336,3 +336,38 @@ Notes:
 - Mode 4 in dark rooms: AE sits at maximum gain and the ramp saturates; measure in daylight or
   with a fixed exposure.
 - Pictures with a real scene must not be published; use only the synthetic pattern pictures.
+
+### Mode 6 on T41 (2026-11-12)
+
+The T41 ISP has no test generator at its input. The vendor way to put a picture of one's own choice in
+front of the ISP is the RAW ring of `IMP_ISP_RAW_RwControl` (vendor header: the callback runs after each RAW
+frame is written to DDR, and the frame is fed back into the ISP when the callback returns). Mode 6 starts that
+ring inside the library (`src/t40/openimp_t41_rawvic.c`, RAW8, one buffer: 4.7 MB of rmem at 2880x1620, the
+only size that fits next to a streamer with rmem=30M) and its callback overwrites every frame with the mode 6
+picture in the sensor's colour filter order, then writes the cache back. The order is read every frame from
+the ISP core register `0x13300088` bits 4:0 (written by the driver from the sensor's media bus code with the
+OEM map RGGB 0, BGGR 1, GRBG 2, GBRG 3; gc5603 reads `0x102` = GRBG), so a flip that moves the order is
+followed; other values (RGB-IR) give ENOTSUP. Pictures (`isp_pattern`): 1 flat field at half scale, 2 four
+horizontal bands red, green, blue, white with a left-to-right ramp, 3 four vertical bands with a top-to-bottom
+ramp, 4 eight bars at 75 % (white, yellow, cyan, green, magenta, red, blue, black). RAW8 black level 15.
+
+- The picture enters in front of BLC and LSC, so it runs through the whole ISP and the encoder. The sensor
+  keeps running; AE, AWB and the streamer's day/night logic keep running on the picture (as on T10/T20). The
+  ISP gains act on it: in the dark (maximum gain) the ramps clip early and a grey shows the AWB gains.
+- With one buffer the ISP writes and reads in turns: the output rate halves (gc5603 25 -> 12.3 frames/s, as
+  with the vendor ring). Leaving the mode stops the ring and frees the buffer; the rate is back at once.
+- An application ring has priority: mode 6 returns EBUSY while one runs; `IMP_ISP_RAW_RwControl` ENABLE
+  returns -4091 while mode 6 holds the ring, DISABLE stops it. ENOMEM without the rmem block, EIO with a
+  driver without the ring (needs open-tx-isp T41 with #320, `t41_raw_ring` 1), ENODEV without a running ISP.
+- Host test: `tests/t41` `make rawvic` (fake driver: ring control payload RAW8 x1, pictures in GRBG and RGGB,
+  order change followed, pattern switch without a new ring, EBUSY / -4091 / DISABLE interplay, cache
+  write-back per frame).
+- Device (T41LQ Vanhua T55A, gc5603, night, open-tx-isp `next` module swapped at runtime, test libimp
+  bind-mounted, timps, H.264 1920x1080): 3 cycles of patterns 1..4 and mode 0, all Set calls ok. Bars: the
+  eight bars in order (day: white, yellow, cyan, green, magenta, red, blue, black; night: eight grey steps
+  252 .. 0), cycles 2 and 3 with the same bar means (+-1). Bands and ramps as described. Flat field: the LSC
+  correction shows (edges brighter than the centre, faint rings from the RAW8 steps). 12.3 frames/s with the
+  ring, 24-25 without; timps 3-19 % CPU. Mode 0: live scene back 3 s later (frame means as before), RDMA type
+  register `0x21024` = 0. Colour forced (day mode at night): bars fully saturated, the flat field pink
+  (254/193/254), the ramps clip after about a quarter: the night gains act on the picture. 0 oops, stock
+  module and library restored. Pictures stay local.
