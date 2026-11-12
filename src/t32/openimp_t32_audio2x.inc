@@ -333,11 +333,9 @@ int IMP_AI_EnableChn(int device, int channel)
             sizeof(int16_t);
     if (!bytes)
         return -1;
-    p3_audio.cap_depth = (unsigned)(depth < P3_CAPTURE_SLOTS ? depth
-                                                             : P3_CAPTURE_SLOTS);
     t32_ai.vol = 60;
     t32_ai.vol_live = t32_ai.vol_saved = 1.0;
-    if (p3_capture_start(bytes) != 0)
+    if (p3_capture_start(bytes, (unsigned)depth) != 0)
         return -1;
     p3_audio.ai_channel_enabled = 1;
     return 0;
