@@ -75,11 +75,19 @@ VIDEO_CFG again on the live controller without clearing it, as rcInit does. Proo
 `outBitRate`, `flucLvl` last; VBR/SMART: `flucLvl` in place of H.264's `gopRelation`) as the vendor branch does
 (`src/t40/codec_rc_helix.h`, #228; before, a live CBR change took `staticTime` as the bit rate).
 
+## ROI on H.265 (#404)
+
+Vendor 1.0.5 (Ghidra, project t30lib): `IMP_Encoder_SetChnROI` 0xc1ec0 packs the region like H.264 (enable, relative, QP as bytes, the corners sorted
+and divided by 16: 7 bytes) and calls `i265e_set_param` -> `I265eReconfig::setRoi` 0x6ff0c: index 0..15 (else -1), written to the
+*pending* table, dirty bit 4.  `ReconfigPFrame` 0x6f6d8 (every picture) copies the pending table to the live one (i265e + 0xc0, 16 x 7 bytes) and
+`codec_enc` 0x6cf4c copies the live table to the slice info (block 0x3b), which the command list programs (0x20044.., 0x2004c..).
+`IMP_Encoder_GetChnROI` 0xc22e8 (index 0..7 else -1) reads the *live* table (`I265eReconfig::getRoi` 0x6fff0), so a read-back right after a Set is
+all zero until a picture was encoded.  OpenIMP does the same (`h265_roi_pend` / `h265_roi` in codec-t40.c, `OpenIMP_T30_RadixSetRoi`; host tests
+p2_t30_enc_test and radix_encoder_test).  A new channel starts with an empty table (before, the slot kept the region of an earlier H.264 channel).
+timps: ROI is H.264 only and its tier on T30 is "unsupported" (`src/roi_caps.h`), prudynt sets no ROI.
+
 ## Not ported (vendor has it, no streamer on T30 reaches it)
 
-- ROI on H.265: vendor `SetChnROI` (H.265 branch) packs up to 16 regions (7 bytes, coordinates / 16) into
-  `I265eReconfig::setRoi`; `ReconfigPFrame` copies them to the i265e parameters, `codec_enc` into block 0x3b (the command
-  list builder already programs them). timps: ROI is H.264 only and its tier on T30 is "unsupported" (`src/roi_caps.h`), prudynt sets no ROI.
 - The eprc ROI offsets / Gaussian SAS map (E+148/149) and the other A+152 variants: debug switches only, 0 in every
   vendor T30 path (`eprc_default_set_T30`, rcInit does not set them).
 raptor was not checked (UNVERIFIED).

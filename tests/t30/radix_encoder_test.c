@@ -122,6 +122,8 @@ static uint32_t list_value(const uint32_t *list, uint32_t reg, int *found)
     return v;
 }
 
+static uint32_t list_roi_ctrl, list_roi_box;
+
 int __wrap_ioctl(int fd, unsigned long request, ...)
 {
     va_list ap;
@@ -172,6 +174,8 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         list_dst_stride = list_value(list, 0x1001cu, &f7);
         list_ref_stride = list_value(list, 0x30064u, &list_has_ref_stride);
         assert(f7);
+        list_roi_ctrl = list_value(list, 0x20044u, &f7);
+        list_roi_box = list_value(list, 0x2004cu, &f7);
         assert(f1 && f2 && f3 && f4 && f5);
         assert(list_rawy == frame_phys);
         if (run_fail)
@@ -396,6 +400,34 @@ int main(void)
         const uint8_t *pps;
         uint32_t pps_len = 0;
 
+        /* #404: no ROI until set; the live table (16 x 7 bytes, vendor codec_enc
+         * 0x6cf4c) reaches the command list: control byte of region 0 and its box */
+        assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+        assert((list_roi_ctrl & 0xffu) == 0 && list_roi_box == 0);
+        free((void *)(uintptr_t)s->virt_addr);
+        free(s);
+        {
+            uint8_t roi[16][7];
+
+            memset(roi, 0, sizeof(roi));
+            roi[0][0] = 1; roi[0][1] = 1; roi[0][2] = (uint8_t)-4;
+            roi[0][3] = 4; roi[0][4] = 19; roi[0][5] = 4; roi[0][6] = 15;
+            assert(OpenIMP_T30_RadixSetRoi(e, roi) == 0);
+            s = NULL;
+            assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+            assert((list_roi_ctrl & 0xffu) == 0xf3u);
+            assert(list_roi_box == (4u | 19u << 8 | 4u << 16 | 15u << 24));
+            free((void *)(uintptr_t)s->virt_addr);
+            free(s);
+            memset(roi, 0, sizeof(roi));
+            assert(OpenIMP_T30_RadixSetRoi(e, roi) == 0 && OpenIMP_T30_RadixSetRoi(e, NULL) == -1);
+            s = NULL;
+            assert(OpenIMP_T30_RadixEncode(e, &frame, &s) == 0 && s);
+            assert((list_roi_ctrl & 0xffu) == 0 && list_roi_box == 0);
+            free((void *)(uintptr_t)s->virt_addr);
+            free(s);
+            s = NULL;
+        }
         assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == -3 && cb == -3);
         assert(OpenIMP_T30_RadixSetChromaQp(e, 5, -7) == 0);
         assert(OpenIMP_T30_RadixGetChromaQp(e, &cr, &cb) == 0 && cr == -3 && cb == -3);

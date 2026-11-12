@@ -133,10 +133,14 @@ int IMP_ISP_Tuning_SetSharpness_internal(uint32_t v, int32_t m) { sharp_calls++;
 #endif
 int AL_Codec_Encode_SetMbRC(void *c, int e) { (void)c; mbrc_calls++; mbrc_value = e; return 0; }
 int AL_Codec_Encode_SetColor2Grey(void *c, int e) { (void)c; c2g_calls++; c2g_value = e; return 0; }
-static uint8_t roi_entry[8][7];
+static uint8_t roi_entry[16][7], roi_live[16][7];   /* pending (Set) / live (adopted at a picture) */
 static int roi_calls, chroma_calls, chroma_value;
 int AL_Codec_Encode_SetRoi(void *c, uint32_t i, const uint8_t e[7])
-{ (void)c; if (i >= 8u) return -1; roi_calls++; memcpy(roi_entry[i], e, 7); return 0; }
+{ (void)c; if (i >= 16u) return -1; roi_calls++; memcpy(roi_entry[i], e, 7); return 0; }
+/* H.265: Get reads the live table, a picture adopts the pending one (#404) */
+int AL_Codec_Encode_GetRoi(void *c, uint32_t i, uint8_t e[7])
+{ (void)c; if (i >= 16u) return -1; memcpy(e, roi_live[i], 7); return 0; }
+static void stub_picture(void) { memcpy(roi_live, roi_entry, sizeof(roi_live)); }
 int AL_Codec_Encode_SetChromaQpOffset(void *c, int o)
 { (void)c; chroma_calls++; chroma_value = o; return 0; }
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
@@ -327,6 +331,32 @@ int main(void)
             CHECK(IMP_Encoder_GetH265TransCfg(0, &tc) == 0 &&
                   tc.chroma_cr_qp_offset == 0 && tc.chroma_cb_qp_offset == 0);
             CHECK(IMP_Encoder_InsertUserData(3, ud, (uint32_t)strlen(ud)) == 0 && ud_calls == ud0 + 1);
+            /* #404 ROI on H.265 (0xc1ec0 / 0xc22e8, I265eReconfig::setRoi 0x6ff0c / getRoi 0x6fff0):
+             * Set goes to a pending table, Get reads the live one, so it is zero until a picture
+             * adopted the Set; the region reads back like H.264 afterwards (corners /16 x16) */
+            {
+                IMPEncoderROICfg r, g;
+
+                memset(&r, 0, sizeof(r));
+                r.u32Index = 0; r.bEnable = true; r.bRelatedQp = true; r.s32Qp = -4;
+                r.rect.x = 64; r.rect.y = 64; r.rect.width = 319; r.rect.height = 255;
+                memset(&g, 0x5a, sizeof(g)); g.u32Index = 0;
+                CHECK(IMP_Encoder_SetChnROI(3, &r) == 0);
+                CHECK(IMP_Encoder_GetChnROI(3, &g) == 0 && !g.bEnable && !g.bRelatedQp && g.s32Qp == 0 &&
+                      g.rect.x == 0 && g.rect.y == 0 && g.rect.width == 0 && g.rect.height == 0);
+                stub_picture();
+                memset(&g, 0x5a, sizeof(g)); g.u32Index = 0;
+                CHECK(IMP_Encoder_GetChnROI(3, &g) == 0 && g.bEnable && g.bRelatedQp && g.s32Qp == -4 &&
+                      g.rect.x == 64 && g.rect.y == 64 && g.rect.width == 304 && g.rect.height == 240);
+                /* the API has no index check on H.265 Set (the encoder takes 0..15), Get takes 0..7 */
+                r.u32Index = 9;
+                CHECK(IMP_Encoder_SetChnROI(3, &r) == 0);
+                r.u32Index = 16;
+                CHECK(IMP_Encoder_SetChnROI(3, &r) == -1);
+                g.u32Index = 9;
+                CHECK(IMP_Encoder_GetChnROI(3, &g) == -1);
+                CHECK(IMP_Encoder_SetChnROI(3, NULL) == -1);
+            }
             CHECK(IMP_Encoder_DestroyChn(3) == 0);
         } else {
             printf("p2_t30_enc_test: H.265 channel not created (skipped)\n");

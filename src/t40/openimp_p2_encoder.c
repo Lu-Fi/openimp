@@ -1473,6 +1473,8 @@ extern int AL_Codec_Encode_SetRoi(void *codec, uint32_t index,
                                   const uint8_t entry[7]);
 extern int AL_Codec_Encode_SetChromaQpOffset(void *codec, int offset);
 #if defined(P2_T30_NATIVE)
+/* IMP_Encoder_Get/SetChnROI on an H.265 channel (#404) */
+extern int AL_Codec_Encode_GetRoi(void *codec, uint32_t index, uint8_t entry[7]);
 /* IMP_Encoder_Set/GetH265TransCfg on the Radix encoder (#399) */
 extern int AL_Codec_Encode_SetH265ChromaQp(void *codec, int cr, int cb);
 extern int AL_Codec_Encode_GetH265ChromaQp(void *codec, int *cr, int *cb);
@@ -2916,6 +2918,11 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     ch->codec_type = (int)p2_attr_codec_type(attr);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T41)
     memset(&ch->roi_attr, 0, sizeof(ch->roi_attr));
+#endif
+    /* a new encoder starts with an empty ROI table (the slot keeps no region
+     * of an earlier channel: #404, the H.265 read-back showed H.264's) */
+#if defined(PLATFORM_T23) || defined(PLATFORM_T30)
+    memset(ch->roi, 0, sizeof(ch->roi));
 #endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     ch->rc_runtime = 0;
@@ -6335,6 +6342,26 @@ int IMP_Encoder_SetChnROI(int channel, const IMPEncoderROICfg *config)
     if (!ch)
         return 0;
 #endif
+#if defined(P2_T30_NATIVE)
+    /* T30 1.0.5 H.265 (0xc1ec0 -> i265e_set_param -> I265eReconfig::setRoi
+     * 0x6ff0c): no index check in the API, the encoder takes 0..15 (else -1);
+     * the same entry as H.264 (corners /16, bytes as given) goes to the
+     * pending table, adopted with the next picture.  The read-back is the
+     * live table (IMP_Encoder_GetChnROI). */
+    if (ch && config && ch->codec_type == IMP_ENC_TYPE_HEVC) {
+        uint8_t entry[7];
+
+        if (config->u32Index >= 16u || !ch->codec)
+            return -1;
+        Helix_H264_RoiEntry(config->bEnable, config->bRelatedQp,
+                            config->s32Qp, config->rect.x, config->rect.y,
+                            config->rect.width, config->rect.height, entry);
+        pthread_mutex_lock(&ch->lock);
+        int r = AL_Codec_Encode_SetRoi(ch->codec, config->u32Index, entry);
+        pthread_mutex_unlock(&ch->lock);
+        return r == 0 ? 0 : -1;
+    }
+#endif
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
 #if !defined(PLATFORM_T23)
@@ -6426,6 +6453,22 @@ int IMP_Encoder_GetChnROI(int channel, IMPEncoderROICfg *config)
     if (!ch || !config || config->u32Index >= 8u)
         return -1;
     index = config->u32Index;
+#if defined(P2_T30_NATIVE)
+    if (ch->codec_type == IMP_ENC_TYPE_HEVC) {
+        /* vendor 0xc22e8: the live i265e table; zero until a picture adopted
+         * the Set (I265eReconfig::ReconfigPFrame) */
+        uint8_t entry[7] = {0};
+        IMPEncoderROICfg stored;
+
+        pthread_mutex_lock(&ch->lock);
+        if (ch->codec)
+            (void)AL_Codec_Encode_GetRoi(ch->codec, index, entry);
+        pthread_mutex_unlock(&ch->lock);
+        p2_roi_stored(config, entry, &stored);
+        *config = stored;
+        return 0;
+    }
+#endif
     pthread_mutex_lock(&ch->lock);
     *config = ch->roi[index];
     config->u32Index = index;
