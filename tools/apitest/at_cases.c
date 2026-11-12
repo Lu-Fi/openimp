@@ -73,7 +73,17 @@ static int flow(void)
     int w, h;
     int64_t t = 0, t2 = 0;
 
-    return fs_peek(1, &w, &h, &t) == 0 && fs_peek(1, &w, &h, &t2) == 0 && t2 > t;
+    int k;
+
+    /* two frames with increasing time stamps.  The stock T30 library hands out the same frame to two GetFrame calls within one frame
+     * interval (b61: SetTemperDnsCtl / SetISPProcess "frames flow" FAIL on the vendor stack with ret 0), so the second frame is polled
+     * for up to 1 s (15 fps = 67 ms) instead of taken back to back. */
+    if (fs_peek(1, &w, &h, &t) != 0) return 0;
+    for (k = 0; k < 25; k++) {
+        if (fs_peek(1, &w, &h, &t2) == 0 && t2 > t) return 1;
+        usleep(40000);
+    }
+    return 0;
 }
 
 static double dabs(double a) { return a < 0 ? -a : a; }
@@ -2465,29 +2475,29 @@ static void cs_alloc(void)
     /* --- attributes (stored, read back, restored) */
     if (aset && aget) {
         uint32_t a0 = 0, c0 = 0;
-        aget(&a0, &c0);
-        r = aset(4096, 0); ok = aget(&al, &cp) == 0 && al == 4096 && cp == 0;
+        GATE("alloc_get_attr0", aget(&a0, &c0));
+        r = GATE("alloc_set_attr", aset(4096, 0)); ok = GATE("alloc_get_attr", aget(&al, &cp)) == 0 && al == 4096 && cp == 0;
         rep(LBL("IMP_Alloc_Set_Attr"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "alignment 4096 / cached written, read back %u/%u", al, cp);
         rep(LBL("IMP_Alloc_Get_Attr"), 0, ok ? V_PASS : V_FAIL, "initial %u/%u, read back after Set %u/%u", a0, c0, al, cp);
         aset(a0, c0);
     } else { ALN("IMP_Alloc_Set_Attr"); ALN("IMP_Alloc_Get_Attr"); }
     /* --- descriptor allocation, address conversion, cache flush, free */
     if (a_alloc && a_free) {
-        uintptr_t st = a_alloc(d, 8192, "apitest"), v = (uintptr_t)d->virt;       /* descriptor style: the return value is the status, the addresses are in the descriptor */
+        uintptr_t st = GATE("alloc_alloc", a_alloc(d, 8192, "apitest")), v = (uintptr_t)d->virt;       /* descriptor style: the return value is the status, the addresses are in the descriptor */
         va = (unsigned char *)v;
         ok = st == 0 && v != 0 && d->phys != 0 && d->size >= 8192;
         rep(LBL("IMP_Alloc"), ok ? 0 : -1, ok ? V_PASS : V_FAIL, "8192 bytes: status %ld virt %p phys 0x%x size %u", (long)st, (void *)v, d->phys, d->size);
         if (ok) {
             for (i = 0; i < 8192; i++) va[i] = (unsigned char)(i * 7 + 3);
-            if (v2p) { uint32_t ph = v2p(va + 100); r = ph; rep(LBL("IMP_Virt_to_Phys"), 0, ph == d->phys + 100 ? V_PASS : V_FAIL, "virt+100 -> 0x%x (descriptor phys+100 = 0x%x)", ph, d->phys + 100); } else ALN("IMP_Virt_to_Phys");
-            if (p2v) { void *pv = p2v(d->phys + 100); rep(LBL("IMP_Phys_to_Virt"), 0, pv == (void *)(va + 100) ? V_PASS : V_FAIL, "phys+100 -> %p (expected %p)", pv, (void *)(va + 100)); } else ALN("IMP_Phys_to_Virt");
+            if (v2p) { uint32_t ph = GATE("alloc_v2p", v2p(va + 100)); r = ph; rep(LBL("IMP_Virt_to_Phys"), 0, ph == d->phys + 100 ? V_PASS : V_FAIL, "virt+100 -> 0x%x (descriptor phys+100 = 0x%x)", ph, d->phys + 100); } else ALN("IMP_Virt_to_Phys");
+            if (p2v) { void *pv = at_gate("alloc_p2v") ? NULL : p2v(d->phys + 100); rep(LBL("IMP_Phys_to_Virt"), 0, pv == (void *)(va + 100) ? V_PASS : V_FAIL, "phys+100 -> %p (expected %p)", pv, (void *)(va + 100)); } else ALN("IMP_Phys_to_Virt");
             if (flush) {
-                r = flush(va, 8192);
+                r = GATE("alloc_flush", flush(va, 8192));
                 for (i = 0, ok = 1; i < 8192; i++) if (va[i] != (unsigned char)(i * 7 + 3)) { ok = 0; break; }
                 rep(LBL("IMP_FlushCache"), r, (r == 0 && ok && flush(NULL, 0) == -1) ? V_PASS : V_FAIL, "8192 bytes flushed, pattern intact (%d), NULL/0 rejected", ok);
             } else ALN("IMP_FlushCache");
-            if (adump) { r = adump(); rep(LBL("IMP_Alloc_Dump"), r, r == 0 ? V_PASS : V_FAIL, "registry dump with a live buffer"); } else ALN("IMP_Alloc_Dump");
-            if (adumpf) { r = adumpf("/dev/null"); ok = adumpf(NULL) == -1; rep(LBL("IMP_Alloc_Dump_To_File"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "/dev/null accepted, NULL path rejected"); } else ALN("IMP_Alloc_Dump_To_File");
+            if (adump) { r = GATE("alloc_dump", adump()); rep(LBL("IMP_Alloc_Dump"), r, r == 0 ? V_PASS : V_FAIL, "registry dump with a live buffer"); } else ALN("IMP_Alloc_Dump");
+            if (adumpf) { r = GATE("alloc_dumpf", adumpf("/dev/null")); ok = GATE("alloc_dumpf_null", adumpf(NULL)) == -1; rep(LBL("IMP_Alloc_Dump_To_File"), r, (r == 0 && ok) ? V_PASS : V_FAIL, "/dev/null accepted, NULL path rejected"); } else ALN("IMP_Alloc_Dump_To_File");
             r = a_free(v);
             rep(LBL("IMP_Free"), r, r == 0 ? V_PASS : V_FAIL, "freed (ret %ld)", r);
         } else if (v) a_free(v);
@@ -2514,7 +2524,7 @@ static void cs_alloc(void)
     } else ALN("IMP_Sp_Alloc");
 #else
     if (a_sp && a_free) {
-        uintptr_t v = a_sp(4096, "apitest");
+        uintptr_t v = at_gate("alloc_sp") ? 0 : a_sp(4096, "apitest");
         if (v) memset((void *)v, 0x5a, 4096);
         r = v ? a_free(v) : -1;
         rep(LBL("IMP_Sp_Alloc"), r, (v != 0 && r == 0) ? V_PASS : V_FAIL, "4096 bytes at %p written and freed", (void *)v);
@@ -3405,10 +3415,14 @@ static void cs_extchn_t31(void)
     char path[256];
     IMPFrameInfo *fr = (IMPFrameInfo *)&fr;     /* sentinel: GetFrame must leave it alone */
 
+    int ew = 320, eh = 180, noenc = getenv("APITEST_EXTCHN_NOENC") != NULL, nsec[4] = { 0, 0, 0, 0 };
+    /* APITEST_EXTCHN_SIZE=WxH: other ext size (b61: the device encoder gave 2 streams for 320x180 and the stock one faulted in the VPU:
+     * 640x360 / 320x192 tell whether it is the size); APITEST_EXTCHN_NOENC=1: no FS3 -> ENC5 stage (stock library faults there) */
+    if (getenv("APITEST_EXTCHN_SIZE")) { int w2 = 0, h2 = 0; if (sscanf(getenv("APITEST_EXTCHN_SIZE"), "%dx%d", &w2, &h2) == 2 && w2 >= 16 && h2 >= 2 && !(h2 & 1)) { ew = w2; eh = h2; } }
     memset(&ea, 0, sizeof(ea));
-    ea.picWidth = 320; ea.picHeight = 180; ea.pixFmt = PIX_FMT_NV12;
+    ea.picWidth = ew; ea.picHeight = eh; ea.pixFmt = PIX_FMT_NV12;
     ea.outFrmRateNum = 15; ea.outFrmRateDen = 1; ea.nrVBs = 2; ea.type = FS_EXT_CHANNEL;
-    ea.scaler.enable = 1; ea.scaler.outwidth = 320; ea.scaler.outheight = 180;
+    ea.scaler.enable = 1; ea.scaler.outwidth = ew; ea.scaler.outheight = eh;
     ra = IMP_FrameSource_SetSource(5, 1); rb = IMP_FrameSource_SetSource(3, 3); rcx = IMP_FrameSource_SetSource(3, -1);
     rc = IMP_FrameSource_CreateChn(3, &ea);
     rs = IMP_FrameSource_SetSource(3, EXT_SRC);
@@ -3419,7 +3433,7 @@ static void cs_extchn_t31(void)
             rg = IMP_FrameSource_GetFrame(3, &fr);
             if (rg == 0 && fr && fr != (IMPFrameInfo *)&fr) {
                 if (!got) printf("[extchn] first frame %ux%u fmt 0x%x\n", (unsigned)fr->width, (unsigned)fr->height, (unsigned)fr->pixfmt);
-                if (EXT_T30 && (fr->width != 320 || fr->height != 180)) got += 100;
+                if (EXT_T30 && (fr->width != (unsigned)ew || fr->height != (unsigned)eh)) got += 100;
                 got++; IMP_FrameSource_ReleaseFrame(3, fr); fr = (IMPFrameInfo *)&fr;
             }
             usleep(50000);
@@ -3432,7 +3446,7 @@ static void cs_extchn_t31(void)
         }
         {   /* the vendor sample reads an ext channel through an encoder: FS 3 -> ENC 5, H.264 320x180, 3 s */
             /* APITEST_EXTCHN_BASE=1: the same through physical ch1 (640x360), the stack's own baseline */
-            int base = getenv("APITEST_EXTCHN_BASE") != NULL, bw = base ? 640 : 320, bh = base ? 360 : 180;
+            int base = getenv("APITEST_EXTCHN_BASE") != NULL, bw = base ? 640 : ew, bh = base ? 360 : eh;
             IMPCell fsx = { DEV_ID_FS, base ? EXT_SRC : 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
 #if defined(PLATFORM_T30)
             IMPEncoderCHNAttr *ea2 = (IMPEncoderCHNAttr *)calloc(1, sizeof(*ea2));
@@ -3444,7 +3458,7 @@ static void cs_extchn_t31(void)
             int rb2 = -1, nstr = 0, nlate = 0, pulled = 0;
             int64_t tfirst = -1;
 
-            if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
+            if (noenc) { enc_streams = -1; } else if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
 #if defined(PLATFORM_T30)
                 ea2->encAttr.picWidth = bw; ea2->encAttr.picHeight = bh; ea2->encAttr.enType = PT_H264; ea2->encAttr.profile = 1;
                 ea2->rcAttr.outFrmRate.frmRateNum = 15; ea2->rcAttr.outFrmRate.frmRateDen = 1; ea2->rcAttr.maxGop = 30;
@@ -3470,6 +3484,7 @@ static void cs_extchn_t31(void)
                                 pulled = 1;
                                 if (IMP_FrameSource_GetFrame(EXT_SRC, &p1) == 0 && p1) IMP_FrameSource_ReleaseFrame(EXT_SRC, p1);
                             }
+                            { int sec = (int)((now_us() - t0) / 1000000); nsec[sec < 3 ? sec : 3]++; }
                             nstr++; IMP_Encoder_ReleaseStream(5, &es);
                         }
                     }
@@ -3479,9 +3494,12 @@ static void cs_extchn_t31(void)
             }
             free(ea2);
             if (dump) fclose(dump);
-            printf("[extchn] FS%d -> ENC5: bind %d, %d streams in 3 s (first after %lld ms, %d in the last 2 s)\n", fsx.groupID, rb2, nstr,
-                   (long long)(tfirst / 1000), nlate);
-            enc_streams = nstr;
+            if (!noenc) {
+                printf("[extchn] FS%d -> ENC5 %dx%d: bind %d, %d streams in 3 s (first after %lld ms, %d in the last 2 s; per second %d/%d/%d)\n", fsx.groupID,
+                       bw, bh, rb2, nstr, (long long)(tfirst / 1000), nlate, nsec[0], nsec[1], nsec[2]);
+                enc_streams = nstr;
+            } else
+                printf("[extchn] FS3 -> ENC5 not run (APITEST_EXTCHN_NOENC)\n");
         }
 #if defined(PLATFORM_T30)
         {   /* picture check in the process: the ext frame is the scaled ch0 picture.  Luma mean of both and the mean absolute
@@ -3496,8 +3514,8 @@ static void cs_extchn_t31(void)
             }
             if (f0 && fe) {
                 const unsigned char *y0 = (const unsigned char *)(uintptr_t)f0->virAddr, *ye = (const unsigned char *)(uintptr_t)fe->virAddr;
-                long sum0 = 0, sume = 0, mad = 0, n = 0;
-                unsigned x, y;
+                long sum0 = 0, sume = 0, mad = 0, n = 0, bmad = 0, bn = 0;
+                unsigned x, y, bx, by;
 
                 for (y = 0; y < fe->height; y++)
                     for (x = 0; x < fe->width; x++) {
@@ -3507,10 +3525,25 @@ static void cs_extchn_t31(void)
 
                         sum0 += a0; sume += a1; mad += a0 > a1 ? a0 - a1 : a1 - a0; n++;
                     }
-                printf("[extchn] ext %ux%u vs ch0 %ux%u: luma mean %.1f / %.1f, mean abs diff %.2f, time stamps %lld / %lld us\n",
-                       fe->width, fe->height, f0->width, f0->height, (double)sume / n, (double)sum0 / n, (double)mad / n,
+                /* b61 (live scene, 2048x1536 sensor): the pixel difference of a point-sampled reduction is 27.8 on a textured scene whose
+                 * frames are 133 ms apart (QEMU: flat scene, same frame, 0.00), so the verdict is on 16x16 block means (the ext block
+                 * against the source area it covers, 4 x 4 samples each): robust against moving texture, still fails on a wrong picture */
+                for (by = 0; by + 16 <= fe->height; by += 16)
+                    for (bx = 0; bx + 16 <= fe->width; bx += 16) {
+                        long se = 0, s0 = 0;
+                        unsigned i, j, nx0 = (unsigned)(((unsigned long long)bx * f0->width) / fe->width), nx1 = (unsigned)(((unsigned long long)(bx + 16) * f0->width) / fe->width);
+                        unsigned ny0 = (unsigned)(((unsigned long long)by * f0->height) / fe->height), ny1 = (unsigned)(((unsigned long long)(by + 16) * f0->height) / fe->height);
+
+                        for (j = 0; j < 16; j++) for (i = 0; i < 16; i++) se += ye[(size_t)(by + j) * fe->width + bx + i];
+                        for (j = 0; j < 16; j++) for (i = 0; i < 16; i++)
+                            s0 += y0[(size_t)(ny0 + (ny1 - ny0) * j / 16) * f0->width + nx0 + (nx1 - nx0) * i / 16];
+                        se /= 256; s0 /= 256;
+                        bmad += se > s0 ? se - s0 : s0 - se; bn++;
+                    }
+                printf("[extchn] ext %ux%u vs ch0 %ux%u: luma mean %.1f / %.1f, pixel mean abs diff %.2f, block (16x16) mean abs diff %.2f, time stamps %lld / %lld us\n",
+                       fe->width, fe->height, f0->width, f0->height, (double)sume / n, (double)sum0 / n, (double)mad / n, bn ? (double)bmad / bn : -1.0,
                        (long long)fe->timeStamp, (long long)f0->timeStamp);
-                pic_ok = n && dabs((double)sume / n - (double)sum0 / n) < 10 && (double)mad / n < 25;
+                pic_ok = n && bn && dabs((double)sume / n - (double)sum0 / n) < 10 && (double)bmad / bn < 12;
             }
             if (f0) IMP_FrameSource_ReleaseFrame(0, f0);
             if (fe) IMP_FrameSource_ReleaseFrame(3, fe);
@@ -3535,7 +3568,7 @@ static void cs_extchn_t31(void)
 #if defined(PLATFORM_T30)
     /* QEMU: the encoder is slow, so only that frames arrive (>= 5); GetFrame(3) serves the 320x180 depth list (libimp 1.0.5) */
     rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == 0 && rc == 0 && rs == 0 && re == 0 && got >= 1 && got < 100 &&
-        enc_streams >= 5 && pic_ok && rd == 0 && flow()) ? V_PASS : V_FAIL,
+        (noenc || enc_streams >= 5) && pic_ok && rd == 0 && flow()) ? V_PASS : V_FAIL,
         "rt: ext ch5 %d, src3 %d (-1), src-1 %d (0); Create(3, EXT) %d, SetSource(3,0) %d, Enable %d, GetFrame(3) %d frames (320x180; >= 1), "
         "FS3 -> ENC5 %d streams in 3 s (>= 5), ext picture = scaled ch0 %d, Destroy %d, frames flow", ra, rb, rcx, rc, rs, re, got, enc_streams, pic_ok, rd);
     (void)rg;
@@ -5162,9 +5195,16 @@ static void cs_padframe_t23(void)
             at_td_disarm();
             rep(FN(IMP_Encoder_SetPadFrameAttr), r1 | r2 | r3, (r1 == 0 && r2 == 0 && r3 == 0 && f3 > 5 && s3 > s1 * 2) ? V_PASS : V_FAIL,
                 "free mode on / time-stamp mode on / off: ret %d %d %d; off again: %d frames, %.0f bytes avg", r1, r2, r3, f3, s3);
-            rep(FN(IMP_Encoder_PadFrame), 0, (f1 > 5 && s1 < s0 / 3 && rel1 >= f1 && f2 <= 1 && rel2 > 5 && g_pad_inflight == 0 && flow()) ? V_PASS : V_FAIL,
+            /* APITEST_VENDOR=1 (stock libimp): b61 showed the stock T30 library takes the pad frames and hands every one back but encodes none
+             * (0 frames in free mode, same as the stock T21/T23 in QEMU, t2x-cov), so the stock verdict is the hand-back contract only; the
+             * encoding of pad frames (black pad frames much smaller than the scene) is the open-stack behaviour and is judged on OpenIMP only */
+            int pad_ok = at_stock() ? (rel1 >= f1 && f2 <= 1 && rel2 > 5 && g_pad_inflight == 0 && flow())
+                                    : (f1 > 5 && s1 < s0 / 3 && rel1 >= f1 && f2 <= 1 && rel2 > 5 && g_pad_inflight == 0 && flow());
+
+            rep(FN(IMP_Encoder_PadFrame), 0, pad_ok ? V_PASS : V_FAIL,
                 "scene %d frames %.0f B avg; black pad frames: %d frames %.0f B avg, %d released; stale pad frames (ts mode): %d frames encoded, %d released; "
-                "all handed back after DestroyChn (in flight %d)", f0, s0, f1, s1, rel1, f2, rel2, g_pad_inflight);
+                "all handed back after DestroyChn (in flight %d)%s", f0, s0, f1, s1, rel1, f2, rel2, g_pad_inflight,
+                at_stock() ? "; stock library: pad frames are handed back, not encoded (verdict = hand-back contract)" : "");
         }
         if (a_free) a_free(d->virt);
         free(a); gfree(d);
@@ -5700,17 +5740,17 @@ static void cs_decoder_t23(void)
         unsigned char *pic = NULL;
 
         bad.decType = PT_H264;
-        rbad0 = cc(0, &bad);                                    /* only JPEG */
+        rbad0 = GATE("dec_bad0", cc(0, &bad));                                    /* only JPEG */
         bad = a; bad.pixelFormat = PIX_FMT_BGRA;
-        rbad1 = cc(0, &bad);                                    /* only YUV420P / NV12 / NV21 */
-        rbad2 = cc(1, &a);                                      /* channel 0 only */
-        rno = sd(0, &str, 100);
-        rc = cc(0, &a);
-        rsr = sr(0);
+        rbad1 = GATE("dec_bad1", cc(0, &bad));                                    /* only YUV420P / NV12 / NV21 */
+        rbad2 = GATE("dec_bad2", cc(1, &a));                                      /* channel 0 only */
+        rno = GATE("dec_send_nochn", sd(0, &str, 100));
+        rc = GATE("dec_create", cc(0, &a));
+        rsr = GATE("dec_start", sr(0));
         str.i_payload = (int)sizeof(at_dec_jpg); str.p_payload = jp; str.timeStamp = 4242;
-        rs = rc == 0 ? sd(0, &str, 2000) : -1;
-        rp = rs == 0 ? pf(0, 2000) : -1;
-        if (rp == 0) rg = gf(0, &fr);
+        rs = rc == 0 ? GATE("dec_send", sd(0, &str, 2000)) : -1;
+        rp = rs == 0 ? GATE("dec_poll", pf(0, 2000)) : -1;
+        if (rp == 0) rg = GATE("dec_getframe", gf(0, &fr));
         if (rg == 0 && fr) {
             const unsigned char *y;
             int i, j;
@@ -5723,7 +5763,7 @@ static void cs_decoder_t23(void)
             ok = fr->width == 32 && fr->height == 24 && pic && abs(ryl - 208) < 8 && abs(ryr - 70) < 8 &&
                  abs(pic[32 * 24] - 33) < 8 && abs(pic[32 * 24 + 1] - 143) < 8 && abs(pic[32 * 24 + 16] - 201) < 8 && abs(pic[32 * 24 + 17] - 107) < 8;
             fw = (int)fr->width; fh = (int)fr->height; cb0 = pic[32 * 24]; cr0 = pic[32 * 24 + 1];
-            rr = rf(0, fr);
+            rr = GATE("dec_release", rf(0, fr));
         }
         {   /* a broken payload and a picture above maxWidth are refused, the channel keeps working */
             at_decstream b2;
@@ -5733,11 +5773,11 @@ static void cs_decoder_t23(void)
 
             memset(junk, 0x5a, sizeof(junk));
             b2.i_payload = (int)sizeof(junk); b2.p_payload = junk; b2.timeStamp = 1;
-            rj = sd(0, &b2, 200);
-            rst = st(0);
-            rd = dc(0);
+            rj = GATE("dec_send_junk", sd(0, &b2, 200));
+            rst = GATE("dec_stop", st(0));
+            rd = GATE("dec_destroy", dc(0));
             small.maxWidth = 16;
-            rbig = cc(0, &small) == 0 ? sd(0, &str, 200) : 0;
+            rbig = GATE("dec_create_small", cc(0, &small)) == 0 ? GATE("dec_send_big", sd(0, &str, 200)) : 0;
             if (rbig == -1 || rbig == 0) dc(0);
             rdd = dc(0);
             rep(LBL("IMP_Decoder_CreateChn"), rc, (rc == 0 && rbad0 == -1 && rbad1 == -1 && rbad2 == -1) ? V_PASS : V_FAIL,

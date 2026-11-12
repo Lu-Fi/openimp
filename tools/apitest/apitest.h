@@ -189,5 +189,11 @@ int enc_rctrig_run(void);    /* case "rctrig" (explicit only, T10/T20) */
 
 /* fetch one NV12 frame from FS ch1 (for IVS/encoder-less users) */
 int fs_peek(int ch, int *w, int *h, int64_t *ts);
+/* crash isolation for a stack whose library may fault (stock libimp): APITEST_TRACE=1 prints "[trace] name" (flushed) before the call,
+ * APITEST_SKIP=a,b,c makes at_gate("a") return 1 (the caller then skips the call and reports its result as -99). */
+int at_gate(const char *name);
+#define GATE(n, e) (at_gate(n) ? -99 : (e))
+/* APITEST_VENDOR=1: the stack under test is the stock libimp (the run is a vendor reference, not an OpenIMP verdict) */
+int at_stock(void);
 
 #endif
