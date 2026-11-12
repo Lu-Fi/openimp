@@ -9,6 +9,7 @@ the pass/fail checks, the deviations and the pictures; names are `<vendor>-<soc>
 
 | SoC | camera | date | lamps | result |
 |---|---|---|---|---|
+| T10 | Secuplug SP1, jxh42 | 2026-11-12 10:18 | full 5000 K run both stacks + open supplement 12:36 (reload, motion, aeresp, nightir, d1d4); open: open-tx-isp next 51d50ddc (#358 fix) + OpenIMP libimp next a822a1b6 + timps a7cba61, runtime only; AE overshoot metric fixed (#396, open 6.2 % vs vendor 7.0 %); the fails are #405 (stale first frame since #374) and #406 (reset on streamer restart) | [45 pass / 9 fail](secuplug-t10-jxh42-2026-11-12-1018.html) |
 | T10 | Secuplug SP1, jxh42 | 2026-11-11 19:23 | full 5000 K run both stacks (open: open-tx-isp next ff96b3a8 + OpenIMP libimp next df9d225f built from source, runtime only; sensor shvflip=1 #276, OSD band masked for PSNR #304, ch1 #235), Claude picture review; D4 and rc-step fails filed as #358 #359 | [60 pass / 3 fail](secuplug-t10-jxh42-2026-11-11-1923.html) |
 | T10 | Secuplug SP1, jxh42 | 2026-11-10 17:40 | full 3000 K run both stacks (open: next with the T20 firmware fixes #244 #246 #252 #253 #262, runtime insmod), 5000 K AWB/colour/AE response/P1, Claude picture/log review | [62 pass / 4 fail](secuplug-t10-jxh42-2026-11-10-1740.html) |
 | T10 | Secuplug SP1, jxh42 | 2026-11-07 | 3000 K fair pass + 5000 K colour pass + day/night D1/D4 | [28 pass / 3 differ](secuplug-t10-jxh42-2026-11-07.html) |
