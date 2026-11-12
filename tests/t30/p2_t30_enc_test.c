@@ -185,7 +185,25 @@ int main(void)
 
     CHECK(IMP_Encoder_CreateGroup(0) == 0);
     make_attr(&attr, 0);
+    attr.rcAttr.attrHSkip.hSkipAttr.skipType = IMP_Encoder_STYPE_N1X;
+    attr.rcAttr.attrHSkip.hSkipAttr.maxSameSceneCnt = 3;
     CHECK(IMP_Encoder_CreateChn(0, &attr) == 0);
+    /* ---- HSkip (#24): T30 1.0.5 CreateChn hands hSkipAttr to i264e (channel_i264e_encoder_init), SetChnHSkip and
+     * SetChnHSkipBlackEnhance reach it through i264e_set_param(9) / (10) ---- */
+    CHECK(hs_calls == 1 && hs_type == 0);
+    {
+        IMPEncoderAttrHSkip hsk;
+        extern int IMP_Encoder_SetChnHSkipBlackEnhance(int, const int);
+
+        memset(&hsk, 0, sizeof(hsk));
+        CHECK(IMP_Encoder_GetChnHSkip(0, &hsk) == 0 && hsk.maxSameSceneCnt == 3);
+        hsk.bEnableScenecut = 1;
+        CHECK(IMP_Encoder_SetChnHSkip(0, &hsk) == 0 && hs_calls == 2 && hs_scene == 1);
+        CHECK(IMP_Encoder_SetChnHSkipBlackEnhance(0, 1) == 0 && hs_black == 1 && hs_calls == 3);
+        CHECK(IMP_Encoder_SetChnHSkipBlackEnhance(0, 0) == 0 && hs_black == 0);
+        hsk.skipType = IMP_Encoder_STYPE_H1M_TRUE;     /* above maxHSkipType (0 here): refused, nothing sent */
+        CHECK(IMP_Encoder_SetChnHSkip(0, &hsk) == -1 && hs_calls == 4);
+    }
 
     /* ---- ROI: an enabled region is stored and read back, corners / 16 x 16 ---- */
     memset(&roi, 0, sizeof(roi));

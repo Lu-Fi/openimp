@@ -1002,6 +1002,193 @@ static void test_runtime_parameters(void)
 }
 
 #if defined(PLATFORM_T30)
+/* IMP_Encoder_SetChnHSkip, T30 (#24, docs/T30_HSKIP.md): the T30 1.0.5 i264e is the T10/T20 one, its decisions are
+ * tests/hskip/hskip_vectors.txt (tools/hskip_oracle.py on the T30 library).  The pictures follow the vectors (IDR,
+ * frame_num, long-term flag, list modification, MMCO) in every rate-control mode, with and without the T30 eprc
+ * controller; BlackEnhance writes the ENHANCE pictures in software (no VPU run, QP 0). */
+typedef struct {
+    unsigned int cnt, idr, ft, ltr, reo, mm;
+} T30HsVec;
+
+static int t30_hs_vectors(unsigned int gop, unsigned int type, unsigned int m, unsigned int n, unsigned int same,
+                          T30HsVec *v, unsigned int count)
+{
+    FILE *f = fopen("../hskip/hskip_vectors.txt", "r");
+    char line[256];
+    unsigned int g, t, mm, nn, s, i = 0;
+    int ref, rec, idc;
+
+    if (!f)
+        return -1;
+    while (fgets(line, sizeof(line), f)) {
+        if (line[0] == 'S' && sscanf(line, "S %u %u %u %u %u", &g, &t, &mm, &nn, &s) == 5 &&
+            g == gop && t == type && mm == m && nn == n && s == same) {
+            for (i = 0; i < count && fgets(line, sizeof(line), f); i++)
+                if (sscanf(line, "%u %u %u %d %d %u %u %d %u", &v[i].cnt, &v[i].idr, &v[i].ft, &ref, &rec,
+                           &v[i].ltr, &v[i].reo, &idc, &v[i].mm) != 9)
+                    break;
+            fclose(f);
+            return i == count ? 0 : -1;
+        }
+    }
+    fclose(f);
+    return -1;
+}
+
+static void t30_hs_params(HWEncoderParams *params, unsigned int gop, int cbr)
+{
+    memset(params, 0, sizeof(*params));
+    params->width = 640;
+    params->height = 360;
+    params->fps_num = gop < 15u ? gop : 15u;     /* CreateChn rounds the GOP up to a multiple of the rate (#367) */
+    params->fps_den = 1;
+    params->gop_length = gop;
+    params->rc_mode = cbr ? HW_RC_MODE_CBR : HW_RC_MODE_FIXQP;
+    params->bitrate = 500000;
+    params->qp = 30;
+    params->min_qp = 20;
+    params->max_qp = 51;
+    params->rc_flags = HW_RC_FLAG_APP;
+}
+
+static void test_t30_hskip(void)
+{
+    static const unsigned int mns[4][3] = { { 7, 1, 0 }, { 7, 1, 3 }, { 4, 2, 0 }, { 3, 3, 5 } };
+    unsigned int type, k, black, eprc, frame, scenarios = 0;
+
+    hs_parse = 1;
+    for (eprc = 0; eprc < 2u; eprc++) {
+        setenv("OPENIMP_T30_EPRC", eprc ? "1" : "0", 1);
+        for (type = 0; type <= 6u; type++) {
+            for (k = 0; k < 4u; k++) {
+                for (black = 0; black < 2u; black++) {
+                    HWEncoderParams params;
+                    T30HelixEncoder *encoder = NULL;
+                    PictureInfo info;
+                    T30HsVec v[48];
+                    unsigned int runs0, blacks = 0;
+
+                    assert(t30_hs_vectors(8u, type, mns[k][0], mns[k][1], mns[k][2], v, 48u) == 0);
+                    t30_hs_params(&params, 8u, (int)eprc);
+                    params.hskip_type = type;
+                    params.hskip_m = mns[k][0];
+                    params.hskip_n = mns[k][1];
+                    /* CreateChn: maxSameSceneCnt counts for N1X and H1M only */
+                    params.same_scene_gops = (type == 0u || type >= 5u) ? mns[k][2] : 0u;
+                    params.hskip_flags = HW_HSKIP_SET | (black ? HW_HSKIP_BLACK : 0u);
+                    assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+                    runs0 = runs;
+                    for (frame = 0; frame < 48u; frame++) {
+                        fill_payload(200u + frame, 20u);
+                        assert(encode(encoder, &info) == 0);
+                        if (info.idr != (int)v[frame].idr || info.frame_num != (v[frame].cnt & 1023u))
+                            fprintf(stderr, "eprc %u type %u k %u black %u frame %u: idr %d/%u fn %u/%u\n", eprc, type,
+                                    k, black, frame, info.idr, v[frame].idr, info.frame_num, v[frame].cnt);
+                        assert(info.idr == (int)v[frame].idr);
+                        assert(info.frame_num == (v[frame].cnt & 1023u));
+                        assert(info.ltr == (int)v[frame].ltr);
+                        assert(info.reorder == (int)v[frame].reo);
+                        assert(info.mmco == (v[frame].mm == 2u));
+                        if (black && v[frame].ft == 3u && !v[frame].idr) {
+                            assert(info.qp == 0u && info.slice_bytes < 60u);    /* the all-skip slice */
+                            blacks++;
+                        } else {
+                            assert(info.slice_bytes > 200u);
+                        }
+                    }
+                    assert(runs - runs0 == 48u - blacks);   /* a black picture does not reach the VPU */
+                    assert(!black || type == 0u || type >= 5u || blacks > 0u);
+                    OpenIMP_T30_HelixDestroy(encoder);
+                    scenarios++;
+                }
+            }
+        }
+    }
+    {
+        /* IMP_Encoder_SetChnHSkip at run time: i264e_reconfig_hskip_set waits for the next IDR (frame 16) */
+        HWEncoderParams params;
+        T30HelixEncoder *encoder = NULL;
+        PictureInfo info;
+        T30HsVec v[32];
+
+        unsetenv("OPENIMP_T30_EPRC");
+        assert(t30_hs_vectors(8u, 5u, 7u, 1u, 0u, v, 32u) == 0);
+        t30_hs_params(&params, 8u, 1);
+        assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+        for (frame = 0; frame < 40u; frame++) {
+            fill_payload(300u + frame, 20u);
+            assert(encode(encoder, &info) == 0);
+            if (frame == 11u) {
+                params.hskip_type = 5;
+                params.hskip_m = 7;
+                params.hskip_n = 1;
+                params.hskip_flags = HW_HSKIP_SET;
+                assert(OpenIMP_T30_HelixUpdateParams(encoder, &params) == 0);
+            }
+            if (frame >= 16u) {
+                assert(info.idr == (int)v[frame - 16u].idr && info.frame_num == v[frame - 16u].cnt &&
+                       info.reorder == (int)v[frame - 16u].reo && info.mmco == (v[frame - 16u].mm == 2u) &&
+                       info.ltr == (int)v[frame - 16u].ltr);
+            } else {
+                assert(info.idr == (frame % 8u == 0u));
+                assert(!info.reorder && !info.mmco && !info.ltr);
+            }
+        }
+        /* SetChnHSkipBlackEnhance at run time: from the next picture, no new IDR */
+        params.hskip_flags = HW_HSKIP_SET | HW_HSKIP_BLACK;
+        assert(OpenIMP_T30_HelixUpdateParams(encoder, &params) == 0);
+        {
+            unsigned int blacks = 0, idrs = 0;
+
+            for (frame = 40; frame < 48u; frame++) {
+                fill_payload(300u + frame, 20u);
+                assert(encode(encoder, &info) == 0);
+                if (v[frame - 16u].ft == 3u && !v[frame - 16u].idr) {
+                    assert(info.qp == 0u && info.slice_bytes < 60u);
+                    blacks++;
+                }
+                idrs += (unsigned int)info.idr;
+                assert(info.frame_num == v[frame - 16u].cnt);
+            }
+            assert(blacks > 0u && idrs == 1u);      /* frame 40: the GOP's own IDR */
+        }
+        OpenIMP_T30_HelixDestroy(encoder);
+    }
+    for (eprc = 0; eprc < 2u; eprc++) {
+        /* bEnableScenecut (i264e_decide_reset_slice_to_idr): H1M_TRUE m 4 (a base picture every 5), 15 fps; the base
+         * picture at the whole second (frame 15) is larger than the IDR picture: it is coded again as an IDR picture,
+         * the structure starts again there (next IDR one GOP later, frame 45) */
+        HWEncoderParams params;
+        T30HelixEncoder *encoder = NULL;
+        PictureInfo info;
+        unsigned int runs0;
+
+        setenv("OPENIMP_T30_EPRC", eprc ? "1" : "0", 1);
+        t30_hs_params(&params, 30u, (int)eprc);
+        params.hskip_type = 6;
+        params.hskip_m = 4;
+        params.hskip_n = 2;
+        params.hskip_flags = HW_HSKIP_SET | HW_HSKIP_SCENECUT;
+        assert(OpenIMP_T30_HelixCreate(&encoder, &params) == 0);
+        runs0 = runs;
+        for (frame = 0; frame < 50u; frame++) {
+            fill_payload(frame == 15u ? 3000u : 300u, 20u);
+            assert(encode(encoder, &info) == 0);
+            assert(info.idr == (frame == 0u || frame == 15u || frame == 45u));
+            assert(info.frame_num == (frame < 15u ? frame : frame < 45u ? frame - 15u : frame - 45u));
+            assert(!info.idr || info.ltr);
+        }
+        assert(runs - runs0 == 51u);                /* frame 15 ran twice */
+        OpenIMP_T30_HelixDestroy(encoder);
+    }
+    unsetenv("OPENIMP_T30_EPRC");
+    setenv("OPENIMP_T30_EPRC", "0", 1);
+    hs_parse = 0;
+    printf("T30 HSkip: %u scenarios equal to the vendor vectors\n", scenarios);
+}
+#endif
+
+#if defined(PLATFORM_T30)
 /* FIXQP (#271): the T30 1.0.5 library codes I pictures at QP - 3 and P pictures at QP although the channel's range
  * is [qp, qp] (T30X b55 slice QPs: FixQP 25 -> I 22 / P 25, FixQP 35 -> I 32 / P 35) */
 static void test_t30_fixqp(void)
@@ -2943,6 +3130,7 @@ int main(int argc, char **argv)
     test_chroma_clamp_t21();
 #endif
 #if defined(PLATFORM_T30)
+    test_t30_hskip();
     test_t30_fixqp();
     test_t30_short_gop();
 #else

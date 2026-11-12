@@ -1797,6 +1797,14 @@ int enc_hskip_run(void)
         printf("hskip: SetChnHSkip %d\n", r);
     }
     if (getenv("HSKIP_BLACK") && IMP_Encoder_SetChnHSkipBlackEnhance) printf("hskip: SetChnHSkipBlackEnhance %d\n", IMP_Encoder_SetChnHSkipBlackEnhance(chn, hs.bBlackEnhance));
+    if (IMP_Encoder_GetChnHSkip) {      /* the read-back of the stored words (T30 #24: vendor vs open) */
+        IMPEncoderAttrHSkip g;
+
+        memset(&g, 0x5a, sizeof(g));
+        r = IMP_Encoder_GetChnHSkip(chn, &g);
+        printf("hskip: GetChnHSkip %d type %d m %d n %d same %d scenecut %d black %d\n", r, (int)g.skipType, g.m, g.n,
+               g.maxSameSceneCnt, (int)g.bEnableScenecut, (int)g.bBlackEnhance);
+    }
     if (getenv("HSKIP_REF") && IMP_Encoder_SetChangeRef) printf("hskip: SetChangeRef %d\n", IMP_Encoder_SetChangeRef(chn, hs_env("HSKIP_REF", 0)));
     r = IMP_Encoder_StartRecvPic(chn);
     printf("hskip: StartRecvPic %d\n", r);
