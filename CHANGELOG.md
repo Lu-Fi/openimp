@@ -14,6 +14,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Fix (`VBMExpireReady`, T20/T30 capture thread): a published frame that no reader took within 20 ms (waiting readers take it within a few ms: encoder frame-ready event, GetFrame 5 ms poll) goes back to the driver before the next DQBUF, so the ring is full at each frame boundary; the next capture is published for the next reader (fresh after a pause, #405). #374 (no 1 s pause) unchanged.
 - Host: new `fs_lifecycle_test` case `ivs_after_reader` (fake bank ring: a frame completes only with every bank filled; reader pulls 400 ms, leaves, IVS needs 20 frames in 900 ms, GetFrame afterwards fresh; with and without delay FIFO): 1 frame on the old code, passes now (T20, T30).
 - Device (runtime /tmp libimp, no flash): T20 .107 apitest `enc,ivs` 3/3 runs IVS 25/0 (before 19/5), `sys,fs,enc,osd,ivs,isp,su,cases` 301/4 (only the known #421 enc GOP/rate FAILs); T10 .31 first snapshot after a 30 s pause fresh 3/3 rounds; T31 .26 ext feed 46 streams/3 s x2 (vendor 46).
+## 2026-11-12: matrix decisions C2/C3/C4 and #347 F9 rejected
+
+- T30 `Decoder_*`, `Sp_Alloc`, `FrameSource_SetSource` rated dev+ (OpenIMP passes on the T30X, vendor 1.0.5 crashes; observed vendor crash, no behaviour change, documented in OPENIMP_BEYOND_VENDOR.md 6.7).
+- T31 `SU_CIPHER_DES_Test` keeps our -18 before `DES_Init` (like T40), cell nohw, documented in OPENIMP_BEYOND_VENDOR.md.
+- T40 `SU_Key_Read/Enable/DisableEvent` rated nohw (vendor and OpenIMP fail identically, gpio_keys vs gpio-keys; no name fallback).
+- #347 F9 (T40 fine-trim deadband) rejected: vendor behaviour stays.
+
 ## 2026-11-12: matrix round r2: SU no-node cells, T41 audio select and wake-up mode, T30X slot b68 prepared
 
 - Fresh inventory of every remaining 🔧/⚠ cell (T32/T33 planned, excluded): API cells 76 -> 67 (incl. 2 T30 cache cells), feature cells 5 unchanged. Device runs on the agg68 test cameras (runtime /tmp libraries only, no flash, no sound):
