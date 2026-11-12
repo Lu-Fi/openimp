@@ -4938,7 +4938,7 @@ int OpenIMP_T30_HelixSetUserData(T30HelixEncoder *encoder, uint32_t count,
 
 #if defined(PLATFORM_T30)
 /* IMP_Encoder_GetGOPSize: i264e parameter 7 (i264e_reconfig_gop_get), the
- * GOP the glue last handed over (whole seconds at CreateChn, the rounded or
+ * GOP the glue last handed over (rounded up at CreateChn, the rounded or
  * rescaled value after the first picture past a SetGOPSize/SetChnFrmRate),
  * also while it still waits for its IDR */
 uint32_t OpenIMP_T30_HelixGop(const T30HelixEncoder *encoder)

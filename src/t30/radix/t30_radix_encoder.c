@@ -242,7 +242,7 @@ int OpenIMP_T30_RadixCreate(T30RadixEncoder **encoder_out,
     }
     if (!e->params.gop_length)
         e->params.gop_length = 25u;
-    /* CreateChn: the GOP in whole seconds (#367) */
+    /* CreateChn: the GOP rounded up to a multiple of num * den (#367) */
     e->params.gop_length = t30_gop_glue_create(&e->gop, e->params.gop_length,
                                                e->params.gop_requests,
                                                e->params.fps_num,

@@ -4,8 +4,8 @@
  * for both channel types and hands frame rate and GOP to i264e / i265e as
  * parameters 5 / 7.
  *
- * - CreateChn: the GOP in whole seconds of the reduced rate (gop * den / num
- *   truncated, times num / den rounded up; GOP 30 at 25 fps -> 25).
+ * - CreateChn: the GOP rounded up to a multiple of num * den of the reduced
+ *   rate (GOP 30 at 25 fps -> 50, measured on a T30X, #367).
  * - A new frame rate keeps the whole seconds of the running GOP.
  * - A GOP asked for (SetGOPSize, channel +0xd8) is rounded up to a multiple
  *   of num * den of the reduced rate (30 at 25/1 -> 50) and stored back.
@@ -69,7 +69,7 @@ static inline uint32_t t30_gop_glue_create(T30GopGlue *s, uint32_t gop,
     t30_gop_reduce(&num, &den);
     s->gop_hw = gop;
     s->gop_requests = requests;
-    s->vgop = t30_gop_rescale(gop, num, den, num, den);
+    s->vgop = t30_gop_round(gop, num, den);
     s->vgop_req = s->vgop;
     return s->vgop;
 }

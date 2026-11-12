@@ -406,11 +406,17 @@ def main_h264_gop(lib, args):
             else:
                 ev.append((f, 'g', rnd.randint(1, 8) * rnd.choice((5, 10, 25))))
         scen.append((fps, rnd.randint(1, 6) * 25, ev))
+    from math import gcd
     for fps, gop, ev in scen:
+        # CreateChn (T30X device b59: GOP 30 at 25/1 -> GetGOPSize 50): the
+        # GOP rounded up to a multiple of num * den of the reduced rate
+        gd = gcd(fps[0], fps[1])
+        unit = (fps[0] // gd) * (fps[1] // gd)
+        cgop = -(-gop // unit) * unit
         L.wr(CH, bytes(0x1000)); L.wr(FR, bytes(0x100)); L.wr(H, bytes(0x93000))
         L.w32(CH + 8, 1); L.w32(CH + 0x394, H)
-        for o, v in ((0x38, fps[0]), (0x3c, fps[1]), (0x40, gop), (0xd0, fps[0]),
-                     (0xd4, fps[1]), (0xd8, gop)):
+        for o, v in ((0x38, fps[0]), (0x3c, fps[1]), (0x40, cgop), (0xd0, fps[0]),
+                     (0xd4, fps[1]), (0xd8, cgop)):
             L.w32(CH + o, v)
         L.w32(FR + 0x28, src[0]); L.w32(FR + 0x2c, src[1])
         pics, idrs, lines, applied, since, pend = 0, [], [], None, 0, None

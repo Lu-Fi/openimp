@@ -664,6 +664,14 @@ static void fill_payload(uint32_t length, unsigned int zero_percent)
     payload_length = length;
 }
 
+/* a short GOP (CreateChn rounds up to a multiple of the rate, #367) keeps its
+ * length on a rate dividing it; only T30 has the rounding in this branch */
+#if defined(PLATFORM_T30)
+#define T30_FPS(n) (n)
+#else
+#define T30_FPS(n) 25
+#endif
+
 static T30HelixEncoder *create(uint32_t width, uint32_t height,
                                uint32_t fps, uint32_t gop)
 {
@@ -673,6 +681,12 @@ static T30HelixEncoder *create(uint32_t width, uint32_t height,
     memset(&params, 0, sizeof(params));
     params.width = width;
     params.height = height;
+    /* CreateChn rounds the GOP up to a multiple of the rate (#367): a short
+     * GOP of these tests keeps its length on the largest rate dividing it */
+#if defined(PLATFORM_T30)
+    while (gop < fps && fps > 1u && gop % fps)
+        fps--;
+#endif
     params.fps_num = fps;
     params.fps_den = 1;
     params.gop_length = gop;
@@ -701,7 +715,7 @@ static void test_color2grey(void)
     memset(&p, 0, sizeof(p));
     p.width = 640;
     p.height = 360;
-    p.fps_num = 25;
+    p.fps_num = T30_FPS(4);
     p.fps_den = 1;
     p.gop_length = 4;
     p.rc_mode = HW_RC_MODE_CBR;
@@ -758,7 +772,7 @@ static void test_t20_superframe(void)
     memset(&p, 0, sizeof(p));
     p.width = 640;
     p.height = 360;
-    p.fps_num = 25;
+    p.fps_num = T30_FPS(10);
     p.fps_den = 1;
     p.gop_length = 10;
     p.rc_mode = HW_RC_MODE_CBR;
@@ -875,7 +889,7 @@ static void test_gop_and_failures(void)
 
 static void test_runtime_parameters(void)
 {
-    T30HelixEncoder *encoder = create(1920, 1080, 25, 10);
+    T30HelixEncoder *encoder = create(1920, 1080, 25, 25);
     HWEncoderParams params;
     PictureInfo info;
     unsigned int i;
@@ -966,7 +980,7 @@ static void test_t30_fixqp(void)
     memset(&params, 0, sizeof(params));
     params.width = 640;
     params.height = 360;
-    params.fps_num = 25;
+    params.fps_num = T30_FPS(10);
     params.fps_den = 1;
     params.gop_length = 10;
     params.rc_mode = HW_RC_MODE_FIXQP;
@@ -996,7 +1010,7 @@ static void test_t20_fixqp(void)
     memset(&params, 0, sizeof(params));
     params.width = 640;
     params.height = 360;
-    params.fps_num = 25;
+    params.fps_num = T30_FPS(10);
     params.fps_den = 1;
     params.gop_length = 10;
     params.rc_mode = HW_RC_MODE_FIXQP;
@@ -1184,7 +1198,7 @@ static void test_t20_rate_control(void)
         memset(&mp, 0, sizeof(mp));
         mp.width = 1280;
         mp.height = 720;
-        mp.fps_num = 25;
+        mp.fps_num = T30_FPS(10);
         mp.fps_den = 1;
         mp.gop_length = 10;
         mp.rc_mode = HW_RC_MODE_CBR;
@@ -1883,7 +1897,7 @@ static void test_roi_chroma(int t10)
     memset(&p, 0, sizeof(p));
     p.width = 640;
     p.height = 360;
-    p.fps_num = 25;
+    p.fps_num = T30_FPS(4);
     p.fps_den = 1;
     p.gop_length = 4;
     p.rc_mode = HW_RC_MODE_CBR;
@@ -2000,7 +2014,7 @@ static void test_fisheye(int t10)
         memset(&params, 0, sizeof(params));
         params.width = 640;
         params.height = 360;
-        params.fps_num = 25;
+        params.fps_num = T30_FPS(20);
         params.fps_den = 1;
         params.gop_length = 20;
         params.rc_mode = HW_RC_MODE_FIXQP;
@@ -2055,7 +2069,7 @@ static void test_fisheye_t21(void)
         memset(&params, 0, sizeof(params));
         params.width = 640;
         params.height = 360;
-        params.fps_num = 25;
+        params.fps_num = T30_FPS(20);
         params.fps_den = 1;
         params.gop_length = 20;
         params.rc_mode = HW_RC_MODE_FIXQP;
@@ -2102,7 +2116,7 @@ static void test_chroma_clamp_t21(void)
     memset(&p, 0, sizeof(p));
     p.width = 640;
     p.height = 360;
-    p.fps_num = 25;
+    p.fps_num = T30_FPS(4);
     p.fps_den = 1;
     p.gop_length = 4;
     p.rc_mode = HW_RC_MODE_CBR;
@@ -2166,12 +2180,12 @@ static void test_t30_eprc(void)
     unsetenv("OPENIMP_T30_EPRC");
     /* the encoder against a bare vendor controller: no start floor */
     setenv("OPENIMP_T30_START_FLOOR", "0", 1);
-    encoder = create(1280, 720, 25, 10);
+    encoder = create(1280, 720, 25, 25);
     memset(&p, 0, sizeof(p));
     p.rc_mode = EPRC_MODE_CBR;
     p.width = 1280;
     p.height = 720;
-    p.gop = 10;
+    p.gop = 25;
     p.fps_num = 25;
     p.fps_den = 1;
     p.min_qp = 20;
@@ -2280,7 +2294,7 @@ static void test_t30_frmrate_366(void)
     memset(&p, 0, sizeof(p));
     p.width = 1280;
     p.height = 720;
-    p.fps_num = 10;
+    p.fps_num = T30_FPS(10);
     p.fps_den = 1;
     p.gop_length = 50;
     p.rc_mode = HW_RC_MODE_CBR;
@@ -2439,14 +2453,14 @@ static void test_t30_start_qp(void)
         if (i)
             setenv("OPENIMP_T30_START_FLOOR", "0", 1);
         fill_payload(200u, 30);
-        encoder = create(1920, 1080, 25, 10);
+        encoder = create(1920, 1080, 25, 25);
         assert(encode(encoder, &info) == 0 && info.idr && info.qp == 32);
-        for (k = 1; k < 10u; k++) {
+        for (k = 1; k < 25u; k++) {
             assert(encode(encoder, &info) == 0 && !info.idr);
             below += info.qp < 32u;
         }
         assert(encode(encoder, &info) == 0 && info.idr);
-        for (k = 1; k < 10u; k++) {
+        for (k = 1; k < 25u; k++) {
             assert(encode(encoder, &info) == 0 && !info.idr);
             below2 += info.qp < 32u;
         }
@@ -2581,7 +2595,7 @@ static void test_t30_black_start(void)
 /* #367: IDR pictures under SetChnFrmRate / SetGOPSize at run time against
  * the vendor glue (tools/eprc_t30_oracle.py LIB --h264-reconf --gop >
  * tests/t30/t30_gop_vectors.txt): the new GOP and rate are latched and
- * apply at the next IDR, the GOP keeps its whole seconds on a new rate
+ * apply at the next IDR, CreateChn rounds the GOP up to a multiple of the rate, a new rate keeps its whole seconds
  * and a GOP asked for is rounded up to a multiple of the rate.  The
  * parameters go in before every picture, as codec-t40.c does. */
 static void test_t30_gop_vectors(const char *path)
@@ -2669,7 +2683,8 @@ static void test_t30_gop_vectors(const char *path)
     printf("T30 GOP vectors: %u scenarios equal\n", scenarios);
 }
 
-/* #367: a GOP under one second makes the vendor glue's GOP 0 (its
+/* #367: CreateChn rounds the GOP up to a multiple of the rate; only a later
+ * rate change under one second makes the vendor glue's GOP 0 (its
  * i264e_ratecontrol_init then divides by 0); OpenIMP keeps the GOP. */
 static void test_t30_short_gop(void)
 {
@@ -2684,11 +2699,12 @@ static void test_t30_short_gop(void)
     assert(OpenIMP_T30_HelixGop(encoder) == 10u);
     OpenIMP_T30_HelixDestroy(encoder);
     /* GetGOPSize before the first picture: the CreateChn GOP of the glue */
-    assert(OpenIMP_T30_GopCreate(30u, 25u, 1u) == 25u);
+    assert(OpenIMP_T30_GopCreate(30u, 25u, 1u) == 50u);   /* T30X device b59 */
     assert(OpenIMP_T30_GopCreate(50u, 25u, 1u) == 50u);
-    assert(OpenIMP_T30_GopCreate(60u, 25u, 1u) == 50u);
+    assert(OpenIMP_T30_GopCreate(60u, 25u, 1u) == 75u);
     assert(OpenIMP_T30_GopCreate(30u, 15u, 1u) == 30u);
-    assert(OpenIMP_T30_GopCreate(10u, 25u, 1u) == 10u);   /* vendor: 0 */
+    assert(OpenIMP_T30_GopCreate(10u, 25u, 1u) == 25u);
+    assert(OpenIMP_T30_GopCreate(10u, 10u, 1u) == 10u);
 }
 #endif
 
