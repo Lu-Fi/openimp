@@ -4331,9 +4331,10 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
         return -1;
     }
 #if defined(PLATFORM_T23)
-    /* OEM: a picture that fits one window is complete in its first
-     * stream, pack[0].frameEnd = 1 as on the last section */
-    if (ch->ms_raw && ch->ms_count == 1u)
+    /* OEM (update_h264_one_frmstrm): a complete picture, also without
+     * multi-section mode, gets pack[0].frameEnd = 1 on top of the last
+     * pack's (#363); the PPS between them stays 0 */
+    if (!ch->ms_raw || ch->ms_count == 1u)
         ch->packs[0].frameEnd = true;
 #endif
     stream->pack = ch->packs;

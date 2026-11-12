@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T23 GetStream sets pack[0].frameEnd on a complete picture like the vendor (#363)
+
+- The vendor stream thread (`update_h264_one_frmstrm`, T23 1.3.0) sets `frameEnd = 1` on the last pack and then overwrites `pack[0].frameEnd` with the "picture complete" flag, so a whole IDR (SPS, PPS, IDR slice) has 1/0/1. OpenIMP only flagged the last pack outside multi-section mode.
+- Fix (T23 only, `src/t40/openimp_p2_encoder.c`): a complete picture without multi-section mode now also gets `pack[0].frameEnd = 1`; the packs between stay 0. Multi-section mode unchanged. T30 not changed (not checked against the vendor).
+- Host: `p2_multisection_test` (mode off, whole IDR) checks first/last pack 1 and the middle packs 0; `make check` rc=0.
+
 ## 2026-11-12: T10/T20/T30 IVS keeps getting frames after an encoder session (#420)
 
 - Regression of #374/#405 (bisect on T20 .107: c0cd9723): after the encoder unbound from FS ch1 (3 buffers + delay FIFO 2), the newest frame stayed in the ready queue for the 1 s pull window. The T10/T20 (and T30) ISP writes a ring of DMA banks and disables its DMA when the next bank is empty; device trace: with 2 of 3 banks filled, two frames later nothing completed, the capture thread slept in the stock DQBUF for good and never reached the idle recycle, so IVS bound to the channel got no more frames (apitest `enc,ivs`: 2 of 8 results, base move / custom IVS none).

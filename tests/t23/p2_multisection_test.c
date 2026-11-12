@@ -219,6 +219,13 @@ static int run_picture(uint32_t expect_sections)
             CHECK(st.packCount == 1 && st.pack[0].length <= section_bytes);
         if (st.packCount > 1)
             CHECK(st.pack[st.packCount - 1].frameEnd);
+        if (!section_bytes && st.packCount > 1) {
+            /* #363: whole picture = vendor flags, first and last pack 1,
+             * the packs between 0 */
+            CHECK(st.pack[0].frameEnd);
+            for (i = 1; i + 1 < st.packCount; i++)
+                CHECK(!st.pack[i].frameEnd);
+        }
         if (section_bytes && !st.pack[0].frameEnd) {
             CHECK(n < (int)expect_sections);
             /* the stream stays: GetStream again gives the same section */
