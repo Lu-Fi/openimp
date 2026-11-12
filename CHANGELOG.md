@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: SU_Base_Reboot device-tested on T31 and T40 (matrix)
+
+- `SU_Base_Reboot` aud/host -> dev on T31 (T31L camera) and T40 (Eufy T40XP): called for real with the image libsysutils and with the vendor libsysutils, two reboots per camera. All return 0, the camera is back after 21-35 s with a new boot id and the streamer running, no new kernel message. T30 stays aud (lab camera, separate run).
+
 ## 2026-11-12: T23 PollingStream waits past a frame-loss drop (#395); matrix proofs
 
 - T30 matrix from the T30X device run b61 (vendor stack, then open stack by runtime swap): `Encoder_SetPadFrameAttr` qemu -> dev (vendor-equal), and the RTC/alarm/ADC `SU_*` rows (9) qemu -> nohw (no node on the board, both stacks return the same -1). Kept: `SetTemperDnsCtl`, `SetISPProcess`, `Encoder_PadFrame` (vendor run reports FAIL, open PASS: look first), `Decoder_*`, `Phys/Virt`, `Sp_Alloc`, `Get/SetChnCrop` (vendor binary crashed in the run, no vendor line), `SU_Base_GetDevID`/`Raw2SUTime` (same FAIL on both). Driver checks 16/16 PASS, 0 oops.
