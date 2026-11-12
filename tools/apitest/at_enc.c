@@ -75,6 +75,7 @@ typedef struct {
     int vps, sps, pps, idr, sei, other;
     int w, h, profile, level;           /* from SPS (H.264) or SOF (JPEG) */
     int soi, eoi, jpeg_ok;              /* JPEG frames with SOI..EOI */
+    int dqt0;                           /* first luma DQT entry of the last JPEG frame (-1 none) */
     int user;                           /* user data string seen */
     int trunc;
     int first_idr_frame;                /* frame index of the first IDR (-1 none) */
@@ -193,6 +194,7 @@ static void scan_frame(const unsigned char *b, size_t n, int codec, SI *si)
         while (ok && j + 9 < n && b[j] == 0xFF) {
             unsigned m = b[j + 1], len = (b[j + 2] << 8) | b[j + 3];
             if (m == 0xC0 || m == 0xC2) { si->h = (b[j + 5] << 8) | b[j + 6]; si->w = (b[j + 7] << 8) | b[j + 8]; }
+            if (m == 0xDB && len >= 67) si->dqt0 = b[j + 5];
             if (m == 0xDA) break;
             j += 2 + len;
         }
@@ -240,6 +242,7 @@ static int pull(int chn, int codec, int maxf, int stop, int rp, SI *si, int tmo_
 
     memset(si, 0, sizeof(*si));
     si->first_idr_frame = -1;
+    si->dqt0 = -1;
     if (!g_sbuf) g_sbuf = malloc(STREAMCAP);
     for (k = 0; k < maxf; k++) {
         G(IMPEncoderStream, s);
@@ -980,13 +983,13 @@ static void live_old(int chn, int codec)
     RT_INT(IMP_Encoder_SetMbRC, IMP_Encoder_GetMbRC, 1, "MbRC")
 # endif
 # if HAS_IMP_Encoder_SetChangeRef
-#  if defined(PLATFORM_T23) || defined(PLATFORM_T21)
-    /* stock T23 1.3.0 and T21 1.0.33 (0x48ecc): the getter has no read-back and fails on a created channel */
+#  if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+    /* stock T23 1.3.0, T21 1.0.33 (0x48ecc) and T30 1.0.5 (same code, #177): the getter has no read-back and fails on a created channel */
     NEED(IMP_Encoder_SetChangeRef) {
         int r2 = IMP_Encoder_SetChangeRef(chn, 1);
         int g = 0, r3 = IMP_Encoder_GetChangeRef ? IMP_Encoder_GetChangeRef(chn, &g) : -1;
-        RET0(IMP_Encoder_SetChangeRef, r2, "ChangeRef set 1 (T21/T23 stock: no read-back)");
-        rep(FN(IMP_Encoder_GetChangeRef), r3, r3 == -1 ? V_PASS : V_FAIL, "stock T21/T23 getter fails on a created channel: ret %d", r3);
+        RET0(IMP_Encoder_SetChangeRef, r2, "ChangeRef set 1 (T21/T23/T30 stock: no read-back)");
+        rep(FN(IMP_Encoder_GetChangeRef), r3, r3 == -1 ? V_PASS : V_FAIL, "stock T21/T23/T30 getter fails on a created channel: ret %d", r3);
         IMP_Encoder_SetChangeRef(chn, 0);
     }
 #  else
@@ -1196,7 +1199,7 @@ static void live_misc(int chn, int codec)
 #endif
     NEED(IMP_Encoder_FlushStream) {
         r = IMP_Encoder_FlushStream(chn);
-        pull(chn, codec, 3, 0, 0, &si, 2000);
+        pull(chn, codec, 3, 0, 0, &si, 4000);       /* the IDR after the flush: 2 s was too tight for a loaded QEMU host (1 run in 5) */
         CHECK(IMP_Encoder_FlushStream, r, si.frames == 3, "%d frames after the flush", si.frames);
     }
 #if HAS_IMP_Encoder_GetFd
@@ -1331,11 +1334,16 @@ int IMP_Encoder_PollingModuleStream(uint32_t *encChnBitmap, uint32_t timeoutMsec
 }
 
 /* ------------------------------------------------------------------ JPEG */
+static int g_jpeg_dqt0 = -1;            /* luma DQT[0] of the last jpeg_avg() frame */
 static unsigned long jpeg_avg(int chn, int n)
 {
     SI si;
 
-    if (pull(chn, CODEC_JPEG, n, 0, 0, &si, 2000) < 0 || si.frames < n || si.jpeg_ok < n) return 0;
+    g_jpeg_dqt0 = -1;
+    /* one retry: a slow emulated target can starve the JPEG channel of frames for a moment */
+    if ((pull(chn, CODEC_JPEG, n, 0, 0, &si, 2000) < 0 || si.frames < n || si.jpeg_ok < n) &&
+        (pull(chn, CODEC_JPEG, n, 0, 0, &si, 2000) < 0 || si.frames < n || si.jpeg_ok < n)) return 0;
+    g_jpeg_dqt0 = si.dqt0;
     return si.bytes / (unsigned)n;
 }
 
@@ -1398,6 +1406,7 @@ static void test_jpeg_body(int jchn, int share_with)
     NEED(IMP_Encoder_SetJpegeQl) {
         G(IMPEncoderJpegeQl, o); G(IMPEncoderJpegeQl, n); G(IMPEncoderJpegeQl, g);
         unsigned long hi, lo;
+        int dqt_hi, dqt_lo;
         int r2, r3, i, n_t = (int)sizeof(n->qmem_table) < 128 ? (int)sizeof(n->qmem_table) : 128;
 
         r3 = IMP_Encoder_GetJpegeQl ? IMP_Encoder_GetJpegeQl(jchn, o) : -1; gchk(o);
@@ -1407,14 +1416,20 @@ static void test_jpeg_body(int jchn, int share_with)
         r2 = IMP_Encoder_SetJpegeQl(jchn, n);
         pull(jchn, CODEC_JPEG, 2, 0, 0, &si, 2000);
         hi = jpeg_avg(jchn, 4);
+        dqt_hi = g_jpeg_dqt0;
         r = IMP_Encoder_GetJpegeQl ? IMP_Encoder_GetJpegeQl(jchn, g) : -1; gchk(g);
         CHECK(IMP_Encoder_SetJpegeQl, r2, r == 0 && g->user_ql_en && g->qmem_table[0] == 2 && g->qmem_table[64] == 2, "table all 2, read back en %d [0] %u [64] %u", g->user_ql_en, g->qmem_table[0], g->qmem_table[64]);
         for (i = 0; i < n_t; i++) n->qmem_table[i] = 90;           /* coarse quantizer: small pictures */
         r2 = IMP_Encoder_SetJpegeQl(jchn, n);
         pull(jchn, CODEC_JPEG, 2, 0, 0, &si, 2000);
         lo = jpeg_avg(jchn, 4);
-        rep(LBL("JPEG size follows SetJpegeQl live"), r2, (hi && lo && hi > lo + lo / 3) ? V_PASS : V_FAIL,
-            "table 2 -> avg %lu bytes, table 90 -> avg %lu bytes (needs table 2 clearly bigger)", hi, lo);
+        dqt_lo = g_jpeg_dqt0;
+        /* a textured scene: table 2 is clearly bigger.  A smooth scene (the QEMU ramp, whose pictures differ from frame
+         * to frame) is mostly header and DC, so the sizes barely differ there: it passes when table 2 is still bigger and
+         * the DQT of the stream follows the tables (2 then 90, the quantizers are applied to the stream). */
+        rep(LBL("JPEG size follows SetJpegeQl live"), r2,
+            (hi && lo && (hi > lo + lo / 3 || (hi > lo && dqt_hi == 2 && dqt_lo == 90))) ? V_PASS : V_FAIL,
+            "table 2 -> avg %lu bytes (DQT[0] %d), table 90 -> avg %lu bytes (DQT[0] %d) (needs table 2 clearly bigger, or bigger with the DQT following)", hi, dqt_hi, lo, dqt_lo);
         IMP_Encoder_SetJpegeQl(jchn, o);
         gfree(o); gfree(n); gfree(g);
     }
