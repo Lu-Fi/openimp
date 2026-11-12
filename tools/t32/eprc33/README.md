@@ -46,5 +46,9 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   out-of-range configuration values at VIDEO_CFG, HW revision e+0x34 (6 / 7), size-based reference QP
   (inst+0x54), SMART motion level inst+0x7f / rule inst+0x7d, the per-picture flags e+0x30 / e+0x53,
   st+0x398 back to 0 at FRAME_END, IDR periods that differ from the GOP, GOP 2.
-- `swap265.py` (in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
+  Seeds 3 / 4 add FRAME_START knobs (own random stream, seeds 1 / 2 unchanged): FIXQP (mode 0), the still map
+  (cur+0x320..0x327: block size 8..32, 2..4 classes as the 4 counters at ms+0x2c allow, hysteresis), motion mode
+  cur+0x340 / 0x341, forced intra cur+0x342 / 0x344 and intra refresh e+0x35d with cur+0x32a..0x338.
+  `reg265.sh` runs seeds 1..4 (7 N / 2 scenarios).
+- `swap265.py` (`CFLAGS_X='-O0 --coverage' OUT=...` for a gcov build; in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
   controller with the functions of `swapmap265.txt` taken from `src/eprc/eprc_t33_h265.c`.

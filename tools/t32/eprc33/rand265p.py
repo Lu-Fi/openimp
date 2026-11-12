@@ -30,6 +30,8 @@ def scen(seed, k, VB):
     iqp = r.choice([-1, 25, 30, 35])
     try:
         blk = O.imp_block(LIB, mode, kbps, w, h, fps, gop, iqp)
+        if mode == 0 and x:
+            iqp = 30
     except RuntimeError:
         print('scen %d: vendor rejects the attributes (no channel)' % k)
         return 0
@@ -39,6 +41,20 @@ def scen(seed, k, VB):
     p54 = r.choice([0, 0, 1, 1, 2]); p7f = r.choice([None, None, 0, 1, 2, 3]); p7d = r.choice([None, 0, 1])
     pk30 = r.choice([0, 0, 0.05, 0.2]); pk53 = r.choice([0, 1]); p398 = r.choice([0, 0, 0.05, 0.15])
     sizes = r.random() < 0.5
+    # seeds >= 3: FRAME_START knobs on top (own random stream, so seeds 1 / 2 stay as they were):
+    # FIXQP (mode 0), the still map (cur+0x320.. -> the 64x64 CTU vote), motion mode cur+0x340 / 0x341,
+    # forced intra cur+0x342 / hold 0x344, intra refresh e+0x35d with cur+0x32a .. 0x338
+    x = random.Random(seed * 1000 + k + 777777) if seed >= 3 else None
+    if x:
+        if x.random() < 0.2:
+            mode = 0
+        still = x.random() < 0.5
+        sbs = x.choice([8, 12, 16, 32]); scl = x.choice([2, 3, 4]); shy = x.choice([0, 1])   # <= 4 classes (4 counters)
+        mmode = x.choice([None, 0, 1, 2, 3, 4]); m41 = x.choice([0, 1])
+        fint = x.choice([0, 0, 0.03, 0.1]); hold = x.choice([-1, 0, 2, 5])
+        refr = x.random() < 0.4
+        rf = (x.choice([0, 1]), x.choice([0, 1, 3, 12, 20]), x.choice([0, 1]), x.choice([0, 1, 3, 8]),
+              x.choice([0, 2, 5, 30, 70000]))
 
     def poke(name, H):
         L = H.L; e = EA
@@ -57,6 +73,22 @@ def scen(seed, k, VB):
                 L.wr(inst + 0x54, bytes([p54]))
                 if p7f is not None: L.wr(inst + 0x7f, bytes([p7f]))
                 if p7d is not None: L.wr(inst + 0x7d, bytes([p7d]))
+            if x:
+                c = e + 0x34
+                if still:
+                    m = HEAP + 0xa0000; bw, bh = w // sbs, h // sbs
+                    if L.r32(c + 0x320) != m:
+                        L.wr(m, bytes(x.randint(0, scl) for _ in range(bw * bh)))
+                    L.wr(c + 0x324, bytes([1, sbs, scl, shy])); L.w32(c + 0x320, m)
+                    if x.random() < 0.05:   # the map changes
+                        L.wr(m + x.randint(0, bw * bh - 64), bytes(x.randint(0, scl) for _ in range(64)))
+                if mmode is not None:
+                    L.wr(c + 0x340, bytes([mmode, m41]))
+                if fint:
+                    L.wr(c + 0x342, bytes([x.random() < fint])); L.w32(c + 0x344, hold & 0xffffffff)
+                if refr:
+                    L.wr(e + 0x35d, b'\x01'); L.wr(c + 0x32a, bytes([rf[0]])); L.w32(c + 0x32c, rf[1])
+                    L.wr(c + 0x330, bytes([rf[2]])); L.w32(c + 0x334, rf[3]); L.w32(c + 0x338, rf[4])
             if pk30:
                 on = r.random() < pk30
                 L.wr(e + 0x30, bytes([on])); L.wr(e + 0x53, bytes([pk53 if on else 0]))

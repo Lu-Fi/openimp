@@ -23,7 +23,7 @@ with open('swap265.c', 'w') as f:
         f.write('#define %s(X, ...) %s(X, __VA_ARGS__)\n' % (g, h))
     f.write('#include "genx265.c"\n')
     f.write(open('t265.c').read().split('#include "gen265.c"')[1])
-out = os.environ.get('OUT', 'libswap265.so')
-subprocess.check_call(['gcc', '-O1', '-fwrapv', '-ffp-contract=off', '-w', '-shared', '-fPIC', '-I' + W + '/src', '-I.',
+out = os.environ.get('OUT', 'libswap265.so')   # CFLAGS_X='-O0 --coverage' OUT=cov/libcov.so: coverage build
+subprocess.check_call(['gcc', '-O1'] + os.environ.get('CFLAGS_X', '').split() + [ '-fwrapv', '-ffp-contract=off', '-w', '-shared', '-fPIC', '-I' + W + '/src', '-I.',
                        'swap265.c', '-o', out, '-lm'])
 print('built %s with %d hand functions' % (out, len(M)))
