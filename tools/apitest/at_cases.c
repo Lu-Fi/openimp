@@ -3452,16 +3452,22 @@ static void cs_fscb_t31(void)
     }
 }
 
-/* Explicit only (APITEST_CASES=extchn_t31, #309): IMP_FrameSource_SetSource.  Extended channel 3 (FS_EXT_CHANNEL, scaled copy
- * of ch1) is created, SetSource(3, 1) between CreateChn and EnableChn (vendor header), enabled, 4 frames pulled and checked
- * (size, luma), then disabled/destroyed.  Argument rules: ext 5 / source 3 / source -1 refused.  Prints every return code so
- * the open and the vendor library can be compared line by line. */
+/* Explicit only (APITEST_CASES=extchn_t31, #309/#370): IMP_FrameSource_SetSource.  Extended channel 3 (FS_EXT_CHANNEL, scaled copy
+ * of ch1, 320x180) is created, SetSource(3, 1) between CreateChn and EnableChn (vendor header), enabled and read as the vendor sample
+ * does: through an encoder (FS3 -> ENC5, H.264, 3 s).  libimp 1.1.6 on the T31L (#370): SetSource ext 5 / source 3 -1, source -1
+ * stored (0); GetFrame(3) returns 0 at once without a frame (its frame-depth list is only filled for physical channels);
+ * FS3 -> ENC5 45 streams in 3 s at 15 fps.  APITEST_EXTCHN_DIR=<dir>: ext.h264 (the FS3 stream) and ch1.nv12 (one ch1 frame,
+ * capture layout) for the picture check off the camera. */
 #if defined(PLATFORM_T31) && HAS_IMP_FrameSource_SetSource
+extern size_t at_stream_gather(const IMPEncoderStream *s, unsigned char *buf, size_t cap, int *trunc);
 static void cs_extchn_t31(void)
 {
     IMPFSChnAttr ea;
-    int rc, rs, re, rg = -1, got = 0, ra, rb, rcx, rd, w = 0, h = 0, k, enc_streams = 0;
-    double luma = 0;
+    int rc, rs, re, rg = -1, got = 0, ra, rb, rcx, rd, t, enc_streams = 0;
+    const char *dir = getenv("APITEST_EXTCHN_DIR");
+    FILE *dump = NULL;
+    char path[256];
+    IMPFrameInfo *fr = (IMPFrameInfo *)&fr;     /* sentinel: GetFrame must leave it alone */
 
     memset(&ea, 0, sizeof(ea));
     ea.picWidth = 320; ea.picHeight = 180; ea.pixFmt = PIX_FMT_NV12;
@@ -3473,49 +3479,71 @@ static void cs_extchn_t31(void)
     if (rc == 0) IMP_FrameSource_SetFrameDepth(3, 2);
     re = rc == 0 ? IMP_FrameSource_EnableChn(3) : -99;
     if (re == 0) {
-        for (k = 0; k < 4; k++) {
-            IMPFrameInfo *fr = NULL;
-            { int t; for (t = 0; t < 60; t++) { fr = NULL; rg = IMP_FrameSource_GetFrame(3, &fr); if (rg == 0 && fr) break; if (k == 0 && t == 0) printf("[extchn] first GetFrame ret %d frame %p\n", rg, (void *)fr); usleep(50000); } if (k == 0) printf("[extchn] after %d polls ret %d frame %p\n", t, rg, (void *)fr); }
-            if (0) printf("[extchn] GetFrame(3) ret %d frame %p\n", rg, (void *)fr);
-            if (rg == 0 && fr) {
-                const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
-                long i, n = (long)fr->width * fr->height, sum = 0;
-                w = fr->width; h = fr->height;
-                for (i = 0; y && i < n; i += 7) sum += y[i];
-                luma = n ? (double)sum / ((n + 6) / 7) : 0;
-                got++;
-                IMP_FrameSource_ReleaseFrame(3, fr);
-            }
+        for (t = 0; t < 20; t++) {
+            rg = IMP_FrameSource_GetFrame(3, &fr);
+            if (rg == 0 && fr && fr != (IMPFrameInfo *)&fr) { got++; IMP_FrameSource_ReleaseFrame(3, fr); fr = (IMPFrameInfo *)&fr; }
+            usleep(50000);
+        }
+        printf("[extchn] GetFrame(3) x20: last ret %d, %d frames, frame pointer %s\n", rg, got,
+               fr == (IMPFrameInfo *)&fr ? "untouched" : "changed");
+        if (dir) {
+            snprintf(path, sizeof(path), "%s/ext.h264", dir);
+            dump = fopen(path, "wb");
         }
         {   /* the vendor sample reads an ext channel through an encoder: FS 3 -> ENC 5, H.264 320x180, 3 s */
-            IMPCell fsx = { DEV_ID_FS, 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
+            /* APITEST_EXTCHN_BASE=1: the same through physical ch1 (640x360), the stack's own baseline */
+            int base = getenv("APITEST_EXTCHN_BASE") != NULL, bw = base ? 640 : 320, bh = base ? 360 : 180;
+            IMPCell fsx = { DEV_ID_FS, base ? 1 : 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
             IMPEncoderChnAttr *ea2 = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea2));
+            static unsigned char dbuf[1 << 18];
             int64_t t0 = now_us();
-            int rb2 = -1, nstr = 0;
+            int rb2 = -1, nstr = 0, nlate = 0;
+            int64_t tfirst = -1;
 
             if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
-                IMP_Encoder_SetDefaultParam(ea2, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, 320, 180, 15, 1, 30, 2, -1, 256);
+                IMP_Encoder_SetDefaultParam(ea2, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, bw, bh, 15, 1, 30, 2, -1, 256);
                 if (IMP_Encoder_CreateChn(5, ea2) == 0 && IMP_Encoder_RegisterChn(5, 5) == 0 && (rb2 = IMP_System_Bind(&fsx, &en5)) == 0) {
                     IMP_Encoder_StartRecvPic(5);
                     while (now_us() - t0 < 3000000) {
                         IMPEncoderStream es;
-                        if (IMP_Encoder_PollingStream(5, 300) == 0 && IMP_Encoder_GetStream(5, &es, 0) == 0) { nstr++; IMP_Encoder_ReleaseStream(5, &es); }
+                        if (IMP_Encoder_PollingStream(5, 300) == 0 && IMP_Encoder_GetStream(5, &es, 0) == 0) {
+                            if (dump) { int trunc = 0; size_t n = at_stream_gather(&es, dbuf, sizeof(dbuf), &trunc); if (!trunc) fwrite(dbuf, 1, n, dump); }
+                            if (tfirst < 0) tfirst = now_us() - t0;
+                            if (now_us() - t0 >= 1000000) nlate++;
+                            nstr++; IMP_Encoder_ReleaseStream(5, &es);
+                        }
                     }
                     IMP_Encoder_StopRecvPic(5); IMP_System_UnBind(&fsx, &en5);
                 }
                 IMP_Encoder_UnRegisterChn(5); IMP_Encoder_DestroyChn(5); IMP_Encoder_DestroyGroup(5);
             }
             free(ea2);
-            printf("[extchn] FS3 -> ENC5: bind %d, %d streams in 3 s\n", rb2, nstr);
+            if (dump) fclose(dump);
+            printf("[extchn] FS%d -> ENC5: bind %d, %d streams in 3 s (first after %lld ms, %d in the last 2 s)\n", fsx.groupID, rb2, nstr,
+                   (long long)(tfirst / 1000), nlate);
             enc_streams = nstr;
+        }
+        if (dir) {   /* one ch1 frame next to the ext stream: the ext picture must be its scaled copy.  After the encoder
+                      * run: on OpenIMP a pull marks ch1 as read, its buffers then wait in the ready queue for up to 1 s */
+            IMPFrameInfo *f1 = NULL;
+
+            snprintf(path, sizeof(path), "%s/ch1.nv12", dir);
+            if (IMP_FrameSource_GetFrame(1, &f1) == 0 && f1) {
+                FILE *o = fopen(path, "wb");
+
+                if (o) { fwrite((void *)(uintptr_t)f1->virAddr, 1, (size_t)f1->width * (((f1->height + 15) & ~15u) + f1->height / 2), o); fclose(o); }
+                printf("[extchn] ch1 frame %ux%u -> %s\n", f1->width, f1->height, path);
+                IMP_FrameSource_ReleaseFrame(1, f1);
+            }
         }
         IMP_FrameSource_DisableChn(3);
     }
     rd = rc == 0 ? IMP_FrameSource_DestroyChn(3) : -99;
-    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == -1 && rc == 0 && rs == 0 && re == 0 && got == 4 && w == 320 && h == 180 && luma > 5 && rd == 0 && flow()) ? V_PASS : V_FAIL,
-        "rt: ext ch5 %d, src3 %d, src-1 %d (all must be -1); Create(3, EXT) %d, SetSource(3,1) %d, Enable %d, GetFrame %d: %d of 4 frames %dx%d luma %.1f, Destroy %d, frames flow",
-        ra, rb, rcx, rc, rs, re, rg, got, w, h, luma, rd);
-    (void)enc_streams;
+    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == 0 && rc == 0 && rs == 0 && re == 0 && rg == 0 && got == 0 &&
+        enc_streams >= 30 && rd == 0 && flow()) ? V_PASS : V_FAIL,
+        "rt: ext ch5 %d, src3 %d (-1), src-1 %d (0, stored); Create(3, EXT) %d, SetSource(3,1) %d, Enable %d, GetFrame %d with %d frames "
+        "(vendor: 0, none); FS3 -> ENC5 %d streams in 3 s (>= 30 at 15 fps), Destroy %d, frames flow",
+        ra, rb, rcx, rc, rs, re, rg, got, enc_streams, rd);
 }
 #else
 static void cs_extchn_t31(void) {}

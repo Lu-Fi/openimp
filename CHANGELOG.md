@@ -13,6 +13,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - No OpenIMP code change: all three FAILs were test or QEMU limits. `GetChangeRef` -1 on a created channel is the T30 1.0.5 behaviour (same code as T21/T23); the apitest now expects it on T30 as on T21/T23.
 - `JPEG size follows SetJpegeQl live`: the QEMU ramp scene is almost all header and DC, so table 2 and table 90 differ by about 1 %; the test also reads the DQT of the stream (2, then 90) and passes with a smaller size gap when the quantizers reached the stream; one retry for a starved JPEG channel.
 - `FlushStream` waits 4 s per picture after the IDR (1 flake in 5 runs on a loaded QEMU host).
+## 2026-11-12: T31 FrameSource ext channel delivers frames, like the vendor (#370)
+
+- `FS_EXT_CHANNEL` + `IMP_FrameSource_SetSource` on T31 were stored only: the ext channel opened a frame device it has no driver channel for, `GetFrame` timed out and a bound encoder got nothing. libimp 1.1.6 (read with Ghidra, no vendor code copied): `EnableChn` of an ext channel opens no device and starts no thread, it only creates the pool; the capture thread of every physical channel scales each captured frame into a free frame of every enabled ext channel whose source it is (`nv12_scaler_16`: 1/16-pixel steps, 4x4 box mean for luma, nearest chroma pairs, last line repeated below a height that is not a multiple of 16) and hands it to the ext channel's group; no free frame: the frame is skipped.
+- OpenIMP now does the same: `openimp_fs_ext_feed` (FrameSource dequeue hook, after rotation) fills an ext VBM pool (`VBMSetExtPool` / `VBMExtFill`: frames free, queued or held; without a free frame the oldest unread one is reused); the encoder pulls it like a physical channel, IVS gets its copy through the capture hook. NV12/NV21 only (other formats fail `EnableChn`). Also vendor-equal: `GetFrame` on an ext channel returns 0 without a frame (its depth list is only filled for physical channels), `SetSource` stores a negative source (0), `CreateChn` of an ext channel resets the source to 0.
+- T31L camera, case `extchn_t31` (ext 320x180 from ch1 640x360, FS3 -> ENC5 H.264, 3 s): OpenIMP 46 streams, vendor libimp 1.1.6 46; the decoded ext picture is the scaled ch1 picture. `FrameSource_SetSource` T31 `err` -> `dev`.
+- Host test: `fs_lifecycle_test` now also built for T31 (`fs_lifecycle_test_t31`), new `ext_channel` test (bit-exact against the decompiled scaler, free/held/reuse rules, source change, disable while the source captures).
+- T30 shares the gap (vendor 1.0.5 exports `SetSource`, OpenIMP T30 stores it only); T23/T40/T41 vendor libraries have no `SetSource`.
 
 ## 2026-11-12: T30 run-time rate-control changes at the next IDR, like the vendor (#366)
 

@@ -193,6 +193,10 @@ fs_lifecycle_test_t30: $(FS_DEPS)
 fs_lifecycle_test_t23: $(FS_DEPS)
 	$(CC) $(CFLAGS) $(FS_FLAGS) -DPLATFORM_T23 $(ROOT)/src/core/imp_log_emit.c -o $@ $(FS_SOURCES) -pthread
 
+# T31: the FS_EXT_CHANNEL software scale (#370) and the common lifecycle
+fs_lifecycle_test_t31: $(FS_DEPS)
+	$(CC) $(CFLAGS) $(FS_FLAGS) -DPLATFORM_T31 $(ROOT)/src/core/imp_log_emit.c -o $@ $(FS_SOURCES) -pthread
+
 # IMP_System_Init/Exit and the timestamp base, as built for T21.
 SYSTEM_SOURCES := system_test.c $(ROOT)/src/t40/openimp_p0.c
 SYSTEM_FLAGS = -Wno-unused-result '-D_Static_assert(c,m)=' -DPLATFORM_T21 \
@@ -215,7 +219,7 @@ HELIX_SANITIZE := -O1 -g -fsanitize=undefined -fno-sanitize=alignment \
 TSAN_RUN = TSAN_OPTIONS="halt_on_error=1 suppressions=$(CURDIR)/fs_lifecycle_tsan.supp"
 
 sanitize: $(FS_DEPS) $(HELIX_SOURCES) $(HELIX_T21_SOURCES) $(IVS_DEPS)
-	set -e; for soc in "T21" "T20 -DPLATFORM_T21" "T23" "T30"; do \
+	set -e; for soc in "T21" "T20 -DPLATFORM_T21" "T23" "T30" "T31"; do \
 		name=$$(echo $$soc | cut -d' ' -f1); \
 		$(SAN_CC) $(FS_FLAGS) $(FS_SANITIZE_ASAN) -DPLATFORM_$$soc \
 			-o fs_lifecycle_asan_$$name $(FS_SOURCES) -pthread; \
@@ -367,7 +371,7 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
 	t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_framework_test_t30 ivs_move_bench_t20 \
-	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 \
+	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 fs_lifecycle_test_t31 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20 \
 	p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test radix_cmdlist_test radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test codec_rc_helix_test
@@ -412,6 +416,7 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	./fs_lifecycle_test_t20
 	./fs_lifecycle_test_t23
 	./fs_lifecycle_test_t30
+	./fs_lifecycle_test_t31
 	./system_test
 	./rc_readback_test_t21
 	./rc_readback_test_t20
@@ -514,6 +519,6 @@ clean:
 		helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
 		t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 		ivs_framework_test_t21 ivs_framework_test_t20 ivs_framework_test_t30 ivs_move_bench_t20 \
-		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 \
+		fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 fs_lifecycle_test_t31 \
 		fs_lifecycle_asan_* fs_lifecycle_tsan_* helix_encoder_asan_* \
 		ivs_framework_asan_* ivs_framework_tsan_* system_test system_tsan
