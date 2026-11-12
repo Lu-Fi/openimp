@@ -196,6 +196,7 @@ struct fake_chan {
     uint32_t queue_addr[FAKE_BUFS];
     uint32_t idx_addr[FAKE_BUFS];   /* address queued for each index */
     int queued;
+    unsigned int banks;             /* SET_BANKS (T20 with a delay FIFO, T30) */
 };
 
 static pthread_mutex_t fake_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -219,6 +220,20 @@ static unsigned int fake_frames_done;
 /* #405: the T10/T20 ISP writes a bank ring and stops its DMA while the
  * next bank has no buffer: with one buffer queued nothing completes */
 static int fake_need_two;
+/* #420: stricter bank ring: the T20 ISP disables its DMA when the bank
+ * after the one being written is empty, so a frame completes only while
+ * every bank (REQBUFS count, or SET_BANKS) holds a buffer */
+static int fake_need_ring;
+
+/* fake_lock held: whether the driver can complete a frame now */
+static int fake_can_complete(const struct fake_chan *c)
+{
+    unsigned int banks = c->banks ? c->banks : c->reqbufs;
+
+    if (fake_need_ring)
+        return c->queued > 0 && (unsigned int)c->queued >= banks;
+    return c->queued > (fake_need_two ? 1 : 0);
+}
 static uint64_t fake_done_ms[256];   /* wall time of frame n (n % 256) */
 
 int __real_open(const char *path, int flags, ...);
@@ -291,7 +306,7 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
             pthread_mutex_lock(&fake_lock);
             ready = fd < 0 || fd >= FAKE_FDS || !fake[fd].open ||
                     !fake[fd].streaming ||
-                    fake[fd].queued > (fake_need_two ? 1 : 0);
+                    fake_can_complete(&fake[fd]);
             pthread_mutex_unlock(&fake_lock);
             if (!ready)
                 usleep(1000);
@@ -313,12 +328,15 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
         if (words[0] > FAKE_BUFS)
             words[0] = FAKE_BUFS;
         c->reqbufs = words[0];
+        c->banks = 0;
         c->queued = 0;
         memset(c->idx_addr, 0, sizeof(c->idx_addr));
         break;
     case 0x800456c5u:                           /* SET_DEPTH */
         if (fake_inject == INJ_SET_DEPTH)
             ret = fake_fail(EINVAL);
+        else
+            c->banks = words[0];
         break;
     case 0x80045612u:                           /* STREAMON */
         if (fake_inject == INJ_STREAM_ON)
@@ -368,7 +386,7 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
             ret = fake_fail(EINVAL);
 #endif
         } else if (!c->queued || fake_frame_budget == 0 ||
-                   (fake_need_two && c->queued < 2)) {
+                   !fake_can_complete(c)) {
             ret = fake_fail(EAGAIN);
         } else {
             uint64_t ts_us;
@@ -435,7 +453,7 @@ int __wrap_select(int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *tv)
         for (fd = 0; fd < n && fd < FAKE_FDS; fd++)
             if (r && FD_ISSET(fd, r) &&
                 (!fake[fd].open || !fake[fd].streaming ||
-                 (fake[fd].queued > (fake_need_two ? 1 : 0) && fake_frame_budget != 0)))
+                 (fake_can_complete(&fake[fd]) && fake_frame_budget != 0)))
                 ready = 1;
         pthread_mutex_unlock(&fake_lock);
         if (ready)
@@ -1682,6 +1700,74 @@ static void test_ivs_only_stock_dq_delay(void)
     CHECK(IMP_FrameSource_DestroyChn(0) == 0, "ivs only delay: destroy");
     check_clean("ivs only delay");
 }
+
+/* #420 (T20 .107 apitest enc,ivs): an encoder pulls ch1 (3 buffers, frame
+ * depth / delay FIFO 2 as the apitest) every frame, unbinds, and IVS bound
+ * to the channel must keep getting frames.  With the newest frame kept in
+ * the ready queue for the pull window (1 s) the bank ring was one buffer
+ * short, the ISP stopped and the stock DQBUF slept for good. */
+static void check_ivs_after_reader(int maxdelay)
+{
+    IMPFSChnAttr a = attr_for(640, 360, 3);
+    unsigned int at_stop, got, waited;
+    pthread_t thread;
+
+    fake_stock_dq = 1;
+    fake_need_ring = 1;
+    fake_frame_budget = -1;
+    fake_dqbuf_delay_us = 20000;        /* one frame per 20 ms */
+    __atomic_store_n(&ivs_hook_frames, 0, __ATOMIC_RELAXED);
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "ivs after reader %d: create", maxdelay);
+    if (maxdelay)
+        CHECK(IMP_FrameSource_SetMaxDelay(0, maxdelay) == 0 &&
+              IMP_FrameSource_SetDelay(0, maxdelay) == 0, "ivs after reader %d: delay", maxdelay);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "ivs after reader %d: enable", maxdelay);
+    __atomic_store_n(&puller_frames, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&puller_stop, 0, __ATOMIC_RELAXED);
+    pthread_create(&thread, NULL, puller, NULL);
+    sleep_ms(400);
+    __atomic_store_n(&puller_stop, 1, __ATOMIC_RELAXED);
+    pthread_join(thread, NULL);
+    CHECK(__atomic_load_n(&puller_frames, __ATOMIC_RELAXED) >= 5,
+          "ivs after reader %d: the reader got %u frames", maxdelay,
+          __atomic_load_n(&puller_frames, __ATOMIC_RELAXED));
+    at_stop = __atomic_load_n(&ivs_hook_frames, __ATOMIC_RELAXED);
+    /* 20 frames take 400 ms; inside the old pull window (1 s) */
+    for (waited = 0; waited < 900 &&
+         __atomic_load_n(&ivs_hook_frames, __ATOMIC_RELAXED) < at_stop + 20;
+         waited += 10)
+        sleep_ms(10);
+    got = __atomic_load_n(&ivs_hook_frames, __ATOMIC_RELAXED) - at_stop;
+    CHECK(got >= 20, "ivs after reader %d: %u frames in 900 ms after the reader left (bank ring stalled)",
+          maxdelay, got);
+    /* a reader coming back gets a current frame */
+    {
+        IMPFrameInfo *fi = NULL;
+        unsigned int done, seq;
+
+        CHECK(IMP_FrameSource_GetFrame(0, (void **)&fi) == 0 && fi != NULL,
+              "ivs after reader %d: GetFrame afterwards", maxdelay);
+        if (fi) {
+            done = frames_done();
+            seq = (unsigned int)(fi->timeStamp / 40000);
+            CHECK(done - seq <= 3u + (unsigned int)maxdelay,
+                  "ivs after reader %d: GetFrame gave frame %u, newest %u (stale)", maxdelay, seq, done);
+            IMP_FrameSource_ReleaseFrame(0, fi);
+        }
+    }
+    fake_dqbuf_delay_us = 0;
+    fake_need_ring = 0;
+    fake_stock_dq = 0;
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "ivs after reader %d: disable", maxdelay);
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "ivs after reader %d: destroy", maxdelay);
+    check_clean("ivs after reader");
+}
+
+static void test_ivs_after_reader(void)
+{
+    check_ivs_after_reader(0);
+    check_ivs_after_reader(2);
+}
 #endif
 
 #if defined(PLATFORM_T31)
@@ -2320,6 +2406,7 @@ int main(void)
 #if defined(PLATFORM_T30) || defined(PLATFORM_T20)
     RUN(ivs_only_stock_dq);
     RUN(ivs_only_stock_dq_delay);
+    RUN(ivs_after_reader);
 #endif
     if (failures) {
         fprintf(report, "fs_lifecycle_test: %d failure(s)\n", failures);
