@@ -79,6 +79,7 @@ int IMP_ISP_GetDefaultBinPath(char *path);
 #define T23_VIDIOC_GET_FRAME_DROP_SEC 0xc00456ebU
 #define T23_VIDIOC_STREAM_CHECK 0xc00456ecU
 #define T23_VIDIOC_SET_STREAM_OUT 0xc00456edU
+#define T23_VIDIOC_SET_SWITCHGPIO 0xc00456eeU
 #define T23_VIDIOC_SET_SENSOR_REG 0x8038564fU
 #define T23_VIDIOC_GET_SENSOR_REG 0xc0385650U
 
@@ -1868,6 +1869,13 @@ int IMP_ISP_StreamCheck(void *state)
 int IMP_ISP_SetStreamOut(void *state)
 {
     return t23_dev_ioctl(__func__, T23_VIDIOC_SET_STREAM_OUT, state);
+}
+
+/* MIPI switch GPIO record of a multi-sensor board (IMPUserSwitchgpio): the stock call
+ * passes it to the driver (ioctl 0xc00456ee) and answers -1 for a NULL record. */
+int IMP_ISP_MultiCamera_SetSwitchgpio(void *info)
+{
+    return t23_dev_ioctl(__func__, T23_VIDIOC_SET_SWITCHGPIO, info);
 }
 
 /* --- Single-camera calls without a MultiCamera form --------------------- */

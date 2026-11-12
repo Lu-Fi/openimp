@@ -13,6 +13,19 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Desk analysis, no device run. The OpenIMP path (`IMP_AI_EnableAec` -> reference from the driver in the same fragments as the microphone -> `openimp_aec_process` per 10 ms block) is correct: host ERLE 36-45 dB on speech-like signals, both 8 and 16 kHz, 1.5 and 40 ms echo delay (existing `aec_test`). The vendor libimp 1.0.5 uses a separate `libaudioProcess.so` (`audio_process_aec_create/process/free`), not part of the tree.
 - Cause of the b53 "0 dB": WebRTC AECM adapts its echo channel only while the far end is active (`farEnergyVAD` / `farEnergyMaxMin` in aecm_core.c). A stationary 1 kHz tone or noise burst never is, so any echo stays (host: ERLE 0.1 dB on both, 8 and 16 kHz); the same signals amplitude-modulated at 3 Hz give 36-46 dB. b55/b57 found no audible echo at the microphone at all on that unit.
 - Host: `tests/t31/aec_test.c` now also runs the four lab signals (stationary and 3 Hz modulated tone/noise) and fails when the modulated case stays under 15 dB. No code change; use speech, music or modulated noise for AEC device tests.
+## 2026-11-12: SU_Base_Raw2SUTime / SUTime2Raw decided vendor-equal (#321)
+
+- Vendor libsysutils 1.3.0 (T40 SDK) run under unicorn (`tools/su_time_oracle.py`, 8000 inputs): `SU_Base_Raw2SUTime` returns plain `struct tm` fields (month 0..11, year-1900) over the whole uint32 range, so it is not the inverse of `SU_Base_SUTime2Raw` (month 1..12, year > 1900); `SU_Base_SUTime2Raw` is the kernel mktime formula in unsigned 32-bit arithmetic, never fails and does not normalise month/day overflow. No undefined range.
+- OpenIMP exports neither call; the T40 image answers with ingenic-system-libs-neo libsysutils, which now matches the vendor byte for byte (neo branch `fix/su-base-time-vendor-equal`); the former round-trip answer is dropped. Host test `tests/su_time` (in `make check`); api_evidence T40 note and ref updated, cell stays dev.
+## 2026-11-12: T40 SU_Key_* checked on the Eufy .184 (matrix1112)
+
+- Vendor libsysutils 1.3.1 and OpenIMP both answer OpenEvent -1 (ENOENT) because they look for the input name "gpio_keys" while the board names it "gpio-keys"; Enable/DisableEvent -1 in both: vendor-equal, but the hardware is present, so the cells are not `nohw`: T40 Read/Enable/DisableEvent host -> aud with the reason. The image libsysutils (neo) opens the device and reads an injected key; its Enable/DisableEvent answer -1 (wrong sysfs path).
+
+## 2026-11-12: second-sensor calls on T23 / T31 checked on one-sensor boards, matrix cells from 🔧 to nohw
+
+- New apitest case `secsensor_t23` / `secsensor_t31`: `IMP_ISP_SET_GPIO_INIT_OR_FREE` / `SET_GPIO_STA` (T23, T31), `SetCameraInputMode`, `SetStreamOut`, `StreamCheck`, `MultiCamera_SetSwitchgpio` (T23) with the vendor libimp and with OpenIMP on a one-sensor camera, before AddSensor and with the sensor streaming. Only values that cannot move a pin: GPIO lists starting with 0xff, a disabled switch-gpio record, input mode 0 or an invalid one, the single-sensor stream state.
+- One difference found and fixed: T23 `IMP_ISP_MultiCamera_SetSwitchgpio` was a stub returning 0 (also for NULL). It now passes the record to the driver (ioctl 0xc00456ee) and answers -1 for NULL like the stock call; host test in `tests/t23/isp_tuning_test.c`. After that all return codes and read-backs are equal on T23 (flashed open driver) and T31 (vendor driver and open driver).
+- T31: the open driver has no handler for the GPIO ioctls (ENOTTY where the stock driver answers 0 with a running sensor); the library is vendor-equal, the driver gap is tracked separately. Matrix: these T23 (6) and T31 (2) cells are `nohw` (vendor-equal, no second sensor on the test boards).
 
 ## 2026-11-12: first GetFrame / snapshot after a pause returned an old picture (#405, regression of #374)
 

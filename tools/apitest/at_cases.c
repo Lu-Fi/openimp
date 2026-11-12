@@ -5232,6 +5232,77 @@ void algo_pre_t2x(void) {}
 void algo_post_t2x(void) {}
 #endif
 
+/* secsensor_t23 / secsensor_t31: second-sensor / multi-camera calls on a ONE-sensor board, run with the vendor libimp and with OpenIMP and
+ * compared line by line ([T] sec lines: return code + errno, read-backs).  Nothing here can move a GPIO: the GPIO list always starts
+ * with 0xff (the vendor driver stops at the first 0xff, nothing requested / driven), the switch-gpio record is "disabled" (enable 0),
+ * the input mode is "not joint" (0, the single-sensor default) or invalid (refused before any ioctl), the stream state is the
+ * single-sensor one (main on, second off).  Phase 0 runs after IMP_ISP_Open before AddSensor (the documented place of
+ * SetCameraInputMode / SetSwitchgpio), phase 1 with the sensor streaming. */
+#if (defined(PLATFORM_T23) || defined(PLATFORM_T31)) && !defined(APITEST_T40) && !defined(PLATFORM_T41)
+#define SECP(name, call) do { errno = 0; int r_ = (call); int e_ = errno; printf("[T] sec ph%d %s -> %d errno %d\n", ph, name, r_, e_); } while (0)
+void sec_t2x(int ph)
+{
+    const char *c = getenv("APITEST_CASES");
+    IMPISPGPIO *g;
+
+    if (!c || !(strstr(c, "secsensor_t23") || strstr(c, "secsensor_t31")))
+        return;
+    g = (IMPISPGPIO *)gnew(sizeof(*g));
+    if (IMP_ISP_SET_GPIO_INIT_OR_FREE) {
+        SECP("GPIO_INIT_OR_FREE NULL", IMP_ISP_SET_GPIO_INIT_OR_FREE(NULL));
+        memset(g, 0, sizeof(*g)); g->gpio_num[0] = 0xff; g->free = 0;
+        SECP("GPIO_INIT_OR_FREE empty list init", IMP_ISP_SET_GPIO_INIT_OR_FREE(g));
+        memset(g, 0, sizeof(*g)); g->gpio_num[0] = 0xff; g->free = 1;
+        SECP("GPIO_INIT_OR_FREE empty list free", IMP_ISP_SET_GPIO_INIT_OR_FREE(g));
+    }
+    if (IMP_ISP_SET_GPIO_STA) {
+        SECP("GPIO_STA NULL", IMP_ISP_SET_GPIO_STA(NULL));
+        memset(g, 0, sizeof(*g)); g->gpio_num[0] = 0xff;
+        SECP("GPIO_STA empty list", IMP_ISP_SET_GPIO_STA(g));
+    }
+    gchk(g); gfree(g);
+#ifdef PLATFORM_T23
+    {
+        IMPISPCameraInputMode m;
+        IMPUserSwitchgpio sw;
+        IMPISPStreamCheck sc;
+        IMPISPStreamState st;
+
+        if (IMP_ISP_SetCameraInputMode) {
+            SECP("SetCameraInputMode NULL", IMP_ISP_SetCameraInputMode(NULL));
+            memset(&m, 0, sizeof(m)); m.joint_mode = (IMPISPDualSensorSplitJoint)73;
+            SECP("SetCameraInputMode mode 73 (invalid)", IMP_ISP_SetCameraInputMode(&m));
+            memset(&m, 0, sizeof(m)); m.joint_mode = (IMPISPDualSensorSplitJoint)9;
+            SECP("SetCameraInputMode mode 9 (invalid low nibble)", IMP_ISP_SetCameraInputMode(&m));
+            memset(&m, 0, sizeof(m)); m.joint_mode = IMPISP_NOT_JOINT;
+            SECP("SetCameraInputMode NOT_JOINT", IMP_ISP_SetCameraInputMode(&m));
+        }
+        if (IMP_ISP_MultiCamera_SetSwitchgpio) {
+            SECP("SetSwitchgpio NULL", IMP_ISP_MultiCamera_SetSwitchgpio(NULL));
+            memset(&sw, 0, sizeof(sw));
+            SECP("SetSwitchgpio disabled (enable 0)", IMP_ISP_MultiCamera_SetSwitchgpio(&sw));
+        }
+        if (IMP_ISP_StreamCheck) {
+            SECP("StreamCheck NULL", IMP_ISP_StreamCheck(NULL));
+            memset(&sc, 0, sizeof(sc)); sc.timeout = 500;
+            SECP("StreamCheck timeout 500", IMP_ISP_StreamCheck(&sc));
+            printf("[T] sec ph%d StreamCheck read-back state %d %d\n", ph, sc.state.sensor[0], sc.state.sensor[1]);
+        }
+        if (IMP_ISP_SetStreamOut) {
+            SECP("SetStreamOut NULL", IMP_ISP_SetStreamOut(NULL));
+            memset(&st, 0, sizeof(st)); st.sensor[0] = 1; st.sensor[1] = 0;
+            SECP("SetStreamOut main on / second off", IMP_ISP_SetStreamOut(&st));
+        }
+    }
+#endif
+    if (ph) printf("[T] sec ph%d frames %s\n", ph, flow() ? "flow" : "STOPPED");
+}
+static void cs_secsensor(void) { sec_t2x(1); }
+#else
+void sec_t2x(int ph) { (void)ph; }
+static void cs_secsensor(void) {}
+#endif
+
 #if !defined(APITEST_T40)
 static void cs_t140c(void) {}
 static void cs_awbctstart_t40(void) {}
@@ -7022,7 +7093,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "secsensor_t23", "secsensor_t31" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7144,6 +7215,7 @@ void t_cases(void)
     if (cs_on("drawblock_t23")) cs_drawblock_t23(); wdog("cases", 60);
     if (cs_on("ispcover1_t23")) cs_ispcover1_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("secprobe_t23")) cs_secprobe_t23(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && (cs_on("secsensor_t23") || cs_on("secsensor_t31"))) cs_secsensor(); wdog("cases", 60);
     if (cs_on("enchelp_t23")) cs_enchelp_t23(); wdog("cases", 60);
     if (getenv("APITEST_CASES") && cs_on("t140c")) cs_t140c(); wdog("cases", 120);
     if (cs_on("padframe_t23")) {
