@@ -1497,6 +1497,9 @@ extern int AL_Codec_Encode_RequestIDR(void *codec);
 extern int AL_Codec_Encode_SetJpegSkip(void *codec, int allow);
 extern int AL_Codec_Encode_SetJpegSrcPitch(void *codec, uint32_t pitch);
 extern int AL_Codec_Encode_JpegSkipped(void *codec);
+#if defined(PLATFORM_T23)
+extern int AL_Codec_Encode_FrameLossDropped(void *codec);
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
 extern int AL_Codec_Encode_SetJpegQl(void *codec, int enable,
                                      const uint8_t tables[128]);
@@ -3560,10 +3563,22 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
         uint64_t spent_ms;
 
         pthread_mutex_lock(&ch->poll_serial);
-        spent_ms = (p2_monotonic_us() - start_us) / 1000u;
-        ret = p2_polling_stream(channel,
-                                spent_ms >= timeout_ms ? 0u
-                                    : timeout_ms - (uint32_t)spent_ms);
+        for (;;) {
+            spent_ms = (p2_monotonic_us() - start_us) / 1000u;
+            ret = p2_polling_stream(channel,
+                                    spent_ms >= timeout_ms ? 0u
+                                        : timeout_ms - (uint32_t)spent_ms);
+#if defined(PLATFORM_T23)
+            /* IMP_Encoder_Setframelossthd: a dropped picture is no stream,
+             * not an error; wait for the next one within the timeout as the
+             * OEM PollingStream does (its stream thread drops silently). */
+            if (ret != 0 && ch->codec &&
+                AL_Codec_Encode_FrameLossDropped(ch->codec) &&
+                (p2_monotonic_us() - start_us) / 1000u < timeout_ms)
+                continue;
+#endif
+            break;
+        }
         pthread_mutex_unlock(&ch->poll_serial);
     }
     pthread_mutex_lock(&ch->lock);

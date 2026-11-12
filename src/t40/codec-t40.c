@@ -8613,6 +8613,7 @@ struct AL_CodecEncode {
      * is written by the API thread (atomic), the state by the encoder */
     int32_t frameloss_threshold;
     T23FrameLoss frameloss;
+    int frameloss_dropped;         /* the last Process dropped its picture */
 #endif
 };
 
@@ -9640,6 +9641,7 @@ static int t23_frameloss_check(AL_CodecEncode *enc,
     const HWEncoderParams *hp = &enc->hw_params;
     int qp = 0;
 
+    __atomic_store_n(&enc->frameloss_dropped, 0, __ATOMIC_RELAXED);
     fl->threshold = __atomic_load_n(&enc->frameloss_threshold,
                                     __ATOMIC_RELAXED);
     if (!fl->threshold) {
@@ -9654,6 +9656,7 @@ static int t23_frameloss_check(AL_CodecEncode *enc,
         return 0;
     (void)OpenIMP_T30_HelixRequestIDRQp(enc->t30_helix,
                                         t23_frameloss_fenc_qp(qp));
+    __atomic_store_n(&enc->frameloss_dropped, 1, __ATOMIC_RELAXED);
     if (fl->drops <= 3u || fl->drops % 100u == 0u)
         IMP_LOG_INFO("Encoder", "T23 channel %d: picture of %u bytes not "
                      "delivered (frame-loss threshold %d bytes, %u so far), "
@@ -9661,6 +9664,17 @@ static int t23_frameloss_check(AL_CodecEncode *enc,
                      stream->length, fl->threshold, fl->drops,
                      t23_frameloss_fenc_qp(qp));
     return 1;
+}
+
+/* 1 (once) when the last Process did not hand out its picture because of
+ * the frame-loss threshold: not an encoder failure, the OEM PollingStream
+ * simply keeps waiting for the next delivered picture. */
+int AL_Codec_Encode_FrameLossDropped(void *codec)
+{
+    AL_CodecEncode *enc = (AL_CodecEncode *)codec;
+
+    return enc ? __atomic_exchange_n(&enc->frameloss_dropped, 0,
+                                     __ATOMIC_RELAXED) : 0;
 }
 #endif
 

@@ -1945,6 +1945,8 @@ int enc_demask_run(void) { return -1; }
  *   FISHEYE_ON (default 1)  FISHEYE_QP (FIXQP at that QP, default 30; 0: CBR)  FISHEYE_GOP (default 40)  FISHEYE_FRAMES (default 100)
  *   FISHEYE_ROI=1 (an application ROI, delta QP -6 over most of the picture, set before the first picture)  FISHEYE_DUMP=<file>
  *   HSKIP_MAIN=1 (T21: the encoder reads FrameSource ch0 at the sensor size, ch1 is not set up)
+ *   FISHEYE_LOSSTHD=<bytes> (T23: IMP_Encoder_Setframelossthd after CreateChn; the delivered pictures are logged with
+ *   their stream seq, so a dropped picture shows as a seq gap; the IDR QP after the drop is read from the dump)
  * ------------------------------------------------------------------------------------------ */
 #if !defined(ENC_NEW) && HAS_IMP_Encoder_SetFisheyeEnableStatus
 int enc_fisheye_run(void)
@@ -1976,6 +1978,16 @@ int enc_fisheye_run(void)
     printf("fisheye: SetFisheyeEnableStatus %d after CreateChn -> %d\n", !on, r);
     r = IMP_Encoder_GetFisheyeEnableStatus(chn, &fe);
     printf("fisheye: GetFisheyeEnableStatus -> %d value %d\n", r, fe);
+#if HAS_IMP_Encoder_Setframelossthd
+    if ((e = getenv("FISHEYE_LOSSTHD")) && *e) {
+        uint32_t thd = 0;
+
+        r = IMP_Encoder_Setframelossthd(chn, (uint32_t)strtoul(e, NULL, 0));
+        printf("fisheye: Setframelossthd %s -> %d\n", e, r);
+        r = IMP_Encoder_Getframelossthd(chn, &thd);
+        printf("fisheye: Getframelossthd -> %d value %u\n", r, thd);
+    }
+#endif
     r = IMP_Encoder_RegisterChn(GRP, chn);
 #if HAS_IMP_Encoder_SetChnROI
     if (roi) {
@@ -2003,7 +2015,7 @@ int enc_fisheye_run(void)
         gchk(s);
         n = gather(s, g_sbuf, STREAMCAP, &trunc);
         if (dump && !trunc) fwrite(g_sbuf, 1, n, dump);
-        printf("pic %d %zu\n", k, n);
+        printf("pic %d %zu seq %u\n", k, n, (unsigned)s->seq);
         total += n;
         IMP_Encoder_ReleaseStream(chn, s);
         gchk(s);

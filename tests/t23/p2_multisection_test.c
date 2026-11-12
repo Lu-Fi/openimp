@@ -102,6 +102,7 @@ int AL_Codec_Encode_Create(void **codec, void *params)
 { (void)params; *codec = calloc(1, 64); return *codec ? 0 : -1; }
 int AL_Codec_Encode_Destroy(void *codec) { free(codec); return 0; }
 int AL_Codec_Encode_JpegSkipped(void *c) { (void)c; return 0; }
+int AL_Codec_Encode_FrameLossDropped(void *c) { (void)c; return 0; }
 /* T23 encoder waits on the VBM ready event (#151); no frame ever comes */
 unsigned int VBMReadySequence(int chn) { (void)chn; return 0; }
 int VBMWaitReady(int chn, unsigned int seq, uint32_t us)

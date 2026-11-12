@@ -55,6 +55,7 @@ int AL_Codec_Encode_Process(void *c, void *f, void *u) { (void)c; (void)f; (void
 int AL_Codec_Encode_GetStream(void *c, void **s, void **u) { (void)c; (void)s; (void)u; return 1; }
 int AL_Codec_Encode_ReleaseStream(void *c, void *s, void *u) { (void)c; (void)s; (void)u; return 0; }
 int AL_Codec_Encode_JpegSkipped(void *c) { (void)c; return 0; }
+int AL_Codec_Encode_FrameLossDropped(void *c) { (void)c; return 0; }
 int VBMGetFrame(int chn, void **frame) { (void)chn; (void)frame; return -1; }
 /* T23 encoder waits on the VBM ready event (#151); no frame ever comes */
 unsigned int VBMReadySequence(int chn) { (void)chn; return 0; }
