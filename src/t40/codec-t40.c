@@ -14866,6 +14866,7 @@ int AL_Codec_Encode_SetGopParam(void *codec, void *gopAttr)
 
     *(uint32_t *)(enc->codec_param + 0xb0) = enc->gop_cache.gopLength;
     enc->hw_params.gop_length = enc->gop_cache.gopLength;
+    enc->hw_params.gop_requests++;
     enc->avpu.gop_length = enc->gop_cache.gopLength;
 #if defined(PLATFORM_T41)
     /* gopLength is the IDR distance (uGopLength * uMaxSameSenceCnt) */
