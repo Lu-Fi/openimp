@@ -22,11 +22,27 @@ The context comes from `watermark_init()` at channel creation (H.264
 on every hardware run of an I slice (Helix: a re-encoded I picture is marked
 again) and rewrites the source frame in place, before the hardware reads it.
 
-T31/T40 `encode1` also writes the QP table (EP2 + 0x40) while the flag is set:
-entries 0..12 cleared on every picture, entries 0..3 (the four top-left
-macroblocks of an H.264 I picture) set to 0x21 (relative -31), and the picture's
-"use QP table" and "relative" options.  For H.265 it writes ten entries of the
-CTB layout instead.
+T31/T40 `encode1` also writes the QP table (EP2 + 0x40, the same buffer as the
+ROI table) while the flag is set, on every picture (#402):
+
+- entries 0..12 cleared;
+- an I picture, after `embed_watermark` succeeded: H.264 entries 0..3 (the four
+  top-left 16x16 macroblocks) = 0x21; H.265 entries 0..4 and 8..12 (the first
+  two 32x32 CTBs of the 8-byte-per-CTB layout, `AL_GetAllocSizeEP2(HEVC)` =
+  align128(8 * CTBs) + 0x40) = 0x21.  0x21 is relative -31 (6-bit two's
+  complement): the marked blocks are coded at the lowest QP the hardware gives;
+- the picture's "use QP table" and "relative" options (cmd[9] bits 25, 24).
+  When `embed_watermark` fails the I picture keeps the cleared table without
+  the two options.
+
+On a textured scene the -31 blocks make the hardware raise its LCU overflow
+warning: status word +0x104 bit 31, bits 29:0 the entropy byte count (vendor
+`EntropyStatusRegsToSliceStatus`).  The vendor prints "Warning some LCU exceed
+the maximum allowed bits" (`AL_WARN_LCU_OVERFLOW`) and keeps the picture.
+OpenIMP did not mask the size word, so the first marked IDR looked larger than
+the stream buffer and was dropped; it now masks it and logs the same warning.
+`OPENIMP_WM_PARTS` (default 3: bit 0 the luma mark, bit 1 the QP entries)
+switches a part off.
 
 ## The routine (`src/watermark`)
 
@@ -76,10 +92,17 @@ the `madd.s` instruction itself.
   there the CPU check above is the proof and the trace shows the routine on
   every IDR.
 
-## Not ported
+## QP entries on the cameras (#402, 2026-11-12)
 
-- The T31/T40 QP table entries.  On the open T31 stack the first IDR with the
-  mark and the -31 entries fails in Enc1 (no payload) and the channel stalls;
-  each part alone codes fine, the vendor prints "some LCU exceed the maximum
-  allowed bits" and goes on.  `OPENIMP_WM_PARTS` (bit 0 the mark, default; bit 1
-  the QP entries) is there to work on it (#402).  The H.265 entries are not written.
+- T31 (.26, apitest case `fisheye`, 640x360 FixQP 30, vendor 1.1.6 and OpenIMP
+  back to back): first IDR macroblock QPs (tools/fisheye_mbqp.py), row 0 x 0..7
+  / row 1: vendor 3 2 1 0 27 27 27 27 / 33 33 29 30 29 27 27 27, OpenIMP the
+  same, without the entries 33 31 30 29 ...; both print the LCU warning once per
+  marked IDR; every OpenIMP IDR (0, 10, 20) codes and decodes.
+- T31 H.265 (CBR; FixQP H.265 on T31 is broken without the flag too, #403):
+  every IDR codes and decodes with the entries; there is no H.265 per-block QP
+  reader, so the QPs are not compared.
+- T40 (.184, OpenIMP only, FixQP 30): IDR row 0 = 0 0 0 0 29 29 29 27, the
+  IDRs decode; H.265 (CBR) codes and decodes.  A vendor T40 run needs the
+  vendor stack and was not done.
+- Host: tests/t31 stream_layout_test (size mask and warning bit).
