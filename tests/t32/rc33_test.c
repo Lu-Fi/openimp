@@ -12,7 +12,10 @@
  *                               command-list words vendor H264E_T32V_SliceInit
  *                               makes from the slice block, which OpenIMP's list
  *                               (t32_hera_h264_list on the port's slice block)
- *                               must carry the same, in the same place
+ *                               must carry the same, in the same place;
+ *                               'C picture id a b c d' lines (oracle --setters)
+ *                               are run-time changes (t32_rc33_set_param) before
+ *                               that picture
  *
  * FILE: 'S mode kbps pictures' runs (oracle run(), vendor-2.2.0-rc-h264.txt)
  * or random scenarios (oracle scenario(), vendor-2.2.0-rc33-h264.txt).  The
@@ -141,6 +144,8 @@ static unsigned model_rows(uint32_t nbytes, int qp, unsigned n, uint32_t *rows)
     return n;
 }
 
+static int total_changes;              /* run-time changes applied ('C' lines) */
+
 /* one oracle run; returns the number of pictures whose QP differs */
 static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with_rows, int with_list)
 {
@@ -148,7 +153,7 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with
     uint32_t mbs = (uint32_t)(c->w / 16) * (uint32_t)(c->h / 16), st[T33_RC_STATS];
     struct scene sc = { c->seed, 60.0, 0 };
     char line[1024];
-    int bad = 0;
+    int bad = 0, changes = 0;
 
     if (t32_rc33_open(&rc, (uint32_t)c->w, (uint32_t)c->h) != 0) {
         printf("FAIL: no memory\n");
@@ -178,8 +183,21 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with
         unsigned nrows;
 
         uint32_t lw[NSLICE + 1 + T33_RC_ROWS];
-        int nlw = 0;
+        int nlw = 0, have;
 
+        /* run-time changes before the picture ('C picture id a b c d'), then its 'F' line */
+        while ((have = fgets(line, sizeof(line), ref) != NULL) && line[0] == 'C') {
+            uint32_t a[4] = { 0, 0, 0, 0 };
+            int pi, id;
+
+            if (sscanf(line, "C %d %d %u %u %u %u", &pi, &id, &a[0], &a[1], &a[2], &a[3]) < 4 || pi != i ||
+                t32_rc33_set_param(&rc, (unsigned)id, a) != 0) {
+                printf("FAIL: bad change line at picture %d: %s", i, line);
+                have = 0;
+                break;
+            }
+            changes++;
+        }
         (void)t32_rc33_start(&rc, rc.n % (uint32_t)c->gop);
         qp = rc.qp;
         if (with_list) {
@@ -191,8 +209,7 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with
         model_stats(qp, nb, mbs, st);
         nrows = with_rows ? t32_rc33_idr_rows(&rc) : 0u;
         t32_rc33_end_rows(&rc, nb, st, rows, model_rows(nb, qp, nrows, rows));
-        if (!fgets(line, sizeof(line), ref) ||
-            (nf = sscanf(line, "F %d %d %d %lu %lu", &ri, &rt, &rq, &rb, &rs)) < 4 || ri != i) {
+        if (!have || (nf = sscanf(line, "F %d %d %d %lu %lu", &ri, &rt, &rq, &rb, &rs)) < 4 || ri != i) {
             printf("FAIL: reference ends at picture %d\n", i);
             bad += c->pics - i;
             break;
@@ -228,6 +245,7 @@ static int run(const struct cfg *c, FILE *ref, int *faults, int motion, int with
     }
     *faults += rc.X.fault;
     t32_rc33_close(&rc);
+    total_changes += changes;
     return bad;
 }
 
@@ -293,6 +311,7 @@ int main(int argc, char **argv)
         printf("FAIL: %d controller accesses outside the arena\n", faults);
         failed++;
     }
-    printf("eprc T33 H.264 vs vendor 2.2.0: %d runs, %d pictures, %d runs differ\n", runs, pics, failed);
+    printf("eprc T33 H.264 vs vendor 2.2.0: %d runs, %d pictures, %d run-time changes, %d runs differ\n", runs, pics,
+           total_changes, failed);
     return failed != 0;
 }

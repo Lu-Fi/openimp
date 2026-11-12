@@ -17,6 +17,11 @@ path you pass.  The emulator has no HERA: statistics are synthetic.
     tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
     tools/eprc_t33_oracle.py LIB [--motion N] --rows --scenarios FIRST COUNT   the same with per-row IDR
                                      slice sizes from HERA; 'F' lines end with the controller's sum
+    tools/eprc_t33_oracle.py LIB [--motion N] [--rows] --setters --scenarios FIRST COUNT   the same with
+                                     random run-time changes (IMP_Encoder_SetChnBitRate, _SetChnQpBounds,
+                                     _SetChnQpBoundsPerFrame, _SetChnMaxPictureSize through i264e_set_param;
+                                     'C picture id a b c d' lines before the picture's 'F' line), taken at the
+                                     next IDR by the vendor i264e_idr_reconfig
     tools/eprc_t33_oracle.py LIB [--motion N] [--rows] --slice --scenarios FIRST COUNT   the same, each 'F'
                                      line followed by an 'L' line: the HERA command-list words vendor
                                      H264E_T32V_SliceInit makes from the controller's slice block (SLICE_REGS,
@@ -36,6 +41,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eprc_oracle import Lib, HEAP  # noqa: E402
 from unicorn import UC_HOOK_CODE  # noqa: E402
+from unicorn.mips_const import UC_MIPS_REG_PC, UC_MIPS_REG_RA, UC_MIPS_REG_V0  # noqa: E402
+
+# what i264e_idr_reconfig calls besides the rate control (headers, slice type and QP decisions): skipped
+IDR_SKIP = ('i264e_sps_init', 'i264e_pps_init', 'i264e_validate_levels', 'i264e_init_skip_header',
+            'i264e_decide_slice_type_and_rd', 'i264e_decide_slice_qp')
 
 W, H, GOP, FPS = 1920, 1088, 50, 25
 
@@ -113,6 +123,31 @@ class T33:
         L.w32(P + 0x3088, HEAP + 0x100000)
         self.n = 0
         self.gop = gop
+        # the parameter block is the i264e handle; i264e_idr_reconfig reaches the picture through +0x41d8
+        L.w32(P + 0x41d8, self.Hh)
+        self.setters = False
+
+    def _idr_hooks(self):
+        L = self.L
+
+        def skip(uc, addr, size, _):
+            uc.reg_write(UC_MIPS_REG_V0, 0)
+            uc.reg_write(UC_MIPS_REG_PC, uc.reg_read(UC_MIPS_REG_RA))
+
+        for f in IDR_SKIP:
+            L.uc.hook_add(UC_HOOK_CODE, skip, begin=L.syms[f], end=L.syms[f])
+        self.setters = True
+
+    def set_param(self, pid, args):
+        """i264e_set_param(handle, pid, args) as the IMP setters call it (the change waits for the next IDR)"""
+        if not self.setters:
+            self._idr_hooks()
+        L = self.L
+        a = HEAP + 0x3f000
+        # IMP_Encoder_SetChnQpBoundsPerFrame passes {0, 0, max I, min I, max P, min P}
+        v = [0, 0] + list(args) if pid == 0x13 else list(args)
+        L.wr(a, struct.pack('<6I', *(v + [0] * (6 - len(v)))))
+        return L.call('i264e_set_param', self.P, pid, a)
 
     def start(self):
         L = self.L
@@ -120,6 +155,10 @@ class T33:
         # IDR only when it is 0); the encoder restarts it every GOP
         L.w32(self.Hh, self.n % self.gop if self.gop else self.n)
         r = L.call('i264e_ratecontrol_start', self.Hh)
+        if self.setters and L.r32(self.Hh) == 0 and L.r32(self.P + 0x26cc):
+            # i264e_encode: at an IDR with pending changes, i264e_idr_reconfig (the changes into the
+            # parameters, i264e_validate_parameters, a second i264e_ratecontrol_start)
+            L.call('i264e_idr_reconfig', self.P, 0, 0, 0)
         return r, L.r32(self.Hh + 0x354), L.rd(self.P + 0xb71, 1)[0]
 
     def end(self, nbytes, regs, rows=None):
@@ -230,7 +269,22 @@ def model_rows(nbytes, qp, n):
     return [(nbytes * 8 // n) * (6 + (i * 5 + qp) % 7) // 9 for i in range(n)] if n else []
 
 
-def scenario(path, seed, motion=0, rows=False, sl=False):
+def setter_call(x, mode):
+    """one random run-time change as the vendor IMP layer passes it on (its checks passed):
+    (i264e_set_param id, args)"""
+    k = x % 4
+    # the IMP layer only requires >= 1 (and min <= max): QPs past 51 and rates below 128 reach the clamps
+    a = [(x >> 3) % 60 + 1, (x >> 9) % 60 + 1, (x >> 15) % 60 + 1, (x >> 21) % 60 + 1]
+    if k == 0:                                  # SetChnBitRate(target, max)
+        return 0x11, [1 + (x >> 4) % 8000, 1 + (x >> 13) % 8000]
+    if k == 1:                                  # SetChnQpBounds(min, max) -> {max, min}
+        return 0x12, [max(a[0], a[1]), min(a[0], a[1])]
+    if k == 2:                                  # SetChnQpBoundsPerFrame(minI, maxI, minP, maxP)
+        return 0x13, [max(a[0], a[1]), min(a[0], a[1]), max(a[2], a[3]), min(a[2], a[3])]
+    return 0x14, [1 + (x >> 4) % 12000, 1 + (x >> 14) % 8000]   # SetChnMaxPictureSize(I, P)
+
+
+def scenario(path, seed, motion=0, rows=False, sl=False, setters=False):
     """one random scenario: 'S' header line and its 'F' lines"""
     x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
     pick = []
@@ -250,8 +304,15 @@ def scenario(path, seed, motion=0, rows=False, sl=False):
     sc = Scene(pick[9])
     mbs = (w // 16) * (h // 16)
     out = ['S %d %d %d %d %d %d %d %d %d %d %u' % (mode, kbps, w, h, gop, fps, minqp, maxqp, initqp, pics, pick[9])]
+    sx = pick[9] ^ 0x5bd1e995
     for i in range(pics):
         cplx = sc.next()
+        if setters:
+            sx = xorshift32(sx)
+            if sx % 100 < 6:
+                pid, args = setter_call(xorshift32(sx * 7 & 0xffffffff or 1), mode)
+                t.set_param(pid, args)
+                out.append('C %d %d %s' % (i, pid, ' '.join(str(v) for v in args)))
         r, qp, typ = t.start()
         idr = i % gop == 0
         nb = model_bytes(qp, idr, mbs, cplx)
@@ -291,13 +352,16 @@ def main():
     sl = len(a) >= 2 and a[1] == '--slice'
     if sl:
         del a[1]
+    setters = len(a) >= 2 and a[1] == '--setters'
+    if setters:
+        del a[1]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
         return
     if len(a) >= 4 and a[1] == '--scenarios':
         for k in range(int(a[2]), int(a[2]) + int(a[3])):
-            print('\n'.join(scenario(a[0], k, motion, rows, sl)), flush=True)
+            print('\n'.join(scenario(a[0], k, motion, rows, sl, setters)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])

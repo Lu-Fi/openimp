@@ -73,8 +73,22 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
   'F' line, the words of the vendor `H264E_T32V_SliceInit` on the vendor controller's block
   (`vendor-2.2.0-rc33-slice-h264.txt.gz`, 40 scenarios), `rc33_test -l` requires OpenIMP's list (built from the
   port's block) to carry the same words in the same place for every picture.
-- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the H.265 T33 revision, the other
-  run-time setters (SetChnBitRate, SetChnQpBounds, ...) on the reconfiguration copy, IVDC channels.
+- H.264 run-time setters as vendor 2.2.0: `IMP_Encoder_SetChnBitRate` (target in CBR, else the max rate),
+  `_SetChnQpBounds`, `_SetChnQpBoundsPerFrame` (I bounds; at FIXQP the fixed I / P QP = max I / max P, the vendor
+  takes no P bounds otherwise) and `_SetChnMaxPictureSize` check their arguments with the vendor's codes
+  (0x80040001 channel, 0x80040002 argument, 0x80040008 no channel, 0x80040080 FIXQP / JPEG), update the channel
+  attribute as the vendor does and go, as `i264e_set_param` 0x11..0x14 (`i264e_reconfig_*_set`), into the
+  reconfiguration copy and a pending set for the next IDR. There `i264e_encode` runs `i264e_ratecontrol_start`,
+  then `i264e_idr_reconfig`: the changes into the parameter block, `i264e_validate_parameters` and, as these four
+  need no `i264e_ratecontrol_init`, a second `i264e_ratecontrol_start` for the IDR; OpenIMP does the same
+  (`t32_rc33_start`; with a SetChnAttrRcMode at the same IDR the changes go in after its copy). H.265 (T23 revision)
+  restarts its controller at the next IDR with the updated attribute. Checked: `tools/eprc_t33_oracle.py --setters`
+  calls the vendor `i264e_set_param` at random pictures (390 changes in 40 scenarios, QPs up to 60, rates from 1)
+  and lets the vendor `i264e_idr_reconfig` take them; `rc33_test` on `vendor-2.2.0-rc33-setters-h264.txt.gz`:
+  the QP of every picture equal (without the second start 36 of the 40 runs differ). QEMU apitest (`enc` area): SetChnBitRate reads back the new rate at once (vendor 2.2.0 still the old one until the IDR; it writes the attribute, its getter reads elsewhere), SetChnQpBoundsPerFrame 0, SetChnMaxPictureSize the same picture-size FAIL as the vendor (no re-encoding in either).
+- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the H.265 T33 revision, the frame-rate
+  and GOP changes on the reconfiguration copy (`i264e_reconfig_fps_set` / `_gop_set`, which need
+  `i264e_ratecontrol_init`), IVDC channels.
 
 ## Vendor reference (libimp 2.2.0, eprc T33 revision)
 

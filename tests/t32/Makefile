@@ -73,6 +73,8 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(AUDIO_BIN) 
 		-r vendor-2.2.0-rc33-rows-h264.txt
 	# ... and the HERA list words of the controller's slice block (vendor H264E_T32V_SliceInit)
 	gzip -dc vendor-2.2.0-rc33-slice-h264.txt.gz | $(RC33_BIN) -m 2 -r -l /dev/stdin
+	# ... and the run-time setters (i264e_set_param 0x11..0x14, taken at the next IDR)
+	gzip -dc vendor-2.2.0-rc33-setters-h264.txt.gz | $(RC33_BIN) -m 2 -r /dev/stdin
 	gzip -dc vendor-2.2.0-rc-imp.txt.gz | $(RC_IMP_BIN) vendor-2.2.0-rc-imp-defaults.txt /dev/stdin
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)

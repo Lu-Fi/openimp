@@ -146,6 +146,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t stats[T32_HERA_STATS];     /* the engine's statistics of the last picture */
     T32Rc rc;                           /* rate control (#295), off at FIXQP */
     int rc_restart;                     /* SetChnAttrRcMode: restart at the next IDR */
+    uint32_t set_mask;                  /* run-time setters not yet handed to the controller (bit id - 0x11) */
+    uint32_t set_args[4][4];            /* their i264e_set_param arguments */
 #ifdef PLATFORM_T33
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
     int ref_is_idr;                     /* the reference is the I picture */
@@ -562,6 +564,20 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
     struct t32_h264 *a = &e->avc;
     int qp = idr ? a->qp_i : a->qp_p, q;
 
+    {
+        uint32_t mask, args[4][4];
+        unsigned k;
+
+        /* run-time setters (H.264): to the controller, which takes them at the next IDR */
+        pthread_mutex_lock(&enc_lock);
+        mask = a->set_mask;
+        memcpy(args, a->set_args, sizeof(args));
+        a->set_mask = 0;
+        pthread_mutex_unlock(&enc_lock);
+        for (k = 0; k < 4; k++)
+            if (mask & 1u << k)
+                (void)t32_rc_set_param(&a->rc, 0x11u + k, args[k]);
+    }
     if (idr) {
         IMPEncoderAttrRcMode m;
         int restart;
@@ -573,6 +589,9 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         pthread_mutex_unlock(&enc_lock);
         if (restart)
             rc_setup(e, &m, 1);
+        /* FIXQP: a per-picture QP bound sets the fixed QPs (i264e_idr_reconfig) */
+        if (t32_rc_fixqp_take(&a->rc, &a->qp_i, &a->qp_p))
+            qp = a->qp_i;
     }
     if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
         qp = q;
@@ -1641,6 +1660,143 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     }
     pthread_mutex_unlock(&enc_lock);
     return rc;
+}
+
+/*
+ * Run-time rate-control setters (vendor 2.2.0): the argument checks and
+ * error codes of the vendor IMP layer, the channel attribute updated as the
+ * vendor does, the change handed to the encoder (i264e_set_param 0x11..0x14),
+ * which takes it at the next IDR (t32_rc_set_param).  H.265 channels (T23
+ * controller revision) restart their controller at the next IDR instead.
+ */
+#define T32_ENC_ERR_CHN     ((int)0x80040001)
+#define T32_ENC_ERR_PARAM   ((int)0x80040002)
+#define T32_ENC_ERR_NOCHN   ((int)0x80040008)
+#define T32_ENC_ERR_MODE    ((int)0x80040080)
+
+static int rc_setter(int encChn, unsigned id, const uint32_t a[4], int fixqp_ok)
+{
+    struct t32_enc_chn *e;
+    IMPEncoderAttrRcMode *m;
+    int rc = 0;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    m = e ? &e->attr.rcAttr.attrRcMode : NULL;
+    if (!e || !e->created)
+        rc = T32_ENC_ERR_NOCHN;
+    else if (!e->h264 || (!fixqp_ok && m->rcMode == IMP_ENC_RC_MODE_FIXQP))
+        rc = T32_ENC_ERR_MODE;
+    else if (id == 0x13 && m->rcMode == IMP_ENC_RC_MODE_FIXQP && (a[0] != a[1] || a[2] != a[3]))
+        rc = T32_ENC_ERR_PARAM;
+    if (rc) {
+        pthread_mutex_unlock(&enc_lock);
+        return rc;
+    }
+    /* the attribute (the QP bytes and the rate sit at the same place in every mode but FIXQP) */
+    switch (id) {
+    case 0x11:
+        if (m->rcMode == IMP_ENC_RC_MODE_CBR)
+            m->attrH264Cbr.outBitRate = a[0];
+        else if (m->rcMode >= IMP_ENC_RC_MODE_VBR && m->rcMode <= IMP_ENC_RC_MODE_AVBR)
+            m->attrH264Vbr.maxBitRate = a[1];
+        break;
+    case 0x12:
+        if (m->rcMode >= IMP_ENC_RC_MODE_CBR && m->rcMode <= IMP_ENC_RC_MODE_AVBR) {
+            m->attrH264Cbr.maxQp = (uint8_t)a[0];
+            m->attrH264Cbr.minQp = (uint8_t)a[1];
+        }
+        break;
+    case 0x13:
+        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
+            m->attrH264FixQp.IQp = a[0];
+            m->attrH264FixQp.PQp = a[3];
+        } else if (m->rcMode <= IMP_ENC_RC_MODE_AVBR) {
+            m->attrH264Cbr.maxIQp = (uint8_t)a[0];
+            m->attrH264Cbr.minIQp = (uint8_t)a[1];
+        }
+        break;
+    case 0x14:
+        switch (m->rcMode) {
+        case IMP_ENC_RC_MODE_CBR:
+            m->attrH264Cbr.maxIPictureSize = a[0];
+            m->attrH264Cbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_VBR:
+            m->attrH264Vbr.maxIPictureSize = a[0];
+            m->attrH264Vbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_SMART:
+            m->attrH264Smart.maxIPictureSize = a[0];
+            m->attrH264Smart.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_CVBR:
+            m->attrH264CVbr.maxIPictureSize = a[0];
+            m->attrH264CVbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_AVBR:
+            m->attrH264AVbr.maxIPictureSize = a[0];
+            m->attrH264AVbr.maxPPictureSize = a[1];
+            break;
+        default:
+            break;
+        }
+        break;
+    }
+    if (e->hevc) {
+        e->avc.rc_restart = 1;
+    } else {
+        memcpy(e->avc.set_args[id - 0x11], a, sizeof(e->avc.set_args[0]));
+        e->avc.set_mask |= 1u << (id - 0x11);
+    }
+    pthread_mutex_unlock(&enc_lock);
+    return 0;
+}
+
+int IMP_Encoder_SetChnBitRate(int encChn, int bitrate, int bitrateMax)
+{
+    uint32_t a[4] = { (uint32_t)bitrate, (uint32_t)bitrateMax, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (bitrate < 1 || bitrateMax < 1)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x11, a, 0);
+}
+
+int IMP_Encoder_SetChnQpBounds(int encChn, int minQp, int maxQp)
+{
+    uint32_t a[4] = { (uint32_t)maxQp, (uint32_t)minQp, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (minQp < 1 || maxQp < 1 || maxQp < minQp)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x12, a, 0);
+}
+
+int IMP_Encoder_SetChnQpBoundsPerFrame(int encChn, int minQpI, int maxQpI, int minQpP, int maxQpP)
+{
+    uint32_t a[4] = { (uint32_t)maxQpI, (uint32_t)minQpI, (uint32_t)maxQpP, (uint32_t)minQpP };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (minQpI < 1 || maxQpI < 1 || maxQpI < minQpI || minQpP < 1 || maxQpP < 1 || maxQpP < minQpP)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x13, a, 1);
+}
+
+int IMP_Encoder_SetChnMaxPictureSize(int encChn, uint32_t maxPictureSizeI, uint32_t maxPictureSizeP)
+{
+    uint32_t a[4] = { maxPictureSizeI, maxPictureSizeP, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (!maxPictureSizeI || !maxPictureSizeP)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x14, a, 1);
 }
 
 int IMP_Encoder_GetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)

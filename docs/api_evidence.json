@@ -8833,7 +8833,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "miss",
         "T40": "dev",
         "T41": "dev"
@@ -8859,7 +8859,8 @@
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
       }
     },
     "Encoder_SetChnEntropyMode": {
@@ -8976,7 +8977,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
@@ -8995,7 +8996,8 @@
       "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only)",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
       }
     },
     "Encoder_SetChnQp": {
@@ -9026,7 +9028,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
+        "T32": "host",
         "T33": "miss",
         "T40": "dev",
         "T41": "dev"
@@ -9052,7 +9054,8 @@
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "rc33_test vendor-2.2.0-rc33-setters-h264.txt.gz (host, QEMU apitest has no T32 case)"
       }
     },
     "Encoder_SetChnQpBoundsPerFrame": {
@@ -9064,14 +9067,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
       "note": "audit: userspace implementation",
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
       }
     },
     "Encoder_SetChnQpIPDelta": {

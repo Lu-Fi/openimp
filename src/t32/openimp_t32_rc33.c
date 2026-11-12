@@ -144,6 +144,72 @@ uint32_t t32_rc33_get(T32Rc33 *c, uint32_t off)
     return P32(off);
 }
 
+static int32_t clip3(int32_t v, int32_t lo, int32_t hi)
+{
+    return v < lo ? lo : v > hi ? hi : v;
+}
+
+/* i264e_validate_parameters, the clamps of the words the controller reads
+ * (checked against the vendor with tests/t32/rc_imp_test.c) */
+void t32_rc33_validate(T32Rc33 *c)
+{
+#define G(o) ((int32_t)t32_rc33_get(c, (o)))
+#define S(o, v) t32_rc33_set(c, (o), (uint32_t)(v))
+#define CL(o, lo, hi) S((o), clip3(G(o), (lo), (hi)))
+    int32_t w = G(T33P_WIDTH), h = G(T33P_HEIGHT), area, lo, k = w < 0x321 ? 3 : 6;
+    union { uint32_t u; float f; } r1, r2, qc;
+
+    CL(0x118, 1, 0x40000000);
+    CL(T33P_FIX_IQP, 0, 51);
+    CL(T33P_FIX_PQP, 0, 51);
+    CL(0xe8, 0, 51);
+    CL(T33P_MAX_QP, 0, 51);
+    CL(T33P_MIN_QP, 0, G(T33P_MAX_QP));
+    CL(T33P_INIT_QP, 0, 51);
+    CL(T33P_MAX_IQP, 0, 51);
+    CL(T33P_MIN_IQP, 0, 51);
+    CL(0x11c, -10, 10);
+    CL(0x120, 0, 15);
+    CL(0x124, 0, 15);
+    CL(0x128, 2, 51);
+    if (G(T33P_KBPS) < 0x80)
+        S(T33P_KBPS, 0x80);
+    if (G(0x130) < 1)
+        S(0x130, 1);
+    CL(0x134, 50, 100);
+    CL(0x13c, 0, 8);
+    CL(0x138, 0, 7);
+    CL(0x150, 0, 100);
+    CL(0x154, 0, G(0x150));
+    CL(0x160, 1, 100);
+    CL(0x164, 0, 51);
+    CL(0x16c, 0, 10);
+    CL(0x170, 0, 3);
+    CL(0x174, 1, 100);
+    if (G(0x180) < 1)
+        S(0x180, 1);
+    if (G(0x184) < 1)
+        S(0x184, 1);
+    CL(0x188, 0, 1000);
+    qc.u = t32_rc33_get(c, 0x140);
+    qc.f = (float)clip3((int32_t)qc.f, 2, 10);
+    S(0x140, qc.u);
+    CL(0x144, G(T33P_MAX_QP), 51);
+    /* VBV: between 3/50 and 12/3 (12/6 above 800 pixels wide) bits per pixel */
+    area = (int32_t)(((uint32_t)w + 15u) & ~15u) * (int32_t)(((uint32_t)h + 15u) & ~15u);
+    lo = area * 3 / 50;
+    CL(0x19c, 0, 3);
+    CL(0x1a0, lo, area * 12 / k);
+    r1.u = t32_rc33_get(c, 0x108);
+    r2.u = t32_rc33_get(c, 0x10c);
+    CL(0x1a4, lo, (int32_t)((float)G(0x1a0) / r1.f));
+    CL(0x1a8, lo, (int32_t)((float)G(0x1a4) / r2.f));
+    CL(0x114, 1, G(0x118));
+#undef CL
+#undef S
+#undef G
+}
+
 /* i264e_ratecontrol_init (0x78a14), without the /dev/mem mapping */
 void t32_rc33_init(T32Rc33 *c)
 {
@@ -297,8 +363,81 @@ void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode)
     e33_st_U8(&c->X, A_F + 0x164, mode);
 }
 
-/* i264e_ratecontrol_start (0x78f0c) */
+int t32_rc33_set_param(T32Rc33 *c, unsigned id, const uint32_t *a)
+{
+    T33Pending *p = &c->pend;
+
+    switch (id) {
+    case 0x11:                  /* i264e_reconfig_bitrate_set: by the running mode */
+        p->kbps = t32_rc33_get(c, T33P_MODE) == 1u ? a[0] : a[1];
+        p->flags |= T33_SET_BITRATE;
+        return 0;
+    case 0x12:                  /* i264e_reconfig_qpbound_set */
+        p->max_qp = a[0];
+        p->min_qp = a[1];
+        p->flags |= T33_SET_QPBOUND;
+        return 0;
+    case 0x13:                  /* i264e_reconfig_perqpbound_set */
+        p->max_iqp = a[0];
+        p->min_iqp = a[1];
+        p->max_pqp = a[2];
+        p->min_pqp = a[3];
+        p->flags |= T33_SET_IQPBOUND;
+        return 0;
+    case 0x14:                  /* i264e_reconfig_maxpicsize_set */
+        p->pic_i = a[0];
+        p->pic_p = a[1];
+        p->flags |= T33_SET_PICSIZE;
+        return 0;
+    }
+    return -1;
+}
+
+/* i264e_idr_reconfig (0x7efac), flags 0x20000..0x100000 */
+uint32_t t32_rc33_take_pending(T32Rc33 *c, const T33Pending *p)
+{
+    E33 *X = &c->X;
+    uint32_t f = p->flags;
+
+    if (f & T33_SET_BITRATE)
+        SP32(T33P_KBPS, p->kbps);
+    if (f & T33_SET_QPBOUND) {
+        SP32(T33P_MAX_QP, p->max_qp);
+        SP32(T33P_MIN_QP, p->min_qp);
+    }
+    if (f & T33_SET_IQPBOUND) {
+        SP32(T33P_MAX_IQP, p->max_iqp);
+        SP32(T33P_MIN_IQP, p->min_iqp);
+        if (P32(T33P_MODE) == 0) {
+            SP32(T33P_FIX_IQP, p->max_iqp);
+            SP32(T33P_FIX_PQP, p->max_pqp);
+        }
+    }
+    if (f & T33_SET_PICSIZE) {
+        SP32(0x158, p->pic_i);
+        SP32(0x15c, p->pic_p);
+    }
+    return f & (T33_SET_BITRATE | T33_SET_QPBOUND | T33_SET_IQPBOUND | T33_SET_PICSIZE);
+}
+
+static int t33_start(T32Rc33 *c, uint32_t since_idr);
+
 int t32_rc33_start(T32Rc33 *c, uint32_t since_idr)
+{
+    int qp = t33_start(c, since_idr);
+
+    if (since_idr == 0 && c->pend.flags) {
+        /* i264e_encode: at the IDR, after the start, i264e_idr_reconfig */
+        t32_rc33_take_pending(c, &c->pend);
+        memset(&c->pend, 0, sizeof(c->pend));
+        t32_rc33_validate(c);
+        qp = t33_start(c, since_idr);
+    }
+    return qp;
+}
+
+/* i264e_ratecontrol_start (0x78f0c) */
+static int t33_start(T32Rc33 *c, uint32_t since_idr)
 {
     E33 *X = &c->X;
     uint32_t gop = P32(T33P_GOP), f = A_F;

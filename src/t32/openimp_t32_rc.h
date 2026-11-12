@@ -42,6 +42,7 @@ typedef struct {
     uint32_t stash[T32_RC_PWORDS];
     int have_stash;
     uint32_t width, height;     /* the coded size */
+    T33Pending pend;            /* run-time changes for the next IDR without a T33 controller (FIXQP) */
 } T32Rc;
 
 /* The EprcParams of a T32 channel (exposed for the host tests): 0, or -1
@@ -96,6 +97,17 @@ void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstat
 unsigned t32_rc_idr_rows(T32Rc *rc);
 void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,
                      unsigned nrows);
+
+/* H.264 run-time changes (IMP_Encoder_SetChnBitRate / _SetChnQpBounds /
+ * _SetChnQpBoundsPerFrame / _SetChnMaxPictureSize: vendor i264e_set_param id
+ * 0x11..0x14, see t32_rc33_set_param): into the reconfiguration copy and
+ * pending for the next IDR, where t32_rc_start (or t32_rc_reconfig, after the
+ * copy) takes them.  0, -1 without an H.264 channel. */
+int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a);
+/* FIXQP channel at an IDR: the fixed I / P QPs a pending per-picture QP bound
+ * sets (vendor: P+0xe0 / +0xe4 = max I / max P), 1 when there were any; the
+ * pending changes are taken either way */
+int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p);
 
 /* H.264 (T33 revision): the slice block of the picture in work (after
  * t32_rc_start) for the HERA command list, NULL without it; and its per-MB

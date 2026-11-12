@@ -225,66 +225,6 @@ static void t33_sizes(T32Rc33 *c, uint32_t kbps, uint32_t max_i, uint32_t max_p)
     t32_rc33_set(c, 0x15c, max_p);
 }
 
-/* i264e_validate_parameters, the rate-control part */
-static void t33_validate(T32Rc33 *c)
-{
-#define G(o) ((int32_t)t32_rc33_get(c, (o)))
-#define S(o, v) t32_rc33_set(c, (o), (uint32_t)(v))
-#define CL(o, lo, hi) S((o), clip3(G(o), (lo), (hi)))
-    int32_t w = G(T33P_WIDTH), h = G(T33P_HEIGHT), area, lo, k = w < 0x321 ? 3 : 6;
-    union { uint32_t u; float f; } r1, r2, qc;
-
-    CL(0x118, 1, 0x40000000);
-    CL(T33P_FIX_IQP, 0, 51);
-    CL(T33P_FIX_PQP, 0, 51);
-    CL(0xe8, 0, 51);
-    CL(T33P_MAX_QP, 0, 51);
-    CL(T33P_MIN_QP, 0, G(T33P_MAX_QP));
-    CL(T33P_INIT_QP, 0, 51);
-    CL(T33P_MAX_IQP, 0, 51);
-    CL(T33P_MIN_IQP, 0, 51);
-    CL(0x11c, -10, 10);
-    CL(0x120, 0, 15);
-    CL(0x124, 0, 15);
-    CL(0x128, 2, 51);
-    if (G(T33P_KBPS) < 0x80)
-        S(T33P_KBPS, 0x80);
-    if (G(0x130) < 1)
-        S(0x130, 1);
-    CL(0x134, 50, 100);
-    CL(0x13c, 0, 8);
-    CL(0x138, 0, 7);
-    CL(0x150, 0, 100);
-    CL(0x154, 0, G(0x150));
-    CL(0x160, 1, 100);
-    CL(0x164, 0, 51);
-    CL(0x16c, 0, 10);
-    CL(0x170, 0, 3);
-    CL(0x174, 1, 100);
-    if (G(0x180) < 1)
-        S(0x180, 1);
-    if (G(0x184) < 1)
-        S(0x184, 1);
-    CL(0x188, 0, 1000);
-    qc.u = t32_rc33_get(c, 0x140);
-    qc.f = (float)clip3((int32_t)qc.f, 2, 10);
-    S(0x140, qc.u);
-    CL(0x144, G(T33P_MAX_QP), 51);
-    /* VBV: between 3/50 and 12/3 (12/6 above 800 pixels wide) bits per pixel */
-    area = (int32_t)(((uint32_t)w + 15u) & ~15u) * (int32_t)(((uint32_t)h + 15u) & ~15u);
-    lo = area * 3 / 50;
-    CL(0x19c, 0, 3);
-    CL(0x1a0, lo, area * 12 / k);
-    r1.u = t32_rc33_get(c, 0x108);
-    r2.u = t32_rc33_get(c, 0x10c);
-    CL(0x1a4, lo, (int32_t)((float)G(0x1a0) / r1.f));
-    CL(0x1a8, lo, (int32_t)((float)G(0x1a4) / r2.f));
-    CL(0x114, 1, G(0x118));
-#undef CL
-#undef S
-#undef G
-}
-
 int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
                     uint32_t gop, uint32_t fps_num, uint32_t fps_den)
 {
@@ -402,7 +342,7 @@ int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, u
     t32_rc33_set(c, 0x2e8, 2);
     t32_rc33_set8(c, 0x344, 1);
     t32_rc33_set(c, 0x348, 250);
-    t33_validate(c);
+    t32_rc33_validate(c);
     return 0;
 }
 
@@ -691,6 +631,7 @@ int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, ui
                     uint32_t gop, uint32_t fps_num, uint32_t fps_den, int hevc)
 {
     uint32_t stash[T32_RC_PWORDS], width = rc->width, height = rc->height;
+    T33Pending pend = rc->t33 ? rc->t33->pend : rc->pend;
     T32Rc33 *c;
 
     if (hevc || !rc->have_stash || rc->hevc || m->rcMode > IMP_ENC_RC_MODE_AVBR)
@@ -705,18 +646,22 @@ int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, ui
     rc->height = height;
     rc->mode = (int)m->rcMode;
     rc->i_min = rc->i_max = -1;
-    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP)
+    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
+        rc->pend = pend;        /* the fixed QPs of a per-picture bound: t32_rc_fixqp_take */
         return 0;
+    }
     c = calloc(1, sizeof(*c));
     if (!c || t32_rc33_open(c, width, height) != 0) {
         free(c);
         return -1;
     }
-    /* i264e_idr_reconfig: the copy back (blkQpEn as 0/1), then the clamps */
+    /* i264e_idr_reconfig: the copy back (blkQpEn as 0/1), the other pending
+     * changes after it, then the clamps */
     for (unsigned o = 0; o < T32_RC_PWORDS; o++)
         t32_rc33_set(c, 4u * o, stash[o]);
     t32_rc33_set(c, 0xf4, stash[0xf4 / 4] != 0);
-    t33_validate(c);
+    (void)t32_rc33_take_pending(c, &pend);
+    t32_rc33_validate(c);
     t32_rc33_init(c);
     rc->t33 = c;
     rc->min_qp = (int)t32_rc33_get(c, T33P_MIN_QP);
@@ -798,4 +743,69 @@ const uint8_t *t32_rc_map(T32Rc *rc, int which, uint32_t *len)
 {
     *len = 0;
     return rc->on && rc->t33 ? t32_rc33_map(rc->t33, which, len) : NULL;
+}
+
+int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
+{
+    uint32_t *st = rc->stash;
+    T33Pending *p = rc->t33 ? &rc->t33->pend : &rc->pend;
+
+    if (rc->hevc || !rc->have_stash || id < 0x11 || id > 0x14)
+        return -1;
+    /* the vendor setters write the fields of the reconfiguration copy that
+     * i264e_reconfig_rc_set fills too (bit rate, QP and I QP bounds; the
+     * picture sizes have fields of their own) */
+    if (id == 0x11)
+        st[T33P_KBPS / 4] = (rc->t33 ? t32_rc33_get(rc->t33, T33P_MODE) == 1u : rc->mode == IMP_ENC_RC_MODE_CBR) ?
+                            a[0] : a[1];
+    else if (id == 0x12) {
+        st[T33P_MAX_QP / 4] = a[0];
+        st[T33P_MIN_QP / 4] = a[1];
+    } else if (id == 0x13) {
+        st[T33P_MAX_IQP / 4] = a[0];
+        st[T33P_MIN_IQP / 4] = a[1];
+    }
+    if (rc->t33)
+        return t32_rc33_set_param(rc->t33, id, a);
+    /* no controller (FIXQP): the same fields, the bit rate by the running mode */
+    switch (id) {
+    case 0x11:
+        p->kbps = rc->mode == IMP_ENC_RC_MODE_CBR ? a[0] : a[1];
+        p->flags |= T33_SET_BITRATE;
+        break;
+    case 0x12:
+        p->max_qp = a[0];
+        p->min_qp = a[1];
+        p->flags |= T33_SET_QPBOUND;
+        break;
+    case 0x13:
+        p->max_iqp = a[0];
+        p->min_iqp = a[1];
+        p->max_pqp = a[2];
+        p->min_pqp = a[3];
+        p->flags |= T33_SET_IQPBOUND;
+        break;
+    default:
+        p->pic_i = a[0];
+        p->pic_p = a[1];
+        p->flags |= T33_SET_PICSIZE;
+        break;
+    }
+    return 0;
+}
+
+int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p)
+{
+    T33Pending *p = &rc->pend;
+    int r = 0;
+
+    if (rc->on || !p->flags)
+        return 0;
+    if (p->flags & T33_SET_IQPBOUND) {
+        *qp_i = clip((int32_t)p->max_iqp, 0, 51);
+        *qp_p = clip((int32_t)p->max_pqp, 0, 51);
+        r = 1;
+    }
+    memset(p, 0, sizeof(*p));
+    return r;
 }

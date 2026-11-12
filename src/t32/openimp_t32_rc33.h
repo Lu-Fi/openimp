@@ -41,6 +41,24 @@ enum {
 
 #define T33_RC_STATS 48         /* engine statistics after each picture (vendor read list) */
 
+/* Run-time changes (vendor IMP_Encoder_SetChnBitRate / _SetChnQpBounds /
+ * _SetChnQpBoundsPerFrame / _SetChnMaxPictureSize -> i264e_set_param 0x11..
+ * 0x14 -> i264e_reconfig_*_set): flags of the handle word +0x26cc, taken at
+ * the next IDR by i264e_idr_reconfig, which copies them into the parameter
+ * block, runs i264e_validate_parameters and, these four needing no
+ * i264e_ratecontrol_init, a second i264e_ratecontrol_start for the IDR. */
+#define T33_SET_BITRATE  0x20000u       /* P+0x110 <- kbps (+0x2b54) */
+#define T33_SET_QPBOUND  0x40000u       /* P+0xf0 / +0xec <- max / min QP (+0x2b34 / +0x2b38) */
+#define T33_SET_IQPBOUND 0x80000u       /* P+0xfc / +0x100 <- max / min I QP; FIXQP: P+0xe0 / +0xe4 <- max I / max P */
+#define T33_SET_PICSIZE  0x100000u      /* P+0x158 / +0x15c <- max I / P picture size, kbit (+0x2bc4 / +0x2bc8) */
+typedef struct {
+    uint32_t flags;
+    uint32_t kbps;
+    uint32_t max_qp, min_qp;
+    uint32_t max_iqp, min_iqp, max_pqp, min_pqp;
+    uint32_t pic_i, pic_p;
+} T33Pending;
+
 typedef struct {
     E33 X;
     uint8_t *mem;               /* region 0: parameter block, encoder blocks, slice block, maps */
@@ -50,6 +68,7 @@ typedef struct {
     int qp;                     /* QP of the last FRAME_START */
     int type;                   /* picture type of the last FRAME_START (2 IDR) */
     int mb_flags;               /* the MB map carried flags at the last FRAME_START */
+    T33Pending pend;            /* run-time changes for the next IDR */
 } T32Rc33;
 
 /* Arena and i264e_param_default for a @width x @height channel; the caller
@@ -63,6 +82,16 @@ void t32_rc33_close(T32Rc33 *c);
 void t32_rc33_set(T32Rc33 *c, uint32_t off, uint32_t v);
 void t32_rc33_set8(T32Rc33 *c, uint32_t off, uint8_t v);
 uint32_t t32_rc33_get(T32Rc33 *c, uint32_t off);
+/* i264e_validate_parameters: the clamps of the words the controller reads */
+void t32_rc33_validate(T32Rc33 *c);
+/* i264e_set_param @id (0x11 bit rate {target, max}: the target in CBR, else
+ * the max; 0x12 QP bounds {max, min}; 0x13 per-picture QP bounds {max I, min I,
+ * max P, min P}; 0x14 max picture sizes {I, P}) for the next IDR; 0, -1 for
+ * another id */
+int t32_rc33_set_param(T32Rc33 *c, unsigned id, const uint32_t *a);
+/* i264e_idr_reconfig's copy of the pending changes into the parameter block
+ * (no clamps); the flags it took */
+uint32_t t32_rc33_take_pending(T32Rc33 *c, const T33Pending *p);
 /* i264e_ratecontrol_init (controller defaults, parameter copy, VIDEO_CFG) */
 void t32_rc33_init(T32Rc33 *c);
 /* the per-picture motion mode (F+0x164): i264e_update_fenc sets 2, the
@@ -70,7 +99,9 @@ void t32_rc33_init(T32Rc33 *c);
 void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode);
 /* i264e_ratecontrol_start for the picture @since_idr pictures after the
  * last IDR (0: IDR): the picture QP, -1 when the controller's picture type
- * does not match (the vendor logs and keeps the last QP) */
+ * does not match (the vendor logs and keeps the last QP).  At an IDR with
+ * pending changes it goes on as i264e_idr_reconfig does: the changes into the
+ * parameter block, the clamps, the second start (its QP). */
 int t32_rc33_start(T32Rc33 *c, uint32_t since_idr);
 /* i264e_ratecontrol_is_reenc after the picture (no re-encoding): coded size
  * in bytes, @stats the T33_RC_STATS engine statistics or NULL */
