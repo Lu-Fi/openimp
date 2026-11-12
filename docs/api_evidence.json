@@ -1334,18 +1334,20 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "aud",
+        "T23": "nohw",
         "T30": "n.a.",
-        "T31": "aud",
+        "T31": "nohw",
         "T32": "n.a.",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "no-op"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. GPIO list starting with 0xff (nothing requested or driven): init 0, free 0, NULL -1; the driver answers 0.",
+        "T31": "apitest secsensor_t31 2026-11-12 (T31L single-sensor camera, sc2336): OpenIMP libimp and the vendor T31 1.1.6 libimp give identical results on the vendor driver (runtime swap of the stock module, then back to the flashed stack) and on the flashed open driver; empty GPIO list (0xff first, nothing requested or driven), NULL -1. Vendor driver: -1 / EPERM before AddSensor, 0 with the sensor running; open driver: -1 / ENOTTY, the T31 open driver has no handler for ioctl 0xc00456e8/e9 yet (tracked as a driver issue). No pin was touched; the real GPIO function is not verified on hardware."
       },
-      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls.  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call sends ioctl 0xc00456e8 with a list of sensor GPIO numbers; no handler for it was found in the open T23 driver source and the boards have no spare, known pin: a call could claim or drive a guessed pin, which is not done."
+      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls.  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call sends ioctl 0xc00456e8 with a list of sensor GPIO numbers; no handler for it was found in the open T23 driver source and the boards have no spare, known pin: a call could claim or drive a guessed pin, which is not done.  T23 2026-11-12 (matrix 2nd-sensor round): nohw. Run only with an empty list (first entry 0xff), so no pin is touched; return codes equal to the vendor library.  T31 2026-11-12 (matrix 2nd-sensor round): nohw, library vendor-equal; open-tx-isp T31 still answers ENOTTY where the stock driver answers 0 (driver issue)."
     },
     "ISP_SET_GPIO_STA": {
       "area": "ISP tuning",
@@ -1353,18 +1355,20 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "aud",
+        "T23": "nohw",
         "T30": "n.a.",
-        "T31": "aud",
+        "T31": "nohw",
         "T32": "n.a.",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "no-op"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. empty GPIO list (0xff first) 0, NULL -1; the driver answers 0.",
+        "T31": "apitest secsensor_t31 2026-11-12 (T31L single-sensor camera, sc2336): OpenIMP libimp and the vendor T31 1.1.6 libimp give identical results on the vendor driver (runtime swap of the stock module, then back to the flashed stack) and on the flashed open driver; empty GPIO list (0xff first, nothing requested or driven), NULL -1. Vendor driver: -1 / EPERM before AddSensor, 0 with the sensor running; open driver: -1 / ENOTTY, the T31 open driver has no handler for ioctl 0xc00456e8/e9 yet (tracked as a driver issue). No pin was touched; the real GPIO function is not verified on hardware."
       },
-      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls.  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called (ioctl 0xc00456e9, sets sensor GPIO levels; same reason as GPIO_INIT_OR_FREE: no known pin, no handler found in the open T23 driver source)."
+      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls.  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called (ioctl 0xc00456e9, sets sensor GPIO levels; same reason as GPIO_INIT_OR_FREE: no known pin, no handler found in the open T23 driver source).  T23 2026-11-12: nohw, same run (empty list only, nothing is set at the next VIC done).  T31 2026-11-12: nohw, same run; the stock driver stores the list and sets the pins at the next VIC done, which was not run (empty list)."
     },
     "ISP_SetCameraInputMode": {
       "area": "ISP tuning",
@@ -1372,7 +1376,7 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "aud",
+        "T23": "nohw",
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
@@ -1380,7 +1384,10 @@
         "T40": "host",
         "T41": "n.a."
       },
-      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board)."
+      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board).  T23 2026-11-12: nohw. Only the invalid modes and mode 0 were sent; no joint mode (needs a second sensor).",
+      "ref": {
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, mode 73 and a low nibble of 9 -1 (refused before the ioctl), mode 0 (not joint, the single-sensor default) 0."
+      }
     },
     "ISP_SetCameraInputSelect": {
       "area": "ISP tuning",
@@ -1464,7 +1471,7 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "aud",
+        "T23": "nohw",
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
@@ -1472,7 +1479,10 @@
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "audit: reaches the driver/kernel  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called: ioctl 0xc00456ed belongs to the second-sensor topology (stream out); there is no second sensor on the test cameras (apitest category own-topology)."
+      "note": "audit: reaches the driver/kernel  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called: ioctl 0xc00456ed belongs to the second-sensor topology (stream out); there is no second sensor on the test cameras (apitest category own-topology).  T23 2026-11-12: nohw, same run; frames kept flowing.",
+      "ref": {
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, state main on / second off (the single-sensor state) 0."
+      }
     },
     "ISP_SetSwitchgpio": {
       "area": "ISP tuning",
@@ -1480,7 +1490,7 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "host",
+        "T23": "nohw",
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
@@ -1488,10 +1498,13 @@
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "T23: ioctl (claude/t23t31-cacheonly, not in agg-25)  T23 2026-11-04 (T23 cameras, both with one sensor): stays host. OpenIMP implements IMP_ISP_MultiCamera_SetSwitchgpio on T23 as a stub that returns 0 without an ioctl (a one-sensor T23 has no sensor-switch GPIO), so a device call proves nothing; not run.",
+      "note": "T23: ioctl (claude/t23t31-cacheonly, not in agg-25)  T23 2026-11-04 (T23 cameras, both with one sensor): stays host. OpenIMP implements IMP_ISP_MultiCamera_SetSwitchgpio on T23 as a stub that returns 0 without an ioctl (a one-sensor T23 has no sensor-switch GPIO), so a device call proves nothing; not run.  T23 2026-11-12: OpenIMP forwards IMP_ISP_MultiCamera_SetSwitchgpio to the driver (was a stub returning 0); only a disabled record (enable 0, no pin) was sent to the camera.",
       "alias": [
         "ISP_MultiCamera_SetSwitchgpio"
-      ]
+      ],
+      "ref": {
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. record with enable 0 returns 0, NULL -1. Before this round OpenIMP returned 0 for NULL without calling the driver; it now hands the record to the driver like the stock call (ioctl 0xc00456ee, host test isp_tuning_test)."
+      }
     },
     "ISP_SetVicDoneCbFunc": {
       "area": "ISP tuning",
@@ -1540,7 +1553,7 @@
         "T10": "n.a.",
         "T20": "n.a.",
         "T21": "n.a.",
-        "T23": "aud",
+        "T23": "nohw",
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
@@ -1548,7 +1561,10 @@
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "audit: reaches the driver/kernel  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called: ioctl 0xc00456ec belongs to the second-sensor topology (stream check, apitest category own-topology). Probe of the second-sensor getters on a one-sensor camera: GetBrightness/Contrast/Sharpness/Saturation/BcshHue/TotalGain_Sec answer 0, the AE/AWB/AF statistics, GetAeLuma/AeState/AeAttr/MaxAgain/AWBCt/AntiFlicker/AeComp/RunningMode _Sec answer -1; a 0 from a Sec getter without a second sensor is therefore no evidence of a second-sensor path."
+      "note": "audit: reaches the driver/kernel  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called: ioctl 0xc00456ec belongs to the second-sensor topology (stream check, apitest category own-topology). Probe of the second-sensor getters on a one-sensor camera: GetBrightness/Contrast/Sharpness/Saturation/BcshHue/TotalGain_Sec answer 0, the AE/AWB/AF statistics, GetAeLuma/AeState/AeAttr/MaxAgain/AWBCt/AntiFlicker/AeComp/RunningMode _Sec answer -1; a 0 from a Sec getter without a second sensor is therefore no evidence of a second-sensor path.  T23 2026-11-12: nohw, same run.",
+      "ref": {
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, timeout 500 ms returns 0 with state 0 0 (open driver and stock libimp the same)."
+      }
     },
     "ISP_Tuning_DisableMovestate": {
       "area": "ISP tuning",
