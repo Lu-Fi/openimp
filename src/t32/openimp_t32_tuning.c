@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include <imp/imp_common.h>
+#include <imp/imp_encoder.h>
 #include <imp/imp_isp.h>
 
 #include "imp_log_int.h"
@@ -42,6 +43,24 @@
 #endif
 
 #define TAG "T32-TUN"
+
+/*
+ * The vendor public structures whose size differs between the T32 2.2.0 and
+ * the T33 2.0.2.1 headers (the other 279 common typedefs are equal; audit of
+ * #390).  IMPISPBinInfo is a header type only: the DEFAULT_BIN request of
+ * both libimp lines is 880 bytes (version at 863, SoC at 871,
+ * openimp_t32_bin.c), the T33 header's 856 is not what the T33 library
+ * passes.  None of the three crosses an ioctl this library issues.
+ */
+#ifdef PLATFORM_T33
+_Static_assert(sizeof(IMPISPBinInfo) == 856, "T33 2.0.2.1 IMPISPBinInfo");
+_Static_assert(sizeof(tisp_bin_attr_t) == 828, "T33 2.0.2.1 tisp_bin_attr_t (no paddr[6])");
+_Static_assert(sizeof(IMPEncoderKernEncOut) == 48, "T33 2.0.2.1 IMPEncoderKernEncOut");
+#else
+_Static_assert(sizeof(IMPISPBinInfo) == 880, "T32 2.2.0 IMPISPBinInfo");
+_Static_assert(sizeof(tisp_bin_attr_t) == 852, "T32 2.2.0 tisp_bin_attr_t");
+_Static_assert(sizeof(IMPEncoderKernEncOut) == 56, "T32 2.2.0 IMPEncoderKernEncOut");
+#endif
 
 #define T32_TUN_IOC      0xc0105467u    /* /dev/isp-m0 DEFAULT_CMD_ISP_TUNING */
 #define T32_AE_START_SET 0xc0045436u    /* /dev/tx-isp SET/GET_AE_START_EV */

@@ -16,6 +16,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `tools/apitest/at_enc.c`: on T10/T20/T21/T30 the base case reads `GetChnFrmRate` / `GetGOPSize` back after two pictures (the vendor glue latches both to the next picture, #367) and expects the GOP rounded up to a multiple of the frame rate (set 25 at 15 fps reads 30, like the vendor). Library unchanged. Device check (area enc, agg68 image): T10, T20, T21 FAIL 0 (before: 4 FAIL each).
 
+## 2026-11-12: T33 size asserts, export check, tuning on the open T33 module (#390, #394; planned, QEMU only)
+
+- `_Static_assert`s for the three public structures whose size differs between the T32 2.2.0 and T33 2.0.2.1 headers (`IMPISPBinInfo` 880/856, `tisp_bin_attr_t` 852/828, `IMPEncoderKernEncOut` 56/48), in `src/t32/openimp_t32_tuning.c` (built with the vendor headers of each line). None crosses an ioctl of this library; DEFAULT_BIN stays 880 bytes on both. WDR: no `IMP_ISP_WDR_*` on T32/T33 (the T33 ISP has none); DMIC kept (same 28 vendor names); no DVP API.
+- Export check for the planned SoCs (`SOCS="T32 T33"`, tools/export-check/README.md): T33 374 of 575 vendor names, the same 8 streamer-used names missing as on T32 (encoder / FrameSource gaps, #391).
+- QEMU apitest on open-tx-isp's `tx-isp-t33.ko` with the tuning controls (open-tx-isp `claude/t32-ds-batch`, openimp #389): 255 PASS / 16 FAIL (before 207 / 58); on the vendor module 254 / 17; every remaining FAIL also fails on the vendor module (QEMU: no picture effect of list-programmed blocks, encoder/FrameSource rate and pool semantics). With the vendor libimp 2.0.2.1 the open module lacks four /dev/tx-isp commands (#429).
+
 ## 2026-11-12: T33 platform skeleton: first OpenIMP T33 build (#390, #394; planned, QEMU only)
 
 - New `build-t33.sh`: the T32 platform (`PLATFORM_T32`) plus `PLATFORM_T33` on the T33 libimp 2.0.2.1 API (vendor headers T33/2.0.2.1 for the tuning and ISP-OSD units). T33 deltas: DRIVER_VERSION SoC `PRJ008`, IQ bins `<sensor>-PRJ008-<mode>.bin` in a 0x25800-byte buffer; the BCSH RGB offset and multi-sensor effect calls are not built (the 2.0.2.1 API has no such types). The T32 build is unchanged.

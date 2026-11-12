@@ -6,6 +6,10 @@
 # (audit: IMPISPBinInfo 856, tisp_bin_attr_t 828, IMPEncoderKernEncOut 48,
 # PRJ008 bins, bin buffer 0x25800).  Vendor 2.0.2.1 headers for the tuning
 # and ISP-OSD units.  Toolchain: the T32 one (same XBurst1 MIPS32r2 + uClibc).
+# Size asserts of the three deltas: src/t32/openimp_t32_tuning.c.  WDR: the
+# T32 platform exports no IMP_ISP_WDR_* (the T33 ISP has no WDR either); the
+# WDR output mode ids reach the driver, which answers "non-WDR".  DMIC stays
+# (the T33 2.0.2.1 libimp exports the same 28 IMP_DMIC_* names); no DVP API.
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)

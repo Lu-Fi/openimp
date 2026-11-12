@@ -20,3 +20,7 @@ Exception (T10, T20): the lists follow the 3.12.0 libimp, the one the cameras ru
 `ChnDemask`, `ChnDenoise` and `ChnFrmUsedMode` and dropped the RcAttr pair; the 3.9.0 channel-attribute structures differ, so a 3.9.0 program does
 not run on OpenIMP anyway) are not listed.
 
+Planned SoCs (T32, T33; not in the default `SOCS`, not a release gate): `SOCS="T32 T33" NM=<T32 toolchain>-nm ./tools/export-check.sh`
+after `build-t32.sh` / `build-t33.sh`. State 2026-11-12: T32 372 of 556 vendor names exported, T33 374 of 575 (`vendor-T33.txt` = T33
+2.0.2.1 libimp); both miss the same 8 streamer-used names (`IMP_Encoder_SetChnBitRate`, `SetChnQpBounds`, `SetChnROI`,
+`SetFisheyeEnableStatus`, `SetMbRC`, `IMP_FrameSource_Get/SetChnFifoAttr`, `SetI2dAttr`), the T32 encoder / FrameSource gaps (#391).
