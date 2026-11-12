@@ -40,6 +40,7 @@ typedef struct ISPDevice {
     void *sensor_alloc[2];
 } ISPDevice;
 ISPDevice *gISP;
+void tseries_algo_notify_fps(void);
 
 #define ioctl test_ioctl
 int test_ioctl(int fd, unsigned long nr, ...);
@@ -57,6 +58,9 @@ int imp_log_fun(int level, int option, int type, ...)
 }
 static int idr_requests, changewait_calls, fps_num_seen, fps_den_seen;
 int IMP_Encoder_RequestIDR(int chn) { (void)chn; idr_requests++; return 0; }
+static int algo_fps_notifies;
+/* isp_tseries.c: the custom AE library's FPS-change notify (vendor 0x63378) */
+void tseries_algo_notify_fps(void) { algo_fps_notifies++; }
 int32_t set_framesource_fps(int32_t n, int32_t d)
 {
     fps_num_seen = n; fps_den_seen = d; return 0;
@@ -642,7 +646,8 @@ static void test_misc(void)
     reset();
     CHECK(IMP_ISP_Tuning_SetSensorFPS(25, 2) == 0 &&
           last_req.cid == 0x80000e0 && last_req.value == ((25u << 16) | 2) &&
-          fps_num_seen == 25 && fps_den_seen == 2, "fps set");
+          fps_num_seen == 25 && fps_den_seen == 2 && algo_fps_notifies == 1,
+          "fps set (custom AE notified)");
     reset();
     get_value = (30u << 16) | 1;
     CHECK(IMP_ISP_Tuning_GetSensorFPS_Sec(&a, &b) == 0 && a == 30 && b == 1 &&

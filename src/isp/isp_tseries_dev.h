@@ -36,6 +36,11 @@ typedef struct ISPDevice {
 #endif
 } ISPDevice;
 
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31)
+/* isp_tseries.c: an active custom AE library gets IMPISP_AE_NOTIFY_FPS_CHANGE */
+void tseries_algo_notify_fps(void);
+#endif
+
 #if defined(PLATFORM_T23)
 _Static_assert(offsetof(ISPDevice, tuning_path) == 0x7c,
                "T23 ISP tuning path ABI mismatch");

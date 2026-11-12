@@ -15,6 +15,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-12: SU_Base_Reboot device-tested on T31 and T40 (matrix)
 
 - `SU_Base_Reboot` aud/host -> dev on T31 (T31L camera) and T40 (Eufy T40XP): called for real with the image libsysutils and with the vendor libsysutils, two reboots per camera. All return 0, the camera is back after 21-35 s with a new boot id and the streamer running, no new kernel message. T30 stays aud (lab camera, separate run).
+## 2026-11-12: T23/T31 custom AE/AWB library (IMP_ISP_SetAeAlgoFunc / SetAwbAlgoFunc) vendor flow (#401)
+
+- T23 and T31 kept the callback record but sent wrong ioctls and never called a callback. Now the vendor libimp flow (T23 1.3.0 / T31 1.1.6, same code): the record is registered at `IMP_ISP_EnableSensor` (AE open with the init attribute from the driver, AWB open), one worker per library feeds `handle()` with the driver's statistics and returns its result, `IMP_ISP_DisableSensor` closes, `IMP_ISP_Tuning_SetSensorFPS` notifies the AE library. `OPENIMP_ISP_ALGO_FUNC=0` switches it off (-1 / ENOTSUP), as on T40/T41. Documented differences: NULL records refused, the AE open gets `priv_data` (the vendor passes the address of its copy), a zero us->lines divisor leaves the time (the vendor traps).
+- Needs the open-tx-isp branch of the same name (T31 AE apply and AWB ioctls, T23 ioctls).
+- apitest case `customalgo_t23` / `customalgo_t31`; host test `tests/t31/custom_algo_test.c` (T31 and T23 builds). Device: T31L (OpenIMP, vendor 1.1.6 libimp and the full vendor stack) and T23 Jooan (OpenIMP and vendor 1.3.0 libimp): the library's exposure and white balance requests move the picture the same way; matrix cells T23/T31 aud -> dev.
 
 ## 2026-11-12: T23 PollingStream waits past a frame-loss drop (#395); matrix proofs
 

@@ -39,6 +39,8 @@ VIDEO_DROP_TEST_BIN := $(PROJECT_DIR)/build/tests/video-drop-test
 VBM_DELAY_TEST_BIN := $(PROJECT_DIR)/build/tests/vbm-delay-test
 ROI_CLAMP_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-roi-clamp-test
 FIXED_CONTRAST_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-fixed-contrast-test
+# custom AE / AWB library path, T31 and T23 builds of isp_tseries.c
+CUSTOM_ALGO_TEST_BINS := $(PROJECT_DIR)/build/tests/custom-algo-test-t31 $(PROJECT_DIR)/build/tests/custom-algo-test-t23
 EVAL_INFO_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-eval-info-test
 BIN_PATH_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-bin-path-test
 LOG_SINK_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-log-sink-test
@@ -56,7 +58,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
 	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN) $(LOG_SINK_TEST_BIN) \
-	$(DMIC_SWITCH_TEST_BINS)
+	$(DMIC_SWITCH_TEST_BINS) $(CUSTOM_ALGO_TEST_BINS)
 	$(STREAM_LAYOUT_TEST_BIN)
 	for bin in $(DMIC_SWITCH_TEST_BINS); do $$bin || exit 1; done
 	$(AL_RC_TRACE_TEST_BIN) traces
@@ -88,6 +90,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(VIDEO_DROP_TEST_BIN)
 	$(VBM_DELAY_TEST_BIN)
 	$(FIXED_CONTRAST_TEST_BIN)
+	for bin in $(CUSTOM_ALGO_TEST_BINS); do $$bin || exit 1; done
 	$(EVAL_INFO_TEST_BIN)
 	$(BIN_PATH_TEST_BIN)
 	$(LOG_SINK_TEST_BIN)
@@ -112,6 +115,13 @@ $(VIDEO_DROP_TEST_BIN): video_drop_test.c $(PROJECT_DIR)/src/core/video_drop.c \
 
 # isp_tseries.c with the 32-bit ABI asserts off (host build), a fake ioctl and
 # unresolved symbols tolerated (none is reached by the test)
+$(PROJECT_DIR)/build/tests/custom-algo-test-%: custom_algo_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c $(PROJECT_DIR)/src/isp/isp_t23_tuning.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -Wno-cast-function-type -Wno-missing-field-initializers -fno-pie -no-pie \
+		"-D_Static_assert(a,b)=" -DPLATFORM_$(shell echo $* | tr a-z A-Z) -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
+		custom_algo_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
+		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o "$@"
+
 $(FIXED_CONTRAST_TEST_BIN): fixed_contrast_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
 	mkdir -p "$(dir $@)"
 	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
