@@ -10838,14 +10838,14 @@
         "T21": "n.a.",
         "T23": "n.a.",
         "T30": "aud",
-        "T31": "aud",
+        "T31": "err",
         "T32": "n.a.",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Static: channel bound (< 5) and source bound (< 3) equal to the vendor 1.0.5 (0xe3f7c); the vendor additionally clears three per-channel depth counters and sets a source-map flag, OpenIMP stores the source channel. No apitest case.",
-      "ref": {
+      "ref": {"T31": "apitest extchn_t31 2026-11-12 T31L: vendor libimp 1.1.6 + module: ext ch 3 (FS_EXT_CHANNEL) + SetSource(3,1), FS3->ENC5 delivers 45 H.264 streams in 3 s; OpenIMP stores the source only, GetFrame(3) times out, FS3->ENC5 delivers nothing (#370)", 
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
       }
     },

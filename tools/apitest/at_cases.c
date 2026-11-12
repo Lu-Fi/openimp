@@ -3452,6 +3452,75 @@ static void cs_fscb_t31(void)
     }
 }
 
+/* Explicit only (APITEST_CASES=extchn_t31, #309): IMP_FrameSource_SetSource.  Extended channel 3 (FS_EXT_CHANNEL, scaled copy
+ * of ch1) is created, SetSource(3, 1) between CreateChn and EnableChn (vendor header), enabled, 4 frames pulled and checked
+ * (size, luma), then disabled/destroyed.  Argument rules: ext 5 / source 3 / source -1 refused.  Prints every return code so
+ * the open and the vendor library can be compared line by line. */
+#if defined(PLATFORM_T31) && HAS_IMP_FrameSource_SetSource
+static void cs_extchn_t31(void)
+{
+    IMPFSChnAttr ea;
+    int rc, rs, re, rg = -1, got = 0, ra, rb, rcx, rd, w = 0, h = 0, k, enc_streams = 0;
+    double luma = 0;
+
+    memset(&ea, 0, sizeof(ea));
+    ea.picWidth = 320; ea.picHeight = 180; ea.pixFmt = PIX_FMT_NV12;
+    ea.outFrmRateNum = 15; ea.outFrmRateDen = 1; ea.nrVBs = 2; ea.type = FS_EXT_CHANNEL;
+    ea.scaler.enable = 1; ea.scaler.outwidth = 320; ea.scaler.outheight = 180;
+    ra = IMP_FrameSource_SetSource(5, 1); rb = IMP_FrameSource_SetSource(3, 3); rcx = IMP_FrameSource_SetSource(3, -1);
+    rc = IMP_FrameSource_CreateChn(3, &ea);
+    rs = IMP_FrameSource_SetSource(3, 1);
+    if (rc == 0) IMP_FrameSource_SetFrameDepth(3, 2);
+    re = rc == 0 ? IMP_FrameSource_EnableChn(3) : -99;
+    if (re == 0) {
+        for (k = 0; k < 4; k++) {
+            IMPFrameInfo *fr = NULL;
+            { int t; for (t = 0; t < 60; t++) { fr = NULL; rg = IMP_FrameSource_GetFrame(3, &fr); if (rg == 0 && fr) break; if (k == 0 && t == 0) printf("[extchn] first GetFrame ret %d frame %p\n", rg, (void *)fr); usleep(50000); } if (k == 0) printf("[extchn] after %d polls ret %d frame %p\n", t, rg, (void *)fr); }
+            if (0) printf("[extchn] GetFrame(3) ret %d frame %p\n", rg, (void *)fr);
+            if (rg == 0 && fr) {
+                const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr;
+                long i, n = (long)fr->width * fr->height, sum = 0;
+                w = fr->width; h = fr->height;
+                for (i = 0; y && i < n; i += 7) sum += y[i];
+                luma = n ? (double)sum / ((n + 6) / 7) : 0;
+                got++;
+                IMP_FrameSource_ReleaseFrame(3, fr);
+            }
+        }
+        {   /* the vendor sample reads an ext channel through an encoder: FS 3 -> ENC 5, H.264 320x180, 3 s */
+            IMPCell fsx = { DEV_ID_FS, 3, 0 }, en5 = { DEV_ID_ENC, 5, 0 };
+            IMPEncoderChnAttr *ea2 = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea2));
+            int64_t t0 = now_us();
+            int rb2 = -1, nstr = 0;
+
+            if (ea2 && IMP_Encoder_CreateGroup(5) == 0) {
+                IMP_Encoder_SetDefaultParam(ea2, IMP_ENC_PROFILE_AVC_HIGH, IMP_ENC_RC_MODE_CBR, 320, 180, 15, 1, 30, 2, -1, 256);
+                if (IMP_Encoder_CreateChn(5, ea2) == 0 && IMP_Encoder_RegisterChn(5, 5) == 0 && (rb2 = IMP_System_Bind(&fsx, &en5)) == 0) {
+                    IMP_Encoder_StartRecvPic(5);
+                    while (now_us() - t0 < 3000000) {
+                        IMPEncoderStream es;
+                        if (IMP_Encoder_PollingStream(5, 300) == 0 && IMP_Encoder_GetStream(5, &es, 0) == 0) { nstr++; IMP_Encoder_ReleaseStream(5, &es); }
+                    }
+                    IMP_Encoder_StopRecvPic(5); IMP_System_UnBind(&fsx, &en5);
+                }
+                IMP_Encoder_UnRegisterChn(5); IMP_Encoder_DestroyChn(5); IMP_Encoder_DestroyGroup(5);
+            }
+            free(ea2);
+            printf("[extchn] FS3 -> ENC5: bind %d, %d streams in 3 s\n", rb2, nstr);
+            enc_streams = nstr;
+        }
+        IMP_FrameSource_DisableChn(3);
+    }
+    rd = rc == 0 ? IMP_FrameSource_DestroyChn(3) : -99;
+    rep(FN(IMP_FrameSource_SetSource), rs, (ra == -1 && rb == -1 && rcx == -1 && rc == 0 && rs == 0 && re == 0 && got == 4 && w == 320 && h == 180 && luma > 5 && rd == 0 && flow()) ? V_PASS : V_FAIL,
+        "rt: ext ch5 %d, src3 %d, src-1 %d (all must be -1); Create(3, EXT) %d, SetSource(3,1) %d, Enable %d, GetFrame %d: %d of 4 frames %dx%d luma %.1f, Destroy %d, frames flow",
+        ra, rb, rcx, rc, rs, re, rg, got, w, h, luma, rd);
+    (void)enc_streams;
+}
+#else
+static void cs_extchn_t31(void) {}
+#endif
+
 /* AE start exposure through the tuning node (control 0x800003a): set, read back, restore */
 static void cs_evstart_t31(void)
 {
@@ -6632,7 +6701,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -6733,6 +6802,7 @@ void t_cases(void)
     if (cs_on("ncu_t31")) cs_ncu_t31(); wdog("cases", 60);
     if (cs_on("fsset_t31")) cs_fsset_t31(); wdog("cases", 60);
     if (cs_on("fscb_t31")) cs_fscb_t31(); wdog("cases", 60);
+    if (getenv("APITEST_CASES") && cs_on("extchn_t31")) cs_extchn_t31(); wdog("cases", 60);   /* explicit only (#309) */
     if (cs_on("evstart_t31")) cs_evstart_t31(); wdog("cases", 60);
     if (cs_on("shading_t31")) cs_shading_t31(); wdog("cases", 90);
     if (cs_on("meshscale")) cs_meshscale(); wdog("cases", 90);
