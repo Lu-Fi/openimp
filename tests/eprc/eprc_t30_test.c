@@ -120,6 +120,7 @@ int main(int argc, char **argv)
     static uint8_t qpmap[0x10000];
     EprcParams p, p264;
     int scenario = -1, frame = 0, active = 0, real = 0, reconf264 = 0;
+    uint32_t ybytes = 0;   /* 'Y': coded size of the next F picture (--replay) */
     /* 'W' lines (#217 step 2): the register words of the slice block of
      * the last picture (last_p: a P picture), or of the last 'Z' block */
     static uint8_t zslice[0x1204];
@@ -361,6 +362,8 @@ int main(int argc, char **argv)
             if ((crc32(slice, sizeof(slice)) != want || tgt_crc != want_t) && failed++ < 10)
                 fprintf(stderr, "%s: scenario %d picture %d: slice parameters differ\n",
                         path, scenario, frame - 1);
+        } else if (line[0] == 'Y' && active) {
+            ybytes = (uint32_t)strtoul(line + 1, NULL, 10);
         } else if (line[0] == 'F' && active) {
             int want[16], n = 0, since, i, idr;
             char *s = line + 1;
@@ -403,6 +406,10 @@ int main(int argc, char **argv)
                 statistics((uint32_t)frame, regs);
             bytes = picture_bytes((uint32_t)frame, pic.qp, idr,
                                   (uint64_t)p.width * p.height, scenario % 2);
+            if (ybytes) {
+                bytes = ybytes;
+                ybytes = 0;
+            }
             for (i = 0;; i++) {
                 checked++;
                 if (i >= n || pic.qp != want[i]) {
