@@ -528,7 +528,7 @@ static void live_common(int chn, int codec)
         pull(chn, codec, 40, 1, 0, &si, 2000);
         CHECK(IMP_Encoder_RequestIDR, r, si.idr > 0, "%s: IDR %s within %d frames", cname[codec], si.idr ? "seen" : "NOT seen", si.frames);
     }
-    /* frame rate (APITEST_SKIP_FRMRATE=1 leaves it out: T30 SIGFPE after a frame-rate change, #366) */
+    /* frame rate (APITEST_SKIP_FRMRATE=1 leaves it out; T30 SIGFPE after a frame-rate change before #366) */
     if (!getenv("APITEST_SKIP_FRMRATE")) NEED(IMP_Encoder_SetChnFrmRate) {
         G(IMPEncoderFrmRate, f);
         IMPEncoderFrmRate nf = { 10, 1 }, of = { EFPS, 1 };

@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: T30 run-time rate-control changes at the next IDR, like the vendor (#366)
+
+- T30 H.264: a frame-rate (or any rate-control) change while the channel runs (`IMP_Encoder_SetChnFrmRate`, `SetChnAttrRcMode`, bitrate, QP range, GOP) killed the process with SIGFPE two pictures later: OpenIMP restarted the OEM-equivalent controller (`src/eprc/eprc_t30.c`) in the middle of a GOP, its P-picture budget count reached 0 and the first P of the next GOP divided by it. The vendor T30 1.0.5 has the same unguarded division (`JZ_VPU_RC_FRAME_START_T30`, also traps under the oracle after a mid-GOP `i264e_ratecontrol_init`) and never gets there: `i264e_reconfig_fps_set` and the other setters only latch the change and `i264e_encode` applies it in `i264e_idr_reconfig` at the next IDR picture (the running controller starts that picture, then `i264e_ratecontrol_init` from its QP clipped to the new range, then `ratecontrol_start` again).
+- OpenIMP now does the same (`OpenIMP_T30_HelixUpdateParams` marks the restart, the next IDR runs `EPRC30_Reinit` on the same controller and slice block from that QP); no division guard added (vendor has none).
+- Oracle `tools/eprc_t30_oracle.py --h264-reconf` (vendor controller under unicorn, frame-rate-only changes 25 <-> 10 fps plus random rate-control changes): new host vectors `tests/eprc/eprc_t30_reconf_vectors.txt`, 21 scenarios, 4083 decisions, 0 differ.
+- T21/T23 were not affected: their Helix eprc path already applies run-time changes at the next IDR (`helix_eprc_start`, `eprc_restart_pending`).
+
 ## 2026-11-12: T30 API gaps closed: Decoder, ChnCrop, pad frames, SetISPLDC (#308)
 
 - The OpenIMP T30 build now exports 330 of the 334 vendor T30 1.0.5 names (was 317); still missing: `Encoder_Enable/DisableAllNCUDenoise`, `Get/SetRencFirstFrameMult`. Behaviour read from the vendor libimp 1.0.5 (Ghidra project t30lib, no vendor code copied):
