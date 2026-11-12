@@ -2306,12 +2306,12 @@ static void t30_mbrc_case(int mode, int expect_on)
         setenv("OPENIMP_EPRC_MBRC", "0", 1);
     else
         unsetenv("OPENIMP_EPRC_MBRC");
-    encoder = create(1280, 720, 25, 10);
+    encoder = create(1280, 720, 25, 25);
     memset(&p, 0, sizeof(p));
     p.rc_mode = EPRC_MODE_CBR;
     p.width = 1280;
     p.height = 720;
-    p.gop = 10;
+    p.gop = 25;
     p.fps_num = 25;
     p.fps_den = 1;
     p.min_qp = 20;
