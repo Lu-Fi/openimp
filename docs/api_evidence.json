@@ -7389,7 +7389,8 @@
         "T21": "hskip 2026-11-02 .24 vs the vendor libimp 1.0.33 on the same camera (LD_LIBRARY_PATH, FrameSource ch0 1920x1080 15 fps, SMART 200 kbit/s, 130 pictures per scenario): per-picture structure (NAL ref_idc, slice type, frame_num, list modification, MMCO, long_term_reference_flag) 0 differing pictures in 39 of 45 scenarios (skip types 0..6, maxSameSceneCnt 2/3, run-time Set, black enhancement, ChangeRef on/off, CBR: structure and same-scene count ignored by both as the vendor, brightness flicker); the other 6 are bEnableScenecut runs where the base picture is larger than the last IDR picture in one library only (the controllers' picture sizes differ), each library follows the rule on its own sizes; all open streams decode clean (ffmpeg strict and VA-API, real picture), drop test clean, snapshot 200, 0 oopses; QEMU first; host tests/hskip T21 vectors 0 differences",
         "T23": "apitest agg47 2026-10-26 .30",
         "T10": "hskip 2026-11-02 .31: OEM reference structure coded (skip types 0..6, m/n, maxSameSceneCnt, run-time Set at the next IDR); per-picture structure (NAL ref_idc, slice type, frame_num, list modification, MMCO, long_term_reference_flag) identical to the vendor libimp 3.12.0 on the same camera for 14 scenarios of 130 pictures (tools/hskip_trace.py, 0 differing pictures); stream decodes clean (ffmpeg strict) with a real picture, and still decodes with the drop-able pictures removed (drop test); QEMU first, host: tests/hskip 76 scenarios x 240 pictures 0 differences; bEnableScenecut (changeref 2026-11-02 .31 with an ISP brightness jump as scene change): H1M_TRUE: IDR at pictures 0, 15, 45, 75 as the vendor (SMART and CBR); H1M_FALSE: no conversion in either library",
-        "T20": "hskip 2026-11-02 .107: OEM reference structure coded (skip types 0..6, m/n, maxSameSceneCnt, run-time Set at the next IDR); per-picture structure (NAL ref_idc, slice type, frame_num, list modification, MMCO, long_term_reference_flag) identical to the vendor libimp 3.12.0 on the same camera for 18 scenarios of 130 pictures (tools/hskip_trace.py, 0 differing pictures); stream decodes clean (ffmpeg strict) with a real picture, and still decodes with the drop-able pictures removed (drop test); QEMU first, host: tests/hskip 76 scenarios x 240 pictures 0 differences; bEnableScenecut (changeref 2026-11-02 .107 with an ISP brightness jump as scene change): H1M_TRUE: IDR at pictures 0, 15, 45, 75, 105 as the vendor (SMART and CBR); H1M_FALSE: no conversion in either library"
+        "T20": "hskip 2026-11-02 .107: OEM reference structure coded (skip types 0..6, m/n, maxSameSceneCnt, run-time Set at the next IDR); per-picture structure (NAL ref_idc, slice type, frame_num, list modification, MMCO, long_term_reference_flag) identical to the vendor libimp 3.12.0 on the same camera for 18 scenarios of 130 pictures (tools/hskip_trace.py, 0 differing pictures); stream decodes clean (ffmpeg strict) with a real picture, and still decodes with the drop-able pictures removed (drop test); QEMU first, host: tests/hskip 76 scenarios x 240 pictures 0 differences; bEnableScenecut (changeref 2026-11-02 .107 with an ISP brightness jump as scene change): H1M_TRUE: IDR at pictures 0, 15, 45, 75, 105 as the vendor (SMART and CBR); H1M_FALSE: no conversion in either library",
+        "T30": "cache: the HSkip logic is vendor-equal (tools/hskip_oracle.py), the T30 Helix wiring is missing (#427)"
       }
     },
     "Encoder_Get/SetChnROI": {
@@ -8814,7 +8815,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T10": "hskip 2026-11-02 .31: black enhancement as the vendor: the drop-able pictures are all-skip slices at QP 0, 21 bytes at 640x360 as the vendor (slice data byte-identical for 635 macroblock counts under the emulator, tests/hskip), structure identical to the vendor on the camera (t1black, t2black, t5black), decodes clean with a real picture",
         "T20": "hskip 2026-11-02 .107: black enhancement as the vendor: the drop-able pictures are all-skip slices at QP 0, 21 bytes at 640x360 as the vendor (slice data byte-identical for 635 macroblock counts under the emulator, tests/hskip), structure identical to the vendor on the camera (t1black, t2black, t5black), decodes clean with a real picture",
-        "T21": "hskip 2026-11-02 .24: black ENHANCE pictures identical to the vendor libimp on the same camera (65 pictures of 71 bytes at 1080p, QP 0, structure 0 differing pictures); decode clean, drop test clean, 0 oopses"
+        "T21": "hskip 2026-11-02 .24: black ENHANCE pictures identical to the vendor libimp on the same camera (65 pictures of 71 bytes at 1080p, QP 0, structure 0 differing pictures); decode clean, drop test clean, 0 oopses",
+        "T30": "cache: the HSkip logic is vendor-equal (tools/hskip_oracle.py), the T30 Helix wiring is missing (#427)"
       }
     },
     "Encoder_SetChnInitQP": {
@@ -17283,10 +17285,10 @@
         "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
-        "T41": "host"
+        "T41": "nohw"
       },
       "ref": {
-        "T41": "OpenIMP claude/t4x-api-gaps (2026-10-26): host test; no camera run yet",
+        "T41": "mx1112-r2 2026-11-12 T41 test camera (Cinnado, agg68a, timps stopped, AI dev 1 chn 0 enabled, microphone only): OpenIMP libimp and the vendor 1.2.6 libimp answer the same: before AI enable -1, device 2 -1, channel 1 -1, dev 1 chn 0 -1 errno EPERM with the kernel line 'ioctl command 1074024522 is not supported' (0x4004504a) for both: the board's audio module has no select-codec command, vendor-equal (audit/matrix1112/r2/out-34.txt, tool acodec)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       },
       "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: with AI enabled the ioctl answers -1 (errno 1) on the Cinnado, the dsp_ioctl of the image's audio module (ingenic-sdk common/audio/t41/oss3/audio_dsp.c) has no select-codec command (default branch 'not supported'); device 2 and channel 1 are refused with -1 as in the library code; the external codec is not selected (routing change); needs a board whose audio module has the command."
@@ -17869,14 +17871,14 @@
         "T32": "qemu",
         "T33": "nob",
         "T40": "n.a.",
-        "T41": "host"
+        "T41": "nohw"
       },
       "note": "T41: the board's neo-sysutils writes the mode into /sys/power/state (the kernel refuses it); the vendor libsysutils 1.2.5 opens /dev/rtc0 and sends ioctl 0x80045209 with {0, 0x2c, 0xd2ad2d28 (mode 1) / 0xd2ad2d29 (mode 2)}. OpenIMP's libimp.so now exports the vendor request (src/core/su_base_wkup.c, host test with fake open/ioctl; QEMU T41: mode 0 refused by libimp.so). T41 camera: the documented RTC write sequence works with the RTC clock gate cleared and read back correctly (RTCCR, RTCSR, RTCSAR, HWCR 0xd2ad2d28/29 = the vendor requests of modes 1/2), but the counter does not tick at 1 Hz and an armed alarm never fires: the board has no usable 32 kHz oscillator, so the wake-up itself cannot be shown here (board limit, not a driver gap) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): re-run: mode 0 refused (-1), modes 1/2 not sent (the RTC counter does not tick, see above); stays host.",
       "action": {
         "T41": "n.a."
       },
       "ref": {
-        "T41": "host test (tests/core/su_base_wkup_test.c: the exact vendor request {0, 0x2c, 0xd2ad2d28/29} with a fake open/ioctl) and QEMU T41 (mode 0 refused by libimp.so). NOT proven on the camera: the function itself was not run there. Separate camera fact, by direct RTC register writes and not through this function: the documented write sequence (RTC clock gate cleared) reads back RTCCR, RTCSR, RTCSAR and HWCR with the values of modes 1/2; the counter does not tick and an alarm never fires (no usable 32 kHz clock), so neither the ioctl path on the device nor a wake-up is demonstrated.",
+        "T41": "mx1112-r2 2026-11-12 T41 test camera (Vanhua, agg68a, no /dev/rtc0): OpenIMP libimp.so (0ce3e85a) and the vendor 1.2.6 libsysutils answer -1 for modes 0/1/2 (vendor errno ENOENT from the /dev/rtc0 open; OpenIMP refuses mode 0 before the open, EINVAL; modes 1/2 ENOENT on both): vendor-equal return codes, no RTC node on the board (audit/matrix1112/r2/out-32.txt, tool sutool wkup). Earlier: host test tests/core/su_base_wkup_test.c (the exact vendor request {0, 0x2c, 0xd2ad2d28/29}) and QEMU T41",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
       }
     },
@@ -18052,7 +18054,7 @@
       "note": "T40: answers -1 with errno ENOTSUP by design: the vendor functions drive the Ingenic AES/DES kernel drivers (/dev/aes, /dev/jz-des), which the open stack does not ship (the vendor library answers -1 as well on a kernel without them); software AES/DES would be an extra beyond the vendor and is not offered T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): classified as a documented limit, not a bug: the apitest answer is exactly the documented one (-1, errno ENOTSUP/122, 10 of 10 PASS), because the image ships neither /dev/aes nor /dev/jz-des; the cell stays err by design (software AES/DES would be an extra beyond the vendor). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no /dev/aes and no /dev/jz-des on either camera (no AES/DES engine driver in the image); apitest skips the group; OpenIMP answers -1/ENOTSUP by design (documented limit, no bug, no issue); needs a board with the cipher drivers. | T41 matrix1111 2026-11-11 (#318, #319): stays aud: after the failed Init (no /dev/aes, /dev/jz-des) the image libsysutils and the vendor 1.2.6 library answer differently (vendor/image: CreateHandle -12/-18, ConfigHandle 0/-13, Encrypt -14/-13, Decrypt blocks/-13, DestroyHandle(-1) blocks/-19, Exit -18/-17, DES_Test 0 (CPU self test)/-18, DES_Exit -18/-17); not vendor-equal, so not nohw. T40: answers -1 with errno ENOTSUP by design: the vendor functions drive the Ingenic AES/DES kernel drivers (/dev/aes, /dev/jz-des), which the open stack does not ship (the vendor library answers -1 as well on a kernel without them); software AES/DES would be an extra beyond the vendor and is not offered T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): classified as a documented limit, not a bug: the apitest answer is exactly the documented one (-1, errno ENOTSUP/122, 10 of 10 PASS), because the image ships neither /dev/aes nor /dev/jz-des; the cell stays err by design (software AES/DES would be an extra beyond the vendor). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no /dev/aes and no /dev/jz-des on either camera (no AES/DES engine driver in the image); apitest skips the group; OpenIMP answers -1/ENOTSUP by design (documented limit, no bug, no issue); needs a board with the cipher drivers. T40 2026-11-11 (#310): SU_CIPHER_* now follow the vendor libsysutils 1.3.x cipher.c flow (/dev/aes GET_PBUFF + /dev/mem 2 MB mapping + SET_PARA + START_EN/DE, /dev/jz-des self tests, su_cipher.h codes) instead of -1/ENOTSUP; host test tests/core/su_sysutils_test.c drives the whole flow with a fake driver.  Device: the Eufy T40XP has neither /dev/aes nor /dev/jz-des (and no driver with the vendor ioctl ABI exists in the T40 SDK 1.3.1 or thingino), so the camera run compares the no-driver answers: OpenIMP and the vendor libsysutils (apitest area su, APITEST_SU_NOHW=1, the vendor library with an imp_log shim) give the same codes: Init/DES_Init -11, CreateHandle -12, DestroyHandle -19, ConfigHandle(NULL) -14, Encrypt/Decrypt 8 bytes -16, Exit/DES_Exit -18 (QEMU T40 first, same result).  The vendor leaves its handle mutex locked on the CreateHandle/DestroyHandle error paths (the next handle call blocks); OpenIMP releases it. T32 (2026-11-11 #300 follow-up): not in OpenIMP's T32 libimp by design (vendor libimp 2.2.0 exports no SU_*; the T32 SDK keeps them in libsysutils, which the firmware ships; build-t32.sh, #299); QEMU has no RTC/ADC/key/AES nodes (run-oineo-su, run-oivsu-su, run-vendor-su: every lib fails alike) | T41 #319 2026-11-12: no /dev/aes and no /dev/jz-des on the T41 boards, so the AES ioctl-ABI PR 3 does not apply here. After a failed Init the image library returns negative codes for every call (CreateHandle -18, ConfigHandle -13, Encrypt/Decrypt -13, DestroyHandle -19, Exit -17, DES_Test -18, DES_Exit -17); vendor 1.2.6 differs on these misuse paths (CreateHandle -12, ConfigHandle 0, Encrypt -14, Decrypt and DestroyHandle(-1) block, Exit -18, DES_Test 0, DES_Exit -18). Not copied on purpose: the vendor blocks and reports success without a device. Stays aud; no upstream change needed.",
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
-        "T31": "QEMU 0.7.14 ingenic-t31 (#327, 2026-11-11): /dev/jz-des opened, Test, closed (open lib; the vendor 1.1.3 lib fails the open), image libsysutils vs vendor T31 libsysutils in the same guest: vendor-equal or better"
+        "T31": "QEMU 0.7.14 ingenic-t31 (#327, 2026-11-11): /dev/jz-des opened, Test, closed (open lib; the vendor 1.1.3 lib fails the open), image libsysutils vs vendor T31 libsysutils in the same guest: vendor-equal or better; board 2026-11-12 (no /dev/jz-des): image lib DES_Exit -17, vendor 1.1.3 -18, #426; stays qemu (audit/matrix1112/r2/out-26.txt)"
       }
     },
     "SU_CIPHER_DES_Init": {
@@ -18063,7 +18065,7 @@
         "T21": "n.a.",
         "T23": "n.a.",
         "T30": "n.a.",
-        "T31": "qemu",
+        "T31": "nohw",
         "T32": "miss",
         "T33": "nob",
         "T40": "nohw",
@@ -18073,7 +18075,7 @@
       "ref": {
         "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils",
         "T41": "SU test 2026-11-11 on the Vanhua T41 test camera (gc5603, open-stack image) (#318): image libsysutils (neo-sysutils) and vendor T41 1.2.6 libsysutils (from /tmp, vendor libalog preloaded) give the same answer: -11 (errno ENOENT): no /dev/aes and no /dev/jz-des on the T41 images",
-        "T31": "QEMU 0.7.14 ingenic-t31 (#327, 2026-11-11): /dev/jz-des opened, Test, closed (open lib; the vendor 1.1.3 lib fails the open), image libsysutils vs vendor T31 libsysutils in the same guest: vendor-equal or better"
+        "T31": "mx1112-r2 2026-11-12 T31 test camera (agg68a, no /dev/jz-des): image libsysutils and the vendor T31 1.1.3 ZRT libsysutils (the only T31 vendor lib with SU_CIPHER_*) both answer -11 (ENOENT): vendor-equal, no DES engine node on the board (audit/matrix1112/r2/out-26.txt). Earlier: QEMU 0.7.14 ingenic-t31 (#327) /dev/jz-des opened by the image lib (the vendor 1.1.3 fails the open). DES_Test/DES_Exit codes differ on the board (#426)"
       }
     },
     "SU_CIPHER_DES_Test": {
@@ -18087,13 +18089,13 @@
         "T31": "qemu",
         "T32": "miss",
         "T33": "nob",
-        "T40": "host",
+        "T40": "nohw",
         "T41": "aud"
       },
       "note": "T40: answers -1 with errno ENOTSUP by design: the vendor functions drive the Ingenic AES/DES kernel drivers (/dev/aes, /dev/jz-des), which the open stack does not ship (the vendor library answers -1 as well on a kernel without them); software AES/DES would be an extra beyond the vendor and is not offered T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): classified as a documented limit, not a bug: the apitest answer is exactly the documented one (-1, errno ENOTSUP/122, 10 of 10 PASS), because the image ships neither /dev/aes nor /dev/jz-des; the cell stays err by design (software AES/DES would be an extra beyond the vendor). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no /dev/aes and no /dev/jz-des on either camera (no AES/DES engine driver in the image); apitest skips the group; OpenIMP answers -1/ENOTSUP by design (documented limit, no bug, no issue); needs a board with the cipher drivers. | T41 matrix1111 2026-11-11 (#318, #319): stays aud: after the failed Init (no /dev/aes, /dev/jz-des) the image libsysutils and the vendor 1.2.6 library answer differently (vendor/image: CreateHandle -12/-18, ConfigHandle 0/-13, Encrypt -14/-13, Decrypt blocks/-13, DestroyHandle(-1) blocks/-19, Exit -18/-17, DES_Test 0 (CPU self test)/-18, DES_Exit -18/-17); not vendor-equal, so not nohw. T40: answers -1 with errno ENOTSUP by design: the vendor functions drive the Ingenic AES/DES kernel drivers (/dev/aes, /dev/jz-des), which the open stack does not ship (the vendor library answers -1 as well on a kernel without them); software AES/DES would be an extra beyond the vendor and is not offered T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): classified as a documented limit, not a bug: the apitest answer is exactly the documented one (-1, errno ENOTSUP/122, 10 of 10 PASS), because the image ships neither /dev/aes nor /dev/jz-des; the cell stays err by design (software AES/DES would be an extra beyond the vendor). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: no /dev/aes and no /dev/jz-des on either camera (no AES/DES engine driver in the image); apitest skips the group; OpenIMP answers -1/ENOTSUP by design (documented limit, no bug, no issue); needs a board with the cipher drivers. T40 2026-11-11 (#310): SU_CIPHER_* now follow the vendor libsysutils 1.3.x cipher.c flow (/dev/aes GET_PBUFF + /dev/mem 2 MB mapping + SET_PARA + START_EN/DE, /dev/jz-des self tests, su_cipher.h codes) instead of -1/ENOTSUP; host test tests/core/su_sysutils_test.c drives the whole flow with a fake driver.  Device: the Eufy T40XP has neither /dev/aes nor /dev/jz-des (and no driver with the vendor ioctl ABI exists in the T40 SDK 1.3.1 or thingino), so the camera run compares the no-driver answers: OpenIMP and the vendor libsysutils (apitest area su, APITEST_SU_NOHW=1, the vendor library with an imp_log shim) give the same codes: Init/DES_Init -11, CreateHandle -12, DestroyHandle -19, ConfigHandle(NULL) -14, Encrypt/Decrypt 8 bytes -16, Exit/DES_Exit -18 (QEMU T40 first, same result).  The vendor leaves its handle mutex locked on the CreateHandle/DestroyHandle error paths (the next handle call blocks); OpenIMP releases it.  DES_Test stays host: before DES_Init OpenIMP answers UNINIT -18, the vendor runs its 16 self-test ioctls on fd -1 and reports all of them as passed (0); a deliberate difference (better than the vendor), so not nohw. T32 (2026-11-11 #300 follow-up): not in OpenIMP's T32 libimp by design (vendor libimp 2.2.0 exports no SU_*; the T32 SDK keeps them in libsysutils, which the firmware ships; build-t32.sh, #299); QEMU has no RTC/ADC/key/AES nodes (run-oineo-su, run-oivsu-su, run-vendor-su: every lib fails alike) | T41 #319 2026-11-12: no /dev/aes and no /dev/jz-des on the T41 boards, so the AES ioctl-ABI PR 3 does not apply here. After a failed Init the image library returns negative codes for every call (CreateHandle -18, ConfigHandle -13, Encrypt/Decrypt -13, DestroyHandle -19, Exit -17, DES_Test -18, DES_Exit -17); vendor 1.2.6 differs on these misuse paths (CreateHandle -12, ConfigHandle 0, Encrypt -14, Decrypt and DestroyHandle(-1) block, Exit -18, DES_Test 0, DES_Exit -18). Not copied on purpose: the vendor blocks and reports success without a device. Stays aud; no upstream change needed.",
       "ref": {
-        "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils; deliberate difference, user-approved 2026-11-12 (beyond vendor): before SU_CIPHER_DES_Init we answer -18 (SU_CIPHER_UNINIT, log line) where the vendor runs its self-test ioctls on fd -1 and returns 0 (every test counted as passed, a false pass); see docs/OPENIMP_BEYOND_VENDOR.md section 6",
-        "T31": "QEMU 0.7.14 ingenic-t31 (#327, 2026-11-11): /dev/jz-des opened, Test, closed (open lib; the vendor 1.1.3 lib fails the open), image libsysutils vs vendor T31 libsysutils in the same guest: vendor-equal or better"
+        "T40": "apitest su 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP libimp vs vendor 1.3.1 libsysutils; deliberate difference, user-approved 2026-11-12 (beyond vendor): before SU_CIPHER_DES_Init we answer -18 (SU_CIPHER_UNINIT, log line) where the vendor runs its self-test ioctls on fd -1 and returns 0 (every test counted as passed, a false pass); see docs/OPENIMP_BEYOND_VENDOR.md section 6; counted nohw 2026-11-12 (mx1112-r2): the board has no /dev/jz-des (the self tests never reach hardware, like the other T40 cipher cells), the deviation is the user-approved error path (BEYOND_VENDOR)",
+        "T31": "QEMU 0.7.14 ingenic-t31 (#327, 2026-11-11): /dev/jz-des opened, Test, closed (open lib; the vendor 1.1.3 lib fails the open), image libsysutils vs vendor T31 libsysutils in the same guest: vendor-equal or better; board 2026-11-12 (no /dev/jz-des): image lib DES_Test before Init -18, vendor 1.1.3 0 (false pass), #426; stays qemu (audit/matrix1112/r2/out-26.txt)"
       }
     },
     "SU_CIPHER_Decrypt": {
@@ -18250,12 +18252,12 @@
     "SU_Key_DisableEvent": {
       "area": "System",
       "cells": {
-        "T10": "aud",
-        "T20": "aud",
-        "T21": "aud",
-        "T23": "aud",
+        "T10": "nohw",
+        "T20": "nohw",
+        "T21": "nohw",
+        "T23": "nohw",
         "T30": "aud",
-        "T31": "aud",
+        "T31": "nohw",
         "T32": "miss",
         "T33": "nob",
         "T40": "aud",
@@ -18265,8 +18267,11 @@
       "ref": {
         "T40": "keys 2026-11-12 .184: vendor 1.3.1 and OpenIMP both OpenEvent -1 (name gpio_keys vs gpio-keys); audit/matrix1112/keys/out-184*.txt",
         "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud",
-        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud (finding #313): Disable(28) -> -1 EINVAL with both libraries; Enable returns -1 EACCES with the image library (writes the read-only keys list) and 0 with the vendor library; Disable of a key not in the list answers 0 with both"
+        "T21": "SU test 2026-11-11 T21 PC420: DisableEvent -1/EINVAL with the image and the vendor T21 libsysutils 4.7.2 and 5.4.0: vendor-equal, counted nohw 2026-11-12 (mx1112-r2). EnableEvent differs (#313)",
+        "T23": "mx1112-r2 2026-11-12 T23 test camera (agg68a): image libsysutils (091d6c6a) vs vendor T23 1.3.0 libsysutils, keys 28 and 102 with disabled_keys read back: Disable(28) -1 EINVAL with both (key not maskable), Disable(102) 0 with both and no entry in disabled_keys: vendor-equal, no maskable key on the board (audit/matrix1112/r2/out-keys-30.txt, out-k30.txt). EnableEvent differs (#314)",
+        "T31": "mx1112-r2 2026-11-12 T31 test camera (agg68a): image libsysutils (091d6c6a) vs vendor T31 1.1.6 libsysutils, keys 28 and 102 with disabled_keys read back: Disable(28) -1 EINVAL with both (key not maskable), Disable(102) 0 with both and no entry in disabled_keys: vendor-equal, no maskable key on the board (audit/matrix1112/r2/out-keys-26.txt, out-k26.txt). EnableEvent differs (#314)",
+        "T10": "t10-mx 2026-11-11 (T10 test camera): DisableEvent(28) -1 EINVAL with the image and the vendor 3.12.0 libsysutils (board key not maskable): vendor-equal, counted nohw 2026-11-12 (mx1112-r2, same pattern measured with disabled_keys read-back on T23/T31). EnableEvent differs (#314)",
+        "T20": "t20-mx 2026-11-11 (T20 test camera): DisableEvent(28 and 102) -1 EINVAL with the image and the vendor libsysutils (the kernel refuses the mask): vendor-equal, counted nohw 2026-11-12 (mx1112-r2). EnableEvent differs (#314)"
       }
     },
     "SU_Key_EnableEvent": {

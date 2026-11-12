@@ -603,7 +603,7 @@ features:
       text: dynamic ADR lifted from the vendor module (44/44 emulator-identical, claude/t23-adr-defog); DRC strength 0/255 visibly effective on cam-B; sc2336 has no WDR mode
     T30:
       sym: ⚠️
-      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): RawDRC acts through Iridix on the device: off / manual255 Y 94.2 / 123.5 (vendor 96.4 / 112.4, b26), timps drc_strength 0/128/255 JPEG Y 96.7/109.6/125.4 (b47 a1); `SetWDRAttr` returns -1 on the linear SC4236 on both stacks (vendor-equal). Deviation: the unlimit strength reads 221-247 on the open stack against 149-154 on the vendor (b26, b29), and the Iridix base strength is above the vendor (0x3c4 0x43 vs 0x1c, b29). Earlier: `Get/SetRawDRC` exported; `Get/SetWDRAttr` exported since 2026-10-10 (V4L2 control 0x8000169, host test), no device result"
+      text: "2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): RawDRC acts through Iridix on the device: off / manual255 Y 94.2 / 123.5 (vendor 96.4 / 112.4, b26), timps drc_strength 0/128/255 JPEG Y 96.7/109.6/125.4 (b47 a1); `SetWDRAttr` returns -1 on the linear SC4236 on both stacks (vendor-equal). Deviation: the unlimit strength reads 221-247 on the open stack against 149-154 on the vendor (b26, b29), and the Iridix base strength is above the vendor (0x3c4 0x43 vs 0x1c, b29) (#428). Earlier: `Get/SetRawDRC` exported; `Get/SetWDRAttr` exported since 2026-10-10 (V4L2 control 0x8000169, host test), no device result"
       issues:
       - 202
     T31:
