@@ -8,11 +8,11 @@
  *                           input format of tools/eprc_t33_oracle.py
  *                           --compare)
  *   rc_test FILE            also compare with the vendor 2.2.0 sequences of
- *                           FILE (vendor-2.2.0-rc-h264.txt, same model):
- *                           OpenIMP runs the T23 controller revision, so
- *                           the check is a bound, not equality (CBR, VBR,
- *                           CVBR: rate within 12 % of the vendor's, mean QP
- *                           difference <= 3; SMART / AVBR reported only)
+ *                           FILE (vendor-2.2.0-rc-h264.txt, same model;
+ *                           the device motion mode 2 gives the same QPs on
+ *                           it as the harness's 0): H.264 runs the T33
+ *                           revision through the attribute mapping, so the
+ *                           QP of every picture must equal the vendor's
  */
 #include <math.h>
 #include <stdio.h>
@@ -54,6 +54,8 @@ struct run {
     uint32_t n;
 };
 
+/* the attributes of the vendor reference runs: i264e_param_default values
+ * for everything the runs do not set (QP 15..48, initial QP 30) */
 static void fill(IMPEncoderAttrRcMode *m, int mode, uint32_t kbps)
 {
     memset(m, 0, sizeof(*m));
@@ -62,23 +64,39 @@ static void fill(IMPEncoderAttrRcMode *m, int mode, uint32_t kbps)
     m->attrH264Cbr.maxQp = 48;
     m->attrH264Cbr.minQp = 15;
     m->attrH264Cbr.initialQp = 30;
+    m->attrH264Cbr.maxIQp = 48;
+    m->attrH264Cbr.minIQp = 15;
     switch (mode) {
     case IMP_ENC_RC_MODE_CBR:
         m->attrH264Cbr.outBitRate = kbps;
         m->attrH264Cbr.staticTime = 2;
-        m->attrH264Cbr.qualityLvl = 2;
+        m->attrH264Cbr.qualityLvl = 6;
+        m->attrH264Cbr.flucLvl = 2;
+        m->attrH264Cbr.IPfrmQPDelta = 8;
+        m->attrH264Cbr.PPfrmQPDelta = 3;
+        m->attrH264Cbr.maxIprop = 100;
+        m->attrH264Cbr.minIprop = 1;
         break;
     case IMP_ENC_RC_MODE_VBR:
         m->attrH264Vbr.maxBitRate = kbps;
         m->attrH264Vbr.changePos = 80;
         m->attrH264Vbr.staticTime = 2;
-        m->attrH264Vbr.qualityLvl = 2;
+        m->attrH264Vbr.qualityLvl = 6;
+        m->attrH264Vbr.maxIprop = 100;
+        m->attrH264Vbr.minIprop = 1;
         break;
     case IMP_ENC_RC_MODE_SMART:
         m->attrH264Smart.maxBitRate = kbps;
         m->attrH264Smart.changePos = 80;
         m->attrH264Smart.staticTime = 2;
-        m->attrH264Smart.qualityLvl = 2;
+        m->attrH264Smart.qualityLvl = 6;
+        m->attrH264Smart.maxIprop = 100;
+        m->attrH264Smart.minIprop = 1;
+        m->attrH264Smart.minStillRate = 25;
+        m->attrH264Smart.maxStillQp = 35;
+        m->attrH264Smart.supSmtStillLvl = 5;
+        m->attrH264Smart.supSmtStillRateLvl = 2;
+        m->attrH264Smart.maxSupSmtStillRate = 20;
         break;
     case IMP_ENC_RC_MODE_CVBR:
         m->attrH264CVbr.maxBitRate = kbps;
@@ -87,13 +105,20 @@ static void fill(IMPEncoderAttrRcMode *m, int mode, uint32_t kbps)
         m->attrH264CVbr.changePos = 80;
         m->attrH264CVbr.shortStatTime = 2;
         m->attrH264CVbr.longStatTime = 60;
-        m->attrH264CVbr.qualityLvl = 2;
+        m->attrH264CVbr.qualityLvl = 6;
+        m->attrH264CVbr.maxIprop = 100;
+        m->attrH264CVbr.minIprop = 1;
+        m->attrH264CVbr.extraBitRate = 5;
         break;
     case IMP_ENC_RC_MODE_AVBR:
         m->attrH264AVbr.maxBitRate = kbps;
         m->attrH264AVbr.changePos = 80;
         m->attrH264AVbr.staticTime = 2;
-        m->attrH264AVbr.qualityLvl = 2;
+        m->attrH264AVbr.qualityLvl = 6;
+        m->attrH264AVbr.maxIprop = 100;
+        m->attrH264AVbr.minIprop = 1;
+        m->attrH264AVbr.minStillRate = 25;
+        m->attrH264AVbr.maxStillQp = 35;
         break;
     }
 }
@@ -258,16 +283,8 @@ static void test_vendor(const char *path)
                 printf("vs vendor %-5s %4d kbit/s: vendor %5.0f, OpenIMP %5.0f kbit/s (%+5.1f %%), "
                        "QP |diff| mean %.2f max %d\n", names[mode], kbps, vk, ok, (ok - vk) * 100.0 / vk,
                        (double)dsum / n, dmax);
-                /* SMART / AVBR: the T33 still-scene logic (fixed still I QP,
-                 * minStillRate) is not in the T23 revision: reported only */
-                if (mode == 3 || mode == 5) {
-                    printf("          (%s: known gap, T33 still-scene rules not ported)\n", names[mode]);
-                } else {
-                    CHECK(ok < vk * 1.12 && ok > vk * 0.88, "%s %d: rate %.0f vs vendor %.0f", names[mode],
-                          kbps, ok, vk);
-                    CHECK((double)dsum / n <= 3.0, "%s %d: mean QP difference %.2f", names[mode], kbps,
-                          (double)dsum / n);
-                }
+                /* H.264 runs the T33 revision: the QP of every picture */
+                CHECK(dmax == 0, "%s %d: QP differs from the vendor (max %d)", names[mode], kbps, dmax);
                 blocks++;
             }
             if (!l)

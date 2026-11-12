@@ -15,7 +15,7 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC optimize("wrapv")
 #endif
-#include "eprc/eprc_t33_mem.h"
+#include "eprc/eprc_t33.h"
 
 #include <math.h>
 
@@ -2120,8 +2120,8 @@ static void e33_frame_end(E33 *X, uint32_t e)
             t33_hist8(X, st + 0x248, 10,
                       (uint8_t)t33_div64(LD_S64(st + 0x20) + (int64_t)g - 1, (int64_t)g));
         }
-        OEM_memset(X, st + 0x1a8, 0, 0x28);
-        OEM_memset(X, st + 0x220, 0, 10);
+        e33_fill(X, st + 0x1a8, 0, 0x28);
+        e33_fill(X, st + 0x220, 0, 10);
         pos = 0;
     }
     if (pos == 0) {                     /* bit-rate statistics window */
@@ -2274,7 +2274,7 @@ static void e33_video_cfg(E33 *X, uint32_t e)
 
     u = (((LD_U16(e + 4) + 0x1f) >> 5) * ((LD_U16(e + 6) + 0x1f) >> 5) * 4 + 0xfu) & ~0xfu;
     if (S == 0) {
-        S = OEM_calloc(X, u * 2 + 0x7b0, 1);
+        S = e33_calloc(X, u * 2 + 0x7b0, 1);
         ST_U32(e, S);
         if (S == 0)
             return;
@@ -2394,7 +2394,7 @@ static void e33_video_cfg(E33 *X, uint32_t e)
         ST_U8(S + 0x540, LD_U8(e + (mode == 2 ? 0x846 : 0x848)));
         break;
     }
-    OEM_memset(X, S + 0x90, 0, 0x468);
+    e33_fill(X, S + 0x90, 0, 0x468);
     ST_U8(S + 0x108, 4);
     ST_U8(S + 0x138, 4);
     ST_U8(S + 0x7d, 0);
@@ -2513,11 +2513,11 @@ static void e33_video_cfg(E33 *X, uint32_t e)
         ST_U8(S + 0x18, i_qp);
         ST_U8(S + 0x19, i_qp);
         ST_S32(S + 0x3d4, n40);
-        OEM_memset(X, S + 0x238, 0, 0x8c);
-        OEM_memset(X, S + 0x434, 0, 8);
-        OEM_memset(X, S + 0x3d8, 0, 8);
-        OEM_memset(X, S + 0x360, 0, 8);
-        OEM_memset(X, S + 0x2c4, 0xff, 0x1e);
+        e33_fill(X, S + 0x238, 0, 0x8c);
+        e33_fill(X, S + 0x434, 0, 8);
+        e33_fill(X, S + 0x3d8, 0, 8);
+        e33_fill(X, S + 0x360, 0, 8);
+        e33_fill(X, S + 0x2c4, 0xff, 0x1e);
         if (n40 < 0)
             ST_U32(S + 0x40, 0);
         else if (n40 > 60)
@@ -2902,7 +2902,17 @@ static const uint8_t t33_si_data[0x6dc] = {
 
 #define T33_SID_BASE 0x200b90u
 
-/* @n bytes of the vendor .data at @a (zeros outside the copy) */
+/* @n bytes of the vendor .data at @a (zeros outside the copy).  The indexed
+ * rows stay inside the copy for every input the vendor encoder produces:
+ * the SMART rule / level (pic+0x22/0x23 <- e+0x84a/0x84b <- i264e P+0x26c/
+ * 0x26d, clamped 0..2 / 0..3 by i264e_reconfig_qpgai_set) select rows 0..7
+ * of the 0x30-byte table at 0x200f6c (384 bytes, 8 rows); the motion step
+ * pic+0x2e (st+0xa9 = cur+0x7d4 / 3 + 1..4, cur+0x7d4 = 2 from
+ * i264e_update_fenc) rows 0..5 of the 0x24-byte table at 0x200e74 (216
+ * bytes).  The copy ends at 0x20126c: rows 0..15 / 0..27 (cur+0x7d4 <= 71)
+ * read the same bytes as the vendor.  Past it the vendor reads the next
+ * .data objects, then .got (load addresses) and .bss, so no copy could
+ * match; the glue keeps the inputs in the vendor ranges (rand6.py). */
 static const uint8_t *t33_sid(uint32_t a, uint32_t n)
 {
     static const uint8_t zero[0x228];
@@ -3340,12 +3350,12 @@ static void e33_set_sliceinfo(E33 *X, uint32_t e)
 
     if (LD_S8(e + 0xc) != 0) {
         if (LD_S8(e + 0xc) == 1)
-            OEM_memset(X, LD_U32(e + 0x36c), 0, 0xf48);
+            e33_fill(X, LD_U32(e + 0x36c), 0, 0xf48);
         return;
     }
     vb = LD_U32(e + 0x88c);
     s = LD_U32(e + 0x36c);
-    OEM_memset(X, s, 0, 0x878);
+    e33_fill(X, s, 0, 0x878);
     cur = LD_U32(vb + 4);
     pic = LD_U32(vb + 8);
     rev = LD_S8(cur);
@@ -3571,7 +3581,7 @@ static void e33_set_sliceinfo(E33 *X, uint32_t e)
     ST_U8(s + 0x349, 1);
     ST_U8(s + 0x860, 1);
     if (LD_S8(vb + 0xa4) != 0) {
-        OEM_memset(X, LD_U32(s + 0x250), 0, LD_U16(s + 0xc) * 2 * LD_U16(s + 0xe));
+        e33_fill(X, LD_U32(s + 0x250), 0, LD_U16(s + 0xc) * 2 * LD_U16(s + 0xe));
         ST_U8(vb + 0xa4, 0);
     }
 
@@ -3664,10 +3674,10 @@ static void e33_set_sliceinfo(E33 *X, uint32_t e)
             ST_U32(s + 0x778, 0xffff);
     }
     if (slices == 0) {
-        OEM_memset(X, s + 0x52c, 0, 9);
-        OEM_memset(X, s + 0x768, 0, 6);
-        OEM_memset(X, s + 0x54e, 0, 0x18);
-        OEM_memset(X, s + 0x568, 0, 0x200);
+        e33_fill(X, s + 0x52c, 0, 9);
+        e33_fill(X, s + 0x768, 0, 6);
+        e33_fill(X, s + 0x54e, 0, 0x18);
+        e33_fill(X, s + 0x568, 0, 0x200);
     } else {
         uint8_t sel;
 
@@ -4341,4 +4351,26 @@ static void e33_frame_start(E33 *X, uint32_t e)
     t33_start_output(X, e, inst, st, out, ps, qp);
     e33_set_sliceinfo(X, e);
     e33_output_param(X, e, 0);
+}
+
+/* ------------------------------------------------------ public entries */
+
+void eprc_t33_h264_default_set(E33 *X, uint32_t e)
+{
+    e33_default_set(X, e);
+}
+
+void eprc_t33_h264_video_cfg(E33 *X, uint32_t e)
+{
+    e33_video_cfg(X, e);
+}
+
+void eprc_t33_h264_frame_start(E33 *X, uint32_t e)
+{
+    e33_frame_start(X, e);
+}
+
+void eprc_t33_h264_frame_end(E33 *X, uint32_t e)
+{
+    e33_frame_end(X, e);
 }

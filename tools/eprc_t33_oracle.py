@@ -10,7 +10,7 @@ controller (tests/t32/rc_test.c 'trace'), so the two sequences can be
 compared.  Nothing from the vendor library is copied; it is read from the
 path you pass.  The emulator has no HERA: statistics are synthetic.
 
-    tools/eprc_t33_oracle.py LIB MODE [KBPS] [PICTURES]      'F' lines
+    tools/eprc_t33_oracle.py LIB [--motion N] MODE [KBPS] [PICTURES]      'F' lines
     tools/eprc_t33_oracle.py LIB --compare MODE KBPS PICS OPENIMP_TRACE
     tools/eprc_t33_oracle.py LIB --defaults                  i264e defaults
     tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
@@ -52,7 +52,7 @@ def model_stats(qp, nbytes, mbs):
 
 class T33:
     def __init__(self, path, mode, kbps, rev=6, w=W, h=H, gop=GOP, fps=FPS, minqp=15, maxqp=48,
-                 initqp=30, extra=None):
+                 initqp=30, extra=None, motion=0):
         L = self.L = Lib(path, generic=True)
         lo = L.syms['get_history_iqp'] if 'get_history_iqp' in L.syms else 0
         hi = L.syms['librc_h264_get_version'] + 0x100
@@ -84,6 +84,9 @@ class T33:
         L.w32(Hh + 0x1540, P); L.w32(Hh + 0x3f0, self.X); L.w32(Hh + 0x400, self.S)
         L.w32(Hh + 0xbac, self.TB)
         L.w32(self.X + 0x4c, 0xffffffff)                  # no FRAME_REPEATE_JUDGE (no re-encoding)
+        # the per-picture motion mode X+0x164 (i264e_update_fenc sets 2; 0 by default here,
+        # as in the reference runs made before it was known)
+        L.wr(self.X + 0x164, bytes([motion]))
         # the i264e slice block the controller fills (Hh+0xf9c -> P+0x6cc); without it the
         # controller writes through a NULL pointer into low memory
         self.SL = HEAP + 0x20000
@@ -117,8 +120,8 @@ class T33:
         self.n += 1
 
 
-def run(path, mode, kbps, pics, out=sys.stdout):
-    t = T33(path, mode, kbps)
+def run(path, mode, kbps, pics, out=sys.stdout, motion=0):
+    t = T33(path, mode, kbps, motion=motion)
     mbs = (W // 16) * (H // 16)
     seq = []
     for i in range(pics):
@@ -161,7 +164,7 @@ class Scene:
         return max(0.5, self.lvl * (0.8 + 0.4 * ((u >> 12) & 1023) / 1024.0))
 
 
-def scenario(path, seed):
+def scenario(path, seed, motion=0):
     """one random scenario: 'S' header line and its 'F' lines"""
     x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
     pick = []
@@ -177,7 +180,7 @@ def scenario(path, seed):
     maxqp = (38, 42, 45, 48, 51)[pick[6] % 5]
     initqp = (25, 30, 35)[pick[7] % 3]
     pics = (80, 150, 250)[pick[8] % 3]
-    t = T33(path, mode, kbps, w=w, h=h, gop=gop, fps=fps, minqp=minqp, maxqp=maxqp, initqp=initqp)
+    t = T33(path, mode, kbps, w=w, h=h, gop=gop, fps=fps, minqp=minqp, maxqp=maxqp, initqp=initqp, motion=motion)
     sc = Scene(pick[9])
     mbs = (w // 16) * (h // 16)
     out = ['S %d %d %d %d %d %d %d %d %d %d %u' % (mode, kbps, w, h, gop, fps, minqp, maxqp, initqp, pics, pick[9])]
@@ -201,13 +204,17 @@ def summary(name, seq):
 
 def main():
     a = sys.argv[1:]
+    motion = 0
+    if len(a) >= 3 and a[1] == '--motion':
+        motion = int(a[2])
+        del a[1:3]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
         return
     if len(a) >= 4 and a[1] == '--scenarios':
         for k in range(int(a[2]), int(a[2]) + int(a[3])):
-            print('\n'.join(scenario(a[0], k)), flush=True)
+            print('\n'.join(scenario(a[0], k, motion)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])
@@ -220,7 +227,7 @@ def main():
         print('QP |diff| mean %.2f max %d, equal %d/%d' % (sum(d) / n, max(d), d.count(0), n))
         return
     mode = int(a[1]); kbps = int(a[2]) if len(a) > 2 else 2000; pics = int(a[3]) if len(a) > 3 else 250
-    run(a[0], mode, kbps, pics)
+    run(a[0], mode, kbps, pics, motion=motion)
 
 
 if __name__ == '__main__':

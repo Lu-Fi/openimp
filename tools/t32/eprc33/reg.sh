@@ -1,11 +1,11 @@
 #!/bin/bash
-# reg.sh SO OUTDIR : rand(1) 0..23, rand_rate(2) 0..23, rand3(3) 0..47, rand4(4) 0..47, rand5(5) 0..31, NJ (12) at a time; TASKSET="" for all cores
+# reg.sh SO OUTDIR : rand(1) 0..23, rand_rate(2) 0..23, rand3(3) 0..47, rand4(4) 0..47, rand5(5) 0..31, rand6(6, group A) 0..31, NJ (12) at a time; TASKSET="" for all cores
 cd "${E33DIR:-.}"
 SO=$1; O=$2; mkdir -p $O; rm -f $O/*.txt
 jobs=()
 for k in $(seq 0 23); do jobs+=("rand.py 1 1 $k 2" "rand_rate.py 2 1 $k 2"); done
 for k in $(seq 0 47); do jobs+=("rand3.py 3 1 $k 2" "rand4.py 4 1 $k 2"); done
-for k in $(seq 0 31); do jobs+=("rand5.py 5 1 $k 2"); done
+for k in $(seq 0 31); do jobs+=("rand5.py 5 1 $k 2" "rand6.py 6 1 $k 2 A"); done
 i=0
 for j in "${jobs[@]}"; do
   set -- $j

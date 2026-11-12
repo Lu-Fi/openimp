@@ -57,6 +57,28 @@ E33_ACC(F32, float)
 E33_ACC(F64, double)
 #undef E33_ACC
 
+/* memset over arena addresses (one mapped region: host memset, else byte by
+ * byte, so that unmapped bytes count as faults like single stores) */
+static inline uint32_t e33_fill(E33 *X, uint32_t a, uint8_t v, uint32_t n)
+{
+    for (int i = 0; i < 3; i++)
+        if (a - X->rb[i] < X->rs[i] && X->rs[i] - (a - X->rb[i]) >= n) {
+            memset(X->r[i] + (a - X->rb[i]), v, n);
+            return a;
+        }
+    for (uint32_t i = 0; i < n; i++)
+        e33_st_U8(X, a + i, v);
+    return a;
+}
+
+/* the controller's one allocation (the state block): placed by the caller
+ * at X->calloc_addr, zeroed like calloc */
+static inline uint32_t e33_calloc(E33 *X, uint32_t n, uint32_t m)
+{
+    e33_fill(X, X->calloc_addr, 0, n * m);
+    return X->calloc_addr;
+}
+
 /* accessors with the context X implied */
 #define LD_U8(a)  e33_ld_U8(X, (uint32_t)(a))
 #define LD_S8(a)  e33_ld_S8(X, (uint32_t)(a))

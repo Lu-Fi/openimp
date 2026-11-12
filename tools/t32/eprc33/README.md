@@ -24,3 +24,7 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   addresses (cur+0x44c..0x470), last IDR slice sizes (cur+0x21c / 0x228.. / 0x328), the work-buffer flag (vb+0xa4).
   Coverage: build the swap oracle with `-O0 --coverage` and run gcov on `eprc_t33_h264.c`; compare results only with the
   `-O1` build (the generated C has uninitialised locals in the P path that differ at -O0).
+- `rand6.py` (group A in `reg.sh`, 208 scenarios in all): the SMART rule / level and motion-step table rows of the
+  slice block. Group A keeps the inputs in the ranges the vendor encoder produces (rule 0..2 / level 0..3 through
+  P+0x26c/0x26d with the still map on, out-of-range values at VIDEO_CFG, motion mode cur+0x7d4 0..71): 0 differing
+  calls. Group B (`rand6.py SEED N K0 VB B`, exploratory) goes past the copied .data and differs by design.
