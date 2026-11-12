@@ -1876,6 +1876,37 @@ static void test_ext_channel(void)
 }
 #endif
 
+/* #374: one GetFrame on a channel nobody else reads marks it pulled for the
+ * pull window; capture (driver DQBUFs) must keep running meanwhile instead of
+ * stopping until the idle recycle. */
+static void test_single_pull_capture(void)
+{
+    IMPFSChnAttr a = attr_for(640, 360, 2);
+    void *frame = NULL;
+    unsigned int before, waited;
+
+    fake_stock_dq = 0;
+    fake_frame_budget = -1;
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "single pull: create");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "single pull: enable");
+    CHECK(IMP_FrameSource_GetFrame(0, &frame) == 0 && frame != NULL,
+          "single pull: GetFrame");
+    if (frame)
+        CHECK(IMP_FrameSource_ReleaseFrame(0, frame) == 0, "single pull: release");
+    sleep_ms(100);
+    before = __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED);
+    for (waited = 0; waited < 500 &&
+         __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) < before + 20;
+         waited += 10)
+        sleep_ms(10);
+    CHECK(__atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) >= before + 20,
+          "single pull: only %u driver frames in 500 ms after one GetFrame (capture stalled)",
+          __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) - before);
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "single pull: disable");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "single pull: destroy");
+    check_clean("single pull");
+}
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -1911,6 +1942,7 @@ int main(void)
     RUN(depth_during_disable);
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
+    RUN(single_pull_capture);
 #if !defined(PLATFORM_T31)
     /* T31: timed frames and rotation limits differ (own tests) */
     RUN(delay_fifo);
