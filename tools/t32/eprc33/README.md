@@ -19,5 +19,8 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   periods that differ from the GOP, small still-map blocks and class counts, ROI regions, intra refresh and the
   per-picture motion knobs (X+0x151.., X+0x164..), out-of-range configuration values. Inputs that i264e would not
   produce are poked at function entry (`Harness.poke`, before the snapshot), so both sides still get the same input.
+- `rand5.py` (in `reg.sh`, 176 scenarios in all): the slice block (VPI_set_sliceinfo, get_bu_target_bits): HW revision
+  e+0x34 (6 / 7), intra-refresh ring and second reference (cur+0x7b0..0x7b8), SMART bit map (cur+0x43c), buffer
+  addresses (cur+0x44c..0x470), last IDR slice sizes (cur+0x21c / 0x228.. / 0x328), the work-buffer flag (vb+0xa4).
   Coverage: build the swap oracle with `-O0 --coverage` and run gcov on `eprc_t33_h264.c`; compare results only with the
   `-O1` build (the generated C has uninitialised locals in the P path that differ at -O0).

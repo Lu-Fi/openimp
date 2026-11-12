@@ -1,1 +1,1 @@
-e33_set_sliceinfo VPI_set_sliceinfo
+# not-yet-ported callees of the hand code: hand-name generated-name

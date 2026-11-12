@@ -21,3 +21,5 @@ init_inst_param e33_init_inst
 JZ_VPU_RC_FRAME_END_H264_T33 e33_frame_end
 JZ_VPU_RC_VIDEO_CFG_H264_T33 e33_video_cfg
 JZ_VPU_RC_FRAME_START_H264_T33 e33_frame_start
+VPI_set_sliceinfo e33_set_sliceinfo
+get_bu_target_bits e33_bu_target_bits

@@ -2546,6 +2546,1231 @@ static void e33_video_cfg(E33 *X, uint32_t e)
     }
 }
 
+/* ---------------------------------------------------------- slice block */
+
+/*
+ * The slice block (e+0x36c, the i264e slice / VPU parameter block) is
+ * rebuilt for every picture (VPI_set_sliceinfo, 0x192b0c).  Names:
+ *   vb  = e+0x88c (controller block at state + 0x6c0)
+ *   cur = vb+4 (encoder stream parameters; byte 0 = the HW revision 6 / 7)
+ *   pic = vb+8 (picture parameters: +0x20 kind, 2 = IDR)
+ * Tables below are copies of the vendor tables (addresses in the comments).
+ */
+
+/* basic-unit rows by slice-level class (0x1e9b68) */
+static const uint8_t t33_bu_rows[9] = { 1, 2, 4, 6, 8, 10, 20, 40, 64 };
+
+/* per-slice bit limits by level, three columns (0x1e9988: rev 6, x/1600 of
+ * the slice target; 0x1e9ad8: rev 7, x/3200); both rows of each table are
+ * the same */
+static const uint16_t t33_bu_lim6[12][3] = {
+    { 50, 50, 50 }, { 60, 70, 80 }, { 70, 90, 120 }, { 80, 110, 150 },
+    { 100, 160, 200 }, { 130, 200, 250 }, { 180, 250, 300 }, { 250, 300, 350 },
+    { 300, 350, 400 }, { 350, 400, 450 }, { 400, 450, 500 }, { 450, 500, 550 },
+};
+static const uint16_t t33_bu_lim7[12][3] = {
+    { 24, 24, 24 }, { 18, 18, 18 }, { 10, 10, 10 }, { 0, 0, 0 },
+    { 20, 20, 20 }, { 40, 40, 40 }, { 70, 70, 70 }, { 110, 110, 110 },
+    { 160, 160, 160 }, { 220, 220, 220 }, { 290, 290, 290 }, { 370, 370, 370 },
+};
+
+static inline int32_t t33_div32(int32_t a, int32_t b)
+{
+    return b ? a / b : 0;       /* the vendor traps on 0 */
+}
+
+/* the vendor's float -> unsigned conversion (trunc around 2^31) */
+static inline uint32_t t33_f2u(float f)
+{
+    if (f >= 2147483648.0f)
+        return (uint32_t)(int32_t)(f - 2147483648.0f) | 0x80000000u;
+    return (uint32_t)(int32_t)f;
+}
+
+/* bits of the MBs [lo, hi) of the complexity map @m (u32 per MB) in the
+ * share of @bits: sum * bits / tot (64 bit, @bits sign-extended) */
+static uint32_t t33_bu_share(E33 *X, uint32_t m, int32_t lo, int32_t hi, uint32_t bits, uint32_t tot)
+{
+    uint64_t sum = 0;
+
+    if (lo >= hi)
+        return 0;
+    for (int32_t i = lo; i < hi; i++)
+        sum += LD_U32(m + 4 * i);
+    return (uint32_t)((sum * (uint64_t)(int64_t)(int32_t)bits) / (uint64_t)tot);
+}
+
+/*
+ * Per-slice target bits (get_bu_target_bits, 0x19c62c): basic-unit size
+ * s+0x52c (MBs) and count s+0x530, the targets s+0x568.. (one per unit;
+ * cumulative when @cum), and the per-unit limits of the revision
+ * (s+0x536.. rev 6, s+0x54e.. rev 7).  @lvl indexes t33_bu_rows, @col the
+ * limit column, @bits the bit rate.
+ */
+static void e33_bu_target_bits(E33 *X, uint32_t vb, uint32_t s, int32_t cum, int32_t lvl, int8_t col,
+                               uint32_t bits)
+{
+    uint32_t cur = LD_U32(vb + 4), t = s + 0x568, per;
+    int8_t rev = LD_S8(cur);
+    int32_t h = LD_S32(s + 8);
+    int32_t mbw = (LD_S32(s + 4) + 15) / 16, mbs = ((h + 15) / 16) * mbw;
+    int32_t tot = LD_S32(cur + 0x21c), n, bu, rows, i;
+    uint32_t rl = (uint32_t)lvl < 9 ? t33_bu_rows[lvl] : 0;
+
+    if (rev == 6) {
+        int32_t r = (int32_t)rl * mbw;
+
+        if (mbw <= r)
+            bu = mbs / 2 < r ? mbs / 2 : r;
+        else
+            bu = mbw;
+        n = t33_div32(bu - 1 + mbs, bu);
+        if (n > 0x80) {
+            bu = mbs / 128;
+            n = 0x80;
+        }
+        ST_S32(s + 0x52c, bu);
+        ST_S32(s + 0x530, n);
+    } else if (rev == 7) {
+        int32_t r = (int32_t)rl * mbw, q;
+
+        ST_U8(s + 0x77c, 4);
+        if (h > 0x800 && r < mbw * 8)
+            r = mbw * 8;
+        q = r < mbw ? mbw : (r < mbs / 2 ? r : mbs / 2);
+        q = (q + 3) / 4 * 4;
+        n = t33_div32(mbs + q - 1, q);
+        if (n > 0x3f) {
+            q = (mbs / 64 + 4) / 4 * 4;
+            n = t33_div32(mbs + q - 1, q);
+        }
+        ST_S32(s + 0x52c, q);
+        ST_S32(s + 0x530, n);
+        ST_S16(s + 0x77e, q / 4);
+    } else {
+        n = LD_S32(s + 0x530);
+    }
+    if (n < 2)
+        return;                         /* the vendor asserts */
+    bu = LD_S32(s + 0x52c);
+    rows = (int8_t)t33_div32(bu, mbw);
+    per = (uint32_t)t33_div32((int32_t)bits, n);
+
+    if (rev == 7 && LD_S32(LD_U32(vb + 8)) >= 1 && tot != 0) {
+        /* from the per-MB complexity of the last picture */
+        uint32_t m = LD_U32(vb + 0xc) + 0x44;
+
+        if (!cum) {
+            int32_t k4 = ((uint8_t)LD_S8(s + 0xf3) + 1) * 4, acc = 0, lo;
+
+            for (i = 0; i < n; i++) {
+                lo = t33_div32(acc, k4);
+                acc += rows;
+                ST_U32(t + 4 * i, t33_bu_share(X, m, lo, t33_div32(acc, k4), bits, (uint32_t)tot));
+            }
+        } else {
+            for (i = 0; i < n; i++)
+                ST_U32(t + 4 * i, t33_bu_share(X, m, 0, rows * (i + 1) / 4, bits, (uint32_t)tot));
+        }
+    } else if (LD_S8(s) == 2 && LD_S8(LD_U32(vb + 8) + 0x2f) != 0 && LD_U32(cur + 0x328) != 0) {
+        /* IDR: from the slice sizes of the last IDR (n - 1 of them) */
+        float den = (float)(double)LD_U32(cur + 0x328), fb = (float)(int32_t)bits;
+        int32_t acc = 0;
+
+        for (i = 0; i < n - 1; i++) {
+            if (!cum) {
+                ST_U32(t + 4 * i, t33_f2u((float)(double)LD_U32(cur + 0x228 + 4 * i) / den * fb));
+            } else {
+                acc += LD_S32(cur + 0x228 + 4 * i);
+                ST_U32(t + 4 * i, t33_f2u((float)acc / den * fb));
+            }
+        }
+    } else {
+        /* first third 1.5x, second third 1x, last third 0.5x */
+        int32_t third = n / 3, two = n * 2 / 3;
+
+        if (!cum) {
+            for (i = 0; i < third; i++)
+                ST_U32(t + 4 * i, per * 3 >> 1);
+            for (i = third; i < two; i++)
+                ST_U32(t + 4 * i, per);
+            for (i = two; i < n; i++)
+                ST_U32(t + 4 * i, per >> 1);
+        } else {
+            uint32_t b1 = per * (uint32_t)third * 3 >> 1, b2 = (uint32_t)(two - third) * per + b1;
+
+            for (i = 0; i < third; i++)
+                ST_U32(t + 4 * i, per * 3 * (uint32_t)(i + 1) >> 1);
+            for (i = third; i < two; i++)
+                ST_U32(t + 4 * i, (uint32_t)(i - third + 1) * per + b1);
+            for (i = two; i < n; i++)
+                ST_U32(t + 4 * i, ((uint32_t)(i - two + 1) * per >> 1) + b2);
+        }
+    }
+    for (i = 0; i < n; i++)
+        if (LD_U32(t + 4 * i) > 0xfffffff)
+            ST_U32(t + 4 * i, 0xfffffff);
+
+    if (rev == 6) {
+        int32_t p100 = (int32_t)bits / 100;
+
+        for (int k = 0; k < 12; k++) {
+            int32_t lo = (p100 * (2 + 3 * k)) >> 4;
+            int32_t v = (int32_t)(((uint32_t)t33_bu_lim6[k][col] * per / 100 >> 4) & 0xffff);
+            uint32_t m = (uint32_t)(lo <= v ? v : lo);
+
+            ST_U16(s + 0x536 + 2 * k, (m & 0xffff) < 4 ? 4 : m);
+        }
+    } else if (rev == 7) {
+        for (int k = 0; k < 12; k++) {
+            int16_t v = (int16_t)((uint32_t)t33_bu_lim7[k][col] * per / 0xc80);
+
+            if (v < 4)
+                v = 4;
+            ST_S16(s + 0x54e + 2 * k, k < 3 ? -v : v);
+        }
+    }
+}
+
+/* -> s+0x200 (0x1e9a18) */
+static const uint8_t t33_si_200[4] = { 1, 0, 1, 0 };
+/* rev 6 -> s+0x3ef (0x1e9a1c) */
+static const uint8_t t33_si_3ef_6[16] = { 255, 255, 255, 0, 255, 255, 255, 0, 5, 5, 0, 0, 5, 5, 0, 0 };
+/* rev 7 -> s+0x3ef (0x1e9bc8) */
+static const uint8_t t33_si_3ef_7[16] = { 255, 255, 255, 0, 255, 255, 255, 0, 15, 15, 0, 0, 25, 25, 0, 0 };
+/* rev 6 -> s+0x1d4; the copy at 0x1e9a58 (-> s+0x1b1) is the same (0x1e9a34) */
+static const uint8_t t33_si_1d4[35] = {
+    6, 5, 4, 3, 2, 2, 1, 6, 5, 4, 3, 3, 2, 2, 2, 2,
+    2, 3, 4, 5, 6, 2, 2, 3, 4, 5, 6, 6, 2, 2, 3, 4,
+    5, 5, 5,
+};
+/* rev 6 -> s+0x18d (0x1e9aa0) */
+static const uint8_t t33_si_18d[36] = {
+    10, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 20, 30, 40, 50,
+    60, 70, 80, 100, 120, 140, 170, 170, 6, 10, 16, 22, 30, 40, 50, 60,
+    70, 80, 90, 90,
+};
+/* rev 6 -> s+0xfa (12 bytes), s+0x10e (4) (0x1e9ac4) */
+static const uint8_t t33_si_0fa[16] = { 100, 130, 140, 175, 40, 110, 120, 155, 120, 160, 165, 225, 12, 13, 19, 41 };
+/* rev 6 -> s+0x15c (0x1e9ad4) */
+static const int8_t t33_si_15c[3] = { -3, -2, -1 };
+/* -> s+0x322 (0x1e9b74) */
+static const uint8_t t33_si_322[32] = {
+    0, 5, 10, 15, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3,
+};
+/* -> s+0x42e (0x1e9bc4) */
+static const uint8_t t33_si_42e[2] = { 4, 2 };
+/* -> s+0x205 (0x1e9b94) */
+static const uint8_t t33_si_205[48] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 3, 3, 3,
+    1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 3, 3, 3,
+};
+/* vendor .data 0x200b90..0x20126c (no relocations), the slice-block tables */
+static const uint8_t t33_si_data[0x6dc] = {
+    /* 0x200b90: +0x1f7 by start-QP class (4 per row) */
+    5, 8, 8, 8, 5, 5, 5, 5, 8, 5, 5, 5,
+    /* 0x200b9c: rev 6 +0x162 */
+    150, 0, 44, 1, 144, 1, 232, 3, 208, 7, 160, 15, 136, 19, 112, 23,
+    /* 0x200bac: rev 6 +0x13a */
+    0, 0, 145, 0, 0, 0, 0, 0, 6, 0, 53, 0, 6, 0, 6, 0,
+    6, 0, 53, 0, 6, 0, 6, 0,
+    /* 0x200bc4: rev 6 +0x134 */
+    0, 0, 0, 0, 250, 0, 0, 0,
+    /* 0x200bcc: rev 6 +0x106 */
+    97, 0, 183, 0, 15, 1, 116, 3,
+    /* 0x200bd4: record byte 0x11 by pic+0x2e (rev 6) */
+    8, 8, 7, 6, 5, 3, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2,
+    2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6,
+    8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 11, 11, 11, 11,
+    11, 11, 13, 13, 13, 13, 13, 13, 15, 15, 15, 15, 15, 15, 0, 0,
+    /* 0x200c14: record bytes 0x26.. by pic+0x2d (6 per row) */
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
+    2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 6, 6,
+    6, 6, 6, 6, 8, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11, 11,
+    15, 15, 15, 15, 15, 15, 0, 0,
+    /* 0x200c4c: the eight 0x45-byte field records */
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8, 8, 8, 8,
+    8, 8, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    1, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 0, 0, 8, 8,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0,
+    1, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 4, 4, 4, 4, 4,
+    4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8,
+    8, 0, 0, 8, 8, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0,
+    0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0,
+    8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 8, 8, 8, 8, 8, 0, 0, 8, 8, 0, 0, 0, 0, 0, 1,
+    1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8,
+    8, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0,
+    0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 0, 0, 8, 8, 0,
+    0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+    8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8,
+    0, 0, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 8, 8, 8, 8, 8, 2, 0, 0, 0, 0, 0,
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 8,
+    8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    8, 8, 8, 8, 8, 0, 0, 8, 8, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 8, 8, 8, 8, 8, 15,
+    0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0,
+    0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 0, 0, 8, 8, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8,
+    8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 0,
+    0, 8, 8, 0, 0, 0, 0, 0,
+    /* 0x200e74: +0x434 by pic+0x2e (0x24 per row) */
+    21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0,
+    21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0, 21, 0, 0, 0,
+    11, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0,
+    11, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0,
+    21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0,
+    21, 0, 0, 0, 11, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0,
+    21, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0, 4, 0, 0, 0,
+    2, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0, 4, 0, 0, 0,
+    2, 0, 0, 0, 21, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0, 21, 0, 0, 0, 11, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0, 21, 0, 0, 0, 21, 0, 0, 0,
+    11, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0,
+    /* 0x200f4c: +0x11c */
+    0, 0, 150, 0, 0, 0, 0, 0, 5, 0, 50, 0, 5, 0, 5, 0,
+    5, 0, 50, 0, 5, 0, 5, 0,
+    /* 0x200f64: +0x116 */
+    0, 0, 0, 0, 0, 1, 0, 0,
+    /* 0x200f6c: +0x205 by the SMART rule / level (0x30 per row) */
+    1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 2, 2, 2, 3, 3, 3,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 2, 3, 4, 6, 7, 8, 8, 1, 2, 3, 4, 6, 7, 8, 8,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 2, 5, 7, 10, 12, 14, 14, 1, 2, 5, 7, 10, 12, 14, 14,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246, 246,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    /* 0x2010ec: +0x184 by start-QP class (8 per row) */
+    246, 251, 255, 1, 2, 3, 4, 4, 246, 249, 254, 1, 2, 3, 4, 4,
+    246, 248, 253, 1, 3, 3, 4, 4, 246, 248, 253, 1, 3, 3, 4, 4,
+    246, 248, 253, 0, 1, 2, 3, 4, 246, 248, 252, 255, 0, 2, 3, 4,
+    246, 248, 252, 254, 0, 2, 3, 4,
+    /* 0x201124: +0x174 */
+    244, 1, 232, 3, 196, 9, 136, 19, 64, 31, 176, 54, 32, 78, 168, 97,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 251, 253, 254, 0,
+    0, 1, 2, 251, 253, 254, 0, 0, 1, 2, 251, 253, 255, 0, 1, 1,
+    2, 252, 253, 255, 0, 0, 1, 2, 251, 253, 254, 0, 0, 1, 2, 251,
+    254, 255, 0, 0, 1, 2, 251, 254, 255, 0, 1, 2, 2, 251, 254, 255,
+    0, 0, 1, 2, 250, 252, 254, 0, 1, 2, 3, 250, 252, 254, 0, 1,
+    2, 3, 250, 252, 254, 0, 1, 2, 3, 250, 252, 254, 0, 1, 2, 3,
+    250, 251, 254, 0, 1, 2, 3, 250, 252, 255, 0, 1, 2, 3, 250, 252,
+    255, 0, 1, 2, 3, 250, 252, 255, 0, 1, 2, 3, 249, 251, 253, 0,
+    0, 3, 4, 249, 251, 253, 0, 1, 2, 3, 249, 251, 253, 0, 2, 3,
+    4, 249, 251, 253, 0, 2, 3, 3, 249, 252, 253, 0, 1, 3, 3, 249,
+    252, 254, 0, 1, 3, 3, 249, 252, 254, 0, 1, 3, 4, 249, 252, 254,
+    0, 1, 3, 4, 248, 251, 253, 0, 2, 3, 4, 248, 251, 253, 0, 2,
+    3, 4, 248, 251, 253, 0, 2, 3, 4, 248, 251, 253, 0, 2, 3, 4,
+    248, 251, 254, 0, 2, 4, 5, 248, 251, 254, 0, 2, 4, 5, 248, 251,
+    254, 1, 2, 4, 5, 248, 251, 254, 1, 2, 3, 5, 0, 2, 253, 0,
+    0, 0, 1, 253, 252, 0, 254, 253, 1, 253, 252, 1, 254, 253, 1, 253,
+    252, 0, 254, 253, 0, 0, 0, 0, 0, 0, 0, 0, 253, 254, 1, 0,
+    1, 2, 3, 4, 252, 253, 254, 0, 1, 2, 3, 4, 251, 253, 255, 0,
+    1, 3, 4, 5, 250, 252, 254, 255, 0, 2, 4, 6, 249, 251, 254, 255,
+    1, 3, 5, 7, 248, 251, 254, 255,
+};
+
+#define T33_SID_BASE 0x200b90u
+
+/* @n bytes of the vendor .data at @a (zeros outside the copy) */
+static const uint8_t *t33_sid(uint32_t a, uint32_t n)
+{
+    static const uint8_t zero[0x228];
+
+    if (a >= T33_SID_BASE && a - T33_SID_BASE + n <= sizeof(t33_si_data))
+        return t33_si_data + (a - T33_SID_BASE);
+    return zero;
+}
+
+static void t33_put(E33 *X, uint32_t a, const void *src, uint32_t n)
+{
+    const uint8_t *p = src;
+
+    for (uint32_t i = 0; i < n; i++)
+        ST_U8(a + i, p[i]);
+}
+
+static inline uint32_t t33_align(int32_t v, uint32_t a)
+{
+    return ((uint32_t)v + a - 1) & ~(a - 1);
+}
+
+/* the vendor keeps the field records as a writable global (0x200c4c) and patches
+ * classes 0/1 from the picture parameters; the port patches a copy and
+ * mirrors the bytes into the vendor's global (mapped only under the
+ * differential test) */
+#define T33_SI_TPL 0x200c4cu
+
+static void t33_tpl_set(E33 *X, uint8_t *tpl, uint32_t o, uint8_t v)
+{
+    tpl[o] = v;
+    ST_U8(T33_SI_TPL + o, v);
+}
+
+/* pack the eight field records into s+0x34c (3 words each) and s+0x3ac
+ * (2 words each) */
+static void t33_pack_fields(E33 *X, uint32_t s, const uint8_t *tpl)
+{
+    for (int k = 0; k < 8; k++) {
+        const uint8_t *b = tpl + 0x45 * k;
+        uint32_t w = 0;
+        int i;
+
+        w = (b[0] & 1) | (b[1] & 1) << 1 | (uint32_t)b[0x10] << 28;
+        for (i = 2; i < 12; i++)
+            w |= (uint32_t)(b[i] & 1) << i;
+        for (i = 0; i < 4; i++)
+            w |= (uint32_t)(b[0xc + i] & 0xf) << (12 + 4 * i);
+        ST_U32(s + 0x34c + 12 * k, w);
+
+        w = (b[0x11] & 0xf) | (uint32_t)b[0x27] << 31;
+        for (i = 0; i < 5; i++)
+            w |= (uint32_t)(b[0x12 + i] & 1) << (4 + i);
+        w |= (uint32_t)(b[0xc] & 0xf) << 9 | (uint32_t)(b[0xf] & 0xf) << 13 | (uint32_t)(b[0x12] & 0xf) << 17;
+        for (i = 0; i < 6; i++)
+            w |= (uint32_t)(b[0x20 + i] & 1) << (21 + i);
+        w |= (uint32_t)(b[0x26] & 0xf) << 27;
+        ST_U32(s + 0x350 + 12 * k, w);
+
+        w = (b[0x27] & 0xf) >> 1;
+        for (i = 0; i < 4; i++)
+            w |= (uint32_t)(b[0x28 + i] & 0xf) << (3 + 4 * i);
+        for (i = 0; i < 6; i++)
+            w |= (uint32_t)(b[0x2c + i] & 1) << (19 + i);
+        ST_U32(s + 0x354 + 12 * k, w);
+
+        w = (b[0x32] & 1) | (uint32_t)b[0x3f] << 31;
+        for (i = 0; i < 4; i++)
+            w |= (uint32_t)(b[0x33 + i] & 1) << (1 + i);
+        for (i = 0; i < 5; i++)
+            w |= (uint32_t)(b[0x37 + i] & 0xf) << (5 + 4 * i);
+        w |= (uint32_t)(b[0x3c] & 1) << 25 | (uint32_t)(b[0x3d] & 1) << 26 | (uint32_t)(b[0x3e] & 0xf) << 27;
+        ST_U32(s + 0x3ac + 8 * k, w);
+
+        w = (b[0x3f] & 0xf) >> 1;
+        for (i = 0; i < 5; i++)
+            w |= (uint32_t)(b[0x40 + i] & 1) << (3 + i);
+        ST_U32(s + 0x3b0 + 8 * k, w);
+    }
+}
+
+/* rev 6 header part of the slice block */
+static void t33_si_rev6(E33 *X, uint32_t s)
+{
+    ST_U8(s + 0x824, 1);
+    ST_U8(s + 0x814, 4);
+    ST_U8(s + 0x815, 0x43);
+    ST_U8(s + 0x818, 10);
+    t33_put(X, s + 0x3ef, t33_si_3ef_6, 16);
+    ST_U8(s + 0x825, LD_U8(s + 0x154));
+    ST_U8(s + 0x826, LD_U8(s + 0x155));
+    ST_U8(s + 0xef, 1);
+    ST_U8(s + 0xf0, 0x82);
+    ST_U8(s + 0xf4, 1);
+    ST_U8(s + 0x204, 1);
+    ST_U8(s + 0x7e6, 1);
+    ST_U8(s + 0x7e4, 1);
+    ST_U8(s + 0xf5, 1);
+    ST_U8(s + 0xf9, 0x1e);
+    ST_U8(s + 0xf6, 1);
+    ST_U8(s + 0xf7, 1);
+    ST_U8(s + 0xf8, 1);
+    t33_put(X, s + 0x15c, t33_si_15c, 3);
+    t33_put(X, s + 0xfa, t33_si_0fa, 12);
+    t33_put(X, s + 0x106, t33_sid(0x200bcc, 8), 8);
+    t33_put(X, s + 0x10e, t33_si_0fa + 12, 4);
+    t33_put(X, s + 0x134, t33_sid(0x200bc4, 6), 6);
+    t33_put(X, s + 0x13a, t33_sid(0x200bac, 24), 24);
+    t33_put(X, s + 0x162, t33_sid(0x200b9c, 16), 16);
+    t33_put(X, s + 0x18d, t33_si_18d, 36);
+    t33_put(X, s + 0x1b1, t33_si_1d4, 35);
+    t33_put(X, s + 0x1d4, t33_si_1d4, 35);
+    /* s+0x1fb: five zero bytes (0x1e9a2c) */
+}
+
+/* the 16 ROI regions of cur+0x3ac (9 bytes each) -> s+0x54 (7 bytes each);
+ * absolute QPs are clamped to [lo, hi], relative ones (rev 6) so that the
+ * picture QP plus the offset stays inside, else to -32..31 */
+static void t33_si_roi(E33 *X, uint32_t vb, uint32_t s, int32_t lo, int32_t hi)
+{
+    uint8_t any = LD_U8(s + 0x15a);
+
+    for (int i = 0; i < 16; i++) {
+        uint32_t r = LD_U32(vb + 4) + 0x3ac + 9 * i, o = s + 0x54 + 7 * i;
+        int32_t q;
+        int8_t rel;
+
+        if (LD_S8(r) == 0)
+            any |= LD_S8(r + 2) != 0;
+        ST_U8(s + 0x15a, any);
+        ST_U8(o, LD_U8(r + 2));
+        rel = LD_S8(r + 3) != 0 ? 2 : 1;
+        ST_S8(o + 1, rel);
+        q = LD_S8(r + 4);
+        for (int j = 4; j < 9; j++)
+            ST_U8(o + j - 2, LD_U8(r + j));
+        if (rel == 1) {
+            if (q < lo)
+                ST_S8(o + 2, lo);
+            else if (q > hi)
+                ST_S8(o + 2, hi);
+        } else if (LD_S8(LD_U32(vb + 4)) == 6) {
+            int32_t pq = LD_S32(LD_U32(vb + 8) + 8);
+
+            if (q + pq < lo)
+                ST_S8(o + 2, (int8_t)lo - (int8_t)pq);
+            else if (q + pq > hi)
+                ST_S8(o + 2, (int8_t)hi - (int8_t)pq);
+        } else if (q < -0x20) {
+            ST_S8(o + 2, -0x20);
+        } else if (q > 0x1f) {
+            ST_S8(o + 2, 0x1f);
+        }
+    }
+}
+
+/* OR @flag into the 16-bit entries [a, b) of the MB map s+0x250 */
+static void t33_map_or(E33 *X, uint32_t map, int32_t a, int32_t b, uint32_t flag)
+{
+    for (int32_t i = a; i < b; i++) {
+        uint32_t w = map + (i / 2) * 4;
+
+        ST_U32(w, LD_U32(w) | flag << (((i % 2) * 16) & 0x1f));
+    }
+}
+
+/* the reference / reconstruction buffers of the picture (rev 6: s+0x848..,
+ * rev 7: s+0x784..), rotated through vb+0x20..0x34 */
+static uint32_t t33_si_refs(E33 *X, uint32_t vb, uint32_t s, uint32_t out)
+{
+    uint32_t cur = LD_U32(vb + 4), pic = LD_U32(vb + 8), v[6];
+    int i;
+
+    if (LD_S8(s) == 2) {
+        for (i = 0; i < 4; i++)
+            v[i] = t33_align(LD_S32(cur + 0x454 + 4 * i), 0x100);
+        for (i = 0; i < 4; i++)
+            ST_U32(vb + 0x20 + 4 * i, v[i]);
+        if (LD_S8(s + 0x7d8) == 2) {
+            ST_U32(vb + 0x30, t33_align(LD_S32(cur + 0x464), 0x100));
+            ST_U32(vb + 0x34, t33_align(LD_S32(cur + 0x468), 0x100));
+        }
+        for (i = 0; i < 4; i++)
+            ST_U32(out + 4 * i, v[i]);
+    } else {
+        static const uint8_t ord[3][6] = {
+            { 0x28, 0x2c, 0x20, 0x24, 0, 0 },           /* one reference */
+            { 0x30, 0x34, 0x20, 0x24, 0x28, 0x2c },     /* two, pic+4 == 2 */
+            { 0x28, 0x2c, 0x20, 0x24, 0x30, 0x34 },     /* two */
+        };
+        int k = 0, nw = 4;
+
+        if (LD_S32(pic + 4) != 1 && LD_S8(s + 0x2b4) != 0) {
+            k = LD_S32(pic + 4) == 2 ? 1 : 2;
+            nw = 6;
+        }
+        for (i = 0; i < nw; i++)
+            v[i] = LD_U32(vb + ord[k][i]);
+        for (i = 0; i < nw; i++)
+            ST_U32(out + 4 * i, v[i]);
+    }
+    for (i = 0; i < 4; i++)
+        ST_U32(vb + 0x20 + 4 * i, v[i]);
+    if (LD_S8(s + 0x2b4) != 0) {
+        ST_U32(vb + 0x30, LD_U32(out + 0x10));
+        ST_U32(vb + 0x34, LD_U32(out + 0x14));
+    }
+    return v[0];
+}
+
+/* the second picture buffer of the refresh ring (s+0x7c0..0x7cc, vb+0x40) */
+static void t33_si_ring(E33 *X, uint32_t vb, uint32_t s, uint32_t cur)
+{
+    uint32_t v = LD_U32(s + 0x7d4), y, c;
+
+    if (LD_S8(s + 0x781) == 0)
+        return;
+    if (LD_S8(s + 0x7ac) != 0) {
+        if (v == 1 && LD_S8(s + 0x7d8) == 1) {
+            y = LD_U32(cur + 0x330);
+            ST_U32(s + 0x7c0, y);
+            ST_U32(s + 0x7c8, LD_U32(vb + 0x40));
+        } else if (v < 2) {
+            y = LD_U32(s + 0x7c0);
+        } else {
+            y = LD_U32(cur + 0x330);
+            ST_U32(s + 0x7c0, y);
+            ST_U32(s + 0x7c8, LD_U32(vb + 0x40));
+        }
+        ST_U32(vb + 0x40, y);
+        return;
+    }
+    if (v == 1 ? LD_S8(s + 0x7d8) != 1 : v < 2) {
+        ST_U32(vb + 0x40, LD_U32(s + 0x7c0));
+        ST_U32(vb + 0x44, LD_U32(s + 0x7c4));
+        return;
+    }
+    c = LD_U32(cur + 0x334);
+    y = LD_U32(cur + 0x330);
+    ST_U32(s + 0x7c8, LD_U32(vb + 0x40));
+    ST_U32(s + 0x7cc, LD_U32(vb + 0x44));
+    ST_U32(s + 0x7c0, y);
+    ST_U32(s + 0x7c4, c);
+    ST_U32(vb + 0x40, y);
+    ST_U32(vb + 0x44, c);
+}
+
+/* intra-refresh ring buffers (s+0x7ad set): addresses s+0x7b0..0x7cc */
+static void t33_si_refresh(E33 *X, uint32_t vb, uint32_t s, uint32_t cur)
+{
+    uint32_t v = LD_U32(s + 0x7d4);
+    uint32_t y0 = t33_align(LD_S32(cur + 0x44c), 0x100), c0 = t33_align(LD_S32(cur + 0x450), 0x100);
+    uint32_t st = t33_align(LD_S32(s + 4), 0x40), hh, ysz, csz, y1, c1;
+    int32_t ch, r, r2, yoff, coff, yend, cend;
+    int8_t rv = LD_S8(s + 0x874);
+
+    if (rv == 6 || rv == 7) {
+        hh = t33_align(LD_S32(s + 8), rv == 6 ? 0x40 : 0x10);
+        ch = (int32_t)hh >> 1;
+    } else {
+        hh = 0;
+        ch = 0;
+    }
+    r = ((uint8_t)LD_S8(s + 0x7ae) + 1) * 0x40;
+    r2 = LD_S8(s + 0x844) != 0 || LD_S16(s + 0x780) != 0 ? r - 0x40 : r;
+    ysz = (uint32_t)(r + (int32_t)hh) * st;
+    csz = (uint32_t)((r >> 1) + ch) * st;
+    yoff = (int32_t)(st * (uint32_t)r2);
+    coff = (int32_t)((uint32_t)(r2 >> 1) * st);
+    if (LD_S8(cur) == 7 && LD_S8(s + 0x781) != 0) {
+        r -= 0x40;
+        if (LD_S8(s + 0x7ac) == 0) {
+            ysz = (hh + (uint32_t)r) * st + 0x4000;
+            yoff = (int32_t)(st * (uint32_t)r + 0x4000);
+            coff = (int32_t)(st * (uint32_t)(r >> 1) + 0x2000);
+            csz = (uint32_t)((r >> 1) + ch) * st + 0x2000;
+        } else {
+            coff = 0;
+            csz = 0;
+            ysz = (uint32_t)((int32_t)(((hh + (uint32_t)r) * st + 0x4000) * 3) >> 1);
+            yoff = (int32_t)(st * (uint32_t)r + 0x4000);
+        }
+    }
+    yend = (int32_t)(y0 + ysz);
+    cend = (int32_t)(c0 + csz);
+    ST_S32(s + 0x7b8, yend);
+    ST_S32(s + 0x7bc, cend);
+    ST_U32(s + 0x7b0, y0);
+    ST_U32(s + 0x7b4, c0);
+    ST_U32(s + 0x7c8, y0);
+    ST_U32(s + 0x7cc, c0);
+    ST_U32(s + 0x7c0, y0);
+    ST_U32(s + 0x7c4, c0);
+    if (LD_S8(s) == 2) {
+        ST_U32(vb + 0x38, 0);
+        ST_U32(vb + 0x3c, 0);
+    } else {
+        int32_t py = LD_S32(vb + 0x38), pc = LD_S32(vb + 0x3c);
+        uint32_t my = ysz ? (uint32_t)(yoff + py) % ysz : 0, mc = 0;
+
+        if (LD_S8(s + 0x7ac) == 0)
+            mc = csz ? (uint32_t)(coff + pc) % csz : 0;
+        ST_U32(s + 0x7c0, my ? (uint32_t)yend - my : y0);
+        ST_U32(s + 0x7c4, mc ? (uint32_t)cend - mc : c0);
+        ST_U32(s + 0x7c8, py ? (uint32_t)(yend - py) : y0);
+        ST_U32(s + 0x7cc, pc ? (uint32_t)(cend - pc) : c0);
+        ST_U32(vb + 0x38, my);
+        ST_U32(vb + 0x3c, mc);
+    }
+    ST_U32(s + 0x7d0, (st ? (uint32_t)(LD_S32(s + 0x7b8) - LD_S32(s + 0x7c8)) / st : 0) / 64 - 1);
+    if (LD_S8(s + 0x7d8) != 2)
+        return;
+    /* second reference (s+0x7d8 == 2) */
+    y1 = t33_align(LD_S32(cur + 0x46c), 0x100);
+    c1 = t33_align(LD_S32(cur + 0x470), 0x100);
+    if (v == 0) {
+        ST_U32(s + 0x7c0, y1);
+        ST_U32(s + 0x7c4, c1);
+        ST_U32(s + 0x7b8, ysz + y1);
+        ST_U32(s + 0x7bc, c1 + csz);
+    } else if (v == 1) {
+        ST_U32(s + 0x7c8, y1);
+        ST_U32(s + 0x7cc, c1);
+    }
+    if (v == 1 && (LD_S8(s + 0x780) == 1 || LD_S8(s + 0x781) == 1)) {
+        ST_U8(s + 0x7d9, 1);
+        ST_U32(s + 0x7dc, ysz + y1);
+        ST_U32(s + 0x7e0, c1 + csz);
+    }
+}
+
+/* picture QP window s+0x154 (max) / s+0x155 (min), rev 6 */
+static void t33_si_qp6(E33 *X, uint32_t e, uint32_t vb, uint32_t s)
+{
+    uint32_t cur = LD_U32(vb + 4), pic = LD_U32(vb + 8), hi, lo;
+    int8_t ext = LD_S8(LD_U32(e + 0x880) + 0x1a);
+
+    if (LD_S8(cur + 0x43c) == 0) {
+        hi = 0x33;
+        lo = 1;
+    } else if (LD_S32(pic + 8) < 0x27) {
+        uint32_t q = LD_U32(pic + 8) & 0xff;
+
+        hi = (q + 0xd) & 0xff;
+        lo = hi > 0x19 ? (q - 0xc) & 0xff : 1;
+    } else {
+        hi = 0x33;
+        lo = 0x1a;
+    }
+    if (ext != 0 || LD_S32(pic) == 0) {
+        uint32_t mn = LD_U8(pic + 0x28), mx = LD_U8(pic + 0x27);
+
+        hi = hi < mn ? mn : hi > mx ? mx : hi;
+        lo = lo < mn ? mn : lo > mx ? mx : lo;
+    }
+    if (LD_S8(pic + 0x2e) == 5)
+        hi = lo = LD_U8(pic + 0x27);
+    if (hi > 0x33)
+        hi = 0x33;
+    if (lo > 0x33)
+        lo = 0x33;
+    ST_U8(s + 0x154, hi);
+    ST_U8(s + 0x155, lo);
+    ST_U8(s + 0x825, hi);
+    ST_U8(s + 0x826, lo);
+    if (LD_S8(cur + 0x43c) == 0) {
+        uint32_t b = ext != 0 ? LD_U8(pic + 0x29) : 0x33;
+
+        lo = ext != 0 ? LD_U8(pic + 0x2a) : 1;
+        ST_U8(s + 0x76e, b == 0 ? 1 : b > 0x33 ? 0x33 : b);
+    } else {
+        ST_U8(s + 0x76e, hi == 0 ? 1 : hi);
+    }
+    ST_U8(s + 0x76f, lo == 0 ? 1 : lo > 0x33 ? 0x33 : lo);
+}
+
+/* picture QP windows, rev 7: s+0x154/0x155 and s+0x156/0x157 */
+static void t33_si_qp7(E33 *X, uint32_t e, uint32_t vb, uint32_t s)
+{
+    uint32_t pic = LD_U32(vb + 8);
+    uint8_t mx = 0x33, mn, b;
+
+    ST_U8(s + 0x156, 0x33);
+    ST_U8(s + 0x157, 1);
+    ST_U8(s + 0x76e, 0x33);
+    ST_U8(s + 0x76f, 1);
+    ST_U8(s + 0x154, 0x33);
+    ST_U8(s + 0x155, 1);
+    if (LD_S8(LD_U32(e + 0x880) + 0x1a) == 0) {
+        if (LD_S8(pic + 0x2e) != 5)
+            return;
+    } else {
+        mx = LD_U8(pic + 0x28);
+        if (mx < 0x34) {
+            b = LD_U8(pic + 0x27);
+            if (b < 0x33) {
+                ST_U8(s + 0x156, b);
+                mx = b;
+            } else {
+                mx = 0x33;
+            }
+        } else {
+            ST_U8(s + 0x156, mx);
+        }
+        mn = LD_U8(pic + 0x28);
+        if (mn >= 2)
+            ST_U8(s + 0x157, mn);
+        else if (LD_S8(pic + 0x27) == 0)
+            ST_U8(s + 0x157, 0);
+    }
+    if (LD_S8(pic + 0x2e) == 5 && LD_U8(pic + 0x27) != 0x33)
+        ST_U8(s + 0x154, LD_U8(pic + 0x27));
+    if (mx == 0)
+        ST_U8(s + 0x156, 1);
+    else if (mx > 0x33)
+        ST_U8(s + 0x156, 0x33);
+    b = LD_U8(s + 0x157);
+    if (b == 0)
+        ST_U8(s + 0x157, 1);
+    else if (b > 0x33)
+        ST_U8(s + 0x157, 0x33);
+    b = LD_U8(s + 0x154);
+    if (b == 0)
+        ST_U8(s + 0x154, 1);
+    else if (b > 0x33)
+        ST_U8(s + 0x154, 0x33);
+}
+
+static void e33_set_sliceinfo(E33 *X, uint32_t e)
+{
+    uint32_t vb, s, cur, pic, mbw, mbh, n, w, h, base, a, b, c, d, ref, bits;
+    uint8_t tpl[0x228], refresh = 0, nref;
+    int8_t rev, idr, slices;
+    int32_t q, k, lo, hi;
+
+    if (LD_S8(e + 0xc) != 0) {
+        if (LD_S8(e + 0xc) == 1)
+            OEM_memset(X, LD_U32(e + 0x36c), 0, 0xf48);
+        return;
+    }
+    vb = LD_U32(e + 0x88c);
+    s = LD_U32(e + 0x36c);
+    OEM_memset(X, s, 0, 0x878);
+    cur = LD_U32(vb + 4);
+    pic = LD_U32(vb + 8);
+    rev = LD_S8(cur);
+    idr = LD_S8(pic + 0x20) == 2;
+    ST_U8(s, idr ? 2 : 0);
+    ref = LD_U32(pic + 4);
+    ST_U32(s + 0x7d4, ref);
+    ST_S8(s + 0x874, rev);
+    ST_U8(s + 0x7ad, LD_U8(cur + 0x7b0));
+    if (LD_S8(cur + 0x7b0) != 0)
+        refresh = LD_U8(cur + 0x7b1);
+    ST_U8(s + 0x7ae, refresh);
+    ST_U8(s + 0x238, LD_U8(cur + 0x7b5));
+    if (LD_S8(cur + 0x7b5) != 0)
+        ST_U32(s + 0x23c, LD_U32(cur + 0x7b8));
+    nref = LD_U8(cur + 0x7b4);
+    nref = nref == 0 ? 1 : nref < 3 ? nref : 2;
+    ST_U8(s + 0x7d8, nref);
+
+    if (rev == 6) {
+        ST_U8(s + 0xec, 1);
+        ST_U8(s + 0xee, 5);
+        t33_si_rev6(X, s);
+    } else if (rev == 7) {
+        ST_U8(s + 0x42d, 5);
+        t33_put(X, s + 0x3ef, t33_si_3ef_7, 16);
+        ST_U8(s + 0xe6, 0x16);
+        ST_U8(s + 0xf3, LD_S32(s + 8) > 0x800);        /* s+8 is still 0 here */
+        ST_U8(s + 0x781, LD_U8(cur + 0x7b2));
+        ST_U8(s + 0x529, 1);
+        ST_U8(s + 0x7ac, LD_S8(cur + 0x7b3) != 0 && LD_S8(cur + 0x7b2) != 0);
+    }
+
+    /* picture geometry and the VPU work-buffer layout */
+    ST_U8(s + 0x19, 1);
+    ST_U8(s + 0x458, 1);
+    ST_U8(s + 0x51e, 1);
+    ST_U8(s + 0x430, LD_S8(e + 0x88a) == 100);
+    w = LD_U16(LD_U32(e + 0x880));
+    h = LD_U16(LD_U32(e + 0x880) + 2);
+    ST_U8(s + 0x260, 1);
+    mbh = (h + 15) >> 4;
+    mbw = (w + 15) >> 4;
+    n = mbw * mbh;
+    ST_U8(s + 0x11, mbh - 1);
+    ST_U8(s + 0x12, 8);
+    base = LD_U32(vb + 0x10);
+    ST_U16(s + 0xc, mbw);
+    ST_U16(s + 0xe, mbh);
+    ST_U32(s + 4, w);
+    ST_U32(s + 8, h);
+    ST_U16(s + 0x14, w);
+    ST_U16(s + 0x16, h);
+    ST_U32(s + 0x48, w);
+    ST_U32(s + 0x4c, h);
+    a = (n * 0x18 + 0xff) & ~0xffu;
+    b = (base + 0x20ff) & ~0xffu;
+    c = ((n + 0xff) & ~0xffu) + a + b;
+    d = (n * 4 + 0xff) & ~0xffu;
+    ST_U32(s + 0x250, c);           /* MB QP / flag map, 16 bit per MB */
+    ST_U32(s + 0x268, b);
+    ST_U32(s + 0x24c, b + a);       /* SMART map, 1 bit per MB */
+    ST_U32(s + 0x254, c + d);       /* ROI map, 16 bytes per 4 MBs */
+    ST_U32(s + 0xc8, b);
+    ST_U32(s + 0x25c, c + d + (LD_S8(cur + 0x7ac) != 0 ? d : 0));
+    ST_U8(s + 0xe8, 2);
+    ST_U8(s + 0xcf, 2);
+    ST_U8(s + 0xd2, 0x10);
+    ST_U8(s + 0xd6, 0xc);
+    ST_U8(s + 0xd4, 0x10);
+    ST_U8(s + 0xc4, 1);
+    ST_U8(s + 0x152, 1);
+    ST_U8(s + 0x172, 1);
+    ST_U8(s + 0xc5, 1);
+    ST_U8(s + 0xc6, 1);
+    ST_U8(s + 0xf1, 1);
+    ST_U8(s + 0xf2, 1);
+    ST_U8(s + 0x114, 1);
+    ST_U8(s + 0x158, 1);
+    ST_U8(s + 0xce, 4);
+    {
+        static const uint8_t d8[7] = { 8, 0xc, 0x11, 0x16, 0x20, 0x2a, 0x40 };
+
+        for (int i = 0; i < 7; i++)
+            ST_U16(s + 0xd8 + 2 * i, d8[i]);
+    }
+    ST_U8(s + 0xd7, 3);
+    t33_put(X, s + 0x174, t33_sid(0x201124, 16), 16);
+    t33_put(X, s + 0x116, t33_sid(0x200f64, 6), 6);
+    t33_put(X, s + 0x11c, t33_sid(0x200f4c, 24), 24);
+    t33_put(X, s + 0x200, t33_si_200, 4);
+    ST_U8(s + 0x27d, 1);
+    ST_U8(s + 0x27e, 1);
+    for (int i = 0; i < 8; i++)
+        ST_U8(s + 0x284 + i, 4);
+    ST_U8(s + 0x2b1, 1);
+    ST_U8(s + 0x2b0, 1);
+    ST_U8(s + 0x2b3, 4);
+    ST_U8(s + 0x2b5, 1);
+    ST_U8(s + 0x2b6, 1);
+    ST_U8(s + 0x2b2, 3);
+    ST_U8(s + 0x2bc, 0x3f);
+    ST_U8(s + 0x2c0, 0x40);
+    ST_U8(s + 0x2c4, 0x20);
+    ST_U8(s + 0x2b7, 3);
+    if (LD_S8(s + 0x7ad) != 0 && LD_S8(s + 0x781) == 0 && refresh * 0x40 + 8 < 0x20)
+        ST_S32(s + 0x2c4, refresh * 0x40 + 8);
+    ST_U8(s + 0x31d, LD_S8(pic + 0x20) == 2 ? 6 : 3);
+    ST_U8(s + 0x31c, 0x21);
+    ST_U8(s + 0x31e, 1);
+    ST_U8(s + 0x320, LD_S8(pic + 0x20) != 2 ? 0x1c : 0x19);
+    ST_U8(s + 0x345, 10);
+    ST_U8(s + 0x344, 4);
+    ST_U8(s + 0x3ed, 1);
+    ST_U8(s + 0x3ee, 7);
+    ST_U8(s + 0x347, 1);
+    ST_U8(s + 0x40e, 1);
+    ST_U8(s + 0x41c, 4);
+    ST_U8(s + 0x41d, 4);
+    /* s+0x400..0x40b: twelve bytes of a vendor global that stays 0 (0x226294) */
+    t33_put(X, s + 0x322, t33_si_322, 32);
+    t33_put(X, s + 0x42e, t33_si_42e, 2);
+    ST_U8(s + 0x522, 0xcc);
+    ST_U8(s + 0x528, 5);
+    ST_U8(s + 0x521, 5);
+
+    /* start-QP classes */
+    q = LD_S32(pic + 8);
+    k = q <= 0x13 ? 0 : q <= 0x1a ? 1 : q <= 0x20 ? 2 : q <= 0x26 ? 3 : q <= 0x29 ? 4 : q <= 0x2d ? 5 : 6;
+    ST_S8(s + 0x153, q);
+    ST_U8(s + 0xcc, !idr);
+    ST_U8(s + 0xcd, !idr);
+    ST_U8(s + 0xd0, !idr);
+    ST_U8(s + 0xd1, !idr);
+    ST_U8(s + 0x2b8, idr ? 3 : 0);
+    ST_U8(s + 0x2b4, nref == 2 && ref > 1);
+    t33_put(X, s + 0x184, t33_sid(0x2010ec + 8 * k, 8), 8);
+    t33_put(X, s + 0x205, t33_si_205, 48);
+    k = (q & 0xff) <= 0x1d ? 0 : (q & 0xff) <= 0x29 ? 1 : 2;
+    t33_put(X, s + 0x1f7, t33_sid(0x200b90 + 4 * k, 4), 4);
+    if (rev == 6) {
+        ST_U8(s + 0x7e5, !idr);
+        ST_U8(s + 0x40d, LD_S8(pic + 0x20) != 2);
+        ST_S8(s + 0x819, q);
+        ST_U32(s + 0x7ec, LD_U32(pic + 4));
+    } else if (rev == 7) {
+        ST_U8(s + 0x42c, 1);
+        ST_U8(s + 0x45a, 1);
+    }
+
+    /* SMART still map: one bit per MB from the encoder's byte map */
+    {
+        int8_t on = LD_S8(cur + 0x43c) == 1;
+
+        ST_U8(s + 0x159, on);
+        if (LD_S8(cur + 0x474) != 0) {
+            on = LD_S8(cur + 0x481);
+            ST_U8(s + 0x159, on);
+        }
+        /* with cur+0x474 the vendor reads the map from a file (not ported) */
+        if (on && LD_S8(cur + 0x474) == 0) {
+            uint32_t src = LD_U32(cur + 0x440), map = LD_U32(s + 0x24c);
+
+            for (uint32_t i = 0; (int32_t)i < (int32_t)n; i += 4) {
+                uint32_t v = 0;
+
+                for (uint32_t j = 0; j < 4; j++)
+                    if ((int32_t)(i + j) <= (int32_t)n)
+                        v |= (uint32_t)LD_U8(src + i + j) << (8 * j);
+                ST_U32(map + i, v);
+            }
+        }
+    }
+
+    /* ROI regions; with cur+0x474 the vendor reads them from a file (not
+     * ported) */
+    lo = 1;
+    hi = 0x33;
+    if (rev == 6) {
+        int8_t c3d = LD_S8(pic + 0x3d);
+
+        if (c3d < 40) {
+            hi = (int8_t)(c3d + 12);
+            lo = hi > 0x19 ? (int8_t)(c3d - 13) : 1;
+        } else {
+            lo = 0x1a;
+            hi = 0x33;
+        }
+    }
+    if (LD_S8(cur + 0x474) != 0)
+        ST_U8(s + 0x15a, LD_U8(cur + 0x480));
+    else
+        t33_si_roi(X, vb, s, lo, hi);
+
+    /* ROI map: per 4 MBs four words from the encoder's 4-byte records */
+    {
+        int8_t on = LD_S8(cur + 0x7ac);
+
+        ST_U8(s + 0x112, on);
+        ST_U8(s + 0x113, LD_U8(cur + 0x7ae));
+        if (LD_S8(cur + 0x474) != 0) {
+            on = LD_S8(cur + 0x482);
+            ST_U8(s + 0x112, on);
+        }
+        if (on) {
+            uint32_t r22 = LD_U8(pic + 0x22), nm = LD_U16(s + 0xc) * LD_U16(s + 0xe);
+
+            if (r22 != 0) {
+                uint32_t row = (r22 - 1) * 4 + LD_U8(pic + 0x23);
+
+                t33_put(X, s + 0x205, t33_sid(0x200f6c + 0x30 * row, 0x30), 48);
+            }
+            for (int32_t i = 0; i < (int32_t)nm; i += 4) {
+                uint32_t o = LD_U32(s + 0x254) + 4 * i, src = LD_U32(LD_U32(vb + 0xc) + 0x20) + i;
+
+                ST_U32(o, (LD_U8(src + 1) & 0x1f) << 22 | (LD_U8(src) & 0x1f));
+                ST_U32(o + 4, (LD_U8(src + 2) & 0x1f) << 12);
+                ST_U32(o + 8, (LD_U8(src + 3) & 0x1f) << 2);
+                ST_U32(o + 12, 0);
+            }
+        }
+    }
+    ST_U8(s + 0x349, 1);
+    ST_U8(s + 0x860, 1);
+    if (LD_S8(vb + 0xa4) != 0) {
+        OEM_memset(X, LD_U32(s + 0x250), 0, LD_U16(s + 0xc) * 2 * LD_U16(s + 0xe));
+        ST_U8(vb + 0xa4, 0);
+    }
+
+    /* field records */
+    memcpy(tpl, t33_sid(T33_SI_TPL, sizeof(tpl)), sizeof(tpl));
+    if (rev == 6 || rev == 7) {
+        const uint8_t *r = t33_sid(0x200c14 + 6 * LD_U8(pic + 0x2d), 6);
+
+        for (int i = 0; i < 6; i++) {
+            t33_tpl_set(X, tpl, 0x26 + i, r[i]);
+            t33_tpl_set(X, tpl, 0x45 + 0x26 + i, r[i]);
+        }
+        if (rev == 6) {
+            uint8_t z = LD_U8(pic + 0x2e), on = z >= 4, v = *t33_sid(0x200bd4 + z, 1);
+
+            t33_tpl_set(X, tpl, 0x11, v);
+            t33_tpl_set(X, tpl, 0x45 + 0x11, v);
+            t33_tpl_set(X, tpl, 1, on);
+            t33_tpl_set(X, tpl, 0x45 + 1, on);
+            t33_tpl_set(X, tpl, 0, on);
+            t33_tpl_set(X, tpl, 0x45, on);
+        }
+    }
+    t33_pack_fields(X, s, tpl);
+
+    /* MB map flags: 0x9000 intra-refresh rows, 0xa000 forced intra (all) */
+    {
+        uint32_t map = LD_U32(s + 0x250), nm = LD_U16(s + 0xc) * LD_U16(s + 0xe);
+        int clr2c4 = 0, zero = 0;
+
+        if (LD_S8(cur + 0x7bc) != 0 && LD_S8(pic + 0x30) != 0) {
+            int32_t m = LD_U16(s + 0xc);
+
+            t33_map_or(X, map, m * LD_S32(pic + 0x34), m * LD_S32(pic + 0x38), 0x9000);
+            ST_U8(vb + 0xa4, 1);
+        }
+        if (LD_S8(pic + 0x3c) == 1 && LD_S8(s) == 0) {
+            t33_map_or(X, map, 0, (int32_t)nm, 0xa000);
+            ST_U8(vb + 0xa4, 1);
+            if (LD_S8(pic + 0x30) != 0)
+                ST_U8(s + 0x3ec, 0);
+            clr2c4 = 1;
+            zero = LD_S8(pic + 0x3c) != 0;
+        } else if (LD_S8(pic + 0x30) != 0) {
+            ST_U8(s + 0x3ec, 0);
+            clr2c4 = 1;
+            zero = LD_S8(pic + 0x3c) != 0;
+        } else if (LD_S8(pic + 0x3c) != 0) {
+            clr2c4 = 1;
+            zero = 1;
+        }
+        if (clr2c4)
+            ST_U32(s + 0x2c4, 0);
+        if (zero) {
+            ST_U32(s + 0x2c0, 0);
+            ST_U8(s + 0x3ec, 0);
+            ST_U8(s + 0x42c, 0);
+        }
+    }
+
+    if (rev == 6) {
+        t33_put(X, s + 0x434, t33_sid(0x200e74 + 0x24 * LD_U8(pic + 0x2e), 0x24), 0x24);
+    } else if (rev == 7) {
+        t33_put(X, s + 0x434, t33_sid(0x200e74, 0x24), 0x24);
+        if (LD_S8(pic + 0x2e) != 0)
+            ST_U8(s + 0x459, 1);
+    }
+
+    /* slices: basic units and their targets */
+    slices = LD_S8(pic + 0x24);
+    ST_U8(s + 0x52a, slices != 0);
+    k = LD_S8(s + 0xf3) != 0 ? 4 : 2;
+    bits = LD_S8(pic + 0x24) == 1 ? LD_U32(pic + 0x18) : LD_U32(pic + 0x10);
+    if (rev == 6) {
+        ST_U8(s + 0x534, 5);
+        ST_U8(s + 0x768, LD_S8(pic + 0x24) == 1 ? 0xf : 6);
+        ST_S8(s + 0x769, LD_S8(pic + 0x24) == 1 ? 0 : -6);
+    } else if (rev == 7) {
+        uint32_t r = (uint32_t)((((int32_t)bits >> 10) * 0x6e) / 100);
+
+        ST_U8(s + 0x534, 7);
+        ST_U8(s + 0x768, LD_S8(pic + 0x24) == 1 ? 0x33 : 0xc);
+        ST_S8(s + 0x769, LD_S8(pic + 0x24) == 1 ? 0 : -6);
+        ST_S8(s + 0x770, -3);
+        ST_S32(s + 0x774, (int32_t)bits >> 12);
+        ST_U32(s + 0x778, r);
+        if ((uint32_t)((int32_t)bits >> 12) > 0xffff)
+            ST_U32(s + 0x774, 0xffff);
+        if (r > 0xffff)
+            ST_U32(s + 0x778, 0xffff);
+    }
+    if (slices == 0) {
+        OEM_memset(X, s + 0x52c, 0, 9);
+        OEM_memset(X, s + 0x768, 0, 6);
+        OEM_memset(X, s + 0x54e, 0, 0x18);
+        OEM_memset(X, s + 0x568, 0, 0x200);
+    } else {
+        uint8_t sel;
+
+        ST_U8(s + 0x76d, 1);
+        if (rev == 6) {
+            int32_t v = LD_S8(s + 0x768);
+            int8_t m;
+
+            if (LD_S8(cur + 0x43c) == 0) {
+                int32_t t = 0x3f - LD_S8(pic + 0x3d);
+
+                v = v < t ? v : t;
+            } else if (v > 0xc) {
+                v = 0xc;
+            }
+            m = LD_S8(s + 0x769);
+            ST_S8(s + 0x768, v);
+            ST_S8(s + 0x769, m < -0xc ? -0xc : m);
+        }
+        sel = LD_U8(s + 0x534);         /* jump tables 0x1e9744 / 0x1e9724 */
+        if (sel < 8) {
+            int cum = sel == 1 || sel == 3 || sel == 4 || sel == 5;
+
+            e33_bu_target_bits(X, vb, s, cum, k, 1, bits);
+            if (sel == 5) {
+                ST_U8(s + 0x76a, 3);
+            } else if (sel >= 6) {
+                ST_U8(s + 0x76c, 3);
+                ST_U8(s + 0x76b, 3);
+            }
+        }
+    }
+    if (rev == 6)
+        t33_si_qp6(X, e, vb, s);
+    else if (rev == 7)
+        t33_si_qp7(X, e, vb, s);
+
+    /* picture buffers */
+    if (LD_S8(s + 0x7ad) == 0)
+        ST_U32(s + 0x7d0, 0x3f);
+    else
+        t33_si_refresh(X, vb, s, cur);
+    t33_si_ring(X, vb, s, cur);
+    if (rev == 6) {
+        int8_t f = LD_S8(s + 0x844);    /* 0: memset above */
+        int32_t w64;
+        uint32_t y;
+
+        if (f == 0)
+            return;
+        w64 = (LD_S32(s + 4) + 0x3f) >> 6;
+        ST_S8(s + 0x81a, f);
+        ST_S8(s + 0x81b, f);
+        ST_S32(s + 0x7a4, ((int32_t)t33_align(LD_S32(s + 8), 0x10) / 8) * w64);
+        ST_S32(s + 0x7a8, ((int32_t)(LD_S32(s + 8) + 0xf) >> 4) * w64);
+        y = t33_si_refs(X, vb, s, s + 0x848);
+        ST_U32(s + 0x81c, LD_S32(s + 0x7a4) * 0x10 + y);
+        ST_U32(s + 0x820, LD_S32(s + 0x7a8) * 0x10 + LD_U32(vb + 0x24));
+    } else if (rev == 7 && LD_S8(s + 0x781) != 0) {
+        t33_si_refs(X, vb, s, s + 0x784);
+    }
+}
+
+/* ------------------------------------------------------- other entries */
+
+#define E33_UNUSED __attribute__((unused))
+
+/* JZ_VPU_RC_FRAME_REPEATE_JUDGE_H264_T33 (0x19d44c): never re-encodes */
+static E33_UNUSED int e33_repeat_judge(E33 *X)
+{
+    (void)X;
+    return 0;
+}
+
+/* JZ_VPU_RC_FRAME_MULT_REPEATE_H264_T33 (0x19d454): re-run the slice block
+ * for a repeated picture */
+static E33_UNUSED int e33_mult_repeat(E33 *X, uint32_t e)
+{
+    uint32_t sm = LD_U32(e + 0x87c), v = LD_U32(e + 0x47c);
+
+    if (LD_S8(e + 0x30) == 0)
+        return 0;
+    ST_U8(e + 0x50, LD_U8(e + 0x810));
+    ST_U8(e + 0x52, LD_U8(e + 0x811));
+    ST_U32(LD_U32(e + 0x88c) + 0x10, v);
+    ST_U32(sm + 0xc, v);
+    e33_frame_feature(X, e);
+    e33_set_sliceinfo(X, e);
+    e33_output_param(X, e, 1);
+    return 1;
+}
+
+/* JZ_VPU_RC_FREE_H264_T33 (0x19d4f8): the state block pointer at @p
+ * (freed by the caller of the port) */
+static E33_UNUSED void e33_free(E33 *X, uint32_t p)
+{
+    if (LD_S32(p) != 0)
+        ST_S32(p, 0);
+}
+
+/* librc_h264_get_version (0x19d544) */
+#define T33_RC_VERSION 0x13501ee
+
 /* ---------------------------------------------------------- picture start */
 
 /* Still-map region vote (FRAME_START, 0x1abc..): the encoder's still map
