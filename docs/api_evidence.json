@@ -10837,16 +10837,16 @@
         "T20": "n.a.",
         "T21": "n.a.",
         "T23": "n.a.",
-        "T30": "aud",
+        "T30": "host",
         "T31": "dev",
         "T32": "n.a.",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Static: channel bound (< 5) and source bound (< 3) equal to the vendor 1.0.5 (0xe3f7c); the vendor additionally clears three per-channel depth counters and sets a source-map flag, OpenIMP stores the source channel. No apitest case. T31 (#370): an ext channel is a software-scaled copy of its source channel (libimp 1.1.6 nv12_scaler_16 equivalent, filled in the source capture thread); T30 shares the stored-only gap (vendor 1.0.5 exports SetSource, OpenIMP T30 stores it only).",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Static: channel bound (< 5) and source bound (< 3) equal to the vendor 1.0.5 (0xe3f7c); the vendor additionally clears three per-channel depth counters and sets a source-map flag, OpenIMP stores the source channel. No apitest case. T31 (#370): an ext channel is a software-scaled copy of its source channel (libimp 1.1.6 nv12_scaler_16 equivalent, filled in the source capture thread); T30 (#370): libimp 1.0.5 (Ghidra, 0xe3f7c, on_framesource_group_data_update) stores the source in a flag table nothing reads: every enabled ext channel is cut out (its own crop attribute) and scaled with sw_resize (c_resize_c, bilinear 1/16 steps) from the channel 0 capture path, GetFrame serves its depth list; OpenIMP T30 does the same (ext pool filled in the ch0 dequeue hook), source stored only.",
       "ref": {"T31": "apitest extchn_t31 2026-11-12 T31L (#370): ext ch 3 (FS_EXT_CHANNEL 320x180) + SetSource(3,1): FS3->ENC5 46 H.264 streams in 3 s on OpenIMP (libimp of claude/t31-370 from /tmp) and 46 on the vendor libimp 1.1.6 + module; ext picture = scaled ch1 picture (decoded, checked); SetSource ext 5 / source 3 -1, source -1 stored (0), GetFrame(3) 0 without a frame on both", 
-        "T30": "static audit 2026-10-31 (OpenIMP claude/t30-audit)"
+        "T30": "host test fs_lifecycle_test_t30 ext_channel (c_resize_c bit-exact reference: scale, crop, copy) + QEMU ingenic-t30 apitest extchn_t30 2026-11-12 (#370): ext ch3 320x180 from ch0 2304x1536, GetFrame(3) 20 frames, FS3->ENC5 35 streams in 3 s, ext picture = scaled ch0 (luma mean abs diff 0.00), 4 runs PASS, origin/next FAILs the case (Enable -1); no T30X device run"
       }
     },
     "FrameSource_SetYuvAlign": {
