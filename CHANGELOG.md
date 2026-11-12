@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-12: SU_Base_Raw2SUTime / SUTime2Raw decided vendor-equal (#321)
+
+- Vendor libsysutils 1.3.0 (T40 SDK) run under unicorn (`tools/su_time_oracle.py`, 8000 inputs): `SU_Base_Raw2SUTime` returns plain `struct tm` fields (month 0..11, year-1900) over the whole uint32 range, so it is not the inverse of `SU_Base_SUTime2Raw` (month 1..12, year > 1900); `SU_Base_SUTime2Raw` is the kernel mktime formula in unsigned 32-bit arithmetic, never fails and does not normalise month/day overflow. No undefined range.
+- OpenIMP exports neither call; the T40 image answers with ingenic-system-libs-neo libsysutils, which now matches the vendor byte for byte (neo branch `fix/su-base-time-vendor-equal`); the former round-trip answer is dropped. Host test `tests/su_time` (in `make check`); api_evidence T40 note and ref updated, cell stays dev.
+
 ## 2026-11-12: first GetFrame / snapshot after a pause returned an old picture (#405, regression of #374)
 
 - #374 kept one buffer with the driver (oldest ready frame back when none was left). The T10/T20 (and T30) ISP writes a ring of DMA banks and stops its DMA while the next bank is empty, so one queued buffer completes no frame: capture stopped with frames from before the pause in the ready queue, the stock frame channel slept in DQBUF for good (no idle recycle) and the next `GetFrame` / JPEG snapshot got such a frame (T10 light box: first snapshot after an AE compensation step showed the previous step; NV12 noise frames came every 2nd frame).
