@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Vendor libsysutils 1.3.0 (T40 SDK) run under unicorn (`tools/su_time_oracle.py`, 8000 inputs): `SU_Base_Raw2SUTime` returns plain `struct tm` fields (month 0..11, year-1900) over the whole uint32 range, so it is not the inverse of `SU_Base_SUTime2Raw` (month 1..12, year > 1900); `SU_Base_SUTime2Raw` is the kernel mktime formula in unsigned 32-bit arithmetic, never fails and does not normalise month/day overflow. No undefined range.
 - OpenIMP exports neither call; the T40 image answers with ingenic-system-libs-neo libsysutils, which now matches the vendor byte for byte (neo branch `fix/su-base-time-vendor-equal`); the former round-trip answer is dropped. Host test `tests/su_time` (in `make check`); api_evidence T40 note and ref updated, cell stays dev.
+## 2026-11-12: T40 SU_Key_* checked on the Eufy .184 (matrix1112)
+
+- Vendor libsysutils 1.3.1 and OpenIMP both answer OpenEvent -1 (ENOENT) because they look for the input name "gpio_keys" while the board names it "gpio-keys"; Enable/DisableEvent -1 in both: vendor-equal, but the hardware is present, so the cells are not `nohw`: T40 Read/Enable/DisableEvent host -> aud with the reason. The image libsysutils (neo) opens the device and reads an injected key; its Enable/DisableEvent answer -1 (wrong sysfs path).
 
 ## 2026-11-12: first GetFrame / snapshot after a pause returned an old picture (#405, regression of #374)
 
