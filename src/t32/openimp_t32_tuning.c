@@ -275,7 +275,9 @@ BCSH(BcshHue, ID_BCSH_HUE, BCSH_HUE)
 #define PASS(name, type, id) \
     PASS_SET(IMP_ISP_Tuning_Set##name, type, id) PASS_GET(IMP_ISP_Tuning_Get##name, type, id)
 
+#ifndef PLATFORM_T33	/* the T33 2.0.2.1 API has no BCSH RGB offset (#390) */
 PASS(BcshRGBOffsetAttr, IMPISPBCSHRGBOffsetAttr, ID_BCSH_RGB_OFFSET)
+#endif
 PASS(ModuleControl, IMPISPModuleCtl, ID_MODULE_CTL)
 PASS(Module_Ratio, IMPISPModuleRatioAttr, ID_MODULE_RATIO)
 PASS(StatisConfig, IMPISPStatisConfig, ID_STATIS_CONFIG)
@@ -315,6 +317,7 @@ PASS_GET(IMP_ISP_GetCsccrMode, IMPISPCsccrModeAttr, ID_CSCCR)
 PASS_SET(IMP_ISP_HB_SetAttr, uint16_t, ID_HB)
 PASS_GET(IMP_ISP_HB_GetAttr, uint16_t, ID_HB)
 
+#ifndef PLATFORM_T33	/* no IMPISPSensorSyncEffect / multi-sensor effect API in T33 2.0.2.1 (#390) */
 /* multi-sensor sync: Set always goes to VI 0, Get takes any VI (no range check) */
 #define MULTI(name, id) \
     int32_t IMP_ISP_Tuning_Set##name(IMPISPSensorSyncEffect *p) \
@@ -324,6 +327,7 @@ PASS_GET(IMP_ISP_HB_GetAttr, uint16_t, ID_HB)
 MULTI(MultiSensorAeEffect, ID_MS_AE)
 MULTI(MultiSensorAWBEffect, ID_MS_AWB)
 MULTI(MultiSensorEffect, ID_MS_EFFECT)
+#endif
 
 /* ---- with field checks ------------------------------------------------------- */
 int32_t IMP_ISP_Tuning_SetHVFLIP(IMPVI_NUM num, IMPISPHVFLIPAttr *attr)

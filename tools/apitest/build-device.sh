@@ -25,6 +25,7 @@ case $soc in
   T40) hv=T40/1.3.1/en;   defs="-DPLATFORM_T41 -DAPITEST_T40";;
   T41) hv=T41/1.2.6/zh;   defs="-DPLATFORM_T41";;
   T32) hv=T32/1.0.6/en;   defs="-DPLATFORM_T41 -DAPITEST_T32";;   # planned (#300): T41 family + T23-family encoder
+  T33) hv=T33/2.0.2.1/en; defs="-DPLATFORM_T41 -DAPITEST_T32 -DAPITEST_T33";;   # planned (#394): the T32 apitest on the T33 2.0.2.1 API
   *) echo "unsupported SoC $soc" >&2; exit 2;;
 esac
 inc=$APITEST_HEADERS/$hv

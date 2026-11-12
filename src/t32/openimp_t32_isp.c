@@ -53,7 +53,11 @@
 #define TAG "T32-ISP"
 
 /* what this library speaks; the driver answers DRIVER_VERSION with these */
+#ifdef PLATFORM_T33
+#define T32_DRIVER_SOC     "PRJ008"   /* T33 (#390; vendor tx-isp-t33.ko answers PRJ008 / 20251107a, #384) */
+#else
 #define T32_DRIVER_SOC     "PRJ007"
+#endif
 #define T32_DRIVER_VERSION "20251107a"
 
 #define T32_DRIVER_VERSION_ROOM 96   /* vendor ko copy size */

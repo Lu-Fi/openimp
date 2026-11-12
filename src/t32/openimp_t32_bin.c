@@ -52,8 +52,13 @@
 #define T32_BIN_VI        4
 #define T32_BIN_MODES     IMPISP_BIN_MODE_BUTT
 #define T32_BIN_PATH      128
+#ifdef PLATFORM_T33
+#define T32_BIN_CAPACITY  0x25800u  /* PRJ008 buffer of the vendor T33 libimp 2.0.2.1 (#390) */
+#define T32_BIN_SOC_TAG   "-PRJ008-"
+#else
 #define T32_BIN_CAPACITY  0x32000u  /* PRJ007 buffer (vendor: PRJ008 0x25800) */
 #define T32_BIN_SOC_TAG   "-PRJ007-"
+#endif
 #define T32_BIN_VER_LEN   8         /* bin bytes 0-7 */
 #define T32_BIN_HDR_LEN   0x98      /* bin bytes 8..0x9f */
 #define T32_BIN_HDR_SOC   0x90      /* SoC in that header (bin byte 0x98) */
