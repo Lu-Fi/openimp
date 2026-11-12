@@ -5227,7 +5227,7 @@
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl. T30 device 2026-11-10 (b53/b54): Get 0, Set 1 reads back 1, restore 0 on both stacks.",
+      "note": "T10+T20+T21: newly exported (agg-25); T10 shares the T20 build; T30 1.0.5: tuning control 0x8000022, as T20/T21; host test with a fake ioctl. T30 device 2026-11-10 (b53/b54): Get 0, Set 1 reads back 1, restore 0 on both stacks. T21 2026-11-12 (#422): the vendor tx-isp-t21 g_ctrl answers 0x8000022 with 0 without writing the value (0x8000020..0x8000023 fall through) and vendor 1.0.33 GetAeStrategy returns an uninitialised stack word, so T21 has no AE strategy; OpenIMP reads 0 after Set 0/1, integration time unchanged (1688 -> 1688), every call rc 0: vendor-equal no-op.",
       "ref": {
         "T10": "apitest apitest-cov 2026-10-27 .31 (API round trip, no visible effect expected)",
         "T30": "b53t T30X lab 2026-11-10 (b53/b54)"

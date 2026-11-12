@@ -17,6 +17,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
   - T40 `SU_CIPHER_DES_Test`: host -> nohw (user-approved error path, no DES node on the board).
 - New issues for code gaps: #427 (T30 HSkip Helix wiring, cells cache), #428 (T30 Iridix DRC strength above the vendor, feature row 14).
 - T30X slot b68 prepared, not run (audit, needs the user's go): SU cells with the vendor 1.0.5 libsysutils, keys, LED, SU_Base_Reboot as the final reboot, NCU denoise open run, SetISPLDC after #365.
+## 2026-11-12: apitest T41 AF statistics N/A rule in the isp area (#423)
+
+- `tools/apitest/at_isp.c`: on T41 `IMP_ISP_Tuning_GetAfStatistics` / `GetAFMetricesInfo` answering -4090 with EPERM report N/A (AF block off, open-tx-isp `t41_af=0` default; served with `t41_af=1`, #179), the same rule the isp-rt area already used. Device (agg68 image): T41 .32 (gc5603) and .34 (sc5336) isp area FAIL 0, N/A 2. Repeat of case `faceae` on the gc5603 camera: target 40 -> Y 126.9, target 180 -> Y 165.0, PASS (the agg68 FAIL was scene-dependent).
+
+## 2026-11-12: T21 AE strategy is a vendor-equal no-op (#422)
+
+- The vendor tx-isp-t21 module has no AE strategy: its tuning g_ctrl returns 0 for 0x8000022 without writing the value, and the vendor 1.0.33 `IMP_ISP_Tuning_GetAeStrategy` hands back an uninitialised stack word. OpenIMP reads 0 after Set 0/1 with rc 0 and no exposure change. apitest case `aestrategy` checks exactly that on T21 (T20 keeps the full round trip). Device: T21 .27 PASS, T20 .107 PASS (agg68 image).
+
 ## 2026-11-12: apitest base encoder case follows the T10/T20/T21/T30 latch (#421)
 
 - `tools/apitest/at_enc.c`: on T10/T20/T21/T30 the base case reads `GetChnFrmRate` / `GetGOPSize` back after two pictures (the vendor glue latches both to the next picture, #367) and expects the GOP rounded up to a multiple of the frame rate (set 25 at 15 fps reads 30, like the vendor). Library unchanged. Device check (area enc, agg68 image): T10, T20, T21 FAIL 0 (before: 4 FAIL each).
