@@ -15,6 +15,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - soc_vpu node `vtype` as the vendor (H.264 0x91, H.265 0x80) on T32 and T33.
 - QEMU: H.264 FIXQP and CBR decode clean, SSIM like the vendor's on the same scene; JPEG job identical but the address. No T33 camera test. H.265 on T33 is refused at CreateChn until its lists are ported (#391 stays open). Details: docs/T33_DESK_ANALYSIS.md section 9.
 
+## 2026-11-13: T30 lab run b71 results (#308, #100, #328)
+
+- `ISP_Tuning_Get/SetSinterDnsAttr`, `Get/SetTemperDnsAttr`, `SetTemperStrength` on T30 rt -> dev: open effect present and vendor-equal on the T30X (sinter-255 H vs sinter-0 13.08/13.37 open, 13.05/13.27 vendor; temper-255 H 11.24/17.21 open, 11.18/16.84 vendor).
+- Saturation, ColorfxMode, SceneMode, WDRAttr, WB, IntegrationTime/SetExpr stay rt: vendor-equal response in the lab scene, scene too flat to show the effect (sepia, b/w, saturation-0 identical on both stacks). Real differences filed: #449 (GetSaturation reads 0 before any Set, vendor 128), #450 (manual WB blue-high V 161 vs 135).
+- IR cut (row 11): the pin level switches night/day but the `ircut` tool status does not; an oops counter of 1 came from a dmesg grep in the stock-stack step (cause unknown): stays planned, no claim.
+- `SU_Base_Shutdown` (vendor libsysutils 1.0.5 only was run): camera stopped answering and answered again ~25 s later = reboot, not halt; vendor behaviour, cell stays host. #328: no /dev/aes on the T30X, cells unchanged.
+
 ## 2026-11-13: T30 WDR / ADR / DRC cell supported (#428)
 
 - Matrix row 14, T30: ⚠️ -> ✅. The only deviation (Iridix base and unlimit strength above the vendor) is fixed by #428 (open-tx-isp 4fab1e1d) and proven on the T30X (run b70, settled window: 0x3c4 0x58/0x58, 0x3dc 0x100/0x100 open/vendor). WDR stays n/a on the linear SC4236 (SetWDRAttr -1 on both stacks).

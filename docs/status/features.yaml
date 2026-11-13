@@ -485,7 +485,7 @@ features:
       text: 'device-tested: timps auto night switches IR cut + ir850 + mono'
     T30:
       sym: 📋
-      text: "2026-11-11: planned, not tested. The IR cut is a GPIO driven by thingino (daynightd parses `/proc/jz/isp/isp-m0` on T30; the T30 aperto camera configs name the ircut GPIO 72 / 73), not by OpenIMP; the ISP side is row 10 and works. The lab board's stock `ircut` tool timed out talking to its daemon (b52), so no toggle was ever seen. Plan: toggle the GPIO by hand and with daynightd on the open stack and compare snapshots."
+      text: "2026-11-13 T30X lab b71 (open stack, raptor/ric running; no claim): the stock `ircut` tool answered, but its status stayed 'IRCUT filter is set' after night and after day, while `gpio read 72` read 0 in night and 1 in day, i.e. the pin level switches and the tool status does not; an oops counter of 1 came from a dmesg grep during the stock-stack step (dmesg was not saved, cause unknown). Stays planned. 2026-11-11: planned, not tested. The IR cut is a GPIO driven by thingino (daynightd parses `/proc/jz/isp/isp-m0` on T30; the T30 aperto camera configs name the ircut GPIO 72 / 73), not by OpenIMP; the ISP side is row 10 and works. The lab board's stock `ircut` tool timed out talking to its daemon (b52), so no toggle was ever seen. Plan: toggle the GPIO by hand and with daynightd on the open stack and compare snapshots."
       issues:
       - 308
     T31:
