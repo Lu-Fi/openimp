@@ -81,11 +81,6 @@ int IMP_System_GetVersion(IMPVersion *pstVersion)
     return 0;
 }
 
-const char *IMP_System_GetCPUInfo(void)
-{
-    return "T32";
-}
-
 static int64_t ts_offset_us;
 
 uint64_t IMP_System_GetTimeStamp(void)

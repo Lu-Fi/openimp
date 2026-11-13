@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T32/T33 `IMP_System_GetCPUInfo` reads the chip variant (#471)
+
+- `src/t32/openimp_t32_sys.c`: `t32_get_cpu_id()` (cached) as the vendor `get_cpu_id` (libimp T33 2.0.2.1 / T32 2.2.0): SoC id `[0x1300002c]`, T32 sub id `[0x13540238] >> 16`, T33 variant byte `[0x1354021c] >> 24` (the vendor's unaligned read at 0x1354021f, done aligned); `IMP_System_GetCPUInfo` maps the id through the vendor's 20-name table ("T32-LQ" .. "T32-VN", "T33-L" .. "T33-VN", "Unknown" for the rest). The constant "T32" in `openimp_t32_skeleton.c` is gone.
+- Evidence (QEMU): `-M ingenic-t33` t33l returns "T33-L" (as the vendor 2.0.2.1); `-M ingenic-t32` returns "T32-NQ"; 0 oopses.
+
 ## 2026-11-13: T40 GOP and QP-bounds read-back as the vendor glue (#455, #456)
 
 - #455: the T40 vendor 1.3.1 IMP glue puts the CreateChn GOP into whole seconds of the channel rate at the first picture (rounded down: GOP 25 at 20 fps -> IDR every 20, 50 -> 40, as the 2026-11-12 Eufy light-box clips show) and a GOP set at run time (`SetChnGopLength`, a new length in `SetChnGopAttr`) into whole seconds rounded up; the encoder's IDR distance is length x same-scene count rounded up to a multiple of the rate (`AL_Codec_Encode_ValidateGopParam`). OpenIMP T40 now does the same (`src/t40/t40_vendor_cmd.h`); `GetChnGopAttr`/`GetChnAttr` read the new length once a picture went through, as the vendor. Under one second OpenIMP keeps the GOP (vendor reaches 0, not measured; docs/OPENIMP_BEYOND_VENDOR.md section 8).

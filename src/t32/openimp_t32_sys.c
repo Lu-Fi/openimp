@@ -356,6 +356,83 @@ static int t32_reg_access(uint32_t addr, uint32_t *value, int write)
     return 0;
 }
 
+/* vendor get_cpu_id (T32 2.2.0 0x38efc = T33 2.0.2.1 0x3d28c), cached */
+static int t32_cpu_id_calc(void)
+{
+    uint32_t soc = 0, v = 0, w = 0;
+    unsigned chip, b;
+
+    if (t32_reg_access(0x1300002c, &soc, 0) < 0 || (soc >> 28) != 1)
+        return -1;
+    chip = (soc & 0x0fffffffu) >> 12;
+    if (chip == 0x32) {
+        if (t32_reg_access(0x13540238, &v, 0) < 0)
+            return -1;
+        switch (v >> 16) {
+        case 0x9999: return 0;
+        case 0xaaaa: case 0x3333: return 1;
+        case 0x2222: return 2;
+        case 0x4444: return 3;
+        case 0x5555: return 4;
+        case 0x7777: return 5;
+        case 0x6666: return 6;
+        case 0xffff: return 7;
+        case 0x8888: return 8;
+        case 0x1111: return 9;
+        case 0xcccc: return 10;
+        case 0xbbbb: return 11;
+        case 0xdddd: return 12;
+        case 0xeeee: return -1;
+        default: return 21;
+        }
+    }
+    if (chip == 0x33) {
+        /* vendor reads 32 bits at the unaligned 0x1354021f and keeps the low byte */
+        if (t32_reg_access(0x1354021c, &v, 0) < 0 || t32_reg_access(0x13540220, &w, 0) < 0)
+            return -1;
+        b = v >> 24;
+        switch (b) {
+        case 0x99: return 13;
+        case 0xaa: case 0x33: return 14;
+        case 0x44: return 15;
+        case 0x55: return 16;
+        case 0x77: return 17;
+        case 0x11: return 18;
+        case 0xcc: return 19;
+        case 0xdd: return 20;
+        case 0xee: return -1;
+        case 0: return (w & 0x00ffffffu) == 0 ? 15 : 21;
+        default: return 21;
+        }
+    }
+    return -1;
+}
+
+int t32_get_cpu_id(void)
+{
+    static int id, done;
+
+    if (!done) {
+        id = t32_cpu_id_calc();
+        done = 1;
+    }
+    return id;
+}
+
+const char *IMP_System_GetCPUInfo(void)
+{
+    static const char *const names[] = {
+        "T32-LQ", "T32-NQ", "T32-XQ", "T32-A", "T32-ZL", "T32-ZN", "T32-ZX", "T32-VX",
+        "T32-LQH", "T32-DL", "T32-VL", "T32-VNP", "T32-VN", "T33-L", "T33-N", "T33-A",
+        "T33-ZL", "T33-ZN", NULL, "T33-VL", "T33-VN",
+    };
+    int id = t32_get_cpu_id();
+
+    if (id < 0 || id >= (int)(sizeof(names) / sizeof(names[0])) || !names[id])
+        return "Unknown";
+    return names[id];
+}
+
 uint32_t IMP_System_ReadReg32(uint32_t addr)
 {
     uint32_t v = 0;
