@@ -266,6 +266,9 @@ static int want(const char *areas, const char *a)
     return !areas || strstr(areas, a) != NULL;
 }
 
+static char lm_dev_main[64];   /* logger stand-in file of this run, removed at exit (#476) */
+static void lm_cleanup(void) { if (lm_dev_main[0]) unlink(lm_dev_main); }
+
 int main(int argc, char **argv)
 {
     const char *areas;
@@ -288,7 +291,7 @@ int main(int argc, char **argv)
         static char lmd[] = "/tmp/apitest_lmd_XXXXXX";
         int lfd = mkstemp(lmd);
 
-        if (lfd >= 0) { close(lfd); setenv("OPENIMP_LOGGER_DEV", lmd, 1); setenv("APITEST_LM_DEV", lmd, 1); }
+        if (lfd >= 0) { close(lfd); snprintf(lm_dev_main, sizeof(lm_dev_main), "%s", lmd); atexit(lm_cleanup); setenv("OPENIMP_LOGGER_DEV", lmd, 1); setenv("APITEST_LM_DEV", lmd, 1); }
     }
     areas = argc > 5 ? argv[5] : NULL;
     if (argc == 2 && !strcmp(argv[1], "--list")) { list_fns(0); return 0; }

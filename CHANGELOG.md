@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T30/T31 matrix re-derived from the lab runs b71..b84; apitest removes its logger stand-in file (#308, #309, #476)
+
+- `tools/apitest/apitest.c`: the logger stand-in file `/tmp/apitest_lmd_*` is removed at exit (`atexit`), also when the log-macro case does not run (#476).
+- Matrix (`docs/api_evidence.json`): T30 `ISP_Tuning_Get/SetSaturation` and `ISP_Tuning_Get/SetWB` rt -> dev (T30X lab b71/b75/b79, vendor 1.0.5 and OpenIMP on the same camera: GetSaturation 128 on both, saturation-0 U=V 125.4 on both, manual WB red-high/blue-high within 0.2/2.9 U,V, restore within 0.92, 0 oopses; #449 #450 fixed).
+- T31 `ISP_SetAeAlgoFunc` / `ISP_SetAwbAlgoFunc` were already dev (case `customalgo_t31`, 2026-11-12). Remaining T30/T31 non-dev cells are camera-only or hardware-blocked and listed in #308 / #309.
 ## 2026-11-13: T32/T33 `IMP_System_GetCPUInfo` reads the chip variant (#471)
 
 - `src/t32/openimp_t32_sys.c`: `t32_get_cpu_id()` (cached) as the vendor `get_cpu_id` (libimp T33 2.0.2.1 / T32 2.2.0): SoC id `[0x1300002c]`, T32 sub id `[0x13540238] >> 16`, T33 variant byte `[0x1354021c] >> 24` (the vendor's unaligned read at 0x1354021f, done aligned); `IMP_System_GetCPUInfo` maps the id through the vendor's 20-name table ("T32-LQ" .. "T32-VN", "T33-L" .. "T33-VN", "Unknown" for the rest). The constant "T32" in `openimp_t32_skeleton.c` is gone.
