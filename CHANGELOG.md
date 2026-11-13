@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T30 matrix cells from the T30X run b68
+
+- Vendor 1.0.5 and OpenIMP compared on the T30X (audit/t30/b68, 0 oopses in su/encx, SU_Base_Reboot ret 0, camera back): Encoder_Enable/DisableAllNCUDenoise and SU_Base_Raw2SUTime, SU_Base_Reboot, SU_Key_Enable/DisableEvent -> dev; SU_Base_GetDevID, SU_CIPHER_Init/Exit/CreateHandle/DestroyHandle, SU_LED_Command (no /proc/board/power/led0, vendor fails the same) -> nohw.
+- Not proven, stay as they are: ISP_Tuning_SetISPLDC (no result on either stack, #438), SU_Key_ReadEvent (injected key not read, #439), SU_CIPHER_Config/Encrypt/Decrypt (#328).
+
 ## 2026-11-12: T23 GetStream sets pack[0].frameEnd on a complete picture like the vendor (#363)
 
 - The vendor stream thread (`update_h264_one_frmstrm`, T23 1.3.0) sets `frameEnd = 1` on the last pack and then overwrites `pack[0].frameEnd` with the "picture complete" flag, so a whole IDR (SPS, PPS, IDR slice) has 1/0/1. OpenIMP only flagged the last pack outside multi-section mode.
