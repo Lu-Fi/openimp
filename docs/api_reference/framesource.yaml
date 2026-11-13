@@ -318,7 +318,7 @@ functions:
     summary: "Chooses the direct mode the kernel uses at the next `System_Init`: 0 for memory, 1 to 4 for the direct modes (T32)."
     params:
       direct_mode: "Mode, 0 to 4."
-    returns: "-1 for a value outside 0 to 4, when the IVDC device cannot be opened or when the driver refuses; otherwise 0."
+    returns: "0 on success; 0x80010002 for a value outside 0 to 4, 0x80011000 when the IVDC device cannot be opened or the driver refuses (vendor 2.0.2.1 codes)."
     notes: "Call it before `System_Init`; it does not change a running system. Read the active mode with `FrameSource_GetDirectMode`."
     soc: "T32"
   FrameSource_SetIvdcMemLine:
@@ -326,7 +326,7 @@ functions:
     summary: "Sets how many picture lines the IVDC keeps in memory in the single-sensor direct mode (T32)."
     params:
       ivdc_mem_line: "Number of lines, 0 to 6480."
-    returns: "-1 for a value outside 0 to 6480, when the system is not in direct mode 1, or when the driver refuses; otherwise 0."
+    returns: "0 on success; 0x80010002 for a value above 6480, 0x80040080 outside direct mode 1 or while channel 0 runs, 0x80011000 when the driver refuses (vendor 2.0.2.1 codes)."
     soc: "T32"
   FrameSource_CreateJoint:
     group: misc
