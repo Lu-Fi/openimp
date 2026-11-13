@@ -204,8 +204,9 @@ void t_su(void)
         SUNEED(SU_Base_Raw2SUTime) {
             int r3 = f_SU_Base_Raw2SUTime(raw, back); gchk(back);
             int cal = back->year == 2001 && back->mon == 9;
-#ifdef PLATFORM_T30
-            /* T30 libsysutils 1.0.5 (vendor and OpenIMP alike, T30X b61): Raw2SUTime returns struct tm fields (year since 1900, month 0..11) */
+#if defined(PLATFORM_T30) || defined(APITEST_T33)
+            /* T30 libsysutils 1.0.5 (vendor and OpenIMP alike, T30X b61) and T33 libsysutils 2.0.2.1 (the vendor library itself: OpenIMP ships no
+             * SU_* for the T33, QEMU run #452): Raw2SUTime returns struct tm fields (year since 1900, month 0..11), not the inverse of SUTime2Raw (#321) */
             if (!cal && back->year == 101 && back->mon == 8) cal = 1;
 #endif
             CHECK(SU_Base_Raw2SUTime, r3, cal && back->mday == 9 && back->hour == 1 && back->min == 46 && back->sec == 40,

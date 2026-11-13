@@ -280,6 +280,16 @@ int main(int argc, char **argv)
             argc -= 2;
             break;
         }
+    /* Logger device for the whole run: libimp opens /dev/log_main once, at the first log call, and keeps the result
+     * (vendor libalog does the same).  Any earlier area can log first (the vendor libsysutils logs "open rtc node fail"
+     * through imp_log_fun), and the real /dev/log_main (vendor T33 3.10 kernel: Android logger node) or a cached -1 made the
+     * log-macro cases FAIL after the su area (#452).  A regular file stands in for the device; the log-macro case (at_cases.c) reuses it. */
+    if (!getenv("OPENIMP_LOGGER_DEV")) {
+        static char lmd[] = "/tmp/apitest_lmd_XXXXXX";
+        int lfd = mkstemp(lmd);
+
+        if (lfd >= 0) { close(lfd); setenv("OPENIMP_LOGGER_DEV", lmd, 1); setenv("APITEST_LM_DEV", lmd, 1); }
+    }
     areas = argc > 5 ? argv[5] : NULL;
     if (argc == 2 && !strcmp(argv[1], "--list")) { list_fns(0); return 0; }
     if (argc == 2 && !strcmp(argv[1], "--areas")) {

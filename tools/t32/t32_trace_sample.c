@@ -287,6 +287,77 @@ static void osd_attr_print(const char *tag, const IMPOSDRgnAttr *a, const IMPOSD
 static int step(const char *name, int rc);
 #define STEP(call) (mark ? mark(#call) : (void)0, step(#call, (call)))
 
+/* "enc2" (#453): two encoder channels at once, each on its own FrameSource channel (1280x720 and 640x360: the QEMU rmem holds no more), N streams
+ * each polled by one thread per channel.  T32_ENC2=h265,h265 picks the codec of channel 0,1 (default h265,h265: two
+ * channels on one engine, the shared section buffer and lock of the T33 #391). */
+struct enc2_arg { int chn, streams, got; };
+
+static void *enc2_poll(void *p)
+{
+    struct enc2_arg *a = p;
+    int i;
+
+    for (i = 0; i < a->streams; i++) {
+        IMPEncoderStream st;
+        if (IMP_Encoder_PollingStream(a->chn, 10000) || IMP_Encoder_GetStream(a->chn, &st, 1))
+            continue;
+        a->got++;
+        IMP_Encoder_ReleaseStream(a->chn, &st);
+    }
+    return NULL;
+}
+
+static int enc2_run(const IMPFSChnAttr *fs, int streams)
+{
+    static const int sz[2][2] = { { 1280, 720 }, { 640, 360 } };
+    const char *cs = getenv("T32_ENC2") ? getenv("T32_ENC2") : "h265,h265";
+    char c0[16] = "h265", c1[16] = "h265";
+    struct enc2_arg arg[2];
+    pthread_t th[2];
+    int c, ok = 1;
+
+    sscanf(cs, "%15[^,],%15s", c0, c1);
+    for (c = 0; c < 2; c++) {
+        const char *cn = c ? c1 : c0;
+        IMPFSChnAttr a = *fs;
+        IMPEncoderProfile pr = !strcmp(cn, "jpeg") ? T32_PROFILE_JPEG :
+                               !strcmp(cn, "h265") ? T32_PROFILE_HEVC_MAIN : T32_PROFILE_AVC_MAIN;
+        IMPEncoderCHNAttr ea;
+        IMPCell s = { DEV_ID_FS, c, 0 }, d = { DEV_ID_ENC, c, 0 };
+
+        a.picWidth = a.scaler.outwidth = sz[c][0];
+        a.picHeight = a.scaler.outheight = sz[c][1];
+        if (STEP(IMP_FrameSource_CreateChn(c, &a)) || STEP(IMP_Encoder_CreateGroup(c)) ||
+            STEP(IMP_Encoder_SetDefaultParam(&ea, pr, pr == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR,
+                                             sz[c][0], sz[c][1], 15, 1, 15, 0, -1, 1000)) ||
+            STEP(IMP_Encoder_CreateChn(c, &ea)) || STEP(IMP_Encoder_RegisterChn(c, c)) || STEP(IMP_System_Bind(&s, &d)))
+            return 0;
+    }
+    for (c = 0; c < 2; c++)
+        if (STEP(IMP_FrameSource_EnableChn(c)) || STEP(IMP_Encoder_StartRecvPic(c)))
+            return 0;
+    for (c = 0; c < 2; c++) {
+        arg[c].chn = c; arg[c].streams = streams; arg[c].got = 0;
+        pthread_create(&th[c], NULL, enc2_poll, &arg[c]);
+    }
+    for (c = 0; c < 2; c++) {
+        pthread_join(th[c], NULL);
+        printf("T32S enc%d streams %d/%d\n", c, arg[c].got, streams);
+        ok &= arg[c].got == streams;
+    }
+    for (c = 1; c >= 0; c--) {
+        IMPCell s = { DEV_ID_FS, c, 0 }, d = { DEV_ID_ENC, c, 0 };
+        STEP(IMP_Encoder_StopRecvPic(c));
+        STEP(IMP_FrameSource_DisableChn(c));
+        STEP(IMP_System_UnBind(&s, &d));
+        STEP(IMP_Encoder_UnRegisterChn(c));
+        STEP(IMP_Encoder_DestroyChn(c));
+        STEP(IMP_Encoder_DestroyGroup(c));
+        STEP(IMP_FrameSource_DestroyChn(c));
+    }
+    return ok;
+}
+
 /* regions + group 0; returns 0 when every step worked */
 static int osd_setup(void)
 {
@@ -541,11 +612,12 @@ int main(int argc, char **argv)
     int bin_test = !strcmp(codec, "bin");
     int bind_test = !strcmp(codec, "bind");
     int fs3 = !strcmp(codec, "fs3");
+    int enc2 = !strcmp(codec, "enc2");
     int vpu_cycles = !strcmp(codec, "vpu");
     int osd = !strcmp(codec, "osd");
     int isposd = !strcmp(codec, "isposd");
     int isp_only = !strcmp(codec, "isp") || bin_test;
-    int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only && !vpu_cycles;
+    int enc = strcmp(codec, "none") != 0 && !bind_test && !fs3 && !isp_only && !vpu_cycles && !enc2;
     IMPSensorInfo si;
     IMPFSChnAttr fs;
     static IMPEncoderCHNAttr ea;
@@ -558,6 +630,8 @@ int main(int argc, char **argv)
     int enc_h = getenv("T32_ENC_H") ? atoi(getenv("T32_ENC_H")) : 1080;
     int qp_cur = getenv("T32_ENC_QP") ? atoi(getenv("T32_ENC_QP")) : -1, qp_last = qp_cur;
     int i, got = 0;
+    long wait_max = 0;
+    int poll_ms = getenv("T32_POLL_MS") ? atoi(getenv("T32_POLL_MS")) : 3000;   /* QEMU under host load: raise (#453) */
 
     if (getenv("T32_ENC_QPS"))          /* "a-b" */
         sscanf(getenv("T32_ENC_QPS"), "%d-%d", &qp_cur, &qp_last);
@@ -690,6 +764,10 @@ int main(int argc, char **argv)
         got = ok ? streams : 0;
         goto teardown;
     }
+    if (enc2) {                         /* #453: two encoder channels at once */
+        got = enc2_run(&fs, streams) ? streams : 0;
+        goto teardown;
+    }
 again:
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
@@ -728,14 +806,25 @@ again:
             mark("streams");
         for (i = 0; i < streams; i++) {
             IMPEncoderStream st;
-            if (IMP_Encoder_PollingStream(0, 3000) || IMP_Encoder_GetStream(0, &st, 1))
+            struct timespec t0, t1;
+            long ms;
+            int prc;
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            prc = IMP_Encoder_PollingStream(0, poll_ms);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ms = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
+            if (ms > wait_max)
+                wait_max = ms;
+            if (prc || IMP_Encoder_GetStream(0, &st, 1)) {
+                printf("T32S stream %d missed (poll rc=%d after %ld ms)\n", i, prc, ms);
                 continue;
+            }
             if (getenv("T32_STREAM_DUMP"))
                 stream_dump(got, &st);
             got++;
             IMP_Encoder_ReleaseStream(0, &st);
         }
-        printf("T32S streams %d/%d\n", got, streams);
+        printf("T32S streams %d/%d (longest wait %ld ms, poll timeout %d ms)\n", got, streams, wait_max, poll_ms);
         if (isposd)
             isposd_teardown();
         STEP(IMP_Encoder_StopRecvPic(0));

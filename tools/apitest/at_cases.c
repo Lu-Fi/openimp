@@ -519,11 +519,15 @@ static void cs_logmacro(void)
 
     NEED(imp_log_fun) NEED(IMP_Log_Get_Option) NEED(IMP_Log_Set_Option) {
         int o0 = IMP_Log_Get_Option();
-        int dfd = mkstemp(lm_dev);
+        const char *pre = getenv("APITEST_LM_DEV");   /* created by main() before the first area (#452) */
+        int dfd = -1;
+
+        if (pre && strlen(pre) < sizeof(lm_dev)) strcpy(lm_dev, pre); else dfd = mkstemp(lm_dev);
 
         /* No logger device in the QEMU image / on the host: a regular file stands in for /dev/log_main. */
         if (dfd >= 0) close(dfd);
         setenv("OPENIMP_LOGGER_DEV", lm_dev, 1);
+        truncate(lm_dev, 0);        /* records of earlier areas (libsysutils logs) would fill the 2 KiB read-back */
 
         t = lm_run(lm_levels);
         /* UNKNOWN/VERBOSE (level < 3) are below the vendor default level: never printed. WARN, ERROR, FATAL, SILENT print. */
@@ -587,7 +591,7 @@ static void cs_logmacro(void)
             rep("IMP_LOG_TO_FILE", 0, strstr(b, "m-file") ? V_PASS : V_FAIL, "sink 1 (IMP_LOG_OUT_LOCAL_FILE) appended to the log file: \"%.40s\"", b);
             if (ffd >= 0) close(ffd);
             unlink(gpath); unsetenv("OPENIMP_LOG_FILE");
-            unlink(lm_dev); unsetenv("OPENIMP_LOGGER_DEV");
+            unlink(lm_dev); unsetenv("OPENIMP_LOGGER_DEV"); unsetenv("APITEST_LM_DEV");
         }
     }
 }
