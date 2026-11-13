@@ -432,6 +432,10 @@ The only vendor T32 library with `IMP_Decoder_*` (libimp 2.0.0, T32Pro SDK) clea
 
 On the T30X lab camera OpenIMP passes `IMP_Decoder_*`, `IMP_Sp_Alloc` and `IMP_FrameSource_SetSource` (see the evidence of those cells) where the vendor libimp 1.0.5 crashes or fails (`IMP_Sp_Alloc` -1, `Alloc_Set_Attr` -99, vendor VPU fault on the ext channel). The cells are rated dev+ (better than the vendor) for that reason. This is an observed vendor crash, not a behaviour change of OpenIMP.
 
+### 6.8 T30 IMP_ISP_Tuning_SetISPLDC: refusal instead of a kernel oops (T30, 2026-11-13, #438)
+
+On the T30X lab camera (SC4236, 2048x1536) the LDC link needs DDR buffers that the board's ISP memory pool cannot hold. The vendor libimp 1.0.5 returns 0 for `ENABLE`, the frames stop and the kernel oopses (`ispmem isn't enough!`, Call Trace). OpenIMP with open-tx-isp returns -1 (the NCU stream-on fails with -ENOMEM), the frames stop until `DISABLE` and nothing oopses; `DISABLE` restores the stream on both stacks. Rated dev+ (the same cause, a clean error instead of a crash); it is a refusal, not a working LDC. Evidence: T30X b69 (audit/t30/b69).
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

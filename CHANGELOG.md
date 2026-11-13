@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T30 matrix cells from the T30X run b69
+
+- Vendor 1.0.5 and OpenIMP compared on the T30X (audit/t30/b69, one power cycle, 0 oopses on the open stack, camera back): `Encoder_Get/SetChnHSkip` and `Encoder_SetChnHSkipBlackEnhance` cache -> dev (HSkip changes the stream on both stacks, type 2 vendor against open: 90 of 90 pictures equal, #427).
+- `ISP_Tuning_SetISPLDC` -> dev+ (#438): both stacks run out of ISP memory for the LDC link; the vendor reports 0 and oopses, OpenIMP returns -1 without an oops, DISABLE recovers (docs/OPENIMP_BEYOND_VENDOR.md 6.8).
+- `SU_Key_ReadEvent` stays aud (#439): the b69 key step never injected a key (script bug in the event-node detection, not a result); hardware is present (gpio-keys, key 102), a corrected re-run is needed.
+- apitest case `ldc_t30` uses bounded probes and prints progress lines, so a stopped stream still yields a result.
+
 ## 2026-11-13: T30 matrix cells from the T30X run b68
 
 - Vendor 1.0.5 and OpenIMP compared on the T30X (audit/t30/b68, 0 oopses in su/encx, SU_Base_Reboot ret 0, camera back): Encoder_Enable/DisableAllNCUDenoise and SU_Base_Raw2SUTime, SU_Base_Reboot, SU_Key_Enable/DisableEvent -> dev; SU_Base_GetDevID, SU_CIPHER_Init/Exit/CreateHandle/DestroyHandle, SU_LED_Command (no /proc/board/power/led0, vendor fails the same) -> nohw.
