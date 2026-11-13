@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Vendor 1.0.5 and OpenIMP compared on the T30X (audit/t30/b68, 0 oopses in su/encx, SU_Base_Reboot ret 0, camera back): Encoder_Enable/DisableAllNCUDenoise and SU_Base_Raw2SUTime, SU_Base_Reboot, SU_Key_Enable/DisableEvent -> dev; SU_Base_GetDevID, SU_CIPHER_Init/Exit/CreateHandle/DestroyHandle, SU_LED_Command (no /proc/board/power/led0, vendor fails the same) -> nohw.
 - Not proven, stay as they are: ISP_Tuning_SetISPLDC (no result on either stack, #438), SU_Key_ReadEvent (injected key not read, #439), SU_CIPHER_Config/Encrypt/Decrypt (#328).
+## 2026-11-13: T40 HLDC Set device-equal with the open driver (#432)
+
+- open-tx-isp now runs the vendor HLDC set path. Before, `tisp_s_hldc_attr` was an empty tail call; now it is a port of `tisp_hldc_set_attr` and its helpers, with the HLDC init where the vendor calls it. Device run on the T40 test camera: the HLDC registers of the whole `SetHLDCAttr` sequence are identical to the vendor module's, Get reads back like the vendor, and strength changes the picture. Matrix T40 `ISP_Tuning_Get/SetHLDCAttr` err -> dev; no OpenIMP code change.
 
 ## 2026-11-12: T23 GetStream sets pack[0].frameEnd on a complete picture like the vendor (#363)
 

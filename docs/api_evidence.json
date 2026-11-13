@@ -2303,12 +2303,12 @@
         "T31": "n.a.",
         "T32": "n.a.",
         "T33": "n.a.",
-        "T40": "err",
+        "T40": "dev",
         "T41": "n.a."
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have). T40 2026-11-11 (#310): Get device-equal (OpenIMP and vendor both rc 0, strength 128, 1920x1080, centre 960,540; NULL -9 / num >= 4 -4 after aligning OpenIMP, was -1); Set not run (rule: reprograms the lens-correction back end), so the pair stays host. T40 2026-11-12 (C5, #433): err. Set ran on the device: rc 0, but the open driver never applies the strength (the read-back stays 128; strength 255 and 0 give the same picture). The vendor reads back 255/0/128. Gap #432.",
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have). T40 2026-11-11 (#310): Get device-equal (OpenIMP and vendor both rc 0, strength 128, 1920x1080, centre 960,540; NULL -9 / num >= 4 -4 after aligning OpenIMP, was -1); Set not run (rule: reprograms the lens-correction back end), so the pair stays host. T40 2026-11-12 (C5, #433): err. Set ran on the device: rc 0, but the open driver never applies the strength (the read-back stays 128; strength 255 and 0 give the same picture). The vendor reads back 255/0/128. Gap #432. T40 2026-11-13 (#432): err -> dev. The open driver now runs the vendor HLDC set path (open-tx-isp port of tisp_hldc_set_attr and its helpers). The registers match the vendor module at every step, and Get reads back like the vendor. The apitest verdict line stays PART: its 'back' check compares against the picture before the first Set, when HLDC was still bypassed. The vendor's first Set also un-bypasses HLDC.",
       "ref": {
-        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 8000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): Set rc 0 on both libs; vendor Get reads back 255/0/128, OpenIMP Get stays 128 and the picture is the same for strength 255 and 0 (open driver tisp_s_hldc_attr is an empty tail call, #432)."
+        "T40": "apitest t40dev 8000000 2026-11-13 (#432; T40 test camera, runtime swap to open-tx-isp with the HLDC port, HLDC registers ISP+0x15000..0x15044 sampled at 250 ms, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko): every register state of the Set sequence (default, strength 255, 0, default) identical to the vendor module; Get reads back 255/0/128 and the ISP input size 3840x2160 like the vendor; strength 255 and 0 give different pictures (frame difference 18.8 / 39.6 against noise 3.5); 0 oops."
       }
     },
     "ISP_Tuning_Get/SetHVFLIP": {
