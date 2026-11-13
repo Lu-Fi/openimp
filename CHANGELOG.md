@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `src/t32/openimp_t32_sys.c`: `t32_get_cpu_id()` (cached) as the vendor `get_cpu_id` (libimp T33 2.0.2.1 / T32 2.2.0): SoC id `[0x1300002c]`, T32 sub id `[0x13540238] >> 16`, T33 variant byte `[0x1354021c] >> 24` (the vendor's unaligned read at 0x1354021f, done aligned); `IMP_System_GetCPUInfo` maps the id through the vendor's 20-name table ("T32-LQ" .. "T32-VN", "T33-L" .. "T33-VN", "Unknown" for the rest). The constant "T32" in `openimp_t32_skeleton.c` is gone.
 - Evidence (QEMU): `-M ingenic-t33` t33l returns "T33-L" (as the vendor 2.0.2.1); `-M ingenic-t32` returns "T32-NQ"; 0 oopses.
+## 2026-11-13: T32/T33 kernel driver port merged into open-tx-isp next (#234, #392)
+
+- Status data / matrix: the T32 driver-port row now reads "merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15" (`tools/status_driver_port.py`, `docs/status/driver_port.json`, intro in `tools/driver_port.py`). Host-proven, not device-tested (device proof: #99).
 
 ## 2026-11-13: T40 GOP and QP-bounds read-back as the vendor glue (#455, #456)
 

@@ -42,7 +42,7 @@ def main():
     d["socs"].setdefault("T33", {"proven": 0, "total": None, "branch": None, "date": day,
                                  "note": "paused, no recovered driver yet"})
     d["socs"]["T32"] = {"proven": len(names), "total": total, "branch": a.oracle.replace("origin/", ""), "date": day,
-                        "note": "bit-exact against the recovered vendor C on the host; not merged, waits for the upstream recovered-driver pull request; host-proven, not device-tested"}
+                        "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"}
     s = json.dumps(d, indent=1) + "\n"
     if a.print:
         sys.stdout.write(s)
