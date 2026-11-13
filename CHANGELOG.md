@@ -13,6 +13,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `tools/apitest/apitest.c`: the logger stand-in file `/tmp/apitest_lmd_*` is removed at exit (`atexit`), also when the log-macro case does not run (#476).
 - Matrix (`docs/api_evidence.json`): T30 `ISP_Tuning_Get/SetSaturation` and `ISP_Tuning_Get/SetWB` rt -> dev (T30X lab b71/b75/b79, vendor 1.0.5 and OpenIMP on the same camera: GetSaturation 128 on both, saturation-0 U=V 125.4 on both, manual WB red-high/blue-high within 0.2/2.9 U,V, restore within 0.92, 0 oopses; #449 #450 fixed).
 - T31 `ISP_SetAeAlgoFunc` / `ISP_SetAwbAlgoFunc` were already dev (case `customalgo_t31`, 2026-11-12). Remaining T30/T31 non-dev cells are camera-only or hardware-blocked and listed in #308 / #309.
+
 ## 2026-11-13: T32/T33 SU_* matrix cells follow the neo libsysutils evidence (#482)
 
 - `SU_*` (libsysutils, not libimp) on T32/T33 are served by the neo libsysutils (Lu-Fi/ingenic-system-libs-neo, thingino aperto pin; user decision 2026-11-13), no longer `miss`. Six lines with a PASS in the T33 QEMU run (GetModelNumber, GetVersion, GetDevID, SUTime2Raw, Raw2SUTime, SetWkupMode refusal) are `qemu` on both SoCs; the other 56 rows are `aud` (exported by neo, QEMU line N/A or SKIP on neo and vendor alike, or not exercised). `docs/api_evidence.json`, matrix regenerated.
