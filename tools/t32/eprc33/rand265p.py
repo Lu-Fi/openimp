@@ -55,6 +55,12 @@ def scen(seed, k, VB):
         refr = x.random() < 0.4
         rf = (x.choice([0, 1]), x.choice([0, 1, 3, 12, 20]), x.choice([0, 1]), x.choice([0, 1, 3, 8]),
               x.choice([0, 2, 5, 30, 70000]))
+        # slice-block knobs (own stream, the x stream above unchanged): the ROI QP table cur+0x2ac / map
+        # cur+0x2b0 (one byte per 16x16 block, vpi_emc_qpt_cfg) and the motion search cur+0x348 / level 0x349
+        y = random.Random(seed * 1000 + k + 999999)
+        qpt = y.random() < 0.3; mce = y.choice([None, None, 0, 1, 2, 3, 4, 5])
+        if w * h > 1280 * 720:   # the slice block per 32x32 unit is slow under the emulator's per-instruction hook
+            qpt, mce = False, None
 
     def poke(name, H):
         L = H.L; e = EA
@@ -89,6 +95,13 @@ def scen(seed, k, VB):
                 if refr:
                     L.wr(e + 0x35d, b'\x01'); L.wr(c + 0x32a, bytes([rf[0]])); L.w32(c + 0x32c, rf[1])
                     L.wr(c + 0x330, bytes([rf[2]])); L.w32(c + 0x334, rf[3]); L.w32(c + 0x338, rf[4])
+                if qpt:
+                    m = HEAP + 0xc0000; n = ((w + 15) // 16) * ((h + 15) // 16)
+                    if L.r32(c + 0x2b0) != m or y.random() < 0.05:
+                        L.wr(m, bytes(y.randint(0, 255) for _ in range(n)))
+                    L.wr(c + 0x2ac, b'\x01'); L.w32(c + 0x2b0, m)
+                if mce is not None:
+                    L.wr(c + 0x348, bytes([1, mce]))
             if pk30:
                 on = r.random() < pk30
                 L.wr(e + 0x30, bytes([on])); L.wr(e + 0x53, bytes([pk53 if on else 0]))

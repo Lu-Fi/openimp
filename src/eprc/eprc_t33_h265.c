@@ -11,8 +11,8 @@
  * swap265.py).  Most of them are the H.264 code on the H.265 handle layout:
  * the rate block e+0x820.. of H.264 sits at e+0x390.. (e+0x88c.. at
  * e+0x400..), the inner state blocks (rc, inst, st, out) keep the H.264
- * layout.  Still to do: VPI_set_sliceinfo
- * (vpi_emc_*, pad_maproi).
+ * layout.  Still to do: VPI_set_sliceinfo itself (its helpers vpi_emc_*
+ * and pad_maproi are done).
  */
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC optimize("wrapv")
@@ -2753,6 +2753,150 @@ static void e65_bu_target_bits(E33 *X, uint32_t vb, uint32_t s, int32_t cum, int
             ST_S16(s + 0x92e + 2 * k, k < 3 ? -v : v);
         }
     }
+}
+
+/* ------------------------------------------- slice block: per-32x32 maps */
+
+/*
+ * The VPU takes its per-block side information (AI QP offsets, intra
+ * refresh, motion search, QP table) in 32x32 units, four per 64x64 CTU, in
+ * the order (0,0) (32,0) (0,32) (32,32) of each CTU; a unit is written
+ * only when its corner lies inside the picture (s+6 width, s+8 height), the
+ * entries are packed (the index runs over the written units only).
+ * t65_unit_in() is that test for unit @k of the CTU at (@x, @y).
+ */
+static int t65_unit_in(E33 *X, uint32_t s, int32_t x, int32_t y, int k)
+{
+    return x + (k & 1) * 32 < (int32_t)LD_U16(s + 6) && y + (k >> 1) * 32 < (int32_t)LD_U16(s + 8);
+}
+
+/* vpi_emc_ai_cfg (0x1a83b4): the AI QP offsets of the picture (vb+0xc ->
+ * +0x3c, 4 bytes per unit, 5 bit each) into the 16-byte unit entries at
+ * s+0x2b4 */
+static uint32_t e65_ai_cfg(E33 *X, uint32_t vb, uint32_t s)
+{
+    int32_t ch = (LD_U16(s + 8) + 0x3f) >> 6, cw = (LD_U16(s + 6) + 0x3f) >> 6;
+    uint32_t src = 0, idx = 0;
+
+    for (int32_t cy = 0; cy < ch; cy++)
+        for (int32_t cx = 0; cx < cw; cx++, idx += 4)
+            for (int k = 0; k < 4; k++) {
+                uint32_t a, d;
+
+                if (!t65_unit_in(X, s, cx * 64, cy * 64, k))
+                    continue;
+                a = LD_U32(LD_U32(vb + 0xc) + 0x3c) + src;
+                d = LD_U32(s + 0x2b4) + (idx + k) * 0x10;
+                src += 4;
+                ST_U32(d, (LD_U8(a + 1) & 0x1f) * 0x400000u + (LD_U8(a) & 0x1f));
+                ST_U32(d + 4, (uint32_t)(LD_U8(a + 2) & 0x1f) << 12);
+                ST_U32(d + 8, (uint32_t)(LD_U8(a + 3) & 0x1f) << 2);
+                ST_U32(d + 12, 0);
+            }
+    return 0;
+}
+
+/* vpi_emc_md_cfg_gdr (0x1a6ef8): gradual decoder refresh - the units of
+ * the CTU rows [pic+0x34, pic+0x38) (pic = vb+8) get the fixed intra mode
+ * decision entry, at s+0x2c0 from unit 2 * ceil(w / 32) * first row on */
+static uint32_t e65_md_cfg_gdr(E33 *X, uint32_t vb, uint32_t s)
+{
+    int32_t row = LD_S32(LD_U32(vb + 8) + 0x34);
+    int32_t cw = (LD_U16(s + 6) + 0x3f) >> 6;
+    uint32_t idx = (uint32_t)(((LD_U16(s + 6) + 0x1f) >> 5) * row * 2);
+
+    for (; row < LD_S32(LD_U32(vb + 8) + 0x38); row++)
+        for (int32_t cx = 0; cx < cw; cx++)
+            for (int k = 0; k < 4; k++) {
+                uint32_t d;
+
+                if (!t65_unit_in(X, s, cx * 64, row * 64, k))
+                    continue;
+                d = LD_U32(s + 0x2c0) + idx++ * 0x10;
+                ST_U32(d, 0);
+                ST_U32(d + 4, 0x33333300);
+                ST_U32(d + 8, 0x333);
+                ST_U32(d + 12, 0);
+            }
+    return 0;
+}
+
+/* vpi_emc_mce_cfg (0x1a7478): motion search per unit by the motion level
+ * L = cur+0x349 (cur = vb+4).  Rev 6: 16-byte entries at s+0x2bc, the
+ * fast flag (bit 1) on unit 0 for L < 4, unit 1 for L 2..3, unit 2 for
+ * L 1..3, unit 3 for L 3.  Rev 7: 2-byte entries OR-ed with the level bits
+ * (byte 0: 1 / 0x41 / 0x49 / 0x49, byte 1: 0 / 0 / 0 / 2 for L 0..3). */
+static void e65_mce_cfg(E33 *X, uint32_t vb, uint32_t s)
+{
+    static const uint8_t fast6[4] = { 0x1, 0x5, 0x7, 0xf };    /* L -> units with the flag (bit k) */
+    int32_t ch = (LD_U16(s + 8) + 0x3f) >> 6, cw = (LD_U16(s + 6) + 0x3f) >> 6;
+    uint32_t idx = 0;
+
+    for (int32_t cy = 0; cy < ch; cy++)
+        for (int32_t cx = 0; cx < cw; cx++)
+            for (int k = 0; k < 4; k++) {
+                uint32_t cur, m;
+                uint8_t l;
+
+                if (!t65_unit_in(X, s, cx * 64, cy * 64, k))
+                    continue;
+                cur = LD_U32(vb + 4);
+                l = LD_U8(cur + 0x349);
+                m = LD_U32(s + 0x2bc);
+                if (LD_S8(cur) == 6) {
+                    uint32_t d = m + idx * 0x10;
+
+                    ST_U32(d, l < 4 && (fast6[l] >> k & 1) ? 0x8040042 : 0x8040040);
+                    ST_U32(d + 4, 0x2010);
+                    ST_U32(d + 8, 0x7c000000);
+                    ST_U32(d + 12, 0);
+                } else if (LD_S8(cur) == 7 && l < 4) {
+                    static const uint8_t b0[4] = { 0x01, 0x41, 0x49, 0x49 }, b1[4] = { 0, 0, 0, 2 };
+
+                    ST_U8(m + idx * 2, LD_U8(m + idx * 2) | b0[l]);
+                    ST_U8(m + idx * 2 + 1, LD_U8(m + idx * 2 + 1) | b1[l]);
+                }
+                idx++;
+            }
+}
+
+/* pad_maproi (0x1a7ae4) as the QP table reads it: the 16x16 ROI map
+ * (@w x @h bytes) padded by repeating the last column / row, i.e. the
+ * entry (@r, @c) of the padded map is the map entry at the clamped
+ * position.  The vendor copies the map into a padded malloc'ed buffer
+ * first; the values are the same. */
+static uint8_t t65_pad_at(E33 *X, uint32_t map, int32_t w, int32_t h, int32_t r, int32_t c)
+{
+    return LD_U8(map + (r < h ? r : h - 1) * w + (c < w ? c : w - 1));
+}
+
+/* vpi_emc_qpt_cfg (0x1a7d48): the ROI QP map (cur+0x2b0, one byte per
+ * 16x16 block) into the 4-byte unit entries at s+0x2c4 (the 2x2 16x16
+ * blocks of the unit, row by row, low byte first).  With cur+0x2d4 the
+ * vendor reads the entries from a file (cur+0x2e8, when cur+0x2e1): not
+ * done here. */
+static uint32_t e65_qpt_cfg(E33 *X, uint32_t vb, uint32_t s)
+{
+    uint32_t cur = LD_U32(vb + 4), map = LD_U32(cur + 0x2b0), idx = 0;
+    int32_t W = LD_U16(s + 6), H = LD_U16(s + 8), w16 = (W + 0xf) >> 4, h16 = (H + 0xf) >> 4;
+    int32_t ch = (H + 0x3f) >> 6, cw = (W + 0x3f) >> 6;
+
+    if (LD_S8(cur + 0x2d4) != 0)
+        return 0;                       /* map from a file */
+    for (int32_t cy = 0; cy < ch; cy++)
+        for (int32_t cx = 0; cx < cw; cx++)
+            for (int k = 0; k < 4; k++) {
+                int32_t r = cy * 4 + (k >> 1) * 2, c = cx * 4 + (k & 1) * 2;
+
+                if (!t65_unit_in(X, s, cx * 64, cy * 64, k))
+                    continue;
+                ST_U32(LD_U32(s + 0x2c4) + idx++ * 4,
+                       (uint32_t)t65_pad_at(X, map, w16, h16, r, c) |
+                           (uint32_t)t65_pad_at(X, map, w16, h16, r, c + 1) << 8 |
+                           (uint32_t)t65_pad_at(X, map, w16, h16, r + 1, c) << 16 |
+                           (uint32_t)t65_pad_at(X, map, w16, h16, r + 1, c + 1) << 24);
+            }
+    return 0;
 }
 
 /* ------------------------------------------------------- other entries */

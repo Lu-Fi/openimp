@@ -52,6 +52,10 @@ class Harness:
         if self.pending:
             return
         assert uc.reg_read(UC_MIPS_REG_A0) == EA, hex(uc.reg_read(UC_MIPS_REG_A0))
+        # the vendor's bump allocator: the state block (the first calloc, at configuration) stays at B as the
+        # C build assumes; the per-picture scratch (vpi_emc_qpt_cfg's padded ROI map) goes past the compared ranges
+        if name in ('JZ_VPU_RC_FRAME_START_T33', 'JZ_VPU_RC_FRAME_END_T33'):
+            self.L.brk = max(self.L.brk, HEAP + 0x2000000)
         if self.poke:
             self.poke(name, self)
         self.pending = (name, uc.reg_read(UC_MIPS_REG_RA), self.snap())

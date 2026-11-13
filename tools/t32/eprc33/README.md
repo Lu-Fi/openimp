@@ -49,6 +49,10 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   Seeds 3 / 4 add FRAME_START knobs (own random stream, seeds 1 / 2 unchanged): FIXQP (mode 0), the still map
   (cur+0x320..0x327: block size 8..32, 2..4 classes as the 4 counters at ms+0x2c allow, hysteresis), motion mode
   cur+0x340 / 0x341, forced intra cur+0x342 / 0x344 and intra refresh e+0x35d with cur+0x32a..0x338.
+  Seeds 3 / 4 also poke (own stream, up to 1280x720 since the per-unit slice block is slow under the
+  per-instruction hook) the ROI QP table (cur+0x2ac / map cur+0x2b0, vpi_emc_qpt_cfg) and the motion search
+  (cur+0x348 / level 0x349, vpi_emc_mce_cfg).  `diff265.py` moves the vendor's bump allocator past the compared
+  ranges after the state block (the qpt scratch map would otherwise land in B).
   `reg265.sh` runs seeds 1..4 (7 N / 2 scenarios).
 - `swap265.py` (`CFLAGS_X='-O0 --coverage' OUT=...` for a gcov build; in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
   controller with the functions of `swapmap265.txt` taken from `src/eprc/eprc_t33_h265.c`.
