@@ -328,3 +328,25 @@ functions:
       ivdc_mem_line: "Number of lines, 0 to 6480."
     returns: "-1 for a value outside 0 to 6480, when the system is not in direct mode 1, or when the driver refuses; otherwise 0."
     soc: "T32"
+  FrameSource_CreateJoint:
+    group: misc
+    summary: "Creates a joint of several channels laid out on a 12 x 12 board (`IMPFSJointAttr.position`, rows of channel numbers from the top left, 0xff ends a row); returns the joined size and a handle."
+    returns: "0 on success; 0x80010008 for NULL, 0x80010004 for an invalid channel, 0x80010100 when no memory or handle is left."
+    notes: "T32 / T33: the API state only; the composition of the joined channels in the frame path is not implemented (matrix cell cache)."
+    see_also: [FrameSource_DestroyJoint, FrameSource_GetJointByHandler, FrameSource_SetJointBackground]
+    soc: "T32, T33"
+  FrameSource_DestroyJoint:
+    group: misc
+    summary: "Frees a joint created by `CreateJoint`."
+    returns: "0 on success; 0x80010008 for an unknown handle."
+    soc: "T32, T33"
+  FrameSource_GetJointByHandler:
+    group: misc
+    summary: "Reads back the board and size of a joint; the handle goes in `joint_attr->handler`."
+    returns: "0 on success; 0x80010008 for NULL or an unknown handle."
+    soc: "T32, T33"
+  FrameSource_SetJointBackground:
+    group: misc
+    summary: "Sets the background colour of joined pictures."
+    returns: "Always 0."
+    soc: "T32, T33"

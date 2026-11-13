@@ -65,7 +65,15 @@ functions:
       to: The cell whose input is redirected, normally an encoder channel.
     returns: "0 on success, non-zero when `to` has no bind to splice into or one of the new binds fails; the original bind is restored in that case."
     notes: Do it before the encoder channel starts, since the encoder looks its OSD group up when the channel is registered or started. The call is a wrapper around `IMP_System_GetBindbyDest`, `IMP_System_UnBind` and `IMP_System_Bind`.
-    see_also: [System_Bind, OSD_Start]
+    see_also: [System_Bind, OSD_Start, OSD_DetachToGroup]
+  OSD_DetachToGroup:
+    group: group
+    summary: The reverse of `OSD_AttachToGroup` (T32 / T33 2.x API) - the path source -> OSD -> to becomes source -> to again.
+    params:
+      from: The OSD cell that was attached.
+      to: The cell behind it, normally an encoder channel.
+    returns: "0 on success, 0x80020040 when `from` has no source bind or one of the bind steps fails (the binds are restored)."
+    see_also: [OSD_AttachToGroup]
   OSD_Start:
     group: group
     summary: Lets the group draw on every frame that passes it.

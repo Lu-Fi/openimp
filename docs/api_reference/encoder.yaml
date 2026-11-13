@@ -674,3 +674,39 @@ functions:
       do not apply a 4-byte compensation for the vendor shift with OpenIMP. A JPEG channel returns 8 bytes: `iNumBytes` (JPEG
       size) at 0 and the quality factor at 4.'
     soc: T31
+  Encoder_MappingTransform:
+    group: qp
+    summary: "Remaps a QP map through a table of up to 16 entries (used by `SetChnMapRoi`)."
+    returns: "0 on success; 0x80040010 for NULL, 0x80040002 for a table longer than 16 or a map entry above 16."
+    soc: "T32, T33"
+  Encoder_SetChnQpgAIEnable:
+    group: qp
+    summary: "Enables the AI-driven QP grouping of a channel; must be called before the channel is created."
+    returns: "0 on success; 0x80040001 for a channel of 16 or more, 0x80040004 once the channel exists."
+    notes: "T32 / T33: stored; the HERA encoder does not use it yet (cell cache)."
+    soc: "T32, T33"
+  Encoder_SetMotionQualityEnable:
+    group: qp
+    summary: "Enables the motion-quality mode of a channel; must be called before the channel is created."
+    returns: "0 on success; 0x80040001 for a channel of 16 or more, 0x80040004 once the channel exists."
+    notes: "T32 / T33: stored; not used by the HERA encoder yet (cell cache)."
+    soc: "T32, T33"
+  Encoder_SetChnQpgAIEnable_Yuv:
+    group: yuv
+    summary: "The same flag for the unbound YUV encoder (no return value)."
+    soc: "T32, T33"
+  Encoder_SetMotionQualityEnable_Yuv:
+    group: yuv
+    summary: "The motion-quality flag of the unbound YUV encoder (no return value)."
+    soc: "T32, T33"
+  Encoder_SetMotionQuality_Yuv:
+    group: yuv
+    summary: "Motion-quality mode of the unbound YUV encoder (mode 2 selects the strong setting)."
+    returns: "Always 0."
+    soc: "T32, T33"
+  Encoder_SetJpegMultiSectionMode:
+    group: mem
+    summary: "Lets the JPEG encoder write its bitstream in sections (mode < 4, section size); only before `IMP_System_Init`."
+    returns: "0 on success; 0x80040080 after `IMP_System_Init`, 0x80040002 for a mode of 4 or more."
+    notes: "T32 / T33: stored; the JPEG path does not use sections yet (cell cache)."
+    soc: "T32, T33"

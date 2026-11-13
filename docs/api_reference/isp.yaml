@@ -1488,3 +1488,85 @@ functions:
     returns: "0 on success; 0xfffff008 when tuning is not enabled, 0xfffff009 for a NULL pointer; otherwise the driver's result."
     notes: "`Get` does not check the VI number; the driver decides."
     soc: "T32"
+  ISP_GET_DriverMode:
+    group: sys
+    summary: "Reads whether the ISP driver runs continuously (normal) or in one-shot mode (T32 / T33 2.x API)."
+    params:
+      mode: "Pointer to `IMPISPDriverMode`: 0 normal, 1 one-shot."
+    returns: "0 on success; 0xfffff009 before `IMP_ISP_Open`, 0xfffff001 for NULL or when the driver refuses."
+    soc: "T32, T33"
+  ISP_OneShotEnable:
+    group: sys
+    summary: "Switches the ISP driver to one-shot mode (a frame only on `OneShotTick`), for low-power capture; `OneShotDisable` returns to continuous streaming, `OneShotTick` requests one frame."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff001 when the driver refuses (a tick outside one-shot mode)."
+    notes: "The driver gets the value 1 / 0 / 2 itself as the argument, not a pointer. The low-power effect needs a camera; in QEMU frames keep flowing."
+    see_also: [ISP_OneShotDisable, ISP_OneShotTick, ISP_GET_DriverMode, ISP_PM_SetMode]
+    soc: "T32, T33"
+  ISP_OneShotDisable:
+    group: sys
+    summary: "Ends one-shot mode: the ISP streams continuously again."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff001 when the driver refuses."
+    see_also: [ISP_OneShotEnable]
+    soc: "T32, T33"
+  ISP_OneShotTick:
+    group: sys
+    summary: "Requests one frame while the driver is in one-shot mode."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff001 outside one-shot mode or when the driver refuses."
+    see_also: [ISP_OneShotEnable]
+    soc: "T32, T33"
+  ISP_PM_SetMode:
+    group: sys
+    summary: "Sets or reads the power-management mode of a video input (`IMPISPPMAttr`: normal or AOV)."
+    params:
+      num: "Video input 0..3."
+      attr: "Pointer to the mode."
+    returns: "0 on success; 0xfffff00c for an input number of 4 or more, 0xfffff009 before the sensor is enabled or for NULL, 0xfffff001 when the driver refuses."
+    notes: "T33: as vendor 2.0.2.1 on this chip, a {mode, input} request to the driver (in QEMU the vendor module answers 0 and leaves the value unchanged). T32: mode 0 switches one-shot off, mode 1 one-shot on plus one tick."
+    see_also: [ISP_OneShotEnable, ISP_PM_WaitAllDone]
+    soc: "T32, T33"
+  ISP_PM_GetMode:
+    group: sys
+    summary: "See `ISP_PM_SetMode`."
+    soc: "T32, T33"
+  ISP_PM_WaitAllDone:
+    group: sys
+    summary: "Waits until the power-management switch of the ISP is done."
+    params:
+      enable: "Ignored (as the vendor)."
+    returns: "0 on success; 0xfffff009 before the sensor is enabled, 0xfffff001 when the driver refuses (also the vendor module in QEMU)."
+    soc: "T32, T33"
+  ISP_LDC_SetMode:
+    group: ldc
+    summary: "Selects online or offline lens-distortion correction (`IMPISPLDCMode`) and tells the driver; `LDC_GetMode` reads the recorded mode."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, for a mode of 2 or more, for NULL (Get) and for Get before any Set; 0xfffff001 when the driver refuses."
+    see_also: [ISP_LDC_GetMode]
+    soc: "T32, T33"
+  ISP_LDC_GetMode:
+    group: ldc
+    summary: "See `ISP_LDC_SetMode`."
+    soc: "T32, T33"
+  ISP_AddSensor_Process:
+    group: life
+    summary: "Replays the settings requested for a video input before `IMP_ISP_AddSensor` (bin path, bypass, WDR, night mode, LDC); `AddSensor_Free` drops them."
+    params:
+      vinum: "Video input."
+    returns: "The result of the last replayed call, 0 when nothing is pending."
+    notes: "OpenIMP applies those requests at once, so nothing is pending and the call returns 0 (as the vendor without pending requests)."
+    soc: "T32, T33"
+  ISP_AddSensor_Free:
+    group: life
+    summary: "See `ISP_AddSensor_Process` (no return value)."
+    soc: "T32, T33"
+  ISP_GPIOSwitchConfig:
+    group: sys
+    summary: "Configures a GPIO the ISP driver switches at a frame boundary (`IMPISPGPIOSwitchAttr`: GPIO number and state); `GPIOSwitchTrigger` fires the switch."
+    params:
+      num: "Video input 0..3."
+      attr: "GPIO number and state (Config only)."
+    returns: "0 on success; 0xfffff00c for an input number of 4 or more, 0xfffff009 before the sensor is enabled or for NULL, 0xfffff001 when the driver refuses."
+    notes: "The T33 2.0.2.1 header names them `IMP_ISP_SetGPIOSwitchConfig/Trigger`; the vendor library exports these names. The open module does not serve the GPIO ioctls yet (#472)."
+    soc: "T32, T33"
+  ISP_GPIOSwitchTrigger:
+    group: sys
+    summary: "See `ISP_GPIOSwitchConfig`."
+    soc: "T32, T33"
