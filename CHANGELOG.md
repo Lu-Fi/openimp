@@ -49,6 +49,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Matrix row 14, T30: ⚠️ -> ✅. The only deviation (Iridix base and unlimit strength above the vendor) is fixed by #428 (open-tx-isp 4fab1e1d) and proven on the T30X (run b70, settled window: 0x3c4 0x58/0x58, 0x3dc 0x100/0x100 open/vendor). WDR stays n/a on the linear SC4236 (SetWDRAttr -1 on both stacks).
 
+## 2026-11-13: T32 AENC/ADEC matrix cell aud -> qemu (#298)
+
+- `AENC_* / ADEC_*` on T32: aud -> qemu (docs/api_evidence.json ref: vendor 2.2.0 vs OpenIMP in QEMU, identical codec bytes, decode, user codecs, return codes; audit/issue298). Matrix and HTML regenerated.
+
 ## 2026-11-13: T32 AENC/ADEC compared with vendor 2.2.0 (#298, planned, QEMU only)
 
 - New sample mode `tools/t32/t32_misc_sample.c acodec N`: fixed synthetic PCM through the built-in G.711A/G.711U/G.726/ADPCM encoders and back, a user encoder/decoder pair and error returns. Vendor libimp 2.2.0 and OpenIMP in the same QEMU guest: payload bytes, decoded PCM, lengths, user-codec handles/calls and return codes identical (audit/issue298 vac/oac).
