@@ -47,19 +47,19 @@
 
 /* Platform differences of the vendor objects (checked in the stock libimp
  * builds: T10/T20 3.12.0, T21 1.0.33, T23 1.1.x/1.3.0, T31 1.1.6,
- * T40 1.2.0/1.3.1, T41 1.1.1/1.2.0/1.2.6):
+ * T40 1.2.0/1.3.1, T41 1.1.1/1.2.0/1.2.6, T32 2.2.0 in QEMU, #298):
  * - PT_G726 rate: T10/T20/T21/T31 open g726_init(16000), T23/T40/T41
  *   g726_init(32000) (both in _aenc_pcm2g726/_adec_g726_2pcm);
  * - AENC stream time stamp: the T23 and T41 IMP_AENC_GetStream stamp the
- *   stream with gettimeofday() in microseconds; the others leave it
- *   untouched, here it carries the frame's time stamp. IMP_ADEC_GetStream
+ *   stream with gettimeofday() in microseconds; the others (T32 2.2.0
+ *   checked: frame time stamp) give the frame's time stamp. IMP_ADEC_GetStream
  *   never stamps it (all SoCs); here it carries the input stream's. */
 #if defined(PLATFORM_T23) || defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
 #define OPENIMP_ACODEC_G726_32K       1
 #else
 #define OPENIMP_ACODEC_G726_32K       0
 #endif
-#if defined(PLATFORM_T23) || defined(PLATFORM_T41) || defined(PLATFORM_T32)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T41)
 #define OPENIMP_ACODEC_WALLCLOCK_TS   1
 #else
 #define OPENIMP_ACODEC_WALLCLOCK_TS   0

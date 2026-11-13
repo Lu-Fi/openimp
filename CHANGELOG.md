@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T32 AENC/ADEC compared with vendor 2.2.0 (#298, planned, QEMU only)
+
+- New sample mode `tools/t32/t32_misc_sample.c acodec N`: fixed synthetic PCM through the built-in G.711A/G.711U/G.726/ADPCM encoders and back, a user encoder/decoder pair and error returns. Vendor libimp 2.2.0 and OpenIMP in the same QEMU guest: payload bytes, decoded PCM, lengths, user-codec handles/calls and return codes identical (audit/issue298 vac/oac).
+- Fix (T32): the AENC stream carries the frame's time stamp like vendor 2.2.0; OpenIMP had stamped it with the wall clock (assumed from T41). Host test `tests/t32/acodec_test.c` (in `make -C tests/t32 check`): the four codecs bit-exact with the vendor hashes, frame time stamps.
+- Beyond vendor, pending user OK: OpenIMP writes `seq`/`phyAddr` (and the ADEC time stamp) that the vendor leaves unwritten (docs/OPENIMP_BEYOND_VENDOR.md 6.9).
+
 ## 2026-11-13: T33 API matrix column from QEMU runs (#394)
 
 - The 502 T33 API cells (vendor 2.0.2.1 function list) left `nob`: 236 not exported by the T33 libimp -> miss, 145 exported but not proven -> ?, 121 apitest PASS in QEMU (`-M ingenic-t33`, open `tx-isp-t33.ko` + OpenIMP libimp, `openimp-apitest` T33 build) -> qemu. 16 FAIL lines (picture effects QEMU cannot render, frame-rate timing, FrameSource_GetPool/SetMaxStreamCnt/SetChnAttr details) leave their cells at ?; 0 oopses. No device column: there is no T33 camera, so nothing counts as working yet. `docs/api_exports.json` gets the T33 export list (378 names).

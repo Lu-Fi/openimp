@@ -436,6 +436,10 @@ On the T30X lab camera OpenIMP passes `IMP_Decoder_*`, `IMP_Sp_Alloc` and `IMP_F
 
 On the T30X lab camera (SC4236, 2048x1536) the LDC link needs DDR buffers that the board's ISP memory pool cannot hold. The vendor libimp 1.0.5 returns 0 for `ENABLE`, the frames stop and the kernel oopses (`ispmem isn't enough!`, Call Trace). OpenIMP with open-tx-isp returns -1 (the NCU stream-on fails with -ENOMEM), the frames stop until `DISABLE` and nothing oopses; `DISABLE` restores the stream on both stacks. Rated dev+ (the same cause, a clean error instead of a crash); it is a refusal, not a working LDC. Evidence: T30X b69 (audit/t30/b69).
 
+### 6.9 AENC/ADEC stream fields the vendor leaves unwritten (all SoCs, checked on T32 2.2.0, pending user OK, #298)
+
+Vendor libimp 2.2.0 (T32, QEMU, `tools/t32/t32_misc_sample.c acodec`, stream struct pre-filled with 0xa5) writes only `stream`, `len` and `timeStamp` (the frame's time stamp) in `IMP_AENC_GetStream`, and only `stream` and `len` in `IMP_ADEC_GetStream`: `seq`, `phyAddr` (and the ADEC `timeStamp`) keep whatever the caller's memory held. OpenIMP fills them with defined values: `seq` = the frame's / input stream's `seq`, `phyAddr` = 0, ADEC `timeStamp` = the input stream's time stamp (`src/audio/openimp_audio_enc_dec.c`, the same on every SoC). Payload bytes, lengths and the AENC time stamp are equal to the vendor (`tests/t32/acodec_test.c`). No switch. Beyond vendor, pending user OK (keep, or leave the fields unwritten like the vendor).
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

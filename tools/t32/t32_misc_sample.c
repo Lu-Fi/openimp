@@ -34,6 +34,11 @@
  *                 with send/flush times and queue states ("T32X ..."); the AO
  *                 tone goes to the QEMU audiodev (a wav file), no real sound
  *   dmicx N       dmic N plus IMP_DMIC_Enable Ns/Agc/Hpf phases (#329/#330)
+ *   acodec N      AENC/ADEC: N frames of a fixed synthetic 16 kHz PCM through
+ *                 the built-in G.711A/G.711U/G.726/ADPCM encoders and back
+ *                 through the decoders, plus a user encoder/decoder pair and
+ *                 error returns; per-frame lengths and FNV-1a hashes
+ *                 ("T32C ...", #298). No audio device is opened.
  *
  * usage: t32_trace_sample <mode> [n]   (installed under that name)
  */
@@ -938,6 +943,208 @@ static int dmicx_test(int n)
     return ok ? 0 : 2;
 }
 
+/* ---- AENC / ADEC (#298) ---------------------------------------------------- */
+static uint32_t fnv(const void *p, int len)
+{
+    const uint8_t *b = p;
+    uint32_t h = 2166136261u;
+    int i;
+
+    for (i = 0; b && i < len; i++)
+        h = (h ^ b[i]) * 16777619u;
+    return h;
+}
+
+/* fixed PCM: a slow sweep with noise, peaks near full scale (exercises the
+ * codecs' segment/step tables over their whole range) */
+static void acodec_pcm(int16_t *pcm, int samples, int frame)
+{
+    static uint32_t seed = 12345;
+    static int phase;
+    int k;
+
+    if (frame == 0) {
+        seed = 12345;
+        phase = 0;
+    }
+    for (k = 0; k < samples; k++) {
+        int t = phase++;
+        int tri = (t * (3 + frame)) & 0xffff;               /* sawtooth, rising pitch */
+        int v = (tri < 0x8000 ? tri : 0xffff - tri) * 2 - 0x8000;
+        int amp = 1 + ((t >> 9) & 7);                        /* 1/8 .. 8/8 */
+        v = v * amp / 8 + (int)(lcg(&seed) >> 22) - 512;
+        pcm[k] = (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+    }
+}
+
+#define ACODEC_SAMPLES 320
+#define ACODEC_MAXSTREAM 1024
+
+static int user_enc_calls, user_dec_calls;
+static int user_open_enc(void *attr, void *enc) { (void)attr; (void)enc; return 0; }
+static int user_close(void *x) { (void)x; return 0; }
+static int user_enc_frm(void *enc, IMPAudioFrame *f, unsigned char *out, int *outLen)
+{
+    const uint8_t *in = (const uint8_t *)(uintptr_t)f->virAddr;
+    int i;
+
+    (void)enc;
+    user_enc_calls++;
+    for (i = 0; i < f->len / 2; i++)        /* high bytes only */
+        out[i] = in[2 * i + 1];
+    *outLen = f->len / 2;
+    return 0;
+}
+static int user_open_dec(void *attr, void *dec) { (void)attr; (void)dec; return 0; }
+static int user_dec_frm(void *dec, unsigned char *in, int inLen, unsigned short *out, int *outLen, int *chns)
+{
+    int i;
+
+    (void)dec;
+    user_dec_calls++;
+    for (i = 0; i < inLen; i++)
+        out[i] = (unsigned short)(in[i] << 8);
+    *outLen = inLen * 2;
+    if (chns)
+        *chns = 1;
+    return 0;
+}
+static int user_frm_info(void *dec, void *info) { (void)dec; (void)info; return 0; }
+
+static int acodec_run(const char *tag, int ch, int encType, int decType, int n)
+{
+    static uint8_t streams[16][ACODEC_MAXSTREAM];
+    static int slen[16];
+    static int16_t pcm[ACODEC_SAMPLES];
+    IMPAudioEncChnAttr ea;
+    IMPAudioDecChnAttr da;
+    uint32_t henc = 2166136261u, hdec = 2166136261u;
+    int i, got = 0, dgot = 0, ts_same = 0;
+
+    if (n > 16)
+        n = 16;
+    memset(&ea, 0, sizeof ea);
+    ea.type = encType;
+    ea.bufSize = 20;
+    printf("T32C %s enc create rc=%d\n", tag, IMP_AENC_CreateChn(ch, &ea));
+    for (i = 0; i < n; i++) {
+        IMPAudioFrame f;
+        IMPAudioStream s;
+        int rc;
+
+        acodec_pcm(pcm, ACODEC_SAMPLES, i);
+        memset(&f, 0, sizeof f);
+        f.bitwidth = AUDIO_BIT_WIDTH_16;
+        f.soundmode = AUDIO_SOUND_MODE_MONO;
+        f.virAddr = (uint32_t *)pcm;
+        f.len = sizeof pcm;
+        f.seq = i;
+        f.timeStamp = 1000 + 20000LL * i;
+        memset(&s, 0xa5, sizeof s);      /* shows which fields GetStream writes */
+        rc = IMP_AENC_SendFrame(ch, &f);
+        if (rc || IMP_AENC_PollingStream(ch, 1000) || IMP_AENC_GetStream(ch, &s, BLOCK)) {
+            printf("T32C %s enc %d send rc=%d none\n", tag, i, rc);
+            slen[i] = 0;
+            continue;
+        }
+        slen[i] = s.len > ACODEC_MAXSTREAM ? ACODEC_MAXSTREAM : s.len;
+        memcpy(streams[i], s.stream, slen[i]);
+        ts_same += s.timeStamp == f.timeStamp;
+        if (i < 2 || i == n - 1)
+            printf("T32C %s enc %d len %d seq %#x phy %#x ts %s h %08x\n", tag, i, s.len,
+                   (unsigned)s.seq, (unsigned)s.phyAddr,
+                   s.timeStamp == f.timeStamp ? "frame" : "other", fnv(s.stream, s.len));
+        henc = fnv(s.stream, s.len) ^ (henc * 31u);
+        got++;
+        IMP_AENC_ReleaseStream(ch, &s);
+    }
+    printf("T32C %s enc frames %d/%d all %08x ts=frame %d\n", tag, got, n, henc, ts_same);
+    printf("T32C %s enc destroy rc=%d\n", tag, IMP_AENC_DestroyChn(ch));
+
+    memset(&da, 0, sizeof da);
+    da.type = decType;
+    da.bufSize = 20;
+    da.mode = ADEC_MODE_PACK;
+    printf("T32C %s dec create rc=%d\n", tag, IMP_ADEC_CreateChn(ch, &da));
+    for (i = 0; i < n; i++) {
+        IMPAudioStream in, out;
+        int rc;
+
+        if (!slen[i])
+            continue;
+        memset(&in, 0, sizeof in);
+        in.stream = streams[i];
+        in.len = slen[i];
+        in.seq = i;
+        in.timeStamp = 5000 + i;
+        memset(&out, 0xa5, sizeof out);
+        rc = IMP_ADEC_SendStream(ch, &in, BLOCK);
+        if (rc || IMP_ADEC_PollingStream(ch, 1000) || IMP_ADEC_GetStream(ch, &out, BLOCK)) {
+            printf("T32C %s dec %d send rc=%d none\n", tag, i, rc);
+            continue;
+        }
+        if (i < 2 || i == n - 1)
+            printf("T32C %s dec %d len %d seq %#x phy %#x ts %#llx h %08x\n", tag, i, out.len,
+                   (unsigned)out.seq, (unsigned)out.phyAddr, (unsigned long long)out.timeStamp,
+                   fnv(out.stream, out.len));
+        hdec = fnv(out.stream, out.len) ^ (hdec * 31u);
+        dgot++;
+        IMP_ADEC_ReleaseStream(ch, &out);
+    }
+    printf("T32C %s dec frames %d/%d all %08x\n", tag, dgot, got, hdec);
+    printf("T32C %s dec clear rc=%d\n", tag, IMP_ADEC_ClearChnBuf(ch));
+    printf("T32C %s dec destroy rc=%d\n", tag, IMP_ADEC_DestroyChn(ch));
+    return got == n && dgot == got;
+}
+
+static int acodec_test(int n)
+{
+    static const struct { const char *tag; int type; } t[] = {
+        { "g711a", PT_G711A }, { "g711u", PT_G711U }, { "g726", PT_G726 }, { "adpcm", PT_ADPCM },
+    };
+    IMPAudioEncEncoder ue;
+    IMPAudioDecDecoder ud;
+    IMPAudioEncChnAttr ea;
+    int i, ok = 1, eh = -1, dh = -1;
+
+    for (i = 0; i < 4; i++)
+        ok &= acodec_run(t[i].tag, i, t[i].type, t[i].type, n);
+
+    memset(&ue, 0, sizeof ue);
+    ue.type = PT_PCM;
+    ue.maxFrmLen = ACODEC_MAXSTREAM;
+    strcpy(ue.name, "t32hi");
+    ue.openEncoder = user_open_enc;
+    ue.encoderFrm = user_enc_frm;
+    ue.closeEncoder = user_close;
+    memset(&ud, 0, sizeof ud);
+    ud.type = PT_PCM;
+    strcpy(ud.name, "t32hi");
+    ud.openDecoder = user_open_dec;
+    ud.decodeFrm = user_dec_frm;
+    ud.getFrmInfo = user_frm_info;
+    ud.closeDecoder = user_close;
+    printf("T32C user enc register rc=%d\n", IMP_AENC_RegisterEncoder(&eh, &ue));
+    printf("T32C user dec register rc=%d\n", IMP_ADEC_RegisterDecoder(&dh, &ud));
+    printf("T32C user handles enc %d dec %d\n", eh, dh);
+    ok &= acodec_run("user", 4, eh, dh, n);
+    printf("T32C user calls enc %d dec %d\n", user_enc_calls, user_dec_calls);
+    printf("T32C user enc unregister rc=%d\n", IMP_AENC_UnRegisterEncoder(&eh));
+    printf("T32C user dec unregister rc=%d\n", IMP_ADEC_UnRegisterDecoder(&dh));
+
+    /* error returns */
+    memset(&ea, 0, sizeof ea);
+    ea.type = PT_G711A;
+    ea.bufSize = 20;
+    printf("T32C err create twice rc=%d", IMP_AENC_CreateChn(0, &ea));
+    printf(" %d\n", IMP_AENC_CreateChn(0, &ea));
+    printf("T32C err destroy twice rc=%d", IMP_AENC_DestroyChn(0));
+    printf(" %d\n", IMP_AENC_DestroyChn(0));
+    printf("T32C err dec destroy unused rc=%d\n", IMP_ADEC_DestroyChn(0));
+    printf("T32S end ok=%d\n", ok);
+    return ok ? 0 : 2;
+}
+
 int main(int argc, char **argv)
 {
     const char *mode = argc > 1 ? argv[1] : "buf";
@@ -960,6 +1167,8 @@ int main(int argc, char **argv)
         return audiox_test(n);
     if (!strcmp(mode, "dmicx"))
         return dmicx_test(n);
+    if (!strcmp(mode, "acodec"))
+        return acodec_test(n);
     printf("T32S unknown mode %s\n", mode);
     return 1;
 }
