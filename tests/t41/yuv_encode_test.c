@@ -369,7 +369,12 @@ int main(void)
               ch->attr.rcAttr.attrRcMode.attrCbr.iMinQP == 20 &&
               ch->attr.rcAttr.attrRcMode.attrCbr.iMaxQP == 40,
               "cbr attr");
+#if defined(PLATFORM_T41)
+        /* GOP 50 x same-scene 2 at 25 fps: the stored GOP is the IDR distance (#475) */
+        CHECK(ch->attr.gopAttr.uGopLength == 100, "gop");
+#else
         CHECK(ch->attr.gopAttr.uGopLength == 50, "gop");
+#endif
     }
     CHECK(IMP_Encoder_CreateChn(P2_MAX_CHANNELS, NULL) == -1,
           "hidden slot not public");
