@@ -8616,6 +8616,12 @@ struct AL_CodecEncode {
     int use_hardware;               /* Flag: 1=hardware, 0=software */
     uint32_t entropy_mode;          /* 0=CAVLC, 1=CABAC */
     int force_next_idr;             /* Per-codec RequestIDR latch */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+    /* AL_Codec_Encode_RestartGop (#484/#485): an IDR on the next picture
+     * and the GOP counted from it (RequestIDR keeps the running count) */
+    int restart_gop;
+    uint32_t gop_base_frame;
+#endif
     int last_error;                 /* Best-effort OEM-like sticky error */
     IMPEncoderRcAttr rc_attr_cache; /* Control-plane cache for wrapper APIs */
 #if defined(OPENIMP_AL_ALLEGRO_RC)
@@ -12520,6 +12526,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         enc->avpu.frames_encoded = 0;
                         enc->avpu.frame_number = 0;
                         enc->avpu.idr_frame_number = 0;
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+                        enc->gop_base_frame = 0;
+#endif
                         enc->avpu.stream_header_offset = 0;
                         enc->avpu.busy_skip_count = 0;
                         enc->avpu.busy_snapshot_emitted = 0;
@@ -13292,6 +13301,15 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         /* Consumed only once a command is submitted: a request must survive
          * a skipped or failed submit (busy core, no stream buffer). */
         int force_idr = enc->force_next_idr;
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+        int restart_gop = __atomic_load_n(&enc->restart_gop, __ATOMIC_ACQUIRE);
+        uint32_t gop_base = enc->gop_base_frame;
+
+        if (restart_gop)
+            force_idr = 1;
+#else
+        const uint32_t gop_base = 0u;
+#endif
 
         /* Keep the AVPU shadow aligned with live control-plane state before
          * each OEM-shaped encode1 submit. */
@@ -13464,8 +13482,8 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #endif
             if (!force_idr
                 && ctx->gop_length > 0u
-                && ctx->frame_number != 0u
-                && ((ctx->frame_number % ctx->gop_length) == 0u)
+                && ctx->frame_number != gop_base
+                && (((ctx->frame_number - gop_base) % ctx->gop_length) == 0u)
                 && (ctx->reference_valid != 0)
                 && reference_storage_ready) {
                 periodic_idr = 1;
@@ -14097,6 +14115,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #endif
 
             /* Advance CL index (already set above based on IDR vs P frame) */
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+            if (restart_gop) {
+                /* vendor RestartGop: the next periodic IDR is one GOP
+                 * after this picture */
+                enc->gop_base_frame = ctx->frame_number;
+                __atomic_store_n(&enc->restart_gop, 0, __ATOMIC_RELEASE);
+            }
+#endif
             ctx->frame_number++;
             submitted = 1;
             if (force_idr)
@@ -15072,7 +15098,19 @@ int AL_Codec_Encode_SetQpIPDelta(void *codec, int delta)
 
 int AL_Codec_Encode_RestartGop(void *codec)
 {
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+    /* vendor AL_Common_Encoder_RestartGop (T41 1.2.6 0xdbf08) latches a
+     * restart for the next picture: it is an IDR and the GOP count starts
+     * there (vendor run #485: SetChnGopLength at picture 130 -> IDR 130,
+     * 190, 250 with an IDR distance of 60) */
+    if (codec == NULL)
+        return -1;
+    __atomic_store_n(&((AL_CodecEncode *)codec)->restart_gop, 1,
+                     __ATOMIC_RELEASE);
+    return 0;
+#else
     return AL_Codec_Encode_RequestIDR(codec);
+#endif
 }
 
 int AL_Codec_Encode_GetGopParam(void *codec, void *gopAttr)

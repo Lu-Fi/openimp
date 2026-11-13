@@ -455,6 +455,12 @@ typedef struct {
     int rb_hold;
     IMPEncoderRcAttr rb_rc;
     IMPEncoderGopAttr rb_gop;
+    /* vendor glue (#484/#485): restart the GOP before the next picture
+     * (set by a GOP or rate change, as the vendor encoder_get_fps_mask
+     * sets it after SetGopParam) and the channel's day/night picture
+     * state of do_day_night_change (inStat.is_day, 0 at creation) */
+    int gop_restart;
+    int dn_is_day;
 #endif
 } P2EncoderChannel;
 
@@ -1524,6 +1530,7 @@ extern int AL_Codec_Encode_GetEvalInfo(void *codec, void *stream, void *out36)
 #endif
 extern int AL_Codec_Encode_ReleaseStream(void *codec, void *stream, void *user_data);
 extern int AL_Codec_Encode_RequestIDR(void *codec);
+extern int AL_Codec_Encode_RestartGop(void *codec);
 extern int AL_Codec_Encode_SetJpegSkip(void *codec, int allow);
 extern int AL_Codec_Encode_SetJpegSrcPitch(void *codec, uint32_t pitch);
 extern int AL_Codec_Encode_JpegSkipped(void *codec);
@@ -1653,6 +1660,75 @@ static void p2_t41_rb_hold(int channel)
 }
 #endif
 
+
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+/* vendor imp_isp is_isp_day (1, cleared by SetISPRunningMode,
+ * src/t40/openimp_p3_controls.c; weak there, so either object links alone) */
+int openimp_t4x_is_isp_day __attribute__((weak)) = 1;
+
+/* Vendor encoder_get_fps_mask (T40 1.3.1 / T41 1.2.6): the glue runs
+ * before a picture when the pending GOP length or same-scene count differs
+ * from the active one (or the rate changed), calls SetGopParam and then
+ * AL_Codec_Encode_RestartGop: an IDR on that picture, the GOP counted from
+ * it (#485).  Active = the value before the pending change. */
+static void p2_t4x_gop_restart_if(P2EncoderChannel *ch, uint32_t length,
+                                  uint32_t same_scene)
+{
+    const IMPEncoderGopAttr *active = ch->rb_hold ? &ch->rb_gop
+                                                  : &ch->attr.gopAttr;
+
+    if (length != active->uGopLength ||
+        same_scene != active->uMaxSameSenceCnt)
+        __atomic_store_n(&ch->gop_restart, 1, __ATOMIC_RELEASE);
+}
+
+/* Vendor do_day_night_change (T40 1.3.1 imp_encoder line 0x2d8, T41 1.2.6
+ * line 899, in the picture path before the encode): a picture whose eight
+ * chroma samples are all 0x80 is "night" (0), any other "day" (1).  When
+ * that differs from the channel state and equals is_isp_day, the state
+ * follows and the GOP restarts (#484).  NV12, pitch ALIGN16(width), chroma
+ * after ALIGN16(height) luma rows, as the vendor reads it. */
+static int p2_t4x_picture_is_day(const P2SyntheticFrame *frame)
+{
+    uint32_t pitch, luma;
+    int32_t quarter;
+    const uint8_t *uv;
+
+    if (!frame || !frame->virtual_address || !frame->width ||
+        !frame->height)
+        return 1;
+    pitch = (frame->width + 15u) & ~15u;
+    luma = ((frame->height + 15u) & ~15u) * pitch;
+    if (frame->size && frame->size < luma + luma / 2u)
+        return 1;               /* not an ALIGN16 NV12 buffer: no read */
+    uv = (const uint8_t *)(uintptr_t)(frame->virtual_address + luma);
+    quarter = (int32_t)luma / 4;
+    if (uv[0] == 0x80u && uv[0xe1] == 0x80u && uv[pitch / 2u] == 0x80u &&
+        uv[pitch / 2u + 0x147u] == 0x80u && uv[quarter] == 0x80u &&
+        uv[quarter + 0x1a4] == 0x80u && uv[luma / 2u - 0xe0u] == 0x80u)
+        return uv[luma / 2u - 1u] != 0x80u;
+    return 1;
+}
+
+static void p2_t4x_restart_gop(int channel, P2EncoderChannel *ch,
+                               const void *frame)
+{
+    int day = p2_t4x_picture_is_day((const P2SyntheticFrame *)frame);
+    int restart = 0;
+
+    if (ch->dn_is_day != day &&
+        __atomic_load_n(&openimp_t4x_is_isp_day, __ATOMIC_RELAXED) == day) {
+        ch->dn_is_day = day;
+        IMP_LOG_INFO("Encoder", "do_day_night_change: chn %d is_day=%d",
+                     channel, day);
+        restart = 1;
+    }
+    if (__atomic_exchange_n(&ch->gop_restart, 0, __ATOMIC_ACQ_REL))
+        restart = 1;
+    if (restart)
+        (void)AL_Codec_Encode_RestartGop(ch->codec);
+}
+#endif
 
 /* A NULL out/attr pointer of an API call: one limited line, then -1. */
 static int p2_null_arg(const char *function, const void *pointer)
@@ -3024,6 +3100,10 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     p2_t30_hs_created(ch, attr);
 #endif
     ch->created = 1;
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+    ch->gop_restart = 0;
+    ch->dn_is_day = 0;
+#endif
 #if defined(PLATFORM_T31)
     memset(ch->eval_info, 0, sizeof(ch->eval_info));
 #endif
@@ -4127,6 +4207,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
          * completion point like the captured frame (review H2) */
         pad_pending = 1;
     } else
+#endif
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+    if (ch->codec_type != IMP_ENC_TYPE_JPEG && frame)
+        p2_t4x_restart_gop(channel, ch, frame);
 #endif
     process_result = AL_Codec_Encode_Process(ch->codec, frame, frame);
 #if defined(PLATFORM_T41) || defined(PLATFORM_T40)
@@ -5401,6 +5485,13 @@ int IMP_Encoder_SetChnFrmRate(int channel, IMPEncoderFrmRate *rate,
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
+    /* vendor glue: a new output rate goes through SetFrameRate and
+     * SetGopParam before the next picture, then RestartGop (#485) */
+    if ((uint64_t)rate->frmRateNum * ch->attr.rcAttr.outFrmRate.frmRateDen !=
+        (uint64_t)ch->attr.rcAttr.outFrmRate.frmRateNum * rate->frmRateDen)
+        __atomic_store_n(&ch->gop_restart, 1, __ATOMIC_RELEASE);
+#endif
     ch->attr.rcAttr.outFrmRate = *rate;
     ch->next_frame_due_us = 0;
     ch->output_timestamp_us = 0;
@@ -5798,6 +5889,8 @@ int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
             p2_channels[channel].attr.gopAttr = *gop;
             return 0;
         }
+        p2_t4x_gop_restart_if(&p2_channels[channel], gop->uGopLength,
+                              gop->uMaxSameSenceCnt);
         /* T41 glue (#475): the GOP in effect is the IDR distance */
         eff = *gop;
         eff.gopLength = (uint16_t)p2_t41_set_distance(
@@ -5821,11 +5914,12 @@ int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
         uint32_t num = ch->attr.rcAttr.outFrmRate.frmRateNum;
         uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
 
+        p2_t41_rb_hold(channel);
+        p2_t4x_gop_restart_if(ch, eff.uGopLength, eff.uMaxSameSenceCnt);
         if (eff.uGopLength &&
             eff.uGopLength != ch->attr.gopAttr.uGopLength)
             eff.uGopLength = (uint16_t)t40_vendor_set_gop(eff.uGopLength,
                                                           num, den);
-        p2_t41_rb_hold(channel);
         ch->attr.gopAttr = eff;
         eff.gopLength = (uint16_t)t40_vendor_idr_distance(
             eff.uGopLength, eff.uMaxSameSenceCnt, num, den);
@@ -5861,6 +5955,8 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
         if (length <= 0)
             return 0;   /* vendor: stored, never applied */
         eff = p2_channels[channel].attr.gopAttr;
+        p2_t4x_gop_restart_if(&p2_channels[channel], (uint32_t)length,
+                              eff.uMaxSameSenceCnt);
         eff.gopLength = (uint16_t)p2_t41_set_distance(
             &p2_channels[channel], (uint32_t)length, eff.uMaxSameSenceCnt);
         eff.uGopLength = eff.gopLength;     /* T41 glue (#475) */
@@ -5884,6 +5980,8 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
         uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
 
         p2_t41_rb_hold(channel);
+        p2_t4x_gop_restart_if(ch, (uint32_t)length,
+                              ch->attr.gopAttr.uMaxSameSenceCnt);
         ch->attr.gopAttr.uGopLength =
             (uint16_t)t40_vendor_set_gop((uint32_t)length, num, den);
         eff = ch->attr.gopAttr;

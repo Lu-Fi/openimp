@@ -1805,6 +1805,11 @@ int32_t IMP_ISP_Tuning_GetCCMAttr(IMPVI_NUM num, IMPISPCCMAttr *attr)
 }
 #endif
 
+/* vendor isp_tseries is_isp_day (T40 1.3.1 / T41 1.2.5): 1 until the
+ * first successful SetISPRunningMode, which clears it whatever the mode;
+ * the encoder's do_day_night_change compares the picture with it (#484) */
+int openimp_t4x_is_isp_day __attribute__((weak)) = 1;
+
 #if defined(PLATFORM_T41)
 int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
                                          IMPISPRunningMode *mode)
@@ -1814,8 +1819,10 @@ int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
     if (num != IMPVI_MAIN || !mode)
         return -1;
     result = p3_tuning_pointer(num, 0, TISP_CID_RUNNING_MODE, mode);
-    if (result == 0)
+    if (result == 0) {
         p3_controls.running_mode = *mode;
+        __atomic_store_n(&openimp_t4x_is_isp_day, 0, __ATOMIC_RELAXED);
+    }
     return result;
 }
 
@@ -1855,8 +1862,10 @@ int32_t IMP_ISP_Tuning_SetISPRunningMode(IMPVI_NUM num,
     if ((uint32_t)*mode >= (uint32_t)IMPISP_RUNNING_MODE_BUTT)
         return -4;
     result = p3_tuning_pointer(num, 0, TISP_CID_RUNNING_MODE, mode);
-    if (result == 0)
+    if (result == 0) {
         p3_controls.running_mode = *mode;
+        __atomic_store_n(&openimp_t4x_is_isp_day, 0, __ATOMIC_RELAXED);
+    }
     return result;
 }
 

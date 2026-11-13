@@ -205,6 +205,7 @@ int AL_Codec_Encode_JpegSkipped(void *codec)
 #define STUB0(name) int name(void *codec) { (void)codec; return 0; }
 #define STUB1(name, t) int name(void *codec, t a) { (void)codec; (void)a; return 0; }
 STUB0(AL_Codec_Encode_RequestIDR)
+STUB0(AL_Codec_Encode_RestartGop)
 STUB1(AL_Codec_Encode_SetBitRate, int)
 int AL_Codec_Encode_SetFisheye(void *c, int e) { (void)c; (void)e; return 0; }
 int openimp_t31_enc_fisheye(int c) { (void)c; return 0; }

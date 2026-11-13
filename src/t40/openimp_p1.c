@@ -519,6 +519,29 @@ static int p1_capture_alloc(int channel, uint32_t size, const char *tag,
     return dma_alloc(size, tag, physical, virtual_address);
 }
 
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+/* NV12 capture: the ISP writes ALIGN16(width) x height luma rows and the
+ * chroma after ALIGN16(height) rows; the chroma rows between height / 2 and
+ * ALIGN16(height) / 2 stay as allocated.  Fill them neutral (0x80): the
+ * vendor encoder glue's day/night picture check (do_day_night_change,
+ * #484) reads the last chroma byte of the ALIGN16 frame, and on the vendor
+ * stack that byte reads 0x80 for a grey picture (vendor run 2026-11-13). */
+static void p1_fill_chroma_padding(void *virtual_address, uint32_t size,
+                                   uint32_t width, uint32_t height,
+                                   int32_t pixfmt)
+{
+    uint32_t pitch = (width + 15u) & ~15u;
+    uint32_t height16 = (height + 15u) & ~15u;
+    uint32_t start = pitch * height16 + pitch * (height / 2u);
+    uint32_t end = pitch * height16 + pitch * (height16 / 2u);
+
+    if (!virtual_address || pixfmt != (int32_t)TISP_PIX_FMT_NV12_ENUM ||
+        !width || !height || end <= start || end > size)
+        return;
+    memset((uint8_t *)virtual_address + start, 0x80, end - start);
+}
+#endif
+
 static int free_capture_buffers(struct openimp_fs_channel *chn)
 {
     unsigned int i;
@@ -2568,6 +2591,12 @@ int IMP_FrameSource_EnableChn(int channel)
             goto done;
         }
         trace_p1("P1_INNER ALLOC_END\n");
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+        p1_fill_chroma_padding(buffer->virtual_address, chn->sizeimage,
+                               (uint32_t)chn->attr.picWidth,
+                               (uint32_t)chn->attr.picHeight,
+                               chn->attr.pixFmt);
+#endif
         buffer->size = chn->sizeimage;
         fill_qbuf(words, i, buffer->physical, buffer->size);
         trace_p1("P1_INNER QBUF_BEGIN\n");
