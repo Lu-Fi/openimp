@@ -47,6 +47,29 @@ static void sleep_ms(unsigned int ms)
         ;
 }
 
+/* wait until at least `want` reports arrived, at most 5 s (a loaded host
+ * may run the 50 ms monitor thread late), then give the thread several more
+ * ticks to prove the "at most three per stall" cap: the count must stay. */
+static int wait_reports(int want)
+{
+    unsigned int waited = 0;
+
+    while (cb_calls < want && waited < 5000u) {
+        sleep_ms(10);
+        waited += 10;
+    }
+    sleep_ms(400);
+    return cb_calls;
+}
+
+static unsigned long long now_ms(void)
+{
+    struct timespec t;
+
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (unsigned long long)t.tv_sec * 1000ull + (unsigned long long)t.tv_nsec / 1000000ull;
+}
+
 static void test_step(void)
 {
     OpenIMPVideoDropState st = { 0, 0, 0 };
@@ -84,13 +107,30 @@ static void test_thread(void)
     /* streaming: the counter moves every 5 ms, no report */
     demand = 1;
     CHECK(openimp_video_drop_set(drop_cb) == 0, "set");
-    for (i = 0; i < 40; i++) {
-        openimp_video_drop_note_frame();
-        sleep_ms(5);
+    {
+        unsigned long long last = now_ms(), gap = 0;
+
+        for (i = 0; i < 40; i++) {
+            unsigned long long t;
+
+            openimp_video_drop_note_frame();
+            sleep_ms(5);
+            t = now_ms();
+            if (t - last > gap)
+                gap = t - last;
+            last = t;
+        }
+        /* a feeder starved for >= one tick (50 ms) is a real stall for the
+         * monitor: the check is only meaningful on a host that kept up.
+         * The step rule itself is covered deterministically above. */
+        if (gap < 40)
+            CHECK(cb_calls == 0, "report while streaming (%d)", cb_calls);
+        else
+            fprintf(stderr, "note: host starved (gap %llu ms), streaming check skipped\n", gap);
+        cb_calls = 0;
     }
-    CHECK(cb_calls == 0, "report while streaming (%d)", cb_calls);
     /* stall: three reports (100, 200, 300 ms), no more */
-    sleep_ms(500);
+    wait_reports(3);
     CHECK(cb_calls == 3, "%d reports for one stall, want 3", cb_calls);
     /* nothing streaming: quiet */
     demand = 0;
@@ -101,11 +141,11 @@ static void test_thread(void)
     /* cleared: the thread ends and no callback runs any more */
     CHECK(openimp_video_drop_set(NULL) == 0, "clear");
     demand = 1;
-    sleep_ms(300);
+    sleep_ms(1000);   /* the old thread must have seen the cleared callback */
     CHECK(cb_calls == 0, "report after clearing (%d)", cb_calls);
     /* registering again restarts the monitor */
     CHECK(openimp_video_drop_set(drop_cb) == 0, "set again");
-    sleep_ms(500);
+    wait_reports(3);
     CHECK(cb_calls == 3, "%d reports after restart, want 3", cb_calls);
     CHECK(openimp_video_drop_set(NULL) == 0, "clear again");
     sleep_ms(100);
