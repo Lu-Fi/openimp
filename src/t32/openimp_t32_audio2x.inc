@@ -830,6 +830,14 @@ int IMP_AO_DisableChn(int device, int channel)
     return 0;
 }
 
+/* Playback algorithm slots: the T32 2.2.0 API has three (HPF, AGC, NS), the T33 2.0.2.1 API two (AO_MODULE_BUTT = 2);
+ * a T33 caller's array holds two entries, so the third must be neither read nor written. */
+#ifdef PLATFORM_T33
+#define T32_AO_ORDER_N 2
+#else
+#define T32_AO_ORDER_N 3
+#endif
+
 static void t32_ao_effects(int16_t *samples, int count)
 {
     const IMPAudioIOAttr *attr = &p3_audio.ao_attr;
@@ -838,7 +846,7 @@ static void t32_ao_effects(int16_t *samples, int count)
     if (attr->bitwidth != AUDIO_BIT_WIDTH_16 ||
         !t32_ten_ms(t32_ao.node_samples, attr->samplerate))
         return;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < T32_AO_ORDER_N; i++) {
         switch (t32_ao.order_set ? t32_ao.order[i] : i) {
         case AO_MODULE_HPF:
             if (t32_ao.hpf_enabled)
@@ -1167,11 +1175,12 @@ int IMP_AO_Soft_UNMute(int device, int channel)
 
 int IMP_AO_SetAlgoOrder(int device, int channel, AudioAO_Type order[])
 {
+    int i;
+
     if (device < 0 || device >= 1 || channel != 0 || !order)
         return -1;
-    t32_ao.order[0] = (int)order[0];
-    t32_ao.order[1] = (int)order[1];
-    t32_ao.order[2] = (int)order[2];
+    for (i = 0; i < T32_AO_ORDER_N; i++)
+        t32_ao.order[i] = (int)order[i];
     t32_ao.order_set = 1;
     return 0;
 }
@@ -1182,7 +1191,7 @@ int IMP_AO_GetAlgoOrder(int device, int channel, AudioAO_Type order[])
 
     if (device < 0 || device >= 1 || channel != 0 || !order)
         return -1;
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < T32_AO_ORDER_N; i++)
         order[i] = (AudioAO_Type)(t32_ao.order_set ? t32_ao.order[i] : i);
     return 0;
 }

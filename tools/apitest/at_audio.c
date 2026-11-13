@@ -514,8 +514,9 @@ static void ao_flow(void)
 
         memset(&zf, 0, sizeof(zf)); zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zb; zf.len = 1280;
         r = IMP_AI_SetPubAttr(adev, attr);
-        if (r == 0) r = IMP_AI_Enable(adev);
-        if (r == 0) r = IMP_AI_EnableChn(adev, 0);
+        int rs = r, re = -99, rc = -99;
+        if (r == 0) { r = IMP_AI_Enable(adev); re = r; }
+        if (r == 0) { r = IMP_AI_EnableChn(adev, 0); rc = r; }
         if (r == 0) {
             r2 = IMP_AI_EnableAec(adev, 0, ao, 0);
             rep(FN(IMP_AI_EnableAec), r2, r2 == 0 ? V_PASS : V_FAIL, "rt: AI dev %d chn 0 with the muted AO dev %d chn 0 as reference", adev, ao);
@@ -535,7 +536,7 @@ static void ao_flow(void)
             NEED(IMP_AI_DisableAec) { r4 = IMP_AI_DisableAec(adev, 0); RET0(IMP_AI_DisableAec, r4, "rt: AEC off"); }
             IMP_AI_DisableChn(adev, 0); IMP_AI_Disable(adev);
         } else
-            rep(FN(IMP_AI_EnableAec), r, V_FAIL, "AI enable for the AEC test failed");
+            rep(FN(IMP_AI_EnableAec), r, V_FAIL, "AI enable for the AEC test failed (SetPubAttr %d, Enable %d, EnableChn %d)", rs, re, rc);
         gfree(fr); gfree(ref);
     }
 #endif

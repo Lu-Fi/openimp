@@ -13,6 +13,17 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `tools/apitest/apitest.c`: the logger stand-in file `/tmp/apitest_lmd_*` is removed at exit (`atexit`), also when the log-macro case does not run (#476).
 - Matrix (`docs/api_evidence.json`): T30 `ISP_Tuning_Get/SetSaturation` and `ISP_Tuning_Get/SetWB` rt -> dev (T30X lab b71/b75/b79, vendor 1.0.5 and OpenIMP on the same camera: GetSaturation 128 on both, saturation-0 U=V 125.4 on both, manual WB red-high/blue-high within 0.2/2.9 U,V, restore within 0.92, 0 oopses; #449 #450 fixed).
 - T31 `ISP_SetAeAlgoFunc` / `ISP_SetAwbAlgoFunc` were already dev (case `customalgo_t31`, 2026-11-12). Remaining T30/T31 non-dev cells are camera-only or hardware-blocked and listed in #308 / #309.
+## 2026-11-13: T32/T33 SU_* matrix cells follow the neo libsysutils evidence (#482)
+
+- `SU_*` (libsysutils, not libimp) on T32/T33 are served by the neo libsysutils (Lu-Fi/ingenic-system-libs-neo, thingino aperto pin; user decision 2026-11-13), no longer `miss`. Six lines with a PASS in the T33 QEMU run (GetModelNumber, GetVersion, GetDevID, SUTime2Raw, Raw2SUTime, SetWkupMode refusal) are `qemu` on both SoCs; the other 56 rows are `aud` (exported by neo, QEMU line N/A or SKIP on neo and vendor alike, or not exercised). `docs/api_evidence.json`, matrix regenerated.
+- Evidence: `-M ingenic-t33`, apitest area `su`, neo vs vendor 2.0.2.1: 33 of 33 lines equal, 0 oopses.
+
+## 2026-11-13: T33 audio API in QEMU, AO algorithm order has two slots on T33 (#481)
+
+- QEMU `-M ingenic-t33` models the AIC and the internal codec; the vendor `audio.ko` (H20250929a) loads in the 3.10.14 guest and brings `/dev/dsp`. apitest area `audio`, vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (vendor `ADEC_GetStream` returns 1280 bytes for an 800-byte node, OpenIMP 800), `t32_misc_sample audiox` equal apart from `AI_EnableLpf` (vendor -1, OpenIMP 0). 55 T33 audio rows `?` to `qemu`, 8 audiox rows to `qemu`, `AO_SetAlgoOrder` `aud`. Silence only. DMIC and the apitest AEC block stay `?` (DMIC returns -1 on vendor and OpenIMP in this guest; the AEC block fails the same way on both).
+- `src/t32/openimp_t32_audio2x.inc`: on T33 `IMP_AO_Set/GetAlgoOrder` use two slots (`AO_MODULE_BUTT` is 2 in the 2.0.2.1 API); before, Get wrote a third entry past a vendor-API caller's 2-entry array. T32 unchanged (three slots).
+- `tools/apitest/at_audio.c`: the AEC failure line reports which step failed.
+
 ## 2026-11-13: T32/T33 `IMP_System_GetCPUInfo` reads the chip variant (#471)
 
 - `src/t32/openimp_t32_sys.c`: `t32_get_cpu_id()` (cached) as the vendor `get_cpu_id` (libimp T33 2.0.2.1 / T32 2.2.0): SoC id `[0x1300002c]`, T32 sub id `[0x13540238] >> 16`, T33 variant byte `[0x1354021c] >> 24` (the vendor's unaligned read at 0x1354021f, done aligned); `IMP_System_GetCPUInfo` maps the id through the vendor's 20-name table ("T32-LQ" .. "T32-VN", "T33-L" .. "T33-VN", "Unknown" for the rest). The constant "T32" in `openimp_t32_skeleton.c` is gone.
