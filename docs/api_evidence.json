@@ -386,7 +386,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -452,7 +452,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Bypass_Bind": {
@@ -480,7 +481,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -546,7 +547,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_DelSensor": {
@@ -559,7 +561,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -625,7 +627,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_DisableSensor": {
@@ -638,7 +641,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -704,7 +707,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_DisableTuning": {
@@ -717,7 +721,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -783,7 +787,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "QEMU #296 2026-11-11"
+        "T32": "QEMU #296 2026-11-11",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_EnableSensor": {
@@ -796,7 +801,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -862,7 +867,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_EnableTuning": {
@@ -875,7 +881,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -941,7 +947,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "QEMU #296 2026-11-11"
+        "T32": "QEMU #296 2026-11-11",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Get/SetCsccrMode": {
@@ -954,7 +961,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -974,7 +981,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "err",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1014,7 +1021,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1044,7 +1051,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -1073,7 +1080,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -1095,7 +1102,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1152,7 +1159,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "n.a."
       },
@@ -1197,7 +1204,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "no-op"
       },
@@ -1216,7 +1223,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "no-op"
       },
@@ -1235,7 +1242,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -1301,7 +1308,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_RAW_RwControl": {
@@ -1378,7 +1386,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "n.a."
       },
@@ -1537,7 +1545,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "rt"
       },
@@ -1717,7 +1725,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -1783,7 +1791,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetBacklightComp": {
@@ -1828,7 +1837,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1870,7 +1879,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetCCMAttr": {
@@ -1883,7 +1893,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "rt"
       },
@@ -1903,7 +1913,8 @@
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T23": "apitest apitest-cov 2026-10-27 .30",
         "T31": "apitest apitest-cov 2026-10-27 .26",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetColorfxMode": {
@@ -1955,7 +1966,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2162,7 +2173,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -2263,7 +2274,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2321,7 +2332,7 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2420,7 +2431,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2428,7 +2439,8 @@
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetISPCustomMode": {
@@ -2540,7 +2552,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2606,7 +2618,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "QEMU run-oi-bin vs run-vendor-bin (#289, audit/issue289)"
+        "T32": "QEMU run-oi-bin vs run-vendor-bin (#289, audit/issue289)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetISPVflip": {
@@ -2847,7 +2860,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2885,7 +2898,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2905,7 +2918,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3058,14 +3071,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -3154,7 +3168,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "no-op"
       },
@@ -3197,7 +3211,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3206,7 +3220,8 @@
         "T23": "apitest rc3gaps2 2026-10-27 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetBlcAttr": {
@@ -3246,7 +3261,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3416,7 +3431,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -3495,7 +3510,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3525,7 +3540,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetSensorFPS": {
@@ -3538,7 +3554,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3604,7 +3620,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "QEMU #296 2026-11-11"
+        "T32": "QEMU #296 2026-11-11",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetSharpness": {
@@ -3617,7 +3634,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3779,7 +3796,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "rt"
       },
@@ -3809,7 +3826,8 @@
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_SetBrightness": {
@@ -3822,7 +3840,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4065,7 +4083,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -4152,7 +4170,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -4177,7 +4195,8 @@
       "ref": {
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T31": "apitest rc3-cases 2026-10-26 .26",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_SetSceneMode": {
@@ -4226,7 +4245,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4292,7 +4311,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "QEMU #296 2026-11-11"
+        "T32": "QEMU #296 2026-11-11",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_SetSharpness": {
@@ -4305,7 +4325,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4518,13 +4538,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): set/clear of one brighten region, frames flow; registers 0x1e040..0x1e07c read back equal with a diagnostic ko (open-tx-isp #180); no visible luma change for the apitest request (the weighting acts on face regions only)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -4538,7 +4559,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "rt"
       },
@@ -4584,7 +4605,8 @@
         "T41": "apitest agg47-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_SwitchBin": {
@@ -4597,7 +4619,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "rt"
       },
@@ -4672,14 +4694,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -4693,7 +4716,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "rt",
         "T41": "dev"
       },
@@ -4730,7 +4753,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4783,7 +4806,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "rt"
       },
@@ -4803,7 +4826,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4828,7 +4851,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -5072,7 +5095,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -5093,7 +5116,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "rt"
       },
@@ -5278,7 +5301,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -5334,7 +5357,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetAfHist": {
@@ -5391,7 +5415,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -5425,7 +5449,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetAwbAttr": {
@@ -5438,7 +5463,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "rt"
       },
@@ -5533,13 +5558,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -5603,7 +5629,7 @@
         "T30": "rt",
         "T31": "no-op",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -5659,7 +5685,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_Get/SetAwbZoneWeight": {
@@ -5691,7 +5718,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "dev"
       },
@@ -5712,13 +5739,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): changed global/roi/smooth weights read back, initial values restored, frames flow (control 0x8000036)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -5732,7 +5760,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "n.a."
       },
@@ -5822,7 +5850,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -5906,14 +5934,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "action": {
         "T41": "implement"
@@ -6109,7 +6138,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6117,7 +6146,8 @@
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetAeZone": {
@@ -6173,14 +6203,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest agg5v 2026-11-01 .34 (open-tx-isp next ac1913e3, module loaded with t41_af=1): PASS, 30 min soak with a read every 10 s (180/180 ret 0, metric follows the scene), 6 reload cycles, 0 oopses; open-tx-isp #179",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "action": {
         "T41": "implement"
@@ -6225,7 +6256,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6233,7 +6264,8 @@
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetAwbStatistics": {
@@ -6246,7 +6278,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6268,7 +6300,8 @@
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ISP_Tuning_GetAwbZone": {
@@ -6371,13 +6404,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -6605,7 +6639,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -6637,7 +6671,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6703,7 +6737,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b39 2026-11-06 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_CreateGroup": {
@@ -6716,7 +6751,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6782,7 +6817,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_DestroyChn": {
@@ -6795,7 +6831,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6861,7 +6897,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_DestroyGroup": {
@@ -6874,7 +6911,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -6940,7 +6977,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_FlushStream": {
@@ -6953,7 +6991,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7009,7 +7047,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_Get/SetChangeRef": {
@@ -7022,7 +7061,7 @@
         "T30": "no-op",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7045,7 +7084,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7101,7 +7140,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b39 2026-11-06 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_Get/SetChnColor2Grey": {
@@ -7114,7 +7154,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7142,7 +7182,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7186,7 +7226,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7214,7 +7254,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7270,7 +7310,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_Get/SetChnFrmUsedMode": {
@@ -7283,7 +7324,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7390,7 +7431,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7413,7 +7454,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7507,7 +7548,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "n.a."
       },
@@ -7532,7 +7573,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7551,7 +7592,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7582,7 +7623,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7630,7 +7671,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7688,7 +7729,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7716,7 +7757,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7758,7 +7799,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7805,7 +7846,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7852,7 +7893,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7908,7 +7949,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_GetChnAveBitrate": {
@@ -7945,7 +7987,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7983,7 +8025,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_GetChnEvalInfo": {
@@ -8039,7 +8082,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8077,7 +8120,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_GetGOPSize": {
@@ -8090,7 +8134,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -8113,7 +8157,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8179,7 +8223,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b39 2026-11-06 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_InputJpege": {
@@ -8192,7 +8237,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8216,7 +8261,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8235,7 +8280,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -8281,7 +8326,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8347,7 +8392,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_Query": {
@@ -8360,7 +8406,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8416,7 +8462,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_RegisterChn": {
@@ -8429,7 +8476,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8495,7 +8542,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_ReleaseStream": {
@@ -8508,7 +8556,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8574,7 +8622,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_RequestGDR": {
@@ -8587,7 +8636,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -8606,7 +8655,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8672,7 +8721,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_SetAvpuBsShare": {
@@ -8738,7 +8788,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8816,7 +8866,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -8858,7 +8908,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8881,7 +8931,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8931,7 +8981,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8969,7 +9019,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9012,7 +9062,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9034,7 +9084,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9060,7 +9110,8 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_SetFrameRelease": {
@@ -9094,7 +9145,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -9134,7 +9185,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9153,7 +9204,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -9207,7 +9258,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9273,7 +9324,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_StopRecvPic": {
@@ -9286,7 +9338,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9352,7 +9404,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_UnRegisterChn": {
@@ -9365,7 +9418,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9431,7 +9484,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Encoder_VbmAlloc": {
@@ -9444,7 +9498,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9469,7 +9523,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9488,7 +9542,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9513,7 +9567,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9532,7 +9586,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9552,7 +9606,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9577,7 +9631,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9602,7 +9656,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9621,7 +9675,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9646,7 +9700,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9684,7 +9738,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9709,7 +9763,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9836,7 +9890,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9902,7 +9956,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_DequeueBuffer": {
@@ -9915,7 +9970,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9935,7 +9990,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10001,7 +10056,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_DisableChn": {
@@ -10014,7 +10070,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10080,7 +10136,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_EnableChn": {
@@ -10093,7 +10150,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10159,7 +10216,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_ExternInject_CreateChn": {
@@ -10172,7 +10230,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10192,7 +10250,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10212,7 +10270,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10232,7 +10290,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10252,7 +10310,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10330,7 +10388,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10398,7 +10456,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10457,7 +10515,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10518,7 +10576,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10552,7 +10610,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10592,7 +10650,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "err",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -10627,7 +10685,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10668,7 +10726,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_GetFrameEx": {
@@ -10681,7 +10740,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10700,7 +10759,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10758,7 +10817,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10778,7 +10837,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10819,7 +10878,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_ReleaseFrameEx": {
@@ -10832,7 +10892,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10898,7 +10958,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -10917,7 +10977,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11029,7 +11089,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11067,7 +11127,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11105,7 +11165,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -11126,7 +11186,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -11147,7 +11207,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11169,7 +11229,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11207,7 +11267,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11245,7 +11305,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11283,7 +11343,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11309,7 +11369,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11375,7 +11435,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_CreateRgn": {
@@ -11388,7 +11449,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11454,7 +11515,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_CreateRgn_ISP": {
@@ -11467,7 +11529,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11489,7 +11551,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11555,7 +11617,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_DestroyRgn": {
@@ -11568,7 +11631,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11634,7 +11697,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_DestroyRgn_ISP": {
@@ -11647,7 +11711,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11669,7 +11733,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11690,7 +11754,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11756,7 +11820,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_Get/SetRgnAttr": {
@@ -11769,7 +11834,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11835,7 +11900,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_Get/SetRgnAttr_ISP": {
@@ -11848,7 +11914,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11892,7 +11958,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11914,7 +11980,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11980,7 +12046,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_RgnCreate_Query": {
@@ -11993,7 +12060,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12002,7 +12069,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_RgnRegister_Query": {
@@ -12015,7 +12083,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12024,7 +12092,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_SetGroupCallback": {
@@ -12037,14 +12106,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_SetMosaic": {
@@ -12057,7 +12127,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12066,7 +12136,8 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_SetPoolSize": {
@@ -12079,7 +12150,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12145,7 +12216,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_SetPoolSize_ISP": {
@@ -12158,7 +12230,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12180,7 +12252,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12226,7 +12298,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_SetRgnAttr_PicISP": {
@@ -12239,7 +12312,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12261,7 +12334,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12327,7 +12400,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_ShowRgn_ISP": {
@@ -12340,7 +12414,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12362,7 +12436,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12428,7 +12502,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_Stop": {
@@ -12441,7 +12516,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12487,7 +12562,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_UnRegisterRgn": {
@@ -12500,7 +12576,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12566,7 +12642,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_UpdateRgnAttrData": {
@@ -12579,7 +12656,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12635,7 +12712,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_CreateBaseMoveInterface": {
@@ -12648,7 +12726,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12694,7 +12772,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_CreateChn": {
@@ -12707,7 +12786,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12763,7 +12842,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_CreateGroup": {
@@ -12776,7 +12856,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12832,7 +12912,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_CreateMoveInterface": {
@@ -12845,7 +12926,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12901,7 +12982,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_DestroyBaseMoveInterface": {
@@ -12914,7 +12996,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12960,7 +13042,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_DestroyChn": {
@@ -12973,7 +13056,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13039,7 +13122,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_DestroyGroup": {
@@ -13052,7 +13136,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13118,7 +13202,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_DestroyMoveInterface": {
@@ -13131,7 +13216,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13197,7 +13282,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_Get/SetParam": {
@@ -13210,7 +13296,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13266,7 +13352,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_GetResult": {
@@ -13279,7 +13366,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13335,7 +13422,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_PollingResult": {
@@ -13348,7 +13436,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13404,7 +13492,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_RegisterChn": {
@@ -13417,7 +13506,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13473,7 +13562,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_ReleaseData": {
@@ -13486,7 +13576,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13532,7 +13622,8 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_ReleaseResult": {
@@ -13545,7 +13636,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13601,7 +13692,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_StartRecvPic": {
@@ -13614,7 +13706,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13670,7 +13762,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_StopRecvPic": {
@@ -13683,7 +13776,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13749,7 +13842,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "IVS_UnRegisterChn": {
@@ -13762,7 +13856,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13828,7 +13922,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "ADEC_ReleaseDecoder": {
@@ -13857,7 +13952,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -13927,7 +14022,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14006,7 +14101,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14064,7 +14159,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14123,7 +14218,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14202,7 +14297,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -14222,7 +14317,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14301,7 +14396,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -14320,7 +14415,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14399,7 +14494,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14420,7 +14515,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14499,7 +14594,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14578,7 +14673,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "?",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14630,7 +14725,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "?",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14688,7 +14783,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14767,7 +14862,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -14787,7 +14882,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14866,7 +14961,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -14885,7 +14980,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14964,7 +15059,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14985,7 +15080,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15092,7 +15187,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15171,7 +15266,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15191,7 +15286,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15270,7 +15365,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15349,7 +15444,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15428,7 +15523,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15507,7 +15602,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -15526,7 +15621,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -15585,7 +15680,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15664,7 +15759,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15762,7 +15857,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15811,7 +15906,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15870,7 +15965,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15913,7 +16008,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -15971,7 +16066,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16028,7 +16123,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16093,7 +16188,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16151,7 +16246,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -16170,7 +16265,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16235,7 +16330,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16293,7 +16388,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16354,7 +16449,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16412,7 +16507,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -16431,7 +16526,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16492,7 +16587,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16550,7 +16645,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16615,7 +16710,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16635,7 +16730,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16700,7 +16795,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16765,7 +16860,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16830,7 +16925,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16888,7 +16983,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16946,7 +17041,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17004,7 +17099,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17065,7 +17160,7 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17113,7 +17208,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17181,7 +17276,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17239,7 +17334,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17297,7 +17392,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "nohw"
       },
@@ -17317,7 +17412,7 @@
         "T30": "nohw",
         "T31": "rt",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17359,7 +17454,7 @@
         "T30": "nohw",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17385,7 +17480,8 @@
         "T40": "apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
         "T41": "apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
         "T30": "2026-11-05, user decision (RC3 gate): counted as done but NOT verified on hardware: the T30X lab board has no DMIC node (b27/b28 probe: only /dev/dsp with the vendor audio module); code path audited only. To be verified when a T30 camera with a digital microphone is available.",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "Log_Get_Option": {
@@ -17446,7 +17542,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17472,7 +17568,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17498,7 +17594,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17524,7 +17620,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17550,7 +17646,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17576,7 +17672,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17602,7 +17698,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17628,7 +17724,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17654,7 +17750,7 @@
         "T30": "nohw",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17681,7 +17777,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17708,7 +17804,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17777,7 +17873,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -17803,7 +17899,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17830,7 +17926,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17856,7 +17952,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17883,7 +17979,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "nohw"
       },
@@ -17906,7 +18002,7 @@
         "T30": "host",
         "T31": "host",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "host",
         "T41": "host"
       },
@@ -17925,7 +18021,7 @@
         "T30": "aud",
         "T31": "aud",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "host",
         "T41": "aud"
       },
@@ -18011,7 +18107,7 @@
         "T30": "aud",
         "T31": "aud",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18036,7 +18132,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18061,7 +18157,7 @@
         "T30": "n.a.",
         "T31": "qemu",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18081,7 +18177,7 @@
         "T30": "n.a.",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -18102,7 +18198,7 @@
         "T30": "n.a.",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18122,7 +18218,7 @@
         "T30": "aud",
         "T31": "aud",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18147,7 +18243,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18172,7 +18268,7 @@
         "T30": "aud",
         "T31": "aud",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18197,7 +18293,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18222,7 +18318,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "nohw"
       },
@@ -18248,7 +18344,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "aud"
       },
@@ -18273,7 +18369,7 @@
         "T30": "dev",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18298,7 +18394,7 @@
         "T30": "dev",
         "T31": "aud",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18320,7 +18416,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "aud"
       },
@@ -18345,7 +18441,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "aud"
       },
@@ -18370,7 +18466,7 @@
         "T30": "nohw",
         "T31": "nohw",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "dev",
         "T41": "nohw"
       },
@@ -18396,7 +18492,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18462,7 +18558,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_Exit": {
@@ -18475,7 +18572,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18541,7 +18638,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_GetBindbyDest": {
@@ -18554,7 +18652,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18600,7 +18698,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_GetCPUInfo": {
@@ -18613,7 +18712,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18669,7 +18768,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_GetTimeStamp": {
@@ -18682,7 +18782,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18738,7 +18838,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_GetVersion": {
@@ -18751,7 +18852,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18817,7 +18918,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_Init": {
@@ -18830,7 +18932,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18896,7 +18998,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_MemPoolFree": {
@@ -18909,7 +19012,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -18929,7 +19032,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18938,7 +19041,8 @@
         "T23": "apitest rc3gaps2 2026-10-27 .30",
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
     },
@@ -18952,7 +19056,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -18998,7 +19102,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_RebaseTimeStamp": {
@@ -19011,7 +19116,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "err",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -19080,7 +19185,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -19146,7 +19251,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_WriteReg32": {
@@ -19159,7 +19265,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -19205,7 +19311,8 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "AI_DisableDrcAndEq": {
@@ -19218,7 +19325,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19238,7 +19345,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19258,7 +19365,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19278,7 +19385,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19298,7 +19405,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19318,7 +19425,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19338,7 +19445,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19358,7 +19465,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19378,7 +19485,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19398,7 +19505,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19418,7 +19525,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19438,7 +19545,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19458,7 +19565,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19478,7 +19585,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19498,7 +19605,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19518,7 +19625,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19538,7 +19645,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19558,7 +19665,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19578,7 +19685,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19598,7 +19705,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19614,7 +19721,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19633,7 +19740,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19649,7 +19756,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19665,7 +19772,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19681,7 +19788,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19697,7 +19804,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19714,7 +19821,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19730,7 +19837,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19746,7 +19853,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19762,7 +19869,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19778,7 +19885,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19794,7 +19901,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19810,7 +19917,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19826,7 +19933,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19842,7 +19949,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19858,7 +19965,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19874,7 +19981,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19898,7 +20005,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19914,7 +20021,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19930,7 +20037,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19946,7 +20053,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19962,7 +20069,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19978,7 +20085,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -19994,7 +20101,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20056,7 +20163,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20072,7 +20179,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20088,7 +20195,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20104,7 +20211,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20120,7 +20227,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20137,7 +20244,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20153,7 +20260,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20170,7 +20277,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20186,7 +20293,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20202,7 +20309,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20218,7 +20325,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20234,7 +20341,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20258,7 +20365,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20274,7 +20381,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20293,7 +20400,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20309,7 +20416,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20328,7 +20435,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20344,7 +20451,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20360,7 +20467,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20376,7 +20483,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20392,7 +20499,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20412,7 +20519,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20428,7 +20535,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20444,7 +20551,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20460,7 +20567,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20476,7 +20583,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20496,7 +20603,7 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20515,7 +20622,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20535,7 +20642,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20551,7 +20658,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20567,7 +20674,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20583,7 +20690,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20599,7 +20706,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20615,7 +20722,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20635,7 +20742,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20651,7 +20758,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20667,7 +20774,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20683,7 +20790,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20699,7 +20806,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20715,7 +20822,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20731,7 +20838,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20751,7 +20858,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20771,7 +20878,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20787,7 +20894,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20803,7 +20910,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20819,7 +20926,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20835,7 +20942,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20851,7 +20958,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20867,7 +20974,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20883,7 +20990,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20899,7 +21006,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20915,7 +21022,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20931,7 +21038,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20947,7 +21054,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20963,7 +21070,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20979,7 +21086,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20995,7 +21102,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21011,7 +21118,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21027,7 +21134,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21043,7 +21150,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21059,7 +21166,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21075,7 +21182,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21091,7 +21198,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21107,7 +21214,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21123,7 +21230,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21139,7 +21246,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21155,7 +21262,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21171,7 +21278,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21187,7 +21294,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21203,7 +21310,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21219,7 +21326,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21235,7 +21342,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21251,7 +21358,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21271,7 +21378,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21291,7 +21398,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21311,7 +21418,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21331,7 +21438,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21351,7 +21458,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21371,7 +21478,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21387,7 +21494,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21407,7 +21514,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21427,7 +21534,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21447,7 +21554,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21467,7 +21574,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21487,7 +21594,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21507,7 +21614,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21527,7 +21634,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21547,7 +21654,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21567,7 +21674,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21587,7 +21694,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21595,7 +21702,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "MemPool_InitPool": {
@@ -21608,7 +21716,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21616,7 +21724,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "MemPool_Release": {
@@ -21629,14 +21738,15 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "OSD_Alloc": {
@@ -21649,7 +21759,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21669,7 +21779,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21685,7 +21795,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "dev",
         "T41": "dev"
       },
@@ -21708,7 +21818,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "?",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21729,7 +21839,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21741,7 +21851,8 @@
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
         "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): alloc case: phys+100 maps to the expected virtual address on vendor and open",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (phys+100 -> 0x760b6064 (expected 0x760b6064)). T10 2026-11-03 on the T10 camera (OpenIMP T20 build as the T10 library, loaded from /tmp, installed library untouched): apitest case alloc PASS (phys+100 maps to the virtual address +100 of the same buffer). Same for Virt_to_Phys, Sp_Alloc (second reference, first free keeps the buffer, last free releases it, NULL/phys 0 refused), PoolVirt_to_Phys and PoolPhys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS."
     },
@@ -21755,7 +21866,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21763,7 +21874,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolAlloc_Dump": {
@@ -21776,7 +21888,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21784,7 +21896,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolAlloc_Get_Attr": {
@@ -21797,7 +21910,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21805,7 +21918,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolAlloc_Set_Attr": {
@@ -21818,7 +21932,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21826,7 +21940,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolFlushCache": {
@@ -21839,7 +21954,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21847,7 +21962,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolFree": {
@@ -21860,7 +21976,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21868,7 +21984,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolPhys_to_Virt": {
@@ -21881,7 +21998,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21889,7 +22006,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "PoolVirt_to_Phys": {
@@ -21902,7 +22020,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21910,7 +22028,8 @@
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30",
         "T31": "apitest agg61 2026-10-31 .26",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "SU_ADC_Init": {
@@ -21923,7 +22042,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "nohw",
         "T41": "dev"
       },
@@ -21947,7 +22066,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21964,7 +22083,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21981,7 +22100,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21998,7 +22117,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22015,7 +22134,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22032,7 +22151,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22049,7 +22168,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22066,7 +22185,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22117,7 +22236,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22134,7 +22253,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22151,7 +22270,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22168,7 +22287,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22185,7 +22304,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22202,7 +22321,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22219,7 +22338,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22236,7 +22355,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22253,7 +22372,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22270,7 +22389,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22287,7 +22406,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22304,7 +22423,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22321,7 +22440,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22338,7 +22457,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22355,7 +22474,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22372,7 +22491,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22389,7 +22508,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22406,7 +22525,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22418,7 +22537,8 @@
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
         "T30": "apitest T30X b67 2026-11-12: open PASS (4096 bytes written and freed); vendor 1.0.5 FAILs (IMP_Sp_Alloc -1, Alloc_Set_Attr -99): vendor crash/fail, no vendor line, cell stays qemu | user decision 2026-11-12 (C2): rated dev+ (better than the vendor): OpenIMP passes on the T30X where vendor libimp 1.0.5 crashes or fails; observed vendor crash documented in OPENIMP_BEYOND_VENDOR.md, no behaviour change",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (4096 bytes at 0x760b6000 written and freed). T10 2026-11-03 on the T10 camera: apitest case alloc PASS; see Phys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.",
       "better": [
@@ -22435,7 +22555,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "nob",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22447,7 +22567,8 @@
         "T20": "apitest t20pass 2026-11-04 .107",
         "T21": "apitest t21pass 2026-11-04 .24",
         "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): alloc case: virt+100 maps back to descriptor phys+100 on vendor and open",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #27): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (virt+100 -> 0x77d0064 (descriptor phys+100 = 0x77d0064)). T10 2026-11-03 on the T10 camera: apitest case alloc PASS (virt+100 gives the descriptor's physical address +100); see Phys_to_Virt.  T20 2026-11-04 (T20 camera, sensor JXF23; OpenIMP T20 build loaded from /tmp, installed library untouched; QEMU T20 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS.  T21 2026-11-04 (T21 camera, sensor JXF23; OpenIMP T21 build loaded from /tmp, installed library, modules and flash untouched; QEMU T21 first): apitest case alloc PASS (Phys_to_Virt and Virt_to_Phys map +100 inside the same buffer, Sp_Alloc second reference keeps the buffer until the last free, NULL and phys 0 refused, PoolVirt_to_Phys and PoolPhys_to_Virt too); device PASS."
     },
@@ -22461,7 +22582,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22477,7 +22598,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22493,7 +22614,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22509,7 +22630,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -22525,7 +22646,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "nob",
+        "T33": "miss",
         "T40": "n.a.",
         "T41": "n.a."
       },

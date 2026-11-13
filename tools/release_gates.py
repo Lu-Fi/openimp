@@ -86,7 +86,7 @@ class Gates:
     def _rc3(self):
         m = self.m
         self.rc3 = {}
-        # T32/T33 are shown in the progress table (honest 0/N: no OpenIMP build yet) but are not gate SoCs
+        # T32/T33 are shown in the progress table (honest 0/N: QEMU only, no test camera) but are not gate SoCs
         self.extra = [s for s in m.socs if s not in self.socs]
         for s in self.socs + self.extra:
             tot = ok = 0
@@ -209,10 +209,10 @@ class Gates:
               "| SoC | works | progress | missing |", "|---|--:|---|--:|"]
         for s in self.socs + self.extra:
             v = self.rc3[s]
-            o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (no OpenIMP build yet)" if s in self.extra else ""),
+            o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (QEMU only, no camera)" if s in self.extra else ""),
                      v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
         if self.extra:
-            o += ["", "%s are not gate SoCs: there is no OpenIMP build yet, so no streamer function works there (planned). "
+            o += ["", "%s are not gate SoCs: they run in QEMU only (no test camera), so no streamer function counts as working there yet (planned). "
                   "The count uses the same vendor-function weighting as the other SoCs." % ", ".join(self.extra)]
         o.append("")
         for s in self.socs:
@@ -289,12 +289,12 @@ class Gates:
         for s in self.socs + self.extra:
             v = self.rc3[s]
             rows.append("<tr><td>%s</td><td class='c'>%d/%d</td><td>%s</td><td class='c'>%d</td></tr>" % (
-                s + (" <span class='small'>(no OpenIMP build yet)</span>" if s in self.extra else ""),
+                s + (" <span class='small'>(QEMU only, no camera)</span>" if s in self.extra else ""),
                 v["ok"], v["total"], self._pb(v["ok"], v["total"]), v["total"] - v["ok"]))
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>streamer functions that work</th><th>progress</th><th>missing</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
         if self.extra:
-            h.append('<p class="small">%s are not gate SoCs: there is no OpenIMP build yet, so 0 works (planned).</p>' % ", ".join(self.extra))
+            h.append('<p class="small">%s are not gate SoCs: they run in QEMU only (no test camera), so 0 count as working (planned).</p>' % ", ".join(self.extra))
         for s in self.socs:
             v = self.rc3[s]
             if not v["missing"]:
