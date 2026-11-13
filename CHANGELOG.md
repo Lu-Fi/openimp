@@ -16,6 +16,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-13: T40 HLDC Set device-equal with the open driver (#432)
 
 - open-tx-isp now runs the vendor HLDC set path. Before, `tisp_s_hldc_attr` was an empty tail call; now it is a port of `tisp_hldc_set_attr` and its helpers, with the HLDC init where the vendor calls it. Device run on the T40 test camera: the HLDC registers of the whole `SetHLDCAttr` sequence are identical to the vendor module's, Get reads back like the vendor, and strength changes the picture. Matrix T40 `ISP_Tuning_Get/SetHLDCAttr` err -> dev; no OpenIMP code change.
+
 ## 2026-11-13: video_drop_test no longer timing-sensitive under load (#440)
 
 - Cause: the test slept a fixed 500 ms after the stall and expected exactly three reports from the 50 ms monitor thread; on a loaded host the thread ran late (0 reports at the check). The restart check had the same fixed sleep, and a 5 ms feeder starved for a tick counted as a stall.
