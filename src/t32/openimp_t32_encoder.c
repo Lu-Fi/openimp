@@ -73,6 +73,7 @@
 #include "t32/openimp_t32_hera_h265.h"
 #ifdef PLATFORM_T33
 #include "t32/openimp_t33_hera.h"
+#include "t32/openimp_t33_hera_h265.h"
 #endif
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
@@ -148,6 +149,7 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
 #ifdef PLATFORM_T33
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
     int ref_is_idr;                     /* the reference is the I picture */
+    int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
 #endif
 };
 
@@ -190,6 +192,55 @@ static pthread_mutex_t enc_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct t32_enc_grp enc_grp[T32_ENC_GROUPS];
 static struct t32_enc_chn enc_chn[T32_ENC_CHNS];
 static uint32_t enc_jpeg_bs_size;       /* IMP_Encoder_SetJpegBsSize, 0 = default */
+
+#ifdef PLATFORM_T33
+/*
+ * T33 (#391): one 2 x 250 KiB section buffer per engine, shared by all of
+ * its channels as vendor libimp 2.0.2.1 has them (rmem "ivpuBs" for HERA,
+ * "jpegBs" for JPEG); a channel holds the engine's lock from START until
+ * the last part is copied out.  A channel with another section size
+ * (OPENIMP_T32_HERA_SECTION_KB, test only) keeps its own buffer.
+ */
+static struct {
+    pthread_mutex_t lock;
+    T32VpuBuf buf;
+    int refs;
+} t33_bs[2] = { { PTHREAD_MUTEX_INITIALIZER, { { "", "", 0, 0, 0, 0, 0 }, 0 }, 0 },
+                { PTHREAD_MUTEX_INITIALIZER, { { "", "", 0, 0, 0, 0, 0 }, 0 }, 0 } };
+static pthread_mutex_t t33_bs_refs = PTHREAD_MUTEX_INITIALIZER;
+
+static int t33_bs_get(struct t32_enc_chn *e)
+{
+    int k = e->h264 ? 0 : 1, rc = 0;
+
+    pthread_mutex_lock(&t33_bs_refs);
+    if (!t33_bs[k].refs)
+        rc = OpenIMP_T32_VpuBufAlloc(&t33_bs[k].buf, 2u * T32_HERA_SECTION_KB * 1024u,
+                                     k ? "t33_jpeg_bs" : "t33_hera_bs");
+    if (rc == 0) {
+        t33_bs[k].refs++;
+        e->avc.ebs = t33_bs[k].buf;
+        e->avc.bs_engine = k + 1;
+    }
+    pthread_mutex_unlock(&t33_bs_refs);
+    return rc;
+}
+
+static void t33_bs_put(struct t32_enc_chn *e)
+{
+    int k = e->avc.bs_engine - 1;
+
+    if (k < 0)
+        return;
+    pthread_mutex_lock(&t33_bs_refs);
+    if (--t33_bs[k].refs == 0)
+        OpenIMP_T32_VpuBufFree(&t33_bs[k].buf);
+    pthread_mutex_unlock(&t33_bs_refs);
+    memset(&e->avc.ebs, 0, sizeof(e->avc.ebs));
+    e->avc.bs_engine = 0;
+}
+
+#endif
 
 static struct t32_enc_chn *chn_get(int n)
 {
@@ -284,8 +335,8 @@ static int h264_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t
  * each full half); the parts are copied into the slot.  A picture over the
  * slot is coded again with a lower quality, as on the T32.
  */
-static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s,
-                       uint32_t *len)
+static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s,
+                                uint32_t *len)
 {
     uint32_t index = (uint32_t)(T32_JPEG_MAX_QP - e->qp);
     T32VpuResult r;
@@ -330,6 +381,18 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         IMP_LOG_WARN(TAG, "picture over the %u byte buffer, again at quality index %u",
                      s->bs.size, index);
     }
+}
+
+/* the JPEG engine's shared section buffer is held for the whole picture */
+static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s,
+                       uint32_t *len)
+{
+    int rc;
+
+    pthread_mutex_lock(&t33_bs[1].lock);
+    rc = jpeg_encode_sections(e, f, s, len);
+    pthread_mutex_unlock(&t33_bs[1].lock);
+    return rc;
 }
 #else
 /* one picture into a free slot: 0 with the length, -1 dropped */
@@ -454,6 +517,24 @@ static void h264_pack(struct t32_enc_slot *s, uint32_t off, uint32_t len, int ty
 
 static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_t cap, uint32_t *at,
                     int *esc, const uint32_t *stat_regs, unsigned nstats);
+
+/* hera_run; on the T33 under the HERA section buffer's lock while it is shared (#391) */
+static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_t cap, uint32_t *at,
+                           int *esc, const uint32_t *stat_regs, unsigned nstats)
+{
+#ifdef PLATFORM_T33
+    int rc;
+
+    if (e->avc.bs_engine)
+        pthread_mutex_lock(&t33_bs[e->avc.bs_engine - 1].lock);
+    rc = hera_run(e, pairs, out, cap, at, esc, stat_regs, nstats);
+    if (e->avc.bs_engine)
+        pthread_mutex_unlock(&t33_bs[e->avc.bs_engine - 1].lock);
+    return rc;
+#else
+    return hera_run(e, pairs, out, cap, at, esc, stat_regs, nstats);
+#endif
+}
 
 /* (re)start the channel's rate control from @m (#295) */
 static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m)
@@ -606,7 +687,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     i = at;
     at += (uint32_t)t32_h264_slice_head(&a->seq, &sl, out + at, &esc);
 
-    if (hera_run(e, n, out, cap, &at, &esc, hera_stat_regs, T32_HERA_STATS) != 0) {
+    if (hera_run_shared(e, n, out, cap, &at, &esc, hera_stat_regs, T32_HERA_STATS) != 0) {
         rc_picture_lost(e);
         return -1;
     }
@@ -674,6 +755,35 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
     return 0;
 }
 
+#ifdef PLATFORM_T33
+/* HERA v1.6 H.265 (#391): the H.264 path's compressed area, the header sets
+ * laid out Y, Y, C, C; pairs written, 0 on bad input */
+static uint32_t t33_h265_list(struct t32_enc_chn *e, const T32HeraH265Pic *p, int idr)
+{
+    struct t32_h264 *a = &e->avc;
+    uint32_t base = t32_vpu_buf_pa(&a->ring), set = a->hdr_set & 1u;
+    T33HeraH265Pic t;
+    T33HeraRing r;
+    size_t n;
+
+    t33_hera_ring_layout(p->width, p->height, &r);
+    memset(&t, 0, sizeof(t));
+    t.pic = *p;
+    t.pic.ring_y = base;
+    t.pic.ring_y_end = t.pic.ring_c = base + r.y;
+    t.pic.ring_c_end = t.pic.ring_c + r.c;
+    t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set, &t.hdr_wy, &t.hdr_wc);
+    t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set ^ 1u, &t.hdr_ry, &t.hdr_rc);
+    t.ref_after_idr = !idr && a->ref_is_idr;
+    n = t33_hera_h265_list(&t, t32_vpu_buf_va(&a->list));
+    if (n) {
+        a->hdr_set = set ^ 1u;
+        a->ref_is_idr = idr;
+    }
+    return (uint32_t)n;
+}
+
+#endif
 static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
@@ -710,7 +820,11 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.section_kb = a->section_kb;
     for (i = 0; i < T32_HERA5_AUX; i++)
         p.aux[i] = t32_vpu_buf_pa(&a->aux[i]);
+#ifdef PLATFORM_T33
+    n = t33_h265_list(e, &p, idr);
+#else
     n = (uint32_t)t32_hera_h265_list(&p, t32_vpu_buf_va(&a->list));
+#endif
     if (!n) {
         IMP_LOG_ERR(TAG, "HERA H.265 list: %ux%u qp %d refused", w, h, p.qp);
         rc_picture_lost(e);
@@ -735,7 +849,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     sl.qp = p.qp;
     i = at;
     at += (uint32_t)t32_h265_slice_head(&a->seq5, &sl, out + at, &esc);
-    if (hera_run(e, n, out, cap, &at, &esc, hera5_stat_regs, T32_HERA5_STATS) != 0) {
+    if (hera_run_shared(e, n, out, cap, &at, &esc, hera5_stat_regs, T32_HERA5_STATS) != 0) {
         rc_picture_lost(e);
         return -1;
     }
@@ -1048,12 +1162,25 @@ static uint32_t h264_bs_size(const IMPEncoderCHNAttr *a)
     return size < 262144u ? 262144u : size;
 }
 
+/* the HERA section buffer: per channel; on the T33 the engine's shared one (#391) */
+static int ebs_alloc(struct t32_enc_chn *e)
+{
+#ifdef PLATFORM_T33
+    if (e->avc.section_kb == T32_HERA_SECTION_KB)
+        return t33_bs_get(e);
+#endif
+    return OpenIMP_T32_VpuBufAlloc(&e->avc.ebs, 2u * e->avc.section_kb * 1024u, "t32_hera_bs");
+}
+
 static void h264_free(struct t32_enc_chn *e)
 {
     int i;
 
     OpenIMP_T32_VpuBufFree(&e->avc.list);
     OpenIMP_T32_VpuBufFree(&e->avc.ring);
+#ifdef PLATFORM_T33
+    t33_bs_put(e);                      /* the engine's shared buffer: not ours to free */
+#endif
     OpenIMP_T32_VpuBufFree(&e->avc.ebs);
     for (i = 0; i < T32_HERA5_AUX; i++)
         OpenIMP_T32_VpuBufFree(&e->avc.aux[i]);
@@ -1107,12 +1234,12 @@ static int h264_setup(struct t32_enc_chn *e)
     a->gop = at->rcAttr.maxGop;
     h264_set_qp(e, &at->rcAttr.attrRcMode);
 #ifdef PLATFORM_T33
-    if (!e->hevc)                       /* HERA v1.6 compressed area (#391) */
-        ring_bytes = t33_hera_ring_bytes(w, ALIGN16(at->encAttr.picHeight));
+    /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8 */
+    ring_bytes = t33_hera_ring_bytes(w, ALIGN16(at->encAttr.picHeight));
 #endif
     if (OpenIMP_T32_VpuBufAlloc(&a->list, T32_HERA_LIST_BYTES, "t32_hera_list") != 0 ||
         OpenIMP_T32_VpuBufAlloc(&a->ring, ring_bytes, "t32_hera_ring") != 0 ||
-        OpenIMP_T32_VpuBufAlloc(&a->ebs, 2u * a->section_kb * 1024u, "t32_hera_bs") != 0)
+        ebs_alloc(e) != 0)
         return -1;
     if (e->hevc)
         return h265_setup(e);
@@ -1135,7 +1262,7 @@ static int h264_setup(struct t32_enc_chn *e)
 
 #ifdef PLATFORM_T33
 /*
- * T33 (#391): the engines write into the channel's 2 x 250 KiB section
+ * T33 (#391): the engines write into the 2 x 250 KiB section
  * buffer only and every picture is copied out of it, so the stream slots
  * are process memory, as vendor libimp 2.0.2.1 has them (packs with
  * phyAddr 0): the T33L's 12.4 MiB rmem holds the engines' buffers alone.
@@ -1214,15 +1341,6 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
         IMP_LOG_ERR(TAG, "chn %d: payload %d not supported on T32", encChn, (int)attr->encAttr.enType);
         return -1;
     }
-#ifdef PLATFORM_T33
-    /* HERA v1.6 H.265 lists differ from the T32's like the H.264 ones
-     * (VMAU / MCE moves, compressed reconstruction): not ported yet (#391);
-     * the T32 list would program registers the T33 engine does not have */
-    if (attr->encAttr.enType == PT_H265) {
-        IMP_LOG_ERR(TAG, "chn %d: H.265 is not ported to the T33 HERA v1.6 yet (#391)", encChn);
-        return -1;
-    }
-#endif
     if (attr->encAttr.enType == PT_H265 &&
         (attr->encAttr.picWidth < 256 || attr->encAttr.picWidth > 4096 || attr->encAttr.picHeight < 64 ||
          attr->encAttr.picHeight > 2304)) {
@@ -1267,7 +1385,7 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 #ifdef PLATFORM_T33
     /* JPEG out through 2 x 250 KiB sections, as the vendor (jpegBs, #391) */
     e->avc.section_kb = T32_HERA_SECTION_KB;
-    if (!e->h264 && OpenIMP_T32_VpuBufAlloc(&e->avc.ebs, 2u * T32_HERA_SECTION_KB * 1024u, "t33_jpeg_bs") != 0)
+    if (!e->h264 && t33_bs_get(e) != 0)
         goto fail_bufs;
 #endif
     if (chn_alloc_bufs(e, e->max_streams) != 0)

@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T33 H.265 on HERA v1.6, shared section buffers (#391, planned, QEMU only)
+
+- T33 H.265 command lists as vendor libimp 2.0.2.1 writes them (`src/t32/openimp_t33_hera_h265.c`, table and QP bands from a QP 0..51 vendor sweep via `tools/t32/hera_h265_table.py --t33`): BC context run of 33, the compressed reconstruction area, core emulation prevention. `make -C tests/t33 check`: 66 of 66 vendor H.265 lists word for word (QP 0..51, 6 sizes, I / P after I / P after P), plus the 24 H.264 lists. `IMP_Encoder_CreateChn` takes H.265 on T33 again.
+- One 2 x 250 KiB section buffer per engine shared by all channels (HERA, JPEG), as the vendor's ivpuBs / jpegBs, under a per-engine lock.
+- QEMU: H.265 FIXQP 30 and default CBR decode clean, Y SSIM 0.88-0.90 (vendor 0.88-0.89 on the same scene). No T33 camera test.
+
 ## 2026-11-13: T32/T33 streamer-used gaps closed in QEMU (#445, #446, #447, #448; planned, QEMU only)
 
 - FrameSource (#445, shared T32/T33 code): `Set/GetMaxDelay`, `Set/GetDelay`, `Set/GetChnFifoAttr`, `GetTimedFrame` (the newest max-delay frames kept as packed NV12, nearest frame to the time stamp), `SnapFrame` (next frame, packed NV12), `SetPool` (capture buffers from the bound pool; `GetPool` answers the id) and `Set/GetI2dAttr` with the return codes, channel states and quirks of vendor libimp 2.2.0 / 2.0.2.1 (disassembly; e.g. SetChnFifoAttr sets max delay = delay = maxdepth, a time stamp at the oldest kept frame is 0x80012000). `Set/GetI2dAttr` only keeps the attribute (no I2D rotation path on T32/T33 yet: cell `cache`, still a gap); SnapFrame takes NV12 only; the delay FIFO does not delay bound modules.

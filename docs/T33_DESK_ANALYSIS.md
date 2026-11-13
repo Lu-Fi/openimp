@@ -244,16 +244,24 @@ libimp 2.0.2.1 traces in QEMU `-M ingenic-t33` (t33l, cv2005, vendor 3.10.14 ker
 - The core adds the emulation prevention bytes (SDE 0x68018 bit 7): the slice data is copied, not escaped.
 - JPEG: the engine writes into a 2 x 250 KiB section buffer (`limit_bs_len` 0, `bsfull_jpeg_intr_size` 250, START +
   WAIT_BSFULL_COMPLETE), as the vendor; the job is otherwise the T32 one (44 words, identical but the stream address).
+- H.265 command lists: `src/t32/openimp_t33_hera_h265.c` with the vendor's order, defaults and QP bands
+  (`openimp_t33_hera_h265_tab.h`, `tools/t32/hera_h265_table.py --t33` from a QP 0..51 sweep; I 591 pairs, P 626;
+  T32 692 / 840). BC CABAC run of 33 states (T32 145; mapping to the Radix HEVC set found over the sweep), the H.264
+  path's compressed area with the header sets laid out Y A, Y B, C A, C B, new ODMA words 0x10170..0x10188 (0x10184 =
+  75/128 of the luma picture, 0x10188 = the NV12 picture's bytes on I, the luma base on P), core emulation
+  prevention (SDE 0x68000 bit 28, no QP field there), no MCE step tables, MD lambda `0xb0000000 | qp << 20`.
 - Stream buffers: process memory (packs with `phyAddr` 0, as the vendor's); rmem holds the engine buffers only, so a
   1080p H.264 channel fits the T33L's 12.4 MiB rmem next to IVDC (vendor: ivpuBs 500 KiB, video0 3.5 MiB, ivdc 3 MiB).
+- Section buffers: one 2 x 250 KiB buffer per engine shared by all its channels (HERA "ivpuBs", JPEG "jpegBs"), as
+  the vendor; a channel holds the engine's lock from START until its last part is copied.
 - soc_vpu node `vtype`: H.264 0x91, H.265 0x80 (vendor 2.2.0 and 2.0.2.1; the radix driver writes it to CFGC 0x0c);
   also set on the T32 now.
 
-Evidence: `make -C tests/t33 check` builds 24 vendor lists (1920x1088 QP 30 / 40, 1280x720, 640x368, 960x544, 1024x576,
-1600x912, 1920x720; I and P) word for word. QEMU: OpenIMP H.264 FIXQP 30 and the default CBR run, 8 / 10 pictures,
+Evidence: `make -C tests/t33 check` builds 24 vendor H.264 lists and 66 H.265 lists (QP 0..51 sampled, 1920x1080,
+1280x720, 640x360, 1600x900, 1920x720, 1024x576; I, P after I, P after P) word for word (180 of 180 sweep lists
+checked during the port); for H.264 the 24 lists cover (1920x1088 QP 30 / 40, 1280x720, 640x368, 960x544, 1024x576,
+1600x912, 1920x720; I and P). QEMU: OpenIMP H.264 FIXQP 30 and the default CBR run, 8 / 10 pictures,
 decode clean, Y SSIM 0.82-0.89 against the captured sources (vendor 0.83-0.87 on the same scene); JPEG 3 / 3, ioctl
 sequence = vendor's but the rmem cache calls.
 
-Open (#391): H.265 lists (same kind of deltas; `IMP_Encoder_CreateChn` refuses H.265 on T33 until ported), the vendor's
-shared section buffers (ivpuBs / jpegBs for all channels; OpenIMP keeps one per channel), and any device proof (no T33
-camera runs the open stack yet).
+Open (#391): any device proof (no T33 camera runs the open stack yet); rate control on T33 follows the T32 work (#295).

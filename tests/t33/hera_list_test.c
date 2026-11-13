@@ -9,12 +9,14 @@
  * (addresses, size, QP, type, header set) are read from its list; the test
  * builds the list with t33_hera_h264_list() and compares every word, and
  * checks t33_hera_ring_layout() against the vendor's area and header sizes.
+ * A list with BC 0x60000 is an H.265 list (t33_hera_h265_list()).
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "t32/openimp_t33_hera.h"
+#include "t32/openimp_t33_hera_h265.h"
 
 static uint32_t find(const uint32_t *w, size_t pairs, uint32_t reg)
 {
@@ -52,6 +54,77 @@ static int check_layout(const char *name, const T33HeraH264Pic *t, uint32_t hdr_
                p->height, r.y, r.c, r.hy, r.hc, p->ring_y_end - p->ring_y, p->ring_c_end - p->ring_c,
                t->hdr_wc - t->hdr_wy);
     return bad;
+}
+
+static int compare(const char *name, const uint32_t *out, size_t n, const uint32_t *v, size_t pairs,
+                   const char *what)
+{
+    size_t i;
+    int bad = 0;
+
+    if (n != pairs) {
+        printf("%s: %zu pairs, vendor %zu\n", name, n, pairs);
+        return 1;
+    }
+    for (i = 0; i < 2 * n; i++)
+        if (out[i] != v[i]) {
+            if (bad++ < 8)
+                printf("%s: pair %zu %s: %08x, vendor %08x (reg %05x)\n", name, i / 2,
+                       i & 1 ? "cmd" : "value", out[i], v[i], v[(i | 1)] & 0xffffcu);
+        }
+    if (bad)
+        printf("%s: %d words differ (%s)\n", name, bad, what);
+    return bad != 0;
+}
+
+static int check_h265(const char *name, const uint32_t *v, size_t pairs)
+{
+    static uint32_t out[T32_HERA5_LIST_MAX_PAIRS * 2];
+    T33HeraH265Pic t;
+    T32HeraH265Pic *p = &t.pic;
+    uint32_t size = find(v, pairs, 0x20008), hy, hc, base;
+    char what[64];
+    int bad = 0;
+    unsigned set;
+
+    memset(&t, 0, sizeof(t));
+    p->width = size & 0xffffu;
+    p->height = size >> 16;
+    p->p_frame = has(v, pairs, 0x30060);
+    p->after_p = p->p_frame && (find(v, pairs, 0x30000) & (1u << 11));
+    p->qp = (int)(find(v, pairs, 0x60004) >> 1 & 0x3fu);
+    p->src_y = find(v, pairs, 0x2000c);
+    p->src_c = find(v, pairs, 0x20010);
+    p->src_stride = find(v, pairs, 0x20014) & 0xffffu;
+    p->ring_y = find(v, pairs, 0x10030);
+    p->ring_c = find(v, pairs, 0x10034);
+    p->ring_y_end = find(v, pairs, 0x10038);
+    p->ring_c_end = find(v, pairs, 0x1003c);
+    p->bs0 = find(v, pairs, 0x90008);
+    p->bs1 = find(v, pairs, 0x9001c);
+    p->section_kb = find(v, pairs, 0x9005c) ? find(v, pairs, 0x90064) : 0;
+    p->aux[T32_HERA5_CPS] = find(v, pairs, 0x9000c);
+    p->aux[T32_HERA5_A24] = find(v, pairs, 0x90024);
+    p->aux[T32_HERA5_QPT] = find(v, pairs, 0x90028);
+    p->aux[T32_HERA5_AI] = find(v, pairs, 0x90018);
+    p->aux[T32_HERA5_A2C] = find(v, pairs, 0x9002c);
+    t.hdr_wy = find(v, pairs, 0x10020);
+    t.hdr_wc = find(v, pairs, 0x10024);
+    t.hdr_ry = find(v, pairs, 0x28008);
+    t.hdr_rc = find(v, pairs, 0x2800c);
+    t.ref_after_idr = p->p_frame && find(v, pairs, 0x28014) != 0;
+    /* the header sets follow the C area: Y A, Y B, C A, C B */
+    base = t.hdr_wy < t.hdr_ry ? t.hdr_wy : t.hdr_ry;
+    set = t.hdr_wy != base;
+    t33_hera_h265_hdr(p->width, p->height, p->ring_c_end, set, &hy, &hc);
+    if (base != p->ring_c_end || hy != t.hdr_wy || hc != t.hdr_wc) {
+        printf("%s: header set %u at %08x / %08x, vendor %08x / %08x\n", name, set, hy, hc, t.hdr_wy,
+               t.hdr_wc);
+        bad = 1;
+    }
+    snprintf(what, sizeof(what), "H.265 %ux%u %s qp %d", p->width, p->height, p->p_frame ? "P" : "I",
+             p->qp);
+    return compare(name, out, t33_hera_h265_list(&t, out), v, pairs, what) | bad;
 }
 
 static int check_list(const char *name, const uint32_t *v, size_t pairs)
@@ -134,9 +207,9 @@ int main(int argc, char **argv)
             s = end;
         }
         lists++;
-        fails += check_list(name, v, n / 2);
+        fails += has(v, n / 2, 0x60000) ? check_h265(name, v, n / 2) : check_list(name, v, n / 2);
     }
     fclose(f);
-    printf("T33 HERA H.264 lists: %d of %d identical to vendor 2.0.2.1\n", lists - fails, lists);
+    printf("T33 HERA H.264 / H.265 lists: %d of %d identical to vendor 2.0.2.1\n", lists - fails, lists);
     return lists && !fails ? 0 : 1;
 }

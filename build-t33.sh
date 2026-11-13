@@ -120,6 +120,7 @@ compile t32_hera src/t32/openimp_t32_hera.c
 # HERA v1.6 (#391): the T33 H.264 command lists (VMAU at 0x40400, the
 # compressed reconstruction area, core emulation prevention)
 compile t33_hera src/t32/openimp_t33_hera.c
+compile t33_hera_h265 src/t32/openimp_t33_hera_h265.c
 compile t32_h264 src/t32/openimp_t32_h264.c
 compile t32_h264_cabac src/t30/h264enc/cabac.c
 compile t32_h264_common src/t30/h264enc/common.c

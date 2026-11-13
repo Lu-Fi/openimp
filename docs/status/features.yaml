@@ -956,7 +956,9 @@ features:
       - 295
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'planned (T33 plan, not a release gate): H.264 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (24 lists, 7 sizes, QP 30/40, I and P; compressed reconstruction area, core emulation prevention), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene; stream buffers in process memory and one shared HERA section buffer as the vendor, so 1080p fits the T33L rmem. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      issues:
+      - 391
     T40:
       sym: ✅
       text: 'open driver 2026-10-18/19 (Eufy T40XP): ch0 1080p CBR 2000 + ch1 640x360, 300 s, 6001 frames each, 0 decode errors, 0 oops; 10-min timps runs ch0+ch1 at 20 fps; encoder parity with the vendor library (`claude/t40-rc`, `t40-rc2`, measured 2026-10-11 on the vendor ISP driver): CBR 500..6000 kbit/s within 1-3 % of the vendor, 360p about equal, 4K FixQP30 +4 %; pack timestamps come from the frame record (e2a74cb). Open: 4K IDR about 2.5x the vendor size, frame size 16-line aligned (353280 B vs 345600 B)'
@@ -998,7 +1000,9 @@ features:
       - 295
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'planned (T33 plan, not a release gate): H.265 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (66 lists, QP 0..51, 6 sizes, I / P after I / P after P), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      issues:
+      - 391
     T40:
       sym: ✅
       text: 'H.265 on the AVPU with the PPS tool flags of the vendor (`transform_skip`, `cu_qp_delta`) and hardware RC on by default (`claude/t40-h265-rc2`, in next): CBR 4000/1000 about equal to the vendor, SSIM equal, decode clean (the earlier "clean decode" on green pictures is fixed); FixQP lambda tables and 4K throughput (ebe0291, 4K 19.3 vs vendor 19.9 fps). Device-tested on the Eufy with the vendor ISP driver (2026-10-11); not re-run on the open ISP driver'
@@ -1036,7 +1040,9 @@ features:
       - 292
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'planned (T33 plan, not a release gate): JPEG on the T33 JPEG engine in QEMU (#391): 2 x 250 KiB sections and one shared section buffer as vendor libimp 2.0.2.1, job equal to the vendor''s except the stream address, 3/3 pictures decode; ioctl sequence equal but the rmem cache calls. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      issues:
+      - 391
     T40:
       sym: ✅
       text: '2026-10-31 (agg59, Eufy T40XP): the stale first snapshot after a pause is fixed in the driver (#168, closed): STREAMOFF now runs `__vb2_queue_cancel`, FREE_BUFFER and clears the MSCA FIFO. Camera A/B with the old libimp: agg57 fails the pause case 6/6, agg58 passes 49/0; the libimp requeue mitigation stays as a safety net. Full apitest run agg59: PASS 270 / FAIL 0, 0 oopses. Earlier: 2026-10-31 (agg57, Eufy T40XP): in the full apitest run the first `SnapFrame`/`GetFrame` after a pause of 2, 10 and 30 s returns the stale picture again, while the case `stalesnap` alone passes (open, #168; only the sequence after the other cases shows it). Earlier: 2026-10-27: the stale first snapshot after a pause is gone (#89, device-tested with the new apitest case `stalesnap`): Eufy T40XP, the first `SnapFrame`/`GetFrame` after 2, 10 and 30 s without a reader shows the current brightness; the same libimp with the stale drop disabled returns the old picture every time (the test is sensitive). Earlier: software baseline JPEG (SSIM 0.9996 vs the vendor library, about 1.7 fps at 4K); open driver 2026-10-19: JPEG of ch1 decodes with 0 errors in all six I2D variants (300 frames each), pitch after I2D fixed (2918162), range/colour as the vendor (the ISP delivers full range BT.709, `claude/jpeg-range`); an encoder failure returns an error instead of a grey JPEG (b5ba1c3)'
