@@ -19,6 +19,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Fix (T23 only, `src/t40/openimp_p2_encoder.c`): a complete picture without multi-section mode now also gets `pack[0].frameEnd = 1`; the packs between stay 0. Multi-section mode unchanged. T30 not changed (not checked against the vendor).
 - Host: `p2_multisection_test` (mode off, whole IDR) checks first/last pack 1 and the middle packs 0; `make check` rc=0.
 
+## 2026-11-12: T40 C5 guarded device run: SetCameraInputMode, HLDC Set, OSD_Get/SetRgnAttr_ISP (#433, #432)
+
+- User decision C5: the three T40 cells blocked by the untestable.yaml / QEMU-first rule ran on the T40 test camera (cam-K) with the deadman armed. The run used new apitest `t40dev` masks: `4000000` SetCameraInputMode, `8000000` HLDC, `10000000` ISP-drawn OSD regions. Both stacks ran the same calls: OpenIMP on the flashed open `tx_isp_t40`, then vendor libimp 1.3.0 on the vendor module. The camera was rebooted back to the flashed image afterwards. No flash, no audio, 0 oops.
+- `IMP_ISP_SetCameraInputMode`: the single-sensor setting before AddSensor gives rc 0 and the same read-back on both libraries, and the stream runs. T40 host -> dev. No dual or joint mode was sent.
+- `IMP_OSD_Set/GetRgnAttr_ISP`: the ISP cover and the window are drawn and measured in the picture, then switched off. Get reads them back, and the return codes and read-backs equal the vendor's. T40 host -> dev. The ISP-OSD getter that oopses in our QEMU guest does not oops on the device.
+- `IMP_ISP_Tuning_SetHLDCAttr`: real gap #432. The open driver's `tisp_s_hldc_attr` is an empty tail call, so the strength is never applied or read back; the vendor reads back 255/0/128. T40 host -> err.
+
 ## 2026-11-12: T10/T20/T30 IVS keeps getting frames after an encoder session (#420)
 
 - Regression of #374/#405 (bisect on T20 .107: c0cd9723): after the encoder unbound from FS ch1 (3 buffers + delay FIFO 2), the newest frame stayed in the ready queue for the 1 s pull window. The T10/T20 (and T30) ISP writes a ring of DMA banks and disables its DMA when the next bank is empty; device trace: with 2 of 3 banks filled, two frames later nothing completed, the capture thread slept in the stock DQBUF for good and never reached the idle recycle, so IVS bound to the channel got no more frames (apitest `enc,ivs`: 2 of 8 results, base move / custom IVS none).

@@ -30,13 +30,13 @@ entries:
     reason: "multi-camera / bypass-bind topology, test cameras have one sensor"
   - match: ["IMP_ISP_SET_GPIO_*", "IMP_ISP_SetCameraInputMode", "IMP_ISP_GetCameraInputMode", "IMP_ISP_SetCameraInputSelect", "IMP_ISP_SetPreDqtime"]
     category: hardware
-    reason: "sensor GPIO / camera input select: change the sensor interface itself"
+    reason: "sensor GPIO / camera input select: change the sensor interface itself (T40: SetCameraInputMode single-sensor setting device-tested in t40dev 0x4000000, #433)"
   - match: ["IMP_ISP_SetAeAlgoFunc*", "IMP_ISP_SetAwbAlgoFunc*"]
     category: own-topology
     reason: "replaces the ISP 3A algorithm with a user callback set; needs a custom algorithm library"
   - match: ["IMP_ISP_LDC_*", "IMP_ISP_SetCsccrMode", "IMP_ISP_Tuning_SetISPLDC", "IMP_ISP_Tuning_SetHLDCAttr", "IMP_ISP_Tuning_GetHLDCAttr", "IMP_ISP_Tuning_SetISPHLDCAttr", "IMP_ISP_Tuning_GetISPHLDCAttr"]
     category: wedges-isp
-    reason: "lens distortion correction / CSC-CR mode reprogram the ISP back end with tables the test cameras do not have"
+    reason: "lens distortion correction / CSC-CR mode reprogram the ISP back end with tables the test cameras do not have (T40: Get/SetHLDCAttr device-tested in t40dev 0x8000000, #433/#432)"
   - match: ["IMP_ISP_Tuning_GetOsdRgnAttr", "IMP_ISP_Tuning_SetOsdRgnAttr", "IMP_ISP_Tuning_CreateOsdRgn", "IMP_ISP_Tuning_DestroyOsdRgn", "IMP_ISP_Tuning_ShowOsdRgn", "IMP_ISP_Tuning_SetOsdPoolSize", "IMP_OSD_*_ISP", "IMP_OSD_*ISPPic", "IMP_OSD_SetRgnAttr_PicISP", "IMP_ISP_Tuning_GetOSD*", "IMP_ISP_Tuning_SetOSD*", "IMP_ISP_Tuning_GetDrawBlock", "IMP_ISP_Tuning_SetDrawBlock", "IMP_ISP_GetOSDAttr", "IMP_ISP_SetOSDAttr", "IMP_ISP_GetSingleOSDAttr", "IMP_ISP_SetSingleOSDAttr"]
     category: backlog
     reason: "ISP-stage OSD (regions drawn by the ISP): T41/T40 have cases (isposd, isposdapi; closed 2026-10-28), the other SoCs no case yet"

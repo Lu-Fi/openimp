@@ -1379,12 +1379,13 @@
         "T31": "n.a.",
         "T32": "miss",
         "T33": "nob",
-        "T40": "host",
+        "T40": "dev",
         "T41": "n.a."
       },
-      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board).  T23 2026-11-12: nohw. Only the invalid modes and mode 0 were sent; no joint mode (needs a second sensor).",
+      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board).  T23 2026-11-12: nohw. Only the invalid modes and mode 0 were sent; no joint mode (needs a second sensor). T40 2026-11-12 (C5, #433): dev. The single-sensor setting (one sensor, bypass, not joint) was sent before AddSensor with OpenIMP and with the vendor libimp: rc 0 on both, read back equal, stream OK. No dual or joint mode was sent: the board has a second sensor, and those modes reroute its input.",
       "ref": {
-        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, mode 73 and a low nibble of 9 -1 (refused before the ioctl), mode 0 (not joint, the single-sensor default) 0."
+        "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, mode 73 and a low nibble of 9 -1 (refused before the ioctl), mode 0 (not joint, the single-sensor default) 0.",
+        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 4000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): single-sensor setting before AddSensor (one sensor, bypass, no switch, not joint) rc 0 on both libs, Get reads it back, sensor streams 41 frames/2 s."
       }
     },
     "ISP_SetCameraInputSelect": {
@@ -2302,10 +2303,13 @@
         "T31": "n.a.",
         "T32": "n.a.",
         "T33": "n.a.",
-        "T40": "host",
+        "T40": "err",
         "T41": "n.a."
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have). T40 2026-11-11 (#310): Get device-equal (OpenIMP and vendor both rc 0, strength 128, 1920x1080, centre 960,540; NULL -9 / num >= 4 -4 after aligning OpenIMP, was -1); Set not run (rule: reprograms the lens-correction back end), so the pair stays host."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run (apitest category wedges-isp: reprograms the ISP back end with tables the test camera does not have). T40 2026-11-11 (#310): Get device-equal (OpenIMP and vendor both rc 0, strength 128, 1920x1080, centre 960,540; NULL -9 / num >= 4 -4 after aligning OpenIMP, was -1); Set not run (rule: reprograms the lens-correction back end), so the pair stays host. T40 2026-11-12 (C5, #433): err. Set ran on the device: rc 0, but the open driver never applies the strength (the read-back stays 128; strength 255 and 0 give the same picture). The vendor reads back 255/0/128. Gap #432.",
+      "ref": {
+        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 8000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): Set rc 0 on both libs; vendor Get reads back 255/0/128, OpenIMP Get stays 128 and the picture is the same for strength 255 and 0 (open driver tisp_s_hldc_attr is an empty tail call, #432)."
+      }
     },
     "ISP_Tuning_Get/SetHVFLIP": {
       "area": "ISP tuning",
@@ -11842,15 +11846,16 @@
         "T31": "n.a.",
         "T32": "qemu",
         "T33": "nob",
-        "T40": "host",
+        "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T23": "apitest t23pass 2026-11-04 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 10000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): OpenIMP: ISP cover on ch1 region Y 174.3 -> 255.0 -> off 182.7, LINE_RECT window top edge = library YUV 149/43/21, off restores; Get rc 0, show 1, both parts read back equal, show 0 after off; vendor: same return codes and read-backs (picture not measurable under the vendor lib in this harness)."
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T40 2026-11-12 (C5, #433): dev. Valid regions set and drawn on the device (cover and window measured in the picture, then switched off). Get reads them back like the vendor. The ISP-OSD getter that oopses in QEMU runs without an oops on the camera."
     },
     "OSD_GetRegionLuma": {
       "area": "OSD",
