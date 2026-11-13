@@ -1782,6 +1782,37 @@ static uint32_t p2_attr_height(const IMPEncoderCHNAttr *attr)
 #endif
 }
 
+#if defined(PLATFORM_T41)
+/* IDR distance of the first picture of a channel (T41 glue, #475) */
+static uint32_t p2_t41_create_distance(const IMPEncoderCHNAttr *attr)
+{
+    uint32_t num = attr->rcAttr.outFrmRate.frmRateNum;
+    uint32_t den = attr->rcAttr.outFrmRate.frmRateDen;
+
+    return t40_vendor_idr_distance(
+        t41_vendor_start_gop(attr->gopAttr.uGopLength, num, den, num, den),
+        attr->gopAttr.uMaxSameSenceCnt, num, den);
+}
+
+/* GOP a run-time setter leaves in effect (SetChnGopAttr / SetChnGopLength,
+ * #475): a changed length takes the one-second-added glue, an unchanged one
+ * the first-picture glue; then the ValidateGopParam rounding */
+static uint32_t p2_t41_set_distance(const P2EncoderChannel *ch, uint32_t length,
+                                    uint32_t same_scene)
+{
+    uint32_t num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+    uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+    /* active length: the one before the pending change (read-back hold) */
+    uint32_t active = ch->rb_hold ? ch->rb_gop.uGopLength
+                                  : ch->attr.gopAttr.uGopLength;
+    uint32_t g = length != active
+        ? t41_vendor_set_gop(length, num, den)
+        : t41_vendor_start_gop(length, num, den, num, den);
+
+    return t40_vendor_idr_distance(g, same_scene, num, den);
+}
+#endif
+
 static uint32_t p2_attr_gop_length(const IMPEncoderCHNAttr *attr)
 {
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
@@ -1799,8 +1830,10 @@ static uint32_t p2_attr_gop_length(const IMPEncoderCHNAttr *attr)
             attr->gopAttr.uMaxSameSenceCnt, num, den);
     }
 #elif defined(PLATFORM_T41)
-    return t40_vendor_gop_length(attr->gopAttr.uGopLength,
-                                 attr->gopAttr.uMaxSameSenceCnt);
+    /* T41 1.2.6 glue (#475): the first picture keeps the GOP in float
+     * seconds (not floored), ValidateGopParam rounds the IDR distance up
+     * to a multiple of the rate: GOP 25 at 20 fps -> IDR every 40 */
+    return p2_t41_create_distance(attr);
 #else
     return attr->gopAttr.uGopLength;
 #endif
@@ -2622,8 +2655,7 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     if (attr->gopAttr.uGopLength) {
         IMPEncoderGopAttr eff = attr->gopAttr;
 
-        eff.gopLength = (uint16_t)t40_vendor_gop_length(
-            attr->gopAttr.uGopLength, attr->gopAttr.uMaxSameSenceCnt);
+        eff.gopLength = (uint16_t)p2_t41_create_distance(attr);
         (void)AL_Codec_Encode_SetGopParam(ch->codec, &eff);
     }
 #endif
@@ -2888,6 +2920,19 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     }
 #endif
     ch->attr = *attr;
+#if defined(PLATFORM_T41)
+    /* vendor T41 1.2.6: the attribute reads back as given until the first
+     * picture; then it reads the IDR distance (#475) */
+    ch->rb_hold = 0;
+    if (p2_attr_codec_type(attr) != IMP_ENC_TYPE_JPEG) {
+        uint32_t d = p2_t41_create_distance(attr);
+
+        if (d != attr->gopAttr.uGopLength) {
+            p2_t41_rb_hold(channel);
+            ch->attr.gopAttr.uGopLength = (uint16_t)d;
+        }
+    }
+#endif
 #if defined(PLATFORM_T40)
     /* vendor T40 1.3.1: the attribute reads back as given until the first
      * picture; then the glue has put the GOP in whole seconds (#455) */
@@ -4903,9 +4948,7 @@ int IMP_Encoder_GetChnAttr(int channel, IMPEncoderChnAttr *attr)
     }
 #endif
 #if defined(PLATFORM_T41)
-    /* vendor: the GOP read-back is the IDR distance (length * same-scene) */
-    attr->gopAttr.uGopLength = (uint16_t)t40_vendor_gop_length(
-        attr->gopAttr.uGopLength, attr->gopAttr.uMaxSameSenceCnt);
+    /* vendor: the GOP read-back is the IDR distance, kept as stored (#475) */
 #endif
     return 0;
 }
@@ -5718,9 +5761,7 @@ int IMP_Encoder_GetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
         *gop = p2_channels[channel].attr.gopAttr;
         if (p2_channels[channel].rb_hold)
             *gop = p2_channels[channel].rb_gop;
-        /* vendor read-back: the IDR distance, uGopLength * uMaxSameSenceCnt */
-        gop->uGopLength = (uint16_t)t40_vendor_gop_length(
-            gop->uGopLength, gop->uMaxSameSenceCnt);
+        /* vendor read-back: the IDR distance, stored by the glue (#475) */
         return 0;
     }
 #endif
@@ -5753,12 +5794,16 @@ int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
             return -1;
         /* vendor: stored without a check, the encoder applies length and
          * same-scene count (IDR every length * count pictures) */
-        p2_channels[channel].attr.gopAttr = *gop;
-        if (!gop->uGopLength)
+        if (!gop->uGopLength) {
+            p2_channels[channel].attr.gopAttr = *gop;
             return 0;
+        }
+        /* T41 glue (#475): the GOP in effect is the IDR distance */
         eff = *gop;
-        eff.gopLength = (uint16_t)t40_vendor_gop_length(
-            gop->uGopLength, gop->uMaxSameSenceCnt);
+        eff.gopLength = (uint16_t)p2_t41_set_distance(
+            &p2_channels[channel], gop->uGopLength, gop->uMaxSameSenceCnt);
+        p2_channels[channel].attr.gopAttr = *gop;
+        p2_channels[channel].attr.gopAttr.uGopLength = eff.gopLength;
         return AL_Codec_Encode_SetGopParam(p2_channels[channel].codec, &eff) ?
             -1 : 0;
     }
@@ -5815,10 +5860,11 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
         p2_t41_rb_hold(channel);
         if (length <= 0)
             return 0;   /* vendor: stored, never applied */
-        p2_channels[channel].attr.gopAttr.uGopLength = (uint16_t)length;
         eff = p2_channels[channel].attr.gopAttr;
-        eff.gopLength = (uint16_t)t40_vendor_gop_length(
-            (uint32_t)length, eff.uMaxSameSenceCnt);
+        eff.gopLength = (uint16_t)p2_t41_set_distance(
+            &p2_channels[channel], (uint32_t)length, eff.uMaxSameSenceCnt);
+        eff.uGopLength = eff.gopLength;     /* T41 glue (#475) */
+        p2_channels[channel].attr.gopAttr = eff;
         return AL_Codec_Encode_SetGopParam(p2_channels[channel].codec, &eff) ?
             -1 : 0;
     }

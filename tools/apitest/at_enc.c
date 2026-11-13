@@ -58,8 +58,28 @@ static const char *cname[] = { "H264", "H265", "JPEG" };
  * same deferred read-back (rb_hold), so the read-back is checked after two more pictures. */
 #if defined(PLATFORM_T41) && !defined(APITEST_T40)   /* the T40 build uses the T41 API family */
 # define RB_SETTLE(chn, codec) pull((chn), (codec), 2, 0, 0, &si, 1500)
-/* T41 vendor read-back of the GOP length: the IDR distance uGopLength * uMaxSameSenceCnt */
-# define GOP_RB(len, same) ((len) * ((same) > 1 ? (same) : 1))
+/* T41 vendor read-back of the GOP length (#475, vendor 1.2.6 run on the .32): the IDR distance of the glue.
+ * First picture: float seconds, not floored; a changed run-time length gets one full second added unless
+ * it is whole seconds; then length * same-scene rounded up to a multiple of the rate (ValidateGopParam). */
+static unsigned t41_gop_rb(unsigned len, unsigned same, unsigned active)
+{
+    volatile float s, t;
+    unsigned frames = len, g, idr;
+
+    if (len != active) {                       /* SetChnGopLength / SetChnGopAttr: pending != active */
+        s = (float)frames; s = s / (float)EFPS;
+        if (frames % EFPS) s = s + 1.0f;
+        t = s * (float)EFPS; t = t / 1.0f;
+    } else {                                   /* first picture */
+        s = (float)frames; s = s / (float)EFPS; t = s * (float)EFPS; t = t / 1.0f;
+    }
+    g = (unsigned)t;
+    idr = g * (same > 1 ? same : 1);
+    if (idr > 1000 - EFPS) idr = 1000 - EFPS;
+    return (idr + EFPS - 1) / EFPS * EFPS;
+}
+# define GOP_RB(len, same) t41_gop_rb((len), (same), (len))
+# define GOP_SET_RB_T41(len, same, active) t41_gop_rb((len), (same), (active))
 #else
 # define GOP_RB(len, same) (len)
 #endif
@@ -651,17 +671,26 @@ static void live_common(int chn, int codec)
             r2 = IMP_Encoder_SetChnGopLength(chn, 25);
             RB_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnGopAttr(chn, g2); gchk(g2);
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+            CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_SET_RB_T41(25, g2->uMaxSameSenceCnt, g->uGopLength), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
+#else
             CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB(25, g2->uMaxSameSenceCnt), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
+#endif
         }
         NEED(IMP_Encoder_SetChnGopAttr) {
 #if defined(PLATFORM_T41) && !defined(APITEST_T40)
             /* restore the created length: the read-back is the product, the setter takes the length */
             if (g->uMaxSameSenceCnt > 1)
                 g->uGopLength /= g->uMaxSameSenceCnt;
+            unsigned active = g2->uGopLength;      /* running length after the SetChnGopLength above */
 #endif
             r2 = IMP_Encoder_SetChnGopAttr(chn, g);
             RB_SETTLE(chn, codec);
+#if defined(PLATFORM_T41) && !defined(APITEST_T40)
+            g->uGopLength = GOP_SET_RB_T41(g->uGopLength, g->uMaxSameSenceCnt, active);
+#else
             g->uGopLength = GOP_RB(g->uGopLength, g->uMaxSameSenceCnt);
+#endif
             r = IMP_Encoder_GetChnGopAttr(chn, g2); gchk(g2);
             CHECK(IMP_Encoder_SetChnGopAttr, r2, r == 0 && g2->uGopLength == g->uGopLength && g2->uGopCtrlMode == g->uGopCtrlMode, "restore attr, length %u", g2->uGopLength);
         }

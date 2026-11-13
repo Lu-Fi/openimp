@@ -110,6 +110,25 @@ int main(void)
     EXPECT(t40_vendor_idr_distance(990u, 1u, 20u, 1u) == 980u, "idr cap");
     EXPECT(t40_vendor_idr_distance(0u, 1u, 20u, 1u) == 0u, "idr 0");
 
+    /* T41 float glue (#475, vendor run on .32): not floored at the first
+     * picture, one second added for a run-time GOP that is not whole seconds */
+    EXPECT(t41_vendor_start_gop(25u, 20u, 1u, 20u, 1u) == 25u, "t41 start 25@20");
+    EXPECT(t41_vendor_start_gop(30u, 25u, 1u, 25u, 1u) == 30u, "t41 start 30@25");
+    EXPECT(t41_vendor_start_gop(50u, 20u, 1u, 20u, 1u) == 50u, "t41 start 50@20");
+    EXPECT(t41_vendor_start_gop(25u, 20u, 1u, 40u, 1u) == 50u, "t41 rate change");
+    EXPECT(t41_vendor_start_gop(25u, 0u, 1u, 20u, 1u) == 25u, "t41 start rate 0");
+    EXPECT(t41_vendor_set_gop(25u, 20u, 1u) == 45u, "t41 set 25@20");
+    EXPECT(t41_vendor_set_gop(30u, 20u, 1u) == 50u, "t41 set 30@20");
+    EXPECT(t41_vendor_set_gop(40u, 20u, 1u) == 40u, "t41 set 40@20");
+    EXPECT(t41_vendor_set_gop(20u, 20u, 1u) == 20u, "t41 set 20@20");
+    EXPECT(t41_vendor_set_gop(5u, 20u, 1u) == 25u, "t41 set 5@20");
+    EXPECT(t41_vendor_set_gop(25u, 0u, 1u) == 25u, "t41 set rate 0");
+    /* vendor IDR distances through ValidateGopParam (device: 40, 60, 50) */
+    EXPECT(t40_vendor_idr_distance(t41_vendor_start_gop(25u, 20u, 1u, 20u, 1u), 1u, 20u, 1u) == 40u, "t41 idr create 25@20");
+    EXPECT(t40_vendor_idr_distance(t41_vendor_set_gop(25u, 20u, 1u), 1u, 20u, 1u) == 60u, "t41 idr set 25@20");
+    EXPECT(t40_vendor_idr_distance(t41_vendor_start_gop(30u, 25u, 1u, 25u, 1u), 1u, 25u, 1u) == 50u, "t41 idr create 30@25");
+    EXPECT(t40_vendor_idr_distance(t41_vendor_start_gop(50u, 20u, 1u, 20u, 1u), 1u, 20u, 1u) == 60u, "t41 idr create 50@20");
+
     /* vendor FixQP EP1 words: IDR keeps the intra lane only */
     memset(ep1, 0xa5, sizeof(ep1));
     EXPECT(openimp_t40_update_fixqp_ep1(ep1, sizeof(ep1), 1) == 0, "ep1 idr");

@@ -16,6 +16,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Status data / matrix: the T32 driver-port row now reads "merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15" (`tools/status_driver_port.py`, `docs/status/driver_port.json`, intro in `tools/driver_port.py`). Host-proven, not device-tested (device proof: #99).
 
+## 2026-11-13: T41 GOP as the vendor glue, float seconds (#475)
+
+- `src/t40/t40_vendor_cmd.h`: `t41_vendor_start_gop` / `t41_vendor_set_gop` (T41 1.2.5/1.2.6 `encoder_get_fps_mask`, single precision float, operation order as the vendor); `openimp_p2_encoder.c` T41: CreateChn, `SetChnGopAttr` and `SetChnGopLength` hand the encoder the IDR distance of the glue (`t40_vendor_idr_distance` of it), and `GetChnGopAttr` / `GetChnAttr` read it back as stored (the IDR distance; before the next picture the value of before). Until now the distance was length * same-scene without the vendor's rounding: GOP 25 at 20 fps ran with an IDR every 25 pictures, the vendor's every 40.
+- Vendor reference (libimp 1.2.6 loaded at run time on the Vanhua T55A .32, `audit/issue475`): GOP 25 at 20 fps -> IDR every 40, read-back 25 then 40 after the first picture; `SetChnGopLength(25)` at run time -> IDR every 60, read-back 40 then 60; GOP 30 at 25 fps -> 50. OpenIMP on the same camera: the same distances and read-backs. Not matched (own issue): the vendor also codes an IDR on the second picture after start and one on the first picture after `SetChnGopLength` (GOP restart by the glue's SetGopParam).
+- `tests/t40/vendor_cmd_test.c`: rows for the float glue; `tools/apitest/at_enc.c` (T41) expects the glue's read-back.
+
 ## 2026-11-13: T40 GOP and QP-bounds read-back as the vendor glue (#455, #456)
 
 - #455: the T40 vendor 1.3.1 IMP glue puts the CreateChn GOP into whole seconds of the channel rate at the first picture (rounded down: GOP 25 at 20 fps -> IDR every 20, 50 -> 40, as the 2026-11-12 Eufy light-box clips show) and a GOP set at run time (`SetChnGopLength`, a new length in `SetChnGopAttr`) into whole seconds rounded up; the encoder's IDR distance is length x same-scene count rounded up to a multiple of the rate (`AL_Codec_Encode_ValidateGopParam`). OpenIMP T40 now does the same (`src/t40/t40_vendor_cmd.h`); `GetChnGopAttr`/`GetChnAttr` read the new length once a picture went through, as the vendor. Under one second OpenIMP keeps the GOP (vendor reaches 0, not measured; docs/OPENIMP_BEYOND_VENDOR.md section 8).

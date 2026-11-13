@@ -157,6 +157,57 @@ static inline uint32_t t40_vendor_set_gop(uint32_t gop, uint32_t num,
     return g ? (g > 0xffffu ? 0xffffu : g) : gop;
 }
 
+/* T41 1.2.5 / 1.2.6 IMP glue (encoder_get_fps_mask, GOP part 0x1d5c-0x1fec,
+ * #475): single-precision float, operation order as the vendor (div, mul,
+ * div; volatile keeps the compiler from fusing or widening).  Vendor run on
+ * the Vanhua T55A 2026-11-13 (audit/issue475): GOP 25 at 20 fps -> IDR every
+ * 40, read-back 25, then 40 after the first picture; SetChnGopLength(25)
+ * at run time -> 60 (read-back 60 after the next picture); 30 at 25 -> 50.
+ *
+ * GOP of the first picture (and of a rate change, old rate = given rate):
+ * seconds are NOT floored, g = trunc(gop * old_den / old_num * num / den). */
+static inline uint32_t t41_vendor_start_gop(uint32_t gop, uint32_t old_num,
+                                            uint32_t old_den, uint32_t num,
+                                            uint32_t den)
+{
+    volatile float a, b, c;
+    uint32_t g;
+
+    t40_vendor_rate_reduce(&old_num, &old_den);
+    t40_vendor_rate_reduce(&num, &den);
+    if (!old_num || !old_den || !num || !den)
+        return gop;
+    a = (float)(gop * old_den);
+    b = a / (float)old_num;
+    c = b * (float)num;
+    c = c / (float)den;
+    g = (uint32_t)c;
+    return g ? (g > 0xffffu ? 0xffffu : g) : gop;
+}
+
+/* GOP set at run time (SetChnGopLength, a new length through SetChnGopAttr):
+ * s = p * den / num, one full second added unless it is whole seconds,
+ * g = trunc(s * num / den): 25 at 20 fps -> 45, 30 -> 50, 40 -> 40. */
+static inline uint32_t t41_vendor_set_gop(uint32_t p, uint32_t num,
+                                          uint32_t den)
+{
+    volatile float s, t;
+    uint32_t frames, g;
+
+    t40_vendor_rate_reduce(&num, &den);
+    if (!num || !den)
+        return p;
+    frames = p * den;
+    s = (float)frames;
+    s = s / (float)num;
+    if (frames % num)
+        s = s + 1.0f;
+    t = s * (float)num;
+    t = t / (float)den;
+    g = (uint32_t)t;
+    return g ? (g > 0xffffu ? 0xffffu : g) : p;
+}
+
 /* AL_Codec_Encode_ValidateGopParam (lib_codec.c, every SetGopParam): the
  * IDR distance length * same-scene, at most 1000 - rate, rounded up to a
  * multiple of the reduced rate numerator; the GOP length becomes that
