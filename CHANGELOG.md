@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T10 manual WB gain range documented (#468)
+
+- `include/imp/imp_isp.h`: the 8-bit manual WB gain note (128 = 1.0x, values above 255 keep only the low 8 bits, vendor-equal: vendor libimp 3.12.0 SetWB/GetWB pass through, the firmware stores a byte) now names T10 and T20.
+
 ## 2026-11-13: T33 backlog batches Q1/Q2, T33 apitest on the 2.0.2.1 headers, n.a. cells (#54-#60, T32 #39-#45; planned, QEMU only)
 
 - apitest: T33 build (`build.sh T33`: `-DAPITEST_T32 -DAPITEST_T33`, T33 2.0.2.1 headers, `gen_have.sh` T33 set; needs `EXTRA_LDFLAGS=<vendor libalog.so>` for the vendor libimp) and case `t33pass` (`tools/apitest/at_t33.c`): ISP tuning round trips with the 2.0.2.1 structs, the Q1 ISP control calls, the Q2 FrameSource / encoder state calls, each line with hex return codes. Vendor libimp 2.0.2.1 on the vendor module is the reference: OpenIMP gives the same line on 99 of 100 (the 100th: the vendor `GetAeStartAttr` writes past the 8-byte struct, OVERWRITE), on the vendor module and on open-tx-isp `claude/t33-ctl-ioctls`; 0 oops. Vendor library findings: `GetAeStartAttr(NULL)` SIGSEGV, VI 5 on a tuning call oopses the vendor module, the full enc area crashes the vendor library (pool path).
