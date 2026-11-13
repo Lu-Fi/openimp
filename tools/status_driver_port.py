@@ -4,7 +4,7 @@
 Local tool (the pages build in CI from this repo only and just read the JSON).  Read-only on the checkout, git commands only, no branch switch.
   total  = number of fn_*.c files under driver/t32/recovered on the recovered-driver branch
   proven = unique fn_*.c names listed in tests/t32_oracle/*.conf on the oracle branch (functions proven bit-exact by a host oracle)
-T33 has no recovered driver yet: proven 0, total null (kept as in the JSON, not touched here).
+T33 has no recovered driver: its entry (T33-only vendor functions ported by name, counted by hand) is kept as in the JSON, not touched here.
 Usage: python3 tools/status_driver_port.py [--repo /path/to/open-tx-isp] [--recovered REF] [--oracle REF] [--print]
 """
 import argparse

@@ -254,8 +254,9 @@ void t_fs(void)
     /* after SetChnFifoAttr(maxdepth 2): libimp stores maxdelay = delay = 2 */
     if (g_fifo_set) {
         NEED(IMP_FrameSource_GetMaxDelay) { G(int, d); r = IMP_FrameSource_GetMaxDelay(1, d); gchk(d); 
-#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
-            /* vendor T40/T41 (disassembly): max delay stays at the value set before */
+#if (defined(PLATFORM_T41) || defined(PLATFORM_T40)) && !defined(APITEST_T32)
+            /* vendor T40/T41 (disassembly): max delay stays at the value set before
+             * (T32 2.2.0 / T33 2.0.2.1: SetChnFifoAttr calls SetMaxDelay(maxdepth), QEMU vendor run #445) */
             CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 3, "max delay %d (stays 3 after SetChnFifoAttr maxdepth 2, as the vendor)", *d);
 #else
             CHECK(IMP_FrameSource_GetMaxDelay, r, *d == 2, "max delay %d (SetChnFifoAttr maxdepth 2)", *d);
@@ -384,6 +385,12 @@ void t_fs(void)
             ts->ts = (uint64_t)got;
             r2 = IMP_FrameSource_GetTimedFrame(1, ts, 0, buf, fi);
             gchk(fi); gchk(buf);
+#if defined(APITEST_T32)
+            /* T32 2.2.0 / T33 2.0.2.1 (disassembly, #445): the time of the OLDEST kept frame is refused with 0x80012000 */
+            if (r2 == (int)0x80012000)
+                rep(LBL("IMP_FrameSource_GetTimedFrame (no block, held frame)"), r2, V_PASS, "ts of the oldest kept frame -> 0x80012000 as the vendor");
+            else
+#endif
             rep(LBL("IMP_FrameSource_GetTimedFrame (no block, held frame)"), r2, r2 == 0 && (int64_t)fi->timeStamp == got ? V_PASS : V_FAIL,
                 "ts of the held frame -> %d, ts %s", r2, (int64_t)fi->timeStamp == got ? "equal" : "differs");
         }

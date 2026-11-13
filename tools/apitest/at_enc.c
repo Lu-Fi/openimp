@@ -77,6 +77,11 @@ static const char *cname[] = { "H264", "H265", "JPEG" };
 #endif
 
 /* quiet-after-first reporting: first=1 prints the line, later calls print only failures */
+#if defined(APITEST_T32)
+#define ENC_POOL_ID 3       /* requested by the encoder tests (#447) */
+#else
+#define ENC_POOL_ID 0
+#endif
 #define QR0(f, r, first, ...) do { if ((first) || (r) != 0) RET0(f, r, __VA_ARGS__); } while (0)
 
 /* ----------------------------------------------------------- stream parse */
@@ -484,7 +489,19 @@ static int chn_up(int chn, int codec, int first, int start)
 
     fill_attr(a, codec, EGOP);
 #if HAS_IMP_Encoder_SetPool
+# if defined(APITEST_T32)
+    /* T32 2.2.0 / T33 2.0.2.1 (disassembly, #447): the pool must exist (MemPoolRequest), else -1 */
+    NEED(IMP_Encoder_SetPool) {
+        static int pool_req;
+        if (!pool_req && IMP_System_MemPoolRequest) pool_req = IMP_System_MemPoolRequest(ENC_POOL_ID, 65536, "apitest-enc") == 0 ? 1 : -1;
+        if (first) { int rn = IMP_Encoder_SetPool(chn, 30); rep(LBL("IMP_Encoder_SetPool (pool never requested)"), rn, rn == -1 ? V_PASS : V_FAIL, "chn %d pool 30: %d (vendor -1)", chn, rn); }
+        r = IMP_Encoder_SetPool(chn, ENC_POOL_ID);
+        if (r == -1 && IMP_Encoder_GetPool && IMP_Encoder_GetPool(chn) == ENC_POOL_ID) r = 0;   /* bound in an earlier round: once per channel, as the vendor */
+        QR0(IMP_Encoder_SetPool, r, first, "chn %d pool %d (requested: %d, before CreateChn)", chn, ENC_POOL_ID, pool_req);
+    }
+# else
     NEED(IMP_Encoder_SetPool) { r = IMP_Encoder_SetPool(chn, 0); QR0(IMP_Encoder_SetPool, r, first, "chn %d pool 0 (before CreateChn)", chn); }
+# endif
 #endif
 #if HAS_IMP_Encoder_SetStreamBufSize
     NEED(IMP_Encoder_SetStreamBufSize) { r = IMP_Encoder_SetStreamBufSize(chn, 262144); QR0(IMP_Encoder_SetStreamBufSize, r, first, "chn %d 256 KB (before CreateChn)", chn); }
@@ -1253,7 +1270,7 @@ static void live_misc(int chn, int codec)
     }
 #endif
 #if HAS_IMP_Encoder_GetPool
-    NEED(IMP_Encoder_GetPool) { r = IMP_Encoder_GetPool(chn); rep(FN(IMP_Encoder_GetPool), r, r == 0 ? V_PASS : V_FAIL, "chn %d pool %d (set 0)", chn, r); }
+    NEED(IMP_Encoder_GetPool) { r = IMP_Encoder_GetPool(chn); rep(FN(IMP_Encoder_GetPool), r, r == ENC_POOL_ID ? V_PASS : V_FAIL, "chn %d pool %d (set %d)", chn, r, ENC_POOL_ID); }
 #endif
 #if HAS_IMP_Encoder_GetStreamBufSize
     NEED(IMP_Encoder_GetStreamBufSize) {

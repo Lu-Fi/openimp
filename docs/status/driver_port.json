@@ -1,11 +1,11 @@
 {
  "socs": {
   "T33": {
-   "proven": 0,
-   "total": null,
-   "branch": null,
-   "date": "2026-11-10",
-   "note": "paused, no recovered driver yet"
+   "proven": 86,
+   "total": 409,
+   "branch": "claude/t32-ds-batch",
+   "date": "2026-11-13",
+   "note": "counting basis differs from T32 (no recovered T33 C, so nothing is bit-exact-proven): of the 1563 functions of the vendor tx-isp-t33.ko, 1154 have a T32 namesake and run on the shared driver/t32 port; the count is the 409 T33-only functions, of which 86 are ported by name in the T33 files (driver/t32/tx_isp_t33_*.h, driver/t33); checked by 5 host tests and the QEMU apitest (OpenIMP 255 PASS / 16 FAIL on this module, 254 / 17 on the vendor module; openimp #383-#389, #413, #429, #431, #434, #436, #437, #441, #442); not merged into next, not device-tested (no T33 camera)"
   },
   "T32": {
    "proven": 1591,

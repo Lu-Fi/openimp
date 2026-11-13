@@ -30,9 +30,10 @@
  *
  * IMP_System_MemPoolRequest/Free are IMP_MemPool_InitPool/Release
  * (src/dma_alloc.c), as the vendor wraps its Jz_mempool; MemPoolFree also
- * returns -1 for a pool that was never requested.  FrameSource and Encoder
- * on T32 allocate from the one rmem arena (no SetPool), so there are no pool
- * associations to clear.
+ * returns -1 for a pool that was never requested.  FrameSource channels bound
+ * with IMP_FrameSource_SetPool take their capture buffers from the pool
+ * (#445); IMP_Encoder_SetPool (end of this file, #447) only keeps the
+ * association.
  *
  * Not here: IMP_Alloc_direct / IMP_Alloc_get_reuse_block (vendor: the
  * zeratul fast-boot reuse of RTOS buffers; no such boot on the open stack).
@@ -370,4 +371,48 @@ void IMP_System_WriteReg32(uint32_t addr, uint32_t val)
 {
     if (t32_reg_access(addr, &val, 1) < 0)
         IMP_LOG_ERR(TAG, "IMP_System_WriteReg32(0x%08x) failed", addr);
+}
+
+/*
+ * IMP_Encoder_SetPool / GetPool (#447), vendor libimp T32 2.2.0 / T33 2.0.2.1
+ * (disassembly): channel 0..32, the pool must exist (MemPoolRequest), one
+ * pool per channel; every failure is -1; GetPool answers the id or -1.  The
+ * association is kept for the application; the T32 encoder allocates its
+ * stream and reference buffers from the one rmem arena (as the T31 build).
+ */
+#define T32_ENC_POOL_CHNS 33
+static int enc_pool[T32_ENC_POOL_CHNS];
+static int enc_pool_init;
+static pthread_mutex_t enc_pool_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int IMP_Encoder_SetPool(int chnNum, int poolID)
+{
+    uint8_t info[256];
+    int rc = -1;
+
+    if ((unsigned)chnNum >= T32_ENC_POOL_CHNS || IMP_MemPool_GetById(poolID, info) != 0)
+        return -1;
+    pthread_mutex_lock(&enc_pool_lock);
+    if (!enc_pool_init) {
+        memset(enc_pool, 0xff, sizeof(enc_pool));
+        enc_pool_init = 1;
+    }
+    if (enc_pool[chnNum] < 0) {
+        enc_pool[chnNum] = poolID;
+        rc = 0;
+    }
+    pthread_mutex_unlock(&enc_pool_lock);
+    return rc;
+}
+
+int IMP_Encoder_GetPool(int chnNum)
+{
+    int rc;
+
+    if ((unsigned)chnNum >= T32_ENC_POOL_CHNS)
+        return -1;
+    pthread_mutex_lock(&enc_pool_lock);
+    rc = enc_pool_init ? enc_pool[chnNum] : -1;
+    pthread_mutex_unlock(&enc_pool_lock);
+    return rc;
 }

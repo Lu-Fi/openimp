@@ -61,8 +61,26 @@ void t_isp(void)
         v->addr = 0x0;
         r = IMP_ISP_GetSensorRegister(IMPVI_MAIN, v); gchk(v);
         RET0(IMP_ISP_GetSensorRegister, r, "reg 0x0 read");
+#if defined(APITEST_T32)
+        /* QEMU only (T32/T33 have no camera): the value just read written back, then read again (#446) */
+        if (r == 0 && getenv("APITEST_QEMU")) NEED(IMP_ISP_SetSensorRegister) {
+            G(IMPISPSensorRegister, w);
+            int r2, r3;
+            uint32_t was = v->value;
+            w->addr = v->addr; w->value = was;
+            r2 = IMP_ISP_SetSensorRegister(IMPVI_MAIN, w); gchk(w);
+            v->value = ~was;
+            r3 = IMP_ISP_GetSensorRegister(IMPVI_MAIN, v); gchk(v);
+            rep(FN(IMP_ISP_SetSensorRegister), r2, r2 == 0 && r3 == 0 && v->value == was ? V_PASS : V_FAIL,
+                "QEMU: reg 0x%x = 0x%x written back (ret %d), read 0x%x (ret %d)", w->addr, was, r2, v->value, r3);
+            gfree(w);
+        }
+#endif
         gfree(v);
     }
+#endif
+#if defined(APITEST_T32)
+    if (!getenv("APITEST_QEMU"))
 #endif
     rep(LBL("IMP_ISP_SetSensorRegister"), 0, V_SKIP, "writes the sensor");
 
@@ -330,6 +348,28 @@ void t_isp(void)
         CHECK(IMP_ISP_GetDefaultBinPath, r, 1, "\"%.100s\" (empty: none set)", path);
         gfree(path);
     }
+#endif
+#if defined(APITEST_T32)   /* T32 2.2.0 / T33 2.0.2.1 layouts (#446) */
+# if HAS_IMP_ISP_GetDefaultBinPath
+    NEED(IMP_ISP_GetDefaultBinPath) {
+        G(IMPISPDefaultBinAttr, a);
+        a->mode = IMPISP_BIN_MODE_DAY;
+        r = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, a); gchk(a);
+        CHECK(IMP_ISP_GetDefaultBinPath, r, a->bname[0] == '/' || a->bname[0] == 0, "day bin \"%.100s\"", a->bname);
+        gfree(a);
+    }
+# endif
+# if HAS_IMP_ISP_GetCameraInputMode
+    NEED(IMP_ISP_GetCameraInputMode) {
+        G(IMPISPCameraInputMode, m);
+        size_t k, nz = 0;
+        memset(m, 0xa5, sizeof(*m));
+        r = IMP_ISP_GetCameraInputMode(m); gchk(m);
+        for (k = 0; k < sizeof(*m); k++) if (((unsigned char *)m)[k]) nz++;
+        CHECK(IMP_ISP_GetCameraInputMode, r, nz == 0, "%zu of %zu bytes non-zero (vendor: zeroed, single sensor)", nz, sizeof(*m));
+        gfree(m);
+    }
+# endif
 #endif
 #if HAS_IMP_ISP_GetFrameDrop
     ISPGET(IMP_ISP_GetFrameDrop, IMPISPFrameDropAttr, "ch0 enable %d lsize %u, ch1 enable %d, ch2 enable %d", (int)p->fdrop[0].enable, (unsigned)p->fdrop[0].lsize, (int)p->fdrop[1].enable, (int)p->fdrop[2].enable)

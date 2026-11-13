@@ -390,6 +390,33 @@ int IMP_ISP_SetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr)
     return 0;
 }
 
+int OpenIMP_T32_BinDefaultPath(int num, int mode, char *path)
+{
+    if (!path || !t32_bin_vi_ok((IMPVI_NUM)num) || (unsigned)mode >= T32_BIN_MODES)
+        return -1;
+    memcpy(path, tb.vi[num].def_path[mode], T32_BIN_PATH);
+    path[T32_BIN_PATH - 1] = 0;
+    return 0;
+}
+
+int OpenIMP_T32_BinSetWdr(int num, int on)
+{
+    T32BinVi *v;
+    uint32_t next;
+
+    if (!t32_bin_vi_ok((IMPVI_NUM)num))
+        return -1;
+    v = &tb.vi[num];
+    next = (v->mode & ~2u) | (on ? 2u : 0u);    /* IMPISP_BIN_MODE_*_WDR = mode | 2 */
+    if (next == v->mode)
+        return 0;
+    if (!v->added) {
+        v->mode = next;         /* the first bin AddSensor loads */
+        return 0;
+    }
+    return t32_bin_update((IMPVI_NUM)num, next);
+}
+
 int IMP_ISP_StartNightMode(IMPVI_NUM num)
 {
     T32BinVi *v;

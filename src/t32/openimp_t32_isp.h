@@ -26,5 +26,12 @@ int OpenIMP_T32_BinOpen(void);
 void OpenIMP_T32_BinClose(void);
 int OpenIMP_T32_BinAddSensor(IMPVI_NUM num, const char *sensor);
 void OpenIMP_T32_BinDelSensor(IMPVI_NUM num);
+/* default bin path of a mode (128 B, "" when none): 0, -1 bad VI / mode or no ISP (#446) */
+int OpenIMP_T32_BinDefaultPath(int num, int mode, char *path);
+/* WDR bit of the bin mode (vendor WDR_ENABLE): stored before AddSensor,
+ * else the bin of the new mode is loaded; 0 / -1 (load failed) (#446) */
+int OpenIMP_T32_BinSetWdr(int num, int on);
+/* sensor name of VI num (32 B) while the sensor is added: 0, else -1 (#446) */
+int OpenIMP_T32_SensorName(int num, char *name);
 
 #endif

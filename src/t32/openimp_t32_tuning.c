@@ -713,3 +713,225 @@ int32_t IMP_ISP_Tuning_GetAeStartAttr(IMPVI_NUM num, IMPISPAeStartAttr *attr)
     memcpy(attr, &r[1], 8);
     return 0;
 }
+
+/* ---- streamer-used ISP calls (#446) ---------------------------------------
+ * Checks and return codes of vendor libimp T32 2.2.0 / T33 2.0.2.1
+ * (disassembly; no vendor code copied):
+ *   GetDefaultBinPath  ISP open (0xfffff008), attr, VI < 4; the default bin
+ *                      of attr->mode (vendor: asked from its driver, which
+ *                      keeps what the library set; on the open stack the
+ *                      library owns the bins, openimp_t32_bin.c)
+ *   Set/GetFrameDrop   ISP open, attr, VI; SET/GET_FRAME_DROP with {vi, 3 x
+ *                      {enable, lsize, fmark}} (40 B), driver error 0xfffff001
+ *   Set/GetISPBypass   Set: attr, VI; BYPASS_SENSOR {enable, vi}, the value
+ *                      kept; Get: ISP open, attr, VI, tuning enabled
+ *                      (0xfffff005), the kept value
+ *   Set/GetSensorRegister  ISP open, attr, VI, sensor enabled and on I2C
+ *                      (0xfffff009 otherwise); S/G_REGISTER with the 64 B
+ *                      block {name[32], vi, bus type, size, pad, reg u64,
+ *                      val u64}; driver error 0xfffff001
+ *   GetCameraInputMode attr; zeroes the 108 B structure, 0 (as the vendor)
+ *   WDR_ENABLE         ISP open (vendor: no check, dereferences), attr, VI,
+ *                      value 0/1 (0xfffff004); the WDR bit of the bin mode:
+ *                      kept before AddSensor, else the WDR / non-WDR bin is
+ *                      loaded (0xfffff006 when that fails)
+ *   WDR_ENABLE_GET     ISP open, attr, VI, tuning enabled; DEFAULT_BIN
+ *                      (880 B, VI at byte 862), WDR word at byte 852
+ * The vendor's SetFrameDrop also recomputes its FrameSource drop table; the
+ * open FrameSource takes the rate from the driver per frame instead. */
+#define T32X_IOC_SET_SENSOR_REGISTER 0xc040540du
+#define T32X_IOC_GET_SENSOR_REGISTER 0x8040540eu
+#define T32X_IOC_BYPASS_SENSOR       0x80085418u
+#define T32X_IOC_SET_FRAME_DROP      0xc004542cu
+#define T32X_IOC_GET_FRAME_DROP      0xc004542du
+#define T32X_IOC_DEFAULT_BIN         0xc00454c9u
+#define T32X_DBIN_SIZE 880
+#define T32X_DBIN_WDR  852
+#define T32X_DBIN_VI   862
+
+_Static_assert(sizeof(IMPISPFrameDropAttr) == 36, "IMPISPFrameDropAttr");
+_Static_assert(sizeof(IMPISPCameraInputMode) == 108, "IMPISPCameraInputMode");
+_Static_assert(sizeof(IMPISPSensorRegister) == 8, "IMPISPSensorRegister");
+
+static int32_t isp_bypass[T32_VI_MAX];
+
+static int32_t ispx_check(int num, const void *p)
+{
+    if (OpenIMP_T32_IspFd() < 0)
+        return E_TUNING;
+    if (!p)
+        return E_NULL;
+    if ((unsigned)num >= T32_VI_MAX)
+        return E_VI;
+    return 0;
+}
+
+int32_t IMP_ISP_GetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr)
+{
+    int32_t rc = ispx_check(num, attr);
+
+    if (rc)
+        return rc;
+    if (OpenIMP_T32_BinDefaultPath(num, (int)attr->mode, attr->bname) < 0)
+        return E_NULL;
+    return 0;
+}
+
+struct ispx_fdrop {
+    uint32_t vi;
+    IMPISPFrameDropAttr attr;
+};
+
+int32_t IMP_ISP_SetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct ispx_fdrop b;
+    int32_t rc = ispx_check(num, attr);
+
+    if (rc)
+        return rc;
+    b.vi = (uint32_t)num;
+    b.attr = *attr;
+    if (ioctl(OpenIMP_T32_IspFd(), T32X_IOC_SET_FRAME_DROP, &b) != 0) {
+        IMP_LOG_ERR(TAG, "SET_FRAME_DROP: %s", strerror(errno));
+        return E_SENSOR;
+    }
+    return 0;
+}
+
+int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct ispx_fdrop b;
+    int32_t rc = ispx_check(num, attr);
+
+    if (rc)
+        return rc;
+    memset(&b, 0, sizeof(b));
+    b.vi = (uint32_t)num;
+    if (ioctl(OpenIMP_T32_IspFd(), T32X_IOC_GET_FRAME_DROP, &b) != 0) {
+        IMP_LOG_ERR(TAG, "GET_FRAME_DROP: %s", strerror(errno));
+        return E_SENSOR;
+    }
+    *attr = b.attr;
+    return 0;
+}
+
+int32_t IMP_ISP_SetISPBypass(IMPVI_NUM num, IMPISPOpsMode *enable)
+{
+    int32_t b[2];
+    int fd = OpenIMP_T32_IspFd();
+
+    if (!enable)
+        return E_NULL;
+    if ((unsigned)num >= T32_VI_MAX)
+        return E_VI;
+    if (fd >= 0) {
+        b[0] = (int32_t)*enable;
+        b[1] = (int32_t)num;
+        if (ioctl(fd, T32X_IOC_BYPASS_SENSOR, b) != 0) {
+            IMP_LOG_ERR(TAG, "BYPASS_SENSOR: %s", strerror(errno));
+            return E_SENSOR;
+        }
+    }
+    isp_bypass[num] = (int32_t)*enable;
+    return 0;
+}
+
+int32_t IMP_ISP_GetISPBypass(IMPVI_NUM num, IMPISPOpsMode *enable)
+{
+    int32_t rc = ispx_check(num, enable);
+
+    if (rc)
+        return rc;
+    if (tun.fd < 0)
+        return E_STATE;
+    *enable = (IMPISPOpsMode)isp_bypass[num];
+    return 0;
+}
+
+/* vendor tx_isp_dbg_register (T32/T33 SDK include/tx-isp-device.h) */
+struct ispx_reg {
+    char name[32];
+    int32_t sensor_id;
+    int32_t type;
+    uint32_t size;
+    uint32_t pad;
+    uint64_t reg;
+    uint64_t val;
+};
+_Static_assert(sizeof(struct ispx_reg) == 64, "tx_isp_dbg_register");
+
+static int32_t ispx_reg(IMPVI_NUM num, IMPISPSensorRegister *reg, int set)
+{
+    struct ispx_reg b;
+    int32_t rc = ispx_check(num, reg);
+
+    if (rc)
+        return rc;
+    if (OpenIMP_T32_SensorState(num) != 2)
+        return E_NULL;          /* vendor: sensor not enabled */
+    memset(&b, 0, sizeof(b));
+    if (OpenIMP_T32_SensorName(num, b.name) < 0)
+        return E_NULL;
+    b.sensor_id = (int32_t)num;
+    b.type = 1;                 /* TX_SENSOR_CONTROL_INTERFACE_I2C: the only bus the vendor accepts */
+    b.reg = reg->addr;
+    b.val = set ? reg->value : 0;
+    if (ioctl(OpenIMP_T32_IspFd(), set ? T32X_IOC_SET_SENSOR_REGISTER : T32X_IOC_GET_SENSOR_REGISTER,
+              &b) != 0) {
+        IMP_LOG_ERR(TAG, "%s_REGISTER 0x%x: %s", set ? "SET" : "GET", reg->addr, strerror(errno));
+        return E_SENSOR;
+    }
+    if (!set)
+        reg->value = (uint32_t)b.val;
+    return 0;
+}
+
+int32_t IMP_ISP_SetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    return ispx_reg(num, reg, 1);
+}
+
+int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
+{
+    return ispx_reg(num, reg, 0);
+}
+
+int32_t IMP_ISP_GetCameraInputMode(IMPISPCameraInputMode *mode)
+{
+    if (!mode)
+        return E_NULL;
+    memset(mode, 0, sizeof(*mode));
+    return 0;
+}
+
+int32_t IMP_ISP_WDR_ENABLE(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    int32_t rc = ispx_check(num, mode);
+
+    if (rc)
+        return rc;
+    if ((unsigned)*mode > 1)
+        return E_FIELD;
+    return OpenIMP_T32_BinSetWdr(num, *mode == IMPISP_TUNING_OPS_MODE_ENABLE) < 0 ? E_IOCTL : 0;
+}
+
+int32_t IMP_ISP_WDR_ENABLE_GET(IMPVI_NUM num, IMPISPTuningOpsMode *mode)
+{
+    uint8_t b[T32X_DBIN_SIZE];
+    uint32_t w;
+    int32_t rc = ispx_check(num, mode);
+
+    if (rc)
+        return rc;
+    if (tun.fd < 0)
+        return E_STATE;
+    memset(b, 0, sizeof(b));
+    b[T32X_DBIN_VI] = (uint8_t)num;
+    if (ioctl(OpenIMP_T32_IspFd(), T32X_IOC_DEFAULT_BIN, b) != 0) {
+        IMP_LOG_ERR(TAG, "DEFAULT_BIN (WDR): %s", strerror(errno));
+        return E_SENSOR;
+    }
+    memcpy(&w, b + T32X_DBIN_WDR, sizeof(w));
+    *mode = (IMPISPTuningOpsMode)w;
+    return 0;
+}

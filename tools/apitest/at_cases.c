@@ -1045,11 +1045,15 @@ static void cs_rgbcoef(void)
 static void cs_rgbcoef(void) {}
 #endif
 
-#if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_GetISPBypass && HAS_IMP_ISP_SetISPBypass
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_GetISPBypass && HAS_IMP_ISP_SetISPBypass
 static void cs_ispbypass(void)
 {
     NEED(IMP_ISP_GetISPBypass) NEED(IMP_ISP_SetISPBypass) {
+#if defined(APITEST_T32)
+        IMPISPOpsMode o = IMPISP_OPS_MODE_DISABLE, b = IMPISP_OPS_MODE_ENABLE;   /* T32/T33 2.x type (#446) */
+#else
         IMPISPTuningOpsMode o = IMPISP_TUNING_OPS_MODE_DISABLE, b = IMPISP_TUNING_OPS_MODE_ENABLE;
+#endif
         int r1 = IMP_ISP_GetISPBypass(IMPVI_MAIN, &o), r2, r3;
 
         rep(FN(IMP_ISP_GetISPBypass), r1, r1 == 0 ? V_PASS : V_FAIL, "bypass %d", (int)o);

@@ -126,6 +126,19 @@ int OpenIMP_T32_SensorState(int num)
     return st;
 }
 
+int OpenIMP_T32_SensorName(int num, char *name)
+{
+    int rc = -1;
+
+    pthread_mutex_lock(&t32.lock);
+    if (t32.sensor_added && num == (int)t32.vinum && name) {
+        memcpy(name, t32.sensor.name, 32);
+        rc = 0;
+    }
+    pthread_mutex_unlock(&t32.lock);
+    return rc;
+}
+
 int OpenIMP_T32_IvdcDirect(void)
 {
     int32_t direct = 0;

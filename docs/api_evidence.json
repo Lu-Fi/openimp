@@ -980,8 +980,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "err",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1005,10 +1005,12 @@
           "r†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; userspace implementation T32 (2026-11-11 #300 follow-up): Set is implemented (src/t32/openimp_t32_bin.c) but IMP_ISP_GetDefaultBinPath is not exported by build/t32/libimp.so (vendor 2.2.0 exports both); no QEMU call.",
+      "note": "audit: reaches the driver/kernel; userspace implementation T32 (2026-11-11 #300 follow-up): Set is implemented (src/t32/openimp_t32_bin.c) but IMP_ISP_GetDefaultBinPath is not exported by build/t32/libimp.so (vendor 2.2.0 exports both); no QEMU call. T32/T33 (2026-11-13, #445/#446): Get answers the default bin of attr->mode from the library bin table (the open stack loads the bins in userspace); QEMU PASS day bin path. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads",
-        "T40": "apitest agg47 stock 2026-10-27 .184 (API round trip, no visible effect expected)"
+        "T40": "apitest agg47 stock 2026-10-27 .184 (API round trip, no visible effect expected)",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_Get/SetFrameDrop": {
@@ -1020,8 +1022,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1036,9 +1038,11 @@
           "r†"
         ]
       },
-      "note": "T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused)",
+      "note": "T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T41: 40-byte request {ch, 3 entries}, device-tested (claude/t41-driver-gaps, in agg-35); T31: stock lsize/fmark semantics, the ISP drops the frames (open-tx-isp claude/release-t31-framedrop; 29.6 fps to 14.8/7.4 fps, disabled restores, lsize 32 refused) T32/T33 (2026-11-13, #445/#446): SET/GET_FRAME_DROP 40 B {vi, 3 x {enable, lsize, fmark}} on the open driver; QEMU round trip PASS (the vendor 2.2.0 library reads back a different block in the same test). The vendor FrameSource drop table update is not done (rate taken per frame from the driver). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
-        "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)"
+        "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_Get/SetISPBypass": {
@@ -1050,8 +1054,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -1067,8 +1071,11 @@
         ]
       },
       "ref": {
-        "T41": "apitest ispbypass 2026-10-27 .34 (#125 branch, in next): Set 0 ret 0 (was -4095), Set 1 refused -1, Get stays 0, frames flow; real bypass needs the VIC MDMA path (#125); 2026-11-03 T41 camera (open-tx-isp isp_bypass_graph=1 + OPENIMP_T41_BYPASS_GRAPH, module and library at run time, no flash, #125): vendor raw sample order, Set 1 ret 0, RAW16 channel 10/10 frames 2880x1620 9331200 bytes (10-bit MSB-aligned), Set 0 then NV12 25/25, 6 reload cycles, 0 oopses; the vendor 1.2.6 stack hangs the board after EnableChn of the raw channel (no vendor frame); default off"
-      }
+        "T41": "apitest ispbypass 2026-10-27 .34 (#125 branch, in next): Set 0 ret 0 (was -4095), Set 1 refused -1, Get stays 0, frames flow; real bypass needs the VIC MDMA path (#125); 2026-11-03 T41 camera (open-tx-isp isp_bypass_graph=1 + OPENIMP_T41_BYPASS_GRAPH, module and library at run time, no flash, #125): vendor raw sample order, Set 1 ret 0, RAW16 channel 10/10 frames 2880x1620 9331200 bytes (10-bit MSB-aligned), Set 0 then NV12 25/25, 6 reload cycles, 0 oopses; the vendor 1.2.6 stack hangs the board after EnableChn of the raw channel (no vendor frame); default off",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
+      },
+      "note": " T32/T33 (2026-11-13, #445/#446): BYPASS_SENSOR 0x80085418 {enable, input}, flag kept in the driver (open-tx-isp d4132a79), Get needs tuning enabled (0xfffff005); QEMU round trip PASS, frames flow. No picture effect checked (vendor notify not repeated). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly."
     },
     "ISP_Get/SetInternalChnAttr": {
       "area": "ISP tuning",
@@ -1101,8 +1108,8 @@
         "T23": "rt",
         "T30": "rt",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1138,7 +1145,7 @@
           "r†"
         ]
       },
-      "note": "T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was \"There isn't sensor!\"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30, no camera): GetSensorRegister PASS in the apitest isp area (ret=0 reg 0x0 = 0x0) and in tests/t30_qemu/sensor_register.c (sc4236 chip id registers 0x3107/0x3108 read 0x32/0x35), 6 module reload cycles with the register read at the end, 0 oopses. The oops of 2026-10-31 (NULL dereference in the ioctl, the lifted handler copied the 0x38-byte request over 4-byte locals) was fixed by #174 (open-tx-isp 648eddd7); SetSensorRegister is not run (it writes the sensor).",
+      "note": "T41: claude/t41-isp-round2 (not in agg-25); not device-tested; T23: bus type read at the stock offset (was \"There isn't sensor!\"); apitest read PASS, write skipped; T41: request with vinum at 32 and bus type at 36, device-tested (claude/t41-driver-gaps, in agg-35). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #14): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 2026-11-03 (#177, QEMU T30, no camera): GetSensorRegister PASS in the apitest isp area (ret=0 reg 0x0 = 0x0) and in tests/t30_qemu/sensor_register.c (sc4236 chip id registers 0x3107/0x3108 read 0x32/0x35), 6 module reload cycles with the register read at the end, 0 oopses. The oops of 2026-10-31 (NULL dereference in the ioctl, the lifted handler copied the 0x38-byte request over 4-byte locals) was fixed by #174 (open-tx-isp 648eddd7); SetSensorRegister is not run (it writes the sensor). T32/T33 (2026-11-13, #445/#446): S/G_REGISTER with the 64 B tx_isp_dbg_register block, sensor enabled and I2C; QEMU PASS (read, same value written back and read). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest agg47-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest agg47-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
@@ -1146,7 +1153,9 @@
         "T23": "apitest agg47-cases 2026-10-26 .30 (API round trip, no visible effect expected)",
         "T31": "apitest issue-113 2026-10-26 .26 (open-tx-isp 3e9a5d2c + OpenIMP 662b0d8c): chip id 0xcb3a read, same-value write round trip PASS; QEMU T31 equal",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)"
+        "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_GetCameraInputMode": {
@@ -1158,8 +1167,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "n.a."
       },
@@ -1173,7 +1182,12 @@
         "T33": [
           "r†"
         ]
-      }
+      },
+      "ref": {
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
+      },
+      "note": " T32/T33 (2026-11-13, #445/#446): zeroes the 108 B structure and returns 0, as vendor 2.2.0 / 2.0.2.1; QEMU PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly."
     },
     "ISP_GetRaw": {
       "area": "ISP tuning",
@@ -4718,8 +4732,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "dev"
       },
@@ -4740,10 +4754,12 @@
           "r†"
         ]
       },
-      "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
+      "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T32/T33 (2026-11-13, #445/#446): WDR bit of the bin mode: kept before AddSensor, else the WDR / linear bin is loaded (0xfffff006 on failure), value 0/1; QEMU round trip PASS (same value). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
-        "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
+        "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_WDR_ENABLE_GET": {
@@ -4755,8 +4771,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4774,10 +4790,12 @@
           "r†"
         ]
       },
-      "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35)",
+      "note": "T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T41: driver control, device-tested (claude/t41-driver-gaps, in agg-35) T32/T33 (2026-11-13, #445/#446): DEFAULT_BIN 880 B, WDR word at 852, needs tuning enabled; QEMU PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_WDR_ENABLE_Get": {
@@ -7762,8 +7780,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -7787,12 +7805,14 @@
           "r†"
         ]
       },
-      "note": "audit: userspace implementation",
+      "note": "audit: userspace implementation T32 (2026-11-13, #447): pool must exist (MemPoolRequest), once per channel, every failure -1 (vendor 2.2.0 disassembly); the association is kept, encoder buffers stay in the rmem arena (as T31); QEMU PASS. T33: the same shared code (exported by build/t33), QEMU PASS (pool 30 refused, pool 3 bound and read back).",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "Encoder_Get/SetQpgMode": {
@@ -10394,8 +10414,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10441,7 +10461,7 @@
           "r†"
         ]
       },
-      "note": "T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetChnFifoAttr: ret=0 maxdepth 2 type 0 (set 2/0); FrameSource_SetChnFifoAttr: ret=0 ch1 maxdepth ).",
+      "note": "T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it T10+T20+T21+T23+T31: = SetMaxDelay(maxdepth) (agg-25); FIFO_DATA_PRIORITY refused for maxdepth>0; T41: FIFO attr stored, no FIFO behind it. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetChnFifoAttr: ret=0 maxdepth 2 type 0 (set 2/0); FrameSource_SetChnFifoAttr: ret=0 ch1 maxdepth ). T32/T33 (2026-11-13, #445/#446): SetChnFifoAttr = SetMaxDelay(maxdepth) + delay = maxdepth + type, vendor return codes; QEMU PASS (maxdepth 2 read back, max delay 2 as vendor 2.2.0). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest agg47 2026-10-26 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -10450,7 +10470,9 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_Get/SetDelay": {
@@ -10462,8 +10484,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10481,7 +10503,7 @@
           "r†"
         ]
       },
-      "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetDelay: ret=0 delay 1 (set 1, before SetChnFifoAttr); FrameSource_SetDelay: ret=0 ch1 delay 1).",
+      "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetDelay: ret=0 delay 1 (set 1, before SetChnFifoAttr); FrameSource_SetDelay: ret=0 ch1 delay 1). T32/T33 (2026-11-13, #445/#446): 0..100, <= max delay, created channel; QEMU PASS. The FIFO keeps heap copies; bound modules are not delayed (vendor FIFO output order not modelled). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -10490,7 +10512,9 @@
         "T31": "apitest agg61 2026-10-31 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b30 2026-11-05 .231"
+        "T30": "apitest t30b30 2026-11-05 .231",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_Get/SetDirectModeAttr": {
@@ -10583,8 +10607,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "cache",
+        "T33": "cache",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10602,10 +10626,12 @@
           "r†"
         ]
       },
-      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1",
+      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T32/T33 (2026-11-13, #445/#446): the five words are kept and read back with the vendor checks (flip+mirror, flip/mirror+rotate 0x80010040), but the rotation / flip is NOT applied at EnableChn: the T32/T33 build has no I2D path yet (vendor uses its I2D pool). QEMU round trip PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_Get/SetMaxDelay": {
@@ -10617,8 +10643,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10636,7 +10662,7 @@
           "r†"
         ]
       },
-      "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetMaxDelay: ret=0 max delay 3 (set 3, before SetChnFifoAttr); FrameSource_SetMaxDelay: ret=0 ch1 ).",
+      "note": "T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: real delay FIFO (agg-25); T10 shares the T20 build; FIFO_DATA_PRIORITY refused for maxdepth>0; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (FrameSource_GetMaxDelay: ret=0 max delay 3 (set 3, before SetChnFifoAttr); FrameSource_SetMaxDelay: ret=0 ch1 ). T32/T33 (2026-11-13, #445/#446): 0..100 on a created, not enabled channel (0x80010040 otherwise); the newest max-delay frames are kept for GetTimedFrame; QEMU PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -10645,7 +10671,9 @@
         "T31": "apitest agg61 2026-10-31 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30b30 2026-11-05 .231"
+        "T30": "apitest t30b30 2026-11-05 .231",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_Get/SetPool": {
@@ -10657,8 +10685,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "err",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -10676,11 +10704,13 @@
           "r†"
         ]
       },
-      "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T32 (2026-11-11 #300 follow-up): GetPool is exported (weak, src/dma_alloc.c) but IMP_FrameSource_SetPool is not exported by build/t32/libimp.so (vendor 2.2.0 exports both); no QEMU call.",
+      "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25); T41: pool id recorded only T32 (2026-11-11 #300 follow-up): GetPool is exported (weak, src/dma_alloc.c) but IMP_FrameSource_SetPool is not exported by build/t32/libimp.so (vendor 2.2.0 exports both); no QEMU call. T32/T33 (2026-11-13, #445/#446): pool must exist (0x80010040), once per channel (0x80010020), GetPool id or 0x80010020; capture buffers come from the bound pool; QEMU PASS (unrequested pool refused as vendor 2.2.0). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-        "T41": "apitest t41pass 2026-11-04 .34"
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_GetFrame": {
@@ -10766,8 +10796,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10803,7 +10833,7 @@
           "r†"
         ]
       },
-      "note": "T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (ts now-25211 us, block: frame ts +22322 us from it, info 640x360).",
+      "note": "T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11) T10+T20+T21+T23+T31: agg-25; T41: host (vendor 1.2.6 semantics in src/t40/openimp_p1.c, delay cache; host test only, `export-check` 2026-10-11). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (ts now-25211 us, block: frame ts +22322 us from it, info 640x360). T32/T33 (2026-11-13, #445/#446): needs a max delay; nearest kept frame, packed NV12; at/before the oldest kept 0x80012000, newer than the newest 0x80010040 without block, 5 s wait with block; QEMU PASS (block and no-block). Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest agg47 2026-10-26 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -10812,7 +10842,9 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "FrameSource_QueueBuffer": {
@@ -10984,8 +11016,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "qemu",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11021,7 +11053,7 @@
           "r†"
         ]
       },
-      "note": "T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (640x360, 5666 sampled non-zero bytes of 5665, info 640x360).",
+      "note": "T41: copies the next consumer frame, packed NV12; T20/T21/T23/T31: waits up to 2 s like the vendor; T40: device-tested on cam-K 2026-10-10 (OpenIMP vs vendor library). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (640x360, 5666 sampled non-zero bytes of 5665, info 640x360). T32/T33 (2026-11-13, #445/#446): next frame within 3 s, packed NV12 (NV12 only; vendor size check width OR height kept); QEMU PASS 640x360 non-zero picture. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
       "ref": {
         "T10": "apitest agg47 2026-10-26 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -11030,7 +11062,9 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "ISP_Get/SetDrawAttr": {
@@ -17813,7 +17847,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -17859,7 +17893,7 @@
           "r†"
         ]
       },
-      "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): PASS (device values not published).",
+      "note": "audit: sysfs/ioctl/syscall path. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the unchanged vendor libsysutils 1.0.5 that ships with the T30 image (OpenIMP has no SU_ code for T30). QEMU T30 (sc4236 model, no camera): PASS (device values not published). T33 (2026-11-13, #448): SU_* live in the vendor libsysutils 2.0.2.1 the T33 firmware ships (OpenIMP libimp exports none, as T32); QEMU PASS \"SYSUTILS-2.0.2.1\".",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg47 2026-10-26 .107",
@@ -17869,7 +17903,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
       }
     },
     "SU_Base_PollingAlarm": {
@@ -19124,7 +19159,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "err",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
@@ -19171,7 +19206,7 @@
           "r†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (base 5000000 -> GetTimeStamp 5000071 us; restored (ret 0)). T32 (2026-11-11 matrix-x): still the skeleton stub: returns -1 (apitest QEMU FAIL), no rebase.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #21): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (base 5000000 -> GetTimeStamp 5000071 us; restored (ret 0)). T32 (2026-11-11 matrix-x): still the skeleton stub: returns -1 (apitest QEMU FAIL), no rebase. T32 (2026-11-13): fixed in next 5f532471 (#394); QEMU rerun PASS (base 5000000 -> 5000128 us), vendor 2.2.0 PASS in the same test.",
       "ref": {
         "T10": "apitest rc3gaps2 2026-10-27 .31",
         "T20": "apitest rc3gaps2 2026-10-27 .107",
@@ -19181,7 +19216,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
         "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },

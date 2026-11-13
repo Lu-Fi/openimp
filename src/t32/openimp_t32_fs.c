@@ -44,14 +44,18 @@
  * encoder groups only (also through OSD groups, which cannot draw on them),
  * and SetFrameDepth / GetFrame refuse the channel.  Direct modes 2..4
  * (several sensors) are refused.
+ * Delay FIFO, GetTimedFrame, SnapFrame, I2D attribute and pools (#445): see
+ * the block before OpenIMP_FrameSource_RegisterSink.
  * Not here (later T32 issues): crop / mirror (no request seen on this ABI
- * yet), rotation, joint/sub-stream channels, SnapFrame.
+ * yet), rotation (the I2D attribute is kept, not applied), joint/sub-stream
+ * channels.
  */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <time.h>
@@ -126,6 +130,21 @@ struct t32_fs_chn {
     struct t32_fs_slot slot[T32_FS_MAX_DEPTH];
     pthread_cond_t ready;
     uint32_t frames, dropped, copied, sink_frames;
+    /* delay FIFO (#445): Set/GetMaxDelay, Set/GetDelay, Set/GetChnFifoAttr,
+     * GetTimedFrame; the newest maxdelay frames, packed NV12 heap copies */
+    int maxdelay, delay, fifo_type;
+    struct t32_fs_cached *cache;
+    int cache_cap, cache_next;
+    /* SnapFrame (#445): one request at a time, filled by the frame thread */
+    int snap;                   /* 0 idle, 1 wanted, 2 filling, 3 done */
+    void *snap_buf;
+    IMPFrameInfo *snap_info;
+};
+
+struct t32_fs_cached {
+    void *data;                 /* width x height x 3/2, packed NV12 */
+    IMPFrameInfo info;
+    int valid;
 };
 
 /* src: a FrameSource channel, or an OSD group that passes the frames on
@@ -200,6 +219,33 @@ static int fs_alloc(IMPDMABufferInfo *d, uint32_t size, const char *tag)
     memset(d, 0, sizeof(*d));
     if (DMA_AllocDescriptor(d, (int)size, tag) < 0 || !d->phys_addr || !d->virt_addr) {
         IMP_LOG_ERR(TAG, "%s: cannot allocate %u bytes", tag, size);
+        memset(d, 0, sizeof(*d));
+        return -1;
+    }
+    return 0;
+}
+
+/* FrameSource pools (#445): vendor table of 33 channel -> pool ids, -1 none */
+#define T32_FS_POOL_CHNS 33
+static int fs_pool[T32_FS_POOL_CHNS];
+static int fs_pool_init;
+
+int IMP_MemPool_GetById(int pool_id, void *info_out);
+
+/* a capture buffer: from the channel's pool when SetPool bound one */
+static int fs_alloc_chn(int chn, IMPDMABufferInfo *d, uint32_t size)
+{
+    int pool = -1;
+
+    pthread_once(&fs_once, fs_init_once);
+    if (fs_pool_init && chn >= 0 && chn < T32_FS_POOL_CHNS)
+        pool = fs_pool[chn];
+    if (pool < 0)
+        return fs_alloc(d, size, "fs-chn");
+    memset(d, 0, sizeof(*d));
+    if (DMA_PoolAllocDescriptor(pool, d, (int)size, "fs-chn") < 0 || !d->phys_addr ||
+        !d->virt_addr) {
+        IMP_LOG_ERR(TAG, "chn %d: pool %d cannot give %u bytes", chn, pool, size);
         memset(d, 0, sizeof(*d));
         return -1;
     }
@@ -311,6 +357,89 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
     return best;
 }
 
+/* the capture buffer (Y stride x ALIGN16(h), then UV) as packed NV12 */
+static void fs_pack_nv12(const struct t32_fs_chn *c, const struct t32_fs_buf *b, uint8_t *dst)
+{
+    const uint8_t *y = (const uint8_t *)(uintptr_t)b->dma.virt_addr;
+    const uint8_t *uv = y + c->stride * ALIGN_UP(c->height, 16);
+    uint32_t r;
+
+    for (r = 0; r < c->height; r++)
+        memcpy(dst + r * c->width, y + r * c->stride, c->width);
+    dst += c->width * c->height;
+    for (r = 0; r < c->height / 2; r++)
+        memcpy(dst + r * c->width, uv + r * c->stride, c->width);
+}
+
+static void fs_packed_info(const struct t32_fs_chn *c, int chn, const struct t32_fs_buf *b,
+                           void *data, IMPFrameInfo *f)
+{
+    *f = b->frame;
+    f->pool_idx = chn;
+    f->width = c->width;
+    f->height = c->height;
+    f->pixfmt = PIX_FMT_NV12;
+    f->size = c->width * c->height * 3 / 2;     /* vendor: w x h x 3/2 for NV12 */
+    f->phyAddr = 0;
+    f->virAddr = (uint32_t)(uintptr_t)data;
+}
+
+/* delay FIFO and SnapFrame: called by the frame thread for every passed frame */
+static void fs_cache_feed(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
+{
+    struct t32_fs_cached *e = NULL;
+    void *snap_buf = NULL;
+    IMPFrameInfo *snap_info = NULL;
+
+    pthread_mutex_lock(&fs_lock);
+    if (c->cache && c->cache_cap > 0) {
+        e = &c->cache[c->cache_next];
+        e->valid = 0;           /* being refilled: GetTimedFrame skips it */
+        c->cache_next = (c->cache_next + 1) % c->cache_cap;
+        if (!e->data)
+            e->data = malloc(c->width * c->height * 3 / 2);
+        if (!e->data)
+            e = NULL;
+    }
+    if (c->snap == 1) {
+        c->snap = 2;
+        snap_buf = c->snap_buf;
+        snap_info = c->snap_info;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    if (!e && !snap_buf)
+        return;
+    if (e)
+        fs_pack_nv12(c, b, e->data);
+    if (snap_buf) {
+        fs_pack_nv12(c, b, snap_buf);
+        if (snap_info)
+            fs_packed_info(c, chn, b, snap_buf, snap_info);
+    }
+    pthread_mutex_lock(&fs_lock);
+    if (e && c->cache) {
+        fs_packed_info(c, chn, b, e->data, &e->info);
+        e->valid = 1;
+    }
+    if (snap_buf)
+        c->snap = 3;
+    pthread_cond_broadcast(&c->ready);
+    pthread_mutex_unlock(&fs_lock);
+}
+
+static void fs_cache_free_locked(struct t32_fs_chn *c)
+{
+    int i;
+
+    if (c->cache) {
+        for (i = 0; i < c->cache_cap; i++)
+            free(c->cache[i].data);
+        free(c->cache);
+    }
+    c->cache = NULL;
+    c->cache_cap = c->cache_next = 0;
+}
+
 static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
     struct { OpenIMP_T32_FrameSink fn; void *ctx; } sinks[T32_FS_MAX_BINDS];
@@ -361,6 +490,8 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
         pthread_cond_broadcast(&c->ready);
         pthread_mutex_unlock(&fs_lock);
     }
+    if (!c->direct)
+        fs_cache_feed(chn, c, b);
     if (!nsinks)
         return;
     /* every sink holds the buffer while it runs; one that keeps it gives it
@@ -568,6 +699,8 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     c->fd = -1;
     c->created = 0;
     c->depth = 0;
+    c->maxdelay = c->delay = c->fifo_type = 0;
+    memset(&c->attr, 0, sizeof(c->attr));
     pthread_mutex_unlock(&fs_lock);
     return 0;
 }
@@ -704,7 +837,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
     for (i = 0; i < c->nbufs; i++) {
         struct t32_fs_buf *b = &c->buf[i];
 
-        if (!c->direct && fs_alloc(&b->dma, c->alloc, "fs-chn") < 0)
+        if (!c->direct && fs_alloc_chn(chnNum, &b->dma, c->alloc) < 0)
             goto fail_bufs;
         fs_fill_frame(c, chnNum, i, &b->dma, &b->frame);
         fs_fill_qbuf(c, b, i);
@@ -716,6 +849,11 @@ int IMP_FrameSource_EnableChn(int chnNum)
         goto fail_bufs;
     c->enabled = 1;
     c->fps_word = 0;
+    if (!c->direct && c->maxdelay > 0) {
+        c->cache = calloc((size_t)c->maxdelay, sizeof(*c->cache));
+        c->cache_cap = c->cache ? c->maxdelay : 0;
+        c->cache_next = 0;
+    }
     c->frames = c->dropped = c->copied = c->sink_frames = 0;
     fs_slots_sync_locked(c);
     c->run = 1;
@@ -778,6 +916,7 @@ int IMP_FrameSource_DisableChn(int chnNum)
     pthread_mutex_lock(&fs_lock);
     fs_release_bufs_locked(c);
     fs_free_dma(&c->ivdc);
+    fs_cache_free_locked(c);
     c->enabled = 0;
     c->direct = 0;
     fs_slots_sync_locked(c);
@@ -810,12 +949,6 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
     fs_slots_sync_locked(c);
     pthread_mutex_unlock(&fs_lock);
     return 0;
-}
-
-/* vendor 2.0.2.1: 0x80010001 for a channel >= 33, 0x80010020 while no pool is bound (this build binds none) */
-int IMP_FrameSource_GetPool(int chnNum)
-{
-    return chnNum < 0 || chnNum > 32 ? (int)0x80010001 : (int)0x80010020;
 }
 
 int IMP_FrameSource_GetFrameDepth(int chnNum, int *depth)
@@ -909,6 +1042,379 @@ int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
 }
 
 /* ---- sinks (bound modules) ------------------------------------------------ */
+/* ---- delay FIFO, I2D attribute, pools, SnapFrame (#445) --------------------
+ * Return codes and checks of vendor libimp T32 2.2.0 / T33 2.0.2.1
+ * (disassembly; no vendor code copied):
+ *   channels 0..11 (0x80010001 above; this build has /dev/framechan0-2,
+ *   the others are never created), state "created" / "enabled";
+ *   SetMaxDelay 0..100 on a created, not enabled channel (0x80010040
+ *   otherwise, 0x80010002 out of range); SetDelay 0..100 and <= max delay
+ *   on a created channel; Get* on a created channel;
+ *   SetChnFifoAttr = SetMaxDelay(maxdepth) (its return value) plus
+ *   delay = maxdepth and the type; GetChnFifoAttr {max delay, type};
+ *   SetI2dAttr / GetI2dAttr store / read the five words of the channel
+ *   attribute (no state check; flip with mirror, or flip/mirror with
+ *   rotate: 0x80010040; NULL 0x80010010);
+ *   SetPool: channel 0..32, the pool must exist (IMP_System_MemPoolRequest,
+ *   else 0x80010040), once per channel (0x80010020); GetPool: the id or
+ *   0x80010020; the channel's capture buffers come from that pool;
+ *   GetTimedFrame: needs a max delay; the newest max-delay frames are kept;
+ *   a time stamp at or before the oldest kept frame: 0x80012000; newer than
+ *   the newest: 0x80010040 without block, else wait up to 5 s (0x80012000);
+ *   otherwise the kept frame nearest to it, copied packed NV12 into
+ *   framedata (when given), info with size w x h x 3/2;
+ *   SnapFrame: framedata non-NULL (0x80010010), enabled channel, width or
+ *   height equal to the channel's (vendor test), the next frame within 3 s
+ *   (0x80012000), packed NV12.
+ * Not as the vendor: SetI2dAttr's rotation / flip is not applied at
+ * EnableChn (the T32/T33 build has no I2D path yet; the attribute is only
+ * kept); SnapFrame takes PIX_FMT_NV12 only (0x80010002 for others, the
+ * vendor's other formats are not reverse engineered); the FIFO keeps heap
+ * copies instead of holding capture buffers, so bound modules are not
+ * delayed by SetDelay (the vendor's FIFO_CACHE_PRIORITY / DATA_PRIORITY
+ * output order is not modelled). */
+#define FS_ERR_CHN      ((int)0x80010001)
+#define FS_ERR_PARAM    ((int)0x80010002)
+#define FS_ERR_NULL     ((int)0x80010010)
+#define FS_ERR_BUSY     ((int)0x80010020)
+#define FS_ERR_STATE    ((int)0x80010040)
+#define FS_ERR_TIMEOUT  ((int)0x80012000)
+#define FS_VENDOR_CHNS  12
+#define FS_DELAY_MAX    100
+
+/* 0 not created, 1 created, 2 enabled; channels 3..11 exist only on the vendor */
+static int fs_state_locked(int chn)
+{
+    if (chn < 0 || chn >= T32_FS_CHANNELS || !fs_chn[chn].created)
+        return 0;
+    return fs_chn[chn].enabled ? 2 : 1;
+}
+
+int IMP_FrameSource_SetMaxDelay(int chnNum, int maxcnt)
+{
+    int rc = 0;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if ((unsigned)maxcnt > FS_DELAY_MAX)
+        return FS_ERR_PARAM;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (fs_state_locked(chnNum) != 1)
+        rc = FS_ERR_STATE;
+    else
+        fs_chn[chnNum].maxdelay = maxcnt;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_GetMaxDelay(int chnNum, int *maxcnt)
+{
+    int rc = 0;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (!maxcnt)
+        return FS_ERR_PARAM;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (!fs_state_locked(chnNum))
+        rc = FS_ERR_STATE;
+    else
+        *maxcnt = fs_chn[chnNum].maxdelay;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_SetDelay(int chnNum, int cnt)
+{
+    int rc = 0;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if ((unsigned)cnt > FS_DELAY_MAX)
+        return FS_ERR_PARAM;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (!fs_state_locked(chnNum))
+        rc = FS_ERR_STATE;
+    else if (cnt > fs_chn[chnNum].maxdelay)
+        rc = FS_ERR_PARAM;
+    else
+        fs_chn[chnNum].delay = cnt;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_GetDelay(int chnNum, int *cnt)
+{
+    int rc = 0;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (!cnt)
+        return FS_ERR_PARAM;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (!fs_state_locked(chnNum))
+        rc = FS_ERR_STATE;
+    else
+        *cnt = fs_chn[chnNum].delay;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_SetChnFifoAttr(int chnNum, IMPFSChnFifoAttr *attr)
+{
+    int rc;
+
+    if (!attr)
+        return FS_ERR_PARAM;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    rc = fs_state_locked(chnNum) == 1 ? 0 : FS_ERR_STATE;
+    pthread_mutex_unlock(&fs_lock);
+    if (rc)
+        return rc;
+    rc = IMP_FrameSource_SetMaxDelay(chnNum, attr->maxdepth);
+    pthread_mutex_lock(&fs_lock);
+    if (fs_state_locked(chnNum)) {      /* stored as the vendor, whatever SetMaxDelay said */
+        fs_chn[chnNum].fifo_type = (int)attr->type;
+        fs_chn[chnNum].delay = attr->maxdepth;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_GetChnFifoAttr(int chnNum, IMPFSChnFifoAttr *attr)
+{
+    int rc = 0;
+
+    if (!attr)
+        return FS_ERR_PARAM;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (!fs_state_locked(chnNum)) {
+        rc = FS_ERR_STATE;
+    } else {
+        attr->maxdepth = fs_chn[chnNum].maxdelay;
+        attr->type = (IMPFSChnFifoType)fs_chn[chnNum].fifo_type;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+int IMP_FrameSource_SetI2dAttr(int chnNum, IMPFSI2DAttr *attr)
+{
+    if (!attr)
+        return FS_ERR_NULL;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if ((attr->flip_enable & attr->mirr_enable) ||
+        ((attr->flip_enable | attr->mirr_enable) & attr->rotate_enable))
+        return FS_ERR_STATE;
+    if (chnNum >= T32_FS_CHANNELS)
+        return 0;               /* vendor stores it into its channel table */
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    fs_chn[chnNum].attr.i2dattr = *attr;
+    pthread_mutex_unlock(&fs_lock);
+    if (attr->i2d_enable)
+        IMP_LOG_WARN(TAG, "chn %d: I2D rotate/flip kept, not applied on this SoC yet", chnNum);
+    return 0;
+}
+
+int IMP_FrameSource_GetI2dAttr(int chnNum, IMPFSI2DAttr *attr)
+{
+    if (!attr)
+        return FS_ERR_NULL;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (chnNum >= T32_FS_CHANNELS) {
+        memset(attr, 0, sizeof(*attr));
+        return 0;
+    }
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    *attr = fs_chn[chnNum].attr.i2dattr;
+    pthread_mutex_unlock(&fs_lock);
+    return 0;
+}
+
+int IMP_FrameSource_SetPool(int chnNum, int poolID)
+{
+    uint8_t info[256];
+    int rc = 0;
+
+    if ((unsigned)chnNum >= T32_FS_POOL_CHNS)
+        return FS_ERR_CHN;
+    if (IMP_MemPool_GetById(poolID, info) != 0)
+        return FS_ERR_STATE;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (!fs_pool_init) {
+        memset(fs_pool, 0xff, sizeof(fs_pool));
+        fs_pool_init = 1;
+    }
+    if (fs_pool[chnNum] >= 0)
+        rc = FS_ERR_BUSY;
+    else
+        fs_pool[chnNum] = poolID;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+/* vendor: the bound pool id, 0x80010020 while none is bound */
+int IMP_FrameSource_GetPool(int chnNum)
+{
+    int rc;
+
+    if ((unsigned)chnNum >= T32_FS_POOL_CHNS)
+        return FS_ERR_CHN;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    rc = fs_pool_init && fs_pool[chnNum] >= 0 ? fs_pool[chnNum] : FS_ERR_BUSY;
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+/* deadline on the channel condition's clock (CLOCK_MONOTONIC) */
+static void fs_deadline(struct timespec *t, int sec)
+{
+    clock_gettime(CLOCK_MONOTONIC, t);
+    t->tv_sec += sec;
+}
+
+int IMP_FrameSource_GetTimedFrame(int chnNum, void *framets, int block, void *framedata,
+                                  void *frame)
+{
+    const struct { uint64_t ts, minus, plus; } *ts = framets;   /* vendor IMPFrameTimestamp; only ts is used */
+    IMPFrameInfo *out = frame;
+    struct t32_fs_chn *c;
+    struct timespec until;
+    int rc;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (!ts)
+        return FS_ERR_PARAM;
+    if (chnNum >= T32_FS_CHANNELS)
+        return FS_ERR_TIMEOUT;  /* vendor: no max delay on a channel never created */
+    pthread_once(&fs_once, fs_init_once);
+    c = &fs_chn[chnNum];
+    fs_deadline(&until, 5);
+    pthread_mutex_lock(&fs_lock);
+    for (;;) {
+        const struct t32_fs_cached *best = NULL, *oldest = NULL, *newest = NULL;
+        uint64_t bd = 0;
+        int i;
+
+        if (!c->maxdelay || !c->cache) {
+            pthread_mutex_unlock(&fs_lock);
+            return FS_ERR_TIMEOUT;
+        }
+        for (i = 0; i < c->cache_cap; i++) {
+            const struct t32_fs_cached *e = &c->cache[i];
+            uint64_t t, d;
+
+            if (!e->valid)
+                continue;
+            t = (uint64_t)e->info.timeStamp;
+            if (!oldest || t < (uint64_t)oldest->info.timeStamp)
+                oldest = e;
+            if (!newest || t > (uint64_t)newest->info.timeStamp)
+                newest = e;
+            d = t > ts->ts ? t - ts->ts : ts->ts - t;
+            if (!best || d < bd || (d == bd && t > (uint64_t)best->info.timeStamp)) {
+                best = e;
+                bd = d;
+            }
+        }
+        if (oldest && (uint64_t)oldest->info.timeStamp >= ts->ts) {
+            /* vendor: a time at or before the oldest kept frame is an error */
+            pthread_mutex_unlock(&fs_lock);
+            return FS_ERR_TIMEOUT;
+        }
+        if (newest && (uint64_t)newest->info.timeStamp >= ts->ts) {
+            if (framedata)
+                memcpy(framedata, best->data, best->info.size);
+            if (out) {
+                *out = best->info;
+                if (framedata)
+                    out->virAddr = (uint32_t)(uintptr_t)framedata;
+            }
+            pthread_mutex_unlock(&fs_lock);
+            return 0;
+        }
+        if (!block) {
+            pthread_mutex_unlock(&fs_lock);
+            return FS_ERR_STATE;
+        }
+        rc = pthread_cond_timedwait(&c->ready, &fs_lock, &until);
+        if (rc == ETIMEDOUT) {
+            pthread_mutex_unlock(&fs_lock);
+            return FS_ERR_TIMEOUT;
+        }
+    }
+}
+
+static pthread_mutex_t fs_snap_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int IMP_FrameSource_SnapFrame(int chnNum, IMPPixelFormat fmt, int width, int height,
+                              void *framedata, IMPFrameInfo *frame)
+{
+    struct t32_fs_chn *c;
+    struct timespec until;
+    int rc = 0;
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (!framedata)
+        return FS_ERR_NULL;
+    if (chnNum >= T32_FS_CHANNELS)
+        return FS_ERR_STATE;
+    pthread_once(&fs_once, fs_init_once);
+    c = &fs_chn[chnNum];
+    pthread_mutex_lock(&fs_lock);
+    if (fs_state_locked(chnNum) != 2 || c->direct ||
+        ((uint32_t)width != c->width && (uint32_t)height != c->height)) {
+        IMP_LOG_ERR(TAG, "SnapFrame chn %d: %s", chnNum,
+                    fs_state_locked(chnNum) != 2 ? "not enabled" :
+                    c->direct ? "IVDC direct channel" : "size differs from the channel");
+        pthread_mutex_unlock(&fs_lock);
+        return FS_ERR_STATE;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    if (fmt != PIX_FMT_NV12) {
+        IMP_LOG_ERR(TAG, "SnapFrame chn %d: format %d not supported (NV12 only)", chnNum, (int)fmt);
+        return FS_ERR_PARAM;
+    }
+    pthread_mutex_lock(&fs_snap_lock);
+    fs_deadline(&until, 3);
+    pthread_mutex_lock(&fs_lock);
+    c->snap_buf = framedata;
+    c->snap_info = frame;
+    c->snap = 1;
+    while (c->snap != 3 && c->enabled) {
+        if (pthread_cond_timedwait(&c->ready, &fs_lock, &until) == ETIMEDOUT && c->snap != 2) {
+            rc = FS_ERR_TIMEOUT;
+            break;
+        }
+    }
+    if (c->snap != 3 && !rc)
+        rc = FS_ERR_TIMEOUT;
+    c->snap = 0;
+    c->snap_buf = NULL;
+    c->snap_info = NULL;
+    pthread_mutex_unlock(&fs_lock);
+    pthread_mutex_unlock(&fs_snap_lock);
+    return rc;
+}
+
 int OpenIMP_FrameSource_RegisterSink(int devID, int grpID, OpenIMP_T32_FrameSink sink, void *ctx)
 {
     int i, freei = -1, rc = -1;
