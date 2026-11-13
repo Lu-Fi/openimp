@@ -11,6 +11,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-13: T10 manual WB gain range documented (#468)
 
 - `include/imp/imp_isp.h`: the 8-bit manual WB gain note (128 = 1.0x, values above 255 keep only the low 8 bits, vendor-equal: vendor libimp 3.12.0 SetWB/GetWB pass through, the firmware stores a byte) now names T10 and T20.
+
 ## 2026-11-13: Light box, Eufy T40XP (T40) 3000 K re-run (#230, #409, #410, #412, #443, #474)
 
 - New report `docs/lightbox/eufy-t40xp-sc830ai-2026-11-13-3000.html` (open-tx-isp next b0716513 + OpenIMP libimp next e970f6e1, runtime only, no pictures): 74 pass, 5 fail (11-12: 59 / 15). #409 AAC timestamps and #410 AE comp path are fixed on the device (0 repeated timestamps, path test 109.9 / 110.1 Y); #412 AE overshoot 12.5 -> 3.5 % and settle 3.65 -> 1.55 s (vendor 0.1 % / 1.80 s), residual tracked in #474; SSIM 0.005-0.006 below the vendor stays in #443 (harness fix #457 in); #332 night shadows ratio 1.166 is now a valid measurement (11-12: n/a).
