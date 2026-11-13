@@ -1545,6 +1545,59 @@ functions:
     group: ldc
     summary: "See `ISP_LDC_SetMode`."
     soc: "T32, T33"
+  ISP_LDC_OnlineInit:
+    group: ldc
+    summary: "Online lens correction for one video input (T32, T33), before `IMP_ISP_AddSensor`: function I2D (1, with the rotation angle), HLDC (2) or LDC (4, with the LUT block size). Needs `LDC_SetMode` online first."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff009 after `AddSensor` of that input or when the mode is not online, 0xfffff004 for NULL or another function."
+    notes: "The settings are kept; the open T32/T33 kernel module does not serve the online LUT requests yet, so they are not applied at `AddSensor` (the picture effect needs that driver part and a camera)."
+    soc: "T32, T33"
+  ISP_LDC_OnlineSetStrength:
+    group: ldc
+    summary: "Correction strength of the online LDC (exported by the vendor 2.x library, not in the 2.0.2.1 headers); excludes a LUT file."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`; 0xfffff009 (Set: after `AddSensor`; both: mode not online); Set 0xfffff004 when a LUT file is set. Get leaves the value alone when no strength was set."
+    soc: "T32, T33"
+  ISP_LDC_OnlineGetStrength:
+    group: ldc
+    summary: "See `ISP_LDC_OnlineSetStrength`."
+    soc: "T32, T33"
+  ISP_LDC_OnlineSetLut:
+    group: ldc
+    summary: "File name (128 bytes) of a LUT for the online LDC; excludes a strength."
+    returns: "As `OnlineSetStrength`; Set 0xfffff004 when a strength is set."
+    soc: "T32, T33"
+  ISP_LDC_OnlineGetLut:
+    group: ldc
+    summary: "See `ISP_LDC_OnlineSetLut`."
+    soc: "T32, T33"
+  ISP_LDC_OfflineInit:
+    group: ldc
+    decl: |
+      int32_t IMP_ISP_LDC_OfflineInit(IMPISPLDCOfflineOpsMode mode);
+    summary: "Offline LDC on memory pictures through `/dev/offline_ldc` (T32 2.2.0 header `imp_ldc.h`; T33 exports it too). `OfflineInit(1)` needs `LDC_SetMode` offline and opens the node, `OfflineInit(0)` closes it when no job is left."
+    returns: "0 on success, 0xfffff009 when the mode is not offline (or `OfflineInit(0)` with jobs left), 0xfffff008 when the node cannot be opened."
+    notes: "The open T32/T33 kernel module has no `offline_ldc` node yet, so `OfflineInit(1)` answers 0xfffff008 as a vendor stack without the node. The vendor 2.0.2.1 library crashes in `OfflineInit(0)` after a successful `OfflineInit(1)` (QEMU)."
+    soc: "T32, T33"
+  ISP_LDC_OfflineCreateJob:
+    group: ldc
+    summary: "Creates an offline LDC job (function, input size, LUT block size, LUT source)."
+    returns: "0xfffff009 when the mode is not offline, 0xfffff008 when `OfflineInit(1)` did not open the node, 0xfffff004 for NULL."
+    notes: "The job protocol behind an open node is not implemented yet (0xfffff001); with the open module the node never exists."
+    soc: "T32, T33"
+  ISP_LDC_OfflineDestroyJob:
+    group: ldc
+    summary: "Destroys an offline LDC job by its handle."
+    returns: "0xfffff008 when the node is not open, 0xfffff004 for an unknown job."
+    soc: "T32, T33"
+  ISP_LDC_OfflineSubmitTask:
+    group: ldc
+    summary: "Runs one offline LDC task (input and output addresses, strides, angle) of a job."
+    returns: "0xfffff008 when the node is not open, 0xfffff004 for NULL or an unknown job; see `OfflineCreateJob`."
+    soc: "T32, T33"
+  ISP_LDC_OfflineUpdateLutToJob:
+    group: ldc
+    summary: "Loads a new LUT (file, parameters or memory) into an offline LDC job."
+    returns: "0xfffff008 when the node is not open, 0xfffff004 for NULL or an unknown job; see `OfflineCreateJob`."
+    soc: "T32, T33"
   ISP_AddSensor_Process:
     group: life
     summary: "Replays the settings requested for a video input before `IMP_ISP_AddSensor` (bin path, bypass, WDR, night mode, LDC); `AddSensor_Free` drops them."

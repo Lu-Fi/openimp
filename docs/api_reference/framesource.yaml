@@ -150,11 +150,40 @@ functions:
     summary: "Variant of `GetFrame` for T40 and T41 that takes a frame straight from the capture queue and does not need `SetFrameDepth`."
     returns: "0 on success, -1 for a channel number of 7 or more or a NULL pointer, otherwise the result of `GetFrame` (no frame within the wait)."
     see_also: [FrameSource_ReleaseFrameEx]
+    notes: "T32 and T33: channel 0 to 11 (0x80010001 above), NULL 0x80010010, channel not created 0x80010040; waits for the next frame of the channel without a time limit and keeps that capture buffer until `ReleaseFrameEx`; no `SetFrameDepth` needed."
   FrameSource_ReleaseFrameEx:
     group: frames
     summary: "Gives back a frame obtained with `GetFrameEx`; it does the same as `ReleaseFrame`."
     returns: "0 on success, -1 for a channel number of 7 or more, a NULL frame, or the errors of `ReleaseFrame`."
     see_also: [FrameSource_GetFrameEx]
+    notes: "T32 and T33: 0x80010001 / 0x80010010 as `GetFrameEx`, 0x80010040 when the channel does not exist or the frame names another channel (`pool_idx`), 0x80010008 when it is not a frame held by `GetFrameEx`."
+  FrameSource_PM_Suspend:
+    group: misc
+    summary: "Power management (T32, T33): stops the frame thread of a running channel (bound modules finish their frames first) and writes `FS_PM` to `/sys/power/wake_unlock`."
+    returns: "0 on success, 0x80010040 when the channel is not running (or already suspended), -1 when the wake-unlock file cannot be written."
+    see_also: [FrameSource_PM_Resume]
+    soc: "T32, T33"
+  FrameSource_PM_Resume:
+    group: misc
+    summary: "Restarts the frame thread of a suspended channel and writes `FS_PM` to `/sys/power/wake_lock`; on T32 the ISP gets a one-shot tick after the last channel resumed."
+    returns: "0 on success, 0x80011000 when the channel is not suspended, 0x80014000 when the thread cannot start or the wake-lock file cannot be written, 0x80012000 when the one-shot tick fails (T32)."
+    see_also: [FrameSource_PM_Suspend]
+    soc: "T32, T33"
+  FrameSource_SnapRaw_Start:
+    group: frames
+    decl: |
+      typedef struct { uint32_t vinum, count, type, mode, size, paddr, vaddr; } SnapRawAttr;   /* not in the vendor headers */
+      int IMP_FrameSource_SnapRaw_Start(SnapRawAttr *attr);
+    summary: "Captures `count` RAW frames of a sensor into reserved memory (T32, T33; exported by the vendor 2.x library, not declared in its headers). The encoders stop receiving and ISP module bit 11 is set until `SnapRaw_End`. Line length by `type`: 0 width bytes, 2 width x 3/2, others width x 2, rounded up to 8; `mode` 2 doubles the frame."
+    returns: "0 with `count`, `size` (one frame), `paddr` and `vaddr` filled; 0xfffff008 before `IMP_ISP_Open`, -1 for NULL, a sensor above 4096 pixels, missing memory or a driver refusal."
+    notes: "The vendor library uses its reuse block (free reserved memory) as the buffer, OpenIMP allocates it (kept until the next Start). The open T32/T33 kernel module does not serve the two RAW requests yet (0xc004548e / 0xc004548f): -1 there."
+    see_also: [FrameSource_SnapRaw_End]
+    soc: "T32, T33"
+  FrameSource_SnapRaw_End:
+    group: frames
+    summary: "Ends a RAW capture: tells the driver, clears the ISP module bits `SnapRaw_Start` set and restarts the encoders it stopped."
+    returns: "0 on success, 0xfffff008 before `IMP_ISP_Open`, -1 when the driver or a module call fails."
+    soc: "T32, T33"
   FrameSource_SnapFrame:
     group: frames
     summary: Copies one frame into a buffer of the application, in the format and size of the channel, and fills a frame description. Meant for snapshots.
@@ -256,28 +285,34 @@ functions:
     summary: "Takes a free buffer of an injection channel (T40 and T41); the application then fills it with an NV12 picture and hands it back with `QueueBuffer`."
     returns: "0 on success with the frame in `*frame`; -1 for a bad channel or NULL pointer, when the injection channel is not enabled, or when no buffer is free."
     see_also: [FrameSource_QueueBuffer]
+    notes: "T32 and T33: channel 0 to 11; always -1 in IVDC direct mode (as the vendor library)."
   FrameSource_QueueBuffer:
     group: inject
     summary: "Hands a filled buffer of an injection channel to its consumers. The CPU cache is written back first, and a frame without time stamp gets the current system time stamp."
     returns: "0 on success, -1 when the channel is not enabled or the frame is not a buffer obtained with `DequeueBuffer`."
     see_also: [FrameSource_DequeueBuffer]
+    notes: "T32 and T33: the frame goes to the modules bound to the channel at once (in the calling thread); the buffer is free again when they gave it back."
   FrameSource_ExternInject_CreateChn:
     group: inject
     summary: "Creates an injection channel (T40 and T41): a channel without sensor that is fed by the application. Use a channel number that the sensor channels do not use."
     returns: "0 on success, -1 for a channel number of 7 or more, a NULL attribute, a width that is not a positive multiple of 16, a height of 0 or less, a pixel format other than NV12, a scaler on channel 0, a channel number that is already a sensor channel, or an injection channel that already exists."
     see_also: [FrameSource_DequeueBuffer]
+    notes: "T32 and T33: channel 0 to 11, picture width a multiple of 16, channel 0 only as a physical channel; a channel that already exists (sensor or injection channel) gives 0 without a change, as the vendor library 2.x."
   FrameSource_ExternInject_DestroyChn:
     group: inject
     summary: "Destroys an injection channel. Disable it first."
     returns: "0 on success, -1 for a bad channel number, when the channel does not exist, or while it is still enabled."
+    notes: "T32 and T33: 0 also when the channel does not exist; -1 while it is enabled."
   FrameSource_ExternInject_EnableChn:
     group: inject
     summary: "Starts the injection channel and allocates its buffers (`nrVBs`, 3 if unset, at most 8), so buffers can be dequeued."
     returns: "0 on success and when already enabled, -1 when the channel does not exist or the frame memory cannot be allocated."
+    notes: "T32 and T33: up to 16 buffers (`nrVBs`). The vendor library T33 2.0.2.1 fails here in QEMU (it asks a frame channel node the injection channel never opened); OpenIMP delivers the frames (see Beyond the Vendor)."
   FrameSource_ExternInject_DisableChn:
     group: inject
     summary: "Stops the injection channel and frees its buffers."
     returns: "0 on success, -1 when the channel does not exist or a consumer (such as the encoder) still holds a frame."
+    notes: "T32 and T33: -1 when the channel is not enabled; waits up to one second for the modules to give their frames back."
   EmuFrameSource_*:
     group: inject
     decl: |

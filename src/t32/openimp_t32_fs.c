@@ -139,6 +139,11 @@ struct t32_fs_chn {
     int snap;                   /* 0 idle, 1 wanted, 2 filling, 3 done */
     void *snap_buf;
     IMPFrameInfo *snap_info;
+    /* GetFrameEx (F1): waiters, the buffer offered to them, the info block */
+    int ex_want;
+    struct t32_fs_buf *ex_buf;
+    IMPFrameInfo ex_frame;
+    int suspended;              /* PM_Suspend (F1): frame thread stopped */
 };
 
 struct t32_fs_cached {
@@ -440,36 +445,23 @@ static void fs_cache_free_locked(struct t32_fs_chn *c)
     c->cache_cap = c->cache_next = 0;
 }
 
+static int fs_collect_sinks_locked(int chn, int direct, OpenIMP_T32_FrameSink *fn, void **ctx,
+                                   int max);
+static void fs_ex_offer_locked(struct t32_fs_chn *c, struct t32_fs_buf *b);
+
 static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
-    struct { OpenIMP_T32_FrameSink fn; void *ctx; } sinks[T32_FS_MAX_BINDS];
-    IMPCell from[T32_FS_MAX_BINDS + 1];
+    OpenIMP_T32_FrameSink fn[T32_FS_MAX_BINDS];
+    void *ctx[T32_FS_MAX_BINDS];
     struct t32_fs_slot *slot;
-    int i, j, k, nsinks = 0, nfrom = 1, done = 0;
+    int i, nsinks, done = 0;
 
     /* every cell this channel reaches, breadth first: the FrameSource
      * channel's own receivers, then those behind an OSD group (which draws
      * into the buffer before it passes it on, as the vendor OSD module) */
-    from[0].deviceID = DEV_ID_FS;
-    from[0].groupID = chn;
     pthread_mutex_lock(&fs_lock);
-    for (k = 0; k < nfrom; k++)
-        for (i = 0; i < T32_FS_MAX_BINDS; i++) {
-            if (!fs_bind[i].used || fs_bind[i].src.deviceID != from[k].deviceID ||
-                fs_bind[i].src.groupID != from[k].groupID)
-                continue;
-            for (j = 0; j < T32_FS_MAX_SINKS && nsinks < T32_FS_MAX_BINDS; j++)
-                if (fs_sink[j].used && fs_sink[j].dev == (int)fs_bind[i].dst.deviceID &&
-                    fs_sink[j].grp == (int)fs_bind[i].dst.groupID &&
-                    (!c->direct || fs_sink[j].dev == DEV_ID_ENC)) {
-                    sinks[nsinks].fn = fs_sink[j].fn;
-                    sinks[nsinks].ctx = fs_sink[j].ctx;
-                    nsinks++;
-                    break;
-                }
-            if (fs_bind[i].dst.deviceID == DEV_ID_OSD && nfrom <= T32_FS_MAX_BINDS)
-                from[nfrom++] = fs_bind[i].dst;
-        }
+    nsinks = fs_collect_sinks_locked(chn, c->direct, fn, ctx, T32_FS_MAX_BINDS);
+    fs_ex_offer_locked(c, b);
     slot = c->direct ? NULL : fs_pick_slot_locked(c);
     if (slot)
         slot->state = SLOT_FILLING;
@@ -501,7 +493,7 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
     c->sink_frames++;
     pthread_mutex_unlock(&fs_lock);
     for (i = 0; i < nsinks; i++)
-        if (sinks[i].fn(sinks[i].ctx, chn, &b->frame) != 1)
+        if (fn[i](ctx[i], chn, &b->frame) != 1)
             done++;
     pthread_mutex_lock(&fs_lock);
     b->holds -= done;
@@ -657,6 +649,9 @@ int OpenIMP_T32_FsChnSize(int chn, int *w, int *h)
     return rc;
 }
 
+static int inj_state_locked(int chn);
+static int inj_get_attr_locked(int chn, IMPFSChnAttr *a);
+
 /* ---- channel API ---------------------------------------------------------- */
 static int fs_attr_ok(int chn, const IMPFSChnAttr *a)
 {
@@ -695,7 +690,7 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
     if (!c || !fs_attr_ok(chnNum, chn_attr))
         return -1;
     pthread_mutex_lock(&fs_lock);
-    if (c->created) {
+    if (c->created || inj_state_locked(chnNum)) {
         pthread_mutex_unlock(&fs_lock);
         IMP_LOG_ERR(TAG, "chn %d already created", chnNum);
         return -1;
@@ -767,10 +762,12 @@ int IMP_FrameSource_GetChnAttr(int chnNum, IMPFSChnAttr *chn_attr)
     struct t32_fs_chn *c = fs_get(chnNum);
     int rc = -1;
 
-    if (!c || !chn_attr)
+    if (!chn_attr)
         return -1;
     pthread_mutex_lock(&fs_lock);
-    if (c->created) {
+    if (inj_get_attr_locked(chnNum, chn_attr) == 0) {     /* ExternInject channel (F1) */
+        rc = 0;
+    } else if (c && c->created) {
         *chn_attr = c->attr;
         rc = 0;
     }
@@ -1103,9 +1100,10 @@ int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
  *   SnapFrame: framedata non-NULL (0x80010010), enabled channel, width or
  *   height equal to the channel's (vendor test), the next frame within 3 s
  *   (0x80012000), packed NV12.
- * Not as the vendor: SetI2dAttr's rotation / flip is not applied at
- * EnableChn (the T32/T33 build has no I2D path yet; the attribute is only
- * kept); SnapFrame takes PIX_FMT_NV12 only (0x80010002 for others, the
+ * I2D: SetI2dAttr's rotation / flip is kept, not applied.  T33: as the
+ * vendor 2.0.2.1 on the T33L (QEMU: the frame stays unrotated, the I2D
+ * block gets no interrupt).  T32: not as the vendor 2.2.0, which feeds
+ * /dev/i2d (later item of #445); SnapFrame takes PIX_FMT_NV12 only (0x80010002 for others, the
  * vendor's other formats are not reverse engineered); the FIFO keeps heap
  * copies instead of holding capture buffers, so bound modules are not
  * delayed by SetDelay (the vendor's FIFO_CACHE_PRIORITY / DATA_PRIORITY
@@ -1486,12 +1484,24 @@ int OpenIMP_FrameSource_RegisterSink(int devID, int grpID, OpenIMP_T32_FrameSink
     return rc;
 }
 
+static int inj_release_locked(int chn, IMPFrameInfo *frame);
+
 int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn_num, IMPFrameInfo *frame)
 {
-    struct t32_fs_chn *c = fs_get(fs_chn_num);
+    struct t32_fs_chn *c;
     int rc = -1;
 
-    if (!c || !frame)
+    if (!frame)
+        return -1;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    if (inj_release_locked(fs_chn_num, frame)) {        /* ExternInject channel (F1) */
+        pthread_mutex_unlock(&fs_lock);
+        return 0;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    c = fs_get(fs_chn_num);
+    if (!c)
         return -1;
     pthread_mutex_lock(&fs_lock);
     if (c->enabled && frame->index >= 0 && frame->index < c->nbufs &&
@@ -1548,7 +1558,7 @@ int IMP_System_Bind(IMPCell *srcCell, IMPCell *dstCell)
     if (!srcCell || !dstCell)
         return -1;
     if (srcCell->outputID != 0 || srcCell->groupID < 0 ||
-        !((srcCell->deviceID == DEV_ID_FS && srcCell->groupID < T32_FS_CHANNELS) ||
+        !((srcCell->deviceID == DEV_ID_FS && srcCell->groupID < 12 /* + ExternInject */) ||
           (srcCell->deviceID == DEV_ID_OSD && srcCell->groupID < T32_OSD_GROUPS)) ||
         same_cell(srcCell, dstCell)) {
         IMP_LOG_ERR(TAG, "Bind: source %d-%d-%d not supported (FrameSource channels, OSD groups)",
@@ -1654,3 +1664,6 @@ uint32_t OpenIMP_FS_FramePitch(uint32_t physical)
     pthread_mutex_unlock(&fs_lock);
     return pitch;
 }
+
+extern int32_t IMP_ISP_OneShotTick(void);
+#include "t32/openimp_t32_fs_f1.inc"

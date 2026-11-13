@@ -541,14 +541,17 @@ functions:
     group: yuv
     summary: "Same as `YuvInit`, but returns a small integer handle (0 to 7) instead of a pointer. In OpenIMP it works only in the process that owns the encoder."
     returns: "0 on success, -1 on the errors of `YuvInit`, when all 8 handles are in use, or in a process without the encoder (errno ENOTSUP)."
+    notes: "T32 and T33: a client of the multi-process encoder server (`MultiProcessInit` in another process, System V message queue 0x24861357); -1 when no server runs. The OpenIMP server answers these requests with \"failed\" (no unbound YUV encoder on T32/T33 yet)."
   Encoder_YuvEncode_Ex:
     group: yuv
     summary: "Same as `YuvEncode` with an integer handle."
     returns: "The result of `YuvEncode`; -1 for an unknown handle or in a process without the encoder (errno ENOTSUP)."
+    notes: "T32 and T33: see `YuvInit_Ex`."
   Encoder_YuvExit_Ex:
     group: yuv
     summary: "Same as `YuvExit` with an integer handle; the handle is free for reuse afterwards."
     returns: "The result of `YuvExit`; -1 for an unknown handle or in a process without the encoder (errno ENOTSUP)."
+    notes: "T32 and T33: see `YuvInit_Ex`."
   Encoder_VbmAlloc:
     group: yuv
     summary: "Allocates a physically contiguous buffer from reserved memory that the YUV and JPEG interfaces can read."
@@ -568,9 +571,47 @@ functions:
   Encoder_VbmAlloc_Ex:
     group: yuv
     summary: "Allocation for the secondary-process interface. In OpenIMP the same as `VbmAlloc`, but only in the process that owns the encoder; elsewhere it returns NULL (errno ENOTSUP)."
+    notes: "T32 and T33: a client of the multi-process server (queue 0x12345678): NULL when no server runs; the server allocates with `VbmAlloc` and frees the buffers of a client process that ended."
   Encoder_VbmFree_Ex:
     group: yuv
     summary: "Free for the secondary-process interface. In OpenIMP the same as `VbmFree`, but only in the process that owns the encoder; elsewhere it does nothing."
+    notes: "T32 and T33: see `VbmAlloc_Ex`; nothing happens without a server."
+  Encoder_InputJpege_Ex:
+    group: yuv
+    summary: "Client side of the multi-process JPEG request (T32, T33; queue 0x12354645): a picture in reserved memory is encoded by the server process."
+    returns: "0 with `*stream_length` set; -1 without a server or when the server fails (the OpenIMP server has no unbound JPEG encoder on T32/T33 yet and answers failed)."
+    soc: "T32, T33"
+  Encoder_MultiProcessInit:
+    group: yuv
+    summary: "Starts the multi-process encoder server in this process (T32, T33): reserved-memory allocation for client processes (`VbmAlloc_Ex`), release of the buffers of ended clients, and the YUV / JPEG request queues."
+    returns: "0 on success, 0x80040080 after `IMP_System_Init` (call it before), 0x80042000 when a server thread cannot start."
+    notes: "YUV and JPEG requests are answered failed: the unbound encoders are not on T32/T33 yet."
+    see_also: [Encoder_MultiProcessExit]
+    soc: "T32, T33"
+  Encoder_MultiProcessExit:
+    group: yuv
+    summary: "Stops the server threads of `MultiProcessInit`."
+    soc: "T32, T33"
+  Encoder_KernEnc_Stop:
+    group: misc
+    summary: "Kernel encoder (T32, T33): stops it through `/dev/kern_enc`. No kernel module of the T32/T33 cameras creates that node."
+    returns: "0 on success, 0x80048000 when `/dev/kern_enc` cannot be opened or refuses the request."
+    soc: "T32, T33"
+  Encoder_KernEnc_GetStatus:
+    group: misc
+    summary: "Kernel encoder: whether the channel is enabled (`*enable`)."
+    returns: "0 on success, 0x80048000 without `/dev/kern_enc` or when it refuses."
+    soc: "T32, T33"
+  Encoder_KernEnc_Release:
+    group: misc
+    summary: "Kernel encoder: releases the streams of a channel."
+    returns: "0 on success, 0x80040001 for a channel of 16 or more, 0x80048000 without `/dev/kern_enc`."
+    soc: "T32, T33"
+  Encoder_KernEnc_GetStream:
+    group: misc
+    summary: "Kernel encoder: the next stream of a channel."
+    returns: "0x80040001 for a channel of 16 or more, 0x80048000 without `/dev/kern_enc`; behind an existing node OpenIMP does not map the kernel stream buffer yet (0x80048000)."
+    soc: "T32, T33"
   Encoder_Get/SetMaxStreamCnt:
     group: mem
     summary: "Sets or reads how many output streams a channel may hold."

@@ -8,6 +8,7 @@
  * Functions that the 2.0.2.1 headers do not declare (but the vendor library exports) are declared weak here with the vendor signature. */
 #if defined(APITEST_T33)
 #include <errno.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -413,5 +414,343 @@ void cs_t33pass(void)
     t33_fs_enc_q2();
     wdog("cases", 60);
     t33_isp_modes();
+}
+/* ---- case "t33f1": FrameSource data paths (batch F1, #57 / #42) ------------------------------------------------------------------
+ * ExternInject channel 3 (320x192 NV12, 3 buffers) bound to encoder group 4 / channel 5 (H.264): argument checks, Dequeue/Queue with
+ * a moving pattern and the encoded frames (only outside IVDC direct mode: the vendor refuses DequeueBuffer in direct mode),
+ * GetFrameEx / ReleaseFrameEx error codes and one frame of ch1, PM_Suspend / PM_Resume of ch1 (frames stop and come back),
+ * SnapRaw_Start / _End with a one-frame request and IMP_DQbuffer (not declared in the 2.0.2.1 headers). */
+struct t33_snapraw { uint32_t vinum, count, type, mode, size, paddr, vaddr; };
+extern int IMP_FrameSource_SnapRaw_Start(struct t33_snapraw *a) __attribute__((weak));
+extern int IMP_FrameSource_SnapRaw_End(void) __attribute__((weak));
+extern int IMP_DQbuffer(const char *path, uint32_t cmd, int dump) __attribute__((weak));
+static int F1_CH = 2;     /* APITEST_F1_CH: the inject channel (vendor: needs a framechan node, 0..2) */
+#define F1_GRP 4
+#define F1_ENC 5
+#define F1_W 320
+#define F1_H 192
+static volatile int f1_n, f1_deq, f1_q, f1_waits, f1_stop;
+static void *f1_feeder(void *arg)
+{
+    int i;
+
+    (void)arg;
+    for (i = 0; i < f1_n + 8 && !f1_stop; i++) {
+        IMPFrameInfo *f = NULL;
+        uint8_t *y;
+        int x, yy;
+
+        while (IMP_FrameSource_DequeueBuffer(F1_CH, &f) != 0 || !f) {
+            usleep(5000);
+            if (f1_stop || ++f1_waits > 2000) return NULL;
+        }
+        f1_deq++;
+        y = (uint8_t *)(uintptr_t)f->virAddr;
+        for (yy = 0; yy < F1_H; yy++)
+            for (x = 0; x < F1_W; x++) y[yy * F1_W + x] = (uint8_t)(((x + i * 8) & 0xff) ^ (yy & 0x20 ? 0x80 : 0));
+        memset(y + F1_W * ((F1_H + 15) & ~15), 128, (size_t)F1_W * F1_H / 2);
+        f->timeStamp = (int64_t)(i + 1) * 40000;
+        if (IMP_FrameSource_QueueBuffer(F1_CH, f) == 0) f1_q++;
+        usleep(40000);
+    }
+    return NULL;
+}
+
+static void t33_f1_inject(void)
+{
+    IMPFSChnAttr fs, bad;
+    IMPEncoderCHNAttr enc;
+    IMPCell src = { DEV_ID_FS, 0, 0 }, dst = { DEV_ID_ENC, F1_GRP, 0 };
+    IMPFrameInfo *dummy = NULL;
+    pthread_t th;
+    int r12, rnull, rodd, rc, rc2, rdq0, ren, ren2, rdq, setup = 1, thr = 0, got = 0, i, ok_ts = 1, rd, rd2, rds, rds2, dm = -1;
+    long long last = -1;
+
+    if (!IMP_FrameSource_ExternInject_CreateChn || !IMP_FrameSource_DequeueBuffer || !IMP_FrameSource_QueueBuffer) {
+        rep_na(FN(IMP_FrameSource_ExternInject_CreateChn));
+        return;
+    }
+    if (getenv("APITEST_F1_CH")) F1_CH = atoi(getenv("APITEST_F1_CH"));
+    src.groupID = F1_CH;
+    if (IMP_FrameSource_GetDirectMode) IMP_FrameSource_GetDirectMode(&dm);
+    memset(&fs, 0, sizeof(fs));
+    fs.pixFmt = PIX_FMT_NV12; fs.picWidth = F1_W; fs.picHeight = F1_H; fs.outFrmRateNum = 25; fs.outFrmRateDen = 1; fs.nrVBs = 3;
+    fs.type = FS_PHY_CHANNEL;
+    bad = fs; bad.picWidth = F1_W + 8;
+    r12 = IMP_FrameSource_ExternInject_CreateChn(12, &fs);
+    rnull = IMP_FrameSource_ExternInject_CreateChn(F1_CH, NULL);
+    rodd = IMP_FrameSource_ExternInject_CreateChn(F1_CH, &bad);
+    rc = IMP_FrameSource_ExternInject_CreateChn(F1_CH, &fs);
+    rc2 = IMP_FrameSource_ExternInject_CreateChn(F1_CH, &fs);
+    rdq0 = IMP_FrameSource_DequeueBuffer(F1_CH, &dummy);
+    ren = IMP_FrameSource_ExternInject_EnableChn(F1_CH);
+    ren2 = IMP_FrameSource_ExternInject_EnableChn(F1_CH);
+    dummy = NULL;
+    rdq = IMP_FrameSource_DequeueBuffer(F1_CH, &dummy);
+    if (rdq == 0 && dummy) IMP_FrameSource_QueueBuffer(F1_CH, dummy);     /* no module bound yet: back to the free list */
+    if (rc || ren || rdq) setup = 0;
+    if (setup && (IMP_Encoder_CreateGroup(F1_GRP) ||
+                  IMP_Encoder_SetDefaultParam(&enc, IMP_ENC_PROFILE_AVC_MAIN, ENC_RC_MODE_CBR, F1_W, F1_H, 25, 1, 25, 2, -1, 500) ||
+                  IMP_Encoder_CreateChn(F1_ENC, &enc) || IMP_Encoder_RegisterChn(F1_GRP, F1_ENC) || IMP_System_Bind(&src, &dst) ||
+                  IMP_Encoder_StartRecvPic(F1_ENC)))
+        setup = 0;
+    f1_n = 10; f1_deq = f1_q = f1_waits = f1_stop = 0;
+    if (setup) thr = pthread_create(&th, NULL, f1_feeder, NULL) == 0;
+    for (i = 0; setup && thr && got < f1_n && i < f1_n * 3; i++) {
+        IMPEncoderStream s;
+
+        if (IMP_Encoder_PollingStream(F1_ENC, 2000) != 0) continue;
+        if (IMP_Encoder_GetStream(F1_ENC, &s, 1) != 0) continue;
+        if (s.packCount && (long long)s.pack[0].timestamp <= last && got > 0) ok_ts = 0;
+        if (s.packCount) last = s.pack[0].timestamp;
+        IMP_Encoder_ReleaseStream(F1_ENC, &s);
+        got++;
+    }
+    if (setup) {
+        IMP_Encoder_StopRecvPic(F1_ENC);
+        f1_stop = 1;
+        if (thr) pthread_join(th, NULL);
+        IMP_System_UnBind(&src, &dst);
+        IMP_Encoder_UnRegisterChn(F1_ENC);
+        IMP_Encoder_DestroyChn(F1_ENC);
+        IMP_Encoder_DestroyGroup(F1_GRP);
+    }
+    rd = IMP_FrameSource_ExternInject_DisableChn(F1_CH);
+    rd2 = IMP_FrameSource_ExternInject_DisableChn(F1_CH);
+    rds = IMP_FrameSource_ExternInject_DestroyChn(F1_CH);
+    rds2 = IMP_FrameSource_ExternInject_DestroyChn(F1_CH);
+    rep(FN(IMP_FrameSource_ExternInject_CreateChn), rc, rc == 0 && r12 == -1 && rnull == -1 && rodd == -1 && rc2 == 0 ? V_PASS : V_FAIL,
+        "chn 12 0x%x, NULL 0x%x, width %d 0x%x, chn %d %dx%d 0x%x, again 0x%x", X(r12), X(rnull), F1_W + 8, X(rodd), F1_CH, F1_W, F1_H, X(rc), X(rc2));
+    rep(FN(IMP_FrameSource_ExternInject_EnableChn), ren, ren == 0 && ren2 == 0 ? V_PASS : V_FAIL, "enable 0x%x, again 0x%x", X(ren), X(ren2));
+    rep(FN(IMP_FrameSource_DequeueBuffer), rdq, rdq0 == -1 && (dm >= 1 ? rdq == -1 : (rdq == 0 && f1_deq >= f1_n)) ? V_PASS : V_FAIL,
+        "before Enable 0x%x; enabled 0x%x (direct mode %d: refused there); %d dequeued, %d waits", X(rdq0), X(rdq), dm, f1_deq, f1_waits);
+    rep(FN(IMP_FrameSource_QueueBuffer), 0, dm >= 1 ? (rdq == -1 ? V_PASS : V_FAIL) : (setup && f1_q >= f1_n && got >= f1_n / 2 && ok_ts ? V_PASS : V_FAIL),
+        "direct mode %d; %d queued with a pattern, encoder (grp %d chn %d) delivered %d of %d, time stamps %s", dm, f1_q, F1_GRP, F1_ENC, got, f1_n,
+        ok_ts ? "increasing" : "NOT increasing");
+    rep(FN(IMP_FrameSource_ExternInject_DisableChn), rd, rd == 0 && rd2 == -1 ? V_PASS : V_FAIL, "disable 0x%x, again 0x%x", X(rd), X(rd2));
+    rep(FN(IMP_FrameSource_ExternInject_DestroyChn), rds, rds == 0 && rds2 == 0 && cases_flow() ? V_PASS : V_FAIL,
+        "destroy 0x%x, again 0x%x; frames of ch1 flow", X(rds), X(rds2));
+}
+
+static void t33_f1_ex_pm(void)
+{
+    int skip_pm = getenv("APITEST_F1_NOPM") != NULL;
+
+    NEED(IMP_FrameSource_GetFrameEx) NEED(IMP_FrameSource_ReleaseFrameEx) {
+        IMPFrameInfo *f = NULL, fake;
+        int r12 = IMP_FrameSource_GetFrameEx(12, &f), rn = IMP_FrameSource_GetFrameEx(1, NULL), r5 = IMP_FrameSource_GetFrameEx(5, &f);
+        int rg, rr = -1, rw = -1, rrn = IMP_FrameSource_ReleaseFrameEx(1, NULL), rr12 = IMP_FrameSource_ReleaseFrameEx(12, &fake);
+        unsigned w = 0, h = 0;
+
+        f = NULL;
+        rg = IMP_FrameSource_GetFrameEx(1, &f);
+        if (rg == 0 && f) {
+            w = f->width; h = f->height;
+            fake = *f; fake.pool_idx = 2;
+            rw = IMP_FrameSource_ReleaseFrameEx(1, &fake);
+            rr = IMP_FrameSource_ReleaseFrameEx(1, f);
+        }
+        REP2(IMP_FrameSource_GetFrameEx, IMP_FrameSource_ReleaseFrameEx, rg | rr,
+             rg == 0 && rr == 0 && X(r12) == 0x80010001 && X(rn) == 0x80010010 && X(r5) == 0x80010040 && X(rw) == 0x80010040 &&
+             X(rrn) == 0x80010010 && X(rr12) == 0x80010001 && cases_flow(),
+             "get chn 12 0x%x, NULL 0x%x, chn 5 0x%x; chn 1 0x%x %ux%u; release wrong pool 0x%x, NULL 0x%x, chn 12 0x%x, ok 0x%x; frames flow",
+             X(r12), X(rn), X(r5), X(rg), w, h, X(rw), X(rrn), X(rr12), X(rr));
+    }
+    if (skip_pm) rep_na(FN(IMP_FrameSource_PM_Suspend));
+    else NEED(IMP_FrameSource_PM_Suspend) NEED(IMP_FrameSource_PM_Resume) {
+        int rs5 = IMP_FrameSource_PM_Suspend(5), rr0 = IMP_FrameSource_PM_Resume(1), rs, rs2, rr, rr2, during;
+
+        rs = IMP_FrameSource_PM_Suspend(1);
+        rs2 = IMP_FrameSource_PM_Suspend(1);
+        usleep(300000);
+        during = cases_flow();
+        rr = IMP_FrameSource_PM_Resume(1);
+        rr2 = IMP_FrameSource_PM_Resume(1);
+        usleep(300000);
+        REP2(IMP_FrameSource_PM_Suspend, IMP_FrameSource_PM_Resume, rs | rr,
+             X(rs5) == 0x80010040 && X(rr0) == 0x80011000 && X(rs2) == 0x80010040 && X(rr2) == 0x80011000 && cases_flow(),
+             "suspend chn 5 0x%x, resume not suspended 0x%x; chn 1 suspend 0x%x, again 0x%x, frames while suspended %d; resume 0x%x, again 0x%x; frames flow",
+             X(rs5), X(rr0), X(rs), X(rs2), during, X(rr), X(rr2));
+    }
+    if (IMP_FrameSource_SnapRaw_Start && IMP_FrameSource_SnapRaw_End) {
+        struct t33_snapraw a = { 0, 1, 1, 0, 0, 0, 0 };
+        int rn = IMP_FrameSource_SnapRaw_Start(NULL), rs = IMP_FrameSource_SnapRaw_Start(&a), re = IMP_FrameSource_SnapRaw_End();
+
+        rep("IMP_FrameSource_SnapRaw_Start", rs, V_PASS, "NULL 0x%x; vinum 0, 1 frame, type 1: 0x%x (count %u size %u paddr 0x%x vaddr 0x%x)",
+            X(rn), X(rs), a.count, a.size, a.paddr, a.vaddr);
+        rep("IMP_FrameSource_SnapRaw_End", re, cases_flow() ? V_PASS : V_FAIL, "0x%x; frames flow", X(re));
+    } else {
+        rep_na("IMP_FrameSource_SnapRaw_Start");
+    }
+    if (IMP_DQbuffer) {
+        int r = IMP_DQbuffer("/tmp/dq.bin", 0xc0605400u, 1);
+        rep("IMP_DQbuffer", r, V_PASS, "/tmp/dq.bin, request 0xc0605400: 0x%x", X(r));
+    } else {
+        rep_na("IMP_DQbuffer");
+    }
+}
+
+/* ---- case "t33l1": LDC online / offline (batch L1, #54 / #39) ---------------------------------------------------------------------
+ * Online state on VI 1 (no sensor there, so "before AddSensor"): mode record online, Init argument checks, strength set / read back,
+ * LUT name refused after a strength; VI 0 (sensor added) refused.  Offline: mode record offline, OfflineInit opens /dev/offline_ldc
+ * (vendor module: the node exists; open T33 module: not yet, f008), CreateJob(NULL), OfflineInit(0); mode back to online. */
+extern int IMP_ISP_LDC_OnlineSetStrength(IMPVI_NUM num, double s) __attribute__((weak));
+extern int IMP_ISP_LDC_OnlineGetStrength(IMPVI_NUM num, double *s) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineInit(int mode) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineCreateJob(void *attr) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineDestroyJob(uint32_t job) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineSubmitTask(void *task) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr) __attribute__((weak));
+#define T33STEP(t, n) do { printf("[T] %s step %d\n", t, n); fflush(stdout); } while (0)
+void cs_t33l1(void)
+{
+    IMPISPLDCInitOnlineAttr a;
+    char lut[128];
+    double d = 0;
+    int rm0, rn, rf, ri, ri0, rs, rg, rl, rgl, rs0, rm1, rgm, roi, rcj, rdj, rst, rul, roi0, rm2;
+
+    if (!IMP_ISP_LDC_SetMode || !IMP_ISP_LDC_OnlineInit || !IMP_ISP_LDC_OnlineSetStrength || !IMP_ISP_LDC_OfflineInit) {
+        rep_na(FN(IMP_ISP_LDC_OnlineInit));
+        return;
+    }
+    T33STEP("l1", 1);
+    rm0 = IMP_ISP_LDC_SetMode(IMPISP_ONLINE_MODE);
+    memset(&a, 0, sizeof(a));
+    T33STEP("l1", 2);
+    rn = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, NULL);
+    T33STEP("l1", 3);
+    a.func = (IMPISPLDCFunc)3; rf = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, &a);
+    a.func = IMPISP_LDC_MODE; a.size = IMPISP_LUT_BLOCKSIZE_16x16;
+    T33STEP("l1", 4);
+    ri = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, &a);
+    T33STEP("l1", 5);
+    ri0 = IMP_ISP_LDC_OnlineInit(IMPVI_MAIN, &a);
+    T33STEP("l1", 6);
+    rs = IMP_ISP_LDC_OnlineSetStrength(IMPVI_SEC, 0.5);
+    T33STEP("l1", 7);
+    rg = IMP_ISP_LDC_OnlineGetStrength(IMPVI_SEC, &d);
+    memset(lut, 0, sizeof(lut)); strcpy(lut, "/tmp/none.lut");
+    T33STEP("l1", 8);
+    rl = IMP_ISP_LDC_OnlineSetLut(IMPVI_SEC, lut);
+    T33STEP("l1", 9);
+    rgl = IMP_ISP_LDC_OnlineGetLut(IMPVI_SEC, lut);
+    T33STEP("l1", 10);
+    rs0 = IMP_ISP_LDC_OnlineSetStrength(IMPVI_MAIN, 0.5);
+    T33STEP("l1", 11);
+    rm1 = IMP_ISP_LDC_SetMode(IMPISP_OFFLINE_MODE);
+    T33STEP("l1", 12);
+    rgm = IMP_ISP_LDC_OnlineGetStrength(IMPVI_SEC, &d);
+    T33STEP("l1", 13);
+    roi = IMP_ISP_LDC_OfflineInit(1);
+    T33STEP("l1", 14);
+    rcj = IMP_ISP_LDC_OfflineCreateJob ? IMP_ISP_LDC_OfflineCreateJob(NULL) : -2;
+    T33STEP("l1", 15);
+    rdj = IMP_ISP_LDC_OfflineDestroyJob ? IMP_ISP_LDC_OfflineDestroyJob(0x1234) : -2;
+    T33STEP("l1", 16);
+    rst = IMP_ISP_LDC_OfflineSubmitTask ? IMP_ISP_LDC_OfflineSubmitTask(NULL) : -2;
+    T33STEP("l1", 17);
+    rul = IMP_ISP_LDC_OfflineUpdateLutToJob ? IMP_ISP_LDC_OfflineUpdateLutToJob(NULL) : -2;
+    /* vendor 2.0.2.1: OfflineInit(0) after a successful OfflineInit(1) crashes (it destroys the mutex of the freed device block);
+     * APITEST_L1_NODEINIT=1 skips it for the vendor reference run */
+    roi0 = getenv("APITEST_L1_NODEINIT") ? -2 : IMP_ISP_LDC_OfflineInit(0);
+    T33STEP("l1", 19);
+    rm2 = IMP_ISP_LDC_SetMode(IMPISP_ONLINE_MODE);
+    rep(FN(IMP_ISP_LDC_OnlineInit), ri, V_PASS, "mode online 0x%x; VI1 NULL 0x%x, func 3 0x%x, LDC 16x16 0x%x; VI0 (sensor added) 0x%x", X(rm0), X(rn), X(rf), X(ri), X(ri0));
+    rep("IMP_ISP_LDC_OnlineSetStrength", rs, V_PASS, "VI1 0.5: 0x%x; VI0 0x%x", X(rs), X(rs0));
+    rep("IMP_ISP_LDC_OnlineGetStrength", rg, V_PASS, "VI1 0x%x -> %.3f; with offline mode 0x%x", X(rg), d, X(rgm));
+    rep(FN(IMP_ISP_LDC_OnlineSetLut), rl, V_PASS, "after a strength 0x%x", X(rl));
+    rep(FN(IMP_ISP_LDC_OnlineGetLut), rgl, V_PASS, "0x%x", X(rgl));
+    rep("IMP_ISP_LDC_OfflineInit", roi, V_PASS, "mode offline 0x%x; init 1 0x%x; init 0 0x%x; mode online again 0x%x", X(rm1), X(roi), X(roi0), X(rm2));
+    rep("IMP_ISP_LDC_OfflineCreateJob", rcj, V_PASS, "NULL 0x%x", X(rcj));
+    rep("IMP_ISP_LDC_OfflineDestroyJob", rdj, V_PASS, "unknown job 0x%x", X(rdj));
+    rep("IMP_ISP_LDC_OfflineSubmitTask", rst, V_PASS, "NULL 0x%x", X(rst));
+    rep("IMP_ISP_LDC_OfflineUpdateLutToJob", rul, V_PASS, "NULL 0x%x; frames flow %d", X(rul), cases_flow());
+}
+
+/* ---- case "t33e3": kernel encoder and multi-process encoder clients (batch E3, #56 / #41) -------------------------------------------
+ * After IMP_System_Init: MultiProcessInit refused (0x80040080), no server: the *_Ex clients fail (NULL / -1); /dev/kern_enc does not exist
+ * on the T33 kernel: KernEnc_* 0x80048000, channel 16 0x80040001. */
+void cs_t33e3(void)
+{
+    NEED(IMP_Encoder_KernEnc_Stop) NEED(IMP_Encoder_KernEnc_GetStatus) NEED(IMP_Encoder_KernEnc_Release) NEED(IMP_Encoder_KernEnc_GetStream) {
+        IMPEncoderKernEncOut o;
+        int en = -1, rs = IMP_Encoder_KernEnc_Stop(), rg = IMP_Encoder_KernEnc_GetStatus(0, &en), rr = IMP_Encoder_KernEnc_Release(0),
+            rr16 = IMP_Encoder_KernEnc_Release(16), rgs, rgs16;
+
+        memset(&o, 0, sizeof(o));
+        rgs = IMP_Encoder_KernEnc_GetStream(0, &o);
+        rgs16 = IMP_Encoder_KernEnc_GetStream(16, &o);
+        rep(FN(IMP_Encoder_KernEnc_Stop), rs, X(rs) == 0x80048000 ? V_PASS : V_FAIL, "no /dev/kern_enc: 0x%x", X(rs));
+        rep(FN(IMP_Encoder_KernEnc_GetStatus), rg, X(rg) == 0x80048000 ? V_PASS : V_FAIL, "chn 0: 0x%x", X(rg));
+        rep(FN(IMP_Encoder_KernEnc_Release), rr, X(rr) == 0x80048000 && X(rr16) == 0x80040001 ? V_PASS : V_FAIL, "chn 0 0x%x, chn 16 0x%x", X(rr), X(rr16));
+        rep(FN(IMP_Encoder_KernEnc_GetStream), rgs, X(rgs) == 0x80048000 && X(rgs16) == 0x80040001 ? V_PASS : V_FAIL, "chn 0 0x%x, chn 16 0x%x", X(rgs), X(rgs16));
+    }
+    NEED(IMP_Encoder_MultiProcessInit) NEED(IMP_Encoder_MultiProcessExit) {
+        int r = IMP_Encoder_MultiProcessInit();
+        IMP_Encoder_MultiProcessExit();
+        rep(FN(IMP_Encoder_MultiProcessInit), r, X(r) == 0x80040080 ? V_PASS : V_FAIL, "after IMP_System_Init: 0x%x", X(r));
+        rep(FN(IMP_Encoder_MultiProcessExit), 0, V_PASS, "void, no server running");
+    }
+    NEED(IMP_Encoder_VbmAlloc_Ex) NEED(IMP_Encoder_VbmFree_Ex) {
+        void *p = IMP_Encoder_VbmAlloc_Ex(4096, 64);
+        if (p) IMP_Encoder_VbmFree_Ex(p);
+        REP2(IMP_Encoder_VbmAlloc_Ex, IMP_Encoder_VbmFree_Ex, 0, p == NULL, "no server: %p", p);
+    }
+    NEED(IMP_Encoder_YuvInit_Ex) NEED(IMP_Encoder_YuvEncode_Ex) NEED(IMP_Encoder_YuvExit_Ex) {
+        IMPEncoderYuvIn in;
+        IMPEncoderYuvOut out;
+        IMPFrameInfo f;
+        int h = -7, ri, re, rx;
+
+        memset(&in, 0, sizeof(in)); memset(&out, 0, sizeof(out)); memset(&f, 0, sizeof(f));
+        in.type = PT_H264;
+        ri = IMP_Encoder_YuvInit_Ex(&h, 320, 192, &in);
+        re = IMP_Encoder_YuvEncode_Ex(0, f, &out);
+        rx = IMP_Encoder_YuvExit_Ex(0);
+        rep(FN(IMP_Encoder_YuvInit_Ex), ri, ri == -1 && h == -7 ? V_PASS : V_FAIL, "no server: 0x%x (handle untouched %d)", X(ri), h);
+        rep(FN(IMP_Encoder_YuvEncode_Ex), re, re == -1 ? V_PASS : V_FAIL, "no server: 0x%x", X(re));
+        rep(FN(IMP_Encoder_YuvExit_Ex), rx, rx == -1 ? V_PASS : V_FAIL, "no server: 0x%x", X(rx));
+    }
+    NEED(IMP_Encoder_InputJpege_Ex) {
+        int len = -7, r = IMP_Encoder_InputJpege_Ex(NULL, NULL, 320, 192, 75, &len);
+        rep(FN(IMP_Encoder_InputJpege_Ex), r, r == -1 && len == -7 ? V_PASS : V_FAIL, "no server: 0x%x; frames flow %d", X(r), cases_flow());
+    }
+}
+
+/* ---- case "t33i2d": FrameSource I2D rotation on channel 2 (#445) -----------------------------------------------------------------
+ * ch2 320x192 NV12 with i2dattr {enable, rotate 90} set in the channel attribute, enabled, one frame read: its size tells whether the
+ * library rotated (192x320) or not; GetI2dAttr read back. */
+void cs_t33i2d(void)
+{
+    IMPFSChnAttr a;
+    IMPFSI2DAttr g;
+    IMPFrameInfo *f = NULL;
+    int rc, re, rd, rg, rr = -1, rgi;
+    unsigned w = 0, h = 0;
+
+    memset(&a, 0, sizeof(a));
+    a.pixFmt = PIX_FMT_NV12; a.picWidth = 320; a.picHeight = 192; a.outFrmRateNum = 15; a.outFrmRateDen = 1; a.nrVBs = 2;
+    a.type = FS_PHY_CHANNEL; a.scaler.enable = 1; a.scaler.outwidth = 320; a.scaler.outheight = 192;
+    a.i2dattr.i2d_enable = 1; a.i2dattr.rotate_enable = 1; a.i2dattr.rotate_angle = 90;
+    rc = IMP_FrameSource_CreateChn(2, &a);
+    memset(&g, 0, sizeof(g));
+    rgi = IMP_FrameSource_GetI2dAttr(2, &g);
+    re = rc == 0 ? IMP_FrameSource_EnableChn(2) : -1;
+    rd = re == 0 ? IMP_FrameSource_SetFrameDepth(2, 1) : -1;
+    rg = rd == 0 ? IMP_FrameSource_GetFrame(2, &f) : -1;
+    if (rg == 0 && f) { w = f->width; h = f->height; rr = IMP_FrameSource_ReleaseFrame(2, f); }
+    if (rd == 0) IMP_FrameSource_SetFrameDepth(2, 0);
+    if (re == 0) IMP_FrameSource_DisableChn(2);
+    if (rc == 0) IMP_FrameSource_DestroyChn(2);
+    rep(FN(IMP_FrameSource_SetI2dAttr), rg, V_PASS, "ch2 320x192 i2d rotate 90 in the attribute: create 0x%x, GetI2dAttr 0x%x {%d,%d,%d,%d,%d}, enable 0x%x, depth 0x%x, frame 0x%x %ux%u (%s), release 0x%x; ch1 flows %d",
+        X(rc), X(rgi), g.i2d_enable, g.flip_enable, g.mirr_enable, g.rotate_enable, g.rotate_angle, X(re), X(rd), X(rg), w, h,
+        w == 192 && h == 320 ? "rotated" : "not rotated", X(rr), cases_flow());
+}
+
+void cs_t33f1(void)
+{
+    t33_f1_inject();
+    wdog("cases", 60);
+    t33_f1_ex_pm();
 }
 #endif /* APITEST_T33 */

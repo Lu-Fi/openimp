@@ -8306,15 +8306,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): VbmAlloc_Ex buffer, 640x352 NV12 (the _Ex call needs a height that is a multiple of 16; 640x360 is refused with -1) -> JPEG with SOI/EOI, size checked (new _Ex flow in the swenc test, QEMU first)."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): VbmAlloc_Ex buffer, 640x352 NV12 (the _Ex call needs a height that is a multiple of 16; 640x360 is refused with -1) -> JPEG with SOI/EOI, size checked (new _Ex flow in the swenc test, QEMU first). T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_InsertUserData": {
       "area": "Encoder",
@@ -9573,15 +9574,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): two 345600-byte buffers, align 64 (new _Ex flow in the swenc test, QEMU first)."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): two 345600-byte buffers, align 64 (new _Ex flow in the swenc test, QEMU first). T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_VbmFree": {
       "area": "Encoder",
@@ -9619,15 +9621,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): both buffers freed (void)."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): both buffers freed (void). T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_VbmP2V": {
       "area": "Encoder",
@@ -9712,15 +9715,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): one NV12 frame -> H.264 IDR with SPS and PPS."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): one NV12 frame -> H.264 IDR with SPS and PPS. T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_YuvExit": {
       "area": "Encoder",
@@ -9756,15 +9760,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): handle released, 0."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): handle released, 0. T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_YuvGetCrop": {
       "area": "Encoder",
@@ -9819,15 +9824,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): 640x360 H.264 CBR handle created."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): 640x360 H.264 CBR handle created. T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_YuvRequestIDR": {
       "area": "Encoder",
@@ -10026,16 +10032,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see ExternInject_CreateChn (case inject_t40): refused before Enable, 20+ buffers dequeued."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see ExternInject_CreateChn (case inject_t40): refused before Enable, 20+ buffers dequeued. T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_DestroyChn": {
       "area": "FrameSource",
@@ -10286,16 +10293,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case inject_t40 (built for T41 too): channel 3 320x192 NV12, channel 7 and a second Create refused, 20 frames fed by Dequeue/Queue reach the H.264 encoder with increasing time stamps, Disable/Destroy 0, sensor channels keep flowing."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case inject_t40 (built for T41 too): channel 3 320x192 NV12, channel 7 and a second Create refused, 20 frames fed by Dequeue/Queue reach the H.264 encoder with increasing time stamps, Disable/Destroy 0, sensor channels keep flowing. T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_ExternInject_DestroyChn": {
       "area": "FrameSource",
@@ -10306,16 +10314,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40). T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_ExternInject_DisableChn": {
       "area": "FrameSource",
@@ -10326,16 +10335,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40). T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_ExternInject_EnableChn": {
       "area": "FrameSource",
@@ -10346,16 +10356,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40)."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see CreateChn (case inject_t40). T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_Get/SetChnAttr": {
       "area": "FrameSource",
@@ -10639,7 +10650,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10657,12 +10668,12 @@
           "r†"
         ]
       },
-      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T32/T33 (2026-11-13, #445/#446): the five words are kept and read back with the vendor checks (flip+mirror, flip/mirror+rotate 0x80010040), but the rotation / flip is NOT applied at EnableChn: the T32/T33 build has no I2D path yet (vendor uses its I2D pool). QEMU round trip PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly.",
+      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T32/T33 (2026-11-13, #445/#446): the five words are kept and read back with the vendor checks (flip+mirror, flip/mirror+rotate 0x80010040), but the rotation / flip is NOT applied at EnableChn: the T32/T33 build has no I2D path yet (vendor uses its I2D pool). QEMU round trip PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly. T33 (2026-11-13, #445): vendor libimp 2.0.2.1 on the T33L in QEMU does not rotate either: ch2 320x192 created with i2dattr {enable, rotate 90}, the frame comes back 320x192 and the kernel I2D block (/dev/i2d, IRQ 47) counts 0 interrupts; OpenIMP gives the same lines -> T33 qemu (vendor-equal). T32: the 2.2.0 library's I2D path (/dev/i2d, kernel driver ingenic_i2d: START/LISTEN/FLUSH ioctls with struct i2d_param, VBMCreateI2dPool) is not in OpenIMP yet and not checked against the T32 vendor run (cache).",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
+        "T33": "apitest t33i2d 2026-11-13 QEMU -M ingenic-t33 (t33l), vendor 2.0.2.1 reference run with /proc/interrupts (audit t33backlog/runs2/v6b-vend-i2d)"
       }
     },
     "FrameSource_Get/SetMaxDelay": {
@@ -10808,15 +10819,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch F1): main-process path, codes 0x80010001/0x80010010/0x80010040, frame of ch1, release check of pool_idx equal to vendor 2.0.2.1 in QEMU (t33f1). The vendor secondary-process path (/dev/mpsys_data) is not built (OpenIMP is always the main process). T32: same source (aud)."
     },
     "FrameSource_GetTimedFrame": {
       "area": "FrameSource",
@@ -10887,16 +10900,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see ExternInject_CreateChn (case inject_t40): buffers queued with a pattern, the encoder delivered 20 of 20 frames."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested with the new apitest case inject_t40 (QEMU T40 first): an injected 320x192 NV12 channel bound to its own H.264 encoder channel, 20 queued pattern frames come out as 20 frames with increasing time stamps, channel 7 and a second Create are refused, Dequeue before Enable is refused, Disable and Destroy return 0, the sensor channels keep flowing. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): see ExternInject_CreateChn (case inject_t40): buffers queued with a pattern, the encoder delivered 20 of 20 frames. T33 (2026-11-13, #57/#480 batch F1, src/t32/openimp_t32_fs_f1.inc): argument and state codes as vendor 2.0.2.1 (QEMU, same apitest t33f1 lines); DequeueBuffer refused in IVDC direct mode as the vendor; with direct_mode=0 a bound H.264 channel encodes 10/10 injected frames. The vendor 2.0.2.1 EnableChn fails in QEMU (frame-format request on a node the injection channel never opened): OpenIMP better, docs/OPENIMP_BEYOND_VENDOR.md 6.10 (user OK pending). T32: same source, no T32 run (aud)."
     },
     "FrameSource_ReleaseFrame": {
       "area": "FrameSource",
@@ -10962,15 +10976,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch F1): main-process path, codes 0x80010001/0x80010010/0x80010040, frame of ch1, release check of pool_idx equal to vendor 2.0.2.1 in QEMU (t33f1). The vendor secondary-process path (/dev/mpsys_data) is not built (OpenIMP is always the main process). T32: same source (aud)."
     },
     "FrameSource_SetChnRotate": {
       "area": "FrameSource",
@@ -19931,12 +19947,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch F1): /dev/tisp debug helper as vendor 2.0.2.1 (256 open tries, request word written, 96-byte block, /dev/mem dump); no /dev/tisp in QEMU: -1 on both libraries."
     },
     "Encoder_ClearPoolId": {
       "area": "Encoder",
@@ -20105,12 +20125,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "nohw",
+        "T33": "nohw",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, #56/#480 batch E3, src/t32/openimp_t32_enc_e3.c): /dev/kern_enc does not exist on the T33 camera kernel nor in any vendor .ko: 0x80048000 (channel >= 16: 0x80040001), equal to vendor 2.0.2.1 in QEMU (t33e3). GetStream behind an existing node not implemented."
     },
     "Encoder_KernEnc_GetStream": {
       "area": "Encoder",
@@ -20121,12 +20145,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "nohw",
+        "T33": "nohw",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, #56/#480 batch E3, src/t32/openimp_t32_enc_e3.c): /dev/kern_enc does not exist on the T33 camera kernel nor in any vendor .ko: 0x80048000 (channel >= 16: 0x80040001), equal to vendor 2.0.2.1 in QEMU (t33e3). GetStream behind an existing node not implemented."
     },
     "Encoder_KernEnc_Release": {
       "area": "Encoder",
@@ -20137,12 +20165,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "nohw",
+        "T33": "nohw",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, #56/#480 batch E3, src/t32/openimp_t32_enc_e3.c): /dev/kern_enc does not exist on the T33 camera kernel nor in any vendor .ko: 0x80048000 (channel >= 16: 0x80040001), equal to vendor 2.0.2.1 in QEMU (t33e3). GetStream behind an existing node not implemented."
     },
     "Encoder_KernEnc_Stop": {
       "area": "Encoder",
@@ -20153,12 +20185,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "nohw",
+        "T33": "nohw",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, #56/#480 batch E3, src/t32/openimp_t32_enc_e3.c): /dev/kern_enc does not exist on the T33 camera kernel nor in any vendor .ko: 0x80048000 (channel >= 16: 0x80040001), equal to vendor 2.0.2.1 in QEMU (t33e3). GetStream behind an existing node not implemented."
     },
     "Encoder_MappingTransform": {
       "area": "Encoder",
@@ -20189,12 +20225,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_MultiProcessInit": {
       "area": "Encoder",
@@ -20205,12 +20245,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, batch E3): SysV message protocol of vendor 2.0.2.1 (queues 0x12345678 / 0x24861357 / 0x12354645, message types and layouts); client codes without a server and MultiProcessInit after System_Init (0x80040080) equal to the vendor in QEMU (t33e3). Server: VBM allocation and release of ended clients as the vendor; YUV/JPEG requests answered failed (no unbound YUV/JPEG encoder on T32/T33 yet)."
     },
     "Encoder_PadFrame": {
       "area": "Encoder",
@@ -20836,12 +20880,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch F1): codes as vendor 2.0.2.1 disassembly (0x80010040 not running, 0x80011000 not suspended, wake_unlock/wake_lock FS_PM, -1 / 0x80014000 when the file is missing as in the QEMU guest); frames stop while suspended and come back. Vendor 2.0.2.1 segfaults in PM_Suspend in QEMU (BEYOND_VENDOR 6.10). Power effect needs a camera."
     },
     "FrameSource_PM_Suspend": {
       "area": "FrameSource",
@@ -20852,12 +20900,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch F1): codes as vendor 2.0.2.1 disassembly (0x80010040 not running, 0x80011000 not suspended, wake_unlock/wake_lock FS_PM, -1 / 0x80014000 when the file is missing as in the QEMU guest); frames stop while suspended and come back. Vendor 2.0.2.1 segfaults in PM_Suspend in QEMU (BEYOND_VENDOR 6.10). Power effect needs a camera."
     },
     "FrameSource_SetChnAttr_Expand": {
       "area": "FrameSource",
@@ -20988,12 +21040,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). Not proven: the open T32/T33 module does not serve 0xc004548e/0xc004548f yet (ENOTTY) and the QEMU rmem is too small for OpenIMP's own 4 MB buffer (vendor uses its reuse block); driver issue #491."
     },
     "FrameSource_SnapRaw_Start": {
       "area": "FrameSource",
@@ -21004,12 +21060,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). Not proven: the open T32/T33 module does not serve 0xc004548e/0xc004548f yet (ENOTTY) and the QEMU rmem is too small for OpenIMP's own 4 MB buffer (vendor uses its reuse block); driver issue #491."
     },
     "FrameSource_UpdateChnLut": {
       "area": "FrameSource",
@@ -21240,12 +21300,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineCreateJobExt": {
       "area": "ISP tuning",
@@ -21275,12 +21339,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineInit": {
       "area": "ISP tuning",
@@ -21291,12 +21359,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineSubmitTask": {
       "area": "ISP tuning",
@@ -21307,12 +21379,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineUpdateLutToJob": {
       "area": "ISP tuning",
@@ -21323,12 +21399,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "aud",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OnlineGetFunc": {
       "area": "ISP tuning",
@@ -21358,12 +21438,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
     "ISP_LDC_OnlineGetLutBufMode": {
       "area": "ISP tuning",
@@ -21412,12 +21496,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
     "ISP_LDC_OnlineInit": {
       "area": "ISP tuning",
@@ -21428,12 +21516,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
     "ISP_LDC_OnlineSetLut": {
       "area": "ISP tuning",
@@ -21444,12 +21536,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
     "ISP_LDC_OnlineSetLutBufMode": {
       "area": "ISP tuning",
@@ -21498,12 +21594,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+      },
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
     "ISP_LDC_SetMode": {
       "area": "ISP tuning",
