@@ -18,6 +18,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - The 502 T33 API cells (vendor 2.0.2.1 function list) left `nob`: 236 not exported by the T33 libimp -> miss, 145 exported but not proven -> ?, 121 apitest PASS in QEMU (`-M ingenic-t33`, open `tx-isp-t33.ko` + OpenIMP libimp, `openimp-apitest` T33 build) -> qemu. 16 FAIL lines (picture effects QEMU cannot render, frame-rate timing, FrameSource_GetPool/SetMaxStreamCnt/SetChnAttr details) leave their cells at ?; 0 oopses. No device column: there is no T33 camera, so nothing counts as working yet. `docs/api_exports.json` gets the T33 export list (378 names).
 - Matrix wording: T33 is "QEMU only, no camera" instead of "no OpenIMP build yet"; the 45 T33 feature cells say that qemu cells carry no picture or hardware result. No symbol moved.
+## 2026-11-13: T31 matrix cells from the neo aperto pin (#309, #314, #426)
+
+- T31 SU_Key_EnableEvent aud -> dev (EnableEvent 0, DisableEvent -1/EINVAL as the vendor); SU_CIPHER_ConfigHandle/Encrypt/Decrypt/DES_Exit aud/qemu -> nohw (codes equal to vendor libsysutils 1.1.3, no /dev/aes on the board). Libsysutils from Lu-Fi/ingenic-system-libs-neo aperto (7171f20), pinned by thingino aperto a1774778e; not yet in a flashed image.
 
 ## 2026-11-13: T30 SU_Key_ReadEvent dev from the T30X run b70 (#439)
 
