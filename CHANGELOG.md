@@ -32,6 +32,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `include/imp/imp_isp.h`: the 8-bit manual WB gain note (128 = 1.0x, values above 255 keep only the low 8 bits, vendor-equal: vendor libimp 3.12.0 SetWB/GetWB pass through, the firmware stores a byte) now names T10 and T20.
 
+## 2026-11-13: Light box, Eufy T40XP (T40) 5000 K colour pass + #332/#474/#462 phases (#230, #332, #474, #462)
+
+- New report `docs/lightbox/eufy-t40xp-sc830ai-2026-11-13-5000.html` (5000 K DiCUNO pair, both stacks, charts/numbers only): colour dE00 mean open 9.68 / vendor 9.67, grey-normalised 4.63 / 4.56, open-vs-vendor dE00 0.98 mean (max 1.9); 11 pass / 3 fail.
+- AE (#474/#462, new runner phase aecomp-step, sampler 30 ms + open t40_ae_ftrace): open moves 0.26 s after a comp step, vendor 0.40-0.43 s; open takes 4 steps on unchanged statistics (ftrace), the vendor 1 step + 2-3 equal steps; t40_ae_sensor_fd=0 gives 3-4 and more overshoot (5.0 / 26.5 % vs 0.3 / 19.6 %). Lamps-on overshoot open 6.3 % / vendor 0.1 % (#474 open).
+- #332: defog effect (night manual point minus TOP bit 11 bypass, same stack): open (next) rms 2.1 codes from the vendor; the candidate t40_defog_trans_day=1 (open-tx-isp claude/t40-332) matches the vendor on bright cells but not in the shadows (rms 3.9), not merged.
+
 ## 2026-11-13: Light box, Eufy T40XP (T40) 3000 K re-run (#230, #409, #410, #412, #443, #474)
 
 - New report `docs/lightbox/eufy-t40xp-sc830ai-2026-11-13-3000.html` (open-tx-isp next b0716513 + OpenIMP libimp next e970f6e1, runtime only, no pictures): 74 pass, 5 fail (11-12: 59 / 15). #409 AAC timestamps and #410 AE comp path are fixed on the device (0 repeated timestamps, path test 109.9 / 110.1 Y); #412 AE overshoot 12.5 -> 3.5 % and settle 3.65 -> 1.55 s (vendor 0.1 % / 1.80 s), residual tracked in #474; SSIM 0.005-0.006 below the vendor stays in #443 (harness fix #457 in); #332 night shadows ratio 1.166 is now a valid measurement (11-12: n/a).
