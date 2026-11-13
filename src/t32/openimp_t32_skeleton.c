@@ -50,7 +50,7 @@ _Static_assert(sizeof(IMPEncoderAttrRcMode) == 64, "T32 IMPEncoderAttrRcMode");
 #define T32_TAG "T32"
 
 /* one line per function and process: "not implemented yet" */
-static void t32_missing(const char *fn, int *logged)
+static __attribute__((unused)) void t32_missing(const char *fn, int *logged)
 {
     if (!*logged) {
         *logged = 1;
@@ -86,18 +86,31 @@ const char *IMP_System_GetCPUInfo(void)
     return "T32";
 }
 
+static int64_t ts_offset_us;
+
 uint64_t IMP_System_GetTimeStamp(void)
 {
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
         return 0;
-    return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
+    return (uint64_t)((int64_t)((uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u) + ts_offset_us);
+}
+
+/* vendor: GetTimeStamp continues from the base given here (QEMU: base 5000000 -> 5000073 us later) */
+int IMP_System_RebaseTimeStamp(uint64_t basets)
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+        return -1;
+    ts_offset_us = (int64_t)basets - (int64_t)((uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u);
+    return 0;
 }
 
 /* IMP_System_Init/Exit: openimp_t32_isp.c (#288) */
 /* IMP_System_Bind/UnBind: openimp_t32_fs.c (#290) */
-T32_STUB(IMP_System_RebaseTimeStamp, (uint64_t basets))
+/* IMP_System_RebaseTimeStamp: above */
 
 /* ---- ISP (vendor 2.x: /dev/tx-isp, /dev/isp-m0) ------------------------- */
 /* Open/Close, Add/Del/Enable/DisableSensor: openimp_t32_isp.c (#288) */

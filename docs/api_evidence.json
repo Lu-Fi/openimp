@@ -2181,7 +2181,8 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "QEMU run 2026-11-13: FAIL = frame not visible, QEMU renders no picture (not judgeable); register trace needed (#436/#441)"
       }
     },
     "ISP_Tuning_Get/SetFrontCrop": {
@@ -2300,7 +2301,8 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "QEMU run 2026-11-13: FAIL = no picture effect, QEMU renders no picture (not judgeable; vendor libimp same); call and read-back ok"
       }
     },
     "ISP_Tuning_Get/SetHLDCAttr": {
@@ -2885,7 +2887,8 @@
         "T23": "apitest apitest-cov 2026-10-27 .30",
         "T21": "apitest apitest-cov 2026-10-27 .24",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "QEMU run 2026-11-13: FAIL = no picture effect, QEMU renders no picture (not judgeable; vendor libimp same); read-back ok"
       }
     },
     "ISP_Tuning_Get/SetModule_Ratio": {
@@ -5725,7 +5728,8 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "QEMU run 2026-11-13: FAIL = metering effect in the picture, QEMU renders none (not judgeable; vendor libimp same); read-back ok"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -5856,7 +5860,8 @@
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "QEMU run 2026-11-13: FAIL = flag overwrite guard, not judgeable without a picture; the vendor libimp fails the same line"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -7716,7 +7721,8 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T33": "QEMU run 2026-11-13: read-back is cnt-1 on the vendor libimp 2.0.2.1 too (apitest expectation, not a difference to the vendor)"
       }
     },
     "Encoder_Get/SetMbRC": {
@@ -10310,7 +10316,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10375,7 +10381,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_Get/SetChnFifoAttr": {
@@ -10515,7 +10522,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -10563,7 +10570,8 @@
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "apitest t30lab 2026-11-03 .231"
+        "T30": "apitest t30lab 2026-11-03 .231",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "FrameSource_Get/SetI2dAttr": {
@@ -11922,7 +11930,8 @@
         "T23": "apitest t23pass 2026-11-04 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "QEMU #336 2026-11-11",
-        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 10000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): OpenIMP: ISP cover on ch1 region Y 174.3 -> 255.0 -> off 182.7, LINE_RECT window top edge = library YUV 149/43/21, off restores; Get rc 0, show 1, both parts read back equal, show 0 after off; vendor: same return codes and read-backs (picture not measurable under the vendor lib in this harness)."
+        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 10000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): OpenIMP: ISP cover on ch1 region Y 174.3 -> 255.0 -> off 182.7, LINE_RECT window top edge = library YUV 149/43/21, off restores; Get rc 0, show 1, both parts read back equal, show 0 after off; vendor: same return codes and read-backs (picture not measurable under the vendor lib in this harness).",
+        "T33": "QEMU run 2026-11-13: FAIL = ISP OSD not visible, QEMU renders no picture (not judgeable); register trace needed (#436/#441)"
       },
       "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; needs an IMPOSDIspDraw set-up of its own, and the ISP-OSD controls oops tx_isp_t40 in our QEMU (APITEST_T40_ISPOSD_CTL), so by the QEMU-first rule they are not run on the camera.  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case ispcover1_t23 ran in the T23 QEMU first, no oops): the single-camera calls drive a cover block on ch1: IMP_OSD_SetRgnAttr_ISP shows it (luma 120.4 -> 235.0 on one camera; a black cover 133.9 -> 16.0 on the other), disabled again 120.4, NULL refused; IMP_OSD_GetRgnAttr_ISP reports show 1 and the window while shown. Device PASS. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (sensor 2, NULL, type 9: -1 for Set and Get); valid regions not drawn (the ISP-OSD getters oops tx_isp_t40 in QEMU). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T40 2026-11-12 (C5, #433): dev. Valid regions set and drawn on the device (cover and window measured in the picture, then switched off). Get reads them back like the vendor. The ISP-OSD getter that oopses in QEMU runs without an oops on the camera."
     },
@@ -19116,7 +19125,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "err",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -19172,7 +19181,8 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
-        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)"
+        "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
+        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
       }
     },
     "System_UnBind": {

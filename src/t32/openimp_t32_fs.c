@@ -583,6 +583,8 @@ int IMP_FrameSource_SetChnAttr(int chnNum, IMPFSChnAttr *chn_attr)
     if (c->created && !c->enabled) {
         c->attr = *chn_attr;
         rc = 0;
+    } else if (c->created && !memcmp(&c->attr, chn_attr, sizeof(c->attr))) {
+        rc = 0;     /* vendor 2.0.2.1 stores the attribute without a state check; here an unchanged one is accepted on a running channel */
     }
     pthread_mutex_unlock(&fs_lock);
     if (rc)
@@ -810,6 +812,12 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
     return 0;
 }
 
+/* vendor 2.0.2.1: 0x80010001 for a channel >= 33, 0x80010020 while no pool is bound (this build binds none) */
+int IMP_FrameSource_GetPool(int chnNum)
+{
+    return chnNum < 0 || chnNum > 32 ? (int)0x80010001 : (int)0x80010020;
+}
+
 int IMP_FrameSource_GetFrameDepth(int chnNum, int *depth)
 {
     struct t32_fs_chn *c = fs_get(chnNum);
@@ -838,9 +846,15 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
         until.tv_nsec -= 1000000000L;
     }
     pthread_mutex_lock(&fs_lock);
-    if (!c->enabled || c->depth <= 0) {
+    if (c->enabled && c->depth <= 0) {
+        /* vendor libimp (T41 1.2.5 and T33 2.0.2.1, disassembled): depth 0 returns 0 and leaves *frame alone */
         pthread_mutex_unlock(&fs_lock);
-        IMP_LOG_ERR(TAG, "GetFrame chn %d: %s", chnNum, c->enabled ? "frame depth 0" : "not enabled");
+        IMP_LOG_ERR(TAG, "GetFrame chn %d: frame depth 0", chnNum);
+        return 0;
+    }
+    if (!c->enabled) {
+        pthread_mutex_unlock(&fs_lock);
+        IMP_LOG_ERR(TAG, "GetFrame chn %d: not enabled", chnNum);
         return -1;
     }
     for (;;) {
@@ -861,7 +875,7 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
         if (!c->enabled || rc == ETIMEDOUT) {
             pthread_mutex_unlock(&fs_lock);
             IMP_LOG_ERR(TAG, "GetFrame chn %d: %s", chnNum, c->enabled ? "timeout" : "disabled");
-            return -1;
+            return c->enabled ? (int)0x80012000 : -1;   /* IMP_ERR_FS_OVERTIME as the vendor */
         }
         rc = pthread_cond_timedwait(&c->ready, &fs_lock, &until);
     }

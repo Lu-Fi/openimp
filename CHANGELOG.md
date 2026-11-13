@@ -13,6 +13,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - New sample mode `tools/t32/t32_misc_sample.c acodec N`: fixed synthetic PCM through the built-in G.711A/G.711U/G.726/ADPCM encoders and back, a user encoder/decoder pair and error returns. Vendor libimp 2.2.0 and OpenIMP in the same QEMU guest: payload bytes, decoded PCM, lengths, user-codec handles/calls and return codes identical (audit/issue298 vac/oac).
 - Fix (T32): the AENC stream carries the frame's time stamp like vendor 2.2.0; OpenIMP had stamped it with the wall clock (assumed from T41). Host test `tests/t32/acodec_test.c` (in `make -C tests/t32 check`): the four codecs bit-exact with the vendor hashes, frame time stamps.
 - Beyond vendor, pending user OK: OpenIMP writes `seq`/`phyAddr` (and the ADEC time stamp) that the vendor leaves unwritten (docs/OPENIMP_BEYOND_VENDOR.md 6.9).
+## 2026-11-13: T32/T33 FrameSource and System return values as the vendor (#394)
+
+- Triage of the 16 FAILs of the T33 QEMU apitest against the vendor libimp 2.0.2.1 (disassembly + the same apitest on the vendor library): four were real differences and are fixed in the shared T32/T33 platform code. `IMP_System_RebaseTimeStamp` was a stub (-1): `GetTimeStamp` now continues from the given base. `IMP_FrameSource_GetPool` answers 0x80010020 (no pool bound) / 0x80010001 (channel >= 33) instead of -1. `IMP_FrameSource_SetChnAttr` accepts an unchanged attribute on a running channel (vendor stores without a state check). `IMP_FrameSource_GetFrame` at depth 0 returns 0 and leaves `*frame` alone, and the wait timeout returns 0x80012000 (IMP_ERR_FS_OVERTIME).
+- The other 12 FAILs are not differences: picture effects QEMU cannot render (gamma, module control, face AE, draw block, ISP OSD, AE flicker flag), frame-rate timing under QEMU, and `Encoder_SetMaxStreamCnt` read-back that is cnt-1 on the vendor library too. They stay "?" with the reason in the cell reference. QEMU after the fix: 4 fewer FAILs (12 left), 0 oopses.
 
 ## 2026-11-13: T33 API matrix column from QEMU runs (#394)
 
