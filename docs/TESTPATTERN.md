@@ -147,6 +147,11 @@ bands (R, G, B, magenta to white), 3 four vertical bands with a vertical gradien
   (white, grey, light grey, black), the same frame statistics in all 3 cycles; gradients as described.
   Mode 0: live scene back 3 s later (frame mean Y 105-106 against 104 before, same column profile).
   No stream stop, 0 oops, flashed stack restored afterwards.
+- Device (T10L Secuplug SP1 .31, open stack, H.264 ch0, night; test libimp bind-mounted from /tmp, flashed one restored): 3 cycles of
+  patterns 1..4 and mode 0, `0x40` = ...92 / `0x9c0` = 1 / `0x9c4` = 0..3 every time, mode 0 back to ...93 / 0 / 0. Flat field Y 255 over the whole
+  picture (frame mean 254.2, all 3 cycles); bars: left-to-right 255 255 87 0 and frame mean 148.8 in all 3 cycles; the bands/gradients (patterns 2, 3)
+  repeat to within 1-3 codes (AE/AWB keep running). Mode 0: the live scene is back (column profile 208 35 0 0, mean 62.0 against 62.0 before). No
+  stream stop, 0 oops, timpsd and libimp as before. Pictures local only.
 
 ## API
 
