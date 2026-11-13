@@ -22,6 +22,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - T31 SU_Key_EnableEvent aud -> dev (EnableEvent 0, DisableEvent -1/EINVAL as the vendor); SU_CIPHER_ConfigHandle/Encrypt/Decrypt/DES_Exit aud/qemu -> nohw (codes equal to vendor libsysutils 1.1.3, no /dev/aes on the board). Libsysutils from Lu-Fi/ingenic-system-libs-neo aperto (7171f20), pinned by thingino aperto a1774778e; not yet in a flashed image.
 
+## 2026-11-13: T30 lab run b71 prepared (#308, #100, #328; not run, no cell moved)
+
+- Device-only T30 cells collected in one lab run (audit/t30/b71): picture effect of the rt ISP cells (Saturation, ColorfxMode, SceneMode, WDRAttr, Sinter/Temper, WB, IntegrationTime), IR cut feature 11 (ircut tool + pin while ric runs), boot-guard probe (feature 3), `SU_Base_Shutdown`, and the #328 AES known-answer test (neo libsysutils vs vendor, only with /dev/aes). Features 39 and 41 need a flash or a soak and stay planned.
+
 ## 2026-11-13: T30 SU_Key_ReadEvent dev from the T30X run b70 (#439)
 
 - `SU_Key_ReadEvent` on T30 -> dev: with vendor libsysutils 1.0.5 on both stacks (node event0), injected KEY 102 gives ret 0, key 102 event 1; the negative control KEY 28 times out; 0 oopses (audit/t30/b70). Vendor-equal by construction: both stacks use the same vendor library. The b69 result was a script bug in the event-node detection.
