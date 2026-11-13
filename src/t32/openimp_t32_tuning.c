@@ -896,11 +896,15 @@ int32_t IMP_ISP_GetSensorRegister(IMPVI_NUM num, IMPISPSensorRegister *reg)
     return ispx_reg(num, reg, 0);
 }
 
+int OpenIMP_T32_CameraInputMode(IMPISPCameraInputMode *mode);   /* openimp_t32_isp_ctl.c */
+
 int32_t IMP_ISP_GetCameraInputMode(IMPISPCameraInputMode *mode)
 {
     if (!mode)
         return E_NULL;
-    memset(mode, 0, sizeof(*mode));
+    /* the mode SetCameraInputMode handed to the driver (vendor: cached at dev+0x2ac), else zeroes */
+    if (!OpenIMP_T32_CameraInputMode(mode))
+        memset(mode, 0, sizeof(*mode));
     return 0;
 }
 

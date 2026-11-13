@@ -88,6 +88,13 @@ compile dma_alloc src/dma_alloc.c
 compile t32_skeleton src/t32/openimp_t32_skeleton.c
 # ISP open / sensor lifecycle, System_Init/Exit (#288)
 compile t32_isp src/t32/openimp_t32_isp.c
+# 2.x ISP control calls and FrameSource / encoder state calls (#54-#60, #39-#45): vendor
+# 2.x headers like the tuning unit (their types: PM, LDC mode, joints, frame-used mode)
+for unit in isp_ctl fs_enc_ext; do
+    "$compiler" $strict_flags -I"$T33_HEADERS" -I"$project_dir/src" \
+        -c "$project_dir/src/t32/openimp_t32_$unit.c" -o "$output_dir/t32_$unit.o"
+    objects="$objects $output_dir/t32_$unit.o"
+done
 # userspace IQ-bin loader, day/night bins (#289)
 compile t32_bin src/t32/openimp_t32_bin.c
 # ISP tuning on /dev/isp-m0 (#296): vendor 2.2.0 headers instead of include/
@@ -154,12 +161,21 @@ compile t32_audio_enc_dec src/audio/openimp_audio_enc_dec.c
 # libimp 2.x exports none) and the T32 firmware ships its own libsysutils, so
 # libimp does not shadow it (#299: QEMU check in tools/t32/t32_misc_sample.c su)
 
+# T33 = vendor libimp 2.0.2.1: IMP_Decoder_*, IMP_Buf_* and IMP_AO_Enable/DisableNs,
+# IMP_AO_Enable/DisableDrcAndEq are not in that library or its headers (they come from
+# the T32 2.2.0 line), so the T33 build keeps them internal (user decision 2026-11-13;
+# the T32 build exports them).  Exact names in "local:" win over the IMP_* wildcard.
+t33_hidden=$("${TOOLCHAIN_PREFIX}-nm" -g --defined-only $objects 2>/dev/null |
+    awk '$3 ~ /^IMP_(Decoder_|Buf_|AO_(Enable|Disable)(Ns|DrcAndEq)$)/ {print "        " $3 ";"}' | sort -u)
+awk -v hid="$t33_hidden" '/^    local:/ {print; print hid; next} {print}' \
+    "$project_dir/src/t40/libimp.map" > "$output_dir/libimp_t33.map"
+
 rm -f "$output_dir/libimp.a"
 "$archiver" rcs "$output_dir/libimp.a" $objects
 
 "$compiler" -shared -nostartfiles \
     -Wl,-soname,libimp.so -Wl,--gc-sections \
-    -Wl,--version-script="$project_dir/src/t40/libimp.map" \
+    -Wl,--version-script="$output_dir/libimp_t33.map" \
     -o "$output_dir/libimp.so" $objects \
     -ldl -lpthread -lrt -lm
 

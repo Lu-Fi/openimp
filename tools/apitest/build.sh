@@ -6,13 +6,14 @@
 # Vendor headers: HDR (vendor SDK include root). T40 = T41 API family: -DPLATFORM_T41 -DAPITEST_T40.
 # T32 (planned, QEMU only): T41 family + T23-family encoder, -DPLATFORM_T41 -DAPITEST_T32, T32 1.0.6 headers
 # (2.x structs are the same), LIBDIR=<OpenIMP build/t32> (the QEMU rootfs has the vendor libimp).
+# T33 (QEMU only): -DAPITEST_T32 -DAPITEST_T33, T33 2.0.2.1 headers; cases with `!defined(APITEST_T32) || defined(APITEST_T33)` run on T33.
 HDR=${HDR:?set HDR=<vendor SDK include root>}
 TO=${TO:?set TO=<thingino build output dir>}
 GEN=${GEN:-agg46}
 D=$(cd "$(dirname "$0")" && pwd)
 OUT=${OUT:-$D/build}
 mkdir -p "$OUT"
-SRC="$D/apitest.c $D/at_sys.c $D/at_enc.c $D/at_osd_ivs.c $D/at_audio.c $D/at_isp.c $D/at_isp_rt.c $D/at_cases.c $D/at_su.c $D/at_picture.c $D/at_t40dev.c $D/at_tdwatch.c"
+SRC="$D/apitest.c $D/at_sys.c $D/at_enc.c $D/at_osd_ivs.c $D/at_audio.c $D/at_isp.c $D/at_isp_rt.c $D/at_cases.c $D/at_su.c $D/at_picture.c $D/at_t40dev.c $D/at_tdwatch.c $D/at_t33.c"
 build() { # soc headerdir camdir defs
   local soc=$1 inc=$HDR/$2 cam=$(ls -d $TO/$3-$GEN-* $TO/$3 2>/dev/null | head -1) defs=$4
   local lc=$(echo $soc | tr A-Z a-z)
@@ -34,3 +35,5 @@ w T31 && build T31 T31/1.1.6/en wuuk_y0510_t31x_sc4336p_ssv6158 -DPLATFORM_T31
 w T40 && build T40 T40/1.3.1/en eufy_t8416_t40xp_sc830_aic8800d40 "-DPLATFORM_T41 -DAPITEST_T40"
 w T41 && build T41 T41/1.2.6/zh vanhua_t55a_t41lq_gc5603_eth "-DPLATFORM_T41"
 w T32 && build T32 T32/1.0.6/en qemu_t32nq-k44-t32plan "-DPLATFORM_T41 -DAPITEST_T32"
+# T33 (QEMU only): the T32 family build plus APITEST_T33, against the T33 2.0.2.1 headers (LIBDIR=<OpenIMP build/t33>)
+w T33 && build T33 T33/2.0.2.1/en qemu_t32nq-k44-t32plan "-DPLATFORM_T41 -DAPITEST_T32 -DAPITEST_T33"

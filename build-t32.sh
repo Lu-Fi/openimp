@@ -81,6 +81,13 @@ compile dma_alloc src/dma_alloc.c
 compile t32_skeleton src/t32/openimp_t32_skeleton.c
 # ISP open / sensor lifecycle, System_Init/Exit (#288)
 compile t32_isp src/t32/openimp_t32_isp.c
+# 2.x ISP control calls and FrameSource / encoder state calls (#54-#60, #39-#45): vendor
+# 2.x headers like the tuning unit (their types: PM, LDC mode, joints, frame-used mode)
+for unit in isp_ctl fs_enc_ext; do
+    "$compiler" $strict_flags -I"$T32_HEADERS" -I"$project_dir/src" \
+        -c "$project_dir/src/t32/openimp_t32_$unit.c" -o "$output_dir/t32_$unit.o"
+    objects="$objects $output_dir/t32_$unit.o"
+done
 # userspace IQ-bin loader, day/night bins (#289)
 compile t32_bin src/t32/openimp_t32_bin.c
 # ISP tuning on /dev/isp-m0 (#296): vendor 2.2.0 headers instead of include/

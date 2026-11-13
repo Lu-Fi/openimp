@@ -620,6 +620,43 @@ int OpenIMP_T32_FsChnDirect(int chn)
     return d;
 }
 
+/* for openimp_t32_fs_enc_ext.c / openimp_t32_ivdc.c (#54 #57): 0 none, 1 created, 2 enabled;
+ * the frame depth of the channel (0 = none set) */
+int OpenIMP_T32_FsChnState(int chn, int *depth)
+{
+    struct t32_fs_chn *c = fs_get(chn);
+    int st = 0;
+
+    if (depth)
+        *depth = 0;
+    if (!c)
+        return 0;
+    pthread_mutex_lock(&fs_lock);
+    st = c->enabled ? 2 : c->created ? 1 : 0;
+    if (depth)
+        *depth = c->depth;
+    pthread_mutex_unlock(&fs_lock);
+    return st;
+}
+
+/* picture size of a created channel (openimp_t32_fs_enc_ext.c joints); -1 when not created */
+int OpenIMP_T32_FsChnSize(int chn, int *w, int *h)
+{
+    struct t32_fs_chn *c = fs_get(chn);
+    int rc = -1;
+
+    if (!c)
+        return -1;
+    pthread_mutex_lock(&fs_lock);
+    if (c->created) {
+        *w = c->attr.picWidth;
+        *h = c->attr.picHeight;
+        rc = 0;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
 /* ---- channel API ---------------------------------------------------------- */
 static int fs_attr_ok(int chn, const IMPFSChnAttr *a)
 {

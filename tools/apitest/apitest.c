@@ -402,6 +402,9 @@ int main(int argc, char **argv)
     if (ret < 0) { printf("[E] ISP open/add/enable sensor failed\n"); return 1; }
 
     rep_area("sys");
+#if defined(APITEST_T33)
+    { void t33_pre_sysinit(void); t33_pre_sysinit(); }   /* at_t33.c: encoder globals before IMP_System_Init */
+#endif
     ret = IMP_System_Init();
     RET0(IMP_System_Init, ret, "");
     if (ret < 0) return 1;

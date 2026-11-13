@@ -67,6 +67,8 @@
  * -DPLATFORM_T41 -DAPITEST_T32 (T32 1.0.6 headers; structs = 2.x, PLAN) */
 #if defined(APITEST_T40)
 # define SOC "T40"
+#elif defined(APITEST_T33)
+# define SOC "T33"
 #elif defined(APITEST_T32)
 # define SOC "T32"
 #elif defined(PLATFORM_T10)

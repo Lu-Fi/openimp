@@ -274,42 +274,47 @@ int IMP_FrameSource_GetDirectMode(int *direct_mode)
     return 0;
 }
 
-/* the kernel's mode for the next System_Init (0 memory, 1..4 direct) */
+/* the kernel's mode for the next System_Init (0 memory, 1..4 direct); vendor 2.0.2.1 codes:
+ * mode >= 5 0x80010002, node open / ioctl failure 0x80011000 */
 int IMP_FrameSource_SetDirectMode(int direct_mode)
 {
     int32_t m = direct_mode;
     int fd, rc;
 
-    if (direct_mode < 0 || direct_mode > 4) {
+    if ((unsigned)direct_mode > 4) {
         IMP_LOG_ERR(TAG, "SetDirectMode %d (0..4)", direct_mode);
-        return -1;
+        return (int)0x80010002;
     }
     fd = open("/dev/misc-ivdc", O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         IMP_LOG_ERR(TAG, "open /dev/misc-ivdc: %s", strerror(errno));
-        return -1;
+        return (int)0x80011000;
     }
     rc = ioctl(fd, OI_T32_IOC_SET_DIRECT, &m);
     if (rc < 0)
         IMP_LOG_ERR(TAG, "SET_DIRECT %d: %s", direct_mode, strerror(errno));
     close(fd);
-    return rc < 0 ? -1 : 0;
+    return rc < 0 ? (int)0x80011000 : 0;
 }
 
+int OpenIMP_T32_FsChnState(int chn, int *depth);   /* openimp_t32_fs.c */
+
+/* vendor 2.0.2.1: lines > 0x1950 0x80010002; only in single-sensor direct mode (1) and before
+ * FrameSource channel 0 runs, else 0x80040080; ioctl failure 0x80011000 */
 int IMP_FrameSource_SetIvdcMemLine(int ivdc_mem_line)
 {
     int32_t n = ivdc_mem_line;
 
-    if (ivdc_mem_line < 0 || ivdc_mem_line > IVDC_MEM_LINE_MAX) {
+    if ((unsigned)ivdc_mem_line > IVDC_MEM_LINE_MAX) {
         IMP_LOG_ERR(TAG, "SetIvdcMemLine %d (0..%d)", ivdc_mem_line, IVDC_MEM_LINE_MAX);
-        return -1;
+        return (int)0x80010002;
     }
-    if (iv.mode != 1) {
-        IMP_LOG_ERR(TAG, "SetIvdcMemLine: needs single-sensor direct mode (mode %d)", iv.mode);
-        return -1;
+    if (iv.mode != 1 || OpenIMP_T32_FsChnState(0, NULL) >= 2) {
+        IMP_LOG_ERR(TAG, "SetIvdcMemLine: needs single-sensor direct mode before channel 0 runs (mode %d)", iv.mode);
+        return (int)0x80040080;
     }
     if (OpenIMP_T32_IvdcIoctl(OI_T32_IOC_SET_MEM_LINE, &n, "SET_MEM_LINE") != 0)
-        return -1;
+        return (int)0x80011000;
     IMP_LOG_INFO(TAG, "IVDC mem line %d", ivdc_mem_line);
     return 0;
 }

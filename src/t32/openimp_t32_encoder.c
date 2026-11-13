@@ -1514,38 +1514,86 @@ int IMP_Encoder_GetChnEncType(int encChn, IMPPayloadType *encType)
     return e ? 0 : -1;
 }
 
+/* vendor 2.0.2.1 codes (#56): channel >= 16 0x80040001, qp > 98 0x80040002, not created
+ * 0x80040008, not a JPEG channel 0x80040080 (Get: NULL after the channel checks 0x80040002) */
+#define T32_ENC_API_CHNS 16
+#define E_ENC_CHN     ((int)0x80040001)
+#define E_ENC_PARAM   ((int)0x80040002)
+#define E_ENC_UNEXIST ((int)0x80040008)
+#define E_ENC_STATE   ((int)0x80040080)
+
+static int jpeg_chn_locked(int encChn, struct t32_enc_chn **out)
+{
+    struct t32_enc_chn *e = chn_get(encChn);
+
+    if (!e)
+        return E_ENC_UNEXIST;
+    if (e->h264)
+        return E_ENC_STATE;
+    *out = e;
+    return 0;
+}
+
 int IMP_Encoder_SetJpegQp(int encChn, int jpegQp)
 {
-    struct t32_enc_chn *e;
+    struct t32_enc_chn *e = NULL;
+    int rc;
 
-    if (jpegQp < 0 || jpegQp > T32_JPEG_MAX_QP)
-        return -1;
+    if (encChn >= T32_ENC_API_CHNS)
+        return E_ENC_CHN;
+    if ((unsigned)jpegQp > T32_JPEG_MAX_QP || encChn < 0)
+        return E_ENC_PARAM;
     pthread_mutex_lock(&enc_lock);
-    e = chn_get(encChn);
-    if (e)
+    rc = jpeg_chn_locked(encChn, &e);
+    if (rc == 0)
         e->qp = jpegQp;
     pthread_mutex_unlock(&enc_lock);
-    return e ? 0 : -1;
+    return rc;
 }
 
 int IMP_Encoder_GetJpegQp(int encChn, int *jpegQp)
 {
-    struct t32_enc_chn *e;
+    struct t32_enc_chn *e = NULL;
+    int rc;
 
-    if (!jpegQp)
-        return -1;
+    if (encChn >= T32_ENC_API_CHNS)
+        return E_ENC_CHN;
+    if (encChn < 0)
+        return E_ENC_PARAM;
     pthread_mutex_lock(&enc_lock);
-    e = chn_get(encChn);
-    if (e)
-        *jpegQp = e->qp;
+    rc = jpeg_chn_locked(encChn, &e);
+    if (rc == 0) {
+        if (jpegQp)
+            *jpegQp = jpeg_qp_of(e->qp);
+        else
+            rc = E_ENC_PARAM;
+    }
     pthread_mutex_unlock(&enc_lock);
-    return e ? 0 : -1;
+    return rc;
 }
 
+int OpenIMP_T32_SystemInitDone(void);   /* openimp_t32_isp.c */
+
+/* vendor: only before the encoder module is up (IMP_System_Init), 0 refused */
 int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize)
 {
+    if (OpenIMP_T32_SystemInitDone())
+        return E_ENC_STATE;
+    if (!jpegBsSize)
+        return E_ENC_PARAM;
     enc_jpeg_bs_size = jpegBsSize;
     return 0;
+}
+
+/* for openimp_t32_enc_ext.c (#56 #57): the channel exists */
+int OpenIMP_T32_EncChnCreated(int encChn)
+{
+    int c;
+
+    pthread_mutex_lock(&enc_lock);
+    c = chn_get(encChn) != NULL;
+    pthread_mutex_unlock(&enc_lock);
+    return c;
 }
 
 int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)

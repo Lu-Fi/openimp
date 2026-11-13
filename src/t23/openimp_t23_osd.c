@@ -1094,6 +1094,29 @@ int IMP_OSD_AttachToGroup(IMPCell *from, IMPCell *to)
     return 0;
 }
 
+#if defined(PLATFORM_T32)
+/* T32/T33 2.x (#57): the reverse of AttachToGroup: src -> from -> to becomes src -> to again;
+ * any failing step 0x80020040 as the vendor's system_detach failure */
+int IMP_OSD_DetachToGroup(IMPCell *from, IMPCell *to)
+{
+    IMPCell source;
+
+    if (!from || !to || IMP_System_GetBindbyDest(from, &source) != 0 ||
+        IMP_System_UnBind(from, to) != 0)
+        return (int)0x80020040;
+    if (IMP_System_UnBind(&source, from) != 0) {
+        (void)IMP_System_Bind(from, to);
+        return (int)0x80020040;
+    }
+    if (IMP_System_Bind(&source, to) != 0) {
+        (void)IMP_System_Bind(&source, from);
+        (void)IMP_System_Bind(from, to);
+        return (int)0x80020040;
+    }
+    return 0;
+}
+#endif
+
 IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *attr)
 {
     struct t23_osd_region *r;

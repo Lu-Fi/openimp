@@ -961,15 +961,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest agg5u 2026-11-01 .34 (open-tx-isp next e1c958c3 image): Get mode 0; Set same value read back equal, frames flow (control 0x8000097, served by the open T41 module since #171)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls."
     },
     "ISP_Get/SetDefaultBinPath": {
       "area": "ISP tuning",
@@ -1086,8 +1087,8 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -1095,9 +1096,10 @@
         "T41": "implement"
       },
       "ref": {
-        "T41": "apitest agg5y 2026-11-01 .34 (open-tx-isp next a84b6be2, isp area, no APITEST_RISKY): Get ch0/1/2 types 0/1/2; Set with the same values returns 0 and reads back equal, frames flow; open-tx-isp #181"
+        "T41": "apitest agg5y 2026-11-01 .34 (open-tx-isp next a84b6be2, isp area, no APITEST_RISKY): Get ch0/1/2 types 0/1/2; Set with the same values returns 0 and reads back equal, frames flow; open-tx-isp #181",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T41: Set accepts types 0..2 (no effect, as on stock); types 3..5 answer EOPNOTSUPP because the open VIC frame-channel path has no internal inputs"
+      "note": "T41: Set accepts types 0..2 (no effect, as on stock); types 3..5 answer EOPNOTSUPP because the open VIC frame-channel path has no internal inputs T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_Get/SetSensorRegister": {
       "area": "ISP tuning",
@@ -1217,15 +1219,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "no-op",
         "T40": "n.a.",
         "T41": "no-op"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls."
+      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls. T33 (2026-11-13): vendor 2.0.2.1 is a no-op here (log, 0; WDR_OPEN: no WDR on the T32/T33 chip class); OpenIMP the same, apitest t33pass equal to the vendor line in QEMU. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_LDC_INIT": {
       "area": "ISP tuning",
@@ -1236,15 +1239,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "no-op",
         "T40": "n.a.",
         "T41": "no-op"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0 (frames flow, no oopses, stock module restored); QEMU T41 the same; vendor no-op matched (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls."
+      "note": "T41: vendor no-op, no function. The stock 1.2.5 module has no handler for the ISP-device ioctls 0xc0045479..7b (LDC) and 0xc004548e/f (GPIO) and answers 0 without any effect; OpenIMP and open-tx-isp do the same (before: ENOTTY). There is no lens-distortion and no GPIO function behind these calls. T33 (2026-11-13): vendor 2.0.2.1 is a no-op here (log, 0; WDR_OPEN: no WDR on the T32/T33 chip class); OpenIMP the same, apitest t33pass equal to the vendor line in QEMU. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_Open": {
       "area": "ISP tuning",
@@ -1399,15 +1403,16 @@
         "T23": "nohw",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "host",
         "T40": "dev",
         "T41": "n.a."
       },
-      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board).  T23 2026-11-12: nohw. Only the invalid modes and mode 0 were sent; no joint mode (needs a second sensor). T40 2026-11-12 (C5, #433): dev. The single-sensor setting (one sensor, bypass, not joint) was sent before AddSensor with OpenIMP and with the vendor libimp: rc 0 on both, read back equal, stream OK. No dual or joint mode was sent: the board has a second sensor, and those modes reroute its input.",
+      "note": "audit: reaches the driver/kernel T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported, not run on the camera (apitest category hardware: they change the sensor interface or the raw path; QEMU-first rule, no safe case).  T23 2026-11-04 (T23 cameras, both with one sensor): stays aud, not called. The call selects the dual-sensor input mode (ioctl 0xc00456c9, mode below 73) and changes the sensor interface (apitest category hardware); a one-sensor board has no second input to select. T40 2026-11-11 (#310): stays host: argument checks equal to the vendor on the camera (NULL -9, sensor_num 4 -4, joint 0x1111 -4); a valid mode is not sent (switches the dual-sensor input of the running board).  T23 2026-11-12: nohw. Only the invalid modes and mode 0 were sent; no joint mode (needs a second sensor). T40 2026-11-12 (C5, #433): dev. The single-sensor setting (one sensor, bypass, not joint) was sent before AddSensor with OpenIMP and with the vendor libimp: rc 0 on both, read back equal, stream OK. No dual or joint mode was sent: the board has a second sensor, and those modes reroute its input. T33 (2026-11-13): implemented as vendor 2.0.2.1 (ioctl / bind sequence); the QEMU run proves the argument checks only (equal to the vendor line); the open-tx-isp module does not serve the GPIO / camera-input ioctls yet, the real path needs a T33 camera. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T23": "apitest secsensor_t23 2026-11-12 (T23 single-sensor camera, sc1a4t, flashed open driver, streamer stopped for the run): OpenIMP libimp and the vendor T23 1.3.0 libimp run back to back give identical results, before AddSensor and with the sensor streaming; no second sensor on the board, so the call is not verified on hardware. NULL -1, mode 73 and a low nibble of 9 -1 (refused before the ioctl), mode 0 (not joint, the single-sensor default) 0.",
-        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 4000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): single-sensor setting before AddSensor (one sensor, bypass, no switch, not joint) rc 0 on both libs, Get reads it back, sensor streams 41 frames/2 s."
+        "T40": "2026-11-12 C5 (#433, user-approved guarded device run; Eufy T40XP, apitest t40dev 4000000, OpenIMP libimp of next from /tmp on the flashed open tx_isp_t40, then vendor libimp 1.3.0 on the vendor tx-isp-t40.ko, deadman armed, sysrq reboot back to the flashed image, 0 oops): single-sensor setting before AddSensor (one sensor, bypass, no switch, not joint) rc 0 on both libs, Get reads it back, sensor streams 41 frames/2 s.",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_SetCameraInputSelect": {
@@ -1559,14 +1564,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0, frames flow; the module stores the night-start word like the stock module (10 at core+0x1d4+4*vinum), which the next first ISP tuning open consumes; no other visible effect (open-tx-isp #171, host test tx_isp_t41_devioctl_test)"
+        "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): returns 0, frames flow; the module stores the night-start word like the stock module (10 at core+0x1d4+4*vinum), which the next first ISP tuning open consumes; no other visible effect (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_bin.c, #289)."
+      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_bin.c, #289). T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls."
     },
     "ISP_StreamCheck": {
       "area": "ISP tuning",
@@ -2915,14 +2921,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "audit: reaches the driver/kernel T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest apitest-cov 2026-10-27 .34",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_Get/SetSaturation": {
@@ -3185,13 +3192,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "no-op"
       },
-      "note": "T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T41: the stock driver has no handler (empty tisp_set/get_wdr_output_mode); the open driver refuses with EOPNOTSUPP, so libimp accepts the value and reads it back (default 0), like the vendor no-op but with readback; apitest PASS on the T41 test board (2026-10-17) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_Get/SetWdr_OutputMode": {
@@ -3448,15 +3456,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
-      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): ch1 block 0 set (80x60 at 40,30, RGB), read back (window and colour equal; the kernel reports the enable bit as 0 like the stock one), block off, frames flow; the stored block has no picture effect before the next output start.  T23 2026-11-04 (T23 cameras, sensors SC1A4T and SC2336P; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case maskblock_t23 ran in the T23 QEMU first, no oops): superseded remark: \"stored masks have no image effect\" holds for drivers before the MSCA mask update (agg-47 and older); with the agg67 driver the block IS drawn into the picture. Set white 320x180 at (160,90) on ch1 block 0 and white 640x360 at (320,180) on ch0 block 1: luma inside 122.8 -> 255.0 on both channels, back to 122.9 after mask_en 0 (second camera 135.9 -> 255.0 / 129.3 -> 255.0); GetMaskBlock returns window and colour type equal, the enable flag reads 0 as the stock handler does; channel 3 is refused (-4090). The same call is behind IMP_OSD_SetRgnAttr_ISP (cover). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run) | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): ch1 block 0 set (80x60 at 40,30, RGB), read back (window and colour equal; the kernel reports the enable bit as 0 like the stock one), block off, frames flow; the stored block has no picture effect before the next output start.  T23 2026-11-04 (T23 cameras, sensors SC1A4T and SC2336P; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched; new apitest case maskblock_t23 ran in the T23 QEMU first, no oops): superseded remark: \"stored masks have no image effect\" holds for drivers before the MSCA mask update (agg-47 and older); with the agg67 driver the block IS drawn into the picture. Set white 320x180 at (160,90) on ch1 block 0 and white 640x360 at (320,180) on ch0 block 1: luma inside 122.8 -> 255.0 on both channels, back to 122.9 after mask_en 0 (second camera 135.9 -> 255.0 / 129.3 -> 255.0); GetMaskBlock returns window and colour type equal, the enable flag reads 0 as the stock handler does; channel 3 is refused (-4090). The same call is behind IMP_OSD_SetRgnAttr_ISP (cover). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetRawDRC": {
@@ -4100,7 +4109,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -4115,11 +4124,12 @@
           "r†"
         ]
       },
-      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04: see GetMaskBlock (device PASS, the block is drawn into the picture on ch0 and ch1 and switched off again, channel 3 refused). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: 0x8000183 in claude/t23-awb-runtime only (not in agg-25); T41: control 0x08000074 is handled by the open driver (open-tx-isp next: stores window and colour, programmed at the next output start, Get reports en 0 as the stock driver does); drivers from before the MSCA zoom/mask work failed with -EPERM; T23: 0x8000183 on the stock mscaler mask table (open-tx-isp agg-28, emulator-identical); the stored masks have no image effect yet (the mscaler update that consumes them is not run); T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start  T23 2026-11-04: see GetMaskBlock (device PASS, the block is drawn into the picture on ch0 and ch1 and switched off again, channel 3 refused). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest agg47 2026-10-26 .34",
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_SetMeshShadingScale": {
@@ -4826,16 +4836,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "no-op",
         "T40": "dev",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest 2026-11-02 .32 (Vanhua T55A T41 gc5603, runtime swap of open-tx-isp next + c30c00ff and a test libimp, case t41isp with APITEST_RISKY=1, dead-man armed): linear start with imode DOL returns 0, frames flow; the module stores the non-zero mode byte like the stock module, mode 0 is refused with EFAULT as stock (-4090); no visible effect on this linear sensor (open-tx-isp #171, host test tx_isp_t41_devioctl_test)",
-        "T40": "apitest t40dev 1000 2026-11-11 (Eufy T40XP sc830ai, runtime swap of open-tx-isp claude/t40-fix 66dcbe8f + test libimp, then vendor 1.3.1 on the vendor module; QEMU T40 too): LINEAR with imode DOL before AddSensor returns 0 on both (open module stores the mode byte at core_priv+1564 like the OEM, imode 0 -EFAULT like the OEM). Difference: the vendor stream then stays at 0 frames (its ISP init takes the WDR mode on a linear sensor), the open stream runs on (21 frames/s, Y 81) (#324)."
+        "T40": "apitest t40dev 1000 2026-11-11 (Eufy T40XP sc830ai, runtime swap of open-tx-isp claude/t40-fix 66dcbe8f + test libimp, then vendor 1.3.1 on the vendor module; QEMU T40 too): LINEAR with imode DOL before AddSensor returns 0 on both (open module stores the mode byte at core_priv+1564 like the OEM, imode 0 -EFAULT like the OEM). Difference: the vendor stream then stays at 0 frames (its ISP init takes the WDR mode on a linear sensor), the open stream runs on (21 frames/s, Y 81) (#324).",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run. T40 2026-11-11 (#310): stays host: argument checks equal (NULL -8, rmode 7 -9); LINEAR before AddSensor: OpenIMP -1 (the open module refuses ioctl 0xc0045432, stream runs on), vendor 0 but its stream then stays at 0 frames in that run (#324). 2026-11-11 (#324): ioctl fixed (the lift returned an address instead of storing the byte), rc equal, dev; the vendor's no-frames result with a WDR imode on a linear sensor is not reproduced (open keeps streaming), noted on #324."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays host: exported; only valid before IMP_ISP_AddSensor (t40dev phase 1000, run on its own, not part of the safe mask), not run. T40 2026-11-11 (#310): stays host: argument checks equal (NULL -8, rmode 7 -9); LINEAR before AddSensor: OpenIMP -1 (the open module refuses ioctl 0xc0045432, stream runs on), vendor 0 but its stream then stays at 0 frames in that run (#324). 2026-11-11 (#324): ioctl fixed (the lift returned an address instead of storing the byte), rc equal, dev; the vendor's no-frames result with a WDR imode on a linear sensor is not reproduced (open keeps streaming), noted on #324. T33 (2026-11-13): vendor 2.0.2.1 is a no-op here (log, 0; WDR_OPEN: no WDR on the T32/T33 chip class); OpenIMP the same, apitest t33pass equal to the vendor line in QEMU. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_SetAeAlgoFunc": {
       "area": "AE / AWB / AF",
@@ -4846,17 +4857,18 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T40: vendor protocol ported (SetAe/AwbAlgoFunc keep the callback record, EnableSensor registers it with ioctl 0xc004541d / 0xc0045425 and starts the worker, workers ioctl 0xc004541b/c and 0xc0045423/4, DisableSensor closes with 0xc004541e / 0xc0045426, SetSensorFPS notifies the AE library). On by default, OPENIMP_ISP_ALGO_FUNC=0 switches it off (-1 / ENOTSUP). Device-verified effect (#65, T40 test camera, apitest customalgo_t40): the AE callback result reaches the sensor: a request of 1/6 of the running exposure time (1919 -> 319 lines) read back as 319 lines in the ISP state and dropped the picture luma 88 -> 36 (0.4x); a 4x analog gain request (4095 in the ISP state) raised it to 133; the starting exposure requested again gave 85; after DisableSensor the normal AE came back (1800 lines, same gain and luma 120 as before). | T41: needs a user-space callback thread fed by the ISP module (ioctl 0xc004541d); the open T41 module runs its own AE and has no such event path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) T41 (#76, 2026-11-02, T41 test camera .34, runtime swap of the open-tx-isp module, apitest customalgo_t41): same libimp protocol as T40 (the vendor T41 libimp 1.2.5/1.2.6 uses the same ioctls 0xc004541b..e), served by the stock T41 dispatcher commands and by the open module since #76 (translated tisp_ae_algo_init/handle/deinit, library woken by the vendor-AE statistics event, one channel). Reached: open 1 of 1, handle ~205 calls with statistics, notify 2 after SetSensorFPS, close 1 of 1. Verified effect: the library's integration time 56 -> 9 lines read back as 9 in the ISP state and the picture luma dropped 65.4 -> 26.4 (0.4x), 8x analog gain at 9 lines gave 8192 in the ISP state and luma 73.5, the base exposure again gave luma 66.3; after DisableSensor the internal AE controlled again on the same module instance. Needs an open-tx-isp T41 module with the #76 path (older modules answer ENOTTY: the record is registered, the open fails with a message).  T23 2026-11-04: stays aud. The call replaces the ISP 3A algorithm with a user callback set and needs a custom algorithm library (apitest category own-topology); the T23 camera pass has none and the callback protocol is only ported on T40/T41. | T23/T31 (#401, 2026-11-12): the vendor libimp T23 1.3.0 / T31 1.1.6 flow (Ghidra headless; identical on both): the record stays pending until EnableSensor, AE open ioctl 0x800456dd {0x336ac, 0, IMPISPAeInitAttr} + open(priv, init), AWB open 0xc00456e3 (no argument) + open(priv), workers get 0x800456db / 0xc00456e1 -> handle -> set 0x800456dc / 0xc00456e2 (us -> lines with the sensor words of the info), close 0x800456de / 0xc00456e4 at DisableSensor, notify(FPS_CHANGE) after SetSensorFPS. Differences (documented in isp_tseries.c): NULL refused, the AE open gets priv_data (vendor: the address of its copy), a 0 divisor leaves the time (vendor SIGFPE). Needs open-tx-isp claude/customalgo-t23-t31 (T31: AE apply + AWB ioctls, T23: all ioctls; T23 get-handle waits for the next AE/AWB run, the stock T23 module answers at once without data).",
+      "note": "T40: vendor protocol ported (SetAe/AwbAlgoFunc keep the callback record, EnableSensor registers it with ioctl 0xc004541d / 0xc0045425 and starts the worker, workers ioctl 0xc004541b/c and 0xc0045423/4, DisableSensor closes with 0xc004541e / 0xc0045426, SetSensorFPS notifies the AE library). On by default, OPENIMP_ISP_ALGO_FUNC=0 switches it off (-1 / ENOTSUP). Device-verified effect (#65, T40 test camera, apitest customalgo_t40): the AE callback result reaches the sensor: a request of 1/6 of the running exposure time (1919 -> 319 lines) read back as 319 lines in the ISP state and dropped the picture luma 88 -> 36 (0.4x); a 4x analog gain request (4095 in the ISP state) raised it to 133; the starting exposure requested again gave 85; after DisableSensor the normal AE came back (1800 lines, same gain and luma 120 as before). | T41: needs a user-space callback thread fed by the ISP module (ioctl 0xc004541d); the open T41 module runs its own AE and has no such event path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) T41 (#76, 2026-11-02, T41 test camera .34, runtime swap of the open-tx-isp module, apitest customalgo_t41): same libimp protocol as T40 (the vendor T41 libimp 1.2.5/1.2.6 uses the same ioctls 0xc004541b..e), served by the stock T41 dispatcher commands and by the open module since #76 (translated tisp_ae_algo_init/handle/deinit, library woken by the vendor-AE statistics event, one channel). Reached: open 1 of 1, handle ~205 calls with statistics, notify 2 after SetSensorFPS, close 1 of 1. Verified effect: the library's integration time 56 -> 9 lines read back as 9 in the ISP state and the picture luma dropped 65.4 -> 26.4 (0.4x), 8x analog gain at 9 lines gave 8192 in the ISP state and luma 73.5, the base exposure again gave luma 66.3; after DisableSensor the internal AE controlled again on the same module instance. Needs an open-tx-isp T41 module with the #76 path (older modules answer ENOTTY: the record is registered, the open fails with a message).  T23 2026-11-04: stays aud. The call replaces the ISP 3A algorithm with a user callback set and needs a custom algorithm library (apitest category own-topology); the T23 camera pass has none and the callback protocol is only ported on T40/T41. | T23/T31 (#401, 2026-11-12): the vendor libimp T23 1.3.0 / T31 1.1.6 flow (Ghidra headless; identical on both): the record stays pending until EnableSensor, AE open ioctl 0x800456dd {0x336ac, 0, IMPISPAeInitAttr} + open(priv, init), AWB open 0xc00456e3 (no argument) + open(priv), workers get 0x800456db / 0xc00456e1 -> handle -> set 0x800456dc / 0xc00456e2 (us -> lines with the sensor words of the info), close 0x800456de / 0xc00456e4 at DisableSensor, notify(FPS_CHANGE) after SetSensorFPS. Differences (documented in isp_tseries.c): NULL refused, the AE open gets priv_data (vendor: the address of its copy), a 0 divisor leaves the time (vendor SIGFPE). Needs open-tx-isp claude/customalgo-t23-t31 (T31: AE apply + AWB ioctls, T23: all ioctls; T23 get-handle waits for the next AE/AWB run, the stock T23 module answers at once without data). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T41": "apitest customalgo_t41 on the T41 test camera 2026-11-03 (runtime swap of the open-tx-isp module, dead-man armed): AE and AWB effect PASS, 31 of 31 cases, AE/AWB open/close 1 of 1; kill -9 of the registering client (idle and with a worker thread in get): the next open answers 0, with the vendor-equal module EBUSY (extra beyond the vendor, #197); 100 close races, 6 of 6 reload cycles, 0 oopses. Earlier: QEMU T41 2026-10-31 case t41isp",
         "T40": "apitest customalgo_t40 on the T40 test camera 2026-11-02 (runtime swap of the open-tx-isp module, dead-man armed): customalgo_ae_effect_t40 and customalgo_awb_effect_t40 PASS (numbers in the note), open/close 1 of 1, handle ~190 calls each, 0 oops; regression with the module: apitest all areas PASS 398 / FAIL 0, t40dev 0 FAIL, 6 of 6 reload cycles, 0 oops",
         "T23": "apitest customalgo_t23 on the T23 Jooan (sc1a4t) 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, flashed module reloaded after, no reboot; out audit customalgo/out30-1050, out30-1054): OpenIMP libimp PASS 8/8: AE open 1, handle 15/s, FPS notify 3, close 1 of 1; AE effect: 372 -> 62 lines (GetExpr 62), luma 75.7 -> 35.3, 6x gain -> 71.6, base -> 70.8; AWB effect: r x2 / b /2 -> V 154 -> 187, r /2 / b x2 -> U 155 -> 202, back -> same. Vendor 1.3.0 libimp on the same module: same calls and the same effects (31 lines -> luma 61 -> 25, gain -> 59; V 154 -> 187, U 156 -> 200; its FAIL verdicts come from the frame-flow probe, which does not run with the vendor library). No vendor sc1a4t module: the stock-module side is from the disassembly (no get-handle handler there: the library gets no statistics, info 0 on both libraries here too); 0 oops",
-        "T31": "apitest customalgo_t31 on the T31L test camera 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, planned reboot after; out audit customalgo/out26-1036): OpenIMP libimp and vendor 1.1.6 libimp on the open module both PASS; AE open 1, handle 15/s (frame-paced), FPS notify 3, close 1 of 1; AE effect: requested 359 -> 59 lines read back by GetExpr (59), luma 61.5 -> 15.2, 6x gain at 59 lines -> 59.0, base again -> 55.7; AWB effect: r x2 / b /2 -> V 134 -> 158, r /2 / b x2 -> U 114 -> 139, back -> same; full vendor stack (vendor module + 1.1.6, out26-1029) same protocol and AE/AWB effect PASS; 0 oops"
+        "T31": "apitest customalgo_t31 on the T31L test camera 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, planned reboot after; out audit customalgo/out26-1036): OpenIMP libimp and vendor 1.1.6 libimp on the open module both PASS; AE open 1, handle 15/s (frame-paced), FPS notify 3, close 1 of 1; AE effect: requested 359 -> 59 lines read back by GetExpr (59), luma 61.5 -> 15.2, 6x gain at 59 lines -> 59.0, base again -> 55.7; AWB effect: r x2 / b /2 -> V 134 -> 158, r /2 / b x2 -> U 114 -> 139, back -> same; full vendor stack (vendor module + 1.1.6, out26-1029) same protocol and AE/AWB effect PASS; 0 oops",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
       "better": [
         "T41"
@@ -4871,17 +4883,18 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T40: vendor protocol ported (SetAe/AwbAlgoFunc keep the callback record, EnableSensor registers it with ioctl 0xc004541d / 0xc0045425 and starts the worker, workers ioctl 0xc004541b/c and 0xc0045423/4, DisableSensor closes with 0xc004541e / 0xc0045426, SetSensorFPS notifies the AE library). On by default, OPENIMP_ISP_ALGO_FUNC=0 switches it off (-1 / ENOTSUP). Device-verified effect (#65, T40 test camera, apitest customalgo_t40): the AWB callback result changes the white balance: r x2 / b x0.5 moved the picture chroma (Cb/Cr) from 172/171 to 112/197, r x0.5 / b x2 to 214/141, the start gains again gave 161/159, and the gains the ISP reported followed each request exactly; DisableSensor gave the automatic white balance back (manual gains 0). | T41: needs a user-space callback thread fed by the ISP module (ioctl the AWB twin of 0xc004541d); the open T41 module runs its own AWB and has no such event path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) T41 (#195, an extra beyond the vendor; vendor is a no-op): the stock T41 module has no AWB library ioctl (0xc0045423..26 are not in its dispatcher), so with the vendor stack the call registers the record, the open at EnableSensor fails and the library is never called. OpenIMP serves the custom algorithm: same libimp protocol as T40, the open-tx-isp T41 module answers the four ioctls (statistics of the native AWB, library woken once per processed AWB frame, results take the white balance as manual hardware gains in 0x200..0x1800 with 1024 = 1.0, the close, a killed client and DisableSensor give the application's white balance back; locking as the T40 H1 fix). Device (T41 test camera, runtime swap of the open-tx-isp module, apitest customalgo_t41): open 1 of 1, handle ~146 calls in the case (821 up to the close), close 1 of 1; effect with the final module: start gains r 1448 b 2348 chroma U/V 124/123, r x2 / b x0.5 gave U/V 118/130, r x0.5 / b x2 gave 133/118, the start gains again gave 124/123 (an earlier run: 136/136 -> 119/158 -> 163/119 -> 136/136), the gains the ISP reported followed every request; awbrace client on /dev/tx-isp: argument errors, get/set/close without a library, double open (EBUSY), 100 close races with 3 waiting threads, a client killed with and without a thread in get (the release unregisters it, the white balance comes back), 50 open/get/close rounds, all ok; 6 of 6 reload cycles, 0 oopses. Host test with 11 detected mutations (open-tx-isp tests/t41_awb_algo_host.sh).  T23 2026-11-04: stays aud. The call replaces the ISP 3A algorithm with a user callback set and needs a custom algorithm library (apitest category own-topology); the T23 camera pass has none and the callback protocol is only ported on T40/T41. | T23/T31 (#401, 2026-11-12): the vendor libimp T23 1.3.0 / T31 1.1.6 flow (Ghidra headless; identical on both): the record stays pending until EnableSensor, AE open ioctl 0x800456dd {0x336ac, 0, IMPISPAeInitAttr} + open(priv, init), AWB open 0xc00456e3 (no argument) + open(priv), workers get 0x800456db / 0xc00456e1 -> handle -> set 0x800456dc / 0xc00456e2 (us -> lines with the sensor words of the info), close 0x800456de / 0xc00456e4 at DisableSensor, notify(FPS_CHANGE) after SetSensorFPS. Differences (documented in isp_tseries.c): NULL refused, the AE open gets priv_data (vendor: the address of its copy), a 0 divisor leaves the time (vendor SIGFPE). Needs open-tx-isp claude/customalgo-t23-t31 (T31: AE apply + AWB ioctls, T23: all ioctls; T23 get-handle waits for the next AE/AWB run, the stock T23 module answers at once without data).",
+      "note": "T40: vendor protocol ported (SetAe/AwbAlgoFunc keep the callback record, EnableSensor registers it with ioctl 0xc004541d / 0xc0045425 and starts the worker, workers ioctl 0xc004541b/c and 0xc0045423/4, DisableSensor closes with 0xc004541e / 0xc0045426, SetSensorFPS notifies the AE library). On by default, OPENIMP_ISP_ALGO_FUNC=0 switches it off (-1 / ENOTSUP). Device-verified effect (#65, T40 test camera, apitest customalgo_t40): the AWB callback result changes the white balance: r x2 / b x0.5 moved the picture chroma (Cb/Cr) from 172/171 to 112/197, r x0.5 / b x2 to 214/141, the start gains again gave 161/159, and the gains the ISP reported followed each request exactly; DisableSensor gave the automatic white balance back (manual gains 0). | T41: needs a user-space callback thread fed by the ISP module (ioctl the AWB twin of 0xc004541d); the open T41 module runs its own AWB and has no such event path; OpenIMP exports the call as -1/ENOTSUP (apitest case t41isp PASS in QEMU T41) T41 (#195, an extra beyond the vendor; vendor is a no-op): the stock T41 module has no AWB library ioctl (0xc0045423..26 are not in its dispatcher), so with the vendor stack the call registers the record, the open at EnableSensor fails and the library is never called. OpenIMP serves the custom algorithm: same libimp protocol as T40, the open-tx-isp T41 module answers the four ioctls (statistics of the native AWB, library woken once per processed AWB frame, results take the white balance as manual hardware gains in 0x200..0x1800 with 1024 = 1.0, the close, a killed client and DisableSensor give the application's white balance back; locking as the T40 H1 fix). Device (T41 test camera, runtime swap of the open-tx-isp module, apitest customalgo_t41): open 1 of 1, handle ~146 calls in the case (821 up to the close), close 1 of 1; effect with the final module: start gains r 1448 b 2348 chroma U/V 124/123, r x2 / b x0.5 gave U/V 118/130, r x0.5 / b x2 gave 133/118, the start gains again gave 124/123 (an earlier run: 136/136 -> 119/158 -> 163/119 -> 136/136), the gains the ISP reported followed every request; awbrace client on /dev/tx-isp: argument errors, get/set/close without a library, double open (EBUSY), 100 close races with 3 waiting threads, a client killed with and without a thread in get (the release unregisters it, the white balance comes back), 50 open/get/close rounds, all ok; 6 of 6 reload cycles, 0 oopses. Host test with 11 detected mutations (open-tx-isp tests/t41_awb_algo_host.sh).  T23 2026-11-04: stays aud. The call replaces the ISP 3A algorithm with a user callback set and needs a custom algorithm library (apitest category own-topology); the T23 camera pass has none and the callback protocol is only ported on T40/T41. | T23/T31 (#401, 2026-11-12): the vendor libimp T23 1.3.0 / T31 1.1.6 flow (Ghidra headless; identical on both): the record stays pending until EnableSensor, AE open ioctl 0x800456dd {0x336ac, 0, IMPISPAeInitAttr} + open(priv, init), AWB open 0xc00456e3 (no argument) + open(priv), workers get 0x800456db / 0xc00456e1 -> handle -> set 0x800456dc / 0xc00456e2 (us -> lines with the sensor words of the info), close 0x800456de / 0xc00456e4 at DisableSensor, notify(FPS_CHANGE) after SetSensorFPS. Differences (documented in isp_tseries.c): NULL refused, the AE open gets priv_data (vendor: the address of its copy), a 0 divisor leaves the time (vendor SIGFPE). Needs open-tx-isp claude/customalgo-t23-t31 (T31: AE apply + AWB ioctls, T23: all ioctls; T23 get-handle waits for the next AE/AWB run, the stock T23 module answers at once without data). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T41": "apitest customalgo_t41 on the T41 test camera 2026-11-02 (runtime swap of the open-tx-isp module, dead-man armed): customalgo_awb_effect_t41 PASS, AWB open/close 1 of 1, 6 of 6 reload cycles, awbrace race client all ok, 0 oopses (#195)",
         "T40": "apitest customalgo_t40 on the T40 test camera 2026-11-02 (runtime swap of the open-tx-isp module, dead-man armed): customalgo_ae_effect_t40 and customalgo_awb_effect_t40 PASS (numbers in the note), open/close 1 of 1, handle ~190 calls each, 0 oops; regression with the module: apitest all areas PASS 398 / FAIL 0, t40dev 0 FAIL, 6 of 6 reload cycles, 0 oops",
         "T23": "apitest customalgo_t23 on the T23 Jooan (sc1a4t) 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, flashed module reloaded after, no reboot; out audit customalgo/out30-1050, out30-1054): OpenIMP libimp PASS 8/8: AE open 1, handle 15/s, FPS notify 3, close 1 of 1; AE effect: 372 -> 62 lines (GetExpr 62), luma 75.7 -> 35.3, 6x gain -> 71.6, base -> 70.8; AWB effect: r x2 / b /2 -> V 154 -> 187, r /2 / b x2 -> U 155 -> 202, back -> same. Vendor 1.3.0 libimp on the same module: same calls and the same effects (31 lines -> luma 61 -> 25, gain -> 59; V 154 -> 187, U 156 -> 200; its FAIL verdicts come from the frame-flow probe, which does not run with the vendor library). No vendor sc1a4t module: the stock-module side is from the disassembly (no get-handle handler there: the library gets no statistics, info 0 on both libraries here too); 0 oops",
-        "T31": "apitest customalgo_t31 on the T31L test camera 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, planned reboot after; out audit customalgo/out26-1036): OpenIMP libimp and vendor 1.1.6 libimp on the open module both PASS; AE open 1, handle 15/s (frame-paced), FPS notify 3, close 1 of 1; AE effect: requested 359 -> 59 lines read back by GetExpr (59), luma 61.5 -> 15.2, 6x gain at 59 lines -> 59.0, base again -> 55.7; AWB effect: r x2 / b /2 -> V 134 -> 158, r /2 / b x2 -> U 114 -> 139, back -> same; full vendor stack (vendor module + 1.1.6, out26-1029) same protocol and AE/AWB effect PASS; 0 oops"
+        "T31": "apitest customalgo_t31 on the T31L test camera 2026-11-12 (runtime swap of the open-tx-isp module claude/customalgo-t23-t31, planned reboot after; out audit customalgo/out26-1036): OpenIMP libimp and vendor 1.1.6 libimp on the open module both PASS; AE open 1, handle 15/s (frame-paced), FPS notify 3, close 1 of 1; AE effect: requested 359 -> 59 lines read back by GetExpr (59), luma 61.5 -> 15.2, 6x gain at 59 lines -> 59.0, base again -> 55.7; AWB effect: r x2 / b /2 -> V 134 -> 158, r /2 / b x2 -> U 114 -> 139, back -> same; full vendor stack (vendor module + 1.1.6, out26-1029) same protocol and AE/AWB effect PASS; 0 oops",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
       "better": [
         "T41"
@@ -5116,16 +5129,17 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "rt"
       },
       "ref": {
         "T41": "apitest issue-90 runtime swap 2026-10-27 .34 (open-tx-isp 42691882 + OpenIMP c34c0196): mode on/off with the calibration list reads back, frames flow, mode 7 refused",
         "T40": "apitest t40pass 2026-11-04 .184 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): Get and Set run with the new T40 variant of the apitest case aeexplist (QEMU first): the list read back after Set agrees within 3 % (the driver recomputes the ladder while the AE runs), list mode on and off keep the picture and the frame flow. The T40 driver (OEM code) stores any mode, so a mode 7 is not refused here (the T41 library refuses it). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): Get and Set run with the new T40 variant of the apitest case aeexplist (QEMU first): the list read back after Set agrees within 3 % (the driver recomputes the ladder while the AE runs), list mode on and off keep the picture and the frame flow. The T40 driver (OEM code) stores any mode, so a mode 7 is not refused here (the T41 library refuses it). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls."
     },
     "ISP_Tuning_Get/SetAeExprInfo": {
       "area": "AE / AWB / AF",
@@ -5137,14 +5151,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "rt"
       },
-      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, modes and limits equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, modes and limits equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_Get/SetAeHist": {
@@ -5484,15 +5499,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "rt"
       },
-      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_Get/SetAwbClust": {
@@ -5782,15 +5798,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "rt",
         "T41": "n.a."
       },
       "ref": {
         "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #138): GetFaceAwb returns the stored attribute (enable, window, target as set; no kernel pointers), SetFaceAwb round trip; no effect on AWB, like the vendor",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls."
     },
     "ISP_Tuning_Get/SetWB": {
       "area": "AE / AWB / AF",
@@ -6662,7 +6679,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -6678,7 +6695,8 @@
         "T20": "apitest dec-t1x 2026-11-01 .107 (library from /tmp, streamer restarted, stock module md5 unchanged): 8/8 PASS (32 PASS / 0 FAIL; QEMU T20 first: 8/8, frames flow); JPEG snapshot of the same camera (1920x1080) decoded to NV12 in 2.0 s against a host decode of the same file: Y PSNR 69.5 dB, SSIM 0.9999, max difference 1 level, chroma PSNR 60.7 dB",
         "T21": "apitest dec-t1x 2026-11-01 .24 (library from /tmp, streamer restarted, stock module md5 unchanged): 8/8 PASS (32 PASS / 0 FAIL; QEMU T21 first: 8/8, frames flow); JPEG snapshot of the same camera (1920x1080) decoded to NV12 in 2.0 s against a host decode of the same file: Y PSNR 69.0 dB, SSIM 0.9999, max difference 1 level, chroma PSNR 62.5 dB",
         "T23": "apitest t23pass 2026-11-04 .30 (case decoder_t23, 8/8 PASS; software decode, small known test picture, no host-decode comparison on this SoC yet)",
-        "T30": "apitest decoder_t2x 2026-11-12 QEMU T30 (OpenIMP claude/t30-gaps, open tx-isp-t30 of claude/t30-283b, sc4236 model): 8/8 PASS: a 32x24 baseline JPEG decoded into NV12 on channel 0 (Y 208/70, Cb/Cr 33/143 as the known picture), H.264, BGRA and channel 1 refused, data before CreateChn, junk and a picture above maxWidth -1, second destroy -1, frames flow | user decision 2026-11-12 (C2): rated dev+ (better than the vendor): OpenIMP passes on the T30X where vendor libimp 1.0.5 crashes or fails; observed vendor crash documented in OPENIMP_BEYOND_VENDOR.md, no behaviour change"
+        "T30": "apitest decoder_t2x 2026-11-12 QEMU T30 (OpenIMP claude/t30-gaps, open tx-isp-t30 of claude/t30-283b, sc4236 model): 8/8 PASS: a 32x24 baseline JPEG decoded into NV12 on channel 0 (Y 208/70, Cb/Cr 33/143 as the known picture), H.264, BGRA and channel 1 refused, data before CreateChn, junk and a picture above maxWidth -1, second destroy -1, frames flow | user decision 2026-11-12 (C2): rated dev+ (better than the vendor): OpenIMP passes on the T30X where vendor libimp 1.0.5 crashes or fails; observed vendor crash documented in OPENIMP_BEYOND_VENDOR.md, no behaviour change",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "better": [
         "T30"
@@ -7346,18 +7364,19 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test",
+      "note": "T23: stored in the channel attribute (claude/t23-enc-rest, not in agg-25); T10/T20/T21: three words stored/read as the vendor (also before CreateChn; NULL and channel >= limit -1), apitest PASS on T10, T20, T21; as on T23 the frame reuse/skip of the OEM channel thread is not reproduced, OpenIMP paces every channel at its frame rate; T30 1.0.5: the three words are stored as given, also before CreateChn (same vendor code as T21); host test T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
-        "T30": "apitest T30X lab 2026-11-03 .231"
+        "T30": "apitest T30X lab 2026-11-03 .231",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "Encoder_Get/SetChnGopAttr": {
@@ -7570,12 +7589,12 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "dev",
         "T41": "n.a."
       },
-      "note": "T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T40 (vendor 1.3.1 disassembly, 0x6bd4c Set / 0x6be44 Get, 2026-10-31): channels 0..12, the flag is stored at +872 of the channel record only while the record is not created (-1 afterwards), the getter returns 0/1; the only reader is channel_encoder_init (0x66900), which hands it to the closed encoder code. OpenIMP behaves the same (host and apitest case), the flag has no consumer in the Helix/AVPU path (stays cache, class d). The vendor getter does not check a NULL pointer; OpenIMP returns -1 instead of faulting. | T41: not in the T41 1.2.5 libimp, not in the T41 1.2.6 library (ext/vlib41) and not in the T41 name list of the vendor builds; OpenIMP does not export it on T41 T21 2026-11-02: the vendor copies the flag into the i264e parameters at CreateChn (channel +0x1ac, settable only before CreateChn); no consumer in the i264e rate-control or reference code was found, so the stored value is all that was identified. | T10/T20 3.12.0 (2026-11-02): not a stored value. CreateChn hands the flag to the encoder as i264e parameter 0x72 and its only reader is i264e_icodec_enc (0x4d740): with the flag the ROI table of every coding try is cleared (an application ROI is lost) and on I slices and at whole seconds of the frame rate (counter * fps_den % fps_num == 0) region 0 is set to the top-left 64x32 pixels at absolute QP min(slice QP, 15). OpenIMP's T10/T20 build does the same (src/fisheye, docs/T20_FISHEYE.md). Proof: unicorn oracle of i264e_icodec_enc (3815 cases, 0 differences), host test of the command list (region 0 programmed on IDR and whole-second pictures only), QEMU T10 and T20, cameras with the vendor library and OpenIMP on the same camera: the pictures that carry a macroblock at QP 15 or better are the same (IDR and every whole second; FixQP 30, FixQP 40, with an application ROI set, which the flag removes), and the region macroblocks' QPs are equal per picture (T10 100/100 in all three, T20 100/100 with the ROI and at QP 40, 99/100 at QP 30; the long T20 runs of 225 pictures: 14 of 15 whole-second pictures in OpenIMP, 15 of 15 in the vendor); streams decode clean (ffmpeg strict) with a real picture, equal to the vendor's statistics. Differences: OpenIMP keeps the H.264 limit of 25 between neighbouring macroblock QPs (an IDR at slice QP 45 gets its region at QP 20, the vendor writes QP 15, a step that ffmpeg hides); T20 CBR: the vendor's macroblock rate control limits the region to the picture QP - 12, OpenIMP's default CBR has no macroblock table, so the region reaches 15; a region whose macroblocks are all skipped shows no QP in the stream (the missing 1 of 15). T21 2026-11-02 (docs/T21_FISHEYE.md): the vendor i264e_icodec_enc (1.0.33, gcc 4.7.2 and 5.4.0) builds the same table as on T10/T20 (oracle: byte-identical vectors), but the T21 hardware path never reads it; cameras: vendor library with the flag set shows no region at QP 15 and no ROI effect, OpenIMP T21 now drops the application ROI table with the flag and codes no region, like the vendor; channel numbers of 6 and above are -1. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays cache: Set answers -1 on a created channel as the stock library does (apitest PASS); the flag is kept for the getter only, see the note above. | Re-check 2026-11-12 (vendor libimp T23 1.3.0, T31 1.1.6, T40 1.3.1, Ghidra decompile of the whole library): T23 is not a stored value: CreateChn copies the channel flag (record +0x1dc) into i264e parameter +0x1d4, and the T23 i264e_icodec_enc (0x42a2c) is the T10/T20 function: tools/fisheye_oracle.py on the T23 library gives the 3815 T10/T20 vectors byte for byte; unlike T21 the T23 hardware programs that table (hwicodec_pf_h264e_t21_enc copies it to slice +752, docs/ROI.md). OpenIMP T23 (native Helix backend) now does the same: CreateChn hands the flag to the encoder, every picture drops the application ROI and IDR and whole-second pictures code region 0 (top-left 64x32 pixels) at QP min(slice QP, 15), clamped like the T20 build to the H.264 limit of 25 between macroblock QPs (tests/t23 helix_stream_test fisheye_test, tests/fisheye with the T23 vectors). Device proof 2026-11-12 on the T23 camera (see ref): region pictures and the dropped application ROI as the vendor rule, region QP held at slice QP - 12 by the slice QP floor. T31 1.1.6 and T40 1.3.1: also not a stored value, and not a fisheye path at all: channel_encoder_init copies the flag into the codec parameters (T31 +0xec, T40 +0xf0), AL_Common_Encoder_CreateChannel then runs watermark_init (T31 settings +0xe8, T40 +0xec) and encode1 embeds a DCT-domain watermark (embed_watermark) into the luma of every I picture and programs a fixed QP (33) for its blocks in the encoder parameter buffer. OpenIMP T31/T40 do not have this yet (the cells stay cache: OpenIMP stores the flag); follow-up in the cache-cells issue. T30 2026-11-12 (#308): stays cache. Vendor 1.0.5 Set 0xc0578 / Get 0xc0680: channel < 6, settable only before CreateChn (record +0x18c), CreateChn passes it to i264e, whose i264e_icodec_enc reads parameter 0x72 (the per-picture ROI of T10/T20). Whether the T30 hardware path reads that table is not known: the T30 command-list ROI registers are not known (SetChnROI refuses an enabled region), so the effect cannot be built yet. | Matrix warning round 2026-11-12 (#357): T30, T31 and T40 stay cache, by decision, not by a gap in the analysis. On all three the flag is an invisible watermark, not a fisheye correction: T30 1.0.5 CreateChn hands it to i264e parameter 0x72, i264e_icodec_init passes it to hwicodec (+0x50), hwicodec_pf_h264e_t30_init runs watermark_init and hwicodec_pf_h264e_t30_enc runs embed_watermark on I pictures (the H.265 path likewise); T31/T40 see above (AL_Common_Encoder_CreateChannel, encode1). embed_watermark rewrites the top-left 64x16 luma pixels of the source picture (16 8x8 blocks: DCT, two coefficients per block set from a fixed 32-value mark, inverse DCT; a block with DC below 80 is replaced by a fixed block), and T31/T40 also force a relative QP table (entries 0..12 zero, the watermark macroblocks -31 on I pictures). A vendor-equal port has to reproduce the vendor's mark and its fixed block (vendor data, not behaviour), so it waits for the maintainer decision in #357; until then OpenIMP keeps the flag for the getter (API round trip as the vendor) and leaves the picture untouched. The T10/T20/T21/T23 libraries call embed_watermark from their hwicodec encoders as well (checked in the T20 3.12.0, T21 1.0.33 and T23 1.3.0 libraries; #397). | Watermark (#357, #397, 2026-11-12, branch claude/watermark): in every vendor library with the call (T10/T20 3.12.0, T21 1.0.33, T23 1.3.0, T30 1.0.5 H.264 and H.265, T31 1.1.6, T40 1.3.1; T41 has neither the call nor the routine) the flag is also an invisible luma watermark: watermark_init at channel creation, embed_watermark(ctx, source luma, mb_width*16 / ALIGN16(width), mb_height*16 / ALIGN16(height)) on every I picture, rewriting the top-left 64x16 pixels of the source frame (8x8 DCT, ranks 31..33 levelled, coefficients 33 and 12 carry a fixed 32-value mark, dark blocks replaced by a fixed block). OpenIMP src/watermark is a hand-written port used by the Helix H.264 path (T10/T20/T21/T23/T30), the T30 Radix H.265 path and the T31/T40 AVPU path. Byte-exact: tools/watermark_oracle.py (vendor routine under unicorn, all 8 vendor builds identical in the unfused model) = tests/watermark; on the camera CPUs tools/watermark_devcheck.c (vendor routine dlopen'ed next to ours, 4000 random planes each, 0 mismatches) on T20 .107, T21 .27, T23 .30, T31 .26, T40 .184. The gcc 4.7.2 (T10/T20/T21/T30) and 7.2 (T40) vendor builds use madd.s, which the Ingenic FPU rounds once (fused): measured on T20, OpenIMP uses madd.s there (WATERMARK_FUSED_MADD). QP entries (#402, 2026-11-12): the T31/T40 vendor also clears QP table entries 0..12 on every picture and sets entries 0..3 (H.264) or 0..4 and 8..12 (H.265 CTB layout) of a marked I picture to relative -31; OpenIMP does the same by default (OPENIMP_WM_PARTS). The -31 blocks raise the hardware LCU overflow warning (status +0x104 bit 31, size in bits 29:0, vendor EntropyStatusRegsToSliceStatus); OpenIMP used the unmasked word and dropped the IDR, now it masks it and warns like the vendor. T31 .26 (FixQP 30, vendor 1.1.6 and OpenIMP back to back): first IDR macroblock QPs equal (row 0: 3 2 1 0 27 27 27 27, row 1: 33 33 29 30 29 27 27 27), every IDR codes and decodes; H.265 (CBR) codes and decodes, QPs not read (no H.265 QP reader). T40 .184 (OpenIMP only): IDR row 0 = 0 0 0 0, H.264 and H.265 decode.",
+      "note": "T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T23+T31: kept for getter only (documented in source); class d: the flag only has an effect in the vendor's closed fisheye/i264e path, which OpenIMP does not contain (T31: closed IVS fisheye module; T23: i264e creation option of the OEM session); T10/T20/T21: a flag in the channel record, settable only on an idle channel (-1 once created), exactly as the vendor (disassembly T21 0x45454, T20 0x4776c); apitest PASS on T10, T20, T21; class d like T23/T31; T30 1.0.5: flag kept, settable before CreateChn only, as T21 (the closed fisheye motion search of the vendor encoder is not in the Helix path); host test; vendor check 2026-10-10 (libimp T23 1.3.0 and T31 1.1.6 disassembly): T31 1.1.6 sets the flag in the channel record only while the channel does not exist (channel below 9, else -1), as OpenIMP does; T23 1.3.0 likewise; the flag is read later by the closed encoder code T40 (vendor 1.3.1 disassembly, 0x6bd4c Set / 0x6be44 Get, 2026-10-31): channels 0..12, the flag is stored at +872 of the channel record only while the record is not created (-1 afterwards), the getter returns 0/1; the only reader is channel_encoder_init (0x66900), which hands it to the closed encoder code. OpenIMP behaves the same (host and apitest case), the flag has no consumer in the Helix/AVPU path (stays cache, class d). The vendor getter does not check a NULL pointer; OpenIMP returns -1 instead of faulting. | T41: not in the T41 1.2.5 libimp, not in the T41 1.2.6 library (ext/vlib41) and not in the T41 name list of the vendor builds; OpenIMP does not export it on T41 T21 2026-11-02: the vendor copies the flag into the i264e parameters at CreateChn (channel +0x1ac, settable only before CreateChn); no consumer in the i264e rate-control or reference code was found, so the stored value is all that was identified. | T10/T20 3.12.0 (2026-11-02): not a stored value. CreateChn hands the flag to the encoder as i264e parameter 0x72 and its only reader is i264e_icodec_enc (0x4d740): with the flag the ROI table of every coding try is cleared (an application ROI is lost) and on I slices and at whole seconds of the frame rate (counter * fps_den % fps_num == 0) region 0 is set to the top-left 64x32 pixels at absolute QP min(slice QP, 15). OpenIMP's T10/T20 build does the same (src/fisheye, docs/T20_FISHEYE.md). Proof: unicorn oracle of i264e_icodec_enc (3815 cases, 0 differences), host test of the command list (region 0 programmed on IDR and whole-second pictures only), QEMU T10 and T20, cameras with the vendor library and OpenIMP on the same camera: the pictures that carry a macroblock at QP 15 or better are the same (IDR and every whole second; FixQP 30, FixQP 40, with an application ROI set, which the flag removes), and the region macroblocks' QPs are equal per picture (T10 100/100 in all three, T20 100/100 with the ROI and at QP 40, 99/100 at QP 30; the long T20 runs of 225 pictures: 14 of 15 whole-second pictures in OpenIMP, 15 of 15 in the vendor); streams decode clean (ffmpeg strict) with a real picture, equal to the vendor's statistics. Differences: OpenIMP keeps the H.264 limit of 25 between neighbouring macroblock QPs (an IDR at slice QP 45 gets its region at QP 20, the vendor writes QP 15, a step that ffmpeg hides); T20 CBR: the vendor's macroblock rate control limits the region to the picture QP - 12, OpenIMP's default CBR has no macroblock table, so the region reaches 15; a region whose macroblocks are all skipped shows no QP in the stream (the missing 1 of 15). T21 2026-11-02 (docs/T21_FISHEYE.md): the vendor i264e_icodec_enc (1.0.33, gcc 4.7.2 and 5.4.0) builds the same table as on T10/T20 (oracle: byte-identical vectors), but the T21 hardware path never reads it; cameras: vendor library with the flag set shows no region at QP 15 and no ROI effect, OpenIMP T21 now drops the application ROI table with the flag and codes no region, like the vendor; channel numbers of 6 and above are -1. T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): stays cache: Set answers -1 on a created channel as the stock library does (apitest PASS); the flag is kept for the getter only, see the note above. | Re-check 2026-11-12 (vendor libimp T23 1.3.0, T31 1.1.6, T40 1.3.1, Ghidra decompile of the whole library): T23 is not a stored value: CreateChn copies the channel flag (record +0x1dc) into i264e parameter +0x1d4, and the T23 i264e_icodec_enc (0x42a2c) is the T10/T20 function: tools/fisheye_oracle.py on the T23 library gives the 3815 T10/T20 vectors byte for byte; unlike T21 the T23 hardware programs that table (hwicodec_pf_h264e_t21_enc copies it to slice +752, docs/ROI.md). OpenIMP T23 (native Helix backend) now does the same: CreateChn hands the flag to the encoder, every picture drops the application ROI and IDR and whole-second pictures code region 0 (top-left 64x32 pixels) at QP min(slice QP, 15), clamped like the T20 build to the H.264 limit of 25 between macroblock QPs (tests/t23 helix_stream_test fisheye_test, tests/fisheye with the T23 vectors). Device proof 2026-11-12 on the T23 camera (see ref): region pictures and the dropped application ROI as the vendor rule, region QP held at slice QP - 12 by the slice QP floor. T31 1.1.6 and T40 1.3.1: also not a stored value, and not a fisheye path at all: channel_encoder_init copies the flag into the codec parameters (T31 +0xec, T40 +0xf0), AL_Common_Encoder_CreateChannel then runs watermark_init (T31 settings +0xe8, T40 +0xec) and encode1 embeds a DCT-domain watermark (embed_watermark) into the luma of every I picture and programs a fixed QP (33) for its blocks in the encoder parameter buffer. OpenIMP T31/T40 do not have this yet (the cells stay cache: OpenIMP stores the flag); follow-up in the cache-cells issue. T30 2026-11-12 (#308): stays cache. Vendor 1.0.5 Set 0xc0578 / Get 0xc0680: channel < 6, settable only before CreateChn (record +0x18c), CreateChn passes it to i264e, whose i264e_icodec_enc reads parameter 0x72 (the per-picture ROI of T10/T20). Whether the T30 hardware path reads that table is not known: the T30 command-list ROI registers are not known (SetChnROI refuses an enabled region), so the effect cannot be built yet. | Matrix warning round 2026-11-12 (#357): T30, T31 and T40 stay cache, by decision, not by a gap in the analysis. On all three the flag is an invisible watermark, not a fisheye correction: T30 1.0.5 CreateChn hands it to i264e parameter 0x72, i264e_icodec_init passes it to hwicodec (+0x50), hwicodec_pf_h264e_t30_init runs watermark_init and hwicodec_pf_h264e_t30_enc runs embed_watermark on I pictures (the H.265 path likewise); T31/T40 see above (AL_Common_Encoder_CreateChannel, encode1). embed_watermark rewrites the top-left 64x16 luma pixels of the source picture (16 8x8 blocks: DCT, two coefficients per block set from a fixed 32-value mark, inverse DCT; a block with DC below 80 is replaced by a fixed block), and T31/T40 also force a relative QP table (entries 0..12 zero, the watermark macroblocks -31 on I pictures). A vendor-equal port has to reproduce the vendor's mark and its fixed block (vendor data, not behaviour), so it waits for the maintainer decision in #357; until then OpenIMP keeps the flag for the getter (API round trip as the vendor) and leaves the picture untouched. The T10/T20/T21/T23 libraries call embed_watermark from their hwicodec encoders as well (checked in the T20 3.12.0, T21 1.0.33 and T23 1.3.0 libraries; #397). | Watermark (#357, #397, 2026-11-12, branch claude/watermark): in every vendor library with the call (T10/T20 3.12.0, T21 1.0.33, T23 1.3.0, T30 1.0.5 H.264 and H.265, T31 1.1.6, T40 1.3.1; T41 has neither the call nor the routine) the flag is also an invisible luma watermark: watermark_init at channel creation, embed_watermark(ctx, source luma, mb_width*16 / ALIGN16(width), mb_height*16 / ALIGN16(height)) on every I picture, rewriting the top-left 64x16 pixels of the source frame (8x8 DCT, ranks 31..33 levelled, coefficients 33 and 12 carry a fixed 32-value mark, dark blocks replaced by a fixed block). OpenIMP src/watermark is a hand-written port used by the Helix H.264 path (T10/T20/T21/T23/T30), the T30 Radix H.265 path and the T31/T40 AVPU path. Byte-exact: tools/watermark_oracle.py (vendor routine under unicorn, all 8 vendor builds identical in the unfused model) = tests/watermark; on the camera CPUs tools/watermark_devcheck.c (vendor routine dlopen'ed next to ours, 4000 random planes each, 0 mismatches) on T20 .107, T21 .27, T23 .30, T31 .26, T40 .184. The gcc 4.7.2 (T10/T20/T21/T30) and 7.2 (T40) vendor builds use madd.s, which the Ingenic FPU rounds once (fused): measured on T20, OpenIMP uses madd.s there (WATERMARK_FUSED_MADD). QP entries (#402, 2026-11-12): the T31/T40 vendor also clears QP table entries 0..12 on every picture and sets entries 0..3 (H.264) or 0..4 and 8..12 (H.265 CTB layout) of a marked I picture to relative -31; OpenIMP does the same by default (OPENIMP_WM_PARTS). The -31 blocks raise the hardware LCU overflow warning (status +0x104 bit 31, size in bits 29:0, vendor EntropyStatusRegsToSliceStatus); OpenIMP used the unmasked word and dropped the IDR, now it masks it and warns like the vendor. T31 .26 (FixQP 30, vendor 1.1.6 and OpenIMP back to back): first IDR macroblock QPs equal (row 0: 3 2 1 0 27 27 27 27, row 1: 33 33 29 30 29 27 27 27), every IDR codes and decodes; H.265 (CBR) codes and decodes, QPs not read (no H.265 QP reader). T40 .184 (OpenIMP only): IDR row 0 = 0 0 0 0, H.264 and H.265 decode. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T40": "2026-11-12 .184: devcheck 4000/4000 byte-exact on the camera CPU (vendor 1.3.1, fused madd.s); no stream run",
         "T10": "apitest case fisheye 2026-11-02 .31 (vendor library and OpenIMP on the same camera, 6 scenarios of 100 pictures; region QPs equal per picture in the FixQP and ROI scenarios, see note)",
@@ -7583,7 +7602,8 @@
         "T21": "apitest case fisheye 2026-11-02 .24 (vendor library 1.0.33 and OpenIMP on the same camera, 7 scenarios of 100 pictures: no region and no ROI effect with the flag in either library; the vendor T21 hardware path never reads the i264e table, see note); watermark: devcheck 4000/4000 byte-exact on .27 2026-11-12 (vendor 1.0.33 4.7.2, fused)",
         "T23": "apitest case fisheye 2026-11-12 T23 Jooan A6M (sc1a4t, open stack, OpenIMP native Helix libimp from /tmp), 640x360 FixQP 30, GOP 40, 15 fps, 100 pictures per scenario, macroblock QPs from the dump (tools/fisheye_mbqp.py): flag on: Set before CreateChn 0, after it -1, Get 1; the top-left 64x32 region is coded below the slice QP exactly on the IDR pictures (0, 40, 80) and the whole seconds (15, 30, 60, 75, 90; 45 = all region macroblocks skipped, so no QP in the stream), nowhere else; flag on + SetChnROI -6 over the picture: the application ROI is gone (every other macroblock at 30), the same region pictures (45 included); flag off: no region. The region QP is 18, not the table's 15: the T21-family slice QP floor (vendor h264_api_enc slice +810 = QP - 12, src/t21/t21_h264_descriptor.c) holds it, as in the vendor's own register programming (host vectors: tests/fisheye on the vendor T23 1.3.0 i264e_icodec_enc). The vendor libimp cannot run on the open ISP module, so the comparison is against the vendor rule, not a vendor run on the same camera; watermark: devcheck 4000/4000 byte-exact on .30 2026-11-12 (vendor 1.3.0)",
         "T31": "2026-11-12 .26: devcheck 4000/4000 byte-exact on the camera CPU (vendor 1.1.6 5.4.0 build); apitest case fisheye with OpenIMP: avpu_watermark runs on every IDR (trace: frame 0 and 5, 640x368 plane); the textured scene keeps the vendor detector below its threshold for both libraries (vendor 0.05..0.40, OpenIMP 0.04..0.35, flag off 0.06..0.29), see note",
-        "T30": "apitest enc T30X b62 2026-11-10 and b65 2026-11-11 (vendor 1.0.5 and OpenIMP): Set on a created channel -1 (stock refuses), idle channel set 1 -> get 1, set 0 -> get 0, identical on both; the flag is only stored (no effect: the closed fisheye motion search of the vendor encoder is not in the Helix path, class d); earlier host: tests/watermark"
+        "T30": "apitest enc T30X b62 2026-11-10 and b65 2026-11-11 (vendor 1.0.5 and OpenIMP): Set on a created channel -1 (stock refuses), idle channel set 1 -> get 1, set 0 -> get 0, identical on both; the flag is only stored (no effect: the closed fisheye motion search of the vendor encoder is not in the Helix path, class d); earlier host: tests/watermark",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "Encoder_Get/SetGDRCfg": {
@@ -9087,17 +9107,18 @@
         "T23": "n.a.",
         "T30": "dev",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run in QEMU. The vendor 1.0.5 (0xc44c8) accepts any value (non-zero = on) for channel < 6; ALIGNED: OpenIMP's T30 build now accepts any value (host test p2_gap_test_t30).",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run in QEMU. The vendor 1.0.5 (0xc44c8) accepts any value (non-zero = on) for channel < 6; ALIGNED: OpenIMP's T30 build now accepts any value (host test p2_gap_test_t30). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): on 0, off 0, value 5 0 (any non-zero = on), chn 99 -1: PASS on open and vendor, vendor-equal. Earlier: static audit + host test p2_gap_test_t30 2026-11-01 (OpenIMP claude/t30-audit)"
+        "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): on 0, off 0, value 5 0 (any non-zero = on), chn 99 -1: PASS on open and vendor, vendor-equal. Earlier: static audit + host test p2_gap_test_t30 2026-11-01 (OpenIMP claude/t30-audit)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "Encoder_SetDefaultParam": {
@@ -9210,15 +9231,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32"
+        "T41": "apitest t41pass 2026-11-04 .34 .32",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): size 0 answers 0x80040002, a call after System_Init 0x80040040 (the vendor codes); the pre-init success path needs a call before IMP_System_Init and is covered by the host test only."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): size 0 answers 0x80040002, a call after System_Init 0x80040040 (the vendor codes); the pre-init success path needs a call before IMP_System_Init and is covered by the host test only. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetMultiSectionMode": {
       "area": "Encoder",
@@ -9229,14 +9251,15 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "T23 (vendor 1.3.0 Ghidra decompile, RE reference only): the call is refused once the encoder module is initialised; it stores size << 10 in the word SetPoolSize also writes, and the mode (1, 2; larger values become 1); cnt is only range-checked. CreateChn of an H.264 channel turns that into the encoder's bitstream-full window (i264e +0x3741/+0x3744). i264e_slice_write then waits for the soc_vpu bitstream-full interrupt per window (ioctl 0xc058630b / 0xc058630c). Mode 1 copies the sections back into the picture, so the application gets whole pictures. Mode 2 hands out every section as its own stream: the first one carries SPS/PPS/SEI and the start of the slice, each further one is one pack with the next window bytes, all of them with the picture's seq. pack[0].frameEnd is 0 until the last section, and ReleaseStream of such a section only lets the encoder continue. OpenIMP (src/t23/t23_multisection.h, GetStream/ReleaseStream in src/t40/openimp_p2_encoder.c) codes the whole picture and hands it out in the same sections. The stream layout is vendor-equal; the first section is not delivered before the picture is done. Host: tests/t23 p2_multisection_test. Device 2026-11-12 (T23 .30, 640x360, 8 KiB window): mode 2 gave 60 pictures, 4 of them in sections, with no seq, length, frameEnd or release error; the joined stream decodes (60 frames) and the picture is fine. Mode 1 and mode off give whole pictures. T31 1.1.6 exports no multi-section function (n.a.).",
+      "note": "T23 (vendor 1.3.0 Ghidra decompile, RE reference only): the call is refused once the encoder module is initialised; it stores size << 10 in the word SetPoolSize also writes, and the mode (1, 2; larger values become 1); cnt is only range-checked. CreateChn of an H.264 channel turns that into the encoder's bitstream-full window (i264e +0x3741/+0x3744). i264e_slice_write then waits for the soc_vpu bitstream-full interrupt per window (ioctl 0xc058630b / 0xc058630c). Mode 1 copies the sections back into the picture, so the application gets whole pictures. Mode 2 hands out every section as its own stream: the first one carries SPS/PPS/SEI and the start of the slice, each further one is one pack with the next window bytes, all of them with the picture's seq. pack[0].frameEnd is 0 until the last section, and ReleaseStream of such a section only lets the encoder continue. OpenIMP (src/t23/t23_multisection.h, GetStream/ReleaseStream in src/t40/openimp_p2_encoder.c) codes the whole picture and hands it out in the same sections. The stream layout is vendor-equal; the first section is not delivered before the picture is done. Host: tests/t23 p2_multisection_test. Device 2026-11-12 (T23 .30, 640x360, 8 KiB window): mode 2 gave 60 pictures, 4 of them in sections, with no seq, length, frameEnd or release error; the joined stream decodes (60 frames) and the picture is fine. Mode 1 and mode off give whole pictures. T31 1.1.6 exports no multi-section function (n.a.). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet.",
       "ref": {
-        "T23": "apitest case multisection_t23 2026-11-12 .30"
+        "T23": "apitest case multisection_t23 2026-11-12 .30",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "Encoder_SetbufshareChn": {
@@ -9523,8 +9546,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9536,8 +9559,10 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_VbmAlloc_Ex": {
       "area": "Encoder",
@@ -9567,8 +9592,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9580,8 +9605,10 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_VbmFree_Ex": {
       "area": "Encoder",
@@ -9611,16 +9638,18 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_VbmV2P": {
       "area": "Encoder",
@@ -9631,8 +9660,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9644,8 +9673,10 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_YuvEncode": {
       "area": "Encoder",
@@ -10997,15 +11028,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "rt"
       },
       "ref": {
-        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)"
+        "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): argument rules and geometry check (new case t41pass, QEMU first): enable 0 and the 3 align pairs that fit ch1 640x360 return 0, the 6 pairs that would need padding are refused, channel 7 -> 0x80010001, not-created channel -> 0x80010008; the frame stride is not changed (the open frame channel has no pad ioctl), frames flow."
+      "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): argument rules and geometry check (new case t41pass, QEMU first): enable 0 and the 3 align pairs that fit ch1 640x360 return 0, the 6 pairs that would need padding are refused, channel 7 -> 0x80010001, not-created channel -> 0x80010008; the frame stride is not changed (the open frame channel has no pad ioctl), frames flow. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_SnapFrame": {
       "area": "FrameSource",
@@ -11207,15 +11239,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "rt"
       },
-      "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000181 on the stock mscaler OSD attribute bytes (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock handlers); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest agg47 2026-10-28 .34 (API round trip, no visible effect expected)",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_Get/SetOSDBlock": {
@@ -11228,15 +11261,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "dev"
       },
-      "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T23: 0x8000182 on the stock mscaler OSD block table (open-tx-isp claude/gaps-t23-t31-drv, class c; emulator-identical to the stock Set including its stale-size quirk; the Get reports the requested block, stock always reports block 0 because it clears its local first; a block above 7 is refused, beyond stock; a block beyond the channel limits is logged and ignored, the call still returns 0, as stock); host build only, device test pending; no image effect yet (the MSCA update that programs the OSD blocks is not run); Not in agg-36: the open-tx-isp branch claude/gaps-t23-t31-drv is held back until its T23 SwitchBin is reworked (review: memcpy over live banks), so the agg-36 driver still behaves as before (cell unchanged). T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetOsdRgnAttr": {
@@ -19057,14 +19091,15 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T32 (2026-11-11 #300 follow-up): t32_misc_sample buf: MemPoolRequest/Free, double free, bad id, equal to vendor 2.2.0 (#299).",
+      "note": "T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T32 (2026-11-11 #300 follow-up): t32_misc_sample buf: MemPoolRequest/Free, double free, bad id, equal to vendor 2.2.0 (#299). T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "System_MemPoolRequest": {
@@ -19511,14 +19546,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
       "ref": {
-        "T32": "QEMU #329 audiox 2026-11-11"
+        "T32": "QEMU #329 audiox 2026-11-11",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "AO_DisableNs": {
@@ -19531,14 +19567,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
       "ref": {
-        "T32": "QEMU #329 audiox 2026-11-11"
+        "T32": "QEMU #329 audiox 2026-11-11",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "AO_EnableDrcAndEq": {
@@ -19551,14 +19588,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
       "ref": {
-        "T32": "QEMU #329 audiox 2026-11-11"
+        "T32": "QEMU #329 audiox 2026-11-11",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "AO_EnableNs": {
@@ -19571,14 +19609,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera.",
       "ref": {
-        "T32": "QEMU #329 audiox 2026-11-11"
+        "T32": "QEMU #329 audiox 2026-11-11",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "AO_GetAlgoOrder": {
@@ -19631,13 +19670,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19651,13 +19691,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19671,13 +19712,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19691,13 +19733,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19711,13 +19754,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19731,13 +19775,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)"
+        "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): t32_misc_sample buf (pools, aligned allocs, v2p/p2v, destroy busy/again) equal to vendor 2.2.0 (#299)."
     },
@@ -19766,15 +19811,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T31": "apitest agg61 2026-10-31 .26"
+        "T31": "apitest agg61 2026-10-31 .26",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T31 libimp 1.1.6 (disassembly): frees the encoder channel-to-pool table, the channel argument is unused, returns 0; OpenIMP drops every channel's pool binding the same way (GetPool reads -1 afterwards). apitest PASS on the device (set pool 2 on chn 7, ClearPoolId, GetPool -1); a pool is a name only in OpenIMP (one rmem arena), so there is no memory effect to check."
+      "note": "T31 libimp 1.1.6 (disassembly): frees the encoder channel-to-pool table, the channel argument is unused, returns 0; OpenIMP drops every channel's pool binding the same way (GetPool reads -1 afterwards). apitest PASS on the device (set pool 2 on chn 7, ClearPoolId, GetPool -1); a pool is a name only in OpenIMP (one rmem arena), so there is no memory effect to check. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_GetChnRfcDropFrameLines": {
       "area": "Encoder",
@@ -19786,11 +19832,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "Encoder_GetChnRfcRatio": {
       "area": "Encoder",
@@ -19802,11 +19851,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "Encoder_GetH264Vui": {
       "area": "Encoder",
@@ -19850,12 +19902,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP."
+      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      }
     },
     "Encoder_GetMotionQuality": {
       "area": "Encoder",
@@ -19978,12 +20033,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_MultiProcessExit": {
       "area": "Encoder",
@@ -20067,11 +20126,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "Encoder_SetChnQpgAI": {
       "area": "Encoder",
@@ -20098,12 +20160,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetChnQpgAIEnable_Yuv": {
       "area": "Encoder",
@@ -20114,12 +20180,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetChnQpgAI_Yuv": {
       "area": "Encoder",
@@ -20209,11 +20279,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "Encoder_SetChnRfcRatio": {
       "area": "Encoder",
@@ -20225,11 +20298,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "Encoder_SetH264Vui": {
       "area": "Encoder",
@@ -20273,12 +20349,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP."
+      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache).",
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      }
     },
     "Encoder_SetJpegMultiSectionMode": {
       "area": "Encoder",
@@ -20289,12 +20368,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetJpegQp": {
       "area": "Encoder",
@@ -20306,12 +20389,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP."
+      "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c, #292); the JPEG QEMU runs encode with the default QP. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      }
     },
     "Encoder_SetMotionQuality": {
       "area": "Encoder",
@@ -20338,12 +20424,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetMotionQualityEnable_Yuv": {
       "area": "Encoder",
@@ -20354,12 +20444,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetMotionQuality_Yuv": {
       "area": "Encoder",
@@ -20370,12 +20464,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetPadFrameAttr": {
       "area": "Encoder",
@@ -20426,15 +20524,17 @@
         "T23": "rt",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T23": "apitest agg62 2026-10-31 .30 (API round trip, no visible effect expected)"
-      }
+        "T23": "apitest agg62 2026-10-31 .30 (API round trip, no visible effect expected)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "Encoder_SetSrdCfg": {
       "area": "Encoder",
@@ -20461,15 +20561,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T31": "apitest agg61 2026-10-31 .26"
+        "T31": "apitest agg61 2026-10-31 .26",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T31 libimp 1.1.6 (disassembly): frees the FrameSource pool-id table, no argument, returns 0; OpenIMP resets every channel's pool id to -1 the same way. apitest PASS on the device (pool 2 set on ch3, ClearPoolId, every channel -1, old bindings restored, frames flow); a pool is a name only in OpenIMP, so there is no memory effect to check."
+      "note": "T31 libimp 1.1.6 (disassembly): frees the FrameSource pool-id table, no argument, returns 0; OpenIMP resets every channel's pool id to -1 the same way. apitest PASS on the device (pool 2 set on ch3, ClearPoolId, every channel -1, old bindings restored, frames flow); a pool is a name only in OpenIMP, so there is no memory effect to check. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_CreateChn_Ext": {
       "area": "FrameSource",
@@ -20481,11 +20582,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "FrameSource_CreateJoint": {
       "area": "FrameSource",
@@ -20496,12 +20600,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_DestroyJoint": {
       "area": "FrameSource",
@@ -20512,12 +20620,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_GetChnAttr_Expand": {
       "area": "FrameSource",
@@ -20529,11 +20641,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "FrameSource_GetDirectMode": {
       "area": "FrameSource",
@@ -20545,14 +20660,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera.",
+      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "QEMU #301/#349 2026-11-11"
+        "T32": "QEMU #301/#349 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "FrameSource_GetJointByHandler": {
@@ -20564,12 +20680,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_PM_Resume": {
       "area": "FrameSource",
@@ -20613,11 +20733,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "FrameSource_SetDirectMode": {
       "area": "FrameSource",
@@ -20629,14 +20752,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera.",
+      "note": "T32 (2026-11-11 matrix-x): IVDC direct and memory mode runs in QEMU (#301, OpenIMP H.264 and JPEG over IVDC, vendor-equal MMIO); no T32 camera. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "QEMU #301/#349 2026-11-11"
+        "T32": "QEMU #301/#349 2026-11-11",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "FrameSource_SetFrameDepthCopyType": {
@@ -20648,15 +20772,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "rt",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T31": "apitest rc3cov 2026-10-29 .26 (and .33) (refusal path only)"
+        "T31": "apitest rc3cov 2026-10-29 .26 (and .33) (refusal path only)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T31 libimp 1.1.6 (disassembly): channel below 5; allowed only while the channel frame depth is 0 (stores bNoCopy != 0), otherwise logs and returns -1; OpenIMP matches this, any non-zero value counts as 1. Device (apitest, SetFrameDepth was 2 at that point): the refusal path and the invalid channel are proven; the success path (depth reset to 0, then set and clear) passes in the QEMU T31 only and has not run on a camera yet, and OpenIMP records the flag without a separate zero-copy frame path, so the cell stays an API round trip."
+      "note": "T31 libimp 1.1.6 (disassembly): channel below 5; allowed only while the channel frame depth is 0 (stores bNoCopy != 0), otherwise logs and returns -1; OpenIMP matches this, any non-zero value counts as 1. Device (apitest, SetFrameDepth was 2 at that point): the refusal path and the invalid channel are proven; the success path (depth reset to 0, then set and clear) passes in the QEMU T31 only and has not run on a camera yet, and OpenIMP records the flag without a separate zero-copy frame path, so the cell stays an API round trip. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_SetIvdcMemLine": {
       "area": "FrameSource",
@@ -20668,14 +20793,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): implemented with the vendor range check (openimp_t32_ivdc.c); not called in the #301 QEMU runs.",
+      "note": "T32 (2026-11-11 matrix-x): implemented with the vendor range check (openimp_t32_ivdc.c); not called in the #301 QEMU runs. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "static audit src/t32/openimp_t32_ivdc.c"
+        "T32": "static audit src/t32/openimp_t32_ivdc.c",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "FrameSource_SetJointBackground": {
@@ -20687,12 +20813,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "FrameSource_SetSubStreamOnlineMode": {
       "area": "FrameSource",
@@ -20704,11 +20834,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "FrameSource_SnapRaw_End": {
       "area": "FrameSource",
@@ -20752,11 +20885,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISPOSD_Alloc": {
       "area": "System",
@@ -20787,12 +20923,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_AddSensor_Process": {
       "area": "ISP tuning",
@@ -20803,12 +20943,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_GET_DriverMode": {
       "area": "ISP tuning",
@@ -20819,12 +20963,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_GPIOSwitchConfig": {
       "area": "ISP tuning",
@@ -20835,12 +20983,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13): implemented as vendor 2.0.2.1 (ioctl / bind sequence); the QEMU run proves the argument checks only (equal to the vendor line); the open-tx-isp module does not serve the GPIO / camera-input ioctls yet, the real path needs a T33 camera. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_GPIOSwitchTrigger": {
       "area": "ISP tuning",
@@ -20851,12 +21003,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13): implemented as vendor 2.0.2.1 (ioctl / bind sequence); the QEMU run proves the argument checks only (equal to the vendor line); the open-tx-isp module does not serve the GPIO / camera-input ioctls yet, the real path needs a T33 camera. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_GetFrameDropOnce": {
       "area": "ISP tuning",
@@ -20868,11 +21024,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_HB_GetAttr": {
       "area": "ISP tuning",
@@ -20884,14 +21043,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_HB_SetAttr": {
@@ -20904,14 +21064,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_LDC_GetMode": {
@@ -20923,12 +21084,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_LDC_OfflineCreateJob": {
       "area": "ISP tuning",
@@ -20956,11 +21121,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OfflineDestroyJob": {
       "area": "ISP tuning",
@@ -21036,11 +21204,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OnlineGetLut": {
       "area": "ISP tuning",
@@ -21068,11 +21239,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OnlineGetState": {
       "area": "ISP tuning",
@@ -21084,11 +21258,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OnlineGetStrength": {
       "area": "ISP tuning",
@@ -21148,11 +21325,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OnlineSetState": {
       "area": "ISP tuning",
@@ -21164,11 +21344,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_LDC_OnlineSetStrength": {
       "area": "ISP tuning",
@@ -21195,12 +21378,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_OSD_Alloc": {
       "area": "ISP tuning",
@@ -21211,12 +21398,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_OneShotDisable": {
       "area": "ISP tuning",
@@ -21227,12 +21418,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_OneShotDropCnt": {
       "area": "ISP tuning",
@@ -21244,11 +21439,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_OneShotEnable": {
       "area": "ISP tuning",
@@ -21259,12 +21457,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_OneShotTick": {
       "area": "ISP tuning",
@@ -21275,12 +21477,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_PM_GetMode": {
       "area": "ISP tuning",
@@ -21291,12 +21497,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_PM_SetMode": {
       "area": "ISP tuning",
@@ -21307,12 +21517,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_PM_SetOneByOneCallback": {
       "area": "ISP tuning",
@@ -21324,11 +21538,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_PM_WaitAllDone": {
       "area": "ISP tuning",
@@ -21339,12 +21556,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "ISP_RawCaptureGuardBegin": {
       "area": "ISP tuning",
@@ -21356,11 +21577,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_RawCaptureGuardEnd": {
       "area": "ISP tuning",
@@ -21372,11 +21596,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_SetFrameDropOnce": {
       "area": "ISP tuning",
@@ -21388,11 +21615,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_Tuning_GetAeLightCompensation": {
       "area": "AE / AWB / AF",
@@ -21404,14 +21634,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetAeOnlyReadAttr": {
@@ -21424,14 +21655,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetAeStartAttr": {
@@ -21444,14 +21676,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetAeTargetAttr": {
@@ -21464,14 +21697,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetAwbOnlyReadAttr": {
@@ -21484,14 +21718,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_GetBcshRGBOffsetAttr": {
@@ -21504,14 +21739,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_GetISPRunningModeWithFd": {
@@ -21524,11 +21760,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "n.a.",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "ISP_Tuning_GetMultiSensorAWBEffect": {
       "area": "AE / AWB / AF",
@@ -21540,14 +21779,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_GetMultiSensorAeEffect": {
@@ -21560,14 +21800,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_GetMultiSensorEffect": {
@@ -21580,14 +21821,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_SetAeLightCompensation": {
@@ -21600,14 +21842,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_SetAeStartAttr": {
@@ -21620,14 +21863,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_SetAeTargetAttr": {
@@ -21640,14 +21884,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       }
     },
     "ISP_Tuning_SetBcshRGBOffsetAttr": {
@@ -21660,14 +21905,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_SetMultiSensorAWBEffect": {
@@ -21680,14 +21926,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_SetMultiSensorAeEffect": {
@@ -21700,14 +21947,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "ISP_Tuning_SetMultiSensorEffect": {
@@ -21720,14 +21968,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
       "ref": {
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
       }
     },
     "MemPool_GetById": {
@@ -21824,12 +22073,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "aud",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+      },
+      "note": "T33 (2026-11-13): implemented as vendor 2.0.2.1 (ioctl / bind sequence); the QEMU run proves the argument checks only (equal to the vendor line); the open-tx-isp module does not serve the GPIO / camera-input ioctls yet, the real path needs a T33 camera. T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
     },
     "OSD_Init_ISP": {
       "area": "OSD",
@@ -22628,11 +22881,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "alloc_unit": {
       "area": "System",
@@ -22644,11 +22900,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "create_units": {
       "area": "System",
@@ -22660,11 +22919,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "destroy_units": {
       "area": "System",
@@ -22676,11 +22938,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     },
     "free_unit": {
       "area": "System",
@@ -22692,11 +22957,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "miss",
-        "T33": "miss",
+        "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
+      }
     }
   },
   "history": [
