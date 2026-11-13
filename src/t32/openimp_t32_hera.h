@@ -72,5 +72,9 @@ uint32_t t32_hera_cmd(uint32_t reg, uint32_t value, int term);
 /* the CABAC context state of H.264 ctxIdx 0..459 for slice type and QP
  * (cabac_init_idc 0), as preCtxState 1..126 */
 void t32_hera_cabac_states(int p_frame, int qp, uint8_t state[460]);
+/* the SDE context table word of CABAC state @state, and the QP generator's
+ * delta thresholds (0x20300) by QP: shared with the T33 builder (#391) */
+uint32_t t32_hera_sde_ctx(unsigned state);
+uint32_t t32_hera_qpg_dlt(uint32_t qp);
 
 #endif

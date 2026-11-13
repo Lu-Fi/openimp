@@ -8,6 +8,13 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T33 encoder on HERA v1.6: JPEG and H.264 (#391, planned, QEMU only)
+
+- T33 H.264 command lists as vendor libimp 2.0.2.1 writes them (`src/t32/openimp_t33_hera.c`): VMAU at 0x40400, the compressed reconstruction area with its two header sets, core emulation prevention. `make -C tests/t33 check`: 24 of 24 vendor lists word for word (7 sizes, QP 30 / 40, I and P).
+- T33 JPEG through 2 x 250 KiB sections like the vendor; stream buffers in process memory (packs `phyAddr` 0, vendor-equal), so 1080p H.264 fits the T33L rmem (before: CreateChn failed for lack of rmem).
+- soc_vpu node `vtype` as the vendor (H.264 0x91, H.265 0x80) on T32 and T33.
+- QEMU: H.264 FIXQP and CBR decode clean, SSIM like the vendor's on the same scene; JPEG job identical but the address. No T33 camera test. H.265 on T33 is refused at CreateChn until its lists are ported (#391 stays open). Details: docs/T33_DESK_ANALYSIS.md section 9.
+
 ## 2026-11-13: T30 WDR / ADR / DRC cell supported (#428)
 
 - Matrix row 14, T30: ⚠️ -> ✅. The only deviation (Iridix base and unlimit strength above the vendor) is fixed by #428 (open-tx-isp 4fab1e1d) and proven on the T30X (run b70, settled window: 0x3c4 0x58/0x58, 0x3dc 0x100/0x100 open/vendor). WDR stays n/a on the linear SC4236 (SetWDRAttr -1 on both stacks).

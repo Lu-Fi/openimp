@@ -227,3 +227,33 @@ Test hardware: one T33L module is on order. Before any device step the T32 check
 - Medium: the 2.0.0 and 2.0.2.1 SDK lines differ (libimp 2.0.0 vs the 2.0.2.1 blob the firmware ecosystem has); the open driver must name the SDK line it targets.
 - Medium: IQ bin sections for T33 are not decoded yet; wrong sizes mean silent mis-parse.
 - Low: CPU / kernel / toolchain (same XBurst1 experience as T31 / T32).
+
+## 9. Encoder on HERA v1.6 (#391, QEMU only)
+
+OpenIMP `build-t33.sh` runs the T32 encoder (`src/t32/openimp_t32_encoder.c`) with these T33 deltas, each taken from vendor
+libimp 2.0.2.1 traces in QEMU `-M ingenic-t33` (t33l, cv2005, vendor 3.10.14 kernel):
+
+- H.264 command lists: `src/t32/openimp_t33_hera.c` with the vendor's register order and defaults
+  (`openimp_t33_hera_tab.h`, `tools/t32/hera_h264_table.py --t33`). VMAU moved from 0x80000 to 0x40400 (context states
+  0x40448), its tail to 0x70000, a new block at 0x38000; the MCE step tables 0x30900 / 0x30a00 are gone (I 776 pairs,
+  P 811; T32 736 / 913).
+- Reconstruction: compressed, one picture-sized area per plane (luma `w * (h + 64) + 16 KiB`, chroma half) plus two
+  sets of compression headers (16 bytes per 64 x 16 block, counts rounded up to 4) written and read in turn. Only the
+  I picture names the area (0x10008 / 0x1000c), only the P picture after it names the reference (0x28014 / 0x28018,
+  0x30070 / 0x30074); later lists leave them 0.
+- The core adds the emulation prevention bytes (SDE 0x68018 bit 7): the slice data is copied, not escaped.
+- JPEG: the engine writes into a 2 x 250 KiB section buffer (`limit_bs_len` 0, `bsfull_jpeg_intr_size` 250, START +
+  WAIT_BSFULL_COMPLETE), as the vendor; the job is otherwise the T32 one (44 words, identical but the stream address).
+- Stream buffers: process memory (packs with `phyAddr` 0, as the vendor's); rmem holds the engine buffers only, so a
+  1080p H.264 channel fits the T33L's 12.4 MiB rmem next to IVDC (vendor: ivpuBs 500 KiB, video0 3.5 MiB, ivdc 3 MiB).
+- soc_vpu node `vtype`: H.264 0x91, H.265 0x80 (vendor 2.2.0 and 2.0.2.1; the radix driver writes it to CFGC 0x0c);
+  also set on the T32 now.
+
+Evidence: `make -C tests/t33 check` builds 24 vendor lists (1920x1088 QP 30 / 40, 1280x720, 640x368, 960x544, 1024x576,
+1600x912, 1920x720; I and P) word for word. QEMU: OpenIMP H.264 FIXQP 30 and the default CBR run, 8 / 10 pictures,
+decode clean, Y SSIM 0.82-0.89 against the captured sources (vendor 0.83-0.87 on the same scene); JPEG 3 / 3, ioctl
+sequence = vendor's but the rmem cache calls.
+
+Open (#391): H.265 lists (same kind of deltas; `IMP_Encoder_CreateChn` refuses H.265 on T33 until ported), the vendor's
+shared section buffers (ivpuBs / jpegBs for all channels; OpenIMP keeps one per channel), and any device proof (no T33
+camera runs the open stack yet).

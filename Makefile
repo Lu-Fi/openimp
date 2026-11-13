@@ -70,6 +70,7 @@ check:
 	$(MAKE) -C tests/t31 check
 	$(MAKE) -C tests/t32 check
 	$(MAKE) -C tests/t32 check-drv
+	$(MAKE) -C tests/t33 check
 	$(MAKE) -C tests/t40 check
 	$(MAKE) -C tests/t41 check
 	$(MAKE) -C tests/testpattern check

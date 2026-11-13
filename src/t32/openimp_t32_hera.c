@@ -103,6 +103,19 @@ uint32_t t32_hera_cmd(uint32_t reg, uint32_t value, int term)
     return CL_VLD | (term ? CL_TERM : 0u) | (sum & 0x3ffu) << 20 | (reg & 0xffffcu);
 }
 
+/* the SDE context table word of a CABAC state 1..126 (T33 builder, #391) */
+uint32_t t32_hera_sde_ctx(unsigned state)
+{
+    return hera_lps_range[state <= 63u ? 63u - state : (state - 64u) & 63u] | (state >> 6 & 1u);
+}
+
+static uint32_t hera_qpg_dlt(uint32_t qp);
+
+uint32_t t32_hera_qpg_dlt(uint32_t qp)
+{
+    return hera_qpg_dlt(qp);
+}
+
 void t32_hera_cabac_states(int p_frame, int qp, uint8_t state[460])
 {
     static h264_cabac_t cb;             /* 1 KiB of states: not on a thread's stack */
