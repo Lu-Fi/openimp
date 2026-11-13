@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: AENC/ADEC defined stream fields kept (user OK, #298)
+
+- docs/OPENIMP_BEYOND_VENDOR.md 6.9: OpenIMP keeps filling `seq`, `phyAddr` (and the ADEC `timeStamp`) that the vendor leaves unwritten; approved by the user 2026-11-13.
+
 ## 2026-11-13: T41 SU_Key_* cells dev (#318, #319)
 
 - The five T41 `SU_Key_*` cells move aud -> dev: the image libsysutils (neo fork aperto 7171f20, firmware pin a1774778e) answers call for call like vendor 1.2.6 on the Vanhua T41 (OpenEvent fd, ReadEvent key 158 pressed/released via an injected evdev event, Enable 0, Disable -1 EINVAL, Close 0). Library loaded from /tmp, no flash or reboot. Remaining T41 aud cells: 8 `SU_CIPHER_*` (user decision 2026-11-12), `SU_Base_Suspend`, `SU_LED_Command`.
