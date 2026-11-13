@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T30 WDR / ADR / DRC cell supported (#428)
+
+- Matrix row 14, T30: ⚠️ -> ✅. The only deviation (Iridix base and unlimit strength above the vendor) is fixed by #428 (open-tx-isp 4fab1e1d) and proven on the T30X (run b70, settled window: 0x3c4 0x58/0x58, 0x3dc 0x100/0x100 open/vendor). WDR stays n/a on the linear SC4236 (SetWDRAttr -1 on both stacks).
+
 ## 2026-11-13: T32 AENC/ADEC compared with vendor 2.2.0 (#298, planned, QEMU only)
 
 - New sample mode `tools/t32/t32_misc_sample.c acodec N`: fixed synthetic PCM through the built-in G.711A/G.711U/G.726/ADPCM encoders and back, a user encoder/decoder pair and error returns. Vendor libimp 2.2.0 and OpenIMP in the same QEMU guest: payload bytes, decoded PCM, lengths, user-codec handles/calls and return codes identical (audit/issue298 vac/oac).
