@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-13: T40 GOP and QP-bounds read-back as the vendor glue (#455, #456)
+
+- #455: the T40 vendor 1.3.1 IMP glue puts the CreateChn GOP into whole seconds of the channel rate at the first picture (rounded down: GOP 25 at 20 fps -> IDR every 20, 50 -> 40, as the 2026-11-12 Eufy light-box clips show) and a GOP set at run time (`SetChnGopLength`, a new length in `SetChnGopAttr`) into whole seconds rounded up; the encoder's IDR distance is length x same-scene count rounded up to a multiple of the rate (`AL_Codec_Encode_ValidateGopParam`). OpenIMP T40 now does the same (`src/t40/t40_vendor_cmd.h`); `GetChnGopAttr`/`GetChnAttr` read the new length once a picture went through, as the vendor. Under one second OpenIMP keeps the GOP (vendor reaches 0, not measured; docs/OPENIMP_BEYOND_VENDOR.md section 8).
+- #456: `SetChnQpBounds` on T40 is pending until the next picture like the vendor (channel +0x15c/+0x15e): `GetChnAttrRcMode` keeps the old window (15/48 of `SetDefaultParam`) until then; before, OpenIMP read the new window (20/45) at once.
+- Host tests: tests/t40/vendor_cmd_test.c (GOP helpers). Device (Eufy T40XP, runtime libimp swap, timps, 20 fps, planned): ch0 GOP 25 -> IDR every 20 pictures (before: 25; vendor 20), ch1 GOP 50 -> every 40 (vendor 40); rc read-back before the first picture 15/48 (vendor 15/48), after 20/45.
+
 ## 2026-11-13: T10 manual WB gain range documented (#468)
 
 - `include/imp/imp_isp.h`: the 8-bit manual WB gain note (128 = 1.0x, values above 255 keep only the low 8 bits, vendor-equal: vendor libimp 3.12.0 SetWB/GetWB pass through, the firmware stores a byte) now names T10 and T20.

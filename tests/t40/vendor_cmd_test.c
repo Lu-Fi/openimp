@@ -88,6 +88,28 @@ int main(void)
     EXPECT(t40_vendor_gop_length(40u, 1u) == 40u, "gop 40x1");
     EXPECT(t40_vendor_gop_length(40u, 0u) == 40u, "gop 40x0");
 
+    /* #455: vendor glue at the first picture, whole seconds rounded down
+     * (Eufy light-box pass 2026-11-12: GOP 25 / 50 at 20 fps -> IDR every
+     * 20 / 40 pictures) */
+    EXPECT(t40_vendor_start_gop(25u, 20u, 1u) == 20u, "start 25@20");
+    EXPECT(t40_vendor_start_gop(50u, 20u, 1u) == 40u, "start 50@20");
+    EXPECT(t40_vendor_start_gop(40u, 20u, 1u) == 40u, "start 40@20");
+    EXPECT(t40_vendor_start_gop(30u, 25u, 1u) == 25u, "start 30@25");
+    EXPECT(t40_vendor_start_gop(10u, 20u, 1u) == 10u, "start under 1 s kept");
+    EXPECT(t40_vendor_start_gop(25u, 40u, 2u) == 20u, "start 25@40/2");
+    EXPECT(t40_vendor_start_gop(25u, 0u, 1u) == 25u, "start rate 0 kept");
+    /* run-time GOP: whole seconds rounded up */
+    EXPECT(t40_vendor_set_gop(25u, 20u, 1u) == 40u, "set 25@20");
+    EXPECT(t40_vendor_set_gop(40u, 20u, 1u) == 40u, "set 40@20");
+    EXPECT(t40_vendor_set_gop(5u, 20u, 1u) == 20u, "set 5@20");
+    /* ValidateGopParam: IDR distance up to a multiple of the rate */
+    EXPECT(t40_vendor_idr_distance(20u, 1u, 20u, 1u) == 20u, "idr 20x1@20");
+    EXPECT(t40_vendor_idr_distance(20u, 2u, 20u, 1u) == 40u, "idr 20x2@20");
+    EXPECT(t40_vendor_idr_distance(25u, 1u, 20u, 1u) == 40u, "idr 25x1@20");
+    EXPECT(t40_vendor_idr_distance(10u, 1u, 20u, 1u) == 20u, "idr 10x1@20");
+    EXPECT(t40_vendor_idr_distance(990u, 1u, 20u, 1u) == 980u, "idr cap");
+    EXPECT(t40_vendor_idr_distance(0u, 1u, 20u, 1u) == 0u, "idr 0");
+
     /* vendor FixQP EP1 words: IDR keeps the intra lane only */
     memset(ep1, 0xa5, sizeof(ep1));
     EXPECT(openimp_t40_update_fixqp_ep1(ep1, sizeof(ep1), 1) == 0, "ep1 idr");

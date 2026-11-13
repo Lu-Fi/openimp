@@ -1355,7 +1355,7 @@
   {
    "number": 82,
    "title": "[T40] AE/AWB from the hardware statistics interrupts like the vendor",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/82",
    "labels": [
     "area:AE-AWB",
@@ -1713,7 +1713,7 @@
   {
    "number": 103,
    "title": "Test pattern modes 5/6 for more SoCs (ISP-middle injection, RAW before the ISP)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/103",
    "labels": [
     "area:Driver",
@@ -3436,7 +3436,7 @@
   {
    "number": 260,
    "title": "T32: three guards where the port differs from the vendor (MSCA init, MSCA curve, CLM zone count)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/260",
    "labels": [
     "area:ISP",
@@ -3453,7 +3453,7 @@
   {
    "number": 264,
    "title": "[T31] t31_ipu review findings (Opus review 2026-11-10): GET_PBUFF NULL memset, timeout retry without reprogramming, +11",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/264",
    "labels": [
     "area:Driver",
@@ -4004,7 +4004,7 @@
   {
    "number": 312,
    "title": "[T21] libsysutils on the image: SU_Base_Shutdown sends SIGCHLD, vendor sends SIGUSR2",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/312",
    "labels": [
     "area:System",
@@ -4020,7 +4020,7 @@
   {
    "number": 313,
    "title": "[T21] libsysutils on the image: SU_Key_EnableEvent answers -1/EACCES, vendor answers 0",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/313",
    "labels": [
     "area:System",
@@ -4036,7 +4036,7 @@
   {
    "number": 314,
    "title": "[T20] board libsysutils: SU_Key_EnableEvent returns -1 (EACCES) on a key that is not masked; the vendor returns 0",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/314",
    "labels": [
     "area:System",
@@ -4052,7 +4052,7 @@
   {
    "number": 315,
    "title": "[T20] board libsysutils: SU_Base_GetModelNumber returns junk after the name, SU_Base_GetDevID reports success with an all-zero ID",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/315",
    "labels": [
     "area:System",
@@ -4103,7 +4103,7 @@
   {
    "number": 319,
    "title": "[T41] image libsysutils (neo) SU_Key_* miss the gpio_keys device; SU_CIPHER_* codes differ from vendor",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/319",
    "labels": [],
    "created": "2026-11-11T10:26:39Z",
@@ -4123,7 +4123,7 @@
   {
    "number": 321,
    "title": "[T40] SU_Base_Raw2SUTime: vendor 1.3.0 is not the inverse of SUTime2Raw; T40 cell rests on the image's sysutils",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/321",
    "labels": [
     "area:System",
@@ -4393,7 +4393,7 @@
   {
    "number": 388,
    "title": "T33: register-list (RCFG) backend for all ISP blocks",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/388",
    "labels": [
     "prio:long-term",
@@ -4409,7 +4409,7 @@
   {
    "number": 389,
    "title": "T33: AE / AWB statistics + per-frame 3A",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/389",
    "labels": [
     "area:AE-AWB",
@@ -4442,7 +4442,7 @@
   {
    "number": 391,
    "title": "T33: OpenIMP encoder on HERA v1.6 (JPEG / H.264 / H.265)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/391",
    "labels": [
     "area:Encoder",
@@ -4510,7 +4510,7 @@
   {
    "number": 409,
    "title": "[T40] Open stack: 7-8 AAC frames with one timestamp ~1.5 s into every RTSP recording (vendor 0), light box",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/409",
    "labels": [
     "area:Audio",
@@ -4556,7 +4556,7 @@
   {
    "number": 419,
    "title": "T40: image libsysutils (neo) SU_LED_Command uses /proc/board/power/led<N>, vendor 1.3.1 and OpenIMP libimp use sysfs GPIO",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/419",
    "labels": [
     "area:System",
@@ -4661,7 +4661,7 @@
   {
    "number": 426,
    "title": "[T31] image libsysutils: SU_CIPHER error codes are one lower than the vendor 1.1.3 (-13/-15/-17 vs -14/-16/-18)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/426",
    "labels": [
     "area:System",
@@ -4678,7 +4678,7 @@
   {
    "number": 427,
    "title": "[T30] Encoder HSkip / HSkipBlackEnhance are cache-only: Helix wiring missing (3rd recon buffer, ref select, LTR)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/427",
    "labels": [
     "area:Encoder",
@@ -4695,7 +4695,7 @@
   {
    "number": 428,
    "title": "[T30] DRC: Iridix strength above the vendor (unlimit 221-247 vs 149-154, base 0x43 vs 0x1c)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/428",
    "labels": [
     "area:ISP",
@@ -4728,7 +4728,7 @@
   {
    "number": 432,
    "title": "[T40] SetHLDCAttr: strength never applied (tisp_s_hldc_attr is an empty tail call)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/432",
    "labels": [
     "area:Driver",
@@ -4762,7 +4762,7 @@
   {
    "number": 435,
    "title": "[T41] host test t41_awb_algo_host fails intermittently (assertion at awb_algo_host.c:183)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/435",
    "labels": [
     "area:tests",
@@ -4773,6 +4773,319 @@
     "type:bug"
    ],
    "created": "2026-11-12T23:55:40Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 437,
+   "title": "T33: AF block (algorithm, statistics, register write) not ported (tx-isp-t33.ko)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/437",
+   "labels": [
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-12T23:57:41Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 443,
+   "title": "[T40] Encoder SSIM 0.004-0.008 below the vendor in every light-box case",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/443",
+   "labels": [],
+   "created": "2026-11-13T07:32:34Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 444,
+   "title": "T33: LCE / LSF per-frame path (LCE irq 8, LSF irq 0x1e, Tisp_lce_soft)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/444",
+   "labels": [
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T07:45:24Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 445,
+   "title": "T32/T33: FrameSource streamer gaps (FifoAttr, Delay, MaxDelay, I2dAttr, Pool, GetTimedFrame, SnapFrame)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/445",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T08:09:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 447,
+   "title": "T32/T33: Encoder_Get/SetPool, T32 SetChnBitRate/MaxPictureSize/QpBounds streamer gaps",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/447",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T08:12:22Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 451,
+   "title": "[T30] Open stack raises ~15 % fewer ISP interrupts per second than the vendor (149.5 vs 175 irq/s)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/451",
+   "labels": [
+    "soc:T30"
+   ],
+   "created": "2026-11-13T08:37:17Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 455,
+   "title": "[T40] GOP 25 requested: open IDR every 25 frames, vendor every 20",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/455",
+   "labels": [
+    "soc:T40"
+   ],
+   "created": "2026-11-13T11:06:09Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 456,
+   "title": "[T40] ch1 rate-control read-back: min/max QP 20/45 open vs 15/48 vendor",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/456",
+   "labels": [
+    "soc:T40"
+   ],
+   "created": "2026-11-13T11:06:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 458,
+   "title": "Test pattern mode 5: colour at maximum gain (T41) and daylight checks (T40/T41)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/458",
+   "labels": [
+    "soc:T40",
+    "soc:T41"
+   ],
+   "created": "2026-11-13T11:07:02Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 459,
+   "title": "[T30] Recovery AWB lacks the black-level factor of the OEM awb_normalise",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/459",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-13T11:19:05Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 462,
+   "title": "[T40] AE comp 128->40: 21-29 % undershoot on the open stack; compare with the vendor in the light box",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/462",
+   "labels": [
+    "soc:T40"
+   ],
+   "created": "2026-11-13T12:48:06Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 463,
+   "title": "[T30] Lifted sensor_fsm_clear / sensor_init_output store at 4x the OEM offsets (writes into the AE FSM)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/463",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T30",
+    "type:bug"
+   ],
+   "created": "2026-11-13T12:53:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 464,
+   "title": "[T30] /proc/jz/isp/isp-fs, isp-m3, isp-w0x return EIO while streaming (vendor prints per-channel frame counts)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/464",
+   "labels": [
+    "repo:open-tx-isp",
+    "soc:T30"
+   ],
+   "created": "2026-11-13T12:56:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 465,
+   "title": "T41: build_local ko gave smaller/different snapshots on .32 (155-177 KB vs 238 KB) — cause open",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/465",
+   "labels": [
+    "soc:T41"
+   ],
+   "created": "2026-11-13T12:57:44Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 467,
+   "title": "[T10/T20] Hard hang + watchdog reset when timps starts right after the apitest teardown (sensor unbind)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/467",
+   "labels": [
+    "soc:T10",
+    "soc:T20"
+   ],
+   "created": "2026-11-13T13:02:23Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 468,
+   "title": "[T10] AWB manual blue gain set 300 reads back 44 (8-bit truncation)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/468",
+   "labels": [
+    "soc:T10"
+   ],
+   "created": "2026-11-13T13:02:23Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 469,
+   "title": "[T10/T20/T21] apitest FAILs from the remote camtest run (old apitest 2026-10-06): recheck with the current apitest",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/469",
+   "labels": [
+    "soc:T10",
+    "soc:T20",
+    "soc:T21"
+   ],
+   "created": "2026-11-13T13:02:24Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 470,
+   "title": "[T10/T20] Unbounded register poll loops in core stream-off (tx-isp-core.c:1973,1986)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/470",
+   "labels": [
+    "repo:open-tx-isp",
+    "soc:T10",
+    "soc:T20"
+   ],
+   "created": "2026-11-13T13:11:20Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 471,
+   "title": "[T33] IMP_System_GetCPUInfo answers \"T32\", vendor 2.0.2.1 \"T33-L\" (chip id decode missing)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/471",
+   "labels": [
+    "area:System",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T13:36:04Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 472,
+   "title": "[T32/T33] open module answers ENOTTY to the 2.x ISP control ioctls (run mode, one-shot, LDC mode, PM, bypass, GPIO, multi-sensor)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/472",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T13:37:47Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 474,
+   "title": "[T40] Open AE overshoot 3.5 % (vendor 0.1 %) when the light comes on, residual after #412 (light box)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/474",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T40",
+    "type:bug"
+   ],
+   "created": "2026-11-13T14:09:06Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 475,
+   "title": "[T41] GOP: check the vendor whole-second GOP glue (as T40 #455)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/475",
+   "labels": [
+    "severity:low",
+    "soc:T41"
+   ],
+   "created": "2026-11-13T14:25:52Z",
    "closed": null,
    "milestone": null
   }

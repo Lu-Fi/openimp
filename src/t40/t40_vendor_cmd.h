@@ -102,4 +102,78 @@ static inline uint32_t t40_vendor_gop_length(uint32_t gop, uint32_t same_scene)
     return gop > 0xffffu ? 0xffffu : gop;
 }
 
+/* The channel rate as the vendor glue keeps it: reduced (c_reduce_fraction);
+ * 0 parts give 0/0, which the GOP helpers below treat as "keep the GOP". */
+static inline void t40_vendor_rate_reduce(uint32_t *num, uint32_t *den)
+{
+    uint32_t a = *num, b = *den, t;
+
+    if (!a || !b) {
+        *num = *den = 0u;
+        return;
+    }
+    while (b) {
+        t = a % b;
+        a = b;
+        b = t;
+    }
+    *num /= a;
+    *den /= a;
+}
+
+/* T40 1.3.1 IMP glue (on_encoder_group_data_update, encoder_get_fps_mask,
+ * first picture of a channel, #455): the GOP of CreateChn is kept in whole
+ * seconds of the channel rate, rounded DOWN, and sent to the encoder with
+ * the rate (GOP 25 at 20 fps -> 20, 50 -> 40; Eufy light-box pass
+ * 2026-11-12: vendor IDR every 20 / 40 pictures).  GetChnGopAttr reads the
+ * new length from then on.  Under one second the vendor computes GOP 0;
+ * OpenIMP keeps the GOP then (as on T30, docs/BEYOND_VENDOR.md). */
+static inline uint32_t t40_vendor_start_gop(uint32_t gop, uint32_t num,
+                                            uint32_t den)
+{
+    uint32_t g;
+
+    t40_vendor_rate_reduce(&num, &den);
+    if (!num || !den)
+        return gop;
+    g = (uint32_t)((uint64_t)gop * den / num) * num / den;
+    return g ? g : gop;
+}
+
+/* The same glue for a GOP set at run time (SetChnGopLength, or a new
+ * length through SetChnGopAttr): whole seconds rounded UP. */
+static inline uint32_t t40_vendor_set_gop(uint32_t gop, uint32_t num,
+                                          uint32_t den)
+{
+    uint64_t frames;
+    uint32_t secs, g;
+
+    t40_vendor_rate_reduce(&num, &den);
+    if (!num || !den)
+        return gop;
+    frames = (uint64_t)gop * den;
+    secs = (uint32_t)(frames / num + (frames % num != 0u));
+    g = (uint32_t)((uint64_t)secs * num / den);
+    return g ? (g > 0xffffu ? 0xffffu : g) : gop;
+}
+
+/* AL_Codec_Encode_ValidateGopParam (lib_codec.c, every SetGopParam): the
+ * IDR distance length * same-scene, at most 1000 - rate, rounded up to a
+ * multiple of the reduced rate numerator; the GOP length becomes that
+ * distance (I pictures only at the IDR). */
+static inline uint32_t t40_vendor_idr_distance(uint32_t gop,
+                                               uint32_t same_scene,
+                                               uint32_t num, uint32_t den)
+{
+    uint32_t idr = t40_vendor_gop_length(gop, same_scene);
+
+    t40_vendor_rate_reduce(&num, &den);
+    if (!num || num >= 1000u || !idr)
+        return idr;
+    if (idr > 1000u - num)
+        idr = 1000u - num;
+    idr = (idr + num - 1u) / num * num;
+    return idr > 0xffffu ? 0xffffu : idr;
+}
+
 #endif

@@ -446,10 +446,12 @@ typedef struct {
     pthread_mutex_t poll_serial;    /* one PollingStream encodes at a time */
     int yuv_claimed;                /* hidden slot held by IMP_Encoder_YuvInit */
     pthread_mutex_t lock;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     /* vendor: RC setters only store a pending value that the encoder
      * applies before the next picture; the read-back changes then.  While
-     * rb_hold is set the getters return the values of before the call. */
+     * rb_hold is set the getters return the values of before the call.
+     * T40 (#455/#456): SetChnQpBounds and the GOP setters, and the GOP of
+     * CreateChn, which the vendor glue changes at the first picture. */
     int rb_hold;
     IMPEncoderRcAttr rb_rc;
     IMPEncoderGopAttr rb_gop;
@@ -1634,6 +1636,9 @@ static void p2_t41_clamp_bounds(int *minimum, int *maximum)
     if (*minimum > *maximum) *minimum = *maximum;
 }
 
+#endif
+
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
 /* Keep the read-back of before the first RC setter call until the next
  * picture went through the encoder (vendor: pending value). */
 static void p2_t41_rb_hold(int channel)
@@ -1781,7 +1786,19 @@ static uint32_t p2_attr_gop_length(const IMPEncoderCHNAttr *attr)
 {
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     return attr->rcAttr.maxGop;
-#elif defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#elif defined(PLATFORM_T40)
+    /* the IDR distance the vendor encoder runs with from the first picture
+     * on: CreateChn GOP in whole seconds (rounded down), then the
+     * AL_Codec_Encode_ValidateGopParam rounding (#455) */
+    {
+        uint32_t num = attr->rcAttr.outFrmRate.frmRateNum;
+        uint32_t den = attr->rcAttr.outFrmRate.frmRateDen;
+
+        return t40_vendor_idr_distance(
+            t40_vendor_start_gop(attr->gopAttr.uGopLength, num, den),
+            attr->gopAttr.uMaxSameSenceCnt, num, den);
+    }
+#elif defined(PLATFORM_T41)
     return t40_vendor_gop_length(attr->gopAttr.uGopLength,
                                  attr->gopAttr.uMaxSameSenceCnt);
 #else
@@ -2871,6 +2888,21 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
     }
 #endif
     ch->attr = *attr;
+#if defined(PLATFORM_T40)
+    /* vendor T40 1.3.1: the attribute reads back as given until the first
+     * picture; then the glue has put the GOP in whole seconds (#455) */
+    ch->rb_hold = 0;
+    if (p2_attr_codec_type(attr) != IMP_ENC_TYPE_JPEG) {
+        uint32_t g = t40_vendor_start_gop(attr->gopAttr.uGopLength,
+                                          attr->rcAttr.outFrmRate.frmRateNum,
+                                          attr->rcAttr.outFrmRate.frmRateDen);
+
+        if (g != attr->gopAttr.uGopLength) {
+            p2_t41_rb_hold(channel);
+            ch->attr.gopAttr.uGopLength = (uint16_t)g;
+        }
+    }
+#endif
 #if defined(PLATFORM_T20)
     /* OEM CreateChn: memset of the channel record, then the attribute is
      * copied in: the demask state (hold counter, measure, sharpness word)
@@ -4052,7 +4084,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     } else
 #endif
     process_result = AL_Codec_Encode_Process(ch->codec, frame, frame);
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     /* the pending RC values are in effect from this picture on */
     ch->rb_hold = 0;
 #endif
@@ -4864,7 +4896,7 @@ int IMP_Encoder_GetChnAttr(int channel, IMPEncoderChnAttr *attr)
     if (!p2_valid_channel(channel) || !attr || !p2_channels[channel].created)
         return -1;
     *attr = p2_channels[channel].attr;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     if (p2_channels[channel].rb_hold) {
         attr->rcAttr = p2_channels[channel].rb_rc;
         attr->gopAttr = p2_channels[channel].rb_gop;
@@ -5420,7 +5452,7 @@ int IMP_Encoder_GetChnAttrRcMode(int channel, IMPEncoderAttrRcMode *mode)
     if (!p2_valid_channel(channel) || !mode || !p2_channels[channel].created)
         return -1;
     *mode = p2_channels[channel].attr.rcAttr.attrRcMode;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T41) || defined(PLATFORM_T40)
     if (p2_channels[channel].rb_hold)
         *mode = p2_channels[channel].rb_rc.attrRcMode;
 #endif
@@ -5700,6 +5732,10 @@ int IMP_Encoder_GetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
 #else
     *gop = p2_channels[channel].attr.gopAttr;
 #endif
+#if defined(PLATFORM_T40)
+    if (p2_channels[channel].rb_hold)
+        *gop = p2_channels[channel].rb_gop;
+#endif
     return 0;
 }
 
@@ -5729,6 +5765,28 @@ int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
 #endif
     if (!p2_valid_channel(channel) || !gop || !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T40)
+    {
+        /* vendor T40 1.3.1: stored as pending (channel +0x13c); before the
+         * next picture the glue takes a new length in whole seconds rounded
+         * up, an unchanged one as it runs, and the encoder codes an IDR
+         * every length * same-scene pictures (t40_vendor_cmd.h, #455) */
+        P2EncoderChannel *ch = &p2_channels[channel];
+        IMPEncoderGopAttr eff = *gop;
+        uint32_t num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+        uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+
+        if (eff.uGopLength &&
+            eff.uGopLength != ch->attr.gopAttr.uGopLength)
+            eff.uGopLength = (uint16_t)t40_vendor_set_gop(eff.uGopLength,
+                                                          num, den);
+        p2_t41_rb_hold(channel);
+        ch->attr.gopAttr = eff;
+        eff.gopLength = (uint16_t)t40_vendor_idr_distance(
+            eff.uGopLength, eff.uMaxSameSenceCnt, num, den);
+        return AL_Codec_Encode_SetGopParam(ch->codec, &eff);
+    }
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     p2_channels[channel].attr.rcAttr.maxGop = gop->gopLength;
 #else
@@ -5768,6 +5826,26 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
     if (!p2_valid_channel(channel) || length <= 0 ||
         !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T40)
+    {
+        /* vendor T40 1.3.1: stored as pending (channel +0x140); before the
+         * next picture the glue rounds it up to whole seconds of the rate
+         * and the encoder codes an IDR every length * same-scene pictures
+         * (t40_vendor_cmd.h, #455) */
+        P2EncoderChannel *ch = &p2_channels[channel];
+        IMPEncoderGopAttr eff;
+        uint32_t num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+        uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+
+        p2_t41_rb_hold(channel);
+        ch->attr.gopAttr.uGopLength =
+            (uint16_t)t40_vendor_set_gop((uint32_t)length, num, den);
+        eff = ch->attr.gopAttr;
+        eff.gopLength = (uint16_t)t40_vendor_idr_distance(
+            eff.uGopLength, eff.uMaxSameSenceCnt, num, den);
+        return AL_Codec_Encode_SetGopParam(ch->codec, &eff);
+    }
+#endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     p2_channels[channel].attr.rcAttr.maxGop = (uint32_t)length;
 #else
@@ -5845,6 +5923,13 @@ int IMP_Encoder_SetChnQpBounds(int channel, int minimum, int maximum)
     if (!p2_valid_channel(channel) || minimum < 0 || maximum > 51 ||
         minimum > maximum || !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T40)
+    /* vendor T40 1.3.1: stored as pending (channel +0x15c/+0x15e), applied
+     * before the next picture; GetChnAttrRcMode reads the new window only
+     * from then on (#456: read before any picture, vendor 15/48 of
+     * SetDefaultParam, OpenIMP read 20/45) */
+    p2_t41_rb_hold(channel);
+#endif
     p2_set_qp_bounds(&p2_channels[channel].attr.rcAttr.attrRcMode,
                      minimum, maximum);
 #if defined(PLATFORM_T23)
