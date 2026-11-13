@@ -511,7 +511,7 @@ for a debug image; the default image carries the release build.
 
 ## 8. Unverified or not yet in this list
 
-- T40 GOP under one second (#455, host test only, pending user decision): the vendor T40 1.3.1 glue keeps the CreateChn GOP in whole seconds of the channel rate (rounded down at the first picture, e.g. GOP 25 at 20 fps -> 20) and so reaches GOP 0 below one second; what its encoder then does is not measured. OpenIMP keeps the GOP in pictures there (IDR distance rounded up to a multiple of the rate, as the vendor `AL_Codec_Encode_ValidateGopParam`).
+- T40 GOP under one second (#455, host test only, user OK 2026-11-12 (GOP < 1 s keeps pictures, decided for all SoCs)): the vendor T40 1.3.1 glue keeps the CreateChn GOP in whole seconds of the channel rate (rounded down at the first picture, e.g. GOP 25 at 20 fps -> 20) and so reaches GOP 0 below one second; what its encoder then does is not measured. OpenIMP keeps the GOP in pictures there (IDR distance rounded up to a multiple of the rate, as the vendor `AL_Codec_Encode_ValidateGopParam`).
 
 - T30 CSC presets (`IMP_ISP_Tuning_SetCsc_Attr` / `GetCsc_Attr`, tuning control `0x80000a6`, the same ABI as T10/T20/T31; open-tx-isp `claude/t30-csc`): presets 0-3 (BT.601 / BT.709, full / TV range) or a user matrix with offsets and Y/UV clip. The vendor T30 driver rejects the control (-1) and libimp 1.0.5 has no such call. Off until set: the getter returns -1 like the vendor and the tuning-bin matrix stays in place. First checked in QEMU T30 (matrix and clip registers per preset); on the T30X lab camera the presets reach the driver and change the picture (apitest `t30pass_csc` cases, batches b26/b32; extra beyond vendor, opt-in). Not in the tables above yet.
 
