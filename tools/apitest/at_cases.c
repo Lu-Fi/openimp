@@ -86,6 +86,15 @@ static int flow(void)
     return 0;
 }
 
+/* one bounded probe: a frame of ch1 within the GetFrame timeout (2 s), no polling (#438) */
+static int flow_q(void)
+{
+    int w, h;
+    int64_t t = 0;
+
+    return fs_peek(1, &w, &h, &t) == 0;
+}
+
 static double dabs(double a) { return a < 0 ? -a : a; }
 
 /* AE drift of the scene without any change (dark scenes drift several luma levels in seconds): measured once at the start of the
@@ -6124,8 +6133,21 @@ static void cs_ldc_t30(void)
         Fst base = fst(800), on, off;
         int r1, f1, r0, f0, ms = 0;
 
-        r1 = set(1); on = recover(base.y, &ms); f1 = flow();
-        r0 = set(0); off = recover(base.y, &ms); f0 = flow();
+        /* b68: the unbounded recover() / flow() polls (2 s per GetFrame without frames) outlived the host timeout, so no result line
+         * was printed on either stack.  Now every step is one bounded probe (flow_q = one 2 s GetFrame) and progress goes to stdout
+         * at once; recover() only runs while frames flow. */
+        memset(&on, 0, sizeof(on)); memset(&off, 0, sizeof(off));
+        printf("[T] ldc: base Y %.1f (%d frames), SetISPLDC(1)\n", base.y, base.ok); fflush(stdout);
+        r1 = set(1);
+        usleep(500000);
+        f1 = flow_q();
+        printf("[T] ldc: ENABLE -> %d, frames %s\n", r1, f1 ? "flow" : "STOP"); fflush(stdout);
+        if (f1) on = recover(base.y, &ms);
+        r0 = set(0);
+        usleep(500000);
+        f0 = flow_q();
+        printf("[T] ldc: DISABLE -> %d, frames %s\n", r0, f0 ? "flow" : "STOP"); fflush(stdout);
+        if (f0) off = recover(base.y, &ms);
         rep(LBL("IMP_ISP_Tuning_SetISPLDC"), r1 | r0, (r1 == 0 && r0 == 0 && f1 && f0) ? V_PASS : V_FAIL,
             "rt: ENABLE -> %d (frames %s, Y %.1f), DISABLE -> %d (frames %s, Y %.1f), base Y %.1f",
             r1, f1 ? "flow" : "STOP", on.y, r0, f0 ? "flow" : "STOP", off.y, base.y);
