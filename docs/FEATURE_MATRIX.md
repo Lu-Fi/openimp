@@ -92,7 +92,7 @@ How the ports were made: success rate of the paid API port loop per model, by pr
 | SoC | proven / all | progress | note |
 |---|--:|---|---|
 | T32 | 1591/1591 (100.0 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; as of 2026-11-13 |
-| T33 | 192/409 (46.9 %) | `█████████░░░░░░░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 192 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 56 more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
+| T33 | 194/409 (47.4 %) | `█████████░░░░░░░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 194 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 56 more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
 
 ### Readable C (driver de-lift, open-tx-isp)
 
