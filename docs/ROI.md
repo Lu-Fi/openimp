@@ -97,7 +97,7 @@ CBR window +20 drops the window SSIM 0.96 -> 0.89. On the vendor side the 32-bit
 ## T31 (device-tested, beyond vendor)
 
 The vendor T31 libimp 1.1.6 has no ROI API, but its Allegro core shows how
-the AVPU takes a macroblock QP table (HLIL in `docs/re/libimp.so_hlil.txt`):
+the AVPU takes a macroblock QP table (HLIL in `libimp.so_hlil.txt`):
 
 - `AL_Common_Encoder_Process` sets picture option bit 0
   (`AL_OPT_USE_QP_TABLE`) when a QP buffer comes with the frame and uses that

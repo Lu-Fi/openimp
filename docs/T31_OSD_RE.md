@@ -6,7 +6,7 @@ Markierungen: **[V]** = verifiziert (Quelle direkt gelesen), **[I]** = abgeleite
 **[?]** = offen, nur auf dem Gerät zu klären.
 
 Quellen:
-- `H:` = `docs/re/libimp.so_hlil.txt` (Binary-Ninja-HLIL der T31-libimp, Zeilennummern
+- `H:` = `libimp.so_hlil.txt` (Binary-Ninja-HLIL der T31-libimp, lokale Datei, nicht im Repo; Zeilennummern
   plus Adresse)
 - `OI:` = OpenIMP (Fork `Lu-Fi/openimp`, Branch `claude/t31-hw-jpeg`, Commit `01e7eff`)
 - `K:` = IPU-Kerneltreiber (GPL) aus Thingino,
