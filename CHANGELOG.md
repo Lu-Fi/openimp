@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: apitest case `ctsweep` for vendor-vs-open register comparisons (#533, #550; tool only)
+
+- `tools/apitest/at_cases.c`: explicit-only case `ctsweep` (needs `APITEST_CTDIR`): CT sweep (`APITEST_CTS`), optional manual exposure (`APITEST_CTEXPR`) or WB mode list (`APITEST_WBMODES`), then day -> night -> day; per step the ISP core registers 0..0xc000 (`APITEST_CTBASE`, default the T31 base 0x13300000), isp-m0 and a 1/4-size ch1 picture (local only). Used for the T31 #533 / #550 device checks (vendor and open module, same libimp). Built for T31; no library change.
+
 ## 2026-11-14: status: T33 driver-port row 199/409 (open-tx-isp blocks cscmisc, drvver; #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 199/409 (`tisp_t33_csc_write_reg`, `tisp_csccr_bin_par_update`, `tisp_sdns_other_params_transform`, `tx_isp_driver_version`; open-tx-isp next feed6e88e). Docs only.

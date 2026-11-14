@@ -1636,6 +1636,118 @@ static void cs_awbct(void)
 static void cs_awbct(void) {}
 #endif
 
+
+/* ctsweep (explicit only; openimp #533 / #550 device checks): CT sweep (APITEST_CTS=3000,3500,..), optional manual exposure
+ * (APITEST_CTEXPR=<lines>) or WB mode list (APITEST_WBMODES=2,3,..), then day -> night -> day; per step the ISP core
+ * registers 0..0xc000 (APITEST_CTBASE, default the T31 base 0x13300000), isp-m0 and a 1/4-size ch1 PPM go into
+ * APITEST_CTDIR (the case does nothing without it).  Pictures stay local. */
+#include <sys/mman.h>
+#if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetAwbCt && HAS_IMP_ISP_Tuning_GetAWBCt
+static void ct_step_dump(const char *dir, const char *tag)
+{
+    char path[300];
+    FILE *f;
+    int mem = open("/dev/mem", O_RDONLY | O_SYNC);
+    /* ISP core base: T31 0x13300000 (default); other SoCs set APITEST_CTBASE */
+    off_t base = getenv("APITEST_CTBASE") ? (off_t)strtoul(getenv("APITEST_CTBASE"), NULL, 0) : (off_t)0x13300000;
+
+    if (mem >= 0) {
+        volatile unsigned int *m = mmap(NULL, 0xc000, PROT_READ, MAP_SHARED, mem, base);
+        if (m != MAP_FAILED) {
+            snprintf(path, sizeof(path), "%s/%s.regs", dir, tag);
+            if ((f = fopen(path, "w"))) { unsigned o; for (o = 0; o < 0xc000; o += 4) fprintf(f, "%04x %08x\n", o, m[o / 4]); fclose(f); }
+            munmap((void *)m, 0xc000);
+        }
+        close(mem);
+    }
+    {
+        char buf[4096]; size_t n; FILE *in = fopen("/proc/jz/isp/isp-m0", "r");
+        snprintf(path, sizeof(path), "%s/%s.proc", dir, tag);
+        if (in && (f = fopen(path, "w"))) { while ((n = fread(buf, 1, sizeof(buf), in)) > 0) fwrite(buf, 1, n, f); fclose(f); }
+        if (in) fclose(in);
+    }
+    {
+        IMPFrameInfo *fr = NULL;
+        int k;
+        if (!IMP_FrameSource_GetFrame) return;
+        for (k = 0; k < 3; k++) if (IMP_FrameSource_GetFrame(1, &fr) == 0 && fr) { if (k < 2) { IMP_FrameSource_ReleaseFrame(1, fr); fr = NULL; } }
+        if (!fr) return;
+        snprintf(path, sizeof(path), "%s/%s.ppm", dir, tag);
+        if ((f = fopen(path, "wb"))) {
+            const unsigned char *y = (const unsigned char *)(uintptr_t)fr->virAddr; int w = fr->width, h = fr->height, i, j;
+            const unsigned char *uv = y + (size_t)w * h;
+            fprintf(f, "P6\n%d %d\n255\n", w / 4, h / 4);
+            for (j = 0; j < h / 4; j++) for (i = 0; i < w / 4; i++) {
+                int Y = y[(size_t)(4 * j) * w + 4 * i], U = uv[(size_t)(2 * j) * w + (4 * i & ~1)] - 128, V = uv[(size_t)(2 * j) * w + (4 * i & ~1) + 1] - 128;
+                int r = Y + (1402 * V) / 1000, g = Y - (344 * U + 714 * V) / 1000, b = Y + (1772 * U) / 1000;
+                fputc(r < 0 ? 0 : r > 255 ? 255 : r, f); fputc(g < 0 ? 0 : g > 255 ? 255 : g, f); fputc(b < 0 ? 0 : b > 255 ? 255 : b, f);
+            }
+            fclose(f);
+        }
+        IMP_FrameSource_ReleaseFrame(1, fr);
+    }
+}
+
+static void cs_ctsweep(void)
+{
+    const char *d = getenv("APITEST_CTDIR"), *cl = getenv("APITEST_CTS");
+    char list[256], tag[64], *tok, *sv = NULL;
+    unsigned int ct, cur = 0;
+    int r, nstep = 0, bad = 0;
+
+    if (!d) return;
+    wdog("ctsweep", 400);
+    NEED(IMP_ISP_Tuning_SetAwbCt) NEED(IMP_ISP_Tuning_GetAWBCt) {
+        snprintf(list, sizeof(list), "%s", cl ? cl : "4500,3000,3500,4000,4500,5000,5500,6000,6500,6000,5500,5000,4500,4000,3500,3000");
+        fst(600);
+        if (getenv("APITEST_CTEXPR") && HAS_IMP_ISP_Tuning_SetExpr) {
+            IMPISPExpr e; memset(&e, 0, sizeof(e));
+            e.s_attr.mode = ISP_CORE_EXPR_MODE_MANUAL; e.s_attr.unit = ISP_CORE_EXPR_UNIT_LINE; e.s_attr.time = (uint16_t)atoi(getenv("APITEST_CTEXPR"));
+            r = IMP_ISP_Tuning_SetExpr(&e); printf("[ctsweep] manual exposure %d lines rc=%d\n", atoi(getenv("APITEST_CTEXPR")), r); usleep(3000000);
+        }
+        if (getenv("APITEST_WBMODES") && IMP_ISP_Tuning_SetWB) {
+            char wl[128]; char *wt, *ws = NULL;
+            snprintf(wl, sizeof(wl), "%s", getenv("APITEST_WBMODES"));
+            for (wt = strtok_r(wl, ",", &ws); wt; wt = strtok_r(NULL, ",", &ws)) {
+                IMPISPWB w; memset(&w, 0, sizeof(w)); w.mode = atoi(wt);
+                r = IMP_ISP_Tuning_SetWB(&w); usleep(4000000);
+                snprintf(tag, sizeof(tag), "wb%02d_m%s", nstep, wt);
+                ct_step_dump(d, tag);
+                printf("[ctsweep] step %d SetWB(mode %s) rc=%d -> %s\n", nstep, wt, r, tag); fflush(stdout);
+                bad |= r; nstep++;
+            }
+            list[0] = 0;
+        }
+        for (tok = strtok_r(list, ",", &sv); tok; tok = strtok_r(NULL, ",", &sv)) {
+            ct = (unsigned)atoi(tok);
+            r = IMP_ISP_Tuning_SetAwbCt(&ct); usleep(4000000);
+            cur = 0; IMP_ISP_Tuning_GetAWBCt(&cur);
+            snprintf(tag, sizeof(tag), "ct%02d_%u", nstep, ct);
+            ct_step_dump(d, tag);
+            printf("[ctsweep] step %d SetAwbCt(%u) rc=%d GetAWBCt=%u -> %s\n", nstep, ct, r, cur, tag); fflush(stdout);
+            bad |= r; nstep++;
+        }
+#if HAS_IMP_ISP_Tuning_SetISPRunningMode && HAS_IMP_ISP_Tuning_GetISPRunningMode
+        {
+            IMPISPRunningMode o = IMPISP_RUNNING_MODE_DAY, m;
+            IMP_ISP_Tuning_GetISPRunningMode(&o);
+            ct_step_dump(d, "dn0_orig");
+            m = IMPISP_RUNNING_MODE_NIGHT; r = IMP_ISP_Tuning_SetISPRunningMode(m); bad |= r; usleep(6000000);
+            ct_step_dump(d, "dn1_night"); printf("[ctsweep] night rc=%d\n", r);
+            m = IMPISP_RUNNING_MODE_DAY; r = IMP_ISP_Tuning_SetISPRunningMode(m); bad |= r; usleep(6000000);
+            ct_step_dump(d, "dn2_day"); printf("[ctsweep] day rc=%d\n", r);
+            m = o; IMP_ISP_Tuning_SetISPRunningMode(m);
+        }
+#endif
+        if (getenv("APITEST_CTEXPR") && HAS_IMP_ISP_Tuning_SetExpr) { IMPISPExpr e; memset(&e, 0, sizeof(e)); e.s_attr.mode = ISP_CORE_EXPR_MODE_AUTO; e.s_attr.unit = ISP_CORE_EXPR_UNIT_LINE; IMP_ISP_Tuning_SetExpr(&e); }
+        { IMPISPWB w; memset(&w, 0, sizeof(w)); w.mode = ISP_CORE_WB_MODE_AUTO; if (IMP_ISP_Tuning_SetWB) IMP_ISP_Tuning_SetWB(&w); }
+        rep(LBL("ctsweep"), bad, bad == 0 ? V_PASS : V_FAIL, "%d CT steps + day/night dumped into %s", nstep, d);
+    }
+}
+#else
+static void cs_ctsweep(void) {}
+#endif
+
 #if !defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetScalerLv
 static void cs_scalerlv_old(void)
 {
@@ -7294,7 +7406,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33e1", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33e1", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7355,6 +7467,7 @@ void t_cases(void)
     if (cs_on("autozoom_set")) cs_autozoom_set(); wdog("cases", 90);
     if (cs_on("csc")) cs_csc();        wdog("cases", 90);
     if (cs_on("awbct")) cs_awbct();      wdog("cases", 90);
+    if (getenv("APITEST_CASES") && cs_on("ctsweep")) cs_ctsweep(); wdog("cases", 90);   /* explicit only: CT / day-night register dumps (#533, #550) */
     if (cs_on("scalerlv_old")) cs_scalerlv_old(); wdog("cases", 90);
     if (getenv("APITEST_CASES") && cs_on("wdrtoggle_t41")) cs_wdrtoggle_t41();   /* explicit only: a real WDR switch (#189) */
     if (getenv("APITEST_CASES") && cs_on("hskip")) enc_hskip_run();               /* explicit only: HSkip/ChangeRef stream dump (#3 #5 #7) */
