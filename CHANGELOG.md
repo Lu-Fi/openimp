@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: tools: `make mp-wiki` generates the wiki page Module-Parameters-All
+
+- `tools/gen_module_params_wiki.py` (new): lists every module parameter of every SoC (type, permission, default, description, bring-up-only names) from `module_param*()` and `MODULE_PARM_DESC()` in an open-tx-isp checkout (`--repo`, env `OPEN_TX_ISP`, default `../open-tx-isp`); `make mp-wiki WIKI_DIR=<openimp.wiki checkout>` next to `api-wiki`. Run after every driver merge round (docs/ai/reference.md). Docs and tooling only.
+
 ## 2026-11-14: docs: T10/T20 SetDRC_Strength row approved
 
 - `docs/OPENIMP_BEYOND_VENDOR.md`: `IMP_ISP_Tuning_SetDRC_Strength` acting on the auto Iridix strength on T10/T20 is a beyond-vendor row, user OK 2026-11-14, kept. Docs only.

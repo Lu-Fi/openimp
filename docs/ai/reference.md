@@ -125,6 +125,7 @@ matched no-op) out of all vendor functions of that SoC.
 - Issues: https://github.com/Lu-Fi/openimp/issues (library, encoder, integration; default when unsure) and https://github.com/Lu-Fi/open-tx-isp/issues (kernel driver, ISP, memory)
 - Releases: https://github.com/Lu-Fi/openimp/releases and https://github.com/Lu-Fi/open-tx-isp/releases; RC3 note: [docs/releases/RC3.md](../releases/RC3.md)
 - Wikis: https://github.com/Lu-Fi/openimp/wiki (Installing-and-Switching, Environment-Variables, Module-Parameters, Memory, Troubleshooting, Supported-SoCs-and-Sensors, Per-SoC-Status, Release-Gates, Reset-Diagnostics, Test-Pattern, Building) and https://github.com/Lu-Fi/open-tx-isp/wiki
+- Wiki generators (run after merge rounds, from an `origin/next` worktree, then push the wiki): `make api-wiki WIKI_DIR=<openimp.wiki checkout>` (API pages) and `make mp-wiki WIKI_DIR=<openimp.wiki checkout> OPEN_TX_ISP=<open-tx-isp checkout>` (page Module-Parameters-All, regenerated after every open-tx-isp driver merge).
 - In this repository: [FEATURE_MATRIX](../FEATURE_MATRIX.md), [OPENIMP_BEYOND_VENDOR](../OPENIMP_BEYOND_VENDOR.md), [RESET_DIAGNOSTICS](../RESET_DIAGNOSTICS.md), [TESTPATTERN](../TESTPATTERN.md), [light-box protocols](../lightbox/README.md), [CHANGELOG](../../CHANGELOG.md)
 
 ## 6. Accuracy notes
