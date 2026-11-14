@@ -389,6 +389,30 @@ int main(int argc, char **argv)
     ret = IMP_ISP_Open();
     rep(FN(IMP_ISP_Open), ret, ret < 0 ? V_FAIL : V_PASS, "");
     if (ret >= 0) t_binpath_pre();
+#if defined(APITEST_T33)
+    /* #491: APITEST_LDC_ONLINE=strength|<LUT file>: online LDC 16x16 on VI0 before AddSensor (the library sends it at AddSensor) */
+    if (ret >= 0 && getenv("APITEST_LDC_ONLINE")) {
+        extern int32_t IMP_ISP_LDC_OnlineSetStrength(IMPVI_NUM num, double strength) __attribute__((weak));
+        IMPISPLDCInitOnlineAttr la;
+        const char *lv = getenv("APITEST_LDC_ONLINE");
+        char lut[128];
+        int lm, li, ls;
+
+        memset(&la, 0, sizeof(la));
+        la.func = IMPISP_LDC_MODE; la.size = IMPISP_LUT_BLOCKSIZE_16x16;
+        lm = IMP_ISP_LDC_SetMode(IMPISP_ONLINE_MODE);
+        li = IMP_ISP_LDC_OnlineInit(IMPVI_MAIN, &la);
+        if (strcmp(lv, "strength") == 0) {
+            ls = IMP_ISP_LDC_OnlineSetStrength ? IMP_ISP_LDC_OnlineSetStrength(IMPVI_MAIN, 0.5) : -2;
+        } else {
+            memset(lut, 0, sizeof(lut));
+            strncpy(lut, lv, sizeof(lut) - 1);
+            ls = IMP_ISP_LDC_OnlineSetLut(IMPVI_MAIN, lut);
+        }
+        printf("[T] ldc online before AddSensor: SetMode 0x%x, OnlineInit VI0 LDC 16x16 0x%x, %s 0x%x\n", (unsigned)lm, (unsigned)li,
+               strcmp(lv, "strength") ? "SetLut" : "SetStrength 0.5", (unsigned)ls);
+    }
+#endif
     if (ret >= 0) { ret = IMP_ISP_AddSensor(IMPVI_MAIN, &g_sensor); RET0(IMP_ISP_AddSensor, ret, "sensor %s", g_sensor.name); }
 #if defined(APITEST_T40) || defined(PLATFORM_T41)
     if (ret >= 0) algo_pre_t40();          /* custom AE/AWB records (case customalgo_t40): the vendor starts them at EnableSensor */

@@ -352,6 +352,7 @@ int IMP_ISP_AddSensor(IMPVI_NUM num, IMPSensorInfo *info)
     t32.width = (uint32_t)in.vinum >> 16;
     t32.height = (uint32_t)in.vinum & 0xffffu;
     t32.input_index = index;
+    OpenIMP_T32_LdcAddSensor(t32.isp_fd, num, t32.width, t32.height);    /* vendor order: before the memory */
     if (t32_setup_mem(OI_T32_IOC_GET_ISP_IPC_MEM_INFO, OI_T32_IOC_SET_ISP_IPC_MEM_INFO,
                       "isp-ipc", &t32.ipc_mem) < 0)
         goto fail_input;

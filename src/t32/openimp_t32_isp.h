@@ -34,4 +34,7 @@ int OpenIMP_T32_BinSetWdr(int num, int on);
 /* sensor name of VI num (32 B) while the sensor is added: 0, else -1 (#446) */
 int OpenIMP_T32_SensorName(int num, char *name);
 
+/* openimp_t32_isp_ctl.c: online LDC requests of IMP_ISP_AddSensor (#491) */
+int OpenIMP_T32_LdcAddSensor(int fd, int vinum, uint32_t w, uint32_t h);
+
 #endif

@@ -839,6 +839,86 @@ void cs_t33drv(void)
     printf("[T] t33drv: frames flow %d\n", cases_flow());
 }
 
+/* ---- case "t33l2": the offline LDC job protocol (#491, explicit only) ------------------------------------------------------------
+ * Mode offline, OfflineInit(1), CreateJob for an I2D job of 64x32 (vendor 2.0.2.1: f004 also when it creates the job; the handle in
+ * attr word 36), planes from /dev/offline_ldc ioctl 0 (as case t33drv), SubmitTask 180 degrees (Y checked), SubmitTask with func 4 on
+ * the I2D job (f00a), UpdateLutToJob on it (f004), DestroyJob (0) and an unknown job (f004), OfflineInit(0) after a created job
+ * (f009), mode online again.  Same lines on the vendor library + module. */
+extern int IMP_ISP_LDC_OfflineInit(int mode) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineCreateJob(void *attr) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineDestroyJob(uint32_t job) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineSubmitTask(void *task) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr) __attribute__((weak));
+
+void cs_t33l2(void)
+{
+    enum { W = 64, H = 32 };
+    uint32_t ja[40], task[8], upd[40], blk[4][5];
+    int lfd, mem, i, x, y, bad = -1, rm, ri, rc, rs = -2, rs4 = -2, ru = -2, rd = -2, rdu, ri0, rm2;
+    void *base[4] = { 0 };
+    uint32_t mlen[4] = { 0 };
+    uint8_t *p[4] = { 0 };
+
+    if (!IMP_ISP_LDC_OfflineInit || !IMP_ISP_LDC_OfflineCreateJob || !IMP_ISP_LDC_OfflineSubmitTask) {
+        rep_na("IMP_ISP_LDC_OfflineSubmitTask");
+        return;
+    }
+    rm = IMP_ISP_LDC_SetMode(IMPISP_OFFLINE_MODE);
+    ri = IMP_ISP_LDC_OfflineInit(1);
+    memset(ja, 0, sizeof(ja));
+    ja[0] = 1;                          /* func mask: I2D */
+    ja[1] = (uint32_t)H << 16 | W;
+    rc = IMP_ISP_LDC_OfflineCreateJob(ja);
+    lfd = open("/dev/offline_ldc", O_RDWR);
+    mem = open("/dev/mem", O_RDWR | O_SYNC);
+    for (i = 0; lfd >= 0 && mem >= 0 && i < 4; i++) {
+        memset(blk[i], 0, sizeof(blk[i]));
+        blk[i][2] = i & 1 ? W * H / 2 : W * H;
+        blk[i][3] = 4;
+        if (ioctl(lfd, 0, blk[i]) || !blk[i][1] || !(p[i] = drv_map(mem, blk[i][1], blk[i][2], &base[i], &mlen[i])))
+            break;
+    }
+    if (i == 4 && ja[36]) {
+        for (y = 0; y < H; y++)
+            for (x = 0; x < W; x++)
+                p[0][y * W + x] = (uint8_t)(x * 4 + y);
+        memset(p[1], 0x80, W * H / 2);
+        memset(p[2], 0, W * H);
+        task[0] = ja[36]; task[1] = blk[0][1]; task[2] = blk[1][1]; task[3] = blk[2][1]; task[4] = blk[3][1];
+        task[5] = (uint32_t)W << 16 | W; task[6] = 2; task[7] = 1;
+        rs = IMP_ISP_LDC_OfflineSubmitTask(task);
+        for (y = 0; y < H && bad < 0; y++)
+            for (x = 0; x < W && bad < 0; x++)
+                if (p[2][y * W + x] != (uint8_t)((W - 1 - x) * 4 + (H - 1 - y)))
+                    bad = y * W + x;
+        task[7] = 4;
+        rs4 = IMP_ISP_LDC_OfflineSubmitTask(task);
+        memset(upd, 0, sizeof(upd));
+        upd[0] = ja[36]; upd[1] = 1;
+        ru = IMP_ISP_LDC_OfflineUpdateLutToJob ? IMP_ISP_LDC_OfflineUpdateLutToJob(upd) : -2;
+    }
+    rdu = IMP_ISP_LDC_OfflineDestroyJob ? IMP_ISP_LDC_OfflineDestroyJob(0x1234) : -2;
+    if (ja[36] && IMP_ISP_LDC_OfflineDestroyJob)
+        rd = IMP_ISP_LDC_OfflineDestroyJob(ja[36]);
+    for (i = 0; i < 4; i++) {
+        if (base[i])
+            munmap(base[i], mlen[i]);
+        if (lfd >= 0 && blk[i][1])
+            ioctl(lfd, 1, blk[i]);
+    }
+    if (mem >= 0) close(mem);
+    if (lfd >= 0) close(lfd);
+    ri0 = IMP_ISP_LDC_OfflineInit(0);
+    rm2 = IMP_ISP_LDC_SetMode(IMPISP_ONLINE_MODE);
+    rep("IMP_ISP_LDC_OfflineCreateJob", rc, rc == (int)0xfffff004 && ja[36] ? V_PASS : V_FAIL,
+        "mode offline 0x%x, init 0x%x; I2D job 64x32: 0x%x (vendor 2.0.2.1 f004 also on success), handle %s", X(rm), X(ri), X(rc), ja[36] ? "set" : "none");
+    rep("IMP_ISP_LDC_OfflineSubmitTask", rs, rs == 0 && bad < 0 && rs4 == (int)0xfffff00a ? V_PASS : V_FAIL,
+        "rotate 180 64x32: 0x%x, Y %s; func 4 on the I2D job 0x%x", X(rs), bad < 0 ? "turned" : "WRONG", X(rs4));
+    rep("IMP_ISP_LDC_OfflineUpdateLutToJob", ru, ru == (int)0xfffff004 ? V_PASS : V_FAIL, "I2D job (no LUT bit) 0x%x", X(ru));
+    rep("IMP_ISP_LDC_OfflineDestroyJob", rd, rd == 0 && rdu == (int)0xfffff004 ? V_PASS : V_FAIL,
+        "job 0x%x, unknown 0x%x; OfflineInit(0) after a created job 0x%x; mode online 0x%x; frames flow %d", X(rd), X(rdu), X(ri0), X(rm2), cases_flow());
+}
+
 void cs_t33f1(void)
 {
     t33_f1_inject();

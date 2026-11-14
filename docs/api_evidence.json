@@ -21301,15 +21301,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
     },
     "ISP_LDC_OfflineCreateJobExt": {
       "area": "ISP tuning",
@@ -21341,15 +21341,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
     },
     "ISP_LDC_OfflineInit": {
       "area": "ISP tuning",
@@ -21381,15 +21381,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
     },
     "ISP_LDC_OfflineUpdateLutToJob": {
       "area": "ISP tuning",
@@ -21401,15 +21401,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
     },
     "ISP_LDC_OnlineGetFunc": {
       "area": "ISP tuning",
@@ -21526,7 +21526,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). 2026-11-14 (#491): the open T33 module answers the online LUT requests 0xc00454b9 (LUT memory, same size as the vendor's: 33672 B for LDC 16x16 at 1920x1080), 0xc00454ba and 0xc00454bb like the vendor module (apitest t33drv). Still cache: the library does not issue them at AddSensor yet (LUT fill / generation not ported), and neither module applies the attribute unless the ISP was initialised with LDC on."
+      "note": "T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). Still cache: the open module does not switch the ISP's online LDC on at init (vendor: LDC_SetMode(online) -> init flag -> register list 25, LDC working memory in the IPC memory, top bypass). Vendor 2.0.2.1 in QEMU with a strength corrupts kernel memory at AddSensor (its LUT header overruns the driver's block); OpenIMP passes the header size."
     },
     "ISP_LDC_OnlineSetLut": {
       "area": "ISP tuning",

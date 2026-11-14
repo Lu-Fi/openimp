@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T33 offline LDC jobs and online LDC at AddSensor as the vendor (#491; QEMU only)
+
+- `src/t32/openimp_t32_isp_ctl.c`: offline job protocol of vendor 2.0.2.1 (CreateJob: 12 job slots, handle in attr word 36, f004 also on success as the vendor; SubmitTask: the 40-byte `/dev/offline_ldc` job, I2D angle or LDC LUT + block, f00a for other functions; DestroyJob: slot freed, LUT block to ioctl 1; UpdateLutToJob: LUT jobs only). A LUT job has no LUT memory (the vendor allocates none and would map physical 0): f001; LUT from parameters not ported.
+- `IMP_ISP_AddSensor` sends the online LDC state (`0xc00454b9`, LUT via /dev/mem from the LUT file or the vendor's identity mesh for a strength, `0xc00454bb`, `0xc00454ba`). The open module records it; the ISP's online LDC is not switched on at init yet (#491).
+- apitest: case `t33l2` (offline jobs) and `APITEST_LDC_ONLINE=strength|<file>` (online LDC before AddSensor). QEMU: t33l2 equal on the vendor and the open stack; vendor 2.0.2.1 with an online strength corrupts kernel memory in QEMU, OpenIMP does not.
+
 ## 2026-11-14: T32 FrameSource I2D rotation / flip / mirror (#445; QEMU only)
 
 - `src/t32/openimp_t32_fs.c` (T32 build): as the vendor libimp 2.2.0, EnableChn arms an I2D pass for a channel whose `i2dattr` enables a rotation, flip or mirror: every captured NV12 frame goes through `/dev/i2d` (kernel `ingenic_i2d`, `IOCTL_I2D_START`, the T40 `struct i2d_param`; helpers `src/t40/p1_i2d.h`) into an I2D buffer of its own, which GetFrame and the bound modules get (90 / 270: picHeight x picWidth). The T32 driver takes the destination UV address as given, so it is set (the T40 driver derives it). The T33 build keeps the attribute only, as the T33 vendor 2.0.2.1.
