@@ -1,8 +1,8 @@
 #!/bin/sh
-# T32 platform skeleton (#286, planned): PRJ007, vendor 2.x kernel ABI
+# T32 platform (#286, planned): PRJ007, vendor 2.x kernel ABI
 # (open-tx-isp driver/t32).  XBurst1 MIPS32r2 + MXU2 like T31, uClibc.
-# Builds libimp.so and libimp.a from the OpenIMP headers only; the entry
-# points are stubs until the T32 issues land (docs/FEATURE_MATRIX: planned).
+# Builds libimp.so and libimp.a from src/t32 (QEMU-checked against the
+# vendor libimp 2.2.0; state per function: docs/FEATURE_MATRIX, planned).
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)

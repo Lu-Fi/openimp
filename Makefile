@@ -41,7 +41,7 @@ t30:
 t31:
 	./build-t31.sh
 
-# T32 platform skeleton (planned, #286): stub libimp, layout asserts only
+# T32 platform (planned, #286): QEMU-checked, no camera yet
 t32:
 	./build-t32.sh
 

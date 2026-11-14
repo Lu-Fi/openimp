@@ -858,7 +858,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 ## 2026-11-08, T20: EnableChn on kernels without the legacy crop ioctls
 
-- `fs_set_format()` (T20): a kernel without the legacy crop ioctls (7.x) answers `VIDIOC_S_CROP` with ENOTTY, and EnableChn failed at "set format failed". With no crop requested this is now accepted and the frame source stays at its full-frame default. Every other S_CROP or CROPCAP error, and a requested crop that cannot be applied, still fails as before, so the 3.10 vendor kernel path is unchanged. Reported by Paul Philippov (a narrower variant of his patch). Build-checked for T20, not yet run on a 7.x kernel.
+- `fs_set_format()` (T20): a kernel without the legacy crop ioctls (7.x) answers `VIDIOC_S_CROP` with ENOTTY, and EnableChn failed at "set format failed". With no crop requested this is now accepted and the frame source stays at its full-frame default. Every other S_CROP or CROPCAP error, and a requested crop that cannot be applied, still fails as before, so the 3.10 vendor kernel path is unchanged. Reported upstream (a narrower variant of the reported patch). Build-checked for T20, not yet run on a 7.x kernel.
 
 ## 2026-11-07: light-box protocol T10, open vs vendor (#230)
 
