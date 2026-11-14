@@ -1,684 +1,684 @@
-# T31 Hardware-JPEG im Allegro-AVPU: Reverse-Engineering-Bericht für OpenIMP
+# T31 hardware JPEG in the Allegro AVPU: reverse engineering report for OpenIMP
 
-Stand: 2026-09-29. Grundlage ist die Binary-Ninja-HLIL der T31-`libimp.so`
-(`libimp.so_hlil.txt`, im Folgenden `L<zeile>` bzw.
-`0x<adresse>`), der OpenIMP-Quellstand bei Commit `9cab219`,
-der dort mitgelieferte T31-`avpu`-Kerneltreiber (`avpu/t31/`) und ein Stock-Registertrace
-(`stock_logs.txt`, aufgenommen mit einem WR/RD-loggenden `avpu.ko`, prudynt mit
-1080p-H.264 + zwei JPEG-Kanälen 1920x1080 und 640x360).
+Status: 2026-09-29. The basis is the Binary Ninja HLIL of the T31 `libimp.so`
+(`libimp.so_hlil.txt`, referred to below as `L<line>` or
+`0x<address>`), the OpenIMP source state at commit `9cab219`,
+the T31 `avpu` kernel driver shipped with it (`avpu/t31/`) and a stock register trace
+(`stock_logs.txt`, recorded with a WR/RD-logging `avpu.ko`, prudynt with
+1080p H.264 + two JPEG channels 1920x1080 and 640x360).
 
-Kennzeichnung:
+(`libimp.so_hlil.txt` and `stock_logs.txt` are local files and are not in the repository.)
 
-- **[V]** belegt: steht so in der HLIL und/oder ist im Stock-Trace direkt beobachtet.
-- **[I]** abgeleitet: plausibel aus Kontext/Namensgebung/Konvention, nicht direkt belegt.
-- **[?]** offen: muss auf dem Gerät geprüft werden.
+Marking:
 
-Der Bericht beschreibt Verhalten und Datenformate und verweist auf Fundstellen. Er kopiert
-keinen Herstellercode und soll eine Clean-Room-Neuimplementierung (MIT) ermöglichen. Die
-Quantisierungs- und Huffman-Standardtabellen sind die öffentlichen Tabellen aus
+- **[V]** evidenced: it says so in the HLIL and/or is directly observed in the stock trace.
+- **[I]** inferred: plausible from context/naming/convention, not directly evidenced.
+- **[?]** open: must be checked on the device.
+
+The report describes behaviour and data formats and refers to locations. It copies
+no vendor code and is meant to enable a clean-room re-implementation (MIT). The
+standard quantisation and Huffman tables are the public tables from
 ITU-T T.81, Annex K.
 
 ---
 
-## 0. Kurzfazit
+## 0. Short conclusion
 
-1. **Der JPEG-Encoder ist ein eigener Hardware-Core und nicht der H.264-Core.** Der
-   Scheduler legt `numCore` AVC-Cores an und danach genau einen JPEG-Core mit dem **Index
-   `numCore`** (L66623 und L66635, `0x62c78`/`0x62d1c`). Die T31-libimp ruft
-   `AL_SchedulerEnc_Init(..., numCore = 1, ...)` auf (L53999, `0x507d4`). Der JPEG-Core
-   hat also **Index 1**:
-   - Registerfenster `(1<<9)+0x8200…` = **`0x8400–0x85FF`**
-   - Reset `0x85F0`, Start `0x85E4`, Clock-Gate `0x85F4`
-   - Status `0x8430/0x8434/0x8438`
-   - **IRQ-Bit 4** in `0x8014` (IRQ-Slot 4)
+1. **The JPEG encoder is a separate hardware core and not the H.264 core.** The
+   scheduler creates `numCore` AVC cores and then exactly one JPEG core with **index
+   `numCore`** (L66623 and L66635, `0x62c78`/`0x62d1c`). The T31 libimp calls
+   `AL_SchedulerEnc_Init(..., numCore = 1, ...)` (L53999, `0x507d4`). The JPEG core
+   therefore has **index 1**:
+   - register window `(1<<9)+0x8200…` = **`0x8400–0x85FF`**
+   - reset `0x85F0`, start `0x85E4`, clock gate `0x85F4`
+   - status `0x8430/0x8434/0x8438`
+   - **IRQ bit 4** in `0x8014` (IRQ slot 4)
 
-   Die Vermutung „gleiches Bit wie Enc1“ stimmt nur für die Formel `1<<(core*4)`. Weil der
-   Core-Index ein anderer ist, ergibt sich ein anderes Bit: AVC nutzt Bit 0 (Enc1) und
-   Bit 2 (Entropy), JPEG nutzt Bit 4. [V]
-2. **Kein Command-List-Mechanismus.** JPEG wird über 11 direkte Registerschreibzugriffe
-   (`0x8400–0x8428`) konfiguriert, dann folgt `0x85E4 = 1`. Nach dem IRQ werden drei
-   Statusregister gelesen, Länge in Bytes = `0x8434`. [V]
-3. **Die Tabellen liegen in einem DMA-Puffer („EP1“, Adresse in `0x8418`).** Er enthält:
-   - Quantisierungstabellen in Zigzag-Reihenfolge (DQT-Form)
-   - Reziproktabellen (u16) für den Hardware-Quantisierer
-   - Huffman-BITS-Arrays
-   - Huffman-Codebücher (4 Byte je Symbol)
+   The assumption "same bit as Enc1" is right only for the formula `1<<(core*4)`. Because the
+   core index is a different one, a different bit results: AVC uses bit 0 (Enc1) and
+   bit 2 (entropy), JPEG uses bit 4. [V]
+2. **No command-list mechanism.** JPEG is configured by 11 direct register writes
+   (`0x8400–0x8428`), followed by `0x85E4 = 1`. After the IRQ, three
+   status registers are read, length in bytes = `0x8434`. [V]
+3. **The tables are in a DMA buffer ("EP1", address in `0x8418`).** It contains:
+   - quantisation tables in zigzag order (DQT form)
+   - reciprocal tables (u16) for the hardware quantiser
+   - Huffman BITS arrays
+   - Huffman codebooks (4 bytes per symbol)
 
-   Der Puffer wird **einmal pro Kanal** in Software erzeugt. Die Quality-Skalierung ist die
-   IJG-Formel. [V]
-4. **Die JFIF-Header erzeugt aller Wahrscheinlichkeit nach die Hardware** (SOI…EOI
-   inklusive APP0-Dichte, DQT, DHT, SOF, SOS). Die Software trägt nur einen Abschnitt
-   `[offset, offset+size)` ein und schreibt keine Header. [I, stark gestützt; am Gerät
-   prüfen]
-5. **AVC und JPEG laufen im Stock-Trace echt parallel** auf ihren zwei Cores. Die
-   Serialisierung beschränkt sich auf:
-   - einen gemeinsamen „Register-Mutex“ für Clock-Gating, JPEG-Zonenschreiben und
-     JPEG-Statuslesen
-   - Scheduler-Mutexe
-   - **genau einen** IRQ-Waiter-Thread pro Prozess, der Callbacks je Slot verteilt. [V]
-6. **Nebenbefund mit hoher Priorität:** OpenIMP startet auf T31 derzeit **bei jedem
-   H.264-Frame den JPEG-Core**. `avpu_t31_start_companion_stage()` in
-   `src/t40/codec-t40.c:7515` wird nach jedem `CL_PUSH` aufgerufen (`:9305`) und hält den
-   Block `0x8400–0x8428` samt `0x85F0/0x85E4` für eine AVC-„Source-Config“. Dabei zeigen
-   Tabellenzeiger und Ausgabepuffer auf AVC-Speicher. Das muss vor jeder
-   Hardware-JPEG-Arbeit entfernt bzw. verifiziert werden (Abschnitt 5.5).
-7. **Machbarkeit: gut.** Die vorhandenen `/dev/avpu`-Primitiven (`WRITE_REG`, `READ_REG`,
-   `WAIT_IRQ`, rmem-Flush) reichen, eine Kerneländerung ist nicht nötig. In OpenIMP fehlen:
-   - Demux des IRQ-Slots 4 unabhängig vom AVC-„Owner“
-   - gemeinsamer Mutex für `0x8014`-RMW
-   - EP1-Generator
-   - JPEG-Stream-Pufferverwaltung
-   - Entfernung der Companion-Stage
+   The buffer is generated in software **once per channel**. The quality scaling is the
+   IJG formula. [V]
+4. **The JFIF headers are in all likelihood generated by the hardware** (SOI…EOI
+   including APP0 density, DQT, DHT, SOF, SOS). The software only enters one section
+   `[offset, offset+size)` and writes no headers. [I, strongly supported; check on the
+   device]
+5. **AVC and JPEG really run in parallel in the stock trace** on their two cores. The
+   serialisation is limited to:
+   - a shared "register mutex" for clock gating, JPEG zone writing and
+     JPEG status reading
+   - scheduler mutexes
+   - **exactly one** IRQ waiter thread per process, which distributes callbacks per slot. [V]
+6. **Side finding with high priority:** On T31, OpenIMP currently starts the **JPEG core at every
+   H.264 frame**. `avpu_t31_start_companion_stage()` in
+   `src/t40/codec-t40.c:7515` is called after every `CL_PUSH` (`:9305`) and holds
+   the block `0x8400–0x8428` together with `0x85F0/0x85E4` for an AVC "source config". The table pointer
+   and output buffer point to AVC memory. This must be removed or verified before any
+   hardware JPEG work (section 5.5).
+7. **Feasibility: good.** The existing `/dev/avpu` primitives (`WRITE_REG`, `READ_REG`,
+   `WAIT_IRQ`, rmem flush) are enough, no kernel change is necessary. Missing in OpenIMP:
+   - demux of IRQ slot 4 independent of the AVC "owner"
+   - shared mutex for the `0x8014` RMW
+   - EP1 generator
+   - JPEG stream buffer management
+   - removal of the companion stage
 
-   Aufwand: etwa 1,5–2,5 Personenwochen inklusive Gerätevalidierung.
+   Effort: about 1.5–2.5 person-weeks including device validation.
 
 ---
 
-## 1. Architektur: Cores, Registerfenster, IRQ-Slots
+## 1. Architecture: cores, register windows, IRQ slots
 
-| Element | Fundstelle | Aussage |
+| Element | Location | Statement |
 |---|---|---|
-| `AL_SchedulerCpu_Create` | L53999 `0x507d4` | `AL_SchedulerEnc_Init(..., 1 /*numCore*/, 0x2faf0800 /*Takt 800 MHz*/)` [V] |
-| `AL_SchedulerEnc_Init` | L66566 ff. | schreibt global `0x8010 = 0x1000` (`0x62be4`), Schleife `AL_EncCore_Init(core i)` für `i < numCore` (`0x62c78`), danach `AL_EncJpegCore_Init(core numCore)` (`0x62d1c`) [V] |
-| `AL_EncCore_Init` | L72514 `0x6c8d8` | registriert `EndEncoding` an Slot `core*4` und `EndAvcEntropy` an Slot `core*4+2`, `ResetCore` (`0x83F0` ← 1, 2, 4), `0x8018 ← 0xFFFFFF`, `0x8054 ← 0x80`, Codec-Liste {1, 0} (HEVC, AVC) [V] |
-| `AL_EncJpegCore_Init` | L72491 `0x6c7fc` | registriert nur `EndEncoding` an Slot `core*4` (`0x6c894`), Codec-Liste {4} = JPEG (`0x6c8a4`/`0x6c8ac`), **kein Reset**, **kein IRQ-Clear** [V] |
-| `getCompatibleCores` | L65725 `0x61230` | vergleicht `eProfile>>24` mit der Codec-Liste des Cores und iteriert Cores `0…numCore` (einschließlich JPEG-Core). JPEG-Kanäle landen daher zwangsläufig auf Core 1 [V] |
-| Stock-Trace | `stock_logs.txt` Z. 146–190 | `WR 0x85f4=1`, `0x8014=0x11`, `0x85f0=1`, `0x8400…0x8428`, `0x85e4=1` [V] |
+| `AL_SchedulerCpu_Create` | L53999 `0x507d4` | `AL_SchedulerEnc_Init(..., 1 /*numCore*/, 0x2faf0800 /*clock 800 MHz*/)` [V] |
+| `AL_SchedulerEnc_Init` | L66566 ff. | writes global `0x8010 = 0x1000` (`0x62be4`), loop `AL_EncCore_Init(core i)` for `i < numCore` (`0x62c78`), then `AL_EncJpegCore_Init(core numCore)` (`0x62d1c`) [V] |
+| `AL_EncCore_Init` | L72514 `0x6c8d8` | registers `EndEncoding` at slot `core*4` and `EndAvcEntropy` at slot `core*4+2`, `ResetCore` (`0x83F0` ← 1, 2, 4), `0x8018 ← 0xFFFFFF`, `0x8054 ← 0x80`, codec list {1, 0} (HEVC, AVC) [V] |
+| `AL_EncJpegCore_Init` | L72491 `0x6c7fc` | registers only `EndEncoding` at slot `core*4` (`0x6c894`), codec list {4} = JPEG (`0x6c8a4`/`0x6c8ac`), **no reset**, **no IRQ clear** [V] |
+| `getCompatibleCores` | L65725 `0x61230` | compares `eProfile>>24` with the codec list of the core and iterates cores `0…numCore` (including the JPEG core). JPEG channels therefore necessarily land on core 1 [V] |
+| Stock trace | `stock_logs.txt` lines 146–190 | `WR 0x85f4=1`, `0x8014=0x11`, `0x85f0=1`, `0x8400…0x8428`, `0x85e4=1` [V] |
 
-Per-Core-Register (Basis `B = core<<9`, für JPEG gilt `B = 0x200`):
+Per-core registers (base `B = core<<9`, for JPEG `B = 0x200` applies):
 
-| Register | AVC-Core 0 | JPEG-Core 1 | Bedeutung |
+| Register | AVC core 0 | JPEG core 1 | Meaning |
 |---|---|---|---|
-| `0x8200+B … 0x8228+B` | (nicht als Zone genutzt) | `0x8400–0x8428` | JPEG-Kommandozone (11 Worte) [V] |
-| `0x8230+B … 0x8238+B` | – | `0x8430–0x8438` | JPEG-Statuszone (3 Worte) [V] |
-| `0x83E0+B` | `CL_ADDR` | – | für JPEG nicht benutzt [V] |
-| `0x83E4+B` | `CL_PUSH` (2 = Enc1, 8 = Enc2) | `0x85E4` ← **1** = JPEG-Start | Start/Trigger [V]; Bitbedeutung „1 = JPEG“ [I] |
-| `0x83F0+B` | Reset 1, 2, 4 | `0x85F0` ← **1** vor jedem JPEG | Teil-/Soft-Reset [V Schreibwert, I Bedeutung] |
-| `0x83F4+B` | Clock-Cmd Bits[1:0] | `0x85F4` Bits[1:0] = 1 | Clock-Gate an (RMW, `SetClockCommand` L72391 `0x6c428`) [V] |
-| `0x83F8+B` | Bit1 Enc1 läuft, Bit4 Enc2 läuft | (`0x85F8`) | für JPEG vom Hersteller nicht abgefragt [V] |
+| `0x8200+B … 0x8228+B` | (not used as a zone) | `0x8400–0x8428` | JPEG command zone (11 words) [V] |
+| `0x8230+B … 0x8238+B` | – | `0x8430–0x8438` | JPEG status zone (3 words) [V] |
+| `0x83E0+B` | `CL_ADDR` | – | not used for JPEG [V] |
+| `0x83E4+B` | `CL_PUSH` (2 = Enc1, 8 = Enc2) | `0x85E4` ← **1** = JPEG start | start/trigger [V]; bit meaning "1 = JPEG" [I] |
+| `0x83F0+B` | reset 1, 2, 4 | `0x85F0` ← **1** before every JPEG | partial/soft reset [V written value, I meaning] |
+| `0x83F4+B` | clock cmd bits[1:0] | `0x85F4` bits[1:0] = 1 | clock gate on (RMW, `SetClockCommand` L72391 `0x6c428`) [V] |
+| `0x83F8+B` | bit 1 Enc1 running, bit 4 Enc2 running | (`0x85F8`) | not queried by the vendor for JPEG [V] |
 
-Globale Register: `0x8010` (Misc, `0x1000` bei Init), `0x8014` (IRQ-Maske), `0x8018`
-(IRQ-Pending, Schreiben löscht), `0x8054` (Top-Ctrl `0x80`), `0x8004` (Board-ID
-`0x72000460`, siehe `src/al_avpu.c`).
+Global registers: `0x8010` (misc, `0x1000` at init), `0x8014` (IRQ mask), `0x8018`
+(IRQ pending, writing clears), `0x8054` (top ctrl `0x80`), `0x8004` (board ID
+`0x72000460`, see `src/al_avpu.c`).
 
-IRQ-Slots (Index = Bitnummer, von `WAIT_IRQ` geliefert): 0 = Enc1-Ende Core 0,
-2 = AVC-Entropy Core 0, **4 = JPEG-Ende Core 1**. [V]
+IRQ slots (index = bit number, delivered by `WAIT_IRQ`): 0 = Enc1 end core 0,
+2 = AVC entropy core 0, **4 = JPEG end core 1**. [V]
 
 ---
 
-## 2. Registerkarte der JPEG-Zonen
+## 2. Register map of the JPEG zones
 
-### 2.1 Format der Zonen-Deskriptoren [V]
+### 2.1 Format of the zone descriptors [V]
 
-`WriteZoneRegisters` (L72468, `0x6c758`) interpretiert einen 8-Byte-Deskriptor:
+`WriteZoneRegisters` (L72468, `0x6c758`) interprets an 8-byte descriptor:
 
-- `u32 reg_offset` (relativ zur Zonenbasis)
-- `u16 word_index` (Index ins Kommando-/Statuspuffer-Array)
+- `u32 reg_offset` (relative to the zone base)
+- `u16 word_index` (index into the command/status buffer array)
 - `u16 count`
 
-Nimmt man die 64-Bit-Konstanten auseinander (L131462/L131463, Datenadressen
-`0xe3c28/0xe3c30`), ergibt sich:
+Taking the 64-bit constants apart (L131462/L131463, data addresses
+`0xe3c28/0xe3c30`) gives:
 
-| Symbol | Rohwert | reg_offset | word_index | count |
+| Symbol | Raw value | reg_offset | word_index | count |
 |---|---|---|---|---|
 | `AL_ENCJPEG_CMD` | `0x000b000000000000` | 0x00 | 0 | **11** |
 | `AL_ENCJPEG_STATUS` | `0x0003000c00000030` | 0x30 | 12 | **3** |
-| (Vergleich) `AL_ENC1_STATUS` | `0x001d004100000104` | 0x104 | 0x41 | 29 |
+| (comparison) `AL_ENC1_STATUS` | `0x001d004100000104` | 0x104 | 0x41 | 29 |
 
-`AL_EncCore_EncodeJpeg` (L72713) schreibt damit die Pufferworte 0…10 nach
-`(core<<9)+0x8200 … +0x8228`. Die Statuszone liegt bei `+0x8230 … +0x8238` und wird im
-Puffer als Worte 12…14 gespiegelt (`JpegStatusToStatusRegs` L73244 schreibt `+0x30/+0x34/+0x38`).
+`AL_EncCore_EncodeJpeg` (L72713) thus writes the buffer words 0…10 to
+`(core<<9)+0x8200 … +0x8228`. The status zone is at `+0x8230 … +0x8238` and is mirrored in the
+buffer as words 12…14 (`JpegStatusToStatusRegs` L73244 writes `+0x30/+0x34/+0x38`).
 
-### 2.2 Kommandozone (T31: `0x8400–0x8428`)
+### 2.2 Command zone (T31: `0x8400–0x8428`)
 
-Die Werte werden in `SetJpegParam` gesetzt (L71843–L71936, `0x6b33c–0x6b59c`):
+The values are set in `SetJpegParam` (L71843–L71936, `0x6b33c–0x6b59c`):
 
-- Worte 0–3 über `JpegParamToCtrlRegs` (L73828, `0x6f5c4`)
-- Worte 4–10 direkt (`0x6b498–0x6b4e4`)
-- Die Namen „srcY/srcC/tab/bit“ stammen aus `TraceJpegCmd` (L52408), das eine
-  `.sram_map.hex` mit genau diesen Bezeichnern für die Worte 4–7 schreibt (`0x4ca94–0x4cb04`,
-  Strings `0xe3800/0xe3820/0xe3828/0xe382c`).
+- Words 0–3 via `JpegParamToCtrlRegs` (L73828, `0x6f5c4`)
+- Words 4–10 directly (`0x6b498–0x6b4e4`)
+- The names "srcY/srcC/tab/bit" come from `TraceJpegCmd` (L52408), which writes a
+  `.sram_map.hex` with exactly these identifiers for words 4–7 (`0x4ca94–0x4cb04`,
+  strings `0xe3800/0xe3820/0xe3828/0xe382c`).
 
-| Reg (T31) | Wort | Bits | Inhalt | Quelle im Hersteller | Stock-Wert (1080p / 360p) | Status |
+| Reg (T31) | Word | Bits | Content | Source in the vendor | Stock value (1080p / 360p) | Status |
 |---|---|---|---|---|---|---|
-| `0x8400` | 0 | [1:0] | ChromaMode: 0 = 4:0:0, 1 = 4:2:0, 2 = 4:2:2 (Assert `ChromaMode <= AL_CHROMA_4_2_2`, `0x6b5c8`) | `ePicFormat>>8 & 0xF` | 1 | [V] |
-| | | [5:4] | Komponentenzahl: 1 bei Mono, sonst 3 | `0x6b450–0x6b458` | 3 | [V] Wert, [I] Name (SOF-Nf) |
-| | | [8] | immer 1 | `0x6b438` | 1 | [V] Wert, [?] Bedeutung (evtl. „Header erzeugen“) |
-| | | [9] | Kanalflag `ChParam+0x5D`; unterdrückt die Quant-Tabellen und schaltet auf eine Nur-DC-Huffman-Anordnung (Abschnitt 3.5) | `0x6b418` | 0 | [V] Wert, [I] „Lossless-Modus“ |
-| | | [13:12] | `ChParam+0x60` (2 Bit) | `0x6b42c` | 0 | [V] Wert, [I] JFIF-„units“ (0 = Seitenverhältnis) |
-| | | [31:16] | `ChParam+0x5E` (u16) | `0x6b43c` | 0 | [V] Wert, [I] Restart-Intervall (DRI) |
-| `0x8404` | 1 | [15:0] | Höhe − 1 | `ChParam+6` | `0x0437` (1079) / `0x0167` (359) | [V] |
-| | | [31:16] | Breite − 1 | `ChParam+4` | `0x077F` (1919) / `0x027F` (639) | [V] |
-| `0x8408` | 2 | [31:16] / [15:0] | JFIF-X-Dichte / -Y-Dichte | `ChParam+0x62/+0x64`, gesetzt von `setDensity` (JPEG_Encoder.c, L51629 ff., `0x4b370`) | `0x0001/0x0001` | [V] Herkunft (Assert-Funktionsname `setDensity`), [I] Semantik |
-| `0x840C` | 3 | [15:0] | Quell-Pitch (Bytes, Luma) | Quellpuffer +0x0C (`SetSourceBuffer` L68803) | `0x0780` / `0x0280` | [V] Wert, [I] Pitch statt Breite |
-| | | [31:16] | 0 (Memset) | `0x6b46c` | 0 | [V] |
-| `0x8410` | 4 | 31:0 | **Y-Physikadresse** | Quelle | `0x071a5f00` | [V] („srcY“) |
-| `0x8414` | 5 | 31:0 | **UV-Physikadresse (NV12, interleaved)** | Quelle | `0x073a3f00` = Y + 1920·1088 | [V] („srcC“), Offset = Pitch·align16(H) beobachtet |
-| `0x8418` | 6 | 31:0 | **Tabellenpuffer (EP1) phys.** | `AL_IntermMngr_GetEp1Addr` (`0x6a8a8`), muss 32-Byte-aligned sein (Prüfung `0x5c9f0`) | `0x0718dd00` / `0x0719f600` (je Kanal konstant) | [V] („tab“) |
-| `0x841C` | 7 | 31:0 | **Bitstream-Puffer phys. (Basis)** | StreamBuf+0x0C | `0x06f75300` | [V] („bit“) |
-| `0x8420` | 8 | 31:0 | Puffergröße gesamt | StreamBuf+0x10 | `0x000e7680` / `0x00027780` | [V] Wert, [I] Name |
-| `0x8424` | 9 | 31:0 | Startoffset im Puffer | StreamBuf+0x14 | `0x00000200` | [V] (identisch mit dem Abschnitts-Offset in `EndJpegEncoding` `0x68cac`) |
-| `0x8428` | 10 | 31:0 | verfügbare Bytes = Größe − Offset | `+0x10 − +0x14` (`0x6b4e4`) | `0x000e7480` | [V] |
+| `0x8400` | 0 | [1:0] | ChromaMode: 0 = 4:0:0, 1 = 4:2:0, 2 = 4:2:2 (assert `ChromaMode <= AL_CHROMA_4_2_2`, `0x6b5c8`) | `ePicFormat>>8 & 0xF` | 1 | [V] |
+| | | [5:4] | number of components: 1 for mono, otherwise 3 | `0x6b450–0x6b458` | 3 | [V] value, [I] name (SOF-Nf) |
+| | | [8] | always 1 | `0x6b438` | 1 | [V] value, [?] meaning (maybe "generate header") |
+| | | [9] | channel flag `ChParam+0x5D`; suppresses the quant tables and switches to a DC-only Huffman arrangement (section 3.5) | `0x6b418` | 0 | [V] value, [I] "lossless mode" |
+| | | [13:12] | `ChParam+0x60` (2 bits) | `0x6b42c` | 0 | [V] value, [I] JFIF "units" (0 = aspect ratio) |
+| | | [31:16] | `ChParam+0x5E` (u16) | `0x6b43c` | 0 | [V] value, [I] restart interval (DRI) |
+| `0x8404` | 1 | [15:0] | height − 1 | `ChParam+6` | `0x0437` (1079) / `0x0167` (359) | [V] |
+| | | [31:16] | width − 1 | `ChParam+4` | `0x077F` (1919) / `0x027F` (639) | [V] |
+| `0x8408` | 2 | [31:16] / [15:0] | JFIF X density / Y density | `ChParam+0x62/+0x64`, set by `setDensity` (JPEG_Encoder.c, L51629 ff., `0x4b370`) | `0x0001/0x0001` | [V] origin (assert function name `setDensity`), [I] semantics |
+| `0x840C` | 3 | [15:0] | source pitch (bytes, luma) | source buffer +0x0C (`SetSourceBuffer` L68803) | `0x0780` / `0x0280` | [V] value, [I] pitch instead of width |
+| | | [31:16] | 0 (memset) | `0x6b46c` | 0 | [V] |
+| `0x8410` | 4 | 31:0 | **Y physical address** | source | `0x071a5f00` | [V] ("srcY") |
+| `0x8414` | 5 | 31:0 | **UV physical address (NV12, interleaved)** | source | `0x073a3f00` = Y + 1920·1088 | [V] ("srcC"), offset = pitch·align16(H) observed |
+| `0x8418` | 6 | 31:0 | **table buffer (EP1) phys.** | `AL_IntermMngr_GetEp1Addr` (`0x6a8a8`), must be 32-byte aligned (check `0x5c9f0`) | `0x0718dd00` / `0x0719f600` (constant per channel) | [V] ("tab") |
+| `0x841C` | 7 | 31:0 | **bitstream buffer phys. (base)** | StreamBuf+0x0C | `0x06f75300` | [V] ("bit") |
+| `0x8420` | 8 | 31:0 | total buffer size | StreamBuf+0x10 | `0x000e7680` / `0x00027780` | [V] value, [I] name |
+| `0x8424` | 9 | 31:0 | start offset in the buffer | StreamBuf+0x14 | `0x00000200` | [V] (identical to the section offset in `EndJpegEncoding` `0x68cac`) |
+| `0x8428` | 10 | 31:0 | available bytes = size − offset | `+0x10 − +0x14` (`0x6b4e4`) | `0x000e7480` | [V] |
 
-Alle beobachteten Adressen sind 256-Byte-aligned [V, Trace]. Hart geprüft wird nur die
-32-Byte-Ausrichtung von EP1 [V].
+All observed addresses are 256-byte aligned [V, trace]. Only the 32-byte alignment of
+EP1 is hard-checked [V].
 
-Der gleiche Dreiklang (Größe, Offset, verfügbar) steht auch im AVC-Command-List-Dump
-(`CL[049..051] = 000e7680 00000220 000e7460`) und ist damit Allegro-Konvention. [V]
+The same triple (size, offset, available) is also in the AVC command-list dump
+(`CL[049..051] = 000e7680 00000220 000e7460`) and is thus an Allegro convention. [V]
 
-### 2.3 Statuszone (T31: `0x8430–0x8438`)
+### 2.3 Status zone (T31: `0x8430–0x8438`)
 
-`AL_EncCore_ReadStatusRegsJpeg` (L72837, `0x6d32c`) liest die drei Register unter dem
-Register-Mutex:
+`AL_EncCore_ReadStatusRegsJpeg` (L72837, `0x6d32c`) reads the three registers under the
+register mutex:
 
-| Reg | Ziel im Status | Verwendung | Status |
+| Reg | Target in status | Use | Status |
 |---|---|---|---|
-| `0x8430` | `Status+0x70` | nur für Trace zurückgeschrieben | [V] Lesen, [?] Bedeutung (Zyklen-/Bitzähler?) |
-| `0x8434` | `Status+0x08` | **Länge des erzeugten JPEG in Bytes.** `EndJpegEncoding` trägt den Abschnitt {Offset = StreamBuf+0x14, Länge = dieser Wert} ein (`0x68ca0–0x68cbc`) | [V] |
-| `0x8438` | Bit 1 → `Status+0x01` | Fehlerflag. Wenn gesetzt, setzt `EndJpegEncoding` den Fehlercode `0x88` (`0x68cc4`) | [V]; [I] `0x88` = Allegro „Stream-Overflow“ (`0x87` wird an `0x63218` als No-Memory benutzt) |
+| `0x8430` | `Status+0x70` | written back only for trace | [V] reading, [?] meaning (cycle/bit counter?) |
+| `0x8434` | `Status+0x08` | **length of the generated JPEG in bytes.** `EndJpegEncoding` enters the section {offset = StreamBuf+0x14, length = this value} (`0x68ca0–0x68cbc`) | [V] |
+| `0x8438` | bit 1 → `Status+0x01` | error flag. If set, `EndJpegEncoding` sets the error code `0x88` (`0x68cc4`) | [V]; [I] `0x88` = Allegro "stream overflow" (`0x87` is used as no-memory at `0x63218`) |
 
-Beim Abschluss wird kein Register geschrieben: keine Maskenänderung, kein Clear. Den Ack
-von `0x8018` macht der Kerneltreiber (Abschnitt 5). [V]
+On completion no register is written: no mask change, no clear. The ack
+of `0x8018` is done by the kernel driver (section 5). [V]
 
 ---
 
-## 3. Quantisierungs- und Huffman-Tabellen (EP1-Puffer)
+## 3. Quantisation and Huffman tables (EP1 buffer)
 
-### 3.1 Erzeugung und Lebenszyklus [V]
+### 3.1 Creation and life cycle [V]
 
-- Pro Kanal wird ein EP1-Puffer der Größe `AL_GetAllocSizeEP1() = 0x6400` Byte (L43022)
-  mit dem DMA-Allocator angelegt (`MemDesc_AllocNamed`, `0x45c00`, L48506).
-- Beim Kanal-Setup wird er einmal gelöscht (`AL_CleanupMemory`, `0x45f5c`) und über den
-  Encoder-vtable-Eintrag `preprocessEp1` gefüllt (`0x45f8c`). Für JPEG ist das
+- Per channel an EP1 buffer of size `AL_GetAllocSizeEP1() = 0x6400` bytes (L43022)
+  is created with the DMA allocator (`MemDesc_AllocNamed`, `0x45c00`, L48506).
+- At channel setup it is cleared once (`AL_CleanupMemory`, `0x45f5c`) and filled via the
+  encoder vtable entry `preprocessEp1` (`0x45f8c`). For JPEG this is the
   `preprocessEp1` in JPEG_Encoder.c (L51587, `0x4b1e0`):
-  - Ist `ChParam+0x5D == 0`, wird `JpegTables_InitQuant(Q, chroma, …)` aufgerufen.
-  - Danach folgt immer `JpegTables_InitHuffman(chroma, ChParam+0x5D, …)`.
-  - Anschließend wird im EP1-Deskriptor Flag `0x10` gesetzt.
-- Der Scheduler kopiert das EP1-Master-Image in jeden Intermediate-Puffer
-  (`AL_EncChannel_PushIntermBuffer`, L71346 `0x6a4c0`). Pro Frame wird die EP1-Physadresse
-  des gerade benutzten Intermediate-Puffers eingetragen (`0x6a8c0`).
-- Folge: Die Tabellen werden **nicht pro Frame** neu gerechnet. Das deckt sich mit der
-  kanal-konstanten `0x8418` im Trace.
+  - If `ChParam+0x5D == 0`, `JpegTables_InitQuant(Q, chroma, …)` is called.
+  - After that, `JpegTables_InitHuffman(chroma, ChParam+0x5D, …)` always follows.
+  - Then flag `0x10` is set in the EP1 descriptor.
+- The scheduler copies the EP1 master image into every intermediate buffer
+  (`AL_EncChannel_PushIntermBuffer`, L71346 `0x6a4c0`). Per frame, the EP1 physical address
+  of the intermediate buffer currently in use is entered (`0x6a8c0`).
+- Consequence: The tables are **not** recomputed per frame. This matches the
+  channel-constant `0x8418` in the trace.
 
-### 3.2 Quality → Quantisierungstabelle [V]
+### 3.2 Quality → quantisation table [V]
 
 `JpegTables_InitQuant` (L51669, `0x4b490`):
 
-- `Q` = vorzeichenerweiterter Wert aus `ChParam+0x80`. Das ist `RC.iInitialQP`; die
-  RC-Struktur beginnt bei `Settings+0x68`, siehe `AL_Settings_SetDefaultRCParam`
-  `0x3ddb8` (`+0x18 = -1`). Die JPEG-Defaults setzen MinQP = 1 und MaxQP = 100
-  (`AL_sSettings_SetDefaultJPEGParam` `0x3dd84`: `+0x82 = 1`, `+0x84 = 100`). [V Feld,
-  I „Quality = iInitialQP“, passt zur IMP-API `IMP_Encoder_SetDefaultParam(..., iInitialQP, ...)`]
-- Skalierung (IJG):
-  - `S = 200 − 2Q` für `Q ≥ 50`, sonst `S = 5000 / Q`
+- `Q` = sign-extended value from `ChParam+0x80`. This is `RC.iInitialQP`; the
+  RC structure begins at `Settings+0x68`, see `AL_Settings_SetDefaultRCParam`
+  `0x3ddb8` (`+0x18 = -1`). The JPEG defaults set MinQP = 1 and MaxQP = 100
+  (`AL_sSettings_SetDefaultJPEGParam` `0x3dd84`: `+0x82 = 1`, `+0x84 = 100`). [V field,
+  I "quality = iInitialQP", fits the IMP API `IMP_Encoder_SetDefaultParam(..., iInitialQP, ...)`]
+- Scaling (IJG):
+  - `S = 200 − 2Q` for `Q ≥ 50`, otherwise `S = 5000 / Q`
   - `S &= 0xFFFF`
-  - `Q = 0` würde durch null teilen (trap).
-- Pro Eintrag: `q = (base·S + 50) / 100`. Wird `q` zu 0, gilt `q = 1`; ab `q ≥ 256` gilt
+  - `Q = 0` would divide by zero (trap).
+- Per entry: `q = (base·S + 50) / 100`. If `q` becomes 0, `q = 1`; from `q ≥ 256` on,
   `q = 255`.
-- Basistabellen: ITU-T T.81 Annex K.1 für Luma und Chroma, im Binary als
-  `LUMA_QUANT_TABLE`/`CHROMA_QUANT_TABLE` in Rasterreihenfolge (`0xe3040`/`0xe3000`).
-- **Ausgabe in Zigzag-Reihenfolge** (DQT-Reihenfolge). Iteriert wird über `ZIGZAG_SCAN`
-  (`0xe2fc0`, Standard-Zigzag→Raster).
-  - Luma: 64 Byte ab EP1+0x00
-  - Chroma (nur wenn ChromaMode ≠ 0): 64 Byte ab EP1+0x40
+- Base tables: ITU-T T.81 Annex K.1 for luma and chroma, in the binary as
+  `LUMA_QUANT_TABLE`/`CHROMA_QUANT_TABLE` in raster order (`0xe3040`/`0xe3000`).
+- **Output in zigzag order** (DQT order). Iteration is over `ZIGZAG_SCAN`
+  (`0xe2fc0`, standard zigzag→raster).
+  - Luma: 64 bytes from EP1+0x00
+  - Chroma (only if ChromaMode ≠ 0): 64 bytes from EP1+0x40
 
-### 3.3 Reziproktabellen für den Hardware-Quantisierer [V]
+### 3.3 Reciprocal tables for the hardware quantiser [V]
 
-- Direkt hinter den Quant-Bytes (bei Farbe EP1+0x80, bei Mono EP1+0x40) liegen 64 × u16
-  (Little Endian, CPU-nativ) je Komponente.
-- Chroma liegt 0x80 Byte hinter Luma.
-- Wert: `r = ((0x10000 + (q>>1)) / q) & 0xFFFF`, davon −1. Für q = 1 ergibt das `0xFFFF`.
-- Abgelegt in **Rasterreihenfolge**: `r[zigzag[k]]` wird aus dem k-ten Zigzag-Quantwert
-  berechnet (`0x4b5b4–0x4b610`).
-- Damit multipliziert die Hardware mit 0.16-Festkomma-Kehrwerten, statt zu dividieren. [I]
+- Directly behind the quant bytes (with colour at EP1+0x80, with mono at EP1+0x40) are 64 × u16
+  (little endian, CPU-native) per component.
+- Chroma is 0x80 bytes behind luma.
+- Value: `r = ((0x10000 + (q>>1)) / q) & 0xFFFF`, minus 1 of that. For q = 1 this gives `0xFFFF`.
+- Stored in **raster order**: `r[zigzag[k]]` is computed from the k-th zigzag quant value
+  (`0x4b5b4–0x4b610`).
+- So the hardware multiplies by 0.16 fixed-point reciprocals instead of dividing. [I]
 
-### 3.4 Huffman-Format [V]
+### 3.4 Huffman format [V]
 
-`JpegTables_InitHuffman` (L51767, `0x4b64c`) legt zwei Arten von Daten ab.
+`JpegTables_InitHuffman` (L51767, `0x4b64c`) stores two kinds of data.
 
-**(a) BITS-Arrays** (16 Byte je Tabelle = Anzahl Codes je Länge 1…16):
-- gespeichert als vier u32-Worte, in denen jeweils 4 Bytes **MSB-first** stehen, also
-  Byte-Reihenfolge pro Wort vertauscht
-- Beispiel DC-Luma `{0,1,5,1,1,1,1,1,1,0,…}` → Worte `0x00010501, 0x01010101, 0x01000000, 0`
+**(a) BITS arrays** (16 bytes per table = number of codes per length 1…16):
+- stored as four u32 words, each holding 4 bytes **MSB-first**, i.e. the
+  byte order per word is swapped
+- Example DC luma `{0,1,5,1,1,1,1,1,1,0,…}` → words `0x00010501, 0x01010101, 0x01000000, 0`
 
-Nebenbei: Binary Ninja zeigt einige dieser Konstanten als Zeiger in Strings an. So ist
-„`fog_Strength`“ = `0x00010501`, „`_GetDRC_Strength`“ = `0x00010277`, „`g_SetAeHist`“ =
-`0xFFFF`, „`_SetAeHist`“ = `0x10000`, „`etGopParam`“ = `0xCFFF`. Sie wurden über die
-Stringadressen `0x104ed+20`, `0x10269+14`, `0xfff2+13`, `0xcff3+12` aufgelöst.
+Incidentally: Binary Ninja displays some of these constants as pointers into strings. So
+"`fog_Strength`" = `0x00010501`, "`_GetDRC_Strength`" = `0x00010277`, "`g_SetAeHist`" =
+`0xFFFF`, "`_SetAeHist`" = `0x10000`, "`etGopParam`" = `0xCFFF`. They were resolved via the
+string addresses `0x104ed+20`, `0x10269+14`, `0xfff2+13`, `0xcff3+12`.
 
-**(b) Codebücher**: je Symbol ein u32 (LE) mit folgendem Aufbau:
+**(b) Codebooks**: per symbol one u32 (LE) with the following layout:
 
-| Bits | Inhalt |
+| Bits | Content |
 |---|---|
-| [7:0] | **nächstes Symbol in HUFFVAL-Reihenfolge** (`0xFF` = Listenende) – eine verkettete Liste, mit der die Hardware die DHT-Wertefolge ausgeben kann [I] |
-| [23:8] | Huffman-Code (rechtsbündig) |
-| [31:24] | Codelänge − 1 |
+| [7:0] | **next symbol in HUFFVAL order** (`0xFF` = end of list) – a linked list with which the hardware can output the DHT value sequence [I] |
+| [23:8] | Huffman code (right-aligned) |
+| [31:24] | code length − 1 |
 
-Beispiel DC-Luma Kategorie 0: Code `00`, Länge 2 → Wort `0x01000001` mit next = 1. [V]
+Example DC luma category 0: code `00`, length 2 → word `0x01000001` with next = 1. [V]
 
-Anordnung der Codebücher:
-- **DC**: 12 Einträge, Index = Kategorie 0…11 (48 Byte).
-- **AC**: 162 Einträge (648 Byte). Index `(size−1)·16 + run` für size 1…10 und run 0…15,
-  dann Index 160 = ZRL (0xF0), Index 161 = EOB (0x00). Geprüft an Luma und Chroma, z. B.
-  Chroma-ZRL = `1111111010`, 10 Bit, Chroma-EOB = `00`, 2 Bit.
-- Ob die Hardware bei ungewöhnlichen Tabellen den Listenkopf selbst findet (kanonisch
-  beginnt der erste Code immer mit lauter Nullen) oder aus den Kopfworten liest, ist
-  **[?]**. Für eine Neuimplementierung reicht es, die Standardtabellen byte-identisch
-  nachzubauen.
+Arrangement of the codebooks:
+- **DC**: 12 entries, index = category 0…11 (48 bytes).
+- **AC**: 162 entries (648 bytes). Index `(size−1)·16 + run` for size 1…10 and run 0…15,
+  then index 160 = ZRL (0xF0), index 161 = EOB (0x00). Checked on luma and chroma, e.g.
+  chroma ZRL = `1111111010`, 10 bits, chroma EOB = `00`, 2 bits.
+- Whether the hardware finds the list head itself with unusual tables (canonically
+  the first code always starts with all zeros) or reads it from the header words is
+  **[?]**. For a re-implementation it is enough to rebuild the standard tables
+  byte-identically.
 
-### 3.5 EP1-Speicherbild (Normalmodus, Bit 9 = 0) [V]
+### 3.5 EP1 memory image (normal mode, bit 9 = 0) [V]
 
-Farbe (4:2:0/4:2:2):
+Colour (4:2:0/4:2:2):
 
-| Offset | Größe | Inhalt |
+| Offset | Size | Content |
 |---|---|---|
-| 0x000 | 64 B | Luma-Quant u8, Zigzag |
-| 0x040 | 64 B | Chroma-Quant u8, Zigzag |
-| 0x080 | 128 B | Luma-Reziproke u16, Raster |
-| 0x100 | 128 B | Chroma-Reziproke u16, Raster |
-| 0x180 | 4 B | u32 = 1 [?] (evtl. Kopf-Symbol AC-Luma = 0x01 oder ein Flag) |
+| 0x000 | 64 B | luma quant u8, zigzag |
+| 0x040 | 64 B | chroma quant u8, zigzag |
+| 0x080 | 128 B | luma reciprocals u16, raster |
+| 0x100 | 128 B | chroma reciprocals u16, raster |
+| 0x180 | 4 B | u32 = 1 [?] (maybe head symbol AC luma = 0x01 or a flag) |
 | 0x184 | 4 B | u32 = 0 [?] |
-| 0x188 | 16 B | BITS AC-Luma (Wort-MSB-first) |
-| 0x198 | 16 B | BITS DC-Luma |
-| 0x1A8 | 16 B | BITS AC-Chroma |
-| 0x1B8 | 16 B | BITS DC-Chroma |
-| 0x1C8 | 648 B | Codebuch AC-Luma |
-| 0x450 | 48 B | Codebuch DC-Luma |
-| 0x480 | 648 B | Codebuch AC-Chroma |
-| 0x708 | 48 B | Codebuch DC-Chroma |
-| 0x738 | 88 B | Nullen (bis 0x790) |
+| 0x188 | 16 B | BITS AC luma (word MSB-first) |
+| 0x198 | 16 B | BITS DC luma |
+| 0x1A8 | 16 B | BITS AC chroma |
+| 0x1B8 | 16 B | BITS DC chroma |
+| 0x1C8 | 648 B | codebook AC luma |
+| 0x450 | 48 B | codebook DC luma |
+| 0x480 | 648 B | codebook AC chroma |
+| 0x708 | 48 B | codebook DC chroma |
+| 0x738 | 88 B | zeros (up to 0x790) |
 
 Mono (4:0:0):
 
-| Offset | Größe | Inhalt |
+| Offset | Size | Content |
 |---|---|---|
-| 0x000 | 64 B | Luma-Quant, Zigzag |
-| 0x040 | 128 B | Luma-Reziproke, Raster |
+| 0x000 | 64 B | luma quant, zigzag |
+| 0x040 | 128 B | luma reciprocals, raster |
 | 0x0C0 | 4 B | u32 = 1 |
 | 0x0C4 | 4 B | u32 = 0 |
-| 0x0C8 | 16 B | BITS AC-Luma |
-| 0x0D8 | 16 B | BITS DC-Luma |
-| 0x0E8 | 648 B | Codebuch AC-Luma |
-| 0x370 | 48 B | Codebuch DC-Luma |
-| 0x3A0 | 88 B | Nullen |
+| 0x0C8 | 16 B | BITS AC luma |
+| 0x0D8 | 16 B | BITS DC luma |
+| 0x0E8 | 648 B | codebook AC luma |
+| 0x370 | 48 B | codebook DC luma |
+| 0x3A0 | 88 B | zeros |
 
-**Bit-9-Modus** (`ChParam+0x5D ≠ 0`, Pfad `0x4b7bc`):
-- keine Quant-Tabellen
-- ab EP1+0: `1, 0`, dann BITS DC-Luma (+ BITS DC-Chroma), Codebuch DC-Luma
-  (+ DC-Chroma), Nullen
-- nur „DC-artige“ SSSS-Tabellen und keine DQT: das passt zu Lossless-JPEG [I]
-- Die IMP-API setzt das Flag nicht (Default 0 durch Memset in `AL_Settings_SetDefaults`
-  `0x3de88`). Es kann ignoriert werden.
+**Bit-9 mode** (`ChParam+0x5D ≠ 0`, path `0x4b7bc`):
+- no quant tables
+- from EP1+0: `1, 0`, then BITS DC luma (+ BITS DC chroma), codebook DC luma
+  (+ DC chroma), zeros
+- only "DC-like" SSSS tables and no DQT: this fits lossless JPEG [I]
+- The IMP API does not set the flag (default 0 by memset in `AL_Settings_SetDefaults`
+  `0x3de88`). It can be ignored.
 
-Wichtig für die Neuimplementierung: Die Hardware liest die Bytes aus dem
-Little-Endian-Speicher. Wie sie die u8-Quantbytes innerhalb der 32-Bit-Worte adressiert,
-ist nicht belegt. **Die Neuimplementierung muss das Speicherbild byte-exakt nachbilden**
-(Abgleich gegen einen Stock-Dump, Abschnitt 8).
+Important for the re-implementation: The hardware reads the bytes from little-endian
+memory. How it addresses the u8 quant bytes inside the 32-bit words
+is not evidenced. **The re-implementation must reproduce the memory image byte-exactly**
+(comparison against a stock dump, section 8).
 
 ---
 
-## 4. Ablauf eines JPEG-Frames beim Hersteller
+## 4. Flow of a JPEG frame in the vendor
 
-1. **Einmalig** (Scheduler-Init):
+1. **Once** (scheduler init):
    - `0x8010 = 0x1000`
-   - Init von AVC-Core 0 (`0x83F0` 1/2/4, `0x8018 = 0xFFFFFF`, `0x8054 = 0x80`)
-   - JPEG-Callback auf Slot 4
-   - Diese Schritte laufen auch, wenn nur ein JPEG-Kanal existiert. [V]
-2. **Kanalanlage**:
-   - EP1 anlegen (DMA/rmem, cached) und mit Tabellen füllen
-   - Dichte setzen (`ConfigureChannel`/`setDensity`: Aspect-Enum `ChParam+0xFC`, 2 → 4:3,
-     0/3 → 16:9, 4 → 1:1, JPEG-Default 4 → 1:1)
-   - Stream-Puffer anlegen
-   - Log-Hinweise: „Jpeg channel will not share buff“ und „Jpeg channel need create after
-     channel 0“ (L85368, L133288). [V]
-3. **Frame-Start**: `CheckAndEncode` (`0x61b08`):
-   - Unter dem Scheduler-Mutex (`0x6200c`) wird Core 1 als „running“ markiert.
-   - `AL_EncCore_TurnOnGC` → RMW `0x85F4[1:0] = 1` unter dem Register-Mutex (`0x61fec`).
-     Im Trace passiert das nur beim ersten JPEG.
-   - Dann folgt `AL_EncChannel_Encode` (`0x620d0`). [V]
-4. **`SetJpegParam`** (L71843 ff.) unter dem Kanal-Mutex:
-   - Request aus der FIFO nehmen
-   - Kommandopuffer (0x200 B, `Req+0xA78`) nullen
-   - Worte 0–10 füllen (Abschnitt 2.2)
-   - optionaler Trace-Hook (`handleJpegInputTrace`)
-   - `AL_EncCore_TurnOnRAM` (No-op, `0x6cbbc`)
+   - init of AVC core 0 (`0x83F0` 1/2/4, `0x8018 = 0xFFFFFF`, `0x8054 = 0x80`)
+   - JPEG callback on slot 4
+   - These steps also run if only one JPEG channel exists. [V]
+2. **Channel creation**:
+   - create EP1 (DMA/rmem, cached) and fill it with tables
+   - set density (`ConfigureChannel`/`setDensity`: aspect enum `ChParam+0xFC`, 2 → 4:3,
+     0/3 → 16:9, 4 → 1:1, JPEG default 4 → 1:1)
+   - create stream buffer
+   - Log hints: "Jpeg channel will not share buff" and "Jpeg channel need create after
+     channel 0" (L85368, L133288). [V]
+3. **Frame start**: `CheckAndEncode` (`0x61b08`):
+   - Under the scheduler mutex (`0x6200c`) core 1 is marked "running".
+   - `AL_EncCore_TurnOnGC` → RMW `0x85F4[1:0] = 1` under the register mutex (`0x61fec`).
+     In the trace this happens only at the first JPEG.
+   - Then follows `AL_EncChannel_Encode` (`0x620d0`). [V]
+4. **`SetJpegParam`** (L71843 ff.) under the channel mutex:
+   - take the request from the FIFO
+   - zero the command buffer (0x200 B, `Req+0xA78`)
+   - fill words 0–10 (section 2.2)
+   - optional trace hook (`handleJpegInputTrace`)
+   - `AL_EncCore_TurnOnRAM` (no-op, `0x6cbbc`)
    - **`AL_EncCore_SetJpegInterrupt`**: RMW `0x8014 |= 1<<4` (`0x6d3f8`)
-   - Zeitstempel
+   - timestamp
    - `AL_EncCore_EncodeJpeg` [V]
 5. **`AL_EncCore_EncodeJpeg`** (L72713):
-   - `Rtos_FlushCacheMemory(cmdbuf_virt, 0x100000)`. Das wird über
-     `IMP_FlushCache` → `/dev/rmem` ioctl `0xc00c7200 {vaddr, 1 MiB, dir = 1}` zum
-     Writeback (L23910).
-   - Register-Mutex holen, `0x85F0 ← 1`, 11 Zonenregister schreiben, `0x85E4 ← 1`,
-     Mutex freigeben. [V]
-   - [I] Der 1-MiB-Writeback ist größer als der Cache und führt bei MIPS praktisch zum
-     kompletten D-Cache-Writeback. Damit sind auch die per CPU geschriebenen EP1-Bytes
-     sicher im RAM.
-6. **Hardware** liest NV12 direkt aus dem Framesource-Puffer (keine Kopie) und schreibt ab
-   `Basis + Offset (0x200)` bis maximal `Größe − Offset`. [V Parameter, I Semantik]
-7. **IRQ Slot 4** → Kernel (Abschnitt 5) → `WAIT_IRQ` liefert 4 → IpCtrl-Callback
-   `EndEncoding` (`0x6c2c0`) → `HandleCoreInterrupt(sched, core = 1)` (`0x6290c`) → Kanal
-   des Cores → `AL_EncChannel_EndEncoding` → bei Codec 4 **`EndJpegEncoding`**
-   (L70417, `0x68b70`; Verzweigung `0x6b870`). [V]
+   - `Rtos_FlushCacheMemory(cmdbuf_virt, 0x100000)`. This becomes, via
+     `IMP_FlushCache` → `/dev/rmem` ioctl `0xc00c7200 {vaddr, 1 MiB, dir = 1}`, a
+     writeback (L23910).
+   - Take the register mutex, `0x85F0 ← 1`, write 11 zone registers, `0x85E4 ← 1`,
+     release the mutex. [V]
+   - [I] The 1 MiB writeback is larger than the cache and on MIPS practically leads to a
+     complete D-cache writeback. This also gets the EP1 bytes written by CPU
+     safely into RAM.
+6. The **hardware** reads NV12 directly from the framesource buffer (no copy) and writes from
+   `base + offset (0x200)` up to at most `size − offset`. [V parameters, I semantics]
+7. **IRQ slot 4** → kernel (section 5) → `WAIT_IRQ` returns 4 → IpCtrl callback
+   `EndEncoding` (`0x6c2c0`) → `HandleCoreInterrupt(sched, core = 1)` (`0x6290c`) → channel
+   of the core → `AL_EncChannel_EndEncoding` → for codec 4 **`EndJpegEncoding`**
+   (L70417, `0x68b70`; branch `0x6b870`). [V]
 8. **`EndJpegEncoding`**:
-   - Status lesen (`0x8430/34/38`)
-   - Abschnitt {Offset, Länge = `0x8434`} eintragen, bei Bit 1 Fehler `0x88`
-   - Request in den End-FIFO, Arbeits-Puffer freigeben
-   - Quellframe freigeben (`shouldReleaseSource` → 1, `0x4b1d0`)
-   - danach `Process()` für den nächsten Auftrag. [V]
+   - read status (`0x8430/34/38`)
+   - enter section {offset, length = `0x8434`}, on bit 1 error `0x88`
+   - request into the end FIFO, release working buffer
+   - release source frame (`shouldReleaseSource` → 1, `0x4b1d0`)
+   - then `Process()` for the next job. [V]
 9. **Header:**
-   - `generateNals` ist für JPEG leer (`0x4b1d8`).
-   - `updateHlsAndWriteSections` (`0x4b298`) übernimmt nur die bereits vorhandenen
-     Abschnittsdaten und fügt einen Abschluss-Abschnitt mit Flag `0x20000000` hinzu.
-   - Die Software schreibt also **kein** SOI/DQT/DHT/SOF/SOS/EOI.
-   - Gleichzeitig enthält EP1 genau die Daten, die ein Header-Generator braucht
-     (DQT-Bytes, BITS, HUFFVAL-Kette), und Wort 2 transportiert JFIF-Dichten.
-   - ⇒ Die Hardware erzeugt den kompletten JFIF-Datenstrom. [I, stark; Prüfung:
-     Ausgabe beginnt mit `FF D8 FF E0`]
+   - `generateNals` is empty for JPEG (`0x4b1d8`).
+   - `updateHlsAndWriteSections` (`0x4b298`) only takes over the section data already present
+     and adds a closing section with flag `0x20000000`.
+   - So the software writes **no** SOI/DQT/DHT/SOF/SOS/EOI.
+   - At the same time EP1 contains exactly the data a header generator needs
+     (DQT bytes, BITS, HUFFVAL chain), and word 2 carries JFIF densities.
+   - ⇒ The hardware generates the complete JFIF data stream. [I, strong; check:
+     output starts with `FF D8 FF E0`]
 
-Gemessene Hardwarezeiten aus dem Stock-Trace (Start `0x85E4` bis `WAIT_IRQ`-Rückkehr mit
-drei Status-Reads), jeweils parallel zu laufendem 1080p-H.264:
+Measured hardware times from the stock trace (start `0x85E4` to `WAIT_IRQ` return with
+three status reads), each in parallel to running 1080p H.264:
 
-| Auflösung | Messungen |
+| Resolution | Measurements |
 |---|---|
-| 1920x1080 | 8,0 ms (`128.883655 → 128.891691`), 8,2 ms (`128.919882 → 128.928094`) |
-| 640x360 | 1,3 ms / 1,1 ms |
+| 1920x1080 | 8.0 ms (`128.883655 → 128.891691`), 8.2 ms (`128.919882 → 128.928094`) |
+| 640x360 | 1.3 ms / 1.1 ms |
 
 [V]
 
 ---
 
-## 5. Scheduling und Sharing mit H.264
+## 5. Scheduling and sharing with H.264
 
-### 5.1 Parallelität statt Zeitmultiplex [V]
+### 5.1 Parallelism instead of time multiplexing [V]
 
-AVC (Core 0) und JPEG (Core 1) sind getrennte Cores mit eigenen Registerfenstern.
+AVC (core 0) and JPEG (core 1) are separate cores with their own register windows.
 
-- Scheduler-Sicht: Pro Core läuft zu jedem Zeitpunkt höchstens ein Kanal
+- Scheduler view: At any time at most one channel runs per core
   (`AL_CoreState_*`, `CheckAndEncode`).
 - Trace:
-  - `128.882581`: AVC-`CL_PUSH`
-  - `128.883655`: JPEG-Start 1080p
-  - `.891691`: JPEG fertig
-  - `.892340`: JPEG-Start 360p, fertig `.893612`
-  - `.894825`: AVC fertig, danach `0x8014 = 0x10`, AVC-Bit 0 wird wieder gelöscht
+  - `128.882581`: AVC `CL_PUSH`
+  - `128.883655`: JPEG start 1080p
+  - `.891691`: JPEG done
+  - `.892340`: JPEG start 360p, done `.893612`
+  - `.894825`: AVC done, then `0x8014 = 0x10`, AVC bit 0 is cleared again
 
-  Es gibt also **keine** Prüfung der Art „Enc1 läuft schon“ vor einem JPEG. Die
-  `IsEnc1/Enc2AlreadyRunning`-Checks (`0x6c678`/`0x6c6e8`) gelten nur für die
-  AVC-Command-Lists.
+  So there is **no** check of the kind "Enc1 already running" before a JPEG. The
+  `IsEnc1/Enc2AlreadyRunning` checks (`0x6c678`/`0x6c6e8`) apply only to the
+  AVC command lists.
 
-### 5.2 Sperren beim Hersteller [V]
+### 5.2 Locks in the vendor [V]
 
-- **Register-Mutex** `sched[0x4be]`: wird allen Cores als `core[7]` mitgegeben
-  (`0x62c78`, `0x62d1c`). Er schützt:
+- **Register mutex** `sched[0x4be]`: passed to all cores as `core[7]`
+  (`0x62c78`, `0x62d1c`). It protects:
   - `SetClockCommand` (RMW `0x83F4`/`0x85F4`)
-  - die komplette JPEG-Zone mit Reset und Start
+  - the complete JPEG zone with reset and start
   - `ReadStatusRegsJpeg`
-- **Scheduler-Mutex** `sched[0x4bd]`: Core-/Kanalzuordnung, IRQ-Dispatch
+- **Scheduler mutex** `sched[0x4bd]`: core/channel assignment, IRQ dispatch
   (`HandleCoreInterrupt`).
-- **Kanal-Mutex**: `SetJpegParam`, `EndJpegEncoding`-Nachlauf.
-- **Nicht** unter einem gemeinsamen Mutex stehen die `0x8014`-RMWs von
-  `SetJpegInterrupt` (JPEG) und `EnableInterrupts`/`DisableEnc1Interrupt` (AVC). Das ist
-  ein theoretisches Rennen im Herstellercode. In OpenIMP sollte man es vermeiden: Bit 4
-  einmalig setzen, danach nie wieder anfassen, oder alle `0x8014`-RMWs unter einen Mutex
-  legen.
+- **Channel mutex**: `SetJpegParam`, `EndJpegEncoding` follow-up.
+- **Not** under a shared mutex are the `0x8014` RMWs of
+  `SetJpegInterrupt` (JPEG) and `EnableInterrupts`/`DisableEnc1Interrupt` (AVC). This is
+  a theoretical race in the vendor code. In OpenIMP it should be avoided: set bit 4
+  once and never touch it again, or put all `0x8014` RMWs under one mutex.
 
-### 5.3 IRQ-Pfad im Kernel (`avpu/t31/avpu_ip.c`, `avpu_main.c`) [V]
+### 5.3 IRQ path in the kernel (`avpu/t31/avpu_ip.c`, `avpu_main.c`) [V]
 
-- Der Hardirq-Handler liest Maske `0x8014` und Pending `0x8018`.
-- Er quittiert **alle** Pending-Bits (auch die maskierten) durch Rückschreiben nach
+- The hardirq handler reads mask `0x8014` and pending `0x8018`.
+- It acknowledges **all** pending bits (also the masked ones) by writing back to
   `0x8018`.
-- Für jedes gesetzte **und** maskierte Bit reiht er einen Eintrag mit der Bitnummer in
-  eine **globale** Liste ein und weckt `codec->chan` auf.
-- `WAIT_IRQ` gibt pro Aufruf eine Bitnummer zurück.
+- For every bit that is set **and** masked, it queues an entry with the bit number into
+  a **global** list and wakes `codec->chan`.
+- `WAIT_IRQ` returns one bit number per call.
 
-Folgerungen:
+Consequences:
 
-- Ohne Bit 4 in `0x8014` geht ein JPEG-Ende **still verloren**: Es wird gelöscht, sobald
-  irgendein anderer IRQ kommt.
-- Der Treiber kennt **genau einen** Client:
-  - `avpu_codec_bind_channel` gibt `-ENODEV` zurück, wenn `codec->chan` belegt ist.
-  - Vor dem Binden verwirft er alle noch anstehenden IRQs („Previous channel lost irq“).
-  - `avpu_codec_unbind_channel` setzt `codec->chan = NULL`, **ohne zu prüfen**, ob der
-    schließende Client auch der gebundene ist.
-  - Geweckt wird nur `codec->chan`.
+- Without bit 4 in `0x8014`, a JPEG end is **silently lost**: It is cleared as soon as
+  any other IRQ comes.
+- The driver knows **exactly one** client:
+  - `avpu_codec_bind_channel` returns `-ENODEV` if `codec->chan` is occupied.
+  - Before binding, it discards all IRQs still pending ("Previous channel lost irq").
+  - `avpu_codec_unbind_channel` sets `codec->chan = NULL` **without checking** whether the
+    closing client is also the bound one.
+  - Only `codec->chan` is woken.
 
-### 5.4 Warum OpenIMPs Versuch die AVC-IRQs „tötete“
+### 5.4 Why OpenIMP's attempt "killed" the AVC IRQs
 
-Der Kommentar in `src/t40/codec-t40.c:8590` bezieht sich **nicht** auf einen Versuch, den
-JPEG-Core anzusteuern. Gemeint ist die generische Legacy-Probe `HW_Encoder_Init`
-(`src/hw_encoder.c:25–85`). Sie öffnet `/dev/avpu` **per rohem `open()`**, also zusätzlich
-zum gepoolten fd des AVC-Pfads (`AL_DevicePool_Open`, Refcount), und schickt ein fremdes
-ioctl `VENC_IOCTL_INIT = 0xc0104501` (Typ 'E'). Der Treiber lehnt es mit `-EINVAL` ab und
-das fd wird wieder geschlossen.
+The comment in `src/t40/codec-t40.c:8590` does **not** refer to an attempt to drive the
+JPEG core. It means the generic legacy probe `HW_Encoder_Init`
+(`src/hw_encoder.c:25–85`). It opens `/dev/avpu` **by a raw `open()`**, i.e. in addition
+to the pooled fd of the AVC path (`AL_DevicePool_Open`, refcount), and sends a foreign
+ioctl `VENC_IOCTL_INIT = 0xc0104501` (type 'E'). The driver rejects it with `-EINVAL` and
+the fd is closed again.
 
-Mit dem oben beschriebenen Single-Client-Treiber kommen je nach Reihenfolge diese
-Mechanismen in Frage [I, der genaue Ablauf ist aus den Quellen nicht eindeutig
-rekonstruierbar]:
+With the single-client driver described above, depending on the order, these
+mechanisms come into question [I, the exact sequence cannot be unambiguously
+reconstructed from the sources]:
 
-- Gewinnt die Probe den einzigen Slot (AVC öffnet in OpenIMP erst lazily im ersten
-  `Process()`), bekommt der AVC-Pfad `-ENODEV` oder verliert beim Binden anstehende IRQs.
-- Das `release()` der Probe setzt `codec->chan = NULL`. Hält ein anderer Client das Gerät
-  weiter offen, werden danach **keine** Wake-ups mehr an den AVC-`WAIT_IRQ`-Thread
-  zugestellt. IRQs landen dann nur noch in der Liste und die Completion bleibt aus.
-- Bei jedem erfolglosen `open()` wird zudem Clock-Enable ohne Gegenstück erhöht (harmlos).
+- If the probe wins the only slot (AVC in OpenIMP opens only lazily in the first
+  `Process()`), the AVC path gets `-ENODEV` or loses pending IRQs at binding.
+- The `release()` of the probe sets `codec->chan = NULL`. If another client keeps the device
+  open, **no** more wake-ups are delivered to the AVC `WAIT_IRQ` thread afterwards.
+  IRQs then only land in the list and the completion does not occur.
+- With every unsuccessful `open()`, a clock enable without counterpart is also incremented (harmless).
 
-**Wie der Hersteller das vermeidet** [V]:
+**How the vendor avoids this** [V]:
 
-- ein einziges `AL_Board`/`LinuxIpCtrl` pro Prozess, also ein fd über `AL_DevicePool`
-- genau ein `WaitInterruptThread`
-- Callback-Tabelle je Slot (Slot 0/2 → AVC-Core, Slot 4 → JPEG-Core)
-- eigene Registerfenster je Core
-- keine fremden ioctls
+- a single `AL_Board`/`LinuxIpCtrl` per process, i.e. one fd via `AL_DevicePool`
+- exactly one `WaitInterruptThread`
+- callback table per slot (slot 0/2 → AVC core, slot 4 → JPEG core)
+- own register windows per core
+- no foreign ioctls
 
-### 5.5 Nebenbefund: OpenIMP startet heute schon den JPEG-Core (T31)
+### 5.5 Side finding: OpenIMP already starts the JPEG core today (T31)
 
-- `avpu_t31_start_companion_stage()` (`codec-t40.c:7515–7584`) schreibt nach **jedem**
-  AVC-`CL_PUSH` (`:9305`, auch im T41-Zweig `:9198`):
+- `avpu_t31_start_companion_stage()` (`codec-t40.c:7515–7584`) writes after **every**
+  AVC `CL_PUSH` (`:9305`, also in the T41 branch `:9198`):
   - `0x85F4 = 1`, `0x85F0 = 1`
   - `0x8400 = 0x131`, `0x8404 = (W−1)<<16 | (H−1)`, `0x8408 = 0x00010001`, `0x840C = W`
-  - Y/UV-Adresse des AVC-Quellframes
-  - **`0x8418` = `interm_buf + interm_ep1_size`** (kommentiert als „WPP start“)
-  - **`0x841C` = der *andere* AVC-Stream-Puffer**
+  - Y/UV address of the AVC source frame
+  - **`0x8418` = `interm_buf + interm_ep1_size`** (commented as "WPP start")
+  - **`0x841C` = the *other* AVC stream buffer**
   - `0x8420/24/28`
   - **`0x85E4 = 1`**
-- Das ist exakt die JPEG-Zone von Core 1 und ihr Startbefehl. `docs/archive/CURRENT_STATUS.md`
-  Z. 90–92/118/143 führt den Block als ungelöstes AVC-Paritätsthema.
-- Im Herstellercode ist `WriteZoneRegisters` ausschließlich aus `AL_EncCore_EncodeJpeg`
-  aufrufbar (einziger Aufrufer L72719). Ohne JPEG-Kanal schreibt die Stock-libimp diesen
-  Block nie. [V]
-- Folgen [I]:
-  1. Bei jedem H.264-Frame liest der JPEG-Core einen kompletten Frame. Mit Tabellen aus
-     einem AVC-Arbeitspuffer schreibt er bis zu `budget` Bytes ab Offset 0x200 in einen
-     AVC-Stream-Puffer, der gerade noch bei der Anwendung liegen kann. Das bedeutet
-     Speicherbandbreite und mögliche **Korruption bereits ausgelieferter H.264-Daten**.
-  2. Ein echter JPEG-Job würde bei jedem AVC-Frame per `0x85F0`/`0x85E4` abgewürgt.
-- **Vor jeder Hardware-JPEG-Arbeit** (nach Absprache mit den Maintainern) diesen Block
-  hinter ein Flag legen und prüfen, ob H.264 ohne ihn identisch weiterläuft.
+- This is exactly the JPEG zone of core 1 and its start command. `docs/archive/CURRENT_STATUS.md`
+  lines 90–92/118/143 lists the block as an unresolved AVC parity topic.
+- In the vendor code, `WriteZoneRegisters` can only be called from `AL_EncCore_EncodeJpeg`
+  (only caller L72719). Without a JPEG channel, the stock libimp never writes this
+  block. [V]
+- Consequences [I]:
+  1. At every H.264 frame the JPEG core reads a complete frame. With tables from
+     an AVC working buffer it writes up to `budget` bytes from offset 0x200 into an
+     AVC stream buffer that may still be with the application. This means
+     memory bandwidth and possible **corruption of already delivered H.264 data**.
+  2. A real JPEG job would be killed at every AVC frame by `0x85F0`/`0x85E4`.
+- **Before any hardware JPEG work** (after agreement with the maintainers), put this block
+  behind a flag and check whether H.264 continues identically without it.
 
 ---
 
-## 6. OpenIMP-Seite: reichen die Primitiven?
+## 6. OpenIMP side: are the primitives enough?
 
-Vorhanden und ausreichend [V]:
+Present and sufficient [V]:
 
-- **Registerzugriff**: `AL_CMD_IP_WRITE_REG`/`READ_REG` (`_IOWR('q', 10/11)`, beliebige
-  4-Byte-aligned Offsets ≥ `0x8000` im 1-MiB-Fenster ab `0x13200000`,
+- **Register access**: `AL_CMD_IP_WRITE_REG`/`READ_REG` (`_IOWR('q', 10/11)`, arbitrary
+  4-byte-aligned offsets ≥ `0x8000` in the 1 MiB window from `0x13200000`,
   `avpu/t31/avpu_main.c`).
-- **IRQ**: `AL_CMD_IP_WAIT_IRQ` (`_IOWR('q', 12)`) liefert die Slotnummer (0…19), also
-  auch 4. Verteilt wird im `avpu_irq_thread` (`codec-t40.c:5070 ff.`) über eine
-  Callback-Tabelle mit 20 Slots.
-- **DMA-Speicher**:
+- **IRQ**: `AL_CMD_IP_WAIT_IRQ` (`_IOWR('q', 12)`) returns the slot number (0…19), so
+  also 4. Distribution happens in the `avpu_irq_thread` (`codec-t40.c:5070 ff.`) via a
+  callback table with 20 slots.
+- **DMA memory**:
   - `avpu_alloc_imp` (rmem, cached, phys + virt)
-  - `avpu_alloc_mmap` (`GET_DMA_MMAP`, kohärent; für einen Standalone-Test am einfachsten)
-- **Cache-Pflege**:
-  - `avpu_flush_cache(..., dir)` über rmem-ioctl `0xc00c7200` (`codec-t40.c:390, 478 ff.`)
-  - Quellframe-Invalidate vor AVPU (`:7650 ff.`)
-  - Stream-Invalidate nach Completion (`:5623 ff.`)
-- **Physadressen der NV12-Frames**: liegen im Process-Pfad vor (`phys_addr`, `virt_addr`,
-  UV = Y + Pitch·align16(H), vgl. SW-JPEG `hw_encoder.c:950 ff.`).
+  - `avpu_alloc_mmap` (`GET_DMA_MMAP`, coherent; simplest for a standalone test)
+- **Cache maintenance**:
+  - `avpu_flush_cache(..., dir)` via rmem ioctl `0xc00c7200` (`codec-t40.c:390, 478 ff.`)
+  - source frame invalidate before AVPU (`:7650 ff.`)
+  - stream invalidate after completion (`:5623 ff.`)
+- **Physical addresses of the NV12 frames**: are available in the process path (`phys_addr`,
+  `virt_addr`, UV = Y + pitch·align16(H), cf. SW JPEG `hw_encoder.c:950 ff.`).
 
-Es fehlt [V aus Codeinspektion]:
+Missing [V from code inspection]:
 
-1. **IRQ-Demux pro Slot.** Auf T31/T40 leitet der Waiter **jeden** IRQ an
-   `g_tseries_irq_owner` weiter, also an den letzten AVC-Submitter (`codec-t40.c:5127`).
-   Auf T31 ist nur Slot 0 registriert (`:8544 ff.`). Slot 4 muss unabhängig vom
-   AVC-Owner an einen JPEG-Kontext gehen. Die Callback-Tabelle darf nicht pro AVC-Kontext
-   liegen, sondern muss prozessweit sein.
-2. **Ein prozessweiter Register-Mutex** für `0x8014`-RMW, `0x85F4`-RMW und die
-   JPEG-Zonensequenz. Die T31-Maske setzt heute nur `0x01` (`avpu_enable_interrupts`
+1. **IRQ demux per slot.** On T31/T40 the waiter forwards **every** IRQ to
+   `g_tseries_irq_owner`, i.e. to the last AVC submitter (`codec-t40.c:5127`).
+   On T31 only slot 0 is registered (`:8544 ff.`). Slot 4 must go to a JPEG context independently of the
+   AVC owner. The callback table must not be per AVC context
+   but process-wide.
+2. **A process-wide register mutex** for the `0x8014` RMW, the `0x85F4` RMW and the
+   JPEG zone sequence. The T31 mask today sets only `0x01` (`avpu_enable_interrupts`
    `:4210`).
-3. **JPEG-Backend**:
-   - EP1-Generator (Abschnitt 3)
-   - Pool von Stream-Puffern
-   - Frame-Referenz halten, bis IRQ 4 kommt: Die Hardware liest asynchron aus dem
-     Framesource-Puffer.
-   - Status-Auswertung und Übergabe an die bestehende Stream-FIFO/`GetStream`-Logik
-4. **Entkopplung vom AVC-Lock.** `AL_Codec_Encode_Process` serialisiert auf T31 alle
-   Encodes über `g_t31_encode_core_lock` und wartet synchron (`:9470 ff.`). JPEG braucht
-   einen eigenen Core-Lock für Core 1, sonst geht die Parallelität verloren.
-5. **Entfernung der Companion-Stage** (Abschnitt 5.5).
+3. **JPEG backend**:
+   - EP1 generator (section 3)
+   - pool of stream buffers
+   - hold the frame reference until IRQ 4 comes: The hardware reads asynchronously from the
+     framesource buffer.
+   - status evaluation and hand-over to the existing stream FIFO/`GetStream` logic
+4. **Decoupling from the AVC lock.** `AL_Codec_Encode_Process` serialises all encodes on T31
+   via `g_t31_encode_core_lock` and waits synchronously (`:9470 ff.`). JPEG needs
+   its own core lock for core 1, otherwise the parallelism is lost.
+5. **Removal of the companion stage** (section 5.5).
 
-Kernel-Support: **keine Änderung nötig.** Der Treiber reicht Slot 4 durch, sofern Bit 4
-maskiert ist. Einzige harte Regel: das gepoolte fd benutzen und nie ein zweites `open()`
-auf `/dev/avpu`.
+Kernel support: **no change needed.** The driver passes slot 4 through as long as bit 4 is
+masked in. The only hard rule: use the pooled fd and never a second `open()`
+on `/dev/avpu`.
 
 ---
 
-## 7. Machbarkeit und Implementierungsplan
+## 7. Feasibility and implementation plan
 
-**Urteil:** Gut machbar. Die Registerschnittstelle ist klein (15 Register) und im
-Stock-Trace vollständig beobachtet. Die Tabellenformate sind aus dem Code vollständig
-rekonstruierbar. Der Treiber braucht keine Änderung. CPU-Last danach: grob 20 ioctls pro
-Frame plus Cache-Pflege statt DCT, also nahe null gegenüber heute 20–30 % eines Cores.
-Hardwarelatenz ≈ 8 ms bei 1080p.
+**Verdict:** Quite feasible. The register interface is small (15 registers) and completely
+observed in the stock trace. The table formats can be completely reconstructed from the code. The driver needs no change. CPU load afterwards: roughly 20 ioctls per
+frame plus cache maintenance instead of DCT, i.e. close to zero compared with today's 20–30 % of a core.
+Hardware latency ≈ 8 ms at 1080p.
 
-### Phase 0 – Aufräumen und Verifikation (0,5–1 Tag)
+### Phase 0 – Clean-up and verification (0.5–1 day)
 
-- Companion-Stage hinter ein Flag (z. B. Env `OPENIMP_T31_COMPANION=0`).
-- H.264 mit und ohne vergleichen: Bitstream-Hash, Frame-Zählung, IRQ-Verhalten,
-  Langzeitlauf.
-- Erwartung laut Herstellercode: kein Unterschied.
+- Put the companion stage behind a flag (e.g. env `OPENIMP_T31_COMPANION=0`).
+- Compare H.264 with and without: bitstream hash, frame count, IRQ behaviour,
+  long run.
+- Expectation according to the vendor code: no difference.
 
-### Phase 1 – Standalone-Testtool (1–2 Tage), Streamer gestoppt
+### Phase 1 – Standalone test tool (1–2 days), streamer stopped
 
-1. `/dev/avpu` öffnen (einziges fd), Waiter-Thread starten.
-2. Global initialisieren wie der Hersteller: `0x8010 = 0x1000`; Core-0-Init (`0x83F0` 1,2,4;
+1. Open `/dev/avpu` (the only fd), start the waiter thread.
+2. Initialise globally like the vendor: `0x8010 = 0x1000`; core-0 init (`0x83F0` 1,2,4;
    `0x8018 = 0xFFFFFF`; `0x8054 = 0x80`); `0x8014 |= 0x10`; `0x85F4[1:0] = 1`.
-3. Puffer per `GET_DMA_MMAP` anlegen (kohärent, damit fallen Cache-Fragen weg):
-   - NV12-Testbild; OpenIMP kann Quellframes dumpen, `openimp-source-ch*.nv12`,
+3. Create buffers via `GET_DMA_MMAP` (coherent, which removes cache questions):
+   - NV12 test picture; OpenIMP can dump source frames, `openimp-source-ch*.nv12`,
      `codec-t40.c:7480 ff.`
    - EP1 (≥ 0x790 B, 256-aligned)
-   - Stream (z. B. W·H + 64 KiB, Offset 0x200)
-4. `0x85F0 = 1`, Zone `0x8400–0x8428` schreiben, `0x85E4 = 1`, auf Slot 4 warten.
-5. `0x8430/34/38` lesen und `[0x200, 0x200+len)` als `.jpg` speichern.
-6. Mit `djpeg`/`ffprobe` prüfen.
-7. Zu klärende Punkte: Header vorhanden (`FF D8 FF E0`)? Quant-Byte-Reihenfolge korrekt
-   (sonst Blockartefakte)? Überlauf-Bit bei zu kleinem Puffer?
+   - stream (e.g. W·H + 64 KiB, offset 0x200)
+4. `0x85F0 = 1`, write zone `0x8400–0x8428`, `0x85E4 = 1`, wait for slot 4.
+5. Read `0x8430/34/38` and save `[0x200, 0x200+len)` as `.jpg`.
+6. Check with `djpeg`/`ffprobe`.
+7. Points to clarify: Header present (`FF D8 FF E0`)? Quant byte order correct
+   (otherwise block artefacts)? Overflow bit with a too small buffer?
 
-### Phase 2 – Byte-Abgleich gegen Stock (0,5–1 Tag)
+### Phase 2 – Byte comparison against stock (0.5–1 day)
 
-- Mit Stock-libimp und JPEG-Kanal den Registertrace aufnehmen (WR-loggender `avpu.ko` wie
-  bei `stock_logs.txt`).
-- Den EP1-Bereich (Physadresse aus `WR 0x8418`, 0x790 B) per `/dev/mem`/devmem bzw. einer
-  Dump-Erweiterung des Debug-Treibers beim Schreiben von `0x85E4` sichern. Die
-  AVC-CL-Dump-Funktion im Trace ist das Vorbild.
-- Mit dem eigenen EP1 für dieselbe Quality vergleichen.
-- Optional denselben NV12-Frame durch Stock und OpenIMP schicken und die JPEGs bitexakt
-  vergleichen.
-- Herstellereigenes Tracing:
-  - `AL_EncTrace_TraceJpeg`/`TraceJpegStatus` schreiben
+- Record the register trace with the stock libimp and a JPEG channel (WR-logging `avpu.ko` as
+  for `stock_logs.txt`).
+- Save the EP1 area (physical address from `WR 0x8418`, 0x790 B) via `/dev/mem`/devmem or a
+  dump extension of the debug driver when `0x85E4` is written. The
+  AVC CL dump function in the trace is the model.
+- Compare with our own EP1 for the same quality.
+- Optionally send the same NV12 frame through stock and OpenIMP and compare the JPEGs
+  bit-exactly.
+- Vendor's own tracing:
+  - `AL_EncTrace_TraceJpeg`/`TraceJpegStatus` write
     `<prefix>.cmd.hex`/`.stat.hex`/`.sram_map.hex` (L52408, L53595, L53641).
-  - Aktiviert wird das über `AL_Common_Encoder_SetTraceMode` (`0x43af8`, per GOT
-    erreichbar) und `SetTraceFolder`.
-  - Die IMP-API ruft das nie auf. Man bräuchte ein `LD_PRELOAD`-Shim, das an das interne
-    AL-Encoder-Handle des IMP-Kanals kommt. Das ist aufwendig und liefert nur dieselben 15
-    Registerwerte, die der Registertrace schon zeigt.
-  - Empfehlung: Registertrace plus EP1-Dump.
+  - This is activated via `AL_Common_Encoder_SetTraceMode` (`0x43af8`, reachable via
+    GOT) and `SetTraceFolder`.
+  - The IMP API never calls this. One would need an `LD_PRELOAD` shim that gets at the internal
+    AL encoder handle of the IMP channel. That is laborious and yields only the same 15
+    register values that the register trace already shows.
+  - Recommendation: register trace plus EP1 dump.
 
-### Phase 3 – Integration in OpenIMP (3–5 Tage)
+### Phase 3 – Integration into OpenIMP (3–5 days)
 
-- Prozessweite IRQ-Slot-Tabelle (Slot 4 → JPEG-Dispatcher) neben dem AVC-Owner-Mechanismus.
-- Prozessweiter Register-Mutex.
-- `0x8014`-Bit 4 einmalig setzen, im Callback nie löschen.
-- JPEG-Kontext je Kanal:
-  - EP1 bei Kanalanlage bzw. Quality-Änderung erzeugen
-  - EP1 per Writeback (`dir = 1`) flushen
-  - Stream-Puffer-Ring
+- Process-wide IRQ slot table (slot 4 → JPEG dispatcher) next to the AVC owner mechanism.
+- Process-wide register mutex.
+- Set `0x8014` bit 4 once, never clear it in the callback.
+- JPEG context per channel:
+  - generate EP1 at channel creation or on a quality change
+  - flush EP1 by writeback (`dir = 1`)
+  - stream buffer ring
 - Submit:
-  - Quellframe-Invalidate wie im AVC-Pfad (kein Writeback auf ISP-Daten!)
-  - Frame-Referenz halten
-  - Core-1-Lock
-  - Registersequenz unter Mutex
+  - source frame invalidate as in the AVC path (no writeback on ISP data!)
+  - hold the frame reference
+  - core-1 lock
+  - register sequence under mutex
 - Completion:
-  - Status lesen
-  - `[offset, offset+len)` invalidieren
-  - Pack an die bestehende `GetStream`-Struktur übergeben
-  - Frame freigeben
-  - Überlauf behandeln (größerer Puffer, Retry oder Frame verwerfen)
-- Mapping der IMP-Quality: Der IMP-JPEG-Kanal übergibt `iInitialQP` als Quality, siehe
-  Abschnitt 3.2. Das Clamping 1…100 entspricht den JPEG-Defaults.
-- Fallback: Software-JPEG bleibt bei Timeout (z. B. 200 ms ohne Slot 4) oder Fehler.
-- Nach einem Timeout ist `0x85F0 = 1` der vermutliche Reset.
+  - read status
+  - invalidate `[offset, offset+len)`
+  - pass the pack to the existing `GetStream` structure
+  - release the frame
+  - handle overflow (larger buffer, retry or discard frame)
+- Mapping of the IMP quality: The IMP JPEG channel passes `iInitialQP` as quality, see
+  section 3.2. The clamping 1…100 corresponds to the JPEG defaults.
+- Fallback: software JPEG stays on timeout (e.g. 200 ms without slot 4) or error.
+- After a timeout, `0x85F0 = 1` is the presumed reset.
 
-### Phase 4 – Härtung (2–3 Tage)
+### Phase 4 – Hardening (2–3 days)
 
-- Dauerlauf mit Main-H.264, Sub-H.264 und JPEG bei unterschiedlichen Raten.
-- Auflösungswechsel.
-- Zu kleine Puffer.
-- IRQ-Zählung: Jede JPEG-Übergabe braucht genau einen Slot 4.
-- AVC-Timeouts dürfen nicht zunehmen.
-- CPU-Messung.
-- T31-Varianten (N/L/X/A/AL/ZX) prüfen: Ist dort jeweils `numCore = 1`, also JPEG = Core 1?
-  In der untersuchten libimp ist das fest verdrahtet (L53999).
+- Long run with main H.264, sub H.264 and JPEG at different rates.
+- Resolution changes.
+- Too small buffers.
+- IRQ counting: Every JPEG hand-over needs exactly one slot 4.
+- AVC timeouts must not increase.
+- CPU measurement.
+- Check the T31 variants (N/L/X/A/AL/ZX): Is `numCore = 1` there in each case, i.e. JPEG = core 1?
+  In the libimp examined this is hard-wired (L53999).
 
-**Gesamtaufwand:** ca. 7–12 Personentage mit Geräteschleife.
+**Total effort:** about 7–12 person-days with the device loop.
 
-### Risiken (absteigend)
+### Risks (descending)
 
-1. **Companion-Stage/AVC-Kopplung:** Falls der AVC-Pfad (fälschlich) von ihr abhängt, muss
-   dieser Teil zuerst sauber verstanden werden. Laut Herstellercode sollte er das nicht.
-2. **IRQ-Demux und Rennen auf `0x8014`:** Eine verlorene AVC-Maske bedeutet einen hängenden
-   H.264-Stream. Gegenmittel: ein Mutex und Bit 4 statisch setzen.
-3. **EP1-Semantik:** Byte-Reihenfolge der u8-Tabellen, Bedeutung der Kopfworte `1/0`.
-   Gegenmittel: Stock-Bytes 1:1 nachbilden und abgleichen.
-4. **Cache-Kohärenz:**
-   - EP1-Writeback nach dem Schreiben.
-   - Quellframe darf keine dirty lines haben. Wenn OpenIMP per CPU OSD in den Frame
-     malt, ist vor dem Submit ein Writeback nötig.
-   - Output vor dem Lesen invalidieren.
-5. **Frame-Lebensdauer:** Die Hardware liest asynchron. Gibt man den Frame zu früh an die
-   Framesource zurück, entstehen Tearing oder ein fremdes Bild.
-6. **Header-Annahme:** Falls die Hardware wider Erwarten nur Entropie-Daten liefert,
-   braucht es einen kleinen Software-Headerwriter. `hw_encoder.c` hat bereits einen. Dann
-   müssen DQT und DHT exakt aus dem EP1-Inhalt stammen, und der Restart-/EOI-Abschluss ist
-   zu prüfen.
-7. **Unklare Felder:** `0x8430`, Bit 8 in `0x8400`, der Sinn von `0x85F0 = 1`. Für den
-   Normalbetrieb genügt es, die Stock-Werte zu übernehmen.
-
----
-
-## 8. Auf dem Gerät zu prüfen (Checkliste)
-
-- [ ] H.264 ohne Companion-Stage unverändert?
-- [ ] Standalone-JPEG: Ausgabe beginnt mit `FFD8 FFE0 … 'JFIF'` und endet mit `FFD9`? Ist `0x8434` = Dateilänge?
-- [ ] EP1 (Stock) = EP1 (eigen) byteweise, für Q = 50/75/90 und für Mono?
-- [ ] Wirkt `0x8400[31:16]` als Restart-Intervall (DRI/RSTn im Strom)? Wirkt `[13:12]` als JFIF-Unit-Feld?
-- [ ] Welche Bits hat `0x8438` außer Bit 1? Was steht in `0x8430`?
-- [ ] Überlauf: kleines `0x8428` → Bit 1 gesetzt, IRQ kommt trotzdem?
-- [ ] Hält der gleichzeitige Betrieb mit Main- und Sub-H.264 über Stunden, ohne AVC-Timeouts?
-- [ ] Mindestausrichtung von Y/UV/Stream (256 B beobachtet) und zulässige Breite/Höhe (Vielfache von 16? ungerade Höhen?).
+1. **Companion stage/AVC coupling:** If the AVC path (wrongly) depends on it, this part has to
+   be understood cleanly first. According to the vendor code it should not.
+2. **IRQ demux and races on `0x8014`:** A lost AVC mask means a hanging
+   H.264 stream. Countermeasure: one mutex and set bit 4 statically.
+3. **EP1 semantics:** Byte order of the u8 tables, meaning of the header words `1/0`.
+   Countermeasure: reproduce stock bytes 1:1 and compare.
+4. **Cache coherence:**
+   - EP1 writeback after writing.
+   - The source frame must have no dirty lines. If OpenIMP paints OSD into the frame
+     by CPU, a writeback is needed before the submit.
+   - Invalidate the output before reading.
+5. **Frame lifetime:** The hardware reads asynchronously. If the frame is returned to the
+   framesource too early, tearing or a foreign picture results.
+6. **Header assumption:** If the hardware contrary to expectation delivers only entropy data,
+   a small software header writer is needed. `hw_encoder.c` already has one. Then
+   DQT and DHT must come exactly from the EP1 content, and the restart/EOI termination has
+   to be checked.
+7. **Unclear fields:** `0x8430`, bit 8 in `0x8400`, the purpose of `0x85F0 = 1`. For
+   normal operation it is enough to take over the stock values.
 
 ---
 
-## Anhang A – Fundstellen (HLIL `libimp.so_hlil.txt`)
+## 8. To check on the device (checklist)
 
-| Funktion/Daten | Zeile | Adresse |
+- [ ] H.264 unchanged without the companion stage?
+- [ ] Standalone JPEG: output starts with `FFD8 FFE0 … 'JFIF'` and ends with `FFD9`? Is `0x8434` = file length?
+- [ ] EP1 (stock) = EP1 (own) byte by byte, for Q = 50/75/90 and for mono?
+- [ ] Does `0x8400[31:16]` act as restart interval (DRI/RSTn in the stream)? Does `[13:12]` act as JFIF unit field?
+- [ ] Which bits does `0x8438` have besides bit 1? What is in `0x8430`?
+- [ ] Overflow: small `0x8428` → bit 1 set, does the IRQ still come?
+- [ ] Does simultaneous operation with main and sub H.264 hold for hours, without AVC timeouts?
+- [ ] Minimum alignment of Y/UV/stream (256 B observed) and permitted width/height (multiples of 16? odd heights?).
+
+---
+
+## Appendix A – Locations (HLIL `libimp.so_hlil.txt`)
+
+| Function/data | Line | Address |
 |---|---|---|
 | `AL_sSettings_SetDefaultJPEGParam` | 43966 | `0x3dd84` |
 | `AL_Settings_SetDefaultRCParam` | 43978 | `0x3ddb8` |
 | `AL_GetAllocSizeEP1` (=0x6400) | 43022 | `0x3c300` |
-| EP1-Alloc / `preprocessEp1`-Aufruf | 48506 / 48596 | `0x45c00` / `0x45f8c` |
+| EP1 alloc / `preprocessEp1` call | 48506 / 48596 | `0x45c00` / `0x45f8c` |
 | JPEG `preprocessEp1` | 51587 | `0x4b1e0` |
 | `ConfigureChannel` (`setDensity`) | 51629 | `0x4b370` |
 | `AL_CreateJpegEncoder` | 51658 | `0x4b438` |
@@ -688,14 +688,14 @@ Hardwarelatenz ≈ 8 ms bei 1080p.
 | `AL_EncTrace_TraceJpeg`/`…Status` | 53595 / 53641 | `0x4f7e4` / `0x4fa44` |
 | `AL_SchedulerCpu_Create` (numCore=1) | 53999 | `0x507d4` |
 | `getCompatibleCores` | 65725 | `0x61230` |
-| `CheckAndEncode` (GC on, Launch) | 66126–66144 | `0x61fec–0x620d0` |
+| `CheckAndEncode` (GC on, launch) | 66126–66144 | `0x61fec–0x620d0` |
 | `HandleCoreInterrupt` | 66534 | `0x6290c` |
-| `AL_SchedulerEnc_Init` (Core-Init, JPEG-Core) | 66566 / 66623 / 66635 | `0x62aa4` / `0x62c78` / `0x62d1c` |
+| `AL_SchedulerEnc_Init` (core init, JPEG core) | 66566 / 66623 / 66635 | `0x62aa4` / `0x62c78` / `0x62d1c` |
 | `EndJpegEncoding` | 70417 | `0x68b70` |
-| `AL_EncChannel_PushIntermBuffer` (EP1-Kopie) | 71346 | `0x6a4c0` |
-| EP1-Adresse je Request | 71694 | `0x6a8c0` |
+| `AL_EncChannel_PushIntermBuffer` (EP1 copy) | 71346 | `0x6a4c0` |
+| EP1 address per request | 71694 | `0x6a8c0` |
 | `SetJpegParam` | 71843–71936 | `0x6b33c–0x6b59c` |
-| JPEG-Zweig in `AL_EncChannel_EndEncoding` | 72033 | `0x6b870` |
+| JPEG branch in `AL_EncChannel_EndEncoding` | 72033 | `0x6b870` |
 | `StartEnc1WithCommandList` / `ResetCore` / `SetClockCommand` | 72374 / 72382 / 72391 | `0x6c320` / `0x6c398` / `0x6c428` |
 | `WriteZoneRegisters` | 72468 | `0x6c758` |
 | `AL_EncJpegCore_Init` | 72491 | `0x6c7fc` |
@@ -705,23 +705,23 @@ Hardwarelatenz ≈ 8 ms bei 1080p.
 | `AL_EncCore_SetJpegInterrupt` | 72854 | `0x6d3f8` |
 | `JpegStatusToStatusRegs` | 73244 | `0x6dce0` |
 | `JpegParamToCtrlRegs` / `CtrlRegsToJpegParam` | 73828 / 73857 | `0x6f5c4` / `0x6f6e8` |
-| `ZIGZAG_SCAN`, Quant- und Huffman-Tabellen | 131064–131110 | `0xe2fc0–0xe35f0` |
+| `ZIGZAG_SCAN`, quant and Huffman tables | 131064–131110 | `0xe2fc0–0xe35f0` |
 | `AL_ENCJPEG_STATUS` / `AL_ENCJPEG_CMD` | 131462 / 131463 | `0xe3c28` / `0xe3c30` |
 
-## Anhang B – OpenIMP-Fundstellen
+## Appendix B – OpenIMP locations
 
 - `src/t40/codec-t40.c`:
-  - Registerdefinitionen `:403–455`
-  - Cache-ioctl `:390, 478–560`
-  - Allokatoren `:627–720`
-  - IRQ-Enable `:4210`
-  - Callback-Registrierung und IRQ-Thread `:5035–5170`
-  - Companion-Stage `:7515–7584` (Aufruf `:9305`, T41 `:9198`)
-  - Quellframe-Invalidate `:7650`
-  - AVC-Init-Kommentar mit Stock-Sequenz `:8660–8693`
-  - JPEG → Software `:8590`
-  - T31-Serialisierung `:9470`
-- `src/al_avpu.c`: IpCtrl/Waiter/EncCore-Nachbau (Slots `core*4`, `core*4+2`).
-- `src/hw_encoder.c:25–85` (Legacy-Probe mit rohem `open("/dev/avpu")` und `VENC_IOCTL_INIT`), `:915` (Software-JPEG).
-- `avpu/t31/avpu_ip.c` (Bind/Unbind, Hardirq), `avpu/t31/avpu_main.c` (ioctls, Registerfenster).
-- `stock_logs.txt` Z. 80–700 (Init, AVC-CL, JPEG-Sequenzen, Masken- und Timing-Belege).
+  - register definitions `:403–455`
+  - cache ioctl `:390, 478–560`
+  - allocators `:627–720`
+  - IRQ enable `:4210`
+  - callback registration and IRQ thread `:5035–5170`
+  - companion stage `:7515–7584` (call `:9305`, T41 `:9198`)
+  - source frame invalidate `:7650`
+  - AVC init comment with stock sequence `:8660–8693`
+  - JPEG → software `:8590`
+  - T31 serialisation `:9470`
+- `src/al_avpu.c`: IpCtrl/waiter/EncCore re-implementation (slots `core*4`, `core*4+2`).
+- `src/hw_encoder.c:25–85` (legacy probe with raw `open("/dev/avpu")` and `VENC_IOCTL_INIT`), `:915` (software JPEG).
+- `avpu/t31/avpu_ip.c` (bind/unbind, hardirq), `avpu/t31/avpu_main.c` (ioctls, register window).
+- `stock_logs.txt` lines 80–700 (init, AVC CL, JPEG sequences, mask and timing evidence).
