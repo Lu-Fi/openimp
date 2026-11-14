@@ -17,6 +17,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `src/t32/openimp_t33_hera.c`, `openimp_t33_hera_h265.c`, `openimp_t32_encoder.c`: a P picture's reconstruction starts where the HERA ODMA stopped writing the last picture (read-back 0x13210168 / 0x1321016c after every picture, as vendor libimp 2.0.2.1 on the T33L), its ODMA sizes are what is left to the areas' ends, and its reference (JRFD 0x28014 / 0x28018, MCE 0x30070 / 0x30074) is the last picture's reconstruction. Before, the lists followed the vendor QEMU trace, where the read-back is 0: on silicon the engine wrote the reconstruction to physical address 0 and the system hung after the first picture. A read-back outside the area restarts at the area's base.
 - Evidence (T33L, cv2005, open tx-isp-t33 direct_mode=0): H.264 150/150 streams, ffmpeg decodes clean, 0 oops (before: hang + WDT reset in 3 of 3 runs). Vendor lists on the same board captured with a soc_vpu ioctl shim. `tests/t33` HERA lists still 90/90 identical to the vendor QEMU traces. H.265 changed the same way, not yet run on silicon.
+## 2026-11-14: status: T33 driver-port row 113/409 (open-tx-isp gamma block gammaev; #507, #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 113/409 (`tisp_gamma_ev_update`, `tisp_gamma_switch_para`, block `gammaev`, open-tx-isp next c02bba6f). Docs only.
+
 ## 2026-11-14: status: T33 driver-port row 111/409 (open-tx-isp CT update blocks bcshct, clmct, ctup; #507, #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 111/409 (`tisp_bcsh_ct_update`, `tisp_clm_ct_interp`, `tisp_clm_ct_update`, `tisp_ct_update`; open-tx-isp next f52f4d51). Docs only.
