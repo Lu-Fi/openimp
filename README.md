@@ -59,8 +59,8 @@ Vendor IMP/SU functions per SoC on 2026-11-14, `next` after RC3 `v2026.11.07-rc3
 | T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
-| T32 | 610 | 4 | 531 | 73 | 2 | planned |
-| T33 | 571 | 8 | 407 | 81 | 75 | planned |
+| T32 | 610 | 4 | 537 | 67 | 2 | planned |
+| T33 | 571 | 8 | 413 | 75 | 75 | planned |
 
 T32 and T33 are planned (no release gate, no camera yet): the "implemented" cells are checked in QEMU against the vendor libraries, the few "works" cells are vendor no-ops, nothing is device-tested yet.
 
