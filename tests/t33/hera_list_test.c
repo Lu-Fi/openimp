@@ -112,7 +112,10 @@ static int check_h265(const char *name, const uint32_t *v, size_t pairs)
     t.hdr_wc = find(v, pairs, 0x10024);
     t.hdr_ry = find(v, pairs, 0x28008);
     t.hdr_rc = find(v, pairs, 0x2800c);
-    t.ref_after_idr = p->p_frame && find(v, pairs, 0x28014) != 0;
+    t.recon_y = find(v, pairs, 0x10008);       /* the vendor's read-back (0 in QEMU) */
+    t.recon_c = find(v, pairs, 0x1000c);
+    t.ref_y = find(v, pairs, 0x28014);
+    t.ref_c = find(v, pairs, 0x28018);
     /* the header sets follow the C area: Y A, Y B, C A, C B */
     base = t.hdr_wy < t.hdr_ry ? t.hdr_wy : t.hdr_ry;
     set = t.hdr_wy != base;
@@ -159,7 +162,10 @@ static int check_list(const char *name, const uint32_t *v, size_t pairs)
     t.hdr_wc = find(v, pairs, 0x10024);
     t.hdr_ry = find(v, pairs, 0x28008);
     t.hdr_rc = find(v, pairs, 0x2800c);
-    t.ref_after_idr = p->p_frame && find(v, pairs, 0x28014) != 0;
+    t.recon_y = find(v, pairs, 0x10008);       /* the vendor's read-back (0 in QEMU) */
+    t.recon_c = find(v, pairs, 0x1000c);
+    t.ref_y = find(v, pairs, 0x28014);
+    t.ref_c = find(v, pairs, 0x28018);
     bad = check_layout(name, &t, t.hdr_wy < t.hdr_ry ? t.hdr_wy : t.hdr_ry);
     n = t33_hera_h264_list(&t, out);
     if (n != pairs) {

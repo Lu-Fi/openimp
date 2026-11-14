@@ -141,7 +141,6 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     uint32_t w = p->width, h = p->height, h16 = (h + 15u) & ~15u, qp = (uint32_t)p->qp;
     uint32_t ctb_w = (w + 63u) / 64u, ctb_h = (h + 63u) / 64u;
     uint32_t ft = p->p_frame ? 1u : 2u;     /* HEVC slice type */
-    int named = !p->p_frame || t->ref_after_idr;    /* the list names the area */
 
     switch (reg) {
     case BC_CTRL:                       /* cu_qp_delta, slice type, size in 8x8 units */
@@ -200,10 +199,10 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
         return p->ring_y;
     case MCE_RLUT_C: case ODMA_BASE_C:
         return p->ring_c;
-    case MCE_BFSH_ADRY:
-        return t->ref_after_idr ? p->ring_y : 0u;
+    case MCE_BFSH_ADRY:                 /* P: the reference (as H.264, #393) */
+        return p->p_frame ? t->ref_y : 0u;
     case MCE_BFSH_ADRC:
-        return t->ref_after_idr ? p->ring_c : 0u;
+        return p->p_frame ? t->ref_c : 0u;
     case MCE_END_Y:
         return p->ring_y_end;
     case MCE_END_C:
@@ -213,9 +212,9 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     case ODMA_CTRL:
         return BUF_SHARE | DMA_BIT30 | h << 14 | w;
     case JRFD_REF_Y: case ODMA_REF_Y:
-        return named ? p->ring_y : 0u;
+        return p->p_frame ? t->ref_y : p->ring_y;
     case JRFD_REF_C:
-        return named ? p->ring_c : 0u;
+        return p->p_frame ? t->ref_c : p->ring_c;
     case JRFD_HDR_Y: case ODMA_HDR_RY:
         return t->hdr_ry;
     case JRFD_HDR_C:
@@ -232,14 +231,14 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
         return p->ring_y_end;
     case JRFD_RING_END: case ODMA_RING_END:
         return p->ring_c_end;
-    case ODMA_BDYA:
-        return p->p_frame ? 0u : p->ring_y;
+    case ODMA_BDYA:                     /* I: the area's base; P: the engine's read-back */
+        return p->p_frame ? t->recon_y : p->ring_y;
     case ODMA_BDCA:
-        return p->p_frame ? 0u : p->ring_c;
-    case ODMA_SIZE_Y:
-        return p->p_frame ? p->ring_y_end : p->ring_y_end - p->ring_y;
+        return p->p_frame ? t->recon_c : p->ring_c;
+    case ODMA_SIZE_Y:                   /* what is left to the area's end */
+        return p->ring_y_end - (p->p_frame ? t->recon_y : p->ring_y);
     case ODMA_SIZE_C:
-        return p->p_frame ? p->ring_c_end : p->ring_c_end - p->ring_c;
+        return p->ring_c_end - (p->p_frame ? t->recon_c : p->ring_c);
     case ODMA_CMP:
         return w * h16 / 128u * 75u + (w * h16 % 128u) * 75u / 128u;
     case ODMA_FRM:

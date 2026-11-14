@@ -88,7 +88,6 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
     const T32HeraH264Pic *p = &t->pic;
     uint32_t w = p->width, h = p->height, mbw = w / 16u, mbh = h / 16u;
     uint32_t qp = (uint32_t)p->qp;
-    int ref_named = p->p_frame && t->ref_after_idr;     /* only the P picture after the I */
 
     switch (reg) {
     case EFE_FRM_SIZE:
@@ -115,30 +114,30 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
         return BUF_SHARE | DMA_BIT30 | h << 14 | w;
     case JRFD_CTRL:
         return BUF_SHARE | DMA_BIT30 | JRFD_BIT27 | h << 14 | w;
-    case ODMA_BDYA:                     /* I only: the area's base */
-        return p->p_frame ? 0u : p->ring_y;
+    case ODMA_BDYA:                     /* I: the area's base; P: the engine's read-back */
+        return p->p_frame ? t->recon_y : p->ring_y;
     case ODMA_BDCA:
-        return p->p_frame ? 0u : p->ring_c;
+        return p->p_frame ? t->recon_c : p->ring_c;
     case ODMA_HDR_Y:
         return t->hdr_wy;
     case ODMA_HDR_C:
         return t->hdr_wc;
-    case ODMA_SIZE_Y:
-        return p->p_frame ? p->ring_y_end : p->ring_y_end - p->ring_y;
+    case ODMA_SIZE_Y:                   /* what is left to the area's end */
+        return p->ring_y_end - (p->p_frame ? t->recon_y : p->ring_y);
     case ODMA_SIZE_C:
-        return p->p_frame ? p->ring_c_end : p->ring_c_end - p->ring_c;
+        return p->ring_c_end - (p->p_frame ? t->recon_c : p->ring_c);
     case JRFD_HDR_Y:
         return t->hdr_ry;
     case JRFD_HDR_C:
         return t->hdr_rc;
-    case JRFD_REF_Y:                    /* I: the base; P: after the I only */
-        return !p->p_frame || ref_named ? p->ring_y : 0u;
+    case JRFD_REF_Y:                    /* I: the base; P: the reference's reconstruction */
+        return p->p_frame ? t->ref_y : p->ring_y;
     case JRFD_REF_C:
-        return !p->p_frame || ref_named ? p->ring_c : 0u;
+        return p->p_frame ? t->ref_c : p->ring_c;
     case MCE_BFSH_ADRY:
-        return ref_named ? p->ring_y : 0u;
+        return p->p_frame ? t->ref_y : 0u;
     case MCE_BFSH_ADRC:
-        return ref_named ? p->ring_c : 0u;
+        return p->p_frame ? t->ref_c : 0u;
     case JRFD_STRD:
         return w << 16 | w / 2u;
     case JRFD_RING_Y: case ODMA_RING_Y: case MCE_RLUT_Y:

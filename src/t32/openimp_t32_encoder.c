@@ -152,7 +152,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t set_args[4][4];            /* their i264e_set_param arguments */
 #ifdef PLATFORM_T33
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
-    int ref_is_idr;                     /* the reference is the I picture */
+    uint32_t odma_y, odma_c;            /* HERA ODMA write position after the last picture */
+    uint32_t recon_y, recon_c;          /* the last picture's reconstruction (the next reference) */
     int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
 #endif
     /* vendor GetChnAttrRcMode reads the encoder's live parameters (i264e_get_param 3 =
@@ -745,6 +746,9 @@ static void rc_picture_lost(struct t32_enc_chn *e)
  * pictures neither (the engine keeps them by the area's base), as vendor
  * libimp 2.0.2.1 does.  Pairs written, 0 on bad input.
  */
+static void t33_recon_addrs(struct t32_h264 *a, const T32HeraH264Pic *ring, int idr,
+                            uint32_t *recon_y, uint32_t *recon_c, uint32_t *ref_y, uint32_t *ref_c);
+
 static uint32_t t33_h264_list(struct t32_enc_chn *e, const T32HeraH264Pic *p, uint32_t w, uint32_t h, int idr)
 {
     struct t32_h264 *a = &e->avc;
@@ -765,15 +769,52 @@ static uint32_t t33_h264_list(struct t32_enc_chn *e, const T32HeraH264Pic *p, ui
     t.hdr_wc = t.hdr_wy + r.hy;
     t.hdr_ry = hdr + (set ^ 1u) * (r.hy + r.hc);
     t.hdr_rc = t.hdr_ry + r.hy;
-    t.ref_after_idr = !idr && a->ref_is_idr;
+    t33_recon_addrs(a, &t.pic, idr, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
     n = t33_hera_h264_list(&t, t32_vpu_buf_va(&a->list));
     if (n) {
         a->hdr_set = set ^ 1u;
-        a->ref_is_idr = idr;
+        a->recon_y = idr ? t.pic.ring_y : t.recon_y;
+        a->recon_c = idr ? t.pic.ring_c : t.recon_c;
     }
     return (uint32_t)n;
 }
 
+#endif
+#ifdef PLATFORM_T33
+/* HERA v1.6 ODMA write position after a picture (vendor libimp 2.0.2.1 reads
+ * both after every picture, openimp #393) */
+#define T33_HERA_ODMA_POS_Y 0x13210168u
+#define T33_HERA_ODMA_POS_C 0x1321016cu
+
+/*
+ * The reconstruction of this picture and its reference, as vendor libimp
+ * 2.0.2.1 on the T33L silicon (#393): an I picture writes from the areas'
+ * bases; a P picture from where the engine stopped (the ODMA read-back after
+ * the last picture) and refers to the last picture's reconstruction.  A
+ * read-back outside the area (QEMU reads 0; an error) restarts at the base:
+ * a P list with 0 there made the engine write over physical address 0.
+ */
+static void t33_recon_addrs(struct t32_h264 *a, const T32HeraH264Pic *ring, int idr,
+                            uint32_t *recon_y, uint32_t *recon_c, uint32_t *ref_y, uint32_t *ref_c)
+{
+    uint32_t y = a->odma_y, c = a->odma_c;
+
+    if (idr || y < ring->ring_y || y >= ring->ring_y_end || c < ring->ring_c || c >= ring->ring_c_end ||
+        (y & 0xfu) || (c & 0xfu)) {
+        static unsigned warned;
+
+        if (!idr && warned < 3) {
+            warned++;
+            IMP_LOG_WARN(TAG, "HERA ODMA read-back %08x / %08x outside the area: from the base", y, c);
+        }
+        y = ring->ring_y;
+        c = ring->ring_c;
+    }
+    *recon_y = y;
+    *recon_c = c;
+    *ref_y = a->recon_y ? a->recon_y : ring->ring_y;
+    *ref_c = a->recon_c ? a->recon_c : ring->ring_c;
+}
 #endif
 static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
@@ -939,6 +980,21 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
     }
     for (n = 0; n < nstats; n++)
         OpenIMP_T32_VpuReadReg(stat_regs[n], &a->stats[n]);
+#ifdef PLATFORM_T33
+    /* the ODMA write position for the next P picture (#393): from the
+     * statistics when they hold it (H.264), read otherwise */
+    a->odma_y = a->odma_c = 0;
+    for (n = 0; n < nstats; n++) {
+        if (stat_regs[n] == T33_HERA_ODMA_POS_Y)
+            a->odma_y = a->stats[n];
+        else if (stat_regs[n] == T33_HERA_ODMA_POS_C)
+            a->odma_c = a->stats[n];
+    }
+    if (!a->odma_y)
+        OpenIMP_T32_VpuReadReg(T33_HERA_ODMA_POS_Y, &a->odma_y);
+    if (!a->odma_c)
+        OpenIMP_T32_VpuReadReg(T33_HERA_ODMA_POS_C, &a->odma_c);
+#endif
     if (r.rc != 0 || !r.output_len || full ||
         h264_take(e, out, cap, at, taken, r.output_len, half, esc) != 0) {
         if (full || r.rc == 0)
@@ -969,11 +1025,21 @@ static uint32_t t33_h265_list(struct t32_enc_chn *e, const T32HeraH265Pic *p, in
     t.pic.ring_c_end = t.pic.ring_c + r.c;
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set, &t.hdr_wy, &t.hdr_wc);
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set ^ 1u, &t.hdr_ry, &t.hdr_rc);
-    t.ref_after_idr = !idr && a->ref_is_idr;
+    {
+        T32HeraH264Pic ring;            /* the area as the H.264 helper takes it */
+
+        memset(&ring, 0, sizeof(ring));
+        ring.ring_y = t.pic.ring_y;
+        ring.ring_y_end = t.pic.ring_y_end;
+        ring.ring_c = t.pic.ring_c;
+        ring.ring_c_end = t.pic.ring_c_end;
+        t33_recon_addrs(a, &ring, idr, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
+    }
     n = t33_hera_h265_list(&t, t32_vpu_buf_va(&a->list));
     if (n) {
         a->hdr_set = set ^ 1u;
-        a->ref_is_idr = idr;
+        a->recon_y = idr ? t.pic.ring_y : t.recon_y;
+        a->recon_c = idr ? t.pic.ring_c : t.recon_c;
     }
     return (uint32_t)n;
 }

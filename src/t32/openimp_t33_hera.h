@@ -10,10 +10,15 @@
  *     step tables 0x30900 / 0x30a00 are gone)
  *   - the reconstruction is compressed: one picture-sized area per plane
  *     (t33_hera_ring_layout) plus two sets of compression headers, written
- *     (0x10020 / 0x10024) and read (0x28008 / 0x2800c) in turn; the lists
- *     give the reconstruction address of an I picture only (0x10008 /
- *     0x1000c, 0 on P) and the reference address of the P picture after it
- *     only (0x28014 / 0x28018, 0x30070 / 0x30074; 0 on later P pictures)
+ *     (0x10020 / 0x10024) and read (0x28008 / 0x2800c) in turn.  The
+ *     reconstruction of an I picture starts at the area's base (0x10008 /
+ *     0x1000c, sizes 0x10028 / 0x1002c = the areas); a P picture's starts
+ *     where the engine stopped writing the last one (vendor: HERA ODMA
+ *     0x13210168 / 0x1321016c read after each picture), its sizes are what
+ *     is left to the areas' ends, and its reference (0x28014 / 0x28018,
+ *     0x30070 / 0x30074) is the last picture's reconstruction.  Seen on the
+ *     T33L silicon with the vendor libimp 2.0.2.1 (openimp #393); in QEMU
+ *     the read-back is 0, which is why the FIXQP traces show 0 / the ends.
  *   - the core adds the emulation prevention bytes (SDE 0x68018 bit 7):
  *     libimp copies the slice data as it comes
  * Register order and the defaults of the other registers are the vendor's
@@ -44,7 +49,8 @@ typedef struct {
     T32HeraH264Pic pic;                 /* ring_* = the data areas; recon / ref unused */
     uint32_t hdr_wy, hdr_wc;            /* the header set this picture writes */
     uint32_t hdr_ry, hdr_rc;            /* the set its reference wrote */
-    int ref_after_idr;                  /* P: the reference is the I picture */
+    uint32_t recon_y, recon_c;          /* P: where the reconstruction starts (engine read-back) */
+    uint32_t ref_y, ref_c;              /* P: the reference's reconstruction (the last recon_*) */
 } T33HeraH264Pic;
 
 /* the list into @list (T32_HERA_LIST_MAX_PAIRS * 2 words): pairs written, 0 on bad input */

@@ -27,7 +27,8 @@ typedef struct {
     T32HeraH265Pic pic;                 /* ring_* = the data areas; recon / ref unused */
     uint32_t hdr_wy, hdr_wc;            /* the header set this picture writes */
     uint32_t hdr_ry, hdr_rc;            /* the set its reference wrote */
-    int ref_after_idr;                  /* P: the reference is the I picture */
+    uint32_t recon_y, recon_c;          /* P: where the reconstruction starts (engine read-back) */
+    uint32_t ref_y, ref_c;              /* P: the reference's reconstruction (the last recon_*) */
 } T33HeraH265Pic;
 
 /* the header sets of an H.265 area of @width x @height after @hdr: set @set's
