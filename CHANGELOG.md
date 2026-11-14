@@ -15,6 +15,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-14: docs: T10/T20 SetDRC_Strength row approved
 
 - `docs/OPENIMP_BEYOND_VENDOR.md`: `IMP_ISP_Tuning_SetDRC_Strength` acting on the auto Iridix strength on T10/T20 is a beyond-vendor row, user OK 2026-11-14, kept. Docs only.
+## 2026-11-14: docs: German RE/test notes translated to English
+
+- Translated 14 German docs to English, content unchanged (structure, tables, register values, line/address references and [V]/[I]/[?] marks kept): `docs/RE_TRACE_GUIDE.md`, `docs/T31_OSD_RE.md`, `docs/T31_HW_JPEG_RE.md`, `docs/T31_HW_JPEG_RE_FOLLOWUP.md`, `docs/T31_AVC_STABILITY_RE.md`, `docs/T31_IVS_MOVE.md`, `docs/T31_TEST_PLAN.md`, `docs/T31_HW_JPEG_TEST.md`, `docs/T31_OSD_IPU_TEST.md`, `docs/T31_AVC_STABILITY_TEST.md`, `docs/archive/HANDOVER_OIMP_OSDTHICK.md` and the three T31 reports under `docs/test-reports/`. Docs only.
 
 ## 2026-11-14: vendor decompile and raw stock trace removed from the repository
 
