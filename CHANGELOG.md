@@ -15,6 +15,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-14: success rate of the paid API port loop per model on the Pages site (docs only)
 
 - New page `docs/port-loop.html` (https://lu-fi.github.io/openimp/port-loop.html): inline-SVG bar charts of passes / attempts per model (DeepSeek Flash and Pro, Claude Sonnet, Opus, Fable) for all attempts and split by project (T32, T33, T10 de-lift) and block size (up to 3 functions vs larger), the attempt count next to every bar, a table view and a short note on the escalation rule (DeepSeek only for small blocks, then Sonnet, Opus, Fable, one attempt per model). Linked from the start page and from the driver-port card of the matrix.
+- Second section "Who contributed": proven functions per source (API loop by model, Claude Code agents by the model in their commit, deterministic script rewrites, unknown) for T32, T33 and the T10 de-lift, attributed from the merged oracle blocks and the loop logs. Agents get no success rate (they iterate until the test passes).
 - Data: `docs/status/port_loop.json` (counts only, committed), refreshed locally by `tools/status_port_loop.py` from the loop logs; `tools/gen_port_loop.py` renders the page, `make status-check` checks it is current. Unclear log entries are stored as unknown, never guessed.
 
 ## 2026-11-14: driver-port card gets a "Readable C (driver de-lift)" table per SoC (openimp #539)

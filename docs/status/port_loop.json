@@ -1,6 +1,58 @@
 {
  "generated": "2026-11-14",
  "note": "counts only; regenerate with tools/status_port_loop.py (local logs). null = the logs do not settle it.",
+ "contributors": {
+  "T32": {
+   "functions": 1584,
+   "sources": {
+    "api-deepseek-flash": 4,
+    "api-deepseek-v4-pro": 6,
+    "api-claude-sonnet-5-5": 125,
+    "api-claude-opus-5-5": 47,
+    "api-unknown": 36,
+    "agent-opus": 907,
+    "agent-sonnet": 459
+   },
+   "blocks": {
+    "api-deepseek-flash": 1,
+    "api-deepseek-v4-pro": 3,
+    "api-claude-sonnet-5-5": 16,
+    "api-claude-opus-5-5": 4,
+    "api-unknown": 5,
+    "agent-opus": 214,
+    "agent-sonnet": 114
+   }
+  },
+  "T33": {
+   "functions": 193,
+   "sources": {
+    "api-deepseek-flash": 13,
+    "api-deepseek-v4-pro": 25,
+    "api-claude-sonnet-5-5": 51,
+    "api-claude-opus-5-5": 4,
+    "api-unknown": 10,
+    "agent-opus": 87,
+    "agent-fable": 3
+   },
+   "blocks": {
+    "api-deepseek-flash": 5,
+    "api-deepseek-v4-pro": 9,
+    "api-claude-sonnet-5-5": 24,
+    "api-claude-opus-5-5": 2,
+    "api-unknown": 3,
+    "agent-opus": 19,
+    "agent-fable": 3
+   }
+  },
+  "T10 de-lift": {
+   "functions": 755,
+   "sources": {
+    "no-port": 700,
+    "script": 55
+   },
+   "blocks": {}
+  }
+ },
  "attempts": [
   {
    "date": "2026-11-09",
@@ -1484,6 +1536,17 @@
    "model": "claude-sonnet-5-5",
    "kind": "port",
    "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-14",
+   "project": "T10 de-lift",
+   "block": "2a FSM entry points (43: reque",
+   "funcs": 43,
+   "model": "claude-sonnet-5-5",
+   "kind": "de-lift",
+   "result": "pass",
    "review": null,
    "via": null
   },

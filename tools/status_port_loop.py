@@ -21,6 +21,7 @@ import glob
 import json
 import os
 import re
+import subprocess
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "status", "port_loop.json")
@@ -192,7 +193,8 @@ def parse_t10(path):
         c = [x.strip() for x in ln.strip().strip("|").split("|")]
         if len(c) >= 5 and re.search(r"claude-|deepseek", c[2]):
             res = "pass" if c[3].lower().startswith("pass") else "fail"
-            out.append({"date": None, "block": c[0][:30], "suf": "", "funcs": None, "model": c[2], "kind": "de-lift",
+            nf = re.match(r"~?(\d+)$", c[1])
+            out.append({"date": day(path), "block": c[0][:30], "suf": "", "funcs": int(nf.group(1)) if nf else None, "model": re.search(r"(claude-[\w.-]+|deepseek-[\w.-]+)", c[2]).group(1), "kind": "de-lift",
                         "result": res, "rounds": None, "esc": False})
     return out
 
@@ -207,6 +209,109 @@ def expand(att):
             r = dict(r, via="flash-escalation")
         out.append(r)
     return out
+
+
+FN = re.compile(r"fn_[0-9a-f]+_[A-Za-z0-9_]+\.c")
+REPO = os.environ.get("OPEN_TX_ISP", "/mnt/NVMe/git/open-tx-isp")
+SRC_ORDER = ["api-deepseek-flash", "api-deepseek-v4-pro", "api-claude-sonnet-5-5", "api-claude-opus-5-5", "api-claude-fable-5-2", "api-unknown",
+             "agent-opus", "agent-sonnet", "agent-fable", "agent-unknown", "script", "no-port", "unknown"]
+
+
+def git(*a):
+    return subprocess.run(["git", "-C", REPO] + list(a), capture_output=True, text=True).stdout
+
+
+def conf_funcs(path, txt):
+    if "t32_oracle" in path:
+        return set(FN.findall(txt))
+    out = set()
+    m = re.search(r"^FUNCS='(.*?)'", txt, re.S | re.M)
+    for ln in (m.group(1) if m else "").splitlines():
+        w = ln.split()
+        if w and not w[0].startswith("#") and w[0] not in ("VEC", "GLOBAL", "CALLS"):
+            out.add(w[0])
+    m = re.search(r"^PROVES='(.*?)'", txt, re.S | re.M)
+    return out | set((m.group(1) if m else "").split())
+
+
+def pass_model(att, block, sufs):
+    """model of the passing port attempt(s) of a block; None unless exactly one model passed (never guessed)"""
+    ms = {a["model"] for a in att if a["block"] == block and a["suf"] in sufs and a["result"] == "pass" and a["kind"] == "port"}
+    return ms.pop() if len(ms) == 1 else None
+
+
+def contributors(ref, t32, t33, delift):
+    """proven functions per source and project (a function counts once, for the oldest oracle block that proves it).
+    Source of a block: explicit model in its commit subject (T33 loop commits, T32 "Claude API"), else the passing attempt of the
+    T32/T33 loop logs when exactly one model passed, else the Co-Authored-By trailer of the commit (agent models), else unknown."""
+    files = [f for f in git("ls-tree", "-r", "--name-only", ref, "tests/t32_oracle", "tests/t33_binoracle").split() if f.endswith(".conf")]
+    first = {}   # conf -> (subject, body); log is oldest first
+    for blk in git("log", ref, "--reverse", "--diff-filter=A", "--name-only", "--format=@@%H").split("@@")[1:]:
+        ls = blk.strip().split("\n")
+        body = git("show", "-s", "--format=%s%n%b", ls[0])
+        for f in ls[1:]:
+            if f in files and f not in first:
+                first[f] = body
+    res = {"T32": {}, "T33": {}}
+    seen = {"T32": set(), "T33": set()}
+    blocks = {"T32": {}, "T33": {}}
+    for f in files:   # oldest-first order of the add commits
+        pass
+    for f in sorted(first, key=lambda x: list(first).index(x)):
+        proj = "T32" if "t32_oracle" in f else "T33"
+        body = first[f]
+        stem = os.path.basename(f)[:-5]
+        subj = body.split("\n", 1)[0]
+        src = None
+        if proj == "T33":
+            m = re.search(r"port loop: block \S+ .*?#99, ([\w.-]+),", subj)
+            mdl = m.group(1) if m else (pass_model(t33, stem, [""]) if "port loop batch" in subj else None)
+            if m and mdl == "auto":
+                mdl = pass_model(t33, stem, [""])
+            if m or "port loop batch" in subj:
+                src = "api-" + mdl if mdl in ("deepseek-flash", "deepseek-v4-pro", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-2") else "api-unknown"
+        else:
+            m = re.search(r"Claude API (claude-[\w.-]+)", subj)
+            if m:
+                src = "api-" + m.group(1)
+            elif "DeepSeek port loop" in subj:
+                m2 = re.match(r"t32_(\w+?)([a-z]?)_oracle$", stem)
+                mdl = None
+                if m2:
+                    b, sf = m2.groups()
+                    mdl = pass_model(t32, b, [sf, ""]) if sf else pass_model(t32, b, [""])
+                src = "api-" + mdl if mdl in ("deepseek-flash", "deepseek-v4-pro", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-2") else "api-unknown"
+        if src is None:
+            tr = " ".join(re.findall(r"(?im)^co-authored-by: Claude (\w+)", body)).lower()
+            src = "agent-" + tr.split()[0] if tr and tr.split()[0] in ("opus", "sonnet", "fable") else "agent-unknown"
+        fs = conf_funcs(f, git("show", "%s:%s" % (ref, f))) - seen[proj]
+        seen[proj] |= fs
+        if fs:
+            res[proj][src] = res[proj].get(src, 0) + len(fs)
+            blocks[proj][src] = blocks[proj].get(src, 0) + 1
+    out = {}
+    for proj in ("T32", "T33"):
+        out[proj] = {"functions": len(seen[proj]), "sources": {k: res[proj][k] for k in SRC_ORDER if k in res[proj]},
+                     "blocks": {k: blocks[proj][k] for k in SRC_ORDER if k in blocks[proj]}}
+    if delift:
+        cur, base, rows = delift
+        script = bool(rows)   # the STATE file reports exactly this proven count after the deterministic batch 1 (no LLM)
+        d = cur - base
+        out["T10 de-lift"] = {"functions": cur, "sources": {k: v for k, v in (("no-port", base), ("script" if script else "unknown", d)) if v},
+                              "blocks": {}}
+    return out
+
+
+def delift_data(d):
+    try:
+        cur = json.load(open(os.path.join(d, "summary.json")))["proven_readable"]
+        base = json.load(open(os.path.join(d, "summary_base.json")))["proven_readable"]
+        rows = [l for l in open(os.path.join(d, "cost.md"), errors="replace") if l.startswith("|") and not l.startswith("|---") and "| block |" not in l]
+        st = re.search(r"now (\d+) \(", open(os.path.join(d, "STATE.md"), errors="replace").read())
+        rows = rows if st and int(st.group(1)) == cur and any("no LLM" in l for l in rows) else []
+    except (OSError, ValueError, KeyError):
+        return None
+    return cur, base, rows
 
 
 def reviews(d):
@@ -226,6 +331,7 @@ def reviews(d):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--audit", default=AUDIT)
+    ap.add_argument("--ref", default="origin/next", help="open-tx-isp ref with the merged oracle blocks (checkout: $OPEN_TX_ISP)")
     ap.add_argument("--print", action="store_true")
     o = ap.parse_args()
     d32 = os.path.join(o.audit, "t32pr", "ds")
@@ -244,17 +350,20 @@ def main():
         r["project"] = "T10 de-lift"
         r["review"] = None
         att.append(r)
+    contrib = contributors(o.ref, t32, [r for r in att if r["project"] == "T33"], delift_data(os.path.join(o.audit, "delift", "t10")))
     att = expand(att)
     att.sort(key=lambda r: (r["date"] or "", r["project"], r["block"] or ""))
     keep = ("date", "project", "block", "funcs", "model", "kind", "result", "review", "via")
     data = {"generated": datetime.date.today().isoformat(),
             "note": "counts only; regenerate with tools/status_port_loop.py (local logs). null = the logs do not settle it.",
+            "contributors": contrib,
             "attempts": [{k: r.get(k) for k in keep} for r in att]}
     if o.print:
         from collections import Counter
         c = Counter((r["project"], r["model"], r["result"]) for r in att)
         for k in sorted(c, key=str):
             print(k, c[k])
+        print(json.dumps(contrib, indent=1))
         print("unknown size:", sum(1 for r in att if r["funcs"] is None and r["kind"] == "port"))
         return
     with open(OUT, "w") as f:

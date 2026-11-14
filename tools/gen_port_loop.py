@@ -24,6 +24,13 @@ MODELS = [("deepseek-flash", "DeepSeek Flash"), ("deepseek-v4-pro", "DeepSeek Pr
           ("claude-opus-5-5", "Claude Opus"), ("claude-fable-5-2", "Claude Fable")]
 PROJECTS = ["T32", "T33", "T10 de-lift"]
 SIZES = [("small", "up to 3 functions"), ("large", "more than 3 functions"), ("none", "size not recorded")]
+SOURCES = {"api-deepseek-flash": ("API loop: DeepSeek Flash", 1), "api-deepseek-v4-pro": ("API loop: DeepSeek Pro", 1),
+           "api-claude-sonnet-5-5": ("API loop: Claude Sonnet", 1), "api-claude-opus-5-5": ("API loop: Claude Opus", 1),
+           "api-claude-fable-5-2": ("API loop: Claude Fable", 1), "api-unknown": ("API loop: model not recorded", 1),
+           "agent-opus": ("Claude Code agents: Opus", 3), "agent-sonnet": ("Claude Code agents: Sonnet", 3),
+           "agent-fable": ("Claude Code agents: Fable", 3), "agent-unknown": ("Claude Code agents: model not recorded", 3),
+           "script": ("Deterministic script rewrite", 2), "no-port": ("Already readable, not ported", 0),
+           "unknown": ("Unknown", 0)}
 LOW_N = 5   # fewer attempts than this: the bar is flagged "few"
 
 CSS = """
@@ -52,7 +59,7 @@ svg.bars{display:block;width:100%;height:auto}
 .bars .lab{fill:var(--fg);font-size:13px}.bars .val{fill:var(--fg);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .bars .cnt{fill:var(--mut);font-size:12px;font-variant-numeric:tabular-nums}
 .bars .trk{fill:var(--track)}.bars .gl{stroke:var(--line);stroke-width:1}.bars .ax{fill:var(--mut);font-size:11px}
-.bars .s1{fill:var(--s1)}.bars .s2{fill:var(--s2)}.bars .s3{fill:var(--s3)}.bars .s4{fill:var(--s4)}.bars .s5{fill:var(--s5)}
+.bars .s1{fill:var(--s1)}.bars .s2{fill:var(--s2)}.bars .s3{fill:var(--s3)}.bars .s4{fill:var(--s4)}.bars .s5{fill:var(--s5)}.bars .sg{fill:var(--mut)}
 .bars .row:hover .trk{fill:var(--line)}
 i.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--mut);font-size:.9em;margin:10px 0 0}
@@ -141,6 +148,41 @@ def panel(title, att, pid):
     return '<figure class="pan"><h3>%s</h3><p class="n">%d attempts with a charted model</p>%s</figure>' % (html.escape(title), n_all, "".join(o))
 
 
+def contrib_panel(proj, c, pid):
+    src = c["sources"]
+    tot = sum(src.values())
+    rows = [(k, v) for k, v in SOURCES.items() if src.get(k)]
+    x0, x1, rh, top = 232, 400, 28, 4
+    h = top + rh * len(rows) + 4
+    o = ['<svg class="bars" viewBox="0 0 560 %d" role="img" aria-labelledby="%s-t"><title id="%s-t">%s: proven functions per source</title>' % (h, pid, pid, html.escape(proj))]
+    for i, (k, (label, g)) in enumerate(rows):
+        n = src[k]
+        y = top + i * rh + 3
+        o.append('<g class="row"><title>%s: %d of %d proven functions</title><rect x="0" y="%d" width="560" height="%d" fill="transparent"/>' % (html.escape(label), n, tot, y - 3, rh))
+        o.append('<text class="lab" x="0" y="%d">%s</text><rect class="trk" x="%d" y="%d" width="%d" height="14" rx="3"/>' % (y + 13, html.escape(label), x0, y + 2, x1 - x0))
+        w = (x1 - x0) * n / float(tot)
+        r = min(4.0, w)
+        cls = "sg" if g == 0 else "s%d" % g
+        o.append('<path class="%s" d="M%d %d h%.1f a%.1f %.1f 0 0 1 %.1f %.1f v%.1f a%.1f %.1f 0 0 1 -%.1f %.1f h-%.1f z"/>' % (cls, x0, y + 2, w - r, r, r, r, r, 14 - 2 * r, r, r, r, r, w - r))
+        o.append('<text class="val" x="%d" y="%d">%d</text><text class="cnt" x="%d" y="%d">%s</text></g>' % (x1 + 10, y + 13, n, x1 + 50, y + 13, pct(n, tot)))
+    o.append("</svg>")
+    return '<figure class="pan"><h3>%s</h3><p class="n">%d proven functions</p>%s</figure>' % (html.escape(proj), tot, "".join(o))
+
+
+def contrib_table(cs):
+    rows = []
+    for proj in PROJECTS:
+        c = cs.get(proj)
+        if not c:
+            continue
+        for k, (label, _) in SOURCES.items():
+            if c["sources"].get(k):
+                rows.append("<tr><td>%s</td><td>%s</td><td class='num'>%d</td><td class='num'>%s</td></tr>" % (
+                    html.escape(proj), html.escape(label), c["sources"][k], c.get("blocks", {}).get(k, "-")))
+    return ('<div class="tw"><table><thead><tr><th>Project</th><th>Source</th><th class="num">Proven functions</th>'
+            '<th class="num">Oracle blocks</th></tr></thead><tbody>%s</tbody></table></div>' % "".join(rows))
+
+
 def table(att):
     rows = []
     for proj in PROJECTS:
@@ -183,7 +225,9 @@ def render(d):
     if other:
         notes.append("%d attempts could not be assigned to a charted model (the log does not say whether a DeepSeek pass came from "
                      "Flash or Pro, or the model is not recorded). They are not charted and not guessed." % other)
-    return PAGE % dict(css=CSS, legend=legend, all=parts[0], secs="".join(secs), table=table(charted), repo=REPO,
+    cs = d.get("contributors", {})
+    contrib = "".join(contrib_panel(p, cs[p], "c%d" % i) for i, p in enumerate(PROJECTS) if p in cs and cs[p]["sources"])
+    return PAGE % dict(css=CSS, contrib=contrib, ctable=contrib_table(cs), legend=legend, all=parts[0], secs="".join(secs), table=table(charted), repo=REPO,
                        n=len(att), d0=dates[0] if dates else "-", d1=dates[-1] if dates else "-", gen=html.escape(d.get("generated", "")),
                        notes="".join("<li>%s</li>" % html.escape(n) for n in notes), url=URL, low=LOW_N)
 
@@ -196,7 +240,7 @@ PAGE = """<!doctype html>
 <style>%(css)s</style></head><body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenIMP</a>
-  <nav><a href="./">Start</a><a href="feature-matrix.html">Matrix</a><a href="#table">Table</a><a href="%(repo)s/openimp">GitHub</a></nav>
+  <nav><a href="./">Start</a><a href="feature-matrix.html">Matrix</a><a href="#who">Who contributed</a><a href="#table">Table</a><a href="%(repo)s/openimp">GitHub</a></nav>
 </div></header>
 <main class="wrap">
 <p class="crumb"><a href="./">Start</a> &rsaquo; Port loop</p>
@@ -214,6 +258,13 @@ then Claude Opus, then Claude Fable. A model never gets a second try on the same
 <p class="sub">T32 is the recovered-C port with host oracles, T33 uses the binary oracle, T10 de-lift is the readable-C rework of the T10 module.
 Blocks are split at 3 functions. Bars with fewer than %(low)d attempts are marked "few": read them as anecdotes, not rates.</p>
 <div class="grid">%(secs)s</div>
+<h2 id="who">Who contributed</h2>
+<p class="sub">Proven functions per source: a function counts once, for the oldest merged oracle block that proves it (host test green, merged into the driver).
+The API loop above is split by model. Claude Code agents (hand ports on the plan budget) are split by the model named in their commit; scripts are deterministic
+rewrites. <b>Agents get no success rate</b> because they keep working on a block until its test passes, so every agent block ends as a pass and there is no failed attempt to count.
+A block whose source the logs do not settle is listed as not recorded or unknown, never guessed.</p>
+<div class="grid">%(contrib)s</div>
+<details><summary>Table view: proven functions per source</summary>%(ctable)s</details>
 <h2 id="table">Table view</h2>
 <details open><summary>Passed / attempts per project, model and block size</summary>%(table)s</details>
 <h2>How the numbers were counted</h2>
