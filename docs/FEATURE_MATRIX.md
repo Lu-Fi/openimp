@@ -92,7 +92,7 @@ How the ports were made: success rate of the paid API port loop per model, by pr
 | SoC | proven / all | progress | note |
 |---|--:|---|---|
 | T32 | 1591/1591 (100.0 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; as of 2026-11-13 |
-| T33 | 308/409 (75.3 %) | `███████████████░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 308 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 0 to a few more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
+| T33 | 308/409 (75.3 %) | `███████████████░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 308 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 5 more are ported by name (3 dead, 1 debug, tisp_top_restart_cfg) in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
 
 ### Readable C (driver de-lift, open-tx-isp)
 
@@ -101,8 +101,8 @@ Per SoC: C functions compiled into the open module that are real, readable C and
 | SoC | readable / all functions | progress | machine-like lines | note |
 |---|--:|---|--:|---|
 | COMMON | 235/236 (99.6 %; before 235) | `████████████████████` | 2.1 % (before 2.1 %) | inventory only |
-| T10 | 834/1188 (70.2 %; before 700) | `██████████████░░░░░░` | 37.4 % (before 45.2 %) | T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-6 (+Fable ctx batch) + ISP context layout merged (system_tab, FSM family, process_interrupt, small helpers, struct t20_isp_ctx with cmos/AE interrupt handlers), host oracles + vendor vdiff + T10 cam stream proof per batch (cam run of the two Fable batches pending) (openimp #539); as of 2026-11-14 |
-| T20 | 695/1033 (67.3 %; before 695) | `█████████████░░░░░░░` | 41.4 % (before 41.4 %) | inventory only |
+| T10 | 904/1188 (76.1 %; before 700) | `███████████████░░░░░` | 32.3 % (before 45.2 %) | T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-12 merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math), host oracles + vendor vdiff + T10 cam stream proof per batch (openimp #539); as of 2026-11-14 |
+| T20 | 768/1033 (74.3 %; before 695) | `███████████████░░░░░` | 35.8 % (before 41.4 %) | shares the recovered firmware unit with T10 (open-tx-isp batches 1-12); inventory (openimp #539); as of 2026-11-14 |
 | T21 | 143/759 (18.8 %; before 143) | `████░░░░░░░░░░░░░░░░` | 82.1 % (before 82.1 %) | inventory only |
 | T23 | 691/1926 (35.9 %; before 691) | `███████░░░░░░░░░░░░░` | 83.4 % (before 83.4 %) | inventory only |
 | T30 | 338/982 (34.4 %; before 338) | `███████░░░░░░░░░░░░░` | 75.6 % (before 75.6 %) | inventory only |

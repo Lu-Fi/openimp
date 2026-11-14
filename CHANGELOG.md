@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T10 / T20 readable-C card 904/1188 and 768/1033 (driver de-lift batches 10-12, #539)
+
+- `docs/status/driver_port.json` / matrix readable-C table: T10 904/1188 proven readable functions (76.1 %, was 834), machine-like lines 32.3 % (was 37.4 %); T20 768/1033 (shared firmware unit). Open-tx-isp next 7a27ff2bd batches 10-12 (132 functions on named parameters/fields), whole object identical machine code on T10 and T20, host oracle, vendor vdiff, tests 618/0, T10 camera stream proof. No feature cell moves.
+
 ## 2026-11-14: status: T33 driver-port row 308/409, recounted (port loop round 5, #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 308/409, name-ported 313 (recount with the fixed inventory tool: it now reads double-quoted FUNCS, PROVES lists and suffixed names such as `mipi_phy_stream_on.constprop.5`; the earlier 274 was an estimate). All T33-only functions that are not dead / debug are proven except AOV / RISC-V / VIC glue and `tisp_tmo_s0s1_overflow_process` (#524), `tisp_top_restart_cfg` (#509) and `tx_isp_module_exit`. Most of the new ports are proven, not wired (our driver lacks the vendor block-state structs, #504/#507). Not device-tested.
