@@ -16,6 +16,7 @@ on:
       - 'tools/release_gates.py'
       - 'tools/driver_port.py'
       - 'tools/gen_site_index.py'
+      - 'tools/gen_port_loop.py'
       - 'tools/export-check/**'
       - '.github/workflows/matrix-pages.yml'
   issues:
@@ -60,6 +61,7 @@ jobs:
         run: |
           python3 tools/gen_feature_matrix_html.py
           mkdir -p _site
+          python3 tools/gen_port_loop.py _site/port-loop.html
           cp docs/feature-matrix.html _site/feature-matrix.html
           mkdir -p _site/lightbox _site/assets
           cp docs/assets/banner.svg docs/assets/banner-dark.svg docs/assets/logo.svg docs/assets/logo-dark.svg _site/assets/

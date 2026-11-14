@@ -12,6 +12,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 192/409 (+8: `ispcore_set_clk_parent`, `ivdc_set_clk_parent`, `tisp_all_reset`, `tisp_blc_deinit`, `tisp_ldc_t33_deinit`, `tisp_msca_t33_deinit`, `tisp_normal_ae_deinit`, `tisp_dma_deinit`; open-tx-isp next 7d17f72d, blocks clkp / deinit / deinitto). The driver checks the clock parents like the vendor (sclka / mpll only) and runs the T33 `tisp_all_reset` at the input setup and at the last close (QEMU A/B equal to the vendor module). Docs only.
 
+## 2026-11-14: success rate of the paid API port loop per model on the Pages site (docs only)
+
+- New page `docs/port-loop.html` (https://lu-fi.github.io/openimp/port-loop.html): inline-SVG bar charts of passes / attempts per model (DeepSeek Flash and Pro, Claude Sonnet, Opus, Fable) for all attempts and split by project (T32, T33, T10 de-lift) and block size (up to 3 functions vs larger), the attempt count next to every bar, a table view and a short note on the escalation rule (DeepSeek only for small blocks, then Sonnet, Opus, Fable, one attempt per model). Linked from the start page and from the driver-port card of the matrix.
+- Data: `docs/status/port_loop.json` (counts only, committed), refreshed locally by `tools/status_port_loop.py` from the loop logs; `tools/gen_port_loop.py` renders the page, `make status-check` checks it is current. Unclear log entries are stored as unknown, never guessed.
+
 ## 2026-11-14: driver-port card gets a "Readable C (driver de-lift)" table per SoC (openimp #539)
 
 - `tools/status_driver_port.py --readable DIR [--readable-only]` reads one `summary.json` per SoC from the de-lift inventories (per-function origin / readability class, rules in the inventory README) into `docs/status/driver_port.json` (`readable` section; the T32/T33 port rows are untouched); `tools/driver_port.py` renders it under the driver-port card (Markdown + HTML): readable / all functions, progress bar, machine-like lines, before/after.

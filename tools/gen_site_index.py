@@ -119,7 +119,7 @@ h2.lbh{display:flex;align-items:center;gap:12px}h2.lbh img{width:72px;height:72p
 </style></head><body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="assets/logo.svg" alt="">OpenIMP</a>
-  <nav><a href="#status">Status</a><a href="#lightbox">Light box</a><a href="feature-matrix.html">Matrix</a><a href="$board">Board</a><a href="$repo/openimp/issues">Issues</a><a href="$repo/openimp/releases">Releases</a><a href="$repo/openimp">GitHub</a></nav>
+  <nav><a href="#status">Status</a><a href="#lightbox">Light box</a><a href="feature-matrix.html">Matrix</a><a href="port-loop.html">Port loop</a><a href="$board">Board</a><a href="$repo/openimp/issues">Issues</a><a href="$repo/openimp/releases">Releases</a><a href="$repo/openimp">GitHub</a></nav>
 </div></header>
 <main class="wrap">
 <div class="hero">
@@ -138,6 +138,7 @@ h2.lbh{display:flex;align-items:center;gap:12px}h2.lbh img{width:72px;height:72p
 <div class="socs">$socs</div></section>
 <section><h2>Project</h2><p class="sub">Where the work is tracked.</p><div class="links">
 <a class="link" href="feature-matrix.html"><b>Feature matrix</b><span>Every function per SoC: done, vendor-equal or better, release gates</span></a>
+<a class="link" href="port-loop.html"><b>Port loop</b><span>How often each language model passed the host test of a ported block</span></a>
 <a class="link" href="$board"><b>Project board</b><span>All open work with its status</span></a>
 <a class="link" href="$repo/openimp/issues"><b>Issues</b><span>OpenIMP; kernel driver: <span>open-tx-isp</span></span></a>
 <a class="link" href="$repo/openimp/blob/next/CHANGELOG.md"><b>Changelog</b><span>What changed, with device evidence</span></a>

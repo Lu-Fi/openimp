@@ -87,6 +87,8 @@ Open items: milestones [RC3](https://github.com/Lu-Fi/openimp/milestones) and Re
 
 Separate from the streamer-function bars above: this counts functions of the recovered vendor kernel driver that were ported to open C and proven bit-exact against the recovered code by a host oracle, out of all functions of the recovered driver. It says nothing about the OpenIMP library. The T32/T33 driver port is merged into open-tx-isp next; its reference-C oracles stay on the T32 branch until upstream PR #15 lands. Host-proven is not device-tested. T33 has no recovered vendor C: its row counts the T33-only functions of the vendor module that pass the T33 binary oracle (the vendor instructions run in an emulator against our C), see its note.
 
+How the ports were made: success rate of the paid API port loop per model, by project and block size: https://lu-fi.github.io/openimp/port-loop.html
+
 | SoC | proven / all | progress | note |
 |---|--:|---|---|
 | T32 | 1591/1591 (100.0 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; as of 2026-11-13 |
