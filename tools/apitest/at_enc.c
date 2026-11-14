@@ -1297,6 +1297,21 @@ static void live_misc(int chn, int codec)
             r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
             rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == -1 && r == 0 && *g == was) ? V_PASS : V_FAIL,
                 "refused on a created channel (before CreateChn only): ret %d, count stays %d (was %d)", r2, *g, was);
+#elif defined(APITEST_T33)
+            /* vendor 2.0.2.1: a created channel refuses the call (0x80040080) and keeps its count; default 2 (H.264/H.265) */
+            r2 = IMP_Encoder_SetMaxStreamCnt(chn, was > 3 ? 3 : was + 1);
+            r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
+            rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == (int)0x80040080 && r == 0 && *g == was && (codec == CODEC_JPEG || was == 2)) ? V_PASS : V_FAIL,
+                "refused on a created channel (before CreateChn only): ret 0x%x, count stays %d (was %d, vendor default 2 video / 1 JPEG)", (unsigned)r2, *g, was);
+            {   /* channel 15 was never created: Set stores (0), Get stays 0x80040008; channel 16: 0x80040001 */
+                int a1 = IMP_Encoder_SetMaxStreamCnt(15, 4), a2 = IMP_Encoder_GetMaxStreamCnt(15, g);
+                int a3 = IMP_Encoder_SetMaxStreamCnt(16, 4), a4 = IMP_Encoder_GetMaxStreamCnt(16, g);
+
+                gchk(g);
+                IMP_Encoder_SetMaxStreamCnt(15, 0);
+                rep(LBL("IMP_Encoder_SetMaxStreamCnt (not created)"), a1, (a1 == 0 && a2 == (int)0x80040008 && a3 == (int)0x80040001 && a4 == (int)0x80040001) ? V_PASS : V_FAIL,
+                    "chn 15 set %d get 0x%x, chn 16 set 0x%x get 0x%x", a1, (unsigned)a2, (unsigned)a3, (unsigned)a4);
+            }
 #else
             r2 = IMP_Encoder_SetMaxStreamCnt(chn, was > 3 ? 3 : was + 1);
             r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);

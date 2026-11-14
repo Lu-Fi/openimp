@@ -1602,6 +1602,22 @@ static void slot_buf_free(T32VpuBuf *b)
 }
 #endif
 
+#ifdef PLATFORM_T33
+/* IMP_Encoder_SetMaxStreamCnt before CreateChn (vendor: the channel table field survives the CreateChn memset) */
+static int t33_streams[T32_ENC_CHNS];
+#endif
+
+#ifdef PLATFORM_T33
+/* Stream buffers behind a requested count: never fewer than the T32 default (the app may hold a stream while the
+ * next picture is encoded) and at most the slot table; the count the getter reports is the requested one. */
+static int alloc_streams(int cnt)
+{
+    return cnt < T32_ENC_DEF_STREAMS ? T32_ENC_DEF_STREAMS : cnt > T32_ENC_MAX_STREAMS ? T32_ENC_MAX_STREAMS : cnt;
+}
+#else
+#define alloc_streams(cnt) (cnt)
+#endif
+
 static void chn_free_bufs(struct t32_enc_chn *e)
 {
     int i;
@@ -1670,7 +1686,14 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     e->h264 = attr->encAttr.enType == PT_H264 || attr->encAttr.enType == PT_H265;
     e->hevc = attr->encAttr.enType == PT_H265;
     e->qp = e->h264 ? 0 : jpeg_qp_of((int)attr->rcAttr.attrRcMode.attrJPEGFixQp.qp);
+#ifdef PLATFORM_T33
+    /* vendor 2.0.2.1 CreateChn: the count SetMaxStreamCnt stored before the call, else 1 (JPEG) / 2 (H.264, H.265);
+     * the vendor keeps the value in the channel table over Destroy/Create */
+    e->max_streams = t33_streams[encChn] > 0 ? t33_streams[encChn] : e->h264 ? 2 : 1;
+    t33_streams[encChn] = e->max_streams;
+#else
     e->max_streams = T32_ENC_DEF_STREAMS;
+#endif
     e->bs_size = e->h264 ? h264_bs_size(attr) : jpeg_bs_size(attr);
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
@@ -1692,7 +1715,7 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     if (!e->h264 && t33_bs_get(e) != 0)
         goto fail_bufs;
 #endif
-    if (chn_alloc_bufs(e, e->max_streams) != 0)
+    if (chn_alloc_bufs(e, alloc_streams(e->max_streams)) != 0)
         goto fail_bufs;
     if (pipe2(e->pipefd, O_CLOEXEC | O_NONBLOCK) != 0)
         goto fail_bufs;
@@ -2170,6 +2193,44 @@ int IMP_Encoder_GetGOPSize(int encChn, IMPEncoderGOPSizeCfg *gop)
     return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
 }
 
+#ifdef PLATFORM_T33
+/* Vendor 2.0.2.1 (libimp 0xe7a14 / 0xe7bc4): Set stores the count in the channel table when the channel is not created
+ * (no range check) and returns 0; a created channel is refused with 0x80040080 and keeps its count; a channel >= 16 is
+ * 0x80040001.  Get of a channel that is not created is 0x80040008, else the count. */
+int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
+{
+    int rc = 0;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    pthread_mutex_lock(&enc_lock);
+    if (chn_get(encChn))
+        rc = T32_ENC_ERR_MODE;
+    else
+        t33_streams[encChn] = cnt;
+    pthread_mutex_unlock(&enc_lock);
+    return rc;
+}
+
+int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt)
+{
+    struct t32_enc_chn *e;
+    int rc = T32_ENC_ERR_NOCHN;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (!cnt)
+        return -1;
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    if (e) {
+        *cnt = e->max_streams;
+        rc = 0;
+    }
+    pthread_mutex_unlock(&enc_lock);
+    return rc;
+}
+#else
 int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
 {
     struct t32_enc_chn *e;
@@ -2206,6 +2267,8 @@ int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt)
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
 }
+
+#endif
 
 /* ---- registration and receiving ---------------------------------------------- */
 int IMP_Encoder_RegisterChn(int encGroup, int encChn)
