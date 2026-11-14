@@ -1,17 +1,18 @@
 {
  "socs": {
   "T33": {
-   "proven": 86,
+   "proven": 13,
+   "ported": 139,
    "total": 409,
-   "branch": "claude/t32-ds-batch",
-   "date": "2026-11-13",
-   "note": "counting basis differs from T32 (no recovered T33 C, so nothing is bit-exact-proven): of the 1563 functions of the vendor tx-isp-t33.ko, 1154 have a T32 namesake and run on the shared driver/t32 port; the count is the 409 T33-only functions, of which 86 are ported by name in the T33 files (driver/t32/tx_isp_t33_*.h, driver/t33); checked by 5 host tests and the QEMU apitest (OpenIMP 255 PASS / 16 FAIL on this module, 254 / 17 on the vendor module; openimp #383-#389, #413, #429, #431, #434, #436, #437, #441, #442); the T32/T33 driver is merged into open-tx-isp next (cd066948, 2026-11-13) and T33 ports added since 2026-11-13 (#437, #441, #491) are not in these counts yet (recount pending); not device-tested (no T33 camera)"
+   "branch": "next",
+   "date": "2026-11-14",
+   "note": "counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 13 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 126 more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested"
   },
   "T32": {
    "proven": 1591,
    "total": 1591,
    "branch": "claude/t32-ds-batch",
-   "date": "2026-11-12",
+   "date": "2026-11-13",
    "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"
   }
  },

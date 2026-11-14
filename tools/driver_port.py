@@ -12,7 +12,8 @@ INTRO = ("Separate from the streamer-function bars above: this counts functions 
          "ported to open C and proven bit-exact against the recovered code by a host oracle, out of all functions of the recovered "
          "driver. It says nothing about the OpenIMP library. The T32/T33 driver port is merged into open-tx-isp "
          "next; its reference-C oracles stay on the T32 branch until upstream PR #15 lands. Host-proven is not device-tested. T33 has no recovered vendor C: its row counts the "
-         "T33-only functions of the vendor module that the open T33 files port, see its note.")
+         "T33-only functions of the vendor module that pass the T33 binary oracle (the vendor instructions run in an emulator "
+         "against our C), see its note.")
 
 
 def load():
