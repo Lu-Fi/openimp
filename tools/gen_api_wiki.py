@@ -73,7 +73,7 @@ CELL = {
     "miss": ("❌", "not exported by OpenIMP"),
     "n.a.": ("·", "function does not exist on this SoC (not in that SoC's vendor API; not a gap)"),
     "?": ("?", "state not determined"),
-    "nob": ("📋", "function not provided by the planned SoC build yet (T32/T33 have a QEMU-only build)"),
+    "nob": ("📋", "function not provided by the SoC build yet (T32/T33 have a QEMU-only build)"),
 }
 DEFAULT_RET = "0 on success, non-zero on error (mostly -1; T40 and T41 return their own error codes for some failures)."
 

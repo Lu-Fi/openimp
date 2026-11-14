@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T32 and T33 are in development (not a release gate), 71 matrix cells 📋 -> 🔧
+
+- Matrix, README SoC table, BUILD.md, `docs/T32_RC.md` and the generators say "in development (not a release gate)" instead of "planned" for T32/T33. Cells with merged code and QEMU/host evidence are 🔧 (T32 35, T33 36), not-started rows 34-39, 41, 44, 45 stay 📋. No device result yet (T33L module boots thingino, open stack not on it, #393; T32 has no camera). Counts: 📋 92 -> 21, 🔧 3 -> 74.
+
 ## 2026-11-14: status: T33 driver-port row 100/409, 130 ported by name (open-tx-isp T33 day / night bin switch, #504)
 
 - `docs/status/driver_port.json` / matrix row: 10 more T33 `*_switch_para` functions run in the open module's bin switch path (open-tx-isp next 13d9394a, QEMU A/B only, not oracle-proven). `tools/t32/t32_trace_sample.c`: `bin` mode options `T32_BIN_END_NIGHT` (stay at night) and `T32_BIN_HOLD=N` (keep the ISP open N s for a list dump) for the T33 day / night A/B (#504). Tool / docs only.

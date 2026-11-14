@@ -131,7 +131,7 @@ h2.lbh{display:flex;align-items:center;gap:12px}h2.lbh img{width:72px;height:72p
     <div class="stat"><div class="v">$ngate</div><div class="k">SoCs at the release gate</div></div>
     <div class="stat"><div class="v">$avg %</div><div class="k">of vendor functions done (mean)</div></div>
     <div class="stat"><div class="v">$nrep</div><div class="k">light-box protocols</div></div>
-    <div class="stat"><div class="v">$nplan</div><div class="k">SoCs planned</div></div>
+    <div class="stat"><div class="v">$nplan</div><div class="k">SoCs in development</div></div>
   </div>
 </div>
 <section id="status"><h2>Status per SoC</h2><p class="sub">Share of the vendor IMP functions implemented and checked, from the feature matrix. <a href="feature-matrix.html">Full matrix &rarr;</a></p>
@@ -523,7 +523,7 @@ def main():
         cards.append('<div class="soc"><div class="n">%s%s</div><div class="bar"><i style="width:%.1f%%"></i></div>'
                      '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), chip, pct, pct, nd, nf))
     for soc in PLANNED:
-        cards.append('<div class="soc plan"><div class="n">%s<span class="chip plan">planned</span></div><div class="bar"><i style="width:0"></i></div>'
+        cards.append('<div class="soc plan"><div class="n">%s<span class="chip plan">in development</span></div><div class="bar"><i style="width:0"></i></div>'
                      '<div class="p">QEMU only</div></div>' % soc)
     avg = sum(x[3] for x in st) / len(st) if st else 0.0
     tag = newest_tag()

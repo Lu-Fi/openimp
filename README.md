@@ -59,10 +59,10 @@ Vendor IMP/SU functions per SoC on 2026-11-14, `next` after RC3 `v2026.11.07-rc3
 | T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
-| T32 | 610 | 4 | 537 | 67 | 2 | planned |
-| T33 | 571 | 8 | 413 | 75 | 75 | planned |
+| T32 | 610 | 4 | 537 | 67 | 2 | in development |
+| T33 | 571 | 8 | 413 | 75 | 75 | in development |
 
-T32 and T33 are planned (no release gate, no camera yet): the "implemented" cells are checked in QEMU against the vendor libraries, the few "works" cells are vendor no-ops, nothing is device-tested yet.
+T32 and T33 are in development (not a release gate, no camera yet): the "implemented" cells are checked in QEMU against the vendor libraries, the few "works" cells are vendor no-ops, nothing is device-tested yet.
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 

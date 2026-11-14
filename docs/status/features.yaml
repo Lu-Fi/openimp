@@ -19,7 +19,7 @@ legend:
 - '✅ supported: works, matches vendor behaviour, tested or backed by the changelog'
 - '✅+ improved beyond vendor: more robust, leaner or more functional than the vendor stack'
 - '⚠️ known defect / deviation: runs, but with a known defect or a deviation from the vendor'
-- '🔧 in progress: branch is running or a test is pending'
+- '🔧 in progress: branch is running or a test is pending (T32 / T33 cells with QEMU or host evidence: in development, not a release gate, no device result yet)'
 - '📋 planned: deliberately scheduled, not started yet (mostly low priority)'
 - '❌ missing: not implemented'
 - '— hardware does not have it: not applicable'
@@ -53,8 +53,8 @@ features:
       sym: ✅
       text: reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
     T32:
-      sym: 📋
-      text: 'planned: ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 97
       - 288
@@ -62,8 +62,8 @@ features:
       - 296
       - 99
     T33:
-      sym: 📋
-      text: '2026-11-14 (#444 closed): the per-frame LCE / LSF path is ported in open-tx-isp next c3029f52 (Unicorn oracle against the vendor tx-isp-t33.ko: 1500 leaf cases and 12 init chains equal, 16 of 16 mutations caught; QEMU: the 16/37 behaviour and buffers equal to the vendor module, 0 oops); the LCE exposure update and the LCE tuning / day-night parts are open (#500). Still no T33 camera (device proof is #393): the cell stays planned. Earlier: planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: '2026-11-14 (#444 closed): the per-frame LCE / LSF path is ported in open-tx-isp next c3029f52 (Unicorn oracle against the vendor tx-isp-t33.ko: 1500 leaf cases and 12 init chains equal, 16 of 16 mutations caught; QEMU: the 16/37 behaviour and buffers equal to the vendor module, 0 oops); the LCE exposure update and the LCE tuning / day-night parts are open (#500). No open-stack device run yet (the T33L module boots thingino since 2026-11-14; device proof is #393): the cell is in development (QEMU evidence only, not a release gate). Earlier: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
       issues:
       - 98
       - 390
@@ -114,13 +114,13 @@ features:
       sym: ✅+
       text: 10x reload with kill -9; vmalloc leak of 252 KB/cycle fixed; residual drift ~45 KB/cycle
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-11-01, round 7 (#189, class `postret`: 25 lifted functions where the MIPS delay-slot statement ended up behind the `return`, 14 of them on T40, restored and vendor-compared; Eufy T40 camera, image agg65m): apitest all areas PASS 398 / FAIL 0, area t40dev 82 PASS / 0 FAIL, 6 planned module reload cycles clean, 0 oopses, snapshot 200. Wording: the functions are not instrumented, so ''reached'' means the apitest area that drives that code path ran clean, not a verified effect of the restored store; the AE exposure numbers equal the run before. T30 `mem_write_u32` is not run on a camera (host only). Earlier: 2026-11-01, typed-pointer audit (#189, Eufy T40 camera, image agg65k = open-tx-isp next with the 11 fixed lifted functions: CSI/ISP/VIN slake and activate, tuning-node open, FrameSource and sensor ioctls, sub-device pipo, VIC frame-done lists, `__frame_channel_vb2_streamoff`, msca state init): a scanner in `make check` finds lifted code that steps typed pointers (byte offsets multiplied by the element size); the fixes ran on the camera clean: apitest all areas PASS 398 / FAIL 0, area t40dev 83 PASS / 0 FAIL, 11 FrameSource disable/enable cycles, 6 planned module reload cycles (module use count back to the same value each time, slab flat), about 25 minutes of streaming, snapshot 200, 0 oopses. Reached by those paths; not instrumented per function. Not proven on the camera: the 21-count wait loop of `__frame_channel_vb2_streamoff` (no buffer stayed pending) and the DVP leg of `tx_isp_vic_start` (no DVP camera); #189 stays open for the remaining suspects and T41. Earlier: 2026-11-01 (Eufy T40 .184, images agg65b to agg65f, open-tx-isp next with #150, #152, #182, #183): the clock teardown at rmmod follows the vendor: every enable of an ISP or CSI clock is counted and what is left is gated after the last child removal (#152); after each unload `div_isp`, `gate_isp` and `gate_csi` read 0 and the ISP clock gate bit is off (before: the counts grew by one per load), the sensor module stops its own MCLK. 6 planned reload cycles per image, 0 oopses, snapshot 200 after every reload; apitest all areas PASS 398 / FAIL 0 / N/A 24. The oopses found on the way are fixed with device proof (WDR-enable/LCE arrays #182, draw-attribute NULL dereference #183, AWB close with the algorithm callbacks on #173). QEMU ingenic-t40: 22 load/unload cycles with a running streamer. Earlier: Update 2026-10-24, evening (open-tx-isp `claude/t40-reload`, merged): reload and restart are clean now, the ''staying ⚠️'' reasons below are overtaken. The first unload oopsed in the frame-channel removal (a lifted `wake_up_all(NULL)`, the fault the vendor `tx_isp_t40` shows on rmmod and that QEMU reproduces); the frame source is now removed before the core, the objects the lift had turned into `kfree(NULL)` are freed, `/proc/jz/isp` and the sensor I2C client are released, the lifted `vmalloc` areas are freed at exit and the per-session leak (about 36 areas / 344 KB per streamer restart, the vendor frees them per session) is closed. Eufy T40 (.184, test module, then stock restored): 10 reloads, 10 `kill -9` + reload, 10 streamer restarts = 30/30 cycles, snapshot 200 every time, 0 oopses, unloaded `vmalloc` and kernel memory flat. ✅+ because the vendor module oopses on rmmod. Older text: 2026-10-24 reasons for staying ⚠️ (code audit, camera busy): the 10-10 oops (epc 0x6ef, module size 763904) was the VENDOR `tx_isp_t40`; the open module was rmmod-tested twice on 2026-10-13, exit steps 1-8 fine, step 10 (core platform device remove) took the SoC down (2nd time without watchdog recovery, power cycle) and it has not been rmmod-tested since. Current next: exit is split into 15 steps (`echo exit N > /proc/tx_isp_t40_recovered` for a bisect), the core remove skips `ispcore_slake_module` by default (`t40_rmmod_skip_slake=1`, untested) and `tisp_deinit` is skipped (`skip_tisp_deinit=1`, tisp allocations probably leak per load); `tx_isp_core_remove` has no NULL check of drvdata and both OEM kfree calls are `private_kfree(NULL)`. Next: per-step bisect with the flight recorder when the Eufy is free (needs power-cycle permission). Status before: the stop/start path (second `S95timps start` after the bind fix) is clean. Earlier (history): 2026-10-24: after the bind fix a second `S95timps start` on the same boot is clean (no oops), agg43c, 2026-10-24. Earlier (history): 2026-10-18: 10/10 ch0+ch1 stop/start cycles after the OEM release reset on the last `/dev/tx-isp` close (`claude/t40-restart-hang`, 181/181 frames each), 5 client reconnects, 0 oops (T40_RESTART_HANG_1018); rmmod/insmod cycles are not run (the test state is a reboot between runs); MemFree drifts about -0.5 MB over 10 sessions (open)'
@@ -154,13 +154,13 @@ features:
       sym: ✅
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-10-25 (RC2): the boot guard (`S10isp-guard`, optional package in upstream thingino `aperto`, default off) is SoC-independent shell logic; checked by a dry run (user decision 2026-10-25); no T40 boot loop occurred in any test run. Earlier: not documented'
@@ -203,13 +203,13 @@ features:
       issues:
       - 95
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-12..14 (Eufy T40XP, light box 5000 K, vendor stack in the same session; #82 #410 #412 #424 #474 #483 #492, all closed): the frame AE runs like the vendor loop: driven by the histogram interrupts (#82), the vendor `tisp_ae_long_tune2` step every AE frame (#410), vendor sensor / ISP-dgain latency and a loop delay of 3 AE frames (#412, #474), a continuous analog gain with the ISP dgain only as remainder and its ceiling from the live bank (#483), a user IT cap below the old floor honoured (#424, cap 42 -> IT 42). Numbers: total gain at the dark limit 40960 = vendor (before 32766); lamps on 1.65 s / 0.0 % overshoot (vendor 1.65 s / 0.1 %; before 3.60 s / 5.9 %); single-frame spikes 0 (before 9-13 %); comp 128->40 Y minimum 68.0 (vendor 66.3-67.8), 128->200 final Y 148.8 (148.6); manual (frozen) AE reads back the live values (#492). Open: the exposure split differs by design (mains-locked ladder, row 7): auto point IT 2241 x 1.63x against the vendor 2025 x 1.89x, ch0 noise about 3 % higher (#498, a denoise compensation is approved 2026-11-14); the symbol stays ✅ until that is device-proven. Earlier: 2026-11-11 evening (#239, Eufy T40XP, IR night scene, plus host test): the frame AE converges on its aim at the integration ceiling like the OEM `tisp_ae_long_tune2`. The new module parameter `t40_ae_fine_trim` (default 1, 0 = old behaviour for A/B) trims the ISP digital gain toward target/luma, at most 1.08x per sample, once the coarse stages cannot move; IT at the ceiling, comp 170/171: luma 70 vs target 71 (EV 1.4 % below aim) instead of 66-68 vs 70 (3-6 % below), no oscillation over 30 s. Earlier: 2026-11-07 (#84 and #225 closed, Eufy T40 camera, light box, fair pass with the same streamer build on both stacks): AE target, metering and exposure split as the OEM, the frame AE meters the hardware AE zone statistics and RAW histogram (#232), the antiflicker rung trade uses the gain the sensor applies (#219 C1). Day IT 2241 / frame Y 104.4 (vendor 2241 / 108.0), 2 clipped grey patches on both (before 13); the AE ends on the same point from the current and from a low exposure (Y 104.1 / 103.4). Earlier: 2026-11-01, design analysis (#82, host only, no camera, no driver change): AWB already follows the vendor flow (statistics interrupt, event, translated vendor AWB in the event thread). The hardware AE statistics interrupts run, but the AE decision is taken from a sparse grid (about 0.13 % of the pixels) of the finished frame every third frame; existing device data: light step settles in under 1 s against 1.5 s on the vendor, no limit cycle. Backlit scenes, slow ramps, OSD/zoom influence and the CPU difference are not measured and not claimed. The AE path change of #82 is merged (open-tx-isp next 43d87acc); the vendor light-box comparison continues in #462. Earlier: 2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): the vendor AE per frame now runs by default (`enable_core_ops_cb=1`, the old default 0 never triggered the OEM core ISR), IT limit from the sensor attribute (2241), target 118, two gain steps at a large error, 9 %/5 % gain bands against a limit cycle, ISP digital gain up to 4x through the OEM GIB entry: day luma 119 against the vendor 122 (before 108), 100 -> 255 light step settles in under 1 s (vendor 1.5 s, before 11.1 s), luma at the dark step 124 against the vendor 105 (before 63). Earlier (history): A/B against the vendor stack, Eufy .184, 2026-10-24 (next 2c29ce79 code, image agg43c with `enable_core_ops_cb=0`, i.e. without the per-frame vendor AE of the line above): day luma 108 against 122, the AE reacts in 4.8 s / settles in 11.1 s against 0.5 s / 2.9 s for the vendor, and at the light step (255 -> 100) the luma drops 107 -> 63 (vendor 122 -> 105). `claude/t40-quality` (local branch, not in next) fixes the default (`enable_core_ops_cb=1`, own AE tick, IT limit from the sensor attribute 2241, target 118): day luma 127, AE back in under 1 s, 105 -> 69 at the dark step (sensor gain at its 32x limit, the vendor adds up to 4x ISP digital gain which does not act in this pipeline yet) - still ⚠️. Earlier (history): vendor AE per frame runs on the open driver (`enable_core_ops_cb=1`, the module line of the timps-t40-v2 bundle; default 0): zone mean 44 = target 44, converges 2-3 frames after the first allocation, IT on the anti-flicker ladder, no oops (`fable/t40-3a-perframe`, in next); 2026-10-19 the AE clamps IT and gains to the sensor limits like the OEM, 12/12 samples 19.9-20.4 fps under timps (was 11.6 fps, `claude/t40-ae-maxint`). Restrictions: the open gain is 4-5x higher than the vendor''s in the same scene (wiki changelog 2026-10-17, open); low light (gain instead of IT at the 2241 cap) not shown yet'
@@ -251,13 +251,13 @@ features:
       sym: ✅
       text: 'device-tested: ae_comp (Y +13/−21), backlight (Y +19), highlight (Y −13) Re-tested 2026-10-10: OEM formula, luma 55 / 100 / 160 for 0 / 128 / 255; the AE is slow (about 6 s dead time, 25 to 30 s to settle), tests need at least 30 s settle'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: "2026-11-07 (#232 closed, Eufy T40 camera, light box): `AeTargetComp` acts like the vendor; frame Y open / vendor at comp 40 / 80 / 128 / 160 / 200: 94.0 / 92.2, 100.1 / 101.6, 108.3 / 109.9, 119.1 / 122.0, 137.4 / 141.9 (before: 39.8 .. 239.7). Rest: at comp 200 the open analog gain stops at 4095 (vendor 5247). Earlier: Update 2026-10-24, evening (open-tx-isp `claude/t40-wip-cells`, `claude/t40-proof`, merged): `AeTargetComp` now reaches the frame AE (the gain and high-side stages compared against the raw target): comp 60/128/200 gives Y 58.5/127.1/185.6 (targets 57/122/190). Backlight/highlight strength is still stored only (no picture effect, the vendor semantics are weight/target and not RE'd), so those two sub-features stay 🔧. Older text: `Get/SetAeScenceAttr` (`AeTargetComp`, the T40 1.3.1 header has no separate AeComp call) exported and device-called (PASS on cam-K 2026-10-10, vendor kernel driver); the compensation effect on the open vendor-AE path is not measured"
@@ -299,13 +299,13 @@ features:
       issues:
       - 119
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening (merged, device-proven on the Eufy): `SetSensorFPS` 12/1 delivers 12.5 fps and `GetSensorFPS` reads the set value back; the user IT cap now pulls a running longer exposure down (cap 560 gives IT 560) and the gain cap works (AG 32766 -> 2047 at the cap, AUTO restores it). Older text: `Get/SetSensorFPS` device-proven under timps (20 fps held; a request before the first delivered frame is kept pending, 2026-10-19), the AE maximum integration time follows the sensor limit (`t40_ae_limits` 2241 at VTS 2250); the app-set `AeExprInfo` caps (`AeMaxAGain`, `AeMaxIntegrationTime`) are host-tested only'
@@ -336,13 +336,13 @@ features:
       sym: ✅
       text: 'device-tested with 22 ms IT cap: IT 1000/900/750 lines off/50/60 Hz, gain compensates; daylight test pending'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-11-14 (#494, Eufy T40XP, box 5000 K, both stacks, device proof; user decision 2026-11-14: beyond vendor, kept): the open AE keeps mains-locked integration rungs (10 ms = 450 lines at 20 fps, ceiling 2241); the vendor ladder uses a stale 15 fps of the sensor''s probe-time mode (7.5 ms rungs of 337.5 lines, ceiling 2025, node list of 120 instead of 6 rungs). A 7.5 ms exposure covers 0.75 of a 50 Hz half-period and is not flicker-free under a mains lamp, 10 ms is. GetSensorFPS 20/1 and GetAntiFlickerAttr (normal, 50 Hz) equal on both stacks; banding itself is not measurable in the box (DC LED lamps), so the benefit follows from the exposure arithmetic. Row in open-tx-isp docs/BEYOND_VENDOR.md (next 771f798f); no code change. Earlier: 2026-10-24: the Antiflicker SET oops that every `S95timps start` hit once the tuning object existed (`image.anti_flicker = 2` -> 60 Hz overwrote a saved register in `tx_isp_core_ops_s_ctrl`) is fixed (`255a46ff`), the SET goes through to the AE ladder. Earlier (history): `Get/SetAntiFlickerAttr` hand-translated after the OEM and device-tested on the Eufy open driver (`t40_allow_antiflick` default 1, 50/60 Hz): IT ladder 469/938/1406/1875 at 25 fps, AE on the lattice (open-tx-isp wiki changelog 2026-10-17); the Get-after-Set oops of the RC2 run (2026-10-17) is fixed; the T40 devtests of 2026-10-19 ran with `t40_antiflick_hz=50`'
@@ -380,13 +380,13 @@ features:
       sym: ✅
       text: '2026-10-24: the AWB statistics sweeps run through the MXU2 vector unit by default in next (`t31_awb_impl=2`, chosen after a load-time self-test against the C code; `t31_awb_impl=0/1` switches it off): bit-exact against the C implementation, device-tested on a T31X (.21) and a T31L (.29), about 2.4 times faster sweeps (96 sweeps: 1229 us in C, 504 us with MXU2). Earlier (history): device-tested: manual R/B gains + presets 3/4/7 read back; chroma follows (Cb/Cr), auto restores'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: "2026-11-07 (#84, Eufy T40 camera, light box 3000 K): the AWB statistics thresholds follow the total gain from the bank of the running mode (the day/night switch now refreshes the AWB bank like the OEM): thresholds and luma byte equal bit for bit to the vendor, AWB gains within 1 % (0x0434 / 0x09C8 vs 0x0430 / 0x09C0), neutral patch RG/BG 1.041 / 0.995 vs 1.050 / 1.004. #213: the AWB zone statistics at the same exposure are identical on both stacks (77 / 196 zones at 1x / 2x analog gain). Earlier: 2026-11-01 (#163, host replay plus a camera A/B): the AWB long algorithm and the colour-temperature detection are replayed against the translated OEM code in `make check` on generated inputs (a mutation check proves the replay catches one-character changes). The replay found a C bug in the special-light cluster test (it read the cluster candidate counts instead of the cluster counts) and it is fixed; Camera A/B (Eufy T40, two images that differ only in that one-line fix, same library, ISP night mode during the run): no regression (apitest all areas PASS 398 / FAIL 0, 6 reload cycles clean, snapshot 200, 0 oopses; the AWB process ran on both, the device output is reproduced bit-exactly by the host replay of both versions on 6 live dumps). The live scene never reached the special-light branch where the two versions differ, so the effect of the fix under real special light is covered by the host replay only and was not exercised on the camera; the cell does not move. Earlier: 2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): the vendor AWB now runs (`t40_vawb_frames` counts; it never ran with `enable_core_ops_cb=0`): day colour R/G 0.98, B/G 1.00 against the vendor 1.00 / 1.02 (before 1.85 / 0.70, the orange cast), grey-patch deviation 16 % / 13 % against 12 % / 11 % (before 53 % / 54 %), saturation 57 against 51 (before 162). Not tested: `Get/SetAwbAttr` effect; the default white balance remains the vendor process, the hand-translated `tisp_awb_ct_detect` stays behind `t40_awb_ctd`. Earlier (history): A/B 2026-10-24 (Eufy .184, next code with the default `enable_core_ops_cb=0`): the picture is orange (R/G 1.85, B/G 0.70, saturation 162 against the vendor 51, grey-patch deviation 53 % against 12 %), there are no AWB fields in `isp-m0` - the vendor AWB process (`t40_vawb`) is never triggered because the OEM core ISR does not reach the AWB statistics interrupts. `claude/t40-quality` (local branch, not in next; default `enable_core_ops_cb=1`) brings the day colours to the vendor level (R/G 1.03, B/G 1.00, saturation 53, grey deviation 12.3 % / 9.5 % against 12 % / 11 %); that is why the cell stays ⚠️ and not ✅ until it is merged and re-tested. Earlier (history): AWB runs on the open driver and the picture is neutral (Bayer phase from the sensor, fast BGGR seed, gates at the OEM offset: colour-saturation index 7.9..9.7, 2026-10-13..15); `GetAwbStatistics` works since the oops fix of 2026-10-19 (`claude/t40-az-nohang`, day/night thread alive). Restrictions: the default white balance is the gray-world fallback; the hand-translated vendor `tisp_awb_ct_detect` is behind `t40_awb_ctd` and the vendor AWB process behind `t40_vendor_awb_process` (both default 0, not in the bundle line); `Get/SetAwbAttr` effect not measured"
@@ -430,13 +430,13 @@ features:
       issues:
       - 105
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-11-12 (#227, Eufy T40XP, light box 3000 K / 5000 K): flat-field at matched manual exposure equals the vendor (median 0.988-0.998, 93-100 % of the cells in band, corner / centre 0.665-0.737 against 0.670-0.755); the old 0.44 against 0.6 ratio was an exposure mismatch of the comparison, not a shading deviation. Earlier: 2026-10-27: the user CCM of the BCSH is applied whole as well (#83, `bcsh_user_full`); T40 test image, no colour cast. Earlier: 2026-10-25: the small picture effect of a manual CCM is vendor behaviour: the vendor firmware (1.3.1, `tisp_ccm_params_refresh`) copies only the first coefficient (R->R, 4 bytes) of the manual matrix into its CT matrices and clears SatEn; the open driver applies all 9 coefficients and keeps SatEn (beyond vendor). Earlier: ⚠️ Update 2026-10-24, evening (merged `claude/t40-cells2`, `claude/t40-wip-cells`): `GetGammaAttr` works (mode 0, 129 nodes from the programmed LUT, monotone) and the LSC bypass through `SetModuleControl` has a measured effect (corner/centre luma 0.971 -> 0.836 and back). `Get/SetCCMAttr` run on the literal OEM state (rc 0, read-back manual=1 and m00=1.000, restore ok), but a red-boost matrix moved the picture only by dU -0.2 / dV +0.7 in a lit scene, so the CCM effect is not proven and the cell is ⚠️ (was 🔧). Day colour with the bin CCM is at the vendor level (chart dE00 5.3-5.6 against 5.2-5.3). Older text: `Get/SetCCMAttr` implemented from the vendor 1.3.1 disassembly (40-byte payload, sign/13-bit conversion): Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library); the LSC calls are not run; 2026-10-15: the CCM/BCSH/LSC module inits run clean on the open driver, their per-frame refresh (events 6-13, `t40_ev_updates`) stays off'
@@ -473,14 +473,14 @@ features:
       sym: ✅
       text: 13 switches in the 4.5 h soak
     T32:
-      sym: 📋
-      text: 'planned: the day/night IQ-bin switch (SetISPRunningMode) runs in QEMU (#289); the ISP-side tuning layer is in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the day/night IQ-bin switch (SetISPRunningMode) runs in QEMU (#289); the ISP-side tuning layer is in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 289
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-12..14 (Eufy T40XP, light box; #226, #332, #483 closed): night IR default AE Y 76.2 against the vendor 72.8 (3000 K) and 76.9 against 76.0 (5000 K), clipped 0.1-0.2 % (before 1.7x brighter, 11 % clipped: the day antiflicker floor at night). AWB1 (TOP bit 6) is bypassed at night like the vendor night bank (`t40_dn_keep_awb1` default 0, night TOP 0x7FD9004D = vendor; user decision 2026-11-13) and the day return runs the vendor way (new TOP word first, AWB statistics refresh on the new word): night shadow map against the vendor dark cells x1.06 (before x1.19), correlation 0.986, rms 0.65 Y; 6 night -> day toggles per stack: bad day returns 0 of 6 open, 0 of 6 vendor. The defog bright-cell transmission comes from the day bank (`t40_defog_trans_day`). Earlier: 2026-11-07 (#84, Eufy T40 camera): at night the frame AE uses the night bank''s antiflicker words like the OEM: night IT 215 / frame Y 78.8 (vendor 173 / 72.0; before IT 450, Y 108, 11.4 % clipped); the AWB bank follows the day/night switch. Earlier: Update 2026-10-24, evening (open-tx-isp `claude/t40-night-lift`, merged `e5030fd4`): the night lift was the demosaic block (DMSC), which kept its low-gain day values at night because the default profile never ran the gain/bank follow. It now follows the night bank and the total gain like the vendor (host test: the literal chain equals the vendor night register dump bit for bit). Dark scene with IR: p50 8 (vendor 11, before 25), noise 1.10 (vendor 1.25); the earlier suspects ADR, gamma and the GIB black level were ruled out (GIB now follows the total gain like the OEM). Known, not from this change: after day -> night -> day the day picture can stay desaturated until reboot (seen on the stock module, tracked separately). Older text: 2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): the forced night picture is 16 % darker than the vendor (luma 65.9 against 78.7, before 24.3; noise 1.23 against 1.57; black level p1 17 against 7, pedestal at 4x GIB gain), the BCSH saturation is re-applied at every mode change (it stayed at the night value S 11; checked S 56 -> 0 -> 57). Neither stack switched to night by itself at light 30 on the Eufy (the script forced it), so the automatic switch is not comparable. Cell ⚠️ (was 🔧): switching works and is measured, the night picture is not yet at the vendor level. Earlier (history): A/B 2026-10-24: neither stack switched to night by itself at light 30 on the Eufy (the script forced night after 90 s and day after 120 s), so the automatic switch is not comparable; the forced night picture of the next code is 69 % darker than the vendor (luma 24 against 79), with `claude/t40-quality` still 66 % darker (the vendor ISP digital gain is missing), so the cell stays 🔧. Earlier (history): `GetISPRunningMode` returns the mode on the open driver (2026-10-15), `StartNightMode` and `SetISPRunningMode` are accepted, the timps day/night thread reads `isp-m0` (`ISP Runing Mode`, `AeIntegrationTime`, `TotalGainDb`) and forces night/day through `/control` without a fps change (2026-10-19). The black-and-white / colour picture proof (chroma 0.0 then 96, 2026-10-12) was made with the vendor kernel driver; the picture check of the switch on the open driver is pending'
@@ -518,13 +518,13 @@ features:
       sym: ✅
       text: 'device-tested: daynight night/day switches ircut + ir940 (no ir850 pin on this cam), ISP follows'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: IR cut toggled on the Eufy through the platform GPIO tool (`ircut`, 8 toggles in the 2026-10-18 motion run; the magenta cast of 2026-10-10 was the IR cut left open); not driven by libimp
@@ -557,13 +557,13 @@ features:
       sym: ✅
       text: defaults 0x80
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-10-27: the BCSH user CSC tables (mode 4) and the user CCM are applied whole (#83, see Front crop / CSC): T40 test image with the user tables, no colour cast. Earlier: 2026-10-25 (open-tx-isp next 6d63667b): the OEM rounding of `tisp_simple_intp_int8` (used by DMSC, YSP sharpening, SDNS, CDNS, LCE and ~230 other places) is fixed, so the computed DMSC block is bit-exact with the vendor day dump at the vendor gain; DMSC now follows the gain by day as the vendor does (`t40_dmsc_day_follow`, default 1): day edge energy +17 % (4.22 -> 4.95, about vendor level), chart chroma 1.05, dE00 5.4. Day colour after night -> day fixed: the night bank bypassed AWB1 and re-enabling it while the pipe runs randomly broke the colour (7/15 bad on stock); `t40_dn_keep_awb1` (default 1) keeps AWB1 on through the night: 0/32 bad (Eufy .184, test module; dark+IR night not yet re-checked). Earlier: ⚠️ Update 2026-10-24, evening: the vendor A/B of the evening (same scene) still shows a softer open picture: day edge energy 5.5 against 6.8, highlights compressed (p99 216 against 234), saturation 44 against 39. The AE EV fan-out (merged `claude/t40-quality3`: defog, ADR, CCM and BCSH follow the AE exposure value like the OEM) improved the day chart (dE00 5.4 -> 4.7). Older text: 2026-10-24 (open-tx-isp `claude/t40-quality`, merged into next `9730342f`; Eufy .184 sc830ai, A/B with the vendor stack in the same scene, stream consumer attached, 0 oops in 8 runs of about 2 h; the image build with it and a soak are still to come): YSP is switched on through the bin gate (`t40_ysp_on=1`): day edge energy 3.76 against the vendor 5.23 (-28 %, before 2.89), day noise 1.20 against 1.90 (lower, i.e. softer), luma 119 / saturation 57 against 122 / 51. The sharpness gap (YSP strength/tables at this gain, possibly a vendor YSP register diff) is open, so the cell stays ⚠️; the open saturation cast of #8 is gone. Earlier (history): A/B 2026-10-24: contrast (luma std) 43 against the vendor 51 and edge energy -45 % (softer picture, YSP stage is off with `t40_force_bypass` bit 17; `claude/t40-quality` 49 and -35 %); the open saturation of 162 is the AWB cast of #8. Earlier (history): `Brightness`, `Contrast`, `Saturation` device-tested only on the vendor kernel driver (Eufy 2026-10-11, getters from the vendor cache); on the open driver the EV-dependent BCSH strength entries are partly unresolved lift code (STREAMER_FUNC_AUDIT 2026-10-17) and no effect test exists; `BcshHue` host (getter from the vendor cache, device re-test pending)'
@@ -598,13 +598,13 @@ features:
       sym: ✅
       text: sc4336p vflip no longer reports an error [-all-13]; MSCA flip takes effect only at the next channel start, as with the vendor
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening (like vendor): ISP modes NORMAL/H/V/HV set and read back with the correct picture transform (4/4). The sensor flip modes are stored and ignored by the vendor library and module on the sc830ai (no vertical-flip handler in the sensor module), so the open driver does the same by default (`t40_c2_flip=0`); the register-level flip hook exists behind the parameter and has no visible effect on this sensor. User decision 2026-10-24. Older text: host (night 2026-10-12): `GetHVFlip` answers the cached mode like vendor 1.3.1 (the stock kernel has no getter: rc -1 on 2026-10-11), `SetHVFLIP` vendor checks; the "not mirrored" result of 2026-10-11 compared two frames captured before the call (2 buffers, no drain), device re-test pending (devtest phase 4); the I2D flip/mirror of ch1 is device-proven on the open driver (#21), the ISP `SetHVFLIP` is not'
@@ -638,13 +638,13 @@ features:
       sym: ✅
       text: WDR buffer lazy; AE1 (short frame) stub = vendor no-op without WDR sensor
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-11 (#322, #324, Eufy T40XP, device-tested): `IMP_ISP_WDR_OPEN` (LINEAR) returns 0 like the vendor and the stream keeps running at 21 fps, where the vendor returns 0 and then delivers no frames (beyond vendor on this one call, user decision 2026-11-11; the row stays on the linear-sensor evidence); `IMP_ISP_SetPreDqtime` no longer oopses (frame source in graph slot 4). Earlier: Update 2026-10-24, evening (merged, device-proven): the DRC ratio reaches the literal ADR chain (ratio 0/128/255 reads back, shadow luma 52.7/61.6/50.0 and a visible exposure move); WDR enable/output mode are flags on this linear sensor, as in the vendor (`SetWdrOutputMode` no longer oopses); the ADR bypass through `SetModuleControl` works without oops but its effect is small (shadow luma 56.2 -> 52.6), noted as ⚠️ inside the cell. Older text: host: `ISP_WDR_ENABLE`/`_GET` ioctl layout test; `ISP_WDR_OPEN` (vendor 1.3.1: LINEAR boot ioctl 0xc0045432, WDR boot = WDR enable; night 2026-10-12; Eufy T40 2026-10-12 (`claude/funcsearch-run5`) with rmode 0 / imode 1 before `AddSensor`: rc 0 as the vendor, but the linear-only sc830ai then delivers no frames with either library, the vendor returns from its stream poll, OpenIMP blocked until killed; stays host); `Get/SetWdrOutputMode` not exported (the Eufy sc830ai is a linear sensor)'
@@ -682,13 +682,13 @@ features:
       sym: ✅
       text: 'device-tested: defog 255 (Y −10, laplacian +193). 2026-11-04 (open-tx-isp c8e3d4d3): the 29 defog tables now come from the active tuning-bin bank like the vendor (`tiziano_defog_load_bank`), device-proven on the T31X light-box camera; fleet image agg67 still has the old tables'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: —
       text: no defog call in the T40 1.3.1 header set
@@ -729,13 +729,13 @@ features:
       issues:
       - 106
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: "2026-11-07 (#213 closed, Eufy T40 camera): chroma NR repack threshold like the OEM (`cdns_thresh` 256); steady-state chroma temporal noise vendor-equal (NV12 U/V 0.47-0.48 / 0.42-0.44), luma temporal noise vendor-equal in the fair pass (1.24-1.77 vs 1.25-1.85). The 1x difference of the first pass was the test point (white zones below the lowest luma band, bimodal colour-temperature clusters on both stacks). Earlier: Update 2026-10-24, evening (merged `claude/t40-csc-temper`, `claude/t40-quality3`): the Temper ratio is the vendor formula on the literal MDNS state (7 curves x 11 nodes, caps 230/250; host test over 131072 cases); ratio 0/128/255 reads back and changes the MDNS registers (33/28, 35/31, 34/28 words, the same counts as with the vendor stack), temporal noise 1.13/0.80/1.08 (ratio 0 clearly noisier; above 128 the effect is small in a lit scene). The Sinter ratio reloads the literal SDNS tables. Older text: 2026-10-24: with `claude/t40-quality` (merged, `9730342f`) the day noise is 1.20 against the vendor 1.90 and the night noise 1.23 against 1.57, but the Sinter/Temper strength (`Module_Ratio`) effect is still not measured, so the cell stays 🔧. Earlier (history): `Get/SetModule_Ratio` (SINTER 2D / TEMPER 3D strength) is exported as a plain pass-through (host only); the open T40 driver handler for CID 0x080000a4 and the effect are not verified"
@@ -778,13 +778,13 @@ features:
       issues:
       - 106
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: —
       text: no DPC call in the T40 1.3.1 header set
@@ -817,13 +817,13 @@ features:
       sym: ✅
       text: 'device-tested: as T23 (claude/t23-t31-scene-colorfx, not yet in an aggregate)'
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: —
       text: no scene-mode/colour-effect call in the T40 1.3.1 header set
@@ -854,13 +854,13 @@ features:
       sym: ✅
       text: as vendor, follows mirror/flip; emulator 400/400 identical; cam-A black+red ok [-all-13]
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-01 (#186, Eufy T40 camera, images agg65i and agg65k, open-tx-isp next): `Get/SetMask` now also works on the scaled channel 1: a white cover raises the region from luma 160 to 255 in the 1280x720 output, the outside is unchanged, disabling restores 160, a second block shows, and the read-back of output 1 equals what was set; a cover set only on output 0 stays out of output 1 (per-output blocks as the vendor). The cause was in the driver (the lifted mask code stepped its unit and channel pointers four times too far, so only unit 0 of output 0 was ever stored, and it wrote past its 288-byte buffer on read-back); rewritten from the OEM code with a host test. apitest all areas PASS 398 / FAIL 0, area t40dev 0 FAIL, 6 planned reload cycles clean, 0 oopses. Earlier: Update 2026-10-24, evening: device-tested on the open driver (Eufy, ch0 1080p): `Get/SetMask` white cover raises the region from Y 146 to 255, the outside is unchanged, disabling restores it; the NULL state base in `SetMask`/`GetMask` that oopsed is fixed. Channel 1 not tested. Older text: `Get/SetMask` (ISP-drawn cover) device-tested 2026-10-10 on the vendor kernel driver (cover at the right place in both streams, crop SSIM 0.9998 vs the vendor library, `claude/t40-isp-osd`); not re-run on the open driver'
@@ -893,13 +893,13 @@ features:
       issues:
       - 124
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-10-31 (agg59, Eufy T40XP): `IMP_ISP_SetScalerLv` on channel 1 passes in the full apitest run (apitest all areas plus 28 cases PASS 270 / FAIL 0, 0 oopses). The agg57 FAIL was the test, not the driver: the baseline was taken before the picture had settled (#169, closed: the case settles first and counts detail only at steady luma). Earlier: 2026-10-31 (agg57, Eufy T40XP): `IMP_ISP_SetScalerLv` on channel 1 is accepted (levels 0/128/64) but has no effect on the picture (detail 10.6 at level 0 against 27.4 at 128, picture not alive): open, #169. CSC and BCSH user tables unchanged. Earlier: 2026-10-27: CSC gamut 4 (user tables) and the BCSH user CCM take the whole user tables (RGB->YUV matrix, inverse, clips, the three CT matrices), where the OEM firmware copies only the first word of each (beyond vendor, `bcsh_user_full=1` default, `=0` is the OEM behaviour; #83): device-tested on the T40 test image without a colour cast. The presets and the rest of the CSC flow stay like the vendor. Earlier: Update 2026-10-24, evening (like vendor): `SetScalerLv` no longer oopses (rewritten from the OEM; ch0/ch1 levels accepted, stream continues), ch1 AutoZoom live (1920x1080 window on a 640x360 channel, region diff 9.9, gap 68 ms). CSC: `Get/SetISPCSCAttr` follow the vendor flow (64-byte wire block, standard via `tisp_set_csc_version`, gamut to the BCSH clips and offset); a runtime A/B with the vendor stack shows the same registers (0xd0xx keeps the BT709-full constants on both, BCSH clips/offset follow the gamut identically) and no change of the ch0 picture, so the open driver matches the vendor. The only difference is the default read-back gamut (vendor 2, open 0). Older text: `Get/SetAutoZoom` (CID 0x08000077) device-tested 2026-10-18 on the Eufy T40XP (sc830ai 3840x2160, open driver): live window changes apply within one frame (frame gap 67-85 ms at 15 fps) on ch0 at 1920x1080, 2560x1440 (zoomed) and 640x360, regions match, invalid/too-small windows return -1, `zr0` (disable) restores the full frame, no oops; the window must be at least as large as the channel output (the MSCA cannot upscale), 4K output only with the full window; ch1/ch2 use the same per-channel path (ch1 frames proven, zoom on ch1 not device-proven); second sensor (vinum 1) is refused. `OpenIMP_Cap_AutoZoom = 1`. `SetScalerLv`, `Get/SetISPCSCAttr` still not exported on T40. Timps crop/ROI test passed on 2026-10-19 (idle 0.01 s, live 0.03 s, region correct, 10 min ch0+ch1) after the AWB-statistics oops fix. Restrictions: a window not smaller than the channel output, 4K only with the full window, `SetScalerLv` and `Get/SetISPCSCAttr` not exported on T40'
@@ -934,13 +934,13 @@ features:
       sym: ✅
       text: 704×1280 correct, 9 ms/frame @15 fps, before OSD/IVS/encoder
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'hardware I2D (same path as T41, vendor 1.3.1 `i2d_resourcedeal`; `/dev/i2d` present), device-tested 2026-10-19 on the Eufy T40XP (open driver): `SetI2dAttr` on ch1 returns 0 for rotate 90/180/270, flip and mirror; all six variants give H.264 + JPEG with 0 decode errors (300 frames each), 90/270 deliver 360x640, orientation correct (SSIM 0.94 against the transformed unrotated picture with the OSD in the frame, wrong orientation 0.38), OSD upright at 16,16 of the output; ch0 without I2D unchanged; 300 s regression 6001 frames, 0 oops [claude/i2d-t4x, in next 30f88d5]'
@@ -975,14 +975,14 @@ features:
       sym: ✅
       text: soak 2 h 53, 260,648 frames, 1030/1030 snapshots, 0 errors
     T32:
-      sym: 📋
+      sym: 🔧
       text: '2026-11-11 night: IVDC direct mode (#301, #348): channel 0 hands frames to the encoder over the IVDC line buffer like vendor libimp 2.2.0 (H.264 5/5 and JPEG 3/3 streams decode in QEMU, ioctl sequence and HERA lists equal to the vendor except addresses); OpenIMP T32 also runs on the vendor tx-isp ko. Earlier: planned: H.264 on HERA, decodable I+P stream in QEMU, command lists equal to vendor libimp 2.2.0 except addresses, fixed QP (#293); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 293
       - 295
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): H.264 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (24 lists, 7 sizes, QP 30/40, I and P; compressed reconstruction area, core emulation prevention), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene; stream buffers in process memory and one shared HERA section buffer as the vendor, so 1080p fits the T33L rmem. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): H.264 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (24 lists, 7 sizes, QP 30/40, I and P; compressed reconstruction area, core emulation prevention), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene; stream buffers in process memory and one shared HERA section buffer as the vendor, so 1080p fits the T33L rmem. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
       issues:
       - 391
     T40:
@@ -1023,14 +1023,14 @@ features:
       sym: ✅
       text: real HEVC on AVPU (VPS/SPS/PPS, CABAC); 2×900 frames, 0 errors
     T32:
-      sym: 📋
-      text: 'planned: H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 294
       - 295
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): H.265 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (66 lists, QP 0..51, 6 sizes, I / P after I / P after P), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): H.265 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (66 lists, QP 0..51, 6 sizes, I / P after I / P after P), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
       issues:
       - 391
     T40:
@@ -1066,13 +1066,13 @@ features:
       sym: ✅
       text: HW JPEG, own MJPEG channel ok (24 B/5 s, before 0 bytes)
     T32:
-      sym: 📋
-      text: 'planned: JPEG on the JPEG v1.2 engine bound to FrameSource in QEMU, pictures decode and look right (#292). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): JPEG on the JPEG v1.2 engine bound to FrameSource in QEMU, pictures decode and look right (#292). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 292
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): JPEG on the T33 JPEG engine in QEMU (#391): 2 x 250 KiB sections and one shared section buffer as vendor libimp 2.0.2.1, job equal to the vendor''s except the stream address, 3/3 pictures decode; ioctl sequence equal but the rmem cache calls. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): JPEG on the T33 JPEG engine in QEMU (#391): 2 x 250 KiB sections and one shared section buffer as vendor libimp 2.0.2.1, job equal to the vendor''s except the stream address, 3/3 pictures decode; ioctl sequence equal but the rmem cache calls. QEMU only (OpenIMP T33 build, vendor 3.10.14 kernel), no T33 camera yet'
       issues:
       - 391
     T40:
@@ -1109,13 +1109,13 @@ features:
       sym: ✅
       text: cam-A 25 fps ch0+ch1 4.5 h
     T32:
-      sym: 📋
-      text: 'planned: FrameSource channels 0-2 (1920x1080, 1280x720, 640x360) in QEMU (#290). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): FrameSource channels 0-2 (1920x1080, 1280x720, 640x360) in QEMU (#290). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 290
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'device-tested 2026-10-10 on cam-K: ch1 640x360 with `GetFrame` (timestamps monotonic, non-zero) and H.264 on the sub-stream, clean strict decode (OpenIMP vs vendor library). **Open driver, 2026-10-18 (Eufy T40XP, open-tx-isp `claude/t40-ch1`, merged into next):** ch1 used to deliver 0 frames (the interrupt handler never popped MSCA output 1); fixed, roitest 1920x1080 + 640x360 (and 1280x720): 226/226 frames per 15 s, and ch0 no longer throttled (9 to 15 fps); 10 min timps run with both streams at 20 fps: 10966/10954 frames, 0 oops, RSS flat. NV12 chroma offset now follows the vendor (height aligned to 16): the green bottom strip on 1080p and the colour fringes on 360p are gone (360p SSIM vs scaled ch0 0.83 to 0.92). Open: stop path mask not OEM-exact, GIB AE dgain still returns -1 per frame (not applied), second sensor untested'
@@ -1152,13 +1152,13 @@ features:
       sym: ✅
       text: 'all modes via the vendor Allegro core (default): CBR 1210 kbit/s at 1200 target and 2973 at 3000 (legacy controller 1511 / 3786, +26 % with large peaks); VBR 1163, CappedVBR 1177, CappedQuality 1174 at 1200; decode clean, 0 oops [claude/t31-allegro-cbr]. CappedVBR/CappedQuality set at CreateChn now keep their mode and cap (were VBR with max = target): cap 38 dB at 3000/4000 → 507 kbit/s at encoder PSNR 38.5 (VBR 3108), SSIM 0.963 vs FixQP 12 [claude/capped-rc-followup]. No filler NAL is written (filler=0 in the logs also at 3000), so in practice there was no difference.'
     T32:
-      sym: 📋
-      text: 'planned: rate control on HERA (#295, partial): CBR/VBR/SMART/CVBR/AVBR/QVBR channels get a per-picture QP from the T23 eprc revision; against the vendor 2.2.0 controller (Unicorn) CBR/VBR/CVBR are within 12 % of the vendor rate, mean QP difference <= 3; CBR H.264 and H.265 streams decode clean in QEMU. Open: T33 controller port, re-encoding, macroblock QP, device proof. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): rate control on HERA (#295, partial): CBR/VBR/SMART/CVBR/AVBR/QVBR channels get a per-picture QP from the T23 eprc revision; against the vendor 2.2.0 controller (Unicorn) CBR/VBR/CVBR are within 12 % of the vendor rate, mean QP difference <= 3; CBR H.264 and H.265 streams decode clean in QEMU. Open: T33 controller port, re-encoding, macroblock QP, device proof. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 295
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'CBR re-measured on the open stack (Eufy .184, open-tx-isp next 6d9313c5, OpenIMP next 5519c45, 2026-10-19, 20 fps, 60 s per run, 0 decode errors): the old "about 20 % of the target" (cam-K, vendor kernel driver, 2026-10-10) is NOT reproducible. With enough picture content (continuous PTZ pan) the mean is within 2 % of the target: 1920x1080 1000/2000/4000 -> 1087/2012/4011 kbit/s, 3840x2160 4000 -> 4085, 640x360 500/1000/2000 -> 505/1003/2007. Deviations follow the content and the QP limits (CBR min QP 15, max QP 48): a static scene undershoots when it needs fewer bits than the target at min QP (static 640x360 1000/2000/4000 -> 560/379/421; FixQP 12 of that scene is 1409), and low targets at high resolution overshoot because max QP is the floor (3840x2160 500 -> 2489 static / 3565 panning; 1000 -> 1706 / 2648; 1920x1080 500 panning -> 1273, static 503). Static 1920x1080 500/1000/2000/4000 -> 503/1010/2006/4026. 1-s peaks up to about 2x the target (IDR second; static 3840x2160 4000: 8002 kbit/s). VBR 2000: 3840x2160 2003 (static) / 3301 (pan), 1920x1080 1912 / 1901; CappedVBR 2000 (42 dB cap) 1139 / 2580 and 556 / 1349 (static / pan). Open points: a 3840x2160 FixQP 12 reference runs at only 1.8-7.8 fps (AVPU throughput at 20-60 Mbit/s); a ch1-only test process (no ch0 enabled) gets 0 frames (with a helper ch0 it runs; vendor behaviour not compared). SSIM against FixQP 12 is only meaningful for the static scene (0.83-0.92 at 1920x1080/3840x2160, 0.91-0.97 on ch1); the synthetic moving pattern (`OPENIMP_TEST_PATTERN=2`) is too cheap to load the rate control (15-91 kbit/s at any target). Rate control shared with T31/T41. Raw data: audit T40_CBR_MOTION_1019'
@@ -1196,13 +1196,13 @@ features:
       sym: ✅
       text: T31 defaults like the vendor (max QP 48, max bitrate 4/3, ...) [-all-13] (claude/rc-modes-2)
     T32:
-      sym: 📋
-      text: 'planned: the rate-control attributes are mapped onto the same eprc channels (#295, partial; maxIQp/minIQp bound the IDR QP, SetChnAttrRcMode restarts at the next IDR). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the rate-control attributes are mapped onto the same eprc channels (#295, partial; maxIQp/minIQp bound the IDR QP, SetChnAttrRcMode restarts at the next IDR). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 295
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening (user decision): the default parameters equal the vendor library (`SetDefaultParam` with gop mode, `encOptions`, `encTools` and the JPEG FixQP rule, from the unknowns work); the runtime parameter calls of the vendor library crash on this board, so a runtime A/B is not possible and the default-parameter comparison is accepted. Older text: not documented'
@@ -1235,14 +1235,14 @@ features:
       sym: ✅
       text: 'IPU OSD; lines/rectangles; rotation: no OSD clamp in timps'
     T32:
-      sym: 📋
-      text: 'planned: IPU OSD in QEMU (#297): BGRA text picture, cover, rectangle and 2-bit picture through FS -> OSD -> encoder; the /dev/ipu requests equal vendor libimp 2.2.0 except buffer addresses, the text and the rectangle checked in the H.264 picture (QEMU''s IPU model draws no covers and no 2-bit pictures); the ISP-drawn OSD (`IMP_OSD_*_ISP`, #336): 20/20 ISP OSD requests equal vendor libimp 2.2.0 and the final MSCA OSD register state is identical (QEMU draws no T32 lines/ranges: register proof only). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): IPU OSD in QEMU (#297): BGRA text picture, cover, rectangle and 2-bit picture through FS -> OSD -> encoder; the /dev/ipu requests equal vendor libimp 2.2.0 except buffer addresses, the text and the rectangle checked in the H.264 picture (QEMU''s IPU model draws no covers and no 2-bit pictures); the ISP-drawn OSD (`IMP_OSD_*_ISP`, #336): 20/20 ISP OSD requests equal vendor libimp 2.2.0 and the final MSCA OSD register state is identical (QEMU draws no T32 lines/ranges: register proof only). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 297
       - 336
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-11-01 (#187, #188, Eufy T40 camera, images agg65i and agg65k): the ISP draw window / line (`ISP_Get/SetDrawAttr`) now draws: the window edge pixels read exactly the YUV of the colour set (green 149/43/21, red 76/84/255) and disabling restores the picture; apitest t40dev 83 PASS / 0 FAIL. The driver fix (#187) corrected the lifted draw code (doubled state offsets, an unbounded loop, unaligned unit fields, the shadow slot index). The alpha value is 0..4 as in the vendor (4 opaque, 0 draws nothing, values above 4 write zeros); the earlier all-zero readings (#188) came from the test using alpha 7, not from the driver. API cell `ISP_Get/SetDrawAttr` err -> dev. Earlier: device-tested 2026-10-10 on cam-K (OpenIMP vs vendor library): PIC and COVER regions; OpenIMP draws COVER on NV12 while the vendor library fails with "COVER cannot support this format" (beyond vendor on this board). IPU OSD from the T41 path; mosaic regions are not drawn, `IMPOSDRgnAttr` shares only the 1772-byte prefix; open driver 2026-10-19: OSD upright at 16,16 of the I2D-rotated frame in H.264 and JPEG (92232a1)'
@@ -1276,13 +1276,13 @@ features:
       sym: ✅+
       text: 'sub-stream default: ~85 % less IVS CPU (compared with vendor libimp)'
     T32:
-      sym: 📋
-      text: 'planned: IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 299
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-10-25 re-run on the RC2 stack (Eufy .184, agg46): 8/8 PTZ pans detected, first result after 0.77-1.01 s, 0 false results in 50 s + 170 s static; day/night and colour unchanged. Objects that appear without moving are not reported (by design). Earlier: ⚠️ move detection device-tested for 20 s on cam-K 2026-10-10 (OpenIMP vs vendor library); T31/T41 IVS framework, base move and `Get/SetParam` host tests only; **open stack 2026-10-19 (Eufy .184, PTZ pans as stimulus, timps motion on ch1 640x360, 5x5 grid, sensitivity 128):** 6 of 8 defined pans detected (latency 0.31-0.92 s, 3-13 snapshots, up to 25 of 25 cells), 2 pans (300 steps each) not detected; 60 s static before the pans: 0 events, but 600 s static afterwards: 50 active snapshots in 12 bursts (1-23 cells; daylight scene, cause not established; T41: 0); timpsd CPU 5.9 % off / 6.3 % on / 6.5 % panning (one core, with a ch1 client, so about 0.4 points for motion); ch1 PTS gaps: none above 0.2 s in 1359 s / 27176 packets (largest 0.100 s; the earlier ~1.1-s gaps are gone, encoder PTS as proxy); 0 BUG/oops'
@@ -1317,7 +1317,7 @@ features:
       sym: ✅
       text: 'device-tested: concurrent streams ok'
     T32:
-      sym: 📋
+      sym: 🔧
       text: '2026-11-11 night: direct mode (IVDC, `IMP_FrameSource_GetDirectMode/SetDirectMode/SetIvdcMemLine`, #301) in QEMU; direct channel 0 refuses SetFrameDepth like the vendor has no picture in memory. Earlier: planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 290
@@ -1326,8 +1326,8 @@ features:
       - 480
       - 491
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
       issues:
       - 479
       - 491
@@ -1365,13 +1365,13 @@ features:
       issues:
       - 131
     T32:
-      sym: 📋
+      sym: 🔧
       text: '2026-11-11 night: AI with the vendor 2.x semantics (software volume, SetGain the only codec ioctl, algo order NS/AGC/HPF then DRC/EQ, LPF; DMIC effects) in QEMU, PCM equal to vendor libimp 2.2.0 (#329, #330; the DMIC oops was the audio.ko default dmic_enable=0, the T32 record thread now passes a capture timestamp). Earlier: planned: AI on the OSS3 /dev/dsp ABI, a tone recorded in QEMU (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-11 night (#342, host test with a fake /dev/dsp, no DMIC hardware): `IMP_DMIC_DisableAec` and `IMP_DMIC_DisableAecRefFrame` no longer hang while frames are captured (80 switches, worst about one frame; hung before); no symbol change. Earlier: 2026-10-31: #131 closed by decision: no DMIC hardware; the DMIC flow is run in QEMU only (no device proof). Earlier: 2026-10-27: `IMP_DMIC_*` (21 functions, OSS3 like the vendor) run as an API round trip on the Eufy; no DMIC hardware, so capture is not proven (not counted for the microphone result). Beyond vendor: `IMP_DMIC_Enable` fails cleanly when the audio module has no DMIC route (the vendor library oopses the kernel). Earlier: Update 2026-10-24, evening: microphone path device-tested (50 frames of 640 samples in 0.79 s at the 40 ms pace); `GetVol`/`GetGain`/`SetVol`/`SetGain` follow the vendor library (clamps, stored read-back, default volume 60). Older text: AI exported (`openimp_p3_audio.c`), no test result'
@@ -1406,13 +1406,13 @@ features:
       sym: ✅
       text: volume/mute work, whole OSS fragments (tested on cam-A); `IMP_AO` enable/`SendFrame`, speaker playback of a known signal at several volumes and `SetVol`, recorded back by the microphone (2026-10-10 AEC test, device-tested)
     T32:
-      sym: 📋
+      sym: 🔧
       text: '2026-11-11 night: AO like vendor libimp 2.x (40 ms block queue, cache on by default, Flush/Clear, soft mute ramp, QueryChnStat) in QEMU, wav levels equal to the vendor (#329); the Flush/Clear tail and attribute write-back differ from the vendor (beyond vendor, user-approved 2026-11-11, not counted). Earlier: planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: 🔧
       text: 'not RC2-relevant, sound tests pending (user decision 2026-10-24/25: no speaker or playback tests before RC2). Older text: AO exported, no test result'
@@ -1448,14 +1448,14 @@ features:
       sym: ✅+
       text: 'real AECM: echo −18 dB, ERLE 44 dB (loopback); before: fake success'
     T32:
-      sym: 📋
+      sym: 🔧
       text: '2026-11-11 night: the 20 audio extras of vendor 2.0.0 (NS/AGC/HPF/LPF/DRC/EQ switches, algo order) are exported and verified against the vendor in QEMU (#329, #330, T32 exports now AI 47, AO 37, DMIC 28). Earlier: planned: the vendor 2.x software volume / gain / AEC extras are #329. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
       - 329
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: 🔧
       text: 'not RC2-relevant, sound tests pending (user decision 2026-10-24/25: no speaker or playback tests before RC2). Older text: AEC calls: see the audio function table, no test result'
@@ -1490,12 +1490,12 @@ features:
       text: '~0.57 MB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 173 / 504 against 1063 / 328 / 1024 (file / xz / RAM, KB).'
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '330 KB file / 112 KB xz / 344 KB RAM (stripped, size audit 2026-10-19) vs the vendor libimp 1.3.1 with 1014 / 293 / 981 KB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 330 / 123 / 372 against 1014 / 293 / 981 (file / xz / RAM, KB).'
@@ -1541,12 +1541,12 @@ features:
       - 231
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-11-02 (#85, steps 0 to D, host and camera-tested on T40): the opt-in translated colour chains (`t40_ct_chains`, about 119 KB of code) are behind a build switch, 49 bring-up parameters left the default build and the module-context inits of the lifted gamma / LSC / CCM / BCSH / CLM chains with them; module 1,221,560 to 1,075,212 bytes stripped (-146,348; xz 339,580 to 302,692; `.text` 765,612 to 638,372). Then two groups of the translated AWB chain became plain C (gain / threshold chain, statistics unpack and saturation weight; the unreachable tele-gain branch is gone): `.text` about -51 KB, the generated chain file 8190 to 5948 lines; host bit-exact against the translated code over about 700,000 compared calls, 0 differences; camera: apitest 398 / 0, 6 of 6 reload cycles, 0 oopses. Vendor module for comparison: 997,864 bytes (xz 229,380), `.text` 510,672; rest of the plan: the remaining AWB chain, DMSC / MDNS literals, AE and YSP leftovers (the issue stays open). Earlier: 2026-11-01, size analysis (#85, host only, built module against the vendor module, no camera): open 1,221,560 bytes stripped (xz 339,580) against vendor 997,864 (xz 229,380); `.text` 765,612 against 510,672 bytes. Origin of the open `.text`: about 35 % translated vendor AWB/colour chain, 51 % lifted bodies (mostly kernel glue), about 6 % literal chains, about 9 % clean C. A QEMU coverage run shows 118 KB of the translated code in the opt-in `t40_ct_chains` path (default off, never executed) and about 201 KB of lifted functions never executed. Plan, not done yet: gate that path behind a build switch (-118 KB), trim module-parameter metadata (-30 KB), delete dead lifted twins in batches, then rewrite the live chains in C with host bit-exact checks; the first three steps bring `.text` to about 570-600 KB. The issue stays open. Earlier: Update 2026-10-24, evening (user decision, accepted): the loaded module is 1445 KB (xz 404 KB) against the vendor 1005 KB (xz 230 KB) after the bring-up parameters and the legacy debug proc were switched off by default (-27 KB xz). The difference is lifted chains, duplicate code paths and diagnostics; reducing it further is planned with the clean C rewrite of the lifted chains after RC2. Older text: 2026-10-24: with the `-Os` + gc build (`9e3222c6`) and the placeholder-buffer fixes the loaded module is 2173 kB against the vendor 764 kB (A/B on .184; was 3015 KB file on 2026-10-19); still 2.8 times the vendor. Earlier (history): open `tx_isp_t40` 3015 KB file / 484 KB xz / 5267 KB RAM vs the vendor module 980 / 230 / 746 KB (size audit 2026-10-19): still built `-O0` without gc; a `-Os` + gc trial gives 1084 KB / 1946 KB RAM (queued, must be re-proven on the camera)'
@@ -1582,12 +1582,12 @@ features:
       - 92
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'MemFree + Buffers + Cached with the stream running on the Eufy: 38.7 MB open against 39.3 MB vendor (A/B 2026-10-24), timpsd RSS 4.2 MB against 6.4 MB.'
@@ -1623,12 +1623,12 @@ features:
       text: not in this SoC's encoder (vendor has none either)
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: —
       text: '2026-10-24: the vendor T40 libimp 1.3.1 (disassembled) has no reference-frame sharing either (AVPU keeps its own reference buffers), so not applicable. The default stream count 2 per channel is in the unmerged branch `claude/t4x-bufshare` (T40 and T41). Earlier (history): not documented'
@@ -1660,12 +1660,12 @@ features:
       text: '2026-10-24 the AWB statistics sweeps are about 2.4 times faster (MXU2, `t31_awb_impl=2` by default, bit-exact, see #8). Earlier (history): 2026-10-21 fleet figures (60 s windows, OpenIMP + open-tx-isp + timps 1.10.1): timpsd 8.0-8.4 % of a core with two clients on the Cinnado T31L cameras against 17.7-18.4 % with the vendor libimp (2026-08-30); 2026-10-24 night A/B on .25: timpsd 8.1 % against the vendor 17.2 %, system CPU 16 % against 23 %, ISP interrupts 109 against 228 per s. Earlier (history): rotation 9 ms/frame @15 fps'
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: "2026-11-07 (#84 fair pass, Eufy T40 camera, same streamer build on both stacks): streamer process CPU 0.34 % open vs 2.26 % vendor. Earlier: 2026-10-31 (Eufy T40, #133 and #149 closed): the open stack is vendor-like on CPU. ISP busy 1.6 % against 1.4 % for the vendor (#133); encoder load of the same encload binary 0.71 % against 0.77 / 0.84 % for the vendor (#149); the blocking DQBUF option `t40_dqbuf_wait_ms` stays at its default 0 because it is not needed. Earlier: 2026-10-30 (Eufy T40, same encload binary on both stacks, H.264 1080p20 CBR 2 Mbit/s GOP 40, frames dropped, 60 s, 20.0 fps): encload user process open 0.90 % (day) / 0.93 % (night) vs vendor 0.77 / 0.84 %, after the 1 ms polling loop of the T40 frame wait was removed (frame_source_wait 34 -> 1 per frame, encoder_poll 2269 -> 615 us/frame; it was 2.67 / 2.72 % before, #149); ISP kernel threads 2.2-3.0 % open vs 3.55-3.57 % vendor; idle encoder (no stream): open 0.6 % vs vendor 1.4 % busy. Open: blocking DQBUF in open-tx-isp for full parity (#149 part 2), same polling path on T31/T41 not checked. Earlier: 2026-10-27: #81: the ISP event thread sleeps until an event is queued (about 20 wake-ups per second instead of a 1 ms poll; QEMU 50 -> 1, state D -> S), the load average is no longer pinned at 1. The per-frame cost of the translated vendor AWB in that thread (about 30 ms CPU per frame, 60 % of one core at 20 fps) is only partly fixed: #133 (C ct_detect, merged) brings it from about 35 to about 27 ms CPU per frame in day mode on the Eufy, still far above the vendor (the per-frame vendor AWB/ADR chain); ⚠️ until it is vendor-like. Earlier: timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured"
@@ -1704,12 +1704,12 @@ features:
       text: SOC_VPU not built
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: —
       text: AVPU, not Helix
@@ -1745,8 +1745,8 @@ features:
       issues:
       - 291
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'the AVPU runs under every T40 encoder test: H.264 4K/1080p/360p, HEVC, 300 s and 10-min runs on the open ISP driver, 0 AVPU errors and 0 oops (2026-10-18/19); the AVPU module is the kernel''s, there is no dedicated T40 review of it'
@@ -1789,12 +1789,12 @@ features:
       - 94
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '2026-10-31 (image agg60: all #140 batches incl. 19 sensor/WDR ioctl sites and 2 AE sites): apitest all areas plus 28 cases PASS 270 / FAIL 0, 0 oopses, 0 `unresolved jalr`, the lost-argument counters (`cnt_core_ops_init`, `cnt_sec_init`, `cnt_main_long_tgain_update`) stay 0, raw ioctl probe ok. #88 (reset while inserting a temporary test build) closed as not reproducible. Earlier: 2026-10-27: test image of the 2026-10-27 merges (#81, #83, #86; the driver in `next` is identical): T40 camera stable for more than 2 h, no oops, AF statistics flow, day/night round trip clean. The last 36 lines of lifted code that addressed fixed offsets of the OEM .bss layout now use the OEM objects (host chains identical before and after, 0 differences). Earlier: RC2 (2026-10-24 22:45 to 2026-10-25 10:00): overnight soak of the Eufy .184 (agg43e: open-tx-isp e5030fd4, OpenIMP f55f620f; ~10.8 h, snapshots always 200, 0 oops, no streamer restart, VMalloc flat; `audit/logs1024/soak-agg4z.log`), the first overnight soak of the T40 stack; the RC2 fleet image agg46 runs the same code line. Known remaining items below stay open but did not occur. Earlier: ⚠️ 2026-10-24: the boot-time oops of agg43b (bind, #1) is fixed; the Eufy ran the whole A/B session (open stack, 0 oops, unchanged PID). The agg43 fleet soak of 2026-10-23 did not include the Eufy (no network until the WLAN fix), so there is still no overnight soak of the T40 stack. Earlier (history): open driver: 300 s regression and 10-min ch0+ch1 timps runs clean, 10/10 restart cycles (2026-10-18), the oops at every day/night thread start fixed 2026-10-19 (AWB statistics); no overnight soak with the current stack. Open: MemFree about -0.5 MB over 10 sessions; aicwf-SDIO "rxbuff list is empty" storms with hangs in about half of the runs on 2026-10-17 (suspected memory pressure, not closed in the TODO)'
@@ -1835,13 +1835,13 @@ features:
       sym: ✅+
       text: 'removed. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T32:
-      sym: 📋
-      text: 'planned: SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 299
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅+
       text: '2026-10-25 (RC2): OpenIMP does not need `libalog` or `libsysutils` (the libimp build does not link them), so the open stack runs without both helper libraries, as on T23/T31/T41. Earlier: `libsysutils` is not part of the libimp build; not checked. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
@@ -1880,13 +1880,13 @@ features:
       - 117
       - 118
     T32:
-      sym: 📋
-      text: 'planned: the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: 🔧
+      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
-      sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      sym: 🔧
+      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening (user decision): 14 getters answer with plausible values on the open driver (AeExprInfo, AeWeight, AfWeight, SensorFPS, FrameDrop, SensorReg, SensorAttr, AwbStat, AeStat, AwbAttr, AeSpeed, StatisConfig, GetGammaAttr, CSC/CCM now real instead of refused). Older text: host: `GetAeWeight`, `GetAfWeight`, `GetAeExprInfo`, `GetSensorFPS`, `GetFrameDrop`, `GetSensorRegister` layout tests; `GetSensorAttr` is device-tested on cam-K 2026-10-10; open driver: `isp-m0` readable and parsed by the timps day/night thread, `GetAwbStatistics` device-proven (2026-10-19)'
@@ -1921,12 +1921,12 @@ features:
       text: '2026-10-27: `GetChnEvalInfo` returns the header layout of `IMPEncoderStreamInfo` (`iNumBytes` first, then the counters, QP at 28/30/32) instead of the vendor''s one-word-shifted bytes: beyond vendor, a deliberate ABI difference a streamer must not compensate for (AVC: iNumBytes 3993 of a 4003-byte access unit; JPEG: size and quality 75); apitest enc on the T31L camera PASS 122 / FAIL 0. Earlier: ditto'
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening: `Encoder_Query` `work_done`/`leftPics` follow the codec activity (busy in 17.5 % of the samples at 20 fps = 8.7 ms per frame, before always idle), `OpenIMP_Encoder_GetTelemetry` counts 139 frames = consumer count at 20.02 fps / 2099 kbit/s, `GetChnAveBitrate` 1920 against 2033 kbit/s measured. Older text: host (night 2026-10-12): `Encoder_Query` with the vendor 1.3.1 field semantics (`leftStreamBytes`/`curPacks` always 0, `leftStreamFrames` 1 while a finished stream waits for `GetStream`, `work_done`); OpenIMP encodes on demand, so `leftPics` is 0; `Encoder_GetChnEvalInfo`, `GetChnAveBitrate` exported, no test result'
@@ -1959,12 +1959,12 @@ features:
       text: 'beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; 2026-10-10: 20 phases valid in VA-API and strict ffmpeg (`-err_detect`); known deviation: under FixQP 42 an absolute 5 or relative -25 window drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream valid); `OPENIMP_T31_ROI=0` refuses the call'
     T32:
       sym: 📋
-      text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
     T33:
       sym: 📋
-      text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
+      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module boots thingino since 2026-11-14 (#393); the open stack does not run on it yet'
     T40:
       sym: ✅
       text: '`Encoder_Get/SetChnRoiAttr` (10 windows, AVC only) through the same AVPU macroblock QP table as the T31 (one byte per 16x16 block in EP2, cmd[9] bits 25/24; the vendor 1.3.1 library builds the same one-byte table and sets the same bits); **on by default** since 2026-10-18 (`OPENIMP_T40_ROI=0` refuses the call); device-tested on the Eufy T40XP in FixQP and CBR (FixQP 32 window -20: 100 to 1194 kbit/s, CBR window +20 drops the window SSIM 0.96 to 0.89); `SetChnMapRoi` is exported on T40 and device-tested for return codes and stream flow (2026-11-04, apitest: a 40x23 block map is accepted, a wrong size, the absolute mode and a quality of 26 are refused, a NULL map removes it)'

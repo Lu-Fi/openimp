@@ -41,11 +41,11 @@ t30:
 t31:
 	./build-t31.sh
 
-# T32 platform (planned, #286): QEMU-checked, no camera yet
+# T32 platform (in development, #286): QEMU-checked, no camera yet
 t32:
 	./build-t32.sh
 
-# T33 platform (planned, #390): QEMU-only, built on the T32 sources
+# T33 platform (in development, #390): QEMU-only, built on the T32 sources
 t33:
 	./build-t33.sh
 

@@ -58,7 +58,7 @@ CELL = {
     "miss": ("s-miss", "❌", "❌ miss", "not exported by OpenIMP"),
     "n.a.": ("s-na", "·", "–", "function does not exist on this SoC (not in that SoC's vendor API; not a gap)"),
     "?": ("s-unk", "?", "?", "state not determined"),
-    "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC (class unused today: T32 and T33 have a build, planned, QEMU only)"),
+    "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC (class unused today: T32 and T33 have a build, in development, QEMU only)"),
 }
 OK, WIPC, GAP, UNK = {"dev", "dev+", "run", "no-op", "rt", "nohw"}, {"host", "aud", "qemu"}, {"cache", "stub", "err", "miss"}, {"?"}
 LEVEL = {"dev", "rt", "run", "nohw", "host", "aud", "qemu", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
@@ -373,7 +373,7 @@ class Model:
                  "(p prudynt, r raptor, t timps; † = source only, no binary checked) calls, sorted by the number of streamers; "
                  "functions of unknown state (?) that a streamer calls are listed as a separate tier (audit pending). "
                  "Gaps in functions no streamer calls follow as a count (lower priority). A SoC without an OpenIMP build would show a line that "
-                 "counts the vendor functions the streamers call and that the first build has to provide (none today: T32 and T33 have a build, planned, QEMU only).")
+                 "counts the vendor functions the streamers call and that the first build has to provide (none today: T32 and T33 have a build, in development, QEMU only).")
         o.append("")
         pr = self.priorities()
         for s in socs:
@@ -612,7 +612,7 @@ class Model:
                 '</section><section class="card" id="backlog"><h2>Long-term backlog</h2>'
                 '<p class="small">Separate from the streamer priorities: vendor functions that are missing, partial or of unknown state and '
                 'that no streamer calls today, per SoC, grouped by area with the suggested action (implement / documented ENOTSUP / '
-                'not applicable). T32/T33 are planned (QEMU only, no camera).</p>' + self.html_backlog() +
+                'not applicable). T32/T33 are in development (QEMU only, no camera, not a release gate).</p>' + self.html_backlog() +
                 '</section><section class="card"><h3>API coverage at a glance</h3>'
                 '<p class="small">Works (device-tested or vendor no-op) / functions that exist in the SoC\'s vendor API; functions the '
                 'vendor API does not have are not counted. Click an area for the full function table.</p>'

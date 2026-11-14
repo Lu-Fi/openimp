@@ -1,6 +1,6 @@
-# T32 rate control on HERA (#295, planned)
+# T32 rate control on HERA (#295, in development)
 
-T32 support is planned (QEMU only, no T32 camera yet); this is not a release gate.
+T32 support is in development (QEMU only, no T32 camera yet); this is not a release gate.
 
 ## What runs
 

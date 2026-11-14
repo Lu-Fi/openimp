@@ -212,7 +212,7 @@ class Gates:
             o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (QEMU only, no camera)" if s in self.extra else ""),
                      v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
         if self.extra:
-            o += ["", "%s are not gate SoCs: they run in QEMU only (no test camera), so no streamer function counts as working there yet (planned). "
+            o += ["", "%s are not gate SoCs: they run in QEMU only (no test camera), so no streamer function counts as working there yet (in development). "
                   "The count uses the same vendor-function weighting as the other SoCs." % ", ".join(self.extra)]
         o.append("")
         for s in self.socs:
@@ -294,7 +294,7 @@ class Gates:
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>streamer functions that work</th><th>progress</th><th>missing</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
         if self.extra:
-            h.append('<p class="small">%s are not gate SoCs: they run in QEMU only (no test camera), so 0 count as working (planned).</p>' % ", ".join(self.extra))
+            h.append('<p class="small">%s are not gate SoCs: they run in QEMU only (no test camera), so 0 count as working (in development).</p>' % ", ".join(self.extra))
         for s in self.socs:
             v = self.rc3[s]
             if not v["missing"]:
