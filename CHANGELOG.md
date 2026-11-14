@@ -52,6 +52,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `docs/OPENIMP_BEYOND_VENDOR.md` 6.10 (T33 ExternInject channels deliver frames where the vendor 2.0.2.1 EnableChn fails in QEMU): user OK 2026-11-14, kept; the six F1 cell notes say so. Docs only.
 
+## 2026-11-14: docs: beyond-vendor rows for library, module and packaging size (user OK 2026-11-14)
+
+- `docs/OPENIMP_BEYOND_VENDOR.md` section 6: rows 'libimp.so smaller than the vendor libimp' (T10..T41, numbers of `docs/SIZE.md`) and 'No libalog / libsysutils in the open image'; open-tx-isp `docs/BEYOND_VENDOR.md`: 'Kernel module smaller than the vendor module' (T21, T23, T30, T31). Matrix rows 34, 35 and 42 set to ✅+ where measured and device-tested (9 symbols; ✅ 266 -> 257, ✅+ 61 -> 70).
+
 ## 2026-11-14: matrix: ✅+ cells re-judged against the beyond-vendor rows (docs only)
 
 - `docs/status/features.yaml`: ✅+ now needs a row in `OPENIMP_BEYOND_VENDOR.md` / open-tx-isp `BEYOND_VENDOR.md` and a device test. T21 column 26 -> 14 ✅+ (10 cells to ✅, row 5 to 🔧, row 15 to ?); the kept cells name their row and device run. 12 cells of other SoCs without row or evidence (T10 row 3, T10/T31 row 34, T10/T20/T23/T31 row 42, T10/T20/T23 row 44, T23 rows 14 and 15) to ✅. Counts: ✅ 244 -> 266, ✅+ 85 -> 61.

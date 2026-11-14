@@ -1471,23 +1471,23 @@ features:
   vendor: T21 ~1.0 / T23 ~1.26 / T31 ~1.05 MB
   cells:
     T10:
-      sym: ✅
-      text: '626,032 B (~0.6 MB) 2026-11-14 audit: ✅+ -> ✅: no vendor comparison or device statement in the cell and no beyond-vendor row for the libimp size (docs/SIZE.md has the vendor numbers).'
+      sym: ✅+
+      text: '626,032 B (~0.6 MB) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 KB file / 173 xz / 511 RAM against 921 / 269 / 1118 (file / xz / RAM, KB).'
     T20:
       sym: ✅+
-      text: 594 KB (was 694 KB; claude/openimp-size, gc-sections)
+      text: '594 KB (was 694 KB; claude/openimp-size, gc-sections) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 173 / 511 against 921 / 269 / 1118 (file / xz / RAM, KB).'
     T21:
-      sym: ✅
-      text: '~0.5 MB. 2026-11-14 audit: ✅+ -> ✅: smaller than the vendor (docs/SIZE.md 2026-10-19: 453 KB file / 167 xz / 491 RAM against 798 / 247 / 996) but a measured build size with no beyond-vendor row; candidate for a row (needs user OK).'
+      sym: ✅+
+      text: '~0.5 MB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 167 / 491 against 798 / 247 / 996 (file / xz / RAM, KB).'
     T23:
       sym: ✅+
-      text: 726 KB (was 774 KB; native, no helixd; claude/openimp-size)
+      text: '726 KB (was 774 KB; native, no helixd; claude/openimp-size) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 518 / 184 / 567 against 1032 / 291 / 1232 (file / xz / RAM, KB).'
     T30:
       sym: ✅+
-      text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): 529,804 B file (text 491,849 B, data 4,724 B, bss 161,784 B; OpenIMP next of 2026-11-10) vs the vendor libimp 1.0.5 1,889,603 B (text 1,550,774 B), measured on the T30X lab camera (b52/b53). Earlier: 594,232 B (~0.57 MB) stripped build; the vendor size was not measured"
+      text: '2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): 529,804 B file (text 491,849 B, data 4,724 B, bss 161,784 B; OpenIMP next of 2026-11-10) vs the vendor libimp 1.0.5 1,889,603 B (text 1,550,774 B), measured on the T30X lab camera (b52/b53). Earlier: 594,232 B (~0.57 MB) stripped build; the vendor size was not measured. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 389 / 149 / 454 against 1660 / 452 / 1823 (file / xz / RAM, KB).'
     T31:
-      sym: ✅
-      text: '~0.57 MB. 2026-11-14 audit: ✅+ -> ✅: no vendor comparison or device statement in the cell and no beyond-vendor row for the libimp size (docs/SIZE.md has the vendor numbers).'
+      sym: ✅+
+      text: '~0.57 MB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 173 / 504 against 1063 / 328 / 1024 (file / xz / RAM, KB).'
     T32:
       sym: 📋
       text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
@@ -1498,10 +1498,10 @@ features:
       text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
     T40:
       sym: ✅+
-      text: 330 KB file / 112 KB xz / 344 KB RAM (stripped, size audit 2026-10-19) vs the vendor libimp 1.3.1 with 1014 / 293 / 981 KB
+      text: '330 KB file / 112 KB xz / 344 KB RAM (stripped, size audit 2026-10-19) vs the vendor libimp 1.3.1 with 1014 / 293 / 981 KB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 330 / 123 / 372 against 1014 / 293 / 981 (file / xz / RAM, KB).'
     T41:
       sym: ✅+
-      text: 327 KB file / 113 KB xz / 339 KB RAM (stripped, size audit 2026-10-19) vs the vendor libimp 1.2.6 with 1362 / 368 / 1322 KB
+      text: '327 KB file / 113 KB xz / 339 KB RAM (stripped, size audit 2026-10-19) vs the vendor libimp 1.2.6 with 1362 / 368 / 1322 KB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 327 / 123 / 366 against 1362 / 368 / 1322 (file / xz / RAM, KB).'
 - n: 35
   title: Kernel module size
   group: Memory, size, load
@@ -1521,21 +1521,21 @@ features:
       - 231
     T21:
       sym: ✅+
-      text: '2026-11-07 (#222, #231; runtime module swap on the T21 camera): `/proc/modules` 650896 -> 646240 B; tuning state, netlink buffer and statistics DMA buffers no longer from high-order kmalloc blocks; new `warn_stack` (default off) drops the vendor stack dump on ISP warnings (extra). Earlier: 452 KB (was 760 KB; vendor 616 KB), RAM unchanged (claude/t21-size-awb-opt, 452 KB since all-17) Beyond-vendor: OPENIMP_BEYOND_VENDOR.md ''T21 AWB faster than vendor'' (module 760 -> 452 KB, cam-D) and open-tx-isp BEYOND_VENDOR.md `warn_stack` row (device A/B cam-D 2026-11-06); docs/SIZE.md (2026-10-19): module 419 KB file against 697 KB for the vendor module.'
+      text: '2026-11-07 (#222, #231; runtime module swap on the T21 camera): `/proc/modules` 650896 -> 646240 B; tuning state, netlink buffer and statistics DMA buffers no longer from high-order kmalloc blocks; new `warn_stack` (default off) drops the vendor stack dump on ISP warnings (extra). Earlier: 452 KB (was 760 KB; vendor 616 KB), RAM unchanged (claude/t21-size-awb-opt, 452 KB since all-17) Beyond-vendor: OPENIMP_BEYOND_VENDOR.md ''T21 AWB faster than vendor'' (module 760 -> 452 KB, cam-D) and open-tx-isp BEYOND_VENDOR.md `warn_stack` row (device A/B cam-D 2026-11-06). Beyond-vendor row: open-tx-isp BEYOND_VENDOR.md ''Kernel module smaller than the vendor module'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19: 419 KB file (120 xz) against 697 (122) for the vendor module.'
       issues:
       - 222
       - 231
     T23:
       sym: ✅+
-      text: 622 KB stripped (was 1,047; vendor 857; claude/open-tx-isp-size2, device-tested on cam-B)
+      text: '622 KB stripped (was 1,047; vendor 857; claude/open-tx-isp-size2, device-tested on cam-B) Beyond-vendor row: open-tx-isp BEYOND_VENDOR.md ''Kernel module smaller than the vendor module'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19: 607 (178) against 1108 (230) for the vendor module.'
     T30:
-      sym: ✅
-      text: '2026-11-13/14 (#274, T30X b83/b84/b86): the T30 module is built at -Os by default (`TX_ISP_T30_OS=y`, open-tx-isp next 10aabdbe): lsmod 343,136 B against the vendor module 347,648 B (the -O0 build 627,952 B; size(1) text 542,251 -> 267,511 B). Picture and the ISP registers 0x540..0x570 equal to the -O0 build and the vendor (b83/b84), isp-m0 / isp-m2 within 1.3 % of the vendor; b86 soak 2097 s under raptor + RTSP, 52,392 frames, 0 decode errors, one day/night switch, 0 oops. Symbol ⚠️ -> ✅ (module at vendor size). Earlier: 2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): /proc/modules 747,184 B (open-tx-isp next bc9e5bda) vs the vendor module 347,648 B; text 662,551 vs 257,384 B: the lifted code is 2.6x the vendor text, no size pass on T30 yet (#274).'
+      sym: ✅+
+      text: '2026-11-13/14 (#274, T30X b83/b84/b86): the T30 module is built at -Os by default (`TX_ISP_T30_OS=y`, open-tx-isp next 10aabdbe): lsmod 343,136 B against the vendor module 347,648 B (the -O0 build 627,952 B; size(1) text 542,251 -> 267,511 B). Picture and the ISP registers 0x540..0x570 equal to the -O0 build and the vendor (b83/b84), isp-m0 / isp-m2 within 1.3 % of the vendor; b86 soak 2097 s under raptor + RTSP, 52,392 frames, 0 decode errors, one day/night switch, 0 oops. Symbol ⚠️ -> ✅ (module at vendor size). Earlier: 2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): /proc/modules 747,184 B (open-tx-isp next bc9e5bda) vs the vendor module 347,648 B; text 662,551 vs 257,384 B: the lifted code is 2.6x the vendor text, no size pass on T30 yet (#274). Beyond-vendor row: open-tx-isp BEYOND_VENDOR.md ''Kernel module smaller than the vendor module'' (user OK 2026-11-14); measured on the loaded module, T30X device runs b83/b84/b86.'
       issues:
       - 274
     T31:
       sym: ✅+
-      text: "2026-11-07 (#223, #231; full OTA on a T31X and a T31L): `/proc/modules` 719712 -> 703544 B (-16168), two idle IRQ threads gone, \"ch0 done\" counted once; the #231 fixes add 16 B. Earlier: 711 KB stripped (was 859; vendor 829; claude/open-tx-isp-size2, device-tested on cam-A)"
+      text: '2026-11-07 (#223, #231; full OTA on a T31X and a T31L): `/proc/modules` 719712 -> 703544 B (-16168), two idle IRQ threads gone, "ch0 done" counted once; the #231 fixes add 16 B. Earlier: 711 KB stripped (was 859; vendor 829; claude/open-tx-isp-size2, device-tested on cam-A) Beyond-vendor row: open-tx-isp BEYOND_VENDOR.md ''Kernel module smaller than the vendor module'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19: 648 (195) against 1077 (228) for the vendor module.'
       issues:
       - 223
       - 231
@@ -1813,17 +1813,17 @@ features:
   vendor: shipped with vendor images
   cells:
     T10:
-      sym: ✅
-      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
+      sym: ✅+
+      text: 'removed. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T20:
-      sym: ✅
-      text: 'removed (image tested) 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
+      sym: ✅+
+      text: 'removed (image tested) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T21:
-      sym: ✅
-      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row; the images run without both libraries.'
+      sym: ✅+
+      text: 'removed. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T23:
-      sym: ✅
-      text: 'removed; also no helixd/vendor libimp. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
+      sym: ✅+
+      text: 'removed; also no helixd/vendor libimp. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T30:
       sym: ✅
       text: '2026-11-14 (T30X b88, #27, #496): neo libsysutils (aperto 2d689bd) from /tmp against the vendor 1.0.5, 0 oopses: `SU_CIPHER_Config/Encrypt/Decrypt` nohw, the same codes on both; `SU_Base_GetDevID` returns an ID on neo (vendor -1, beyond vendor, user OK 2026-11-14). The `SU_CIPHER_CreateHandle` / `DestroyHandle` codes without /dev/aes were fixed in neo aperto 518648d to the vendor codes (-12 / -19, checked by disassembly of the vendor libraries for every SoC that has them; host test, no device re-run, #496 closed). Earlier: 2026-11-11: the T30 libimp build needs only libatomic and libc (readelf NEEDED, b53/b56 builds), so the open stack runs without `libalog` and `libsysutils`; it ran in every batch b17-b57 and the su cases on the device (stock image has no libsysutils, `SU_*` not exported by libimp). The vendor library needs libalog preloaded (b53). Not yet tested on an image that drops both libraries.'
@@ -1832,8 +1832,8 @@ features:
       - 496
       - 27
     T31:
-      sym: ✅
-      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
+      sym: ✅+
+      text: 'removed. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T32:
       sym: 📋
       text: 'planned: SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
@@ -1844,10 +1844,10 @@ features:
       text: 'planned (T33 plan, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result); no device result, no T33 camera. The T33L test module does not run the open stack yet'
     T40:
       sym: ✅+
-      text: '2026-10-25 (RC2): OpenIMP does not need `libalog` or `libsysutils` (the libimp build does not link them), so the open stack runs without both helper libraries, as on T23/T31/T41. Earlier: `libsysutils` is not part of the libimp build; not checked'
+      text: '2026-10-25 (RC2): OpenIMP does not need `libalog` or `libsysutils` (the libimp build does not link them), so the open stack runs without both helper libraries, as on T23/T31/T41. Earlier: `libsysutils` is not part of the libimp build; not checked. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T41:
       sym: ✅+
-      text: removed (cam-F runs the open stack without both libs)
+      text: 'removed (cam-F runs the open stack without both libs) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
 - n: 43
   title: Tuning getters / readback
   group: Stability, helper libraries, telemetry
