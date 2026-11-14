@@ -69,6 +69,7 @@ static struct {
     int isp_fd;
     int open;
     int system_init;
+    uint32_t system_generation; /* IMP_System_Init transitions (OpenIMP_P0_GetState) */
     int ivdc_direct;            /* GET_DIRECT answer at System_Init (mode 0..4) */
     int sensor_added;
     int sensor_enabled;
@@ -180,6 +181,7 @@ int IMP_System_Init(void)
         if (t32.ivdc_direct && OpenIMP_T32_IvdcSystemInit(t32.ivdc_direct) != 0)
             IMP_LOG_ERR(TAG, "IVDC direct mode %d: setup incomplete", t32.ivdc_direct);
         t32.system_init = 1;
+        t32.system_generation++;
         if (IMP_OSD_Init_ISP() < 0)
             IMP_LOG_ERR(TAG, "ISP OSD pool not allocated; ISP OSD regions unavailable");
     }
@@ -198,6 +200,30 @@ int IMP_System_Exit(void)
     t32.ivdc_direct = 0;
     pthread_mutex_unlock(&t32.lock);
     return 0;
+}
+
+/*
+ * OpenIMP marker (#545): the same export and contract as the T40-family
+ * libimp (src/t40/openimp_p0.c), so a streamer can tell OpenIMP from the
+ * vendor library on T32/T33 too (timps keys its OpenIMP flavour on it).
+ * T32 has no P0 root modules: roots 0, main process 1 once initialised.
+ */
+int t32_get_cpu_id(void);
+int OpenIMP_P0_GetState(uint32_t *generation, uint32_t *roots,
+                        int32_t *main_process, int32_t *cpu_id)
+{
+    int init;
+
+    if (!generation || !roots || !main_process || !cpu_id)
+        return -1;
+    pthread_mutex_lock(&t32.lock);
+    *generation = t32.system_generation;
+    init = t32.system_init;
+    pthread_mutex_unlock(&t32.lock);
+    *roots = 0;
+    *main_process = init;
+    *cpu_id = t32_get_cpu_id();
+    return init;
 }
 
 /* ---- ISP --------------------------------------------------------------- */
