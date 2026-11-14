@@ -61,6 +61,11 @@ def scen(seed, k, VB):
         qpt = y.random() < 0.3; mce = y.choice([None, None, 0, 1, 2, 3, 4, 5])
         if w * h > 1280 * 720:   # the slice block per 32x32 unit is slow under the emulator's per-instruction hook
             qpt, mce = False, None
+        # a tall narrow picture size at FRAME_START (the size block e+0x3f0 the slice block reads; own stream):
+        # more slice units than the HW takes, the basic-unit fallbacks of get_bu_target_bits (rev 6 n > 0x80,
+        # rev 7 n > 0x3f)
+        z = random.Random(seed * 1000 + k + 555555)
+        tall = z.choice([4200, 6000, 8400, 8800]) if z.random() < 0.12 and w * h <= 1280 * 720 else None
 
     def poke(name, H):
         L = H.L; e = EA
@@ -102,6 +107,8 @@ def scen(seed, k, VB):
                     L.wr(c + 0x2ac, b'\x01'); L.w32(c + 0x2b0, m)
                 if mce is not None:
                     L.wr(c + 0x348, bytes([1, mce]))
+                if tall:
+                    L.wr(L.r32(e + 0x3f0), struct.pack('<HH', 64, tall))
             if pk30:
                 on = r.random() < pk30
                 L.wr(e + 0x30, bytes([on])); L.wr(e + 0x53, bytes([pk53 if on else 0]))

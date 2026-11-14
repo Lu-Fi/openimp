@@ -53,6 +53,10 @@ Nothing from the vendor library is stored here; every tool reads the library / G
   per-instruction hook) the ROI QP table (cur+0x2ac / map cur+0x2b0, vpi_emc_qpt_cfg) and the motion search
   (cur+0x348 / level 0x349, vpi_emc_mce_cfg).  `diff265.py` moves the vendor's bump allocator past the compared
   ranges after the state block (the qpt scratch map would otherwise land in B).
+  A tall narrow size (64 x 4200..8800 in the size block e+0x3f0, own stream, ~12 % of the small scenarios)
+  reaches the basic-unit fallbacks of get_bu_target_bits (rev 6 n > 0x80, rev 7 n > 0x3f).
+- `sidump.py LIB START END [got.txt]`: a vendor .data / .rodata range as a C byte table (the t65_si_data /
+  t65_si_ro slice-block tables of `src/eprc/eprc_t33_h265.c`).
   `reg265.sh` runs seeds 1..4 (7 N / 2 scenarios).
 - `swap265.py` (`CFLAGS_X='-O0 --coverage' OUT=...` for a gcov build; in the local work directory with h265p.c, got.txt, t265.c, e265oem.h): the generated
   controller with the functions of `swapmap265.txt` taken from `src/eprc/eprc_t33_h265.c`.
