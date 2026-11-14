@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T33 follow-ups from the timps run on the T33L (#527, #528, #531)
+
+- T32 / T33 FrameSource: no "crop/mirror not supported" warning for a crop of the whole sensor frame (0, 0, sensor size), which streamers set on the unscaled main channel; the warning stays for a real crop, fcrop or mirror (#528).
+- #527: `IMP_ISP_Tuning_GetAeExprInfo` is a pass-through on the T32 / T33 as in the vendor 2.0.2.1 libimp (ioctl 0xc0105467, id 0x08000023); the live words come from the driver (open-tx-isp: T33 dgain word as the vendor). New probe `tools/t32/t33_aeexpr_sample.c`.
+- #531: JPEG quality index = 98 - jpegQp with the T.81 Annex K base tables, the same register image as vendor 2.0.2.1 `T32V_JPEGE_SliceInit` (0x46fb0: `98 - qp` into bits 18..24, the 128-byte base table at 0x1fe210 = Annex K); the q95 table the engine writes (luma 7, 5, 4) therefore comes from the hardware scaling, not from an OpenIMP mapping (vendor-lib run on the silicon still to do).
+
 ## 2026-11-14: status: T33 driver-port row 192/409 (clock parents, tisp_all_reset, deinit set; #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 192/409 (+8: `ispcore_set_clk_parent`, `ivdc_set_clk_parent`, `tisp_all_reset`, `tisp_blc_deinit`, `tisp_ldc_t33_deinit`, `tisp_msca_t33_deinit`, `tisp_normal_ae_deinit`, `tisp_dma_deinit`; open-tx-isp next 7d17f72d, blocks clkp / deinit / deinitto). The driver checks the clock parents like the vendor (sclka / mpll only) and runs the T33 `tisp_all_reset` at the input setup and at the last close (QEMU A/B equal to the vendor module). Docs only.

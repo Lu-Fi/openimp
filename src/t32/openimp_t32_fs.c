@@ -765,6 +765,19 @@ static int inj_state_locked(int chn);
 static int inj_get_attr_locked(int chn, IMPFSChnAttr *a);
 
 /* ---- channel API ---------------------------------------------------------- */
+/* crop at 0,0 over the sensor's full size (or the picture size before the sensor is known) */
+static int fs_crop_is_full(const IMPFSChnAttr *a)
+{
+    uint32_t sw = (uint32_t)a->picWidth, sh = (uint32_t)a->picHeight;
+
+    if (OpenIMP_T32_SensorSize(&sw, &sh) != 0 || !sw || !sh) {
+        sw = (uint32_t)a->picWidth;
+        sh = (uint32_t)a->picHeight;
+    }
+    return a->crop.left == 0 && a->crop.top == 0 &&
+           (uint32_t)a->crop.width == sw && (uint32_t)a->crop.height == sh;
+}
+
 static int fs_attr_ok(int chn, const IMPFSChnAttr *a)
 {
     if (!a)
@@ -788,7 +801,9 @@ static int fs_attr_ok(int chn, const IMPFSChnAttr *a)
         IMP_LOG_ERR(TAG, "chn %d: nrVBs %d (1..%d)", chn, a->nrVBs, T32_FS_MAX_BUFS);
         return 0;
     }
-    if (a->crop.enable || a->fcrop.enable || a->mirr_enable)
+    /* a crop of the whole sensor frame (what streamers set on the unscaled
+     * main channel, #528) is the frame itself: no warning for it */
+    if ((a->crop.enable && !fs_crop_is_full(a)) || a->fcrop.enable || a->mirr_enable)
         IMP_LOG_WARN(TAG, "chn %d: crop/mirror not supported on T32 yet, ignored", chn);
     return 1;
 }
