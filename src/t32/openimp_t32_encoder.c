@@ -410,6 +410,11 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
         int half = 0, full = 0, esc = 0;
 
         jpeg_fill_job(e, f, &e->avc.ebs, index);
+        /* control word as vendor 2.0.2.1 on the T33L silicon (job dump,
+         * #510): no length limit (bit 16) and no over-limit stop (bit 26),
+         * bit 29 set (sections); with the T32 word the engine ended every
+         * job with status 0x3 and no data */
+        j->jpeg_ctrl = (j->jpeg_ctrl & ~(1u << 16 | 1u << 26)) | 1u << 29;
         j->limit_bs_len = 0;
         j->bsfull_jpeg_intr_size = e->avc.section_kb;
         OpenIMP_T32_VpuFlush(j, T32_JPEG_JOB_BYTES, OI_T32_VPU_FLUSH_WBACK);

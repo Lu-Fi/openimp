@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T33 JPEG on silicon: the vendor's section-mode control word (openimp #510, #393; T33L module, planned)
+
+- `src/t32/openimp_t32_encoder.c` (T33 sections path): JPEG control word as vendor libimp 2.0.2.1 writes it on the T33L (soc_vpu job dump): bit 29 set, no length limit (bit 16) and no over-limit stop (bit 26). With the T32 word every job ended with status 0x3 and no data.
+- Evidence (T33L): JPEG 45/45 pictures, ffmpeg decodes clean, real picture (before: 0 bytes, status 0x3).
+
 ## 2026-11-14: T33 H.264 / H.265 on silicon: P pictures take the reconstruction address from the engine (openimp #512, #393; T33L module, planned)
 
 - `src/t32/openimp_t33_hera.c`, `openimp_t33_hera_h265.c`, `openimp_t32_encoder.c`: a P picture's reconstruction starts where the HERA ODMA stopped writing the last picture (read-back 0x13210168 / 0x1321016c after every picture, as vendor libimp 2.0.2.1 on the T33L), its ODMA sizes are what is left to the areas' ends, and its reference (JRFD 0x28014 / 0x28018, MCE 0x30070 / 0x30074) is the last picture's reconstruction. Before, the lists followed the vendor QEMU trace, where the read-back is 0: on silicon the engine wrote the reconstruction to physical address 0 and the system hung after the first picture. A read-back outside the area restarts at the area's base.
