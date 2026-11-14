@@ -14,6 +14,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Fix in `src/audio/openimp_aec.c` (T10/T20/T21/T23/T30/T31; T40/T41 use the driver AEC and are unchanged): an echo gate scales AECM's suppression gain with the evidence that the microphone follows the far end: the valley of AECM's own binary delay estimator (mean - best bit count: no gain up to 3, full from 5) or, for far ends outside its 1.5-5.4 kHz band, the correlation of microphone and far-end level (0.6 to 0.8). The gate is open for the first 3 s of far end after `IMP_AI_EnableAec` (AECM as before), opens at once and closes over 6 s.
 - Host (`tests/t31/aec_test.c`, new no-echo cases, 8 and 16 kHz, far end noise or talker, near end noise or talker): near-end loss 3.7-10.3 dB -> 0.1-0.3 dB. The b91 microphone recordings through the host AEC: 13.1 dB -> 0.1 dB (noise), 0.9 -> 0.1 dB (speech). Echo cases unchanged: ERLE 44.3 / 44.9 / 40.9 dB (16 kHz) and 36.0 dB (8 kHz), first 2 s 35.8-39.9 dB, modulated lab signals 35.9-46.2 dB.
 - Known limit: an echo more than about 10 dB under the room noise forms no evidence and is no longer suppressed. `OPENIMP_AEC_STATS=1` lines end with `echo gate N %`. Device proof on the T30X is open (run b93 prepared).
+
 ## 2026-11-14: tools: `make mp-wiki` generates the wiki page Module-Parameters-All
 
 - `tools/gen_module_params_wiki.py` (new): lists every module parameter of every SoC (type, permission, default, description, bring-up-only names) from `module_param*()` and `MODULE_PARM_DESC()` in an open-tx-isp checkout (`--repo`, env `OPEN_TX_ISP`, default `../open-tx-isp`); `make mp-wiki WIKI_DIR=<openimp.wiki checkout>` next to `api-wiki`. Run after every driver merge round (docs/ai/reference.md). Docs and tooling only.
@@ -21,6 +22,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-14: docs: T10/T20 SetDRC_Strength row approved
 
 - `docs/OPENIMP_BEYOND_VENDOR.md`: `IMP_ISP_Tuning_SetDRC_Strength` acting on the auto Iridix strength on T10/T20 is a beyond-vendor row, user OK 2026-11-14, kept. Docs only.
+
 ## 2026-11-14: docs: German RE/test notes translated to English
 
 - Translated 14 German docs to English, content unchanged (structure, tables, register values, line/address references and [V]/[I]/[?] marks kept): `docs/RE_TRACE_GUIDE.md`, `docs/T31_OSD_RE.md`, `docs/T31_HW_JPEG_RE.md`, `docs/T31_HW_JPEG_RE_FOLLOWUP.md`, `docs/T31_AVC_STABILITY_RE.md`, `docs/T31_IVS_MOVE.md`, `docs/T31_TEST_PLAN.md`, `docs/T31_HW_JPEG_TEST.md`, `docs/T31_OSD_IPU_TEST.md`, `docs/T31_AVC_STABILITY_TEST.md`, `docs/archive/HANDOVER_OIMP_OSDTHICK.md` and the three T31 reports under `docs/test-reports/`. Docs only.
@@ -49,6 +51,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `src/eprc/eprc_t33_h265.c` (the hand port of the vendor 2.2.0 H.265 controller) is now built and runs behind `t32_rc65_*` in `src/t32/openimp_t32_rc33.c`: `i265e_param_default`, the channel words of `channel_i265e_encoder_init`, the `I265e_configure` clamps and `I265eRatectrl_rcInit` / `_rcStart` / `_rcEnd` on the controller's arena (the `cnst_pmd_qp_thrd` words the controller patches are arena region 2). `src/t32/openimp_t32_rc.c` maps the IMP attribute (`t32_rc65_params`); H.265 channels use it instead of the T23 revision (QVBR stays there). The encoder hands the 38 HERA statistics and, after an I picture, the 64-line row sizes to `rcEnd`.
 - Checked against vendor libimp 2.2.0 (`tools/eprc_t33_h265_oracle.py --params / --scenarios / --rows`, `tests/t32/rc65_test.c`): 400 random attributes give the same parameter words; 164 scenarios (21740 pictures) the same picture type and QP for every picture. QEMU 640x360 CBR / VBR: decode clean, picture intact, EFE_FRM_QP == slice QP == the vendor controller on the run's sizes. T31 / T41 libimp.so byte-identical. `build-t33.sh` now also builds the T33 controllers and their glue.
+
 ## 2026-11-14: T30 System/sysutils on neo from the T30X run b88 (#27)
 
 - T30X lab run b88 (3 min, no flash, 0 oopses): the open libsysutils neo (aperto 2d689bd, built for T30) from /tmp against the vendor 1.0.5, apitest area `su` plus a small tester. `SU_CIPHER_ConfigHandle`, `SU_CIPHER_Encrypt`, `SU_CIPHER_Decrypt` -> nohw: no /dev/aes on the T30X, neo and vendor answer the same codes (-14, -16, -16).
@@ -60,6 +63,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `src/t40/t40_ep1.c`, `src/t40/codec-t40.c` (T40 build): command lists and EP1 read at every AVPU push on both stacks (Eufy T40XP, light box, AVC FixQP 25, 1920x1080 and 640x360) showed: (1) the vendor 1.3.1 FixQP lambda table has about twice the intra lane (byte 2) of the T31 table from QP 22 (QP 30 `0x08060800`, QP 51 `0x6b506b00`); (2) only the first picture of a channel carries the intra-only lambda words, later IDRs the P table; (3) GOP IDRs carry the P words `cmd[0x08] = 0x11000000` / `cmd[0x12] = 0x8001b01d`; (4) a requested IDR restarts the GOP count. All four now as the vendor; after the fix the 1080p command lists, EP1 and EP2 header are word-equal with the vendor except the stream window words `cmd[0x31]`/`cmd[0x33]` and `cmd[0x1b]` bits 16/17 on one IDR.
 - Box (5000 K, FixQP 25, 1080p): I picture 100180 -> 81516 B (vendor 75163), P 6321..6848 -> 6705 B (vendor 5852); CBR 2000 SSIM per frame 0.9826 (vendor 0.9861), unchanged by this fix (FixQP-only lambdas). Remaining gap: ch0 NV12 under the settled auto AE is 3-4 % noisier on open (flat sigma 0.631 / 0.610, at the same manual exposure equal 0.788 / 0.793), an ISP denoise topic (#443 continues).
 - HEVC keeps the T31 table (not captured). `OPENIMP_T40_LDA131=0` restores the T31 AVC table, `OPENIMP_T40_GOP_IDR=0` the old IDR words, lambdas and GOP count. Host test `tests/t40/vendor_cmd_test.c` updated to the 1.3.1 words.
+
 ## 2026-11-14: T33 online LDC applied by the open module (#491; QEMU only)
 
 - open-tx-isp next 04be28e19 switches online LDC on at ISP init as the vendor; with OpenIMP's AddSensor requests the 50 online-LDC register writes of a vendor QEMU run are equal. Cell T33 `ISP_LDC_OnlineInit` cache -> qemu.
