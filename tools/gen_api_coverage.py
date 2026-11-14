@@ -58,7 +58,7 @@ CELL = {
     "miss": ("s-miss", "❌", "❌ miss", "not exported by OpenIMP"),
     "n.a.": ("s-na", "·", "–", "function does not exist on this SoC (not in that SoC's vendor API; not a gap)"),
     "?": ("s-unk", "?", "?", "state not determined"),
-    "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC yet (planned)"),
+    "nob": ("s-plan", "📋", "📋", "no OpenIMP build for this SoC (class unused today: T32 and T33 have a build, planned, QEMU only)"),
 }
 OK, WIPC, GAP, UNK = {"dev", "dev+", "run", "no-op", "rt", "nohw"}, {"host", "aud", "qemu"}, {"cache", "stub", "err", "miss"}, {"?"}
 LEVEL = {"dev", "rt", "run", "nohw", "host", "aud", "qemu", "no-op", "cache", "stub", "err"}     # states that need an exported symbol
@@ -76,6 +76,20 @@ def slugify(s):
 class Model:
     def __init__(self, md_text=None):
         self.ev = json.load(open(EVID, encoding="utf-8"))
+        # "As of": the newest date named in any evidence note/ref (the hand-kept "asof" field lagged the data), never older than "asof"
+        dates = [self.ev.get("asof", "")]
+
+        def _scan(x):
+            if isinstance(x, str):
+                dates.extend(re.findall(r"20\d\d-\d\d-\d\d", x))
+            elif isinstance(x, dict):
+                for v in x.values():
+                    _scan(v)
+            elif isinstance(x, list):
+                for v in x:
+                    _scan(v)
+        _scan(self.ev.get("functions", {}))
+        self.asof = max(d for d in dates if d)
         self.socs = self.ev["socs"]
         self.exports = json.load(open(EXPO, encoding="utf-8")) if os.path.exists(EXPO) else {}
         up = os.path.join(sd.SDIR, "untested.json")
@@ -254,7 +268,7 @@ class Model:
         if st["total"] == 0:
             return ""
         if st["nob"]:
-            return "0/%d (no OpenIMP build yet)" % st["total"]
+            return "0/%d (no OpenIMP build)" % st["total"]
         t = "%d/%d ✅ · %d 🔧 · %d gaps · %d ?" % (st["ok"], st["total"], st["wip"], st["gap"], st["unk"])
         if st["ws"]:
             t += " · %d 🚧" % st["ws"]
@@ -336,7 +350,7 @@ class Model:
                  "vendor names it covers). Only functions that exist in a SoC's vendor API count for that SoC; a function that "
                  "is not in that SoC's vendor API is shown as `·` and is never a gap. Evidence lives in "
                  "`docs/api_evidence.json` (level per function and SoC, reference, streamer use); the exports of the OpenIMP "
-                 "builds in `docs/api_exports.json` (nm of `libimp.so`) are cross-checked on every run." % self.ev["asof"])
+                 "builds in `docs/api_exports.json` (nm of `libimp.so`) are cross-checked on every run." % self.asof)
         o.append("")
         o.append("### Coverage summary")
         o.append("")
@@ -358,15 +372,15 @@ class Model:
         o.append("Gaps (error, missing, stub, cache-only) in functions that at least one streamer "
                  "(p prudynt, r raptor, t timps; † = source only, no binary checked) calls, sorted by the number of streamers; "
                  "functions of unknown state (?) that a streamer calls are listed as a separate tier (audit pending). "
-                 "Gaps in functions no streamer calls follow as a count (lower priority). T32/T33 have no OpenIMP build yet: their line "
-                 "counts the vendor functions the streamers call and that the first build has to provide.")
+                 "Gaps in functions no streamer calls follow as a count (lower priority). A SoC without an OpenIMP build would show a line that "
+                 "counts the vendor functions the streamers call and that the first build has to provide (none today: T32 and T33 have a build, planned, QEMU only).")
         o.append("")
         pr = self.priorities()
         for s in socs:
             used, unused, nobu, uunk, unk = pr[s]
             if nobu:
                 top = ", ".join("`%s` (%s)" % (f["name"], self.ulabel(self.users(f, s))) for f in nobu[:12])
-                o.append("- **%s:** no OpenIMP build yet; %d vendor functions are called by a streamer. Most used: %s" % (
+                o.append("- **%s:** no OpenIMP build; %d vendor functions are called by a streamer. Most used: %s" % (
                     s, len(nobu), top))
                 continue
             top = ", ".join("`%s` (%s; %s)" % (f["name"], f["cells"][s], self.ulabel(self.users(f, s))) for f in used)
@@ -380,8 +394,8 @@ class Model:
         o.append("### Long-term backlog")
         o.append("")
         o.append("Completeness list, separate from the streamer priorities: every vendor function of the SoC that is missing, "
-                 "partial (cache-only, stub, error) or of unknown state (?) and that **no streamer calls today** (for T32/T33: "
-                 "every vendor function no streamer calls, as there is no build yet). Grouped by area with the suggested action: "
+                 "partial (cache-only, stub, error) or of unknown state (?) and that **no streamer calls today**. "
+                 "Grouped by area with the suggested action: "
                  "implement, documented ENOTSUP (the open driver answers like a vendor stack without the feature) or not applicable "
                  "(declared in a header but exported by no vendor library). Default action derived from the evidence note; "
                  "override per function with `action` in `docs/api_evidence.json`.")
@@ -554,7 +568,7 @@ class Model:
                     esc(self.ulabel(self.users(f, s))) if st else "")
             if nobu:
                 items = "".join('<li><code>%s</code> <span class="small">%s</span></li>' % (esc(f["name"]), esc(self.ulabel(self.users(f, s)))) for f in nobu[:40])
-                out.append('<details class="prio"><summary><b>%s</b> <span class="s-plan sym">no OpenIMP build yet</span> %d vendor functions are called by a streamer '
+                out.append('<details class="prio"><summary><b>%s</b> <span class="s-plan sym">no OpenIMP build</span> %d vendor functions are called by a streamer '
                            '(the first build has to provide them)</summary><ul class="pl">%s</ul>%s</details>' % (
                                s, len(nobu), items, "<p class='small'>top 40 by number of streamers</p>" if len(nobu) > 40 else ""))
                 continue
@@ -598,7 +612,7 @@ class Model:
                 '</section><section class="card" id="backlog"><h2>Long-term backlog</h2>'
                 '<p class="small">Separate from the streamer priorities: vendor functions that are missing, partial or of unknown state and '
                 'that no streamer calls today, per SoC, grouped by area with the suggested action (implement / documented ENOTSUP / '
-                'not applicable). For T32/T33 (no build yet) all vendor functions no streamer calls.</p>' + self.html_backlog() +
+                'not applicable). T32/T33 are planned (QEMU only, no camera).</p>' + self.html_backlog() +
                 '</section><section class="card"><h3>API coverage at a glance</h3>'
                 '<p class="small">Works (device-tested or vendor no-op) / functions that exist in the SoC\'s vendor API; functions the '
                 'vendor API does not have are not counted. Click an area for the full function table.</p>'
@@ -609,7 +623,7 @@ class Model:
         o = ['<h2 id="api-coverage">%s</h2>' % HEAD]
         o.append('<p class="meta">As of %s. One row per vendor function; click a function name for its note and evidence. '
                  'Legend: %s. A construction sign (&#128679;) marks work in progress (open GitHub issue labelled type:wip, docs/status/issues.json).</p>' % (
-                     esc(self.ev["asof"]), " &middot; ".join(
+                     esc(self.asof), " &middot; ".join(
                          '<span class="sym %s">%s</span> %s' % (CELL[c][0], esc(CELL[c][2] or "&middot;"), esc(CELL[c][3]))
                          for c in ("dev", "dev+", "rt", "run", "no-op", "nohw", "host", "aud", "qemu", "cache", "stub", "err", "miss", "n.a.", "?", "nob"))))
         o.append('<div class="mxctl"><div class="fg"><span class="fl">Rows</span>'

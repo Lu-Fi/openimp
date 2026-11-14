@@ -717,7 +717,7 @@ function apiSec(n,s,full){
     var tot=d.ok.length+d.wip.length+d.gap.length+d.unk.length+d.nob;
     h+='<div class="apx"><b>API: '+esc(a)+' on '+s+'</b> ';
     if(!tot){h+='<span class="small">no function of this area in the '+s+' vendor API</span></div>';return}
-    if(d.nob){h+='<span class="small">no OpenIMP build for '+s+' yet: '+d.nob+' vendor functions to provide</span></div>';return}
+    if(d.nob){h+='<span class="small">no OpenIMP build for '+s+': '+d.nob+' vendor functions to provide</span></div>';return}
     h+='<span class="small">'+d.ok.length+'/'+tot+' work'+(d.wip.length?', '+d.wip.length+' implemented not device-tested':'')+(d.gap.length?', '+d.gap.length+' gaps':'')+(d.unk.length?', '+d.unk.length+' unknown':'')+(d.ws.length?', '+d.ws.length+' in progress':'')+'</span>';
     if(full){
       var L=function(t,l,o){return l.length?'<details'+(o?' open':'')+'><summary>'+t+' ('+l.length+')</summary><ul>'+l.map(function(x){return '<li><code>'+esc(x)+'</code></li>'}).join('')+'</ul></details>':''};
