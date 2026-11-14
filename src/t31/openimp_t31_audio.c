@@ -446,13 +446,14 @@ static void t31_aec_stats_frame(const int16_t *reference, const int16_t *mic,
 
         t31_aec_log("frames %u: ref %u active %u missing %u | mic %.1f "
                     "ref %.1f out %.1f dBFS | ERLE(ref active) %.1f dB "
-                    "| delay ~%d ms | failed blocks %lu",
+                    "| delay ~%d ms | failed blocks %lu | echo gate %d %%",
                     t31_audio.stats.frames,
                     t31_audio.stats.frames - t31_audio.stats.noref,
                     t31_audio.stats.ref_active, t31_audio.stats.noref,
                     mic / 10.0, ref / 10.0, out_db / 10.0, erle / 10.0,
                     openimp_aec_delay_ms(t31_audio.aec),
-                    failed - t31_audio.aec_failed_logged);
+                    failed - t31_audio.aec_failed_logged,
+                    openimp_aec_echo_gate_percent(t31_audio.aec));
         t31_audio.aec_failed_logged = failed;
     }
     memset(&t31_audio.stats, 0, sizeof(t31_audio.stats));

@@ -27,6 +27,10 @@ void openimp_aec_set_reference_delay_ms(OpenimpAec *aec, int delay_ms);
 unsigned long openimp_aec_failed_blocks(const OpenimpAec *aec);
 /* AECM's current echo delay estimate in ms, -1 when unknown. */
 int openimp_aec_delay_ms(const OpenimpAec *aec);
+/* Echo gate 0..100: how far the suppression is switched on.  0 while the
+ * microphone does not follow the far end (no echo: the near end passes
+ * unchanged), 100 with a clear echo.  See openimp_aec.c. */
+int openimp_aec_echo_gate_percent(const OpenimpAec *aec);
 void openimp_aec_free(OpenimpAec *aec);
 
 #endif
