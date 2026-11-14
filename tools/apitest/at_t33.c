@@ -925,4 +925,532 @@ void cs_t33f1(void)
     wdog("cases", 60);
     t33_f1_ex_pm();
 }
+
+/* ---- case "t33e1": encoder parameter calls of batches E1a / E1b / E2 and the unbound encoders of E3 (#480) ------------------------
+ * Codes on a channel number of 16, a NULL argument (only where the vendor 2.0.2.1 checks it), a channel never created (5), then on a
+ * started H.264 and a started H.265 channel 0 (FS ch1, 640x360): read the default, set, read back, out-of-range values, and what the
+ * stream shows (IDR spacing, SPS / PPS bytes after the change, SEI user data).  Every line prints values, so the vendor and the
+ * OpenIMP runs compare line by line; the verdict is PASS when the call answered (it does not judge the values). */
+extern int IMP_Encoder_GetChangeRef(int chn, int *en) __attribute__((weak));
+extern int IMP_Encoder_SetChangeRef(int chn, int en) __attribute__((weak));
+extern int IMP_Encoder_GetChnColor2Grey(int chn, IMPEncoderColor2GreyCfg *c) __attribute__((weak));
+extern int IMP_Encoder_SetChnColor2Grey(int chn, const IMPEncoderColor2GreyCfg *c) __attribute__((weak));
+extern int IMP_Encoder_GetChnDenoise(int chn, IMPEncoderAttrDenoise *d) __attribute__((weak));
+extern int IMP_Encoder_SetChnDenoise(int chn, const IMPEncoderAttrDenoise *d) __attribute__((weak));
+extern int IMP_Encoder_GetMbRC(int chn, int *en) __attribute__((weak));
+extern int IMP_Encoder_SetMbRC(int chn, int en) __attribute__((weak));
+extern int IMP_Encoder_SetPadFrameAttr(int chn, int en, const void *attr) __attribute__((weak));
+extern int IMP_Encoder_PadFrame(int chn, void *frame, void *priv, void (*release)(void *, void *)) __attribute__((weak));
+extern int IMP_Encoder_SetChnRcTrigLevel(int chn, uint32_t level, int mode) __attribute__((weak));
+extern int IMP_Encoder_SetChnQpgAI_Yuv(void *h, IMPEncoderQpgAICfg *c) __attribute__((weak));
+int enc_e1_up(int chn, int codec);
+int enc_e1_up_ud(int chn, int codec, int ud_cnt, int ud_size);
+void enc_e1_down(int chn);
+int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, void *), void *arg);
+
+#define E1_LINE(fn, ...) rep(#fn, 0, V_PASS, __VA_ARGS__)
+static void e1_hex(const void *p, size_t n, char *out, size_t cap)
+{
+    const unsigned char *b = p;
+    size_t i, o = 0;
+
+    out[0] = 0;
+    for (i = 0; i < n && o + 3 < cap; i++) o += (size_t)snprintf(out + o, cap - o, "%02x", b[i]);
+}
+
+typedef struct {
+    int h265, idr[64], nidr, sei, user, frames;
+    char sps[200], pps[120], seihex[120];
+} E1Scan;
+
+static void e1_cb(const unsigned char *b, size_t n, int k, void *arg)
+{
+    E1Scan *e = arg;
+    size_t i, j;
+
+    e->frames++;
+    for (i = 0; i + 4 < n; i++) {
+        unsigned t;
+
+        if (b[i] || b[i + 1] || b[i + 2] != 1) continue;
+        t = e->h265 ? (b[i + 3] >> 1) & 63 : b[i + 3] & 31;
+        for (j = i + 3; j + 3 < n && !(b[j] == 0 && b[j + 1] == 0 && b[j + 2] == 1); j++) ;
+        if (j + 3 >= n) j = n;
+        else if (j > 0 && b[j - 1] == 0) j--;
+        if ((!e->h265 && t == 5) || (e->h265 && (t == 19 || t == 20))) { if (!e->nidr || e->idr[e->nidr - 1] != k) if (e->nidr < 64) e->idr[e->nidr++] = k; }
+        if ((!e->h265 && t == 7) || (e->h265 && t == 33)) { if (!e->sps[0]) e1_hex(b + i + 3, j - i - 3 > 90 ? 90 : j - i - 3, e->sps, sizeof(e->sps)); }
+        if ((!e->h265 && t == 8) || (e->h265 && t == 34)) { if (!e->pps[0]) e1_hex(b + i + 3, j - i - 3 > 50 ? 50 : j - i - 3, e->pps, sizeof(e->pps)); }
+        if ((!e->h265 && t == 6) || (e->h265 && (t == 39 || t == 40))) {
+            e->sei++;
+            if (!e->seihex[0]) e1_hex(b + i + 3, j - i - 3 > 50 ? 50 : j - i - 3, e->seihex, sizeof(e->seihex));
+        }
+        i += 2;
+    }
+    for (i = 0; i + 7 <= n; i++) if (!memcmp(b + i, "apitest", 7)) { e->user++; break; }
+}
+
+static void e1_idrs(const E1Scan *e, char *out, size_t cap)
+{
+    int i;
+    size_t o = 0;
+
+    out[0] = 0;
+    for (i = 0; i < e->nidr && o + 6 < cap; i++) o += (size_t)snprintf(out + o, cap - o, "%s%d", i ? "," : "", e->idr[i]);
+}
+
+/* pull @n frames after a requested IDR (@idr) and print what the stream shows */
+static void e1_stream(const char *fn, int h265, int n, int idr, const char *what)
+{
+    E1Scan e;
+    char ids[200];
+
+    memset(&e, 0, sizeof(e));
+    e.h265 = h265;
+    if (idr) IMP_Encoder_RequestIDR(0);
+    enc_e1_pull(0, n, e1_cb, &e);
+    e1_idrs(&e, ids, sizeof(ids));
+    rep(fn, 0, e.frames ? V_PASS : V_FAIL, "%s: %d frames, IDR at %s, SEI %d, user data %d; SPS %s; PPS %s; SEI %s", what, e.frames, ids, e.sei, e.user,
+        e.sps, e.pps, e.seihex);
+}
+
+static int e1_pad_released;
+static void e1_pad_release(void *f, void *p) { (void)f; (void)p; e1_pad_released++; }
+
+/* the channel-free part: chn 16, NULL, chn 5 */
+static void e1_codes(void)
+{
+    IMPEncoderGOPSizeCfg g = { 10 };
+    IMPEncoderH264Vui v4; IMPEncoderH265Vui v5; IMPEncoderH264TransCfg t4 = { 0 }; IMPEncoderH265TransCfg t5 = { 0, 0 };
+    IMPEncoderSuperFrmCfg sf; IMPEncoderGDRCfg gd = { 1, 30, 5 }; IMPEncoderPskipCfg ps = { 1, 2, 120 };
+    IMPEncoderColor2GreyCfg cg = { 1 }; IMPEncoderAttrDenoise dn = { 1, 1, 30, 30 }; IMPEncoderAttrHSkip hs;
+    IMPEncoderCropCfg cr = { 1, 0, 0, 320, 180 }; IMPEncoderQpgMode qm = ENC_MBQP_AUTO; IMPEncoderSrdCfg srd = { 1, 1 };
+    IMPEncoderMotionQuality mq = { 1, 1 }; IMPEncoderQpgAICfg qa; IMPEncoderROIAttr *roi = calloc(1, sizeof(IMPEncoderROIAttr));
+    int en = -1, a, b, c, d;
+    char pad[32];
+
+    memset(&v4, 0, sizeof(v4)); memset(&v5, 0, sizeof(v5)); memset(&sf, 0, sizeof(sf)); memset(&hs, 0, sizeof(hs)); memset(&qa, 0, sizeof(qa));
+    memset(pad, 0, sizeof(pad));
+#define C3(fn, e16, enull, e5) do { a = (e16); b = (enull); c = (e5); rep(#fn, 0, V_PASS, "chn 16 0x%x, NULL 0x%x, chn 5 (not created) 0x%x", X(a), X(b), X(c)); } while (0)
+#define C2(fn, e16, e5) do { a = (e16); c = (e5); rep(#fn, 0, V_PASS, "chn 16 0x%x, chn 5 (not created) 0x%x", X(a), X(c)); } while (0)
+    if (IMP_Encoder_SetGOPSize) C2(IMP_Encoder_SetGOPSize, IMP_Encoder_SetGOPSize(16, &g), IMP_Encoder_SetGOPSize(5, &g));
+    if (IMP_Encoder_GetGOPSize) C2(IMP_Encoder_GetGOPSize, IMP_Encoder_GetGOPSize(16, &g), IMP_Encoder_GetGOPSize(5, &g));
+    if (IMP_Encoder_SetH264Vui) C3(IMP_Encoder_SetH264Vui, IMP_Encoder_SetH264Vui(16, &v4), IMP_Encoder_SetH264Vui(0, NULL), IMP_Encoder_SetH264Vui(5, &v4));
+    if (IMP_Encoder_GetH264Vui) C3(IMP_Encoder_GetH264Vui, IMP_Encoder_GetH264Vui(16, &v4), IMP_Encoder_GetH264Vui(0, NULL), IMP_Encoder_GetH264Vui(5, &v4));
+    if (IMP_Encoder_SetH265Vui) C3(IMP_Encoder_SetH265Vui, IMP_Encoder_SetH265Vui(16, &v5), IMP_Encoder_SetH265Vui(0, NULL), IMP_Encoder_SetH265Vui(5, &v5));
+    if (IMP_Encoder_GetH265Vui) C3(IMP_Encoder_GetH265Vui, IMP_Encoder_GetH265Vui(16, &v5), IMP_Encoder_GetH265Vui(0, NULL), IMP_Encoder_GetH265Vui(5, &v5));
+    if (IMP_Encoder_SetH264TransCfg) C3(IMP_Encoder_SetH264TransCfg, IMP_Encoder_SetH264TransCfg(16, &t4), IMP_Encoder_SetH264TransCfg(0, NULL), IMP_Encoder_SetH264TransCfg(5, &t4));
+    if (IMP_Encoder_GetH264TransCfg) C3(IMP_Encoder_GetH264TransCfg, IMP_Encoder_GetH264TransCfg(16, &t4), IMP_Encoder_GetH264TransCfg(0, NULL), IMP_Encoder_GetH264TransCfg(5, &t4));
+    if (IMP_Encoder_SetH265TransCfg) C3(IMP_Encoder_SetH265TransCfg, IMP_Encoder_SetH265TransCfg(16, &t5), IMP_Encoder_SetH265TransCfg(0, NULL), IMP_Encoder_SetH265TransCfg(5, &t5));
+    if (IMP_Encoder_GetH265TransCfg) C3(IMP_Encoder_GetH265TransCfg, IMP_Encoder_GetH265TransCfg(16, &t5), IMP_Encoder_GetH265TransCfg(0, NULL), IMP_Encoder_GetH265TransCfg(5, &t5));
+    if (IMP_Encoder_GetSuperFrameCfg) C3(IMP_Encoder_GetSuperFrameCfg, IMP_Encoder_GetSuperFrameCfg(16, &sf), IMP_Encoder_GetSuperFrameCfg(0, NULL), IMP_Encoder_GetSuperFrameCfg(5, &sf));
+    if (IMP_Encoder_SetSuperFrameCfg) C3(IMP_Encoder_SetSuperFrameCfg, IMP_Encoder_SetSuperFrameCfg(16, &sf), IMP_Encoder_SetSuperFrameCfg(0, NULL), IMP_Encoder_SetSuperFrameCfg(5, &sf));
+    if (IMP_Encoder_InsertUserData) C3(IMP_Encoder_InsertUserData, IMP_Encoder_InsertUserData(16, "apitest", 7), IMP_Encoder_InsertUserData(5, NULL, 7), IMP_Encoder_InsertUserData(5, "apitest", 7));
+    if (IMP_Encoder_SetChangeRef) C2(IMP_Encoder_SetChangeRef, IMP_Encoder_SetChangeRef(16, 1), IMP_Encoder_SetChangeRef(5, 1));
+    if (IMP_Encoder_GetChangeRef) C2(IMP_Encoder_GetChangeRef, IMP_Encoder_GetChangeRef(16, &en), IMP_Encoder_GetChangeRef(5, &en));
+    if (IMP_Encoder_SetChnColor2Grey) C2(IMP_Encoder_SetChnColor2Grey, IMP_Encoder_SetChnColor2Grey(16, &cg), IMP_Encoder_SetChnColor2Grey(5, &cg));
+    if (IMP_Encoder_GetChnColor2Grey) { cg.enable = 1; c = IMP_Encoder_GetChnColor2Grey(5, &cg); a = IMP_Encoder_GetChnColor2Grey(16, &cg);
+        rep("IMP_Encoder_GetChnColor2Grey", 0, V_PASS, "chn 16 0x%x, chn 5 (not created) 0x%x enable %d", X(a), X(c), (int)cg.enable); }
+    if (IMP_Encoder_SetGDRCfg) C3(IMP_Encoder_SetGDRCfg, IMP_Encoder_SetGDRCfg(16, &gd), IMP_Encoder_SetGDRCfg(5, NULL), IMP_Encoder_SetGDRCfg(5, &gd));
+    if (IMP_Encoder_GetGDRCfg) C3(IMP_Encoder_GetGDRCfg, IMP_Encoder_GetGDRCfg(16, &gd), IMP_Encoder_GetGDRCfg(5, NULL), IMP_Encoder_GetGDRCfg(5, &gd));
+    if (IMP_Encoder_RequestGDR) C2(IMP_Encoder_RequestGDR, IMP_Encoder_RequestGDR(16, 5), IMP_Encoder_RequestGDR(5, 5));
+    if (IMP_Encoder_SetPskipCfg) C3(IMP_Encoder_SetPskipCfg, IMP_Encoder_SetPskipCfg(16, &ps), IMP_Encoder_SetPskipCfg(5, NULL), IMP_Encoder_SetPskipCfg(5, &ps));
+    if (IMP_Encoder_GetPskipCfg) C3(IMP_Encoder_GetPskipCfg, IMP_Encoder_GetPskipCfg(16, &ps), IMP_Encoder_GetPskipCfg(5, NULL), IMP_Encoder_GetPskipCfg(5, &ps));
+    if (IMP_Encoder_RequestPskip) C2(IMP_Encoder_RequestPskip, IMP_Encoder_RequestPskip(16), IMP_Encoder_RequestPskip(5));
+    if (IMP_Encoder_SetChnQpBoundsPerFrame) C2(IMP_Encoder_SetChnQpBoundsPerFrame, IMP_Encoder_SetChnQpBoundsPerFrame(16, 20, 40, 22, 45), IMP_Encoder_SetChnQpBoundsPerFrame(5, 20, 40, 22, 45));
+    if (IMP_Encoder_SetChnRcTrigLevel) C2(IMP_Encoder_SetChnRcTrigLevel, IMP_Encoder_SetChnRcTrigLevel(16, 2, 1), IMP_Encoder_SetChnRcTrigLevel(5, 2, 1));
+    if (IMP_Encoder_SetPadFrameAttr) C2(IMP_Encoder_SetPadFrameAttr, IMP_Encoder_SetPadFrameAttr(16, 1, pad), IMP_Encoder_SetPadFrameAttr(5, 1, pad));
+    if (IMP_Encoder_PadFrame) { e1_pad_released = 0; a = IMP_Encoder_PadFrame(16, pad, NULL, e1_pad_release); b = IMP_Encoder_PadFrame(5, NULL, NULL, e1_pad_release);
+        c = IMP_Encoder_PadFrame(5, pad, NULL, e1_pad_release);
+        rep("IMP_Encoder_PadFrame", 0, V_PASS, "chn 16 0x%x, NULL frame 0x%x, chn 5 (not created) 0x%x; release callbacks %d", X(a), X(b), X(c), e1_pad_released); }
+    if (IMP_Encoder_SetChnCrop) C2(IMP_Encoder_SetChnCrop, IMP_Encoder_SetChnCrop(16, &cr), IMP_Encoder_SetChnCrop(5, &cr));
+    if (IMP_Encoder_GetChnCrop) C2(IMP_Encoder_GetChnCrop, IMP_Encoder_GetChnCrop(16, &cr), IMP_Encoder_GetChnCrop(5, &cr));
+    if (IMP_Encoder_SetChnDenoise) C2(IMP_Encoder_SetChnDenoise, IMP_Encoder_SetChnDenoise(16, &dn), IMP_Encoder_SetChnDenoise(5, &dn));
+    if (IMP_Encoder_GetChnDenoise) C2(IMP_Encoder_GetChnDenoise, IMP_Encoder_GetChnDenoise(16, &dn), IMP_Encoder_GetChnDenoise(5, &dn));
+    if (IMP_Encoder_SetChnHSkip) C2(IMP_Encoder_SetChnHSkip, IMP_Encoder_SetChnHSkip(16, &hs), IMP_Encoder_SetChnHSkip(5, &hs));
+    if (IMP_Encoder_GetChnHSkip) C2(IMP_Encoder_GetChnHSkip, IMP_Encoder_GetChnHSkip(16, &hs), IMP_Encoder_GetChnHSkip(5, &hs));
+    if (IMP_Encoder_SetChnHSkipBlackEnhance) C2(IMP_Encoder_SetChnHSkipBlackEnhance, IMP_Encoder_SetChnHSkipBlackEnhance(16, 1), IMP_Encoder_SetChnHSkipBlackEnhance(5, 1));
+    if (IMP_Encoder_SetChnROI) C3(IMP_Encoder_SetChnROI, IMP_Encoder_SetChnROI(16, roi), IMP_Encoder_SetChnROI(5, NULL), IMP_Encoder_SetChnROI(5, roi));
+    if (IMP_Encoder_GetChnROI) C3(IMP_Encoder_GetChnROI, IMP_Encoder_GetChnROI(16, roi), IMP_Encoder_GetChnROI(5, NULL), IMP_Encoder_GetChnROI(5, roi));
+    if (IMP_Encoder_SetMbRC) C2(IMP_Encoder_SetMbRC, IMP_Encoder_SetMbRC(16, 1), IMP_Encoder_SetMbRC(5, 1));
+    if (IMP_Encoder_GetMbRC) C2(IMP_Encoder_GetMbRC, IMP_Encoder_GetMbRC(16, &en), IMP_Encoder_GetMbRC(5, &en));
+    if (IMP_Encoder_SetQpgMode) C3(IMP_Encoder_SetQpgMode, IMP_Encoder_SetQpgMode(16, &qm), IMP_Encoder_SetQpgMode(5, NULL), IMP_Encoder_SetQpgMode(5, &qm));
+    if (IMP_Encoder_GetQpgMode) C3(IMP_Encoder_GetQpgMode, IMP_Encoder_GetQpgMode(16, &qm), IMP_Encoder_GetQpgMode(5, NULL), IMP_Encoder_GetQpgMode(5, &qm));
+    if (IMP_Encoder_SetSrdCfg) C3(IMP_Encoder_SetSrdCfg, IMP_Encoder_SetSrdCfg(16, &srd), IMP_Encoder_SetSrdCfg(5, NULL), IMP_Encoder_SetSrdCfg(5, &srd));
+    if (IMP_Encoder_GetSrdCfg) C3(IMP_Encoder_GetSrdCfg, IMP_Encoder_GetSrdCfg(16, &srd), IMP_Encoder_GetSrdCfg(5, NULL), IMP_Encoder_GetSrdCfg(5, &srd));
+    if (IMP_Encoder_SetMotionQuality) C3(IMP_Encoder_SetMotionQuality, IMP_Encoder_SetMotionQuality(16, &mq), IMP_Encoder_SetMotionQuality(5, NULL), IMP_Encoder_SetMotionQuality(5, &mq));
+    if (IMP_Encoder_GetMotionQuality) C3(IMP_Encoder_GetMotionQuality, IMP_Encoder_GetMotionQuality(16, &mq), IMP_Encoder_GetMotionQuality(5, NULL), IMP_Encoder_GetMotionQuality(5, &mq));
+    if (IMP_Encoder_SetChnQpgAI) C3(IMP_Encoder_SetChnQpgAI, IMP_Encoder_SetChnQpgAI(16, &qa), IMP_Encoder_SetChnQpgAI(5, NULL), IMP_Encoder_SetChnQpgAI(5, &qa));
+    (void)d;
+    free(roi);
+}
+
+/* a started H.264 (@h265 0) or H.265 channel 0 */
+static void e1_live(int h265)
+{
+    const char *cn = h265 ? "H265" : "H264";
+    char h1[160], h2[160];
+    int a, b, c, d, en = -1, en2 = -1;
+
+    if (enc_e1_up(0, h265) != 0) { rep("IMP_Encoder_CreateChn", -1, V_FAIL, "t33e1: %s chn 0 could not be started", cn); return; }
+    e1_stream(h265 ? "e1 H265 base stream" : "e1 H264 base stream", h265, 4, 1, "default");
+    if (IMP_Encoder_GetGOPSize && IMP_Encoder_SetGOPSize) {
+        IMPEncoderGOPSizeCfg g0 = { -1 }, z = { 0 }, g10 = { 10 }, g1 = { -1 }, g2 = { -1 };
+        a = IMP_Encoder_GetGOPSize(0, &g0); b = IMP_Encoder_SetGOPSize(0, &z); c = IMP_Encoder_SetGOPSize(0, &g10); d = IMP_Encoder_GetGOPSize(0, &g1);
+        rep("IMP_Encoder_SetGOPSize", 0, V_PASS, "%s: get 0x%x %d, set 0 0x%x, set 10 0x%x, get 0x%x %d", cn, X(a), g0.gopsize, X(b), X(c), X(d), g1.gopsize);
+        e1_stream("IMP_Encoder_GetGOPSize", h265, 24, 1, "after GOP 10 and RequestIDR");
+        IMP_Encoder_GetGOPSize(0, &g2);
+        g10.gopsize = g0.gopsize > 0 ? g0.gopsize : 30; IMP_Encoder_SetGOPSize(0, &g10);
+        rep("IMP_Encoder_GetGOPSize", 0, V_PASS, "%s: after 24 frames get %d", cn, g2.gopsize);
+    }
+    if (!h265 && IMP_Encoder_GetH264Vui && IMP_Encoder_SetH264Vui) {
+        IMPEncoderH264Vui v, w, x;
+        memset(&v, 0, sizeof(v)); memset(&w, 0, sizeof(w));
+        a = IMP_Encoder_GetH264Vui(0, &v); e1_hex(&v, sizeof(v), h1, sizeof(h1));
+        x = v;
+        x.vuiAspectRatio.aspect_ratio_info_present_flag = 1; x.vuiAspectRatio.aspect_ratio_idc = 1;
+        x.vuiVideoSignal.video_signal_type_present_flag = 1; x.vuiVideoSignal.video_format = 5; x.vuiVideoSignal.video_full_range_flag = 1;
+        x.vuiVideoSignal.colour_description_present_flag = 1; x.vuiVideoSignal.colour_primaries = 1; x.vuiVideoSignal.transfer_characteristics = 1;
+        x.vuiVideoSignal.matrix_coefficients = 1; x.vuiBitstreamRestric.bitstream_restriction_flag = 1;
+        b = IMP_Encoder_SetH264Vui(0, &x); c = IMP_Encoder_GetH264Vui(0, &w); e1_hex(&w, sizeof(w), h2, sizeof(h2));
+        rep("IMP_Encoder_GetH264Vui", 0, V_PASS, "get 0x%x %s; after set get 0x%x %s", X(a), h1, X(c), h2);
+        rep("IMP_Encoder_SetH264Vui", 0, V_PASS, "aspect 1, signal 5/full/1/1/1, restriction 1: 0x%x", X(b));
+        e1_stream("IMP_Encoder_SetH264Vui", 0, 3, 1, "after SetH264Vui + RequestIDR");
+        x.vuiAspectRatio.aspect_ratio_idc = 255; x.vuiAspectRatio.sar_width = 4; x.vuiAspectRatio.sar_height = 3;
+        x.vuiTimeInfo.timing_info_present_flag = 0;
+        b = IMP_Encoder_SetH264Vui(0, &x); c = IMP_Encoder_GetH264Vui(0, &w); e1_hex(&w, sizeof(w), h2, sizeof(h2));
+        rep("IMP_Encoder_SetH264Vui", 0, V_PASS, "sar 4:3, no timing: 0x%x, get 0x%x %s", X(b), X(c), h2);
+        e1_stream("IMP_Encoder_SetH264Vui", 0, 3, 1, "after SAR 4:3 + RequestIDR");
+        IMP_Encoder_SetH264Vui(0, &v);
+    }
+    if (h265 && IMP_Encoder_GetH265Vui && IMP_Encoder_SetH265Vui) {
+        IMPEncoderH265Vui v, w, x;
+        memset(&v, 0, sizeof(v)); memset(&w, 0, sizeof(w));
+        a = IMP_Encoder_GetH265Vui(0, &v); e1_hex(&v, sizeof(v), h1, sizeof(h1));
+        x = v;
+        x.vuiAspectRatio.aspect_ratio_info_present_flag = 1; x.vuiAspectRatio.aspect_ratio_idc = 1;
+        x.vuiVideoSignal.video_signal_type_present_flag = 1; x.vuiVideoSignal.video_format = 5; x.vuiVideoSignal.video_full_range_flag = 1;
+        x.vuiVideoSignal.colour_description_present_flag = 1; x.vuiVideoSignal.colour_primaries = 1; x.vuiVideoSignal.transfer_characteristics = 1;
+        x.vuiVideoSignal.matrix_coefficients = 1; x.vuiBitstreamRestric.bitstream_restriction_flag = 1;
+        b = IMP_Encoder_SetH265Vui(0, &x); c = IMP_Encoder_GetH265Vui(0, &w); e1_hex(&w, sizeof(w), h2, sizeof(h2));
+        rep("IMP_Encoder_GetH265Vui", 0, V_PASS, "get 0x%x %s; after set get 0x%x %s", X(a), h1, X(c), h2);
+        rep("IMP_Encoder_SetH265Vui", 0, V_PASS, "aspect 1, signal 5/full/1/1/1, restriction 1: 0x%x", X(b));
+        e1_stream("IMP_Encoder_SetH265Vui", 1, 3, 1, "after SetH265Vui + RequestIDR");
+        IMP_Encoder_SetH265Vui(0, &v);
+    }
+    if (IMP_Encoder_SetH264Vui && IMP_Encoder_SetH265Vui) {
+        IMPEncoderH264Vui v4; IMPEncoderH265Vui v5;
+        memset(&v4, 0, sizeof(v4)); memset(&v5, 0, sizeof(v5));
+        a = h265 ? IMP_Encoder_SetH264Vui(0, &v4) : IMP_Encoder_SetH265Vui(0, &v5);
+        b = h265 ? IMP_Encoder_GetH264Vui(0, &v4) : IMP_Encoder_GetH265Vui(0, &v5);
+        rep(h265 ? "IMP_Encoder_SetH264Vui" : "IMP_Encoder_SetH265Vui", 0, V_PASS, "on a %s channel: set 0x%x, get 0x%x", cn, X(a), X(b));
+    }
+    if (IMP_Encoder_GetH264TransCfg && IMP_Encoder_SetH264TransCfg) {
+        IMPEncoderH264TransCfg t0 = { 99 }, t3 = { 3 }, t13 = { 13 }, tm = { -12 }, t1 = { 99 };
+        a = IMP_Encoder_GetH264TransCfg(0, &t0); b = IMP_Encoder_SetH264TransCfg(0, &t3); c = IMP_Encoder_GetH264TransCfg(0, &t1);
+        d = IMP_Encoder_SetH264TransCfg(0, &t13);
+        en = IMP_Encoder_SetH264TransCfg(0, &tm); IMP_Encoder_GetH264TransCfg(0, &tm);
+        rep("IMP_Encoder_SetH264TransCfg", 0, V_PASS, "%s: get 0x%x %d, set 3 0x%x, get 0x%x %d, set 13 0x%x, set -12 0x%x get %d", cn, X(a), t0.chroma_qp_index_offset, X(b), X(c),
+            t1.chroma_qp_index_offset, X(d), X(en), tm.chroma_qp_index_offset);
+        IMP_Encoder_SetH264TransCfg(0, &t3);
+        e1_stream("IMP_Encoder_GetH264TransCfg", h265, 3, 1, "after TransCfg 3 + RequestIDR");
+        t1.chroma_qp_index_offset = 99; c = IMP_Encoder_GetH264TransCfg(0, &t1);
+        rep("IMP_Encoder_GetH264TransCfg", 0, V_PASS, "%s: after the IDR get 0x%x %d", cn, X(c), t1.chroma_qp_index_offset);
+        t0.chroma_qp_index_offset = 0; IMP_Encoder_SetH264TransCfg(0, &t0);
+    }
+    if (IMP_Encoder_GetH265TransCfg && IMP_Encoder_SetH265TransCfg) {
+        IMPEncoderH265TransCfg t0 = { 99, 99 }, t3 = { 3, -2 }, t13 = { 13, 0 }, t1 = { 99, 99 };
+        a = IMP_Encoder_GetH265TransCfg(0, &t0); b = IMP_Encoder_SetH265TransCfg(0, &t3); c = IMP_Encoder_GetH265TransCfg(0, &t1);
+        d = IMP_Encoder_SetH265TransCfg(0, &t13); IMP_Encoder_SetH265TransCfg(0, &t3);
+        rep("IMP_Encoder_SetH265TransCfg", 0, V_PASS, "%s: get 0x%x cr %d cb %d, set 3/-2 0x%x, get 0x%x cr %d cb %d, set 13 0x%x", cn, X(a), t0.chroma_cr_qp_offset,
+            t0.chroma_cb_qp_offset, X(b), X(c), t1.chroma_cr_qp_offset, t1.chroma_cb_qp_offset, X(d));
+        e1_stream("IMP_Encoder_GetH265TransCfg", h265, 3, 1, "after H265TransCfg 3/-2 + RequestIDR");
+        t1.chroma_cr_qp_offset = t1.chroma_cb_qp_offset = 99; c = IMP_Encoder_GetH265TransCfg(0, &t1);
+        rep("IMP_Encoder_GetH265TransCfg", 0, V_PASS, "%s: after the IDR get 0x%x cr %d cb %d", cn, X(c), t1.chroma_cr_qp_offset, t1.chroma_cb_qp_offset);
+        t0.chroma_cr_qp_offset = t0.chroma_cb_qp_offset = 0; IMP_Encoder_SetH265TransCfg(0, &t0);
+    }
+    if (IMP_Encoder_GetSuperFrameCfg && IMP_Encoder_SetSuperFrameCfg) {
+        IMPEncoderSuperFrmCfg s0, s1, s2;
+        memset(&s0, 0, sizeof(s0)); memset(&s2, 0, sizeof(s2));
+        a = IMP_Encoder_GetSuperFrameCfg(0, &s0);
+        s1 = s0; s1.superFrmMode = IMP_RC_SUPERFRM_REENCODE; s1.superIFrmBitsThr = 400000; s1.superPFrmBitsThr = 300000; s1.superBFrmBitsThr = 200000;
+        s1.rcPriority = IMP_RC_PRIORITY_FRAMEBITS_FIRST; s1.maxReEncodeTimes = 2;
+        b = IMP_Encoder_SetSuperFrameCfg(0, &s1); c = IMP_Encoder_GetSuperFrameCfg(0, &s2);
+        s1.superFrmMode = 3; d = IMP_Encoder_SetSuperFrameCfg(0, &s1);
+        s1.superFrmMode = IMP_RC_SUPERFRM_REENCODE; s1.superIFrmBitsThr = 0xffffffffu; en = IMP_Encoder_SetSuperFrameCfg(0, &s1); IMP_Encoder_GetSuperFrameCfg(0, &s1);
+        e1_stream("e1 superframe stream", h265, 3, 1, "after SetSuperFrameCfg + RequestIDR");
+        memset(&s2, 0, sizeof(s2)); IMP_Encoder_GetSuperFrameCfg(0, &s2);
+        rep("IMP_Encoder_GetSuperFrameCfg", 0, V_PASS, "%s: after the IDR mode %d thr %u %u %u prio %d re %u", cn, (int)s2.superFrmMode, s2.superIFrmBitsThr, s2.superPFrmBitsThr,
+            s2.superBFrmBitsThr, (int)s2.rcPriority, s2.maxReEncodeTimes);
+        rep("IMP_Encoder_GetSuperFrameCfg", 0, V_PASS, "%s: get 0x%x mode %d thr %u %u %u prio %d re %u", cn, X(a), (int)s0.superFrmMode, s0.superIFrmBitsThr, s0.superPFrmBitsThr,
+            s0.superBFrmBitsThr, (int)s0.rcPriority, s0.maxReEncodeTimes);
+        rep("IMP_Encoder_SetSuperFrameCfg", 0, V_PASS, "%s: set reencode 0x%x, get 0x%x mode %d thr %u %u %u prio %d re %u; mode 3 0x%x; I thr ~0 0x%x -> %u", cn, X(b), X(c),
+            (int)s2.superFrmMode, s2.superIFrmBitsThr, s2.superPFrmBitsThr, s2.superBFrmBitsThr, (int)s2.rcPriority, s2.maxReEncodeTimes, X(d), X(en), s1.superIFrmBitsThr);
+        IMP_Encoder_SetSuperFrameCfg(0, &s0);
+    }
+    if (IMP_Encoder_InsertUserData) {
+        static char big[2048];
+        int r16, r0, rbig, r3[3];
+        memset(big, 'x', sizeof(big));
+        a = IMP_Encoder_InsertUserData(0, NULL, 16); r0 = IMP_Encoder_InsertUserData(0, "apitest", 0);
+        rbig = IMP_Encoder_InsertUserData(0, big, sizeof(big));
+        r16 = IMP_Encoder_InsertUserData(0, "apitest-userdata", 16);
+        rep("IMP_Encoder_InsertUserData", 0, V_PASS, "%s: NULL 0x%x, len 0 0x%x, 2048 B 0x%x, 16 B 0x%x", cn, X(a), X(r0), X(rbig), X(r16));
+        e1_stream("IMP_Encoder_InsertUserData", h265, 3, 0, "after one 16 B insert");
+        r3[0] = IMP_Encoder_InsertUserData(0, "apitest-1", 9); r3[1] = IMP_Encoder_InsertUserData(0, "apitest-2", 9); r3[2] = IMP_Encoder_InsertUserData(0, "apitest-3", 9);
+        rep("IMP_Encoder_InsertUserData", 0, V_PASS, "%s: three inserts in a row 0x%x 0x%x 0x%x", cn, X(r3[0]), X(r3[1]), X(r3[2]));
+        e1_stream("IMP_Encoder_InsertUserData", h265, 4, 0, "after three inserts");
+    }
+    if (IMP_Encoder_GetChangeRef && IMP_Encoder_SetChangeRef) {
+        en = en2 = -1;
+        a = IMP_Encoder_GetChangeRef(0, &en); b = IMP_Encoder_SetChangeRef(0, 1); c = IMP_Encoder_GetChangeRef(0, &en2); d = IMP_Encoder_SetChangeRef(0, 0);
+        rep("IMP_Encoder_SetChangeRef", 0, V_PASS, "%s: get 0x%x %d, set 1 0x%x, get 0x%x %d, set 0 0x%x", cn, X(a), en, X(b), X(c), en2, X(d));
+    }
+    if (IMP_Encoder_GetChnColor2Grey && IMP_Encoder_SetChnColor2Grey) {
+        IMPEncoderColor2GreyCfg g0 = { 1 }, g1 = { 1 }, g2 = { 0 };
+        a = IMP_Encoder_GetChnColor2Grey(0, &g0); g1.enable = 1; b = IMP_Encoder_SetChnColor2Grey(0, &g1); c = IMP_Encoder_GetChnColor2Grey(0, &g2);
+        g1.enable = 0; d = IMP_Encoder_SetChnColor2Grey(0, &g1);
+        rep("IMP_Encoder_SetChnColor2Grey", 0, V_PASS, "%s: get 0x%x %d, set 1 0x%x, get 0x%x %d, set 0 0x%x", cn, X(a), (int)g0.enable, X(b), X(c), (int)g2.enable, X(d));
+    }
+    if (IMP_Encoder_GetGDRCfg && IMP_Encoder_SetGDRCfg && IMP_Encoder_RequestGDR) {
+        IMPEncoderGDRCfg g0, g1 = { 1, 30, 5 }, g2, g3 = { 1, 2, 5 }, g4 = { 1, 30, 11 }, g5, off = { 0, 0, 0 };
+        int q0, q1, q2;
+        memset(&g0, 0, sizeof(g0)); memset(&g2, 0, sizeof(g2)); memset(&g5, 0, sizeof(g5));
+        q0 = IMP_Encoder_RequestGDR(0, 5);
+        a = IMP_Encoder_GetGDRCfg(0, &g0); b = IMP_Encoder_SetGDRCfg(0, &g1); c = IMP_Encoder_GetGDRCfg(0, &g2);
+        rep("IMP_Encoder_SetGDRCfg", 0, V_PASS, "%s: RequestGDR before 0x%x; get 0x%x %d/%d/%d, set 1/30/5 0x%x, get 0x%x %d/%d/%d", cn, X(q0), X(a), (int)g0.enable, g0.gdrCycle,
+            g0.gdrFrames, X(b), X(c), (int)g2.enable, g2.gdrCycle, g2.gdrFrames);
+        a = IMP_Encoder_SetGDRCfg(0, &g3); IMP_Encoder_GetGDRCfg(0, &g5);
+        rep("IMP_Encoder_GetGDRCfg", 0, V_PASS, "%s: set cycle 2 0x%x -> get %d/%d/%d", cn, X(a), (int)g5.enable, g5.gdrCycle, g5.gdrFrames);
+        a = IMP_Encoder_SetGDRCfg(0, &g4); IMP_Encoder_GetGDRCfg(0, &g5);
+        rep("IMP_Encoder_GetGDRCfg", 0, V_PASS, "%s: set frames 11 0x%x -> get %d/%d/%d", cn, X(a), (int)g5.enable, g5.gdrCycle, g5.gdrFrames);
+        IMP_Encoder_SetGDRCfg(0, &g1);
+        q1 = IMP_Encoder_RequestGDR(0, 5); q2 = IMP_Encoder_RequestGDR(0, 1);
+        rep("IMP_Encoder_RequestGDR", 0, V_PASS, "%s: GDR on: 5 0x%x, 1 0x%x", cn, X(q1), X(q2));
+        IMP_Encoder_RequestGDR(0, 5);
+        e1_stream("IMP_Encoder_RequestGDR", h265, 12, 0, "GDR 1/30/5 after RequestGDR 5");
+        IMP_Encoder_SetGDRCfg(0, &off); IMP_Encoder_GetGDRCfg(0, &g5);
+        rep("IMP_Encoder_GetGDRCfg", 0, V_PASS, "%s: off -> get %d/%d/%d", cn, (int)g5.enable, g5.gdrCycle, g5.gdrFrames);
+    }
+    if (IMP_Encoder_GetPskipCfg && IMP_Encoder_SetPskipCfg && IMP_Encoder_RequestPskip) {
+        IMPEncoderPskipCfg p0, p1 = { 1, 2, 120 }, p2, p3 = { 1, 0, 120 }, p4 = { 1, 2, -1 }, off = { 0, 0, 0 };
+        memset(&p0, 0, sizeof(p0)); memset(&p2, 0, sizeof(p2));
+        a = IMP_Encoder_GetPskipCfg(0, &p0); b = IMP_Encoder_SetPskipCfg(0, &p1); c = IMP_Encoder_GetPskipCfg(0, &p2);
+        d = IMP_Encoder_SetPskipCfg(0, &p3); en = IMP_Encoder_SetPskipCfg(0, &p4);
+        rep("IMP_Encoder_SetPskipCfg", 0, V_PASS, "%s: get 0x%x %d/%d/%d, set 1/2/120 0x%x, get 0x%x %d/%d/%d, max 0 0x%x, thr -1 0x%x", cn, X(a), (int)p0.enable, p0.pskipMaxFrames,
+            p0.pskipThr, X(b), X(c), (int)p2.enable, p2.pskipMaxFrames, p2.pskipThr, X(d), X(en));
+        IMP_Encoder_GetPskipCfg(0, &p2);
+        rep("IMP_Encoder_GetPskipCfg", 0, V_PASS, "%s: after the refused sets %d/%d/%d", cn, (int)p2.enable, p2.pskipMaxFrames, p2.pskipThr);
+        a = IMP_Encoder_RequestPskip(0);
+        rep("IMP_Encoder_RequestPskip", 0, V_PASS, "%s: 0x%x", cn, X(a));
+        e1_stream("IMP_Encoder_RequestPskip", h265, 3, 0, "after RequestPskip");
+        IMP_Encoder_SetPskipCfg(0, &off);
+    }
+    if (IMP_Encoder_SetChnQpBoundsPerFrame) {
+        a = IMP_Encoder_SetChnQpBoundsPerFrame(0, 20, 40, 22, 45); b = IMP_Encoder_SetChnQpBoundsPerFrame(0, 40, 20, 22, 45);
+        c = IMP_Encoder_SetChnQpBoundsPerFrame(0, 0, 51, 0, 52);
+        rep("IMP_Encoder_SetChnQpBoundsPerFrame", 0, V_PASS, "%s: 20-40/22-45 0x%x, I min > max 0x%x, P max 52 0x%x", cn, X(a), X(b), X(c));
+    }
+    if (IMP_Encoder_SetChnRcTrigLevel) {
+        a = IMP_Encoder_SetChnRcTrigLevel(0, 2, 1); b = IMP_Encoder_SetChnRcTrigLevel(0, 200, 1); c = IMP_Encoder_SetChnRcTrigLevel(0, 2, 9);
+        rep("IMP_Encoder_SetChnRcTrigLevel", 0, V_PASS, "%s: level 2 mode 1 0x%x, level 200 0x%x, mode 9 0x%x", cn, X(a), X(b), X(c));
+    }
+    if (IMP_Encoder_SetPadFrameAttr && IMP_Encoder_PadFrame) {
+        char pad[32], frame[64];
+        memset(pad, 0, sizeof(pad)); memset(frame, 0, sizeof(frame));
+        e1_pad_released = 0;
+        a = IMP_Encoder_SetPadFrameAttr(0, 0, pad); b = IMP_Encoder_PadFrame(0, frame, NULL, e1_pad_release);
+        rep("IMP_Encoder_SetPadFrameAttr", 0, V_PASS, "%s: disable 0x%x", cn, X(a));
+        rep("IMP_Encoder_PadFrame", 0, V_PASS, "%s: pad frames off: 0x%x, release callbacks %d", cn, X(b), e1_pad_released);
+    }
+    if (IMP_Encoder_GetChnCrop && IMP_Encoder_SetChnCrop) {
+        IMPEncoderCropCfg c0, c1 = { 1, 16, 8, 320, 180 }, c2, codd = { 1, 1, 0, 320, 180 }, cbig = { 1, 400, 0, 320, 180 }, off = { 0, 0, 0, 0, 0 };
+        memset(&c0, 0, sizeof(c0)); memset(&c2, 0, sizeof(c2));
+        a = IMP_Encoder_GetChnCrop(0, &c0); b = IMP_Encoder_SetChnCrop(0, &c1); c = IMP_Encoder_GetChnCrop(0, &c2);
+        d = IMP_Encoder_SetChnCrop(0, &codd); en = IMP_Encoder_SetChnCrop(0, &cbig);
+        rep("IMP_Encoder_SetChnCrop", 0, V_PASS, "%s: get 0x%x %d %u,%u %ux%u; set 16,8 320x180 0x%x; get 0x%x %d %u,%u %ux%u; odd x 0x%x; outside 0x%x", cn, X(a), (int)c0.enable,
+            c0.x, c0.y, c0.w, c0.h, X(b), X(c), (int)c2.enable, c2.x, c2.y, c2.w, c2.h, X(d), X(en));
+        e1_stream("IMP_Encoder_GetChnCrop", h265, 3, 1, "after crop 16,8 320x180 + RequestIDR");
+        IMP_Encoder_SetChnCrop(0, &off); IMP_Encoder_GetChnCrop(0, &c2);
+        rep("IMP_Encoder_GetChnCrop", 0, V_PASS, "%s: off -> %d %u,%u %ux%u", cn, (int)c2.enable, c2.x, c2.y, c2.w, c2.h);
+        e1_stream("IMP_Encoder_GetChnCrop", h265, 3, 1, "after crop off + RequestIDR");
+    }
+    if (IMP_Encoder_GetChnDenoise && IMP_Encoder_SetChnDenoise) {
+        IMPEncoderAttrDenoise d0, d1 = { 1, 2, 30, 32 }, d2;
+        memset(&d0, 0xee, sizeof(d0)); memset(&d2, 0xee, sizeof(d2));
+        a = IMP_Encoder_GetChnDenoise(0, &d0); b = IMP_Encoder_SetChnDenoise(0, &d1); c = IMP_Encoder_GetChnDenoise(0, &d2);
+        e1_stream("e1 denoise stream", h265, 2, 1, "after SetChnDenoise + RequestIDR");
+        memset(&d0, 0xee, sizeof(d0)); IMP_Encoder_GetChnDenoise(0, &d0);
+        rep("IMP_Encoder_GetChnDenoise", 0, V_PASS, "%s: after the IDR %d/%d/%d/%d", cn, (int)(d0.enable & 0xff), d0.dnType, d0.dnIQp, d0.dnPQp);
+        rep("IMP_Encoder_SetChnDenoise", 0, V_PASS, "%s: get 0x%x %d/%d/%d/%d, set 1/2/30/32 0x%x, get 0x%x %d/%d/%d/%d", cn, X(a), (int)(d0.enable & 0xff), d0.dnType, d0.dnIQp, d0.dnPQp,
+            X(b), X(c), (int)(d2.enable & 0xff), d2.dnType, d2.dnIQp, d2.dnPQp);
+    }
+    if (IMP_Encoder_GetChnHSkip && IMP_Encoder_SetChnHSkip) {
+        IMPEncoderAttrHSkip s0, s1, s2;
+        memset(&s0, 0xee, sizeof(s0)); memset(&s2, 0xee, sizeof(s2)); memset(&s1, 0, sizeof(s1));
+        a = IMP_Encoder_GetChnHSkip(0, &s0);
+        s1.skipType = IMP_Encoder_STYPE_N2X; b = IMP_Encoder_SetChnHSkip(0, &s1); c = IMP_Encoder_GetChnHSkip(0, &s2);
+        s1.skipType = IMP_Encoder_STYPE_H1M_TRUE; s1.m = 5; s1.n = 1; d = IMP_Encoder_SetChnHSkip(0, &s1);
+        e1_stream("e1 hskip stream", h265, 6, 1, "after SetChnHSkip + RequestIDR");
+        memset(&s2, 0xee, sizeof(s2)); IMP_Encoder_GetChnHSkip(0, &s2);
+        rep("IMP_Encoder_GetChnHSkip", 0, V_PASS, "%s: after the IDR %d/%d/%d", cn, (int)s2.skipType, s2.m, s2.n);
+        rep("IMP_Encoder_SetChnHSkip", 0, V_PASS, "%s: get 0x%x %d/%d/%d/%d/%d/%d, set N2X 0x%x, get 0x%x %d/%d/%d, H1M_TRUE 0x%x", cn, X(a), (int)s0.skipType, s0.m, s0.n, s0.maxSameSceneCnt,
+            s0.bEnableScenecut, s0.bBlackEnhance, X(b), X(c), (int)s2.skipType, s2.m, s2.n, X(d));
+        s1.skipType = IMP_Encoder_STYPE_N1X; s1.m = s1.n = 0; IMP_Encoder_SetChnHSkip(0, &s1);
+    }
+    if (IMP_Encoder_SetChnHSkipBlackEnhance) {
+        a = IMP_Encoder_SetChnHSkipBlackEnhance(0, 1); b = IMP_Encoder_SetChnHSkipBlackEnhance(0, 0);
+        rep("IMP_Encoder_SetChnHSkipBlackEnhance", 0, V_PASS, "%s: 1 0x%x, 0 0x%x", cn, X(a), X(b));
+    }
+    if (IMP_Encoder_GetChnROI && IMP_Encoder_SetChnROI) {
+        IMPEncoderROIAttr *r0 = calloc(1, sizeof(*r0)), *r1 = calloc(1, sizeof(*r1)), *r2 = calloc(1, sizeof(*r2));
+        a = IMP_Encoder_GetChnROI(0, r0);
+        r1->roi[0].u32Index = 0; r1->roi[0].bEnable = 1; r1->roi[0].bRelatedQp = 1; r1->roi[0].s32Qp = -5;
+        r1->roi[0].rect.p0.x = 64; r1->roi[0].rect.p0.y = 32; r1->roi[0].rect.p1.x = 319; r1->roi[0].rect.p1.y = 191;
+        for (d = 1; d < IMP_ENC_ROI_WIN_COUNT; d++) r1->roi[d].u32Index = d;
+        b = IMP_Encoder_SetChnROI(0, r1);
+        e1_stream("e1 roi stream", h265, 2, 1, "after SetChnROI + RequestIDR");
+        c = IMP_Encoder_GetChnROI(0, r2);
+        e1_hex(&r2->roi[0], sizeof(r2->roi[0]), h1, sizeof(h1)); e1_hex(&r0->roi[0], sizeof(r0->roi[0]), h2, sizeof(h2));
+        rep("IMP_Encoder_SetChnROI", 0, V_PASS, "%s: get 0x%x roi0 %s; set roi0 64,32-319,191 dqp -5 0x%x; get 0x%x roi0 %s", cn, X(a), h2, X(b), X(c), h1);
+        memset(r1, 0, sizeof(*r1)); for (d = 0; d < IMP_ENC_ROI_WIN_COUNT; d++) r1->roi[d].u32Index = d;
+        IMP_Encoder_SetChnROI(0, r1);
+        free(r0); free(r1); free(r2);
+    }
+    if (IMP_Encoder_SetChnMapRoi) {
+        IMPEncoderMapRoiCfg m;
+        IMPEncoderMappingList l;
+        static uint8_t map[40 * 23];
+        memset(&m, 0, sizeof(m)); memset(&l, 0, sizeof(l));
+        a = IMP_Encoder_SetChnMapRoi(0, &m, &l);
+        m.map = map; m.mapSize = sizeof(map); m.type = IMP_MAPPINGTYPE_BUTT; b = IMP_Encoder_SetChnMapRoi(0, &m, &l);
+        m.type = IMP_MAPPINGTYPE_DIRECT; c = IMP_Encoder_SetChnMapRoi(0, &m, &l);
+        rep("IMP_Encoder_SetChnMapRoi", 0, V_PASS, "%s: map NULL 0x%x, type BUTT 0x%x, direct %u B 0x%x", cn, X(a), X(b), (unsigned)sizeof(map), X(c));
+    }
+    if (IMP_Encoder_GetMbRC && IMP_Encoder_SetMbRC) {
+        en = en2 = -1;
+        a = IMP_Encoder_GetMbRC(0, &en); b = IMP_Encoder_SetMbRC(0, 1); c = IMP_Encoder_GetMbRC(0, &en2); d = IMP_Encoder_SetMbRC(0, 0);
+        rep("IMP_Encoder_SetMbRC", 0, V_PASS, "%s: get 0x%x %d, set 1 0x%x, get 0x%x %d, set 0 0x%x", cn, X(a), en, X(b), X(c), en2, X(d));
+    }
+    if (IMP_Encoder_GetQpgMode && IMP_Encoder_SetQpgMode) {
+        IMPEncoderQpgMode q0 = 99, q1 = ENC_MBQP_ROWRC, q2 = 99, q9 = 9;
+        a = IMP_Encoder_GetQpgMode(0, &q0); b = IMP_Encoder_SetQpgMode(0, &q1); c = IMP_Encoder_GetQpgMode(0, &q2); d = IMP_Encoder_SetQpgMode(0, &q9);
+        e1_stream("e1 qpgmode stream", h265, 2, 1, "after SetQpgMode + RequestIDR");
+        q2 = 99; IMP_Encoder_GetQpgMode(0, &q2);
+        rep("IMP_Encoder_GetQpgMode", 0, V_PASS, "%s: after the IDR %d", cn, (int)q2);
+        rep("IMP_Encoder_SetQpgMode", 0, V_PASS, "%s: get 0x%x %d, set ROWRC 0x%x, get 0x%x %d, set 9 0x%x", cn, X(a), (int)q0, X(b), X(c), (int)q2, X(d));
+        q1 = q0 <= ENC_MBQP_TEXT_ROWRC ? q0 : ENC_MBQP_AUTO; IMP_Encoder_SetQpgMode(0, &q1);
+    }
+    if (IMP_Encoder_GetSrdCfg && IMP_Encoder_SetSrdCfg) {
+        IMPEncoderSrdCfg s0 = { 1, 9 }, s1 = { 1, 2 }, s2 = { 0, 9 }, s4 = { 1, 4 };
+        a = IMP_Encoder_GetSrdCfg(0, &s0); b = IMP_Encoder_SetSrdCfg(0, &s1); c = IMP_Encoder_GetSrdCfg(0, &s2); d = IMP_Encoder_SetSrdCfg(0, &s4);
+        e1_stream("e1 srd stream", h265, 2, 1, "after SetSrdCfg + RequestIDR");
+        s0.enable = 9; s0.level = 9; IMP_Encoder_GetSrdCfg(0, &s0);
+        rep("IMP_Encoder_GetSrdCfg", 0, V_PASS, "%s: after the IDR %d/%d", cn, (int)s0.enable, s0.level);
+        rep("IMP_Encoder_SetSrdCfg", 0, V_PASS, "%s: get 0x%x %d/%d, set 1/2 0x%x, get 0x%x %d/%d, level 4 0x%x", cn, X(a), (int)s0.enable, s0.level, X(b), X(c), (int)s2.enable, s2.level, X(d));
+        s0.enable = 0; IMP_Encoder_SetSrdCfg(0, &s0);
+    }
+    if (IMP_Encoder_GetMotionQuality && IMP_Encoder_SetMotionQuality) {
+        IMPEncoderMotionQuality m0 = { 1, 9 }, m1 = { 1, 2 };
+        a = IMP_Encoder_GetMotionQuality(0, &m0); b = IMP_Encoder_SetMotionQuality(0, &m1);
+        rep("IMP_Encoder_SetMotionQuality", 0, V_PASS, "%s (MotionQualityEnable not called): get 0x%x %d/%d, set 1/2 0x%x", cn, X(a), (int)m0.enable, m0.level, X(b));
+    }
+    if (IMP_Encoder_SetChnQpgAI) {
+        IMPEncoderQpgAICfg q;
+        static uint8_t map[40 * 23];
+        memset(&q, 0, sizeof(q)); q.map = map; q.width = 40; q.height = 23;
+        a = IMP_Encoder_SetChnQpgAI(0, &q);
+        rep("IMP_Encoder_SetChnQpgAI", 0, V_PASS, "%s (QpgAIEnable not called): 0x%x", cn, X(a));
+    }
+    e1_stream(h265 ? "e1 H265 end stream" : "e1 H264 end stream", h265, 3, 1, "after the calls");
+    enc_e1_down(0);
+}
+
+/* InsertUserData on a channel created with user-data buffers (2 x 64 B) */
+static void e1_userdata(int h265)
+{
+    const char *cn = h265 ? "H265" : "H264";
+    static char big[100];
+    int a, b, c, d, r3[3];
+
+    if (!IMP_Encoder_InsertUserData) return;
+    if (enc_e1_up_ud(0, h265, 2, 64) != 0) { rep("IMP_Encoder_InsertUserData", -1, V_FAIL, "t33e1: %s chn 0 with user data could not be started", cn); return; }
+    e1_stream("e1 userdata base stream", h265, 2, 1, "user data 2 x 64 B");
+    memset(big, 'x', sizeof(big));
+    a = IMP_Encoder_InsertUserData(0, NULL, 16); b = IMP_Encoder_InsertUserData(0, big, 65); c = IMP_Encoder_InsertUserData(0, big, 64);
+    d = IMP_Encoder_InsertUserData(0, "apitest-userdata", 16);
+    rep("IMP_Encoder_InsertUserData", 0, V_PASS, "%s 2x64: NULL 0x%x, 65 B 0x%x, 64 B 0x%x, 16 B 0x%x", cn, X(a), X(b), X(c), X(d));
+    e1_stream("IMP_Encoder_InsertUserData", h265, 3, 0, "after the 64 B and 16 B inserts");
+    r3[0] = IMP_Encoder_InsertUserData(0, "apitest-1", 9); r3[1] = IMP_Encoder_InsertUserData(0, "apitest-2", 9); r3[2] = IMP_Encoder_InsertUserData(0, "apitest-3", 9);
+    rep("IMP_Encoder_InsertUserData", 0, V_PASS, "%s 2x64: three inserts in a row 0x%x 0x%x 0x%x", cn, X(r3[0]), X(r3[1]), X(r3[2]));
+    e1_stream("IMP_Encoder_InsertUserData", h265, 4, 0, "after three inserts");
+    enc_e1_down(0);
+}
+
+/* E3: unbound encoders on caller buffers */
+static void e1_unbound(void)
+{
+    uint32_t w = 320, h = 192, nv12 = 320 * 192 * 3 / 2;
+    uint8_t *src = IMP_Encoder_VbmAlloc ? IMP_Encoder_VbmAlloc(nv12, 64) : NULL, *dst = IMP_Encoder_VbmAlloc ? IMP_Encoder_VbmAlloc(nv12, 64) : NULL;
+    uint32_t i;
+    int r, len = -7;
+
+    if (!src || !dst) { rep("IMP_Encoder_YuvInit", -1, V_FAIL, "VbmAlloc failed"); return; }
+    for (i = 0; i < w * h; i++) src[i] = (uint8_t)((i % w) + (i / w));
+    memset(src + w * h, 128, nv12 - w * h);
+    if (IMP_Encoder_InputJpege) {
+        r = IMP_Encoder_InputJpege(src, dst, w, h, 75, &len);
+        rep("IMP_Encoder_InputJpege", 0, V_PASS, "%ux%u q75 0x%x len %d SOI %d EOI %d", w, h, X(r), len, len > 4 && dst[0] == 0xff && dst[1] == 0xd8,
+            len > 4 && len <= (int)nv12 && dst[len - 2] == 0xff && dst[len - 1] == 0xd9);
+    }
+    if (IMP_Encoder_YuvInit && IMP_Encoder_YuvEncode && IMP_Encoder_YuvExit) {
+        int t;
+        for (t = 0; t < 3; t++) {
+            void *hd = NULL;
+            IMPEncoderYuvIn in;
+            IMPEncoderYuvOut out;
+            IMPFrameInfo f;
+            int ri, re, re2, rx;
+            E1Scan e;
+            char ids[64];
+
+            memset(&in, 0, sizeof(in)); memset(&out, 0, sizeof(out)); memset(&f, 0, sizeof(f)); memset(&e, 0, sizeof(e));
+            in.type = t == 0 ? PT_H264 : t == 1 ? PT_H265 : PT_JPEG;
+            if (t == 2) { in.mode.rcMode = ENC_RC_MODE_FIXQP; in.mode.attrJPEGFixQp.qp = 50; }
+            else { in.mode.rcMode = ENC_RC_MODE_FIXQP; in.mode.attrH264FixQp.IQp = 30; in.mode.attrH264FixQp.PQp = 32; }
+            in.outFrmRate.frmRateNum = 15; in.outFrmRate.frmRateDen = 1; in.maxGop = 30;
+            ri = IMP_Encoder_YuvInit(&hd, w, h, &in);
+            f.width = w; f.height = h; f.size = nv12; f.pixfmt = PIX_FMT_NV12;
+            f.virAddr = (uint32_t)(uintptr_t)src; f.phyAddr = IMP_Encoder_VbmV2P ? (uint32_t)IMP_Encoder_VbmV2P((intptr_t)src) : 0;
+            out.outAddr = dst; out.outLen = nv12;
+            re = ri == 0 ? IMP_Encoder_YuvEncode(hd, f, &out) : -2;
+            e.h265 = t == 1;
+            if (re == 0 && out.outAddr && out.outLen > 4 && out.outLen <= nv12 && t < 2) e1_cb(out.outAddr, out.outLen, 0, &e);
+            len = (int)out.outLen;
+            out.outAddr = dst; out.outLen = nv12;
+            re2 = ri == 0 ? IMP_Encoder_YuvEncode(hd, f, &out) : -2;
+            if (re2 == 0 && out.outAddr && out.outLen > 4 && out.outLen <= nv12 && t < 2) e1_cb(out.outAddr, out.outLen, 1, &e);
+            rx = ri == 0 ? IMP_Encoder_YuvExit(hd) : -2;
+            e1_idrs(&e, ids, sizeof(ids));
+            rep(t == 0 ? "IMP_Encoder_YuvInit" : t == 1 ? "IMP_Encoder_YuvEncode" : "IMP_Encoder_YuvExit", 0, V_PASS,
+                "%s %ux%u FIXQP: init 0x%x, encode 0x%x %d B, again 0x%x %u B, exit 0x%x; IDR at %s; SPS %s", t == 0 ? "H264" : t == 1 ? "H265" : "JPEG", w, h, X(ri), X(re), len, X(re2),
+                out.outLen, X(rx), ids, e.sps);
+        }
+    }
+    if (IMP_Encoder_VbmFree) { IMP_Encoder_VbmFree(src); IMP_Encoder_VbmFree(dst); }
+}
+
+void cs_t33e1(void)
+{
+    e1_codes();
+    wdog("cases", 120);
+    e1_live(0);
+    wdog("cases", 120);
+    e1_live(1);
+    wdog("cases", 120);
+    e1_userdata(0);
+    e1_userdata(1);
+    wdog("cases", 120);
+    e1_unbound();
+}
+
 #endif /* APITEST_T33 */

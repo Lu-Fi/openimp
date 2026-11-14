@@ -29,6 +29,20 @@ static void params(const T32H265Seq *s, T30HevcVps *vps, T30HevcSps *sps, T30Hev
     memset(&sps->vui, 0, sizeof(sps->vui));
     sps->vui.num_units_in_tick = s->fps_den ? s->fps_den : 1u;
     sps->vui.time_scale = s->fps_num ? s->fps_num : 25u;
+    sps->vui.video_format = 5;          /* written only with the signal type (#480) */
+    sps->vui.colour_primaries = sps->vui.transfer_characteristics = sps->vui.matrix_coeffs = 2;
+    if (s->vui.signal) {
+        sps->vui.video_signal_type_present = 1;
+        sps->vui.video_format = s->vui.format;
+        sps->vui.video_full_range = s->vui.full ? 1 : 0;
+    }
+    if (s->vui.aspect) {
+        sps->vui.aspect_ratio_info_present = 1;
+        sps->vui.aspect_ratio_idc = s->vui.aspect_idc;
+        sps->vui.sar_width = s->vui.sar_w;
+        sps->vui.sar_height = s->vui.sar_h;
+    }
+    sps->vui.bitstream_restriction = s->vui.restriction ? 1 : 0;
     pps->cb_qp_offset = 0;
     pps->cr_qp_offset = 0;
 }

@@ -78,6 +78,7 @@
 #endif
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
+#include "t32/openimp_t32_enc_e1.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_encoder.c is the PLATFORM_T32 build only"
@@ -100,7 +101,7 @@
 #define T32_HERA_VPU_ID     OI_T32_VPU_RADIX_ID  /* the vendor's START: no instance bit */
 #define T32_HERA_SECTION_KB 250u        /* vendor: two halves of 250 KiB */
 #define T32_H264_DEF_QP     30          /* an initial QP outside 0..51 */
-#define T32_H264_PACKS      4           /* (VPS,) SPS, PPS, slice */
+#define T32_H264_PACKS      6           /* (VPS,) SPS, PPS, up to 2 user-data SEIs, slice */
 #define T32_HERA_STATS      48          /* H.264 48, H.265 38 */
 #define T32_HERA5_STATS     38
 
@@ -256,6 +257,56 @@ static void t33_bs_put(struct t32_enc_chn *e)
 static struct t32_enc_chn *chn_get(int n)
 {
     return n >= 0 && n < T32_ENC_CHNS && enc_chn[n].created ? &enc_chn[n] : NULL;
+}
+
+/* #480: what openimp_t32_enc_e1.c needs to know of a channel */
+static void chn_info(int n, const struct t32_enc_chn *e, T32EncChnInfo *ci)
+{
+    (void)n;
+    memset(ci, 0, sizeof(*ci));
+    ci->codec = e->hevc ? 2 : e->h264 ? 1 : 0;
+    ci->recv = e->recv;
+    ci->width = e->attr.encAttr.picWidth;
+    ci->height = e->attr.encAttr.picHeight;
+    ci->fps_num = e->attr.rcAttr.outFrmRate.frmRateNum;
+    ci->fps_den = e->attr.rcAttr.outFrmRate.frmRateDen;
+    ci->ud_cnt = e->attr.encAttr.userData.maxUserDataCnt;
+    ci->ud_size = e->attr.encAttr.userData.maxUserDataSize;
+}
+
+int OpenIMP_T32_EncChnQuery(int encChn, T32EncChnInfo *ci)
+{
+    struct t32_enc_chn *e;
+
+    pthread_mutex_lock(&enc_lock);
+    e = encChn >= 0 && encChn <= 15 ? chn_get(encChn) : NULL;
+    if (e)
+        chn_info(encChn, e, ci);
+    pthread_mutex_unlock(&enc_lock);
+    return e ? 0 : -1;
+}
+
+/* an IDR: settings deferred to it (VUI into the SPS); user-data SEI before a slice (#480) */
+static void e1_at_idr(struct t32_enc_chn *e)
+{
+    struct t32_h264 *a = &e->avc;
+    T32Vui v;
+    int n = (int)(e - enc_chn);
+
+    if (!OpenIMP_T32_E1AtIdr(n, &v))
+        return;
+    if (e->hevc) {
+        a->seq5.vui = v;
+        a->sps_len = t32_h265_sps(&a->seq5, a->sps);
+    } else {
+        a->seq.vui = v;
+        a->sps_len = t32_h264_sps(&a->seq, a->sps);
+    }
+}
+
+static size_t e1_sei(struct t32_enc_chn *e, uint8_t *out, size_t cap)
+{
+    return OpenIMP_T32_E1Sei((int)(e - enc_chn), e->hevc, out, cap);
 }
 
 static int jpeg_qp_of(int qp)
@@ -796,11 +847,20 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     /* headers first: the engine's slice data follows them */
     s->npacks = 0;
     if (idr) {
+        e1_at_idr(e);
         memcpy(out, a->sps, a->sps_len);
         h264_pack(s, 0, (uint32_t)a->sps_len, IMP_H264_NAL_SPS, f->timeStamp);
         memcpy(out + a->sps_len, a->pps, a->pps_len);
         h264_pack(s, (uint32_t)a->sps_len, (uint32_t)a->pps_len, IMP_H264_NAL_PPS, f->timeStamp);
         at = (uint32_t)(a->sps_len + a->pps_len);
+    }
+    {
+        size_t k;                                   /* InsertUserData (#480): every queued entry */
+
+        while (s->npacks + 1 < T32_H264_PACKS && (k = e1_sei(e, out + at, cap - at)) != 0) {
+            h264_pack(s, at, (uint32_t)k, IMP_H264_NAL_SEI, f->timeStamp);
+            at += (uint32_t)k;
+        }
     }
     memset(&sl, 0, sizeof(sl));
     sl.idr = idr;
@@ -969,6 +1029,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     s->npacks = 0;
     if (idr) {
+        e1_at_idr(e);
         memcpy(out, a->vps, a->vps_len);
         h265_pack(s, 0, (uint32_t)a->vps_len, IMP_H265_NAL_VPS, f->timeStamp);
         at = (uint32_t)a->vps_len;
@@ -978,6 +1039,14 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         memcpy(out + at, a->pps, a->pps_len);
         h265_pack(s, at, (uint32_t)a->pps_len, IMP_H265_NAL_PPS, f->timeStamp);
         at += (uint32_t)a->pps_len;
+    }
+    {
+        size_t k;                                   /* InsertUserData (#480): every queued entry */
+
+        while (s->npacks + 1 < T32_H264_PACKS && (k = e1_sei(e, out + at, cap - at)) != 0) {
+            h265_pack(s, at, (uint32_t)k, IMP_H265_NAL_PREFIX_SEI, f->timeStamp);
+            at += (uint32_t)k;
+        }
     }
     memset(&sl, 0, sizeof(sl));
     sl.idr = idr;
@@ -1478,6 +1547,7 @@ static int chn_alloc_bufs(struct t32_enc_chn *e, int n)
 int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 {
     struct t32_enc_chn *e;
+    T32EncChnInfo ci;
     uint32_t version = 0;
 
     if (encChn < 0 || encChn >= T32_ENC_CHNS || !attr)
@@ -1518,7 +1588,9 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     e->bs_size = e->h264 ? h264_bs_size(attr) : jpeg_bs_size(attr);
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
+    chn_info(encChn, e, &ci);
     pthread_mutex_unlock(&enc_lock);
+    OpenIMP_T32_E1Reset(encChn, &ci);
 
     if (OpenIMP_T32_VpuOpen() != 0)
         goto fail_open;

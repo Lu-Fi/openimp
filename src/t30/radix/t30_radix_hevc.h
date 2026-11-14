@@ -90,6 +90,9 @@ typedef struct {
     uint32_t num_units_in_tick, time_scale;   /* when timing_info is set */
     uint8_t hrd_present;
     T30HevcHrd hrd;
+#if defined(PLATFORM_T32)
+    uint8_t bitstream_restriction;            /* T32/T33 SetH265Vui (#480): vendor 2.0.2.1 fields */
+#endif
 } T30HevcVui;
 
 typedef struct {

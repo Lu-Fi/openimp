@@ -83,7 +83,7 @@ compile t32_skeleton src/t32/openimp_t32_skeleton.c
 compile t32_isp src/t32/openimp_t32_isp.c
 # 2.x ISP control calls and FrameSource / encoder state calls (#54-#60, #39-#45): vendor
 # 2.x headers like the tuning unit (their types: PM, LDC mode, joints, frame-used mode)
-for unit in isp_ctl fs_enc_ext enc_e3; do
+for unit in isp_ctl fs_enc_ext enc_e3 enc_e1; do
     "$compiler" $strict_flags -I"$T32_HEADERS" -I"$project_dir/src" \
         -c "$project_dir/src/t32/openimp_t32_$unit.c" -o "$output_dir/t32_$unit.o"
     objects="$objects $output_dir/t32_$unit.o"

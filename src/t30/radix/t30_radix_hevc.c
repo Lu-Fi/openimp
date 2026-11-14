@@ -204,7 +204,19 @@ static void put_vui(T30HevcBits *b, const T30HevcSps *s)
     } else {
         t30_hevc_put(b, 0, 1);
     }
+#if defined(PLATFORM_T32)
+    t30_hevc_put(b, v->bitstream_restriction, 1);
+    if (v->bitstream_restriction) {             /* vendor 2.0.2.1 (QEMU -M ingenic-t33 stream, #480) */
+        t30_hevc_put(b, 7, 3);                  /* tiles_fixed, mvs over boundaries, restricted ref lists */
+        t30_hevc_ue(b, 0);                      /* min_spatial_segmentation_idc */
+        t30_hevc_ue(b, 0);                      /* max_bytes_per_pic_denom */
+        t30_hevc_ue(b, 0);                      /* max_bits_per_min_cu_denom */
+        t30_hevc_ue(b, 10);                     /* log2_max_mv_length_horizontal */
+        t30_hevc_ue(b, 10);                     /* log2_max_mv_length_vertical */
+    }
+#else
     t30_hevc_put(b, 0, 1);                      /* bitstream_restriction */
+#endif
 }
 
 void t30_hevc_write_sps(T30HevcBits *b, const T30HevcSps *s)

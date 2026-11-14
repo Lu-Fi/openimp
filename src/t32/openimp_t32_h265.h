@@ -20,11 +20,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "t32/openimp_t32_h264.h"
+
 typedef struct {
     uint32_t width, height;             /* picture size (multiples of 8) */
     uint32_t fps_num, fps_den;
     uint32_t rc_mode;                   /* 0 FIXQP: no bit rate in the level */
     uint32_t bitrate;                   /* kbit/s */
+    T32Vui vui;                         /* openimp_t32_h264.h */
 } T32H265Seq;
 
 typedef struct {

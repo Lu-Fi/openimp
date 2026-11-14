@@ -277,7 +277,7 @@ functions:
       cfg: "`IMPEncoderGDRCfg`: `enable`, `gdrCycle` (frames between refreshes) and `gdrFrames` (frames one refresh is spread over)."
     returns: "0 on success; -1 for an invalid channel, a NULL pointer (Set) or a channel that is not created."
     notes: "With `enable` set, a `gdrCycle` outside 3 to 65535 becomes 120 and a `gdrFrames` outside 2 to 10 becomes 6. Setting `enable` to 0 switches it off. Get returns the values as stored. `Encoder_RequestGDR` starts one refresh on demand."
-    soc: "T23"
+    soc: "T23, T32, T33 (#480)"
   Encoder_RequestGDR:
     group: gop
     summary: 'Starts a gradual refresh cycle (GDR) of the given number of frames: instead of one IDR picture the channel refreshes
@@ -288,7 +288,7 @@ functions:
     returns: 0 on success; -1 for a bad channel, a channel that was not created, or a frame count outside 2 to 10.
     notes: T23 only; the request is passed to the encoder with the frame control of the next picture. Checked in the userspace
       audit only.
-    soc: T23
+    soc: "T23, T32, T33 (#480)"
   Encoder_Get/SetChangeRef:
     group: gop
     summary: "Reads or sets the switch for changing the reference picture."
@@ -361,19 +361,19 @@ functions:
     summary: "Sets a region of interest from a map with one entry per macroblock; H.264 channels only."
     returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer, a channel that is not H.264, or when the encoder refuses the map."
     notes: "The map is copied. On T40 the function can be switched off with `OPENIMP_T40_ROI=0`."
-    soc: T40, T41
+    soc: "T40, T41, T32, T33 (#480)"
   Encoder_Get/SetChnColor2Grey:
     group: qp
     summary: "Makes the encoder code an H.264 picture without colour (the chroma plane is neutral), which saves bits at night."
     returns: "0 on success, -1 for an invalid or not created channel or a NULL pointer."
     notes: "The enable flag is stored and read back. On T10, T20 and T21 it is applied from the next IDR picture on, and only on an H.264 channel; on T23 it is passed to the encoder worker."
-    soc: "T10, T20, T21, T23, T30"
+    soc: "T10, T20, T21, T23, T30, T32, T33 (#480)"
   Encoder_Get/SetChnDenoise:
     group: qp
     summary: "Reads or sets the encoder-side noise filter (type and the QP values for I and P pictures)."
     returns: "0 on success. -1 for an invalid channel or a NULL pointer; the setter on T23 and the other SoCs also -1 for a channel that was not created (T20 and T21: 0). The setter on T30 returns -1 for a filter type other than 0 when the channel was created with denoise enabled."
     notes: "The on/off switch of the filter is the one given at channel creation; the setter changes only the type and the QP values. T20 and T21 check the combination of values in the same way as the vendor library. On T10 and T20 the 3.9.0 names `Get/SetChnH264Denoise` are the same functions."
-    soc: "T10, T20, T21, T23"
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_Get/SetChnDemask:
     group: qp
     summary: "Sets or reads the demask attribute (enable and auto flags, count, threshold): a control loop that lowers the ISP sharpness step by step while the encoder's QP is above the threshold and raises it again afterwards."
@@ -398,7 +398,7 @@ functions:
     returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer, a window that leaves the encoded picture, or on Set any of x, y, w, h being odd."
     notes: "Get on a non-H.264 channel returns zero values. The window is passed to the running encoder. On T10, T20 and T21 (exported by the vendor library without a header) x, y, w and h must be multiples of 16 (any other value is -1, also with enable 0), a channel that was never created answers 0 and does nothing, and an enabled window must be non-empty and inside the picture. The window is the visible rectangle of the stream: it is written as frame cropping into the SPS, applied between two pictures, and the next picture is an IDR. Only H.264 channels; JPEG channels answer 0 without effect."
     diff: "T10, T20, T21: the vendor library hands the window to its closed encoder in macroblock units; OpenIMP crops through the SPS of its own Helix encoder (the stream decodes to the window size). The coded picture is still the whole macroblock-aligned picture."
-    soc: "T10, T20, T21, T23"
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_SetChnResizeMode:
     group: qp
     summary: "Stores the resize mode (0 or 1) of the channel."
@@ -410,12 +410,12 @@ functions:
     returns: "0 on success, -1 for an invalid or not created channel, a NULL pointer or an offset outside -12 to 12. The T30 build accepts only an offset of 0."
     notes: "The offset applies from the next IDR picture on (written into the picture parameter set). Stored and read back on T23 and T30; T10, T20 and T21 follow the vendor library (see the SoC notes)."
     diff: "T21 (docs/T21_H264TRANS.md, as the vendor library 1.0.33): a channel number of 6 or more is -1; a channel that does not exist (not created, destroyed, JPEG) answers 0 on Set (nothing happens) and 0 on Get with the structure zeroed; Get returns the offset the encoder codes with now, so a Set shows only after the next IDR picture; a value outside -12..12 is accepted (0) and coded as -12 or 12. T10 and T20 (docs/T21_H264TRANS.md, as the vendor library 3.12.0): the same Set semantics, but Get never shows the offset (zeroed structure with intraTransMode = interTransMode = 1, returns 0). T10: the PPS keeps offset 0 (the vendor T10 codes the offset in the PPS only and the decoded chroma shifts; the T10 hardware cannot apply it)."
-    soc: "T10, T20, T21, T23"
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_Get/SetH265TransCfg:
     group: h26x
     summary: "Reads or sets the H.265 chroma QP offsets for Cb and Cr. Stored and read back on T30; dropped on T21 and T23."
     returns: "0 on success. -1 for an invalid channel or a NULL pointer; on T30 also a channel that was not created or an offset outside -12 to 12. T21 and T23 check only channel and pointer, store nothing, and the getter returns zeros."
-    soc: "T20, T21, T23"
+    soc: "T20, T21, T23, T32, T33 (#480)"
   Encoder_SetChnEntropyMode:
     group: h26x
     summary: "Chooses CAVLC or CABAC for H.264. It can be called before the channel is created, in which case the mode is used at creation."
@@ -440,7 +440,7 @@ functions:
     notes: The data goes into the channel's user-data cache (the number and size of the payloads come from `userData.maxUserDataCnt`
       / `maxUserDataSize` in the channel attribute, two payloads in the vendor library) and is written in front of the next
       picture; the application finds it in the next frames of the stream. Checked with the API test on T10, T20, T21 and T23.
-    soc: T10, T20, T21, T23
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_Get/Setframelossthd:
     group: h26x
     summary: "Reads or sets the frame loss threshold in bytes (T23). The value is kept for the getter."
@@ -592,6 +592,69 @@ functions:
     group: yuv
     summary: "Stops the server threads of `MultiProcessInit`."
     soc: "T32, T33"
+  Encoder_GetH264Vui:
+    group: h26x
+    summary: "Reads the VUI fields of an H.264 channel's sequence parameter set (aspect ratio, timing, video signal type, bitstream restriction)."
+    returns: "0 on success; 0x80040001 for a channel of 16 or more, 0x80040010 for a NULL pointer, 0x80040008 for a channel that does not exist. On an H.265 channel 0 and the structure is left alone."
+    notes: "After SetH264Vui the getter shows the new values only from the next IDR picture on, as vendor libimp 2.0.2.1."
+    soc: "T32, T33"
+  Encoder_SetH264Vui:
+    group: h26x
+    summary: "Sets the VUI of an H.264 channel; it goes into the SPS of the next IDR picture."
+    returns: "As GetH264Vui."
+    notes: "As vendor libimp 2.0.2.1 (QEMU stream comparison, #480): the aspect ratio comes from `sar_width`/`sar_height` (both set: written with the table index, e.g. 4:3 = 14, else 255 and the SAR; the flag and idc fields are not used); format and full range are taken while `video_signal_type_present_flag` is set and the signal type is written when they differ from the default (format 5, limited range); the colour description is never written; `bitstream_restriction_flag` writes the restriction with max_dec_frame_buffering 1. Timing stays the channel's frame rate."
+    soc: "T32, T33"
+  Encoder_GetH265Vui:
+    group: h26x
+    summary: "Reads the VUI fields of an H.265 channel's sequence parameter set."
+    returns: "As GetH264Vui; on an H.264 channel 0 and the structure is left alone."
+    soc: "T32, T33"
+  Encoder_SetH265Vui:
+    group: h26x
+    summary: "Sets the VUI of an H.265 channel; it goes into the SPS of the next IDR picture (aspect ratio flag and idc as given, video signal type, bitstream restriction; no colour description), as vendor libimp 2.0.2.1."
+    returns: "As GetH264Vui."
+    soc: "T32, T33"
+  Encoder_GetSrdCfg:
+    group: h26x
+    summary: "Reads the static-scene bitrate reduction (SRD) setting of an H.265 channel."
+    returns: "0 on success; 0x80040001, 0x80040010 (NULL), 0x80040008 (no channel), 0x80040080 on an H.264 or JPEG channel."
+    notes: "OpenIMP stores the setting (the getter shows it from the next IDR on, as the vendor); the HERA engine is not programmed with it yet."
+    soc: "T32, T33"
+  Encoder_SetSrdCfg:
+    group: h26x
+    summary: "Sets the static-scene bitrate reduction (SRD) of an H.265 channel (enable, level 0 to 3)."
+    returns: "As GetSrdCfg; the level is not checked (as the vendor)."
+    soc: "T32, T33"
+  Encoder_GetMotionQuality:
+    group: h26x
+    summary: "Reads the motion-quality optimisation setting (enable, level 0 to 3)."
+    returns: "0 on success; 0x80040001, 0x80040010 (NULL), 0x80040008 (no channel), 0x80048000 when SetMotionQualityEnable was not called before CreateChn (the structure is left alone)."
+    soc: "T32, T33"
+  Encoder_SetMotionQuality:
+    group: h26x
+    summary: "Sets the motion-quality optimisation; stored only (not applied to the encoder yet)."
+    returns: "As GetMotionQuality; 0x80040002 for a level above 3."
+    soc: "T32, T33"
+  Encoder_SetChnQpgAI:
+    group: h26x
+    summary: "Hands an AI foreground/background map to the channel's QP generation; stored only (not applied to the encoder yet)."
+    returns: "0 on success; 0x80040001, 0x80040010 (NULL), 0x80040008 (no channel), 0x80048000 without SetChnQpgAIEnable before CreateChn, 0x80040080 on a JPEG channel."
+    soc: "T32, T33"
+  Encoder_GetPskipCfg:
+    group: h26x
+    summary: "Reads the adaptive P-skip setting (enable, maximum skip frames, bitrate threshold in percent)."
+    returns: "0 on success; 0x80040001, 0x80040010 (NULL), 0x80040008 (no channel)."
+    soc: "T32, T33"
+  Encoder_SetPskipCfg:
+    group: h26x
+    summary: "Sets the adaptive P-skip mode; stored only (not applied to the encoder yet)."
+    returns: "As GetPskipCfg; 0x80040002 (setting kept) for a maximum below 1 or a negative threshold; enable 0 switches it off and keeps the other fields."
+    soc: "T32, T33"
+  Encoder_RequestPskip:
+    group: h26x
+    summary: "Asks for a P-skip picture; accepted but not applied yet on T32/T33."
+    returns: "0 on success; 0x80040001, 0x80040008 (no channel)."
+    soc: "T32, T33"
   Encoder_KernEnc_Stop:
     group: misc
     summary: "Kernel encoder (T32, T33): stops it through `/dev/kern_enc`. No kernel module of the T32/T33 cameras creates that node."
@@ -690,12 +753,12 @@ functions:
     summary: "Hands a processed copy of a captured frame (with a release callback) to the encoder. While pad frames are enabled with `SetPadFrameAttr`, every captured frame is encoded from the pad frame that matches it instead, and a captured frame without one is not encoded."
     returns: "0 when the frame was queued (also for a channel that is registered and started but not created, as stock). -1, with the release callback called, for an invalid channel, a NULL frame, a channel that is not registered or not started, pad frames not enabled, or a full queue after one frame interval."
     notes: "The pad frame uses the encoder input layout (luma width x height rounded up to 16, chroma behind it). Matching follows the stock arithmetic: in time-stamp mode a pad frame is taken when its time stamp is within the tolerance of the capture, a newer one waits, an older one is released. The time stamp sits at +0x28 of the frame on T23 and at +0x20 on T10, T20 and T21. Device-tested on T10, T20 and T21: free mode encodes the pad frames (a black pad frame cost 26 to 51 bytes against 1000 to 8000 for the scene), stale frames in time-stamp mode are refused and released, nothing stays in flight after `DestroyChn`."
-    soc: "T10, T20, T21, T23"
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_SetPadFrameAttr:
     group: misc
     summary: "Switches pad frames on or off for an H.264 channel and stores the 32-byte attribute: word 1 selects time-stamp matching (0 takes the next pad frame), words 2 and 3 are the tolerance."
     returns: "0 on success, -1 for an invalid channel (6 or more on T10, T20 and T21, 9 or more on T23)."
-    soc: "T10, T20, T21, T23"
+    soc: "T10, T20, T21, T23, T32, T33 (#480)"
   Encoder_GetChnEvalInfo:
     group: misc
     summary: 'Reads the evaluation record of the most recent picture of an H.264 channel on T31: bytes of the picture, six

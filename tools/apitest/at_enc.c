@@ -1010,6 +1010,10 @@ static void live_old(int chn, int codec)
         /* vendor T30 1.0.5: i264e_super_rc_set only stages the values, the controller takes them with the next picture
          * (a Get right after the Set shows the old ones, camera A/B 2026-11-03): read after a few pictures */
         pull(chn, codec, 3, 0, 0, &si, 2000);
+#elif defined(APITEST_T33)
+        /* vendor T33 2.0.2.1: taken at the next IDR (case t33e1, QEMU) */
+        IMP_Encoder_RequestIDR(chn);
+        pull(chn, codec, 3, 0, 0, &si, 2000);
 #endif
         r = IMP_Encoder_GetSuperFrameCfg ? IMP_Encoder_GetSuperFrameCfg(chn, g) : -1; gchk(g);
         if (r2 != 0 && REFUSES_UNSUPPORTED)
@@ -1158,9 +1162,16 @@ static void live_old(int chn, int codec)
     NEED(IMP_Encoder_InsertUserData) {
         char ud[] = "apitest-user-data";
 
+#  if defined(APITEST_T33)
+        /* vendor T33 2.0.2.1: a channel created without user-data buffers (encAttr.userData) refuses with 0x80040080; the SEI
+         * path with buffers is case t33e1 */
+        r = IMP_Encoder_InsertUserData(chn, ud, (uint32_t)strlen(ud));
+        rep(FN(IMP_Encoder_InsertUserData), r, r == (int)0x80040080 ? V_PASS : V_FAIL, "no user-data buffers: 0x%x (vendor 0x80040080)", (unsigned)r);
+#  else
         r = IMP_Encoder_InsertUserData(chn, ud, (uint32_t)strlen(ud));
         pull(chn, codec, 30, 0, 0, &si, 2000);
         CHECK(IMP_Encoder_InsertUserData, r, si.user > 0, "\"%s\": %s in the next %d frames (SEI)", ud, si.user ? "found" : "NOT found", si.frames);
+#  endif
     }
 # endif
 # if HAS_IMP_Encoder_GetGDRCfg
@@ -2554,4 +2565,53 @@ int enc_pull_h264(int n)        /* frames still flowing? */
 
     pull(0, CODEC_H264, n, 0, 0, &si, 3000);
     return si.frames;
+}
+
+/* channel helpers of case t33e1 (at_t33.c): FS ch1 -> group 0 -> channel @chn (codec 0 H.264, 1 H.265) started; frames to a callback */
+int enc_e1_up_ud(int chn, int codec, int ud_cnt, int ud_size)
+{
+    G(EAttr, a);
+    int r;
+
+    if (grp_up(0, 0) != 0) { gfree(a); return -1; }
+    fill_attr(a, codec, EGOP);                  /* no SetPool: the encoder takes its buffers from rmem as a streamer does */
+#if defined(APITEST_T33)
+    a->encAttr.userData.maxUserDataCnt = (uint32_t)ud_cnt; a->encAttr.userData.maxUserDataSize = (uint32_t)ud_size;
+#else
+    (void)ud_cnt; (void)ud_size;
+#endif
+    r = IMP_Encoder_CreateChn(chn, a);
+    if (!r) r = IMP_Encoder_RegisterChn(GRP, chn);
+    if (!r) r = IMP_Encoder_StartRecvPic(chn);
+    gfree(a);
+    if (r) { rep("IMP_Encoder_CreateChn", r, V_FAIL, "t33e1: %s chn %d up 0x%x", cname[codec], chn, (unsigned)r); IMP_Encoder_DestroyChn(chn); grp_down(0); return -1; }
+    return 0;
+}
+
+int enc_e1_up(int chn, int codec) { return enc_e1_up_ud(chn, codec, 0, 0); }
+
+void enc_e1_down(int chn)
+{
+    chn_down(chn, 0);
+    grp_down(0);
+}
+
+/* up to @n frames: @cb(frame bytes, length, frame index, arg) for each; returns the frames seen */
+int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, void *), void *arg)
+{
+    int k;
+
+    if (!g_sbuf) g_sbuf = malloc(STREAMCAP);
+    for (k = 0; k < n; k++) {
+        G(IMPEncoderStream, s);
+        int trunc = 0;
+        size_t len;
+
+        if (IMP_Encoder_PollingStream(chn, 3000) != 0 || IMP_Encoder_GetStream(chn, s, true) != 0) { gfree(s); break; }
+        len = gather(s, g_sbuf, STREAMCAP, &trunc);
+        if (cb) cb(g_sbuf, len, k, arg);
+        IMP_Encoder_ReleaseStream(chn, s);
+        gfree(s);
+    }
+    return k;
 }

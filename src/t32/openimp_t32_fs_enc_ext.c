@@ -274,6 +274,31 @@ int IMP_Encoder_SetMotionQualityEnable(int encChn, int enable)
     return enc_pre_create(encChn, ENC_CHN_OK(encChn) ? &enc_ext[encChn].motion_quality : NULL, enable, E_ENC_CRE4);
 }
 
+/* the two pre-create switches for openimp_t32_enc_e1.inc (#480) */
+int OpenIMP_T32_EncMotionQualityOn(int encChn)
+{
+    int on;
+
+    if (!ENC_CHN_OK(encChn))
+        return 0;
+    pthread_mutex_lock(&ext_lock);
+    on = enc_ext[encChn].motion_quality;
+    pthread_mutex_unlock(&ext_lock);
+    return on;
+}
+
+int OpenIMP_T32_EncQpgAIOn(int encChn)
+{
+    int on;
+
+    if (!ENC_CHN_OK(encChn))
+        return 0;
+    pthread_mutex_lock(&ext_lock);
+    on = enc_ext[encChn].qpg_ai;
+    pthread_mutex_unlock(&ext_lock);
+    return on;
+}
+
 int IMP_Encoder_SetChnQpgAIEnable(int encChn, int enable)
 {
     return enc_pre_create(encChn, ENC_CHN_OK(encChn) ? &enc_ext[encChn].qpg_ai : NULL, enable, E_ENC_CRE4);

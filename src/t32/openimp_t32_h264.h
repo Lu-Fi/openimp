@@ -16,11 +16,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* VUI fields an application can set (IMP_Encoder_SetH264Vui / SetH265Vui, #480): what vendor libimp 2.0.2.1
+ * writes of them (QEMU -M ingenic-t33 streams): the video signal type (format, full range; no colour
+ * description), the aspect ratio (H.264: from the SAR, H.265: as given) and the bitstream restriction;
+ * all zero = the default parameter sets */
+typedef struct {
+    uint8_t signal, format, full;       /* video_signal_type_present, video_format, video_full_range */
+    uint8_t restriction;                /* bitstream_restriction_flag */
+    uint8_t aspect, aspect_idc;         /* H.265: aspect_ratio_info_present, aspect_ratio_idc */
+    uint16_t sar_w, sar_h;              /* H.264: written when both are set; H.265: with idc 255 */
+} T32Vui;
+
 typedef struct {
     uint32_t width, height;             /* picture (cropped) size */
     uint32_t fps_num, fps_den;
     uint32_t bitrate;                   /* bits/s for the level, 0 = none */
     int init_qp;                        /* pic_init_qp */
+    T32Vui vui;
 } T32H264Seq;
 
 typedef struct {

@@ -73,6 +73,37 @@ static size_t nal(uint8_t *out, unsigned ref_idc, unsigned type, const T32Bits *
     return 5u + t32_h264_escape(out + 5, b->buf, b->bits / 8u, esc ? esc : &zeros);
 }
 
+/* aspect_ratio_info: none without a SAR; the table index of the reduced SAR (H.264 Table E-1), else 255
+ * (Extended_SAR) and the SAR itself */
+static void put_aspect(T32Bits *b, uint32_t w, uint32_t h)
+{
+    static const uint8_t tab[16][2] = { { 1, 1 }, { 12, 11 }, { 10, 11 }, { 16, 11 }, { 40, 33 }, { 24, 11 }, { 20, 11 },
+                                        { 32, 11 }, { 80, 33 }, { 18, 11 }, { 15, 11 }, { 64, 33 }, { 160, 99 }, { 4, 3 },
+                                        { 3, 2 }, { 2, 1 } };
+    uint32_t x = w, y = h, t, i;
+
+    if (!w || !h) {
+        put(b, 1, 0);
+        return;
+    }
+    while (y) {
+        t = x % y;
+        x = y;
+        y = t;
+    }
+    w /= x;
+    h /= x;
+    put(b, 1, 1);
+    for (i = 0; i < 16; i++)
+        if (tab[i][0] == w && tab[i][1] == h) {
+            put(b, 8, i + 1u);
+            return;
+        }
+    put(b, 8, 255);
+    put(b, 16, w);
+    put(b, 16, h);
+}
+
 size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
 {
     T32Bits b;
@@ -105,12 +136,30 @@ size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
         put_ue(&b, (h16 - s->height) / 2u);
     }
     put(&b, 1, 1);                      /* VUI */
-    put(&b, 4, 0);                      /* aspect, overscan, signal type, chroma loc */
+    put_aspect(&b, s->vui.sar_w, s->vui.sar_h);
+    put(&b, 1, 0);                      /* overscan */
+    put(&b, 1, s->vui.signal);
+    if (s->vui.signal) {
+        put(&b, 3, s->vui.format);
+        put(&b, 1, s->vui.full ? 1u : 0u);
+        put(&b, 1, 0);                  /* no colour description (the vendor does not pass it on) */
+    }
+    put(&b, 1, 0);                      /* chroma loc */
     put(&b, 1, 1);                      /* timing */
     put(&b, 32, s->fps_den ? s->fps_den : 1u);
     put(&b, 32, 2u * (s->fps_num ? s->fps_num : 25u));
     put(&b, 1, 1);                      /* fixed frame rate */
-    put(&b, 4, 0);                      /* no HRD, no pic_struct, no restriction */
+    put(&b, 3, 0);                      /* no HRD, no pic_struct */
+    put(&b, 1, s->vui.restriction ? 1u : 0u);
+    if (s->vui.restriction) {           /* vendor 2.0.2.1 values */
+        put(&b, 1, 1);                  /* motion_vectors_over_pic_boundaries */
+        put_ue(&b, 0);                  /* max_bytes_per_pic_denom */
+        put_ue(&b, 0);                  /* max_bits_per_mb_denom */
+        put_ue(&b, 11);                 /* log2_max_mv_length_horizontal */
+        put_ue(&b, 11);                 /* log2_max_mv_length_vertical */
+        put_ue(&b, 0);                  /* max_num_reorder_frames */
+        put_ue(&b, 1);                  /* max_dec_frame_buffering */
+    }
     trailing(&b);
     return nal(out, 3, 7, &b, NULL);
 }
