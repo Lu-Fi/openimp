@@ -121,7 +121,7 @@ AWB do with it. The clips come from `tools/qemu/gen_scenes.sh` (ffmpeg lavfi onl
 90 s, looped by the model): static grey, brightness ramp up and down, a dark-to-bright step at 30 s, and a warm-to-cool
 tint shift (Cb/Cr 103/153 to 153/103) from 20 to 70 s.
 
-- The script boots the SoC's flash image read-only (`snapshot=on`) on the QEMU in `$Q/build` (`taskset -c 4-15 nice -n 19`,
+- The script boots the SoC's flash image read-only (`snapshot=on`) on the QEMU in `$Q/build` (`taskset -c 2-15 nice -n 19`,
   one QEMU at a time), starts the ISP stack with day/night switching neutralised, and runs `tools/qemu/ae_sample.sh` in the
   guest: once per loop (about 1 to 2 s of guest time on this emulated CPU) it records the sensor's integration time and gains,
   the ISP EV value, the WB weighted gains and colour temperature, the running mode, the ISP frame counter and (T31) the AE

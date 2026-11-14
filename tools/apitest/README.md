@@ -120,8 +120,7 @@ last `GetFrame` return.
 
 ## Rule: every new case runs in QEMU first (user decision 2026-10-26)
 
-A new case never goes to a camera before it ran in our QEMU for that SoC (`$S/qemu`, READMEs `README-T2x.md`, `README-T31.md`, `README-T40.md`,
-`README-T30.md`; images = agg47 flash copies, never the originals; free ports, own monitor socket, kill by PID):
+A new case never goes to a camera before it ran in our QEMU for that SoC (thingino flash images of the SoC booted read-only with `snapshot=on`, never the originals; free ports, own monitor socket, kill by PID):
 
     tools/apitest/qemu_run.py PORT SOC SENSOR I2C W H build/apitest_<soc> [case ...] --outdir D
 

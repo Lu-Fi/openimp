@@ -84,7 +84,7 @@ Hinweis: thingino pinnt in `package/openimp/openimp.mk` den Upstream-Commit `ope
 3. Optional: Polling durch eine Condvar ersetzen, die `avpu_complete_frame` signalisiert. Das reduziert zugleich F9.
 
 **Verifikation auf dem Gerät**
-- Fehlerinjektion per Debug-Env, z. B. `OPENIMP_T31_DROP_IRQ_EVERY=500`: im Callback jeden n-ten IRQ ignorieren.
+- Fehlerinjektion per Debug-Env (Vorschlag, nie implementiert: `OPENIMP_T31_DROP_IRQ_EVERY` existiert im Code nicht), z. B. `=500`: im Callback jeden n-ten IRQ ignorieren.
 - Erwartung nach dem Fix:
   - höchstens ca. 2 s Aussetzer, dann IDR;
   - der andere Kanal läuft weiter;

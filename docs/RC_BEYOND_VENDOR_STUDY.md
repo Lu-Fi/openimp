@@ -182,6 +182,8 @@ Findings:
 
 ## Proposals (ranked)
 
+**Status of the switch names (2026-11-14):** the names in the last column are proposals from the study. Implemented in `next` are `OPENIMP_T20_RC_IAWARE` (P2, default on for CBR, user-decided 2026-11-04) and `OPENIMP_T10_RC_SUPERFRM` (P1). `OPENIMP_T10_RC_IAWARE` (P3), `OPENIMP_T20_RC_IBUDGET` (P6) and `OPENIMP_T23_EPRC_SMOOTH` (P5) were never implemented under these names: no code reads them, setting them does nothing. The QP-falls-by-at-most-1 limit of P5 exists as `OPENIMP_EPRC_QP_DOWN1` (`src/t30/t30_helix_encoder.c:1879`, opt-in, device test pending).
+
 | # | SoC / modes | change | measured gain (op A, 6 scenes x 3 seeds) | risk | switch (proposed, default off) |
 |---|---|---|---|---|---|
 | P1 | T10 VBR | super-frame thresholds compared in bits (E+88/E+92 = superI/superP bits, as the T20 controller reads them) instead of bits/1024 | re-encodes 0.97 -> 0.00 per picture (encoder load / 2), rate and QP unchanged (+-3 %, all ops) | low: only the emergency re-encode path; a real super frame (> 19.6 / 14 Mbit) still re-encodes | `OPENIMP_T10_RC_SUPERFRM=1` (write E+88/E+92 after `RCT10_Init`) |

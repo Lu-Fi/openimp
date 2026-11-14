@@ -45,6 +45,10 @@ t31:
 t32:
 	./build-t32.sh
 
+# T33 platform (planned, #390): QEMU-only, built on the T32 sources
+t33:
+	./build-t33.sh
+
 t40:
 	./build-t40.sh
 

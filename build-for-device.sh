@@ -23,6 +23,9 @@ case "$platform" in
     T32|T32N|T32NQ)
         exec "$project_dir/build-t32.sh"
         ;;
+    T33)
+        exec "$project_dir/build-t33.sh"
+        ;;
     T40|T40XP)
         exec "$project_dir/build-t40.sh"
         ;;
@@ -30,7 +33,7 @@ case "$platform" in
         exec "$project_dir/build-t41.sh"
         ;;
     *)
-        echo "unsupported platform: $platform (use T20, T21, T23, T30, T31, T32, T40, or T41)" >&2
+        echo "unsupported platform: $platform (use T20, T21, T23, T30, T31, T32, T33, T40, or T41)" >&2
         exit 2
         ;;
 esac
