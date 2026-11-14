@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T32 / T33 encoder frame-rate drop counts every source frame; first frame after StartRecvPic at once (openimp #517, #393; T33L module, planned)
+
+- `src/t32/openimp_t32_encoder.c` (`enc_sink`): the frame-rate drop of a channel now counts every source frame of its group, also those dropped while the group still codes the last frame, and a frame it lets through stays due until the channel can take one. The first frame after `IMP_Encoder_StartRecvPic` is coded at once. Before, a 1 fps JPEG channel next to a 1080p H.264 channel waited for 25 frames the group could take: 2 to 3 s at 17 fps, so raptor's on-demand JPEG snapshot (3 s wait) failed about 1 in 4.
+- Evidence (T33L, raptor rvd, 1080p H.264 + on-demand JPEG chn 2): snapshot latency 0.1 to 1.7 s, 8/8 OK (before 2 to 3 s, 3 of 16 failed). `tests/t32` and `tests/t33` check OK.
+
 ## 2026-11-14: T33 JPEG on silicon: the vendor's section-mode control word (openimp #510, #393; T33L module, planned)
 
 - `src/t32/openimp_t32_encoder.c` (T33 sections path): JPEG control word as vendor libimp 2.0.2.1 writes it on the T33L (soc_vpu job dump): bit 29 set, no length limit (bit 16) and no over-limit stop (bit 26). With the T32 word every job ended with status 0x3 and no data.

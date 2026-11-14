@@ -184,6 +184,7 @@ struct t32_enc_chn {
     uint32_t seq;
     int pending, busy;                  /* a frame of the group is waiting / in work */
     uint64_t rate_acc;                  /* frame-rate drop */
+    int rate_due;                       /* the drop let a frame through, not coded yet */
     int src_fs;
     uint32_t src_num, src_den;
     pthread_t thread;
@@ -1289,6 +1290,20 @@ static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
     }
 
     pthread_mutex_lock(&enc_lock);
+    /* The frame-rate drop counts every source frame, also the ones dropped
+     * below while the group still codes the last frame: a low-rate channel
+     * (1 fps JPEG next to H.264) otherwise waits for many more source frames
+     * than its rate says.  A frame let through stays due until a later
+     * frame can be coded (#517). */
+    for (i = 0; i < T32_ENC_CHNS; i++) {
+        struct t32_enc_chn *e = &enc_chn[i];
+
+        if (!e->created || !e->registered || e->grp != grp || !e->recv)
+            continue;
+        e->frames++;
+        if (!e->rate_due && rate_pass_locked(e))
+            e->rate_due = 1;
+    }
     if (!g->created || g->frame) {      /* still coding the last one: drop */
         for (i = 0; i < T32_ENC_CHNS; i++)
             if (enc_chn[i].created && enc_chn[i].registered && enc_chn[i].grp == grp &&
@@ -1302,8 +1317,7 @@ static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
 
         if (!e->created || !e->registered || e->grp != grp || !e->recv)
             continue;
-        e->frames++;
-        if (!rate_pass_locked(e))
+        if (!e->rate_due)
             continue;
         if (frame->width != e->attr.encAttr.picWidth || frame->height != e->attr.encAttr.picHeight) {
             if (!e->size_logged++)
@@ -1318,6 +1332,7 @@ static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
             continue;
         }
         e->pending = 1;
+        e->rate_due = 0;
         refs++;
         pthread_cond_signal(&e->work);
     }
@@ -2252,6 +2267,8 @@ int IMP_Encoder_StartRecvPic(int encChn)
             if (e->ivdc)
                 IMP_LOG_INFO(TAG, "chn %d: pictures over IVDC (direct mode)", encChn);
         }
+        if (!e->recv)
+            e->rate_due = 1;            /* the first frame after a start is coded at once */
         e->recv = 1;
         e->rate_acc = 0;
         e->src_fs = -1;
