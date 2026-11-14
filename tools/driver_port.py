@@ -13,7 +13,12 @@ INTRO = ("Separate from the streamer-function bars above: this counts functions 
          "driver. It says nothing about the OpenIMP library. The T32/T33 driver port is merged into open-tx-isp "
          "next; its reference-C oracles stay on the T32 branch until upstream PR #15 lands. Host-proven is not device-tested. T33 has no recovered vendor C: its row counts the "
          "T33-only functions of the vendor module that pass the T33 binary oracle (the vendor instructions run in an emulator "
-         "against our C), see its note.")
+         "against our C), see its note; 'wired' = proven functions whose port also runs in the driver (the rest are proven ports "
+         "that still wait for the vendor block-state layer).")
+
+
+def wtxt(r):
+    return "; wired %d" % r["wired"] if r.get("wired") is not None else ""
 
 
 LINK = ("How the ports were made: success rate of the paid API port loop per model, by project and block size: "
@@ -36,7 +41,8 @@ def rows():
     out = []
     for soc in sorted(d["socs"]):
         e = d["socs"][soc]
-        out.append(dict(soc=soc, proven=e["proven"], total=e.get("total"), branch=e.get("branch"), date=e.get("date"), note=e.get("note", "")))
+        out.append(dict(soc=soc, proven=e["proven"], total=e.get("total"), wired=e.get("wired"), branch=e.get("branch"), date=e.get("date"),
+                        note=e.get("note", "")))
     return d, out
 
 
@@ -95,8 +101,8 @@ def md():
          INTRO, "", LINK, "", "| SoC | proven / all | progress | note |", "|---|--:|---|---|"]
     for r in rs:
         if r["total"]:
-            o.append("| %s | %d/%d (%.1f %%) | `%s` | %s; as of %s |" % (r["soc"], r["proven"], r["total"], 100.0 * r["proven"] / r["total"],
-                                                                      bar(r["proven"], r["total"]), r["note"], r["date"]))
+            o.append("| %s | %d/%d (%.1f %%%s) | `%s` | %s; as of %s |" % (r["soc"], r["proven"], r["total"], 100.0 * r["proven"] / r["total"],
+                                                                        wtxt(r), bar(r["proven"], r["total"]), r["note"], r["date"]))
         else:
             o.append("| %s | 0 %% (not started) | `%s` | %s |" % (r["soc"], bar(0, 1), r["note"]))
     o.append("")
@@ -112,7 +118,7 @@ def html_card():
     for r in rs:
         if r["total"]:
             pct = 100.0 * r["proven"] / r["total"]
-            num = "%d/%d <span class='small'>(%.1f %%)</span>" % (r["proven"], r["total"], pct)
+            num = "%d/%d <span class='small'>(%.1f %%%s)</span>" % (r["proven"], r["total"], pct, html.escape(wtxt(r)))
             pb = ('<div class="pb"><i class="b-dev" style="width:%.2f%%" title="%d of %d"></i><i class="b-gap" style="width:%.2f%%"></i></div>'
                   % (pct, r["proven"], r["total"], 100 - pct))
             note = "%s (as of %s)" % (r["note"], r["date"])
