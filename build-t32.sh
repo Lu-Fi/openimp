@@ -109,9 +109,12 @@ compile t32_encoder src/t32/openimp_t32_encoder.c
 # JPEGDEC; needs the 2.0.0 kernel's helix decode path)
 compile t32_jpegd src/t32/openimp_t32_jpegd.c
 compile t32_decoder src/t32/openimp_t32_decoder.c
-# rate control (#295): the T32 attributes on the eprc controller (src/eprc,
-# T23 revision; HERA keeps the Helix statistics registers)
+# rate control (#295): H.264 and H.265 on the port of the vendor's eprc T33
+# revision behind its i264e / i265e glue; QVBR on the T23 revision (src/eprc)
 compile t32_rc src/t32/openimp_t32_rc.c
+compile t32_rc33 src/t32/openimp_t32_rc33.c -O2
+compile t32_eprc_t33_h264 src/eprc/eprc_t33_h264.c -O2 -ffp-contract=off -fwrapv
+compile t32_eprc_t33_h265 src/eprc/eprc_t33_h265.c -O2 -ffp-contract=off -fwrapv
 compile t32_eprc src/eprc/eprc.c -O2 -ffp-contract=off
 compile t32_eprc_mbrc src/eprc/eprc_mbrc.c -O2 -ffp-contract=off
 # H.264 on HERA (#293): command lists, parameter sets / slice headers, the

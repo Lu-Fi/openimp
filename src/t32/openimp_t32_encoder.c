@@ -69,6 +69,7 @@
 #include "t32/openimp_t32_h264.h"
 #include "t32/openimp_t32_h265.h"
 #include "t32/openimp_t32_hera.h"
+#include "t32/t32_gop33.h"
 #include "t32/openimp_t32_rc.h"
 #include "t32/openimp_t32_hera_h265.h"
 #ifdef PLATFORM_T33
@@ -146,11 +147,21 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t stats[T32_HERA_STATS];     /* the engine's statistics of the last picture */
     T32Rc rc;                           /* rate control (#295), off at FIXQP */
     int rc_restart;                     /* SetChnAttrRcMode: restart at the next IDR */
+    uint32_t set_mask;                  /* run-time setters not yet handed to the controller (bit id - 0x11) */
+    uint32_t set_args[4][4];            /* their i264e_set_param arguments */
 #ifdef PLATFORM_T33
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
     int ref_is_idr;                     /* the reference is the I picture */
     int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
 #endif
+    /* vendor GetChnAttrRcMode reads the encoder's live parameters (i264e_get_param 3 =
+     * i264e_reconfig_rc_get, +0xdc..), which the run-time setters change only at the next IDR
+     * (i264e_idr_reconfig): until then the getters show @rb, the attribute before the setter */
+    int rb_hold;
+    IMPEncoderAttrRcMode rb;
+    T32Gop33 glue;                      /* IMP glue: rate and GOP sent to the encoder (encoder_get_fps_mask) */
+    int rate_pend;                      /* a rate / GOP was sent: the encoder takes it at the next IDR */
+    uint32_t rc_num, rc_den;            /* the rate the encoder (rate control, SPS) runs with */
 };
 
 struct t32_enc_chn {
@@ -536,14 +547,17 @@ static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, 
 #endif
 }
 
-/* (re)start the channel's rate control from @m (#295) */
-static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m)
+/* start the channel's rate control from @m (#295); @again: a rate control
+ * set at run time (SetChnAttrRcMode), taken on top of the current one as
+ * the vendor's i264e does */
+static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m, int again)
 {
     struct t32_h264 *a = &e->avc;
     const IMPEncoderCHNAttr *at = &e->attr;
+    int r = (again ? t32_rc_reconfig : t32_rc_init)(&a->rc, m, at->encAttr.picWidth, at->encAttr.picHeight,
+                                                    at->encAttr.bufSize, a->gop, a->rc_num, a->rc_den, e->hevc);
 
-    if (t32_rc_init(&a->rc, m, ALIGN16(at->encAttr.picWidth), ALIGN16(at->encAttr.picHeight), a->gop,
-                    at->rcAttr.outFrmRate.frmRateNum, at->rcAttr.outFrmRate.frmRateDen, e->hevc) != 0)
+    if (r != 0)
         IMP_LOG_WARN(TAG, "rate control init failed: fixed QP %d", a->qp_p);
     else if (a->rc.on)
         IMP_LOG_INFO(TAG, "%s rate control: mode %d -> eprc %u, %u kbit/s, qp [%u,%u], gop %u",
@@ -552,12 +566,95 @@ static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m)
                      a->rc.params.min_qp, a->rc.params.max_qp, a->gop);
 }
 
+/* before every coded picture: the frame rate and GOP the IMP glue sends to
+ * the encoder (vendor 2.2.0 encoder_get_fps_mask, src/t32/t32_gop33.h); 1:
+ * the picture is an IDR.  The channel attribute shows what was sent. */
+static int glue_picture(struct t32_enc_chn *e)
+{
+    struct t32_h264 *a = &e->avc;
+    uint32_t sn, sd;
+    unsigned r;
+
+    pthread_mutex_lock(&enc_lock);
+    sn = e->src_num;
+    sd = e->src_den;
+    if (!sn || !sd) {                   /* the source rate not known: the channel's */
+        sn = a->glue.user_num;
+        sd = a->glue.user_den;
+    }
+    r = t32_gop33_step(&a->glue, sn, sd);
+    if (r & (T32_GOP33_RATE | T32_GOP33_GOP)) {
+        a->rate_pend = 1;
+        e->attr.rcAttr.outFrmRate.frmRateNum = a->glue.num;
+        e->attr.rcAttr.outFrmRate.frmRateDen = a->glue.den;
+        e->attr.rcAttr.maxGop = a->glue.gop;
+    }
+    pthread_mutex_unlock(&enc_lock);
+    if (r & T32_GOP33_ZERO)
+        IMP_LOG_WARN(TAG, "GOP under one second of %u/%u fps: kept at %u pictures (the vendor traps here)",
+                     a->glue.num, a->glue.den, a->glue.gop);
+    return (r & T32_GOP33_IDR) != 0;
+}
+
+/* at the IDR: a new rate / GOP into the encoder (i264e_idr_reconfig: fps,
+ * keyint, the parameter sets, i264e_ratecontrol_init); 1: the rate control
+ * restarts */
+static int rate_take(struct t32_enc_chn *e)
+{
+    struct t32_h264 *a = &e->avc;
+    uint32_t g, n, d;
+    int take;
+
+    pthread_mutex_lock(&enc_lock);
+    take = a->rate_pend;
+    a->rate_pend = 0;
+    g = a->glue.gop;
+    n = a->glue.num;
+    d = a->glue.den;
+    pthread_mutex_unlock(&enc_lock);
+    if (!take || (g == a->gop && n == a->rc_num && d == a->rc_den))
+        return 0;
+    a->gop = g;
+    if (n != a->rc_num || d != a->rc_den) {
+        a->rc_num = n;
+        a->rc_den = d;
+        if (e->hevc) {
+            a->seq5.fps_num = n;
+            a->seq5.fps_den = d;
+            a->vps_len = t32_h265_vps(&a->seq5, a->vps);
+            a->sps_len = t32_h265_sps(&a->seq5, a->sps);
+            a->pps_len = t32_h265_pps(&a->seq5, a->pps);
+        } else {
+            a->seq.fps_num = n;
+            a->seq.fps_den = d;
+            a->sps_len = t32_h264_sps(&a->seq, a->sps);
+            a->pps_len = t32_h264_pps(&a->seq, a->pps);
+        }
+    }
+    IMP_LOG_INFO(TAG, "rate %u/%u, GOP %u from this IDR on", n, d, g);
+    return 1;
+}
+
 /* the picture's QP: the controller's, else the fixed / initial QP */
 static int rc_picture_qp(struct t32_enc_chn *e, int idr)
 {
     struct t32_h264 *a = &e->avc;
     int qp = idr ? a->qp_i : a->qp_p, q;
 
+    {
+        uint32_t mask, args[4][4];
+        unsigned k;
+
+        /* run-time setters (H.264): to the controller, which takes them at the next IDR */
+        pthread_mutex_lock(&enc_lock);
+        mask = a->set_mask;
+        memcpy(args, a->set_args, sizeof(args));
+        a->set_mask = 0;
+        pthread_mutex_unlock(&enc_lock);
+        for (k = 0; k < 4; k++)
+            if (mask & 1u << k)
+                (void)t32_rc_set_param(&a->rc, 0x11u + k, args[k]);
+    }
     if (idr) {
         IMPEncoderAttrRcMode m;
         int restart;
@@ -565,10 +662,16 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         pthread_mutex_lock(&enc_lock);
         restart = a->rc_restart;
         a->rc_restart = 0;
+        a->rb_hold = 0;                 /* the setters are live from this IDR on */
         m = e->attr.rcAttr.attrRcMode;
         pthread_mutex_unlock(&enc_lock);
+        if (rate_take(e) && a->rc.on)
+            restart = 1;                /* i264e_ratecontrol_init with the new rate / GOP */
         if (restart)
-            rc_setup(e, &m);
+            rc_setup(e, &m, 1);
+        /* FIXQP: a per-picture QP bound sets the fixed QPs (i264e_idr_reconfig) */
+        if (t32_rc_fixqp_take(&a->rc, &a->qp_i, &a->qp_p))
+            qp = a->qp_i;
     }
     if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
         qp = q;
@@ -628,7 +731,8 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     uint32_t rs = t32_hera_ring_stride(w), rows = t32_hera_ring_rows(f->height);
     uint32_t aux[4], at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
-    int idr = a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
+    int glue_idr = glue_picture(e);
+    int idr = glue_idr || a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
     T32HeraH264Pic p;
     T32H264Slice sl;
 
@@ -662,6 +766,25 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 #ifdef PLATFORM_T33
     n = t33_h264_list(e, &p, w, h, idr);
 #else
+    /* rate control (T33): the controller's slice block goes into the list,
+     * its per-MB maps (SMART, ROI, MB flags) into the buffers the list names,
+     * as the vendor engine reads them from the controller's memory */
+    p.rc_slice = t32_rc_slice(&a->rc);
+    {
+        static const int map_aux[3][2] = { { T33_MAP_SMART, 2 }, { T33_MAP_ROI, 1 }, { T33_MAP_MB, 3 } };
+
+        for (i = 0; i < 3; i++) {
+            uint32_t len;
+            const uint8_t *m = t32_rc_map(&a->rc, map_aux[i][0], &len);
+            T32VpuBuf *b = &a->aux[map_aux[i][1]];
+
+            if (m && len) {
+                len = len < b->size ? len : b->size;
+                memcpy(t32_vpu_buf_va(b), m, len);
+                OpenIMP_T32_VpuFlush(t32_vpu_buf_va(b), len, OI_T32_VPU_FLUSH_WBACK);
+            }
+        }
+    }
     n = (uint32_t)t32_hera_h264_list(&p, t32_vpu_buf_va(&a->list));
 #endif
     if (!n) {
@@ -691,12 +814,24 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         rc_picture_lost(e);
         return -1;
     }
-    /* FRAME_END: the slice's size and the statistics the engine left */
-    t32_rc_end(&a->rc, at - i, a->stats, T32_HERA_STATS);
+    /* FRAME_END: the slice's size and the statistics the engine left; after
+     * an IDR also the per-row sizes, read the vendor way (select, then read) */
+    {
+        uint32_t rows[T33_RC_ROWS];
+        unsigned nrows = t32_rc_idr_rows(&a->rc), r;
+
+        for (r = 0; r < nrows; r++) {
+            rows[r] = 0;
+            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
+                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+                rows[r] = 0;
+        }
+        t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA_STATS, rows, nrows);
+    }
     h264_pack(s, i, at - i, idr ? IMP_H264_NAL_SLICE_IDR : IMP_H264_NAL_SLICE, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;
-    s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_LBASE;
+    s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_SBASE;   /* vendor 2.2.0: P = SBASE */
     a->ref_y = p.recon_y;
     a->ref_c = p.recon_c;
     a->have_ref = 1;
@@ -791,7 +926,8 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     uint32_t rs = t32_hera_ring_stride(w), rows = t32_hera_ring_rows(h);
     uint32_t at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
-    int idr = a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
+    int glue_idr = glue_picture(e);
+    int idr = glue_idr || a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
     T32HeraH265Pic p;
     T32H265Slice sl;
 
@@ -853,12 +989,24 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         rc_picture_lost(e);
         return -1;
     }
-    /* H.265 reads no Helix-family statistics: the size only */
-    t32_rc_end(&a->rc, at - i, NULL, 0);
+    /* rcEnd: the slice's size, the 38 statistics the engine left and after
+     * an I picture the per-row sizes (read as for H.264) */
+    {
+        uint32_t rows[T33_RC_ROWS];
+        unsigned nrows = t32_rc_idr_rows(&a->rc), r;
+
+        for (r = 0; r < nrows; r++) {
+            rows[r] = 0;
+            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
+                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+                rows[r] = 0;
+        }
+        t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA5_STATS, rows, nrows);
+    }
     h265_pack(s, i, at - i, idr ? IMP_H265_NAL_SLICE_IDR_W_RADL : IMP_H265_NAL_SLICE_TRAIL_R, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;
-    s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_LBASE;
+    s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_SBASE;   /* vendor 2.2.0: P = SBASE */
     a->ref_y = p.recon_y;
     a->ref_c = p.recon_c;
     a->have_ref = 1;
@@ -1103,7 +1251,9 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     memset(attr, 0, sizeof(*attr));
     attr->encAttr.enType = (IMPPayloadType)(((uint32_t)profile >> 24) & 0xffu);
     attr->encAttr.bufSize = (uint32_t)bufSize;
-    attr->encAttr.profile = (uint32_t)profile;
+    /* vendor 2.2.0: H.264 keeps the profile index 2 (High; the channel maps
+     * 0/1/2 to profile_idc 66/77/100), H.265 the profile as given */
+    attr->encAttr.profile = attr->encAttr.enType == PT_H264 ? 2u : (uint32_t)profile;
     attr->encAttr.picWidth = (uint16_t)width;
     attr->encAttr.picHeight = (uint16_t)height;
     attr->rcAttr.outFrmRate.frmRateNum = (uint32_t)fpsNum;
@@ -1111,32 +1261,12 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     attr->rcAttr.maxGop = (uint32_t)gopLen;
     rc = &attr->rcAttr.attrRcMode;
     rc->rcMode = rcMode;
-    if (attr->encAttr.enType == PT_JPEG) {
-        if (rcMode != IMP_ENC_RC_MODE_FIXQP) {
-            IMP_LOG_ERR(TAG, "JPEG takes FIXQP only");
-            return -1;
-        }
-        rc->attrJPEGFixQp.qp = (uint32_t)iInitialQP;  /* kept as given, -1 too */
-        return 0;
+    if (attr->encAttr.enType == PT_JPEG && rcMode != IMP_ENC_RC_MODE_FIXQP) {
+        IMP_LOG_ERR(TAG, "JPEG takes FIXQP only");
+        return -1;
     }
-    /* H.264 / H.265 (HERA, later issue): the basic fields */
-    switch (rcMode) {
-    case IMP_ENC_RC_MODE_FIXQP:
-        rc->attrH264FixQp.IQp = rc->attrH264FixQp.PQp = rc->attrH264FixQp.BQp = (uint32_t)iInitialQP;
-        break;
-    case IMP_ENC_RC_MODE_CBR:
-        rc->attrH264Cbr.outBitRate = (uint32_t)bitrate;
-        rc->attrH264Cbr.initialQp = (uint8_t)iInitialQP;
-        rc->attrH264Cbr.maxQp = 48;
-        rc->attrH264Cbr.minQp = 15;
-        break;
-    default:
-        rc->attrH264Vbr.maxBitRate = (uint32_t)bitrate;
-        rc->attrH264Vbr.initialQp = (uint8_t)iInitialQP;
-        rc->attrH264Vbr.maxQp = 48;
-        rc->attrH264Vbr.minQp = 15;
-        break;
-    }
+    /* the vendor's full set of mode defaults (JPEG: the QP as given, -1 too) */
+    t32_rc_default_attr(rc, attr->encAttr.enType, iInitialQP, (uint32_t)bitrate);
     return 0;
 }
 
@@ -1213,7 +1343,7 @@ static int h265_setup(struct t32_enc_chn *e)
     a->pps_len = t32_h265_pps(&a->seq5, a->pps);
     if (!a->vps_len || !a->sps_len || !a->pps_len)
         return -1;
-    rc_setup(e, &at->rcAttr.attrRcMode);
+    rc_setup(e, &at->rcAttr.attrRcMode, 0);
     return 0;
 }
 
@@ -1232,6 +1362,22 @@ static int h264_setup(struct t32_enc_chn *e)
     if (env && atoi(env) > 0 && atoi(env) <= 4096)
         a->section_kb = (uint32_t)atoi(env);
     a->gop = at->rcAttr.maxGop;
+    {
+        uint32_t n = at->rcAttr.outFrmRate.frmRateNum, d = at->rcAttr.outFrmRate.frmRateDen;
+
+        if (!e->hevc) {
+            /* vendor 2.2.0 channel_i264e_encoder_init: the IDR interval is a
+             * multiple of the frame rate numerator (0: the frame rate) */
+            t32_rc_vendor_rate(&n, &d, &a->gop);
+        } else {
+            t32_gop33_reduce(&n, &d);
+        }
+        a->rc_num = n;
+        a->rc_den = d;
+        /* CreateChn: the glue asks for this GOP again before the first picture */
+        t32_gop33_create(&a->glue, n, d, a->gop);
+        a->rate_pend = 0;
+    }
     h264_set_qp(e, &at->rcAttr.attrRcMode);
 #ifdef PLATFORM_T33
     /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8 */
@@ -1256,7 +1402,7 @@ static int h264_setup(struct t32_enc_chn *e)
     a->seq.init_qp = a->qp_i;
     a->sps_len = t32_h264_sps(&a->seq, a->sps);
     a->pps_len = t32_h264_pps(&a->seq, a->pps);
-    rc_setup(e, &at->rcAttr.attrRcMode);
+    rc_setup(e, &at->rcAttr.attrRcMode, 0);
     return 0;
 }
 
@@ -1493,6 +1639,8 @@ int IMP_Encoder_GetChnAttr(int encChn, IMPEncoderChnAttr *attr)
     e = chn_get(encChn);
     if (e) {
         *attr = e->attr;
+        if (e->avc.rb_hold)
+            attr->rcAttr.attrRcMode = e->avc.rb;
         if (!e->h264)
             attr->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)e->qp;
     }
@@ -1606,6 +1754,10 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e && e->h264) {
+        if (!e->avc.rb_hold) {          /* live (and shown) from the next IDR on, as i264e_reconfig_rc_set */
+            e->avc.rb = e->attr.rcAttr.attrRcMode;
+            e->avc.rb_hold = 1;
+        }
         e->attr.rcAttr.attrRcMode = *rcMode;
         h264_set_qp(e, rcMode);
         e->avc.rc_restart = 1;          /* the controller restarts at the next IDR, as i264e */
@@ -1619,6 +1771,148 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     return rc;
 }
 
+/*
+ * Run-time rate-control setters (vendor 2.2.0): the argument checks and
+ * error codes of the vendor IMP layer, the channel attribute updated as the
+ * vendor does, the change handed to the encoder (i264e_set_param 0x11..0x14),
+ * which takes it at the next IDR (t32_rc_set_param).  H.265 channels (T23
+ * controller revision) restart their controller at the next IDR instead.
+ */
+#define T32_ENC_ERR_CHN     ((int)0x80040001)
+#define T32_ENC_ERR_PARAM   ((int)0x80040002)
+#define T32_ENC_ERR_NOCHN   ((int)0x80040008)
+#define T32_ENC_ERR_MODE    ((int)0x80040080)
+
+static int rc_setter(int encChn, unsigned id, const uint32_t a[4], int fixqp_ok)
+{
+    struct t32_enc_chn *e;
+    IMPEncoderAttrRcMode *m;
+    int rc = 0;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    m = e ? &e->attr.rcAttr.attrRcMode : NULL;
+    if (!e || !e->created)
+        rc = T32_ENC_ERR_NOCHN;
+    else if (!e->h264 || (!fixqp_ok && m->rcMode == IMP_ENC_RC_MODE_FIXQP))
+        rc = T32_ENC_ERR_MODE;
+    else if (id == 0x13 && m->rcMode == IMP_ENC_RC_MODE_FIXQP && (a[0] != a[1] || a[2] != a[3]))
+        rc = T32_ENC_ERR_PARAM;
+    if (rc) {
+        pthread_mutex_unlock(&enc_lock);
+        return rc;
+    }
+    /* the getters keep the attribute as it was until the next IDR */
+    if (!e->avc.rb_hold) {
+        e->avc.rb = *m;
+        e->avc.rb_hold = 1;
+    }
+    /* the attribute (the QP bytes and the rate sit at the same place in every mode but FIXQP) */
+    switch (id) {
+    case 0x11:
+        if (m->rcMode == IMP_ENC_RC_MODE_CBR)
+            m->attrH264Cbr.outBitRate = a[0];
+        else if (m->rcMode >= IMP_ENC_RC_MODE_VBR && m->rcMode <= IMP_ENC_RC_MODE_AVBR)
+            m->attrH264Vbr.maxBitRate = a[1];
+        break;
+    case 0x12:
+        if (m->rcMode >= IMP_ENC_RC_MODE_CBR && m->rcMode <= IMP_ENC_RC_MODE_AVBR) {
+            m->attrH264Cbr.maxQp = (uint8_t)a[0];
+            m->attrH264Cbr.minQp = (uint8_t)a[1];
+        }
+        break;
+    case 0x13:
+        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
+            m->attrH264FixQp.IQp = a[0];
+            m->attrH264FixQp.PQp = a[3];
+        } else if (m->rcMode <= IMP_ENC_RC_MODE_AVBR) {
+            m->attrH264Cbr.maxIQp = (uint8_t)a[0];
+            m->attrH264Cbr.minIQp = (uint8_t)a[1];
+        }
+        break;
+    case 0x14:
+        switch (m->rcMode) {
+        case IMP_ENC_RC_MODE_CBR:
+            m->attrH264Cbr.maxIPictureSize = a[0];
+            m->attrH264Cbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_VBR:
+            m->attrH264Vbr.maxIPictureSize = a[0];
+            m->attrH264Vbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_SMART:
+            m->attrH264Smart.maxIPictureSize = a[0];
+            m->attrH264Smart.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_CVBR:
+            m->attrH264CVbr.maxIPictureSize = a[0];
+            m->attrH264CVbr.maxPPictureSize = a[1];
+            break;
+        case IMP_ENC_RC_MODE_AVBR:
+            m->attrH264AVbr.maxIPictureSize = a[0];
+            m->attrH264AVbr.maxPPictureSize = a[1];
+            break;
+        default:
+            break;
+        }
+        break;
+    }
+    if (e->hevc) {
+        e->avc.rc_restart = 1;
+    } else {
+        memcpy(e->avc.set_args[id - 0x11], a, sizeof(e->avc.set_args[0]));
+        e->avc.set_mask |= 1u << (id - 0x11);
+    }
+    pthread_mutex_unlock(&enc_lock);
+    return 0;
+}
+
+int IMP_Encoder_SetChnBitRate(int encChn, int bitrate, int bitrateMax)
+{
+    uint32_t a[4] = { (uint32_t)bitrate, (uint32_t)bitrateMax, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (bitrate < 1 || bitrateMax < 1)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x11, a, 0);
+}
+
+int IMP_Encoder_SetChnQpBounds(int encChn, int minQp, int maxQp)
+{
+    uint32_t a[4] = { (uint32_t)maxQp, (uint32_t)minQp, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (minQp < 1 || maxQp < 1 || maxQp < minQp)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x12, a, 0);
+}
+
+int IMP_Encoder_SetChnQpBoundsPerFrame(int encChn, int minQpI, int maxQpI, int minQpP, int maxQpP)
+{
+    uint32_t a[4] = { (uint32_t)maxQpI, (uint32_t)minQpI, (uint32_t)maxQpP, (uint32_t)minQpP };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (minQpI < 1 || maxQpI < 1 || maxQpI < minQpI || minQpP < 1 || maxQpP < 1 || maxQpP < minQpP)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x13, a, 1);
+}
+
+int IMP_Encoder_SetChnMaxPictureSize(int encChn, uint32_t maxPictureSizeI, uint32_t maxPictureSizeP)
+{
+    uint32_t a[4] = { maxPictureSizeI, maxPictureSizeP, 0, 0 };
+
+    if (encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (!maxPictureSizeI || !maxPictureSizeP)
+        return T32_ENC_ERR_PARAM;
+    return rc_setter(encChn, 0x14, a, 1);
+}
+
 int IMP_Encoder_GetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
 {
     struct t32_enc_chn *e;
@@ -1628,7 +1922,7 @@ int IMP_Encoder_GetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e) {
-        *rcMode = e->attr.rcAttr.attrRcMode;
+        *rcMode = e->avc.rb_hold ? e->avc.rb : e->attr.rcAttr.attrRcMode;
         if (!e->h264)
             rcMode->attrJPEGFixQp.qp = (uint32_t)e->qp;
     }
@@ -1636,34 +1930,86 @@ int IMP_Encoder_GetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
     return e ? 0 : -1;
 }
 
+/*
+ * Frame rate and GOP (vendor 2.2.0): the setters store the request (the rate
+ * reduced); before the next picture the IMP glue sends it to the encoder
+ * (glue_picture, t32_gop33.h) with an IDR, and the getters read what was sent
+ * (i264e_reconfig_fps_get / _gop_get).  JPEG channels keep the attribute.
+ */
 int IMP_Encoder_SetChnFrmRate(int encChn, const IMPEncoderFrmRate *rate)
 {
     struct t32_enc_chn *e;
 
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
     if (!rate || !rate->frmRateNum || !rate->frmRateDen)
-        return -1;
+        return T32_ENC_ERR_PARAM;
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
-    if (e) {
-        e->attr.rcAttr.outFrmRate = *rate;
-        e->rate_acc = 0;
+    if (e && e->created) {
+        if (e->h264) {
+            t32_gop33_set_rate(&e->avc.glue, rate->frmRateNum, rate->frmRateDen);
+        } else {
+            e->attr.rcAttr.outFrmRate = *rate;
+            e->rate_acc = 0;
+        }
     }
     pthread_mutex_unlock(&enc_lock);
-    return e ? 0 : -1;
+    return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
 }
 
 int IMP_Encoder_GetChnFrmRate(int encChn, IMPEncoderFrmRate *rate)
 {
     struct t32_enc_chn *e;
 
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
     if (!rate)
-        return -1;
+        return T32_ENC_ERR_PARAM;
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
-    if (e)
-        *rate = e->attr.rcAttr.outFrmRate;
+    if (e && e->created) {
+        if (e->h264) {
+            rate->frmRateNum = e->avc.glue.num;
+            rate->frmRateDen = e->avc.glue.den;
+        } else {
+            *rate = e->attr.rcAttr.outFrmRate;
+        }
+    }
     pthread_mutex_unlock(&enc_lock);
-    return e ? 0 : -1;
+    return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
+}
+
+int IMP_Encoder_SetGOPSize(int encChn, const IMPEncoderGOPSizeCfg *gop)
+{
+    struct t32_enc_chn *e;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (!gop || gop->gopsize < 1)
+        return T32_ENC_ERR_PARAM;
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    if (e && e->created && e->h264)
+        t32_gop33_set_gop(&e->avc.glue, (uint32_t)gop->gopsize);
+    pthread_mutex_unlock(&enc_lock);
+    return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
+}
+
+int IMP_Encoder_GetGOPSize(int encChn, IMPEncoderGOPSizeCfg *gop)
+{
+    struct t32_enc_chn *e;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    if (!gop)
+        return T32_ENC_ERR_PARAM;
+    pthread_mutex_lock(&enc_lock);
+    e = chn_get(encChn);
+    if (e && e->created && e->h264)
+        gop->gopsize = (int)e->avc.glue.gop;
+    pthread_mutex_unlock(&enc_lock);
+    return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
 }
 
 int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)

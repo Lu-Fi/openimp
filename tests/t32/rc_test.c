@@ -8,11 +8,12 @@
  *                           input format of tools/eprc_t33_oracle.py
  *                           --compare)
  *   rc_test FILE            also compare with the vendor 2.2.0 sequences of
- *                           FILE (vendor-2.2.0-rc-h264.txt, same model):
- *                           OpenIMP runs the T23 controller revision, so
- *                           the check is a bound, not equality (CBR, VBR,
- *                           CVBR: rate within 12 % of the vendor's, mean QP
- *                           difference <= 3; SMART / AVBR reported only)
+ *                           FILE (vendor-2.2.0-rc-imp-h264.txt, same model,
+ *                           set up through the vendor IMP layer;
+ *                           the device motion mode 2 gives the same QPs on
+ *                           it as the harness's 0): H.264 runs the T33
+ *                           revision through the attribute mapping, so the
+ *                           QP of every picture must equal the vendor's
  */
 #include <math.h>
 #include <stdio.h>
@@ -48,54 +49,42 @@ static void model_stats(int qp, uint32_t bytes, uint32_t mbs, uint32_t st[48])
     st[21] = bytes / 3u;
 }
 
+/* H.265: the 38 HERA statistics of tools/eprc_t33_h265_oracle.py model_stats
+ * (QP and unit sums, size shares, analysis counts) */
+static void model_stats5(int qp, uint32_t bytes, uint32_t ctus, uint32_t st[48])
+{
+    memset(st, 0, 48 * sizeof(st[0]));
+    st[0] = (uint32_t)qp * ctus * 16u;
+    st[1] = ctus * 16u;
+    st[2] = bytes * 3u;
+    st[3] = (bytes / 2u) | (bytes / 3u) << 16;
+    st[4] = ctus * 4u;
+    for (int j = 5; j <= 8; j++)
+        st[j] = (ctus * 2u) | (ctus * 3u) << 16;
+    st[29] = bytes * 6u;
+    st[30] = bytes * 2u;
+    st[32] = (ctus * 16u) << 11 | 3u << 30;
+    st[33] = (uint32_t)qp * ctus * 4u;
+}
+
 struct run {
     uint64_t bits;
     int qmin, qmax, imin, imax;
     uint32_t n;
 };
 
+/* the attributes of the vendor reference runs: i264e_param_default values
+ * for everything the runs do not set (QP 15..48, initial QP 30) */
+/* the channel of the vendor runs (tools/eprc_t33_oracle.py --imp): the
+ * IMP_Encoder_SetDefaultParam defaults (initial QP 30) with max QP / max I QP 48 */
 static void fill(IMPEncoderAttrRcMode *m, int mode, uint32_t kbps)
 {
     memset(m, 0, sizeof(*m));
     m->rcMode = (IMPEncoderRcMode)mode;
+    t32_rc_default_attr(m, PT_H264, 30, kbps);
     /* the head is common to CBR/VBR/SMART/CVBR/AVBR */
     m->attrH264Cbr.maxQp = 48;
-    m->attrH264Cbr.minQp = 15;
-    m->attrH264Cbr.initialQp = 30;
-    switch (mode) {
-    case IMP_ENC_RC_MODE_CBR:
-        m->attrH264Cbr.outBitRate = kbps;
-        m->attrH264Cbr.staticTime = 2;
-        m->attrH264Cbr.qualityLvl = 2;
-        break;
-    case IMP_ENC_RC_MODE_VBR:
-        m->attrH264Vbr.maxBitRate = kbps;
-        m->attrH264Vbr.changePos = 80;
-        m->attrH264Vbr.staticTime = 2;
-        m->attrH264Vbr.qualityLvl = 2;
-        break;
-    case IMP_ENC_RC_MODE_SMART:
-        m->attrH264Smart.maxBitRate = kbps;
-        m->attrH264Smart.changePos = 80;
-        m->attrH264Smart.staticTime = 2;
-        m->attrH264Smart.qualityLvl = 2;
-        break;
-    case IMP_ENC_RC_MODE_CVBR:
-        m->attrH264CVbr.maxBitRate = kbps;
-        m->attrH264CVbr.longMaxBitRate = kbps;
-        m->attrH264CVbr.longMinBitRate = kbps / 4u;
-        m->attrH264CVbr.changePos = 80;
-        m->attrH264CVbr.shortStatTime = 2;
-        m->attrH264CVbr.longStatTime = 60;
-        m->attrH264CVbr.qualityLvl = 2;
-        break;
-    case IMP_ENC_RC_MODE_AVBR:
-        m->attrH264AVbr.maxBitRate = kbps;
-        m->attrH264AVbr.changePos = 80;
-        m->attrH264AVbr.staticTime = 2;
-        m->attrH264AVbr.qualityLvl = 2;
-        break;
-    }
+    m->attrH264Cbr.maxIQp = 48;
 }
 
 static int qp_trace[4096];
@@ -114,7 +103,7 @@ static int simulate(int mode, uint32_t kbps, int hevc, uint32_t w, uint32_t h, u
     memset(&rc, 0, sizeof(rc));
     memset(r, 0, sizeof(*r));
     r->qmin = r->imin = 99;
-    if (t32_rc_init(&rc, &m, w, h, gop, 25, 1, hevc) != 0 || !rc.on)
+    if (t32_rc_init(&rc, &m, w, h, 0, gop, 25, 1, hevc) != 0 || !rc.on)
         return -1;
     for (i = 0; i < pics; i++) {
         int idr = gop_pos == 0, qp = t32_rc_start(&rc, idr, gop_pos);
@@ -127,8 +116,11 @@ static int simulate(int mode, uint32_t kbps, int hevc, uint32_t w, uint32_t h, u
             return -1;
         }
         bytes = model_bytes(qp, idr, mbs, c);
-        model_stats(qp, bytes, mbs, st);
-        t32_rc_end(&rc, bytes, hevc ? NULL : st, hevc ? 0 : 48);
+        if (hevc)
+            model_stats5(qp, bytes, ((w + 63u) / 64u) * ((h + 63u) / 64u), st);
+        else
+            model_stats(qp, bytes, mbs, st);
+        t32_rc_end(&rc, bytes, st, hevc ? 38 : 48);
         if (trace)
             printf("F %u %d %d %u\n", i, idr ? 2 : 0, qp, bytes);
         if (i < 4096u)
@@ -258,16 +250,8 @@ static void test_vendor(const char *path)
                 printf("vs vendor %-5s %4d kbit/s: vendor %5.0f, OpenIMP %5.0f kbit/s (%+5.1f %%), "
                        "QP |diff| mean %.2f max %d\n", names[mode], kbps, vk, ok, (ok - vk) * 100.0 / vk,
                        (double)dsum / n, dmax);
-                /* SMART / AVBR: the T33 still-scene logic (fixed still I QP,
-                 * minStillRate) is not in the T23 revision: reported only */
-                if (mode == 3 || mode == 5) {
-                    printf("          (%s: known gap, T33 still-scene rules not ported)\n", names[mode]);
-                } else {
-                    CHECK(ok < vk * 1.12 && ok > vk * 0.88, "%s %d: rate %.0f vs vendor %.0f", names[mode],
-                          kbps, ok, vk);
-                    CHECK((double)dsum / n <= 3.0, "%s %d: mean QP difference %.2f", names[mode], kbps,
-                          (double)dsum / n);
-                }
+                /* H.264 runs the T33 revision: the QP of every picture */
+                CHECK(dmax == 0, "%s %d: QP differs from the vendor (max %d)", names[mode], kbps, dmax);
                 blocks++;
             }
             if (!l)

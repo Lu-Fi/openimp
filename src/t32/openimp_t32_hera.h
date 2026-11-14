@@ -42,6 +42,7 @@ typedef struct {
     uint32_t bs0, bs1;                  /* stream: one buffer (bs1 0) or two halves */
     uint32_t section_kb;                /* 0: no sections; else BSFULL after this many KiB */
     uint32_t cps, ai, qpt, ipc;         /* analysis outputs (t32_hera_aux_sizes) */
+    const uint8_t *rc_slice;            /* NULL, or the T33 controller's slice block (below) */
 } T32HeraH264Pic;
 
 /* the ring's stride and rows per plane (luma; chroma has half the rows) */
@@ -57,6 +58,15 @@ void t32_hera_aux_sizes(uint32_t width, uint32_t height, uint32_t size[4]);
  * ring (T32_HERA_RING_EXTRA rows before, wrapping at the base) */
 uint32_t t32_hera_ring_prev(uint32_t addr, uint32_t base, uint32_t end, uint32_t rows_bytes);
 
+/*
+ * Rate control (#295): with @rc_slice (the vendor-layout slice block of the
+ * T33 controller, T33_SLICE_BYTES, revision 6) the registers vendor
+ * H264E_T32V_SliceInit fills from it come from there, as the vendor does:
+ * EFE_FRM_QP (picture QP, MB QP window s+0x826 / s+0x825), EFE 0x2029c (MB
+ * QP clamp s+0x76e / s+0x76f, map enables), the row-budget block
+ * 0x40100..0x40124 and, after it, one 0x40900 + 4 i word a 64-line row
+ * (s+0x568, s+0x530 of them).  Other values stay the FIXQP defaults.
+ */
 /* the list into @list (T32_HERA_LIST_MAX_PAIRS * 2 words): pairs written, 0 on bad input */
 size_t t32_hera_h264_list(const T32HeraH264Pic *p, uint32_t *list);
 

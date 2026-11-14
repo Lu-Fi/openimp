@@ -34,6 +34,14 @@ typedef struct {
 #define EFE_ROI_INFOA   0x20054u        /* ..D 0x20060 */
 #define EFE_ROI_INFOD   0x20060u
 #define EFE_QPG_DLT     0x20300u
+#define EFE_MBQP_CFG    0x2029cu        /* MB QP clamp and map enables (rate control) */
+/* RC: the controller's row budgets */
+#define RC_ROW_CFG      0x40100u        /* rows, MBs a row, enables */
+#define RC_ROW_SHIFT    0x40104u
+#define RC_ROW_TGT      0x40108u        /* 0x40108, 0x40114 .. 0x40124: six words */
+#define RC_ROW_TGT_END  0x40124u
+#define RC_ROW_BITS     0x40900u        /* + 4 i: the cumulative target of row i */
+#define RC_ROWS_MAX     64u
 #define EFE_STAT        0x20004u
 /* JRFD: reference read */
 #define JRFD_CTRL       0x28004u
@@ -174,12 +182,40 @@ uint32_t t32_hera_roi_info(int qp)
     return b | b << 8 | b << 16 | b << 24;
 }
 
+static uint32_t rd32(const uint8_t *b)
+{
+    return (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24;
+}
+
 static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, const uint8_t *st,
                            unsigned idx)
 {
     uint32_t w = p->width, h = p->height, mbw = w / 16u, mbh = h / 16u;
     uint32_t qp = (uint32_t)p->qp;
 
+    if (p->rc_slice && p->rc_slice[0x874] == 6u) {
+        const uint8_t *sl = p->rc_slice;
+
+        switch (reg) {
+        case EFE_FRM_QP:                /* QP, MB QP min, max (vendor: s+0x153; the slice header's QP) */
+            return (sl[0x18] & 0x1fu) | qp << 8 | (uint32_t)sl[0x826] << 16 | (uint32_t)sl[0x825] << 24;
+        case EFE_MBQP_CFG:
+            return (sl[0x52a] & 1u) << 22 | (sl[0x76f] & 0x3fu) << 16 | (sl[0x76e] & 0x3fu) << 10 |
+                   (sl[0x76d] & 1u) << 9 | (sl[0x112] & 1u) << 8 | (sl[0x113] & 0xfu) << 4 |
+                   (sl[0x15a] & 1u) << 3 | (sl[0x158] & 1u) << 2 | (sl[0x18c] & 1u);
+        case RC_ROW_CFG:
+            return (((rd32(sl + 0x52c) - 1u) & 0xffffu) << 4) + (sl[0x52a] & 1u) + 0x500000u +
+                   ((uint32_t)sl[0x530] << 23) + ((uint32_t)sl[0x76d] << 31);
+        case RC_ROW_SHIFT:
+            return (sl[0x769] & 0x1fu) << 5 | (sl[0x768] & 0x1fu) | (sl[0x76a] & 0x1fu) << 10 |
+                   (sl[0x76b] & 7u) << 15 | (sl[0x76c] & 7u) << 18 | (sl[0x534] & 7u) << 21;
+        case RC_ROW_TGT:
+            return rd32(sl + 0x536);
+        case RC_ROW_TGT + 0xc: case RC_ROW_TGT + 0x10: case RC_ROW_TGT + 0x14: case RC_ROW_TGT + 0x18:
+        case RC_ROW_TGT_END:
+            return rd32(sl + 0x53a + (reg - (RC_ROW_TGT + 0xc)));
+        }
+    }
     switch (reg) {
     case EFE_FRM_SIZE:
     case VMAU_FRM_SIZE:
@@ -300,6 +336,20 @@ size_t t32_hera_h264_list(const T32HeraH264Pic *p, uint32_t *list)
             list[2 * n] = v;
             list[2 * n + 1] = t32_hera_cmd(reg, v, last);
             n++;
+        }
+        /* rate control: the row budgets follow the row block (vendor order) */
+        if (e->reg == RC_ROW_TGT_END && p->rc_slice && p->rc_slice[0x874] == 6u) {
+            uint32_t rows = rd32(p->rc_slice + 0x530);
+
+            for (k = 0; k < rows && k < RC_ROWS_MAX; k++) {
+                uint32_t v = rd32(p->rc_slice + 0x568 + 4u * k);
+
+                if (n >= T32_HERA_LIST_MAX_PAIRS)
+                    return 0;
+                list[2 * n] = v;
+                list[2 * n + 1] = t32_hera_cmd(RC_ROW_BITS + 4u * k, v, 0);
+                n++;
+            }
         }
     }
     return n;

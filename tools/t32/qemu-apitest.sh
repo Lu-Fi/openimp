@@ -47,7 +47,13 @@ con 20 "dmesg -n 1; mount -t proc p /proc; mount -t tmpfs t /tmp; mount -t sysfs
 con 120 "modprobe tx_isp_t32 && modprobe sensor_cv8001_t32" > "$OUT/modprobe.txt"
 for m in ${MODPROBE:-}; do con 120 "modprobe $m" >> "$OUT/modprobe.txt"; done
 con 60 "ls -l /dev/ipu /dev/dbox /dev/dsp /dev/soc_vpu /dev/framechan0 2>&1" | tr -d '\r' > "$OUT/nodes.txt"
-con 1800 "cd /tmp; APITEST_QEMU=1 ${APITEST_ENV:-} openimp-apitest --json /tmp/at.json cv8001 0x35 1920 1080 $AREAS > /tmp/at.out 2>&1" > /dev/null
+# the vendor libimp imports IMP_Log_Get_Option/imp_log_fun from libalog.so (vendor apps link -lalog);
+# apitest is linked against OpenIMP, so preload libalog when the libimp under test does not define them
+PRE=""
+if ! grep -aq "OpenIMP" "$OUT/rootfs/usr/lib/libimp.so" && [ -f "$OUT/rootfs/usr/lib/libalog.so" ]; then
+    PRE="LD_PRELOAD=/usr/lib/libalog.so"
+fi
+con 1800 "cd /tmp; APITEST_QEMU=1 $PRE ${APITEST_ENV:-} openimp-apitest --json /tmp/at.json cv8001 0x35 1920 1080 $AREAS > /tmp/at.out 2>&1" > /dev/null
 con 120 "echo __OUT_BEGIN; cat /tmp/at.out; echo __OUT_END" | tr -d '\r' |
     awk '/^__OUT_BEGIN/{f=1;next}/^__OUT_END/{f=0}f' > "$OUT/apitest.txt"
 con 120 "echo __JS_BEGIN; cat /tmp/at.json; echo; echo __JS_END" | tr -d '\r' |

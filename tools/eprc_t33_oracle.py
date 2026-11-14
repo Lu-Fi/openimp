@@ -10,9 +10,22 @@ controller (tests/t32/rc_test.c 'trace'), so the two sequences can be
 compared.  Nothing from the vendor library is copied; it is read from the
 path you pass.  The emulator has no HERA: statistics are synthetic.
 
-    tools/eprc_t33_oracle.py LIB MODE [KBPS] [PICTURES]      'F' lines
+    tools/eprc_t33_oracle.py LIB [--motion N] MODE [KBPS] [PICTURES]      'F' lines
+    tools/eprc_t33_oracle.py LIB --imp MODE [KBPS] [PICTURES]   the same, set up through the IMP layer
     tools/eprc_t33_oracle.py LIB --compare MODE KBPS PICS OPENIMP_TRACE
     tools/eprc_t33_oracle.py LIB --defaults                  i264e defaults
+    tools/eprc_t33_oracle.py LIB --scenarios FIRST COUNT     random scenarios ('S' + 'F' lines)
+    tools/eprc_t33_oracle.py LIB [--motion N] --rows --scenarios FIRST COUNT   the same with per-row IDR
+                                     slice sizes from HERA; 'F' lines end with the controller's sum
+    tools/eprc_t33_oracle.py LIB [--motion N] [--rows] --setters --scenarios FIRST COUNT   the same with
+                                     random run-time changes (IMP_Encoder_SetChnBitRate, _SetChnQpBounds,
+                                     _SetChnQpBoundsPerFrame, _SetChnMaxPictureSize through i264e_set_param;
+                                     'C picture id a b c d' lines before the picture's 'F' line), taken at the
+                                     next IDR by the vendor i264e_idr_reconfig
+    tools/eprc_t33_oracle.py LIB [--motion N] [--rows] --slice --scenarios FIRST COUNT   the same, each 'F'
+                                     line followed by an 'L' line: the HERA command-list words vendor
+                                     H264E_T32V_SliceInit makes from the controller's slice block (SLICE_REGS,
+                                     then the row count and the 0x40900 + 4 i words)
 
 MODE: the T32 IMPEncoderRcMode (1 CBR, 2 VBR, 3 SMART, 4 CVBR, 5 AVBR).
 i264e parameter offsets (vendor 2.2.0, from i264e_param_default and the
@@ -28,6 +41,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eprc_oracle import Lib, HEAP  # noqa: E402
 from unicorn import UC_HOOK_CODE  # noqa: E402
+from unicorn.mips_const import UC_MIPS_REG_PC, UC_MIPS_REG_RA, UC_MIPS_REG_V0  # noqa: E402
+
+# what i264e_idr_reconfig calls besides the rate control (headers, slice type and QP decisions): skipped
+IDR_SKIP = ('i264e_sps_init', 'i264e_pps_init', 'i264e_validate_levels', 'i264e_init_skip_header',
+            'i264e_decide_slice_type_and_rd', 'i264e_decide_slice_qp')
 
 W, H, GOP, FPS = 1920, 1088, 50, 25
 
@@ -51,7 +69,7 @@ def model_stats(qp, nbytes, mbs):
 
 class T33:
     def __init__(self, path, mode, kbps, rev=6, w=W, h=H, gop=GOP, fps=FPS, minqp=15, maxqp=48,
-                 initqp=30):
+                 initqp=30, extra=None, motion=0, block=None):
         L = self.L = Lib(path, generic=True)
         lo = L.syms['get_history_iqp'] if 'get_history_iqp' in L.syms else 0
         hi = L.syms['librc_h264_get_version'] + 0x100
@@ -65,39 +83,114 @@ class T33:
         L.call('i264e_param_default', P)
         if mode is None:
             return
-        L.w32(P + 4, rev)
         L.w32(P + 0xc20, 1); L.w32(P + 0xc24, self.REG)     # the HERA register window (no /dev/mem)
-        L.w32(P + 0x2c, gop); L.w32(P + 0x3c, w); L.w32(P + 0x40, h)
-        L.w32(P + 0x2a4, fps); L.w32(P + 0x2a8, 1)
-        L.w32(P + 0xdc, mode); L.w32(P + 0x110, kbps)
-        L.w32(P + 0xec, minqp); L.w32(P + 0xf0, maxqp); L.w32(P + 0xf8, initqp)
-        L.w32(P + 0xfc, maxqp); L.w32(P + 0x100, minqp)
-        if mode == 4:                                     # CVBR long-term bounds
-            L.w32(P + 0x178, kbps); L.w32(P + 0x17c, kbps // 4)
+        if block is not None:
+            # the parameter block the vendor IMP layer made (tools/eprc_t33_imp_oracle.py)
+            L.wr(P, block)
+        else:
+            L.w32(P + 4, rev)
+            L.w32(P + 0x2c, gop); L.w32(P + 0x3c, w); L.w32(P + 0x40, h)
+            L.w32(P + 0x2a4, fps); L.w32(P + 0x2a8, 1)
+            L.w32(P + 0xdc, mode); L.w32(P + 0x110, kbps)
+            L.w32(P + 0xec, minqp); L.w32(P + 0xf0, maxqp); L.w32(P + 0xf8, initqp)
+            L.w32(P + 0xfc, maxqp); L.w32(P + 0x100, minqp)
+            if mode == 4:                                 # CVBR long-term bounds
+                L.w32(P + 0x178, kbps); L.w32(P + 0x17c, kbps // 4)
+        # further i264e parameters {offset: (struct format, value)}, e.g. the SMART/AVBR
+        # still-scene knobs +0x25c (on), +0x260, +0x26c (mode), +0x26d (level), +0x168
+        for o, (f, v) in (extra or {}).items():
+            L.wr(P + o, struct.pack('<' + f, v))
         L.call('i264e_ratecontrol_init', P)
         Hh = self.Hh
         L.w32(Hh + 0x1540, P); L.w32(Hh + 0x3f0, self.X); L.w32(Hh + 0x400, self.S)
         L.w32(Hh + 0xbac, self.TB)
         L.w32(self.X + 0x4c, 0xffffffff)                  # no FRAME_REPEATE_JUDGE (no re-encoding)
+        # the per-picture motion mode X+0x164 (i264e_update_fenc sets 2; 0 by default here,
+        # as in the reference runs made before it was known)
+        L.wr(self.X + 0x164, bytes([motion]))
+        # the i264e slice block the controller fills (Hh+0xf9c -> P+0x6cc); without it the
+        # controller writes through a NULL pointer into low memory
+        self.SL = HEAP + 0x20000
+        L.w32(Hh + 0xf9c, self.SL)
+        # the encoder's per-MB maps (one byte per MB) that i264e_ratecontrol_start hands to
+        # the controller (+0x1444.. -> P+0x7e0..0x7fc, read by VPI_set_sliceinfo as the
+        # SMART / ROI maps); without them the controller writes through NULL into low memory
+        self.MAPS = HEAP + 0x40000
+        for i, o in enumerate((0x1444, 0x1448, 0x1a0c, 0x1a10, 0x1b7c, 0x1b80, 0x1cec, 0x1cf0)):
+            L.w32(P + o, self.MAPS + 0x4000 * i)
+        # the VPU work buffer the slice block maps are laid out in (P+0x3088 -> P+0x7dc ->
+        # VPI_set_sliceinfo: MB QP map, slice table, ... about 30 bytes per MB)
+        L.w32(P + 0x3088, HEAP + 0x100000)
         self.n = 0
+        self.gop = gop
+        # the parameter block is the i264e handle; i264e_idr_reconfig reaches the picture through +0x41d8
+        L.w32(P + 0x41d8, self.Hh)
+        self.setters = False
+
+    def _idr_hooks(self):
+        L = self.L
+
+        def skip(uc, addr, size, _):
+            uc.reg_write(UC_MIPS_REG_V0, 0)
+            uc.reg_write(UC_MIPS_REG_PC, uc.reg_read(UC_MIPS_REG_RA))
+
+        for f in IDR_SKIP:
+            L.uc.hook_add(UC_HOOK_CODE, skip, begin=L.syms[f], end=L.syms[f])
+        self.setters = True
+
+    def set_param(self, pid, args):
+        """i264e_set_param(handle, pid, args) as the IMP setters call it (the change waits for the next IDR)"""
+        if not self.setters:
+            self._idr_hooks()
+        L = self.L
+        a = HEAP + 0x3f000
+        # IMP_Encoder_SetChnQpBoundsPerFrame passes {0, 0, max I, min I, max P, min P}
+        v = [0, 0] + list(args) if pid == 0x13 else list(args)
+        L.wr(a, struct.pack('<6I', *(v + [0] * (6 - len(v)))))
+        return L.call('i264e_set_param', self.P, pid, a)
 
     def start(self):
         L = self.L
-        L.w32(self.Hh, self.n)
+        # Hh+0 counts the pictures since the last IDR (i264e_ratecontrol_start makes an
+        # IDR only when it is 0); the encoder restarts it every GOP
+        L.w32(self.Hh, self.n % self.gop if self.gop else self.n)
         r = L.call('i264e_ratecontrol_start', self.Hh)
+        if self.setters and L.r32(self.Hh) == 0 and L.r32(self.P + 0x26cc):
+            # i264e_encode: at an IDR with pending changes, i264e_idr_reconfig (the changes into the
+            # parameters, i264e_validate_parameters, a second i264e_ratecontrol_start)
+            L.call('i264e_idr_reconfig', self.P, 0, 0, 0)
         return r, L.r32(self.Hh + 0x354), L.rd(self.P + 0xb71, 1)[0]
 
-    def end(self, nbytes, regs):
+    def end(self, nbytes, regs, rows=None):
         L = self.L
         for i, v in enumerate(regs):
             L.w32(self.TB + 8 * i + 4, v)
+        # HERA (revision 6) per-row slice sizes after an IDR: i264e_ratecontrol_is_reenc
+        # selects 0x13240804 + 8 i through +0x44 and reads it from the window
+        for i, v in enumerate(rows or ()):
+            L.w32(self.REG + (0x201 + 2 * i) * 4, v)
         L.w32(self.Hh + 0xfa8, nbytes); L.w32(self.Hh + 0x350, 0)
         L.call('i264e_ratecontrol_is_reenc', self.Hh)
         self.n += 1
 
 
-def run(path, mode, kbps, pics, out=sys.stdout):
-    t = T33(path, mode, kbps)
+def imp_block(path, mode, kbps):
+    """the vendor IMP layer's parameter block for rc_test.c's channel: IMP_Encoder_SetDefaultParam
+    (1920x1088, 25 fps, GOP 50, initial QP 30, bufSize 0) with max QP / max I QP 48, then
+    IMP_Encoder_CreateChn up to i264e_init"""
+    from eprc_t33_imp_oracle import Imp, H264_MAIN
+    imp = Imp(path)
+    r, a = imp.default(H264_MAIN, mode, W, H, FPS, 1, GOP, 0, 30, kbps)
+    a = bytearray(a)
+    a[0x40] = a[0x44] = 48
+    r, v, blk = imp.param(bytes(a))
+    if r or v or blk is None:
+        raise RuntimeError('vendor channel set-up failed (%x %x)' % (r, v))
+    return blk
+
+
+def run(path, mode, kbps, pics, out=sys.stdout, motion=0, imp=False):
+    t = T33(path, mode, kbps, motion=motion, block=imp_block(path, mode, kbps) if imp else None)
     mbs = (W // 16) * (H // 16)
     seq = []
     for i in range(pics):
@@ -112,6 +205,130 @@ def run(path, mode, kbps, pics, out=sys.stdout):
     return seq
 
 
+def xorshift32(x):
+    x ^= (x << 13) & 0xffffffff
+    x ^= x >> 17
+    x ^= (x << 5) & 0xffffffff
+    return x
+
+
+class Scene:
+    """deterministic complexity sequence (scene cuts, still periods); tests/t32/rc_test.c has the same"""
+    LEVELS = (5.0, 20.0, 60.0, 120.0, 250.0)
+
+    def __init__(self, seed):
+        self.x = seed or 1
+        self.lvl = 60.0
+        self.still = 0
+
+    def next(self):
+        self.x = u = xorshift32(self.x)
+        if u % 100 < 3:
+            self.lvl = self.LEVELS[(u >> 8) % 5]
+        if (u >> 16) % 100 < 2:
+            self.still = 10 + (u >> 20) % 50
+        if self.still > 0:
+            self.still -= 1
+            return 1.0 + ((u >> 4) & 255) / 256.0
+        return max(0.5, self.lvl * (0.8 + 0.4 * ((u >> 12) & 1023) / 1024.0))
+
+
+# the command-list registers H264E_T32V_SliceInit fills from the controller's slice block (revision 6)
+SLICE_REGS = (0x2001c, 0x2029c, 0x40100, 0x40104, 0x40108, 0x40114, 0x40118, 0x4011c, 0x40120, 0x40124)
+SLICE_BYTES = 0x878
+
+
+def slice_list(t):
+    """vendor H264E_T32V_SliceInit on a copy of the slice block the controller filled at FRAME_START
+    (hwicodec_pf_h264e_t32v_enc copies it and sets the buffer addresses; +0x1c is the list buffer):
+    the 'L' line words"""
+    L = t.L
+    cp, lb = HEAP + 0x2000000, HEAP + 0x2001000
+    L.wr(cp, L.rd(t.SL, SLICE_BYTES))
+    L.w32(cp + 0x1c, lb)
+    L.wr(lb, bytes(0x4000))
+    L.call('H264E_T32V_SliceInit', cp)
+    w = struct.unpack('<4096I', L.rd(lb, 0x4000))
+    pairs = []
+    for k in range(0, len(w), 2):
+        if not w[k + 1] & 0x80000000:
+            break
+        pairs.append((w[k + 1] & 0xffffc, w[k]))
+        if w[k + 1] & 0x40000000:
+            break
+    regs = dict(pairs)
+    k = [i for i, (r, _) in enumerate(pairs) if r == SLICE_REGS[-1]][0] + 1
+    rows = []
+    while k < len(pairs) and pairs[k][0] == 0x40900 + 4 * len(rows):
+        rows.append(pairs[k][1]); k += 1
+    return [regs[r] for r in SLICE_REGS] + [len(rows)] + rows
+
+
+def model_rows(nbytes, qp, n):
+    """the per-row IDR slice sizes of the model (rc33_test.c has the same)"""
+    return [(nbytes * 8 // n) * (6 + (i * 5 + qp) % 7) // 9 for i in range(n)] if n else []
+
+
+def setter_call(x, mode):
+    """one random run-time change as the vendor IMP layer passes it on (its checks passed):
+    (i264e_set_param id, args)"""
+    k = x % 4
+    # the IMP layer only requires >= 1 (and min <= max): QPs past 51 and rates below 128 reach the clamps
+    a = [(x >> 3) % 60 + 1, (x >> 9) % 60 + 1, (x >> 15) % 60 + 1, (x >> 21) % 60 + 1]
+    if k == 0:                                  # SetChnBitRate(target, max)
+        return 0x11, [1 + (x >> 4) % 8000, 1 + (x >> 13) % 8000]
+    if k == 1:                                  # SetChnQpBounds(min, max) -> {max, min}
+        return 0x12, [max(a[0], a[1]), min(a[0], a[1])]
+    if k == 2:                                  # SetChnQpBoundsPerFrame(minI, maxI, minP, maxP)
+        return 0x13, [max(a[0], a[1]), min(a[0], a[1]), max(a[2], a[3]), min(a[2], a[3])]
+    return 0x14, [1 + (x >> 4) % 12000, 1 + (x >> 14) % 8000]   # SetChnMaxPictureSize(I, P)
+
+
+def scenario(path, seed, motion=0, rows=False, sl=False, setters=False):
+    """one random scenario: 'S' header line and its 'F' lines"""
+    x = xorshift32(seed * 2654435761 & 0xffffffff or 1)
+    pick = []
+    for _ in range(10):
+        x = xorshift32(x)
+        pick.append(x)
+    mode = 1 + pick[0] % 5
+    kbps = (256, 500, 1000, 2000, 3000, 4000, 6000, 8000)[pick[1] % 8]
+    w, h = ((1920, 1088), (1280, 720), (640, 368), (2560, 1440), (2304, 1296))[pick[2] % 5]
+    gop = (10, 25, 30, 50, 60)[pick[3] % 5]
+    fps = (10, 15, 20, 25, 30)[pick[4] % 5]
+    minqp = (10, 15, 20, 25)[pick[5] % 4]
+    maxqp = (38, 42, 45, 48, 51)[pick[6] % 5]
+    initqp = (25, 30, 35)[pick[7] % 3]
+    pics = (80, 150, 250)[pick[8] % 3]
+    t = T33(path, mode, kbps, w=w, h=h, gop=gop, fps=fps, minqp=minqp, maxqp=maxqp, initqp=initqp, motion=motion)
+    sc = Scene(pick[9])
+    mbs = (w // 16) * (h // 16)
+    out = ['S %d %d %d %d %d %d %d %d %d %d %u' % (mode, kbps, w, h, gop, fps, minqp, maxqp, initqp, pics, pick[9])]
+    sx = pick[9] ^ 0x5bd1e995
+    for i in range(pics):
+        cplx = sc.next()
+        if setters:
+            sx = xorshift32(sx)
+            if sx % 100 < 6:
+                pid, args = setter_call(xorshift32(sx * 7 & 0xffffffff or 1), mode)
+                t.set_param(pid, args)
+                out.append('C %d %d %s' % (i, pid, ' '.join(str(v) for v in args)))
+        r, qp, typ = t.start()
+        idr = i % gop == 0
+        nb = model_bytes(qp, idr, mbs, cplx)
+        words = slice_list(t) if sl else None
+        if rows:
+            t.end(nb, model_stats(qp, nb, mbs), model_rows(nb, qp, h >> 6) if idr else None)
+            # the IDR slice size sum the controller keeps (P+0x6bc)
+            out.append('F %d %d %d %d %d' % (i, 2 if idr else 0, qp, nb, t.L.r32(t.P + 0x6bc)))
+        else:
+            t.end(nb, model_stats(qp, nb, mbs))
+            out.append('F %d %d %d %d' % (i, 2 if idr else 0, qp, nb))
+        if words is not None:
+            out.append('L ' + ' '.join('%x' % v for v in words))
+    return out
+
+
 def summary(name, seq):
     bits = sum(s[3] for s in seq) * 8
     p = [s[2] for s in seq if s[1] != 2]
@@ -122,9 +339,29 @@ def summary(name, seq):
 
 def main():
     a = sys.argv[1:]
+    motion = 0
+    if len(a) >= 3 and a[1] == '--motion':
+        motion = int(a[2])
+        del a[1:3]
+    imp = len(a) >= 2 and a[1] == '--imp'
+    if imp:
+        del a[1]
+    rows = len(a) >= 2 and a[1] == '--rows'
+    if rows:
+        del a[1]
+    sl = len(a) >= 2 and a[1] == '--slice'
+    if sl:
+        del a[1]
+    setters = len(a) >= 2 and a[1] == '--setters'
+    if setters:
+        del a[1]
     if len(a) >= 2 and a[1] == '--defaults':
         t = T33(a[0], None, 0)
         print(' '.join('+0x%x=%d' % (o, t.L.r32(t.P + o)) for o in range(0, 0x360, 4) if t.L.r32(t.P + o)))
+        return
+    if len(a) >= 4 and a[1] == '--scenarios':
+        for k in range(int(a[2]), int(a[2]) + int(a[3])):
+            print('\n'.join(scenario(a[0], k, motion, rows, sl, setters)), flush=True)
         return
     if len(a) >= 6 and a[1] == '--compare':
         mode, kbps, pics = int(a[2]), int(a[3]), int(a[4])
@@ -137,7 +374,7 @@ def main():
         print('QP |diff| mean %.2f max %d, equal %d/%d' % (sum(d) / n, max(d), d.count(0), n))
         return
     mode = int(a[1]); kbps = int(a[2]) if len(a) > 2 else 2000; pics = int(a[3]) if len(a) > 3 else 250
-    run(a[0], mode, kbps, pics)
+    run(a[0], mode, kbps, pics, motion=motion, imp=imp)
 
 
 if __name__ == '__main__':
