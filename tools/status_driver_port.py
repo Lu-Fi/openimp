@@ -8,6 +8,10 @@ T33 has no recovered driver: its row counts the T33-only functions of the vendor
 'ported by name' come from the local inventory, Lu-Fi audit/t33-port, kept from the JSON unless --t33-total / --t33-ported):
   proven = unique vendor function names in FUNCS (first column) and PROVES of tests/t33_binoracle/*.conf on --t33-oracle
            (functions that pass the binary oracle: the vendor instructions in Unicorn against our C)
+Readable-C (de-lift) metric per SoC: --readable DIR reads DIR/<soc>/summary.json (+ summary_base.json = before the de-lift),
+written by Lu-Fi tools/delift_inventory.py (rules: DIR/t10/README.md); proven = functions that are real C and proven
+(vendor SDK / own code, or a de-lift oracle), total = every C function compiled into the module.  --readable-only updates
+only that section (T32/T33 rows untouched).
 Usage: python3 tools/status_driver_port.py [--repo /path/to/open-tx-isp] [--recovered REF] [--oracle REF] [--t33-oracle REF]
        [--t33-total N] [--t33-ported N] [--print]
 """
@@ -27,6 +31,25 @@ def git(repo, *a):
     return subprocess.run(["git", "-C", repo] + list(a), check=True, capture_output=True, text=True).stdout
 
 
+def readable(d, top):
+    """readable-C rows from the de-lift inventories (one summary.json per SoC)"""
+    if not top or not os.path.isdir(top):
+        return
+    r = d.setdefault("readable", {})
+    for soc in sorted(os.listdir(top)):
+        f = os.path.join(top, soc, "summary.json")
+        if not os.path.isfile(f):
+            continue
+        cur = json.load(open(f, encoding="utf-8"))
+        bf = os.path.join(top, soc, "summary_base.json")
+        base = json.load(open(bf, encoding="utf-8")) if os.path.isfile(bf) else cur
+        r[soc.upper()] = {"proven": cur["proven_readable"], "total": cur["functions"],
+                          "machine_lines": cur["machine_lines"], "lines": cur["lines"],
+                          "pct_machine_lines": cur["pct_machine_lines"],
+                          "base_proven": base["proven_readable"], "base_pct_machine_lines": base["pct_machine_lines"],
+                          "date": cur.get("date", ""), "issue": cur.get("issue", ""), "note": cur.get("note", "")}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.environ.get("OPEN_TX_ISP", "../open-tx-isp"))
@@ -36,7 +59,16 @@ def main():
     ap.add_argument("--t33-total", type=int, default=None)
     ap.add_argument("--t33-ported", type=int, default=None)
     ap.add_argument("--print", action="store_true", help="print, do not write")
+    ap.add_argument("--readable", default=os.environ.get("DELIFT_DIR"), help="dir with <soc>/summary.json (de-lift inventory)")
+    ap.add_argument("--readable-only", action="store_true", help="update only the readable-C section")
     a = ap.parse_args()
+    if a.readable_only:
+        d = json.load(open(OUT, encoding="utf-8"))
+        readable(d, a.readable)
+        s = json.dumps(d, indent=1) + "\n"
+        sys.stdout.write(s) if a.print else open(OUT, "w", encoding="utf-8").write(s)
+        print("readable C: %s" % ", ".join("%s %d/%d" % (k, v["proven"], v["total"]) for k, v in sorted(d.get("readable", {}).items())))
+        return
     total = len({os.path.basename(p) for p in git(a.repo, "ls-tree", "-r", "--name-only", a.recovered, "driver/t32/recovered").split("\n")
                  if FN.fullmatch(os.path.basename(p))})
     names = set()
@@ -70,6 +102,8 @@ def main():
     d["asof"] = max(day, t33day)
     d["socs"]["T32"] = {"proven": len(names), "total": total, "branch": a.oracle.replace("origin/", ""), "date": day,
                         "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"}
+    if a.readable:
+        readable(d, a.readable)
     s = json.dumps(d, indent=1) + "\n"
     if a.print:
         sys.stdout.write(s)

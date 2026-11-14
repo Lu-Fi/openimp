@@ -36,6 +36,53 @@ def rows():
     return d, out
 
 
+RTITLE = "Readable C (driver de-lift, open-tx-isp)"
+RINTRO = ("Per SoC: C functions compiled into the open module that are real, readable C and proven (Ingenic SDK source, our own "
+          "code, or a recovered function rewritten and proven bit-exact by a de-lift oracle), out of all C functions of the module. "
+          "Machine-like = recovered code that still has register-variable names, raw *(T *)(p + 0x..) accesses, goto chains or "
+          "magic offsets. 'before' = the module when the de-lift of that SoC started.")
+
+
+def rrows():
+    d = load() or {}
+    return [dict(soc=k, **v) for k, v in sorted(d.get("readable", {}).items())]
+
+
+def rnote(r):
+    t = r.get("note") or "inventory only"
+    if r.get("issue"):
+        t += " (openimp #%s)" % r["issue"]
+    return t + ("; as of %s" % r["date"] if r.get("date") else "")
+
+
+def md_readable():
+    rs = rrows()
+    if not rs:
+        return []
+    o = ["### " + RTITLE, "", RINTRO, "", "| SoC | readable / all functions | progress | machine-like lines | note |", "|---|--:|---|--:|---|"]
+    for r in rs:
+        o.append("| %s | %d/%d (%.1f %%; before %d) | `%s` | %.1f %% (before %.1f %%) | %s |" % (
+            r["soc"], r["proven"], r["total"], 100.0 * r["proven"] / r["total"], r["base_proven"], bar(r["proven"], r["total"]),
+            r["pct_machine_lines"], r["base_pct_machine_lines"], rnote(r)))
+    o.append("")
+    return o
+
+
+def html_readable():
+    tr = []
+    for r in rrows():
+        pct = 100.0 * r["proven"] / r["total"]
+        tr.append("<tr><td>%s</td><td class='c'>%d/%d <span class='small'>(%.1f %%, before %d)</span></td>"
+                  "<td><div class=\"pb\"><i class=\"b-dev\" style=\"width:%.2f%%\"></i><i class=\"b-gap\" style=\"width:%.2f%%\"></i></div></td>"
+                  "<td class='c'>%.1f %% <span class='small'>(before %.1f %%)</span></td><td class='small'>%s</td></tr>" % (
+                      html.escape(r["soc"]), r["proven"], r["total"], pct, r["base_proven"], pct, 100 - pct,
+                      r["pct_machine_lines"], r["base_pct_machine_lines"], html.escape(rnote(r))))
+    if not tr:
+        return ""
+    return ('<h3>%s</h3><p class="small">%s</p><table class="mi"><thead><tr><th>SoC</th><th>readable / all functions</th><th>progress</th>'
+            '<th>machine-like lines</th><th>note</th></tr></thead><tbody>%s</tbody></table>' % (html.escape(RTITLE), html.escape(RINTRO), "".join(tr)))
+
+
 def md():
     d, rs = rows()
     if not d:
@@ -49,6 +96,7 @@ def md():
         else:
             o.append("| %s | 0 %% (not started) | `%s` | %s |" % (r["soc"], bar(0, 1), r["note"]))
     o.append("")
+    o += md_readable()
     return "\n".join(o) + "\n"
 
 
@@ -70,5 +118,5 @@ def html_card():
         tr.append("<tr><td>%s</td><td class='c'>%s</td><td>%s</td><td class='small'>%s</td></tr>" % (
             html.escape(r["soc"]), num, pb, html.escape(note)))
     return ('<section class="card" id="driver-port"><h2>%s</h2><p class="small">%s</p>'
-            '<table class="mi"><thead><tr><th>SoC</th><th>proven / all functions</th><th>progress</th><th>note</th></tr></thead><tbody>%s</tbody></table></section>'
-            % (html.escape(TITLE), html.escape(INTRO), "".join(tr)))
+            '<table class="mi"><thead><tr><th>SoC</th><th>proven / all functions</th><th>progress</th><th>note</th></tr></thead><tbody>%s</tbody></table>%s</section>'
+            % (html.escape(TITLE), html.escape(INTRO), "".join(tr), html_readable()))
