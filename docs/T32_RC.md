@@ -9,16 +9,19 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
 - H.264: `src/t32/openimp_t32_rc.c` puts the attributes into an i264e parameter block and runs the port of the
   vendor's T33 revision (`src/eprc/eprc_t33_h264.c`) behind `src/t32/openimp_t32_rc33.c`, a reimplementation of the
   vendor i264e side (`i264e_param_default`, `i264e_ratecontrol_init` / `_start` / `_end` / `_is_reenc`) on the
-  controller's address arena (`src/eprc/eprc_t33_mem.h`). H.265 (its T33 revision is not ported yet) and QVBR map
-  onto `src/eprc` (the T23 revision of the vendor "eprc" controller, bit-exact with the T23 OEM code,
-  docs/T23_EPRC.md). Per picture FRAME_START gives the QP, which goes into the HERA command list (EFE_FRM_QP, the
+  controller's address arena (`src/eprc/eprc_t33_mem.h`). H.265 runs the H.265 build of the T33 revision
+  (`src/eprc/eprc_t33_h265.c`) behind the i265e side of the same file (`t32_rc65_*`: `i265e_param_default`,
+  the words `channel_i265e_encoder_init` sets, the `I265e_configure` clamps, `I265eRatectrl_rcInit` / `_rcStart` /
+  `_rcEnd`). QVBR maps onto `src/eprc` (the T23 revision of the vendor "eprc" controller, bit-exact with the
+  T23 OEM code, docs/T23_EPRC.md). Per picture FRAME_START gives the QP, which goes into the HERA command list (EFE_FRM_QP, the
   CABAC tables and the QP-banded analysis defaults follow it) and the slice header; after the picture the coded
   slice size and the engine statistics go to FRAME_END.
 - Statistics: vendor 2.2.0 reads 48 registers after each H.264 picture; the first 25 are the Helix registers the
   T23 controller reads (0x13200000 + 0x80120..0x8014c, 0x500e8.., 0x80080, 0x40094..0x400a0, 0x800e0..0x800ec,
   0x80168: HERA keeps them at the Helix offsets), and the vendor `i264e_ratecontrol_end` folds them the same way
-  (QP sums `lo16 + hi16`, SSE pairs masked to 27 bits). H.265 has no such registers in its read list: its
-  controller gets the coded size only.
+  (QP sums `lo16 + hi16`, SSE pairs masked to 27 bits). H.265 reads its own list of 38 registers
+  (`hera5_stat_regs`); `I265eRatectrl_rcEnd` folds entries 0..8, 29, 30, 32, 33 (revision 6) and, after an I
+  picture, the 64-line row sizes read as for H.264.
 - H.264 attribute placement (T33), checked against the vendor 2.2.0 IMP layer (below): channel set-up as
   `IMP_Encoder_CreateChn` -> `channel_i264e_encoder_init` -> `i264e_validate_parameters`. The QP bytes
   (maxQp/minQp/blkQpEn/initialQp/maxIQp/minIQp) -> +0xf0/+0xec/byte +0xf4/+0xf8/+0xfc/+0x100, bit rate +0x110,
@@ -46,12 +49,26 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
   copies back before the clamps and `i264e_ratecontrol_init`. Fields the new mode does not carry keep their last
   value; maxIPictureSize 0 stays 0, the CBR qualityLvl is taken, blkQpEn becomes 0/1, and the SMART
   supSmtStillRateLvl is taken from maxIprop clamped to 0..3 (vendor code, kept for equal behaviour).
-- H.265 / QVBR mode mapping (T23 revision): CBR -> CBR (outBitRate, iBiasLvl, staticTime, qualityLvl); VBR -> VBR
+- H.265 attribute placement (T33), checked against the vendor 2.2.0 IMP layer (`channel_i265e_encoder_init` +
+  `I265e_configure`, `tools/eprc_t33_h265_oracle.py --params`, `tests/t32/rc65_test.c`, 400 random attributes,
+  every word the rate control reads equal): mode +0x48, QP bytes maxQp/minQp/blkQpEn/initialQp/maxIQp/minIQp ->
+  +0xac/+0xb4/+0x58/+0x5c/+0xb0/+0xb8 (zero-extended: an initial QP of -1 is 255, clamped to 51), bit rate +0x60,
+  iBiasLvl +0xbc, CBR IP/PPfrmQPDelta +0x80/+0x84 and flucLvl +0xc4, changePos +0xcc (not CBR), staticTime +0xc0,
+  qualityLvl +0xd0, maxIprop/minIprop +0xd4/+0xd8, maxI/PPictureSize +0xdc/+0xe0 (I 0 = 1.5 x rate), SMART / AVBR
+  minStillRate/maxStillQp +0xe4/+0xe8, super-SMART +0xec..+0xf8, CVBR long max/min +0xfc/+0x100, short/long stat
+  time +0x104/+0x108, extraBitRate +0x10c, FIXQP I/P/B QP +0x4c/+0x50/+0x54, the skip attribute +0x1ac..+0x1c4.
+  `I265e_configure` lifts the keyint to the frame rate, clamps the bit rate between the frame rate and 12/6
+  (12/10 above 800 pixels wide) bits per pixel and picture and caps the VBV sizes (+0x1cc..+0x1d4, 1 / 1.4 / 1.3
+  of that) below any stream buffer. The vendor's `cnst_pmd_qp_thrd` .data words the H.265 controller patches
+  (0x2014b4 / 0x2014b6) are region 2 of the arena, one copy per channel (vendor: one per process).
+- QVBR mode mapping (T23 revision): CBR -> CBR (outBitRate, iBiasLvl, staticTime, qualityLvl); VBR -> VBR
   (maxBitRate, changePos, staticTime, qualityLvl); SMART -> SMART; CVBR -> VBR on maxBitRate and shortStatTime (the
   long-term bounds are not modelled); AVBR -> SMART; QVBR (PRJ009/PRJ010 only in the vendor header) -> VBR at
   targetBitrate. QPs clamped to 0..51, VBR rates floored at 128 kbit/s, frame / GOP QP steps 3 / 15. maxIQp /
   minIQp bound the IDR QP.
-- H.265 and QVBR: a rate-control change (`IMP_Encoder_SetChnAttrRcMode`) restarts the controller at the next IDR.
+- H.265 and QVBR: a rate-control change (`IMP_Encoder_SetChnAttrRcMode`) restarts the controller at the next IDR
+  (H.265: a new `I265eRatectrl_rcInit` on the new attribute; the vendor's i265e reconfiguration path is not
+  ported).
   QVBR: vendor 2.2.0 refuses it on PRJ007 (SetDefaultParam / CreateChn / SetChnAttrRcMode take modes 0..5 only);
   OpenIMP keeps running it as VBR (beyond vendor, unchanged).
 - After an IDR the H.264 controller gets the coded size of every 64-line row from HERA, read the vendor way
@@ -81,12 +98,20 @@ T32 support is planned (QEMU only, no T32 camera yet); this is not a release gat
   reconfiguration copy and a pending set for the next IDR. There `i264e_encode` runs `i264e_ratecontrol_start`,
   then `i264e_idr_reconfig`: the changes into the parameter block, `i264e_validate_parameters` and, as these four
   need no `i264e_ratecontrol_init`, a second `i264e_ratecontrol_start` for the IDR; OpenIMP does the same
-  (`t32_rc33_start`; with a SetChnAttrRcMode at the same IDR the changes go in after its copy). H.265 (T23 revision)
-  restarts its controller at the next IDR with the updated attribute. Checked: `tools/eprc_t33_oracle.py --setters`
+  (`t32_rc33_start`; with a SetChnAttrRcMode at the same IDR the changes go in after its copy). H.265 has no
+  setters yet (the vendor `I265eReconfig_*` path is not ported). Checked: `tools/eprc_t33_oracle.py --setters`
   calls the vendor `i264e_set_param` at random pictures (390 changes in 40 scenarios, QPs up to 60, rates from 1)
   and lets the vendor `i264e_idr_reconfig` take them; `rc33_test` on `vendor-2.2.0-rc33-setters-h264.txt.gz`:
   the QP of every picture equal (without the second start 36 of the 40 runs differ). QEMU apitest (`enc` area): SetChnBitRate reads back the new rate at once (vendor 2.2.0 still the old one until the IDR; it writes the attribute, its getter reads elsewhere), SetChnQpBoundsPerFrame 0, SetChnMaxPictureSize the same picture-size FAIL as the vendor (no re-encoding in either).
-- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the H.265 T33 revision, the frame-rate
+- H.265 QP check: `tools/eprc_t33_h265_oracle.py --scenarios` / `--rows` runs the vendor i265e glue and controller
+  under unicorn on the synthetic size and statistics model; `rc65_test` on `vendor-2.2.0-rc65-h265.txt.gz`
+  (164 scenarios, modes 1..5, 640x360 .. 2560x1440, 21740 pictures, 40 with per-row IDR sizes): the picture type
+  and QP of every picture and the row-size sum (rc+0x224) equal, 0 accesses outside the arena. QEMU (640x360,
+  CBR / VBR 1000 kbit/s, 30 pictures): decodes clean, colour bars intact, EFE_FRM_QP == slice QP for every
+  picture and equal to the vendor controller replayed on the run's slice sizes (the QEMU HERA returns zero
+  statistics, so the QP falls to the minimum 15 after the I picture at 45 on that rate).
+- Not done: re-encoding of oversized pictures (FRAME_REPEATE_JUDGE skipped), the H.265 run-time setters and
+  per-picture flags (ROI, still map, refresh: the i265e picture block fields stay 0), the frame-rate
   and GOP changes on the reconfiguration copy (`i264e_reconfig_fps_set` / `_gop_set`, which need
   `i264e_ratecontrol_init`), IVDC channels.
 

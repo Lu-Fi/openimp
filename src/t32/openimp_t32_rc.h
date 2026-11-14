@@ -9,9 +9,9 @@
  * = the first 25 entries of the H.264 statistics list).  H.264 runs the
  * port of the T33 revision (src/eprc/eprc_t33_h264.c behind the vendor's
  * i264e glue, openimp_t32_rc33.c; QP-exact with the vendor on the reference
- * runs, docs/T32_RC.md); H.265, until its T33 revision is ported, the T23
- * revision (src/eprc/eprc.c, bit-exact with the T23 OEM controller) with the
- * T32 attributes mapped onto it.  Platform neutral: no hardware access, so
+ * runs, docs/T32_RC.md), H.265 its H.265 build (src/eprc/eprc_t33_h265.c
+ * behind the i265e glue, t32_rc65_*).  QVBR (refused by the vendor) runs the
+ * T23 revision (src/eprc/eprc.c) with the T32 attributes mapped onto it.  Platform neutral: no hardware access, so
  * the host tests run it on recorded or synthetic statistics.
  */
 #ifndef OPENIMP_T32_RC_H
@@ -36,6 +36,7 @@ typedef struct {
     uint64_t bits;              /* coded bits since init (statistics) */
     EprcParams params;          /* what the controller was started with */
     T32Rc33 *t33;               /* H.264: the vendor's T33 revision (NULL: T23 revision) */
+    T32Rc65 *t65;               /* H.265: the vendor's T33 revision (NULL: T23 revision) */
     /* H.264: the i264e reconfiguration copy of the parameters (vendor
      * i264e_reconfig_init / _rc_set) that SetChnAttrRcMode works on */
 #define T32_RC_PWORDS (0x360 / 4)
@@ -56,6 +57,13 @@ int t32_rc_params(const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height
  * -1 for FIXQP / QVBR / an unknown mode. */
 int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
                     uint32_t gop, uint32_t fps_num, uint32_t fps_den);
+
+/* The i265e parameters of a T32 H.265 channel for the T33 revision, as
+ * vendor 2.2.0 makes them (channel_i265e_encoder_init + I265e_configure;
+ * exposed for the host tests).  @hs the attribute's attrHSkip (NULL: none).
+ * 0, -1 for QVBR / an unknown mode. */
+int t32_rc65_params(T32Rc65 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den, const IMPEncoderAttrInitHSkip *hs);
 
 /* vendor 2.2.0 H.264 channel set-up: the frame rate reduced (0 -> 25/1) and
  * the GOP rounded up to a multiple of its numerator (0 -> the frame rate),
@@ -87,12 +95,12 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos);
 
 /* Finish the picture (FRAME_END) with its coded size in bytes and the
  * engine statistics the encoder read (vendor 2.2.0 order: H.264 the 48
- * registers of hera_stat_regs, whose first 25 are EPRC_StatRegs; H.265 has
- * no Helix-family statistics, @stats NULL).  No re-encoding: the HERA path
+ * registers of hera_stat_regs, whose first 25 are EPRC_StatRegs; H.265 the
+ * 38 of hera5_stat_regs).  No re-encoding: the HERA path
  * cannot code a picture again (FRAME_REPEATE_JUDGE skipped). */
 void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats);
 
-/* H.264 after an IDR: the HERA per-row coded sizes the controller wants
+/* after an IDR: the HERA per-row coded sizes the controller wants
  * (t32_rc_idr_rows rows, read as T33_HERA_ROW_SEL / T33_HERA_ROW) */
 unsigned t32_rc_idr_rows(T32Rc *rc);
 void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,

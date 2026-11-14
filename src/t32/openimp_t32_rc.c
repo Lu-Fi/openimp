@@ -346,6 +346,158 @@ int t32_rc33_params(T32Rc33 *c, const IMPEncoderAttrRcMode *m, uint32_t width, u
     return 0;
 }
 
+/* vendor 2.2.0 channel_i265e_encoder_init (0xd5ccc): the IMP attribute
+ * into the i265e parameter block, then I265e_configure.  The fields of the
+ * T32 attribute (the H.264 layout for both codecs) go in as given; the six
+ * QP bytes zero-extended (an initial QP of -1 becomes 255, which
+ * I265e_configure clamps to 51), maxIPictureSize 0 = 1.5 x the rate.  The
+ * CBR changePos, the VBR / SMART / AVBR IPfrmQPDelta / PPfrmQPDelta / flucLvl
+ * keep the i265e defaults.  The rate: reduced (0 -> 25/1), the keyint a
+ * multiple of its numerator.  Checked word by word against the vendor
+ * library (tools/eprc_t33_h265_oracle.py --params, tests/t32/rc65_test.c). */
+static void t65_head(T32Rc65 *c, const IMPEncoderAttrH264CBR *a)
+{
+    t32_rc65_set(c, T65P_MAX_QP, a->maxQp);
+    t32_rc65_set(c, T65P_MIN_QP, a->minQp);
+    t32_rc65_set(c, 0x58, a->blkQpEn);
+    t32_rc65_set(c, T65P_INIT_QP, a->initialQp);
+    t32_rc65_set(c, T65P_MAX_IQP, a->maxIQp);
+    t32_rc65_set(c, T65P_MIN_IQP, a->minIQp);
+}
+
+static void t65_sizes(T32Rc65 *c, uint32_t kbps, uint32_t max_i, uint32_t max_p)
+{
+    t32_rc65_set(c, 0xdc, max_i ? max_i : (kbps * 3u) >> 1);
+    t32_rc65_set(c, 0xe0, max_p);
+}
+
+/* the VBR-family fields (VBR, SMART, AVBR share the layout up to minIprop) */
+static void t65_vbr(T32Rc65 *c, const IMPEncoderAttrH264VBR *a)
+{
+    t32_rc65_set(c, T65P_KBPS, a->maxBitRate);
+    t32_rc65_set(c, 0xbc, (uint32_t)(int32_t)a->iBiasLvl);
+    t32_rc65_set(c, 0xcc, a->changePos);
+    t32_rc65_set(c, 0xc0, a->staticTime);
+    t32_rc65_set(c, 0xd0, a->qualityLvl);
+    t32_rc65_set(c, 0xd4, a->maxIprop);
+    t32_rc65_set(c, 0xd8, a->minIprop);
+}
+
+int t32_rc65_params(T32Rc65 *c, const IMPEncoderAttrRcMode *m, uint32_t width, uint32_t height, uint32_t bufsize,
+                    uint32_t gop, uint32_t fps_num, uint32_t fps_den, const IMPEncoderAttrInitHSkip *hs)
+{
+    switch (m->rcMode) {
+    case IMP_ENC_RC_MODE_FIXQP: {
+        const IMPEncoderAttrH264FixQP *a = &m->attrH264FixQp;
+
+        t32_rc65_set(c, T65P_MODE, 0);
+        t32_rc65_set(c, T65P_FIX_IQP, a->IQp);
+        t32_rc65_set(c, T65P_FIX_PQP, a->PQp);
+        t32_rc65_set(c, 0x54, a->BQp);
+        t32_rc65_set(c, 0x58, a->blkQpEn);
+        break;
+    }
+    case IMP_ENC_RC_MODE_CBR: {
+        const IMPEncoderAttrH264CBR *a = &m->attrH264Cbr;
+
+        t32_rc65_set(c, T65P_MODE, 1);
+        t65_head(c, a);
+        t32_rc65_set(c, T65P_KBPS, a->outBitRate);
+        t32_rc65_set(c, 0xbc, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc65_set(c, 0x80, a->IPfrmQPDelta);
+        t32_rc65_set(c, 0x84, a->PPfrmQPDelta);
+        t32_rc65_set(c, 0xc0, a->staticTime);
+        t32_rc65_set(c, 0xc4, a->flucLvl);
+        t32_rc65_set(c, 0xd0, a->qualityLvl);
+        t32_rc65_set(c, 0xd4, a->maxIprop);
+        t32_rc65_set(c, 0xd8, a->minIprop);
+        t65_sizes(c, a->outBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        break;
+    }
+    case IMP_ENC_RC_MODE_VBR: {
+        const IMPEncoderAttrH264VBR *a = &m->attrH264Vbr;
+
+        t32_rc65_set(c, T65P_MODE, 2);
+        t65_head(c, &m->attrH264Cbr);
+        t65_vbr(c, a);
+        t65_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        break;
+    }
+    case IMP_ENC_RC_MODE_SMART: {
+        const IMPEncoderAttrH264Smart *a = &m->attrH264Smart;
+
+        t32_rc65_set(c, T65P_MODE, 3);
+        t65_head(c, &m->attrH264Cbr);
+        t65_vbr(c, &m->attrH264Vbr);
+        t32_rc65_set(c, 0xe4, a->minStillRate);
+        t32_rc65_set(c, 0xe8, a->maxStillQp);
+        t32_rc65_set(c, 0xec, a->superSmartEn);
+        t32_rc65_set(c, 0xf0, a->supSmtStillLvl);
+        t32_rc65_set(c, 0xf4, a->supSmtStillRateLvl);
+        t32_rc65_set(c, 0xf8, a->maxSupSmtStillRate);
+        t65_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        break;
+    }
+    case IMP_ENC_RC_MODE_CVBR: {
+        const IMPEncoderAttrH264CVBR *a = &m->attrH264CVbr;
+
+        t32_rc65_set(c, T65P_MODE, 4);
+        t65_head(c, &m->attrH264Cbr);
+        t32_rc65_set(c, T65P_KBPS, a->maxBitRate);
+        t32_rc65_set(c, T65P_LONG_MAX_KBPS, a->longMaxBitRate);
+        t32_rc65_set(c, T65P_LONG_MIN_KBPS, a->longMinBitRate);
+        t32_rc65_set(c, 0xbc, (uint32_t)(int32_t)a->iBiasLvl);
+        t32_rc65_set(c, 0xcc, a->changePos);
+        t32_rc65_set(c, 0x104, a->shortStatTime);
+        t32_rc65_set(c, 0x108, a->longStatTime);
+        t32_rc65_set(c, 0xd0, a->qualityLvl);
+        t32_rc65_set(c, 0xd4, a->maxIprop);
+        t32_rc65_set(c, 0xd8, a->minIprop);
+        t32_rc65_set(c, 0x10c, a->extraBitRate);
+        t65_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        break;
+    }
+    case IMP_ENC_RC_MODE_AVBR: {
+        const IMPEncoderAttrH264AVBR *a = &m->attrH264AVbr;
+
+        t32_rc65_set(c, T65P_MODE, 5);
+        t65_head(c, &m->attrH264Cbr);
+        t65_vbr(c, &m->attrH264Vbr);
+        t32_rc65_set(c, 0xe4, a->minStillRate);
+        t32_rc65_set(c, 0xe8, a->maxStillQp);
+        t65_sizes(c, a->maxBitRate, a->maxIPictureSize, a->maxPPictureSize);
+        break;
+    }
+    default:
+        return -1;              /* QVBR: the vendor refuses it (0x80040002) */
+    }
+    reduce_fraction(&fps_num, &fps_den);
+    if (!fps_num || !fps_den) {
+        fps_num = 25;
+        fps_den = 1;
+    }
+    if ((gop * fps_den) % fps_num)
+        gop = (gop / fps_num + 1u) * fps_num;
+    t32_rc65_set(c, T65P_FPS_NUM, fps_num);
+    t32_rc65_set(c, T65P_FPS_DEN, fps_den);
+    t32_rc65_set(c, T65P_GOP, gop);
+    /* the VBV size in bits: the stream buffer less 8320 bytes (I265e_configure
+     * caps it at 12/6 or 12/10 bits per pixel, below any stream buffer) */
+    t32_rc65_set(c, T65P_VBV, (t32_rc_vendor_bufsize(width, height, bufsize) - 8320u) * 8u);
+    if (hs) {
+        /* the skip attribute (+0x1ac..+0x1c0; +0x1c4: 1 below skip type 2, else 6) */
+        t32_rc65_set(c, T65P_SKIP_TYPE, (uint32_t)hs->hSkipAttr.skipType);
+        t32_rc65_set(c, 0x1b0, (uint32_t)hs->hSkipAttr.m);
+        t32_rc65_set(c, 0x1b4, (uint32_t)hs->hSkipAttr.n);
+        t32_rc65_set(c, 0x1b8, (uint32_t)hs->hSkipAttr.maxSameSceneCnt);
+        t32_rc65_set(c, 0x1bc, (uint32_t)hs->hSkipAttr.bEnableScenecut);
+        t32_rc65_set(c, 0x1c0, (uint32_t)hs->hSkipAttr.bBlackEnhance);
+        t32_rc65_set(c, 0x1c4, (uint32_t)hs->hSkipAttr.skipType < 2u && (uint32_t)hs->maxHSkipType < 2u ? 1u : 6u);
+    }
+    t32_rc65_configure(c);
+    return 0;
+}
+
 /* IMP_Encoder_SetChnAttrRcMode on an H.264 channel (vendor 2.2.0): the
  * attribute goes through i264e_reconfig_rc_set (0x707f0) into the encoder's
  * reconfiguration copy of the parameters (seeded by i264e_reconfig_init
@@ -542,7 +694,11 @@ void t32_rc_default_attr(IMPEncoderAttrRcMode *rc, IMPPayloadType type, int init
 
 void t32_rc_free(T32Rc *rc)
 {
-    if (rc->t33) {
+    if (rc->t65) {
+        t32_rc65_close(rc->t65);
+        free(rc->t65);
+        rc->t65 = NULL;
+    } else if (rc->t33) {
         t32_rc33_close(rc->t33);
         free(rc->t33);
         rc->t33 = NULL;
@@ -565,6 +721,35 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32
     rc->hevc = hevc;
     rc->mode = (int)m->rcMode;
     rc->i_min = rc->i_max = -1;
+    if (hevc && m->rcMode != IMP_ENC_RC_MODE_QVBR) {
+        /* H.265: the vendor's i265e set-up */
+        T32Rc65 *c = calloc(1, sizeof(*c));
+
+        if (!c || t32_rc65_open(c, pic_w, pic_h) != 0) {
+            free(c);
+            return -1;
+        }
+        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP ||
+            t32_rc65_params(c, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, NULL) != 0) {
+            t32_rc65_close(c);
+            free(c);
+            return 0;
+        }
+        if (t32_rc65_init(c) != 0) {
+            t32_rc65_close(c);
+            free(c);
+            return -1;
+        }
+        if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) == 0)
+            rc->params = p;     /* for the log line only */
+        rc->t65 = c;
+        rc->width = width;
+        rc->height = height;
+        rc->min_qp = (int)t32_rc65_get(c, T65P_MIN_QP);
+        rc->max_qp = (int)t32_rc65_get(c, T65P_MAX_QP);
+        rc->on = 1;
+        return 0;
+    }
     if (!hevc && m->rcMode != IMP_ENC_RC_MODE_QVBR) {
         /* H.264: the vendor's i264e set-up, whatever the attribute holds */
         T32Rc33 *c = calloc(1, sizeof(*c));
@@ -682,6 +867,12 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos)
 
     if (!rc->on)
         return -1;
+    if (rc->t65) {
+        qp = t32_rc65_start(rc->t65, idr);
+        rc->qp = clip(qp < 0 ? rc->t65->qp : qp, 0, 51);
+        rc->idr = idr;
+        return rc->qp;
+    }
     if (rc->t33) {
         /* the controller clamps the IDR QP to maxIQp / minIQp itself */
         qp = t32_rc33_start(rc->t33, idr ? 0u : gop_pos);
@@ -703,6 +894,8 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos)
 
 unsigned t32_rc_idr_rows(T32Rc *rc)
 {
+    if (rc->on && rc->t65)
+        return t32_rc65_idr_rows(rc->t65);
     return rc->on && rc->t33 ? t32_rc33_idr_rows(rc->t33) : 0u;
 }
 
@@ -719,6 +912,17 @@ void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned 
 
     if (!rc->on)
         return;
+    if (rc->t65) {
+        uint32_t st[T65_RC_STATS];
+
+        memset(st, 0, sizeof(st));
+        if (stats)
+            memcpy(st, stats, (nstats < T65_RC_STATS ? nstats : T65_RC_STATS) * sizeof(st[0]));
+        t32_rc65_end_rows(rc->t65, bytes, st, rows, nrows);
+        rc->pictures++;
+        rc->bits += (uint64_t)bytes * 8u;
+        return;
+    }
     if (rc->t33) {
         uint32_t st[T33_RC_STATS];
 

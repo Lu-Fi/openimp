@@ -14,6 +14,12 @@ HERA: statistics are synthetic.
 
     tools/eprc_t33_h265_oracle.py LIB MODE [KBPS] [PICTURES]   'F' lines
     tools/eprc_t33_h265_oracle.py LIB --scenarios FIRST COUNT  random scenarios ('S' + 'F' lines)
+    tools/eprc_t33_h265_oracle.py LIB --rows FIRST COUNT       the same with per-row IDR sizes ('F' + row sum)
+    tools/eprc_t33_h265_oracle.py LIB --params FIRST COUNT     random attributes ('A' + 'P' lines)
+
+'A seed attr' (IMPEncoderChnAttr, 184 bytes hex, as given to IMP_Encoder_CreateChn), then
+'P seed ret block' (the i265e parameter block, 0x378 bytes hex, after I265e_configure, as
+I265eRatectrl_rcInit reads it; '-' when the channel did not reach i265e_init).
 
 MODE: the T32 IMPEncoderRcMode (1 CBR, 2 VBR, 3 SMART, 4 CVBR, 5 AVBR).
 'F picture type qp bytes' (type 2 = I).
@@ -136,21 +142,30 @@ class T33H265:
         self.n += 1
 
 
-def imp_block(path, mode, kbps, w=W, h=H, fps=FPS, gop=GOP, iqp=30, mutate=None):
-    from eprc_t33_imp_oracle import Imp, H265_MAIN
-    imp = Imp(path)
-    L = imp.L
-    cap = {}
+from unicorn.mips_const import UC_MIPS_REG_A0  # noqa: E402
 
-    def at_init(uc, addr, size, _):
-        cap['p'] = bytes(uc.mem_read(uc.reg_read(UC_MIPS_REG_A0), PSIZE))
-        uc.emu_stop()
-    from unicorn.mips_const import UC_MIPS_REG_A0
-    a = L.syms['i265e_init']
-    L.uc.hook_add(UC_HOOK_CODE, at_init, begin=a, end=a)
-    r, attr = imp.default(H265_MAIN, mode, w, h, fps, 1, gop, 0, iqp, kbps)
+
+def imp_block(path, mode, kbps, w=W, h=H, fps=FPS, gop=GOP, iqp=30, mutate=None, imp=None, fd=1, bufsize=0,
+              attr_out=None):
+    from eprc_t33_imp_oracle import Imp, H265_MAIN
+    imp = imp or Imp(path)
+    L = imp.L
+    if not hasattr(imp, 'cap265'):
+        # one hook per emulator (a second one would stop at i265e_init first)
+        imp.cap265 = {}
+
+        def at_init(uc, addr, size, _):
+            imp.cap265['p'] = bytes(uc.mem_read(uc.reg_read(UC_MIPS_REG_A0), PSIZE))
+            uc.emu_stop()
+        a = L.syms['i265e_init']
+        L.uc.hook_add(UC_HOOK_CODE, at_init, begin=a, end=a)
+    cap = imp.cap265
+    r, attr = imp.default(H265_MAIN, mode, w, h, fps, fd, gop, bufsize, iqp, kbps)
     if mutate:
         attr = mutate(attr)
+    if attr_out is not None:
+        attr_out.append(attr)
+    cap.clear()
     imp.param(attr)
     if 'p' not in cap:
         raise RuntimeError('vendor channel set-up failed')
@@ -172,8 +187,14 @@ def run(path, mode, kbps, pics, out=sys.stdout):
     return seq
 
 
-def scenarios(path, first, count, out=sys.stdout):
-    """'S k mode kbps w h gop fps iqp pictures' + 'F' lines; complexity from Scene(k + 1)"""
+def model_rows(nbytes, qp, n):
+    """per-row IDR slice sizes (as tools/eprc_t33_oracle.py model_rows)"""
+    return [(nbytes * 8 // n) * (6 + (i * 5 + qp) % 7) // 9 for i in range(n)]
+
+
+def scenarios(path, first, count, out=sys.stdout, rows=False):
+    """'S k mode kbps w h gop fps iqp pictures' + 'F' lines; complexity from Scene(k + 1); with @rows
+    the I pictures get the per-row sizes of model_rows and 'F' a fifth field, their sum (rc+0x224)"""
     for k in range(first, first + count):
         x = xorshift32((k * 2654435761 + 7) & 0xffffffff or 1)
         p = []
@@ -195,16 +216,68 @@ def scenarios(path, first, count, out=sys.stdout):
             idr = t.start()
             qp = t.qp()
             nb = model_bytes(qp, idr, t.ctus, cplx)
-            t.end(nb, model_stats(qp, nb, t.ctus))
-            print('F %d %d %d %d' % (i, 2 if idr else 1, qp, nb), file=out)
+            n = t.L.r32(t.H + 0x30) >> 6 if rows and idr else 0
+            t.end(nb, model_stats(qp, nb, t.ctus), model_rows(nb, qp, min(n, 64)) if n else ())
+            if rows:
+                print('F %d %d %d %d %d' % (i, 2 if idr else 1, qp, nb, t.L.r32(t.H + RC + 0x224)), file=out)
+            else:
+                print('F %d %d %d %d' % (i, 2 if idr else 1, qp, nb), file=out)
+
+
+def configured(L, block):
+    """the parameter block after I265e_configure (what I265eRatectrl_rcInit reads)"""
+    a = HEAP + 0x60000
+    L.wr(a, bytes(0x400))
+    L.wr(a, block[:PSIZE])
+    L.w32(a + 0x370, 0)
+    L.call('I265e_configure', a)
+    return L.rd(a, PSIZE)
+
+
+def params(path, first, count, out=sys.stdout):
+    """random H.265 channels: 'A' (the attribute) + 'P' (the configured parameter block)"""
+    from eprc_t33_imp_oracle import Imp, mutate, xorshift32 as xs
+    imp = Imp(path)
+    for seed in range(first, first + count):
+        x = xs((seed * 2654435761 + 11) & 0xffffffff or 1)
+        p = []
+        for _ in range(8):
+            x = xs(x)
+            p.append(x)
+        mode = p[1] % 6
+        w, h = ((1920, 1080), (1280, 720), (640, 360), (2560, 1440), (2304, 1296), (352, 288), (320, 240))[p[2] % 7]
+        fps = (5, 10, 15, 20, 25, 30)[p[3] % 6]
+        gop = (1, 10, 25, 30, 50, 60, 120)[p[4] % 7]
+        iqp = (-1, 0, 25, 30, 35, 51, 60)[p[5] % 7]
+        kbps = (64, 256, 500, 1000, 2000, 4000, 8000, 15000)[p[6] % 8]
+        x = xs(x)
+        bufsize = 0 if x % 4 else (x >> 8) % 3000000
+        st = [x]
+
+        def mut(a):
+            a2, st[0] = mutate(a, st[0])
+            return a2
+        got = []
+        try:
+            blk = imp_block(path, mode, kbps, w, h, fps, gop, iqp, mutate=mut, imp=imp, fd=1 + (p[7] & 1),
+                            bufsize=bufsize, attr_out=got)
+            blk = configured(imp.L, blk)
+            r = 0
+        except RuntimeError:
+            blk, r = None, 1
+        out.write('A %d %s\n' % (seed, got[0].hex()))
+        out.write('P %d %x %s\n' % (seed, r, blk.hex() if blk else '-'))
 
 
 def main():
     a = sys.argv[1:]
     if len(a) < 2:
         sys.exit(__doc__)
-    if a[1] == '--scenarios':
-        scenarios(a[0], int(a[2]), int(a[3]))
+    if a[1] == '--params':
+        params(a[0], int(a[2]), int(a[3]))
+        return
+    if a[1] in ('--scenarios', '--rows'):
+        scenarios(a[0], int(a[2]), int(a[3]), rows=a[1] == '--rows')
         return
     run(a[0], int(a[1]), int(a[2]) if len(a) > 2 else 2000, int(a[3]) if len(a) > 3 else 60)
 

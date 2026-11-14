@@ -33,7 +33,9 @@ Nothing from the vendor library is stored here; every tool reads the library / G
 
 - `../../eprc_t33_h265_oracle.py`: the vendor H.265 controller under unicorn through the vendor glue
   (IMP_Encoder_CreateChn up to i265e_init for the parameters, I265e_configure, I265eRatectrl_rcInit /
-  _rcStart / _rcEnd with a synthetic picture, slice block, maps and VPU buffers); `--scenarios` 'S' + 'F' lines.
+  _rcStart / _rcEnd with a synthetic picture, slice block, maps and VPU buffers); `--scenarios` 'S' + 'F' lines,
+  `--rows` the same with per-row IDR sizes, `--params` random attributes and the configured parameter block
+  (`tests/t32/rc65_test.c` checks OpenIMP's i265e glue `t32_rc65_*` against both).
 - Ghidra (project with the 2.2.0 .so): `ghidra/SetSig.java ghidra/sig265.txt 10000`,
   `ghidra/CommitParams.java 1ad550 1c1db0`, `ghidra/SwitchFixRa.java ghidra/swra265.txt 10000` (the two jump
   tables dispatched through `jr ra`, which `sw.py` skips and Ghidra takes for returns), then

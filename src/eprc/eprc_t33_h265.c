@@ -5,20 +5,19 @@
  * uses for H.265 on the T32 (HERA).  The H.265 controller is a second build
  * of the H.264 one (src/eprc/eprc_t33_h264.c) with its own state layout and
  * HEVC rules; the state keeps the vendor layout in the arena of
- * eprc_t33_mem.h.  Work in progress (not built yet): the functions below
- * are checked call by call against the vendor controller
- * (tools/t32/eprc33/diff265.py and rand265p.py with the swap build of
- * swap265.py).  Most of them are the H.264 code on the H.265 handle layout:
- * the rate block e+0x820.. of H.264 sits at e+0x390.. (e+0x88c.. at
- * e+0x400..), the inner state blocks (rc, inst, st, out) keep the H.264
- * layout.  All controller functions are here (VPI_set_sliceinfo with its
- * vpi_emc_* helpers included); the glue (i265e rate-control entry points)
- * is still to do.
+ * eprc_t33_mem.h.  Every function was checked call by call against the
+ * vendor controller (tools/t32/eprc33/diff265.py and rand265p.py with the
+ * swap build of swap265.py).  Most of them are the H.264 code on the H.265
+ * handle layout: the rate block e+0x820.. of H.264 sits at e+0x390..
+ * (e+0x88c.. at e+0x400..), the inner state blocks (rc, inst, st, out) keep
+ * the H.264 layout.  The i265e glue (I265eRatectrl_rcInit / _rcStart /
+ * _rcEnd) is t32_rc65_* in src/t32/openimp_t32_rc33.c; tests/t32/rc65_test.c
+ * checks the QP of every picture against the vendor library.
  */
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC optimize("wrapv")
 #endif
-#include "eprc/eprc_t33_mem.h"
+#include "eprc/eprc_t33.h"
 
 #include <math.h>
 
@@ -4909,4 +4908,26 @@ static void e65_frame_start(E33 *X, uint32_t e)
     t65_start_output(X, e, inst, st, out, ps, qp);
     e65_set_sliceinfo(X, e);
     e65_output_param(X, e, 0);
+}
+
+/* ------------------------------------------------------------- entries */
+
+void eprc_t33_h265_default_set(E33 *X, uint32_t e)
+{
+    e65_default_set(X, e);
+}
+
+void eprc_t33_h265_video_cfg(E33 *X, uint32_t e)
+{
+    e65_video_cfg(X, e);
+}
+
+void eprc_t33_h265_frame_start(E33 *X, uint32_t e)
+{
+    e65_frame_start(X, e);
+}
+
+void eprc_t33_h265_frame_end(E33 *X, uint32_t e)
+{
+    e65_frame_end(X, e);
 }

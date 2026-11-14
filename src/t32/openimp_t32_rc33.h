@@ -133,4 +133,83 @@ const uint8_t *t32_rc33_slice(T32Rc33 *c);
 enum { T33_MAP_SMART, T33_MAP_ROI, T33_MAP_MB };
 const uint8_t *t32_rc33_map(T32Rc33 *c, int which, uint32_t *len);
 
+/* ------------------------------------------------------------------ H.265
+ *
+ * The vendor 2.2.0 H.265 encoder (i265e) drives the H.265 build of the
+ * controller (src/eprc/eprc_t33_h265.c) from its rate-control block in the
+ * encoder handle (H+0x2030, the controller block at +0x58):
+ * I265eRatectrl_rcInit after I265e_configure, _rcStart / _rcEnd around every
+ * picture.  t32_rc65_* reimplement those three on the same arena layout
+ * (handle, current picture, statistics list, slice block, maps and VPU
+ * buffers) and the parts of i265e_param_default / I265e_configure the rate
+ * control reads.  The controller patches two words of a vendor .data table
+ * (cnst_pmd_qp_thrd+8 / +0xa at 0x2014b4 / 0x2014b6) and reads them back:
+ * region 2 of the arena (one copy per channel; the vendor's is one per
+ * process). */
+
+/* i265e parameter block offsets (vendor 2.2.0, 0x378 bytes) */
+enum {
+    T65P_REV = 0x4,             /* 6 HERA (T32), 7 */
+    T65P_FPS_NUM = 0x18,
+    T65P_FPS_DEN = 0x1c,
+    T65P_GOP = 0x20,
+    T65P_WIDTH = 0x2c,
+    T65P_HEIGHT = 0x30,
+    T65P_MODE = 0x48,           /* 0 FIXQP 1 CBR 2 VBR 3 SMART 4 CVBR 5 AVBR */
+    T65P_FIX_IQP = 0x4c,
+    T65P_FIX_PQP = 0x50,
+    T65P_INIT_QP = 0x5c,
+    T65P_KBPS = 0x60,
+    T65P_MAX_QP = 0xac,
+    T65P_MAX_IQP = 0xb0,
+    T65P_MIN_QP = 0xb4,
+    T65P_MIN_IQP = 0xb8,
+    T65P_LONG_MAX_KBPS = 0xfc,  /* CVBR */
+    T65P_LONG_MIN_KBPS = 0x100,
+    T65P_SKIP_TYPE = 0x1ac,     /* attrHSkip.skipType */
+    T65P_VBV = 0x1cc,           /* VBV size, bits */
+};
+#define T65_PSIZE 0x378u
+#define T65_RC_STATS 38         /* engine statistics after each picture (vendor read list) */
+
+typedef struct {
+    E33 X;
+    uint8_t *mem;               /* region 0: handle (parameters, rate control), picture, lists, maps, buffers */
+    uint8_t *state;             /* region 1: the controller's state block (its calloc) */
+    uint8_t tpl[4];             /* region 2: cnst_pmd_qp_thrd+8 .. +0xb (vendor .data 0x2014b4) */
+    uint32_t n;                 /* pictures since init */
+    int qp;                     /* QP of the last rcStart */
+    int type;                   /* picture type the controller chose at the last rcStart (2 I) */
+} T32Rc65;
+
+/* Arena, i265e_param_default and the words channel_i265e_encoder_init sets
+ * for every channel (@width x @height the attribute's picture size); the
+ * caller sets the rate control (t32_rc65_set), runs t32_rc65_configure and
+ * t32_rc65_init.  0, -1 on allocation failure. */
+int t32_rc65_open(T32Rc65 *c, uint32_t width, uint32_t height);
+void t32_rc65_close(T32Rc65 *c);
+void t32_rc65_set(T32Rc65 *c, uint32_t off, uint32_t v);
+void t32_rc65_set8(T32Rc65 *c, uint32_t off, uint8_t v);
+uint32_t t32_rc65_get(T32Rc65 *c, uint32_t off);
+/* the parameter words the rate control reads (host test: IMP mapping vs vendor) */
+unsigned t32_rc65_param_words(const uint16_t **words);
+/* I265e_configure: the clamps of the words the rate control reads */
+void t32_rc65_configure(T32Rc65 *c);
+/* I265eRatectrl_rcInit (controller defaults, parameter copy, VIDEO_CFG);
+ * 0, -1 on allocation failure (the state block) */
+int t32_rc65_init(T32Rc65 *c);
+/* I265eRatectrl_rcStart for a picture the encoder codes as @idr (an I
+ * picture) or P: the picture QP, -1 when the controller's picture type
+ * differs (the vendor aborts; the QP of the last picture stays in c->qp) */
+int t32_rc65_start(T32Rc65 *c, int idr);
+/* HERA (revision 6) after an I picture: the coded size of every 64-line
+ * row as for H.264 (T33_HERA_ROW_SEL / T33_HERA_ROW); 0: none */
+unsigned t32_rc65_idr_rows(T32Rc65 *c);
+/* I265eRatectrl_rcEnd after the picture: coded size in bytes, @stats the
+ * T65_RC_STATS engine statistics (vendor order) or NULL, the rows */
+void t32_rc65_end_rows(T32Rc65 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows);
+/* a word of the rate-control block (vendor H+0x2030; host tests: +0x224 the
+ * IDR row-size sum) */
+uint32_t t32_rc65_rc_word(T32Rc65 *c, uint32_t off);
+
 #endif

@@ -17,7 +17,8 @@ HERA_DEPS := $(HERA_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_hera.h $(PROJECT_DIR
 	$(PROJECT_DIR)/src/t32/openimp_t32_hera_h265.h $(PROJECT_DIR)/src/t32/openimp_t32_hera_h265_tab.h
 # rate control (#295): attribute mapping, closed loop, vendor 2.2.0 sequences
 RC_BIN := $(BUILD)/t32-rc-test
-RC33_SRC := $(PROJECT_DIR)/src/t32/openimp_t32_rc33.c $(PROJECT_DIR)/src/eprc/eprc_t33_h264.c
+RC33_SRC := $(PROJECT_DIR)/src/t32/openimp_t32_rc33.c $(PROJECT_DIR)/src/eprc/eprc_t33_h264.c \
+	$(PROJECT_DIR)/src/eprc/eprc_t33_h265.c
 RC33_HDR := $(PROJECT_DIR)/src/t32/openimp_t32_rc33.h $(PROJECT_DIR)/src/eprc/eprc_t33.h \
 	$(PROJECT_DIR)/src/eprc/eprc_t33_mem.h
 RC_SRC := rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_rc.c $(PROJECT_DIR)/src/eprc/eprc.c \
@@ -31,6 +32,8 @@ RC33_HERA := $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/h2
 	$(PROJECT_DIR)/src/t30/h264enc/common.c
 # IMP attributes -> i264e parameters and SetDefaultParam (#295) vs vendor 2.2.0
 RC_IMP_BIN := $(BUILD)/t32-rc-imp-test
+# eprc T33 H.265 port + i265e glue (#295): parameters and QP of every picture vs vendor 2.2.0
+RC65_BIN := $(BUILD)/t32-rc65-test
 # IMP frame rate / GOP glue (#295) vs vendor 2.2.0 encoder_get_fps_mask
 GOP33_BIN := $(BUILD)/t32-gop33-test
 DRV_BIN := $(BUILD)/t32-ioctl-abi-drv-test
@@ -67,7 +70,7 @@ AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
 
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
 	$(TEST_BIN)
 	$(DEC_BIN)
 	gzip -dc vendor-2.2.0-gop33.txt.gz | $(GOP33_BIN) /dev/stdin
@@ -79,6 +82,9 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(GOP33_BIN) 
 	# ... and the run-time setters (i264e_set_param 0x11..0x14, taken at the next IDR)
 	gzip -dc vendor-2.2.0-rc33-setters-h264.txt.gz | $(RC33_BIN) -m 2 -r /dev/stdin
 	gzip -dc vendor-2.2.0-rc-imp.txt.gz | $(RC_IMP_BIN) vendor-2.2.0-rc-imp-defaults.txt /dev/stdin
+	# H.265: IMP attribute -> i265e parameters, then the QP of every picture (+ IDR row sizes)
+	gzip -dc vendor-2.2.0-rc65-params.txt.gz | $(RC65_BIN) /dev/stdin
+	gzip -dc vendor-2.2.0-rc65-h265.txt.gz | $(RC65_BIN) /dev/stdin
 	# audio (#329): vendor 2.x software volume, AO block queue, extras
 	$(AUDIO_BIN)
 	# AENC/ADEC (#298): G.711A/U, G.726, ADPCM bytes == vendor 2.2.0, frame time stamps
@@ -142,6 +148,11 @@ $(RC_IMP_BIN): rc_imp_test.c $(RC_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -o $@ rc_imp_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
+
+$(RC65_BIN): rc65_test.c $(RC_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src -o $@ rc65_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
 
 $(GOP33_BIN): gop33_test.c $(PROJECT_DIR)/src/t32/t32_gop33.h
 	@mkdir -p $(BUILD)

@@ -989,8 +989,20 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         rc_picture_lost(e);
         return -1;
     }
-    /* H.265 reads no Helix-family statistics: the size only */
-    t32_rc_end(&a->rc, at - i, NULL, 0);
+    /* rcEnd: the slice's size, the 38 statistics the engine left and after
+     * an I picture the per-row sizes (read as for H.264) */
+    {
+        uint32_t rows[T33_RC_ROWS];
+        unsigned nrows = t32_rc_idr_rows(&a->rc), r;
+
+        for (r = 0; r < nrows; r++) {
+            rows[r] = 0;
+            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
+                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+                rows[r] = 0;
+        }
+        t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA5_STATS, rows, nrows);
+    }
     h265_pack(s, i, at - i, idr ? IMP_H265_NAL_SLICE_IDR_W_RADL : IMP_H265_NAL_SLICE_TRAIL_R, f->timeStamp);
     s->pack[s->npacks - 1].frameEnd = 1;
     s->length = at;

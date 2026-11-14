@@ -49,6 +49,24 @@ static void model_stats(int qp, uint32_t bytes, uint32_t mbs, uint32_t st[48])
     st[21] = bytes / 3u;
 }
 
+/* H.265: the 38 HERA statistics of tools/eprc_t33_h265_oracle.py model_stats
+ * (QP and unit sums, size shares, analysis counts) */
+static void model_stats5(int qp, uint32_t bytes, uint32_t ctus, uint32_t st[48])
+{
+    memset(st, 0, 48 * sizeof(st[0]));
+    st[0] = (uint32_t)qp * ctus * 16u;
+    st[1] = ctus * 16u;
+    st[2] = bytes * 3u;
+    st[3] = (bytes / 2u) | (bytes / 3u) << 16;
+    st[4] = ctus * 4u;
+    for (int j = 5; j <= 8; j++)
+        st[j] = (ctus * 2u) | (ctus * 3u) << 16;
+    st[29] = bytes * 6u;
+    st[30] = bytes * 2u;
+    st[32] = (ctus * 16u) << 11 | 3u << 30;
+    st[33] = (uint32_t)qp * ctus * 4u;
+}
+
 struct run {
     uint64_t bits;
     int qmin, qmax, imin, imax;
@@ -98,8 +116,11 @@ static int simulate(int mode, uint32_t kbps, int hevc, uint32_t w, uint32_t h, u
             return -1;
         }
         bytes = model_bytes(qp, idr, mbs, c);
-        model_stats(qp, bytes, mbs, st);
-        t32_rc_end(&rc, bytes, hevc ? NULL : st, hevc ? 0 : 48);
+        if (hevc)
+            model_stats5(qp, bytes, ((w + 63u) / 64u) * ((h + 63u) / 64u), st);
+        else
+            model_stats(qp, bytes, mbs, st);
+        t32_rc_end(&rc, bytes, st, hevc ? 38 : 48);
         if (trace)
             printf("F %u %d %d %u\n", i, idr ? 2 : 0, qp, bytes);
         if (i < 4096u)
