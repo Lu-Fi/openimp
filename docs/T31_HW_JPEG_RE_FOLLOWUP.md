@@ -1,646 +1,643 @@
-# T31 Hardware-JPEG: Nachtrag zum RE-Bericht und Review der Implementierung
+# T31 hardware JPEG: addendum to the RE report and review of the implementation
 
-Stand: 2026-09-29. Bezieht sich auf `docs/T31_HW_JPEG_RE.md` und den Branch
-`claude/t31-hw-jpeg` (HEAD `01e7eff`) im Fork `Lu-Fi/openimp`. Nur Recherche: Es wurden
-keine Repository-Dateien geändert.
+Status: 2026-09-29. Refers to `docs/T31_HW_JPEG_RE.md` and the branch
+`claude/t31-hw-jpeg` (HEAD `01e7eff`) in the fork `Lu-Fi/openimp`. Research only: No
+repository files were changed.
 
-Quellen:
+Sources:
 
-- HLIL `libimp.so_hlil.txt` (`L<zeile>` / `0x<adresse>`)
-- Stock-Trace `stock_logs.txt` (`T<zeile>`)
-- Kernel `avpu/t31/*.c`
-- Code (`datei:zeile`)
+- HLIL `libimp.so_hlil.txt` (`L<line>` / `0x<address>`)
+- stock trace `stock_logs.txt` (`T<line>`)
+- kernel `avpu/t31/*.c`
+- code (`file:line`)
 
-Kennzeichnung wie im Bericht: **[V]** belegt, **[I]** abgeleitet, **[?]** offen.
+(`libimp.so_hlil.txt` and `stock_logs.txt` are local files and are not in the repository.)
 
-Anmerkung zum Trace: Laut `logread` im selben Log lief **rvd/Raptor** (IMP-1.1.6, T31-X,
-JPEG q75 1 fps), nicht prudynt. Der Trace besteht aus aneinandergehängten
-`dmesg`-Ausgaben (T755, T1764, T2792). An diesen Stellen fehlen Zeilen. Dadurch hat z. B.
-der Job bei T752 scheinbar keine Completion. Das ist ein Artefakt der Aufnahme, kein
-verlorener IRQ.
+Marking as in the report: **[V]** evidenced, **[I]** inferred, **[?]** open.
+
+Note on the trace: According to `logread` in the same log, **rvd/Raptor** (IMP-1.1.6, T31-X,
+JPEG q75 1 fps) was running, not prudynt. The trace consists of concatenated
+`dmesg` outputs (T755, T1764, T2792). Lines are missing at these places. Because of this, e.g.
+the job at T752 seemingly has no completion. This is an artefact of the recording, not a
+lost IRQ.
 
 ---
 
-## 0. Kurzfazit
+## 0. Short conclusion
 
-**Neu belegt:**
+**Newly evidenced:**
 
-- **Feldnamen in Wort 0 und 2** [V]. `AL_Dump_TEncChanParam` druckt die Felder mit Namen
+- **Field names in words 0 and 2** [V]. `AL_Dump_TEncChanParam` prints the fields with names
   (L46102–46111, `0x41180–0x411e0`):
-  - `+0x5d` = `LossLess` → Bit 9
+  - `+0x5d` = `LossLess` → bit 9
   - `+0x5e` = `RestartInterval` → [31:16]
   - `+0x60` = `AspectRatioUnit` → [13:12]
-  - `+0x62/+0x64` = `X_Density`/`Y_Density` → Wort 2
-  - `iInitialQP` = `tRCParam+0x18` = ChParam+0x80 (L46027) → JPEG-Quality
-- **`0x8438` Bit 1 = Stream-Overflow** [V]. Fehlercode `0x88` heißt laut
-  `AL_Encoder_ErrorToString` (L46221, Case `0x41888`) „Stream Error: Stream overflow“. Das
-  Statusfeld `Status+0x01` ist dasselbe Feld, das beim AVC-Pfad das
-  „Puffer-voll“-Flag trägt (`0x6d9a4`).
-- **EP1 ist byte-identisch zum Hersteller** [V]. Ich habe die Herstellertabellen aus der
-  HLIL extrahiert (`ZIGZAG_SCAN`, Quant-, `HUFFMAN_TABLE_*` bei `0xe2fc0–0xe35f0`) und
-  `JpegTables_InitQuant`/`InitHuffman` nachsimuliert. `HW_Encoder_BuildJpegEp1()` erzeugt
-  für **q = 1…100 exakt dieselben 0x790 Bytes**. Die Codebücher des Herstellers sind
-  **Konstanten aus `.rodata`**, die per `memcpy` kopiert werden. Das „Next-Symbol“-Feld ist
-  also fest vorgegeben und wird nicht berechnet.
-- **Header-Frage** [I, sehr stark]:
-  - In ganz `libimp` gibt es keine JPEG-Marker-Konstante (`FFD8/FFDB/FFC4/FFE0/FFDA/FFD9`)
-    und keinen String „JFIF“.
-  - Die Hardware bekommt Density, Unit und Restart-Intervall. Die braucht man nur für
+  - `+0x62/+0x64` = `X_Density`/`Y_Density` → word 2
+  - `iInitialQP` = `tRCParam+0x18` = ChParam+0x80 (L46027) → JPEG quality
+- **`0x8438` bit 1 = stream overflow** [V]. Error code `0x88` means, according to
+  `AL_Encoder_ErrorToString` (L46221, case `0x41888`), "Stream Error: Stream overflow". The
+  status field `Status+0x01` is the same field that carries the
+  "buffer full" flag in the AVC path (`0x6d9a4`).
+- **EP1 is byte-identical to the vendor** [V]. I extracted the vendor tables from the
+  HLIL (`ZIGZAG_SCAN`, quant, `HUFFMAN_TABLE_*` at `0xe2fc0–0xe35f0`) and
+  re-simulated `JpegTables_InitQuant`/`InitHuffman`. `HW_Encoder_BuildJpegEp1()` produces
+  **exactly the same 0x790 bytes for q = 1…100**. The vendor's codebooks are
+  **constants from `.rodata`** that are copied by `memcpy`. So the "next symbol" field is
+  fixed and is not computed.
+- **Header question** [I, very strong]:
+  - In the whole `libimp` there is no JPEG marker constant (`FFD8/FFDB/FFC4/FFE0/FFDA/FFD9`)
+    and no string "JFIF".
+  - The hardware gets density, unit and restart interval. These are needed only for
     APP0/DRI.
-  - EP1 enthält DQT-Bytes und BITS/HUFFVAL, die nur für DQT/DHT gebraucht werden.
-- **JPEG-Clock bleibt dauerhaft an** [V]. `Process()` gatet nur Cores `< numCore` ab,
-  also nie den JPEG-Core (L66300–66357). Das erklärt, warum `0x85F4` im Trace nur einmal
-  geschrieben wird (T146).
-- **JPEG und AVC teilen sich beim Hersteller die Stream-Puffer und den Quellframe** [V].
-  `0x841C` ∈ {`0x06f75300`, `0x06e8d700`} (1080p) bzw. {`0x0715d000`, `0x07135600`}
-  (360p) sind exakt die AVC-`CL[048]`-Puffer (T131). Die Größe `0xe7680` ist deshalb die
-  Größe des AVC-Stream-Puffers und keine JPEG-Formel.
-- **Keine zusätzlichen Registerzugriffe** [V]. Alle 34 JPEG-Jobs im Trace haben dieselbe
-  Sequenz. Die Stock-libimp liest `0x85F8` nicht, schaltet die Clock nicht ab, schreibt
-  keinen Ack und löscht die Maske nie.
+  - EP1 contains DQT bytes and BITS/HUFFVAL, which are needed only for DQT/DHT.
+- **The JPEG clock stays on permanently** [V]. `Process()` gates off only cores `< numCore`,
+  so never the JPEG core (L66300–66357). This explains why `0x85F4` is written only once in the trace
+  (T146).
+- **In the vendor, JPEG and AVC share the stream buffers and the source frame** [V].
+  `0x841C` ∈ {`0x06f75300`, `0x06e8d700`} (1080p) and {`0x0715d000`, `0x07135600`}
+  (360p) are exactly the AVC `CL[048]` buffers (T131). The size `0xe7680` is therefore
+  the size of the AVC stream buffer and not a JPEG formula.
+- **No additional register accesses** [V]. All 34 JPEG jobs in the trace have the same
+  sequence. The stock libimp does not read `0x85F8`, does not gate off the clock, writes
+  no ack and never clears the mask.
 
-**Die wichtigsten Befunde in der Implementierung** (Details in Teil B):
+**The most important findings in the implementation** (details in part B):
 
-1. **B1:** Ohne AVC-IRQ-Thread gibt es keine Completion.
-   - Beim Start kann der JPEG-Thread die Encode-Lock vor dem ersten AVC-`Process()`
-     bekommen. Ebenso bei reinem JPEG oder nach dem Teardown des Host-AVC-Kanals.
-   - Folge: Timeout, und HW-JPEG ist für den Rest des Prozesses abgeschaltet.
-2. **B2:** `pthread_cond_timedwait` läuft mit `CLOCK_REALTIME`. Der NTP-Sprung beim Boot
-   (im Log: „time disparity of 3298 minutes“) erzeugt einen Schein-Timeout und schaltet
-   HW-JPEG dauerhaft ab.
-3. **B3:** Die Puffer werden global für die Auflösung des ersten JPEG-Frames bemessen.
-   Kommt bei rvd zuerst 360p, läuft 1080p danach dauerhaft in Software, und es gibt bei
-   jedem Frame einen Log-Eintrag.
-4. **B4:** Die Qualität ist fest auf 75. `iInitialQP` wird ignoriert, und die P2-Schicht
-   verliert die Quality > 51 ohnehin.
-5. **B5–B9:** Kleinere Punkte:
-   - EP1-Rest wird nicht genullt
-   - Chroma-Padding-Zeilen fehlen im Quellpuffer
-   - Cache-Richtung `dir=2` statt des bewährten `dir=0`
-   - EOI-Check ist zu strikt
-   - Teardown kann einen laufenden JPEG-Job abschießen
+1. **B1:** Without an AVC IRQ thread there is no completion.
+   - At start the JPEG thread can get the encode lock before the first AVC `Process()`.
+     Likewise with pure JPEG or after the teardown of the host AVC channel.
+   - Consequence: timeout, and HW JPEG is switched off for the rest of the process.
+2. **B2:** `pthread_cond_timedwait` runs with `CLOCK_REALTIME`. The NTP jump at boot
+   (in the log: "time disparity of 3298 minutes") produces a spurious timeout and switches
+   HW JPEG off permanently.
+3. **B3:** The buffers are sized globally for the resolution of the first JPEG frame.
+   With rvd, if 360p comes first, 1080p then runs permanently in software, and there is a log entry
+   for every frame.
+4. **B4:** The quality is fixed at 75. `iInitialQP` is ignored, and the P2 layer
+   loses a quality > 51 anyway.
+5. **B5–B9:** Smaller points:
+   - EP1 remainder is not zeroed
+   - chroma padding rows are missing in the source buffer
+   - cache direction `dir=2` instead of the proven `dir=0`
+   - EOI check is too strict
+   - teardown can shoot down a running JPEG job
 
 ---
 
-## Teil A – Offene Punkte
+## Part A – Open points
 
-### A1. Kommandowort 0 (`0x8400`), `0x85F0`, `0x85E4`, Statusregister
+### A1. Command word 0 (`0x8400`), `0x85F0`, `0x85E4`, status registers
 
-**Wort 0 – vollständige Bitkarte** (`JpegParamToCtrlRegs` L73828, `0x6f5f4–0x6f6a0`).
-Die Felder des lokalen Parameterblocks werden in `SetJpegParam` gefüllt (`0x6b3ec–0x6b458`):
+**Word 0 – complete bit map** (`JpegParamToCtrlRegs` L73828, `0x6f5f4–0x6f6a0`).
+The fields of the local parameter block are filled in `SetJpegParam` (`0x6b3ec–0x6b458`):
 
-| Bits | Quelle im Param-Block | Herkunft | Bedeutung | Status |
+| Bits | Source in the param block | Origin | Meaning | Status |
 |---|---|---|---|---|
-| [1:0] | `u32 @+8` | `ePicFormat>>8 & 0xF` | ChromaMode 0 = 4:0:0, 1 = 4:2:0, 2 = 4:2:2 (Assert `0x6b5c8`) | [V] |
-| [5:4] | `u8 @+5` & 3 | `ChromaMode ? 3 : 1` (`0x6b450–0x6b458`) | Komponentenzahl (SOF Nf / SOS Ns) | [V] Wert, [I] Name |
-| [8] | `u8 @+0` | **Konstante 1** (`0x6b438`, `var_38.b = 1`) | unbekannt | [V] immer 1, [?] Bedeutung |
-| [9] | `u8 @+1` | ChParam+0x5d = **`LossLess`** (L46102) | Lossless-JPEG | [V] Name |
-| [13:12] | `u8 @+4` | ChParam+0x60 = **`AspectRatioUnit`** (L46104) | JFIF „units“ | [V] Name, [I] JFIF-Feld |
-| [31:16] | `u16 @+2` | ChParam+0x5e = **`RestartInterval`** (L46103) | DRI / RSTn | [V] Name |
+| [1:0] | `u32 @+8` | `ePicFormat>>8 & 0xF` | ChromaMode 0 = 4:0:0, 1 = 4:2:0, 2 = 4:2:2 (assert `0x6b5c8`) | [V] |
+| [5:4] | `u8 @+5` & 3 | `ChromaMode ? 3 : 1` (`0x6b450–0x6b458`) | number of components (SOF Nf / SOS Ns) | [V] value, [I] name |
+| [8] | `u8 @+0` | **constant 1** (`0x6b438`, `var_38.b = 1`) | unknown | [V] always 1, [?] meaning |
+| [9] | `u8 @+1` | ChParam+0x5d = **`LossLess`** (L46102) | lossless JPEG | [V] name |
+| [13:12] | `u8 @+4` | ChParam+0x60 = **`AspectRatioUnit`** (L46104) | JFIF "units" | [V] name, [I] JFIF field |
+| [31:16] | `u16 @+2` | ChParam+0x5e = **`RestartInterval`** (L46103) | DRI / RSTn | [V] name |
 
-Weitere Punkte zu Wort 0 bis 3:
+Further points on words 0 to 3:
 
-- **Bit 8** hat außer der Konstante keine Quelle. Auch `CtrlRegsToJpegParam` (L73857)
-  dekodiert es nur für Traces zurück.
-  - Die HLIL zeigt keine Semantik.
-  - Kandidaten [?]: „Header erzeugen“, „Start of frame“/„erstes Segment“,
-    „Standard-Tabellen“.
-  - Prüfung am Gerät: den Probe mit Wort 0 = `0x031` laufen lassen (Vorschlag: Option
-    `-c <word0>` in `tools/t31_hwjpeg_probe.c`) und vergleichen, ob danach SOI/DQT/DHT
-    fehlen.
-- Die übrigen Bits von Wort 0 (2–3, 6–7, 10–11, 14–15) sind **immer 0** [V]. Die Maske
-  `0xCFFF` in `0x6f6a0` räumt auch [15:12] ab.
-- **Wort 2:** `X_Density<<16 | Y_Density` (L46105/46106). Die Werte kommen aus
-  `setDensity` (L51629) mit dem Aspect-Enum `Settings+0xFC`:
-  - 4 (Default) → 1:1
+- **Bit 8** has no source apart from the constant. `CtrlRegsToJpegParam` (L73857) also
+  decodes it back only for traces.
+  - The HLIL shows no semantics.
+  - Candidates [?]: "generate header", "start of frame"/"first segment",
+    "standard tables".
+  - Check on the device: run the probe with word 0 = `0x031` (suggestion: option
+    `-c <word0>` in `tools/t31_hwjpeg_probe.c`) and compare whether SOI/DQT/DHT
+    are missing afterwards.
+- The remaining bits of word 0 (2–3, 6–7, 10–11, 14–15) are **always 0** [V]. The mask
+  `0xCFFF` in `0x6f6a0` also clears [15:12].
+- **Word 2:** `X_Density<<16 | Y_Density` (L46105/46106). The values come from
+  `setDensity` (L51629) with the aspect enum `Settings+0xFC`:
+  - 4 (default) → 1:1
   - 2 → 4:3
   - 0/3 → 16:9
 
   [V]
-- **Wort 3:** Pitch als **u16** in [15:0], [31:16] bleibt erhalten und ist nach dem
-  Memset 0 (`0x6f6ac`). Pitch > 65535 ist also nicht darstellbar. [V]
+- **Word 3:** Pitch as **u16** in [15:0], [31:16] is retained and is 0 after the
+  memset (`0x6f6ac`). A pitch > 65535 is therefore not representable. [V]
 
-**`0x85F0 = 1` vor jedem Job** (`AL_EncCore_EncodeJpeg` `0x6ce30`, Trace bei jedem der 34
-Jobs direkt vor der Zone):
+**`0x85F0 = 1` before every job** (`AL_EncCore_EncodeJpeg` `0x6ce30`, trace at each of the 34
+jobs directly before the zone):
 
-- Es ist dasselbe Register wie `0x83F0` (`ResetCore` `0x6c398`, AVC: 1, 2, 4
-  nacheinander) im Fenster von Core 1.
-- Für JPEG wird nur Bit 0 gepulst. Eine 0 wird nie geschrieben, und es wird weder gewartet
-  noch zurückgelesen.
-- ⇒ Selbstlöschender Soft-Reset/Clear der (einzigen) JPEG-Pipeline vor der
-  Parametrierung. [V Ablauf; I Semantik, per Analogie zu `0x83F0` stark]
+- It is the same register as `0x83F0` (`ResetCore` `0x6c398`, AVC: 1, 2, 4
+  one after another) in the window of core 1.
+- For JPEG only bit 0 is pulsed. A 0 is never written, and nothing is waited for
+  or read back.
+- ⇒ Self-clearing soft reset/clear of the (only) JPEG pipeline before
+  parameterisation. [V sequence; I semantics, strong by analogy with `0x83F0`]
 
 **`0x85E4 = 1`** (`0x6ce80`):
 
-- Analog zu `0x83E4`: AVC schreibt dort 2 (Enc1) bzw. 8 (Enc2) als CL-Push
+- Analogous to `0x83E4`: AVC writes 2 (Enc1) or 8 (Enc2) there as CL push
   (`0x6cd18/0x6cdc0`).
-- Beim JPEG-Core ist das Bit 0 und damit ein „Start aus Registern“, ohne Command-List.
-  `0x85E0` (CL_ADDR) wird nie geschrieben. [V Wert, I Semantik]
+- For the JPEG core this is bit 0 and thus a "start from registers", without a command list.
+  `0x85E0` (CL_ADDR) is never written. [V value, I semantics]
 
 **`0x85F8`:**
 
-- Wird vom Hersteller für JPEG **nie gelesen** [V]. `IsEnc1/2AlreadyRunning` (`0x6c678`,
-  `0x6c6e8`) prüfen nur `(core<<9)+0x83F8` aus dem AVC-Pfad `AL_EncCore_Encode1/2`.
-- Im Trace hat jede JPEG-Completion genau drei RD-ioctls, und das entspricht den drei
-  Status-Reads (T193–T198). Vor dem Start gibt es nur die RMW-Reads für `0x8014`/`0x85F4`.
-- Bedeutung bei JPEG [?]. Vermutlich Bit 1 = busy, wie bei AVC. Nur zur Diagnose lesen.
+- Is **never read** by the vendor for JPEG [V]. `IsEnc1/2AlreadyRunning` (`0x6c678`,
+  `0x6c6e8`) check only `(core<<9)+0x83F8` from the AVC path `AL_EncCore_Encode1/2`.
+- In the trace each JPEG completion has exactly three RD ioctls, which corresponds to the three
+  status reads (T193–T198). Before the start there are only the RMW reads for `0x8014`/`0x85F4`.
+- Meaning for JPEG [?]. Probably bit 1 = busy, as with AVC. Read only for diagnosis.
 
 **Status `0x8430`** (→ `Status+0x70`, `0x6d388`):
 
-- Wird sonst nur von `JpegStatusToStatusRegs` (L73244) für den Trace-Dump zurückgeschrieben.
-- `+0x70` liegt hinter allen Feldern der AVC-SliceStatus (`EncodingStatusRegsToSliceStatus`
-  L73068 füllt höchstens `+0x6c`). Es ist also ein JPEG-eigenes Feld ohne Konsument.
-- Bedeutung [?]. Hypothesen: Taktzyklen, Bitzähler, MCU-Zähler.
-- Prüfung am Gerät: den Wert für 1080p/360p und q50/q90 notieren und mit Laufzeit bzw.
-  Länge korrelieren.
+- Otherwise written back only by `JpegStatusToStatusRegs` (L73244) for the trace dump.
+- `+0x70` is behind all fields of the AVC SliceStatus (`EncodingStatusRegsToSliceStatus`
+  L73068 fills at most `+0x6c`). So it is a JPEG-specific field without a consumer.
+- Meaning [?]. Hypotheses: clock cycles, bit counter, MCU counter.
+- Check on the device: note the value for 1080p/360p and q50/q90 and correlate it with run time or
+  length.
 
-**Status `0x8434`:** Länge in Bytes. Sie wird **unmaskiert** übernommen (AVC maskiert
+**Status `0x8434`:** Length in bytes. It is taken over **unmasked** (AVC masks
 `& 0x3fffffff`, `0x6d978`). [V]
 
 **Status `0x8438`:**
 
-- Nur Bit 1 wird ausgewertet: `(v>>1)&1` → `Status+0x01` (`0x6d3e4`) → Fehler `0x88` =
-  **„Stream Error: Stream overflow“** (L46221 ff.) [V].
-- Die Completion samt IRQ kommt auch bei Overflow. Der Fehlerpfad existiert nur in
-  `EndJpegEncoding`, also nach dem IRQ. [V Pfad, I Hardwareverhalten]
-- Alle anderen Bits [?].
+- Only bit 1 is evaluated: `(v>>1)&1` → `Status+0x01` (`0x6d3e4`) → error `0x88` =
+  **"Stream Error: Stream overflow"** (L46221 ff.) [V].
+- The completion including the IRQ also comes on overflow. The error path exists only in
+  `EndJpegEncoding`, i.e. after the IRQ. [V path, I hardware behaviour]
+- All other bits [?].
 
-### A2. EP1-Details
+### A2. EP1 details
 
-**Quant-Bytes:** Byteweise Stores `sb` (`*($a3_1-1) = $s3_1 & 0xff`, `0x4b538`/`0x4b584`),
-Zigzag-Index k an EP1+k bzw. EP1+0x40+k [V]. Es gibt kein Packen in Worte. Die
-Byte-Reihenfolge ist damit Adressreihenfolge. Die BITS-Arrays dagegen sind als u32 mit
-MSB-first-Inhalt abgelegt (`0x4b690–0x4b70c`). Der Unterschied ist echt und in der
-Implementierung korrekt nachgebildet. [V]
+**Quant bytes:** Byte-wise `sb` stores (`*($a3_1-1) = $s3_1 & 0xff`, `0x4b538`/`0x4b584`),
+zigzag index k at EP1+k or EP1+0x40+k [V]. There is no packing into words. The
+byte order is thus address order. The BITS arrays, by contrast, are stored as u32 with
+MSB-first content (`0x4b690–0x4b70c`). The difference is real and is reproduced
+correctly in the implementation. [V]
 
-**Weitere Belege zu Quant und Reziproken:**
+**Further evidence on quant and reciprocals:**
 
-- Die Clamps bestätigen sich [V]:
+- The clamps are confirmed [V]:
   - `v == 0` → 1 (`0x4b584`)
   - `v ≥ 256` → `0xFF` (`0x4b578`)
   - `S &= 0xFFFF`
-  - `Q == 0` → Trap (`0x4b4c8`)
-- Reziproke: `(int16)((0x10000 + (q>>1)) / q) − 1`, als u16 an `2·ZIGZAG_SCAN[k]`
-  abgelegt, also in Rasterreihenfolge (`0x4b5e0–0x4b608`) [V].
+  - `Q == 0` → trap (`0x4b4c8`)
+- Reciprocals: `(int16)((0x10000 + (q>>1)) / q) − 1`, stored as u16 at `2·ZIGZAG_SCAN[k]`,
+  i.e. in raster order (`0x4b5e0–0x4b608`) [V].
 
 **`+0x180 = 1`, `+0x184 = 0`:**
 
-- Beides sind Konstanten, unabhängig von Tabelleninhalt, Quality und Farbmodus [V]:
-  - Farbe: `0x4b6f0/0x4b6f4`
-  - Mono: `+0xC0/+0xC4` (`0x4b808/0x4b868`)
-  - Lossless: `+0x00/+0x04` (`0x4b7c4/0x4b7e4`)
-- Hypothese [I, schwach]: Liest man das Wort LE byteweise, ergibt sich
-  `[01,00,00,00]` = Kopfsymbole der HUFFVAL-Listen in BITS-Reihenfolge (AC-L = `0x01`,
-  DC-L = `0x00`, AC-C = `0x00`, DC-C = `0x00`). Das passt exakt zu den Standardtabellen.
-  `+0x184` wäre dann Reserve.
-- Gegenargument: Im (ungenutzten) Lossless-Layout steht ebenfalls 1 an erster Stelle,
-  obwohl dort DC-L zuerst kommt und dessen Kopf 0 ist.
-- Alternative [?]: Die Hardware findet den Kopf selbst, nämlich als Symbol mit Code 0 und
-  minimaler Länge (kanonisch).
-- **Für die Implementierung egal:** Der Hersteller unterstützt ausschließlich die fest
-  kodierten Annex-K-Tabellen. Es gibt keine `SetJpegeQl`/Custom-Tabellen in dieser libimp
-  (grep leer). Konstanten 1:1 übernehmen reicht, und genau das tut der Code.
+- Both are constants, independent of table content, quality and colour mode [V]:
+  - colour: `0x4b6f0/0x4b6f4`
+  - mono: `+0xC0/+0xC4` (`0x4b808/0x4b868`)
+  - lossless: `+0x00/+0x04` (`0x4b7c4/0x4b7e4`)
+- Hypothesis [I, weak]: Reading the word LE byte by byte gives
+  `[01,00,00,00]` = head symbols of the HUFFVAL lists in BITS order (AC-L = `0x01`,
+  DC-L = `0x00`, AC-C = `0x00`, DC-C = `0x00`). This fits the standard tables exactly.
+  `+0x184` would then be reserved.
+- Counter-argument: In the (unused) lossless layout 1 is also at the first position,
+  although there DC-L comes first and its head is 0.
+- Alternative [?]: The hardware finds the head itself, namely as the symbol with code 0 and
+  minimal length (canonical).
+- **Irrelevant for the implementation:** The vendor supports only the hard-coded Annex K
+  tables. There are no `SetJpegeQl`/custom tables in this libimp
+  (grep empty). Taking over the constants 1:1 is enough, and that is exactly what the code does.
 
-**Codebuch-Kette (Stichproben aus `.rodata`)** [V]:
+**Codebook chain (samples from `.rodata`)** [V]:
 
-| Tabelle | Eintrag | Wert | Bedeutung |
+| Table | Entry | Value | Meaning |
 |---|---|---|---|
-| AC-Luma | [0] | `0x01000002` | Symbol `0x01`: Code `00`, next `0x02` |
-| AC-Luma | [159] | `0x0FFFFEFF` | Symbol `0xFA`: Code `0xFFFE`, Länge 16, next `0xFF` = Ende |
-| AC-Luma | [160] | `0x0A07F924` | ZRL |
-| AC-Luma | [161] | `0x03000A04` | EOB |
-| DC-Chroma | [11] | `0x0A07FEFF` | Ende der Liste |
+| AC luma | [0] | `0x01000002` | symbol `0x01`: code `00`, next `0x02` |
+| AC luma | [159] | `0x0FFFFEFF` | symbol `0xFA`: code `0xFFFE`, length 16, next `0xFF` = end |
+| AC luma | [160] | `0x0A07F924` | ZRL |
+| AC luma | [161] | `0x03000A04` | EOB |
+| DC chroma | [11] | `0x0A07FEFF` | end of the list |
 
-**Lossless-Modus** (Bit 9, `0x4b7bc ff.`):
+**Lossless mode** (bit 9, `0x4b7bc ff.`):
 
-- DC-Codebücher mit **18** Einträgen: 12 kopierte, 6 genullte (`0x4b760–0x4b764`). Das
-  passt zu den 17 SSSS-Kategorien von Lossless-JPEG.
-- Ohne Quant-Tabellen.
-- ⇒ `LossLess` ist echtes Lossless-JPEG (Prozess 14) [I stark; der Name ist jetzt V].
+- DC codebooks with **18** entries: 12 copied, 6 zeroed (`0x4b760–0x4b764`). This
+  fits the 17 SSSS categories of lossless JPEG.
+- Without quant tables.
+- ⇒ `LossLess` is real lossless JPEG (process 14) [I strong; the name is now V].
 
-**Alignment und Größe:**
+**Alignment and size:**
 
-- `AL_IntermMngr_GetEp1Addr` (L61939, `0x5c9f0`): `addr & 0x1f` ≠ 0 → Assert
-  (`GetSubBufLocation.part.0`). Die 32-Byte-Ausrichtung ist hart [V].
-- Beobachtet sind 256-Byte-ausgerichtete Adressen (`0x0718dd00`, `0x0719f600`) [V].
-- Allokiert werden `0x6400` Bytes, einmal komplett genullt (`AL_CleanupMemory`, `0x4b224`),
-  danach die Tabellen bis `0x790` (das Nullen des Rests `0x738–0x790` ist explizit,
+- `AL_IntermMngr_GetEp1Addr` (L61939, `0x5c9f0`): `addr & 0x1f` ≠ 0 → assert
+  (`GetSubBufLocation.part.0`). The 32-byte alignment is hard [V].
+- Observed are 256-byte aligned addresses (`0x0718dd00`, `0x0719f600`) [V].
+- `0x6400` bytes are allocated, completely zeroed once (`AL_CleanupMemory`, `0x4b224`),
+  then the tables up to `0x790` (zeroing the rest `0x738–0x790` is explicit,
   `0x4b7a0`).
-- Wie viele Bytes die Hardware tatsächlich liest, ist offen [?]. Ein Nutzer von
-  `0x790…0x6400` ist nicht sichtbar. `TraceJpeg` dumpt als `.tab.hex` die ganze
-  Descriptor-Größe (`0x4f948`), das sagt aber nichts über die Hardware.
+- How many bytes the hardware actually reads is open [?]. A user of
+  `0x790…0x6400` is not visible. `TraceJpeg` dumps the whole descriptor size as `.tab.hex`
+  (`0x4f948`), but that says nothing about the hardware.
 
-**Lebenszyklus** [V]:
+**Life cycle** [V]:
 
-- `PushIntermBuffer` kopiert das Master-Image per `memcpy` in den Intermediate-Puffer
+- `PushIntermBuffer` copies the master image by `memcpy` into the intermediate buffer
   (`0x6a4c0`).
-- Pro Kanal gibt es genau **einen** EP1-Ort: `0x8418` ist pro Kanal im gesamten Trace
-  konstant (Tabelle in A5).
-- Eine eigene Cache-Pflege für EP1 gibt es nicht. Sie ist im 1-MiB-Flush jedes Jobs
-  enthalten (A4).
+- Per channel there is exactly **one** EP1 location: `0x8418` is constant per channel in the
+  entire trace (table in A5).
+- There is no separate cache maintenance for EP1. It is contained in the 1 MiB flush of every job
+  (A4).
 
-### A3. JFIF-Header, Restart-Marker, EOI
+### A3. JFIF header, restart markers, EOI
 
-Belege [V] für „keine Software erzeugt Header“:
+Evidence [V] for "no software generates headers":
 
-1. **Kein Marker-Schreiber:** In der gesamten HLIL gibt es kein `0xffd8`, `0xd8ff`,
-   `0xffdb`, `0xffc4`, `0xffe0`, `0xffda` oder `0xffd9` in Codekontext und keine
-   Byte-Stores von `0xd8/0xdb/0xc4/0xe0`. Die einzigen Treffer sind `st_size` von
-   ELF-Symbolen. Einen String „JFIF“ gibt es nicht.
-2. **`generateNals` ist leer** (L51582, `0x4b1d8`, `__pure`).
-3. **`updateHlsAndWriteSections`** (L51609, `0x4b298`) kopiert nur die vorhandene
-   Section `{offset, len, ...}` aus dem Part-Table im Stream-Puffer und hängt einen
-   End-Section-Eintrag mit Flag `0x20000000` an.
-4. **`EndJpegEncoding`** (L70417, `0x68ca0–0x68cbc`) trägt `{StreamBuf+0x14 (=0x200),
-   0x8434, −1, −1}` ein. Die Section beginnt also exakt am Hardware-Startoffset und ist
-   exakt `0x8434` lang.
+1. **No marker writer:** In the whole HLIL there is no `0xffd8`, `0xd8ff`,
+   `0xffdb`, `0xffc4`, `0xffe0`, `0xffda` or `0xffd9` in a code context and no
+   byte stores of `0xd8/0xdb/0xc4/0xe0`. The only hits are `st_size` of
+   ELF symbols. There is no string "JFIF".
+2. **`generateNals` is empty** (L51582, `0x4b1d8`, `__pure`).
+3. **`updateHlsAndWriteSections`** (L51609, `0x4b298`) only copies the existing
+   section `{offset, len, ...}` from the part table in the stream buffer and appends an
+   end-section entry with flag `0x20000000`.
+4. **`EndJpegEncoding`** (L70417, `0x68ca0–0x68cbc`) enters `{StreamBuf+0x14 (=0x200),
+   0x8434, −1, −1}`. So the section begins exactly at the hardware start offset and is
+   exactly `0x8434` long.
 
-Indizien [I, sehr stark], dass die **Hardware** SOI/APP0/DQT/SOF/DHT/(DRI)/SOS…EOI
-schreibt:
+Indications [I, very strong] that the **hardware** writes SOI/APP0/DQT/SOF/DHT/(DRI)/SOS…EOI:
 
-- Die Hardware erhält `X/Y_Density`, `AspectRatioUnit` und `RestartInterval` (Namen [V]).
-  Die ersten drei wirken ausschließlich auf den APP0-Header. `RestartInterval` wirkt auf
-  DRI und die RSTn-Marker.
-- EP1 enthält Zigzag-Quantbytes. Diese braucht nur DQT; der Quantisierer nutzt die
-  Rasterreziproken.
-- EP1 enthält BITS und eine HUFFVAL-Kette. Diese braucht nur DHT; der Entropiecoder
-  braucht nur Code und Länge.
-- rvd bzw. die IMP-API liefern verwendbare JPEG-Dateien, obwohl die libimp keinen Header
-  schreibt.
+- The hardware receives `X/Y_Density`, `AspectRatioUnit` and `RestartInterval` (names [V]).
+  The first three act exclusively on the APP0 header. `RestartInterval` acts on
+  DRI and the RSTn markers.
+- EP1 contains zigzag quant bytes. Only DQT needs these; the quantiser uses the
+  raster reciprocals.
+- EP1 contains BITS and a HUFFVAL chain. Only DHT needs these; the entropy coder
+  needs only code and length.
+- rvd or the IMP API deliver usable JPEG files although the libimp writes no header.
 
-Restart-Marker: `RestartInterval` ist per Default 0 (Memset in `AL_Settings_SetDefaults`,
-keine JPEG-Default-Zuweisung in `AL_sSettings_SetDefaultJPEGParam` L43966), im Trace sind
-[31:16] = 0. ⇒ Kein DRI/RSTn im Stock-Betrieb [V].
+Restart markers: `RestartInterval` is 0 by default (memset in `AL_Settings_SetDefaults`,
+no JPEG default assignment in `AL_sSettings_SetDefaultJPEGParam` L43966), in the trace
+[31:16] = 0. ⇒ No DRI/RSTn in stock operation [V].
 
-EOI und Padding: [?]. Ob `0x8434` nach `FFD9` noch Füllbytes enthält (z. B. eine
-Ausrichtung auf 4/8/32 Byte), ist nicht belegt. Beim Hersteller wäre das unschädlich, weil
-Decoder Bytes nach EOI ignorieren.
+EOI and padding: [?]. Whether `0x8434` still contains filler bytes after `FFD9` (e.g. an
+alignment to 4/8/32 bytes) is not evidenced. In the vendor this would be harmless because
+decoders ignore bytes after EOI.
 
-Stream-Inhalt im Trace: **keiner** [V]. Der Logger protokolliert nur WR-Werte. RD-Werte,
-RD-Adressen und Stream-Puffer werden nicht geloggt; es gibt nur AVC-CL-Dumps.
-`TraceJpeg` würde `.bit.hex` mit `min(Puffergröße, Statuslänge)` schreiben (`0x4f984–0x4f9f4`),
-ist in IMP aber nie aktiv.
+Stream content in the trace: **none** [V]. The logger records only WR values. RD values,
+RD addresses and stream buffers are not logged; there are only AVC CL dumps.
+`TraceJpeg` would write `.bit.hex` with `min(buffer size, status length)` (`0x4f984–0x4f9f4`),
+but is never active in IMP.
 
-### A4. Puffer- und Cache-Anforderungen
+### A4. Buffer and cache requirements
 
-**Stream-Puffer** [V Trace]:
+**Stream buffer** [V trace]:
 
-- Basis 256-aligned.
-- Wort 8 = Größe (`0xe7680`/`0x27780`, Vielfache von `0x80`)
-- Wort 9 = `0x200`
-- Wort 10 = Größe − `0x200`
-- **Neu:** Der JPEG-Kanal benutzt denselben Zweier-Pool wie der AVC-Kanal gleicher
-  Auflösung. `CL[048]` = `06e8d700`/`06f75300` (1080p, 16×) und `07135600`/`0715d000`
-  (360p, 18×) tauchen als `0x841C` der JPEG-Jobs auf (T131 vs. T398/T740).
-- Die Puffergröße ist daher die AVC-Max-NAL-Größe der Auflösung und keine JPEG-spezifische
-  Formel. Eine Mindestgröße ist nicht belegt [?].
-- Wort 8 vs. 10 [I]:
-  - Allegro-Konvention wie AVC-`CL[049..051]`: Puffergröße (Ende bzw. Wrap-Grenze),
-    Schreiboffset, erlaubtes Budget.
-  - Bei Überschreitung des Budgets meldet `0x8438` Bit 1 den Overflow.
-  - Die Rundung auf 32 Byte bei der AVC-Overflow-Berechnung (`0x6d9a4`) legt nahe, dass
-    Größe und Budget mindestens 32-Byte-granular sein sollten [I].
+- Base 256-aligned.
+- Word 8 = size (`0xe7680`/`0x27780`, multiples of `0x80`)
+- Word 9 = `0x200`
+- Word 10 = size − `0x200`
+- **New:** The JPEG channel uses the same two-element pool as the AVC channel of the same
+  resolution. `CL[048]` = `06e8d700`/`06f75300` (1080p, 16×) and `07135600`/`0715d000`
+  (360p, 18×) appear as `0x841C` of the JPEG jobs (T131 vs. T398/T740).
+- The buffer size is therefore the AVC max NAL size of the resolution and not a JPEG-specific
+  formula. A minimum size is not evidenced [?].
+- Word 8 vs. 10 [I]:
+  - Allegro convention like AVC `CL[049..051]`: buffer size (end or wrap limit),
+    write offset, permitted budget.
+  - When the budget is exceeded, `0x8438` bit 1 reports the overflow.
+  - The rounding to 32 bytes in the AVC overflow computation (`0x6d9a4`) suggests that
+    size and budget should be at least 32-byte granular [I].
 
-**Quellpuffer:**
+**Source buffer:**
 
-- NV12 semi-planar [V]: ein srcC-Zeiger (Wort 5) und ChromaMode 1.
-- 4:2:2 und 4:0:0 sind laut Feldern möglich [V], werden aber von IMP nicht benutzt.
+- NV12 semi-planar [V]: one srcC pointer (word 5) and ChromaMode 1.
+- 4:2:2 and 4:0:0 are possible according to the fields [V], but are not used by IMP.
 - Pitch u16 [V].
-- UV = Y + Pitch·align16(H) beobachtet (1920·1088, 640·368) [V].
-- Adressen 256-aligned [V beobachtet]; geprüft wird in Software nichts [V].
-- Breite:
-  - `IMP_FrameSource_SetChnAttr` erzwingt `picWidth` als Vielfaches von 16 (L96211,
+- UV = Y + pitch·align16(H) observed (1920·1088, 640·368) [V].
+- Addresses 256-aligned [V observed]; nothing is checked in software [V].
+- Width:
+  - `IMP_FrameSource_SetChnAttr` enforces `picWidth` as a multiple of 16 (L96211,
     `0x9ca00`) [V].
-  - Allegro prüft „Width shall be multiple of 2 on 420“.
-  - Die Höhe darf ungerade zu 16 sein (1080) [V].
-  - Welche Zeilen die Hardware für die letzte MCU-Zeile liest, ist offen [?]. Bei 4:2:0
-    und H = 1080 wahrscheinlich Luma bis Zeile 1087 und Chroma bis 543. Die
-    Framesource-Puffer haben diese Zeilen (1080p = `0x2fd000` = 1920·1088·1.5,
+  - Allegro checks "Width shall be multiple of 2 on 420".
+  - The height may be odd relative to 16 (1080) [V].
+  - Which rows the hardware reads for the last MCU row is open [?]. With 4:2:0
+    and H = 1080 probably luma up to row 1087 and chroma up to 543. The
+    framesource buffers have these rows (1080p = `0x2fd000` = 1920·1088·1.5,
     `src/kernel_interface.c:465`).
-- Der Hersteller liest den Framesource-Frame **direkt**, denselben, den AVC gerade
-  benutzt: JPEG-`0x8410` = AVC-`CL[032]` = `0x071a5f00` [V].
+- The vendor reads the framesource frame **directly**, the same one AVC is currently
+  using: JPEG `0x8410` = AVC `CL[032]` = `0x071a5f00` [V].
 
-**Cache-Pflege beim Hersteller** [V]:
+**Cache maintenance in the vendor** [V]:
 
-- In `libimp` gibt es genau zwei Aufrufer von `Rtos_FlushCacheMemory(ptr, 0x100000)`:
+- In `libimp` there are exactly two callers of `Rtos_FlushCacheMemory(ptr, 0x100000)`:
   - `AL_EncCore_Encode1` (`0x6cc84`)
   - `AL_EncCore_EncodeJpeg` (`0x6cdf8`)
 
-  Der Aufruf geht über `IMP_FlushCache` → `/dev/rmem` ioctl `0xc00c7200` mit `dir = 1`
+  The call goes via `IMP_FlushCache` → `/dev/rmem` ioctl `0xc00c7200` with `dir = 1`
   (L46615, L23910).
-- `Rtos_InvalidateCacheMemory` (`dir = 2`, L46610) hat **keinen** Aufrufer.
-- Der Hersteller macht also weder ein Invalidate des Quellframes noch des Stream-Puffers
-  nach der Completion. Er verlässt sich auf den 1-MiB-Flush vor jedem Job. Unter MIPS
-  (r4k-Cache-Code: `_dma_cache_wback` = `r4k_dma_cache_wback_inv`; Größe ≥
-  D-Cache/L2 → `blast_dcache`/`blast_scache`) ist das ein globales Writeback+Invalidate
-  des ganzen Caches [I, Kernelquellen von rmem nicht im Repo].
-- Danach berührt die CPU den Stream-Puffer bis zur Completion nicht, deshalb ist das Lesen
-  nach dem IRQ kohärent. Im Trace liegt zwischen RMW `0x8014` und `WR 0x85f0` jeweils eine
-  Lücke von ≈120 µs (z. B. T151 → T154, 128.883279 → 128.883402). Das ist der
-  ioctl-Aufruf, der nicht im avpu-Log erscheint [I].
+- `Rtos_InvalidateCacheMemory` (`dir = 2`, L46610) has **no** caller.
+- So the vendor does neither an invalidate of the source frame nor of the stream buffer
+  after the completion. It relies on the 1 MiB flush before every job. On MIPS
+  (r4k cache code: `_dma_cache_wback` = `r4k_dma_cache_wback_inv`; size ≥
+  D-cache/L2 → `blast_dcache`/`blast_scache`) this is a global writeback+invalidate
+  of the whole cache [I, kernel sources of rmem not in the repo].
+- After that the CPU does not touch the stream buffer until the completion, which is why reading
+  after the IRQ is coherent. In the trace there is a gap of ≈120 µs between RMW `0x8014` and `WR 0x85f0` each
+  time (e.g. T151 → T154, 128.883279 → 128.883402). This is the
+  ioctl call, which does not appear in the avpu log [I].
 
-### A5. Stock-Sequenz Zeile für Zeile, abgeglichen mit der Rekonstruktion
+### A5. Stock sequence line by line, compared with the reconstruction
 
-Einmalig (T69–T88, 128.741):
+Once (T69–T88, 128.741):
 
 - `0x8010 = 0x1000`
 - `0x83F0` = 1, 2, 4
 - `0x8018 = 0xFFFFFF`
 - `0x8054 = 0x80`
-- WAIT_IRQ-Thread startet (T86)
+- WAIT_IRQ thread starts (T86)
 
-Kanalanlage JPEG (T90, T95):
+JPEG channel creation (T90, T95):
 
-- `0x8014` = `0x10` je JPEG-Kanal, **vor jedem Frame**.
-- Das ist `AL_EncCore_SetJpegInterrupt`, aufgerufen aus der Kanalerzeugung bei Codec 4
-  (L71109, `0x69f44`). **Neu [V]**: Bit 4 wird schon bei der Kanalanlage gesetzt, nicht
-  erst pro Job.
+- `0x8014` = `0x10` per JPEG channel, **before every frame**.
+- This is `AL_EncCore_SetJpegInterrupt`, called from the channel creation for codec 4
+  (L71109, `0x69f44`). **New [V]**: Bit 4 is set already at channel creation, not
+  only per job.
 
-Pro JPEG-Job (34 Starts, 33 Completions sichtbar; die fehlende liegt in einer dmesg-Lücke):
+Per JPEG job (34 starts, 33 completions visible; the missing one is in a dmesg gap):
 
-1. Nur beim ersten Job: RD, `WR 0x85F4 = 1` (T146). Der Grund steht in A1: GC-Off gilt
-   nur für Cores `< numCore`.
-2. RD, `WR 0x8014 = 0x11` bzw. `0x10`, je nachdem, ob AVC gerade läuft. 32 von 32 Fällen
-   sind vollständig mitgeloggt.
-3. ≈120 µs Cache-Flush (nicht geloggt).
-4. `WR 0x85F0 = 1`, `0x8400…0x8428` in aufsteigender Reihenfolge, `WR 0x85E4 = 1`.
-5. `WAIT_IRQ` ret, genau drei RD (`0x8430/34/38`). Danach kein WR, kein Ack, keine
-   Maskenänderung.
+1. Only at the first job: RD, `WR 0x85F4 = 1` (T146). The reason is in A1: GC-off applies
+   only to cores `< numCore`.
+2. RD, `WR 0x8014 = 0x11` or `0x10`, depending on whether AVC is running. 32 of 32 cases
+   are fully logged.
+3. ≈120 µs cache flush (not logged).
+4. `WR 0x85F0 = 1`, `0x8400…0x8428` in ascending order, `WR 0x85E4 = 1`.
+5. `WAIT_IRQ` ret, exactly three RD (`0x8430/34/38`). Afterwards no WR, no ack, no
+   mask change.
 
-Laufzeiten (Start → WAIT_IRQ-Rückkehr):
+Run times (start → WAIT_IRQ return):
 
-| Auflösung | Messungen | Spanne |
+| Resolution | Measurements | Range |
 |---|---|---|
-| 1080p | n = 15 | 7,87–8,30 ms |
-| 360p | n = 17 | 0,92–1,27 ms |
+| 1080p | n = 15 | 7.87–8.30 ms |
+| 360p | n = 17 | 0.92–1.27 ms |
 
-AVC-Completion:
+AVC completion:
 
-- RD, `0x8014 = 0x10` (`DisableEnc1Interrupt` löscht nur Bit 0), RD,
+- RD, `0x8014 = 0x10` (`DisableEnc1Interrupt` clears only bit 0), RD,
   `0x83F4 = 0x00010000` (T252–T261).
-- Bit 4 bleibt dauerhaft gesetzt.
-- `0x83F4` liest `0x10001` zurück, Bit 16 ist also ein Hardware-Statusbit [I].
+- Bit 4 stays set permanently.
+- `0x83F4` reads back `0x10001`, so bit 16 is a hardware status bit [I].
 
-Es gibt keine anderen Register: Die Menge der geschriebenen Register im gesamten Trace ist
+There are no other registers: The set of registers written in the entire trace is
 {`0x8010`, `0x8014`, `0x8018`, `0x8054`, `0x83E0`, `0x83E4`, `0x83F0`, `0x83F4`,
 `0x8400`–`0x8428`, `0x85E4`, `0x85F0`, `0x85F4`} [V].
 
-JPEG-Jobs laufen nie überlappend (Core 1 seriell), aber parallel zu AVC [V].
+JPEG jobs never overlap (core 1 serial), but run in parallel to AVC [V].
 
-Die Rekonstruktion (`codec-t40.c:7703–7712`) hat dieselbe Reihenfolge:
+The reconstruction (`codec-t40.c:7703–7712`) has the same order:
 
-- GC-RMW
-- Masken-RMW
-- Reset
-- Zone
-- Start
+- GC RMW
+- mask RMW
+- reset
+- zone
+- start
 
-Abweichungen: Sie schreibt `0x85F4` bei jedem Job neu, was harmlos ist. Sie löscht Bit 4
-nach jedem Job wieder (`:7730`); der Hersteller löscht nie. Das ist beides zulässig,
-erzeugt aber zwei ioctls mehr pro Job.
+Deviations: It writes `0x85F4` anew at every job, which is harmless. It clears bit 4
+again after every job (`:7730`); the vendor never clears it. Both are permissible,
+but cause two more ioctls per job.
 
 ---
 
-## Teil B – Review der Implementierung
+## Part B – Review of the implementation
 
-### B0. Geprüft und korrekt
+### B0. Checked and correct
 
-- **EP1 (`src/hw_encoder.c:912–1004`)** [V]: byte-identisch zum Hersteller für
+- **EP1 (`src/hw_encoder.c:912–1004`)** [V]: byte-identical to the vendor for
   q = 1…100 (4:2:0).
-  - Methode: Tabellen aus L131064–131125 extrahiert, `InitQuant`/`InitHuffman` in Python
-    nachgebaut, gegen die kompilierte Funktion verglichen, 0 Abweichungen.
-  - Auch die berechneten Codebücher, einschließlich der Next-Kette, stimmen mit den
-    `.rodata`-Konstanten überein.
-  - Der Probe-Generator ist laut Commit identisch. Er nutzt die gleiche
-    Konstruktionsmethode (`k_natural` = `ZIGZAG_SCAN`).
-- **Kommandowerte (`codec-t40.c:7685–7695`):**
-  - Wort 0 `0x131`, Wort 1 `(W−1)<<16 | (H−1)`, Wort 2 `0x00010001`, Wort 3 Pitch,
-    Worte 8/9/10 = Größe/`0x200`/Größe−`0x200`. Alles wie im Stock.
-  - Registerreihenfolge wie im Stock (A5).
-- **Clock-RMW** `(clk & ~3) | 1` entspricht exakt `SetClockCommand` (`0x6c4b8`).
-- **IRQ-Demux (`:5121`):** Slot 4 wird vor der AVC-Owner-Logik abgefangen.
-  - `in_flight` wird vor dem Start gesetzt (`:7698`), deshalb kein Lost-Wakeup.
-  - Die Maske bleibt bei AVC-Completion erhalten (`:4814` schreibt `0x10`, solange ein Job
-    läuft).
-  - Bei serialisiertem Betrieb ist `0x8014 = 0` nach AVC unkritisch, weil kein JPEG-Job
-    offen ist.
-- **Statusauswertung** Bit 1 → Fallback pro Frame (`:7740`). Das entspricht dem
-  Hersteller-Overflow.
-- **Companion-Stage** ist bei `OPENIMP_T31_HW_JPEG=1` aus (`:7797`). Das ist zwingend,
-  weil sie sonst jeden JPEG-Job per `0x85F0`/`0x85E4` abwürgen würde.
-- **Nebenläufigkeit:** Alle Encodes laufen unter `g_t31_encode_core_lock` (`:9773`), der
-  globale Einzelkontext `g_t31_hwjpeg` ist damit geschützt.
-- **Quelllayout:** Pitch = Breite, UV nach align16(H) Zeilen.
-  - Der P2-JPEG-Frame ist eine Heap-Kopie mit `source->size` Bytes
+  - Method: tables extracted from L131064–131125, `InitQuant`/`InitHuffman` rebuilt in Python,
+    compared against the compiled function, 0 deviations.
+  - The computed codebooks, including the next chain, also match the
+    `.rodata` constants.
+  - The probe generator is identical according to the commit. It uses the same
+    construction method (`k_natural` = `ZIGZAG_SCAN`).
+- **Command values (`codec-t40.c:7685–7695`):**
+  - Word 0 `0x131`, word 1 `(W−1)<<16 | (H−1)`, word 2 `0x00010001`, word 3 pitch,
+    words 8/9/10 = size/`0x200`/size−`0x200`. All as in stock.
+  - Register order as in stock (A5).
+- **Clock RMW** `(clk & ~3) | 1` corresponds exactly to `SetClockCommand` (`0x6c4b8`).
+- **IRQ demux (`:5121`):** Slot 4 is intercepted before the AVC owner logic.
+  - `in_flight` is set before the start (`:7698`), so there is no lost wakeup.
+  - The mask is retained on AVC completion (`:4814` writes `0x10` as long as a job
+    is running).
+  - In serialised operation `0x8014 = 0` after AVC is uncritical, because no JPEG job
+    is open.
+- **Status evaluation** bit 1 → fallback per frame (`:7740`). This corresponds to the
+  vendor overflow.
+- **Companion stage** is off with `OPENIMP_T31_HW_JPEG=1` (`:7797`). This is mandatory,
+  because otherwise it would kill every JPEG job by `0x85F0`/`0x85E4`.
+- **Concurrency:** All encodes run under `g_t31_encode_core_lock` (`:9773`); the
+  global single context `g_t31_hwjpeg` is thus protected.
+- **Source layout:** pitch = width, UV after align16(H) rows.
+  - The P2 JPEG frame is a heap copy with `source->size` bytes
     (`openimp_p2_encoder.c:261–283`).
-  - Das Layout kommt aus V4L2: `sizeimage` 1080p = `0x2fd000` = 1920·1088·1.5
-    (`kernel_interface.c:465`), passend zum Stock-UV-Offset.
-  - Stimmt [V für Stock, I für OpenIMP-FS], solange `bytesperline == width`.
-  - Die Prüfung `width % 16 == 0` (`:7658`) entspricht der Framesource-Regel
+  - The layout comes from V4L2: `sizeimage` 1080p = `0x2fd000` = 1920·1088·1.5
+    (`kernel_interface.c:465`), matching the stock UV offset.
+  - Holds [V for stock, I for OpenIMP FS] as long as `bytesperline == width`.
+  - The check `width % 16 == 0` (`:7658`) corresponds to the framesource rule
     (`0x9ca00`).
-- **NV21 wird abgelehnt** (`:7659`). Richtig, die Hardware kennt nur CbCr-Reihenfolge
+- **NV21 is rejected** (`:7659`). Right, the hardware knows only CbCr order
   (NV12) [I].
 
-### B1. Completion hängt am AVC-IRQ-Thread – Start-Race, JPEG-only, Teardown (hoch)
+### B1. Completion depends on the AVC IRQ thread – start race, JPEG-only, teardown (high)
 
-`t31_hwjpeg_setup` (`codec-t40.c:7612`) öffnet nur das gepoolte fd. Ein `WAIT_IRQ`-Thread
-existiert auf T31 aber nur, wenn ein **AVC**-Kontext ihn gestartet hat (`:8325–8350`,
-`g_tseries_irq_host`), und er wird mit dem Host-Kontext beendet (`:7268–7280`).
+`t31_hwjpeg_setup` (`codec-t40.c:7612`) opens only the pooled fd. A `WAIT_IRQ` thread
+exists on T31 only if an **AVC** context has started it (`:8325–8350`,
+`g_tseries_irq_host`), and it ends together with the host context (`:7268–7280`).
 
-- **Start-Race:**
-  - Der AVC-Thread kopiert den JPEG-Frame unter `p2_core_lock` und ruft danach
-    `AL_Codec_Encode_Process` auf (`openimp_p2_encoder.c:1233–1239`).
-  - Der aufgeweckte JPEG-Thread kann `g_t31_encode_core_lock` vor dem allerersten
-    AVC-`Process()` bekommen. Das Gerät wird lazy dort geöffnet (`:8253`).
-  - Folge: Der IRQ landet in der Kernelliste ohne Waiter, nach 200 ms kommt ein Timeout,
-    und `t31_hwjpeg_disable` schaltet HW-JPEG **für die ganze Prozesslaufzeit** ab.
-- **JPEG-only:** Es gibt nie einen Waiter und damit nie HW-JPEG. Außerdem fehlt die
-  globale Init: `0x8010 = 0x1000` und `0x8054 = 0x80` schreibt nur die AVC-Session-Init
-  (`:8995–9000`). Der Hersteller macht sie immer (T69–T88).
-- **Teardown/Neuanlage** des Host-AVC-Kanals: Der Waiter wird gejoint, und in dieser Lücke
-  (oder dauerhaft, falls nur ein anderer AVC-Kanal übrig ist) laufen JPEG-Jobs in den
-  Timeout.
+- **Start race:**
+  - The AVC thread copies the JPEG frame under `p2_core_lock` and then calls
+    `AL_Codec_Encode_Process` (`openimp_p2_encoder.c:1233–1239`).
+  - The woken JPEG thread can get `g_t31_encode_core_lock` before the very first
+    AVC `Process()`. The device is opened lazily there (`:8253`).
+  - Consequence: The IRQ lands in the kernel list without a waiter, after 200 ms a timeout occurs,
+    and `t31_hwjpeg_disable` switches HW JPEG off **for the whole process lifetime**.
+- **JPEG-only:** There is never a waiter and thus never HW JPEG. In addition the
+  global init is missing: `0x8010 = 0x1000` and `0x8054 = 0x80` are written only by the AVC session init
+  (`:8995–9000`). The vendor always does it (T69–T88).
+- **Teardown/re-creation** of the host AVC channel: The waiter is joined, and in this gap
+  (or permanently, if only another AVC channel is left) JPEG jobs run into the
+  timeout.
 
 Fix:
 
-- Einen prozessweiten, vom Device-Pool gehaltenen Waiter einführen, der gestartet wird,
-  sobald *irgendwer* (AVC oder HW-JPEG) `/dev/avpu` öffnet, und erst beim letzten Nutzer
-  gejoint wird. Das T41-Modell `avpu_t41_irq_host_get/put` (`:5191–5256`) lässt sich
-  übernehmen.
-- Mindestens: In `t31_hwjpeg_encode` nur starten, wenn `g_tseries_irq_host` gesetzt ist,
-  sonst **diesen Frame** in Software (nicht `disable`).
-- In `t31_hwjpeg_setup` die globale Init nachholen, falls noch keine AVC-Session sie
-  gemacht hat.
+- Introduce a process-wide waiter held by the device pool, which is started
+  as soon as *anyone* (AVC or HW JPEG) opens `/dev/avpu` and is joined only at the last user. The
+  T41 model `avpu_t41_irq_host_get/put` (`:5191–5256`) can be taken over.
+- At least: In `t31_hwjpeg_encode` start only if `g_tseries_irq_host` is set,
+  otherwise do **this frame** in software (not `disable`).
+- In `t31_hwjpeg_setup`, catch up on the global init if no AVC session has done it yet.
 
-### B2. Timeout auf `CLOCK_REALTIME` (hoch, einfach zu beheben)
+### B2. Timeout on `CLOCK_REALTIME` (high, easy to fix)
 
-`codec-t40.c:7714` benutzt `clock_gettime(CLOCK_REALTIME)` mit einem statisch
-initialisierten Condvar (Default-Clock REALTIME, `:7555–7558`).
+`codec-t40.c:7714` uses `clock_gettime(CLOCK_REALTIME)` with a statically
+initialised condvar (default clock REALTIME, `:7555–7558`).
 
-- Ein Vorwärtssprung der Uhr während der ≈8 ms Wartezeit lässt `pthread_cond_timedwait`
-  sofort `ETIMEDOUT` liefern. Der NTP-Step beim Boot passiert genau dann, wenn Streams
-  starten; im selben Log steht „time disparity of 3298 minutes“.
-- Die Folge ist `disable("completion timeout")` für immer.
-- Zusätzlich schreibt der Timeoutpfad `0x85F0 = 1` in einen noch laufenden Job (`:7732`).
+- A forward jump of the clock during the ≈8 ms wait makes `pthread_cond_timedwait`
+  return `ETIMEDOUT` immediately. The NTP step at boot happens exactly when streams
+  start; the same log says "time disparity of 3298 minutes".
+- The consequence is `disable("completion timeout")` for ever.
+- In addition the timeout path writes `0x85F0 = 1` into a job that is still running (`:7732`).
 
-Fix: Die Condvar mit `pthread_condattr_setclock(CLOCK_MONOTONIC)` initialisieren, zum
-Beispiel per `pthread_once`. Außerdem: Nach einem ersten Timeout nicht sofort dauerhaft
-deaktivieren, sondern z. B. erst nach drei aufeinanderfolgenden. Vor dem Reset `0x85F8`
-diagnostisch lesen und loggen.
+Fix: Initialise the condvar with `pthread_condattr_setclock(CLOCK_MONOTONIC)`, for
+example via `pthread_once`. Also: After a first timeout, do not deactivate permanently at once,
+but e.g. only after three consecutive ones. Read and log `0x85F8` diagnostically before the reset.
 
-### B3. Puffer werden nur einmal bemessen (mittel)
+### B3. Buffers are sized only once (medium)
 
-`codec-t40.c:7662–7668`: `setup` allokiert `src`/`stream` nach der **ersten** Auflösung.
-Beide JPEG-Kanäle teilen den globalen Kontext. Bei rvd (1080p + 360p) hängt es von der
-Thread-Reihenfolge ab. Kommt 360p zuerst, läuft 1080p dauerhaft in Software, und
-`IMP_LOG_INFO` (`:7666`) loggt **jeden Frame**.
+`codec-t40.c:7662–7668`: `setup` allocates `src`/`stream` for the **first** resolution.
+Both JPEG channels share the global context. With rvd (1080p + 360p) it depends on the
+thread order. If 360p comes first, 1080p runs permanently in software, and
+`IMP_LOG_INFO` (`:7666`) logs **every frame**.
 
-Fix: Bei Bedarf die größere Allokation nachziehen (alte freigeben mit
-`avpu_release_dma_buf`) oder pro Auflösung bzw. Kanal eigene Puffer anlegen. Das Log auf
-einmalig drosseln.
+Fix: Re-allocate the larger size when needed (free the old one with
+`avpu_release_dma_buf`) or create separate buffers per resolution or channel. Throttle the log to
+once.
 
-### B4. Qualität fest 75 (mittel, funktional)
+### B4. Quality fixed at 75 (medium, functional)
 
-`codec-t40.c:9719` übergibt fest `75u`. Beim Hersteller ist die Quality = `iInitialQP`
-(ChParam+0x80 = `tRCParam+0x18`; L46027 `printf("iInitialQP=%d")`, genutzt in `0x4b250`).
+`codec-t40.c:9719` passes a fixed `75u`. In the vendor the quality = `iInitialQP`
+(ChParam+0x80 = `tRCParam+0x18`; L46027 `printf("iInitialQP=%d")`, used in `0x4b250`).
 
-Die P2-Schicht verliert Werte > 51 bereits beim Parametersatz
-(`openimp_p2_encoder.c:751–752`: `qp > 51 → 26`). `IMP_Encoder_SetDefaultParam` begrenzt
-auf 1…99 (`:1570–1572`).
+The P2 layer already loses values > 51 at the parameter set
+(`openimp_p2_encoder.c:751–752`: `qp > 51 → 26`). `IMP_Encoder_SetDefaultParam` limits
+to 1…99 (`:1570–1572`).
 
-Fix: Für `IMP_ENC_TYPE_JPEG` die Quality 1…100 unbegrenzt in einem eigenen Feld
-mitführen, etwa `params+0x84` ohne 51er-Clamp nur für JPEG, und in `t31_hwjpeg_encode`
-lesen. Dann wird EP1 bei einer Änderung automatisch neu gebaut (`:7672`).
+Fix: For `IMP_ENC_TYPE_JPEG` carry the quality 1…100 unrestricted in a separate field,
+e.g. `params+0x84` without the 51 clamp only for JPEG, and read it in `t31_hwjpeg_encode`. Then EP1 is rebuilt automatically on a change (`:7672`).
 
-Hinweis: Mit einem globalen EP1 und zwei Kanälen unterschiedlicher Quality würde das EP1
-bei jedem Kanalwechsel neu gebaut und geflusht. Das kostet wenig, aber pro Kanal ein
-eigenes EP1 wäre sauberer, wie beim Hersteller.
+Note: With one global EP1 and two channels of different quality, EP1
+would be rebuilt and flushed at every channel change. That costs little, but one
+EP1 per channel would be cleaner, as in the vendor.
 
-### B5. EP1-Rest nicht genullt (niedrig bis mittel)
+### B5. EP1 remainder not zeroed (low to medium)
 
-- `avpu_alloc_encoder(fd, 0x1000, ...)` (`:7619`) liefert rmem ohne Nullung.
-- `HW_Encoder_BuildJpegEp1` nullt nur `0x790` Bytes (`hw_encoder.c:986`), der Flush deckt
-  nur `0x790` ab (`:7676`).
-- Der Hersteller nullt den ganzen EP1 (`0x6400`, `AL_CleanupMemory` `0x4b224`). Welche
-  Länge die Hardware liest, ist unbekannt (A2).
+- `avpu_alloc_encoder(fd, 0x1000, ...)` (`:7619`) returns rmem without zeroing.
+- `HW_Encoder_BuildJpegEp1` zeroes only `0x790` bytes (`hw_encoder.c:986`), the flush covers
+  only `0x790` (`:7676`).
+- The vendor zeroes the whole EP1 (`0x6400`, `AL_CleanupMemory` `0x4b224`). Which
+  length the hardware reads is unknown (A2).
 
-Fix: Nach der Allokation einmal `memset(ep1.map, 0, ep1.size)` und das ganze
-`ep1.size` flushen.
+Fix: After the allocation, do a single `memset(ep1.map, 0, ep1.size)` and flush the whole
+`ep1.size`.
 
-### B6. Quellkopie ohne Chroma-Padding-Zeilen (niedrig)
+### B6. Source copy without chroma padding rows (low)
 
 `src_size = uv_offset + W·ceil(H/2)` (`:7647`):
 
-- Allokation und Kopie enden nach 540 Chroma-Zeilen.
-- Liest die Hardware für die letzte MCU-Zeile bis Chroma-Zeile 543 [?], liest sie bis zu
-  4·W Bytes hinter dem Puffer. Das ist nur Lesen, also harmlos, aber die Kante bekommt
-  Zufallsdaten und damit sichtbare Artefakte am unteren Rand.
-- Der Framesource-Frame hat diese Zeilen (`0x2fd000`).
+- Allocation and copy end after 540 chroma rows.
+- If the hardware reads up to chroma row 543 for the last MCU row [?], it reads up to
+  4·W bytes behind the buffer. This is only reading, so harmless, but the edge gets
+  random data and thus visible artefacts at the lower border.
+- The framesource frame has these rows (`0x2fd000`).
 
-Fix: `src_size = W·align16(H)·3/2` allokieren und `min(frame->size, src_size)` kopieren.
+Fix: Allocate `src_size = W·align16(H)·3/2` and copy `min(frame->size, src_size)`.
 
-### B7. Cache-Richtung und Kohärenz (mittel, am Gerät verifizieren)
+### B7. Cache direction and coherence (medium, verify on the device)
 
-- Nach der Completion invalidiert die Implementierung mit `dir = 2` (`:7752`), vor dem
-  Start den ganzen Stream-Puffer mit `dir = 2` (`:7683`).
-- Der bewährte T31-AVC-Pfad benutzt nach der Completion `dir = 0` (BIDIRECTIONAL,
+- After the completion, the implementation invalidates with `dir = 2` (`:7752`), before the
+  start the whole stream buffer with `dir = 2` (`:7683`).
+- The proven T31 AVC path uses `dir = 0` after the completion (BIDIRECTIONAL,
   `:5645`).
-- Der Hersteller benutzt `dir = 2` nie (A4).
-- Ob der T31-rmem-ioctl `dir = 2` korrekt als `DMA_FROM_DEVICE` umsetzt, ist nicht belegt.
+- The vendor never uses `dir = 2` (A4).
+- Whether the T31 rmem ioctl correctly implements `dir = 2` as `DMA_FROM_DEVICE` is not
+  evidenced.
 
-Fix: Wie beim AVC-Pfad `dir = 0` verwenden. Die Quelle weiter mit `dir = 1` behandeln
-(auf MIPS ist das ohnehin wback+inv).
+Fix: Use `dir = 0` as in the AVC path. Keep treating the source with `dir = 1`
+(on MIPS this is wback+inv anyway).
 
-Hinweis: Der Code enthält widersprüchliche Kommentare, ob der gecachte
-rmem-Flush auf T31 zuverlässig ist (`:468–472`, `:757–759`). Der Stream-Pfad von AVC nutzt
-für die Kompaktierung deshalb ein unkached `/dev/mem`-Alias (`:8381–8391`).
+Note: The code contains contradictory comments on whether the cached
+rmem flush is reliable on T31 (`:468–472`, `:757–759`). The AVC stream path therefore uses
+an uncached `/dev/mem` alias for the compaction (`:8381–8391`).
 
-- Falls die Probe mit kohärenten `GET_DMA_MMAP`-Puffern funktioniert, die Bibliothek aber
-  Artefakte zeigt: für `ep1` und `stream` `avpu_alloc_mmap` oder
-  `avpu_remap_uncached` nehmen.
-- Der Stream ist klein, ein unkached Read ist dort also vertretbar.
-- `src` sollte wegen der 3-MB-memcpy-Kosten gecacht bleiben.
+- If the probe works with coherent `GET_DMA_MMAP` buffers but the library shows
+  artefacts: use `avpu_alloc_mmap` or
+  `avpu_remap_uncached` for `ep1` and `stream`.
+- The stream is small, so an uncached read is acceptable there.
+- `src` should stay cached because of the cost of the 3 MB memcpy.
 
-### B8. EOI-Prüfung zu strikt (niedrig bis mittel)
+### B8. EOI check too strict (low to medium)
 
-`codec-t40.c:7754–7760` verlangt `FFD9` exakt an `length−2`. Falls die Hardware nach EOI
-auf eine Wortgrenze auffüllt (A3, [?]), wird HW-JPEG beim ersten Frame dauerhaft
-abgeschaltet, obwohl die Ausgabe gültig ist.
+`codec-t40.c:7754–7760` demands `FFD9` exactly at `length−2`. If the hardware pads
+to a word boundary after EOI (A3, [?]), HW JPEG is switched off permanently at the first frame
+although the output is valid.
 
-Fix: In den letzten ≤ 64 Bytes rückwärts nach `FF D9` suchen, auf diese Länge kürzen und
-nur ohne Treffer abschalten. SOI weiterhin strikt prüfen.
+Fix: Search backwards for `FF D9` in the last ≤ 64 bytes, shorten to that length and
+switch off only without a hit. Keep checking SOI strictly.
 
-### B9. Maskenmanipulation durch Dritte während eines Jobs (niedrig)
+### B9. Mask manipulation by third parties during a job (low)
 
-`AL_Codec_Encode_Destroy` läuft **nicht** unter `g_t31_encode_core_lock`:
+`AL_Codec_Encode_Destroy` does **not** run under `g_t31_encode_core_lock`:
 
-- Ein AVC-Teardown schreibt `0x8014 = 0` und `0x8018 = 0xFFFFFF` (`:7232–7236`).
-- Läuft gerade ein JPEG-Job, geht dessen IRQ verloren. Es folgt ein Timeout und damit die
-  dauerhafte Abschaltung (B2).
+- An AVC teardown writes `0x8014 = 0` and `0x8018 = 0xFFFFFF` (`:7232–7236`).
+- If a JPEG job is running, its IRQ is lost. A timeout follows and thus the
+  permanent switch-off (B2).
 
-Fix: Teardown-Maskierung und -Ack unter dieselbe Lock wie den Encode legen, oder im
-Teardown `t31_hwjpeg_idle_irq_mask()` statt 0 schreiben und die IRQ-Pending-Bits nur für
-Core 0 quittieren (`0x0F`).
+Fix: Put teardown masking and ack under the same lock as the encode, or in the
+teardown write `t31_hwjpeg_idle_irq_mask()` instead of 0 and acknowledge the IRQ pending bits only for
+core 0 (`0x0F`).
 
-Außerdem: Ein Stale-Pending-Bit 4 aus einem abgebrochenen Vorgängerprozess würde beim
-Entmaskieren sofort als Completion zählen. Das ist nur relevant, wenn JPEG vor der
-AVC-Init läuft, die `0x8018` löscht. Härtung: vor dem Entmaskieren `0x8018 = 0x10`
-schreiben. Laut Kernel ist das Register W1C (`avpu_ip.c:121`).
+Also: A stale pending bit 4 from an aborted predecessor process would count immediately as a completion
+when unmasking. This is relevant only if JPEG runs before the
+AVC init that clears `0x8018`. Hardening: write `0x8018 = 0x10` before unmasking.
+According to the kernel, the register is W1C (`avpu_ip.c:121`).
 
-### B10. Kleinere Punkte
+### B10. Smaller points
 
-- `t31_hwjpeg_set_irq_bit(fd, 0)` nach jedem Job (`:7730`) weicht vom Hersteller ab.
-  Unschädlich. Bit 4 einmalig zu setzen wäre näher am Hersteller, würde aber die
-  Maskenlogik in `:4814` ändern.
-- Das RMW auf `0x8014` ist nicht atomar gegen den AVC-Callback (`:4814` schreibt absolut).
-  Wegen der Serialisierung kann das nur nach einem AVC-„serialized completion timeout“
-  (`:9790–9806`) eintreten. Die Folge wäre ein unnötiges Bit 0, harmlos.
-- Timeout 200 ms bei ≈8 ms Hardwarezeit: angemessen.
-- Kosten (Design, kein Bug):
-  - Doppelte 3-MB-Kopie bei 1080p (P2-Fan-out + `:7679`) plus Flush, alles unter der
-    globalen Encode-Lock. AVC wird dabei ≈8 ms Hardwarezeit plus Kopie blockiert.
-  - Bei 1 fps irrelevant, bei MJPEG mit 10–15 fps spürbar.
-  - Mittelfristig: Fan-out direkt in einen DMA-Puffer kopieren oder, wie der Hersteller,
-    den FS-Frame per Phys-Adresse referenzieren, solange die Frame-Referenz gehalten wird.
-- `stream_size = W·H/2 + 64 KiB` (`:7648`) ist nur 16-Byte-granular für beliebige
-  zulässige Größen. Auf 256 (oder 4 KiB) aufrunden, wie im Stock (A4).
-- DMA-Puffer und Pool-Referenz werden nie freigegeben. Solange der Prozess lebt, bleibt
-  `/dev/avpu` gebunden, auch wenn alle AVC-Kanäle zerstört sind. Innerhalb eines Prozesses
-  ist das unkritisch, weil das fd gepoolt ist; es sollte aber dokumentiert werden.
-- `OPENIMP_T31_HW_JPEG=1` schaltet **zugleich** die Companion-Stage für AVC ab. Zuerst
-  Phase 0 (Companion aus, HW-JPEG aus) validieren, sonst lassen sich AVC-Regressionen
-  nicht zuordnen.
-- Probe (`tools/t31_hwjpeg_probe.c`): Die Sequenz ist korrekt, und die kohärenten Puffer
-  vermeiden Cache-Fragen.
-  - Nützliche Ergänzung: `-c <word0>` (Test Bit 8 und Bit 13:12, Restart-Intervall in
+- `t31_hwjpeg_set_irq_bit(fd, 0)` after every job (`:7730`) deviates from the vendor.
+  Harmless. Setting bit 4 once would be closer to the vendor, but would change the
+  mask logic in `:4814`.
+- The RMW on `0x8014` is not atomic against the AVC callback (`:4814` writes absolutely).
+  Because of the serialisation, this can only occur after an AVC "serialized completion timeout"
+  (`:9790–9806`). The consequence would be an unnecessary bit 0, harmless.
+- Timeout 200 ms with ≈8 ms hardware time: appropriate.
+- Cost (design, not a bug):
+  - Double 3 MB copy at 1080p (P2 fan-out + `:7679`) plus flush, all under the
+    global encode lock. AVC is blocked for ≈8 ms hardware time plus the copy.
+  - Irrelevant at 1 fps, noticeable with MJPEG at 10–15 fps.
+  - Medium term: copy the fan-out directly into a DMA buffer or, like the vendor,
+    reference the FS frame by physical address as long as the frame reference is held.
+- `stream_size = W·H/2 + 64 KiB` (`:7648`) is only 16-byte granular for arbitrary
+  permitted sizes. Round up to 256 (or 4 KiB), as in stock (A4).
+- DMA buffers and the pool reference are never released. As long as the process lives,
+  `/dev/avpu` stays bound, even if all AVC channels are destroyed. Within one process
+  this is uncritical because the fd is pooled; but it should be documented.
+- `OPENIMP_T31_HW_JPEG=1` turns off the companion stage for AVC **at the same time**. Validate
+  phase 0 first (companion off, HW JPEG off), otherwise AVC regressions
+  cannot be attributed.
+- Probe (`tools/t31_hwjpeg_probe.c`): The sequence is correct, and the coherent buffers
+  avoid cache questions.
+  - Useful addition: `-c <word0>` (test bit 8 and bits 13:12, restart interval in
     [31:16]).
-  - Nützliche Ergänzung: `-s <stream-size>` (Overflow-Test).
-  - `0x85F8` vor dem Start und nach der Completion ausgeben.
+  - Useful addition: `-s <stream-size>` (overflow test).
+  - Print `0x85F8` before the start and after the completion.
 
 ---
 
-## Teil C – Verbleibende Unbekannte (nur am Gerät klärbar)
+## Part C – Remaining unknowns (only clarifiable on the device)
 
-1. Bedeutung von Wort-0-Bit 8. Mit dem Probe testen: `0x031` statt `0x131`.
-2. Bedeutung von `0x8430` und der Bits von `0x8438` außer Bit 1. `0x85F8` bei JPEG.
-3. Ob die Hardware tatsächlich den vollständigen JFIF-Strom schreibt. Das ist sehr
-   wahrscheinlich; der Probe zeigt es sofort. Dazu: Endet die Ausgabe exakt mit `FFD9`,
-   oder gibt es Padding?
-4. Wirkung von `RestartInterval` (DRI/RSTn) und `AspectRatioUnit` im Header.
-5. Wie viele Bytes EP1 die Hardware liest, und ob `+0x180` Kopfsymbole sind. Test:
-   `+0x180 = 0` setzen und schauen, ob sich die DHT-HUFFVAL-Reihenfolge ändert.
-6. Zeilenzugriff für H mod 16 ≠ 0 (Chroma-Padding) und Mindestgrößen und -ausrichtungen
-   von Stream und Quelle. Beobachtet sind 256 B; hart geprüft wird nur die EP1-Ausrichtung
-   von 32 B.
-7. Ob `rmem`-ioctl `dir = 2` auf T31 korrekt invalidiert (B7).
+1. Meaning of word-0 bit 8. Test with the probe: `0x031` instead of `0x131`.
+2. Meaning of `0x8430` and of the bits of `0x8438` other than bit 1. `0x85F8` for JPEG.
+3. Whether the hardware really writes the complete JFIF stream. This is very
+   likely; the probe shows it immediately. In addition: Does the output end exactly with `FFD9`,
+   or is there padding?
+4. Effect of `RestartInterval` (DRI/RSTn) and `AspectRatioUnit` in the header.
+5. How many bytes of EP1 the hardware reads, and whether `+0x180` are head symbols. Test:
+   set `+0x180 = 0` and see whether the DHT HUFFVAL order changes.
+6. Row access for H mod 16 ≠ 0 (chroma padding) and minimum sizes and alignments
+   of stream and source. 256 B are observed; only the EP1 alignment of
+   32 B is hard-checked.
+7. Whether the `rmem` ioctl `dir = 2` invalidates correctly on T31 (B7).
 
-## Anhang: Verifikation EP1
+## Appendix: EP1 verification
 
-Das Skript `re/vendor.py` im Scratchpad parst den Hexdump L131060–131135 (Adressen
-`0xe2fc0–0xe35f0`) und simuliert `JpegTables_InitQuant` (L51669) und
-`JpegTables_InitHuffman` (L51767, Farbpfad `0x4b67c–0x4b918`). Verglichen wurde mit
-`re/ep1test.c`: Das sind die Zeilen `hw_encoder.c:662–732` und `:912–1004`, unverändert
-kompiliert.
+The script `re/vendor.py` in the scratchpad parses the hex dump L131060–131135 (addresses
+`0xe2fc0–0xe35f0`) and simulates `JpegTables_InitQuant` (L51669) and
+`JpegTables_InitHuffman` (L51767, colour path `0x4b67c–0x4b918`). It was compared with
+`re/ep1test.c`: These are the lines `hw_encoder.c:662–732` and `:912–1004`, compiled
+unchanged.
 
-Ergebnis: `mismatching q: 0` für q = 1…100. `ZIGZAG_SCAN` ist eine Permutation
-(Zigzag→Raster) und entspricht `k_natural` im Probe.
+Result: `mismatching q: 0` for q = 1…100. `ZIGZAG_SCAN` is a permutation
+(zigzag→raster) and corresponds to `k_natural` in the probe.
