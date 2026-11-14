@@ -16,7 +16,8 @@
  * "bin" is "isp" plus a night and a day IMP_ISP_Tuning_SetISPRunningMode
  * (IQ-bin switch, #289) between System_Init and the teardown; "bin N" ends
  * each of the N-1 extra cycles at night (what the driver reports after a
- * sensor release, #303).
+ * sensor release, #303); T32_BIN_END_NIGHT skips the switch back to day,
+ * T32_BIN_HOLD=N keeps the ISP open N s after the switches (#504).
  * "none" takes N frames with IMP_FrameSource_GetFrame (depth 1); the first
  * frame's colour bands are printed (T32F: mean Y/U/V of 8 vertical bands,
  * NV12 with UV after ALIGN16(height) rows) and its buffer address
@@ -698,7 +699,11 @@ int main(int argc, char **argv)
         printf("T32S running mode %d\n", (int)rm);
         proc_status();
         rm = IMPISP_RUNNING_MODE_DAY;
-        STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
+        if (!getenv("T32_BIN_END_NIGHT"))       /* openimp #504: leave the ISP at night (list dump) */
+            STEP(IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &rm));
+        fflush(stdout);
+        if (getenv("T32_BIN_HOLD"))             /* #504: keep the ISP open N s (list dump from the shell) */
+            sleep((unsigned)atoi(getenv("T32_BIN_HOLD")));
         STEP(IMP_ISP_DisableTuning());
     }
     if (isp_only) {

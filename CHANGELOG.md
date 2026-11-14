@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T33 driver-port row 100/409, 130 ported by name (open-tx-isp T33 day / night bin switch, #504)
+
+- `docs/status/driver_port.json` / matrix row: 10 more T33 `*_switch_para` functions run in the open module's bin switch path (open-tx-isp next 13d9394a, QEMU A/B only, not oracle-proven). `tools/t32/t32_trace_sample.c`: `bin` mode options `T32_BIN_END_NIGHT` (stay at night) and `T32_BIN_HOLD=N` (keep the ISP open N s for a list dump) for the T33 day / night A/B (#504). Tool / docs only.
+
 ## 2026-11-14: status: T33 driver-port row 100/409 (open-tx-isp port loop batch 1, 27 binary-oracle blocks)
 
 - `docs/status/driver_port.json` + generated matrix section: T33 binary-oracle proven 100/409 (was 36): the API port loop's blocks `intp`, `math`, `rcfg1`..`rcfg10` (the 28 `tisp_rcfg_*_reg_init`), `msca-api1`..`4`, `top`, `ldc`, `irq` and the eight `*_t33_frame_done_interrupt` blocks (open-tx-isp next e7ce4b30; vendor module instructions in Unicorn against our C, every mutant detected). `tools/status_driver_port.py` no longer counts `CALLS` / comment lines of a conf as functions. Host-proven only, not device-tested (openimp #99).
