@@ -31,25 +31,25 @@
    "note": ""
   },
   "T10": {
-   "proven": 819,
+   "proven": 820,
    "total": 1188,
-   "machine_lines": 13695,
-   "lines": 33547,
-   "pct_machine_lines": 40.8,
+   "machine_lines": 13409,
+   "lines": 33283,
+   "pct_machine_lines": 40.3,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-14",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-4 + ISP context layout merged (system_tab, FSM family, process_interrupt, small helpers, struct t20_isp_ctx with cmos/AE interrupt handlers), host oracles + vendor vdiff + T10 cam stream proof per batch (cam run of the context-layout batch pending)"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-5 (+Fable ctx batch) + ISP context layout merged (system_tab, FSM family, process_interrupt, small helpers, struct t20_isp_ctx with cmos/AE interrupt handlers), host oracles + vendor vdiff + T10 cam stream proof per batch (cam run of the context-layout batch pending)"
   },
   "T20": {
-   "proven": 685,
+   "proven": 686,
    "total": 1033,
-   "machine_lines": 13785,
-   "lines": 30595,
-   "pct_machine_lines": 45.1,
-   "base_proven": 685,
-   "base_pct_machine_lines": 45.1,
+   "machine_lines": 13499,
+   "lines": 30331,
+   "pct_machine_lines": 44.5,
+   "base_proven": 686,
+   "base_pct_machine_lines": 44.5,
    "date": "",
    "issue": "",
    "note": ""
