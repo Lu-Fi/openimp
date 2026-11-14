@@ -87,7 +87,7 @@ Separate from the streamer-function bars above: this counts functions of the rec
 | SoC | proven / all | progress | note |
 |---|--:|---|---|
 | T32 | 1591/1591 (100.0 %) | `████████████████████` | bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; as of 2026-11-13 |
-| T33 | 142/409 (34.7 %) | `███████░░░░░░░░░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 142 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 89 more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
+| T33 | 149/409 (36.4 %) | `███████░░░░░░░░░░░░░` | counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 149 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 86 more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); not device-tested; as of 2026-11-14 |
 
 
 ## Summary

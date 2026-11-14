@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T33 driver-port row 149/409 (open-tx-isp block rcfgcore; #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 149/409 (register-list core `tisp_rcfg_module_register` / `_release` / `_cfg_trig`, `tisp_rcfg0_dual_module_cfg_trig`, `tisp_rcfg_t33_write_all_reg`, `lib_tisp_rcfg_cfg_trig`, `tisp_rcfg_cfg_end_interrupt`, block `rcfgcore`; `tisp_get_rcfg_module` was already counted with `fdmisc`; open-tx-isp next b3dbc307). Docs only.
+
 ## 2026-11-14: status: T33 driver-port row 142/409 (open-tx-isp blocks t33mem, fdmisc; #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 142/409 (ISP working memory size `tisp_mdns_t33_get_mem_size`, block `t33mem`; MSCA / TOP frame-done list refresh, MDNS trigger, rcfg module getter, block `fdmisc`; open-tx-isp next da64811d). Docs only.
