@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: docs: beyond-vendor rows for #490 and neo SU_Base_GetDevID (#27)
+
+- `docs/OPENIMP_BEYOND_VENDOR.md` section 6: T33 `IMP_AI_EnableLpf` returns 0 on the first call (vendor -1 only from a stale `dlerror`, #490) and neo `SU_Base_GetDevID` returns the ID on T30 (vendor 1.0.5: -1, #27). User OK 2026-11-14. Docs only.
+
 ## 2026-11-14: T32/T33 H.265 rate control on the vendor's eprc T33 revision (#295, planned)
 
 - `src/eprc/eprc_t33_h265.c` (the hand port of the vendor 2.2.0 H.265 controller) is now built and runs behind `t32_rc65_*` in `src/t32/openimp_t32_rc33.c`: `i265e_param_default`, the channel words of `channel_i265e_encoder_init`, the `I265e_configure` clamps and `I265eRatectrl_rcInit` / `_rcStart` / `_rcEnd` on the controller's arena (the `cnst_pmd_qp_thrd` words the controller patches are arena region 2). `src/t32/openimp_t32_rc.c` maps the IMP attribute (`t32_rc65_params`); H.265 channels use it instead of the T23 revision (QVBR stays there). The encoder hands the 38 HERA statistics and, after an I picture, the 64-line row sizes to `rcEnd`.
