@@ -43,6 +43,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `docs/OPENIMP_BEYOND_VENDOR.md` 6.10 (T33 ExternInject channels deliver frames where the vendor 2.0.2.1 EnableChn fails in QEMU): user OK 2026-11-14, kept; the six F1 cell notes say so. Docs only.
 
+## 2026-11-14: matrix: ✅+ cells re-judged against the beyond-vendor rows (docs only)
+
+- `docs/status/features.yaml`: ✅+ now needs a row in `OPENIMP_BEYOND_VENDOR.md` / open-tx-isp `BEYOND_VENDOR.md` and a device test. T21 column 26 -> 14 ✅+ (10 cells to ✅, row 5 to 🔧, row 15 to ?); the kept cells name their row and device run. 12 cells of other SoCs without row or evidence (T10 row 3, T10/T31 row 34, T10/T20/T23/T31 row 42, T10/T20/T23 row 44, T23 rows 14 and 15) to ✅. Counts: ✅ 244 -> 266, ✅+ 85 -> 61.
+
 ## 2026-11-14: feature matrix audit against the newest device evidence (docs only)
 
 - `docs/status/features.yaml`: T30 row 11 (IR cut / IR LED) planned -> supported (T30X b92: the open stack switches gpio72, the IR LED pin, the ISP running mode and the ircut status like the vendor, #100); T30 row 35 (module size) known deviation -> supported (-Os default, 343,136 B against 347,648 B, #274); T40 row 7 (anti-flicker) supported -> improved beyond vendor (#494, mains-locked ladder, device proof, user decision 2026-11-14). Counts: supported 243 -> 244, beyond vendor 84 -> 85, known deviation 2 -> 1, planned 93 -> 92.

@@ -101,7 +101,7 @@ features:
       - 470
     T21:
       sym: ✅+
-      text: 10x stop/start + rmmod/insmod, 0 oops; cause of the old oops (stats DMA into freed memory) fixed
+      text: '10x stop/start + rmmod/insmod, 0 oops; cause of the old oops (stats DMA into freed memory) fixed. 2026-11-14 (#467 proof, T21 test camera .24, agg69a): 10 cycles of apitest teardown followed at once by a streamer start, 0 hits, 0 oops. Beyond vendor (the vendor T21 oopses on reload): OPENIMP_BEYOND_VENDOR.md ''10x stop/start incl. kill -9 and 10x module reload, 0 oops''; second T21 board: 20 reload cycles with streaming incl. SIGKILL (changelog 2026-10). Open note from 2026-10: one crash at the 4th reload in one boot, never formally closed.'
     T23:
       sym: ✅+
       text: '2026-11-02 (#189 pass 5, T23 test camera, full OTA of a new image; vendor-compared triage of the lifted entries): 22 reachable lifted functions triaged (3 fixed, 19 dead because the hand-written layer replaces them or nothing dispatches them); `ispcore_core_ops_ioctl` is now a hand-written event walk with a host test. Default image: apitest all areas PASS 420 / FAIL 11 (the image before, same session: 399 / 32; no function worse, 11 remaining FAILs were FAILs before: 10 second-sensor getters and `SetScalerLv`), 6 of 6 module reload cycles, 3 RTSP pulls, 6 day/night switches, 0 oopses. No visible effect expected or seen for the event walk (no sender of these events in the live code). The two other fixes (`jz_isp_ccm`, `tisp_ae_mean_update`) are reached only with the bring-up parameter `source_core_start=0`; that mode resets the camera within seconds on this tree and on its parent alike (cause not explained, pre-existing), so they have no camera-verified effect. Earlier: 10x stop/start incl. kill -9, 10x reload, 0 oops; 2 out-of-bounds writes (2 KB/18 KB) fixed'
@@ -133,14 +133,14 @@ features:
   vendor: not present
   cells:
     T10:
-      sym: ✅+
-      text: isp_open=auto
+      sym: ✅
+      text: 'isp_open=auto. 2026-11-14 audit: ✅+ -> ✅: the boot guard lives in the thingino firmware and has no beyond-vendor row (same call as T21).'
     T20:
       sym: ✅
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
     T21:
-      sym: ✅+
-      text: S10isp-guard, u-boot isp_open=manual|auto|off
+      sym: ✅
+      text: 'S10isp-guard, u-boot isp_open=manual|auto|off. 2026-11-14 audit: ✅+ -> ✅: runs on the aperto images of the T21 test cameras; an addition that lives in the thingino firmware (not in OpenIMP / open-tx-isp) and has no beyond-vendor row.'
     T23:
       sym: ✅
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
@@ -185,7 +185,7 @@ features:
       - 130
     T21:
       sym: ✅+
-      text: '2026-10-27: `GetIntegrationTime` reports the time in use and the ceiling, `SetIntegrationTime MANUAL/AUTO` fix and release the exposure (stock ignores the block: beyond vendor), `WaitFrame` waits for the next frame (#110); works with the stock libimp as well. Device cell in the API table (T21 camera). Earlier: AE lifted 1:1 from vendor (incl. ae_tune2), night flicker gone; a·b·b bug found'
+      text: '2026-10-27: `GetIntegrationTime` reports the time in use and the ceiling, `SetIntegrationTime MANUAL/AUTO` fix and release the exposure (stock ignores the block: beyond vendor), `WaitFrame` waits for the next frame (#110); works with the stock libimp as well. Device cell in the API table (T21 camera). Earlier: AE lifted 1:1 from vendor (incl. ae_tune2), night flicker gone; a·b·b bug found. Evidence: #110 closing comment (camera + QEMU PASS), apitest issue-110 2026-10-27 on .24 (dev); beyond-vendor row OPENIMP_BEYOND_VENDOR.md ''T21 `ae_it_max_us` acts'' (cam-D, user OK; the MANUAL/AUTO fix has no row of its own).'
       issues:
       - 110
     T23:
@@ -239,8 +239,8 @@ features:
       sym: ✅
       text: 'device-tested: ae_comp (IT 40→562 lines, gain 0→46); highlight has a small effect; backlight not tested (reflash pending) Re-tested 2026-10-10: monotonic, luma 56 / 105 / 245 for comp 0 / 128 / 255'
     T21:
-      sym: ✅+
-      text: vendor dispatcher lifted; individual test not documented
+      sym: 🔧
+      text: 'vendor dispatcher lifted; individual test not documented. 2026-11-14 audit: ✅+ -> 🔧: the cell had no test. The T21 backlight compensation (the AE luma target +5 % per level) is built and linked, device test pending per OPENIMP_BEYOND_VENDOR.md ''AE ceiling, AE luma, backlight compensation and hue''; HiLightDepress is dev on .24 (apitest rc3-cases 2026-10-27). Needs a blc case of the imgfx tool on a T21 camera.'
     T23:
       sym: ✅
       text: 'device-tested with the lifted vendor AE: backlight 10 luma 68→112, highlight 10 →48, AE comp works (decided: lifted vendor AE becomes the default after a pending night-switch test in the dark) [claude/t23-matrix-gaps]'
@@ -286,7 +286,7 @@ features:
       - 128
     T21:
       sym: ✅+
-      text: '2026-10-27: Movestate (`Enable/DisableMovestate`, the vendor 1.0.33 logic): the T21 driver applies only the exposure cap of the motion block (QEMU 2246 -> 1347 -> 2246 lines; the Apical sinter/temper/sharpening bytes have no T21 equivalent); the T21 camera cell of the API table is dev. Earlier: ae_it_max_us acts (claude/t21-ae-it-max 840a57ff; beyond vendor, the vendor ignores the RANGE block; the user decided to keep it): cam-D cap 2000 us gives IT 68 lines and dgain 19 to 63, cap 5000 us gives 172 lines, cap 0 returns to 1125 lines; max gain acts as before. Caveat: a 4th module reload in the same boot gave segfaults and a watchdog reboot (under investigation)'
+      text: '2026-10-27: Movestate (`Enable/DisableMovestate`, the vendor 1.0.33 logic): the T21 driver applies only the exposure cap of the motion block (QEMU 2246 -> 1347 -> 2246 lines; the Apical sinter/temper/sharpening bytes have no T21 equivalent); the T21 camera cell of the API table is dev. Earlier: ae_it_max_us acts (claude/t21-ae-it-max 840a57ff; beyond vendor, the vendor ignores the RANGE block; the user decided to keep it): cam-D cap 2000 us gives IT 68 lines and dgain 19 to 63, cap 5000 us gives 172 lines, cap 0 returns to 1125 lines; max gain acts as before. Caveat: a 4th module reload in the same boot gave segfaults and a watchdog reboot (under investigation) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''T21 `ae_it_max_us` acts'' (cam-D numbers above, user OK); Movestate API cells dev on .24 (apitest movestate 2026-10-27).'
     T23:
       sym: ✅
       text: MaxAgain/MaxDgain, IT max, SetSensorFPS, additional ISP digital-gain stage; t23tune passed
@@ -363,8 +363,8 @@ features:
       sym: ✅
       text: '2026-11-11 (#353, QEMU T20X jxf22 only, no camera run): the simple AWB now accepts any number of calibrated light sources; before it ran only with IQ bins that have exactly 2 (jxf23), so it stayed off with jxf22 (4), sc2235 and ps5250 (3); warm-to-cool scene: red gain 289 -> 401, blue 225 -> 174 (Q8). Earlier: default simple AWB; daylight A/B vs vendor chain: gains 492/393 vs 488/395, neutral ROIs within 0.007, both converge < 4 s; artificial light sweep 2200-6500 K (2026-10-04, smart bulbs): AWB follows (CT estimate 2300/2300/2500/4100 K), 4000 K neutral (R/G 0.99), very warm light stays slightly warm (lower limit ~2300 K, typical)'
     T21:
-      sym: ✅+
-      text: AWB lifted (10/10 scenes register-identical) + hysteresis + IR night freeze; dusk test open
+      sym: ✅
+      text: 'AWB lifted (10/10 scenes register-identical) + hysteresis + IR night freeze; dusk test open. 2026-11-14 audit: ✅+ -> ✅: the hysteresis band is emulator-only (39 -> 0 parameter-set switches in 40 frames) and the dusk test is still open; only the IR night freeze and manual WB at night were confirmed on the T21 test camera (cam-D night checks, 0 oops). Beyond-vendor rows exist (open-tx-isp BEYOND_VENDOR.md ''AWB behaviour on T21'', OPENIMP_BEYOND_VENDOR.md ''AWB hysteresis band 10 % and night freeze''): back to ✅+ once a dusk run on a T21 camera shows the flapping gone.'
     T23:
       sym: ✅
       text: "2026-11-07 (#231 L3, T23 camera by runtime module swap): the AWB luminance threshold is rewritten from the AE mean on every AWB interrupt like the stock module (`source_awb_lum_th`, default 1; emulator oracle 102 cases x 3 frames identical to stock). 2026-11-11 (#233, T23 Jooan A6M, runtime swap, A/B of `source_awb_hlil_interval` 4 vs 1): the AWB now runs on every AWB statistics interrupt like stock (new default 1; the module parameter is now a normal one so the old cadence stays selectable); first convergence after stream start 0.59 -> 0.35 s, re-convergence after an IR-cut step 1.13 -> 0.98 s, same final gains, CPU unchanged. Earlier: [-all-13] daylight green cast fixed on claude/t23-day-color (bc70f10b), tested on cam-B in sunlight: neutral colours, WB gains kept (0x710/0x7c0); not flashed yet"
@@ -410,8 +410,8 @@ features:
       sym: ✅
       text: CCM/LSC read back in isp-m0; CCM follows day/night (mono at night), LSC enabled, strength 1024 day/3440 night; mesh mirror follows ISP hflip at mode reload (vendor-identical); per-CT sweep pending daylight [claude/t1x-ccm-lsc-iridix]
     T21:
-      sym: ✅+
-      text: '2026-10-27: CCM bypass shows the colour change on a colourful daylight scene (|dU|/|dV| 10.8/4.9; T21 has no BCSH bypass bit) (#105: not a defect, the earlier test scenes were nearly colourless). Earlier: CT-controlled CCM/LSC lifted; colour blotches gone (chroma sigma 30→6)'
+      sym: ✅
+      text: '2026-10-27: CCM bypass shows the colour change on a colourful daylight scene (|dU|/|dV| 10.8/4.9; T21 has no BCSH bypass bit) (#105: not a defect, the earlier test scenes were nearly colourless). Earlier: CT-controlled CCM/LSC lifted; colour blotches gone (chroma sigma 30→6) 2026-11-14 audit: ✅+ -> ✅: vendor-equal (CT-controlled CCM/LSC lifted, device-tested on the colourful daylight scene, #105, and the chroma figure above); no beyond-vendor row covers CCM/LSC on T21.'
       issues:
       - 105
     T23:
@@ -544,7 +544,7 @@ features:
       text: defaults 0x80; sharpness works (edge energy 13/230/700); image.sharpness=128
     T21:
       sym: ✅+
-      text: 'getters lifted; sharpness/contrast readable; 2026-10-06: `SetBrightness` now acts (beyond vendor: the AE luma target is scaled by value/128, 128 = the vendor picture; imgfx Y 28.8/117.7/193.0 for 30/128/225, timps `image.brightness` live 44.5/130.8/223.9) [open-tx-isp release-t21-brightness]'
+      text: 'getters lifted; sharpness/contrast readable; 2026-10-06: `SetBrightness` now acts (beyond vendor: the AE luma target is scaled by value/128, 128 = the vendor picture; imgfx Y 28.8/117.7/193.0 for 30/128/225, timps `image.brightness` live 44.5/130.8/223.9) [open-tx-isp release-t21-brightness] Beyond-vendor rows: open-tx-isp BEYOND_VENDOR.md ''T21 `IMP_ISP_Tuning_SetBrightness` acts'' and OPENIMP_BEYOND_VENDOR.md ''Brightness acts on T21'' (user OK 2026-11-14); device-tested (imgfx, timps snapshots, apitest rc3-cases 2026-10-27 on .24).'
     T23:
       sym: ✅
       text: 'brightness/contrast/saturation/hue act now (they were reset on every stream start); contrast/gain feedback: driver takes the low byte like the vendor, OpenIMP remembers the gain before sending (user contrast 100 stays) (claude/t23-bcsh-aeit-fix)'
@@ -623,11 +623,11 @@ features:
       sym: ✅+
       text: 'DRC strength drives auto Iridix ratio: Y 92/96/122, laplacian 555/558/656 at 0/128/255; isp-m0 WDR flag fixed [all-17]'
     T21:
-      sym: ✅+
-      text: ADR lifted (40/40 emulator), DRC reaches the driver; day Y 120 instead of 235
+      sym: ✅
+      text: 'ADR lifted (40/40 emulator), DRC reaches the driver; day Y 120 instead of 235. 2026-11-14 audit: ✅+ -> ✅: no beyond-vendor row covers T21 (the DRC-strength row is T10/T20); DRC strength is apitest dev on .24 (rc3-cases 2026-10-27), the lifted ADR block is emulator-only (40/40), no device picture test of ADR.'
     T23:
-      sym: ✅+
-      text: dynamic ADR lifted from the vendor module (44/44 emulator-identical, claude/t23-adr-defog); DRC strength 0/255 visibly effective on cam-B; sc2336 has no WDR mode
+      sym: ✅
+      text: 'dynamic ADR lifted from the vendor module (44/44 emulator-identical, claude/t23-adr-defog); DRC strength 0/255 visibly effective on cam-B; sc2336 has no WDR mode. 2026-11-14 audit: ✅+ -> ✅: lifted vendor ADR (emulator-identical) and a visible DRC strength on the T23 camera; no beyond-vendor row covers T23 DRC/ADR.'
     T30:
       sym: ✅
       text: "2026-11-13: the Iridix deviation is fixed (#428, open-tx-isp 4fab1e1d): T30X run b70, settled window, 0x3c4 0x58/0x58 and 0x3dc 0x100/0x100 open/vendor; WDR stays n/a on the linear SC4236 (SetWDRAttr -1 on both stacks, vendor-equal). Before: 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): RawDRC acts through Iridix on the device: off / manual255 Y 94.2 / 123.5 (vendor 96.4 / 112.4, b26), timps drc_strength 0/128/255 JPEG Y 96.7/109.6/125.4 (b47 a1); `SetWDRAttr` returns -1 on the linear SC4236 on both stacks (vendor-equal). Deviation: the unlimit strength reads 221-247 on the open stack against 149-154 on the vendor (b26, b29), and the Iridix base strength is above the vendor (0x3c4 0x43 vs 0x1c, b29) (#428). Earlier: `Get/SetRawDRC` exported; `Get/SetWDRAttr` exported since 2026-10-10 (V4L2 control 0x8000169, host test), no device result"
@@ -666,13 +666,13 @@ features:
       sym: ✅+
       text: 'Iridix floor (no defog block in HW): 255 → Y +27, laplacian +106 [all-17]'
     T21:
-      sym: ✅+
-      text: lifted, IRQ 21 registered (40/40 emulator)
+      sym: '?'
+      text: 'lifted, IRQ 21 registered (40/40 emulator) 2026-11-14 audit: ✅+ -> ?: only emulator evidence (40/40, IRQ 21 registered), no device picture test of the defog block on a T21 camera, no beyond-vendor row. Needs an imgfx defog run on .24 or .27.'
       issues:
       - 106
     T23:
-      sym: ✅+
-      text: lifted incl. tisp_defog_soft_process (emulator-identical), IRQ 20 + process running on cam-B, defog strength works; 0xc bit 11 follows the bank like stock
+      sym: ✅
+      text: 'lifted incl. tisp_defog_soft_process (emulator-identical), IRQ 20 + process running on cam-B, defog strength works; 0xc bit 11 follows the bank like stock. 2026-11-14 audit: ✅+ -> ✅: lifted vendor defog, device-tested; no beyond-vendor row covers T23 defog.'
       issues:
       - 106
     T30:
@@ -712,7 +712,7 @@ features:
       text: 'Sinter/Temper take effect (vendor: no-op) [claude/t10-t20-nr-wdr + openimp claude/t20-nr-strength]: temper 0/64/128/200 → 0/42/85/132, sinter 0/17/35/69 at high gain; 128 = IQ; kept across day/night'
     T21:
       sym: ✅+
-      text: 2DNR/gain tracking repaired; Sinter/Temper strength now takes effect (vendor ignores it) [-all-13]
+      text: '2DNR/gain tracking repaired; Sinter/Temper strength now takes effect (vendor ignores it) [-all-13] Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Sinter / Temper denoise strength takes effect (vendor ignores it)'' (cam-D); device: SetSinterStrength dev (apitest rc3-cases 2026-10-27, .24), SetTemperStrength dev (t21pass 2026-11-04, .24: detail energy 26.4-26.6 at strength 0 against 23.5-23.6 at 255).'
       issues:
       - 106
     T23:
@@ -758,8 +758,8 @@ features:
       sym: ✅+
       text: impulses 6628/5153/3667 at 0/128/255 [all-17]
     T21:
-      sym: ✅+
-      text: m1 thresholds scaled like OEM T23; impulses 3857/3841/3498 [all-17]
+      sym: ✅
+      text: 'm1 thresholds scaled like OEM T23; impulses 3857/3841/3498 [all-17] 2026-11-14 audit: ✅+ -> ✅: `SetDPStrength` is exported and acts like the vendor T21 (cap 200 %); the DPC-strength beyond-vendor row covers T10/T20 only. Device: SetDPStrength dev (apitest agg47 2026-10-26, .24), impulse counts above.'
       issues:
       - 106
     T23:
@@ -806,7 +806,7 @@ features:
       text: colorfx 0–3 set/get ok, sepia visible; scene ok
     T21:
       sym: ✅+
-      text: 'B/W, vivid, negative work (confirmed with light on); getters return what was set [-all-13]; 2026-10-06: SEPIA works (beyond vendor, was -1: B/W plus a tinted CSC matrix, imgfx dU/dV +10/+9 and +17/+19 in two runs); `SetAntiFogAttr`/`SetSceneMode` are vendor no-ops [open-tx-isp release-t21-image]'
+      text: 'B/W, vivid, negative work (confirmed with light on); getters return what was set [-all-13]; 2026-10-06: SEPIA works (beyond vendor, was -1: B/W plus a tinted CSC matrix, imgfx dU/dV +10/+9 and +17/+19 in two runs); `SetAntiFogAttr`/`SetSceneMode` are vendor no-ops [open-tx-isp release-t21-image] Beyond-vendor rows: OPENIMP_BEYOND_VENDOR.md ''Scene mode and colour effects act on hardware'' and ''Sepia works on T21'' (cam-D imgfx), open-tx-isp BEYOND_VENDOR.md ''Scene mode and colour effect controls'' (user OK 2026-11-14); apitest Get/SetColorfxMode dev on .24 (agg47-cases 2026-10-26).'
     T23:
       sym: ✅
       text: 'device-tested: B/W, vivid, negative work; invalid values give EINVAL (claude/t23-t31-scene-colorfx, not yet in an aggregate)'
@@ -923,7 +923,7 @@ features:
       text: '2026-11-08 device test, Wyze Cam Pan T20X (jxf22): sub stream 640x368 and 704x576 rotated 90/270 at 15 fps: dims swapped, 0 decode errors, direction correct (corr 0.997 vs 0.10), main 1920x1080 unchanged, invalid sizes refused (-1), MXU2 rotate 1.6-2.8 ms/frame, 12.6-14.7 fps with the 1080p main encoding, dmesg clean (audit t1xrot). OpenIMP extension (beyond vendor: the vendor T10/T20/T21 libimp has no `IMP_FrameSource_SetChnRotate`): software rotation 90/270 on the FrameSource thread, the T31 path of `docs/T31_ROTATE.md`; sub streams only, at most 704x576 pixels, width and height multiples of 16 (a larger channel is refused with -1 and stays unrotated); T10 and T20 have the same envelope as T21 since 2026-11-06. The MXU2 rotate kernel is timed on the T20X and T10L; the full path is host-tested only, the device test is pending. The extension exists since 2026-10-05; this cell said "coerced to 0" until 2026-11-07.'
     T21:
       sym: ✅+
-      text: '2026-11-08 device test, Victure PC420 T21N (jxf23): with the default MXU2 selection the board reset when a rotated channel started (3x); fixed by never probing MXU2 on T21 (C rotate path, like T23, OpenIMP src/core/openimp_mxu2.c). With the fix: 640x368 and 704x576 rotated 90/270 at 15.00 fps, dims swapped, 0 decode errors, direction correct (corr 1.000 vs 0.18), main 1920x1080 unchanged, no reset over 14 min, C rotate 2.2-3.8 ms/frame (audit t1xrot). OpenIMP extension (beyond vendor: the vendor T10/T20/T21 libimp has no `IMP_FrameSource_SetChnRotate`): software rotation 90/270 on the FrameSource thread, the T31 path of `docs/T31_ROTATE.md`; sub streams only, at most 704x576 pixels, width and height multiples of 16 (a larger channel is refused with -1 and stays unrotated); T10 and T20 have the same envelope as T21 since 2026-11-06. The MXU2 rotate kernel is timed on the T20X and T10L; the full path is host-tested only, the device test is pending. The extension exists since 2026-10-05; this cell said "coerced to 0" until 2026-11-07.'
+      text: '2026-11-08 device test, Victure PC420 T21N (jxf23): with the default MXU2 selection the board reset when a rotated channel started (3x); fixed by never probing MXU2 on T21 (C rotate path, like T23, OpenIMP src/core/openimp_mxu2.c). With the fix: 640x368 and 704x576 rotated 90/270 at 15.00 fps, dims swapped, 0 decode errors, direction correct (corr 1.000 vs 0.18), main 1920x1080 unchanged, no reset over 14 min, C rotate 2.2-3.8 ms/frame (audit t1xrot). OpenIMP extension (beyond vendor: the vendor T10/T20/T21 libimp has no `IMP_FrameSource_SetChnRotate`): software rotation 90/270 on the FrameSource thread, the T31 path of `docs/T31_ROTATE.md`; sub streams only, at most 704x576 pixels, width and height multiples of 16 (a larger channel is refused with -1 and stays unrotated); T10 and T20 have the same envelope as T21 since 2026-11-06. The MXU2 rotate kernel is timed on the T20X and T10L; the full path is host-tested only, the device test is pending. The extension exists since 2026-10-05; this cell said "coerced to 0" until 2026-11-07. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Rotation capability marker'' (T10/T20/T21 envelope 704x576, align 16); device-tested 2026-11-08 as above.'
     T23:
       sym: ✅
       text: '`IMP_FrameSource_SetChnRotate` 90/270 (beyond vendor: the T23 libimp has none): the T31/T21 software rotation on the FrameSource thread, before OSD, IVS and the encoders; sizes multiples of 16, at most 704x576 (sub stream). Device-tested 2026-11-05 on two T23N (sc1a4t, sc2336p) with a test client, not under timps yet: 352x640 and 576x704 H.264 + JPEG correctly oriented, 0 decode errors, 15/15 fps; 3-4 ms per 640x352 frame, 6.5 ms per 704x576 (C path, the T23 has no MXU); banded C kernel 2026-11-06 (both cams, rottest): 2.2 ms per 640x352, 3.9-4.0 ms per 704x576 [claude/rotate-speed]. Before this, sub-stream rotation on T23 was timps'' own software path (unbound `IMP_Encoder_Yuv*`), not the native encoder; IMP_Encoder_YuvSetCrop implemented (host-tested only, timps does not call it) [claude/t23-fs-rotate]'
@@ -1054,8 +1054,8 @@ features:
       sym: ✅
       text: HW JPEG, MJPEG 25 B/5 s with/without video consumer
     T21:
-      sym: ✅+
-      text: HW JPEG without vendor lib, 37 ms/job, snapshots 0.05–0.18 s; stripes with RST markers
+      sym: ✅
+      text: 'HW JPEG without vendor lib, 37 ms/job, snapshots 0.05–0.18 s; stripes with RST markers. 2026-11-14 audit: ✅+ -> ✅: the same facts as the ✅ cells of T10, T20 and T23 (hardware JPEG, no vendor library); the T21 beyond-vendor rows (''Adaptive quality ... +5 back after 100 clean frames'', ''Reuse marker for stand-in JPEGs'') are API extras, not this feature. Device: apitest Encoder_Get/SetJpegeQl and FrameSource_SnapFrame dev on .24.'
     T23:
       sym: ✅
       text: HW JPEG 29 ms/job; q75 = IJG tables, size matches libjpeg (scene-driven)
@@ -1304,7 +1304,7 @@ features:
       text: 'snapshot debounce no longer polls the JPEG encoder: with 1 snapshot/s on both channels chn0 14.4 / chn1 15.0 fps (was 11.2/14.3); sub-stream height 270 is rounded to 272 with a warning (was: scaler hang) [openimp claude/openimp-t20-jpeg-align, timps claude/timps-jpeg-idle-nopoll]'
     T21:
       sym: ✅+
-      text: pool parked/reused (release at idle broke later allocations)
+      text: 'pool parked/reused (release at idle broke later allocations) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Frame source / VBM pool parked and reused at idle'' (T21); device: VBM parking 50 cycles with a stable largest free block on the second T21 board (changelog 2026-10).'
     T23:
       sym: ✅
       text: frames also recycled for callback pools
@@ -1471,14 +1471,14 @@ features:
   vendor: T21 ~1.0 / T23 ~1.26 / T31 ~1.05 MB
   cells:
     T10:
-      sym: ✅+
-      text: 626,032 B (~0.6 MB)
+      sym: ✅
+      text: '626,032 B (~0.6 MB) 2026-11-14 audit: ✅+ -> ✅: no vendor comparison or device statement in the cell and no beyond-vendor row for the libimp size (docs/SIZE.md has the vendor numbers).'
     T20:
       sym: ✅+
       text: 594 KB (was 694 KB; claude/openimp-size, gc-sections)
     T21:
-      sym: ✅+
-      text: ~0.5 MB
+      sym: ✅
+      text: '~0.5 MB. 2026-11-14 audit: ✅+ -> ✅: smaller than the vendor (docs/SIZE.md 2026-10-19: 453 KB file / 167 xz / 491 RAM against 798 / 247 / 996) but a measured build size with no beyond-vendor row; candidate for a row (needs user OK).'
     T23:
       sym: ✅+
       text: 726 KB (was 774 KB; native, no helixd; claude/openimp-size)
@@ -1486,8 +1486,8 @@ features:
       sym: ✅+
       text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): 529,804 B file (text 491,849 B, data 4,724 B, bss 161,784 B; OpenIMP next of 2026-11-10) vs the vendor libimp 1.0.5 1,889,603 B (text 1,550,774 B), measured on the T30X lab camera (b52/b53). Earlier: 594,232 B (~0.57 MB) stripped build; the vendor size was not measured"
     T31:
-      sym: ✅+
-      text: ~0.57 MB
+      sym: ✅
+      text: '~0.57 MB. 2026-11-14 audit: ✅+ -> ✅: no vendor comparison or device statement in the cell and no beyond-vendor row for the libimp size (docs/SIZE.md has the vendor numbers).'
     T32:
       sym: 📋
       text: 'planned (T32 plan, not a release gate): not done for T32 yet. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
@@ -1521,7 +1521,7 @@ features:
       - 231
     T21:
       sym: ✅+
-      text: "2026-11-07 (#222, #231; runtime module swap on the T21 camera): `/proc/modules` 650896 -> 646240 B; tuning state, netlink buffer and statistics DMA buffers no longer from high-order kmalloc blocks; new `warn_stack` (default off) drops the vendor stack dump on ISP warnings (extra). Earlier: 452 KB (was 760 KB; vendor 616 KB), RAM unchanged (claude/t21-size-awb-opt, 452 KB since all-17)"
+      text: '2026-11-07 (#222, #231; runtime module swap on the T21 camera): `/proc/modules` 650896 -> 646240 B; tuning state, netlink buffer and statistics DMA buffers no longer from high-order kmalloc blocks; new `warn_stack` (default off) drops the vendor stack dump on ISP warnings (extra). Earlier: 452 KB (was 760 KB; vendor 616 KB), RAM unchanged (claude/t21-size-awb-opt, 452 KB since all-17) Beyond-vendor: OPENIMP_BEYOND_VENDOR.md ''T21 AWB faster than vendor'' (module 760 -> 452 KB, cam-D) and open-tx-isp BEYOND_VENDOR.md `warn_stack` row (device A/B cam-D 2026-11-06); docs/SIZE.md (2026-10-19): module 419 KB file against 697 KB for the vendor module.'
       issues:
       - 222
       - 231
@@ -1568,7 +1568,7 @@ features:
       text: MemFree 47 MB of 91 MB
     T21:
       sym: ✅+
-      text: free with main+sub+MJPEG 2.76 MB (vendor ≈1.2)
+      text: 'free with main+sub+MJPEG 2.76 MB (vendor ≈1.2) Beyond-vendor rows: OPENIMP_BEYOND_VENDOR.md ''Reference-frame ring (BUF_SHARE_CFG)'' (vendor T21 has it off) and ''Frame source / VBM pool parked and reused at idle''; MemFree measured on the T21 test camera (cam-D).'
     T23:
       sym: ✅+
       text: JPEG shares bitstream −1.44 MB; main window 2 MiB
@@ -1609,7 +1609,7 @@ features:
       text: not in this SoC's encoder (vendor has none either)
     T21:
       sym: ✅+
-      text: 'works (claude/t23-ref-ring) [-all-13]: P-frames 150-300 B in a static scene on cam-D, no artefacts; saves ~1.5 MB video memory at 1080p; on by default (<=1920x1088), OPENIMP_REF_SHARE=0 disables'
+      text: 'works (claude/t23-ref-ring) [-all-13]: P-frames 150-300 B in a static scene on cam-D, no artefacts; saves ~1.5 MB video memory at 1080p; on by default (<=1920x1088), OPENIMP_REF_SHARE=0 disables. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Reference-frame ring (BUF_SHARE_CFG)'' (T21, T23; vendor T21: off), device-tested on cam-D.'
     T23:
       sym: ✅+
       text: 'works (claude/t23-ref-ring) [-all-13]: no artefacts on cam-B, P-frame sizes equal or smaller than without the ring; saves ~1.5 MB at 1080p; on by default (<=1920x1088, like the vendor), OPENIMP_REF_SHARE=0 disables'
@@ -1648,7 +1648,7 @@ features:
       text: timps 2.7 % with motion; OEM AWB +4 %
     T21:
       sym: ✅+
-      text: lifted AWB at 0.95x vendor instructions (was 1.41x), output bit-identical; cam-D isp_fw_process -10 %
+      text: 'lifted AWB at 0.95x vendor instructions (was 1.41x), output bit-identical; cam-D isp_fw_process -10 %. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''T21 AWB faster than vendor'' (cam-D isp_fw_process -10 %, `claude/t21-size-awb-opt`).'
     T23:
       sym: ✅
       text: '2026-11-01 (#151, T23 camera .30, 1280x720 15 fps, one RTSP client, 60 s window, two runs each): the encoder sleeps on the frame-ready event; encoder thread 3.40 / 3.41 % before, 1.79 / 1.78 % after (about 48 % less), whole streamer 8.5 / 8.6 % before, 6.6 / 7.0 % after; streams decode clean (SSIM 0.98), 0 oopses. Earlier: ~6–7 % for 2 streams 25 fps'
@@ -1688,8 +1688,8 @@ features:
       sym: ✅+
       text: patch 0099
     T21:
-      sym: ✅+
-      text: patches 0095–0099 (bounded waits, pointer checks, register ioctl restricted to the VPU window)
+      sym: ✅
+      text: 'patches 0095–0099 (bounded waits, pointer checks, register ioctl restricted to the VPU window) 2026-11-14 audit: ✅+ -> ✅: the beyond-vendor row ''soc_vpu: busy VPU sleeps (no 200 ms busy-wait)'' lists T20, T10 and T23 only (patch 0099); the T21 camera runs the same aperto kernel patches, but no T21 measurement or row exists.'
     T23:
       sym: ✅+
       text: 'patches 0098–0105 (0102 ignores the residual Helix interrupt, status 0x100 after a finished job), merged upstream in thingino `aperto` (#1748, #1752); 5 h soak on the `aperto` images: 0 VPU errors on all cameras'
@@ -1813,17 +1813,17 @@ features:
   vendor: shipped with vendor images
   cells:
     T10:
-      sym: ✅+
-      text: removed
+      sym: ✅
+      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
     T20:
-      sym: ✅+
-      text: removed (image tested)
+      sym: ✅
+      text: 'removed (image tested) 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
     T21:
-      sym: ✅+
-      text: removed
+      sym: ✅
+      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row; the images run without both libraries.'
     T23:
-      sym: ✅+
-      text: removed; also no helixd/vendor libimp
+      sym: ✅
+      text: 'removed; also no helixd/vendor libimp. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
     T30:
       sym: ✅
       text: '2026-11-14 (T30X b88, #27, #496): neo libsysutils (aperto 2d689bd) from /tmp against the vendor 1.0.5, 0 oopses: `SU_CIPHER_Config/Encrypt/Decrypt` nohw, the same codes on both; `SU_Base_GetDevID` returns an ID on neo (vendor -1, beyond vendor, user OK 2026-11-14). The `SU_CIPHER_CreateHandle` / `DestroyHandle` codes without /dev/aes were fixed in neo aperto 518648d to the vendor codes (-12 / -19, checked by disassembly of the vendor libraries for every SoC that has them; host test, no device re-run, #496 closed). Earlier: 2026-11-11: the T30 libimp build needs only libatomic and libc (readelf NEEDED, b53/b56 builds), so the open stack runs without `libalog` and `libsysutils`; it ran in every batch b17-b57 and the su cases on the device (stock image has no libsysutils, `SU_*` not exported by libimp). The vendor library needs libalog preloaded (b53). Not yet tested on an image that drops both libraries.'
@@ -1832,8 +1832,8 @@ features:
       - 496
       - 27
     T31:
-      sym: ✅+
-      text: removed
+      sym: ✅
+      text: 'removed. 2026-11-14 audit: ✅+ -> ✅: a packaging difference without a beyond-vendor row.'
     T32:
       sym: 📋
       text: 'planned: SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
@@ -1863,7 +1863,7 @@ features:
       - 121
     T21:
       sym: ✅+
-      text: 'getters return what was set [-all-13] (vendor: scene/colorfx/Sinter DNS no-op)'
+      text: 'getters return what was set [-all-13] (vendor: scene/colorfx/Sinter DNS no-op) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Scene mode and colour effects act on hardware ... getters return what was set''; apitest GetSceneMode and Get/SetColorfxMode dev on .24 (rc3-cases 2026-10-27, agg47-cases 2026-10-26).'
     T23:
       sym: ✅
       text: '2026-10-27: `GetISPCustomMode` reports the custom state (0 until a custom bank is active) and a write-back of that value returns 0 (#122, T23 camera apitest `custom` PASS). Earlier: expr/EV/TotalGain live, SensorAttr 20-byte layout, vendor isp-m0'
@@ -1902,17 +1902,17 @@ features:
   vendor: IMP_Encoder_Query/ChnStat
   cells:
     T10:
-      sym: ✅+
-      text: RC log line, clamp warning
+      sym: ✅
+      text: 'RC log line, clamp warning. 2026-11-14 audit: ✅+ -> ✅: log lines are no beyond-vendor row and no device evidence for the telemetry claim (see T21).'
     T20:
-      sym: ✅+
-      text: ditto
+      sym: ✅
+      text: 'as T10: RC log line, clamp warning. 2026-11-14 audit: ✅+ -> ✅: log lines are no beyond-vendor row and no device evidence for the telemetry claim (see T21).'
     T21:
-      sym: ✅+
-      text: ditto
+      sym: ✅
+      text: 'IMP_Encoder_Query / GetChnStat as the vendor struct layout. 2026-11-14 audit: ✅+ -> ✅: `Encoder_Query` is dev on .24 (apitest agg63 2026-10-31); the text said only ''ditto''. The row ''Encoder channel stats complete (vendor struct layout, real average bitrate)'' (all SoCs, `claude/openimp-quickfixes`) has no device run per SoC.'
     T23:
-      sym: ✅+
-      text: ditto
+      sym: ✅
+      text: 'as T10: RC log line, clamp warning. 2026-11-14 audit: ✅+ -> ✅: log lines are no beyond-vendor row and no device evidence for the telemetry claim (see T21).'
     T30:
       sym: ✅
       text: "2026-11-10 (T30X lab camera, batch b53/b54, runtime swap to the open stack, vendor stack in the same boot as reference): `IMP_Encoder_Query` on a running CBR channel returns 0 with registered 1 and work_done 1 on both stacks (b52, b53); the vendor reports bytes still queued (leftStreamBytes, curPacks), the open library reports 0 because the stream is fetched synchronously. T30 1.0.5 has no GetChnEvalInfo."
@@ -1947,7 +1947,7 @@ features:
       text: 'regions and H.264 chroma QP offset, device-tested (QP 51 region blocky, QP 15 clean); valid H.264 from agg-34 (an absolute QP more than 25 from the macroblock QP broke hardware decoders before); absolute ROI re-tested 2026-10-10: valid, no inversion'
     T21:
       sym: ✅+
-      text: 'effective by default (beyond vendor: the vendor never programs it), device-tested; relative QP acts inside -12/+13 of the slice QP; `OPENIMP_T21_ROI=0` switches it off'
+      text: 'effective by default (beyond vendor: the vendor never programs it), device-tested; relative QP acts inside -12/+13 of the slice QP; `OPENIMP_T21_ROI=0` switches it off. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''T21 `SetChnROI` is effective'' (device-tested: absolute QP 51 blurs exactly the region, QP 15 stays clean).'
     T23:
       sym: ✅
       text: 'on the native Helix encoder (default backend), the same registers the vendor 1.3.0 encoder programs; device-tested 2026-10-10: QP map shows the window (relative QP acts inside -12/+13 of the slice QP, like T21), bit rate +10 % at delta -15 and -4 % at +20/absolute 51, 9 streams valid in VA-API and strict ffmpeg; OPENIMP_T23_ROI=0 switches it off'
