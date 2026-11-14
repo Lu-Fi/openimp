@@ -53,7 +53,7 @@ def main():
             m = re.search(r"^FUNCS='(.*?)'", c, re.S | re.M)
             for ln in (m.group(1) if m else "").splitlines():
                 w = ln.split()
-                if w and w[0] not in ("VEC", "GLOBAL"):
+                if w and not w[0].startswith("#") and w[0] not in ("VEC", "GLOBAL", "CALLS"):
                     t33.add(w[0])
             m = re.search(r"^PROVES='(.*?)'", c, re.S | re.M)
             t33 |= set((m.group(1) if m else "").split())
