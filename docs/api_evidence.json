@@ -21523,7 +21523,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21531,7 +21531,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). Still cache: the open module does not switch the ISP's online LDC on at init (vendor: LDC_SetMode(online) -> init flag -> register list 25, LDC working memory in the IPC memory, top bypass). Vendor 2.0.2.1 in QEMU with a strength corrupts kernel memory at AddSensor (its LUT header overruns the driver's block); OpenIMP passes the header size."
+      "note": "T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). 2026-11-14 round 4: the open T33 module switches online LDC on at ISP init like the vendor (open-tx-isp 04be28e19: init flag, list 25, IPC LDC memory, LDC/WDMA/RDMA addresses): the 50 online-LDC register writes of a vendor QEMU run equal (ldcdiff.sh), frames flow. QEMU does not model the online LDC pass (no picture proof). Vendor 2.0.2.1 with a strength corrupts kernel memory in QEMU (its LUT header overruns the driver block); OpenIMP passes the header size."
     },
     "ISP_LDC_OnlineSetLut": {
       "area": "ISP tuning",

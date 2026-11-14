@@ -92,6 +92,7 @@ Separate from the streamer-function bars above: this counts functions of the rec
 
 ## Summary
 
+- **Update 2026-11-14, T33 online LDC at ISP init (#491; no main-matrix symbol moved, counts unchanged):** T33 `ISP_LDC_OnlineInit` cache -> qemu: the open module programs the online LDC like the vendor once LDC mode online is set (QEMU: the 50 online-LDC writes of a vendor run equal).
 - **Update 2026-11-14, T32 offline LDC job protocol (#491; no main-matrix symbol moved, counts unchanged):** T32 `ISP_LDC_OfflineInit/CreateJob/DestroyJob/SubmitTask/UpdateLutToJob` aud -> qemu: the vendor 2.2.0 T32 protocol (I2D jobs through /dev/i2d, LDC jobs with the parameter block through /dev/offline_ldc); QEMU t32l2 equal on the vendor and the open stack.
 - **Update 2026-11-14, T33 offline LDC job protocol and online LDC at AddSensor (#491; no main-matrix symbol moved, counts unchanged):** T33 `ISP_LDC_OfflineCreateJob/DestroyJob/SubmitTask/UpdateLutToJob` aud -> qemu (QEMU t33l2: same lines and ioctl blocks on the vendor and the open stack); IMP_ISP_AddSensor sends the online LDC state like the vendor (cell stays cache: the open module does not switch online LDC on at ISP init yet).
 - **Update 2026-11-14, T32 FrameSource I2D rotation (#445; no main-matrix symbol moved, counts unchanged):** T32 `FrameSource_Get/SetI2dAttr` cache -> qemu: a channel with an I2D rotation / flip / mirror runs every frame through /dev/i2d as the vendor 2.2.0 (QEMU t32i2d: 320x192 rotate 90 delivers 192x320, as the vendor library in the same QEMU). T33 keeps the attribute only, as its vendor 2.0.2.1.
@@ -1041,7 +1042,7 @@ As of: 2026-11-07. One row per vendor IMP/SU function (a Get/Set row counts as t
 
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
-- **ISP tuning:** T10 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 66/66 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 97/97 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 87/87 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/113 ✅ · 103 🔧 · 10 gaps · 0 ? · T33 4/99 ✅ · 73 🔧 · 5 gaps · 17 ? · T40 71/71 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 78/78 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **ISP tuning:** T10 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 66/66 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 97/97 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 87/87 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/113 ✅ · 103 🔧 · 10 gaps · 0 ? · T33 4/99 ✅ · 74 🔧 · 4 gaps · 17 ? · T40 71/71 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 78/78 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **AE / AWB / AF:** T10 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 26/26 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 49/49 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/41 ✅ · 41 🔧 · 0 gaps · 0 ? · T33 0/37 ✅ · 32 🔧 · 2 gaps · 3 ? · T40 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 39/39 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Encoder:** T10 66/68 ✅ · 0 🔧 · 0 gaps · 2 ? · T20 66/68 ✅ · 0 🔧 · 0 gaps · 2 ? · T21 67/69 ✅ · 0 🔧 · 0 gaps · 2 ? · T23 90/92 ✅ · 0 🔧 · 0 gaps · 2 ? · T30 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 45/45 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 4/116 ✅ · 57 🔧 · 55 gaps · 0 ? · T33 4/115 ✅ · 40 🔧 · 69 gaps · 2 ? · T40 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 61/61 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 19/19 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 25/25 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/47 ✅ · 44 🔧 · 3 gaps · 0 ? · T33 0/44 ✅ · 38 🔧 · 6 gaps · 0 ? · T40 28/28 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 31/31 ✅ · 0 🔧 · 0 gaps · 0 ?
@@ -1049,7 +1050,7 @@ Per area and SoC: functions that work (device-tested or vendor no-op) / function
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/18 ✅ · 18 🔧 · 0 gaps · 0 ? · T33 0/18 ✅ · 18 🔧 · 0 gaps · 0 ? · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 90/90 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 96/96 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 0/127 ✅ · 125 🔧 · 0 gaps · 2 ? · T33 0/123 ✅ · 90 🔧 · 0 gaps · 33 ? · T40 99/99 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 107/107 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **System:** T10 45/48 ✅ · 3 🔧 · 0 gaps · 0 ? · T20 45/48 ✅ · 3 🔧 · 0 gaps · 0 ? · T21 45/48 ✅ · 3 🔧 · 0 gaps · 0 ? · T23 57/60 ✅ · 3 🔧 · 0 gaps · 0 ? · T30 41/46 ✅ · 5 🔧 · 0 gaps · 0 ? · T31 62/64 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 0/104 ✅ · 99 🔧 · 5 gaps · 0 ? · T33 0/91 ✅ · 90 🔧 · 0 gaps · 1 ? · T40 48/50 ✅ · 2 🔧 · 0 gaps · 0 ? · T41 41/51 ✅ · 10 🔧 · 0 gaps · 0 ?
-- **All areas:** T10 326/331 ✅ · 3 🔧 · 0 gaps · 2 ? · T20 326/331 ✅ · 3 🔧 · 0 gaps · 2 ? · T21 330/335 ✅ · 3 🔧 · 0 gaps · 2 ? · T23 454/459 ✅ · 3 🔧 · 0 gaps · 2 ? · T30 347/352 ✅ · 5 🔧 · 0 gaps · 0 ? · T31 399/401 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 4/610 ✅ · 531 🔧 · 73 gaps · 2 ? · T33 8/571 ✅ · 406 🔧 · 82 gaps · 75 ? · T40 387/389 ✅ · 2 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
+- **All areas:** T10 326/331 ✅ · 3 🔧 · 0 gaps · 2 ? · T20 326/331 ✅ · 3 🔧 · 0 gaps · 2 ? · T21 330/335 ✅ · 3 🔧 · 0 gaps · 2 ? · T23 454/459 ✅ · 3 🔧 · 0 gaps · 2 ? · T30 347/352 ✅ · 5 🔧 · 0 gaps · 0 ? · T31 399/401 ✅ · 2 🔧 · 0 gaps · 0 ? · T32 4/610 ✅ · 531 🔧 · 73 gaps · 2 ? · T33 8/571 ✅ · 407 🔧 · 81 gaps · 75 ? · T40 387/389 ✅ · 2 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -1062,7 +1063,7 @@ Gaps (error, missing, stub, cache-only) in functions that at least one streamer 
 - **T30:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T31:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T32:** 3 streamer-used gaps: `Encoder_SetChnBitRate` (miss; t†), `Encoder_SetChnMaxPictureSize` (miss; r†), `Encoder_SetChnQpBounds` (miss; t†); 58 further gaps no streamer calls; 2 streamer-used functions are of unknown state (audit pending), e.g. `AI_EnableAec`, `AI_EnableAecRefFrame`
-- **T33:** 3 streamer-used gaps: `Encoder_SetChnBitRate` (miss; t†), `Encoder_SetChnMaxPictureSize` (miss; r†), `Encoder_SetChnQpBounds` (miss; t†); 65 further gaps no streamer calls; 22 streamer-used functions are of unknown state (audit pending), e.g. `ISP_Tuning_Get/SetContrast`, `ISP_Tuning_Get/SetSaturation`, `ISP_Tuning_SetBrightness`, `ISP_Tuning_SetSharpness`, `AI_DisableAec`, `AI_EnableAec`
+- **T33:** 3 streamer-used gaps: `Encoder_SetChnBitRate` (miss; t†), `Encoder_SetChnMaxPictureSize` (miss; r†), `Encoder_SetChnQpBounds` (miss; t†); 64 further gaps no streamer calls; 22 streamer-used functions are of unknown state (audit pending), e.g. `ISP_Tuning_Get/SetContrast`, `ISP_Tuning_Get/SetSaturation`, `ISP_Tuning_SetBrightness`, `ISP_Tuning_SetSharpness`, `AI_DisableAec`, `AI_EnableAec`
 - **T40:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T41:** 0 streamer-used gaps; 0 further gaps no streamer calls
 
@@ -1113,9 +1114,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T33</b>: 82 functions</summary>
+<details><summary><b>T33</b>: 81 functions</summary>
 
-- **ISP tuning:** implement (6): `ISP_LDC_OnlineGetLut`, `ISP_LDC_OnlineGetStrength`, `ISP_LDC_OnlineInit`, `ISP_LDC_OnlineSetLut`, `ISP_LDC_OnlineSetStrength`, `ISP_Tuning_Get/SetDrawBlock`
+- **ISP tuning:** implement (5): `ISP_LDC_OnlineGetLut`, `ISP_LDC_OnlineGetStrength`, `ISP_LDC_OnlineSetLut`, `ISP_LDC_OnlineSetStrength`, `ISP_Tuning_Get/SetDrawBlock`
 - **AE / AWB / AF:** implement (4): `ISP_SetAeAlgoFunc`, `ISP_SetAwbAlgoFunc`, `ISP_Tuning_Get/SetFaceAe`, `ISP_Tuning_GetAEFlickerFlag`
 - **Encoder (and decoder):** implement (52): `Encoder_Get/SetChangeRef`, `Encoder_Get/SetChnColor2Grey`, `Encoder_Get/SetChnCrop`, `Encoder_Get/SetChnDenoise`, `Encoder_Get/SetChnFrmUsedMode`, `Encoder_Get/SetChnHSkip`, `Encoder_Get/SetChnROI`, `Encoder_Get/SetFisheyeEnableStatus`, `Encoder_Get/SetGDRCfg`, `Encoder_Get/SetH264TransCfg`, `Encoder_Get/SetH265TransCfg`, `Encoder_Get/SetMbRC`, `Encoder_Get/SetQpgMode`, `Encoder_Get/SetSuperFrameCfg`, `Encoder_GetGOPSize`, `Encoder_GetH264Vui`, `Encoder_GetH265Vui`, `Encoder_GetMotionQuality`, `Encoder_GetPskipCfg`, `Encoder_GetSrdCfg`, `Encoder_InputJpege`, `Encoder_InsertUserData`, `Encoder_PadFrame`, `Encoder_RequestGDR`, `Encoder_RequestPskip`, `Encoder_SetChnHSkipBlackEnhance`, `Encoder_SetChnMapRoi`, `Encoder_SetChnQpBoundsPerFrame`, `Encoder_SetChnQpgAI`, `Encoder_SetChnQpgAI_Yuv`, `Encoder_SetChnQpgAIEnable`, `Encoder_SetChnQpgAIEnable_Yuv`, `Encoder_SetChnRcTrigLevel`, `Encoder_SetChnResizeMode`, `Encoder_SetGOPSize`, `Encoder_SetH264Vui`, `Encoder_SetH265Vui`, `Encoder_SetIvpuBsSize`, `Encoder_SetJpegBsSize`, `Encoder_SetJpegMultiSectionMode`, `Encoder_SetMotionQuality`, `Encoder_SetMotionQuality_Yuv`, `Encoder_SetMotionQualityEnable`, `Encoder_SetMotionQualityEnable_Yuv`, `Encoder_SetMultiSectionMode`, `Encoder_SetPadFrameAttr`, `Encoder_SetPskipCfg`, `Encoder_SetRdBufShare`, `Encoder_SetSrdCfg`, `Encoder_YuvEncode`, `Encoder_YuvExit`, `Encoder_YuvInit`
 - **FrameSource:** implement (6): `FrameSource_CreateJoint`, `FrameSource_DestroyJoint`, `FrameSource_GetJointByHandler`, `FrameSource_SetFrameDepthCopyType`, `FrameSource_SetJointBackground`, `FrameSource_SetYuvAlign`
@@ -1156,7 +1157,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### ISP tuning
 
-160 rows (26 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+160 rows (25 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1198,7 +1199,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_LDC_OnlineGetLutBufMode` | · | · | · | · | · | · | ❌ | · | · | · | – |
 | `ISP_LDC_OnlineGetState` | · | · | · | · | · | · | ❌ | · | · | · | – |
 | `ISP_LDC_OnlineGetStrength` | · | · | · | · | · | · | 🔧a | ⚠c | · | · | – |
-| `ISP_LDC_OnlineInit` | · | · | · | · | · | · | 🔧a | ⚠c | · | · | – |
+| `ISP_LDC_OnlineInit` | · | · | · | · | · | · | 🔧a | 🔧+ | · | · | – |
 | `ISP_LDC_OnlineSetLut` | · | · | · | · | · | · | 🔧a | ⚠c | · | · | – |
 | `ISP_LDC_OnlineSetLutBufMode` | · | · | · | · | · | · | ❌ | · | · | · | – |
 | `ISP_LDC_OnlineSetState` | · | · | · | · | · | · | ❌ | · | · | · | – |
@@ -1360,7 +1361,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 - `ISP_LDC_OnlineGetLutBufMode`: T33: not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13).
 - `ISP_LDC_OnlineGetState`: T33: not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13).
 - `ISP_LDC_OnlineGetStrength`: T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33: apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2).
-- `ISP_LDC_OnlineInit`: T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). Still cache: the open module does not switch the ISP's online LDC on at init (vendor: LDC_SetMode(online) -> init flag -> register list 25, LDC working memory in the IPC memory, top bypass). Vendor 2.0.2.1 in QEMU with a strength corrupts kernel memory at AddSensor (its LUT header overruns the driver's block); OpenIMP passes the header size. T33: apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2).
+- `ISP_LDC_OnlineInit`: T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). 2026-11-14 round 4: the open T33 module switches online LDC on at ISP init like the vendor (open-tx-isp 04be28e19: init flag, list 25, IPC LDC memory, LDC/WDMA/RDMA addresses): the 50 online-LDC register writes of a vendor QEMU run equal (ldcdiff.sh), frames flow. QEMU does not model the online LDC pass (no picture proof). Vendor 2.0.2.1 with a strength corrupts kernel memory in QEMU (its LUT header overruns the driver block); OpenIMP passes the header size. T33: apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2).
 - `ISP_LDC_OnlineSetLut`: T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33: apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2).
 - `ISP_LDC_OnlineSetLutBufMode`: T33: not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13).
 - `ISP_LDC_OnlineSetState`: T33: not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13).
