@@ -31,16 +31,16 @@
    "note": ""
   },
   "T10": {
-   "proven": 700,
+   "proven": 755,
    "total": 1184,
-   "machine_lines": 15223,
-   "lines": 33656,
-   "pct_machine_lines": 45.2,
+   "machine_lines": 14967,
+   "lines": 33706,
+   "pct_machine_lines": 44.4,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-14",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; the machine-like part is the recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); de-lift started, nothing merged yet; host-proven only"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batch 1 merged (system table as SDK system_tab, open-tx-isp next 571142d4), host oracles + vendor vdiff + T10 cam stream proof"
   },
   "T20": {
    "proven": 592,
