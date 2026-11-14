@@ -12,6 +12,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - T33 driver port (open-tx-isp next 984a2063, host + QEMU, planned): the BCSH list after a day -> night bin switch now equals the vendor's (QEMU -M ingenic-t33 A/B, 54 / 54 words; before 22 off). Cause: the vendor `tisp_bcsh_switch_para` writes no list word and the night bin's top bypass gates the EV / CT updates, so the list keeps the last day words; ours stored the switched state. New binary oracle block `bcshlist` (switch / EV / CT update sequences, 2000 cases, 14 / 14 mutants). The driver-port count does not change (`tisp_bcsh_switch_para` was already counted; the other functions are T32 namesakes): 124/409. Docs only.
 
+## 2026-11-14: status: T33 driver-port row 137/409 (open-tx-isp blocks tmo1s, mipi; #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 137/409 (TMO one-shot / AOV / multi-sensor V-table glue, block `tmo1s`; D-PHY settle table `get_settle_time`, block `mipi`; open-tx-isp next 95cee6e5). Docs only.
+
 ## 2026-11-14: status: T33 driver-port row 124/409 (open-tx-isp blocks dnglue, rdnspar; #507, #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 124/409 (CSCCR / MDNS day-night glue, block `dnglue`; RDNS / CDNS para_update with their callees, block `rdnspar`; open-tx-isp next f781bffd). Docs only.
