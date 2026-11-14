@@ -22,9 +22,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-14: apitest `FrameSource rate = sensor rate` is N/A under QEMU when the emulated frame timer is off (#493)
 
 - `tools/apitest/at_sys.c`: with `APITEST_QEMU=1` an out-of-range ch1 rate is N/A (message names the known QEMU frame timer) instead of FAIL. QEMU ingenic-0.7.14/0.7.19 T30 runs the ISP frame timer at ~19 fps at a 15 fps setting; the kernel ISP interrupt counts show it without libimp (isp-m3 15/s on 0.7.17, 19/s on 0.7.19, same guest, ko and sensor fps). Real cameras keep the FAIL. Evidence `audit/issue493` (m0717, m0719); the vendor 1.0.5 libimp could not be run in that image (IMP_Alloc fails at EnableSensor), so the proof is the interrupt rate. To be reported upstream by the user.
+
 ## 2026-11-14: T33 IMP_AI_EnableLpf vendor -1 explained: stale dlerror quirk, no OpenIMP change (#490)
 
 - Vendor 2.0.2.1 `IMP_AI_EnableLpf` (Ghidra t33lib) returns -1 only on: bitwidth != 16, cut-off outside 0..samplerate, `init_audioProcess_library` failure, `get_fun_address` failure (dlsym of `audio_process_lpf_create/process/free`, then `dlerror() != NULL`) or filter init failure. In the T33 QEMU guest the `get_fun_address` check fires on the first call because a `dlerror` from an earlier failed lookup in the process is still pending; with `dlerror()` cleared before the call, or on a second call, the vendor returns 0 as OpenIMP (vendor and QEMU libaudioProcess both export the three symbols). OpenIMP keeps rc=0 (no stale-error dependency); matrix note for `AI_EnableLpf` updated. Evidence: `audit/issue490` (v-clr, v-twice, v-t33ap).
+
 ## 2026-11-13: T40/T41 GOP restart as the vendor glue: after GOP/rate changes and on a day/night picture change (#484, #485)
 
 - `src/t40/codec-t40.c` (T40/T41): `AL_Codec_Encode_RestartGop` is no longer a plain IDR request: as the vendor `AL_Common_Encoder_RestartGop` (T41 1.2.6 0xdbf08) the next picture is an IDR and the periodic IDR counts from it (`RequestIDR` keeps the running count, unchanged).
