@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T33 driver-port row 179/409 (IQ bin append data, MIPI stream-on; #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 179/409 (`tisp_get_module_enum` with the driver form of `tisp_bin_append_data_parse`, `mipi_phy_stream_on`; open-tx-isp next 3fff6a55). The driver now feeds `APPEND_LDC` / `APPEND_LSC` records of a PRJ008 IQ bin (QEMU A/B equal to the vendor module). Docs only.
+
 ## 2026-11-14: status: T33 matrix cells re-judged on the first T33L device evidence (#393)
 
 - `docs/status/features.yaml`: T33 H.264 and sub-stream 🔧 -> ✅ (open stack streams on the T33L module: main 1080p + sub 360p, 10 min 0 drops, decode clean, real picture; HW apitest 462/12 = QEMU), rmem and long-term stability 📋 -> 🔧; device text on ISP bring-up, JPEG (#531), frame source / IVDC (#509, #516, #526), day/night (#527), OSD (#523), RC (#522); the "no T33 camera" wording replaced in all T33 cells. T33 stays in development, not a release gate. Docs only.
