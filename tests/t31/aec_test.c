@@ -9,7 +9,9 @@
  *   0-8 s   far end only        -> ERLE (last 4 s, after convergence)
  *   8-10 s  near end only       -> near-end loss (must stay small)
  *   10-14 s double talk         -> echo attenuation in the output
- * Also reports the processing time per second of 16 kHz audio. */
+ * Also reports the processing time per second of 16 kHz audio.
+ * lab(): stationary and modulated lab signals (#272); noecho(): far end
+ * playing with no echo at the microphone (#499). */
 #define _POSIX_C_SOURCE 199309L
 #include <math.h>
 #include <stdint.h>
@@ -105,7 +107,7 @@ static int run(int rate, size_t frame, int report_cpu, double delay_ms)
     int16_t *echo16 = calloc(n, 2), *near16 = calloc(n, 2);
     OpenimpAec *aec;
     struct timespec t0, t1;
-    double erle, near_loss, dt_echo_in, dt_out, dt_near, dt_gain, dt_erle, cpu;
+    double erle, erle_onset, near_loss, dt_echo_in, dt_out, dt_near, dt_gain, dt_erle, cpu;
     int failed = 0, delay_est;
 
     if (!far || !near || !rir || !far16 || !mic16 || !out16 || !echo16 ||
@@ -161,6 +163,9 @@ static int run(int rate, size_t frame, int report_cpu, double delay_ms)
 
     erle = 10 * log10(energy16(mic16, 4 * s, 8 * s) /
                       energy16(out16, 4 * s, 8 * s));
+    /* the first two seconds: AECM converging and the echo gate opening */
+    erle_onset = 10 * log10(energy16(mic16, 0, 2 * s) /
+                            energy16(out16, 0, 2 * s));
     near_loss = 10 * log10(energy16(mic16, 8 * s + s / 2, 10 * s) /
                            energy16(out16, 8 * s + s / 2, 10 * s));
     dt_echo_in = energy16(echo16, 10 * s, 14 * s);
@@ -180,19 +185,20 @@ static int run(int rate, size_t frame, int report_cpu, double delay_ms)
         dt_gain = 20 * log10(fabs(g) + 1e-9);
         dt_erle = 10 * log10(dt_echo_in / (res + 1e-9));
     }
-    printf("aec %5d Hz frame %3zu delay %4.1f ms: ERLE %.1f dB, near-end only loss %.1f dB, "
+    printf("aec %5d Hz frame %3zu delay %4.1f ms: ERLE %.1f dB (first 2 s %.1f dB), near-end only loss %.1f dB, "
            "double talk (echo %+.1f dB over near): near kept at %.1f dB, "
            "echo reduced %.1f dB",
-           rate, frame, delay_ms, erle, near_loss, 10 * log10(dt_echo_in / dt_near), dt_gain, dt_erle);
+           rate, frame, delay_ms, erle, erle_onset, near_loss, 10 * log10(dt_echo_in / dt_near), dt_gain, dt_erle);
     (void)dt_out;
     printf(", AECM delay %d ms", delay_est);
     if (report_cpu)
         printf(", %.2f ms CPU per s audio (%.2f%% of one host core)", cpu,
                cpu / 10.0);
     printf("\n");
-    if (erle < 15.0 || near_loss > 3.0) {
-        fprintf(stderr, "aec %d Hz: ERLE %.1f < 15 dB or near loss %.1f > "
-                        "3 dB\n", rate, erle, near_loss);
+    if (erle < 30.0 || erle_onset < 10.0 || near_loss > 3.0) {
+        fprintf(stderr, "aec %d Hz: ERLE %.1f < 30 dB, first 2 s %.1f < 10 dB "
+                        "or near loss %.1f > 3 dB\n", rate, erle, erle_onset,
+                near_loss);
         failed = 1;
     }
     free(far); free(near); free(rir); free(far16); free(mic16); free(out16);
@@ -246,6 +252,76 @@ static int lab(int rate, int tone, double am_hz)
     return 0;
 }
 
+/* No echo at the microphone (issue #499, T30X lab run b91: speaker not
+ * audible at the mic, far end 3 Hz modulated noise, AECM removed 15 dB of
+ * the room sound; vendor 0.2 dB).  Far end: modulated noise at ref_rms
+ * (the b91 driver reference was at -5 dBFS) or a talker; near end: room
+ * noise at -40 dBFS, steady or slowly fluctuating, or a second talker.
+ * Nothing of the far end is in the microphone, so the output must be the
+ * microphone: loss <= 1 dB over the second half (the echo gate is open for
+ * the first 3 s of far end).  weak_echo_db != 0 adds the far end that far
+ * under the room noise instead (printed only: the gate opens partly). */
+static int noecho(int rate, int far_talker, double ref_rms, int near_kind,
+                  double weak_echo_db)
+{
+    size_t n = (size_t)rate * 20, frame = (size_t)rate * 4 / 100, i;
+    double *f = calloc(n, sizeof(double)), *m = calloc(n, sizeof(double));
+    int16_t *far = calloc(n, 2), *mic = calloc(n, 2), *in = calloc(n, 2);
+    OpenimpAec *aec = openimp_aec_create(rate);
+    static const char *const near_name[] = {"steady noise",
+                                            "fluctuating noise", "talker"};
+    double loss, room = 328.0, echo_gain = 0, lp = 0;
+    int gate;
+
+    if (!f || !m || !far || !mic || !in || !aec)
+        return 1;
+    if (far_talker) {
+        talker(f, n, rate, 120, 600, 1700, 3.1, 0.0);
+    } else {
+        for (i = 0; i < n; i++)
+            f[i] = frand() * (0.5 - 0.5 * cos(2 * M_PI * 3.0 * i / rate));
+    }
+    normalise(f, n, ref_rms);
+    if (near_kind == 2) {
+        talker(m, n, rate, 210, 800, 2300, 2.3, 1.7);
+    } else {
+        for (i = 0; i < n; i++) {
+            lp += 0.3 * (frand() - lp); /* room noise is not white */
+            m[i] = lp;
+            if (near_kind == 1)
+                m[i] *= 1.0 + 0.6 * sin(2 * M_PI * 0.4 * i / rate) +
+                        0.3 * sin(2 * M_PI * 2.7 * i / rate + 1.0);
+        }
+    }
+    normalise(m, n, room);
+    if (weak_echo_db != 0)
+        echo_gain = room * pow(10, weak_echo_db / 20) / ref_rms;
+    for (i = 0; i < n; i++) {
+        far[i] = sat(f[i]); /* a loud reference clips, as on the device */
+        mic[i] = in[i] = sat(m[i] + echo_gain * far[i]);
+    }
+    for (i = 0; i + frame <= n; i += frame)
+        if (openimp_aec_process(aec, far + i, mic + i, frame) != 0)
+            return 1;
+    /* after the gate's warm-up (3 s of far end) and release */
+    loss = 10 * log10(energy16(in, n / 2, n) / energy16(mic, n / 2, n));
+    gate = openimp_aec_echo_gate_percent(aec);
+    printf("aec no echo %5d Hz far %s %.0f dBFS, near %s", rate,
+           far_talker ? "talker" : "noise 3 Hz", 20 * log10(ref_rms / 32768),
+           near_name[near_kind]);
+    if (weak_echo_db != 0)
+        printf(" + echo %.0f dB under it", -weak_echo_db);
+    printf(": near-end loss %.1f dB, echo gate %d %%\n", loss, gate);
+    openimp_aec_free(aec);
+    free(f); free(m); free(far); free(mic); free(in);
+    if (weak_echo_db == 0 && (loss > 1.0 || gate > 25)) {
+        fprintf(stderr, "aec no echo: loss %.1f > 1 dB or gate %d > 25 %%\n",
+                loss, gate);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     int failed = 0;
@@ -263,6 +339,15 @@ int main(void)
         failed |= lab(rate, 1, 3);
         failed |= lab(rate, 0, 0);
         failed |= lab(rate, 0, 3);
+    }
+    for (int rate = 8000; rate <= 16000; rate += 8000) {
+        for (int near_kind = 0; near_kind < 3; near_kind++) {
+            failed |= noecho(rate, 0, 4250, near_kind, 0);  /* -17.7 dBFS */
+            failed |= noecho(rate, 0, 18400, near_kind, 0); /* -5 dBFS */
+            failed |= noecho(rate, 1, 1840, near_kind, 0);  /* -25 dBFS */
+        }
+        failed |= noecho(rate, 0, 4250, 0, -15);
+        failed |= noecho(rate, 0, 4250, 0, -6);
     }
     return failed;
 }
