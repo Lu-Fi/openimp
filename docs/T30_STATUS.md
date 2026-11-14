@@ -197,7 +197,7 @@ At that time QEMU T30 only (the lab camera arrived the same day). The open drive
 lifted switch had lost (`driver/t30/tx_isp_t30_tuning_ctl.h`, one arm per control id, the
 behaviour of the stock tuning code): apitest `isp` area 25 PASS / 0 FAIL (before 8 / 17),
 the cases `fwfreeze`, `hilight`, `expr`, `gamma`, `aeroi`, `aecomp`, `aestrategy`,
-`contrast`, `ispflip`, `rgbcoef`, `scene` and `colorfx` PASS, `tests/t30_qemu/tuning_strength.c`
+`contrast`, `ispflip`, `rgbcoef`, `scene` and `colorfx` PASS, open-tx-isp `tests/t30_qemu/tuning_strength.c`
 (strengths through the driver tables, scene/colour effect, brightness/saturation read-back)
 `done bad=0`, six module reload cycles with the area, the strength test and a sensor register
 read: 0 oopses, no slab reports (`slub_debug=FZPU`).

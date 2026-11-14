@@ -100,15 +100,8 @@ hilight depress, ...) are not flagged as suspect.
 
 ## Build
 
-`./build.sh` cross-builds all six binaries (toolchain and libimp from
-`$THINGINO_OUT/<cam>/`, vendor headers from
-`$HDR_DIR/<SoC>/...`). Every vendor function is declared
-weak, one source builds everywhere; a function missing in the camera's libimp
-prints `N/A` at run time.
+`tools/apitest/build.sh` builds the `picture` area into every `apitest_<soc>` binary (toolchain and libimp from a thingino build tree, vendor headers from `HDR`; see the header of that script). Every vendor function is declared weak, one source builds everywhere; a function missing in the camera's libimp prints `N/A` at run time.
 
 ## T41
 
-The T41 pipeline init follows the vendor T41 flow (`IMP_ISP_AddSensor(num,
-info)`, `EnableSensor(num, info)`, sensor_id/vi/mclk left 0 like timps) and the
-new tuning API (`num` + pointer arguments). It builds and links, but the init
-has not been run on a T41 here: first run may need a sensor-info fix.
+The T41 pipeline init follows the vendor T41 flow (`IMP_ISP_AddSensor(num, info)`, `EnableSensor(num, info)`, sensor_id/vi/mclk left 0 like timps) and the new tuning API (`num` + pointer arguments). The `picture` area has run on T41 test cameras (RC3 gate).

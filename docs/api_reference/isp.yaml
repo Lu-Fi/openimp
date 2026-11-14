@@ -1549,7 +1549,7 @@ functions:
     group: ldc
     summary: "Online lens correction for one video input (T32, T33), before `IMP_ISP_AddSensor`: function I2D (1, with the rotation angle), HLDC (2) or LDC (4, with the LUT block size). Needs `LDC_SetMode` online first."
     returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff009 after `AddSensor` of that input or when the mode is not online, 0xfffff004 for NULL or another function."
-    notes: "The settings are kept; the open T32/T33 kernel module does not serve the online LUT requests yet, so they are not applied at `AddSensor` (the picture effect needs that driver part and a camera)."
+    notes: "The settings are kept and `IMP_ISP_AddSensor` sends them to the driver (online LDC state, LUT, attribute). The open-tx-isp module answers these requests and switches online LDC on at ISP init (QEMU only; the picture effect needs a camera)."
     soc: "T32, T33"
   ISP_LDC_OnlineSetStrength:
     group: ldc

@@ -176,7 +176,7 @@ functions:
       int IMP_FrameSource_SnapRaw_Start(SnapRawAttr *attr);
     summary: "Captures `count` RAW frames of a sensor into reserved memory (T32, T33; exported by the vendor 2.x library, not declared in its headers). The encoders stop receiving and ISP module bit 11 is set until `SnapRaw_End`. Line length by `type`: 0 width bytes, 2 width x 3/2, others width x 2, rounded up to 8; `mode` 2 doubles the frame."
     returns: "0 with `count`, `size` (one frame), `paddr` and `vaddr` filled; 0xfffff008 before `IMP_ISP_Open`, -1 for NULL, a sensor above 4096 pixels, missing memory or a driver refusal."
-    notes: "The vendor library uses its reuse block (free reserved memory) as the buffer, OpenIMP allocates it (kept until the next Start). The open T32/T33 kernel module does not serve the two RAW requests yet (0xc004548e / 0xc004548f): -1 there."
+    notes: "The vendor library uses its reuse block (free reserved memory) as the buffer, OpenIMP allocates it (kept until the next Start). The open-tx-isp T32/T33 module serves the two RAW requests (0xc004548e / 0xc004548f) since 2026-11-14 (QEMU only); a module without them makes the call return -1."
     see_also: [FrameSource_SnapRaw_End]
     soc: "T32, T33"
   FrameSource_SnapRaw_End:
