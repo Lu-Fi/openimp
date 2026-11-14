@@ -220,6 +220,14 @@ int32_t IMP_ISP_LDC_SetMode(IMPISPLDCMode mode)
     if (OpenIMP_T32_IspFd() < 0 || (unsigned)mode >= IMPISP_LDC_MODE_BUTT)
         return E_OPEN;
     pthread_mutex_lock(&ctl_lock);
+#if !defined(PLATFORM_T33)
+    /* vendor 2.2.0 (T32): the mode is set once; "LDC is already in online / offline mode": f009 */
+    if (ldc_mode_rec == 0 || ldc_mode_rec == 1) {
+        pthread_mutex_unlock(&ctl_lock);
+        IMP_LOG_ERR(TAG, "LDC_SetMode: LDC is already in %s mode", ldc_mode_rec ? "offline" : "online");
+        return E_STATE;
+    }
+#endif
     ldc_mode_rec = m;
     pthread_mutex_unlock(&ctl_lock);
     return isp_ioctl(IOC_LDC_MODE, &m, "LDC_MODE") ? E_IOCTL : 0;
@@ -960,6 +968,7 @@ int OpenIMP_T32_LdcAddSensor(int fd, int vinum, uint32_t w, uint32_t h)
  * Not as the vendor: a job without LUT memory (every job: CreateJob allocates none) is refused with
  * f001 instead of mapping physical address 0 through /dev/mem; params mode (ldc_param_to_lut) is not
  * ported (f001). */
+#if defined(PLATFORM_T33)
 #define E_FUNC   ((int32_t)0xfffff00a)
 #define LDC_JOBS 12
 
@@ -1169,3 +1178,254 @@ int32_t IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr)
     pthread_mutex_unlock(&ctl_lock);
     return rc;
 }
+#else /* T32: vendor libimp 2.2.0 on a T32 (get_cpu_id below 0xd: its "mode 0") */
+/* Vendor 2.2.0 (disassembly, no code copied).  OfflineInit(1) opens /dev/offline_ldc and /dev/i2d
+ * (f008); OfflineInit(0) closes both when no job is left (f009).  CreateJob(attr {func mask, u16 w,
+ * u16 h, .., LUT/parameter file name from word 4, job handle out at word 36}): f009 / f008 / f004;
+ * 12 job slots; an LDC job (mask bit 2) reads the 0x444-byte parameter file (f008 when it cannot)
+ * whose block from +0x10 the LDC engine takes; returns 0.  DestroyJob: the slot (and the parameter
+ * buffer) freed, 0, unknown f004.  SubmitTask(task {handle, Y in, UV in, Y out, UV out, strides in |
+ * out << 16, angle code, func}): func & mask 1 = I2D through /dev/i2d (IOCTL_I2D_START, NV12,
+ * angle code 0..3 = rotate 0 / 90 / 180 / 270, 4 mirror, 5 flip, h_align 8), 4 = LDC through
+ * /dev/offline_ldc ioctl 2 (28 bytes: size, strides, the four planes, parameter block), else f00a;
+ * failure f001.  UpdateLutToJob({handle, .., file name from word 2}): an LDC job reads the file
+ * into its parameter buffer again (f008), other jobs 0; unknown f004. */
+#define E_FUNC2  ((int32_t)0xfffff00a)
+#define LDC_PAR_FILE 0x444u
+#define LDC_JOBS2 12
+
+struct ldc_job32 {
+    uint16_t used;
+    uint32_t self;
+    uint8_t *par;
+    uint16_t w, h;
+    uint32_t par_off, par_size;
+    uint8_t *par_blk;
+    uint32_t func;
+};
+
+static struct {
+    int open, fd, i2d;
+    uint8_t jobs;
+    pthread_mutex_t lock;
+    struct ldc_job32 job[LDC_JOBS2];
+} ldc32 = { .fd = -1, .i2d = -1, .lock = PTHREAD_MUTEX_INITIALIZER };
+
+static struct ldc_job32 *ldc32_find(uint32_t h)
+{
+    int i;
+
+    for (i = 0; h && i < LDC_JOBS2; i++)
+        if (ldc32.job[i].used && ldc32.job[i].self == h)
+            return &ldc32.job[i];
+    return NULL;
+}
+
+static int ldc32_read_par(struct ldc_job32 *j, const char *name)
+{
+    FILE *f = fopen(name, "rb");
+
+    if (!f) {
+        IMP_LOG_ERR(TAG, "LDC parameter file %s: %s", name, strerror(errno));
+        return E_OPEN;
+    }
+    if (fread(j->par, 1, LDC_PAR_FILE, f) == 0)
+        IMP_LOG_WARN(TAG, "LDC parameter file %s: empty", name);
+    fclose(f);
+    return 0;
+}
+
+int32_t IMP_ISP_LDC_OfflineInit(int mode)
+{
+    int32_t rc = 0;
+    int i;
+
+    pthread_mutex_lock(&ctl_lock);
+    if (ldc_mode_rec != 1) {
+        rc = E_STATE;
+    } else if (mode == 1) {
+        if (!ldc32.open) {
+            memset(ldc32.job, 0, sizeof(ldc32.job));
+            ldc32.jobs = 0;
+            ldc32.fd = open("/dev/offline_ldc", O_RDWR | O_CLOEXEC);
+            ldc32.i2d = ldc32.fd < 0 ? -1 : open("/dev/i2d", O_RDWR | O_CLOEXEC);
+            if (ldc32.fd < 0 || ldc32.i2d < 0) {
+                IMP_LOG_ERR(TAG, "%s cannot open: %s", ldc32.fd < 0 ? "/dev/offline_ldc" : "/dev/i2d",
+                            strerror(errno));
+                if (ldc32.fd >= 0)
+                    close(ldc32.fd);
+                ldc32.fd = ldc32.i2d = -1;
+                rc = E_OPEN;
+            } else {
+                ldc32.open = 1;
+            }
+        }
+    } else if (mode == 0 && ldc32.open) {
+        if (ldc32.jobs) {
+            IMP_LOG_ERR(TAG, "LDC_OfflineInit(0): %u job(s) left", ldc32.jobs);
+            rc = E_STATE;
+        } else {
+            close(ldc32.fd);
+            close(ldc32.i2d);
+            ldc32.fd = ldc32.i2d = -1;
+            ldc32.open = 0;
+            for (i = 0; i < LDC_JOBS2; i++)
+                free(ldc32.job[i].par);
+            memset(ldc32.job, 0, sizeof(ldc32.job));
+        }
+    }
+    pthread_mutex_unlock(&ctl_lock);
+    return rc;
+}
+
+int32_t IMP_ISP_LDC_OfflineCreateJob(void *attr)
+{
+    uint32_t *a = attr;
+    struct ldc_job32 *j;
+    int32_t rc = 0;
+    int i;
+
+    pthread_mutex_lock(&ctl_lock);
+    if (ldc_mode_rec != 1)
+        rc = E_STATE;
+    else if (!ldc32.open)
+        rc = E_OPEN;
+    else if (!a)
+        rc = E_FIELD;
+    if (rc) {
+        pthread_mutex_unlock(&ctl_lock);
+        return rc;
+    }
+    for (i = 0; i < LDC_JOBS2 && ldc32.job[i].used; i++)
+        ;
+    if (i == LDC_JOBS2) {
+        pthread_mutex_unlock(&ctl_lock);
+        IMP_LOG_ERR(TAG, "LDC_OfflineCreateJob: no free job");
+        return E_FIELD;
+    }
+    ldc32.jobs++;
+    j = &ldc32.job[i];
+    memset(j, 0, sizeof(*j));
+    j->used = 1;
+    j->self = (uint32_t)(uintptr_t)j;
+    j->w = (uint16_t)a[1];
+    j->h = (uint16_t)(a[1] >> 16);
+    j->func = a[0];
+    a[36] = j->self;
+    if (j->func & 4) {
+        j->par = malloc(LDC_PAR_FILE);
+        j->par_off = 0x10;
+        j->par_size = LDC_PAR_FILE;
+        if (!j->par || (rc = ldc32_read_par(j, (const char *)&a[4])) != 0) {
+            pthread_mutex_unlock(&ctl_lock);
+            return rc ? rc : E_OPEN;
+        }
+        j->par_blk = j->par + 0x10;
+    }
+    pthread_mutex_unlock(&ctl_lock);
+    return 0;
+}
+
+int32_t IMP_ISP_LDC_OfflineDestroyJob(uint32_t job)
+{
+    struct ldc_job32 *j;
+
+    pthread_mutex_lock(&ctl_lock);
+    if (!ldc32.open) {
+        pthread_mutex_unlock(&ctl_lock);
+        return E_OPEN;
+    }
+    if (!(j = ldc32_find(job))) {
+        pthread_mutex_unlock(&ctl_lock);
+        IMP_LOG_ERR(TAG, "LDC_OfflineDestroyJob: unknown job 0x%x", job);
+        return E_FIELD;
+    }
+    free(j->par);
+    memset(j, 0, sizeof(*j));
+    ldc32.jobs--;
+    pthread_mutex_unlock(&ctl_lock);
+    return 0;
+}
+
+int32_t IMP_ISP_LDC_OfflineSubmitTask(void *task)
+{
+    static const uint8_t rot[6][4] = {   /* rotate_enable, angle / 90, flip, mirror */
+        { 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 1, 2, 0, 0 }, { 1, 3, 0, 0 }, { 0, 0, 0, 1 }, { 0, 0, 1, 0 } };
+    const uint32_t *t = task;
+    struct ldc_job32 *j;
+    uint32_t b[16], func;
+    int fd, req, r;
+
+    pthread_mutex_lock(&ctl_lock);
+    if (!ldc32.open) {
+        pthread_mutex_unlock(&ctl_lock);
+        return E_OPEN;
+    }
+    if (!t || !(j = ldc32_find(t[0]))) {
+        pthread_mutex_unlock(&ctl_lock);
+        return E_FIELD;
+    }
+    memset(b, 0, sizeof(b));
+    func = t[7] & j->func;
+    if (func == 1) {
+        b[0] = j->w;
+        b[1] = j->h;
+        b[2] = 10;              /* NV12 */
+        if (t[6] < 6) {
+            b[3] = rot[t[6]][0];
+            b[4] = rot[t[6]][1] * 90u;
+            b[5] = rot[t[6]][2];
+            b[6] = rot[t[6]][3];
+        }
+        b[7] = t[1];
+        b[8] = t[2];
+        b[9] = t[3];
+        b[10] = t[4];
+        b[11] = b[12] = t[5] & 0xffff;
+        b[13] = b[14] = t[5] >> 16;
+        b[15] = 8;
+        fd = ldc32.i2d;
+        req = 0x2000446a;       /* IOCTL_I2D_START */
+    } else if (func == 4) {
+        b[0] = (uint32_t)j->h << 16 | j->w;
+        b[1] = t[5];
+        b[2] = t[1];
+        b[3] = t[2];
+        b[4] = t[3];
+        b[5] = t[4];
+        b[6] = (uint32_t)(uintptr_t)j->par_blk;
+        fd = ldc32.fd;
+        req = 2;
+    } else {
+        pthread_mutex_unlock(&ctl_lock);
+        IMP_LOG_ERR(TAG, "LDC_OfflineSubmitTask: func %u of job mask %u", t[7], j->func);
+        return E_FUNC2;
+    }
+    pthread_mutex_unlock(&ctl_lock);
+    pthread_mutex_lock(&ldc32.lock);
+    r = ioctl(fd, req, b);
+    pthread_mutex_unlock(&ldc32.lock);
+    if (r == -1) {
+        IMP_LOG_ERR(TAG, "LDC_OfflineSubmitTask: %s", strerror(errno));
+        return E_IOCTL;
+    }
+    return 0;
+}
+
+int32_t IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr)
+{
+    const uint32_t *p = attr;
+    struct ldc_job32 *j;
+    int32_t rc = 0;
+
+    pthread_mutex_lock(&ctl_lock);
+    if (!ldc32.open)
+        rc = E_OPEN;
+    else if (!p || !(j = ldc32_find(p[0])))
+        rc = E_FIELD;
+    else if ((j->func & 4) && j->par)
+        rc = ldc32_read_par(j, (const char *)&p[2]);
+    pthread_mutex_unlock(&ctl_lock);
+    return rc;
+}
+#endif /* PLATFORM_T33 */

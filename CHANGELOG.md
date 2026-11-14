@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T32 offline LDC job protocol as vendor 2.2.0 (#491; QEMU only)
+
+- `src/t32/openimp_t32_isp_ctl.c` (T32 build): the vendor 2.2.0 T32 protocol: OfflineInit opens `/dev/offline_ldc` and `/dev/i2d`; CreateJob (12 slots, handle in attr word 36, returns 0; an LDC job reads the 0x444-byte parameter file named from attr word 4); SubmitTask: I2D jobs through `/dev/i2d` (`IOCTL_I2D_START`, NV12, angle code 0-3 rotate 0/90/180/270, 4 mirror, 5 flip, h_align 8), LDC jobs through `/dev/offline_ldc` ioctl 2 (28 bytes with the parameter block); DestroyJob; UpdateLutToJob re-reads the parameter file of an LDC job. `IMP_ISP_LDC_SetMode` sets the mode once on T32 (f009 afterwards, as 2.2.0). T33 unchanged.
+- apitest case `t32l2`: QEMU T32, vendor 2.2.0 + vendor module and OpenIMP + open module give the same lines and the same i2d_param block; the rotation job turns the picture on both. Cells T32 `ISP_LDC_Offline*` aud -> qemu.
+
 ## 2026-11-14: T33 offline LDC jobs and online LDC at AddSensor as the vendor (#491; QEMU only)
 
 - `src/t32/openimp_t32_isp_ctl.c`: offline job protocol of vendor 2.0.2.1 (CreateJob: 12 job slots, handle in attr word 36, f004 also on success as the vendor; SubmitTask: the 40-byte `/dev/offline_ldc` job, I2D angle or LDC LUT + block, f00a for other functions; DestroyJob: slot freed, LUT block to ioctl 1; UpdateLutToJob: LUT jobs only). A LUT job has no LUT memory (the vendor allocates none and would map physical 0): f001; LUT from parameters not ported.

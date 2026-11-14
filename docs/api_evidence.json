@@ -21300,16 +21300,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)",
+        "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
-      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
     },
     "ISP_LDC_OfflineCreateJobExt": {
       "area": "ISP tuning",
@@ -21340,16 +21341,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)",
+        "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
-      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
     },
     "ISP_LDC_OfflineInit": {
       "area": "ISP tuning",
@@ -21360,16 +21362,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33drv 2026-11-14 QEMU -M ingenic-t33 (no camera) on the open tx-isp-t33.ko (open-tx-isp #491 driver change) and the vendor module (audit night1114/o1/runs)"
+        "T33": "apitest t33f1/t33l1/t33drv 2026-11-14 QEMU -M ingenic-t33 (no camera) on the open tx-isp-t33.ko (open-tx-isp #491 driver change) and the vendor module (audit night1114/o1/runs)",
+        "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU). T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
     },
     "ISP_LDC_OfflineSubmitTask": {
       "area": "ISP tuning",
@@ -21380,16 +21383,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)",
+        "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
-      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
     },
     "ISP_LDC_OfflineUpdateLutToJob": {
       "area": "ISP tuning",
@@ -21400,16 +21404,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)"
+        "T33": "apitest t33l2 (+ APITEST_LDC_ONLINE) 2026-11-14 QEMU -M ingenic-t33, open module + OpenIMP and vendor module + vendor 2.0.2.1 (ioctl log shim; audit night1114/o1/runs o33e, v33f)",
+        "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
-      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported."
+      "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
     },
     "ISP_LDC_OnlineGetFunc": {
       "area": "ISP tuning",

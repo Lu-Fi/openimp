@@ -89,6 +89,99 @@ static int flow(void)
 int cases_flow(void) { return flow(); }      /* for at_t33.c */
 
 #if defined(APITEST_T32) && !defined(APITEST_T33)
+/* ---- case "t32l2": the T32 offline LDC job protocol (vendor 2.2.0, #491; explicit only) ------------------------------------------
+ * Mode offline, OfflineInit(1) (/dev/offline_ldc + /dev/i2d), CreateJob for an I2D job of 64x32 (handle in attr word 36), planes from
+ * /dev/tx-isp MEMORY_MALLOC, SubmitTask angle code 2 (180 degrees, through /dev/i2d; Y checked), SubmitTask func 4 on the I2D job
+ * (f00a), UpdateLutToJob on it (0: not an LDC job), DestroyJob (0) and an unknown job (f004), OfflineInit(0) (0: no job left), mode
+ * online.  Same lines on the vendor library + module. */
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+extern int IMP_ISP_LDC_SetMode(int mode) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineInit(int mode) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineCreateJob(void *attr) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineDestroyJob(uint32_t job) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineSubmitTask(void *task) __attribute__((weak));
+extern int IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr) __attribute__((weak));
+
+void cs_t32l2(void)
+{
+    enum { W = 64, H = 32 };
+    uint32_t ja[40], task[8], upd[40], mb[4][3];
+    int isp, mem, i, x, y, bad = -1, rm, ri, rc, rs = -2, rs4 = -2, ru = -2, rd = -2, rdu, ri0, rm2;
+    void *base[4] = { 0 };
+    uint32_t mlen[4] = { 0 };
+    uint8_t *p[4] = { 0 };
+
+    if (!IMP_ISP_LDC_SetMode || !IMP_ISP_LDC_OfflineInit || !IMP_ISP_LDC_OfflineCreateJob || !IMP_ISP_LDC_OfflineSubmitTask) {
+        rep_na("IMP_ISP_LDC_OfflineSubmitTask");
+        return;
+    }
+    rm = IMP_ISP_LDC_SetMode(1);
+    ri = IMP_ISP_LDC_OfflineInit(1);
+    memset(ja, 0, sizeof(ja));
+    ja[0] = 1;
+    ja[1] = (uint32_t)H << 16 | W;
+    rc = IMP_ISP_LDC_OfflineCreateJob(ja);
+    isp = open("/dev/tx-isp", O_RDWR);
+    mem = open("/dev/mem", O_RDWR | O_SYNC);
+    memset(mb, 0, sizeof(mb));
+    for (i = 0; isp >= 0 && mem >= 0 && i < 4; i++) {
+        uint32_t off;
+
+        mb[i][2] = i & 1 ? W * H / 2 : W * H;
+        if (ioctl(isp, 0x800c543a, mb[i]) || !mb[i][1])
+            break;
+        off = mb[i][1] & 0xfff;
+        mlen[i] = (mb[i][2] + off + 0xfff) & ~0xfffu;
+        base[i] = mmap(NULL, mlen[i], PROT_READ | PROT_WRITE, MAP_SHARED, mem, (off_t)(mb[i][1] - off));
+        if (base[i] == MAP_FAILED) { base[i] = NULL; break; }
+        p[i] = (uint8_t *)base[i] + off;
+    }
+    if (i == 4 && ja[36]) {
+        for (y = 0; y < H; y++)
+            for (x = 0; x < W; x++)
+                p[0][y * W + x] = (uint8_t)(x * 4 + y);
+        memset(p[1], 0x80, W * H / 2);
+        memset(p[2], 0, W * H);
+        task[0] = ja[36]; task[1] = mb[0][1]; task[2] = mb[1][1]; task[3] = mb[2][1]; task[4] = mb[3][1];
+        task[5] = (uint32_t)W << 16 | W; task[6] = 2; task[7] = 1;
+        rs = IMP_ISP_LDC_OfflineSubmitTask(task);
+        for (y = 0; y < H && bad < 0; y++)
+            for (x = 0; x < W && bad < 0; x++)
+                if (p[2][y * W + x] != (uint8_t)((W - 1 - x) * 4 + (H - 1 - y)))
+                    bad = y * W + x;
+        task[7] = 4;
+        rs4 = IMP_ISP_LDC_OfflineSubmitTask(task);
+        memset(upd, 0, sizeof(upd));
+        upd[0] = ja[36]; upd[1] = 1;
+        ru = IMP_ISP_LDC_OfflineUpdateLutToJob ? IMP_ISP_LDC_OfflineUpdateLutToJob(upd) : -2;
+    }
+    rdu = IMP_ISP_LDC_OfflineDestroyJob ? IMP_ISP_LDC_OfflineDestroyJob(0x1234) : -2;
+    if (ja[36] && IMP_ISP_LDC_OfflineDestroyJob)
+        rd = IMP_ISP_LDC_OfflineDestroyJob(ja[36]);
+    for (i = 0; i < 4; i++) {
+        if (base[i])
+            munmap(base[i], mlen[i]);
+        if (isp >= 0 && mb[i][0])
+            ioctl(isp, 0x800c543b, mb[i]);
+    }
+    if (mem >= 0) close(mem);
+    if (isp >= 0) close(isp);
+    ri0 = IMP_ISP_LDC_OfflineInit(0);
+    rm2 = IMP_ISP_LDC_SetMode(0);
+    rep("IMP_ISP_LDC_OfflineCreateJob", rc, rc == 0 && ja[36] ? V_PASS : V_FAIL,
+        "mode offline 0x%x, init 0x%x; I2D job 64x32: 0x%x, handle %s", (unsigned)rm, (unsigned)ri, (unsigned)rc, ja[36] ? "set" : "none");
+    rep("IMP_ISP_LDC_OfflineSubmitTask", rs, rs == 0 && bad < 0 && rs4 == (int)0xfffff00a ? V_PASS : V_FAIL,
+        "rotate 180 64x32: 0x%x, Y %s (first bad %d); func 4 on the I2D job 0x%x", (unsigned)rs, bad < 0 ? "turned" : "WRONG", bad, (unsigned)rs4);
+    rep("IMP_ISP_LDC_OfflineUpdateLutToJob", ru, ru == 0 ? V_PASS : V_FAIL, "I2D job (no parameter file) 0x%x", (unsigned)ru);
+    rep("IMP_ISP_LDC_OfflineDestroyJob", rd, rd == 0 && rdu == (int)0xfffff004 ? V_PASS : V_FAIL,
+        "job 0x%x, unknown 0x%x; OfflineInit(0) 0x%x; mode online 0x%x; frames flow %d", (unsigned)rd, (unsigned)rdu, (unsigned)ri0,
+        (unsigned)rm2, flow());
+}
+#endif
+
+#if defined(APITEST_T32) && !defined(APITEST_T33)
 /* ---- case "t32i2d": FrameSource I2D rotation on channel 2 (T32, #445; explicit only) -------------------------------------------
  * ch2 320x192 NV12 with i2dattr {enable, rotate 90}, enabled, depth 1: GetFrame's size tells whether the library turned the frame
  * (192x320, the verdict: vendor 2.2.0 in QEMU gives 192x320); SnapFrame (the unturned capture, another frame) turned both ways is
@@ -7201,7 +7294,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33i2d", "t33drv", "t32i2d", "t33l2" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7321,6 +7414,7 @@ void t_cases(void)
 #endif
 #if defined(APITEST_T32) && !defined(APITEST_T33)
     if (getenv("APITEST_CASES") && cs_on("t32i2d")) { cs_t32i2d(); wdog("cases", 60); }   /* explicit only (#445) */
+    if (getenv("APITEST_CASES") && cs_on("t32l2")) { cs_t32l2(); wdog("cases", 60); }   /* explicit only (#491) */
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);
     if (getenv("APITEST_CASES") && cs_on("t30pass_csc")) cs_t30pass_csc(); wdog("cases", 60);   /* explicit only: OpenIMP extension */
