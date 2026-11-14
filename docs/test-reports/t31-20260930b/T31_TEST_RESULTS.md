@@ -1,92 +1,92 @@
-# T31-Testergebnisse, Runde 2: OpenIMP `claude/t31-all` (`dfbd90f`) und open-tx-isp `claude/t31-isp-all`
+# T31 test results, round 2: OpenIMP `claude/t31-all` (`dfbd90f`) and open-tx-isp `claude/t31-isp-all`
 
-Testlauf am 2026-09-30 nach der Übergabe aus der Cloud-Sitzung. Ausgeführt von einer lokalen
-Claude-Code-Session per SSH. Kamera anonymisiert (`cam-A`, `192.0.2.x`). Runde 1 (Original-
-Stack, OpenIMP `3f501a2`) steht auf dem Branch `claude/t31-test-results-20260930`.
+Test run on 2026-09-30 after the hand-over from the cloud session. Run by a local
+Claude Code session over SSH. Camera anonymised (`cam-A`, `192.0.2.x`). Round 1 (original
+stack, OpenIMP `3f501a2`) is on the branch `claude/t31-test-results-20260930`.
 
-## Kopf
+## Header
 
 | | |
 |---|---|
-| Kamera | WUUK Y0510, Profil `wuuk_y0510_t31x_sc4336p_ssv6158`, Sensor SC4336P (2560×1440) |
-| SoC | T31X, `isa: mips32r1`, `ASEs implemented:` leer (kein MXU2) |
-| Speicher | `mem=78M@0x0 rmem=50M@0x4e00000` |
-| thingino | `ciao` `cf463ffc3` mit `BR2_PACKAGE_THINGINO_ISP_OPEN=y`, dazu die drei T31-Patches `0004`–`0006` von open-tx-isp aus `aperto`; per komplettem OTA (`make ota`) geflasht, mit Freigabe des Menschen |
+| Camera | WUUK Y0510, profile `wuuk_y0510_t31x_sc4336p_ssv6158`, sensor SC4336P (2560×1440) |
+| SoC | T31X, `isa: mips32r1`, `ASEs implemented:` empty (no MXU2) |
+| Memory | `mem=78M@0x0 rmem=50M@0x4e00000` |
+| thingino | `ciao` `cf463ffc3` with `BR2_PACKAGE_THINGINO_ISP_OPEN=y`, plus the three T31 patches `0004`–`0006` from open-tx-isp from `aperto`; flashed by a complete OTA (`make ota`), with the human's approval |
 | Kernel | `3.10.14__isvp_swan_1.0__` |
-| ISP-Modul geflasht („alt") | open-tx-isp `e92166b` + thingino-Patches `0001`–`0006` |
-| ISP-Modul Test („neu") | open-tx-isp `claude/t31-isp-all` `97cccfa2` + thingino-Patches `0001`–`0006`, md5 `03b40e861c0724309e098a1c7cbfcf96` |
-| libimp geflasht | OpenIMP `3f501a2` (Runde 1) |
-| libimp Test | OpenIMP `claude/t31-all` `dfbd90f`, md5 `8b48664e0c0252c99625d18340f9a274`, per Bind-Mount |
-| Streamer | timps v1.9.28, für die Tests von Hand mit einer Kopie der Konfiguration in `/tmp` |
+| ISP module flashed ("old") | open-tx-isp `e92166b` + thingino patches `0001`–`0006` |
+| ISP module test ("new") | open-tx-isp `claude/t31-isp-all` `97cccfa2` + thingino patches `0001`–`0006`, md5 `03b40e861c0724309e098a1c7cbfcf96` |
+| libimp flashed | OpenIMP `3f501a2` (round 1) |
+| libimp test | OpenIMP `claude/t31-all` `dfbd90f`, md5 `8b48664e0c0252c99625d18340f9a274`, via bind mount |
+| Streamer | timps v1.9.28, for the tests started by hand with a copy of the configuration in `/tmp` |
 | Main/Sub | H.264 1920×1080 / 640×360, 15 fps |
 
-Regeln wie im Testplan: nur diese Kamera, Dateien nur in `/tmp`, Bind-Mount, keine Kamerabilder
-im Repo (nur lokal angesehen, mit Einverständnis).
+Rules as in the test plan: only this camera, files only in `/tmp`, bind mount, no camera pictures
+in the repo (only looked at locally, with consent).
 
-## Übersicht
+## Overview
 
-| Bereich | Ergebnis |
+| Area | Result |
 |---|---|
-| Phase 1 C (FrameSource-Zyklen, rmem-Fix) | **bestanden**; No-Reuse reproduziert den alten Fehler |
-| Phase 1 S1 (78 min, 15 fps) | **bestanden** |
-| HW-JPEG als Standard (`claude/t31-hwjpeg-default`) | **bestanden**; ~17 % statt ~70 % CPU bei 1 Snapshot/s, kein Jitter-Nachteil auf open-tx-isp |
-| FrameSource-Stopp (`claude/t31-fs-stop-order`) | **bestanden**; behebt einen Deadlock (bedingungsloses `pthread_cancel`), der mit dem neuen Modul nach 6 Zyklen auftrat |
-| G OSD über IPU (auch im HW-JPEG) | **bestanden** |
-| I Bewegung mit Client | **bestanden**; ohne Client mit `dfbd90f` kein Ergebnis → **behoben** in `claude/t31-ivs-idle` |
-| Stopp dauert 4 s + `hard exit` bei aktivem Client | Ursache Audio-`NOBLOCK` → **behoben** in `claude/t31-ai-noblock` (Stopp 1,1 s, AAC ab Start) |
-| Phase 2 T1–T7 (neues Modul) | **bestanden** (T2 mit drop 0 und mit drop 6) |
-| Phase 2 Latenz | neues Modul: max. 660 µs bei Tag/Nacht (alt 1313 µs), 0 Sekunden > 1 ms |
-| Phase 2 Tuning | bestanden bis auf 5.6 (nicht aussagekräftig); `it_max` und `image.ae_it_max_us` wirken jetzt; Zurücksetzen auf 0 fehlt in timps |
-| Phase 2 rmmod (L1) | alt und `97cccfa2`: **Oops** → **behoben** in open-tx-isp `claude/t31-isp-fixes` (3 Lade-Zyklen sauber) |
-| C + S mit beiden neuen Teilen | **bestanden** (mit Stopp-Fix); Abschlusslauf 60 min @ 25 fps mit allen Korrekturen **bestanden** |
-| Ungetestet (Branches vorhanden) | AU-Prüfung/H.264-Doppelbild, leise Logs + schneller Idle-Stopp, Zeitstempel auf dem Stock-Treiber, `fw_ota.sh`-Fix (thingino, lokal) |
+| Phase 1 C (FrameSource cycles, rmem fix) | **passed**; No-Reuse reproduces the old error |
+| Phase 1 S1 (78 min, 15 fps) | **passed** |
+| HW JPEG as default (`claude/t31-hwjpeg-default`) | **passed**; ~17 % instead of ~70 % CPU at 1 snapshot/s, no jitter disadvantage on open-tx-isp |
+| FrameSource stop (`claude/t31-fs-stop-order`) | **passed**; fixes a deadlock (unconditional `pthread_cancel`) that occurred with the new module after 6 cycles |
+| G OSD via IPU (also in HW JPEG) | **passed** |
+| I motion with client | **passed**; without client with `dfbd90f` no result → **fixed** in `claude/t31-ivs-idle` |
+| Stop takes 4 s + `hard exit` with an active client | Cause audio `NOBLOCK` → **fixed** in `claude/t31-ai-noblock` (stop 1.1 s, AAC from the start) |
+| Phase 2 T1–T7 (new module) | **passed** (T2 with drop 0 and with drop 6) |
+| Phase 2 latency | new module: max. 660 µs at day/night (old 1313 µs), 0 seconds > 1 ms |
+| Phase 2 tuning | passed except 5.6 (not conclusive); `it_max` and `image.ae_it_max_us` now work; resetting to 0 is missing in timps |
+| Phase 2 rmmod (L1) | old and `97cccfa2`: **oops** → **fixed** in open-tx-isp `claude/t31-isp-fixes` (3 load cycles clean) |
+| C + S with both new parts | **passed** (with the stop fix); final run 60 min @ 25 fps with all corrections **passed** |
+| Untested (branches exist) | AU check/H.264 double picture, quiet logs + fast idle stop, timestamps on the stock driver, `fw_ota.sh` fix (thingino, local) |
 
-### Branches aus dieser Runde
+### Branches from this round
 
-OpenIMP (`Lu-Fi/openimp`, alle auf `dfbd90f`):
-`claude/t31-hwjpeg-default` (5087c02), `claude/t31-fs-stop-order` (6ce3114), `claude/t31-ivs-idle` (7c5ba1b), `claude/t31-ai-noblock` (0a2331a), `claude/t31-all-fixes` (4653f0a, Merge der vier), `claude/t31-quiet-logs` (auf all-fixes, ungetestet), `claude/t31-fs-timestamps` (auf all-fixes, ungetestet), `claude/t31-avc-au-check` (ungetestet).
+OpenIMP (`Lu-Fi/openimp`, all on `dfbd90f`):
+`claude/t31-hwjpeg-default` (5087c02), `claude/t31-fs-stop-order` (6ce3114), `claude/t31-ivs-idle` (7c5ba1b), `claude/t31-ai-noblock` (0a2331a), `claude/t31-all-fixes` (4653f0a, merge of the four), `claude/t31-quiet-logs` (on all-fixes, untested), `claude/t31-fs-timestamps` (on all-fixes, untested), `claude/t31-avc-au-check` (untested).
 
-open-tx-isp (`Lu-Fi/open-tx-isp`, auf `claude/t31-isp-all` 97cccfa2): `claude/t31-isp-rmmod-fix` (c7c2e7d2), `claude/t31-isp-csi-mutex` (0e1c5773), `claude/t31-isp-fixes` (6caeb75e, Merge, geräte-getestet).
+open-tx-isp (`Lu-Fi/open-tx-isp`, on `claude/t31-isp-all` 97cccfa2): `claude/t31-isp-rmmod-fix` (c7c2e7d2), `claude/t31-isp-csi-mutex` (0e1c5773), `claude/t31-isp-fixes` (6caeb75e, merge, device-tested).
 
 ---
 
-# Phase 1: neue libimp, geflashtes open-tx-isp
+# Phase 1: new libimp, flashed open-tx-isp
 
-## C. Regression mit FrameSource-Zyklen – **bestanden**
+## C. Regression with FrameSource cycles – **passed**
 
-Dateien: [`p1-c/`](p1-c/).
+Files: [`p1-c/`](p1-c/).
 
-### 25 FrameSource-Zyklen
+### 25 FrameSource cycles
 
-Wie in Runde 1: timps ohne Variablen starten, 45 s warten, dann 25-mal Main 8 s per RTSP
-abrufen und trennen, jeweils danach 2 s Sub, 5 s Pause
-([`p1-c/cycles-25.txt`](p1-c/cycles-25.txt), Log [`p1-c/run-cycles-25.log`](p1-c/run-cycles-25.log)).
+As in round 1: start timps without variables, wait 45 s, then 25 times fetch main for 8 s via RTSP
+and disconnect, each time followed by 2 s sub, 5 s pause
+([`p1-c/cycles-25.txt`](p1-c/cycles-25.txt), log [`p1-c/run-cycles-25.log`](p1-c/run-cycles-25.log)).
 
-| | Ergebnis |
+| | Result |
 |---|---|
-| FrameSource-Enables Main / Sub | **26 / 25** (in Zyklus 19–23 hielt ein WebRTC-Client der WebUI Main 140 s lang offen, deshalb dort keine Zyklen) |
+| FrameSource enables main / sub | **26 / 25** (in cycles 19–23 a WebRTC client of the web UI held main open for 140 s, so there are no cycles there) |
 | `allocation failed` / `rmem out of memory` | 0 / 0 |
-| ffmpeg-Fehler Main | 0 in allen Zyklen |
-| timps-PID | durchgehend dieselbe |
-| Bildprüfung | 1. und 16. Frame nach jedem Neuverbinden lokal angesehen: vollständige Bilder, kein Blockmüll. Die numerischen Abweichungen in Zyklus 2–4 sind das Einregeln der Belichtung nach dem Start, ab Zyklus 19 eine echte Szenenänderung (PTZ-Position und offene Tür). |
+| ffmpeg errors main | 0 in all cycles |
+| timps PID | the same throughout |
+| Picture check | 1st and 16th frame after each reconnect looked at locally: complete pictures, no block garbage. The numerical deviations in cycles 2–4 are the exposure settling after the start, from cycle 19 a real scene change (PTZ position and open door). |
 
-**Befund, altes Modul:** Einmal fror der Main-Stream nach einem Tag/Nacht-Wechsel ein und
-erholte sich erst durch die Recovery von timps:
+**Finding, old module:** Once the main stream froze after a day/night switch and
+recovered only through the timps recovery:
 
 ```
 13:46:08.423 [INF] HAL_ING      control image.running_mode=1
-13:46:16.383 [INF] HAL_ING      control image.running_mode=1        (re-assert, Stream läuft)
+13:46:16.383 [INF] HAL_ING      control image.running_mode=1        (re-assert, stream running)
 13:46:17.003 [WRN] HAL_ING      chn0: PollingStream idle (rc=-1, miss#1) - encoder emits no frames
 13:46:21.507 [ERR] HAL_ING      chn0: encoder dead after 10 consecutive misses - forcing a framesource disable/enable cycle to recover (recovery attempt 1/5)
 ```
 
-Danach lief der Stream wieder (Recovery-Versuch 1 reichte). Das ist das Einfrieren nach einem
-Tag/Nacht-Wechsel, das `claude/t31-isp-all` beheben soll; Vergleich in Phase 2 (T2, L5).
+After that the stream ran again (recovery attempt 1 was enough). This is the freeze after a
+day/night switch that `claude/t31-isp-all` is meant to fix; comparison in phase 2 (T2, L5).
 
-### Gegenprobe `OPENIMP_RMEM_NO_REUSE=1` – **bestanden**
+### Control test `OPENIMP_RMEM_NO_REUSE=1` – **passed**
 
 [`p1-c/cycles-noreuse.txt`](p1-c/cycles-noreuse.txt), [`p1-c/run-noreuse.log`](p1-c/run-noreuse.log):
-Der alte Fehler kommt zurück, nach 6 Enables:
+The old error comes back, after 6 enables:
 
 ```
 [DMA] rmem out of memory: requested 6266880, used 49426432 of 52428800, largest free block 3002368, 20 allocations
@@ -95,316 +95,316 @@ Der alte Fehler kommt zurück, nach 6 Enables:
 13:57:31.313 [INF] MAIN         teardown complete - exiting
 ```
 
-timps beendet sich sauber (kein Zombie wie in Runde 1 auf dem Stock-Treiber).
+timps ends cleanly (no zombie as in round 1 on the stock driver).
 
-Nebenbei: Die Kamera war danach ~40 min von meinem Rechner aus nicht erreichbar, lief aber
-durch (Uptime unverändert, DHCP-Verlängerungen im syslog). Das war ein Netzproblem zwischen
-Rechner und Kamera, kein Kamerafehler.
+Incidentally: The camera was unreachable from my machine for ~40 min afterwards, but kept
+running (uptime unchanged, DHCP renewals in syslog). This was a network problem between
+machine and camera, not a camera fault.
 
-### 10-Minuten-Lauf
+### 10-minute run
 
-Main+Sub per RTSP live dekodiert, Snapshot alle 10 s, `top`
+Main+Sub decoded live via RTSP, snapshot every 10 s, `top`
 ([`p1-c/c3-summary.txt`](p1-c/c3-summary.txt), [`p1-c/run-c3.log`](p1-c/run-c3.log)):
 
-| | Ergebnis |
+| | Result |
 |---|---|
-| Main / Sub | 8891 / 8890 Frames in 600 s (15 fps), kein Intervall < 140 außer dem angeschnittenen Ende |
-| Dekodierfehler | 0 |
-| Snapshots | 56/56, Ø 358 KB, Ø 0,53 s |
-| S2-Messung (30 s Frame-Zeitstempel Main) | Median 67 ms, p99 73 ms, **max 80 ms**, 0 Intervalle > 100 ms |
-| `[ERR]`/`[WRN]` | 1× `jpeg chn3: PollingStream idle (miss#1)`, ohne Folgen |
-| timpsd-CPU | 13–32 % (Software-JPEG-Snapshots im Messfenster) |
+| Main / Sub | 8891 / 8890 frames in 600 s (15 fps), no interval < 140 except the truncated end |
+| Decode errors | 0 |
+| Snapshots | 56/56, avg. 358 KB, avg. 0.53 s |
+| S2 measurement (30 s frame timestamps main) | median 67 ms, p99 73 ms, **max 80 ms**, 0 intervals > 100 ms |
+| `[ERR]`/`[WRN]` | 1× `jpeg chn3: PollingStream idle (miss#1)`, without consequences |
+| timpsd CPU | 13–32 % (software JPEG snapshots in the measurement window) |
 
-Die Frame-Abstände sind auf open-tx-isp deutlich gleichmäßiger als in Runde 1 auf dem
-Stock-Treiber (dort max. 101 ms ohne Snapshot-Last).
+The frame intervals on open-tx-isp are clearly more even than in round 1 on the
+stock driver (there max. 101 ms without snapshot load).
 
-## Code-Review: HW-JPEG als Standard? (Review durch eine zweite Claude-Instanz, nur lesend, Basis `dfbd90f`)
+## Code review: HW JPEG as default? (review by a second Claude instance, read-only, base `dfbd90f`)
 
-Anlass: Mit Software-JPEG liegt timpsd bei Snapshot-Last deutlich über der Original-libimp
-(Runde 1, E: 66,9 % gegen 19,4 %), mit `OPENIMP_T31_HW_JPEG=1` gleichauf (18,5 %).
+Reason: With software JPEG, timpsd under snapshot load is clearly above the original libimp
+(round 1, E: 66.9 % versus 19.4 %), with `OPENIMP_T31_HW_JPEG=1` on par (18.5 %).
 
-Empfehlung: **Standard mit Bedingungen.** Vorher:
+Recommendation: **default with conditions.** Beforehand:
 
-1. *(mittel)* `src/t40/codec-t40.c:7859-7869`: Beim Nachwachsen des Stream-Puffers nach einem
-   Overflow wird der alte kohärente Puffer vor der neuen Allokation freigegeben. Scheitert die
-   ~2,2-MB-Allokation aus Kernel-Lowmem (Fragmentierung, vgl. A1 in Runde 1), schaltet
-   `disable("DMA allocation failed")` (`:7961`) den Pfad dauerhaft ab. Fix: erst neu allokieren,
-   bei Fehler alten Puffer behalten; besser Stream/EP1 aus rmem wie der AVC-Pfad.
-2. *(mittel)* Start-Race: HW-JPEG prüft nur, ob der IRQ-Waiter läuft (`:7935`), die globale
-   AVC-Init passiert erst im ersten AVC-Process (`:9335-9341`). Ein früher JPEG-Job kann drei
-   Timeouts sammeln und den Pfad dauerhaft abschalten (`:8035`). Fix: vor der AVC-Init den Frame
-   in Software kodieren, nicht abschalten.
-3. *(Testbedingung)* HW-JPEG schaltet die Companion-Stage immer ab (`:8114-8122`). Vor dem Umschalten
-   Test C mit Zyklen und 10-min-Lauf mit `OPENIMP_T31_HW_JPEG=1`.
+1. *(medium)* `src/t40/codec-t40.c:7859-7869`: When the stream buffer is grown after an
+   overflow, the old coherent buffer is freed before the new allocation. If the
+   ~2.2 MB allocation from kernel lowmem fails (fragmentation, cf. A1 in round 1),
+   `disable("DMA allocation failed")` (`:7961`) switches the path off permanently. Fix: allocate the new one first,
+   keep the old buffer on failure; better stream/EP1 from rmem like the AVC path.
+2. *(medium)* Start race: HW JPEG only checks whether the IRQ waiter is running (`:7935`), the global
+   AVC init happens only in the first AVC process (`:9335-9341`). An early JPEG job can collect three
+   timeouts and switch the path off permanently (`:8035`). Fix: before the AVC init, encode the frame
+   in software, do not switch off.
+3. *(test condition)* HW JPEG always turns off the companion stage (`:8114-8122`). Before switching over,
+   run test C with cycles and the 10-minute run with `OPENIMP_T31_HW_JPEG=1`.
 
-Minimaler Umbau: `codec-t40.c:7784-7788` und `openimp_p2_encoder.c:231-235` gleichlautend auf
-„an, außer `OPENIMP_T31_HW_JPEG=0`" umstellen; Doku von opt-in auf opt-out.
+Minimal change: switch `codec-t40.c:7784-7788` and `openimp_p2_encoder.c:231-235` identically to
+"on, except `OPENIMP_T31_HW_JPEG=0`"; docs from opt-in to opt-out.
 
-Weitere Punkte: Alle übrigen Abschaltgründe sind dauerhaft, aber ohne Flattern; `disable` sollte
-als Fehler geloggt werden. Der größere Zeitstempel-Jitter mit HW-JPEG kommt daher, dass jeder
-JPEG-Job (~10–15 ms inkl. 3-MB-Kopie) den gemeinsamen Core-Lock hält; für 1 Snapshot/s unkritisch,
-für MJPEG spürbar. EP1 und Stream-Puffer kommen aus `/dev/avpu` (Kernel-Lowmem), nicht aus rmem.
+Further points: All other reasons for switching off are permanent, but without flapping; `disable` should
+be logged as an error. The larger timestamp jitter with HW JPEG comes from every
+JPEG job (~10–15 ms incl. 3 MB copy) holding the shared core lock; uncritical for 1 snapshot/s,
+noticeable for MJPEG. EP1 and stream buffer come from `/dev/avpu` (kernel lowmem), not from rmem.
 
-**Zombie-Hänger aus Runde 1:** kein Bezug zu HW-JPEG. `IMP_FrameSource_DisableChn` macht
-STREAMOFF vor dem Join des Tick-Threads (`src/framesource/framesource_tseries.c:1993-2005`); die
-innere Schleife ruft DQBUF ohne `running`-Prüfung erneut auf (`:1019-1046`). Im Stock-tx-isp
-dreht dieses DQBUF nach STREAMOFF im Kernel. Commit `70c42bc` (fd vor Pool-Freigabe schließen)
-behebt das nicht und war im getesteten Stand schon enthalten. Vorschlag: auf T31 zuerst den
-Thread kooperativ stoppen und joinen, dann STREAMOFF. Auf open-tx-isp trat der Hänger nicht auf.
+**Zombie hang from round 1:** no relation to HW JPEG. `IMP_FrameSource_DisableChn` does
+STREAMOFF before the join of the tick thread (`src/framesource/framesource_tseries.c:1993-2005`); the
+inner loop calls DQBUF again without a `running` check (`:1019-1046`). In the stock tx-isp
+this DQBUF spins in the kernel after STREAMOFF. Commit `70c42bc` (close fd before pool release)
+does not fix this and was already contained in the tested state. Proposal: on T31, first stop and join
+the thread cooperatively, then STREAMOFF. The hang did not occur on open-tx-isp.
 
-## S1. H.264-Dauerlauf – **bestanden** (78 min, ohne Hänger)
+## S1. H.264 long run – **passed** (78 min, without hang)
 
-`dfbd90f` auf dem geflashten open-tx-isp, keine Variablen, 14:57–16:15. Main und Sub dauerhaft per
-RTSP live dekodiert, Snapshot alle 10 s. Gekürzt wegen einer Pause des Menschen (Abfahrt), sonst
-2 h. Das Rohlog wurde auf der Kamera minütlich gefiltert und geleert (die Pro-Frame-Debugzeilen
-von OpenIMP ergeben sonst ~25 MB/h in `/tmp`). Dateien: [`p1-s/`](p1-s/).
+`dfbd90f` on the flashed open-tx-isp, no variables, 14:57–16:15. Main and sub permanently decoded live via
+RTSP, snapshot every 10 s. Shortened because of a break by the human (departure), otherwise
+2 h. The raw log was filtered and emptied every minute on the camera (the per-frame debug lines
+of OpenIMP otherwise produce ~25 MB/h in `/tmp`). Files: [`p1-s/`](p1-s/).
 
 | | Main | Sub |
 |---|---|---|
-| Frames in 78 min | 69397 (15,0 fps) | 69393 (15,0 fps) |
-| Verbindungsabbrüche / 10-s-Intervalle mit 0 Frames | 0 / 0 | 0 / 0 |
-| 10-s-Intervalle < 140 Frames | 2 (135, 139) | 0 |
-| Dekodierfehler | 0 | 0 |
+| Frames in 78 min | 69397 (15.0 fps) | 69393 (15.0 fps) |
+| Connection drops / 10 s intervals with 0 frames | 0 / 0 | 0 / 0 |
+| 10 s intervals < 140 frames | 2 (135, 139) | 0 |
+| Decode errors | 0 | 0 |
 
-- Snapshots **444/444** HTTP 200, Ø 0,49 s, max. 0,89 s.
-- Zähler (syslog und gefiltertes Log): `completion timeout`, `without size writeback`,
+- Snapshots **444/444** HTTP 200, avg. 0.49 s, max. 0.89 s.
+- Counters (syslog and filtered log): `completion timeout`, `without size writeback`,
   `completion found without IRQ`, `keeps returning EINTR`, `size written back but core still
-  running`, `picture larger than the stream buffer`, `[ERR]`, `[WRN]`: **alle 0**.
-- Speicher (`top`, belegt inkl. Cache): 36,2 MB nach dem Start, danach konstant 39,8–40,3 MB.
-  `/tmp` konstant bei 3 %. timpsd-CPU aus den 10-min-Proben: 0–33 % je nach Snapshot im Fenster.
-- Kein Hänger, der Recovery-Pfad wurde also nicht ausgelöst.
-- Nach dem Lauf Stopp in 0,3 s, Bind-Mount gelöst, `S95timps` normal gestartet.
+  running`, `picture larger than the stream buffer`, `[ERR]`, `[WRN]`: **all 0**.
+- Memory (`top`, used incl. cache): 36.2 MB after the start, afterwards constant 39.8–40.3 MB.
+  `/tmp` constant at 3 %. timpsd CPU from the 10-minute samples: 0–33 % depending on a snapshot in the window.
+- No hang, so the recovery path was not triggered.
+- After the run, stop in 0.3 s, bind mount released, `S95timps` started normally.
 
-## Neue Korrekturen aus dieser Runde (lokale Branches, von Agenten erstellt, auf dem Gerät geprüft)
+## New corrections from this round (local branches, created by agents, checked on the device)
 
-Alle auf Basis `dfbd90f`, jeweils eigener Branch, jede Änderung als eigener Commit.
+All based on `dfbd90f`, each on its own branch, each change as its own commit.
 
-| Branch | Inhalt | Gerätetest |
+| Branch | Content | Device test |
 |---|---|---|
-| `claude/t31-hwjpeg-default` (`5087c02`) | HW-JPEG: Stream-Puffer wachsen ohne dauerhaftes Abschalten; kein JPEG-Job vor der AVC-Init; Abschalten als Fehler geloggt; **HW-JPEG standardmäßig an**, `OPENIMP_T31_HW_JPEG=0` schaltet zurück | bestanden (unten) |
-| `claude/t31-fs-stop-order` (`6ce3114`, enthält die HW-JPEG-Commits) | FrameSource-Stopp: STREAMOFF → Worker joinen, `pthread_cancel` nur nach 1 s als letzter Ausweg; STREAMOFF aller Kanäle im Destruktor/Fatal-Handler; einmalige Log-Zeile, welcher ISP-Treiber läuft. Enthält auch die zurückgenommenen Zwischenstände `1f07faa`/`b77e0cf`/`2ead380`/`1deebd7` (Diagnose) | bestanden (unten) |
-| `claude/t31-ivs-idle` (`7c5ba1b`) | IVS ohne Stream-Client: nicht abgeholte Frames gehen nach 1 s an den Treiber zurück | bestanden (unten) |
-| `claude/t31-ai-noblock` (`0a2331a`) | Audio: `IMP_AI_GetFrame(NOBLOCK)`/`PollingFrame(timeout)` wie in der Original-libimp (Record-Thread + FIFO) | bestanden (unten) |
+| `claude/t31-hwjpeg-default` (`5087c02`) | HW JPEG: stream buffers grow without permanent switch-off; no JPEG job before the AVC init; switch-off logged as an error; **HW JPEG on by default**, `OPENIMP_T31_HW_JPEG=0` switches back | passed (below) |
+| `claude/t31-fs-stop-order` (`6ce3114`, contains the HW JPEG commits) | FrameSource stop: STREAMOFF → join worker, `pthread_cancel` only after 1 s as a last resort; STREAMOFF of all channels in the destructor/fatal handler; single log line saying which ISP driver is running. Also contains the withdrawn intermediate states `1f07faa`/`b77e0cf`/`2ead380`/`1deebd7` (diagnosis) | passed (below) |
+| `claude/t31-ivs-idle` (`7c5ba1b`) | IVS without stream client: frames not picked up go back to the driver after 1 s | passed (below) |
+| `claude/t31-ai-noblock` (`0a2331a`) | Audio: `IMP_AI_GetFrame(NOBLOCK)`/`PollingFrame(timeout)` as in the original libimp (record thread + FIFO) | passed (below) |
 
-### HW-JPEG als Standard (`5087c02`)
+### HW JPEG as default (`5087c02`)
 
-Code-Review durch eine zweite Instanz (Abschnitt oben), Umsetzung als 4 Commits.
+Code review by a second instance (section above), implemented as 4 commits.
 
-| Test (open-tx-isp, geflashtes Modul) | Ergebnis |
+| Test (open-tx-isp, flashed module) | Result |
 |---|---|
-| 12 FrameSource-Zyklen + Snapshot alle 5 s | 29 Enables, 0 Dekodierfehler, 41/41 Snapshots, `HWJPEG: ready` |
-| 10-min-Lauf (Snapshot alle 10 s) | Main 8890 Frames (15 fps), 57/57 Snapshots Ø 0,23 s, timpsd ~9,6 % CPU, Main-Frame-Abstände max. 84 ms. Einmal beim Start `chn1: encoder dead` mit Recovery (Sub bekam 2× `503`, danach 10 min sauber); in 11 weiteren gezielten Starts (6 einzeln, 5 Main+Sub parallel) nicht wieder aufgetreten |
-| CPU/Jitter bei 1 Snapshot/s, 3 min | HW: timpsd ~17 %, Snapshot Ø 0,21 s, Frame-Abstand max. 92 ms, 0 > 100 ms. `OPENIMP_T31_HW_JPEG=0`: ~70 %, 0,42 s, max. 104 ms. Auf open-tx-isp erhöht HW-JPEG den Jitter nicht mehr (anders als in Runde 1 auf dem Stock-Treiber). |
+| 12 FrameSource cycles + snapshot every 5 s | 29 enables, 0 decode errors, 41/41 snapshots, `HWJPEG: ready` |
+| 10-minute run (snapshot every 10 s) | Main 8890 frames (15 fps), 57/57 snapshots avg. 0.23 s, timpsd ~9.6 % CPU, main frame intervals max. 84 ms. Once at start `chn1: encoder dead` with recovery (sub got 2× `503`, then 10 min clean); did not occur again in 11 further targeted starts (6 individually, 5 main+sub in parallel) |
+| CPU/jitter at 1 snapshot/s, 3 min | HW: timpsd ~17 %, snapshot avg. 0.21 s, frame interval max. 92 ms, 0 > 100 ms. `OPENIMP_T31_HW_JPEG=0`: ~70 %, 0.42 s, max. 104 ms. On open-tx-isp, HW JPEG no longer increases the jitter (unlike in round 1 on the stock driver). |
 | Opt-out | `HWJPEG: T31 hardware JPEG off (OPENIMP_T31_HW_JPEG=0), software encoder` |
 
-Dateien: [`hwjpeg/`](hwjpeg/), [`fs-stop/hwj*-cycles.txt`](fs-stop/).
+Files: [`hwjpeg/`](hwjpeg/), [`fs-stop/hwj*-cycles.txt`](fs-stop/).
 
-### FrameSource-Stopp-Reihenfolge
+### FrameSource stop order
 
-Ausgangspunkt: der Zombie-Hänger aus Runde 1 (Stock-Treiber). Der erste Ansatz (`1f07faa`: Worker vor STREAMOFF stoppen) lief auf open-tx-isp bei ~25 % der Abschaltungen in den 1-s-Timeout; die Diagnose (`1deebd7`) zeigte `worker in step dqbuf (dq ioctl) for 1353–3075 ms … exited after STREAMOFF`: **beide Treiber ignorieren `O_NONBLOCK` in DQBUF**, STREAMOFF ist der einzige Wecker. `b77e0cf` (select vor jedem DQBUF) half nicht und fiel mit einer neuen H.264-Warnung beim Stream-Einstieg zusammen, wurde zurückgenommen.
+Starting point: the zombie hang from round 1 (stock driver). The first approach (`1f07faa`: stop the worker before STREAMOFF) ran into the 1 s timeout on open-tx-isp for ~25 % of the shutdowns; the diagnosis (`1deebd7`) showed `worker in step dqbuf (dq ioctl) for 1353–3075 ms … exited after STREAMOFF`: **both drivers ignore `O_NONBLOCK` in DQBUF**, STREAMOFF is the only waker. `b77e0cf` (select before every DQBUF) did not help and coincided with a new H.264 warning on stream entry, and was withdrawn.
 
-Endgültiger Entwurf (`92d00db`, `6ce3114`): STREAMOFF → join, Cancel nur als letzter Ausweg nach 1 s; beim Prozessende STREAMOFF auf alle Kanäle. Begründung aus dem HLIL des Stock-Moduls: dessen DQBUF dreht nur in einer `-ERESTARTSYS`-Schleife, wenn ein Signal (auch `pthread_cancel`/SIGKILL) einen Thread bei **noch laufendem** Stream trifft.
+Final design (`92d00db`, `6ce3114`): STREAMOFF → join, cancel only as a last resort after 1 s; at process end STREAMOFF on all channels. Rationale from the HLIL of the stock module: its DQBUF spins only in an `-ERESTARTSYS` loop when a signal (also `pthread_cancel`/SIGKILL) hits a thread while the stream is **still running**.
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| 12 Zyklen + Snapshots (geflashtes Modul) | 0 Timeouts in 38 Abschaltungen, 0 Dekodierfehler, 41/41 Snapshots, Log `T31 ISP driver: open tx-isp` |
-| 8 Stopps bei laufendem Stream, 3× `kill -9` | kein Zombie, Neustart danach normal |
-| **20 Zyklen auf dem neuen Modul** | 48 Enables, 0 Fehler, 69/69 Snapshots (siehe Deadlock-Befund unten) |
+| 12 cycles + snapshots (flashed module) | 0 timeouts in 38 shutdowns, 0 decode errors, 41/41 snapshots, log `T31 ISP driver: open tx-isp` |
+| 8 stops with running stream, 3× `kill -9` | no zombie, restart afterwards normal |
+| **20 cycles on the new module** | 48 enables, 0 errors, 69/69 snapshots (see deadlock finding below) |
 
-Auf dem Stock-Treiber (Ursprung des Zombie-Befunds) kann ich das nicht mehr prüfen, weil die Kamera jetzt open-tx-isp hat.
+I can no longer check this on the stock driver (origin of the zombie finding), because the camera now has open-tx-isp.
 
-**Befund Deadlock mit `dfbd90f` auf dem neuen Modul:** Im C-Zyklustest mit neuem Modul und `dfbd90f` blieb timps nach 6 Zyklen komplett stehen (`/control` antwortet nicht, RTSP-Verbindungen bleiben in der Listen-Queue, alle Threads schlafen, 0 % CPU). Letzte Ausgabe `[KernelIF] Stream stopped` von Kanal 1, danach nichts ([`fs-stop/run-p2-c2-deadlock.log`](fs-stop/run-p2-c2-deadlock.log)). Das passt zum bedingungslosen `pthread_cancel` in `dfbd90f`, das den Worker im VBM-Mutex abbricht. Mit `claude/t31-fs-stop-order` liefen danach 20 Zyklen fehlerfrei. `kill -9` löste den Hänger, kein Neustart nötig.
+**Deadlock finding with `dfbd90f` on the new module:** In the C cycle test with the new module and `dfbd90f`, timps stopped completely after 6 cycles (`/control` does not answer, RTSP connections stay in the listen queue, all threads sleep, 0 % CPU). Last output `[KernelIF] Stream stopped` of channel 1, then nothing ([`fs-stop/run-p2-c2-deadlock.log`](fs-stop/run-p2-c2-deadlock.log)). This fits the unconditional `pthread_cancel` in `dfbd90f`, which aborts the worker in the VBM mutex. With `claude/t31-fs-stop-order`, 20 cycles then ran without errors. `kill -9` cleared the hang, no reboot needed.
 
-### G (OSD) mit HW-JPEG – bestanden
+### G (OSD) with HW JPEG – passed
 
-`OPENIMP_T31_OSD=1` mit `5087c02`: OSD (Datum/Uhrzeit, Name, Uptime, Logo) auch im Hardware-JPEG-Snapshot sichtbar (lokal angesehen), 15/15 Snapshots Ø 0,23 s, timpsd ~9,6 % CPU mit OSD + HW-JPEG + Snapshot alle 10 s, 0 Fehler. [`p1-g/`](p1-g/).
+`OPENIMP_T31_OSD=1` with `5087c02`: OSD (date/time, name, uptime, logo) also visible in the hardware JPEG snapshot (looked at locally), 15/15 snapshots avg. 0.23 s, timpsd ~9.6 % CPU with OSD + HW JPEG + snapshot every 10 s, 0 errors. [`p1-g/`](p1-g/).
 
-### I (Bewegung) auf open-tx-isp
+### I (motion) on open-tx-isp
 
-- **Stufe 2 mit Client – bestanden** wie in Runde 1: 120 s ruhige Szene 0 Fehlalarme, jeder PTZ-Schwenk erkannt, Empfindlichkeit live übernommen, Stop/Start ok, CPU mit/ohne Erkennung ~10 %/~6 %, IVS-Statistik 149 Frames/10 s, 0 verworfen. PTZ zurück auf Ausgangsposition. [`p1-i/`](p1-i/).
-- **Ohne Client – mit `dfbd90f` weiterhin kein Ergebnis** (auch auf open-tx-isp): 2 Frames geliefert, dann `no IVS move results … cycling`, `stalled:1`. Ursache (Analyse): gefüllte VBM-Ready-Queue wird nur vom Encoder (`PollingStream`) geleert; ohne Encoder-Abnehmer kehren die zwei Puffer nie zum Treiber zurück.
-- **Mit `claude/t31-ivs-idle` – bestanden:** ohne Client `[IVS] chn0: 149 frames, 0 dropped busy, 25 results`, 0 Stillstandsmeldungen, `stalled:0`, PTZ-Schwenk erkannt; mit Main+Sub-Client unverändert (890 Frames/60 s, IVS-Statistik gleich, 0 Fehler). [`p2-ivs-idle/`](p2-ivs-idle/).
+- **Stage 2 with client – passed** as in round 1: 120 s quiet scene 0 false alarms, every PTZ pan detected, sensitivity taken over live, stop/start ok, CPU with/without detection ~10 %/~6 %, IVS statistics 149 frames/10 s, 0 dropped. PTZ back to the starting position. [`p1-i/`](p1-i/).
+- **Without client – with `dfbd90f` still no result** (also on open-tx-isp): 2 frames delivered, then `no IVS move results … cycling`, `stalled:1`. Cause (analysis): the filled VBM ready queue is emptied only by the encoder (`PollingStream`); without an encoder consumer the two buffers never return to the driver.
+- **With `claude/t31-ivs-idle` – passed:** without client `[IVS] chn0: 149 frames, 0 dropped busy, 25 results`, 0 stall messages, `stalled:0`, PTZ pan detected; with main+sub client unchanged (890 frames/60 s, IVS statistics the same, 0 errors). [`p2-ivs-idle/`](p2-ivs-idle/).
 
-### Befund: timps braucht 4 s zum Beenden, wenn gerade ein Client verbunden wurde – behoben mit `claude/t31-ai-noblock`
+### Finding: timps needs 4 s to exit when a client has just connected – fixed with `claude/t31-ai-noblock`
 
-Auf allen OpenIMP-Ständen (auch `3f501a2`/`dfbd90f`) endete jeder Stopp bei laufendem Client nach ~4 s mit `timpsd: shutdown alarm fired - hard exit` (20/20 in T1). Zeitstempel-Mitschnitt über `/dev/kmsg` ([`p2/stopdiag-dmesg.txt`](p2/stopdiag-dmesg.txt)): nach `framesource 0 disabled` 3,9 s Stille, der Codec-Abbau wird nie erreicht; mit dem neuen Modul kein `MSCA channel still busy`, also kein Kernel-Timeout. Ursache (Analyse, am Gerät bestätigt): timps leert beim Übergang idle→aktiv den Audiopuffer mit `IMP_AI_GetFrame(NOBLOCK)` bis 512 Frames; OpenIMP ignorierte `NOBLOCK` und blockierte pro Frame 40 ms → ~20 s (Log `audio resume: flushed 512 stale AI frame(s)` genau ~20 s nach dem Connect), Audio fehlt in dieser Zeit (`no AAC within warmup -> video-only mp4`), und ein Stopp in diesem Fenster wartet auf den Audio-Thread.
+On all OpenIMP states (also `3f501a2`/`dfbd90f`) every stop with a running client ended after ~4 s with `timpsd: shutdown alarm fired - hard exit` (20/20 in T1). Timestamped capture via `/dev/kmsg` ([`p2/stopdiag-dmesg.txt`](p2/stopdiag-dmesg.txt)): after `framesource 0 disabled` 3.9 s of silence, the codec teardown is never reached; with the new module no `MSCA channel still busy`, so no kernel timeout. Cause (analysis, confirmed on the device): on the idle→active transition timps empties the audio buffer with `IMP_AI_GetFrame(NOBLOCK)` up to 512 frames; OpenIMP ignored `NOBLOCK` and blocked 40 ms per frame → ~20 s (log `audio resume: flushed 512 stale AI frame(s)` exactly ~20 s after the connect), audio is missing during this time (`no AAC within warmup -> video-only mp4`), and a stop in this window waits for the audio thread.
 
-Mit `claude/t31-ai-noblock`: 4/4 Stopps (5 s bzw. 12 s nach Client-Connect) in 1,08–1,11 s mit `teardown complete`, kein `hard exit`, `flushed 6 stale AI frame(s)`, keine `no AAC`-Warnung, fMP4 enthält **H.264 und AAC** ab Beginn. Empfehlung zusätzlich für timps: die Drain-Schleife zeitlich begrenzen (robust gegen beide libimp-Semantiken).
+With `claude/t31-ai-noblock`: 4/4 stops (5 s and 12 s after client connect) in 1.08–1.11 s with `teardown complete`, no `hard exit`, `flushed 6 stale AI frame(s)`, no `no AAC` warning, the fMP4 contains **H.264 and AAC** from the beginning. Additional recommendation for timps: limit the drain loop in time (robust against both libimp semantics).
 
 ---
 
-# Phase 2: neues open-tx-isp-Modul (`claude/t31-isp-all` `97cccfa2` + thingino-Patches)
+# Phase 2: new open-tx-isp module (`claude/t31-isp-all` `97cccfa2` + thingino patches)
 
-## Modultausch per insmod – nicht möglich, deshalb geflasht
+## Module swap via insmod – not possible, therefore flashed
 
-Wie in der Anleitung (Streamer stoppen, `rmmod sensor_sc4336p_t31`, `rmmod tx_isp_t31`): Das **geflashte alte Modul** (opensensor `e92166b` + Patches) stürzt beim `rmmod` ab – `Unable to handle kernel paging request at virtual address 00000000, epc 8037cbf0 (__mutex_lock_slowpath)`, Modul bleibt `Unloading` ([`p2/rmmod-old-oops.txt`](p2/rmmod-old-oops.txt)). Ein erster Versuch mit `panic_on_oops=1` führte zum Neustart ohne Spuren; der zweite ohne lieferte den Oops. Mit Freigabe des Menschen wurde deshalb ein Image mit dem neuen Modul als installiertem Modul gebaut und per komplettem `make ota` geflasht (md5 des Moduls im Image `bbbfbbdd581448c667e7e61e47b80ad4`). Nach dem Flash änderte sich der SSH-Host-Key (neue Datenpartition), mit Freigabe ersetzt.
+As in the guide (stop streamer, `rmmod sensor_sc4336p_t31`, `rmmod tx_isp_t31`): The **flashed old module** (opensensor `e92166b` + patches) crashes on `rmmod` – `Unable to handle kernel paging request at virtual address 00000000, epc 8037cbf0 (__mutex_lock_slowpath)`, module stays `Unloading` ([`p2/rmmod-old-oops.txt`](p2/rmmod-old-oops.txt)). A first attempt with `panic_on_oops=1` led to a reboot without traces; the second without it delivered the oops. With the human's approval, an image with the new module as the installed module was therefore built and flashed by a complete `make ota` (md5 of the module in the image `bbbfbbdd581448c667e7e61e47b80ad4`). After the flash the SSH host key changed (new data partition), replaced with approval.
 
-libimp für alle Phase-2-Tests: `dfbd90f` per Bind-Mount (wenn nicht anders angegeben). timps mit Konfigurationskopie `/tmp/timps-test.conf`, Stream-Abruf lokal über `https://127.0.0.1:8880/stream.mp4?chn=0` (fMP4). Hinweis: Die INFO-Marker der Anleitung (`stopped channel`, `ISP core quiet after`, `already open …`, `Day/night mode updated`) erscheinen mit `print_level=1` und thingino-Patch 0006 nicht in dmesg; ausgewertet wurde über Bytezahlen, Register und FAIL-Marker.
+libimp for all phase 2 tests: `dfbd90f` via bind mount (unless stated otherwise). timps with configuration copy `/tmp/timps-test.conf`, stream fetch locally via `https://127.0.0.1:8880/stream.mp4?chn=0` (fMP4). Note: The INFO markers of the guide (`stopped channel`, `ISP core quiet after`, `already open …`, `Day/night mode updated`) do not appear in dmesg with `print_level=1` and thingino patch 0006; evaluation was done via byte counts, registers and FAIL markers.
 
-## Lebenszyklus T1–T7
+## Life cycle T1–T7
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| T1 Start/Stopp ×20 | **bestanden**: jede Runde 222–342 KB in 5 s, danach `0x13309804`/`0x13309808` = 0, keine FAIL-Treffer. Jeder Stopp ~5 s mit `hard exit` → Audio-Befund oben (mit `claude/t31-ai-noblock` behoben) |
-| T2 Tag/Nacht ×20 bei laufendem Stream | **bestanden**: alle kurzen Abrufe mit Daten, Dauer-Client lief durch (52,8 MB), kein `encoder dead`. (Mit `isp_day_night_switch_drop_frame_num=0`; der Parameter ist nur beim `insmod` setzbar.) Zum Vergleich Phase 1 mit altem Modul: einmal 4,5 s Einfrieren nach einem Wechsel |
-| T3 `kill -9` ×10 | **bestanden**: `0x13309804`=0 nach jedem Kill, kein Zombie, Neustart liefert 378–660 KB/5 s |
-| T4 30 Snapshots parallel zum Stream | **bestanden**: 30/30 `ffd8`, Ø 195 KB, Stream-Client 120 s durchgehend (24,9 MB) |
-| T5 zweites `open()` ×5 | **bestanden**: Datenrate mit/ohne gleich (4,36/4,24 MB in 30 s), keine Lücke |
-| T6 20 Tag/Nacht-Kicks ohne Client | **bestanden**: danach sofort Daten (300 KB/5 s), keine FAIL-Treffer |
-| T7 Speicher | Slab 5196 → 5472 KB über alle Tests, MemFree unverändert; kein stetiges Wachstum |
+| T1 start/stop ×20 | **passed**: each round 222–342 KB in 5 s, afterwards `0x13309804`/`0x13309808` = 0, no FAIL hits. Each stop ~5 s with `hard exit` → audio finding above (fixed with `claude/t31-ai-noblock`) |
+| T2 day/night ×20 with running stream | **passed**: all short fetches with data, permanent client ran through (52.8 MB), no `encoder dead`. (With `isp_day_night_switch_drop_frame_num=0`; the parameter can only be set at `insmod`.) For comparison phase 1 with the old module: once 4.5 s freeze after a switch |
+| T3 `kill -9` ×10 | **passed**: `0x13309804`=0 after every kill, no zombie, restart delivers 378–660 KB/5 s |
+| T4 30 snapshots in parallel to the stream | **passed**: 30/30 `ffd8`, avg. 195 KB, stream client 120 s continuously (24.9 MB) |
+| T5 second `open()` ×5 | **passed**: data rate with/without the same (4.36/4.24 MB in 30 s), no gap |
+| T6 20 day/night kicks without client | **passed**: data immediately afterwards (300 KB/5 s), no FAIL hits |
+| T7 memory | slab 5196 → 5472 KB over all tests, MemFree unchanged; no steady growth |
 
-Dateien: [`p2/T*.txt`](p2/).
+Files: [`p2/T*.txt`](p2/).
 
-## Latenz alt gegen neu (gleiche libimp `dfbd90f`, Main-Stream aktiv)
+## Latency old versus new (same libimp `dfbd90f`, main stream active)
 
-| | altes Modul (geflasht, `e92166b`+Patches) | neues Modul (`97cccfa2`+Patches) |
+| | old module (flashed, `e92166b`+patches) | new module (`97cccfa2`+patches) |
 |---|---|---|
-| L2 Grundlast 60 s, max | 463 µs | 697 µs |
-| L2 24 Tag/Nacht-Wechsel in 120 s, max | **1313 µs** | **660 µs** |
-| Sekunden mit max > 1 ms | 2 | **0** |
-| Aufwachvorgänge 500–999 µs | 194 | 198 |
-| L4 `isp-m0` / `isp-w02` pro s | 115,9 / 29,6 | 121,1 / 29,6 |
-| L4 `ctxt` pro s | 2736 | **2618** (−118) |
+| L2 base load 60 s, max | 463 µs | 697 µs |
+| L2 24 day/night switches in 120 s, max | **1313 µs** | **660 µs** |
+| Seconds with max > 1 ms | 2 | **0** |
+| Wakeups 500–999 µs | 194 | 198 |
+| L4 `isp-m0` / `isp-w02` per s | 115.9 / 29.6 | 121.1 / 29.6 |
+| L4 `ctxt` per s | 2736 | **2618** (−118) |
 
-Die Tag/Nacht-Spitzen über 1 ms verschwinden mit dem neuen Modul. Dateien: [`p2/lat-*.txt`](p2/), [`p2/L4-*.txt`](p2/).
+The day/night peaks above 1 ms disappear with the new module. Files: [`p2/lat-*.txt`](p2/), [`p2/L4-*.txt`](p2/).
 
-## Tuning-Tests (T31_ISP_TUNING_TEST.md, Abschnitt 5)
+## Tuning tests (T31_ISP_TUNING_TEST.md, section 5)
 
-Ausgangswerte mit dem alten Modul: [`p2/tune-baseline-alt.txt`](p2/tune-baseline-alt.txt) (dort meldete `expr` noch `it_max=0`). Tests mit dem neuen Modul, timps läuft: [`p2/tuning-neu*.txt`](p2/).
+Baseline values with the old module: [`p2/tune-baseline-alt.txt`](p2/tune-baseline-alt.txt) (there `expr` still reported `it_max=0`). Tests with the new module, timps running: [`p2/tuning-neu*.txt`](p2/).
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| 5.1 Logging | bestanden (keine `Set control`-Zeilen) |
-| 5.2 B7/B15 Zonen | bestanden: AF-Zonen nur `00`, AE-Zonen echte, sich ändernde Werte, kein `a5`-Muster, 0x8000045 20× `00` |
-| 5.3 B2/B3 it_max | **bestanden**: `it_max=2246` (alt: 0), Kappe 1123 wirkt sofort (`it` → 1123), 0 → `EINVAL`, Rücksetzen ok. SetAeMin nur gelesen |
-| 5.4 B14 / 5.5 B12 | bestanden (`EPERM` bzw. 2× `EINVAL`) |
-| 5.6 Anti-Flicker nach FPS | nicht aussagekräftig: erwartete `T31_DEFLICK`-Zeile erscheint mit `print_level=1` nicht |
-| 5.7 B9 ModuleControl | bestanden (Register unverändert) |
-| 5.8 B4 Schärfe | **bestanden** (mit 1 s Pause nach jedem Setzen): 128/200/200/128/60/60/128 → identische Register für gleiche Werte, zurück auf Ausgangswert |
-| 5.9 B5 Sinter | **bestanden**: 200 wirkt sofort, idempotent, zurück auf Ausgangswert |
-| 5.10 B6 Defog | **bestanden**: 200 → 200, 200+128 → 128 |
-| 5.11 B8/B17 | bestanden: Gewichte unverändert zurückgeschrieben, Gewicht 9 → `EPERM`, Histogramm gefüllt, ungültiger Zeiger → `EFAULT`, kein Oops. *Testtool-Fehler:* `parse_list` kopiert die Liste in `char tmp[1024]` und schnitt 225 Werte auf 205 ab; lokal auf 8192 vergrößert |
-| 5.12 B11 Gamma | **bestanden**: gleiche LUT → Register unverändert, `lut[1]`+0x10 → sofort `0x00090000` → `0x000A0000`, zurück ok |
-| 5.13 B10 CCM | bestanden (Register = gesetzte Matrix, auch nach 3 s; Attribut Byte 0 = 1; zurück auf Auto). Gesetzt wurde die aktuelle Matrix, nicht eine abweichende |
-| 5.14 B13 AeAttr | **bestanden**: manuelle IT 1123 übernommen und gehalten, again 2×, zurück auf Auto |
-| timps `image.ae_it_max_us` | **wirkt jetzt**: `image.ae_it_max_us=10000 -> capped AE at 454 lines; GetExpr now reports max=454 lines (9988us)`; `expr` bestätigt `it_max=454`. Zurücksetzen auf 0 hob die Kappe nicht auf (blieb 454) – für timps/libimp notiert |
+| 5.1 Logging | passed (no `Set control` lines) |
+| 5.2 B7/B15 zones | passed: AF zones only `00`, AE zones real, changing values, no `a5` pattern, 0x8000045 20× `00` |
+| 5.3 B2/B3 it_max | **passed**: `it_max=2246` (old: 0), cap 1123 takes effect immediately (`it` → 1123), 0 → `EINVAL`, reset ok. SetAeMin only read |
+| 5.4 B14 / 5.5 B12 | passed (`EPERM` or 2× `EINVAL`) |
+| 5.6 Anti-flicker by FPS | not conclusive: the expected `T31_DEFLICK` line does not appear with `print_level=1` |
+| 5.7 B9 ModuleControl | passed (registers unchanged) |
+| 5.8 B4 sharpness | **passed** (with 1 s pause after each set): 128/200/200/128/60/60/128 → identical registers for identical values, back to the starting value |
+| 5.9 B5 sinter | **passed**: 200 takes effect immediately, idempotent, back to the starting value |
+| 5.10 B6 defog | **passed**: 200 → 200, 200+128 → 128 |
+| 5.11 B8/B17 | passed: weights written back unchanged, weight 9 → `EPERM`, histogram filled, invalid pointer → `EFAULT`, no oops. *Test tool error:* `parse_list` copies the list into `char tmp[1024]` and truncated 225 values to 205; enlarged locally to 8192 |
+| 5.12 B11 gamma | **passed**: same LUT → registers unchanged, `lut[1]`+0x10 → immediately `0x00090000` → `0x000A0000`, back ok |
+| 5.13 B10 CCM | passed (register = the matrix set, also after 3 s; attribute byte 0 = 1; back to auto). The current matrix was set, not a different one |
+| 5.14 B13 AeAttr | **passed**: manual IT 1123 taken over and held, again 2×, back to auto |
+| timps `image.ae_it_max_us` | **now takes effect**: `image.ae_it_max_us=10000 -> capped AE at 454 lines; GetExpr now reports max=454 lines (9988us)`; `expr` confirms `it_max=454`. Resetting to 0 did not lift the cap (stayed 454) – noted for timps/libimp |
 
-## rmmod des neuen Moduls (L1) – nicht bestanden, Fix in Arbeit
+## rmmod of the new module (L1) – not passed, fix in progress
 
-- **`97cccfa2` (claude/t31-isp-all):** `rmmod tx_isp_t31` stürzt genauso ab wie das alte Modul (`__mutex_lock_slowpath`, NULL). addr2line: `tx_isp_exit` → `tx_isp_vic_remove` → `tx_isp_vic_stop` ([`p2/rmmod-new-oops.txt`](p2/rmmod-new-oops.txt)). Der Commit „cancel the day/night work on module exit" behebt diesen Absturz nicht. Neustart nötig.
-- **Fix-Branch open-tx-isp `claude/t31-isp-rmmod-fix` (von einem Agenten, 2 Commits):** Ursachen laut Analyse: `vic_frame_end_lock` nie `mutex_init`, `kfree(vic_dev)` vor dessen Remove (Use-after-free + Doppel-free), `ourISPdev` im Core-Remove freigegeben. Zusätzlich `claude/t31-isp-csi-mutex` (3 Commits: CSI-Mutex lag über OEM-Feldern und war nie initialisiert, VIC-Frame-End-Completions und Custom-AE-Completion nie initialisiert; `BUILD_BUG_ON`-Layoutprüfung).
-- **Gerätetest des geflashten Stands `claude/t31-isp-csi-mutex` `0e1c5773`** (Modul-md5 `8c9b353f5e460e16896f362fe348eb7a`): Das Modul läuft normal (Boot, Stream). `rmmod sensor` ok, `rmmod tx_isp_t31` führt zum **Neustart**. Live-Mitschnitt über `/proc/kmsg` ([`p2/kmsg-rmmod.txt`](p2/kmsg-rmmod.txt)): `Trying to free nonexistent resource <13310000-1331ffff>` und `<133e0000-133effff>`, direkt danach Oops in einem fremden Pfad (`kworker` → `call_usermodehelper` → `do_execve` → `kernel_read` → `__kmalloc`, BadVA 0x40) – beschädigte Slab-Freiliste, also noch ein falsches/doppeltes `kfree` im Entladepfad. Rückmeldung an den Agenten ist erfolgt.
-- Folge: L1 und T2/L5 mit `isp_day_night_switch_drop_frame_num=6` konnten nicht getestet werden (der Parameter ist nur beim `insmod` setzbar).
-- Nebenbei beim Flashen: Ein OTA-Versuch scheiterte mit `scp: /sbin/sysupgrade-stage2: No such file or directory`, weil `fw_ota.sh` `/overlay/usr` im laufenden Betrieb löscht und overlayfs danach keine Dateien unter `/usr` anlegen kann (hier gab es `/overlay/usr`); nach einem Neustart klappte das OTA. Für `thingino-firmware/scripts/fw_ota.sh` notiert.
+- **`97cccfa2` (claude/t31-isp-all):** `rmmod tx_isp_t31` crashes exactly like the old module (`__mutex_lock_slowpath`, NULL). addr2line: `tx_isp_exit` → `tx_isp_vic_remove` → `tx_isp_vic_stop` ([`p2/rmmod-new-oops.txt`](p2/rmmod-new-oops.txt)). The commit "cancel the day/night work on module exit" does not fix this crash. Reboot needed.
+- **Fix branch open-tx-isp `claude/t31-isp-rmmod-fix` (by an agent, 2 commits):** Causes according to the analysis: `vic_frame_end_lock` never `mutex_init`ed, `kfree(vic_dev)` before its remove (use-after-free + double free), `ourISPdev` freed in the core remove. In addition `claude/t31-isp-csi-mutex` (3 commits: CSI mutex lay over OEM fields and was never initialised, VIC frame-end completions and custom-AE completion never initialised; `BUILD_BUG_ON` layout check).
+- **Device test of the flashed state `claude/t31-isp-csi-mutex` `0e1c5773`** (module md5 `8c9b353f5e460e16896f362fe348eb7a`): The module runs normally (boot, stream). `rmmod sensor` ok, `rmmod tx_isp_t31` leads to a **reboot**. Live capture via `/proc/kmsg` ([`p2/kmsg-rmmod.txt`](p2/kmsg-rmmod.txt)): `Trying to free nonexistent resource <13310000-1331ffff>` and `<133e0000-133effff>`, directly afterwards an oops in a foreign path (`kworker` → `call_usermodehelper` → `do_execve` → `kernel_read` → `__kmalloc`, BadVA 0x40) – damaged slab free list, so yet another wrong/double `kfree` in the unload path. Feedback to the agent has been given.
+- Consequence: L1 and T2/L5 with `isp_day_night_switch_drop_frame_num=6` could not be tested (the parameter can only be set at `insmod`).
+- Incidentally while flashing: An OTA attempt failed with `scp: /sbin/sysupgrade-stage2: No such file or directory`, because `fw_ota.sh` deletes `/overlay/usr` during operation and overlayfs afterwards cannot create files under `/usr` (here `/overlay/usr` existed); after a reboot the OTA worked. Noted for `thingino-firmware/scripts/fw_ota.sh`.
 
-## Test C + S mit beiden neuen Teilen
+## Test C + S with both new parts
 
-Neues Modul (`97cccfa2`) + libimp:
+New module (`97cccfa2`) + libimp:
 
-| libimp | Test | Ergebnis |
+| libimp | Test | Result |
 |---|---|---|
-| `dfbd90f` | C, 12 Zyklen | **Deadlock nach 6 Zyklen** (siehe Befund oben, `pthread_cancel` im VBM-Mutex) |
-| `claude/t31-fs-stop-order` | C, 20 Zyklen + Snapshots | **bestanden**: 48 Enables, 0 Fehler, 69/69 Snapshots |
-| `claude/t31-fs-stop-order` | S, 30 min, 15 fps | **bestanden**: Main/Sub je 26669 Frames, 0 Dekodierfehler, 175/175 Snapshots Ø 0,23 s (HW-JPEG), alle AVC-Zähler 0, 0 ERR/WRN. [`p2-s/`](p2-s/) |
+| `dfbd90f` | C, 12 cycles | **Deadlock after 6 cycles** (see finding above, `pthread_cancel` in the VBM mutex) |
+| `claude/t31-fs-stop-order` | C, 20 cycles + snapshots | **passed**: 48 enables, 0 errors, 69/69 snapshots |
+| `claude/t31-fs-stop-order` | S, 30 min, 15 fps | **passed**: main/sub 26669 frames each, 0 decode errors, 175/175 snapshots avg. 0.23 s (HW JPEG), all AVC counters 0, 0 ERR/WRN. [`p2-s/`](p2-s/) |
 
 
-### Nachtrag: rmmod-Fix bestanden (open-tx-isp `claude/t31-isp-fixes` `6caeb75e`)
+### Addendum: rmmod fix passed (open-tx-isp `claude/t31-isp-fixes` `6caeb75e`)
 
-Zweiter Anlauf des Agenten (`c7c2e7d2`): Die Slab-Beschädigung kam von einem **doppelten `kfree` der Pad-Arrays** in `tx_isp_subdev_deinit` (die benannten Felder `outpads`/`inpads` überlappen die OEM-Rohslots +0xcc/+0xd0 mit vertauschten Rollen; bei VIN und CSI wurde dasselbe Array zweimal freigegeben). Zusätzlich: Abmelde-Reihenfolge (Core zuletzt, sonst hängt `__release_resource` die Kind-Regionen aus → „nonexistent resource"), fehlendes `misc_deregister` der vier `/dev/framechanN` (Use-after-free), doppeltes `cdev_del`. Integrations-Branch `claude/t31-isp-fixes` = rmmod-Fix + CSI-Mutex-Fix, als Image geflasht (Modul-md5 `4d5d49785f289b325b2518d88648d62d`).
+Second attempt by the agent (`c7c2e7d2`): The slab damage came from a **double `kfree` of the pad arrays** in `tx_isp_subdev_deinit` (the named fields `outpads`/`inpads` overlap the OEM raw slots +0xcc/+0xd0 with swapped roles; for VIN and CSI the same array was freed twice). In addition: unregistration order (core last, otherwise `__release_resource` unhooks the child regions → "nonexistent resource"), missing `misc_deregister` of the four `/dev/framechanN` (use-after-free), double `cdev_del`. Integration branch `claude/t31-isp-fixes` = rmmod fix + CSI mutex fix, flashed as an image (module md5 `4d5d49785f289b325b2518d88648d62d`).
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| L1: 3× `rmmod sensor` + `rmmod tx_isp_t31` + `insmod` + `modprobe` | **bestanden**: alle rc=0, kein Oops (Kernel-Meldungen live über `/proc/kmsg` mitgeschnitten), danach keine `isp-m0`/`isp-w02` in `/proc/interrupts` und keine ISP-Regionen in `/proc/iomem`, Neuladen jedes Mal ok, MemFree 43132 → 43084 KB |
-| T2/L5 mit `isp_day_night_switch_drop_frame_num=6` (per insmod), 20 Wechsel bei laufendem Stream | **bestanden**: jeder kurze Abruf mit Daten, Dauer-Client durchgehend (16,5 MB), nur einzelne `PollingStream idle (miss#1)`, kein `encoder dead` |
+| L1: 3× `rmmod sensor` + `rmmod tx_isp_t31` + `insmod` + `modprobe` | **passed**: all rc=0, no oops (kernel messages captured live via `/proc/kmsg`), afterwards no `isp-m0`/`isp-w02` in `/proc/interrupts` and no ISP regions in `/proc/iomem`, reload ok every time, MemFree 43132 → 43084 KB |
+| T2/L5 with `isp_day_night_switch_drop_frame_num=6` (via insmod), 20 switches with running stream | **passed**: every short fetch with data, permanent client continuous (16.5 MB), only isolated `PollingStream idle (miss#1)`, no `encoder dead` |
 
-Dateien: [`p2/kmsg-L1-fixes.txt`](p2/kmsg-L1-fixes.txt), [`p2/L5-drop6.txt`](p2/L5-drop6.txt). Die ersten beiden Anläufe (`97cccfa2` und `claude/t31-isp-csi-mutex` mit dem ersten rmmod-Fix) stehen oben.
+Files: [`p2/kmsg-L1-fixes.txt`](p2/kmsg-L1-fixes.txt), [`p2/L5-drop6.txt`](p2/L5-drop6.txt). The first two attempts (`97cccfa2` and `claude/t31-isp-csi-mutex` with the first rmmod fix) are above.
 
-Nachtrag OTA: Der Fehler in `fw_ota.sh` tritt nicht bei jedem Flash auf. Beim letzten Flash klappte der erste Versuch trotz vorhandenem `/overlay/usr`. `/overlay/usr` stammt aus der Datenpartition des Images (Sounddateien unter `/usr/share/sounds`). Ein Fix liegt im thingino-Repo auf dem lokalen Branch `claude/fw-ota-overlay-fix` (Helfer nach `/tmp` statt `/sbin`, kein Löschen im Overlay), noch ungetestet.
+Addendum OTA: The error in `fw_ota.sh` does not occur on every flash. On the last flash the first attempt worked despite an existing `/overlay/usr`. `/overlay/usr` comes from the data partition of the image (sound files under `/usr/share/sounds`). A fix is in the thingino repo on the local branch `claude/fw-ota-overlay-fix` (helper to `/tmp` instead of `/sbin`, no deleting in the overlay), still untested.
 
-## Abschlusslauf: alle OpenIMP-Korrekturen, neues Modul, 25 fps – bestanden
+## Final run: all OpenIMP corrections, new module, 25 fps – passed
 
-libimp `claude/t31-all-fixes` (`4653f0a`, md5 `b2ab4fee6923f8da59ae87cbd739b9bc`) = HW-JPEG-Standard + FrameSource-Stopp + IVS ohne Client + Audio-NOBLOCK; Modul `97cccfa2`+Patches; Konfigurationskopie mit `video0.fps = video1.fps = sensor.fps = 25` (`/etc` unverändert, dort bewusst 15 fps). 60 min, Main+Sub live, Snapshot alle 10 s. Dateien: [`final-25fps/`](final-25fps/).
+libimp `claude/t31-all-fixes` (`4653f0a`, md5 `b2ab4fee6923f8da59ae87cbd739b9bc`) = HW JPEG default + FrameSource stop + IVS without client + audio NOBLOCK; module `97cccfa2`+patches; configuration copy with `video0.fps = video1.fps = sensor.fps = 25` (`/etc` unchanged, deliberately 15 fps there). 60 min, main+sub live, snapshot every 10 s. Files: [`final-25fps/`](final-25fps/).
 
-| | Ergebnis |
+| | Result |
 |---|---|
-| Frames Main / Sub | 88800 / 88824 (≈ 25 fps), kein 10-s-Intervall unter 233, 0 Verbindungsabbrüche |
-| Dekodierfehler | 0 / 0 |
-| Snapshots | 351/351 (HW-JPEG), Ø 0,22 s |
-| Zähler | `completion timeout` 0, `without size writeback` 0, `EINTR` 0, `[ERR]` 0, `[WRN]` 1, Stopp-Timeout 0 |
+| Frames main / sub | 88800 / 88824 (≈ 25 fps), no 10 s interval below 233, 0 connection drops |
+| Decode errors | 0 / 0 |
+| Snapshots | 351/351 (HW JPEG), avg. 0.22 s |
+| Counters | `completion timeout` 0, `without size writeback` 0, `EINTR` 0, `[ERR]` 0, `[WRN]` 1, stop timeout 0 |
 | Start | `audio resume: flushed 6 stale AI frame(s)`, `HWJPEG: ready`, `T31 ISP driver: open tx-isp` |
-| Speicher | belegt 33,7 → 37,4–38,0 MB (Cache), stabil |
+| Memory | used 33.7 → 37.4–38.0 MB (cache), stable |
 
-## Nachtests in der Nacht (neues Modul `claude/t31-isp-fixes`, geflasht)
+## Follow-up tests overnight (new module `claude/t31-isp-fixes`, flashed)
 
-### `claude/t31-avc-au-check` – bestanden (auf `claude/t31-all-fixes` gemergt)
+### `claude/t31-avc-au-check` – passed (merged into `claude/t31-all-fixes`)
 
-Allein (Basis `dfbd90f`) nicht testbar: Mit dem neuen Modul hing timps beim ersten Stopp des Sub-Streams im bekannten `pthread_cancel`-Deadlock (behoben in `claude/t31-fs-stop-order`) und musste mit `kill -9` beendet werden. Deshalb neuer Branch **`claude/t31-all-fixes-au`** (`5b8b451` = `claude/t31-all-fixes` + AU-Check; Konflikt in `src/t40/openimp_p2_encoder.c` von einem Agenten aufgelöst, beide Seiten behalten; libimp md5 `938e213dafc5e09a3d8262cd305b8555`).
+Not testable on its own (base `dfbd90f`): With the new module, timps hung at the first stop of the sub stream in the known `pthread_cancel` deadlock (fixed in `claude/t31-fs-stop-order`) and had to be ended with `kill -9`. Therefore a new branch **`claude/t31-all-fixes-au`** (`5b8b451` = `claude/t31-all-fixes` + AU check; conflict in `src/t40/openimp_p2_encoder.c` resolved by an agent, both sides kept; libimp md5 `938e213dafc5e09a3d8262cd305b8555`).
 
-Befehl: `cycle2.sh allau-c /tmp/libimp-allau.so 12`, danach dreimal `ffmpeg -loglevel verbose -rtsp_transport tcp -t 3 -i rtsp://…/ch0 -map 0:v -c copy -bsf:v trace_headers -f null -`.
+Command: `cycle2.sh allau-c /tmp/libimp-allau.so 12`, then three times `ffmpeg -loglevel verbose -rtsp_transport tcp -t 3 -i rtsp://…/ch0 -map 0:v -c copy -bsf:v trace_headers -f null -`.
 
-| | Ergebnis |
+| | Result |
 |---|---|
-| 12 Verbindungszyklen Main/Sub | 12/12, je 2 JPEGs Main, Sub 30 Frames/2 s, 0 Dekodierfehler, kein `allocation failed`/`rmem out of memory`, dieselbe PID |
-| VCL-NALs pro AU (3 × 45 AUs) | immer genau 1 |
-| `exceeds max`, Fehler im Trace | 0 |
-| `idr_pic_id` | wechselt (1, dann 0) |
-| `malformed AU` im timps-Log | 0 (Gate hat nichts verworfen) |
+| 12 connection cycles main/sub | 12/12, 2 JPEGs main each, sub 30 frames/2 s, 0 decode errors, no `allocation failed`/`rmem out of memory`, same PID |
+| VCL NALs per AU (3 × 45 AUs) | always exactly 1 |
+| `exceeds max`, errors in the trace | 0 |
+| `idr_pic_id` | alternates (1, then 0) |
+| `malformed AU` in the timps log | 0 (gate discarded nothing) |
 
-Dateien: [`au-check/`](au-check/). Die frühere ffmpeg-Meldung `(0+2) exceeds max (1)` trat in diesem Lauf nicht auf; die Diagnose bleibt im Code, um sie bei einem Wiederauftreten einzuordnen.
+Files: [`au-check/`](au-check/). The earlier ffmpeg message `(0+2) exceeds max (1)` did not occur in this run; the diagnosis stays in the code to classify it if it reappears.
 
-### `claude/t31-fs-timestamps` (`5e3b064`) – bestanden
+### `claude/t31-fs-timestamps` (`5e3b064`) – passed
 
-libimp md5 `d7b29289631300ce35b314a7760e71ce`, 5 min Main+Sub live, Snapshots. Log: `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW`. PTS-Abstände Sub (443 Frames): Median 0,067 s, p99 0,072 s, max 0,100 s, keine doppelten oder rückwärts laufenden PTS. Main/Sub 4446/4445 Frames, 0 Dekodierfehler, 27/27 Snapshots. Dateien: [`timestamps/`](timestamps/).
+libimp md5 `d7b29289631300ce35b314a7760e71ce`, 5 min main+sub live, snapshots. Log: `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW`. PTS intervals sub (443 frames): median 0.067 s, p99 0.072 s, max 0.100 s, no duplicate or backward-running PTS. Main/sub 4446/4445 frames, 0 decode errors, 27/27 snapshots. Files: [`timestamps/`](timestamps/).
 
-### Nachtlauf: `claude/t31-quiet-logs`, 25 fps, 6 h 40 min – bestanden
+### Night run: `claude/t31-quiet-logs`, 25 fps, 6 h 40 min – passed
 
-libimp `claude/t31-quiet-logs` (`6431d97`, md5 `be8d27034b00dda14b7dc1bcf5f5b465` = `claude/t31-all-fixes` + leisere Logs + schneller Tuning-Stopp), Modul `claude/t31-isp-fixes`, Konfigurationskopie mit 25 fps. 00:15–06:56, Main+Sub live dekodiert, Snapshot alle 10 s (bis 06:57), `top`/`free` alle 5 min. Dateien: [`night-25fps/`](night-25fps/).
+libimp `claude/t31-quiet-logs` (`6431d97`, md5 `be8d27034b00dda14b7dc1bcf5f5b465` = `claude/t31-all-fixes` + quieter logs + fast tuning stop), module `claude/t31-isp-fixes`, configuration copy with 25 fps. 00:15–06:56, main+sub decoded live, snapshot every 10 s (until 06:57), `top`/`free` every 5 min. Files: [`night-25fps/`](night-25fps/).
 
-| | Ergebnis |
+| | Result |
 |---|---|
-| Frames Main / Sub | 592053 / 592111 (≈ 24,7 fps), kein 10-s-Intervall unter 227, 1 Verbindung je Stream über 24000 s, 0 Dekodierfehler |
-| Snapshots | 2350/2350 (HTTP 200, JPEG), Ø 0,22 s; erster Snapshot 1,5 s, danach während Live-Clients verbunden max 0,34 s; ohne Live-Client (06:56–06:57, Kaltstart der FrameSource): 1,7 s |
-| timps | dieselbe PID über die ganze Zeit, `[ERR]` 0, `[WRN]` 9 (alle `jpeg chn3: PollingStream idle (miss#1)`, siehe unten) |
-| Logumfang | 25 KB in 6,7 h (gemessen alle 10 min; das Kürzen bei > 1 MB griff nie) |
-| Speicher (`free` used) | nach der ersten Stunde 19,2–19,8 MB, kein Trend; RSS timpsd 4,1–4,7 MB |
-| CPU timpsd | Median 7,6 % (5-min-Stichproben) |
-| Stopp danach | 0,2 s (`stopped (waited 2x100ms)`) |
+| Frames main / sub | 592053 / 592111 (≈ 24.7 fps), no 10 s interval below 227, 1 connection per stream over 24000 s, 0 decode errors |
+| Snapshots | 2350/2350 (HTTP 200, JPEG), avg. 0.22 s; first snapshot 1.5 s, afterwards with live clients connected max 0.34 s; without live client (06:56–06:57, cold start of the FrameSource): 1.7 s |
+| timps | same PID the whole time, `[ERR]` 0, `[WRN]` 9 (all `jpeg chn3: PollingStream idle (miss#1)`, see below) |
+| Log size | 25 KB in 6.7 h (measured every 10 min; the trimming at > 1 MB never kicked in) |
+| Memory (`free` used) | after the first hour 19.2–19.8 MB, no trend; RSS timpsd 4.1–4.7 MB |
+| CPU timpsd | median 7.6 % (5-minute samples) |
+| Stop afterwards | 0.2 s (`stopped (waited 2x100ms)`) |
 
-Nebenbefund: Die letzten Snapshots (06:56–06:57) fielen nach dem Ende der Live-Clients an. timps schaltet die FrameSource dafür jeweils ein und nach ~3,6 s wieder aus; der Snapshot braucht dann 1,7 s statt 0,2 s, und timps meldet bei jedem Kaltstart einmal `jpeg chn3: PollingStream idle (miss#1)`, weil die FrameSource erst 0,5 s läuft. Das ist kosmetisch und betrifft timps, nicht die libimp; timps könnte `miss#1` direkt nach dem Einschalten unterdrücken.
+Side finding: The last snapshots (06:56–06:57) were taken after the live clients ended. timps switches the FrameSource on for each of them and off again after ~3.6 s; the snapshot then takes 1.7 s instead of 0.2 s, and timps reports `jpeg chn3: PollingStream idle (miss#1)` once at every cold start, because the FrameSource has been running for only 0.5 s. This is cosmetic and concerns timps, not the libimp; timps could suppress `miss#1` directly after switching on.
 
-## Sammel-Branch `claude/t31-integration` – bestanden
+## Collective branch `claude/t31-integration` – passed
 
-`aedfced` = `claude/t31-all-fixes-au` + `claude/t31-quiet-logs` + `claude/t31-fs-timestamps` + zwei kleine Korrekturen (Zeitstempel-Folge startet neu, wenn die P0-Zeitbasis zurückspringt; Zusammenfassung zu synthetischen Zeitstempeln nur bei neuen Fällen). Merges von einem Agenten, ohne Konflikte; libimp md5 `d991d14150e555bd7827e86b14ea8da5`; Modul `claude/t31-isp-fixes` (geflasht).
+`aedfced` = `claude/t31-all-fixes-au` + `claude/t31-quiet-logs` + `claude/t31-fs-timestamps` + two small corrections (timestamp sequence restarts when the P0 time base jumps back; summary of synthetic timestamps only for new cases). Merges by an agent, without conflicts; libimp md5 `d991d14150e555bd7827e86b14ea8da5`; module `claude/t31-isp-fixes` (flashed).
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| `cycle2.sh integ-c /tmp/libimp-integ.so 12` | 12/12, 0 Dekodierfehler, kein `allocation failed`/`rmem out of memory`, dieselbe PID |
-| `trace_headers` (3 × 3 s Main) | je AU genau 1 VCL-NAL, `idr_pic_id` 1/0 wechselnd, 0 Fehler |
-| Zeitstempel | `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW` |
-| `phase.sh integ-s 1200 10` (25 fps, Main+Sub live, Snapshots) | Main/Sub 29597/29609 Frames, kein 10-s-Intervall unter 234, 0 Fehler; 116/116 Snapshots Ø 0,22 s; Sub-PTS Median 0,040 s, max 0,047 s; `[ERR]` 0; Log 10 KB; Stopp 0,9 s |
+| `cycle2.sh integ-c /tmp/libimp-integ.so 12` | 12/12, 0 decode errors, no `allocation failed`/`rmem out of memory`, same PID |
+| `trace_headers` (3 × 3 s main) | exactly 1 VCL NAL per AU, `idr_pic_id` alternating 1/0, 0 errors |
+| Timestamps | `[KernelIF] frame timestamps use CLOCK_MONOTONIC_RAW` |
+| `phase.sh integ-s 1200 10` (25 fps, main+sub live, snapshots) | main/sub 29597/29609 frames, no 10 s interval below 234, 0 errors; 116/116 snapshots avg. 0.22 s; sub PTS median 0.040 s, max 0.047 s; `[ERR]` 0; log 10 KB; stop 0.9 s |
 
-Dateien: [`integration/`](integration/). Branch gepusht.
+Files: [`integration/`](integration/). Branch pushed.
 
-## open-tx-isp: DQBUF mit O_NONBLOCK und poll (`claude/t31-isp-dqbuf-nonblock`) – bestanden
+## open-tx-isp: DQBUF with O_NONBLOCK and poll (`claude/t31-isp-dqbuf-nonblock`) – passed
 
-Mit Zustimmung per `insmod` aus `/tmp` getestet (nicht geflasht), danach Neustart auf das geflashte Modul. Testprogramm `fc_nonblock_test` (von einem Agenten, statisch gegen die libimp-Objekte des Images gelinkt; steuert `/dev/framechan0` direkt). Ausgaben: [`isp-nonblock/fc_nonblock_test.txt`](isp-nonblock/fc_nonblock_test.txt).
+Tested with consent via `insmod` from `/tmp` (not flashed), then reboot onto the flashed module. Test program `fc_nonblock_test` (by an agent, linked statically against the libimp objects of the image; drives `/dev/framechan0` directly). Outputs: [`isp-nonblock/fc_nonblock_test.txt`](isp-nonblock/fc_nonblock_test.txt).
 
-- **Befund im bisherigen Modul (`6caeb75e`):** DQBUF ignoriert O_NONBLOCK (blockiert bis zum nächsten Frame), und **poll/select melden immer POLLIN**, auch ohne Frame und nach STREAMOFF. Ursache: `tx_isp_core.c` hatte eine eigene `static frame_channel_fops` ohne `.poll`; das `extern` bei der Registrierung der misc-Geräte band an diese Kopie, die vollständige fops in `tx_isp_module.c` war toter Code. Der libimp-Worker wartete deshalb nie wirklich in `select`, sondern im blockierenden DQBUF.
-- **`85fbd1fd` (nur O_NONBLOCK):** (a) EAGAIN in 4 µs, aber poll weiter immer „bereit“ → mit timps dreht der FS-Worker (FS(0)-tick 2–10 % CPU statt ~0 %). So nicht einsetzbar.
-- **`5fe6bbb2` (+ poll wirklich verdrahtet):** 6/6 PASS (EAGAIN 3 µs, poll ohne Frame 0, POLLIN nach 62 ms, POLLERR nach STREAMOFF, EINTR ohne Pufferverlust). timps mit `claude/t31-integration`, 5 min 25 fps: 0 Fehler, FS-Worker 0–0,3 % CPU; `kill -9` 3× ohne Zombie, Neustart sauber.
-- **rmmod-Oops nach `kill -9`** (mit `5fe6bbb2`): `rmmod tx_isp_t31` → `Unable to handle kernel paging request`, Modul hing in „Unloading“, Neustart nötig ([`isp-nonblock/oops.txt`](isp-nonblock/oops.txt)). Ursache (Agent, per Symbolauflösung): Use-after-free des Sensormoduls, **schon in `6caeb75e` vorhanden**. Nur `IMP_ISP_DelSensor` meldete den Sensor beim ISP ab; nach `kill -9` von timps fehlt das, `rmmod` des Sensors gibt dessen Speicher frei, und `tx_isp_exit()` ruft danach `reset` über den veralteten Zeiger auf. Frühere rmmod-Tests waren sauber, weil vorher DelSensor lief.
-- **Fix `d9b68caa`:** `tx_isp_subdev_deinit()` löst einen noch angemeldeten Sensor vom ISP (Liste, Slot, `ourISPdev->sensor`, gesicherte ops). Test ([`isp-nonblock/rmmod-cycles-d9b68caa.txt`](isp-nonblock/rmmod-cycles-d9b68caa.txt)): 3 Zyklen insmod → `fc_nonblock_test` (6/6) → timps 40 s → Ende per `kill -9` / sauberem Stopp / `kill -9` → rmmod Sensor + tx-isp: alle sauber, kein Oops. Danach Neustart auf das geflashte Modul.
-- Restrisiko laut Agent: nach `kill -9` laufen ISP/AE-Threads weiter; ein Sensor-Zugriff, der genau mit dem Entladen des Sensors zusammenfällt, ist weiter möglich (sehr kleines Fenster). Vollständig wäre ein Stopp von ISP/Sensor beim letzten `close` von `/dev/tx-isp`.
-- Branch `claude/t31-isp-dqbuf-nonblock` (`85fbd1fd` → `5fe6bbb2` → `d9b68caa`) gepusht. Für den Einsatz im Image müsste `OPEN_TX_ISP_VERSION` umgestellt und neu geflasht werden (nicht gemacht).
+- **Finding in the previous module (`6caeb75e`):** DQBUF ignores O_NONBLOCK (blocks until the next frame), and **poll/select always report POLLIN**, even without a frame and after STREAMOFF. Cause: `tx_isp_core.c` had its own `static frame_channel_fops` without `.poll`; the `extern` at the registration of the misc devices bound to this copy, the complete fops in `tx_isp_module.c` was dead code. The libimp worker therefore never really waited in `select`, but in the blocking DQBUF.
+- **`85fbd1fd` (only O_NONBLOCK):** (a) EAGAIN in 4 µs, but poll still always "ready" → with timps the FS worker spins (FS(0) tick 2–10 % CPU instead of ~0 %). Cannot be used like this.
+- **`5fe6bbb2` (+ poll really wired up):** 6/6 PASS (EAGAIN 3 µs, poll without frame 0, POLLIN after 62 ms, POLLERR after STREAMOFF, EINTR without buffer loss). timps with `claude/t31-integration`, 5 min 25 fps: 0 errors, FS worker 0–0.3 % CPU; `kill -9` 3× without zombie, restart clean.
+- **rmmod oops after `kill -9`** (with `5fe6bbb2`): `rmmod tx_isp_t31` → `Unable to handle kernel paging request`, module stuck in "Unloading", reboot needed ([`isp-nonblock/oops.txt`](isp-nonblock/oops.txt)). Cause (agent, via symbol resolution): use-after-free of the sensor module, **already present in `6caeb75e`**. Only `IMP_ISP_DelSensor` unregistered the sensor from the ISP; after `kill -9` of timps this is missing, `rmmod` of the sensor frees its memory, and `tx_isp_exit()` then calls `reset` through the stale pointer. Earlier rmmod tests were clean because DelSensor ran beforehand.
+- **Fix `d9b68caa`:** `tx_isp_subdev_deinit()` detaches a still registered sensor from the ISP (list, slot, `ourISPdev->sensor`, saved ops). Test ([`isp-nonblock/rmmod-cycles-d9b68caa.txt`](isp-nonblock/rmmod-cycles-d9b68caa.txt)): 3 cycles insmod → `fc_nonblock_test` (6/6) → timps 40 s → end by `kill -9` / clean stop / `kill -9` → rmmod sensor + tx-isp: all clean, no oops. Afterwards reboot onto the flashed module.
+- Residual risk according to the agent: after `kill -9`, ISP/AE threads keep running; a sensor access that coincides exactly with the unloading of the sensor is still possible (very small window). A full solution would be to stop ISP/sensor at the last `close` of `/dev/tx-isp`.
+- Branch `claude/t31-isp-dqbuf-nonblock` (`85fbd1fd` → `5fe6bbb2` → `d9b68caa`) pushed. For use in the image, `OPEN_TX_ISP_VERSION` would have to be changed and the image flashed again (not done).
 
-## OSD standardmäßig an (`claude/t31-osd-default`) – bestanden
+## OSD on by default (`claude/t31-osd-default`) – passed
 
-Bisher blendete OpenIMP das OSD auf T31 nur mit `OPENIMP_T31_OSD=1` ein (timps legt die Regionen an, im Bild erschien nichts). `18127d2` (auf `claude/t31-integration`) schaltet das IPU-Backend standardmäßig ein, `OPENIMP_T31_OSD=0` schaltet es ab. libimp md5 `4569960ed6d62804dcd77d367c73c50f`. Test per Bind-Mount, 15 fps (`/etc`-Konfiguration als Kopie): `phase.sh osd-s 300 10` → Main/Sub 4446/4445 Frames, 0 Fehler, 27/27 Snapshots Ø 0,23 s, timpsd 8,5–12,6 % CPU, `[ERR]` 0; OSD (Datum/Uhrzeit, Name, Uptime, Logo) im Main-Snapshot und im Sub-Stream sichtbar (lokal angesehen, nicht eingecheckt); `cycle2.sh osd-c … 12` → 12/12, dieselbe PID.
+Until now OpenIMP blended the OSD on T31 only with `OPENIMP_T31_OSD=1` (timps creates the regions, nothing appeared in the picture). `18127d2` (on `claude/t31-integration`) switches the IPU backend on by default, `OPENIMP_T31_OSD=0` switches it off. libimp md5 `4569960ed6d62804dcd77d367c73c50f`. Test via bind mount, 15 fps (`/etc` configuration as a copy): `phase.sh osd-s 300 10` → main/sub 4446/4445 frames, 0 errors, 27/27 snapshots avg. 0.23 s, timpsd 8.5–12.6 % CPU, `[ERR]` 0; OSD (date/time, name, uptime, logo) visible in the main snapshot and in the sub stream (looked at locally, not checked in); `cycle2.sh osd-c … 12` → 12/12, same PID.
 
-## Neues Image geflasht (komplette OTA, mit Zustimmung)
+## New image flashed (complete OTA, with consent)
 
-thingino `ciao` (Build wie zuvor) mit open-tx-isp `claude/t31-isp-dqbuf-nonblock` `d9b68caa` (Modul md5 `da108912…`) und OpenIMP `claude/t31-osd-default` `18127d2` (libimp md5 `4569960e…`, identisch mit dem getesteten Build). Erst nur das Modul (08:10, mit Flash-libimp `3f501a2`: 3 min Main+Sub 0 Fehler, FS-Thread 0,2 % CPU, zwei Neustarts über `S95timps` in 1–2 s), dann beides (08:35). Nach dem Flash: timps läuft über `S95timps`, Log `T31 IPU OSD backend enabled`, Main und Sub dekodierbar, OSD im Bild, kein Oops.
+thingino `ciao` (build as before) with open-tx-isp `claude/t31-isp-dqbuf-nonblock` `d9b68caa` (module md5 `da108912…`) and OpenIMP `claude/t31-osd-default` `18127d2` (libimp md5 `4569960e…`, identical to the tested build). First only the module (08:10, with flash libimp `3f501a2`: 3 min main+sub 0 errors, FS thread 0.2 % CPU, two restarts via `S95timps` in 1–2 s), then both (08:35). After the flash: timps runs via `S95timps`, log `T31 IPU OSD backend enabled`, main and sub decodable, OSD in the picture, no oops.
 
-## Endzustand der Kamera (2026-10-01, 08:37)
+## Final state of the camera (2026-10-01, 08:37)
 
-Neues Image (siehe oben): Modul `d9b68caa`, libimp `18127d2` mit OSD, kein Bind-Mount, timps über `S95timps` mit `/etc/timps.conf` (15 fps), Main und Sub dekodierbar. `/etc` und Overlay unverändert; Testdateien lagen nur in `/tmp`.
+New image (see above): module `d9b68caa`, libimp `18127d2` with OSD, no bind mount, timps via `S95timps` with `/etc/timps.conf` (15 fps), main and sub decodable. `/etc` and overlay unchanged; test files were only in `/tmp`.
