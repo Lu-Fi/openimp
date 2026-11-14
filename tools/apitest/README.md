@@ -37,7 +37,7 @@ motion results.
 
 FS ch0 = sensor size W x H (as in imgfx), FS ch1 = 640x360 scaled; all encoders
 and IVS/OSD use ch1. Env: `APITEST_MODE=night` (ISP running mode night),
-`APITEST_AIDEV=n` (audio input device, default 1, T23 0), `APITEST_QEMU=1` (set by `qemu_run.py`) turns the picture verdicts of `customalgo_t41` (AE and AWB effect) into N/A (the QEMU test pattern does not respond to the exposure) and a refused `SetSensorFPS` of the QEMU sensor model into N/A, `APITEST_AO=1` enables the (off by default, no-sound rule)
+`APITEST_AIDEV=n` (audio input device, default 1, T23 0), `APITEST_QEMU=1` (set by `qemu_run.py`) turns the picture verdicts of `customalgo_t41` (AE and AWB effect) into N/A (the QEMU test pattern does not respond to the exposure) and a refused `SetSensorFPS` of the QEMU sensor model into N/A, and an out-of-range `FrameSource rate = sensor rate` (ch1 fps by timestamps) into N/A (known QEMU artefact #493: the ingenic-t30 ISP frame timer of QEMU 0.7.14/0.7.19 delivers ~19 frames/s at a 15 fps setting, measured as the kernel ISP interrupt rate without the library: 0.7.17 15 fps, 0.7.19 19 fps; to be reported upstream), `APITEST_AO=1` enables the (off by default, no-sound rule)
 AO return-code checks.
 
 ## What is exercised

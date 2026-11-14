@@ -19617,7 +19617,7 @@
         "T41": "n.a."
       },
       "auto": true,
-      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera. | T33 (2026-11-13, #481): t32_misc_sample audiox in the T33 QEMU guest, vendor 2.0.2.1 vs OpenIMP, same return codes and queue states except IMP_AI_EnableLpf: the vendor returns -1 in the guest (after logging the 500 Hz cut-off), OpenIMP 0 and the filter runs.",
+      "note": "T32 (2026-11-11 matrix-x): called in the #329 audiox QEMU run (rc=0), effects equal to vendor 2.2.0; no T32 camera. | T33 (2026-11-13, #481): t32_misc_sample audiox in the T33 QEMU guest, vendor 2.0.2.1 vs OpenIMP, same return codes and queue states except IMP_AI_EnableLpf: the vendor returns -1 in the guest on the FIRST call (after logging the 500 Hz cut-off), OpenIMP 0 and the filter runs. Cause (#490, vendor 2.0.2.1 EnableLpf decompiled, QEMU runs): vendor get_fun_address calls dlerror() after each dlsym of libaudioProcess.so and treats any pending error as failure; an earlier unrelated failed dl lookup in the process (\"Unable to resolve symbol\", seen by calling dlerror() before the call) is picked up by the first libaudioProcess user. With dlerror() cleared first, or on a second call, the vendor returns 0 as well. A vendor quirk of the process dl state, not emulated by OpenIMP (same filter, rc=0).",
       "ref": {
         "T32": "QEMU #329 audiox 2026-11-11",
         "T33": "t32_misc_sample audiox QEMU 2026-11-13 (#481, runs x1-vend vs x2-oi)"

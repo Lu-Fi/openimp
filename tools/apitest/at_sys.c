@@ -342,8 +342,12 @@ void t_fs(void)
          * samples do, so ch1 must run at ~15 fps */
         if (n == 16 && last > tmeas && tmeas) {
             double fps = 11.0 * 1e6 / (double)(last - tmeas);
-            rep(LBL("FrameSource rate = sensor rate"), 0, fps > g_fps * 0.8 && fps < g_fps * 1.2 ? V_PASS : V_FAIL,
-                "ch1 %.1f fps by timestamps (sensor %d fps in effect, channel outFrmRate 15/1)", fps, g_fps);
+            int in_range = fps > g_fps * 0.8 && fps < g_fps * 1.2;
+            /* QEMU (APITEST_QEMU=1): the ingenic T30 ISP frame timer of QEMU 0.7.14/0.7.19 runs ~19 fps at a 15 fps
+             * setting (kernel ISP interrupt rate, library independent, #493; 0.7.17 gave 15): not a library rate, N/A */
+            rep(LBL("FrameSource rate = sensor rate"), 0, in_range ? V_PASS : getenv("APITEST_QEMU") ? V_NA : V_FAIL,
+                "ch1 %.1f fps by timestamps (sensor %d fps in effect, channel outFrmRate 15/1)%s", fps, g_fps,
+                !in_range && getenv("APITEST_QEMU") ? " [known QEMU frame timer, see tools/apitest/README.md]" : "");
         }
         gfree(pf);
     }
