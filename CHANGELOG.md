@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: status: T33 driver-port row 192/409 (clock parents, tisp_all_reset, deinit set; #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 192/409 (+8: `ispcore_set_clk_parent`, `ivdc_set_clk_parent`, `tisp_all_reset`, `tisp_blc_deinit`, `tisp_ldc_t33_deinit`, `tisp_msca_t33_deinit`, `tisp_normal_ae_deinit`, `tisp_dma_deinit`; open-tx-isp next 7d17f72d, blocks clkp / deinit / deinitto). The driver checks the clock parents like the vendor (sclka / mpll only) and runs the T33 `tisp_all_reset` at the input setup and at the last close (QEMU A/B equal to the vendor module). Docs only.
+
 ## 2026-11-14: driver-port card gets a "Readable C (driver de-lift)" table per SoC (openimp #539)
 
 - `tools/status_driver_port.py --readable DIR [--readable-only]` reads one `summary.json` per SoC from the de-lift inventories (per-function origin / readability class, rules in the inventory README) into `docs/status/driver_port.json` (`readable` section; the T32/T33 port rows are untouched); `tools/driver_port.py` renders it under the driver-port card (Markdown + HTML): readable / all functions, progress bar, machine-like lines, before/after.
