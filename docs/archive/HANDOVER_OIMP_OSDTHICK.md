@@ -1,187 +1,186 @@
-# Übergabe: OpenIMP OSD — gleichmäßige Strichdicke für Diagonalen
+# Handover: OpenIMP OSD — uniform stroke thickness for diagonals
 
-Stand: 2026-10-03 — **fertig implementiert, host-getestet, 3 lokale Commits — NICHT gepusht.**
-**Ein Punkt ist bewusst offen: auf dem Gerät ist nichts geprüft** (Abschnitt 6).
+Status: 2026-10-03 — **fully implemented, host-tested, 3 local commits — NOT pushed.**
+**One point is deliberately open: nothing has been checked on the device** (section 6).
 
-Diese Fassung enthält die Nachbesserungen aus dem Review: `lw = 1` ist jetzt byte-gleich zum
-Stock (Endpunkt p1 ausgenommen), der vollständige Winkelsweep ist als fester Host-Test drin,
-und die Aussagen zur Schrittzahl und zu den Kappen sind korrigiert (Abschnitt 4.2).
+This version contains the improvements from the review: `lw = 1` is now byte-identical to
+stock (end point p1 excepted), the complete angle sweep is included as a fixed host test,
+and the statements about the step count and the caps are corrected (section 4.2).
 
-Branch `claude/osd-thick-lines`, Worktree `<path>/openimp-osdthick`.
-
----
-
-## 1. Auftrag (Original, wörtlich)
-
-> Aufgabe (OpenIMP, nur Host-Arbeit, keine Kamera): OSD-Linien mit gleichmäßiger Dicke.
-> Repo: <path>/openimp. Basis: origin/claude/openimp-all-10 (4c1ffe1). Lege einen eigenen
-> Worktree an und einen neuen Branch claude/osd-thick-lines. Lokal committen, NICHT pushen.
->
-> Anforderungen: gleichmäßige Strichdicke für Linien mit Winkel ≠ 0°/90° (Bresenham mit
-> Perpendicular-Span, oder Murphy's thick line), nur Integer-Arithmetik, keine Floats, kein
-> malloc im Zeichenpfad; Clipping und NV12-Y/UV-Behandlung beibehalten (UV halbe Auflösung);
-> der Dry-Pass (`cv.dry = 1`) muss weiterhin alle tatsächlich geschriebenen Zeilen abdecken;
-> Host-Tests in `tests/t31` erweitern (`make -C tests/t31 check`): senkrechte Dicke von
-> 45°/30°/60°-Linien bei lw = 1,2,4,8 innerhalb ±1 Pixel des Ziels, horizontale/vertikale Linien
-> und Rechtecke byte-identisch zum alten Ergebnis, keine Schreibzugriffe außerhalb des Frames,
-> Dry-Pass-Zeilen ⊇ geschriebene Zeilen; `tests/t30 check`, `tests/t23 check` müssen grün
-> bleiben.
->
-> Deliverable: kurzer Bericht mit Commit-Hash, geänderten Dateien, Testausgabe und einem
-> Host-Mikrobenchmark (alt vs. neu, 1080p-Diagonale lw=4).
-> „Keine Änderungen außerhalb des Branches, keine Kamera, kein Push."
-
-Alle Regeln eingehalten: nur lokal committet, nichts gepusht, kein anderer Branch/Worktree
-angefasst, kein Kamerazugriff, keine Floats und kein `malloc` im Zeichenpfad.
+Branch `claude/osd-thick-lines`, worktree `<path>/openimp-osdthick`.
 
 ---
 
-## 2. Ergebnis auf einen Blick
+## 1. Task (original, verbatim)
+
+> Task (OpenIMP, host work only, no camera): OSD lines with uniform thickness.
+> Repo: <path>/openimp. Base: origin/claude/openimp-all-10 (4c1ffe1). Create your own
+> worktree and a new branch claude/osd-thick-lines. Commit locally, do NOT push.
+>
+> Requirements: uniform stroke thickness for lines with an angle ≠ 0°/90° (Bresenham with
+> perpendicular span, or Murphy's thick line), integer arithmetic only, no floats, no
+> malloc in the drawing path; keep clipping and NV12 Y/UV handling (UV half resolution);
+> the dry pass (`cv.dry = 1`) must still cover all rows actually written;
+> extend host tests in `tests/t31` (`make -C tests/t31 check`): perpendicular thickness of
+> 45°/30°/60° lines at lw = 1,2,4,8 within ±1 pixel of the target, horizontal/vertical lines
+> and rectangles byte-identical to the old result, no writes outside the frame,
+> dry-pass rows ⊇ written rows; `tests/t30 check`, `tests/t23 check` must stay
+> green.
+>
+> Deliverable: short report with commit hash, changed files, test output and a
+> host micro-benchmark (old vs. new, 1080p diagonal lw=4).
+> "No changes outside the branch, no camera, no push."
+
+All rules were observed: committed only locally, pushed nothing, touched no other branch/worktree,
+no camera access, no floats and no `malloc` in the drawing path.
+
+---
+
+## 2. Result at a glance
 
 | | |
 |---|---|
 | Branch | `claude/osd-thick-lines` |
-| Basis | `origin/claude/openimp-all-10` = `4c1ffe1` |
-| Commits | **3 Commits vor der Basis, nicht gepusht**: `cb272dd` (Implementierung, nach Review nachgezogen) + zwei Doku-Commits (diese Datei, `T31_OSD_RE.md` §3.6) — exakte SHAs: `git --no-pager log --oneline 4c1ffe1..HEAD` |
-| Diff | 7 Dateien, **+1.258 / −132** |
-| Host-Tests | `tests/t31` (inkl. `osd_draw_test: ok`), `tests/t30`, `tests/t23` — alle exit 0 |
-| Benchmark (Host, 1080p-Diagonale, lw 4) | alt **53,9 µs / 10.908 Y-Bytes**, neu **23,4 µs / 9.591 Y-Bytes** = **0,43×**; Dry+Draw 69,0 → 34,6 µs |
-| Gemessene Dicke (senkrecht) | lw 1/2/4/8 bei 45°: 0,71 / 2,12 / **4,24** / **7,78** px (alt: 0,71 / 2,12 / 4,95 / 10,61); Winkelsweep 0…180° lw 2…8: max. Abweichung **0,463 px** |
-| Byte-Identität | Achsenlinien, Rechtecke **und `lw = 1`** (jede Richtung) |
-| Betroffene Targets | T31, T20, T21, T30 (geteilter Header; T23 kompiliert den OSD-Block aus, T40/T41 kompilieren die Datei nicht) |
-| Offen | **keine Geräteprüfung** der Diagonale und des Flush-Bands (Abschnitt 6) |
+| Base | `origin/claude/openimp-all-10` = `4c1ffe1` |
+| Commits | **3 commits on top of the base, not pushed**: `cb272dd` (implementation, updated after the review) + two docs commits (this file, `T31_OSD_RE.md` §3.6) — exact SHAs: `git --no-pager log --oneline 4c1ffe1..HEAD` |
+| Diff | 7 files, **+1,258 / −132** |
+| Host tests | `tests/t31` (incl. `osd_draw_test: ok`), `tests/t30`, `tests/t23` — all exit 0 |
+| Benchmark (host, 1080p diagonal, lw 4) | old **53.9 µs / 10,908 Y bytes**, new **23.4 µs / 9,591 Y bytes** = **0.43×**; dry+draw 69.0 → 34.6 µs |
+| Measured thickness (perpendicular) | lw 1/2/4/8 at 45°: 0.71 / 2.12 / **4.24** / **7.78** px (old: 0.71 / 2.12 / 4.95 / 10.61); angle sweep 0…180° lw 2…8: max. deviation **0.463 px** |
+| Byte identity | axis lines, rectangles **and `lw = 1`** (any direction) |
+| Affected targets | T31, T20, T21, T30 (shared header; T23 compiles the OSD block out, T40/T41 do not compile the file) |
+| Open | **no device check** of the diagonal and of the flush band (section 6) |
 
 ---
 
-## 3. Commits und Dateien
+## 3. Commits and files
 
-`git --no-pager log --oneline 4c1ffe1..HEAD` (3 Commits, exakte SHAs dort):
+`git --no-pager log --oneline 4c1ffe1..HEAD` (3 commits, exact SHAs there):
 
 ```
 docs: note the OSD diagonal stroke deviation in T31_OSD_RE.md
     docs/T31_OSD_RE.md               +10
 
 docs: handover notes for the OSD thick-line change
-    HANDOVER_OIMP_OSDTHICK.md        +282 (neu)
+    HANDOVER_OIMP_OSDTHICK.md        +282 (new)
 
 cb272dd osd: uniform stroke thickness for diagonal lines
     src/t31/openimp_t31_osd_draw.h   +205 / −74
     tests/t31/osd_draw_test.c        +500 / −55
-    tests/t31/osd_draw_old.h         +120 (neu)
-    tests/t31/osd_thick_bench.c      +125 (neu)
+    tests/t31/osd_draw_old.h         +120 (new)
+    tests/t31/osd_thick_bench.c      +125 (new)
     tests/t31/Makefile               +16 / −3
 ```
 
-(Achtung: `git commit --amend`/Rebase ändert SHAs — die SHAs in diesem Dokument sind Hinweise,
-maßgeblich ist `git --no-pager log --oneline 4c1ffe1..HEAD`.)
+(Note: `git commit --amend`/rebase changes SHAs — the SHAs in this document are hints,
+authoritative is `git --no-pager log --oneline 4c1ffe1..HEAD`.)
 
-- **`src/t31/openimp_t31_osd_draw.h`** — der gemeinsame, header-only CPU-Zeichner für
-  `OSD_REG_LINE`, `OSD_REG_RECT`, `OSD_REG_BITMAP` auf NV12. Hardware-frei, host-testbar.
-  Einziger Produktions-Consumer: `src/t31/openimp_t31_services.c` (Zeile 25).
-- **`tests/t31/osd_draw_old.h`** (neu) — **eingefrorene Kopie** des Stock-Zeichners zum
-  Basis-Commit (`osd_draw_line_old`, `osd_draw_rect_old`, `osd_fill_new_old`). Dient als
-  Byte-Identitäts-Referenz, als Vorher-Spalte der Dickentabelle und als Benchmark-Gegner.
-- **`tests/t31/osd_draw_test.c`** — `lw = 1`-Identitätstest, Winkel-Sweep, Achsen-Identitätstest,
-  Dickentabelle, Diagonal-Clip- und Dry-Test. Der alte `test_line_reference()` (der die
-  Stock-Treppengeometrie festschrieb) ist ersetzt. Der Test linkt `-lm` (`cos/sin/lround` nur
-  zum Erzeugen der Endpunkte; der Zeichner selbst bleibt float-frei).
-- **`tests/t31/osd_thick_bench.c`** (neu) + `make -C tests/t31 bench` — Host-Mikrobenchmark.
+- **`src/t31/openimp_t31_osd_draw.h`** — the shared, header-only CPU drawer for
+  `OSD_REG_LINE`, `OSD_REG_RECT`, `OSD_REG_BITMAP` on NV12. Hardware-free, host-testable.
+  Only production consumer: `src/t31/openimp_t31_services.c` (line 25).
+- **`tests/t31/osd_draw_old.h`** (new) — **frozen copy** of the stock drawer at the
+  base commit (`osd_draw_line_old`, `osd_draw_rect_old`, `osd_fill_new_old`). Serves as the
+  byte-identity reference, as the "before" column of the thickness table and as the benchmark opponent.
+- **`tests/t31/osd_draw_test.c`** — `lw = 1` identity test, angle sweep, axis identity test,
+  thickness table, diagonal clip and dry test. The old `test_line_reference()` (which fixed the
+  stock staircase geometry) is replaced. The test links `-lm` (`cos/sin/lround` only
+  to generate the end points; the drawer itself stays float-free).
+- **`tests/t31/osd_thick_bench.c`** (new) + `make -C tests/t31 bench` — host micro-benchmark.
 
 ---
 
-## 4. Was technisch gemacht wurde
+## 4. What was done technically
 
-### 4.1 Das Problem in einer Formel
+### 4.1 The problem in one formula
 
-Der Stock-Drawer zeichnet eine Linie als Folge von `lw × lw`-Stempeln, einen pro Schritt der
-dominanten Achse. Bei x-dominant deckt ein Schritt `lw + (lw − 1)·tan(θ)` Zeilen ab, quer zur
-Linie also `lw·cos θ + (lw − 1)·sin θ`. Das ist bei 45° genau `2·lw − 1` Zeilen
-= `(2·lw − 1)/√2 ≈ 1,41·lw` Pixel. Die Linie ist damit **nie** `lw` breit, sondern immer
-breiter — bis Faktor 1,41 bei großem `lw`.
+The stock drawer draws a line as a sequence of `lw × lw` stamps, one per step of the
+dominant axis. For x-dominant, one step covers `lw + (lw − 1)·tan(θ)` rows,
+so across the line `lw·cos θ + (lw − 1)·sin θ`. At 45° this is exactly `2·lw − 1` rows
+= `(2·lw − 1)/√2 ≈ 1.41·lw` pixels. The line is thus **never** `lw` wide, but always
+wider — up to a factor 1.41 at large `lw`.
 
-### 4.2 Die neue Bande
+### 4.2 The new band
 
-Für Diagonalen (`dx ≠ 0` **und** `dy ≠ 0`) läuft `osd_draw_diagonal()` die dominante Achse
-entlang und füllt pro Schritt **einen** Lauf entlang der Nebenachse:
+For diagonals (`dx ≠ 0` **and** `dy ≠ 0`) `osd_draw_diagonal()` walks along the dominant axis
+and fills **one** run along the minor axis per step:
 
 ```
-t = round(lw · hypot / major)          /* Lauf-Länge in Pixeln */
+t = round(lw · hypot / major)          /* run length in pixels */
 r0 = c − t/2;  r1 = r0 + t − 1
 ```
 
-`hypot` kommt aus `osd_isqrt64(((uint64_t)adx*adx + ady*ady) << 20)` (Hypotenuse in
-1/1024-Einheiten), der Rundungsterm ist `(lw*hq + (major << 9)) / (major << 10)`; `t` wird auf
-`[1, OSD_DRAW_MAX_LW]` geklemmt. Auf die Liniennormale projiziert ist die Bande damit `lw` breit
-— innerhalb einer halben Pixellänge, und das ist bei einem ganzzahligen Lauf das Beste, was
-möglich ist (gemessener Worst Case im Winkelsweep: **0,463 px**). Die Nebenachse wird als
-`floor(slope · s)` gerechnet und auf den Endpunktbereich geklemmt, beide Enden werden um `lw/2`
-verlängert.
+`hypot` comes from `osd_isqrt64(((uint64_t)adx*adx + ady*ady) << 20)` (hypotenuse in
+1/1024 units), the rounding term is `(lw*hq + (major << 9)) / (major << 10)`; `t` is clamped to
+`[1, OSD_DRAW_MAX_LW]`. Projected onto the line normal, the band is thus `lw` wide
+— within half a pixel length, and for an integer run this is the best that is
+possible (measured worst case in the angle sweep: **0.463 px**). The minor axis is computed as
+`floor(slope · s)` and clamped to the end-point range, both ends are extended by `lw/2`.
 
-**Zwei Einschränkungen, ehrlich:**
-- Die Kappen sind **nicht** senkrecht, sondern Parallelogramm-Ecken (wie bei den Stock-Stempeln):
-  der Überhang läuft entlang der dominanten Achse, auf die Normale projiziert also höchstens
-  `lw/2 + 0,5` Pixel. Die Bande ist exakt `lw` breit, nicht die Endfläche.
-- Die **Schrittzahl ist nur innen gleich** der des Stock-Drawers. Durch den Überhang kommen an
-  beiden Enden bis zu `lw/2` Schritte dazu, zusammen also bis zu `lw + 1`. Die Aussage „gleiche
-  Schrittzahl" gilt für die Innen-Schritte — und genau die misst der Test.
+**Two restrictions, honestly:**
+- The caps are **not** perpendicular but parallelogram corners (as with the stock stamps):
+  the overhang runs along the dominant axis, so projected onto the normal it is at most
+  `lw/2 + 0.5` pixels. The band is exactly `lw` wide, not the end face.
+- The **step count is equal to that of the stock drawer only on the inside**. Because of the overhang, up to `lw/2` steps are added at
+  both ends, so up to `lw + 1` together. The statement "same step count"
+  applies to the inner steps — and exactly these are measured by the test.
 
-**Eigenschaften, die der Auftrag verlangt:**
-- nur Integer: kein `float`/`double` irgendwo; die einzige Division ist die Skalierung von `t`
-  (einmal pro Linie, nicht pro Pixel),
-- kein `malloc`, kein statischer Zustand, keine Allokation,
-- ein Durchlauf, ein Lauf pro Schritt, jedes Pixel der Bande genau einmal,
-- Clipping inline, NV12-Semantik unverändert (`osd_fill_col()` schreibt Y pro Zeile und das
-  UV-Paar bei `(x & ~1)` in Chroma-Zeile `row >> 1`),
-- `dry` respektiert: `osd_fill_col()` / `osd_fill_box()` aktualisieren `ymin`/`ymax` und
-  schreiben bei `c->dry` keinen einzigen Byte.
+**Properties required by the task:**
+- integer only: no `float`/`double` anywhere; the only division is the scaling of `t`
+  (once per line, not per pixel),
+- no `malloc`, no static state, no allocation,
+- one pass, one run per step, every pixel of the band exactly once,
+- clipping inline, NV12 semantics unchanged (`osd_fill_col()` writes Y per row and the
+  UV pair at `(x & ~1)` in chroma row `row >> 1`),
+- `dry` respected: `osd_fill_col()` / `osd_fill_box()` update `ymin`/`ymax` and
+  write not a single byte when `c->dry` is set.
 
-### 4.3 Achsenlinien und `lw = 1` bleiben byte-gleich
+### 4.3 Axis lines and `lw = 1` stay byte-identical
 
-`adx == 0 || ady == 0` behält **exakt den Stock-Pfad**: `adx < 2*lw` → eine gefüllte Box um die
-Mitten-x, sonst die Vereinigung der Stempel an `pmin..pmax`. Damit sind horizontale und
-vertikale Linien — und damit alle Rechtecke, die aus vier solchen bestehen — **byte-identisch**
-zum alten Ergebnis.
+`adx == 0 || ady == 0` keeps **exactly the stock path**: `adx < 2*lw` → one filled box around the
+centre x, otherwise the union of the stamps at `pmin..pmax`. Thus horizontal and
+vertical lines — and therefore all rectangles made of four of them — are **byte-identical**
+to the old result.
 
-`lw == 1` ebenfalls: ein einzelnes Pixel hat keine Breite zu verteilen, und der Überhang der
-Bande würde am Endpunkt p1 einen Schritt zufügen. Deshalb gilt für `lw == 1` weiter die
-Stock-Dispatch (`|dx| < 2*lw` ⟺ `|dx| ≤ 1` → Box) und in `osd_draw_diagonal()` die
-Stock-Schrittgrenze **p0 inklusive, p1 exklusive**. Ein einpixeliger Strich ist damit in jeder
-Richtung byte-identisch. Nur echte Diagonalen mit `lw ≥ 2` nehmen den neuen Pfad.
+`lw == 1` too: a single pixel has no width to distribute, and the overhang of the
+band would add a step at the end point p1. Therefore for `lw == 1` the
+stock dispatch continues to apply (`|dx| < 2*lw` ⟺ `|dx| ≤ 1` → box) and in `osd_draw_diagonal()` the
+stock step limit **p0 inclusive, p1 exclusive**. A one-pixel stroke is thus
+byte-identical in every direction. Only real diagonals with `lw ≥ 2` take the new path.
 
-Der alte Helfer `osd_fill_new()` (inkrementelle Stempel-Vereinigung, nur vom alten Pfad genutzt)
-wurde dadurch toter Code und ist entfernt; seine eingefrorene Kopie lebt im Test.
+The old helper `osd_fill_new()` (incremental stamp union, used only by the old path)
+thereby became dead code and was removed; its frozen copy lives in the test.
 
-### 4.4 Bewusste Verhaltensänderung
+### 4.4 Deliberate behaviour change
 
-`|dx| < 2*lw` wurde als Dispatch-Bedingung für den Box-Pfad **für `lw ≥ 2`** fallengelassen (er
-greift dort nur noch bei `adx == 0`); für `lw == 1` bleibt er erhalten, weil er dort byte-gleich
-ist und nichts kostet. Eine **kurze Diagonale** mit `lw ≥ 2` war vorher eine Box und ist jetzt
-eine Bande. Das ist gewollt und deckt sich mit dem Auftragsziel.
+`|dx| < 2*lw` was dropped as the dispatch condition for the box path **for `lw ≥ 2`** (it
+now applies there only at `adx == 0`); for `lw == 1` it is kept, because there it is
+byte-identical and costs nothing. A **short diagonal** with `lw ≥ 2` used to be a box and is now
+a band. This is intended and matches the goal of the task.
 
 ---
 
-## 5. Verifikation (Host)
+## 5. Verification (host)
 
-### 5.1 Testläufe
+### 5.1 Test runs
 
 ```
-make -C tests/t31 check   # osd_draw_test: ok   (exit 0, inkl. t31-p2-jpeg-source-test)
+make -C tests/t31 check   # osd_draw_test: ok   (exit 0, incl. t31-p2-jpeg-source-test)
                           # angle sweep 0..180 deg, lw 2..8: worst |width - lw| = 0.463 px
 make -C tests/t30 check   # System Init/Exit tests passed      (exit 0)
 make -C tests/t23 check   # T23 JPEG user tables: all checks passed   (exit 0)
 ```
 
-Neu im OSD-Test:
+New in the OSD test:
 
-| Test | Prüft |
+| Test | Checks |
 |---|---|
-| `test_axis_identity` | 600 deterministische LCG-Fälle, je Fall ein Rechteck **plus** eine Linie (gerade Indizes horizontal, ungerade vertikal, damit Clamp und `offPos` sie nicht in eine Diagonale drehen): Koordinaten −16…79 / −16…63, `offPos` −4…4, `lw ∈ {1,2,3,4,7,9,100,0xffffffff}`; `memcmp` gegen den eingefrorenen Stock-Drawer **und** gleiches `ymin/ymax`-Band |
-| `test_lw1_identity` | 15 feste Fälle (Ecken, `|dx| = 1/2` → Box-Pfad, 45°, weit außerhalb, `INT_MIN/INT_MAX`) × 3 `offPos` plus 400 Zufallsdiagonalen (LCG, mit `dx ≠ 0` **und** `dy ≠ 0`): `lw = 1` muss `memcmp`-gleich zum Stock-Drawer sein, inklusive Band |
-| `test_diagonal_thickness` | 45°/30°/60° bei lw 1/2/4/8: senkrechte Dicke innerhalb ±1 px, genau ein zusammenhängender Lauf pro Schritt, gleiche Innen-Schrittanzahl wie alt, kein Pixel weiter als `lw/2 + 1,5` von der Linie, Fläche/Länge = Breite |
-| `test_angle_sweep` | **0…180° in 1°-Schritten × lw 2…8** (1.267 Läufe, Segment 200 px in der Mitte eines 512×512-Frames): jeder Innen-Schritt genau ein Lauf, kein Loch, senkrechte Breite in `lw ± 0,5`; Worst Case wird ausgegeben (**0,463 px**) |
-| `test_diagonal_clip_dry` | 14 Segmente (negative Koordinaten, alle vier Richtungen, `INT_MIN`/`INT_MAX`, `lw = 0xffffffff`): Randbytes und Zeilen-Padding unberührt, Dry-Pass schreibt nichts, und **jede Zeile mit geschriebenen Pixeln liegt in `[ymin, ymax]` des Dry-Passes** |
+| `test_axis_identity` | 600 deterministic LCG cases, per case one rectangle **plus** one line (even indices horizontal, odd vertical, so that clamp and `offPos` do not turn them into a diagonal): coordinates −16…79 / −16…63, `offPos` −4…4, `lw ∈ {1,2,3,4,7,9,100,0xffffffff}`; `memcmp` against the frozen stock drawer **and** the same `ymin/ymax` band |
+| `test_lw1_identity` | 15 fixed cases (corners, `|dx| = 1/2` → box path, 45°, far outside, `INT_MIN/INT_MAX`) × 3 `offPos` plus 400 random diagonals (LCG, with `dx ≠ 0` **and** `dy ≠ 0`): `lw = 1` must be `memcmp`-equal to the stock drawer, including the band |
+| `test_diagonal_thickness` | 45°/30°/60° at lw 1/2/4/8: perpendicular thickness within ±1 px, exactly one connected run per step, same inner step count as old, no pixel further than `lw/2 + 1.5` from the line, area/length = width |
+| `test_angle_sweep` | **0…180° in 1° steps × lw 2…8** (1,267 runs, segment 200 px in the middle of a 512×512 frame): every inner step exactly one run, no hole, perpendicular width within `lw ± 0.5`; the worst case is printed (**0.463 px**) |
+| `test_diagonal_clip_dry` | 14 segments (negative coordinates, all four directions, `INT_MIN`/`INT_MAX`, `lw = 0xffffffff`): edge bytes and row padding untouched, dry pass writes nothing, and **every row with written pixels lies in `[ymin, ymax]` of the dry pass** |
 
-### 5.2 Dickentabelle (senkrecht, nur Innen-Schritte)
+### 5.2 Thickness table (perpendicular, inner steps only)
 
 ```
   45 deg lw 1: new 0.71   old  0.71
@@ -198,14 +197,14 @@ Neu im OSD-Test:
   60 deg lw 8: new 7.79   old 10.39..11.26 (mean 10.43)
 ```
 
-Bei `lw = 1` ist die Geometrie identisch: `2·lw − 1 = 1` Zeile ist bei 45° nun einmal
-`1/√2 ≈ 0,71 px`; da ist nichts zu verbessern. Für `lw = 1` zeichnet OpenIMP weiter den
-Stock-Pfad, das ist per `memcmp` gegen den eingefrorenen Stock-Drawer abgesichert
-(`test_lw1_identity`); nur der Endpunkt p1 bleibt wie im Stock ausgespart.
+At `lw = 1` the geometry is identical: `2·lw − 1 = 1` row at 45° is
+`1/√2 ≈ 0.71 px`; there is nothing to improve. For `lw = 1` OpenIMP continues to draw the
+stock path, this is secured by `memcmp` against the frozen stock drawer
+(`test_lw1_identity`); only the end point p1 is left out as in stock.
 
-### 5.3 Mikrobenchmark (Host, `make -C tests/t31 bench`)
+### 5.3 Micro-benchmark (host, `make -C tests/t31 bench`)
 
-1920×1080, Diagonale `(0,0)–(1919,1079)`, `lw = 4`, 200 Iterationen pro Lauf:
+1920×1080, diagonal `(0,0)–(1919,1079)`, `lw = 4`, 200 iterations per run:
 
 ```
   old staircase  one pass :     53.9 us    10908 Y bytes  1080 rows
@@ -215,68 +214,68 @@ Stock-Pfad, das ist per `memcmp` gegen den eingefrorenen Stock-Drawer abgesicher
   ratio band/staircase    :     0.43 one pass, 0.50 dry+draw
 ```
 
-Die neue Bande ist also rund **2,3× schneller** als der Stock-Stempel und schreibt **12 %**
-weniger Y-Bytes. Zahlen sind Host-`-O2` ohne Target-Flags: Größenordnung, keine Gerätezahl.
-Kontrolllauf: 53,2 / 23,7 µs, Dry+Draw 68,9 / 31,8 µs — die Streuung liegt bei rund ±10 %.
+The new band is thus about **2.3× faster** than the stock stamp and writes **12 %**
+fewer Y bytes. Figures are host `-O2` without target flags: order of magnitude, not a device figure.
+Control run: 53.2 / 23.7 µs, dry+draw 68.9 / 31.8 µs — the scatter is about ±10 %.
 
-### 5.4 Produktions-TU
+### 5.4 Production TU
 
 ```
 cc -fsyntax-only -std=gnu99 -O2 -Wall -Wextra -Isrc -Iinclude src/t31/openimp_t31_services.c
 # clean
 ```
 
-(Mit `-std=c99` scheitert es an einem vorbestehenden, unabhängigen `O_CLOEXEC`-Problem der
-Datei, nicht an dieser Änderung.)
+(With `-std=c99` it fails on a pre-existing, unrelated `O_CLOEXEC` problem of the
+file, not on this change.)
 
 ---
 
-## 6. ⚠️ Offener Punkt: Geräteprüfung fehlt, und die Abweichung ist bewusst
+## 6. ⚠️ Open point: device check missing, and the deviation is deliberate
 
-**Wie beauftragt wurde ausschließlich auf dem Host gearbeitet.** Der Pfad
-`openimp_t31_osd_apply()` (Dry-Pass → Flush → Zeichnen → Flush) ist nur host-getestet. Beim
-ersten Gerätelauf ist zu prüfen:
+**As instructed, work was done exclusively on the host.** The path
+`openimp_t31_osd_apply()` (dry pass → flush → draw → flush) is only host-tested. On the
+first device run, check:
 
-1. Eine Diagonale ist sichtbar **durchgehend, gleich dick und ohne Lücke** (bei lw ≥ 2).
-2. Der Flush-Band deckt die Bande noch vollständig ab (kein abgeschnittener Rand oben/unten).
-3. Beim Winkelwechsel wirkt der Strich nicht mehr „dicker", sondern konstant.
-4. Eine Linie mit `lw = 1` sieht aus wie vorher (byte-gleich, nur host-verifiziert).
+1. A diagonal is visibly **continuous, of equal thickness and without gaps** (at lw ≥ 2).
+2. The flush band still covers the band completely (no cut-off edge at top/bottom).
+3. When the angle changes, the stroke no longer looks "thicker" but constant.
+4. A line with `lw = 1` looks as before (byte-identical, only host-verified).
 
-**Es gibt dafür noch keinen Gerätetest:** `docs/T31_OSD_IPU_TEST.md` deckt ausschließlich
-Bitmap- und Cover-Ebenen ab; für LINE/RECT-Geometrie existiert dort kein Fall. Ein solcher
-müsste neu angelegt werden.
+**There is no device test for this yet:** `docs/T31_OSD_IPU_TEST.md` covers only
+bitmap and cover layers; there is no case for LINE/RECT geometry. Such a case
+would have to be created.
 
-**Die sichtbare Änderung ist gewollt, aber eine Abweichung vom Stock:** Diagonalen werden
-**dünner** gezeichnet als bisher. Bestehende OSD-Layouts mit Diagonalen sehen danach anders
-aus. Wenn „byte-gleich zum Stock-OSD" ein hartes Projektkriterium ist, braucht dieser Commit
-eine ausdrückliche Abnahme. Achsenlinien, Rechtecke und `lw = 1` bleiben unverändert
-(byte-gleich).
+**The visible change is intended, but it is a deviation from stock:** Diagonals are drawn
+**thinner** than before. Existing OSD layouts with diagonals look different afterwards.
+If "byte-identical to the stock OSD" is a hard project criterion, this commit
+needs an explicit sign-off. Axis lines, rectangles and `lw = 1` stay unchanged
+(byte-identical).
 
-**Ehrliche Korrektur einer früheren Annahme:** Die verbreitete Vermutung, der Stock-Strich sei
-bei 45° um √2 zu dünn, ist **falsch** — er ist zu **breit** (Faktor bis 1,41, siehe 4.1). Die
-Messungen in 5.2 sind der Beleg. Diese Korrektur steht auch als Kommentar im Header und im Test.
-
----
-
-## 7. Grenzen des Nachweises
-
-- Gemessen wird die Breite über Innen-Schritte (mindestens `lw + 4` Pixel vom Ende), nicht an
-  den Kappen. Die Kappen sind Parallelogramm-Ecken und bis `lw/2 + 0,5` px über die Normale
-  hinaus — bewusst so, siehe 4.2.
-- Der Winkelsweep ist jetzt vollständig (0…180° in 1°-Schritten für `lw 2…8`), aber die
-  Dickenprüfung gilt nur für die Innen-Schritte; die Endpunkt-Geometrie ist nicht 1:1 gegen den
-  Stock geprüft (nur `lw = 1` ist überall byte-gleich).
-- `lw = 0` wird nur über den Guard abgedeckt (`lw <= 0` → sofortiges Return), nicht getestet.
-- Der Benchmark ist Host-`-O2` ohne Target-Flags; er belegt die Größenordnung, nicht die
-  Gerätelaufzeit.
-- Byte-Identität ist gegen den **eingefrorenen** Stock-Drawer aus `4c1ffe1` geprüft, nicht
-  gegen Geräteaufnahmen der Stock-`libimp`.
+**Honest correction of an earlier assumption:** The widespread assumption that the stock stroke is
+too thin by √2 at 45° is **wrong** — it is too **wide** (factor up to 1.41, see 4.1). The
+measurements in 5.2 are the evidence. This correction is also a comment in the header and in the test.
 
 ---
 
-## 8. Regeln (Zustand)
+## 7. Limits of the evidence
 
-- **Kein Push.** Der Branch ist lokal, `git status` sauber.
-- **Kein anderer Branch/Worktree** angefasst (`git worktree list` unverändert).
-- **Keine Kamera** benutzt.
-- Änderungen ausschließlich auf `claude/osd-thick-lines`.
+- The width is measured over inner steps (at least `lw + 4` pixels from the end), not at
+  the caps. The caps are parallelogram corners and up to `lw/2 + 0.5` px beyond the normal
+  — deliberately so, see 4.2.
+- The angle sweep is now complete (0…180° in 1° steps for `lw 2…8`), but the
+  thickness check applies only to the inner steps; the end-point geometry is not checked 1:1 against
+  stock (only `lw = 1` is byte-identical everywhere).
+- `lw = 0` is covered only by the guard (`lw <= 0` → immediate return), not tested.
+- The benchmark is host `-O2` without target flags; it shows the order of magnitude, not the
+  device run time.
+- Byte identity is checked against the **frozen** stock drawer from `4c1ffe1`, not
+  against device recordings of the stock `libimp`.
+
+---
+
+## 8. Rules (state)
+
+- **No push.** The branch is local, `git status` clean.
+- **No other branch/worktree** touched (`git worktree list` unchanged).
+- **No camera** used.
+- Changes exclusively on `claude/osd-thick-lines`.
