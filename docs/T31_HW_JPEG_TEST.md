@@ -1,46 +1,46 @@
-# T31 Hardware-JPEG: Testanleitung für eine lokale Claude-Code-Session
+# T31 hardware JPEG: test guide for a local Claude Code session
 
-Diese Anleitung ist für eine Claude-Code-Session gedacht, die auf einem Rechner im
-selben Netz wie eine **T31-Testkamera** läuft und per SSH auf sie zugreifen kann. Sie
-setzt keine Vorkenntnisse aus früheren Sessions voraus.
+This guide is meant for a Claude Code session that runs on a machine in the
+same network as a **T31 test camera** and can reach it over SSH. It
+assumes no knowledge from earlier sessions.
 
-Hintergrund und Registerkarte stehen in [`T31_HW_JPEG_RE.md`](T31_HW_JPEG_RE.md), offene Punkte
-und ein Code-Review in [`T31_HW_JPEG_RE_FOLLOWUP.md`](T31_HW_JPEG_RE_FOLLOWUP.md). Die
-Kurzfassung:
+Background and the register map are in [`T31_HW_JPEG_RE.md`](T31_HW_JPEG_RE.md); open points
+and a code review are in [`T31_HW_JPEG_RE_FOLLOWUP.md`](T31_HW_JPEG_RE_FOLLOWUP.md). The
+short version:
 
-- Der Software-Encoder von OpenIMP kostet grob 0,3 s CPU pro 1080p-Bild und blockiert
-  während dieser Zeit H.264-Submits.
-- Die Original-`libimp` nutzt dafür einen eigenen Hardware-Core im AVPU (Core 1). Der
-  braucht ~8 ms und belastet die CPU praktisch nicht.
-- OpenIMP baut den Hardwarepfad nach. Auf einer T31X geprüft (gültige Bilder, timpsd
-  18,5 % statt 66,9 % CPU) und seitdem **Standard**. `OPENIMP_T31_HW_JPEG=0` schaltet
-  zurück auf den Software-Encoder (Opt-out). Dieser Test prüft das auf weiteren Kameras.
-
----
-
-## 0. Regeln
-
-Die Regeln sind verbindlich. Bei Unklarheit fragst du den Menschen.
-
-1. **Nur ein Testgerät.** Beim Registerstochern kann die AVPU hängen. Dann hilft nur ein
-   Neustart, bei einem Watchdog-Loop eventuell ein Stromzyklus.
-2. **Nichts dauerhaft ändern.**
-   - Kein Flashen, kein Schreiben nach `/etc` oder auf das Overlay.
-   - Neue Dateien nur nach `/tmp`.
-   - Die neue `libimp.so` nur per Bind-Mount einhängen, ein Neustart macht alles rückgängig.
-3. **Git:** Im Repo `Lu-Fi/openimp` nur in Branches schreiben, die du selbst neu anlegst
-   (z. B. `claude/t31-hw-jpeg-results`). Niemals auf `main`, `claude/t31-re`, `claude/t31-hw-jpeg` oder
-   andere bestehende Branches pushen, niemals force-pushen.
-4. **Vor jedem Schritt, der den Streamer stoppt,** kurz Bescheid geben: Die Kamera
-   liefert dann kein Bild.
-5. **Ergebnisse vollständig melden,** auch Fehlschläge. Ein sauber dokumentiertes „geht
-   nicht, weil …“ ist genauso wertvoll.
+- OpenIMP's software encoder costs roughly 0.3 s of CPU per 1080p picture and blocks
+  H.264 submits during that time.
+- The original `libimp` uses a separate hardware core in the AVPU (core 1) for this. It
+  needs ~8 ms and practically does not load the CPU.
+- OpenIMP rebuilds the hardware path. It was checked on a T31X (valid pictures, timpsd
+  18.5 % instead of 66.9 % CPU) and has been the **default** since. `OPENIMP_T31_HW_JPEG=0` switches
+  back to the software encoder (opt-out). This test checks it on more cameras.
 
 ---
 
-## 1. Voraussetzungen prüfen
+## 0. Rules
 
-Auf dem lokalen Rechner:
+The rules are binding. If unsure, ask the human.
+
+1. **One test device only.** While poking at registers the AVPU can hang. Then only a
+   reboot helps; with a watchdog loop possibly a power cycle.
+2. **Change nothing permanently.**
+   - No flashing, no writing to `/etc` or to the overlay.
+   - New files only to `/tmp`.
+   - Mount the new `libimp.so` only with a bind mount; a reboot undoes everything.
+3. **Git:** In the repo `Lu-Fi/openimp`, write only to branches you create yourself
+   (e.g. `claude/t31-hw-jpeg-results`). Never push to `main`, `claude/t31-re`, `claude/t31-hw-jpeg` or
+   other existing branches, never force-push.
+4. **Before every step that stops the streamer,** tell the human briefly: The camera
+   then delivers no picture.
+5. **Report results completely,** including failures. A cleanly documented "does not
+   work because …" is just as valuable.
+
+---
+
+## 1. Check the prerequisites
+
+On the local machine:
 
 ```sh
 git clone https://github.com/Lu-Fi/openimp && cd openimp
@@ -48,66 +48,66 @@ git switch claude/t31-re
 git log --oneline -15
 ```
 
-Der Branch enthält (u. a.):
+The branch contains (among others):
 
-| Commit | Inhalt |
+| Commit | Content |
 |---|---|
-| `t31: allow disabling the AVPU companion stage …` | Schalter `OPENIMP_T31_COMPANION_STAGE=0` |
-| `t31: opt-in hardware JPEG …` | Hardwarepfad; inzwischen Standard, `OPENIMP_T31_HW_JPEG=0` schaltet ihn ab |
-| `t31: log hardware JPEG state …` | `HWJPEG:`-Meldungen im Syslog |
-| `tools: add t31_hwjpeg_probe …` | eigenständiges Testtool |
+| `t31: allow disabling the AVPU companion stage …` | Switch `OPENIMP_T31_COMPANION_STAGE=0` |
+| `t31: opt-in hardware JPEG …` | Hardware path; now the default, `OPENIMP_T31_HW_JPEG=0` turns it off |
+| `t31: log hardware JPEG state …` | `HWJPEG:` messages in syslog |
+| `tools: add t31_hwjpeg_probe …` | standalone test tool |
 
-Auf der Kamera (per SSH):
+On the camera (over SSH):
 
 ```sh
 uname -a; cat /etc/os-release 2>/dev/null | head -5
-grep -i -m1 'soc\|system type' /proc/cpuinfo         # muss T31 sein
-ls -l /dev/avpu                                       # muss existieren
-lsmod | grep -i -E 'avpu|tx.isp'                      # welcher Treiber?
+grep -i -m1 'soc\|system type' /proc/cpuinfo         # must be T31
+ls -l /dev/avpu                                       # must exist
+lsmod | grep -i -E 'avpu|tx.isp'                      # which driver?
 ls -l /usr/lib/libimp.so; strings /usr/lib/libimp.so | grep -i -m3 openimp
 ls /etc/init.d/ | grep -i -E 'timps|prudynt|raptor|rvd|streamer'
-df -h /tmp                                            # Platz für ~2 MB
+df -h /tmp                                            # room for ~2 MB
 ```
 
-Notiere:
+Note down:
 
-- **Userspace:** Läuft OpenIMP (`strings` findet „openimp“) oder die Original-`libimp`?
-- **Streamer:** welcher, und mit welchem Init-Skript?
-- **Befehlszeile des Streamers:** Das Init-Skript lesen (`cat /etc/init.d/S95…`). Stufe 3
-  startet den Streamer von Hand mit zusätzlichen Umgebungsvariablen.
+- **Userspace:** Does OpenIMP run (`strings` finds "openimp") or the original `libimp`?
+- **Streamer:** which one, and with which init script?
+- **Command line of the streamer:** Read the init script (`cat /etc/init.d/S95…`). Stage 3
+  starts the streamer by hand with additional environment variables.
 
-Die Kamera muss die Variante mit offenem Stack haben (thingino-Branch `aperto`, open-tx-isp +
-OpenIMP). Für Stufe 1 reicht jeder T31 mit `/dev/avpu`.
+The camera must have the open-stack variant (thingino branch `aperto`, open-tx-isp +
+OpenIMP). For stage 1, any T31 with `/dev/avpu` is enough.
 
 ---
 
-## 2. Stufe 1: Testtool `t31_hwjpeg_probe` (ohne Streamer)
+## 2. Stage 1: test tool `t31_hwjpeg_probe` (without streamer)
 
-Das Tool kodiert **ein** Bild direkt über den Hardware-Core und prüft dabei die
-Kernannahmen der Rekonstruktion:
+The tool encodes **one** picture directly through the hardware core and checks the
+core assumptions of the reconstruction:
 
-- IRQ-Slot 4
-- Registerblock `0x8400–0x8428`
-- Tabellenformat (EP1)
-- ob die Hardware die JFIF-Header selbst schreibt
+- IRQ slot 4
+- register block `0x8400–0x8428`
+- table format (EP1)
+- whether the hardware writes the JFIF headers itself
 
-### Bauen
+### Build
 
-Statisch, damit es unabhängig von der libc der Kamera läuft. Entweder mit der
-thingino-Toolchain (`<thingino>/output/<branch>/<target>/host/bin/mipsel-linux-gcc`) oder
-mit einem Debian/Ubuntu-Cross-Compiler (`gcc-mipsel-linux-gnu`):
+Static, so that it runs independently of the camera's libc. Either with the
+thingino toolchain (`<thingino>/output/<branch>/<target>/host/bin/mipsel-linux-gcc`) or
+with a Debian/Ubuntu cross compiler (`gcc-mipsel-linux-gnu`):
 
 ```sh
 mipsel-linux-gnu-gcc -O2 -march=mips32r2 -static -Wall -Wextra \
     -o t31_hwjpeg_probe tools/t31_hwjpeg_probe.c
-scp t31_hwjpeg_probe root@<kamera>:/tmp/
+scp t31_hwjpeg_probe root@<camera>:/tmp/
 ```
 
-(Ältere Dropbear-Versionen brauchen `scp -O`.)
+(Older Dropbear versions need `scp -O`.)
 
-### Ausführen
+### Run
 
-Das AVPU-Treibermodul bedient nur **einen** Client, also muss der Streamer gestoppt sein:
+The AVPU driver module serves only **one** client, so the streamer must be stopped:
 
 ```sh
 /etc/init.d/<S95streamer> stop
@@ -118,14 +118,14 @@ dmesg | tail -40 > /tmp/probe-dmesg.txt
 /etc/init.d/<S95streamer> start
 ```
 
-Ohne `-i` kodiert das Tool ein eingebautes Testbild. Oben liegen horizontale
-Graustufen, in der Mitte ein 32-px-Schachbrett, unten vertikale Graustufen, im unteren
-Farbbereich acht Farbbalken. Die Ausgabe landet in `/tmp/hwjpeg.jpg`.
+Without `-i` the tool encodes a built-in test picture. At the top are horizontal
+grey levels, in the middle a 32 px checkerboard, at the bottom vertical grey levels, in the lower
+colour area eight colour bars. The output goes to `/tmp/hwjpeg.jpg`.
 
-### Auswerten
+### Analysis
 
-Die Dateien holen (`scp root@<kamera>:/tmp/{hwjpeg.jpg,hwjpeg-360.jpg,probe-*.txt,ep1.bin} .`)
-und prüfen:
+Fetch the files (`scp root@<camera>:/tmp/{hwjpeg.jpg,hwjpeg-360.jpg,probe-*.txt,ep1.bin} .`)
+and check:
 
 ```sh
 file hwjpeg.jpg
@@ -133,225 +133,225 @@ ffprobe -v error -show_entries stream=width,height,pix_fmt hwjpeg.jpg
 python3 -c "from PIL import Image; im=Image.open('hwjpeg.jpg'); im.load(); print(im.size, im.mode)"
 ```
 
-Dann das Bild ansehen. Stimmen Graustufen, Schachbrett und Farbbalken?
+Then look at the picture. Are grey levels, checkerboard and colour bars right?
 
-| Beobachtung | Bedeutung | Nächster Schritt |
+| Observation | Meaning | Next step |
 |---|---|---|
-| `SOI present`, `EOI present`, Bild korrekt | Rekonstruktion stimmt, die Hardware schreibt die Header | weiter mit Stufe 2 |
-| `no IRQ slot 4 within 2000 ms` | Core startet nicht oder der IRQ kommt nicht an | Registerwerte aus `-v` und `dmesg` melden; mit `-n` (ohne Core-0-Init) wiederholen |
-| IRQ kommt, `len` = 0 oder unplausibel | Core läuft, schreibt aber nichts | `0x8430/0x8438` melden; `/tmp/hwjpeg-stream.raw` holen |
-| `ERROR/overflow bit` | Puffer zu klein oder Tabellen ungültig | mit `-q 30` wiederholen; Ausgabe melden |
-| `no SOI`, aber Daten vorhanden | Hardware liefert nur Entropie-Daten | erste 64 Bytes von `hwjpeg.jpg` als Hexdump melden (`xxd hwjpeg.jpg \| head -4`) |
-| Bild dekodiert, aber Blockartefakte oder falsche Helligkeit | Quant-Tabellen oder Reziproke in falscher Byte-Reihenfolge | `ep1.bin` mitliefern; siehe unten „EP1 gegen Stock“ |
-| Farben vertauscht (Blau/Rot) | U/V-Reihenfolge | melden |
-| Kamera hängt | AVPU blockiert | Neustart; genau notieren, nach welchem Aufruf |
+| `SOI present`, `EOI present`, picture correct | Reconstruction is right, the hardware writes the headers | continue with stage 2 |
+| `no IRQ slot 4 within 2000 ms` | Core does not start or the IRQ does not arrive | Report the register values from `-v` and `dmesg`; repeat with `-n` (without core-0 init) |
+| IRQ arrives, `len` = 0 or implausible | Core runs but writes nothing | Report `0x8430/0x8438`; fetch `/tmp/hwjpeg-stream.raw` |
+| `ERROR/overflow bit` | Buffer too small or tables invalid | Repeat with `-q 30`; report the output |
+| `no SOI`, but data present | Hardware delivers only entropy data | Report the first 64 bytes of `hwjpeg.jpg` as a hex dump (`xxd hwjpeg.jpg \| head -4`) |
+| Picture decodes, but block artefacts or wrong brightness | Quant tables or reciprocals in the wrong byte order | Provide `ep1.bin`; see "EP1 against stock" below |
+| Colours swapped (blue/red) | U/V order | Report |
+| Camera hangs | AVPU blocks | Reboot; note exactly after which call |
 
-Zusätzliche Probe-Läufe, nachdem der Basistest funktioniert:
+Additional probe runs, once the base test works:
 
 ```sh
-/tmp/t31_hwjpeg_probe -s 65536 -o /tmp/overflow.jpg      # erwartet: Overflow-Bit (0x8438 Bit 1)
-/tmp/t31_hwjpeg_probe -c 0x31 -o /tmp/bit8off.jpg         # Bit 8 aus: was ändert sich?
-/tmp/t31_hwjpeg_probe -c 0x00080131 -o /tmp/dri8.jpg      # Restart-Intervall 8 in [31:16]: RST-Marker im JPEG?
+/tmp/t31_hwjpeg_probe -s 65536 -o /tmp/overflow.jpg      # expected: overflow bit (0x8438 bit 1)
+/tmp/t31_hwjpeg_probe -c 0x31 -o /tmp/bit8off.jpg         # bit 8 off: what changes?
+/tmp/t31_hwjpeg_probe -c 0x00080131 -o /tmp/dri8.jpg      # restart interval 8 in [31:16]: RST markers in the JPEG?
 ```
 
-Jeweils Ausgabe, `0x85f8`-Werte und `xxd <datei> | head -4` melden. Ob `dri8.jpg`
-Restart-Marker enthält: `python3 -c "d=open('dri8.jpg','rb').read(); print([hex(d[i+1]) for i in range(len(d)-1) if d[i]==0xff and 0xd0<=d[i+1]<=0xd7][:5], b'\xff\xdd' in d)"`.
+Report the output, the `0x85f8` values and `xxd <file> | head -4` each time. Whether `dri8.jpg`
+contains restart markers: `python3 -c "d=open('dri8.jpg','rb').read(); print([hex(d[i+1]) for i in range(len(d)-1) if d[i]==0xff and 0xd0<=d[i+1]<=0xd7][:5], b'\xff\xdd' in d)"`.
 
-Mit einem echten Kamerabild (optional, OpenIMP-Streamer läuft vorher):
+With a real camera picture (optional, OpenIMP streamer runs beforehand):
 
 ```sh
-# einmal pro Kanal ein Quellbild ablegen lassen
-OPENIMP_T31_DUMP_SOURCE_DIR=/tmp <streamer-befehlszeile> &   # siehe Stufe 3
+# have one source picture saved per channel
+OPENIMP_T31_DUMP_SOURCE_DIR=/tmp <streamer-command-line> &   # see stage 3
 ls -l /tmp/openimp-source-ch*.nv12
-# Streamer stoppen, dann:
+# stop the streamer, then:
 /tmp/t31_hwjpeg_probe -i /tmp/openimp-source-ch0-1920x1080.nv12 -W 1920 -H 1080 -o /tmp/real.jpg
 ```
 
-Das Tool akzeptiert NV12 gepackt (`W*H*3/2` Bytes) oder mit auf 16 Zeilen aufgefüllter
-Luma-Ebene. Hat die Dump-Datei eine andere Größe, wird sie als gepackt gelesen. Die Farben
-sind dann verschoben: bitte melden, mit Dateigröße.
+The tool accepts NV12 packed (`W*H*3/2` bytes) or with the luma plane padded to 16 rows.
+If the dump file has a different size, it is read as packed. The colours
+are then shifted: please report, with the file size.
 
 ---
 
-## 3. Stufe 2: `libimp.so` aus diesem Branch bauen
+## 3. Stage 2: build `libimp.so` from this branch
 
-Die `libimp.so` muss gegen die libc der Kamera (uClibc oder musl) gelinkt werden. Das
-geht nur mit der thingino-Toolchain des passenden Kameraprofils. Gibt es noch keinen
-thingino-Build, den Menschen fragen. Nach einem `aperto`-Build (`make` für das Profil der
-Testkamera) liegt die Toolchain unter `<thingino>/output/<branch>/<target>/host/bin/`.
+`libimp.so` must be linked against the camera's libc (uClibc or musl). This
+only works with the thingino toolchain of the matching camera profile. If there is no
+thingino build yet, ask the human. After an `aperto` build (`make` for the profile of the
+test camera) the toolchain is in `<thingino>/output/<branch>/<target>/host/bin/`.
 
 ```sh
 cd openimp
 TC=<thingino>/output/<branch>/<target>/host/bin/mipsel-linux
 THINGINO_DIR=<thingino> TOOLCHAIN_PREFIX=$TC T31_OUTPUT_DIR=$PWD/build/t31 sh build-t31.sh
 file build/t31/libimp.so
-scp build/t31/libimp.so root@<kamera>:/tmp/libimp-hwjpeg.so
+scp build/t31/libimp.so root@<camera>:/tmp/libimp-hwjpeg.so
 ```
 
-(`build-t31.sh` ruft `$TOOLCHAIN_PREFIX-gcc` und `$TOOLCHAIN_PREFIX-strip` auf.)
+(`build-t31.sh` calls `$TOOLCHAIN_PREFIX-gcc` and `$TOOLCHAIN_PREFIX-strip`.)
 
-Auf der Kamera einhängen, nur bis zum nächsten Neustart:
+Mount it on the camera, only until the next reboot:
 
 ```sh
-cp /usr/lib/libimp.so /tmp/libimp-orig.so           # zum Vergleichen
+cp /usr/lib/libimp.so /tmp/libimp-orig.so           # for comparison
 mount --bind /tmp/libimp-hwjpeg.so /usr/lib/libimp.so
 ```
 
-Zurück: `umount /usr/lib/libimp.so` oder Neustart.
+Undo: `umount /usr/lib/libimp.so` or reboot.
 
 ---
 
-## 4. Stufe 3: Tests im laufenden Streamer
+## 4. Stage 3: tests in the running streamer
 
-Den Streamer für jeden Durchgang **von Hand** starten, damit die Umgebungsvariablen
-sicher ankommen. Die Befehlszeile aus dem Init-Skript übernehmen:
+Start the streamer **by hand** for every pass, so that the environment variables
+reliably arrive. Take the command line from the init script:
 
 ```sh
 /etc/init.d/<S95streamer> stop
-<VAR>=<wert> <streamer-befehlszeile> > /tmp/run-<name>.log 2>&1 &
+<VAR>=<value> <streamer-command-line> > /tmp/run-<name>.log 2>&1 &
 sleep 20
-logread 2>/dev/null | grep -E 'HWJPEG|companion stage' | tail -20   # oder: grep … /tmp/run-<name>.log
+logread 2>/dev/null | grep -E 'HWJPEG|companion stage' | tail -20   # or: grep … /tmp/run-<name>.log
 ```
 
-Prüfen, dass die Variable wirklich gesetzt ist:
+Check that the variable is really set:
 `tr '\0' '\n' < /proc/$(pidof <streamer>)/environ | grep OPENIMP`
 
-### 4a. Companion-Stage A/B (H.264-Regression)
+### 4a. Companion stage A/B (H.264 regression)
 
-Hintergrund: Mit `OPENIMP_T31_HW_JPEG=0` startet OpenIMP nach **jedem** H.264-Frame zusätzlich den JPEG-Core. Die
-Einstellungen dafür sind aus einem Hersteller-Trace abgeschrieben, in dem parallel ein
-JPEG-Kanal lief. Laut Herstellercode gehört das nicht zu H.264. Es schreibt vermutlich in
-einen H.264-Stream-Puffer, der gerade noch beim Streamer liegen kann.
+Background: With `OPENIMP_T31_HW_JPEG=0`, OpenIMP additionally starts the JPEG core after **every** H.264 frame. The
+settings for this were copied from a vendor trace in which a
+JPEG channel ran in parallel. According to the vendor code this does not belong to H.264. It presumably writes into
+an H.264 stream buffer that may still be with the streamer.
 
-Hardware-JPEG (Standard) schaltet die Companion-Stage immer ab. Für diesen Vergleich
-deshalb in beiden Läufen `OPENIMP_T31_HW_JPEG=0` setzen:
+Hardware JPEG (default) always turns the companion stage off. For this comparison,
+set `OPENIMP_T31_HW_JPEG=0` in both runs:
 
-| Lauf | Variablen |
+| Run | Variables |
 |---|---|
-| A | `OPENIMP_T31_HW_JPEG=0` (Companion-Stage an) |
+| A | `OPENIMP_T31_HW_JPEG=0` (companion stage on) |
 | B | `OPENIMP_T31_HW_JPEG=0 OPENIMP_T31_COMPANION_STAGE=0` |
 
-Je Lauf 5 Minuten RTSP abgreifen:
+Capture 5 minutes of RTSP per run:
 
 ```sh
-ffmpeg -rtsp_transport tcp -i rtsp://<kamera>/<pfad> -t 300 -c copy run-A.mp4
+ffmpeg -rtsp_transport tcp -i rtsp://<camera>/<path> -t 300 -c copy run-A.mp4
 ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames run-A.mp4
-ffmpeg -v error -i run-A.mp4 -f null - 2>&1 | head -20      # Dekodierfehler?
+ffmpeg -v error -i run-A.mp4 -f null - 2>&1 | head -20      # decode errors?
 ```
 
-Außerdem `logread` bzw. das Log nach `timeout`, `stall`, `error` durchsuchen und das Bild
-kurz ansehen.
+Also search `logread` or the log for `timeout`, `stall`, `error`, and look at the picture
+briefly.
 
-**Erwartung:** B ist mindestens so gut wie A. Wird B schlechter (weniger Frames, Timeouts,
-Artefakte), ist das ein wichtiger Befund: Dann hängt H.264 wider Erwarten davon ab.
+**Expectation:** B is at least as good as A. If B is worse (fewer frames, timeouts,
+artefacts), that is an important finding: H.264 then depends on it after all.
 
-### 4b. Hardware-JPEG
+### 4b. Hardware JPEG
 
-| Lauf | Variablen |
+| Run | Variables |
 |---|---|
-| C | `OPENIMP_T31_HW_JPEG=0` (Software-JPEG) |
-| D | keine (Hardware-JPEG, Standard) |
+| C | `OPENIMP_T31_HW_JPEG=0` (software JPEG) |
+| D | none (hardware JPEG, default) |
 
-Last erzeugen, von einem anderen Rechner oder auf der Kamera: jede Sekunde ein Snapshot
-bzw. einen MJPEG-Stream offen halten. Den Endpunkt aus der Doku des Streamers nehmen.
+Create load, from another machine or on the camera: one snapshot per second
+or keep an MJPEG stream open. Take the endpoint from the streamer's documentation.
 
 ```sh
 while true; do curl -s -o /dev/null -w '%{http_code} %{size_download} %{time_total}\n' \
-    'http://<kamera>:<port>/<snapshot-pfad>'; sleep 1; done
+    'http://<camera>:<port>/<snapshot-path>'; sleep 1; done
 ```
 
-Messen:
+Measure:
 
-- **CPU:** `top -b -H -n 6 -d 5 > /tmp/top-<lauf>.txt` während der Last
-  (pro Thread, Streamer-Threads und `idle`).
+- **CPU:** `top -b -H -n 6 -d 5 > /tmp/top-<run>.txt` during the load
+  (per thread, streamer threads and `idle`).
 - **Log D:**
   - `HWJPEG: T31 hardware JPEG enabled (OPENIMP_T31_HW_JPEG=0 selects the software encoder)`
   - `HWJPEG: ready, ep1=…`
   - `HWJPEG: 1920x1080 q75 -> … bytes`
-  - oder, als Fehler geloggt, `HWJPEG: disabled for this process, all JPEG frames now use the software encoder: <Grund>`
+  - or, logged as an error, `HWJPEG: disabled for this process, all JPEG frames now use the software encoder: <reason>`
 - **Log C:** `HWJPEG: T31 hardware JPEG off (OPENIMP_T31_HW_JPEG=0), software encoder`
-- **Bilder aus D:** ein paar Snapshots speichern und ansehen. Das Bild muss korrekt sein.
-- **H.264 in D:** wie in 4a kurz prüfen, dass der Stream sauber bleibt.
+- **Pictures from D:** save a few snapshots and look at them. The picture must be correct.
+- **H.264 in D:** check briefly as in 4a that the stream stays clean.
 
-**Erwartung:** In D sinkt die CPU-Last des Streamers während der Snapshots deutlich, die
-JPEGs sind korrekt, und H.264 bleibt stabil.
+**Expectation:** In D the CPU load of the streamer drops clearly during the snapshots, the
+JPEGs are correct, and H.264 stays stable.
 
-**Wenn `disabled: …` erscheint:**
+**If `disabled: …` appears:**
 
-| Grund | Bedeutung |
+| Reason | Meaning |
 |---|---|
-| `repeated completion timeouts` | IRQ 4 kam dreimal in Folge nicht an. Die vorherigen Zeilen `HWJPEG: no IRQ 4 within 200 ms (status …, 0x85f8 …)` mitliefern. |
-| `hardware did not emit a JFIF stream` | kein `FF D8` am Anfang oder kein `FF D9` in den letzten 64 Bytes. Siehe Stufe 1, Header |
-| `implausible length` | siehe Stufe 1 |
-| `DMA allocation failed` / `EP1 … aligned` | Speicher. Die Log-Zeile `HWJPEG: ready …` fehlt, bitte melden. |
+| `repeated completion timeouts` | IRQ 4 did not arrive three times in a row. Provide the preceding lines `HWJPEG: no IRQ 4 within 200 ms (status …, 0x85f8 …)`. |
+| `hardware did not emit a JFIF stream` | no `FF D8` at the start or no `FF D9` in the last 64 bytes. See stage 1, header |
+| `implausible length` | see stage 1 |
+| `DMA allocation failed` / `EP1 … aligned` | Memory. The log line `HWJPEG: ready …` is missing, please report. |
 
-Weitere Meldungen, die **nicht** abschalten:
+Other messages that do **not** turn it off:
 
-- `HWJPEG: no AVC IRQ waiter yet, software until one runs`: Der gemeinsame IRQ-Thread
-  startet mit dem ersten H.264-Kanal. Bis dahin kodiert der Pfad in Software. Erscheint
-  danach nie ein `HWJPEG: … bytes`, läuft kein H.264, bitte melden.
-- `HWJPEG: AVC core not initialised yet, software until it is`: Der AVPU-Core wird mit dem
-  ersten H.264-Frame initialisiert (und nach dem letzten H.264-Kanal wieder abgeschaltet).
-  Solange kodiert der Pfad in Software, ohne das als Timeout zu zählen.
-- `HWJPEG: stream overflow …`: Das eine Bild geht in Software, beim nächsten wird der
-  Stream-Puffer verdoppelt.
-- `HWJPEG: cannot grow the stream buffer to … bytes, keeping …`: Die Verdopplung bekam
-  keinen Speicher. Der alte Puffer bleibt, nur Bilder, die ihn wieder sprengen, gehen in
-  Software. Diese Größe wird nicht erneut versucht.
+- `HWJPEG: no AVC IRQ waiter yet, software until one runs`: The shared IRQ thread
+  starts with the first H.264 channel. Until then the path encodes in software. If
+  no `HWJPEG: … bytes` ever appears afterwards, no H.264 is running; please report.
+- `HWJPEG: AVC core not initialised yet, software until it is`: The AVPU core is initialised with the
+  first H.264 frame (and shut down again after the last H.264 channel).
+  Until then the path encodes in software, without counting that as a timeout.
+- `HWJPEG: stream overflow …`: This one picture goes to software, and for the next one the
+  stream buffer is doubled.
+- `HWJPEG: cannot grow the stream buffer to … bytes, keeping …`: The doubling got
+  no memory. The old buffer stays, and only pictures that overflow it again go to
+  software. This size is not tried again.
 
-**Wenn die Bilder aus D kaputt aussehen** (Streifen, alte Bildinhalte, Blockmüll), der
-Probe aus Stufe 1 aber saubere Bilder liefert: Durchgang D mit zusätzlich
-`OPENIMP_T31_HW_JPEG_SRC_COHERENT=1` wiederholen. Dann liegt auch das Quellbild in
-kohärentem statt gecachtem Speicher. Wird es damit sauber, ist der Cache-Flush des
-gecachten rmem auf T31 die Ursache. Das ist ein wichtiger Befund.
+**If the pictures from D look broken** (stripes, old picture content, block garbage) but the
+probe from stage 1 delivers clean pictures: Repeat pass D with additionally
+`OPENIMP_T31_HW_JPEG_SRC_COHERENT=1`. Then the source picture also lies in
+coherent instead of cached memory. If it becomes clean with that, the cache flush of the
+cached rmem on T31 is the cause. That is an important finding.
 
-Die Stufe 3a (Companion-Stage) vor 3b auswerten: Hardware-JPEG (Standard) schaltet die
-Companion-Stage immer mit ab, sonst lassen sich H.264-Auffälligkeiten nicht zuordnen.
-
----
-
-## 5. Ergebnisbericht
-
-Einen Bericht `T31_HW_JPEG_RESULTS.md` schreiben. Entweder an den Menschen übergeben oder
-auf einem **neuen eigenen** Branch `claude/t31-hw-jpeg-results` im Fork pushen (Regel 3).
-
-Inhalt:
-
-1. **Gerät:**
-   - Kameramodell, SoC-Variante (`/proc/cpuinfo`)
-   - thingino-Stand, Kernel
-   - Streamer
-   - libimp: OpenIMP-Commit bzw. Original
-2. **Stufe 1:**
-   - komplette Ausgaben von `t31_hwjpeg_probe` (1080p und 360p)
-   - Bewertung der Bilder
-   - Hexdump der ersten 64 Bytes
-   - `dmesg`-Auszug
-3. **Stufe 3a:** Frames, Fehler und Auffälligkeiten A gegen B.
-4. **Stufe 3b:**
-   - CPU-Werte C gegen D (Tabelle)
-   - `HWJPEG:`-Logzeilen
-   - JPEG-Größen und Bildqualität
-   - H.264-Stabilität
-5. **Alles Unerwartete,** mit genauem Zeitpunkt und dem Befehl davor.
-
-Dateien (JPEGs, `ep1.bin`, Logs, `top`-Ausgaben) beilegen bzw. mitcommitten, keine Videos.
+Evaluate stage 3a (companion stage) before 3b: Hardware JPEG (default) always turns off
+the companion stage as well; otherwise H.264 anomalies cannot be attributed.
 
 ---
 
-## Anhang: EP1 gegen Stock abgleichen (falls Tabellen verdächtig)
+## 5. Result report
 
-Wenn das Bild dekodiert, aber falsch aussieht, liegt der Fehler meist im Tabellenpuffer:
+Write a report `T31_HW_JPEG_RESULTS.md`. Either hand it to the human or
+push it to a **new branch of your own**, `claude/t31-hw-jpeg-results`, in the fork (rule 3).
 
-- Byte-Reihenfolge der Quant-Bytes
-- Reziproke
-- Kopfworte bei `0x180`
+Content:
 
-Der sicherste Abgleich ist ein EP1-Dump der Original-`libimp` bei laufendem JPEG-Kanal.
+1. **Device:**
+   - camera model, SoC variant (`/proc/cpuinfo`)
+   - thingino revision, kernel
+   - streamer
+   - libimp: OpenIMP commit or original
+2. **Stage 1:**
+   - complete outputs of `t31_hwjpeg_probe` (1080p and 360p)
+   - assessment of the pictures
+   - hex dump of the first 64 bytes
+   - `dmesg` excerpt
+3. **Stage 3a:** frames, errors and anomalies, A against B.
+4. **Stage 3b:**
+   - CPU values C against D (table)
+   - `HWJPEG:` log lines
+   - JPEG sizes and picture quality
+   - H.264 stability
+5. **Anything unexpected,** with the exact time and the command before it.
 
-1. Die Adresse steht im Register `0x8418` (per `devmem` oder `tools/avpu_peek.c` lesen,
-   während die Original-`libimp` JPEG erzeugt).
-2. Die 0x790 Bytes ab dieser physischen Adresse sichern (`devmem` wortweise oder
+Attach (or commit along) the files (JPEGs, `ep1.bin`, logs, `top` outputs), no videos.
+
+---
+
+## Appendix: comparing EP1 against stock (if tables are suspect)
+
+If the picture decodes but looks wrong, the error is usually in the table buffer:
+
+- byte order of the quant bytes
+- reciprocals
+- header words at `0x180`
+
+The safest comparison is an EP1 dump of the original `libimp` while a JPEG channel is running.
+
+1. The address is in register `0x8418` (read with `devmem` or `tools/avpu_peek.c`
+   while the original `libimp` produces JPEG).
+2. Save the 0x790 bytes from this physical address (`devmem` word by word or
    `tools/t31_phys_dump.c`).
-3. Mit `-E stock-ep1.bin` an `t31_hwjpeg_probe` übergeben. Ist das Bild damit korrekt, per
-   `cmp -l ep1.bin stock-ep1.bin` die Unterschiede zum eigenen Generator melden.
+3. Pass it to `t31_hwjpeg_probe` with `-E stock-ep1.bin`. If the picture is correct with that, report the differences to our own generator with
+   `cmp -l ep1.bin stock-ep1.bin`.
