@@ -101,8 +101,8 @@ Per SoC: C functions compiled into the open module that are real, readable C and
 | SoC | readable / all functions | progress | machine-like lines | note |
 |---|--:|---|--:|---|
 | COMMON | 235/236 (99.6 %; before 235) | `████████████████████` | 2.1 % (before 2.1 %) | inventory only |
-| T10 | 814/1187 (68.6 %; before 700) | `██████████████░░░░░░` | 42.3 % (before 45.2 %) | T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-4 merged (system_tab, FSM family, process_interrupt, small helpers), host oracles + vendor vdiff + T10 cam stream proof per batch (openimp #539); as of 2026-11-14 |
-| T20 | 681/1033 (65.9 %; before 681) | `█████████████░░░░░░░` | 46.7 % (before 46.7 %) | inventory only |
+| T10 | 819/1188 (68.9 %; before 700) | `██████████████░░░░░░` | 40.8 % (before 45.2 %) | T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-4 + ISP context layout merged (system_tab, FSM family, process_interrupt, small helpers, struct t20_isp_ctx with cmos/AE interrupt handlers), host oracles + vendor vdiff + T10 cam stream proof per batch (cam run of the context-layout batch pending) (openimp #539); as of 2026-11-14 |
+| T20 | 685/1033 (66.3 %; before 685) | `█████████████░░░░░░░` | 45.1 % (before 45.1 %) | inventory only |
 | T21 | 143/759 (18.8 %; before 143) | `████░░░░░░░░░░░░░░░░` | 82.1 % (before 82.1 %) | inventory only |
 | T23 | 691/1926 (35.9 %; before 691) | `███████░░░░░░░░░░░░░` | 83.4 % (before 83.4 %) | inventory only |
 | T30 | 338/982 (34.4 %; before 338) | `███████░░░░░░░░░░░░░` | 75.6 % (before 75.6 %) | inventory only |
