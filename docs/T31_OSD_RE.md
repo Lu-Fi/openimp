@@ -1,5 +1,7 @@
 # T31 OSD in the vendor libimp: reverse engineering and implementation plan for OpenIMP
 
+> **Status (2026-11-14):** OSD on T31 is now drawn by the IPU backend, on by default, `OPENIMP_T31_OSD=0` turns it off (`src/t31/openimp_t31_services.c:122,146`). The statements below that OpenIMP draws nothing on T31 are the state of 2026-09-29; the rest is historical research.
+
 Status: 2026-09-29. Pure research, no repository was changed.
 
 Markings: **[V]** = verified (source read directly), **[I]** = inferred/plausible,

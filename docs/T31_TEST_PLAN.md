@@ -1,5 +1,7 @@
 # Test plan for the branch `claude/t31-re` (for a local Claude Code session)
 
+> **Status (2026-11-14):** The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history. OSD on T31 is now drawn by the IPU backend, on by default, `OPENIMP_T31_OSD=0` turns it off (`src/t31/openimp_t31_services.c:122,146`). Hardware JPEG is now the default, `OPENIMP_T31_HW_JPEG=0` selects software JPEG (`src/t40/openimp_p2_encoder.c:681`, `src/t40/codec-t40.c:11262`); the companion stage is always off while hardware JPEG is on (`src/t40/codec-t40.c:11794-11809`). Statements below that say "OSD invisible" or "HW JPEG opt-in" are historical.
+
 This document is the **entry point**. It says what is tested, in which order,
 on which camera, and what is reported back. The individual steps are in the linked
 guides. Everything here has so far only been built and statically checked; **nothing has run

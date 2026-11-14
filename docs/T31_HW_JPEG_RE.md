@@ -1,5 +1,7 @@
 # T31 hardware JPEG in the Allegro AVPU: reverse engineering report for OpenIMP
 
+> **Status (2026-11-14):** Hardware JPEG is now the default, `OPENIMP_T31_HW_JPEG=0` selects software JPEG (`src/t40/openimp_p2_encoder.c:681`, `src/t40/codec-t40.c:11262`); the companion stage is always off while hardware JPEG is on (`src/t40/codec-t40.c:11794-11809`). The remainder (including the companion-stage side finding) is the state of 2026-09-29 and historical.
+
 Status: 2026-09-29. The basis is the Binary Ninja HLIL of the T31 `libimp.so`
 (`libimp.so_hlil.txt`, referred to below as `L<line>` or
 `0x<address>`), the OpenIMP source state at commit `9cab219`,

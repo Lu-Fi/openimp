@@ -1,5 +1,7 @@
 # T31 H.264 stability: test guide (branch `claude/t31-avc-stability`)
 
+> **Status (2026-11-14):** The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history. Hardware JPEG is now the default, `OPENIMP_T31_HW_JPEG=0` selects software JPEG (`src/t40/openimp_p2_encoder.c:681`, `src/t40/codec-t40.c:11262`); the companion stage is always off while hardware JPEG is on (`src/t40/codec-t40.c:11794-11809`).
+
 For a local Claude Code session with SSH access to a **T31 test camera** with the open
 stack (open-tx-isp + OpenIMP). The rules from
 [`T31_TEST_PLAN.md`](T31_TEST_PLAN.md), section 0, apply:

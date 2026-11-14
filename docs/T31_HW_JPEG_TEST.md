@@ -1,5 +1,7 @@
 # T31 hardware JPEG: test guide for a local Claude Code session
 
+> **Status (2026-11-14):** Hardware JPEG is now the default, `OPENIMP_T31_HW_JPEG=0` selects software JPEG (`src/t40/openimp_p2_encoder.c:681`, `src/t40/codec-t40.c:11262`); the companion stage is always off while hardware JPEG is on (`src/t40/codec-t40.c:11794-11809`). Sections that treat HW JPEG as opt-in (`OPENIMP_T31_HW_JPEG=1`) are historical. The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history.
+
 This guide is meant for a Claude Code session that runs on a machine in the
 same network as a **T31 test camera** and can reach it over SSH. It
 assumes no knowledge from earlier sessions.

@@ -1,5 +1,7 @@
 # T31 OSD via the IPU: test guide (stage 1, test tool)
 
+> **Status (2026-11-14):** OSD on T31 is now drawn by the IPU backend, on by default, `OPENIMP_T31_OSD=0` turns it off (`src/t31/openimp_t31_services.c:122,146`). Stage 2 text about `OPENIMP_T31_OSD=1` as opt-in is historical. The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history.
+
 For a local Claude Code session with SSH access to a **T31 test camera**. The same rules apply
 as in [`T31_HW_JPEG_TEST.md`](T31_HW_JPEG_TEST.md), section 0:
 - one test device only

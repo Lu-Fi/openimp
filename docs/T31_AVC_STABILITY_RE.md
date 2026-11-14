@@ -1,5 +1,7 @@
 # OpenIMP T31 AVC path: causes of instability (RE report)
 
+> **Status (2026-11-14):** The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history.
+
 > Note: Audit report, created on `claude/t31-re` (commit `e7cf6b9`). The line numbers refer to this state; the fixes are on `claude/t31-avc-stability`.
 
 Status: 2026-09-29. The working tree `/home/user/openimp-wt`, branch `claude/t31-re`, commit `e7cf6b9` was examined.

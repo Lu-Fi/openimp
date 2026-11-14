@@ -1,5 +1,7 @@
 # Reverse engineering on the camera: recording traces of the original libimp
 
+> **Status (2026-11-14):** The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history.
+
 Guide for a **local Claude Code session** that accesses a T31 test camera over SSH.
 Goal: record ground truth from the vendor's original `libimp`, so that OpenIMP
 reconstructions are backed by evidence instead of guesses.

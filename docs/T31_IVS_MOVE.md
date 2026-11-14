@@ -1,5 +1,7 @@
 # T31: IVS motion detection ("move" and "base move") in OpenIMP
 
+> **Status (2026-11-14):** The `claude/t31-*` branches named here were merged into `next` and deleted (CHANGELOG.md line 9); read them as history.
+
 Status: branch `claude/t31-ivs-move`. Built and tested under qemu, **has not yet run on a
 camera.** Section 6 describes the device test for a local Claude session.
 

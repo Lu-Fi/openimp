@@ -1,5 +1,7 @@
 # T31 hardware JPEG: addendum to the RE report and review of the implementation
 
+> **Status (2026-11-14):** Hardware JPEG is now the default, `OPENIMP_T31_HW_JPEG=0` selects software JPEG (`src/t40/openimp_p2_encoder.c:681`, `src/t40/codec-t40.c:11262`); the companion stage is always off while hardware JPEG is on (`src/t40/codec-t40.c:11794-11809`). The review findings B1-B9 below are the state of 2026-09-29 and historical.
+
 Status: 2026-09-29. Refers to `docs/T31_HW_JPEG_RE.md` and the branch
 `claude/t31-hw-jpeg` (HEAD `01e7eff`) in the fork `Lu-Fi/openimp`. Research only: No
 repository files were changed.
