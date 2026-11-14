@@ -8,6 +8,12 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T33 RAW snapshot and LDC requests reach the open module (#491; QEMU only)
+
+- open-tx-isp next serves `0xc004548e`/`0xc004548f`, the online LDC requests `0xc00454b9..bb` and `/dev/offline_ldc` on T32/T33 (see its CHANGELOG). With it, T33 `IMP_FrameSource_SnapRaw_Start/_End` return 0 with the vendor sizes and `IMP_ISP_LDC_OfflineInit(1)` opens the node, as on the vendor module (QEMU apitest t33f1, t33l1). Cells T33 `FrameSource_SnapRaw_Start/_End`, `ISP_LDC_OfflineInit` aud -> qemu.
+- New explicit apitest case `t33drv` (T33): the module requests straight on the driver (online LUT memory, attribute, IQ-bin parameters; one offline rotation job checked pixel by pixel), same lines on the open and the vendor module. `tools/apitest/build-device.sh` links `at_t33.c` for PLATFORM=T33 (the T33 cases did not link).
+- Still open (#491): the library does not issue the online LUT requests at `IMP_ISP_AddSensor` (LUT fill / generation not ported) and has no offline job protocol (real job attributes f001).
+
 ## 2026-11-13: T40/T41 GOP restart as the vendor glue: after GOP/rate changes and on a day/night picture change (#484, #485)
 
 - `src/t40/codec-t40.c` (T40/T41): `AL_Codec_Encode_RestartGop` is no longer a plain IDR request: as the vendor `AL_Common_Encoder_RestartGop` (T41 1.2.6 0xdbf08) the next picture is an IDR and the periodic IDR counts from it (`RequestIDR` keeps the running count, unchanged).

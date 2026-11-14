@@ -666,10 +666,11 @@ done:
  * (f009), opens the node (f008 when it cannot); OfflineInit(0) closes it when no job is left;
  * CreateJob f009 (mode) / f008 (not initialised) / f004 (NULL); DestroyJob, SubmitTask,
  * UpdateLutToJob f008 (not initialised) / f004 (NULL or unknown job).
- * Not as the vendor (driver gap, open-tx-isp): the open T32/T33 module serves neither the online
- * LUT requests 0xc00454b9..bb nor the offline_ldc node, so the online state is kept but not
- * applied at AddSensor, and the offline calls end in f008 at OfflineInit as on a vendor stack
- * without the node.  The job protocol behind an open node is not implemented (f001). */
+ * Open module (open-tx-isp, #491): the T33 module answers the online LUT requests 0xc00454b9..bb
+ * and registers /dev/offline_ldc as the vendor module (ioctls 0 / 1 LUT memory, 2 one job), so
+ * OfflineInit(1) opens the node.  Not as the vendor yet: the online state is kept but the requests
+ * are not issued at AddSensor (LUT fill / generation not ported), and the job protocol behind the
+ * open node is not implemented (f001). */
 
 static struct {
     int init, func, size, angle;

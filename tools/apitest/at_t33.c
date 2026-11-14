@@ -593,7 +593,7 @@ static void t33_f1_ex_pm(void)
 /* ---- case "t33l1": LDC online / offline (batch L1, #54 / #39) ---------------------------------------------------------------------
  * Online state on VI 1 (no sensor there, so "before AddSensor"): mode record online, Init argument checks, strength set / read back,
  * LUT name refused after a strength; VI 0 (sensor added) refused.  Offline: mode record offline, OfflineInit opens /dev/offline_ldc
- * (vendor module: the node exists; open T33 module: not yet, f008), CreateJob(NULL), OfflineInit(0); mode back to online. */
+ * (vendor module and open T33 module since #491: the node exists), CreateJob(NULL), OfflineInit(0); mode back to online. */
 extern int IMP_ISP_LDC_OnlineSetStrength(IMPVI_NUM num, double s) __attribute__((weak));
 extern int IMP_ISP_LDC_OnlineGetStrength(IMPVI_NUM num, double *s) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineInit(int mode) __attribute__((weak));
@@ -745,6 +745,98 @@ void cs_t33i2d(void)
     rep(FN(IMP_FrameSource_SetI2dAttr), rg, V_PASS, "ch2 320x192 i2d rotate 90 in the attribute: create 0x%x, GetI2dAttr 0x%x {%d,%d,%d,%d,%d}, enable 0x%x, depth 0x%x, frame 0x%x %ux%u (%s), release 0x%x; ch1 flows %d",
         X(rc), X(rgi), g.i2d_enable, g.flip_enable, g.mirr_enable, g.rotate_enable, g.rotate_angle, X(re), X(rd), X(rg), w, h,
         w == 192 && h == 320 ? "rotated" : "not rotated", X(rr), cases_flow());
+}
+
+/* ---- case "t33drv": the module requests of openimp #491 straight on the driver (explicit only) ---------------------------------------
+ * /dev/tx-isp online LDC requests (0xc00454b9 LUT memory for LDC 16x16 at the sensor size, 0xc00454ba online attribute, 0xc00454bb
+ * IQ-bin LDC parameters) and one /dev/offline_ldc round trip: LUT-memory blocks (ioctl 0) as the planes of a 64x32 NV12 picture, a
+ * rotation job (ioctl 2, func 1, angle code 2 = 180 degrees), the turned Y plane checked pixel by pixel, the blocks freed (ioctl 1).
+ * Printed as [T] lines (no API cell): the same lines on the vendor module and on the open module. */
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+
+static void *drv_map(int mem, uint32_t pa, uint32_t len, void **base, uint32_t *mlen)
+{
+    uint32_t off = pa & 0xfff;
+
+    *mlen = (len + off + 0xfff) & ~0xfffu;
+    *base = mmap(NULL, *mlen, PROT_READ | PROT_WRITE, MAP_SHARED, mem, (off_t)(pa - off));
+    return *base == MAP_FAILED ? NULL : (char *)*base + off;
+}
+
+void cs_t33drv(void)
+{
+    enum { W = 64, H = 32 };
+    uint32_t b[22], blk[5][5], task[10];
+    int fd = open("/dev/tx-isp", O_RDWR), lfd, mem, i, r, bad = -1, x, y;
+    void *base[4] = { 0 };
+    uint32_t mlen[4] = { 0 };
+    uint8_t *p[4] = { 0 };
+
+    if (fd < 0) {
+        printf("[T] t33drv: /dev/tx-isp: %s\n", strerror(errno));
+        return;
+    }
+    memset(b, 0, sizeof(b));
+    b[0] = 0; b[1] = 4; b[2] = 16; b[6] = 1u << 16;
+    r = ioctl(fd, 0xc00454b9, b);
+    printf("[T] t33drv: 0xc00454b9 LDC 16x16 one LUT: ret %d errno %d, size %u, pa 0x%x / 0x%x\n", r, r ? errno : 0, b[9], b[10], b[11]);
+    memset(b, 0, sizeof(b));
+    b[0] = 0; b[1] = 4; b[2] = 16; b[5] = 1080u << 16 | 1920; b[7] = 0x1000;
+    r = ioctl(fd, 0xc00454ba, b);
+    printf("[T] t33drv: 0xc00454ba online attribute LDC 16 1920x1080: ret %d errno %d\n", r, r ? errno : 0);
+    memset(b, 0xa5, sizeof(b));
+    b[0] = 0;
+    r = ioctl(fd, 0xc00454bb, b);
+    printf("[T] t33drv: 0xc00454bb LDC parameters: ret %d errno %d, word1 %u, word2 0x%x\n", r, r ? errno : 0, b[1], b[2]);
+    close(fd);
+
+    lfd = open("/dev/offline_ldc", O_RDWR);
+    if (lfd < 0) {
+        printf("[T] t33drv: /dev/offline_ldc: %s\n", strerror(errno));
+        return;
+    }
+    mem = open("/dev/mem", O_RDWR | O_SYNC);
+    for (i = 0; i < 4; i++) {           /* Y in, UV in, Y out, UV out */
+        memset(blk[i], 0, sizeof(blk[i]));
+        blk[i][2] = i & 1 ? W * H / 2 : W * H;
+        blk[i][3] = 4;
+        r = ioctl(lfd, 0, blk[i]);
+        if (r || !blk[i][1] || mem < 0 || !(p[i] = drv_map(mem, blk[i][1], blk[i][2], &base[i], &mlen[i])))
+            break;
+    }
+    printf("[T] t33drv: offline_ldc ioctl 0 x4: ret %d, pa 0x%x 0x%x 0x%x 0x%x\n", r, blk[0][1], blk[1][1], blk[2][1], blk[3][1]);
+    if (i == 4) {
+        for (y = 0; y < H; y++)
+            for (x = 0; x < W; x++)
+                p[0][y * W + x] = (uint8_t)(x * 4 + y);
+        memset(p[1], 0x80, W * H / 2);
+        memset(p[2], 0, W * H);
+        memset(task, 0, sizeof(task));
+        task[0] = (uint32_t)H << 16 | W;
+        task[1] = blk[0][1]; task[2] = blk[1][1]; task[3] = blk[2][1]; task[4] = blk[3][1];
+        task[5] = (uint32_t)W << 16 | W;  /* strides in / out */
+        task[7] = 1;                        /* I2D */
+        task[9] = 2;                        /* 180 degrees */
+        r = ioctl(lfd, 2, task);
+        for (y = 0; y < H && bad < 0; y++)
+            for (x = 0; x < W && bad < 0; x++)
+                if (p[2][y * W + x] != (uint8_t)((W - 1 - x) * 4 + (H - 1 - y)))
+                    bad = y * W + x;
+        printf("[T] t33drv: offline_ldc ioctl 2 rotate 180 64x32: ret %d, Y out %s (first bad %d: 0x%02x)\n", r,
+               bad < 0 ? "turned" : "WRONG", bad, bad < 0 ? 0 : p[2][bad]);
+    }
+    for (i = 0; i < 4; i++) {
+        if (base[i])
+            munmap(base[i], mlen[i]);
+        if (blk[i][1])
+            printf("[T] t33drv: offline_ldc ioctl 1 free 0x%x: ret %d\n", blk[i][1], ioctl(lfd, 1, blk[i]));
+    }
+    if (mem >= 0)
+        close(mem);
+    close(lfd);
+    printf("[T] t33drv: frames flow %d\n", cases_flow());
 }
 
 void cs_t33f1(void)

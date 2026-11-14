@@ -21041,15 +21041,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33f1/t33l1/t33drv 2026-11-14 QEMU -M ingenic-t33 (no camera) on the open tx-isp-t33.ko (open-tx-isp #491 driver change) and the vendor module (audit night1114/o1/runs)"
       },
-      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). Not proven: the open T32/T33 module does not serve 0xc004548e/0xc004548f yet (ENOTTY) and the QEMU rmem is too small for OpenIMP's own 4 MB buffer (vendor uses its reuse block); driver issue #491."
+      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). T33 2026-11-14 (#491): the open T33 module serves 0xc004548f (MSCA channels stop / restart, ispcore event 0x100000b) and 0xc004548e (raw WDMA 0x20054/0x20060/0x20058 armed, completed by the WDMA frame-done interrupt, 2000-jiffy wait, always 0) as the vendor module: SnapRaw_Start 0 (size 4147200), _End 0, frames flow afterwards, in QEMU exactly as on the vendor module (QEMU has no T33 WDMA model: both wait the 20 s and return 0; the RAW content is unproven until a T33 camera). T32 stays aud: the open T32 module now has the vendor VIC-MDMA path (tx_isp_vic_snap_raw) but no T32 QEMU proof; vendor T32 refuses RAW type 1 in lib_tisp_vic_set_par."
     },
     "FrameSource_SnapRaw_Start": {
       "area": "FrameSource",
@@ -21061,15 +21061,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33f1/t33l1/t33drv 2026-11-14 QEMU -M ingenic-t33 (no camera) on the open tx-isp-t33.ko (open-tx-isp #491 driver change) and the vendor module (audit night1114/o1/runs)"
       },
-      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). Not proven: the open T32/T33 module does not serve 0xc004548e/0xc004548f yet (ENOTTY) and the QEMU rmem is too small for OpenIMP's own 4 MB buffer (vendor uses its reuse block); driver issue #491."
+      "note": "T32/T33 (2026-11-13, batch F1, src/t32/openimp_t32_isp_ctl.c): flow and codes as vendor 2.0.2.1 (sensor attr, line/frame size: vendor run gives 4147200 for cv2005 type 1 = OpenIMP formula, encoders stopped/restarted, module bit 11, 0xc004548f/0xc004548e). T33 2026-11-14 (#491): the open T33 module serves 0xc004548f (MSCA channels stop / restart, ispcore event 0x100000b) and 0xc004548e (raw WDMA 0x20054/0x20060/0x20058 armed, completed by the WDMA frame-done interrupt, 2000-jiffy wait, always 0) as the vendor module: SnapRaw_Start 0 (size 4147200), _End 0, frames flow afterwards, in QEMU exactly as on the vendor module (QEMU has no T33 WDMA model: both wait the 20 s and return 0; the RAW content is unproven until a T33 camera). T32 stays aud: the open T32 module now has the vendor VIC-MDMA path (tx_isp_vic_snap_raw) but no T32 QEMU proof; vendor T32 refuses RAW type 1 in lib_tisp_vic_set_par."
     },
     "FrameSource_UpdateChnLut": {
       "area": "FrameSource",
@@ -21309,7 +21309,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineCreateJobExt": {
       "area": "ISP tuning",
@@ -21328,7 +21328,8 @@
       "auto": true,
       "ref": {
         "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+      },
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineDestroyJob": {
       "area": "ISP tuning",
@@ -21348,7 +21349,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineInit": {
       "area": "ISP tuning",
@@ -21360,15 +21361,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "aud",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33f1/t33l1/t33drv 2026-11-14 QEMU -M ingenic-t33 (no camera) on the open tx-isp-t33.ko (open-tx-isp #491 driver change) and the vendor module (audit night1114/o1/runs)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineSubmitTask": {
       "area": "ISP tuning",
@@ -21388,7 +21389,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OfflineUpdateLutToJob": {
       "area": "ISP tuning",
@@ -21408,7 +21409,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor; the open T32/T33 module has no /dev/offline_ldc yet, so OfflineInit(1) answers f008 and the job calls f008 (vendor with its node: 0 / f004). Job protocol behind an open node not implemented (driver issue #491). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
+      "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU)."
     },
     "ISP_LDC_OnlineGetFunc": {
       "area": "ISP tuning",
@@ -21525,7 +21526,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). 2026-11-14 (#491): the open T33 module answers the online LUT requests 0xc00454b9 (LUT memory, same size as the vendor's: 33672 B for LDC 16x16 at 1920x1080), 0xc00454ba and 0xc00454bb like the vendor module (apitest t33drv). Still cache: the library does not issue them at AddSensor yet (LUT fill / generation not ported), and neither module applies the attribute unless the ISP was initialised with LDC on."
     },
     "ISP_LDC_OnlineSetLut": {
       "area": "ISP tuning",
