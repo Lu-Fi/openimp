@@ -1,137 +1,136 @@
-# T31 OSD über die IPU: Testanleitung (Stufe 1, Testtool)
+# T31 OSD via the IPU: test guide (stage 1, test tool)
 
-Für eine lokale Claude-Code-Session mit SSH-Zugang zu einer **T31-Testkamera**. Es gelten
-dieselben Regeln wie in [`T31_HW_JPEG_TEST.md`](T31_HW_JPEG_TEST.md), Abschnitt 0:
-- nur ein Testgerät
-- nichts dauerhaft ändern, Dateien nur nach `/tmp`
-- nur in selbst angelegte neue Branches pushen
-- Bescheid geben, bevor der Streamer gestoppt wird
+For a local Claude Code session with SSH access to a **T31 test camera**. The same rules apply
+as in [`T31_HW_JPEG_TEST.md`](T31_HW_JPEG_TEST.md), section 0:
+- one test device only
+- change nothing permanently, write files only to `/tmp`
+- push only to new branches you created yourself
+- tell the human before the streamer is stopped
 
-Hintergrund: [`T31_OSD_RE.md`](T31_OSD_RE.md). Kurz gesagt:
-- Die Original-`libimp` blendet Text und Logos (BGRA-Bitmaps) sowie Abdeckflächen mit dem
-  IPU-Block (`/dev/ipu`) direkt in das NV12-Bild.
-- OpenIMP zeichnet auf T31 bisher gar nichts.
-- Dieses Tool prüft die rekonstruierte IPU-Ansteuerung und misst die Kosten. Mit den
-  Ergebnissen wird das OSD-Backend in OpenIMP gebaut.
+Background: [`T31_OSD_RE.md`](T31_OSD_RE.md). In short:
+- The original `libimp` blends text and logos (BGRA bitmaps) and cover areas directly into the
+  NV12 picture with the IPU block (`/dev/ipu`).
+- OpenIMP has drawn nothing at all on T31 so far.
+- This tool checks the reconstructed IPU control and measures the cost. The results are used to
+  build the OSD backend in OpenIMP.
 
-## Bauen
+## Build
 
 ```sh
 git clone https://github.com/Lu-Fi/openimp && cd openimp
 git switch claude/t31-re
 mipsel-linux-gnu-gcc -O2 -march=mips32r2 -static -Wall -Wextra \
-    -o t31_ipu_osd_probe tools/t31_ipu_osd_probe.c        # oder die thingino-Toolchain
-scp t31_ipu_osd_probe root@<kamera>:/tmp/
+    -o t31_ipu_osd_probe tools/t31_ipu_osd_probe.c        # or the thingino toolchain
+scp t31_ipu_osd_probe root@<camera>:/tmp/
 ```
 
-## Ausführen
+## Run
 
-Das Tool holt sich DMA-Speicher über `/dev/avpu`, deshalb muss der Streamer gestoppt sein:
+The tool gets DMA memory through `/dev/avpu`, so the streamer must be stopped:
 
 ```sh
-ls -l /dev/ipu                                   # muss existieren (CONFIG_JZ_IPU)
+ls -l /dev/ipu                                   # must exist (CONFIG_JZ_IPU)
 /etc/init.d/<S95streamer> stop; sleep 1
 /tmp/t31_ipu_osd_probe -v -n 200 2>&1 | tee /tmp/ipu-probe.txt
 dmesg | tail -30 > /tmp/ipu-dmesg.txt
 /etc/init.d/<S95streamer> start
 ```
 
-Das Tool blendet vier Ebenen in ein 640×368-Testbild (Graustufenverlauf):
+The tool blends four layers into a 640×368 test picture (grey-scale gradient):
 
-| Kanal | Inhalt | Position |
+| Channel | Content | Position |
 |---|---|---|
-| 0 | BGRA-Bitmap: 5 Farbbänder, Alpha-Rampe 0…255 von links nach rechts | (32, 32) |
-| 1 | dieselbe Bitmap, Pixel-Alpha × globales Alpha 128 | (32, 128) |
-| 2 | Abdeckfläche rot, deckend | (224, 32) |
-| 3 | Abdeckfläche blau, Alpha 128 | (224, 128) |
+| 0 | BGRA bitmap: 5 colour bands, alpha ramp 0…255 from left to right | (32, 32) |
+| 1 | same bitmap, pixel alpha × global alpha 128 | (32, 128) |
+| 2 | cover area red, opaque | (224, 32) |
+| 3 | cover area blue, alpha 128 | (224, 128) |
 
-Mit `-n 200` misst es außerdem:
-- einen IPU-Durchlauf mit 4 Ebenen
-- 4 Durchläufe mit je 1 Ebene
-- den 1-MB-Cache-Flush, den die Original-`libimp` pro Region und Frame macht
+With `-n 200` it also measures:
+- one IPU run with 4 layers
+- 4 runs with 1 layer each
+- the 1 MB cache flush that the original `libimp` does per region and frame
 
-Scheitert der kombinierte Lauf, jede Ebene einzeln testen: `-l 1`, `-l 2`, `-l 4`, `-l 8`
-(jeweils mit `-d /tmp/l<n>` in ein eigenes Verzeichnis).
+If the combined run fails, test each layer on its own: `-l 1`, `-l 2`, `-l 4`, `-l 8`
+(each with `-d /tmp/l<n>` into its own directory).
 
-## Auswerten (auf dem PC)
+## Analysis (on the PC)
 
 ```sh
-scp 'root@<kamera>:/tmp/ipu-*' ./ipu/
-python3 tools/ipu_osd_analyze.py ./ipu            # braucht numpy, für PNGs Pillow
+scp 'root@<camera>:/tmp/ipu-*' ./ipu/
+python3 tools/ipu_osd_analyze.py ./ipu            # needs numpy, Pillow for PNGs
 ```
 
-Das Skript zeigt:
-- wo sich das Bild verändert hat (je Ebene an der richtigen Stelle, außerhalb nichts)
-- welche Farbumrechnung und Alpha-Rundung die gemessenen Werte am besten erklären
-- die Farbwerte der Abdeckflächen
+The script shows:
+- where the picture changed (each layer in the right place, nothing outside)
+- which colour conversion and alpha rounding best explain the measured values
+- the colour values of the cover areas
 
-Es erzeugt außerdem `ipu-before.png` und `ipu-after.png`. Die bitte ansehen:
-- Stehen die Farben in Band-Reihenfolge rot, grün, blau, weiß, schwarz?
-- Blendet das Alpha von links nach rechts ein?
-- Kanal 1 halb so deckend wie Kanal 0?
-- Rot deckend, blau halbtransparent?
+It also creates `ipu-before.png` and `ipu-after.png`. Please look at them:
+- Are the colours in band order red, green, blue, white, black?
+- Does the alpha fade in from left to right?
+- Is channel 1 half as opaque as channel 0?
+- Is red opaque and blue semi-transparent?
 
-## Rückmeldung
+## Feedback
 
-- `ipu-probe.txt` und `ipu-dmesg.txt`
-- die Ausgabe von `ipu_osd_analyze.py`
-- die beiden PNGs und die Bewertung (was sieht falsch aus?)
-- die drei Zeiten aus `-n` (µs pro Durchlauf bzw. Flush)
+- `ipu-probe.txt` and `ipu-dmesg.txt`
+- the output of `ipu_osd_analyze.py`
+- the two PNGs and your assessment (what looks wrong?)
+- the three times from `-n` (µs per run or flush)
 
-| Beobachtung | Bedeutung |
+| Observation | Meaning |
 |---|---|
-| `IOCTL_IPU_START` Fehler, `dmesg` „ipu: error …“ | Ein Parameterwort stimmt nicht. Mit `-l` die Ebene finden. |
-| Farben der Bitmap vertauscht (rot ↔ blau) | Byte-Reihenfolge im `para`-Wort, Bits 14–17 |
-| Bitmap deckend statt Alpha-Rampe | Alpha-Modus, Bits 1–2 |
-| Abdeckfläche falsche Farbe / zu dunkel | Farbwort (Y ohne +16?) oder Masken-Bit 23 |
-| Bild außerhalb der Kästen verändert | Positions- oder Stride-Problem |
+| `IOCTL_IPU_START` error, `dmesg` "ipu: error …" | A parameter word is wrong. Find the layer with `-l`. |
+| Bitmap colours swapped (red ↔ blue) | Byte order in the `para` word, bits 14–17 |
+| Bitmap opaque instead of alpha ramp | Alpha mode, bits 1–2 |
+| Cover area wrong colour / too dark | Colour word (Y without +16?) or mask bit 23 |
+| Picture changed outside the boxes | Position or stride problem |
 
 ---
 
-# Stufe 2: OSD-Backend in OpenIMP (Branch `claude/t31-perf`)
+# Stage 2: OSD backend in OpenIMP (branch `claude/t31-perf`)
 
-Erst machen, wenn Stufe 1 (Testtool) plausible Bilder geliefert hat. Auf `claude/t31-perf`
-zeichnet OpenIMP die OSD-Regionen mit der IPU, sobald `OPENIMP_T31_OSD=1` gesetzt ist. Ohne die
-Variable ändert sich nichts. Seit `claude/t31-osd-default` ist das Backend standardmäßig an;
-`OPENIMP_T31_OSD=0` schaltet es ab.
+Do this only when stage 1 (test tool) has produced plausible pictures. On `claude/t31-perf`
+OpenIMP draws the OSD regions with the IPU as soon as `OPENIMP_T31_OSD=1` is set. Without the
+variable nothing changes. Since `claude/t31-osd-default` the backend is on by default;
+`OPENIMP_T31_OSD=0` turns it off.
 
-Was das Backend anders macht als die Original-`libimp`:
-- bis zu 4 Regionen pro IPU-Durchlauf (Original: ein Durchlauf pro Region), nach `layer` sortiert
-- Bitmaps werden nur bei einer Änderung ins rmem kopiert, pro Frame gibt es keinen
-  1-MB-Cache-Flush mehr
-- nach 10 IPU-Fehlern in Folge schaltet es sich ab (Logzeile `T31 IPU OSD backend disabled`),
-  der Stream läuft weiter
+What the backend does differently from the original `libimp`:
+- up to 4 regions per IPU run (original: one run per region), sorted by `layer`
+- bitmaps are copied to rmem only when they change; there is no 1 MB cache flush per frame any more
+- after 10 IPU errors in a row it turns itself off (log line `T31 IPU OSD backend disabled`),
+  the stream keeps running
 
-## Ablauf
+## Procedure
 
-1. `libimp.so` von `claude/t31-perf` bauen und wie im Testplan, Schritt B, per Bind-Mount
-   einhängen (`git switch claude/t31-perf` statt `claude/t31-re`).
-2. Im Streamer das OSD eingeschaltet lassen (Uhrzeit, ggf. Logo und eine Privatzone).
-3. Streamer von Hand starten, einmal ohne und einmal mit Variable:
+1. Build `libimp.so` from `claude/t31-perf` and mount it with a bind mount as in the test plan,
+   step B (`git switch claude/t31-perf` instead of `claude/t31-re`).
+2. Leave the OSD switched on in the streamer (time, possibly logo and a privacy zone).
+3. Start the streamer by hand, once without and once with the variable:
 
    ```sh
    /etc/init.d/<S95streamer> stop; sleep 1
-   OPENIMP_T31_OSD=1 <streamer-befehlszeile> > /tmp/osd-run.log 2>&1 &
+   OPENIMP_T31_OSD=1 <streamer-command-line> > /tmp/osd-run.log 2>&1 &
    ```
 
-4. RTSP-Stream öffnen und 5 Minuten laufen lassen. Dabei:
-   - `top -b -n 5 -d 2 | grep -E '<streamer>|CPU:'` einmal ohne, einmal mit Variable
+4. Open an RTSP stream and let it run for 5 minutes. During that time:
+   - `top -b -n 5 -d 2 | grep -E '<streamer>|CPU:'` once without, once with the variable
    - `grep -E 'OSD' /tmp/osd-run.log`
    - `dmesg | grep -i ipu | tail`
-5. Bild ansehen (nur der Mensch oder mit seinem Einverständnis): Steht die Uhrzeit an der
-   richtigen Stelle, zählt sie sekündlich weiter, stimmen Farben und Transparenz, ist die
-   Privatzone deckend?
-6. Wenn der Streamer Snapshots/MJPEG anbietet: einen Snapshot holen. Das OSD muss auch dort
-   sichtbar sein (JPEG liest das Bild nach dem Blending).
+5. Look at the picture (only the human, or with their consent): Is the time in the right
+   place, does it count up every second, are colours and transparency right, is the
+   privacy zone opaque?
+6. If the streamer offers snapshots/MJPEG: fetch a snapshot. The OSD must be visible there too
+   (JPEG reads the picture after blending).
 
-## Rückmeldung
+## Feedback
 
-| Beobachtung | Bedeutung |
+| Observation | Meaning |
 |---|---|
-| `backend requested`, kein `disabled`, OSD sichtbar | Erfolg. CPU-Last mit/ohne notieren. |
-| `disabled: cannot open /dev/ipu` | Kernel ohne IPU-Treiber (`ls -l /dev/ipu`) |
-| `disabled: repeated IPU errors` | Parameterwort falsch, `dmesg` mitschicken |
-| OSD im RTSP sichtbar, im Snapshot nicht | Cache-Invalidierung nach dem Blending reicht nicht |
-| Text flackert oder zeigt alte Uhrzeit | Bitmap-Update (Double Buffer / Write-back) prüfen |
-| Farben vertauscht, falsch deckend | wie in der Tabelle von Stufe 1 |
-| Stream ruckelt oder FPS sinkt | IPU-Zeit pro Frame zu hoch, `-n 200` aus Stufe 1 vergleichen |
+| `backend requested`, no `disabled`, OSD visible | Success. Note CPU load with/without. |
+| `disabled: cannot open /dev/ipu` | Kernel without IPU driver (`ls -l /dev/ipu`) |
+| `disabled: repeated IPU errors` | Parameter word wrong, send `dmesg` |
+| OSD visible in RTSP, not in snapshot | Cache invalidation after blending is not enough |
+| Text flickers or shows old time | Check the bitmap update (double buffer / write-back) |
+| Colours swapped, wrong opacity | as in the table of stage 1 |
+| Stream stutters or FPS drops | IPU time per frame too high, compare with `-n 200` from stage 1 |

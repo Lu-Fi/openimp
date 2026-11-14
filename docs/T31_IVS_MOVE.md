@@ -1,302 +1,301 @@
-# T31: IVS-Bewegungserkennung („move“ und „base move“) in OpenIMP
+# T31: IVS motion detection ("move" and "base move") in OpenIMP
 
-Stand: Branch `claude/t31-ivs-move`. Unter qemu gebaut und getestet, **noch nicht auf einer
-Kamera gelaufen.** Abschnitt 6 beschreibt den Gerätetest für eine lokale Claude-Session.
+Status: branch `claude/t31-ivs-move`. Built and tested under qemu, **has not yet run on a
+camera.** Section 6 describes the device test for a local Claude session.
 
-Bisher waren die `IMP_IVS_*`-Funktionen für T31 nur Stubs: `PollingResult` hat nur
-geschlafen, `GetResult` hat leere Ergebnisse geliefert. Jetzt rechnen beide
-Vendor-Algorithmen wirklich, mit dem Verhalten der T31-libimp 1.1.6.
+Until now the `IMP_IVS_*` functions for T31 were only stubs: `PollingResult` only
+slept, `GetResult` returned empty results. Now both
+vendor algorithms really compute, with the behaviour of T31 libimp 1.1.6.
 
 ---
 
-## 1. Dateien
+## 1. Files
 
-| Datei | Inhalt |
+| File | Content |
 |---|---|
-| `src/t31/openimp_t31_ivs_abi.h` | Strukturen im Vendor-Layout, mit `_Static_assert` (0x450 `IMP_IVS_MoveParam`, 0x40 `IMP_IVS_BaseMoveParam`, 0x34 `IMPIVSInterface`, 0x30 `IMPFrameInfo`) |
-| `src/t31/openimp_t31_ivs_move.c/.h` | die beiden Algorithmen, reines C ohne Abhängigkeiten |
-| `src/t31/openimp_t31_ivs.c/.h` | IVS-Framework (`IMP_IVS_*`), Interfaces, Frame-Hook |
-| `src/kernel_interface.c` | ruft den Frame-Hook pro Capture-Frame auf (nur T31) |
-| `src/t31/openimp_t31_services.c` | alte Stubs nur noch für T21/T23/T30 |
-| `tools/t31_ivs_compare.c` | Vergleich mit einer Stock-libimp auf synthetischen Frames |
+| `src/t31/openimp_t31_ivs_abi.h` | Structures in the vendor layout, with `_Static_assert` (0x450 `IMP_IVS_MoveParam`, 0x40 `IMP_IVS_BaseMoveParam`, 0x34 `IMPIVSInterface`, 0x30 `IMPFrameInfo`) |
+| `src/t31/openimp_t31_ivs_move.c/.h` | the two algorithms, plain C without dependencies |
+| `src/t31/openimp_t31_ivs.c/.h` | IVS framework (`IMP_IVS_*`), interfaces, frame hook |
+| `src/kernel_interface.c` | calls the frame hook per capture frame (T31 only) |
+| `src/t31/openimp_t31_services.c` | old stubs only remain for T21/T23/T30 |
+| `tools/t31_ivs_compare.c` | Comparison with a stock libimp on synthetic frames |
 
-Die generischen Header `include/imp/imp_ivs*.h` passen **nicht** zum T31-ABI
-(`IMPFrameInfo` hat dort nur 8 Byte, `IMPRect` ist x/y/w/h). Sie werden für T31 nicht benutzt.
+The generic headers `include/imp/imp_ivs*.h` do **not** match the T31 ABI
+(`IMPFrameInfo` has only 8 bytes there, `IMPRect` is x/y/w/h). They are not used for T31.
 
 ---
 
-## 2. Verhalten
+## 2. Behaviour
 
-### 2.1 move (ein Ja/Nein pro ROI)
+### 2.1 move (one yes/no per ROI)
 
-- Das Luma wird 2:1 dezimiert: das Pixel oben links aus jedem 2×2-Block.
-- Ein Ring aus 4 Halbbildern. Verglichen wird immer Eingangsframe t mit Frame t−3.
-- Binäre Differenz `|A−B| > 20`.
-- 3×3-Erosion: ein Pixel bleibt nur, wenn alle 9 Nachbarn gesetzt sind. Am Bildrand wird
-  repliziert.
-- Pro ROI werden die übrigen Pixel gezählt. `retRoi[i] = count > T[sense]`.
-- Schwellen T (Pixel in halber Auflösung):
+- The luma is decimated 2:1: the top-left pixel of each 2×2 block.
+- A ring of 4 half-size pictures. The input frame t is always compared with frame t−3.
+- Binary difference `|A−B| > 20`.
+- 3×3 erosion: a pixel stays only if all 9 neighbours are set. At the picture edge it is
+  replicated.
+- Per ROI the remaining pixels are counted. `retRoi[i] = count > T[sense]`.
+- Thresholds T (pixels at half resolution):
 
   | sense | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
   |---|---|---|---|---|---|---|---|---|---|
   | T | 1365 | 455 | 151 | 50 | 16 | 8 | 4 | 2 | 1 |
 
-- Beim Anlegen wird sense auf 0…4 geklemmt. Über `IMP_IVS_SetParam` sind 0…8 erlaubt.
-- Die ersten 3 Frames liefern Ergebnisse mit lauter Nullen.
-- Danach kommt ein Ergebnis alle `skipFrameCnt + 1` Frames. Das erste bei Frame
+- On creation, sense is clamped to 0…4. Via `IMP_IVS_SetParam`, 0…8 are allowed.
+- The first 3 frames deliver results with all zeros.
+- After that a result comes every `skipFrameCnt + 1` frames. The first at frame
   `skipFrameCnt + 3`.
-- ROI-Koordinaten: erst auf das Bild klemmen, dann halbieren. Die Ecken sind inklusiv.
-- Vendor-Eigenheit, nachgebaut: Beginnt die Bounding-Box aller ROIs nicht in Zeile 0, ist die
-  Erosion um eine Zeile nach unten versetzt. Ausgabezeile y ist dann um Bildzeile y+1
-  zentriert. Bei einem vollen Raster (timps ohne Privacy-Maske) tritt das nicht auf.
-- `SetParam` übernimmt nur `sense[]`, `roiRect[]` und `roiRectCnt`. `skipFrameCnt` und
-  `frameInfo` bleiben. Der Ring und der Frame-Zähler bleiben erhalten.
+- ROI coordinates: first clamp to the picture, then halve. The corners are inclusive.
+- Vendor quirk, reproduced: If the bounding box of all ROIs does not start in row 0, the
+  erosion is shifted down by one row. Output row y is then centred on picture row y+1.
+  With a full grid (timps without privacy mask) this does not occur.
+- `SetParam` takes over only `sense[]`, `roiRect[]` and `roiRectCnt`. `skipFrameCnt` and
+  `frameInfo` stay. The ring and the frame counter are kept.
 
-### 2.2 base move (ein Byte pro 8×8-Block)
+### 2.2 base move (one byte per 8×8 block)
 
-- Volle Auflösung. Frame n wird mit Frame n − `referenceNum` verglichen, alle
-  `skipFrameCnt + 1` Frames.
-- `T = |A−B|`, wenn `|A−B| ≥ thr`, sonst 0. thr nach sense: 30, 20, 15, 10 für 0…3, sonst 0.
-- 3×3-Minimum (Rand repliziert), dann Summe pro 8×8-Block, **auf 8 Bit abgeschnitten**.
-- Nur Breite und Höhe als Vielfache von 8 liefern Daten.
-- Es wird **jeder Frame** ein Ergebnis veröffentlicht. `ret = 1` nur auf Detektionsframes.
-  Bei `ret = 0` enthält `data` alten Inhalt. Konsumenten müssen `ret` prüfen.
-- `sadMode` muss 0 sein, `skipFrameCnt ≥ 0`, `referenceNum ≥ 1`. Sonst scheitert
-  `IMP_IVS_CreateChn`.
-- `SetParam`: nur `sense` wirkt.
+- Full resolution. Frame n is compared with frame n − `referenceNum`, every
+  `skipFrameCnt + 1` frames.
+- `T = |A−B|` if `|A−B| ≥ thr`, else 0. thr by sense: 30, 20, 15, 10 for 0…3, otherwise 0.
+- 3×3 minimum (edge replicated), then sum per 8×8 block, **truncated to 8 bits**.
+- Only widths and heights that are multiples of 8 deliver data.
+- A result is published for **every frame**. `ret = 1` only on detection frames.
+  With `ret = 0`, `data` contains old content. Consumers must check `ret`.
+- `sadMode` must be 0, `skipFrameCnt ≥ 0`, `referenceNum ≥ 1`. Otherwise
+  `IMP_IVS_CreateChn` fails.
+- `SetParam`: only `sense` has an effect.
 
 ### 2.3 Framework
 
-- Nur IVS-Gruppe 0, Kanäle 0…63.
-- Pro Kanal ein Thread `ivs_chnN` und drei Semaphoren (Start = 0, Ende = 1, Ergebnis = 0).
-- Jeder Frame des FrameSource-Kanals, der an Gruppe 0 gebunden ist, erreicht jeden
-  empfangenden Kanal. Ist ein Kanal noch mit dem vorigen Frame beschäftigt, wird der neue Frame
-  für ihn **verworfen**.
-- `IMP_IVS_SetParam` kopiert nach `interface->param`. Die Änderung wirkt beim **nächsten
-  angenommenen Frame**. `IMP_IVS_GetParam` liefert bis dahin noch den alten Stand.
-- Ergebnisse liegen in einem Ring mit 6 Einträgen. `GetResult` liefert einen Zeiger hinein und
-  prüft nicht, ob ein Ergebnis da ist. `ReleaseResult` tut nichts. Wer mehr als 6 Ergebnisse
-  zurückliegt, liest überschriebene Daten (wie beim Vendor).
-- `PollingResult(chn, 0)` prüft nur. Negativer Timeout (`IMP_IVS_DEFAULT_TIMEOUTMS`) = 10 s.
-- `StopRecvPic` wartet bis 1 s auf einen laufenden Frame, dann `flushFrame`.
-- `DestroyChn` stoppt, meldet ab, wartet auf wartende Aufrufer und beendet den Thread.
+- Only IVS group 0, channels 0…63.
+- Per channel one thread `ivs_chnN` and three semaphores (start = 0, end = 1, result = 0).
+- Every frame of the FrameSource channel that is bound to group 0 reaches every
+  receiving channel. If a channel is still busy with the previous frame, the new frame
+  is **dropped** for it.
+- `IMP_IVS_SetParam` copies to `interface->param`. The change takes effect at the **next
+  accepted frame**. Until then `IMP_IVS_GetParam` still returns the old state.
+- Results are in a ring with 6 entries. `GetResult` returns a pointer into it and
+  does not check whether a result is there. `ReleaseResult` does nothing. Whoever is more than 6 results
+  behind reads overwritten data (as in the vendor).
+- `PollingResult(chn, 0)` only checks. Negative timeout (`IMP_IVS_DEFAULT_TIMEOUTMS`) = 10 s.
+- `StopRecvPic` waits up to 1 s for a running frame, then `flushFrame`.
+- `DestroyChn` stops, unregisters, waits for waiting callers and ends the thread.
 
-### 2.4 Frame-Hook
+### 2.4 Frame hook
 
-- In OpenIMP trägt `IMP_System_Bind` nur in eine Tabelle ein. Es gibt keine Observer für
-  `DEV_ID_IVS`, und der Encoder holt Frames aus der Ready-Queue der FrameSource.
-- Deshalb ruft `VBMKernelDequeue` für **jeden** Capture-Frame `openimp_t31_ivs_capture()` auf,
-  **bevor** der Frame in die Ready-Queue kommt.
-- Vorteile:
-  - Das entspricht der Vendor-Stelle (`ivs_update` im FrameSource-Kontext, jeder Frame).
-  - Der Puffer gehört in diesem Moment nur dem Capture-Thread. Der Encoder kann ihn weder
-    freigeben noch OSD hineinmischen.
-  - Kein Encoder-Lock ist beteiligt.
-- Dort passiert nur die Kopie:
-  - move: die 2:1-Dezimation, und nur für Frames, die ein späterer Vergleich liest.
-    Ausnahme seit `claude/ivs-opt`: Wird der neue Frame später nicht mehr als Referenz
-    gebraucht (skipFrameCnt 1 oder ≥ 3), läuft die Detektion gleich hier direkt auf dem
-    Capture-Puffer (siehe 2.6).
-  - base move: das Luma der Capture-Frames.
-- Vor der Kopie wird der Luma-Bereich im Cache invalidiert (`DMA_RmemFlushCache(virt, size, 2)`),
-  weil der ISP per DMA in gecachtes rmem schreibt.
-- Das Rechnen läuft im Kanal-Thread.
-- Die Quelle der Gruppe wird per `IMP_System_GetBindbyDest` rückwärts gesucht (normal
-  FS → IVS direkt).
+- In OpenIMP, `IMP_System_Bind` only enters into a table. There are no observers for
+  `DEV_ID_IVS`, and the encoder fetches frames from the FrameSource ready queue.
+- Therefore `VBMKernelDequeue` calls `openimp_t31_ivs_capture()` for **every** capture frame,
+  **before** the frame goes into the ready queue.
+- Advantages:
+  - This matches the vendor location (`ivs_update` in the FrameSource context, every frame).
+  - At this moment the buffer belongs only to the capture thread. The encoder can neither
+    release it nor blend OSD into it.
+  - No encoder lock is involved.
+- Only the copy happens there:
+  - move: the 2:1 decimation, and only for frames that a later comparison reads.
+    Exception since `claude/ivs-opt`: If the new frame is not needed as a reference later
+    (skipFrameCnt 1 or ≥ 3), detection runs right here directly on the
+    capture buffer (see 2.6).
+  - base move: the luma of the capture frames.
+- Before the copy the luma area is invalidated in the cache (`DMA_RmemFlushCache(virt, size, 2)`),
+  because the ISP writes by DMA into cached rmem.
+- The computation runs in the channel thread.
+- The source of the group is searched backwards with `IMP_System_GetBindbyDest` (normally
+  FS → IVS directly).
 
-### 2.5 Kosten (qemu, nur als Verhältnis aussagekräftig)
+### 2.5 Cost (qemu, meaningful only as a ratio)
 
-Gemessen gegen eine einfache Referenz-Implementierung desselben Verhaltens, gleiche Eingaben:
+Measured against a simple reference implementation of the same behaviour, same inputs:
 
-| Fall | OpenIMP | Referenz | Faktor |
+| Case | OpenIMP | Reference | Factor |
 |---|---|---|---|
-| move 640×360, skip 5, 52 ROIs, pro Frame | 51 µs | 237 µs | 4,6 |
-| move 1920×1080, skip 5, 52 ROIs, pro Frame | 346 µs | 1,87 ms | 5,4 |
-| move 1920×1080, eine Detektion | 1,45 ms | 8,4 ms | 5,8 |
-| move 1920×1080, eine Dezimation | 0,41 ms | 0,97 ms | 2,4 |
-| base move 640×360, Detektion jeder Frame | 1,3 ms | 9,7 ms | 7,5 |
-| base move 1920×1080, Detektion jeder Frame | 9–14 ms | 77–83 ms | 6–9 |
+| move 640×360, skip 5, 52 ROIs, per frame | 51 µs | 237 µs | 4.6 |
+| move 1920×1080, skip 5, 52 ROIs, per frame | 346 µs | 1.87 ms | 5.4 |
+| move 1920×1080, one detection | 1.45 ms | 8.4 ms | 5.8 |
+| move 1920×1080, one decimation | 0.41 ms | 0.97 ms | 2.4 |
+| base move 640×360, detection every frame | 1.3 ms | 9.7 ms | 7.5 |
+| base move 1920×1080, detection every frame | 9–14 ms | 77–83 ms | 6–9 |
 
-- Der Vendor kopiert bei move in **jedem** Frame das volle Luma (2 MB bei 1080p). OpenIMP
-  dezimiert bei skip 5 nur 2 von 6 Frames.
-- Die echten Zeiten auf der Kamera misst der Gerätetest (`OPENIMP_T31_IVS_STATS=1`).
+- For move, the vendor copies the full luma in **every** frame (2 MB at 1080p). With skip 5, OpenIMP
+  decimates only 2 of 6 frames.
+- The device test measures the real times on the camera (`OPENIMP_T31_IVS_STATS=1`).
 
-### 2.6 Beschleunigung (Branch `claude/ivs-opt`)
+### 2.6 Speed-up (branch `claude/ivs-opt`)
 
-Anlass: T20 (Wyze, 1080p-Hauptstream) zeigte timps mit Bewegungserkennung bei ~8 % CPU,
-ohne bei ~0,4 %. Die Ergebnisse bleiben bitgleich.
+Reason: T20 (Wyze, 1080p main stream) showed timps with motion detection at ~8 % CPU,
+without it at ~0.4 %. The results stay bit-identical.
 
-- **Erosion auf Abruf:** Ausgabezeile y ist das UND der erodierten Zeilen y+sh−1, y+sh,
-  y+sh+1. Eine leere Zeile löscht also drei Ausgabezeilen. Die Zeilen werden erst bei
-  Bedarf berechnet, die unterste zuerst. In einer ruhigen Szene wird nur jede dritte Zeile
-  differenziert.
-- **Detektion direkt auf dem Capture-Puffer:** Liest kein späterer Vergleich den neuen
-  Frame (skipFrameCnt 1 oder ≥ 3), dezimiert `feed()` ihn nicht mehr komplett in den Ring.
-  Es rechnet die Detektion sofort gegen das Referenzbild und dezimiert nur die Zeilen,
-  die sie liest. `run()` vergleicht dann nur noch mit den Schwellen. Folge für die
-  Statistik: `copy` (Capture-Thread) enthält bei diesen Frames die Detektion, `process` ist
-  fast null.
-- **Differenztest in Byte-Lanes:** |a − b| > 20 für vier Pixel pro Wort über Floor- und
-  Ceiling-Mittelwert von a und 255 − b (≥ 138 bzw. ≤ 117). Bisher liefen zwei 16-Bit-Lanes.
-- **Optional, nur auf Wunsch:** `OPENIMP_IVS_MOVE_INTERVAL=N` (2…1000). Ein move-Kanal
-  sieht nur jeden N-ten Capture-Frame; `skipFrameCnt` zählt dann diese Frames. Ohne die
-  Variable (oder mit 1) bleibt alles wie beim Vendor. base move und fremde Interfaces sind
-  nicht betroffen.
-- **Prüfung:** `make -C tests/t30 check` lässt `ivs_move_bench_t20 equiv` laufen. Das
-  vergleicht den neuen Code Frame für Frame mit einer eingefrorenen Kopie des alten
-  (`tests/t23/ivs_move_ref.c`): 10 Größen bis 1920×1080 (auch ungerade), skip 0…9,
-  Gitter- und Zufalls-ROIs, Live-SetParam mit sense 0…8, fünf Szenen. `tests/t23` prüft
-  zusätzlich den festen Digest `ca3d1021f2a30c82` von `ivs_move_digest`.
-- **Host-Messung:** `make -C tests/t30 ivs-bench` (x86-64, gcc -O2, 4×4-ROI-Gitter,
-  ns pro Eingangsframe für feed + run, Szenen: ruhig mit ±3 Rauschen, Nacht ±24, bewegtes
-  Rechteck):
+- **Erosion on demand:** Output row y is the AND of the eroded rows y+sh−1, y+sh,
+  y+sh+1. So an empty row clears three output rows. The rows are computed only when
+  needed, the bottom one first. In a quiet scene only every third row is
+  differenced.
+- **Detection directly on the capture buffer:** If no later comparison reads the new
+  frame (skipFrameCnt 1 or ≥ 3), `feed()` no longer decimates it completely into the ring.
+  It computes the detection immediately against the reference picture and decimates only the rows
+  it reads. `run()` then only compares with the thresholds. Consequence for the
+  statistics: `copy` (capture thread) contains the detection for these frames, `process` is
+  almost zero.
+- **Difference test in byte lanes:** |a − b| > 20 for four pixels per word via floor and
+  ceiling mean of a and 255 − b (≥ 138 or ≤ 117). Before, two 16-bit lanes were used.
+- **Optional, only on request:** `OPENIMP_IVS_MOVE_INTERVAL=N` (2…1000). A move channel
+  sees only every N-th capture frame; `skipFrameCnt` then counts these frames. Without the
+  variable (or with 1) everything stays as in the vendor. base move and foreign interfaces are
+  not affected.
+- **Check:** `make -C tests/t30 check` runs `ivs_move_bench_t20 equiv`. This
+  compares the new code frame by frame with a frozen copy of the old one
+  (`tests/t23/ivs_move_ref.c`): 10 sizes up to 1920×1080 (also odd ones), skip 0…9,
+  grid and random ROIs, live SetParam with sense 0…8, five scenes. `tests/t23` also checks
+  the fixed digest `ca3d1021f2a30c82` of `ivs_move_digest`.
+- **Host measurement:** `make -C tests/t30 ivs-bench` (x86-64, gcc -O2, 4×4 ROI grid,
+  ns per input frame for feed + run, scenes: quiet with ±3 noise, night ±24, moving
+  rectangle):
 
-| Fall | vorher | nachher | Faktor |
+| Case | before | after | Factor |
 |---|---|---|---|
-| 1080p ruhig, skip 5 | 175 µs | 82 µs | 2,1 |
-| 1080p ruhig, skip 0 | 744 µs | 417 µs | 1,8 |
-| 1080p Bewegung, skip 5 | 184 µs | 118 µs | 1,6 |
-| 1080p Nacht, skip 5 | 175 µs | 165 µs | 1,06 |
-| 360p ruhig, skip 5 | 14,4 µs | 6,6 µs | 2,2 |
-| 360p ruhig, skip 0 | 68 µs | 32 µs | 2,1 |
-| 360p Bewegung, skip 5 | 14,9 µs | 9,6 µs | 1,6 |
-| 360p Nacht, skip 5 | 14,5 µs | 13,8 µs | 1,05 |
+| 1080p quiet, skip 5 | 175 µs | 82 µs | 2.1 |
+| 1080p quiet, skip 0 | 744 µs | 417 µs | 1.8 |
+| 1080p motion, skip 5 | 184 µs | 118 µs | 1.6 |
+| 1080p night, skip 5 | 175 µs | 165 µs | 1.06 |
+| 360p quiet, skip 5 | 14.4 µs | 6.6 µs | 2.2 |
+| 360p quiet, skip 0 | 68 µs | 32 µs | 2.1 |
+| 360p motion, skip 5 | 14.9 µs | 9.6 µs | 1.6 |
+| 360p night, skip 5 | 14.5 µs | 13.8 µs | 1.05 |
 
-- Nicht gemacht: MXU-SIMD (kein `-mmxu`/MXU-Code im Projekt, die Toolchain wird ohne
-  gebaut). Arbeit ganz auslassen, wenn niemand pollt: timps pollt dauernd, also kein
-  Gewinn, aber ein Verhaltensrisiko.
-
----
-
-## 3. Abweichungen vom Vendor
-
-1. **Zeile hinter dem Puffer (move).** Beginnt die ROI-Box unterhalb von Zeile 0 **und** reicht
-   sie bis zur untersten Zeile, liest der Vendor eine Zeile hinter seinem Puffer (Heap-Müll).
-   OpenIMP wiederholt stattdessen die letzte Zeile.
-   - Betrifft nur ROIs in der untersten Zeile, nur in diesem Layout.
-   - timps ohne Privacy-Maske ist nicht betroffen (Box beginnt in Zeile 0).
-   - Im qemu-Vergleich: 49 von 2880 Frames dieses Layouts weichen ab, alle in einer unteren ROI.
-2. **Ungültiges sense bei SetParam (move).** Der Vendor bricht mittendrin ab und lässt einen
-   freigegebenen Filter zurück (Use-after-free). OpenIMP prüft vorher und behält den alten
-   Stand.
-3. **Frame-Größe.** Der Vendor kopiert `width × height` des Frames in einen Puffer nach
-   `frameInfo`. Bei einem größeren Frame läuft der Heap über. OpenIMP verwirft Frames, deren
-   Größe nicht zu `frameInfo` passt, und meldet das einmal im Log.
-4. **Stride.** Luma wird zeilenweise mit dem Stride gelesen. In OpenIMP T31 ist er gleich der
-   Breite (wie im JPEG- und OSD-Pfad). Der Vendor setzt das stillschweigend voraus.
-5. **Fehler in `processAsync`.** Der Vendor beendet dann den Kanal-Thread, danach kommen nie
-   wieder Ergebnisse. OpenIMP loggt einmal und macht weiter.
-6. **Überflüssige Arbeit entfällt.** Frames, die kein Vergleich liest, werden nicht dezimiert.
-   Das Ergebnis ist identisch.
-7. **Kein Debug-Ballast.** base move schreibt kein `total_count` auf stdout und hängt keine
-   Frames an `/tmp/mountdir/ivsbasemovesnap.nv12` an.
-8. **IVS sieht Frames ohne OSD.** Der Hook liegt vor dem Encoder und damit vor dem OSD-Blending.
-   Ob der Vendor IVS mit oder ohne OSD füttert, ist nicht geprüft. Ohne OSD gibt es keine
-   Fehlalarme durch die Uhrzeit-Einblendung.
-9. **Kleinigkeiten:**
-   - Kanal 64 wird abgelehnt. Der Vendor nimmt ihn an, bedient ihn aber nie.
-   - `DestroyChn` stoppt und meldet einen Kanal selbst ab, statt ihn hängen zu lassen.
-   - `PollingResult` wartet auf der monotonen Uhr. Ein Sprung der Systemzeit (NTP beim Boot)
-     verlängert oder verkürzt den Timeout nicht.
-   - Ungerade Bildgrößen: ROI-Koordinaten werden zusätzlich auf das Halbbild geklemmt.
-   - Von Streamern selbst gebaute Interfaces bekommen `preProcessSync` auf dem Capture-Frame
-     und `processAsync` auf einer privaten NV12-Kopie. OpenIMP kann für sie keinen
-     Capture-Puffer festhalten. `IMP_IVS_ReleaseData` tut deshalb nichts.
+- Not done: MXU SIMD (no `-mmxu`/MXU code in the project, the toolchain is built without
+  it). Skipping the work entirely when nobody polls: timps polls all the time, so no
+  gain, but a behaviour risk.
 
 ---
 
-## 4. Tests unter qemu (erledigt)
+## 3. Deviations from the vendor
 
-- **Algorithmen gegen die Referenz**, bitgenau: 82 880 move-Frames (42 328 Ergebnisse) und
-  70 560 base-move-Frames (22 365 Detektionen), 0 Abweichungen.
-  - Größen 640×360, 320×240, 64×48, 66×50, 96×34, 128×72.
-  - skipFrameCnt −1, 0, 1, 2, 3, 5, 9; referenceNum 1, 3, 5, 7; sense −1…4 (move per
-    SetParam bis 8).
-  - Bewegte Quadrate, Rauschen, Helligkeitssprünge, Flackern, statische Szene.
-  - ROI-Sonderfälle: einzelne Pixel, Ränder, außerhalb des Bildes, leere und überlappende ROIs,
-    52 ROIs, Box ab Zeile > 0.
-  - Stride größer als die Breite, auch nicht durch 4 teilbar.
-- **Gegen die Stock-libimp (Skalarpfad)** mit `tools/t31_ivs_compare.c`: 8591 von 8591
-  move-Frames und 11 520 von 11 520 base-move-Frames identisch, plus die 49 Frames aus
-  Abweichung 1.
-- **Framework** (Semaphoren, Drop bei Belegt, SetParam beim nächsten Frame, falsche
-  Frame-Größe, fremder FS-Kanal, fremde Interfaces, Timeouts, DestroyChn während
-  PollingResult wartet): alles bestanden, unter qemu und nativ mit ThreadSanitizer und
-  AddressSanitizer (Create/Start/Stop/Destroy in einer Schleife, während Frames fließen).
+1. **Row behind the buffer (move).** If the ROI box starts below row 0 **and** reaches
+   the bottom row, the vendor reads one row behind its buffer (heap garbage).
+   OpenIMP repeats the last row instead.
+   - Affects only ROIs in the bottom row, only in this layout.
+   - timps without privacy mask is not affected (box starts in row 0).
+   - In the qemu comparison: 49 of 2880 frames of this layout differ, all in a lower ROI.
+2. **Invalid sense in SetParam (move).** The vendor aborts midway and leaves a
+   freed filter behind (use-after-free). OpenIMP checks beforehand and keeps the old
+   state.
+3. **Frame size.** The vendor copies `width × height` of the frame into a buffer sized by
+   `frameInfo`. With a larger frame the heap overflows. OpenIMP drops frames whose
+   size does not match `frameInfo` and reports this once in the log.
+4. **Stride.** Luma is read row by row with the stride. In OpenIMP T31 it equals the
+   width (as in the JPEG and OSD path). The vendor silently assumes this.
+5. **Error in `processAsync`.** The vendor then ends the channel thread; results never
+   come again. OpenIMP logs once and carries on.
+6. **Unnecessary work is skipped.** Frames that no comparison reads are not decimated.
+   The result is identical.
+7. **No debug ballast.** base move writes no `total_count` to stdout and appends no
+   frames to `/tmp/mountdir/ivsbasemovesnap.nv12`.
+8. **IVS sees frames without OSD.** The hook is before the encoder and thus before OSD blending.
+   Whether the vendor feeds IVS with or without OSD has not been checked. Without OSD there are no
+   false alarms from the time overlay.
+9. **Minor points:**
+   - Channel 64 is rejected. The vendor accepts it but never serves it.
+   - `DestroyChn` stops and unregisters a channel itself instead of leaving it dangling.
+   - `PollingResult` waits on the monotonic clock. A jump of the system time (NTP at boot)
+     does not lengthen or shorten the timeout.
+   - Odd picture sizes: ROI coordinates are additionally clamped to the half-size picture.
+   - Interfaces built by streamers themselves get `preProcessSync` on the capture frame
+     and `processAsync` on a private NV12 copy. OpenIMP cannot hold a
+     capture buffer for them. `IMP_IVS_ReleaseData` therefore does nothing.
 
 ---
 
-## 5. Offene Fragen, die nur die Kamera beantwortet
+## 4. Tests under qemu (done)
 
-1. **SIMD = Skalar beim Vendor?** Auf der Kamera rechnet die Stock-libimp mit MXU2. Stimmen
-   deren Ergebnisse mit dem Skalarpfad (und damit mit OpenIMP) überein? → Stufe 1.
-2. **Cache:** Sieht die CPU nach dem Invalidieren das aktuelle ISP-Frame? Zeichen für ein
-   Problem: bei Bewegung kaum Treffer oder Treffer ohne Bewegung.
-3. **Stride:** Ist der NV12-Stride der T31-FrameSource bei allen genutzten Auflösungen gleich
-   der Breite?
-4. **Kosten:** Kopierzeit im Capture-Thread und Rechenzeit im IVS-Thread bei 1080p und 2K. Stört
-   die Kopie die Bildrate des Hauptstreams?
-5. **„Gefühl“:** Reagiert die Erkennung bei sense 0…4 wie mit der Stock-libimp?
+- **Algorithms against the reference**, bit-exact: 82,880 move frames (42,328 results) and
+  70,560 base-move frames (22,365 detections), 0 deviations.
+  - Sizes 640×360, 320×240, 64×48, 66×50, 96×34, 128×72.
+  - skipFrameCnt −1, 0, 1, 2, 3, 5, 9; referenceNum 1, 3, 5, 7; sense −1…4 (move via
+    SetParam up to 8).
+  - Moving squares, noise, brightness jumps, flicker, static scene.
+  - ROI special cases: single pixels, edges, outside the picture, empty and overlapping ROIs,
+    52 ROIs, box from row > 0.
+  - Stride larger than the width, also not divisible by 4.
+- **Against the stock libimp (scalar path)** with `tools/t31_ivs_compare.c`: 8591 of 8591
+  move frames and 11,520 of 11,520 base-move frames identical, plus the 49 frames from
+  deviation 1.
+- **Framework** (semaphores, drop when busy, SetParam at the next frame, wrong
+  frame size, foreign FS channel, foreign interfaces, timeouts, DestroyChn while
+  PollingResult waits): all passed, under qemu and natively with ThreadSanitizer and
+  AddressSanitizer (Create/Start/Stop/Destroy in a loop while frames are flowing).
 
 ---
 
-## 6. Gerätetest (lokale Claude-Session mit SSH zur T31-Testkamera)
+## 5. Open questions that only the camera can answer
 
-### 6.0 Regeln
+1. **SIMD = scalar in the vendor?** On the camera the stock libimp computes with MXU2. Do
+   its results match the scalar path (and thus OpenIMP)? → Stage 1.
+2. **Cache:** After invalidation, does the CPU see the current ISP frame? Signs of a
+   problem: hardly any hits on motion, or hits without motion.
+3. **Stride:** Is the NV12 stride of the T31 FrameSource equal to the width for all
+   resolutions used?
+4. **Cost:** Copy time in the capture thread and compute time in the IVS thread at 1080p and 2K. Does
+   the copy disturb the frame rate of the main stream?
+5. **"Feel":** Does the detection react at sense 0…4 like with the stock libimp?
 
-1. Nur die eine Testkamera.
-2. Nichts dauerhaft ändern:
-   - nicht flashen;
-   - nichts unter `/etc` oder im Overlay ändern, auch nicht über `POST /control` gegen die
-     normale Konfiguration (timps speichert dann nach `/etc/timps.conf`);
-   - neue Dateien nur nach `/tmp`;
-   - die neue `libimp.so` nur per Bind-Mount einhängen. Ein Neustart stellt alles wieder her.
-3. Vor jedem Stoppen des Streamers kurz Bescheid geben.
-4. **Kamerabilder** (Snapshots, Aufnahmen) nur mit Einverständnis des Menschen weitergeben.
-   Die Stufe 1 braucht keine Kamerabilder.
-5. Alles melden, auch Fehlschläge, mit dem genauen Befehl davor.
+---
 
-### 6.1 Bauen (auf dem Rechner)
+## 6. Device test (local Claude session with SSH to the T31 test camera)
+
+### 6.0 Rules
+
+1. Only the one test camera.
+2. Change nothing permanently:
+   - do not flash;
+   - change nothing under `/etc` or in the overlay, also not via `POST /control` against the
+     normal configuration (timps then saves to `/etc/timps.conf`);
+   - new files only to `/tmp`;
+   - mount the new `libimp.so` only with a bind mount. A reboot restores everything.
+3. Tell the human briefly before every stop of the streamer.
+4. **Camera pictures** (snapshots, recordings) may be passed on only with the human's consent.
+   Stage 1 needs no camera pictures.
+5. Report everything, including failures, with the exact command before it.
+
+### 6.1 Build (on the machine)
 
 ```sh
 cd openimp && git switch claude/t31-ivs-move
 TC=<thingino>/output/<branch>/<target>/host/bin/mipsel-linux
 THINGINO_DIR=<thingino> TOOLCHAIN_PREFIX=$TC T31_OUTPUT_DIR=$PWD/build/t31 sh build-t31.sh
-# Vergleichstool; dynamisch und mit derselben (uclibc-)Toolchain, weil es die
-# Stock-libimp per dlopen lädt:
+# comparison tool; dynamic and with the same (uclibc) toolchain, because it loads the
+# stock libimp via dlopen:
 $TC-gcc -O2 -march=mips32r2 -rdynamic -Isrc/t31 -o build/t31/t31_ivs_compare \
     tools/t31_ivs_compare.c src/t31/openimp_t31_ivs_move.c -ldl
-scp build/t31/libimp.so root@<kamera>:/tmp/libimp-ivs.so
-scp build/t31/t31_ivs_compare root@<kamera>:/tmp/
+scp build/t31/libimp.so root@<camera>:/tmp/libimp-ivs.so
+scp build/t31/t31_ivs_compare root@<camera>:/tmp/
 ```
 
-Die Stock-libimp für den Vergleich: T31 SDK 1.1.6, uclibc
-(`ingenic-lib/T31/lib/1.1.6/uclibc/4.7.2/libimp.so`, md5 `6ba99769…a818`). Nach
-`/tmp/libimp-stock.so` kopieren. Ist sie nicht greifbar, den Menschen fragen oder Stufe 1
-überspringen.
+The stock libimp for the comparison: T31 SDK 1.1.6, uclibc
+(`ingenic-lib/T31/lib/1.1.6/uclibc/4.7.2/libimp.so`, md5 `6ba99769…a818`). Copy it to
+`/tmp/libimp-stock.so`. If it is not at hand, ask the human or skip stage 1.
 
-### 6.2 Stufe 1: Algorithmen gegen die Stock-libimp (ohne Streamer-Stopp)
+### 6.2 Stage 1: algorithms against the stock libimp (without stopping the streamer)
 
-Das Tool rechnet nur auf synthetischen Frames. Es braucht weder ISP noch Kamerabild und läuft
-neben dem Streamer.
+The tool computes only on synthetic frames. It needs neither ISP nor a camera picture and runs
+next to the streamer.
 
 ```sh
-grep -i 'ASEs' /proc/cpuinfo            # steht mxu_v2 drin?
+grep -i 'ASEs' /proc/cpuinfo            # does it list mxu_v2?
 rm -f /tmp/closesimd
 /tmp/t31_ivs_compare /tmp/libimp-stock.so 2>&1 | tee /tmp/ivs-compare-simd.txt
-touch /tmp/closesimd                    # erzwingt den Vendor-Skalarpfad
+touch /tmp/closesimd                    # forces the vendor scalar path
 /tmp/t31_ivs_compare /tmp/libimp-stock.so 2>&1 | tee /tmp/ivs-compare-scalar.txt
-rm -f /tmp/closesimd                    # wichtig: sonst rechnet auch ein Stock-Streamer skalar
+rm -f /tmp/closesimd                    # important: otherwise a stock streamer also computes scalar
 ```
 
-- Die erste Zeile nennt den Pfad (`MXU2 SIMD` oder `scalar`).
-- **Erfolg:** in beiden Läufen `differ=0` bei move und base. `oob-differ` ist erlaubt
-  (Abweichung 1).
-- Abweichungen im SIMD-Lauf sind ein wichtiges Ergebnis, kein Abbruchgrund. Die ersten
-  `MOVE DIFF`/`BASE DIFF`-Zeilen melden.
-- Scheitert `dlopen` (fehlende Symbole, falsche libc), die Meldung zurückgeben.
+- The first line names the path (`MXU2 SIMD` or `scalar`).
+- **Success:** in both runs `differ=0` for move and base. `oob-differ` is allowed
+  (deviation 1).
+- Deviations in the SIMD run are an important result, not a reason to abort. Report the first
+  `MOVE DIFF`/`BASE DIFF` lines.
+- If `dlopen` fails (missing symbols, wrong libc), return the message.
 
-### 6.3 Stufe 2: timps mit OpenIMP und Bewegungserkennung
+### 6.3 Stage 2: timps with OpenIMP and motion detection
 
 ```sh
 cp /usr/lib/libimp.so /tmp/libimp-orig.so
@@ -304,7 +303,7 @@ mount --bind /tmp/libimp-ivs.so /usr/lib/libimp.so
 cp /etc/timps.conf /tmp/timps-ivs.conf
 ```
 
-In `/tmp/timps-ivs.conf` setzen (nur in der Kopie):
+Set in `/tmp/timps-ivs.conf` (only in the copy):
 
 ```
 motion.enabled = 1
@@ -313,7 +312,7 @@ motion.sensitivity = 128
 motion.skip_frames = 5
 ```
 
-Streamer von Hand starten, mit Statistik:
+Start the streamer by hand, with statistics:
 
 ```sh
 /etc/init.d/S95timps stop
@@ -323,99 +322,99 @@ grep -E '\[IVS\]|motion' /tmp/run-ivs.log | tail -20
 logread 2>/dev/null | grep -E 'IVS|motion' | tail -20
 ```
 
-Prüfen, dass die Variable ankommt:
+Check that the variable arrives:
 `tr '\0' '\n' < /proc/$(pidof timpsd)/environ | grep OPENIMP`
 
-Messungen:
+Measurements:
 
-1. **Start:** Meldet timps `motion detection started (…)`? Kein `CreateChn failed`, kein
-   `does not match the configured` von `[IVS]`.
-2. **Statistik** (alle 10 s eine Zeile pro Kanal):
+1. **Start:** Does timps report `motion detection started (…)`? No `CreateChn failed`, no
+   `does not match the configured` from `[IVS]`.
+2. **Statistics** (one line per channel every 10 s):
    `[IVS] chn0: <n> frames, <d> dropped busy, <r> results; copy avg … max …; process avg … max …`
-   - `frames` ≈ Bildrate × 10.
-   - `results` ≈ `frames / (skip_frames + 1)` minus Drops.
-   - `copy` = Zeit im Capture-Thread, `process` = Rechenzeit im IVS-Thread.
-3. **Ruhige Szene** (niemand im Bild, 2 Minuten):
-   `curl -s http://127.0.0.1:8880/control` (Token nach Bedarf), im Objekt `motion`: `active[]`
-   bleibt 0, `last_ms` ändert sich nicht oder selten. Kein `stalled: 1`.
-4. **Gehtest:** Mit Einverständnis des Menschen durchs Bild gehen (oder eine Hand vor die
-   Linse). `active[]` zeigt die Zellen, `last_ms` wird aktuell. Live mitlesen:
+   - `frames` ≈ frame rate × 10.
+   - `results` ≈ `frames / (skip_frames + 1)` minus drops.
+   - `copy` = time in the capture thread, `process` = compute time in the IVS thread.
+3. **Quiet scene** (nobody in the picture, 2 minutes):
+   `curl -s http://127.0.0.1:8880/control` (token as needed), in the `motion` object: `active[]`
+   stays 0, `last_ms` does not change or rarely. No `stalled: 1`.
+4. **Walk test:** With the human's consent, walk through the picture (or hold a hand in front of the
+   lens). `active[]` shows the cells, `last_ms` becomes current. Follow live:
    `curl -N "http://127.0.0.1:8880/events?stream=motion"`.
-5. **Empfindlichkeit live:** Weil timps mit `-c /tmp/timps-ivs.conf` läuft, speichert
-   `POST /control` nur in die Kopie:
+5. **Sensitivity live:** Because timps runs with `-c /tmp/timps-ivs.conf`, `POST /control`
+   saves only into the copy:
    `curl -s -X POST http://127.0.0.1:8880/control -d '{"motion":{"sensitivity":255}}'`,
-   dann `0`. Im Log: `motion sensitivity updated live to …`. Erwartung: bei 255 (sense 4)
-   deutlich mehr Treffer als bei 0 (sense 0).
-6. **Last und Bildrate:** `top -b -n 3 | head -20` mit `motion.enabled = 1` und mit `0`
-   (zweiter Lauf). Bildrate des Hauptstreams aus `/control` (`stats`) in beiden Läufen. Einen
-   RTSP-Client 2 Minuten verbinden, auf Ruckler achten.
-7. **Nacht/IR** (optional): im Dunkeln mit IR ruhige Szene 2 Minuten. Viele Fehlalarme melden.
-8. **Stop/Start:** `curl … -d '{"motion":{"enabled":0}}'`, dann `1`. Kein Absturz, danach wieder
-   Ergebnisse (Statistikzeile).
+   then `0`. In the log: `motion sensitivity updated live to …`. Expectation: at 255 (sense 4)
+   clearly more hits than at 0 (sense 0).
+6. **Load and frame rate:** `top -b -n 3 | head -20` with `motion.enabled = 1` and with `0`
+   (second run). Frame rate of the main stream from `/control` (`stats`) in both runs. Connect an
+   RTSP client for 2 minutes, watch for stutter.
+7. **Night/IR** (optional): in the dark with IR, quiet scene for 2 minutes. Report many false alarms.
+8. **Stop/start:** `curl … -d '{"motion":{"enabled":0}}'`, then `1`. No crash, then results again
+   (statistics line).
 
-**Abbruchkriterium:** Absturz, eingefrorener Stream oder ständig `stalled: 1`. Dann
-`logread`, `dmesg` und `/tmp/run-ivs.log` sichern und melden.
+**Abort criterion:** Crash, frozen stream or constant `stalled: 1`. Then
+save `logread`, `dmesg` and `/tmp/run-ivs.log` and report.
 
-prudynt statt timps: dieselben Schritte. Die Konfiguration nach `/tmp` kopieren, die
-Bewegungserkennung dort einschalten und den Konfigpfad beim Start übergeben (Option mit
-`prudynt --help` prüfen). Ergebnisse stehen dort im Log.
+prudynt instead of timps: the same steps. Copy the configuration to `/tmp`, switch on
+motion detection there and pass the config path at start (check the option with
+`prudynt --help`). Results are in the log there.
 
-### 6.4 Stufe 3 (optional): Vergleich mit dem Stock-Stack
+### 6.4 Stage 3 (optional): comparison with the stock stack
 
-Nur mit einer zweiten T31-Kamera mit Original-Stack (Stock-Kernelmodule und Stock-libimp),
-gleiche Szene, gleiche Einstellungen. Die Stock-libimp läuft nicht auf dem offenen Stack.
+Only with a second T31 camera with the original stack (stock kernel modules and stock libimp),
+same scene, same settings. The stock libimp does not run on the open stack.
 
-- Gehtest wie in 6.3, Punkt 4, einmal ohne und einmal mit `touch /tmp/closesimd` vor dem
-  Streamer-Start (danach `rm -f /tmp/closesimd`).
-- Vergleichen: Welche Zellen lösen aus, wie schnell, wie viele Fehlalarme bei ruhiger Szene.
-- Erwartung: gleiches Verhalten, weil die Algorithmen bitgleich sind. Unterschiede kommen dann
-  von Eingangsbild, Bildrate oder OSD.
+- Walk test as in 6.3, item 4, once without and once with `touch /tmp/closesimd` before the
+  streamer start (afterwards `rm -f /tmp/closesimd`).
+- Compare: Which cells trigger, how fast, how many false alarms in a quiet scene.
+- Expectation: same behaviour, because the algorithms are bit-identical. Differences then come
+  from the input picture, frame rate or OSD.
 
-### 6.5 Aufräumen
+### 6.5 Clean-up
 
 ```sh
 kill $(pidof timpsd); umount /usr/lib/libimp.so; /etc/init.d/S95timps start
 rm -f /tmp/closesimd
 ```
 
-Oder die Kamera neu starten. Danach prüfen, dass der Streamer normal läuft.
+Or reboot the camera. Then check that the streamer runs normally.
 
-### 6.6 Was zurückmelden
+### 6.6 What to report back
 
-- Kopf: Modell, SoC (`/proc/cpuinfo`, auch die Zeile `ASEs implemented`), thingino-Stand,
-  Kernel, Streamer und Version, Commit (`git rev-parse --short HEAD`).
-- Stufe 1: beide Ausgaben von `t31_ivs_compare` vollständig.
-- Stufe 2:
-  - die `[IVS]`-Statistikzeilen (mindestens 1 Minute) für Hauptstream 1080p oder 2K;
-  - `top`-Werte mit und ohne Bewegungserkennung, Bildrate beider Läufe;
-  - Ergebnis von ruhiger Szene, Gehtest, Empfindlichkeit, Stop/Start;
-  - Logauszüge bei Fehlern.
-- Stufe 3, falls gemacht: Beobachtungen im Vergleich.
-- Keine Kamerabilder ohne Einverständnis.
+- Header: model, SoC (`/proc/cpuinfo`, also the line `ASEs implemented`), thingino revision,
+  kernel, streamer and version, commit (`git rev-parse --short HEAD`).
+- Stage 1: both outputs of `t31_ivs_compare` in full.
+- Stage 2:
+  - the `[IVS]` statistics lines (at least 1 minute) for the 1080p or 2K main stream;
+  - `top` values with and without motion detection, frame rate of both runs;
+  - result of quiet scene, walk test, sensitivity, stop/start;
+  - log excerpts on errors.
+- Stage 3, if done: observations in comparison.
+- No camera pictures without consent.
 
 ## 7. T23 (T23 SDK 1.3.0)
 
-Seit Branch `claude/t23-stub-fixes` baut `build-t23.sh` dieselben Dateien
-(`openimp_t31_ivs.c`, `openimp_t31_ivs_move.c`) mit `PLATFORM_T23`; die IVS-Stubs in
-`openimp_t31_services.c` gelten nur noch für T21/T30.
+Since branch `claude/t23-stub-fixes`, `build-t23.sh` builds the same files
+(`openimp_t31_ivs.c`, `openimp_t31_ivs_move.c`) with `PLATFORM_T23`; the IVS stubs in
+`openimp_t31_services.c` now apply only to T21/T30.
 
-- **Vendor-Abgleich (Disassembly von `libimp.a` 1.3.0 gegen T31 1.1.6):** `ivs.c`,
-  `move_ivs.c`, `base_move_ivs.c`, `ivs_move.c`, `ivs_base_move.c`, `filter.c`, `sad.c` sind
-  bis auf Struktur-Offsets identisch. Wo T31 einen MXU2-Zweig hat (`resize`,
-  `MorphRowFilter`, `MorphColumnFilter`, `move_detect`, `Proceed`, `MergeBaseMove`), hat T23
-  nur den skalaren Zweig und ein `assert` statt des SIMD-Codes; Konstanten
-  (Schwellen 1365/455/151/50/16, 20, 30/20/15/10) und Tabellen sind gleich. OpenIMP bildet
-  den skalaren T31-Pfad bitgenau nach, also auch T23.
-- **ABI-Unterschied:** nur `IMPFrameInfo` (0x38 statt 0x30 Byte: `direct_phyAddr` bei 0x20,
-  `timeStamp` bei 0x28, `timeStamp_ivdc` bei 0x30). Daraus folgt `IMP_IVS_MoveParam` 0x458
-  (roiRect 0x110, roiRectCnt 0x450), `IMP_IVS_BaseMoveParam` 0x48 und das öffentliche
-  `IMP_IVS_BaseMoveOutput.timeStamp` bei 0x10. `openimp_t31_ivs_abi.h` prüft das mit
+- **Vendor comparison (disassembly of `libimp.a` 1.3.0 against T31 1.1.6):** `ivs.c`,
+  `move_ivs.c`, `base_move_ivs.c`, `ivs_move.c`, `ivs_base_move.c`, `filter.c`, `sad.c` are
+  identical except for structure offsets. Where T31 has an MXU2 branch (`resize`,
+  `MorphRowFilter`, `MorphColumnFilter`, `move_detect`, `Proceed`, `MergeBaseMove`), T23
+  has only the scalar branch and an `assert` instead of the SIMD code; constants
+  (thresholds 1365/455/151/50/16, 20, 30/20/15/10) and tables are the same. OpenIMP reproduces
+  the scalar T31 path bit-exactly, and so also T23.
+- **ABI difference:** only `IMPFrameInfo` (0x38 instead of 0x30 bytes: `direct_phyAddr` at 0x20,
+  `timeStamp` at 0x28, `timeStamp_ivdc` at 0x30). From this follows `IMP_IVS_MoveParam` 0x458
+  (roiRect 0x110, roiRectCnt 0x450), `IMP_IVS_BaseMoveParam` 0x48 and the public
+  `IMP_IVS_BaseMoveOutput.timeStamp` at 0x10. `openimp_t31_ivs_abi.h` checks this with
   `_Static_assert`.
-- **Frame-Hook und Idle-Drain:** wie T31 (`VBMKernelDequeue` → `openimp_t31_ivs_capture`,
-  Rückgabe der Puffer an den Treiber, solange niemand `GetFrame` aufruft, und
-  `VBMRecycleIdleFrames` nach leerem `select`), jetzt auch für `PLATFORM_T23`.
-- **Hosttests:** `make -C tests/t23 check` vergleicht die Algorithmen mit T31- und T23-Layout
-  (gleicher Digest, 3708 move-Ergebnisse, 5120 base-move-Detektionen) und fährt das
-  Framework mit T23-Capture-Records von Group/Chn/Bind bis Poll/Get/Release durch.
-- **Gerätevergleich:** `tools/t31_ivs_compare.c` mit `-DPLATFORM_T23` bauen und gegen
-  `/opt/openimp-t23/libimp.so` (die Stock-libimp des Helix-Workers) laufen lassen.
+- **Frame hook and idle drain:** as T31 (`VBMKernelDequeue` → `openimp_t31_ivs_capture`,
+  returning the buffers to the driver as long as nobody calls `GetFrame`, and
+  `VBMRecycleIdleFrames` after an empty `select`), now also for `PLATFORM_T23`.
+- **Host tests:** `make -C tests/t23 check` compares the algorithms with T31 and T23 layout
+  (same digest, 3708 move results, 5120 base-move detections) and runs the
+  framework with T23 capture records from group/chn/bind through to poll/get/release.
+- **Device comparison:** build `tools/t31_ivs_compare.c` with `-DPLATFORM_T23` and run it against
+  `/opt/openimp-t23/libimp.so` (the stock libimp of the Helix worker).

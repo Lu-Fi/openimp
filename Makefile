@@ -105,13 +105,20 @@ status-soak:
 	python3 tools/status_soak.py
 	python3 tools/gen_feature_matrix_html.py
 
-.PHONY: status-check status-soak api-wiki
+.PHONY: status-check status-soak api-wiki mp-wiki
 
 # API reference pages of the wiki (ISP, FrameSource, Encoder) from include/, docs/api_evidence.json and docs/api_reference/*.yaml
 # into a wiki checkout: make api-wiki WIKI_DIR=<openimp.wiki checkout>   (needs PyYAML; tools/gen_api_wiki.py)
 api-wiki:
 	@test -n "$(WIKI_DIR)" || { echo "usage: make api-wiki WIKI_DIR=<wiki checkout dir>"; exit 2; }
 	python3 tools/gen_api_wiki.py --out "$(WIKI_DIR)"
+
+# Wiki page Module-Parameters-All (every module parameter of every SoC, from module_param*() in an open-tx-isp checkout, default ../open-tx-isp):
+# make mp-wiki WIKI_DIR=<openimp.wiki checkout> [OPEN_TX_ISP=<open-tx-isp worktree of origin/next>]   (tools/gen_module_params_wiki.py)
+# Regenerate after every open-tx-isp merge round, like api-wiki.
+mp-wiki:
+	@test -n "$(WIKI_DIR)" || { echo "usage: make mp-wiki WIKI_DIR=<wiki checkout dir> [OPEN_TX_ISP=<open-tx-isp checkout>]"; exit 2; }
+	python3 tools/gen_module_params_wiki.py --out "$(WIKI_DIR)" $(if $(OPEN_TX_ISP),--repo "$(OPEN_TX_ISP)")
 
 export-check:
 	./tools/export-check.sh

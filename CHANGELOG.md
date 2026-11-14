@@ -14,10 +14,16 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Fix in `src/audio/openimp_aec.c` (T10/T20/T21/T23/T30/T31; T40/T41 use the driver AEC and are unchanged): an echo gate scales AECM's suppression gain with the evidence that the microphone follows the far end: the valley of AECM's own binary delay estimator (mean - best bit count: no gain up to 3, full from 5) or, for far ends outside its 1.5-5.4 kHz band, the correlation of microphone and far-end level (0.6 to 0.8). The gate is open for the first 3 s of far end after `IMP_AI_EnableAec` (AECM as before), opens at once and closes over 6 s.
 - Host (`tests/t31/aec_test.c`, new no-echo cases, 8 and 16 kHz, far end noise or talker, near end noise or talker): near-end loss 3.7-10.3 dB -> 0.1-0.3 dB. The b91 microphone recordings through the host AEC: 13.1 dB -> 0.1 dB (noise), 0.9 -> 0.1 dB (speech). Echo cases unchanged: ERLE 44.3 / 44.9 / 40.9 dB (16 kHz) and 36.0 dB (8 kHz), first 2 s 35.8-39.9 dB, modulated lab signals 35.9-46.2 dB.
 - Known limit: an echo more than about 10 dB under the room noise forms no evidence and is no longer suppressed. `OPENIMP_AEC_STATS=1` lines end with `echo gate N %`. Device proof on the T30X is open (run b93 prepared).
+## 2026-11-14: tools: `make mp-wiki` generates the wiki page Module-Parameters-All
+
+- `tools/gen_module_params_wiki.py` (new): lists every module parameter of every SoC (type, permission, default, description, bring-up-only names) from `module_param*()` and `MODULE_PARM_DESC()` in an open-tx-isp checkout (`--repo`, env `OPEN_TX_ISP`, default `../open-tx-isp`); `make mp-wiki WIKI_DIR=<openimp.wiki checkout>` next to `api-wiki`. Run after every driver merge round (docs/ai/reference.md). Docs and tooling only.
 
 ## 2026-11-14: docs: T10/T20 SetDRC_Strength row approved
 
 - `docs/OPENIMP_BEYOND_VENDOR.md`: `IMP_ISP_Tuning_SetDRC_Strength` acting on the auto Iridix strength on T10/T20 is a beyond-vendor row, user OK 2026-11-14, kept. Docs only.
+## 2026-11-14: docs: German RE/test notes translated to English
+
+- Translated 14 German docs to English, content unchanged (structure, tables, register values, line/address references and [V]/[I]/[?] marks kept): `docs/RE_TRACE_GUIDE.md`, `docs/T31_OSD_RE.md`, `docs/T31_HW_JPEG_RE.md`, `docs/T31_HW_JPEG_RE_FOLLOWUP.md`, `docs/T31_AVC_STABILITY_RE.md`, `docs/T31_IVS_MOVE.md`, `docs/T31_TEST_PLAN.md`, `docs/T31_HW_JPEG_TEST.md`, `docs/T31_OSD_IPU_TEST.md`, `docs/T31_AVC_STABILITY_TEST.md`, `docs/archive/HANDOVER_OIMP_OSDTHICK.md` and the three T31 reports under `docs/test-reports/`. Docs only.
 
 ## 2026-11-14: vendor decompile and raw stock trace removed from the repository
 
@@ -26,6 +32,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-14: docs: T33 ExternInject beyond-vendor row approved (#480)
 
 - `docs/OPENIMP_BEYOND_VENDOR.md` 6.10 (T33 ExternInject channels deliver frames where the vendor 2.0.2.1 EnableChn fails in QEMU): user OK 2026-11-14, kept; the six F1 cell notes say so. Docs only.
+
+## 2026-11-14: feature matrix audit against the newest device evidence (docs only)
+
+- `docs/status/features.yaml`: T30 row 11 (IR cut / IR LED) planned -> supported (T30X b92: the open stack switches gpio72, the IR LED pin, the ISP running mode and the ircut status like the vendor, #100); T30 row 35 (module size) known deviation -> supported (-Os default, 343,136 B against 347,648 B, #274); T40 row 7 (anti-flicker) supported -> improved beyond vendor (#494, mains-locked ladder, device proof, user decision 2026-11-14). Counts: supported 243 -> 244, beyond vendor 84 -> 85, known deviation 2 -> 1, planned 93 -> 92.
+- Cell texts extended without a symbol change: T30 rows 2, 33, 41, 42; T40 rows 4, 9, 10, 22, 23; T10/T20 row 2. Issue links added (#99, #392, #393, #437, #444, #479, #480, #491, #496, #498, #499, #100); the issue cache lists the closed #483, #487, #488, #494, #495, #497.
+- `docs/api_evidence.json`: notes of `SU_CIPHER_CreateHandle` / `DestroyHandle` (#496, neo aperto 518648d, host-tested) and `SU_Base_GetDevID` (beyond vendor, user OK).
+- `tools/gen_api_coverage.py`: the 'As of' of the API coverage section is the newest date named in `docs/api_evidence.json` (the hand-kept `asof` field said 2026-11-07 over current numbers). `docs/status/driver_port.json`: the T33 note no longer says 'not merged into next' (merged into open-tx-isp next, counts not recounted yet).
+- Generator texts (`tools/gen_api_coverage.py`, `tools/gen_feature_matrix_html.py`) no longer say that T32/T33 have no OpenIMP build (the class stays for a SoC without one); the dead link `../FEATURE_MATRIX.md` in the matrix intro is fixed.
 
 ## 2026-11-14: docs: beyond-vendor rows for #490 and neo SU_Base_GetDevID (#27)
 

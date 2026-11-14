@@ -1,391 +1,393 @@
-# OpenIMP T31 AVC-Pfad: Ursachen der Instabilität (RE-Bericht)
+# OpenIMP T31 AVC path: causes of instability (RE report)
 
-> Hinweis: Audit-Bericht, erstellt auf `claude/t31-re` (Commit `e7cf6b9`). Die Zeilennummern beziehen sich auf diesen Stand; die Fixes liegen auf `claude/t31-avc-stability`.
+> Note: Audit report, created on `claude/t31-re` (commit `e7cf6b9`). The line numbers refer to this state; the fixes are on `claude/t31-avc-stability`.
 
-Stand: 2026-09-29. Untersucht wurde der Arbeitsbaum `/home/user/openimp-wt`, Branch `claude/t31-re`, Commit `e7cf6b9`.
-Vergleichsbasis:
-- Binary-Ninja-HLIL der Stock-T31-`libimp.so` 1.1.6 (`libimp.so_hlil.txt`, im Folgenden „HLIL Lnnn“ mit Adresse)
-- Stock-Registertrace `stock_logs.txt` (rvd, 1080p H.264 + JPEG)
-- T31-`avpu`-Treiberquellen `avpu/t31/`
+Status: 2026-09-29. The working tree `/home/user/openimp-wt`, branch `claude/t31-re`, commit `e7cf6b9` was examined.
+Basis of comparison:
+- Binary Ninja HLIL of the stock T31 `libimp.so` 1.1.6 (`libimp.so_hlil.txt`, referred to below as "HLIL Lnnn" with address)
+- Stock register trace `stock_logs.txt` (rvd, 1080p H.264 + JPEG)
+- T31 `avpu` driver sources `avpu/t31/`
 
-Der Bericht enthält keine Vendor-Disassembly. Das Verhalten ist beschrieben, die Fundstellen sind zitiert.
+(`libimp.so_hlil.txt` and `stock_logs.txt` are local files and are not in the repository.)
 
-Markierung: **[V]** verifiziert (Code/Trace/HLIL gelesen), **[I]** abgeleitet (Mechanismus aus dem Code geschlossen, nicht auf dem Gerät reproduziert), **[?]** offen.
+The report contains no vendor disassembly. The behaviour is described, the locations are cited.
 
-Nicht erneut berichtet (bekannt):
-- Companion-Stage/JPEG-Core-Kick pro AVC-Frame
-- `0x8014 = 0` nach AVC-Completion
-- rmem-Flush-Workaround über den uncached `/dev/mem`-Alias
+Marking: **[V]** verified (code/trace/HLIL read), **[I]** inferred (mechanism concluded from the code, not reproduced on the device), **[?]** open.
 
-Hinweis: thingino pinnt in `package/openimp/openimp.mk` den Upstream-Commit `opensensor/openimp@9cab219`, nicht diesen Branch. Die Zeilennummern beziehen sich auf `claude/t31-re`.
+Not reported again (known):
+- companion stage / JPEG core kick per AVC frame
+- `0x8014 = 0` after AVC completion
+- rmem flush workaround via the uncached `/dev/mem` alias
+
+Note: thingino pins the upstream commit `opensensor/openimp@9cab219` in `package/openimp/openimp.mk`, not this branch. The line numbers refer to `claude/t31-re`.
 
 ---
 
-## 0. Kurzfassung (nach erwartetem Einfluss sortiert)
+## 0. Summary (sorted by expected impact)
 
-| ID | Schwere | Kern |
+| ID | Severity | Core |
 |---|---|---|
-| F1 | **hoch** | Verlorene oder späte AVC-Completion wird nie aufgeräumt. `Process` meldet trotz Timeout Erfolg, der Pending-Eintrag bleibt stehen, der Core wird nicht zurückgesetzt. `PollingStream` hält dabei `p2_core_lock` bis zu ca. 67 min und blockiert damit **alle** AVC-Kanäle. |
-| F2 | **hoch** | Der EndEncoding-Callback verbraucht den Pending-Eintrag und schaltet IRQ-Maske und Clock-Gate ab, **ohne** zu prüfen, ob die Hardware den Frame fertig hat (Writeback `+0x104 == 0`). Ein veralteter oder fremder IRQ erzeugt so eine sich selbst erhaltende Off-by-one-Kette: jeder Frame wird verworfen, der Stream ist schwarz oder eingefroren. Dazu kommt ein Wettlauf zwischen „Sticky Recovery“ im Consumer-Thread und dem IRQ-Thread. |
-| F3 | **hoch** | Der gemeinsame WAIT_IRQ-Thread gehört dem *ersten* Encoder-Kontext, nicht dem Gerät. Wird dieser Kanal zerstört, verliert der überlebende Kanal alle IRQs. Das `UNBLOCK_CHANNEL`-Flag des Kernels bleibt für die gepoolte fd dauerhaft gesetzt. Ein neu gestarteter Waiter dreht mit `EINTR` bei 100 % CPU und bekommt nie wieder einen IRQ. |
-| F4 | hoch/mittel | `Destroy` ist auf T31 nicht mit dem anderen Kanal serialisiert. Es setzt den gemeinsamen Core zurück, maskiert ihn und gated die Clock mitten in einem fremden Frame. Das führt zu F1. Außerdem gibt es ein Use-after-free-Fenster für `g_tseries_irq_owner`, und P2 `DestroyChn`/`UnRegisterChn` laufen ungeschützt gegen ein laufendes `PollingStream`. |
-| F5 | mittel | Ein verworfener Frame (ungültige Größe, reiner Header, Error-Fill) befördert trotzdem Rec→Ref und erhöht `frame_num`, erzwingt aber kein IDR. Der Decoder zeigt Artefakte bis zum nächsten GOP. Die Ratenregelung erfährt nichts davon. |
-| F6 | mittel | Der Software-JPEG-Encoder läuft unter `g_t31_encode_core_lock`. Jeder Snapshot oder MJPEG-Frame blockiert Main- und Sub-H.264 für die Dauer einer CPU-JPEG-Kodierung. |
-| F7 | mittel | `AL_EncCore_Init` (MISC_CTRL, Reset, globales IRQ-Clear `0x8018=0xffffff`, TOP_CTRL) läuft pro Encoder-Session. Stock macht das einmal pro Prozess. |
-| F8 | niedrig/mittel | Eine IDR-Anforderung geht verloren, wenn `Process` vor dem Submit abbricht. |
-| F9 | niedrig/mittel | Im IRQ-Thread passieren `usleep(2000)` und eine byteweise EBSP-Kopie aus uncached Speicher. Dazu kommen 1-ms-Polling-Schleifen, ein ungedrosseltes `fprintf` pro Frame in `VBMGetFrame` und ein Kernel-`printk` pro IRQ (lokale Treiberkopie). Folge: Jitter und hohe sys-Zeit. |
-| F10–F14 | niedrig | Timeouts auf `CLOCK_REALTIME`; keine Prüfung der Frame-Dimension; Fehler bei `prewrite_headers` unbehandelt; RC-Reset bei jeder Bitratenänderung; kleine Lecks bei Create/UnRegister. |
+| F1 | **high** | A lost or late AVC completion is never cleaned up. `Process` reports success despite the timeout, the pending entry stays, the core is not reset. `PollingStream` holds `p2_core_lock` for up to about 67 min and thus blocks **all** AVC channels. |
+| F2 | **high** | The EndEncoding callback consumes the pending entry and switches off the IRQ mask and clock gate **without** checking whether the hardware has finished the frame (writeback `+0x104 == 0`). A stale or foreign IRQ thus creates a self-sustaining off-by-one chain: every frame is discarded, the stream is black or frozen. In addition there is a race between "sticky recovery" in the consumer thread and the IRQ thread. |
+| F3 | **high** | The shared WAIT_IRQ thread belongs to the *first* encoder context, not to the device. If this channel is destroyed, the surviving channel loses all IRQs. The kernel's `UNBLOCK_CHANNEL` flag stays set permanently for the pooled fd. A newly started waiter spins with `EINTR` at 100 % CPU and never gets an IRQ again. |
+| F4 | high/medium | `Destroy` is not serialised with the other channel on T31. It resets the shared core, masks it and gates the clock in the middle of a foreign frame. This leads to F1. There is also a use-after-free window for `g_tseries_irq_owner`, and P2 `DestroyChn`/`UnRegisterChn` run unprotected against a running `PollingStream`. |
+| F5 | medium | A discarded frame (invalid size, header only, error fill) still promotes Rec→Ref and increments `frame_num`, but does not force an IDR. The decoder shows artefacts until the next GOP. The rate control learns nothing about it. |
+| F6 | medium | The software JPEG encoder runs under `g_t31_encode_core_lock`. Every snapshot or MJPEG frame blocks main and sub H.264 for the duration of a CPU JPEG encode. |
+| F7 | medium | `AL_EncCore_Init` (MISC_CTRL, reset, global IRQ clear `0x8018=0xffffff`, TOP_CTRL) runs per encoder session. Stock does this once per process. |
+| F8 | low/medium | An IDR request is lost if `Process` aborts before the submit. |
+| F9 | low/medium | In the IRQ thread there are `usleep(2000)` and a byte-wise EBSP copy from uncached memory. In addition there are 1 ms polling loops, an unthrottled `fprintf` per frame in `VBMGetFrame` and a kernel `printk` per IRQ (local driver copy). Consequence: jitter and high sys time. |
+| F10–F14 | low | Timeouts on `CLOCK_REALTIME`; no check of the frame dimension; error in `prewrite_headers` unhandled; RC reset on every bitrate change; small leaks on Create/UnRegister. |
 
 ---
 
-## 1. Befunde im Detail
+## 1. Findings in detail
 
-### F1 – Keine Recovery nach Completion-Timeout; globaler Lock bis ca. 67 min [V] (Folgen teils [I])
+### F1 – No recovery after completion timeout; global lock for up to about 67 min [V] (consequences partly [I])
 
-**Fundstellen**
-- `src/t40/codec-t40.c:9864–9908` (`AL_Codec_Encode_Process`, T31-Zweig)
+**Locations**
+- `src/t40/codec-t40.c:9864–9908` (`AL_Codec_Encode_Process`, T31 branch)
 - `src/t40/codec-t40.c:9918–9981` (`AL_Codec_Encode_GetStream`)
-- `src/t40/openimp_p2_encoder.c:1234` (Lock), `1239` (Process), `1258–1270` (GetStream-Schleife), `1297–1305` (Freigabe)
-- `src/t40/codec-t40.c:9240–9286` (Submit-Gates)
+- `src/t40/openimp_p2_encoder.c:1234` (lock), `1239` (Process), `1258–1270` (GetStream loop), `1297–1305` (release)
+- `src/t40/codec-t40.c:9240–9286` (submit gates)
 
-**Ist-Zustand**
-1. `AL_Codec_Encode_Process` wartet unter `g_t31_encode_core_lock` bis zu 2000 × 1 ms auf `pending == 0 && completions_drained` geändert. Bei Timeout wird nur geloggt. `ret` bleibt 0 aus `al_codec_encode_process_impl` (`return submitted ? 0 : -1`, `:9777`). Danach wird der Lock freigegeben.
-   - Es gibt keinen Core-Reset, kein Maskieren und kein Leeren des Pending-Eintrags.
-   - Der Stream-Puffer bleibt `IN_FLIGHT`.
-2. P2 `IMP_Encoder_PollingStream` hält `p2_core_lock` (`:1234`) über Process **und** die GetStream-Schleife. Die Schleife läuft `retries = max(timeout_ms, 2000)` mal. Jeder `AL_Codec_Encode_GetStream`-Aufruf wartet intern 20 × `Fifo_Dequeue(…,100)` = 2 s. Die Summe liegt bei ≥ 2000 × 2 s ≈ **4000 s**.
-   - In dieser Zeit steht jeder andere AVC-Kanal an `p2_core_lock`.
-   - Der vom Aufrufer übergebene `timeout_ms` wird ignoriert.
-3. Kommt der IRQ gar nicht (Hardware hängt, IRQ maskiert, siehe F2/F4), dann gilt Folgendes:
-   - Der nächste `PollingStream`-Aufruf submittet trotzdem, weil `last_irq_id >= 0` alle Busy-Gates abschaltet (`:9240 ff.`).
-   - Dabei wird ein neuer Stream-Puffer belegt.
-   - Der Pending-Ring enthält jetzt `[N, N+1]`.
-   - Der IRQ von N+1 wird im Callback dem **ältesten** Eintrag N zugeordnet (`avpu_pending_peek`, `:4480`). N hat keinen Writeback und wird verworfen.
-   - N+1 bleibt pending, und `Process` läuft wieder in den 2-s-Timeout.
-   - Nach `stream_buf_count` (Default 4) aufeinanderfolgenden Hängern liefert `avpu_acquire_stream_buffer` dauerhaft −1 (`:9277–9285`). Ab dann wird nie wieder submittet, also kommt auch nie wieder ein IRQ. Der Kanal ist tot bis zum Destroy. [I]
-4. Im Fehlerpfad (`done:`) gibt P2 den FrameSource-Puffer frei, obwohl der AVPU-Job formal noch läuft. Das ISP kann den Puffer überschreiben, bevor ein später Job ihn liest (korrupter Frame). [I]
+**Current state**
+1. `AL_Codec_Encode_Process` waits under `g_t31_encode_core_lock` for up to 2000 × 1 ms for `pending == 0 && completions_drained` to change. On timeout it only logs. `ret` stays 0 from `al_codec_encode_process_impl` (`return submitted ? 0 : -1`, `:9777`). Then the lock is released.
+   - There is no core reset, no masking and no emptying of the pending entry.
+   - The stream buffer stays `IN_FLIGHT`.
+2. P2 `IMP_Encoder_PollingStream` holds `p2_core_lock` (`:1234`) over Process **and** the GetStream loop. The loop runs `retries = max(timeout_ms, 2000)` times. Every `AL_Codec_Encode_GetStream` call internally waits 20 × `Fifo_Dequeue(…,100)` = 2 s. The sum is ≥ 2000 × 2 s ≈ **4000 s**.
+   - During this time every other AVC channel waits at `p2_core_lock`.
+   - The `timeout_ms` passed by the caller is ignored.
+3. If the IRQ does not come at all (hardware hangs, IRQ masked, see F2/F4), then the following applies:
+   - The next `PollingStream` call submits anyway, because `last_irq_id >= 0` switches off all busy gates (`:9240 ff.`).
+   - A new stream buffer is allocated.
+   - The pending ring now contains `[N, N+1]`.
+   - The IRQ of N+1 is assigned in the callback to the **oldest** entry N (`avpu_pending_peek`, `:4480`). N has no writeback and is discarded.
+   - N+1 stays pending, and `Process` runs into the 2 s timeout again.
+   - After `stream_buf_count` (default 4) consecutive hangs, `avpu_acquire_stream_buffer` permanently returns −1 (`:9277–9285`). From then on nothing is ever submitted again, so no IRQ ever comes again. The channel is dead until Destroy. [I]
+4. In the error path (`done:`) P2 releases the FrameSource buffer although the AVPU job formally still runs. The ISP can overwrite the buffer before a late job reads it (corrupt frame). [I]
 
-**Warum destabilisierend**
-- Stock hat kein Timeout-Konstrukt dieser Art.
-- `AL_EncChannel_EndEncoding` (HLIL L72029, `0x6b82c`) ordnet eine Completion über die *laufende FIFO des Cores* (`getFifoRunning`) dem Kanal zu.
-- Der Scheduler startet den nächsten Kanal aus dem Completion-Kontext. Im Trace kommen `0x83f4=0x10000` → `0x83f4=1` → Reset → `CL_PUSH` des Sub-Kanals aus demselben Thread-Stack (`0x75044xxx`) wie das WAIT_IRQ-ioctl (`stock_logs.txt:252–288`).
-- In OpenIMP reichen dagegen ein einziger verlorener IRQ oder ein fremder Reset (F4), um erst beide Streams für über eine Stunde einzufrieren und danach einen Kanal dauerhaft zu töten.
+**Why destabilising**
+- Stock has no timeout construct of this kind.
+- `AL_EncChannel_EndEncoding` (HLIL L72029, `0x6b82c`) assigns a completion to the channel via the *running FIFO of the core* (`getFifoRunning`).
+- The scheduler starts the next channel from the completion context. In the trace `0x83f4=0x10000` → `0x83f4=1` → reset → `CL_PUSH` of the sub channel come from the same thread stack (`0x75044xxx`) as the WAIT_IRQ ioctl (`stock_logs.txt:252–288`).
+- In OpenIMP, by contrast, a single lost IRQ or a foreign reset (F4) is enough to first freeze both streams for over an hour and then permanently kill one channel.
 
 **Fix (clean-room)**
-1. Timeout = Recovery. Bei Timeout in `AL_Codec_Encode_Process` (T31), noch unter `g_t31_encode_core_lock` und `ctx->irq_mutex`:
-   - `0x8014 &= ~0x1` per Read-Modify-Write; JPEG-Bit erhalten, wie Stock `AL_EncCore_DisableEnc1Interrupt`, HLIL L72725.
-   - Reset-Triplet `0x83f0 = 1,2,4`.
-   - `0x8018 = 0x0f` (nur Core-0-Bits quittieren).
-   - Danach `TurnOffGC`.
-   - Alle Pending-Einträge dieses Kontexts poppen und die Puffer auf `FREE` setzen.
-   - `reference_valid = 0` (das nächste Bild wird IDR).
-   - Einen Zähler `ctx->submit_epoch++` erhöhen (für F2).
-   - Rückgabe −1 mit `errno = ETIMEDOUT`, damit P2 den Frame **nach** dem Reset freigibt.
-2. P2: GetStream-Schleife per Deadline begrenzen, z. B. `deadline = now + max(timeout_ms, 2000 ms)`, statt Iterationen zu zählen. `p2_core_lock` nie länger als diese Deadline halten.
-3. Optional: Polling durch eine Condvar ersetzen, die `avpu_complete_frame` signalisiert. Das reduziert zugleich F9.
+1. Timeout = recovery. On timeout in `AL_Codec_Encode_Process` (T31), still under `g_t31_encode_core_lock` and `ctx->irq_mutex`:
+   - `0x8014 &= ~0x1` by read-modify-write; keep the JPEG bit, like stock `AL_EncCore_DisableEnc1Interrupt`, HLIL L72725.
+   - Reset triplet `0x83f0 = 1,2,4`.
+   - `0x8018 = 0x0f` (acknowledge only the core-0 bits).
+   - Then `TurnOffGC`.
+   - Pop all pending entries of this context and set the buffers to `FREE`.
+   - `reference_valid = 0` (the next picture becomes IDR).
+   - Increment a counter `ctx->submit_epoch++` (for F2).
+   - Return −1 with `errno = ETIMEDOUT`, so that P2 releases the frame **after** the reset.
+2. P2: limit the GetStream loop by a deadline, e.g. `deadline = now + max(timeout_ms, 2000 ms)`, instead of counting iterations. Never hold `p2_core_lock` longer than this deadline.
+3. Optional: replace polling by a condvar that `avpu_complete_frame` signals. This also reduces F9.
 
-**Verifikation auf dem Gerät**
-- Fehlerinjektion per Debug-Env (Vorschlag, nie implementiert: `OPENIMP_T31_DROP_IRQ_EVERY` existiert im Code nicht), z. B. `=500`: im Callback jeden n-ten IRQ ignorieren.
-- Erwartung nach dem Fix:
-  - höchstens ca. 2 s Aussetzer, dann IDR;
-  - der andere Kanal läuft weiter;
-  - `no free AVPU stream buffer` erscheint nie.
-- Vor dem Fix: minutenlanges Einfrieren beider Streams (`logread | grep "serialized completion timeout"`).
+**Verification on the device**
+- Fault injection via a debug env (proposal, never implemented: `OPENIMP_T31_DROP_IRQ_EVERY` does not exist in the code), e.g. `=500`: ignore every n-th IRQ in the callback.
+- Expectation after the fix:
+  - a gap of at most about 2 s, then IDR;
+  - the other channel keeps running;
+  - `no free AVPU stream buffer` never appears.
+- Before the fix: both streams freeze for minutes (`logread | grep "serialized completion timeout"`).
 
 ---
 
-### F2 – Completion wird ohne Hardware-Beleg akzeptiert → Off-by-one und „schwarzer Stream“ [I] (Mechanik [V])
+### F2 – Completion is accepted without hardware evidence → off-by-one and "black stream" [I] (mechanics [V])
 
-**Fundstellen**
-- `src/t40/codec-t40.c:4441–4830` (`avpu_end_encoding_callback`), insbesondere `4546–4561`, `4784–4815`
+**Locations**
+- `src/t40/codec-t40.c:4441–4830` (`avpu_end_encoding_callback`), in particular `4546–4561`, `4784–4815`
 - `src/t40/codec-t40.c:4009–4069` (`avpu_complete_frame`)
-- `src/t40/codec-t40.c:4095–4209` (`avpu_try_recover_sticky_completion`), aufgerufen aus `GetStream` `:9972` ohne `irq_mutex`
-- `src/t40/codec-t40.c:5130–5139` (Owner-Auswahl ohne Lock auf T31)
-- `src/t40/codec-t40.c:9654–9696` (Owner/Push)
+- `src/t40/codec-t40.c:4095–4209` (`avpu_try_recover_sticky_completion`), called from `GetStream` `:9972` without `irq_mutex`
+- `src/t40/codec-t40.c:5130–5139` (owner selection without lock on T31)
+- `src/t40/codec-t40.c:9654–9696` (owner/push)
 
-**Ist-Zustand**
-- Der Callback schaut auf den ältesten Pending-Eintrag des *aktuellen Owners* und liest dort `+0x104` aus dem Submit-Slot. Das CL-Entry wird pro Frame mit `memset(cmd,0,512)` neu aufgebaut (`:2952`), also ist `+0x104` vor dem Hardware-Writeback **0**.
-- Bei `payload == 0` („invalid T31 entropy size“) geht es trotzdem weiter (`:4784–4803`, Kommentar „Continue through normal completion“):
-  - `0x8014 = 0` und `TurnOffGC` (`:4814–4815`), also IRQ maskiert und Clock gegated, während der Frame womöglich noch läuft;
-  - `avpu_complete_frame` → Pop, `avpu_promote_reference` (Rec↔Ref-Tausch), `frames_encoded++`, Drop, `completions_drained++`.
-- Daraufhin sieht `Process` „completed“, gibt den Lock frei, und der nächste Frame wird submittet.
-- Quellen für einen „falschen“ IRQ:
-  1. **Später IRQ nach Timeout (F1).** Er landet beim nächsten Owner, denn `g_tseries_irq_owner` bleibt nach der Completion stehen und wird auf T31 ohne Lock gelesen.
-  2. **Sticky Recovery.** `GetStream` ruft `avpu_try_recover_sticky_completion` ohne `irq_mutex` auf. Das geschieht nach jedem 100-ms-Leerlauf der FIFO, bei niedriger Framerate oder nachts also regelmäßig. Wird Frame N so abgeschlossen, bevor der IRQ-Thread dran war, gilt der echte IRQ von N als „delayed real IRQ“. Der Code-Kommentar `:4163–4166` beschreibt genau das. Er wird dann dem bereits submitteten N+1 zugeordnet.
-  3. Ein IRQ, der zwischen Reset/Unmask und Push im Kernel-Queue steht. Der IRQ-Thread wartet auf `irq_mutex`. Nach dem Push sieht er den neuen Pending-Eintrag und verbraucht ihn (`:9671–9696`).
-- Folge: N+1 wird mit `payload 0` verworfen und die Clock mitten im Frame gegated. Kommt der Job doch zu Ende, bleibt sein IRQ-Bit wegen `mask = 0` stehen und feuert beim nächsten `avpu_enable_interrupts` (`:4215`) sofort. Dann wird N+2 genauso verworfen.
-  - Die Kette kann sich selbst erhalten. Symptom: `GetStream` liefert dauerhaft `ENODATA`, also schwarzer oder eingefrorener Stream.
-  - Der Kommentar in `GetStream` `:9950–9966` beschreibt genau dieses Symptom und behandelt nur die Folge.
-- Nebeneffekt: Nach dem ersten Drop gilt dauerhaft `frames_encoded > frames_consumed`. Die Sticky Recovery ist danach für immer aus (`:4155`). Das ist inkonsistent.
+**Current state**
+- The callback looks at the oldest pending entry of the *current owner* and reads `+0x104` from the submit slot there. The CL entry is rebuilt per frame with `memset(cmd,0,512)` (`:2952`), so `+0x104` is **0** before the hardware writeback.
+- With `payload == 0` ("invalid T31 entropy size") it continues anyway (`:4784–4803`, comment "Continue through normal completion"):
+  - `0x8014 = 0` and `TurnOffGC` (`:4814–4815`), i.e. IRQ masked and clock gated while the frame may still be running;
+  - `avpu_complete_frame` → pop, `avpu_promote_reference` (Rec↔Ref swap), `frames_encoded++`, drop, `completions_drained++`.
+- Thereupon `Process` sees "completed", releases the lock, and the next frame is submitted.
+- Sources of a "false" IRQ:
+  1. **Late IRQ after a timeout (F1).** It lands at the next owner, because `g_tseries_irq_owner` stays set after the completion and is read without a lock on T31.
+  2. **Sticky recovery.** `GetStream` calls `avpu_try_recover_sticky_completion` without `irq_mutex`. This happens after every 100 ms idle period of the FIFO, so regularly at low frame rate or at night. If frame N is completed this way before the IRQ thread got to it, the real IRQ of N counts as a "delayed real IRQ". The code comment `:4163–4166` describes exactly that. It is then assigned to the already submitted N+1.
+  3. An IRQ that sits in the kernel queue between reset/unmask and push. The IRQ thread waits for `irq_mutex`. After the push it sees the new pending entry and consumes it (`:9671–9696`).
+- Consequence: N+1 is discarded with `payload 0` and the clock gated in the middle of the frame. If the job does finish after all, its IRQ bit stays set because of `mask = 0` and fires immediately at the next `avpu_enable_interrupts` (`:4215`). Then N+2 is discarded the same way.
+  - The chain can sustain itself. Symptom: `GetStream` permanently returns `ENODATA`, i.e. a black or frozen stream.
+  - The comment in `GetStream` `:9950–9966` describes exactly this symptom and treats only the consequence.
+- Side effect: After the first drop, `frames_encoded > frames_consumed` holds permanently. Sticky recovery is then off for ever (`:4155`). This is inconsistent.
 
-**Warum destabilisierend / Vergleich Stock**
-- Stock gated und maskiert erst im Scheduler-Pfad nach einer über die laufende FIFO zugeordneten Completion (HLIL L72029 ff.; L66357 `AL_EncCore_TurnOffGC` nur für Module, die nicht laufen, `AL_CoreState_IsRunning`).
-- `IsEnc1AlreadyRunning` (HLIL L72440, `0x6c678`) prüft `0x83f8 & 2`.
-- Stock hat keine Sticky Recovery.
+**Why destabilising / comparison with stock**
+- Stock gates and masks only in the scheduler path after a completion assigned via the running FIFO (HLIL L72029 ff.; L66357 `AL_EncCore_TurnOffGC` only for modules that are not running, `AL_CoreState_IsRunning`).
+- `IsEnc1AlreadyRunning` (HLIL L72440, `0x6c678`) checks `0x83f8 & 2`.
+- Stock has no sticky recovery.
 
 **Fix**
-1. Im T31-Callback **zuerst** den Writeback prüfen. Ist `payload == 0` und kein Error-Fill:
-   - als *spurious* behandeln und loggen;
-   - **kein** Schreiben von `0x8014`/`0x83f4`, **kein** Pop, `return`.
-   - Nur ein gültiger Writeback (0 < n ≤ Kapazität) oder ein expliziter Error-Fill gilt als Completion. Error-Fill → verwerfen und IDR (F5).
-2. Pro Push `ctx->irq_armed = 1` setzen (unter `irq_mutex`). Der Callback handelt nur bei `armed` und setzt es zurück. Veraltete IRQs mit `armed == 0` werden ignoriert.
-3. Sticky Recovery entfernen oder nur im Timeout-Recovery-Pfad (F1) unter `irq_mutex` und nach Prüfung von `0x83f8 & 2 == 0` zulassen.
-4. Die Owner-Auswahl im IRQ-Thread auf T31 unter `g_tseries_irq_host_lock` machen, wie bereits auf T41 (`:5129–5176`). Den Owner nach einer gültigen Completion auf `NULL` setzen.
+1. In the T31 callback, check the writeback **first**. If `payload == 0` and no error fill:
+   - treat it as *spurious* and log it;
+   - **no** writing of `0x8014`/`0x83f4`, **no** pop, `return`.
+   - Only a valid writeback (0 < n ≤ capacity) or an explicit error fill counts as a completion. Error fill → discard and IDR (F5).
+2. Set `ctx->irq_armed = 1` per push (under `irq_mutex`). The callback acts only if `armed` and resets it. Stale IRQs with `armed == 0` are ignored.
+3. Remove sticky recovery, or allow it only in the timeout recovery path (F1) under `irq_mutex` and after checking `0x83f8 & 2 == 0`.
+4. Do the owner selection in the IRQ thread on T31 under `g_tseries_irq_host_lock`, as already on T41 (`:5129–5176`). Set the owner to `NULL` after a valid completion.
 
-**Verifikation**
-- 12 h Main + Sub bei Nacht bzw. niedriger fps.
-- Die Zähler für `invalid T31 entropy size`, `completion without pending stream` und `ENODATA` müssen 0 bleiben.
-- Zusätzlich künstliche Verzögerung im IRQ-Thread testen (z. B. `usleep(50 ms)` vor dem Dispatch, per Env). Vor dem Fix: Drop-Kette. Nach dem Fix: nur Latenz.
+**Verification**
+- 12 h main + sub at night or low fps.
+- The counters for `invalid T31 entropy size`, `completion without pending stream` and `ENODATA` must stay 0.
+- Also test an artificial delay in the IRQ thread (e.g. `usleep(50 ms)` before the dispatch, via env). Before the fix: drop chain. After the fix: only latency.
 
 ---
 
-### F3 – IRQ-Waiter hängt am ersten Encoder; `UNBLOCK` ist im Kernel dauerhaft [V]
+### F3 – IRQ waiter hangs on the first encoder; `UNBLOCK` is permanent in the kernel [V]
 
-**Fundstellen**
-- `src/t40/codec-t40.c:8425–8452` (Host = `&enc->avpu` des ersten AVC-Kanals)
-- `:7277–7293` (Destroy: `irq_thread_running = 0`, `UNBLOCK`, Join)
-- `:7331–7338` (Host auf `NULL`)
-- `:5099–5107` (Waiter: `EINTR` → `continue`)
-- Kernel `avpu/t31/avpu_main.c:211–215` (`unblock_channel` setzt `chan->unblock = 1`, nie zurück) und `:219–236` (`wait_irq` liefert bei gesetztem Flag sofort `-EINTR`)
-- `avpu/t31/avpu_ip.c:36–39` (nur **ein** offener Kanal pro Gerät, sonst `-ENODEV`)
-- `src/device_pool.c` (eine gemeinsame fd, Refcount)
+**Locations**
+- `src/t40/codec-t40.c:8425–8452` (host = `&enc->avpu` of the first AVC channel)
+- `:7277–7293` (Destroy: `irq_thread_running = 0`, `UNBLOCK`, join)
+- `:7331–7338` (host to `NULL`)
+- `:5099–5107` (waiter: `EINTR` → `continue`)
+- Kernel `avpu/t31/avpu_main.c:211–215` (`unblock_channel` sets `chan->unblock = 1`, never reset) and `:219–236` (`wait_irq` returns `-EINTR` immediately when the flag is set)
+- `avpu/t31/avpu_ip.c:36–39` (only **one** open channel per device, otherwise `-ENODEV`)
+- `src/device_pool.c` (one shared fd, refcount)
 
-**Ist-Zustand**
-- Der Waiter-Thread läuft auf dem Kontext des ersten AVC-Encoders, der `Process` aufruft (oft Sub).
-- Wird dieser Kanal zerstört (z. B. Reconfig nur dieses Streams), passiert Folgendes:
-  - `UNBLOCK` auf der **gemeinsamen** fd, Join, Host = `NULL`.
-  - Der überlebende Kanal hat keinen Waiter mehr. Jedes Frame läuft in F1.
-- Wird der zerstörte Kanal neu angelegt, gilt:
-  - `g_tseries_irq_host == NULL`, also startet ein neuer Waiter auf derselben fd.
-  - Die fd wurde nie geschlossen, weil der andere Codec (bzw. HW-JPEG, `t31_hwjpeg_setup` `:7677`) den Pool-Refcount hält. `chan->unblock` bleibt also 1.
-  - `WAIT_IRQ` kehrt sofort mit `EINTR` zurück, der Thread macht `continue`: Busy-Loop mit 100 % CPU, kein IRQ wird je zugestellt, beide Streams sind tot.
+**Current state**
+- The waiter thread runs on the context of the first AVC encoder that calls `Process` (often sub).
+- If this channel is destroyed (e.g. reconfig of only this stream), the following happens:
+  - `UNBLOCK` on the **shared** fd, join, host = `NULL`.
+  - The surviving channel has no waiter any more. Every frame runs into F1.
+- If the destroyed channel is created again, the following applies:
+  - `g_tseries_irq_host == NULL`, so a new waiter starts on the same fd.
+  - The fd was never closed, because the other codec (or HW JPEG, `t31_hwjpeg_setup` `:7677`) holds the pool refcount. So `chan->unblock` stays 1.
+  - `WAIT_IRQ` returns immediately with `EINTR`, the thread does `continue`: busy loop at 100 % CPU, no IRQ is ever delivered, both streams are dead.
 
 **Stock**
-- `AL_Board_Create` erzeugt den Waiter einmal pro Prozess in `EncoderInit`:
+- `AL_Board_Create` creates the waiter once per process in `EncoderInit`:
   - HLIL L84629, `0x823e0` → `AL_Codec_Create` L78957, `0x78d90` → `AL_Board_Create` `0x3612c`.
-- Beendet wird er erst in `AL_Codec_Destroy` (L79025, `0x78ffc`, aus EncoderExit).
-- `LinuxIpCtrl_Destroy` (L39126, `0x36098`): `UNBLOCK` → Join → Mutex löschen → `AL_DevicePool_Close`.
-- `WaitInterruptThread` (L39062, `0x35e28`) **beendet** sich bei jedem ioctl-Fehler, auch bei `EINTR`; nur `perror` wird bei `EINTR` unterdrückt.
-- Die Lebensdauer des Waiters ist also Gerätelebensdauer, nicht Kanallebensdauer.
+- It is ended only in `AL_Codec_Destroy` (L79025, `0x78ffc`, from EncoderExit).
+- `LinuxIpCtrl_Destroy` (L39126, `0x36098`): `UNBLOCK` → join → delete mutex → `AL_DevicePool_Close`.
+- `WaitInterruptThread` (L39062, `0x35e28`) **ends** on every ioctl error, also on `EINTR`; only `perror` is suppressed for `EINTR`.
+- So the lifetime of the waiter is device lifetime, not channel lifetime.
 
 **Fix**
-- Waiter als prozessweites Singleton mit Refcount (Codecs + HW-JPEG), analog zu `avpu_t41_irq_host_get/put` (`:5191–5262`), das auf T31 portiert wird. Erzeugen beim ersten Nutzer, zerstören beim letzten.
-- `UNBLOCK` nur, wenn der Pool-Refcount danach sicher 0 wird und die fd tatsächlich geschlossen wird. Nur dann gibt der Kernel `chan` frei.
-- Waiter: bei `EINTR` den Loop verlassen, wenn `!irq_thread_running`. Sonst nach N aufeinanderfolgenden sofortigen `EINTR` einen Fehler loggen und schlafen (Schutz vor Spin).
-- Optional im Treiber (thingino-kontrolliert): `unblock` in `wait_irq` nach der Auslieferung zurücksetzen (One-shot).
+- Make the waiter a process-wide singleton with a refcount (codecs + HW JPEG), analogous to `avpu_t41_irq_host_get/put` (`:5191–5262`), ported to T31. Create it at the first user, destroy it at the last.
+- `UNBLOCK` only if the pool refcount safely becomes 0 afterwards and the fd is actually closed. Only then does the kernel free `chan`.
+- Waiter: on `EINTR`, leave the loop if `!irq_thread_running`. Otherwise, after N consecutive immediate `EINTR`, log an error and sleep (protection against spinning).
+- Optional in the driver (thingino-controlled): reset `unblock` in `wait_irq` after delivery (one-shot).
 
-**Verifikation**
-- Main und Sub laufen lassen. Nur den Waiter-Host-Kanal zerstören und neu anlegen (prudynt/raptor-Reconfig eines Streams bzw. Testprogramm).
-- Vorher: Der andere Stream friert ein, `top` zeigt einen Thread bei ca. 100 % (sys).
-- Nachher: Beide laufen weiter.
+**Verification**
+- Let main and sub run. Destroy and re-create only the waiter host channel (prudynt/raptor reconfig of one stream, or a test program).
+- Before: the other stream freezes, `top` shows a thread at about 100 % (sys).
+- After: both keep running.
 
 ---
 
-### F4 – `Destroy` stört den laufenden Frame des anderen Kanals; UAF-Fenster; P2-Teardown-Rennen [V] (Auswirkung [I])
+### F4 – `Destroy` disturbs the running frame of the other channel; UAF window; P2 teardown race [V] (impact [I])
 
-**Fundstellen**
-- `src/t40/codec-t40.c:7390–7411` (`AL_Codec_Encode_Destroy`: nur T41 serialisiert über `openimp_core_acquire`)
-- `:7183–7271` (Maske, Ack, Reset-Triplet, GC-off auf den gemeinsamen Core)
-- `:7331–7351` (Owner erst **nach** DMA-Freigabe geleert, danach `irq_mutex` freigegeben)
-- `src/t40/openimp_p2_encoder.c:1000–1028` (`DestroyChn` ohne `p2_core_lock`, ohne Warten auf ein aktives `PollingStream`)
-- `:1051–1068` (`UnRegisterChn` setzt `source_channel = -1`, während ein `PollingStream` es noch für `ReleaseFrame` braucht)
+**Locations**
+- `src/t40/codec-t40.c:7390–7411` (`AL_Codec_Encode_Destroy`: only T41 serialises via `openimp_core_acquire`)
+- `:7183–7271` (mask, ack, reset triplet, GC off on the shared core)
+- `:7331–7351` (owner cleared only **after** DMA release, then `irq_mutex` released)
+- `src/t40/openimp_p2_encoder.c:1000–1028` (`DestroyChn` without `p2_core_lock`, without waiting for an active `PollingStream`)
+- `:1051–1068` (`UnRegisterChn` sets `source_channel = -1` while a `PollingStream` still needs it for `ReleaseFrame`)
 
-**Ist-Zustand und Folgen**
-1. Beim Zerstören von Sub bei laufendem Main (Main steckt in `PollingStream` mit einem Frame im Core) laufen `0x8014 = 0`, `0x8018`-Ack, `0x83f0 = 1,2,4` und `TurnOffGC`. Das tötet den Main-Frame. Main hängt danach in F1.
-2. Der IRQ-Thread liest `g_tseries_irq_owner` ohne Lock (`:5137`). Destroy leert den Owner erst am Ende und gibt dann `irq_mutex` und `enc` frei. Ein bereits gelesener Owner führt zu Lock bzw. Callback auf freigegebenem Speicher oder auf unmapped CL-Ringen (Crash). Das Fenster ist klein, weil vorher maskiert wird; betroffen sind nur schon im Kernel eingereihte IRQs.
-3. `DestroyChn` prüft nur `raw_stream`/`source_frame`. Ein gerade laufendes `PollingStream` desselben Kanals hat diese noch nicht gesetzt. Folge: `AL_Codec_Encode_Destroy` parallel zu `Process`/`GetStream` → Use-after-free.
-4. `UnRegisterChn` während eines laufenden Polls führt zu `IMP_FrameSource_ReleaseFrame(-1, …)`. Der VBM-Puffer wird nie zurückgegeben, der Capture-Pool schrumpft pro Reconfig.
+**Current state and consequences**
+1. When sub is destroyed while main is running (main is in `PollingStream` with a frame in the core), `0x8014 = 0`, the `0x8018` ack, `0x83f0 = 1,2,4` and `TurnOffGC` run. This kills the main frame. Main then hangs in F1.
+2. The IRQ thread reads `g_tseries_irq_owner` without a lock (`:5137`). Destroy clears the owner only at the end and then releases `irq_mutex` and `enc`. An owner that has already been read leads to a lock or callback on freed memory or on unmapped CL rings (crash). The window is small because masking happens first; only IRQs already queued in the kernel are affected.
+3. `DestroyChn` checks only `raw_stream`/`source_frame`. A `PollingStream` of the same channel that is just running has not set these yet. Consequence: `AL_Codec_Encode_Destroy` in parallel to `Process`/`GetStream` → use-after-free.
+4. `UnRegisterChn` during a running poll leads to `IMP_FrameSource_ReleaseFrame(-1, …)`. The VBM buffer is never returned, the capture pool shrinks with each reconfig.
 
 **Stock**
-- `AL_EncChannel_ScheduleDestruction` (HLIL L72230, `0x6c230`) markiert den Kanal nur. Die Zerstörung macht der Scheduler, wenn der Kanal idle ist (`IsChannelIdle`, L66330 ff.).
-- Kein Core-Reset pro Kanal. [V für die Markierung; dass kein Reset erfolgt: [I]]
+- `AL_EncChannel_ScheduleDestruction` (HLIL L72230, `0x6c230`) only marks the channel. The scheduler does the destruction when the channel is idle (`IsChannelIdle`, L66330 ff.).
+- No core reset per channel. [V for the marking; that no reset happens: [I]]
 
 **Fix**
-- T31-`Destroy` unter `g_t31_encode_core_lock`; zusätzlich in P2 `DestroyChn` für AVC `p2_core_lock` nehmen.
-- Eigenes Pending abwarten oder per F1-Recovery abräumen.
-- Reset/GC-off/Mask nur, wenn **kein** anderer initialisierter AVC-Kontext mehr existiert (Sessionzähler). Sonst nur eigene Callbacks und den Owner entfernen.
-- Owner unter demselben Lock leeren, den der IRQ-Thread beim Dispatch hält (wie T41), **bevor** DMA und Mutex freigegeben werden.
-- P2: Zähler `ch->in_poll` pro Kanal. `DestroyChn`/`UnRegisterChn`/`StopRecvPic` warten per Condvar auf 0. `source_channel` beim Poll-Eintritt lokal kopieren.
+- T31 `Destroy` under `g_t31_encode_core_lock`; additionally take `p2_core_lock` in P2 `DestroyChn` for AVC.
+- Wait for its own pending entry or clear it with the F1 recovery.
+- Reset/GC-off/mask only if **no** other initialised AVC context exists any more (session counter). Otherwise remove only its own callbacks and the owner.
+- Clear the owner under the same lock that the IRQ thread holds during dispatch (as T41), **before** DMA and mutex are released.
+- P2: counter `ch->in_poll` per channel. `DestroyChn`/`UnRegisterChn`/`StopRecvPic` wait on a condvar for 0. Copy `source_channel` locally on poll entry.
 
-**Verifikation**
-- Script: Main und Sub streamen, Sub im Sekundentakt zerstören und neu anlegen.
-- Vorher: Aussetzer oder Freeze im Main-Stream, gelegentlich SIGSEGV, wachsende Zahl `in_userspace`-VBM-Puffer.
-- Nachher: Main läuft durch.
+**Verification**
+- Script: stream main and sub, destroy and re-create sub every second.
+- Before: gaps or freeze in the main stream, occasional SIGSEGV, growing number of `in_userspace` VBM buffers.
+- After: main runs through.
 
 ---
 
-### F5 – Verworfener Frame ohne IDR-Erzwingung; Referenz wird trotzdem befördert [V]
+### F5 – Discarded frame without IDR enforcement; reference is promoted anyway [V]
 
-**Fundstellen**
-- `src/t40/codec-t40.c:4038–4058` (`avpu_complete_frame`: `promote_reference` + `frames_encoded++` vor der Publish-Prüfung; bei `!queued` nur `dropped_completions++`)
-- `:5586–5598` (T31 verweigert ungültige Größe)
-- `:6709–6726` (verweigert reine Header)
+**Locations**
+- `src/t40/codec-t40.c:4038–4058` (`avpu_complete_frame`: `promote_reference` + `frames_encoded++` before the publish check; on `!queued` only `dropped_completions++`)
+- `:5586–5598` (T31 refuses an invalid size)
+- `:6709–6726` (refuses header only)
 
-**Ist-Zustand**
-- Ein Frame, dessen Completion ungültig ist (Error-Fill, zu groß, nur Header), wird nicht veröffentlicht.
-- Trotzdem wird die (möglicherweise korrupte) Rekonstruktion zur Referenz.
-- `frame_num`/POC laufen weiter, `force_next_idr` wird nicht gesetzt.
-- Der Decoder verliert ein P-Bild und zeigt Schlieren oder Grau bis zum nächsten periodischen IDR (GOP-Länge, oft 2–4 s).
-- Die T31-Ratenregelung (`t31_rate_control.c`) wird bei `completed == 0` nicht gefüttert (`:4702–4706`). Ein wiederholter Überlauf in detailreichen Nachtszenen wird also nicht per QP gegengesteuert. [I]
+**Current state**
+- A frame whose completion is invalid (error fill, too large, header only) is not published.
+- Nevertheless the (possibly corrupt) reconstruction becomes the reference.
+- `frame_num`/POC keep running, `force_next_idr` is not set.
+- The decoder loses a P picture and shows smears or grey until the next periodic IDR (GOP length, often 2–4 s).
+- The T31 rate control (`t31_rate_control.c`) is not fed when `completed == 0` (`:4702–4706`). A repeated overflow in detailed night scenes is therefore not countered via QP. [I]
 
 **Fix**
-- In `avpu_complete_frame` bei `!queued`: `reference_valid = 0` (sicherer als `force_next_idr`, weil die Rekonstruktion selbst ungültig sein kann).
-- Bei Überlauf (`payload > capacity`) der RC einen Ersatzwert „Kapazität × 8“ melden oder direkt QP + n.
+- In `avpu_complete_frame` on `!queued`: `reference_valid = 0` (safer than `force_next_idr`, because the reconstruction itself may be invalid).
+- On overflow (`payload > capacity`), report a substitute value "capacity × 8" to the RC, or directly QP + n.
 
-**Verifikation**
-- Mit Fehlerinjektion (jeden n-ten Writeback ignorieren) muss unmittelbar danach `NALs 7 8 5` (IDR) folgen.
-- VLC/ffprobe ohne Referenzfehler (`ffmpeg -v error -i rtsp://…`: keine „reference picture missing“).
+**Verification**
+- With fault injection (ignore every n-th writeback), `NALs 7 8 5` (IDR) must follow immediately afterwards.
+- VLC/ffprobe without reference errors (`ffmpeg -v error -i rtsp://…`: no "reference picture missing").
 
 ---
 
-### F6 – Software-JPEG blockiert den AVC-Core-Lock [V] (Dauer [?])
+### F6 – Software JPEG blocks the AVC core lock [V] (duration [?])
 
-**Fundstellen**
-- `src/t40/codec-t40.c:9871` (T31 `AL_Codec_Encode_Process` nimmt `g_t31_encode_core_lock` für **jeden** Codec-Typ)
-- `:9812–9819` (JPEG → `t31_hwjpeg_encode` bzw. `HW_Encoder_Encode_Software` → `HW_Encoder_Encode_NV12_JPEG`, `src/hw_encoder.c:1199–1200`)
+**Locations**
+- `src/t40/codec-t40.c:9871` (T31 `AL_Codec_Encode_Process` takes `g_t31_encode_core_lock` for **every** codec type)
+- `:9812–9819` (JPEG → `t31_hwjpeg_encode` or `HW_Encoder_Encode_Software` → `HW_Encoder_Encode_NV12_JPEG`, `src/hw_encoder.c:1199–1200`)
 
-**Ist-Zustand**
-- P2 lässt JPEG absichtlich außerhalb von `p2_core_lock` laufen (Kommentar `openimp_p2_encoder.c:1226–1232`).
-- Die Codec-Schicht serialisiert es dann doch mit dem AVC-Submit und dem 2-s-Completion-Wait.
-- Eine 1080p-CPU-JPEG-Kodierung blockiert Main und Sub. Folge: Ruckler oder verpasste Frames bei jedem Snapshot bzw. MJPEG-Frame.
+**Current state**
+- P2 deliberately lets JPEG run outside `p2_core_lock` (comment `openimp_p2_encoder.c:1226–1232`).
+- The codec layer then serialises it after all with the AVC submit and the 2 s completion wait.
+- A 1080p CPU JPEG encode blocks main and sub. Consequence: stutter or missed frames on every snapshot or MJPEG frame.
 
 **Fix**
-- In `AL_Codec_Encode_Process` (T31) den Lock nur nehmen, wenn `use_hardware == 2` (AVPU-AVC) oder ein HW-JPEG-Job startet.
-- Software-JPEG ohne Lock.
+- In `AL_Codec_Encode_Process` (T31), take the lock only if `use_hardware == 2` (AVPU AVC) or an HW JPEG job starts.
+- Software JPEG without the lock.
 
-**Verifikation**
-- `curl /image.jpg` in einer Schleife bei laufendem RTSP.
-- Vorher sichtbare Lücken (Frame-Intervall-Histogramm per `ffprobe -show_frames`), nachher keine.
+**Verification**
+- `curl /image.jpg` in a loop while RTSP runs.
+- Before, visible gaps (frame interval histogram via `ffprobe -show_frames`), after, none.
 
 ---
 
-### F7 – Init-Sequenz pro Session statt einmal pro Gerät [V]
+### F7 – Init sequence per session instead of once per device [V]
 
-**Fundstellen**
-- `src/t40/codec-t40.c:9063–9135` (bei `!session_ready`: `0x8010 = 0x1000`, `0x83f0 = 1,2,4`, `0x8018 = 0xffffff`, `0x8054 = 0x80`)
-- Stock-Trace: genau **einmal** `WR 0x8010`/`0x8018`/`0x8054` (`stock_logs.txt:69, 81, 84`) bei 34 CL-Pushes für Main + Sub.
+**Locations**
+- `src/t40/codec-t40.c:9063–9135` (on `!session_ready`: `0x8010 = 0x1000`, `0x83f0 = 1,2,4`, `0x8018 = 0xffffff`, `0x8054 = 0x80`)
+- Stock trace: exactly **one** `WR 0x8010`/`0x8018`/`0x8054` (`stock_logs.txt:69, 81, 84`) for 34 CL pushes for main + sub.
 
-**Ist-Zustand**
-- Der zweite AVC-Kanal setzt beim ersten Frame den Core zurück und löscht alle IRQ-Bits, auch das JPEG-Core-Bit 4.
-- Unter dem Lock ist das meist harmlos. Es verliert aber einen gerade anstehenden JPEG-Completion-IRQ bei `OPENIMP_T31_HW_JPEG=1`. Außerdem gibt es beim Destroy symmetrisch einen Reset (F4).
+**Current state**
+- The second AVC channel resets the core at its first frame and clears all IRQ bits, including the JPEG core bit 4.
+- Under the lock this is mostly harmless. But it loses a pending JPEG completion IRQ with `OPENIMP_T31_HW_JPEG=1`. In addition there is a symmetric reset at Destroy (F4).
 
 **Fix**
-- Statisches Flag „Core initialisiert“ unter `g_t31_encode_core_lock`. Init nur beim ersten Kontext, analog Stock `AL_EncCore_Init` (einmal pro Core/Scheduler).
+- Static flag "core initialised" under `g_t31_encode_core_lock`. Init only for the first context, analogous to stock `AL_EncCore_Init` (once per core/scheduler).
 
-**Verifikation**
-- Registertrace (patched `avpu.ko`) mit Main + Sub: `0x8018 = 0xffffff` darf nur einmal erscheinen.
+**Verification**
+- Register trace (patched `avpu.ko`) with main + sub: `0x8018 = 0xffffff` may appear only once.
 
 ---
 
-### F8 – IDR-Anforderung geht verloren [V]
+### F8 – IDR request is lost [V]
 
-**Fundstelle**
-- `src/t40/codec-t40.c:9041` (`force_idr = __sync_lock_test_and_set(&enc->force_next_idr, 0)` ganz am Anfang)
-- Frühe Returns: `:9249` (Busy-Skip), `:9277–9285` (kein freier Puffer), `:9346–9353` (RC-Prepare), `:9472–9477` (Submit-Slot fehlt), `:9679–9686` (Tracking)
+**Location**
+- `src/t40/codec-t40.c:9041` (`force_idr = __sync_lock_test_and_set(&enc->force_next_idr, 0)` at the very start)
+- Early returns: `:9249` (busy skip), `:9277–9285` (no free buffer), `:9346–9353` (RC prepare), `:9472–9477` (submit slot missing), `:9679–9686` (tracking)
 
-**Ist-Zustand**
-- Scheitert der Submit, ist die Anforderung verbraucht. Neue RTSP-Clients warten dann bis zum periodischen IDR.
+**Current state**
+- If the submit fails, the request is consumed. New RTSP clients then wait until the periodic IDR.
 
 **Fix**
-- Bei jedem Return ohne `submitted` und `force_idr != 0` das Flag wieder setzen.
+- On every return without `submitted` and with `force_idr != 0`, set the flag again.
 
-**Verifikation**
-- `IMP_Encoder_RequestIDR` bei erschöpftem Stream-Pool aufrufen (ReleaseStream künstlich verzögern). Das nächste veröffentlichte Bild muss IDR sein.
+**Verification**
+- Call `IMP_Encoder_RequestIDR` with the stream pool exhausted (delay ReleaseStream artificially). The next published picture must be IDR.
 
 ---
 
-### F9 – Schwere Arbeit im IRQ-Thread, Polling, Log-Druck [V] (Einfluss auf Stabilität [I])
+### F9 – Heavy work in the IRQ thread, polling, log pressure [V] (influence on stability [I])
 
-**Fundstellen**
-- `src/t40/codec-t40.c:5609` (`usleep(2000)` in jeder Completion)
-- `:5733–5808` (EBSP-Kopie Byte für Byte aus `uncached_map`, der Stream-Alias über `/dev/mem`, `:8488`)
-- `:5641–5649` (die Invalidierung des *cached* Alias ist dann wirkungslos)
-- `:9888–9897` (1-ms-Polling im `Process`-Wait)
-- `openimp_p2_encoder.c:1213–1217` (1-ms-Polling auf `GetFrame`)
-- `src/kernel_interface.c` `VBMGetFrame` (ungedrosseltes `fprintf(stderr, "[VBM] GetFrame…")` pro Frame)
-- `avpu_write_reg`/`avpu_read_reg` (`:572–630`, je 1 KiB `posix_memalign`/`free` pro Registerzugriff)
-- `avpu/t31/avpu_ip.c:119` (`printk(KERN_INFO …)` im Hardirq pro IRQ; lokale Treiberkopie, ob thingino-`avpu.ko` dies enthält: [?])
+**Locations**
+- `src/t40/codec-t40.c:5609` (`usleep(2000)` in every completion)
+- `:5733–5808` (EBSP copy byte by byte from `uncached_map`, the stream alias via `/dev/mem`, `:8488`)
+- `:5641–5649` (the invalidation of the *cached* alias is then ineffective)
+- `:9888–9897` (1 ms polling in the `Process` wait)
+- `openimp_p2_encoder.c:1213–1217` (1 ms polling on `GetFrame`)
+- `src/kernel_interface.c` `VBMGetFrame` (unthrottled `fprintf(stderr, "[VBM] GetFrame…")` per frame)
+- `avpu_write_reg`/`avpu_read_reg` (`:572–630`, 1 KiB `posix_memalign`/`free` each per register access)
+- `avpu/t31/avpu_ip.c:119` (`printk(KERN_INFO …)` in hardirq per IRQ; local driver copy, whether the thingino `avpu.ko` contains this: [?])
 
-**Warum relevant**
-- Auf dem Single-Core-T31 verlängert das die Completion-zu-Publish-Latenz. Bei IDRs aus uncached RAM sind das mehrere ms.
-- Es vergrößert das Zeitfenster für die Rennen aus F2 (Sticky Recovery gegen IRQ-Thread).
-- Es erklärt einen Teil der in `prudynt-cpu-profile.md` gemessenen ca. 70 % sys-Zeit.
-- Hängt `stderr` an einer Logger-Pipe, kann das `fprintf` pro Frame den Encoder-Thread blockieren.
+**Why relevant**
+- On the single-core T31 this lengthens the completion-to-publish latency. For IDRs from uncached RAM that is several ms.
+- It enlarges the time window for the races from F2 (sticky recovery against IRQ thread).
+- It explains part of the roughly 70 % sys time measured in `prudynt-cpu-profile.md`.
+- If `stderr` is attached to a logger pipe, the `fprintf` per frame can block the encoder thread.
 
 **Fix**
-- Payload über die gecachte Abbildung nach einer Invalidierung auf `payload_end` lesen (ist schon vorhanden). Wortweise nach `00 00 0x` suchen und `memcpy` für Blöcke ohne Escape verwenden.
-- `usleep(2000)` durch ein Kriterium ersetzen: Writeback `+0x104` stabil zweimal gelesen.
-- Warten per Condvar.
-- `VBMGetFrame`-Log drosseln.
-- Einen statischen Registerpuffer pro Thread verwenden.
+- Read the payload via the cached mapping after an invalidation to `payload_end` (already present). Search word-wise for `00 00 0x` and use `memcpy` for blocks without escape.
+- Replace `usleep(2000)` by a criterion: writeback `+0x104` read twice stably.
+- Wait via condvar.
+- Throttle the `VBMGetFrame` log.
+- Use a static register buffer per thread.
 
-**Verifikation**
-- `/proc/<pid>/task/*/stat` vorher und nachher: Anteil des IRQ-Threads.
-- Completion→GetStream-Latenz im Profil (`OPENIMP_PROFILE_*`).
+**Verification**
+- `/proc/<pid>/task/*/stat` before and after: share of the IRQ thread.
+- Completion→GetStream latency in the profile (`OPENIMP_PROFILE_*`).
 
 ---
 
-### F10–F14 (niedrig)
+### F10–F14 (low)
 
-- **F10 [V]** `src/fifo.c:148–157, 216–225` sowie das statische `fifo_dequeue` `:4399–4406`: timed waits auf `CLOCK_REALTIME`. Ein NTP- oder Uhrzeitsprung verkürzt oder verlängert die GetStream- und Queue-Timeouts.
-  - Fix: `pthread_condattr_setclock(CLOCK_MONOTONIC)` (wie bereits bei `t31_hwjpeg_init_once` `:7579`). Semaphore-Timeouts relativ nachbilden.
-- **F11 [V]** Keine Prüfung, ob Frame-`width`/`height`/`size` (`frame+0x08/0x0c/0x14`) zu `ctx->enc_w/enc_h` passen. `fill_cmd_regs_enc1` rechnet die Chroma-Adresse aus der Encoder-Konfiguration (`:3111–3125`). Bei FrameSource-Reconfig liest der AVPU über das Pufferende hinaus bzw. mit falscher Chroma-Lage.
-  - Fix: Frame verwerfen, wenn die Größe nicht passt oder `size < nv12_size(enc_w, enc_h)`.
-- **F12 [V]** `avpu_prewrite_stream_headers` kann 0 liefern (`:2522–2536`). `Process` submittet trotzdem. `stream_header_offset_by_buf[buf]` behält dann den Wert eines früheren Frames, und der veröffentlichte AU trägt einen falschen Slice-Header.
-  - Fix: bei 0 den Puffer freigeben und `EIO` zurückgeben.
-- **F13 [V]** Jede Bitraten-, fps-, GOP- oder QP-Grenzen-Änderung setzt den T31-RC komplett zurück (`avpu_t31_prepare_picture` `:2398–2421`). QP springt auf `iInitialQP`. `openimp_t31_rate_controller_set_bitrate` existiert, wird für T31-AVPU aber nicht benutzt.
-  - Fix: bei reiner Bitratenänderung `set_bitrate` verwenden.
+- **F10 [V]** `src/fifo.c:148–157, 216–225` and the static `fifo_dequeue` `:4399–4406`: timed waits on `CLOCK_REALTIME`. An NTP or time-of-day jump shortens or lengthens the GetStream and queue timeouts.
+  - Fix: `pthread_condattr_setclock(CLOCK_MONOTONIC)` (as already in `t31_hwjpeg_init_once` `:7579`). Reproduce semaphore timeouts relatively.
+- **F11 [V]** No check whether frame `width`/`height`/`size` (`frame+0x08/0x0c/0x14`) match `ctx->enc_w/enc_h`. `fill_cmd_regs_enc1` computes the chroma address from the encoder configuration (`:3111–3125`). On a FrameSource reconfig the AVPU reads beyond the end of the buffer or with a wrong chroma position.
+  - Fix: discard the frame if the size does not match or `size < nv12_size(enc_w, enc_h)`.
+- **F12 [V]** `avpu_prewrite_stream_headers` can return 0 (`:2522–2536`). `Process` submits anyway. `stream_header_offset_by_buf[buf]` then keeps the value of an earlier frame, and the published AU carries a wrong slice header.
+  - Fix: on 0, release the buffer and return `EIO`.
+- **F13 [V]** Every bitrate, fps, GOP or QP-limit change resets the T31 RC completely (`avpu_t31_prepare_picture` `:2398–2421`). QP jumps to `iInitialQP`. `openimp_t31_rate_controller_set_bitrate` exists but is not used for T31 AVPU.
+  - Fix: use `set_bitrate` for a pure bitrate change.
 - **F14 [V]**
-  - `AL_Codec_Encode_SetStreamBufferCount` ruft `Fifo_Init` erneut auf einer bereits initialisierten FIFO auf (`:6957–6958`): Leck plus Doppel-Init von Mutex, Cond und Semaphore bei jedem `CreateChn`.
-  - `VBMReleaseFrame` mit ungültigem Kanal nach `UnRegisterChn` (F4.4).
-- **[?]** Die VBM-Ready-Queue liefert den **ältesten** Frame (`kernel_interface.c:1589 ff.`). Ist die Kanal-fps kleiner als die Sensor-fps, wachsen Latenz und Anzahl der im Userspace gehaltenen Puffer (die ISP-Queue leert sich). Ob Stock „neueste gewinnt“ macht, ist offen.
+  - `AL_Codec_Encode_SetStreamBufferCount` calls `Fifo_Init` again on an already initialised FIFO (`:6957–6958`): leak plus double init of mutex, cond and semaphore on every `CreateChn`.
+  - `VBMReleaseFrame` with an invalid channel after `UnRegisterChn` (F4.4).
+- **[?]** The VBM ready queue delivers the **oldest** frame (`kernel_interface.c:1589 ff.`). If the channel fps is smaller than the sensor fps, latency and the number of buffers held in userspace grow (the ISP queue drains). Whether stock does "newest wins" is open.
 
 ---
 
-## 2. Geprüft und unauffällig
+## 2. Checked and unremarkable
 
-- **Stream-Puffer-Lebenszyklus** [V]
-  - Übergänge `FREE → IN_FLIGHT` (acquire) `→ READY` (pop) `→ FREE` (ReleaseStream per Phys-Match), alle unter `stream_queue_mutex` (`:3913–4007`, `:10018–10070`).
-  - Deskriptor pro Slot aus dem festen Pool (`avpu_stream_descriptors[16]`).
-  - Die Stream-FIFO hat Kapazität `stream_buf_count ≥` Anzahl `READY`-Puffer. `Fifo_Queue(-1)` im IRQ-Thread kann im Normalbetrieb also nicht blockieren.
-- **CL-Ringe** [V]
-  - Pro Kanal eigene Readback- und Submit-Ringe mit 19 × 0x200. Auf T31 uncached über `/dev/mem` (`:8543–8565`).
-  - Jeder Eintrag wird pro Frame komplett neu geschrieben, das Status-Wort `+0x104` ist vor dem Push also 0. Es gibt keine Wiederverwendung während eines Jobs (seriell, ein Job pro Kanal).
-- **Cache-Handoffs** [V]
-  - Header-Präfix 0x220: cached schreiben, danach WBACK (`:9383–9396`). 0x220 ist auf 32 Byte ausgerichtet, teilt also keine Cachezeile mit dem Payload.
-  - Payload: Lesen über den uncached Alias, danach Kopie in einen CPU-eigenen Puffer. Im DMA-Puffer wird nicht mehr kompaktiert.
-  - Quell-Frame: Invalidierung vor dem Submit (`:8040–8069`).
-  - EP1/EP2/EP3: einmal bei der Init geschrieben und per WBACK zurückgeschrieben (`:8698`, `:8783–8795`). Auf T31 schreibt die CPU sie pro Frame nicht neu.
-- **Register-Parität pro Frame** [V], gegen `stock_logs.txt:100–122` (Main) und `:266–288` (Sub):
+- **Stream buffer life cycle** [V]
+  - Transitions `FREE → IN_FLIGHT` (acquire) `→ READY` (pop) `→ FREE` (ReleaseStream by phys match), all under `stream_queue_mutex` (`:3913–4007`, `:10018–10070`).
+  - Descriptor per slot from the fixed pool (`avpu_stream_descriptors[16]`).
+  - The stream FIFO has capacity `stream_buf_count ≥` number of `READY` buffers. `Fifo_Queue(-1)` in the IRQ thread therefore cannot block in normal operation.
+- **CL rings** [V]
+  - Per channel its own readback and submit rings with 19 × 0x200. On T31 uncached via `/dev/mem` (`:8543–8565`).
+  - Every entry is rewritten completely per frame, so the status word `+0x104` is 0 before the push. There is no reuse during a job (serial, one job per channel).
+- **Cache handoffs** [V]
+  - Header prefix 0x220: write cached, then WBACK (`:9383–9396`). 0x220 is aligned to 32 bytes, so it shares no cache line with the payload.
+  - Payload: read via the uncached alias, then copy into a CPU-owned buffer. No more compacting in the DMA buffer.
+  - Source frame: invalidation before the submit (`:8040–8069`).
+  - EP1/EP2/EP3: written once at init and written back by WBACK (`:8698`, `:8783–8795`). On T31 the CPU does not rewrite them per frame.
+- **Register parity per frame** [V], against `stock_logs.txt:100–122` (main) and `:266–288` (sub):
   - `0x83f4` TurnOnGC (RMW) → `0x83f0 = 1,2,4` → `0x8014 |=` Enc1 (RMW) → `0x83e0` → `0x83e4 = 2`.
-  - Nach der Completion: DisableEnc1 und `0x83f4 = …0000` TurnOffGC (`:314–319`).
-  - OpenIMP entspricht dem bis auf die bekannten Punkte (absolutes `0x8014 = 0` statt RMW `&~1`; Bit 4 nicht gesetzt; Companion-Stage) und F7.
-  - Kein IRQ-Ack aus dem Userspace pro Frame, ebenfalls wie Stock. Der Kernel quittiert im Hardirq (`avpu_ip.c:121`).
-- **Source-Frame-Besitz auf T31** [V]: Freigabe erst nach der Completion (`P2_CAPTURE_RELEASE_AFTER_COMPLETION`, `openimp_p2_encoder.c:56–64, 1276–1282`). Einzige Ausnahme ist der Fehlerpfad (F1.4).
-- **Referenzbeförderung vor dem Publish** [V] (`:4028–4041`). Im Normalpfad gibt es kein Rennen zwischen Rec/Ref-Tausch und dem nächsten Submit, weil Process auf die Completion wartet.
-- **Timestamps** [V]: Aus dem DQBUF-Zeitstempel. open-tx-isp T31 liefert `CLOCK_MONOTONIC` (`driver/t31/tx_isp_module.c:1638`), normalisiert über `OpenIMP_P0_NormalizeMonotonicTimeStamp`. Durch die FIFO-Reihenfolge monoton. Keine Rückwärtssprünge gefunden.
-- **Rate-Control-Arithmetik** [V]: Sättigende Addition, Division nur durch geprüfte Nicht-Null-Werte, QP-Klammerung (`t31_rate_control.c`).
-- **Destroy-Reihenfolge im Einkanalfall** [V]: Quiesce → Waiter joinen → alle VMAs unmappen → fd schließen (`:7183–7322`). Das ist korrekt für den Kernel-Einzelkanal (`avpu_ip.c:36`).
+  - After the completion: DisableEnc1 and `0x83f4 = …0000` TurnOffGC (`:314–319`).
+  - OpenIMP matches this except for the known points (absolute `0x8014 = 0` instead of RMW `&~1`; bit 4 not set; companion stage) and F7.
+  - No IRQ ack from userspace per frame, also like stock. The kernel acknowledges in hardirq (`avpu_ip.c:121`).
+- **Source frame ownership on T31** [V]: Release only after the completion (`P2_CAPTURE_RELEASE_AFTER_COMPLETION`, `openimp_p2_encoder.c:56–64, 1276–1282`). The only exception is the error path (F1.4).
+- **Reference promotion before the publish** [V] (`:4028–4041`). In the normal path there is no race between the Rec/Ref swap and the next submit, because Process waits for the completion.
+- **Timestamps** [V]: From the DQBUF timestamp. open-tx-isp T31 delivers `CLOCK_MONOTONIC` (`driver/t31/tx_isp_module.c:1638`), normalised via `OpenIMP_P0_NormalizeMonotonicTimeStamp`. Monotonic through the FIFO order. No backward jumps found.
+- **Rate control arithmetic** [V]: Saturating addition, division only by checked non-zero values, QP clamping (`t31_rate_control.c`).
+- **Destroy order in the single-channel case** [V]: Quiesce → join waiter → unmap all VMAs → close fd (`:7183–7322`). This is correct for the kernel single channel (`avpu_ip.c:36`).
 
 ---
 
-## 3. Empfohlene Reihenfolge der Fixes
+## 3. Recommended order of the fixes
 
-1. **F3** (Waiter-Singleton plus EINTR-Schutz): kleiner Eingriff, beseitigt totale Hänger nach einer Reconfig.
-2. **F2** (Completion nur mit Writeback-Beleg, `irq_armed`, Sticky Recovery entfernen).
-3. **F1** (Timeout-Recovery, P2-Deadline).
-4. **F4** (Destroy serialisieren, P2 `in_poll`).
-5. **F5 und F8** (IDR-Robustheit).
-6. **F6, F7, F9** (Latenz und Parität).
+1. **F3** (waiter singleton plus EINTR protection): small change, removes total hangs after a reconfig.
+2. **F2** (completion only with writeback evidence, `irq_armed`, remove sticky recovery).
+3. **F1** (timeout recovery, P2 deadline).
+4. **F4** (serialise Destroy, P2 `in_poll`).
+5. **F5 and F8** (IDR robustness).
+6. **F6, F7, F9** (latency and parity).
 
-Messgrößen für den Gerätetest mit Main + Sub + JPEG über 12 h, zusätzlich Reconfig-Script alle 60 s:
+Measured values for the device test with main + sub + JPEG over 12 h, plus a reconfig script every 60 s:
 
-| Messgröße | Soll |
+| Measured value | Target |
 |---|---|
 | `serialized completion timeout` | 0 |
 | `invalid T31 entropy size` | 0 |
 | `completion without pending stream` | 0 |
-| `ENODATA`-Rückgaben | 0 |
+| `ENODATA` returns | 0 |
 | `no free AVPU stream buffer` | 0 |
-| Thread-CPU des IRQ-Waiters | < 5 % |
-| RSS | stabil |
-| RTSP | ohne Referenzfehler (`ffmpeg -v error`) |
+| Thread CPU of the IRQ waiter | < 5 % |
+| RSS | stable |
+| RTSP | without reference errors (`ffmpeg -v error`) |

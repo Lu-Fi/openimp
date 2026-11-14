@@ -429,7 +429,7 @@
   {
    "number": 27,
    "title": "[T30] Backlog: System / sysutils / log API, 35 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/27",
    "labels": [
     "area:System",
@@ -497,7 +497,7 @@
   {
    "number": 31,
    "title": "[T32] ISP tuning: 36 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/31",
    "labels": [
     "area:ISP",
@@ -514,7 +514,7 @@
   {
    "number": 32,
    "title": "[T32] AE / AWB / AF: 4 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/32",
    "labels": [
     "area:AE-AWB",
@@ -531,7 +531,7 @@
   {
    "number": 33,
    "title": "[T32] Encoder (and decoder): 25 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/33",
    "labels": [
     "area:Encoder",
@@ -548,7 +548,7 @@
   {
    "number": 34,
    "title": "[T32] FrameSource: 15 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/34",
    "labels": [
     "area:FrameSource",
@@ -565,7 +565,7 @@
   {
    "number": 35,
    "title": "[T32] OSD: 19 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/35",
    "labels": [
     "area:OSD",
@@ -582,7 +582,7 @@
   {
    "number": 36,
    "title": "[T32] IVS: 17 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/36",
    "labels": [
     "area:IVS",
@@ -599,7 +599,7 @@
   {
    "number": 37,
    "title": "[T32] Audio: 50 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/37",
    "labels": [
     "area:Audio",
@@ -616,7 +616,7 @@
   {
    "number": 38,
    "title": "[T32] System / sysutils / log: 12 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/38",
    "labels": [
     "area:System",
@@ -633,7 +633,7 @@
   {
    "number": 39,
    "title": "[T32] Backlog: ISP tuning API, 56 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/39",
    "labels": [
     "area:ISP",
@@ -650,7 +650,7 @@
   {
    "number": 40,
    "title": "[T32] Backlog: AE / AWB / AF API, 27 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/40",
    "labels": [
     "area:AE-AWB",
@@ -667,7 +667,7 @@
   {
    "number": 41,
    "title": "[T32] Backlog: Encoder (and decoder) API, 73 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/41",
    "labels": [
     "area:Encoder",
@@ -684,7 +684,7 @@
   {
    "number": 42,
    "title": "[T32] Backlog: FrameSource API, 25 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/42",
    "labels": [
     "area:FrameSource",
@@ -701,7 +701,7 @@
   {
    "number": 43,
    "title": "[T32] Backlog: OSD API, 20 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/43",
    "labels": [
     "area:OSD",
@@ -718,7 +718,7 @@
   {
    "number": 44,
    "title": "[T32] Backlog: Audio API, 25 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/44",
    "labels": [
     "area:Audio",
@@ -735,7 +735,7 @@
   {
    "number": 45,
    "title": "[T32] Backlog: System / sysutils / log API, 90 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/45",
    "labels": [
     "area:System",
@@ -752,7 +752,7 @@
   {
    "number": 46,
    "title": "[T33] ISP tuning: 36 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/46",
    "labels": [
     "area:ISP",
@@ -769,7 +769,7 @@
   {
    "number": 47,
    "title": "[T33] AE / AWB / AF: 4 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/47",
    "labels": [
     "area:AE-AWB",
@@ -786,7 +786,7 @@
   {
    "number": 48,
    "title": "[T33] Encoder (and decoder): 25 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/48",
    "labels": [
     "area:Encoder",
@@ -803,7 +803,7 @@
   {
    "number": 49,
    "title": "[T33] FrameSource: 15 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/49",
    "labels": [
     "area:FrameSource",
@@ -820,7 +820,7 @@
   {
    "number": 50,
    "title": "[T33] OSD: 19 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/50",
    "labels": [
     "area:OSD",
@@ -837,7 +837,7 @@
   {
    "number": 51,
    "title": "[T33] IVS: 17 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/51",
    "labels": [
     "area:IVS",
@@ -854,7 +854,7 @@
   {
    "number": 52,
    "title": "[T33] Audio: 50 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/52",
    "labels": [
     "area:Audio",
@@ -871,7 +871,7 @@
   {
    "number": 53,
    "title": "[T33] System / sysutils / log: 12 vendor functions the first OpenIMP build has to provide",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/53",
    "labels": [
     "area:System",
@@ -888,7 +888,7 @@
   {
    "number": 54,
    "title": "[T33] Backlog: ISP tuning API, 59 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/54",
    "labels": [
     "area:ISP",
@@ -905,7 +905,7 @@
   {
    "number": 55,
    "title": "[T33] Backlog: AE / AWB / AF API, 27 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/55",
    "labels": [
     "area:AE-AWB",
@@ -922,7 +922,7 @@
   {
    "number": 56,
    "title": "[T33] Backlog: Encoder (and decoder) API, 78 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/56",
    "labels": [
     "area:Encoder",
@@ -939,7 +939,7 @@
   {
    "number": 57,
    "title": "[T33] Backlog: FrameSource API, 27 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/57",
    "labels": [
     "area:FrameSource",
@@ -956,7 +956,7 @@
   {
    "number": 58,
    "title": "[T33] Backlog: OSD API, 20 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/58",
    "labels": [
     "area:OSD",
@@ -973,7 +973,7 @@
   {
    "number": 59,
    "title": "[T33] Backlog: Audio API, 25 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/59",
    "labels": [
     "area:Audio",
@@ -990,7 +990,7 @@
   {
    "number": 60,
    "title": "[T33] Backlog: System / sysutils / log API, 88 functions that no streamer calls",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/60",
    "labels": [
     "area:System",
@@ -1603,7 +1603,7 @@
   {
    "number": 97,
    "title": "[T32] Bring-up: driver stages S1-S3 in QEMU, next S4 (MSCA curves, tisp/3A, stream-on register list)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/97",
    "labels": [
     "area:Driver",
@@ -1620,7 +1620,7 @@
   {
    "number": 98,
    "title": "[T33] Desk work (documentation), then the firmware profile",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/98",
    "labels": [
     "area:Docs",
@@ -3336,7 +3336,7 @@
   {
    "number": 234,
    "title": "[T32] Host oracle harness from Matt's recovered C + first real functions (planned)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/234",
    "labels": [
     "area:Driver",
@@ -3593,7 +3593,7 @@
   {
    "number": 274,
    "title": "[T30] open-tx-isp: tx-isp-t30.ko is 2.1x the vendor module in memory (747 KB vs 348 KB)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/274",
    "labels": [
     "area:Driver",
@@ -3831,7 +3831,7 @@
   {
    "number": 298,
    "title": "T32: audio AI/AO/AENC/ADEC + DMIC",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/298",
    "labels": [
     "soc:T32"
@@ -3867,7 +3867,7 @@
   {
    "number": 301,
    "title": "T32 (later): IVDC direct mode, LDC, PM/OneShot, Decoder, kern_enc, T33/T32Pro variants",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/301",
    "labels": [
     "soc:T32"
@@ -3937,7 +3937,7 @@
   {
    "number": 308,
    "title": "[T30] matrix: unknown cells and missing functions",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/308",
    "labels": [
     "area:Docs",
@@ -3954,7 +3954,7 @@
   {
    "number": 309,
    "title": "[T31] matrix gaps: FB_* + audit-only cells",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/309",
    "labels": [
     "area:System",
@@ -4093,7 +4093,7 @@
   {
    "number": 318,
    "title": "[T41] matrix gaps: err/miss + audit-only cells",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/318",
    "labels": [],
    "created": "2026-11-11T10:24:57Z",
@@ -4198,7 +4198,7 @@
   {
    "number": 328,
    "title": "[T10-T31] open libsysutils SU_CIPHER_ConfigHandle/Encrypt/Decrypt are no-ops against the kernel AES driver",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/328",
    "labels": [
     "area:System",
@@ -4243,7 +4243,7 @@
   {
    "number": 332,
    "title": "[T40] Night shadows 8-13 % brighter than vendor at identical exposure (Y 20-55)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/332",
    "labels": [],
    "created": "2026-11-11T13:48:47Z",
@@ -4309,7 +4309,7 @@
   {
    "number": 347,
    "title": "[Fleet] Low findings from the 2026-11-11 merge review",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/347",
    "labels": [],
    "created": "2026-11-11T18:30:21Z",
@@ -4426,7 +4426,7 @@
   {
    "number": 390,
    "title": "T33: OpenIMP platform skeleton (build-t33.sh, PLATFORM_T33)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/390",
    "labels": [
     "prio:long-term",
@@ -4493,7 +4493,7 @@
   {
    "number": 394,
    "title": "T33: apitest column + matrix cells",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/394",
    "labels": [
     "area:Docs",
@@ -4541,7 +4541,7 @@
   {
    "number": 417,
    "title": "T40 ch1 colour at 3000 K: open dE00 10.56 vs vendor 9.43 (clipped patches, ch1 exposure)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/417",
    "labels": [
     "area:ISP",
@@ -4794,7 +4794,7 @@
   {
    "number": 443,
    "title": "[T40] Encoder SSIM 0.004-0.008 below the vendor in every light-box case",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/443",
    "labels": [],
    "created": "2026-11-13T07:32:34Z",
@@ -4804,7 +4804,7 @@
   {
    "number": 444,
    "title": "T33: LCE / LSF per-frame path (LCE irq 8, LSF irq 0x1e, Tisp_lce_soft)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/444",
    "labels": [
     "prio:long-term",
@@ -4820,7 +4820,7 @@
   {
    "number": 445,
    "title": "T32/T33: FrameSource streamer gaps (FifoAttr, Delay, MaxDelay, I2dAttr, Pool, GetTimedFrame, SnapFrame)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/445",
    "labels": [
     "area:FrameSource",
@@ -4838,7 +4838,7 @@
   {
    "number": 447,
    "title": "T32/T33: Encoder_Get/SetPool, T32 SetChnBitRate/MaxPictureSize/QpBounds streamer gaps",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/447",
    "labels": [
     "area:Encoder",
@@ -4868,7 +4868,7 @@
   {
    "number": 455,
    "title": "[T40] GOP 25 requested: open IDR every 25 frames, vendor every 20",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/455",
    "labels": [
     "soc:T40"
@@ -4880,7 +4880,7 @@
   {
    "number": 456,
    "title": "[T40] ch1 rate-control read-back: min/max QP 20/45 open vs 15/48 vendor",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/456",
    "labels": [
     "soc:T40"
@@ -4921,7 +4921,7 @@
   {
    "number": 462,
    "title": "[T40] AE comp 128->40: 21-29 % undershoot on the open stack; compare with the vendor in the light box",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/462",
    "labels": [
     "soc:T40"
@@ -4933,7 +4933,7 @@
   {
    "number": 463,
    "title": "[T30] Lifted sensor_fsm_clear / sensor_init_output store at 4x the OEM offsets (writes into the AE FSM)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/463",
    "labels": [
     "area:ISP",
@@ -4949,7 +4949,7 @@
   {
    "number": 464,
    "title": "[T30] /proc/jz/isp/isp-fs, isp-m3, isp-w0x return EIO while streaming (vendor prints per-channel frame counts)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/464",
    "labels": [
     "repo:open-tx-isp",
@@ -4974,7 +4974,7 @@
   {
    "number": 467,
    "title": "[T10/T20] Hard hang + watchdog reset when timps starts right after the apitest teardown (sensor unbind)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/467",
    "labels": [
     "soc:T10",
@@ -4999,7 +4999,7 @@
   {
    "number": 469,
    "title": "[T10/T20/T21] apitest FAILs from the remote camtest run (old apitest 2026-10-06): recheck with the current apitest",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/469",
    "labels": [
     "soc:T10",
@@ -5027,7 +5027,7 @@
   {
    "number": 471,
    "title": "[T33] IMP_System_GetCPUInfo answers \"T32\", vendor 2.0.2.1 \"T33-L\" (chip id decode missing)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/471",
    "labels": [
     "area:System",
@@ -5044,7 +5044,7 @@
   {
    "number": 472,
    "title": "[T32/T33] open module answers ENOTTY to the 2.x ISP control ioctls (run mode, one-shot, LDC mode, PM, bypass, GPIO, multi-sensor)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/472",
    "labels": [
     "area:Driver",
@@ -5062,7 +5062,7 @@
   {
    "number": 474,
    "title": "[T40] Open AE overshoot 3.5 % (vendor 0.1 %) when the light comes on, residual after #412 (light box)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/474",
    "labels": [
     "area:AE-AWB",
@@ -5079,13 +5079,188 @@
   {
    "number": 475,
    "title": "[T41] GOP: check the vendor whole-second GOP glue (as T40 #455)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/475",
    "labels": [
     "severity:low",
     "soc:T41"
    ],
    "created": "2026-11-13T14:25:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 479,
+   "title": "[T32/T33] Streamer-used functions still open (device proof excluded)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/479",
+   "labels": [
+    "soc:T32",
+    "soc:T33"
+   ],
+   "created": "2026-11-13T15:22:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 480,
+   "title": "[T32/T33] Backlog API functions (no streamer use): batches E1-E3, F1, L1, S*",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/480",
+   "labels": [
+    "soc:T32",
+    "soc:T33"
+   ],
+   "created": "2026-11-13T15:22:58Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 483,
+   "title": "[T40] Total gain cap at the dark limit: open 32766 vs vendor 40960 (x1.25)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/483",
+   "labels": [
+    "soc:T40"
+   ],
+   "created": "2026-11-13T15:48:42Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 487,
+   "title": "[T30] T30X goes silent after ~25-35 min soak with the open ko (vendor libimp + raptor)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/487",
+   "labels": [
+    "repo:open-tx-isp",
+    "soc:T30"
+   ],
+   "created": "2026-11-13T20:45:54Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 488,
+   "title": "[T30] ipu: done_ipu timeout / error ipu start ret = -1 during long soaks (27x in 30 min)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/488",
+   "labels": [
+    "soc:T30"
+   ],
+   "created": "2026-11-13T20:46:33Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 491,
+   "title": "[T32/T33] open module lacks RAW snapshot (0x548e/0x548f), online LDC LUT (0x54b9..bb) and /dev/offline_ldc",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/491",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-13T22:26:31Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 494,
+   "title": "[T40] Antiflicker integration rungs 450 lines (open) vs 337.5 (vendor) on the Eufy sc830ai at 20 fps",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/494",
+   "labels": [
+    "severity:low",
+    "soc:T40"
+   ],
+   "created": "2026-11-13T23:14:18Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 495,
+   "title": "[T40] H.264 FixQP lambda intra lane, GOP-IDR words and GOP count after RequestIDR differ from vendor 1.3.1",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/495",
+   "labels": [
+    "severity:medium",
+    "soc:T40"
+   ],
+   "created": "2026-11-14T02:11:57Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 496,
+   "title": "[T30] neo SU_CIPHER_CreateHandle/DestroyHandle return codes differ from vendor 1.0.5 without /dev/aes",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/496",
+   "labels": [
+    "bug",
+    "severity:low",
+    "soc:T30"
+   ],
+   "created": "2026-11-14T02:25:37Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 497,
+   "title": "[T30] Oops when the sensor module is removed while a stream is still running (QEMU)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/497",
+   "labels": [
+    "repo:open-tx-isp",
+    "soc:T30"
+   ],
+   "created": "2026-11-14T02:53:51Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 498,
+   "title": "[T40] Auto AE working point differs from vendor (IT 2241/1.63x vs 2025/1.89x): 3 % more ch0 noise after gain-following denoise, FixQP bytes +8..15 %",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/498",
+   "labels": [
+    "severity:low",
+    "soc:T40"
+   ],
+   "created": "2026-11-14T02:56:37Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 499,
+   "title": "[T30] AEC on: near-end mic attenuated ~15 dB during far-end noise without any echo (vendor 0.2 dB)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/499",
+   "labels": [
+    "area:Audio",
+    "severity:low",
+    "soc:T30"
+   ],
+   "created": "2026-11-14T08:43:46Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 500,
+   "title": "T33: LCE EV update and LCE tuning set / day-night switch not ported (tisp_lce_ev_update)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/500",
+   "labels": [
+    "area:ISP",
+    "severity:low",
+    "soc:T33"
+   ],
+   "created": "2026-11-14T09:10:56Z",
    "closed": null,
    "milestone": null
   }
