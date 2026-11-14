@@ -31,25 +31,25 @@
    "note": ""
   },
   "T10": {
-   "proven": 755,
-   "total": 1184,
-   "machine_lines": 14967,
-   "lines": 33706,
-   "pct_machine_lines": 44.4,
+   "proven": 800,
+   "total": 1187,
+   "machine_lines": 14477,
+   "lines": 33642,
+   "pct_machine_lines": 43.0,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-14",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batch 1 merged (system table as SDK system_tab, open-tx-isp next 571142d4), host oracles + vendor vdiff + T10 cam stream proof"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-3 merged (system_tab, FSM family), host oracles + vendor vdiff + T10 cam stream proof per batch"
   },
   "T20": {
-   "proven": 592,
-   "total": 1031,
-   "machine_lines": 15313,
-   "lines": 30712,
-   "pct_machine_lines": 49.9,
-   "base_proven": 592,
-   "base_pct_machine_lines": 49.9,
+   "proven": 670,
+   "total": 1033,
+   "machine_lines": 14567,
+   "lines": 30694,
+   "pct_machine_lines": 47.5,
+   "base_proven": 670,
+   "base_pct_machine_lines": 47.5,
    "date": "",
    "issue": "",
    "note": ""
