@@ -14,6 +14,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Evidence: QEMU `-M ingenic-t33`, `openimp-apitest enc`: `SetMaxStreamCnt` refused on a created channel (0x80040080, count 2 H.264 / 1 JPEG stays), channel 15 not created (set 0, get 0x80040008), channel 16 (0x80040001): PASS; enc area 107 PASS / 3 FAIL (2 frame-rate timing, H.265 MaxPictureSize). The vendor encoder does not run in the QEMU T33 model (`hwicodec_init failed`), so the reference is the vendor disassembly.
 - Open (#522): H.265 `SetChnMaxPictureSize` is not applied (the vendor hands id 21 to `I265e` reconfiguration, which OpenIMP does not have for any H.265 run-time setter); H.264 passes the vendor `i264e_set_param(0x14)` path and the limit check only fails on silicon. #523 (OSD callback / regions on 1 of 10 frames) does not reproduce in QEMU (timing on the T33L).
 
+## 2026-11-14: status: T33 driver-port row 184/409 (open-tx-isp port-loop batch 4: bin, mcside; #99)
+
+- `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 184/409 (blocks `bin`: default bin path get / set, switch_bin, after the oracle harness learned pointer-chain arguments; `mcside`: `tisp_lce_top_change_state`, `tisp_mdns_start`; open-tx-isp next 9f8c0c217). Default bin path ioctls and the module-control side effects run the proven ports (QEMU apitest equal to the vendor). Docs only.
+
 ## 2026-11-14: status: T33 driver-port row 179/409 (IQ bin append data, MIPI stream-on; #99)
 
 - `docs/status/driver_port.json` / matrix row: T33 binary-oracle proven 179/409 (`tisp_get_module_enum` with the driver form of `tisp_bin_append_data_parse`, `mipi_phy_stream_on`; open-tx-isp next 3fff6a55). The driver now feeds `APPEND_LDC` / `APPEND_LSC` records of a PRJ008 IQ bin (QEMU A/B equal to the vendor module). Docs only.
