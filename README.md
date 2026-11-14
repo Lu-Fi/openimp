@@ -47,19 +47,22 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-11, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-14, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
-| T10 | 329 | 323 (98.2 %) | 6 | 0 | 0 | RC3 gate |
-| T20 | 329 | 323 (98.2 %) | 6 | 0 | 0 | RC3 gate |
-| T21 | 333 | 328 (98.5 %) | 5 | 0 | 0 | RC3 gate |
-| T23 | 457 | 439 (96.1 %) | 13 | 5 | 0 | RC3 gate |
-| T30 | 350 | 294 (84.0 %) | 37 | 19 | 0 | RC3 gate |
-| T31 | 401 | 377 (94.0 %) | 22 | 2 | 0 | RC3 gate |
-| T40 | 389 | 372 (95.6 %) | 15 | 2 | 0 | RC3 gate |
-| T41 | 427 | 407 (95.3 %) | 18 | 2 | 0 | RC3 gate |
-| T32, T33 | – | – | – | – | – | planned (QEMU) |
+| T10 | 331 | 326 (98.5 %) | 3 | 0 | 2 | RC3 gate |
+| T20 | 331 | 326 (98.5 %) | 3 | 0 | 2 | RC3 gate |
+| T21 | 335 | 330 (98.5 %) | 3 | 0 | 2 | RC3 gate |
+| T23 | 459 | 454 (98.9 %) | 3 | 0 | 2 | RC3 gate |
+| T30 | 352 | 350 (99.4 %) | 2 | 0 | 0 | RC3 gate |
+| T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
+| T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
+| T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
+| T32 | 610 | 4 | 531 | 73 | 2 | planned |
+| T33 | 571 | 8 | 407 | 81 | 75 | planned |
+
+T32 and T33 are planned (no release gate, no camera yet): the "implemented" cells are checked in QEMU against the vendor libraries, the few "works" cells are vendor no-ops, nothing is device-tested yet.
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 
@@ -151,9 +154,9 @@ Results and the raw samples of the last run are in `audit/qemu-scene/`.
 The packages `openimp` (this repository) and `open-tx-isp` (kernel driver) are in the upstream
 [thingino-firmware](https://github.com/themactep/thingino-firmware) branch `aperto`
 ([#1756](https://github.com/themactep/thingino-firmware/pull/1756)), selected with
-`BR2_PACKAGE_THINGINO_ISP_OPEN` (menu "ISP stack"). The Lu-Fi `aperto` branch of thingino-firmware pins
-both packages to the tag `v2026.11.07-rc3` (sources `Lu-Fi/openimp` and `Lu-Fi/open-tx-isp`) and timps to v1.12.0;
-the upstream pull request for RC3 is [#1945](https://github.com/themactep/thingino-firmware/pull/1945) (until it is merged, the upstream `aperto` branch pins `v2026.10.25-rc2`). Both replace the proprietary `libimp.so` and `tx-isp-<soc>.ko`; the
+`BR2_PACKAGE_THINGINO_ISP_OPEN` (menu "ISP stack"). The `aperto` branches of thingino-firmware (upstream and Lu-Fi) pin
+both packages to the tag `v2026.11.07-rc3` (sources `Lu-Fi/openimp` and `Lu-Fi/open-tx-isp`) and timps to v1.12.0 at RC3 (the upstream `aperto` branch has moved on to timps v1.12.1);
+the upstream pull request for RC3 is [#1945](https://github.com/themactep/thingino-firmware/pull/1945) (merged 2026-11-07). Both replace the proprietary `libimp.so` and `tx-isp-<soc>.ko`; the
 SDK sensor, audio and AVPU modules stay; T23 runs fully on OpenIMP without any vendor helper. The
 kernel VPU/rmem stability patches
 ([#1748](https://github.com/themactep/thingino-firmware/pull/1748),

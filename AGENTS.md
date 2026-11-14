@@ -10,7 +10,7 @@ on T-series SoCs. It has two parts that always come from the same release tag:
 
 Gate SoCs of the current release candidate (RC3 `v2026.11.07-rc3`, 2026-11-07):
 T10, T20, T21, T23, T30, T31, T40, T41. **T32 and T33 are planned** (QEMU only,
-no OpenIMP build for them). C100 is not covered. Applications using the IMP API
+no camera yet, not a release gate). C100 is not covered. Applications using the IMP API
 link against OpenIMP unchanged; in thingino firmware the open stack is selected
 at build time (`BR2_PACKAGE_THINGINO_ISP_OPEN=y`).
 
