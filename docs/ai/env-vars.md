@@ -1,9 +1,9 @@
 # OpenIMP environment variables
 
-**Applies to OpenIMP `next` of 2026-11-08 (RC3 `v2026.11.07-rc3` plus later
+**Applies to OpenIMP `next` of 2026-11-14 (RC3 `v2026.11.07-rc3` plus later
 commits).** This list is complete: it holds every `OPENIMP_*` name that
 `src/` reads with `getenv()` (directly, through a wrapper, or built from a
-name prefix), **173 variables**: 54 user, 59 debug only, 60 internal.
+name prefix), **184 variables**: 56 user, 66 debug only, 62 internal.
 
 How they work:
 
@@ -137,15 +137,18 @@ the debug-level log messages in.
 |---|---|---|---|---|
 | `OPENIMP_AEC_STATS` | `1` (other non-`0` values select variants) | Periodic audio echo-cancellation (AEC) statistics. | T31 audio code (also used by T10, T20, T21) | debug only |
 | `OPENIMP_AI_STALE` | `0` = off; default on | Drop the cleared fragments the OSS2 capture driver hands out a second time after a false overrun (0.95 s of silence, #266); `0` passes them on as the vendor library does. | T10, T20, T21, T30, T31 (`/dev/dsp`) | debug only |
+| `OPENIMP_ALSA_CARD` | ALSA card number; default 0 | Card used for the raw ALSA PCM nodes `/dev/snd/pcmC<card>D0{c,p}` of the T31 audio backend on mainline kernels. | T31 | user |
+| `OPENIMP_ALSA_CAPTURE_CHANNEL` | `0` = left, `1` = right; default both averaged | Channel taken when a mono capture runs on the stereo ALSA wire. | T31 | user |
 | `OPENIMP_AI_STALE_LOG` | `1` = stderr, a path = append to that file; default off | One line per such run (fragments dropped, or passed on with `OPENIMP_AI_STALE=0`). | T10, T20, T21, T30, T31 (`/dev/dsp`) | debug only |
-| `OPENIMP_AO_CACHE` | `1` = on; default off | Audio-output cache (opt-in). | audio SoCs | internal |
-| `OPENIMP_SU_SHUTDOWN` | unset = SIGTERM to init (reboot on busybox); `vendor` = SIGCHLD; `poweroff` = SIGUSR2 | What `SU_Base_Shutdown` does. | all | user |
+| `OPENIMP_AO_CACHE` | `1` = on, `0` = off; unset = off, except on T32 where unset = on like the vendor libimp 2.x | Audio-output cache (opt-in on the other SoCs). | audio SoCs | internal |
+| `OPENIMP_SU_SHUTDOWN` | unset, `poweroff` or `vendor` = SIGUSR2 to init (busybox powers off, as the vendor library); `reboot` = SIGTERM (busybox reboots, opt-in); default as the vendor | What `SU_Base_Shutdown` does after `sync` (#206). | all | user |
 
 ## Encoder: rate control
 
 | Variable | Values / default | Effect | SoC | Class |
 |---|---|---|---|---|
 | `OPENIMP_EPRC_MBRC` | `1` = on; default off | Macroblock-level RC inside eprc. | T21, T23 | user |
+| `OPENIMP_HELIX_VENDOR_GOP` | `0` = apply GOP and frame-rate changes at once as before #367; default on (vendor glue: latched, rounded GOP, IDR at the next picture) | GOP and frame-rate handling of the Helix encoders. | T10, T20, T21 (T30 always vendor-like) | debug only |
 | `OPENIMP_EPRC_MBRC_LOG` | number | Log of the macroblock RC. | T21, T23 | debug only |
 | `OPENIMP_EPRC_QP_DOWN1` | `1` = CBR only, `2` = all modes; default off | Limit how fast QP may fall (device test pending). | T21, T23 | user |
 | `OPENIMP_T10_RC` | `0` = old GOP controller; default on | OEM-style rate controller for CBR/VBR on T10. | T10 | user |
@@ -165,6 +168,8 @@ the debug-level log messages in.
 | `OPENIMP_T30_START_QP` | unset/`auto` = from bits per pixel; `10`..`51` fixed; `vendor` = 26 | QP of the first IDR of an H.264 stream (calm first window, beyond vendor). | T30 | user |
 | `OPENIMP_T31_RC_CORE` | `legacy` = pre-Allegro core; default `allegro` | Rate-control core on T31. | T31 | user |
 | `OPENIMP_T31_VBR_LOOP` | `0` = open-loop VBR | Debug A/B of the closed-loop VBR. | T31 | debug only |
+| `OPENIMP_T40_GOP_IDR` | `0` = rewrite the intra lambda words for every IDR; default on (only the first picture of a channel carries them, as the vendor 1.3.1 library, #443) | T40 FixQP command list. | T40 | debug only |
+| `OPENIMP_T40_LDA131` | `0` = T31 AVC lambda table instead of the vendor 1.3.1 table; default on (#495) | T40 FixQP lambdas. | T40 | debug only |
 | `OPENIMP_T40_FIXQP_LDA` | knob | T40 FixQP lambda update (bring-up knob). | T40 | internal |
 | `OPENIMP_T40_FIXQP_NOHWRC` | knob | T40 FixQP without hardware RC words (bring-up knob). | T40 | internal |
 | `OPENIMP_T40_HWRC_TARGET` | knob | T40 hardware RC target words (bring-up knob). | T40 | internal |
@@ -205,6 +210,10 @@ the debug-level log messages in.
 | `OPENIMP_T31_HEVC_HWRC` | `0` = picture-level QP; default on | H.265 hardware RC (with PPS cu_qp_delta). | T31 | internal |
 | `OPENIMP_T31_HEVC_TMVP` | `0`; default on | H.265 temporal MV prediction. | T31 | internal |
 | `OPENIMP_T31_STREAM_READ_UNCACHED` | `1` | Read the stream buffer uncached. | T31 | internal |
+| `OPENIMP_T31_HEVC_FIXQP_CUQPD` | `0` = old behaviour; default on | H.265 FixQP: `cu_qp_delta` handling of the PPS. | T31 | internal |
+| `OPENIMP_WM_PARTS` | bit mask, default 3 | Fisheye watermark parts: bit 0 the luma mark of I pictures, bit 1 the QP table entries (#402). | T31, T40 | internal |
+| `OPENIMP_T32_HERA_SECTION_KB` | 1..4096 KiB | Size of one HERA bitstream section (test hook for the BSFULL path, #293). | T32, T33 (planned) | debug only |
+| `OPENIMP_T32_VPU_TEST` | `1` | Run JPEG jobs as START + WAIT_COMPLETE and read the engine version register (#292); default is the vendor RUN path. | T32, T33 (planned) | debug only |
 | `OPENIMP_T40_CMD12` | knob | Encoder command word 0x12 (bring-up knob). | T40 | internal |
 | `OPENIMP_T40_DRAIN_CHECK` | set | Debug comparison against the old fixed drain. | T40 | internal |
 | `OPENIMP_T40_DRAIN_VERIFY` | knob | Verify the payload instead of a fixed 2 ms drain. | T40 | internal |

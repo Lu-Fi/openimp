@@ -165,8 +165,8 @@ recovered vendor kernel routines.
   `curPacks` are never written (0), `leftStreamFrames` is sampled in `GetStream`, `leftPics` after
   every picture, `work_done` 1 when idle.  OpenIMP encodes on demand, so `leftPics` is 0 and
   `leftStreamFrames` is 1 while a finished stream waits (`src/t40/p2_query.h`).
-- **ROI (`OPENIMP_T40_ROI=1`):** works on the device (FixQP 34, delta -10, 81 -> 155 kbps); whether
-  it becomes the default is a user decision.
+- **ROI (on by default since 2026-10-18, `OPENIMP_T40_ROI=0` refuses it):** works on the device
+  (FixQP 34, delta -10, 81 -> 155 kbps; also under CBR, see [ROI.md](ROI.md)).
 - **New:** `Encoder_Set/GetChnSeiAttr` (`src/t40/t40_sei.h`: user_data_unregistered SEI between the
   parameter sets and the slice header, H.264 nal 6 / H.265 PREFIX_SEI 39, EPB; INTRA = IDR pictures,
   ALL = every picture; the header area holds the prefix twice (hardware copy and published copy, no

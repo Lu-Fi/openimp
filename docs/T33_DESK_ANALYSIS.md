@@ -1,6 +1,6 @@
-# T33 desk analysis (no hardware, no OpenIMP build yet)
+# T33 desk analysis (2026-11-03 planning document; T33 is planned, QEMU only)
 
-Status: documentation only, 2026-11-03 (issue #98). Nothing here has run on a camera or in QEMU. The facts come
+Status: planning document written on 2026-11-03 (issue #98), before any T33 code existed. Since then OpenIMP has a T33 build (`build-t33.sh`, `src/t32/` serves T32 and T33) and the T33 API runs in QEMU against the vendor libimp 2.0.2.1 (see [CHANGELOG.md](../CHANGELOG.md), 2026-11-13/14, and the T33 column of [FEATURE_MATRIX.md](FEATURE_MATRIX.md)); the sections below are the original desk analysis and were not rewritten. T33 is planned, not a release gate, and nothing has run on a T33 camera. The facts come
 from the vendor documentation set, the vendor SDK 2.0.0 (T33 / T32Pro line) binaries (`nm`, `readelf`, `strings`;
 no vendor code or tables are copied) and the existing T32 work in `open-tx-isp` (`driver/t32`). The T32 work is the
 template: T33 is a close variant of T32, so most of the plan is "make `driver/t32` serve both".

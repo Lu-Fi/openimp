@@ -31,9 +31,10 @@ apply to older images. Read [AGENTS.md](../../AGENTS.md) first (honesty rule).
   libimp.
 - Kernels: 3.10.14 for T10, T20, T21, T23, T30, T31; 4.4.94 for T40, T41.
 - T10 has no own OpenIMP build: the T20 build detects T10 at run time.
-- T32 / T33: **planned**. T32 runs only in QEMU (an open driver skeleton exists,
-  no OpenIMP build); T33 has no driver yet. They are not part of RC3 or
-  Release 1.
+- T32 / T33: **planned**. Both run only in QEMU (open driver `driver/t32` serves
+  both, OpenIMP builds `build-t32.sh` / `build-t33.sh`, checked against the vendor
+  libimp 2.2.0 / 2.0.2.1); no camera yet. They are not part of RC3 or Release 1
+  (since 2026-11-13; at RC3 only a T32 driver skeleton existed).
 - C100 is not covered.
 
 ## 2. How thingino enables it
