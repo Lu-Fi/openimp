@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: docs: T33 ExternInject beyond-vendor row approved (#480)
+
+- `docs/OPENIMP_BEYOND_VENDOR.md` 6.10 (T33 ExternInject channels deliver frames where the vendor 2.0.2.1 EnableChn fails in QEMU): user OK 2026-11-14, kept; the six F1 cell notes say so. Docs only.
+
 ## 2026-11-14: docs: beyond-vendor rows for #490 and neo SU_Base_GetDevID (#27)
 
 - `docs/OPENIMP_BEYOND_VENDOR.md` section 6: T33 `IMP_AI_EnableLpf` returns 0 on the first call (vendor -1 only from a stale `dlerror`, #490) and neo `SU_Base_GetDevID` returns the ID on T30 (vendor 1.0.5: -1, #27). User OK 2026-11-14. Docs only.
