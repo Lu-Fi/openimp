@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-15: status: T10 / T20 readable-C card 994/1188 and 855/1033 (driver de-lift batches 13-18, #539)
+
+- `docs/status/driver_port.json` / matrix readable-C table: T10 994/1188 proven readable functions (83.7 %, was 904), machine-like lines 20.9 % (was 32.3 %); T20 855/1033 (shared firmware unit). Open-tx-isp next 3898a8447, batches 13-18 (about 220 functions: register-name locals renamed, goto/fragment-form bodies as structured C), whole object identical machine code on T10 and T20, host oracle, vendor vdiff, tests, T10 camera stream proof. No feature cell moves.
+
 ## 2026-11-14: status: T33 driver-port row shows "wired" (104 of 308 proven, #99)
 
 - `docs/status/driver_port.json` T33 `wired` (new field, `tools/status_driver_port.py --t33-wired`, kept from the JSON otherwise) and the driver-port card / matrix row: proven T33-only functions whose port also runs in the driver (open-tx-isp next 336e6a15: wiring groups 1-3, the day/night switch_para of DPC/YDNS/SDNS/CDNS/RDNS/DMSC/YSP and the RDNS EV update). The other proven ports wait for the vendor block-state layer. Not device-tested.

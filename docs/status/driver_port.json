@@ -32,28 +32,28 @@
    "note": ""
   },
   "T10": {
-   "proven": 904,
+   "proven": 994,
    "total": 1188,
-   "machine_lines": 10518,
-   "lines": 32613,
-   "pct_machine_lines": 32.3,
+   "machine_lines": 6806,
+   "lines": 32595,
+   "pct_machine_lines": 20.9,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-14",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-12 merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math), host oracles + vendor vdiff + T10 cam stream proof per batch"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18 merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math), host oracles + vendor vdiff + T10 cam stream proof per batch"
   },
   "T20": {
-   "proven": 768,
+   "proven": 855,
    "total": 1033,
-   "machine_lines": 10608,
-   "lines": 29661,
-   "pct_machine_lines": 35.8,
+   "machine_lines": 6959,
+   "lines": 29643,
+   "pct_machine_lines": 23.5,
    "base_proven": 695,
    "base_pct_machine_lines": 41.4,
-   "date": "2026-11-14",
+   "date": "2026-11-15",
    "issue": "539",
-   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-12); inventory"
+   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-18); inventory"
   },
   "T21": {
    "proven": 143,
