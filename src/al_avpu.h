@@ -323,6 +323,8 @@ typedef struct ALAvpuContext {
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     /* FixQP: picture type whose lambda words EP1 holds (0 = not yet). */
     uint32_t t40_ep1_lambda_type;
+    /* The picture being built is an IDR of the GOP schedule (#443). */
+    uint32_t t40_periodic_idr;
     /* Slice QP of the last IDR (HWRC cmd[0x17] bits 23:16). */
     uint32_t t40_idr_qp;
     /* Picture SSE from the status image (+0x158 high, +0x15c low word, as

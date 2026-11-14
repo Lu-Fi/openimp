@@ -129,21 +129,32 @@ int main(void)
     EXPECT(t40_vendor_idr_distance(t41_vendor_start_gop(30u, 25u, 1u, 25u, 1u), 1u, 25u, 1u) == 50u, "t41 idr create 30@25");
     EXPECT(t40_vendor_idr_distance(t41_vendor_start_gop(50u, 20u, 1u, 20u, 1u), 1u, 20u, 1u) == 60u, "t41 idr create 50@20");
 
-    /* vendor FixQP EP1 words: IDR keeps the intra lane only */
+    /* vendor FixQP EP1 words (libimp 1.3.1, #443 capture at 1080p and
+     * 360p): the intra-only form keeps the intra lane (byte 2) only */
     memset(ep1, 0xa5, sizeof(ep1));
     EXPECT(openimp_t40_update_fixqp_ep1(ep1, sizeof(ep1), 1) == 0, "ep1 idr");
+    memcpy(&word, ep1 + 25 * 4, 4);
+    EXPECT(word == 0x00020000u, "EP1 IDR QP25 %#x", word);
     memcpy(&word, ep1 + 30 * 4, 4);
-    EXPECT(word == 0x00030000u, "EP1 IDR QP30 %#x", word);
+    EXPECT(word == 0x00060000u, "EP1 IDR QP30 %#x", word);
     memcpy(&word, ep1 + 51 * 4, 4);
-    EXPECT(word == 0x00280000u, "EP1 IDR QP51 %#x", word);
+    EXPECT(word == 0x00500000u, "EP1 IDR QP51 %#x", word);
     EXPECT(ep1[0xd0] == 0xa5, "EP1 update stays inside the lambda words");
     EXPECT(openimp_t40_update_fixqp_ep1(ep1, sizeof(ep1), 0) == 0, "ep1 p");
+    memcpy(&word, ep1 + 22 * 4, 4);
+    EXPECT(word == 0x02020200u, "EP1 P QP22 %#x", word);
     memcpy(&word, ep1 + 30 * 4, 4);
-    EXPECT(word == 0x08030800u, "EP1 P QP30 %#x", word);
+    EXPECT(word == 0x08060800u, "EP1 P QP30 %#x", word);
     memcpy(&word, ep1 + 0 * 4, 4);
     EXPECT(word == 0x01010100u, "EP1 P QP0 %#x", word);
     memcpy(&word, ep1 + 51 * 4, 4);
-    EXPECT(word == 0x6b286b00u, "EP1 P QP51 %#x", word);
+    EXPECT(word == 0x6b506b00u, "EP1 P QP51 %#x", word);
+    /* the T31 table (HEVC, OPENIMP_T40_LDA131=0) */
+    EXPECT(openimp_t40_update_fixqp_ep1_table(ep1, sizeof(ep1), 0, 1) == 0, "ep1 p t31");
+    memcpy(&word, ep1 + 30 * 4, 4);
+    EXPECT(word == 0x08030800u, "EP1 P QP30 t31 %#x", word);
+    memcpy(&word, ep1 + 51 * 4, 4);
+    EXPECT(word == 0x6b286b00u, "EP1 P QP51 t31 %#x", word);
 
     if (failures) {
         printf("t40 vendor cmd test: %d failures\n", failures);

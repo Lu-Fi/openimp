@@ -273,6 +273,31 @@ checked by `tests/t40/vendor_cmd_test.c`:
 `OPENIMP_T40_{FIXQP_NOHWRC,FIXQP_LDA,CMD12,POC,HWRC_TARGET}=0` restore the old
 words one by one for comparisons.
 
+2026-11-14 (#443): command lists and EP1 read at every AVPU push on both
+stacks (`cmdcap.so` LD_PRELOAD, read-only `/dev/mem`, light box, AVC FixQP 25
+at 1920x1080 and 640x360, 60 pictures each) showed three more differences,
+now vendor-equal:
+
+- FixQP lambda table: the intra lane (byte 2) of the vendor 1.3.1 table is
+  about twice the T31 value from QP 22 up (QP 30 `0x08060800`, QP 51
+  `0x6b506b00`; same at both sizes).  HEVC keeps the T31 table (not
+  captured); `OPENIMP_T40_LDA131=0` restores it for AVC.
+- The intra-only lambda words are written for the first picture of a
+  channel only; every later picture, requested and GOP IDRs included,
+  carries the P table.
+- An IDR of the GOP schedule carries the P words `cmd[0x08] = 0x11000000`
+  and `cmd[0x12] = 0x8001b01d` (bits 27:24 by width); the first picture and a
+  requested IDR keep `0x77000000` / `0x803ff3ff`.
+- A requested IDR (`IMP_Encoder_RequestIDR`) restarts the GOP count: the
+  vendor's GOP IDRs follow one GOP after it (requested at picture 2, GOP 20:
+  IDRs at 22, 42; OpenIMP had 20, 40).
+  `OPENIMP_T40_GOP_IDR=0` restores the old IDR words, lambdas and count.
+
+Remaining differences: `cmd[0x1b]` bits 16/17 on some IDRs, the stream
+window words `cmd[0x31]`/`cmd[0x33]` (buffer layout).  The ISP output itself
+is equal (ch0 NV12 at the same manual exposure: temporal sigma 0.8895 open /
+0.8963 vendor, flat-area sigma 0.788 / 0.793).
+
 ### JPEG at 4K (device-tested 2026-10-11)
 
 The software baseline encoder (`src/hw_encoder.c`) works one 16x16 MCU row

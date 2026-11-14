@@ -4786,6 +4786,8 @@ static int avpu_t40_knob(int index, const char *name)
 #define AVPU_T40_KNOB_POC 2           /* OPENIMP_T40_POC */
 #define AVPU_T40_KNOB_HWRC_TARGET 3   /* OPENIMP_T40_HWRC_TARGET */
 #define AVPU_T40_KNOB_FIXQP_LDA 4     /* OPENIMP_T40_FIXQP_LDA */
+#define AVPU_T40_KNOB_GOP_IDR 5       /* OPENIMP_T40_GOP_IDR */
+#define AVPU_T40_KNOB_LDA131 6        /* OPENIMP_T40_LDA131 */
 
 static uint32_t avpu_t40_cmd12_hi(uint32_t width)
 {
@@ -4805,20 +4807,28 @@ static void avpu_t40_hwrc_targets(const ALAvpuContext *ctx, int is_idr,
                             is_idr, word15, word16);
 }
 
-/* FixQP lambdas per picture type, as the vendor rewrites EP1 before each
- * picture (only when the type changes; EP1 is at the start of interm_buf).
- * The vendor HEVC command lists carry the same 52-entry tables as AVC
- * (captured at QP 22 and 30, 4K and 720p). */
+/* FixQP lambdas in EP1 (at the start of interm_buf).  The vendor HEVC
+ * command lists carry the same 52-entry tables as AVC (captured at QP 22
+ * and 30, 4K and 720p).  #443 (Eufy T40XP, AVC FixQP 25 1080p, EP1 read at
+ * every AVPU push, 2026-11-14): only the first picture of a channel holds
+ * the intra-only words; every later picture, IDRs included, carries the P
+ * table.  OPENIMP_T40_GOP_IDR=0 rewrites the intra words for every IDR. */
 static void avpu_t40_fixqp_lambdas(ALAvpuContext *ctx, int is_idr)
 {
     uint32_t type = is_idr ? 2u : 1u;
+
+    if (is_idr && ctx->t40_ep1_lambda_type != 0u &&
+        avpu_t40_knob(AVPU_T40_KNOB_GOP_IDR, "OPENIMP_T40_GOP_IDR"))
+        type = 1u;
 
     if (ctx->rc_mode != HW_RC_MODE_FIXQP ||
         !ctx->interm_buf.map || ctx->t40_ep1_lambda_type == type ||
         !avpu_t40_knob(AVPU_T40_KNOB_FIXQP_LDA, "OPENIMP_T40_FIXQP_LDA"))
         return;
-    if (openimp_t40_update_fixqp_ep1(ctx->interm_buf.map,
-                                     ctx->interm_ep1_size, is_idr) != 0)
+    if (openimp_t40_update_fixqp_ep1_table(
+            ctx->interm_buf.map, ctx->interm_ep1_size, type == 2u,
+            ctx->codec_hevc ||
+            !avpu_t40_knob(AVPU_T40_KNOB_LDA131, "OPENIMP_T40_LDA131")) != 0)
         return;
     (void)avpu_flush_cache(ctx->fd, ctx->interm_buf.map, 0x100u, 1 /* WBACK */);
     ctx->t40_ep1_lambda_type = type;
@@ -5346,6 +5356,16 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         cmd[0x11] = 0xffffffffu;
         if (is_idr) {
             cmd[0x12] = 0x803ff3ffu;
+#if defined(AVPU_T40_NATIVE)
+            /* #443: an IDR of the GOP schedule (not the first picture, not a
+             * requested IDR) carries the P words 0x08 / 0x12 at the vendor
+             * (Eufy T40XP AVC 1080p: IDRs 22, 42 of a GOP-20 stream). */
+            if (ctx->t40_periodic_idr &&
+                avpu_t40_knob(AVPU_T40_KNOB_GOP_IDR, "OPENIMP_T40_GOP_IDR")) {
+                cmd[0x08] = 0x11000000u;
+                cmd[0x12] = 0x8001b01du;
+            }
+#endif
         } else {
             cmd[0x0c] = 0x00000002u;
             cmd[0x12] = 0x8001b01du;
@@ -13501,6 +13521,9 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #endif
             if (is_idr)
                 ctx->idr_frame_number = ctx->frame_number;
+#if defined(AVPU_T40_NATIVE)
+            ctx->t40_periodic_idr = (uint32_t)periodic_idr;
+#endif
             if (force_idr) {
                 if (ctx->frame_number % 50 == 0)
                 LOG_CODEC("Process: channel=%d forcing next AVPU frame to IDR", enc->channel_id - 1);
@@ -14122,6 +14145,14 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                 enc->gop_base_frame = ctx->frame_number;
                 __atomic_store_n(&enc->restart_gop, 0, __ATOMIC_RELEASE);
             }
+#if defined(AVPU_T40_NATIVE)
+            /* #443: a requested IDR restarts the GOP count as well (vendor
+             * 1.3.1 on the Eufy T40XP: IDR requested at picture 2, the GOP
+             * IDRs follow at 22, 42 with GOP 20). */
+            else if (force_idr &&
+                     avpu_t40_knob(AVPU_T40_KNOB_GOP_IDR, "OPENIMP_T40_GOP_IDR"))
+                enc->gop_base_frame = ctx->frame_number;
+#endif
 #endif
             ctx->frame_number++;
             submitted = 1;
