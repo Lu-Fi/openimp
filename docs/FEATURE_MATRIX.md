@@ -106,7 +106,7 @@ Per SoC: C functions compiled into the open module that are real, readable C and
 | T30 | 338/982 (34.4 %; before 338) | `███████░░░░░░░░░░░░░` | 75.6 % (before 75.6 %) | inventory only |
 | T31 | 794/1658 (47.9 %; before 794) | `██████████░░░░░░░░░░` | 25.1 % (before 25.1 %) | inventory only |
 | T32 | 1959/2167 (90.4 %; before 1959) | `██████████████████░░` | 34.6 % (before 34.6 %) | inventory only |
-| T33 | 1835/2028 (90.5 %; before 1835) | `██████████████████░░` | 33.4 % (before 33.4 %) | inventory only |
+| T33 | 1848/2041 (90.5 %; before 1848) | `██████████████████░░` | 33.3 % (before 33.3 %) | inventory only |
 | T40 | 1137/2327 (48.9 %; before 1137) | `██████████░░░░░░░░░░` | 78.5 % (before 78.5 %) | inventory only |
 | T41 | 832/2434 (34.2 %; before 832) | `███████░░░░░░░░░░░░░` | 91.0 % (before 91.0 %) | inventory only |
 

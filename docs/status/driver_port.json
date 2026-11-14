@@ -106,7 +106,7 @@
    "proven": 1959,
    "total": 2167,
    "machine_lines": 13071,
-   "lines": 37824,
+   "lines": 37828,
    "pct_machine_lines": 34.6,
    "base_proven": 1959,
    "base_pct_machine_lines": 34.6,
@@ -115,13 +115,13 @@
    "note": ""
   },
   "T33": {
-   "proven": 1835,
-   "total": 2028,
+   "proven": 1848,
+   "total": 2041,
    "machine_lines": 12035,
-   "lines": 36030,
-   "pct_machine_lines": 33.4,
-   "base_proven": 1835,
-   "base_pct_machine_lines": 33.4,
+   "lines": 36162,
+   "pct_machine_lines": 33.3,
+   "base_proven": 1848,
+   "base_pct_machine_lines": 33.3,
    "date": "",
    "issue": "",
    "note": ""
