@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-14: T32 FrameSource I2D rotation / flip / mirror (#445; QEMU only)
+
+- `src/t32/openimp_t32_fs.c` (T32 build): as the vendor libimp 2.2.0, EnableChn arms an I2D pass for a channel whose `i2dattr` enables a rotation, flip or mirror: every captured NV12 frame goes through `/dev/i2d` (kernel `ingenic_i2d`, `IOCTL_I2D_START`, the T40 `struct i2d_param`; helpers `src/t40/p1_i2d.h`) into an I2D buffer of its own, which GetFrame and the bound modules get (90 / 270: picHeight x picWidth). The T32 driver takes the destination UV address as given, so it is set (the T40 driver derives it). The T33 build keeps the attribute only, as the T33 vendor 2.0.2.1.
+- New explicit apitest case `t32i2d`: QEMU T32 ch2 320x192 rotate 90 -> 192x320 frames on OpenIMP and on the vendor 2.2.0 library; OpenIMP's Y equals the unturned snapshot turned clockwise (1794/1794 samples). Cell T32 `FrameSource_Get/SetI2dAttr` cache -> qemu. Not modelled: the delay FIFO and SnapFrame copy the unturned capture.
+
 ## 2026-11-14: T33 RAW snapshot and LDC requests reach the open module (#491; QEMU only)
 
 - open-tx-isp next serves `0xc004548e`/`0xc004548f`, the online LDC requests `0xc00454b9..bb` and `/dev/offline_ldc` on T32/T33 (see its CHANGELOG). With it, T33 `IMP_FrameSource_SnapRaw_Start/_End` return 0 with the vendor sizes and `IMP_ISP_LDC_OfflineInit(1)` opens the node, as on the vendor module (QEMU apitest t33f1, t33l1). Cells T33 `FrameSource_SnapRaw_Start/_End`, `ISP_LDC_OfflineInit` aud -> qemu.

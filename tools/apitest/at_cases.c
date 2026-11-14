@@ -88,6 +88,63 @@ static int flow(void)
 
 int cases_flow(void) { return flow(); }      /* for at_t33.c */
 
+#if defined(APITEST_T32) && !defined(APITEST_T33)
+/* ---- case "t32i2d": FrameSource I2D rotation on channel 2 (T32, #445; explicit only) -------------------------------------------
+ * ch2 320x192 NV12 with i2dattr {enable, rotate 90}, enabled, depth 1: GetFrame's size tells whether the library turned the frame
+ * (192x320, the verdict: vendor 2.2.0 in QEMU gives 192x320); SnapFrame (the unturned capture, another frame) turned both ways is
+ * compared with it for information only (the QEMU sensor picture moves between frames). */
+void cs_t32i2d(void)
+{
+    enum { W = 320, H = 192 };
+    IMPFSChnAttr a;
+    IMPFSI2DAttr g;
+    IMPFrameInfo *f = NULL, *si = NULL;
+    uint8_t *snap = malloc(W * H * 3 / 2 + 64);
+    int rc, re, rd, rg = -1, rr = -1, rgi, rs = -1;
+    unsigned w = 0, h = 0, same = 0, ccw = 0, n = 0, ox, oy;
+
+    si = calloc(1, sizeof(*si) + 64);
+    memset(&a, 0, sizeof(a));
+    a.pixFmt = PIX_FMT_NV12; a.picWidth = W; a.picHeight = H; a.outFrmRateNum = 15; a.outFrmRateDen = 1; a.nrVBs = 2;
+    a.type = FS_PHY_CHANNEL; a.scaler.enable = 1; a.scaler.outwidth = W; a.scaler.outheight = H;
+    a.i2dattr.i2d_enable = 1; a.i2dattr.rotate_enable = 1; a.i2dattr.rotate_angle = 90;
+    rc = IMP_FrameSource_CreateChn(2, &a);
+    memset(&g, 0, sizeof(g));
+    rgi = IMP_FrameSource_GetI2dAttr(2, &g);
+    re = rc == 0 ? IMP_FrameSource_EnableChn(2) : -1;
+    rd = re == 0 ? IMP_FrameSource_SetFrameDepth(2, 1) : -1;
+    if (rd == 0 && snap && si)
+        rs = IMP_FrameSource_SnapFrame(2, PIX_FMT_NV12, W, H, snap, si);
+    if (rd == 0)
+        rg = IMP_FrameSource_GetFrame(2, &f);
+    if (rg == 0 && f) {
+        const uint8_t *y = (const uint8_t *)(uintptr_t)f->virAddr;
+
+        w = f->width; h = f->height;
+        if (rs == 0 && y && w == H && h == W)
+            for (oy = 0; oy < h; oy += 7)
+                for (ox = 0; ox < w; ox += 5, n++) {
+                    int v = y[oy * ((w + 15) & ~15u) + ox];
+                    int d = v - (int)snap[(H - 1 - ox) * W + oy];       /* clockwise */
+                    int e = v - (int)snap[ox * W + (W - 1 - oy)];       /* counter-clockwise */
+                    same += d >= -8 && d <= 8;
+                    ccw += e >= -8 && e <= 8;
+                }
+        rr = IMP_FrameSource_ReleaseFrame(2, f);
+    }
+    if (rd == 0) IMP_FrameSource_SetFrameDepth(2, 0);
+    if (re == 0) IMP_FrameSource_DisableChn(2);
+    if (rc == 0) IMP_FrameSource_DestroyChn(2);
+    rep(FN(IMP_FrameSource_SetI2dAttr), rg, rg == 0 && w == H && h == W ? V_PASS : V_FAIL,
+        "ch2 %ux%u i2d rotate 90: create 0x%x, GetI2dAttr 0x%x {%d,%d,%d,%d,%d}, enable 0x%x, depth 0x%x, snap 0x%x, frame 0x%x %ux%u (%s), "
+        "Y equal to the snapshot turned clockwise %u/%u, counter-clockwise %u/%u, release 0x%x; ch1 flows %d", W, H, (unsigned)(rc), (unsigned)(rgi), g.i2d_enable, g.flip_enable,
+        g.mirr_enable, g.rotate_enable, g.rotate_angle, (unsigned)(re), (unsigned)(rd), (unsigned)(rs), (unsigned)(rg), w, h, w == H && h == W ? "rotated" : "not rotated",
+        same, n, ccw, n, (unsigned)(rr), flow());
+    free(snap);
+    free(si);
+}
+#endif
+
 /* one bounded probe: a frame of ch1 within the GetFrame timeout (2 s), no polling (#438) */
 static int flow_q(void)
 {
@@ -7144,7 +7201,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33i2d", "t33drv" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33f1", "t33l1", "t33e3", "t33i2d", "t33drv", "t32i2d" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7260,6 +7317,9 @@ void t_cases(void)
     { void cs_t33e3(void); if (cs_on("t33e3")) cs_t33e3(); wdog("cases", 60); }       /* at_t33.c */
     if (getenv("APITEST_CASES") && cs_on("t33i2d")) { void cs_t33i2d(void); cs_t33i2d(); wdog("cases", 60); }   /* at_t33.c, explicit only */
     if (getenv("APITEST_CASES") && cs_on("t33drv")) { void cs_t33drv(void); cs_t33drv(); wdog("cases", 60); }   /* at_t33.c, explicit only (#491) */
+#endif
+#if defined(APITEST_T32) && !defined(APITEST_T33)
+    if (getenv("APITEST_CASES") && cs_on("t32i2d")) { cs_t32i2d(); wdog("cases", 60); }   /* explicit only (#445) */
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);
     if (getenv("APITEST_CASES") && cs_on("t30pass_csc")) cs_t30pass_csc(); wdog("cases", 60);   /* explicit only: OpenIMP extension */

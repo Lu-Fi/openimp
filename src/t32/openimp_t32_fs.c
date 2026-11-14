@@ -72,6 +72,7 @@
 #include "t32/openimp_t32_isp.h"
 #include "t32/openimp_t32_fs.h"
 #include "t32/openimp_t32_ivdc.h"
+#include "t40/p1_i2d.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_fs.c is the PLATFORM_T32 build only"
@@ -98,6 +99,7 @@ struct t32_fs_buf {
     IMPFrameInfo frame;         /* what a sink sees */
     int holds;                  /* sinks that kept it */
     int out;                    /* dequeued, not queued back yet */
+    IMPDMABufferInfo i2d;       /* T32: the I2D output of this buffer (#445) */
 };
 
 enum { SLOT_FREE, SLOT_FILLING, SLOT_READY, SLOT_USER };
@@ -144,6 +146,11 @@ struct t32_fs_chn {
     struct t32_fs_buf *ex_buf;
     IMPFrameInfo ex_frame;
     int suspended;              /* PM_Suspend (F1): frame thread stopped */
+    /* T32 I2D (#445): EnableChn arms it from the channel's i2dattr */
+    int i2d_on;
+    IMPFSI2DAttr i2d_attr;
+    struct p1_i2d_geometry i2d_geom;
+    uint32_t i2d_runs, i2d_errors;
 };
 
 struct t32_fs_cached {
@@ -299,6 +306,12 @@ static int fs_qbuf(struct t32_fs_chn *c, struct t32_fs_buf *b)
 }
 
 /* depth copies: allocate up to c->depth (geometry known), free the rest */
+/* bytes of one GetFrame depth copy: the I2D output when the channel turns its frames */
+static uint32_t fs_slot_size(const struct t32_fs_chn *c)
+{
+    return c->i2d_on && c->i2d_geom.dst_size > c->alloc ? c->i2d_geom.dst_size : c->alloc;
+}
+
 static void fs_slots_sync_locked(struct t32_fs_chn *c)
 {
     int i;
@@ -308,7 +321,7 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
         int want = c->enabled && i < c->depth;
 
         if (want && !s->dma.phys_addr && c->alloc) {
-            if (fs_alloc(&s->dma, c->alloc, "fs-depth") == 0)
+            if (fs_alloc(&s->dma, fs_slot_size(c), "fs-depth") == 0)
                 s->state = SLOT_FREE;
         } else if (!want && s->dma.phys_addr && s->state != SLOT_USER &&
                    s->state != SLOT_FILLING) {
@@ -449,6 +462,100 @@ static int fs_collect_sinks_locked(int chn, int direct, OpenIMP_T32_FrameSink *f
                                    int max);
 static void fs_ex_offer_locked(struct t32_fs_chn *c, struct t32_fs_buf *b);
 
+/* ---- T32 I2D (#445) ------------------------------------------------------
+ * Vendor libimp T32 2.2.0 (i2d_enable_ch%d, VBMCreateI2dPool): a channel
+ * whose i2dattr enables a rotation / flip / mirror runs every captured NV12
+ * frame through /dev/i2d (drivers/video/ingenic_i2d, the T40/T41 ABI:
+ * IOCTL_I2D_START with struct i2d_param, the call returns when the block is
+ * done) into an I2D buffer of its own and hands that one to GetFrame and
+ * the bound modules; 90 / 270 give picHeight x picWidth frames.  Shared
+ * helpers: src/t40/p1_i2d.h.  The T33(L) vendor 2.0.2.1 does not apply
+ * the attribute (QEMU, #445), so the T33 build keeps it only.  Output line
+ * pitch ALIGN16(width) as the T32 capture buffers (the T40 driver needs
+ * ALIGN32 for 90 / 270 on silicon: not known for the T32, no camera).
+ * The delay FIFO and SnapFrame copy the unturned capture (not modelled). */
+static int fs_i2d_fd = -1;
+
+static void fs_i2d_frame(const struct t32_fs_chn *c, const IMPDMABufferInfo *d, IMPFrameInfo *f)
+{
+    f->width = c->i2d_geom.out_w;
+    f->height = c->i2d_geom.out_h;
+    f->size = c->i2d_geom.out_w * c->i2d_geom.out_h * 3 / 2;
+    f->phyAddr = d->phys_addr;
+    f->virAddr = d->virt_addr;
+}
+
+/* EnableChn: lock held, capture buffers allocated */
+static void fs_i2d_arm_locked(struct t32_fs_chn *c, int chn)
+{
+#if defined(PLATFORM_T33)
+    (void)c;
+    (void)chn;
+#else
+    const IMPFSI2DAttr *a = &c->attr.i2dattr;
+    int i;
+
+    c->i2d_on = 0;
+    c->i2d_runs = c->i2d_errors = 0;
+    if (c->direct || !p1_i2d_active(a->i2d_enable, a->flip_enable, a->mirr_enable,
+                                    a->rotate_enable, a->rotate_angle))
+        return;
+    if (p1_i2d_geometry(c->width, c->height, a->rotate_enable, a->rotate_angle, &c->i2d_geom) < 0) {
+        IMP_LOG_ERR(TAG, "chn %d: I2D %ux%u angle %d not possible (8-aligned size, 16-aligned width for 90/270)",
+                    chn, c->width, c->height, a->rotate_angle);
+        return;
+    }
+    c->i2d_geom.src_pitch = c->stride;
+    c->i2d_geom.dst_pitch = ALIGN_UP(c->i2d_geom.out_w, 16);
+    c->i2d_geom.dst_size = c->i2d_geom.dst_pitch * ALIGN_UP(c->i2d_geom.out_h, 16) * 3 / 2;
+    if (fs_i2d_fd < 0) {
+        fs_i2d_fd = open("/dev/i2d", O_RDWR | O_CLOEXEC);
+        if (fs_i2d_fd < 0) {
+            IMP_LOG_ERR(TAG, "chn %d: /dev/i2d: %s", chn, strerror(errno));
+            return;
+        }
+    }
+    for (i = 0; i < c->nbufs; i++) {
+        struct t32_fs_buf *b = &c->buf[i];
+
+        if (fs_alloc(&b->i2d, c->i2d_geom.dst_size, "fs-i2d") < 0) {
+            IMP_LOG_ERR(TAG, "chn %d: no memory for the I2D buffers", chn);
+            for (i = 0; i < c->nbufs; i++)
+                fs_free_dma(&c->buf[i].i2d);
+            return;
+        }
+    }
+    c->i2d_attr = *a;
+    c->i2d_on = 1;
+    for (i = 0; i < c->nbufs; i++)
+        fs_i2d_frame(c, &c->buf[i].i2d, &c->buf[i].frame);
+    IMP_LOG_INFO(TAG, "chn %d: I2D %ux%u -> %ux%u (rotate %d/%d flip %d mirror %d)", chn, c->width, c->height,
+                 c->i2d_geom.out_w, c->i2d_geom.out_h, a->rotate_enable, a->rotate_angle, a->flip_enable,
+                 a->mirr_enable);
+#endif
+}
+
+/* the frame thread, no lock: one buffer through the block */
+static void fs_i2d_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
+{
+    struct p1_i2d_param p;
+    const IMPFSI2DAttr *a = &c->i2d_attr;
+
+    p1_i2d_fill(&p, c->width, c->height, a->flip_enable, a->mirr_enable, a->rotate_enable, a->rotate_angle,
+                &c->i2d_geom, b->dma.phys_addr, b->i2d.phys_addr);
+    /* the T32 driver takes dst_addr_uv as given (the T40 one derives it): 0 would
+     * send the chroma to physical address 0; source UV as the driver derives it */
+    p.src_addr_uv = b->dma.phys_addr + c->stride * ALIGN_UP(c->height, 16);
+    p.dst_addr_uv = b->i2d.phys_addr + c->i2d_geom.dst_pitch * ALIGN_UP(c->i2d_geom.out_h, 16);
+    if (ioctl(fs_i2d_fd, P1_I2D_IOC_START, &p) < 0) {
+        if (!c->i2d_errors++)
+            IMP_LOG_ERR(TAG, "I2D start: %s", strerror(errno));
+        return;
+    }
+    c->i2d_runs++;
+    DMA_RmemFlushCache((void *)(uintptr_t)b->i2d.virt_addr, c->i2d_geom.dst_size, 2);
+}
+
 static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
     OpenIMP_T32_FrameSink fn[T32_FS_MAX_BINDS];
@@ -469,10 +576,13 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 
     if (slot) {
         /* NV12 as captured: Y, then UV after ALIGN16(height) rows */
-        memcpy((void *)(uintptr_t)slot->dma.virt_addr, (void *)(uintptr_t)b->dma.virt_addr,
-               c->alloc);
+        memcpy((void *)(uintptr_t)slot->dma.virt_addr,
+               (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : b->dma.virt_addr),
+               c->i2d_on ? c->i2d_geom.dst_size : c->alloc);
         pthread_mutex_lock(&fs_lock);
         fs_fill_frame(c, chn, (int)(slot - c->slot), &slot->dma, &slot->frame);
+        if (c->i2d_on)
+            fs_i2d_frame(c, &slot->dma, &slot->frame);
         slot->frame.timeStamp = b->frame.timeStamp;
         slot->seq = c->seq;
         slot->state = SLOT_READY;
@@ -565,6 +675,8 @@ static void *fs_thread(void *arg)
         if (requeue)
             c->dropped++;
         pthread_mutex_unlock(&fs_lock);
+        if (!requeue && c->i2d_on)
+            fs_i2d_run(c, b);
         if (!requeue)
             fs_deliver(chn, c, b);
         pthread_mutex_lock(&fs_lock);
@@ -779,8 +891,10 @@ static void fs_release_bufs_locked(struct t32_fs_chn *c)
 {
     int i;
 
+    c->i2d_on = 0;
     for (i = 0; i < T32_FS_MAX_BUFS; i++) {
         fs_free_dma(&c->buf[i].dma);
+        fs_free_dma(&c->buf[i].i2d);
         c->buf[i].holds = 0;
         c->buf[i].out = 0;
     }
@@ -879,6 +993,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
         if (fs_qbuf(c, b) < 0)
             goto fail_bufs;
     }
+    fs_i2d_arm_locked(c, chnNum);
     if (FS_IOCTL(c->fd, FRAME_STREAMON, &on) < 0)
         goto fail_bufs;
     c->enabled = 1;
@@ -1102,8 +1217,8 @@ int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
  *   (0x80012000), packed NV12.
  * I2D: SetI2dAttr's rotation / flip is kept, not applied.  T33: as the
  * vendor 2.0.2.1 on the T33L (QEMU: the frame stays unrotated, the I2D
- * block gets no interrupt).  T32: not as the vendor 2.2.0, which feeds
- * /dev/i2d (later item of #445); SnapFrame takes PIX_FMT_NV12 only (0x80010002 for others, the
+ * block gets no interrupt).  T32: as the vendor 2.2.0, EnableChn arms the
+ * /dev/i2d pass (see "T32 I2D" above, #445); SnapFrame takes PIX_FMT_NV12 only (0x80010002 for others, the
  * vendor's other formats are not reverse engineered); the FIFO keeps heap
  * copies instead of holding capture buffers, so bound modules are not
  * delayed by SetDelay (the vendor's FIFO_CACHE_PRIORITY / DATA_PRIORITY
@@ -1258,8 +1373,10 @@ int IMP_FrameSource_SetI2dAttr(int chnNum, IMPFSI2DAttr *attr)
     pthread_mutex_lock(&fs_lock);
     fs_chn[chnNum].attr.i2dattr = *attr;
     pthread_mutex_unlock(&fs_lock);
+#if defined(PLATFORM_T33)
     if (attr->i2d_enable)
-        IMP_LOG_WARN(TAG, "chn %d: I2D rotate/flip kept, not applied on this SoC yet", chnNum);
+        IMP_LOG_WARN(TAG, "chn %d: I2D rotate/flip kept, not applied (as the T33 vendor library)", chnNum);
+#endif
     return 0;
 }
 

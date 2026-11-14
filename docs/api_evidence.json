@@ -10649,7 +10649,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "cache",
+        "T32": "qemu",
         "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
@@ -10668,11 +10668,11 @@
           "r†"
         ]
       },
-      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T32/T33 (2026-11-13, #445/#446): the five words are kept and read back with the vendor checks (flip+mirror, flip/mirror+rotate 0x80010040), but the rotation / flip is NOT applied at EnableChn: the T32/T33 build has no I2D path yet (vendor uses its I2D pool). QEMU round trip PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly. T33 (2026-11-13, #445): vendor libimp 2.0.2.1 on the T33L in QEMU does not rotate either: ch2 320x192 created with i2dattr {enable, rotate 90}, the frame comes back 320x192 and the kernel I2D block (/dev/i2d, IRQ 47) counts 0 interrupts; OpenIMP gives the same lines -> T33 qemu (vendor-equal). T32: the 2.2.0 library's I2D path (/dev/i2d, kernel driver ingenic_i2d: START/LISTEN/FLUSH ioctls with struct i2d_param, VBMCreateI2dPool) is not in OpenIMP yet and not checked against the T32 vendor run (cache).",
+      "note": "T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T40/T41: real hardware I2D rotate/flip/mirror since 2026-10-18 (`claude/i2d-t4x`, src/t40/p1_i2d.h + openimp_p1.c, marker `OpenIMP_Cap_I2dRotate`); T41 device-tested on .34, T40 host only (see row 21). Before: SetI2dAttr returned -1 T32/T33 (2026-11-13, #445/#446): the five words are kept and read back with the vendor checks (flip+mirror, flip/mirror+rotate 0x80010040), but the rotation / flip is NOT applied at EnableChn: the T32/T33 build has no I2D path yet (vendor uses its I2D pool). QEMU round trip PASS. Vendor reference: same apitest on vendor libimp 2.2.0 in QEMU (audit t3233gaps v32base) and the 2.2.0 / 2.0.2.1 disassembly. T33 (2026-11-13, #445): vendor libimp 2.0.2.1 on the T33L in QEMU does not rotate either: ch2 320x192 created with i2dattr {enable, rotate 90}, the frame comes back 320x192 and the kernel I2D block (/dev/i2d, IRQ 47) counts 0 interrupts; OpenIMP gives the same lines -> T33 qemu (vendor-equal). T32: the 2.2.0 library's I2D path (/dev/i2d, kernel driver ingenic_i2d: START/LISTEN/FLUSH ioctls with struct i2d_param, VBMCreateI2dPool) is not in OpenIMP yet and not checked against the T32 vendor run (cache). T32 2026-11-14 (#445): EnableChn arms the vendor 2.2.0 I2D pass (/dev/i2d, kernel ingenic_i2d, struct i2d_param as T40, src/t40/p1_i2d.h helpers): every frame of a channel with rotate / flip / mirror goes through the block into an I2D buffer that GetFrame and the bound modules get; QEMU t32i2d: ch2 320x192 rotate 90 delivers 192x320 as the vendor 2.2.0 does, Y equal to the unturned snapshot turned clockwise (1794/1794 samples). The T32 driver takes the destination UV address as given (set explicitly). Delay FIFO and SnapFrame keep the unturned capture.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T32": "apitest t32i2d 2026-11-14 QEMU -M ingenic-t32 (cv8001, no camera), vendor libimp 2.2.0 on the vendor module through the same case (audit night1114/o1/runs o32i, v32i)",
         "T33": "apitest t33i2d 2026-11-13 QEMU -M ingenic-t33 (t33l), vendor 2.0.2.1 reference run with /proc/interrupts (audit t33backlog/runs2/v6b-vend-i2d)"
       }
     },
