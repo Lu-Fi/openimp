@@ -8180,7 +8180,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -8191,7 +8191,8 @@
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_GetStream": {
@@ -8836,7 +8837,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "host",
         "T40": "dev",
         "T41": "dev"
       },
@@ -8862,7 +8863,8 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_SetChnEntropyMode": {
@@ -8980,7 +8982,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8999,7 +9001,8 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
+        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_SetChnQp": {
@@ -9031,7 +9034,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "miss",
+        "T33": "host",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9057,7 +9060,8 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "rc33_test vendor-2.2.0-rc33-setters-h264.txt.gz (host, QEMU apitest has no T32 case)"
+        "T32": "rc33_test vendor-2.2.0-rc33-setters-h264.txt.gz (host, QEMU apitest has no T32 case)",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_SetChnQpBoundsPerFrame": {
@@ -9070,14 +9074,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "dev"
       },
       "note": "audit: userspace implementation",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0"
+        "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_SetChnQpIPDelta": {
@@ -9198,7 +9203,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "miss",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -9226,7 +9231,8 @@
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask"
+        "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
+        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
       }
     },
     "Encoder_SetIvpuBsSize": {
