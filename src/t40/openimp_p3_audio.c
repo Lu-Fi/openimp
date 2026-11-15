@@ -480,18 +480,21 @@ static int p3_effects_load(void)
     return 0;
 }
 
+/* vendor T40 1.3.1 / T41 1.2.5 _ai_record_thread order (#591): NS over all
+ * 10 ms blocks of the frame, then AGC over all blocks, then the HPF
+ * (_ai_HPF_Filter); the howling suppression and the software volume follow
+ * in the caller.  With AEC enabled the vendor skips NS/AGC/HPF in the
+ * library (AEC contains them); here the AEC runs in the audio driver. */
 static void p3_process_effects(int16_t *samples, int count)
 {
     int sample_rate = p3_audio.ai_attr.samplerate;
     int frame_samples = sample_rate / 100;
     int offset;
 
-    if (p3_audio.hpf_enabled)
-        p3_audio.hpf_process(p3_audio.hpf_state, samples, count);
-    if (frame_samples <= 0)
-        return;
-    for (offset = 0; offset + frame_samples <= count; offset += frame_samples) {
-        if (p3_audio.ns_enabled && sample_rate <= 16000) {
+    if (frame_samples > 0 && frame_samples <= 160 &&
+        p3_audio.ns_enabled && sample_rate <= 16000) {
+        for (offset = 0; offset + frame_samples <= count;
+             offset += frame_samples) {
             float input[160];
             float output[160];
             const float *inputs[1] = { input };
@@ -500,6 +503,7 @@ static void p3_process_effects(int16_t *samples, int count)
 
             for (i = 0; i < frame_samples; i++)
                 input[i] = (float)samples[offset + i];
+            memset(output, 0, sizeof(output));
             p3_audio.ns_process(p3_audio.ns, inputs, 1, outputs);
             for (i = 0; i < frame_samples; i++) {
                 if (output[i] > 32767.0f)
@@ -510,7 +514,10 @@ static void p3_process_effects(int16_t *samples, int count)
                     samples[offset + i] = (int16_t)output[i];
             }
         }
-        if (p3_audio.agc_enabled && sample_rate <= 16000) {
+    }
+    if (frame_samples > 0 && p3_audio.agc_enabled && sample_rate <= 16000) {
+        for (offset = 0; offset + frame_samples <= count;
+             offset += frame_samples) {
             const int16_t *inputs[1] = { samples + offset };
             int16_t *outputs[1] = { samples + offset };
             int32_t output_level = 127;
@@ -521,6 +528,8 @@ static void p3_process_effects(int16_t *samples, int count)
                                        &output_level, 0, &saturated);
         }
     }
+    if (p3_audio.hpf_enabled)
+        p3_audio.hpf_process(p3_audio.hpf_state, samples, count);
 }
 
 #if !defined(PLATFORM_T32)
@@ -745,20 +754,18 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
     t32_ai_effects((int16_t *)p3_audio.frame_buffer,
                    (int)(bytes / sizeof(int16_t)));
 #else
-    /* IMP_AI_EnableHs: howling suppression ahead of the other effects */
+    /* vendor T40 1.3.1 / T41 1.2.5 _ai_record_thread: NS, AGC, HPF
+     * (p3_process_effects), then the howling suppression (IMP_AI_EnableHs),
+     * then the software volume last (#519, #591) */
+    p3_process_effects((int16_t *)p3_audio.frame_buffer,
+                       (int)(bytes / sizeof(int16_t)));
     if (openimp_t23_ai_pre_effects)
         openimp_t23_ai_pre_effects((int16_t *)p3_audio.frame_buffer,
                                    (int)(bytes / sizeof(int16_t)),
                                    p3_audio.ai_attr.samplerate);
-#if !defined(PLATFORM_T32)
-    /* vendor T40 / T41 _ai_record_thread: software volume after the howling
-     * suppression (#519) */
     p3_soft_volume((int16_t *)p3_audio.frame_buffer,
                    (const int16_t *)p3_audio.frame_buffer,
                    (int)(bytes / sizeof(int16_t)), p3_audio.ai_vgain);
-#endif
-    p3_process_effects((int16_t *)p3_audio.frame_buffer,
-                       (int)(bytes / sizeof(int16_t)));
     if (p3_audio.ai_mute)
         memset(p3_audio.frame_buffer, 0, bytes);
 #endif

@@ -19,15 +19,19 @@ OSD_CB_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-osd-callback-test
 DGAIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-dgain-test
 VOLUME_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-volume-test
 VOLUME41_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-audio-volume-test
+CHAIN_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-audio-chain-test
+CHAIN41_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-audio-chain-test
 I2D_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-i2d-test
 
-check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(VOLUME_TEST_BIN) $(VOLUME41_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-wait p2-pace audio-capture
+check: $(QUERY_TEST_BIN) $(SEI_TEST_BIN) $(OSD_CB_TEST_BIN) $(DGAIN_TEST_BIN) $(VOLUME_TEST_BIN) $(VOLUME41_TEST_BIN) $(CHAIN_TEST_BIN) $(CHAIN41_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(STREAM_LAYOUT_TEST_BIN) $(DENOISE_TEST_BIN) $(CAMERA_INPUT_TEST_BIN) $(IVS_FRAMEWORK_TEST_BIN) $(I2D_TEST_BIN) p3-controls isp-osd abi-layout frame-ts frame-rc vendor-cmd fs-wait p2-pace audio-capture
 	$(QUERY_TEST_BIN)
 	$(SEI_TEST_BIN)
 	$(OSD_CB_TEST_BIN)
 	$(DGAIN_TEST_BIN)
 	$(VOLUME_TEST_BIN)
 	$(VOLUME41_TEST_BIN)
+	$(CHAIN_TEST_BIN)
+	$(CHAIN41_TEST_BIN)
 	$(P2_BUFSHARE_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(DENOISE_TEST_BIN)
@@ -121,6 +125,19 @@ $(VOLUME41_TEST_BIN): audio_volume_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audi
 	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T41 \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		audio_volume_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -lm -o "$@"
+
+# #591: AI record chain order NS, AGC, HPF, howling suppression, volume (vendor T40 1.3.1 / T41 1.2.5)
+$(CHAIN_TEST_BIN): audio_chain_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T40 \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		audio_chain_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -lm -o "$@"
+
+$(CHAIN41_TEST_BIN): audio_chain_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Wno-unused-function -DPLATFORM_T41 \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		audio_chain_test.c $(PROJECT_DIR)/src/core/imp_log_emit.c -pthread -ldl -lm -o "$@"
 
 # #409: AI capture thread from EnableChn, stub driver with a backlog (T40 + T41 build)
 .PHONY: audio-capture
