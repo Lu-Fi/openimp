@@ -12564,7 +12564,17 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         "openimp/codec startup: device pool open fd=%d\n", fd);
                     if (fd >= 0) {
                         /* Initialize AVPU context directly (OEM parity: no ALAvpu_Init wrapper) */
+#if defined(AVPU_T40_NATIVE)
+                        /* #556: the channel-attribute QP window (set at
+                         * Create / SetRcParam) survives the context reset. */
+                        uint32_t attr_min_qp = enc->avpu.t40_attr_min_qp;
+                        uint32_t attr_max_qp = enc->avpu.t40_attr_max_qp;
+#endif
                         memset(&enc->avpu, 0, sizeof(enc->avpu));
+#if defined(AVPU_T40_NATIVE)
+                        enc->avpu.t40_attr_min_qp = attr_min_qp;
+                        enc->avpu.t40_attr_max_qp = attr_max_qp;
+#endif
                         enc->avpu.fd = fd;
                         enc->avpu.event_fd = enc->event ? (int)(uintptr_t)enc->event : -1;
                         enc->avpu.cl_ring.dmabuf_fd = -1;
