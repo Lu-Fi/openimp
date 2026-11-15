@@ -3228,10 +3228,11 @@ static int avpu_t31_hevc_tmvp_enabled(void)
  * whatever cmd[9] says: with either PPS flag clear every picture breaks
  * after the first CTBs (ffmpeg decodes garbage, mostly without an error;
  * VA-API fails).  The vendor T40 PPS sets both, also for FixQP, and its VUI
- * signals full range.  OPENIMP_T40_HEVC_TOOLS (bit mask, default 13):
- * 1 transform skip (PPS + cmd[9] bit 15), 2 scaling lists (SPS default
- * lists + cmd[9] bits 31/30; breaks the picture, test only), 4 PPS
- * cu_qp_delta always on, 8 VUI full range. */
+ * signals full range.  OPENIMP_T40_HEVC_TOOLS (bit mask, default 15 as the
+ * vendor): 1 transform skip (PPS + cmd[9] bit 15), 2 default scaling lists
+ * (SPS scaling_list_enabled_flag, cmd[9] bits 31/30 and the hardware tables
+ * at EP1+0x100, openimp_t40_init_hevc_ep1()), 4 PPS cu_qp_delta always on,
+ * 8 VUI full range. */
 static uint32_t avpu_t40_hevc_tools(void)
 {
     static int tools = -1;
@@ -3240,7 +3241,7 @@ static uint32_t avpu_t40_hevc_tools(void)
         const char *value = getenv("OPENIMP_T40_HEVC_TOOLS");
 
         tools = value && value[0] ? (int)(strtoul(value, NULL, 0) & 0xfu)
-                                  : 13;
+                                  : 15;
     }
     return (uint32_t)tools;
 }
@@ -3450,9 +3451,9 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
  * libimp 1.3.1 SliceParamToCmdRegsEnc1); the words below follow the vendor
  * T40 HEVC command lists captured on a T40XP (3840x2160 and 1280x720,
  * CBR).  Addresses, source/reconstruction geometry, QP words and cmd[0x13]
- * are the AVC ones already in cmd[].  Like T31, OpenIMP runs HEVC without
- * scaling lists and transform skip (cmd[9] bits 31/30/15 clear) and signals
- * that in its SPS/PPS; the vendor sets them together with its own headers.
+ * are the AVC ones already in cmd[].  Scaling lists and transform skip
+ * (cmd[9] bits 31/30/15) follow OPENIMP_T40_HEVC_TOOLS, by default on as
+ * the vendor, together with the matching SPS/PPS flags.
  */
 static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                                    int is_idr)
@@ -3489,8 +3490,9 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                 0x80000000u;
     cmd[0x08] = is_idr ? 0x77000000u : 0x33000000u;
 
-    /* No scaling list (bits 30/31), collocated_from_l0 (bit 18), HWRC
-     * enable (bit 16) only together with PPS cu_qp_delta. */
+    /* Scaling list enable/load (bits 30/31, sp[0x71]/sp[0x72], set on every
+     * picture by the vendor), collocated_from_l0 (bit 18), HWRC enable
+     * (bit 16) only together with PPS cu_qp_delta. */
     cmd[0x09] = (cmd[0x09] & 0x3fff7fffu) | 0x00040000u;
     if (!hwrc)
         cmd[0x09] &= ~0x00010000u;
@@ -12937,11 +12939,21 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                                   interm_total_sz,
                                                   use_fixqp_lda))
 #else
-                                        /* T40: the T31 EP1 layout */
+                                        /* T40: the T31 EP1 layout; HEVC
+                                         * adds the default scaling-list
+                                         * tables at EP1+0x100 (vendor). */
                                         (enc->avpu.codec_hevc
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+                                            ? openimp_t40_init_hevc_ep1(
+                                                  enc->avpu.interm_buf.map,
+                                                  interm_total_sz,
+                                                  (avpu_t40_hevc_tools() &
+                                                   2u) != 0u)
+#else
                                             ? openimp_t31_init_hevc_ep1(
                                                   enc->avpu.interm_buf.map,
                                                   interm_total_sz)
+#endif
                                             : openimp_t40_init_ep1(
                                                   enc->avpu.interm_buf.map,
                                                   interm_total_sz,

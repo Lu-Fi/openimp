@@ -77,6 +77,9 @@ int32_t AL_AVC_WriteEncHwScalingList(void *scaling, void *scratch,
                                      uint32_t *output);
 int32_t AL_AVC_WriteEncHwScalingListT41(void *scaling, void *scratch,
                                         uint32_t *output);
+int32_t AL_HEVC_GenerateHwScalingList(void *scaling, void *scratch);
+int32_t AL_HEVC_WriteEncHwScalingList(void *scaling, void *scratch,
+                                      uint32_t *output);
 
 /* The stock AVC/HEVC lambda tables (used when no external Lambdas.hex
  * override exists) are generated from the HM/JM lambda formula, see
@@ -190,6 +193,87 @@ static int openimp_init_ep1(void *ep1, size_t size, int use_fixqp_lda,
  * the AVC one when the channel codec is HEVC (generated, t40_lambda.h).
  * HEVC runs without scaling lists, so nothing is written at EP1+0x100.
  */
+
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+/* H.265 Table 7-6 default 8x8 lists in raster order (intra, inter) and the
+ * flat 4x4 lists, as AL_HEVC_DefaultScalingLists8x8/4x4 in the vendor T40
+ * libimp 1.3.1 (HEVC_EncUtils.c.o .rodata 0x14 and 0x94). */
+static const uint8_t hevc_default_scaling_8x8[0x80] = {
+    16, 16, 16, 16, 17, 18, 21, 24, 16, 16, 16, 16, 17, 19, 22, 25,
+    16, 16, 17, 18, 20, 22, 25, 29, 16, 16, 18, 21, 24, 27, 31, 36,
+    17, 17, 20, 24, 30, 35, 41, 47, 18, 19, 22, 27, 35, 44, 54, 65,
+    21, 22, 25, 31, 41, 54, 70, 88, 24, 25, 29, 36, 47, 65, 88, 115,
+    16, 16, 16, 16, 17, 18, 20, 24, 16, 16, 16, 17, 18, 20, 24, 25,
+    16, 16, 17, 18, 20, 24, 25, 28, 16, 17, 18, 20, 24, 25, 28, 33,
+    17, 18, 20, 24, 25, 28, 33, 41, 18, 20, 24, 25, 28, 33, 41, 54,
+    20, 24, 25, 28, 33, 41, 54, 71, 24, 25, 28, 33, 41, 54, 71, 91,
+};
+
+/*
+ * The scaling-list block of the vendor HEVC SPS structure (AL_HEVC_GenerateSPS
+ * with eScalingList = AL_SCL_DEFAULT, SPS + 546), the input of
+ * AL_HEVC_GenerateHwScalingList:
+ *   +0x00..0x2f  prediction flags / matrix id deltas (0)
+ *   +0x30..0x35  16x16 DC of matrices 0..5, +0x36 and +0x39 32x32 DC of
+ *                matrices 0 and 3 (16; the other DC bytes stay 0)
+ *   +0x3c + (size * 6 + matrix) * 0x40  coefficients in raster order:
+ *                4x4 flat 16, 8x8/16x16 matrices 0..2 intra and 3..5 inter,
+ *                32x32 matrix 0 intra and 3 inter.
+ */
+#define T40_HEVC_SCL_SIZE 0x600u
+#define T40_HEVC_SCL_LIST(size, matrix) \
+    (0x3cu + ((size) * 6u + (matrix)) * 0x40u)
+
+static void t40_hevc_default_scaling(uint8_t *scl)
+{
+    unsigned int size, matrix;
+
+    memset(scl, 0, T40_HEVC_SCL_SIZE);
+    for (matrix = 0u; matrix < 6u; ++matrix) {
+        const uint8_t *def8 = hevc_default_scaling_8x8 +
+                              (matrix < 3u ? 0u : 0x40u);
+
+        memset(scl + T40_HEVC_SCL_LIST(0u, matrix), 16, 16);
+        for (size = 1u; size <= 3u; ++size) {
+            if (size == 3u && matrix != 0u && matrix != 3u)
+                continue;
+            memcpy(scl + T40_HEVC_SCL_LIST(size, matrix), def8, 0x40);
+        }
+        scl[0x30u + matrix] = 16u;
+    }
+    scl[0x36] = 16u;
+    scl[0x39] = 16u;
+}
+
+/*
+ * T40 HEVC with default scaling lists (vendor libimp 1.3.1
+ * HEVC_Encoder.c preprocessEp1 -> AL_HEVC_PreprocessScalingList): the
+ * forward/inverse hardware tables generated from the default lists go to
+ * EP1+0x100 (0x6200 bytes, up to EP1+0x6300).  The table depends on the
+ * lists only, so writing it once per channel is enough; the lambda rewrites
+ * only touch EP1+0x00..0xcf.
+ */
+int openimp_t40_init_hevc_ep1(void *ep1, size_t size, int scaling_list)
+{
+    uint8_t *scl;
+    uint8_t *scratch;
+
+    if (openimp_t31_init_hevc_ep1(ep1, size) != 0)
+        return -1;
+    if (!scaling_list)
+        return 0;
+    scl = (uint8_t *)calloc(1, T40_HEVC_SCL_SIZE + 0x5dd0u);
+    if (scl == NULL)
+        return -1;
+    scratch = scl + T40_HEVC_SCL_SIZE;
+    t40_hevc_default_scaling(scl);
+    AL_HEVC_GenerateHwScalingList(scl, scratch);
+    AL_HEVC_WriteEncHwScalingList(scl, scratch,
+                                  (uint32_t *)((uint8_t *)ep1 + 0x100));
+    free(scl);
+    return 0;
+}
+#endif
 
 int openimp_t31_init_hevc_ep1(void *ep1, size_t size)
 {

@@ -20,6 +20,17 @@ int32_t AL_AVC_WriteEncHwScalingList(void *s, void *t, uint32_t *o)
 int32_t AL_AVC_WriteEncHwScalingListT41(void *s, void *t, uint32_t *o)
 { (void)s; (void)t; (void)o; return 0; }
 
+/* HEVC: keep the scaling-list block the EP1 init hands to the generator and
+ * mark the output position of the table writer. */
+static uint8_t hevc_scl[0x5c0];
+static int hevc_gen_calls;
+static uint8_t *hevc_write_out;
+int32_t AL_HEVC_GenerateHwScalingList(void *s, void *t)
+{ (void)t; memcpy(hevc_scl, s, sizeof(hevc_scl)); ++hevc_gen_calls; return 6; }
+int32_t AL_HEVC_WriteEncHwScalingList(void *s, void *t, uint32_t *o)
+{ (void)s; (void)t; hevc_write_out = (uint8_t *)o; return 0; }
+
+
 static int failures;
 
 #define EXPECT(cond, ...) do { if (!(cond)) { printf("FAIL: " __VA_ARGS__); \
@@ -29,6 +40,66 @@ struct hwrc_case {
     uint32_t w, h, kbps, max_kbps, fps, groups;
     uint32_t i15, p15, w16;
 };
+
+/* Vendor libimp 1.3.1 HEVC_EncUtils.c.o .rodata: AL_HEVC_DefaultScalingLists8x8
+ * (0x14, intra then inter, raster) and ...4x4 (0x94, flat). */
+static const uint8_t vendor_hevc_def8[0x80] = {
+    0x10, 0x10, 0x10, 0x10, 0x11, 0x12, 0x15, 0x18, 0x10, 0x10, 0x10, 0x10,
+    0x11, 0x13, 0x16, 0x19, 0x10, 0x10, 0x11, 0x12, 0x14, 0x16, 0x19, 0x1d,
+    0x10, 0x10, 0x12, 0x15, 0x18, 0x1b, 0x1f, 0x24, 0x11, 0x11, 0x14, 0x18,
+    0x1e, 0x23, 0x29, 0x2f, 0x12, 0x13, 0x16, 0x1b, 0x23, 0x2c, 0x36, 0x41,
+    0x15, 0x16, 0x19, 0x1f, 0x29, 0x36, 0x46, 0x58, 0x18, 0x19, 0x1d, 0x24,
+    0x2f, 0x41, 0x58, 0x73, 0x10, 0x10, 0x10, 0x10, 0x11, 0x12, 0x14, 0x18,
+    0x10, 0x10, 0x10, 0x11, 0x12, 0x14, 0x18, 0x19, 0x10, 0x10, 0x11, 0x12,
+    0x14, 0x18, 0x19, 0x1c, 0x10, 0x11, 0x12, 0x14, 0x18, 0x19, 0x1c, 0x21,
+    0x11, 0x12, 0x14, 0x18, 0x19, 0x1c, 0x21, 0x29, 0x12, 0x14, 0x18, 0x19,
+    0x1c, 0x21, 0x29, 0x36, 0x14, 0x18, 0x19, 0x1c, 0x21, 0x29, 0x36, 0x47,
+    0x18, 0x19, 0x1c, 0x21, 0x29, 0x36, 0x47, 0x5b,
+};
+
+/* Vendor AL_HEVC_GenerateSPS (AL_SCL_DEFAULT) writes, relative to the
+ * scaling block (SPS + 546): DC 0x30..0x36 and 0x39, intra 8x8 lists at
+ * 0x1bc/0x1fc/0x23c (8x8), 0x33c/0x37c/0x3bc (16x16), 0x4bc (32x32), inter
+ * at +0xc0 of each group (32x32 inter 0x57c), flat 4x4 at 0x3c + m * 0x40. */
+static void test_hevc_scaling_list(void)
+{
+    static uint8_t ep1[0x6400];
+    static const uint32_t intra[7] = { 0x1bc, 0x1fc, 0x23c, 0x33c, 0x37c,
+                                       0x3bc, 0x4bc };
+    static const uint32_t inter[7] = { 0x27c, 0x2bc, 0x2fc, 0x3fc, 0x43c,
+                                       0x47c, 0x57c };
+    uint8_t expect[0x5c0];
+    unsigned int i;
+
+    memset(expect, 0, sizeof(expect));
+    for (i = 0; i < 7u; ++i) {
+        memcpy(expect + intra[i], vendor_hevc_def8, 0x40);
+        memcpy(expect + inter[i], vendor_hevc_def8 + 0x40, 0x40);
+    }
+    for (i = 0; i < 6u; ++i)
+        memset(expect + 0x3c + i * 0x40, 0x10, 0x10);
+    for (i = 0x30; i <= 0x36; ++i)
+        expect[i] = 0x10;
+    expect[0x39] = 0x10;
+
+    hevc_gen_calls = 0;
+    hevc_write_out = NULL;
+    EXPECT(openimp_t40_init_hevc_ep1(ep1, sizeof(ep1), 0) == 0,
+           "HEVC EP1 init without scaling lists");
+    EXPECT(hevc_gen_calls == 0, "no scaling table without scaling lists");
+
+    EXPECT(openimp_t40_init_hevc_ep1(ep1, sizeof(ep1), 1) == 0,
+           "HEVC EP1 init with scaling lists");
+    EXPECT(hevc_gen_calls == 1, "scaling table generated once");
+    EXPECT(hevc_write_out == ep1 + 0x100, "scaling table at EP1+0x100");
+    for (i = 0; i < sizeof(expect); ++i)
+        if (hevc_scl[i] != expect[i])
+            break;
+    EXPECT(i == sizeof(expect), "HEVC default scaling block differs at 0x%x",
+           i);
+    EXPECT(openimp_t40_init_hevc_ep1(ep1, 0x63ffu, 1) != 0,
+           "EP1 below 0x6400 refused");
+}
 
 int main(void)
 {
@@ -155,6 +226,8 @@ int main(void)
     EXPECT(word == 0x08030800u, "EP1 P QP30 t31 %#x", word);
     memcpy(&word, ep1 + 51 * 4, 4);
     EXPECT(word == 0x6b286b00u, "EP1 P QP51 t31 %#x", word);
+
+    test_hevc_scaling_list();
 
     if (failures) {
         printf("t40 vendor cmd test: %d failures\n", failures);

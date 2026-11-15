@@ -11,6 +11,11 @@ int openimp_t40_update_fixqp_ep1_table(void *ep1, size_t size, int is_idr,
                                        int t31_table);
 /* T31 HEVC: HEVC default lambda table, no scaling list. */
 int openimp_t31_init_hevc_ep1(void *ep1, size_t size);
+/* T40 HEVC: HEVC default lambda table and, with scaling_list, the vendor
+ * hardware tables of the H.265 default scaling lists at EP1+0x100. */
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+int openimp_t40_init_hevc_ep1(void *ep1, size_t size, int scaling_list);
+#endif
 
 /* Rewrite only T41's 52 AVC lambda words for the next picture type.
  * AL_GetLambda indexes the four-component default table by slice type:
