@@ -13,7 +13,7 @@ written by Lu-Fi tools/delift_inventory.py (rules: DIR/t10/README.md); proven = 
 (vendor SDK / own code, or a de-lift oracle), total = every C function compiled into the module.  --readable-only updates
 only that section (T32/T33 rows untouched).
 Usage: python3 tools/status_driver_port.py [--repo /path/to/open-tx-isp] [--recovered REF] [--oracle REF] [--t33-oracle REF]
-       [--t33-total N] [--t33-ported N] [--t33-wired N] [--print]
+       [--t33-total N] [--t33-ported N] [--t33-wired N] [--t33-proven N] [--t33-unreachable N] [--print]
 """
 import argparse
 import json
@@ -59,6 +59,8 @@ def main():
     ap.add_argument("--t33-total", type=int, default=None)
     ap.add_argument("--t33-ported", type=int, default=None)
     ap.add_argument("--t33-wired", type=int, default=None)
+    ap.add_argument("--t33-proven", type=int, default=None, help="override the proven count (inventory basis incl. oracle callees)")
+    ap.add_argument("--t33-unreachable", type=int, default=None, help="T33-only vendor functions no vendor entry reaches (Lu-Fi audit/t33-port/reach/REACH_T33.tsv)")
     ap.add_argument("--print", action="store_true", help="print, do not write")
     ap.add_argument("--readable", default=os.environ.get("DELIFT_DIR"), help="dir with <soc>/summary.json (de-lift inventory)")
     ap.add_argument("--readable-only", action="store_true", help="update only the readable-C section")
@@ -94,13 +96,17 @@ def main():
     tot = a.t33_total or o.get("total") or 409
     ported = a.t33_ported if a.t33_ported is not None else o.get("ported", 0)
     wired = a.t33_wired if a.t33_wired is not None else o.get("wired", 0)
+    unreach = a.t33_unreachable if a.t33_unreachable is not None else o.get("unreachable", 0)
     t33day = git(a.repo, "log", "-1", "--format=%cs", a.t33_oracle).strip()
-    d["socs"]["T33"] = {"proven": len(t33), "ported": ported, "wired": wired, "total": tot, "branch": a.t33_oracle.replace("origin/", ""), "date": t33day,
+    nproven = a.t33_proven if a.t33_proven is not None else len(t33)
+    d["socs"]["T33"] = {"proven": nproven, "ported": ported, "wired": wired, "unreachable": unreach, "total": tot, "branch": a.t33_oracle.replace("origin/", ""), "date": t33day,
                         "note": "counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a "
                                 "T32 namesake and run on the shared driver/t32 port; the bar counts the %d T33-only functions; proven = %d that "
                                 "pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); "
                                 "%d more are ported by name in the T33 files but not oracle-proven yet (QEMU apitest only); "
-                                "not device-tested" % (tot, len(t33), max(ported - len(t33), 0))}
+                                "%d are unreachable (no caller and no function-pointer reference in the vendor module, or only from such code: nothing to prove); "
+                                "the remaining %d are reachable (tuning node, /proc, irq, AOV) and not proven, see openimp #589, #590, #524; "
+                                "not device-tested" % (tot, nproven, max(ported - nproven, 0), unreach, tot - nproven - unreach)}
     d["asof"] = max(day, t33day)
     d["socs"]["T32"] = {"proven": len(names), "total": total, "branch": a.oracle.replace("origin/", ""), "date": day,
                         "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"}

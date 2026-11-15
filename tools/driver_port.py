@@ -18,7 +18,10 @@ INTRO = ("Separate from the streamer-function bars above: this counts functions 
 
 
 def wtxt(r):
-    return "; wired %d" % r["wired"] if r.get("wired") is not None else ""
+    s = "; wired %d" % r["wired"] if r.get("wired") is not None else ""
+    if r.get("unreachable"):
+        s += "; unreachable %d" % r["unreachable"]
+    return s
 
 
 LINK = ("How the ports were made: success rate of the paid API port loop per model, by project and block size: "
@@ -41,7 +44,7 @@ def rows():
     out = []
     for soc in sorted(d["socs"]):
         e = d["socs"][soc]
-        out.append(dict(soc=soc, proven=e["proven"], total=e.get("total"), wired=e.get("wired"), branch=e.get("branch"), date=e.get("date"),
+        out.append(dict(soc=soc, proven=e["proven"], total=e.get("total"), wired=e.get("wired"), unreachable=e.get("unreachable"), branch=e.get("branch"), date=e.get("date"),
                         note=e.get("note", "")))
     return d, out
 
@@ -119,8 +122,10 @@ def html_card():
         if r["total"]:
             pct = 100.0 * r["proven"] / r["total"]
             num = "%d/%d <span class='small'>(%.1f %%%s)</span>" % (r["proven"], r["total"], pct, html.escape(wtxt(r)))
-            pb = ('<div class="pb"><i class="b-dev" style="width:%.2f%%" title="%d of %d"></i><i class="b-gap" style="width:%.2f%%"></i></div>'
-                  % (pct, r["proven"], r["total"], 100 - pct))
+            un = 100.0 * (r.get("unreachable") or 0) / r["total"]
+            pb = ('<div class="pb"><i class="b-dev" style="width:%.2f%%" title="%d of %d"></i>%s<i class="b-gap" style="width:%.2f%%"></i></div>'
+                  % (pct, r["proven"], r["total"],
+                     ('<i class="b-q" style="width:%.2f%%" title="unreachable: no vendor entry reaches it"></i>' % un) if un else "", 100 - pct - un))
             note = "%s (as of %s)" % (r["note"], r["date"])
         else:
             num, note = "0 % <span class='small'>(not started)</span>", r["note"]
