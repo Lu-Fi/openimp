@@ -3455,6 +3455,9 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
  * (cmd[9] bits 31/30/15) follow OPENIMP_T40_HEVC_TOOLS, by default on as
  * the vendor, together with the matching SPS/PPS flags.
  */
+static int avpu_t40_knob(int index, const char *name);
+#define AVPU_T40_KNOB_GOP_IDR 5       /* OPENIMP_T40_GOP_IDR */
+
 static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                                    int is_idr)
 {
@@ -3470,6 +3473,12 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                avpu_t31_hevc_hwrc_enabled(ctx);
     uint32_t tools = avpu_t40_hevc_tools();
     uint32_t l2_rows;
+    /* #556: an IDR of the GOP schedule (not the first picture, not a
+     * requested IDR) carries the P words 0x08 / 0x12 at the vendor, as on
+     * AVC (#443; Eufy T40XP HEVC FixQP 25 1080p, IDRs 22 and 42). */
+    int intra_words = is_idr &&
+        !(ctx->t40_periodic_idr &&
+          avpu_t40_knob(AVPU_T40_KNOB_GOP_IDR, "OPENIMP_T40_GOP_IDR"));
 
     if (!ctb_w || !ctb_h)
         return;
@@ -3488,7 +3497,7 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
         cmd[0x06] |= 0x00000400u;
     cmd[0x07] = (((ctb_h - 1u) & 0x3ffu) << 12) | ((ctb_w - 1u) & 0x3ffu) |
                 0x80000000u;
-    cmd[0x08] = is_idr ? 0x77000000u : 0x33000000u;
+    cmd[0x08] = intra_words ? 0x77000000u : 0x33000000u;
 
     /* Scaling list enable/load (bits 30/31, sp[0x71]/sp[0x72], set on every
      * picture by the vendor), collocated_from_l0 (bit 18), HWRC enable
@@ -3513,7 +3522,7 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     memset(&cmd[0x0c], 0, 4u * sizeof(uint32_t));
     cmd[0x10] = 0xffffffffu;
     cmd[0x11] = 0xffffffffu;
-    if (is_idr) {
+    if (intra_words) {
         cmd[0x12] = 0x803ff3ffu;
     } else {
         uint32_t h_range = width >= 64u ? width : 64u;
@@ -3521,14 +3530,16 @@ static void avpu_t40_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
 
         if (v_range < 8u)
             v_range = 8u;
+        cmd[0x12] = 0x80000000u |
+                    (((h_range >> 6) - 1u) & 0x3ffu) |
+                    ((((v_range >> 3) - 1u) & 0x3ffu) << 12);
+    }
+    if (!is_idr) {
         cmd[0x0c] = picture_number * 2u;
         cmd[0x0d] = (picture_number - 1u) * 2u;
         cmd[0x0f] = cmd[0x0d];
         if (picture_number > 1u)
             cmd[0x10] = (picture_number - 2u) * 2u;
-        cmd[0x12] = 0x80000000u |
-                    (((h_range >> 6) - 1u) & 0x3ffu) |
-                    ((((v_range >> 3) - 1u) & 0x3ffu) << 12);
     }
     /* UpdateCommand L2 cache rows (4:2:0: 512 / 64-pixel columns, at most
      * 128), packed as (rows - 1) & 0xf in bits 27:24 like the vendor. */
@@ -4788,7 +4799,6 @@ static int avpu_t40_knob(int index, const char *name)
 #define AVPU_T40_KNOB_POC 2           /* OPENIMP_T40_POC */
 #define AVPU_T40_KNOB_HWRC_TARGET 3   /* OPENIMP_T40_HWRC_TARGET */
 #define AVPU_T40_KNOB_FIXQP_LDA 4     /* OPENIMP_T40_FIXQP_LDA */
-#define AVPU_T40_KNOB_GOP_IDR 5       /* OPENIMP_T40_GOP_IDR */
 #define AVPU_T40_KNOB_LDA131 6        /* OPENIMP_T40_LDA131 */
 
 static uint32_t avpu_t40_cmd12_hi(uint32_t width)
@@ -4811,7 +4821,8 @@ static void avpu_t40_hwrc_targets(const ALAvpuContext *ctx, int is_idr,
 
 /* FixQP lambdas in EP1 (at the start of interm_buf).  The vendor HEVC
  * command lists carry the same 52-entry tables as AVC (captured at QP 22
- * and 30, 4K and 720p).  #443 (Eufy T40XP, AVC FixQP 25 1080p, EP1 read at
+ * and 30, 4K and 720p); #556 (HEVC FixQP 25 1080p, 2026-11-15): HEVC also
+ * uses the vendor 1.3.1 table below, byte-equal with AVC.  #443 (Eufy T40XP, AVC FixQP 25 1080p, EP1 read at
  * every AVPU push, 2026-11-14): only the first picture of a channel holds
  * the intra-only words; every later picture, IDRs included, carries the P
  * table.  OPENIMP_T40_GOP_IDR=0 rewrites the intra words for every IDR. */
@@ -4829,7 +4840,6 @@ static void avpu_t40_fixqp_lambdas(ALAvpuContext *ctx, int is_idr)
         return;
     if (openimp_t40_update_fixqp_ep1_table(
             ctx->interm_buf.map, ctx->interm_ep1_size, type == 2u,
-            ctx->codec_hevc ||
             !avpu_t40_knob(AVPU_T40_KNOB_LDA131, "OPENIMP_T40_LDA131")) != 0)
         return;
     (void)avpu_flush_cache(ctx->fd, ctx->interm_buf.map, 0x100u, 1 /* WBACK */);

@@ -371,9 +371,10 @@ static const uint8_t t40_avc_fixqp_lda[0xd0] = {
 /*
  * T40 FixQP: P pictures carry the fixed-QP table; the intra-only form keeps
  * only byte 2 (the intra lambda) and clears the inter lanes (the vendor
- * writes it for the first picture of a channel, see codec-t40.c).  AVC uses
- * the vendor 1.3.1 table unless t31_table is set (HEVC, not captured, and
- * OPENIMP_T40_LDA131=0).  The scaling list at EP1+0x100 stays as
+ * writes it for the first picture of a channel, see codec-t40.c).  AVC and
+ * HEVC use the vendor 1.3.1 table (HEVC FixQP 25 1080p EP1 capture #556,
+ * 2026-11-15: byte-equal with the AVC table) unless t31_table is set
+ * (OPENIMP_T40_LDA131=0).  The scaling list at EP1+0x100 stays as
  * initialised.
  */
 int openimp_t40_update_fixqp_ep1_table(void *ep1, size_t size, int is_idr,
