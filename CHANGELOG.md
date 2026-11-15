@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-15: status: T33 driver-port "wired" 206 of 308 proven (#99)
+
+- `docs/status/driver_port.json` T33 `wired` 204 -> 206 and the card / matrix row: open-tx-isp next 00f1324ae (wiring group 13d-1: CCM on the vendor ccm_para block with tispCcmRefresh / irq 45, CSC on csc_para; newly wired tisp_csc_get, tisp_ccm_no_interp). Counting basis change (Lu-Fi audit/t33-port/wire/wired.py, g13d): the CCM glue header tx_isp_t33_ccmv.h counts as driver code; old basis (wired.py.g13c) gives 205, base next before 13d-1 = 204 on both.
+
 ## 2026-11-15: AI NS/AGC/HPF/HS on every AI device documented as beyond vendor (#605)
 
 - The vendor applies them only to AI device 1 (device 0 silently gets none); OpenIMP keeps them on the recording device so timps (device 0) has noise suppression. User decision 2026-11-15: keep, documented in docs/OPENIMP_BEYOND_VENDOR.md 6.11.
