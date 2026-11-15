@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-15: status: T33 driver-port "wired" 131 of 308 proven (#99)
+
+- `docs/status/driver_port.json` T33 `wired` 130 -> 131 and the card / matrix row: open-tx-isp next 27af463f wiring group 9 (MDNS frame done at system irq 50; the compression writer `tisp_mdns_t33_cmp_reg_write` and `tisp_mdns_t33_set_mem_cfg` now also run, inside `t33_mdns_init`, which `wired.py` does not scan). Count = `audit/t33-port/wire/wired.py`. Host + QEMU only, not device-tested.
+
 ## 2026-11-15: T40 H.265 default scaling lists as the vendor (#556)
 
 - The vendor T40 libimp 1.3.1 encodes HEVC with the H.265 default scaling lists (SPS `scaling_list_enabled_flag 1`, hardware tables at EP1+0x100, cmd[9] bits 31/30); OpenIMP had them off (an earlier test without the EP1 table gave a grey picture). New `openimp_t40_init_hevc_ep1()` builds the vendor `AL_SCL_DEFAULT` block and writes the table with the existing `AL_HEVC_*` ports; the 0x6200-byte table equals the vendor objects' output (emulated side by side). Default `OPENIMP_T40_HEVC_TOOLS` 13 -> 15 (13 = old behaviour).

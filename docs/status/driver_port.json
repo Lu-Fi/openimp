@@ -7,7 +7,7 @@
    "branch": "next",
    "date": "2026-11-14",
    "note": "counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a T32 namesake and run on the shared driver/t32 port; the bar counts the 409 T33-only functions; proven = 308 that pass the binary oracle (vendor instructions in Unicorn against our C, tests/t33_binoracle, openimp #99); 5 more are ported by name (3 dead, 1 debug, tisp_top_restart_cfg) in the T33 files but not oracle-proven yet (QEMU apitest only); wired = 104 of the proven functions also run in the driver (port referenced from the driver code, callees with their caller; Lu-Fi audit/t33-port/wire/wired.py, open-tx-isp next 336e6a15), the other proven ports wait for the vendor block-state layer; not device-tested",
-   "wired": 130
+   "wired": 131
   },
   "T32": {
    "proven": 1591,
