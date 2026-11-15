@@ -5365,6 +5365,15 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         ep3_index = is_idr ? 2u : 1u;
 #else
         ep3_index = (2u + 3u - (ctx->frame_number % 3u)) % 3u;
+#if defined(AVPU_T40_NATIVE)
+        /* #604 AVC CBR (vendor 1.3.1, Eufy T40XP 1080p CBR 1000/2000, EP3
+         * read at each push): the IDR slot for every IDR, the P slot for
+         * every P (as T31 and the T40 HEVC path), no three-slot rotation. */
+        if (ctx->rc_mode != HW_RC_MODE_FIXQP &&
+            avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP,
+                          "OPENIMP_T40_HEVC_HWRC_QP"))
+            ep3_index = is_idr ? 2u : 1u;
+#endif
 #endif
         if (ctx->rec_trace_buf.phy_addr)
             ep3_phys = ctx->rec_trace_buf.phy_addr +
