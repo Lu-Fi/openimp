@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-15",
+ "generated": "2026-11-16",
  "note": "counts only; regenerate with tools/status_port_loop.py (local logs). null = the logs do not settle it.",
  "contributors": {
   "T32": {
@@ -24,33 +24,33 @@
    }
   },
   "T33": {
-   "functions": 335,
+   "functions": 384,
    "sources": {
     "api-deepseek-flash": 15,
-    "api-deepseek-v4-pro": 28,
-    "api-claude-sonnet-5-5": 172,
-    "api-claude-opus-5-5": 5,
+    "api-deepseek-v4-pro": 31,
+    "api-claude-sonnet-5-5": 203,
+    "api-claude-opus-5-5": 10,
     "api-unknown": 10,
-    "agent-opus": 101,
+    "agent-opus": 111,
     "agent-sonnet": 1,
     "agent-fable": 3
    },
    "blocks": {
     "api-deepseek-flash": 6,
-    "api-deepseek-v4-pro": 10,
-    "api-claude-sonnet-5-5": 61,
-    "api-claude-opus-5-5": 2,
+    "api-deepseek-v4-pro": 11,
+    "api-claude-sonnet-5-5": 76,
+    "api-claude-opus-5-5": 3,
     "api-unknown": 3,
-    "agent-opus": 27,
+    "agent-opus": 28,
     "agent-sonnet": 1,
     "agent-fable": 3
    }
   },
   "T10 de-lift": {
-   "functions": 1052,
+   "functions": 1088,
    "sources": {
     "no-port": 700,
-    "unknown": 352
+    "unknown": 388
    },
    "blocks": {}
   }
@@ -2985,6 +2985,39 @@
   {
    "date": "2026-11-15",
    "project": "T33",
+   "block": "aeQ",
+   "funcs": 5,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "aeQ",
+   "funcs": 5,
+   "model": "claude-opus-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "awbQ",
+   "funcs": 4,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
    "block": "bcshH",
    "funcs": 2,
    "model": "claude-sonnet-5-5",
@@ -3075,6 +3108,17 @@
    "project": "T33",
    "block": "bcshO",
    "funcs": 1,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "bcshQ",
+   "funcs": 4,
    "model": "claude-sonnet-5-5",
    "kind": "port",
    "result": "pass",
@@ -3216,6 +3260,39 @@
   {
    "date": "2026-11-15",
    "project": "T33",
+   "block": "defQ",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "defQ",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "defQ",
+   "funcs": 3,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
    "block": "initA",
    "funcs": 3,
    "model": "deepseek-flash",
@@ -3306,6 +3383,50 @@
    "project": "T33",
    "block": "initC",
    "funcs": 3,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "irqA",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "irqA",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "irqA",
+   "funcs": 3,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "irqB",
+   "funcs": 4,
    "model": "claude-sonnet-5-5",
    "kind": "port",
    "result": "pass",
@@ -3383,6 +3504,193 @@
    "project": "T33",
    "block": "mdnsR",
    "funcs": 1,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parA",
+   "funcs": 2,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parA",
+   "funcs": 2,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parA",
+   "funcs": 2,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parB",
+   "funcs": 1,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parB",
+   "funcs": 1,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "parB",
+   "funcs": 1,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refA",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refA",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refA",
+   "funcs": 3,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refB",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refB",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "refB",
+   "funcs": 3,
+   "model": "claude-sonnet-5-5",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "tgA",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "tgA",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "pass",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "tgB",
+   "funcs": 3,
+   "model": "deepseek-flash",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": null
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "tgB",
+   "funcs": 3,
+   "model": "deepseek-v4-pro",
+   "kind": "port",
+   "result": "fail",
+   "review": null,
+   "via": "flash-escalation"
+  },
+  {
+   "date": "2026-11-15",
+   "project": "T33",
+   "block": "tgB",
+   "funcs": 3,
    "model": "claude-sonnet-5-5",
    "kind": "port",
    "result": "pass",
