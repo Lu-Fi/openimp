@@ -2083,53 +2083,53 @@ features:
   vendor: libimp starts an on-demand tuning-tool server (/dev/tisp) for the Ingenic Windows ISP tuning tool
   cells:
     T10:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T20:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T21:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T23:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T30:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T31:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T32:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T33:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T40:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
     T41:
-      sym: ❌
-      text: 'not provided (vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
+      sym: —
+      text: 'not provided by decision (user 2026-11-15, low priority; neutral symbol, not counted in the gates; vendor PC tuning tool only): the PC tool is not public (NDA) and no streamer uses it; normal tuning goes through /dev/isp-m0 (IMP_ISP_Tuning_*), which works. Effort if wanted: about 25 per-block param get/set plus an OpenIMP server with the reverse-engineered protocol, testable only with the PC tool. Low priority, revisit when someone can provide the PC tool.'
       issues:
       - 593
 api_links:
