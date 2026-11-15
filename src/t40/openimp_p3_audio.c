@@ -163,6 +163,10 @@ static struct {
     int ao_dgain;       /* IMP_AO_SetDigitalGain (raw 0..255) */
     int ao_volume;
     int ao_gain;
+    double ai_vgain;    /* T40: software volume factor of IMP_AI_SetVol */
+    double ao_vgain;    /* T40: software volume factor of IMP_AO_SetVol */
+    unsigned char *ao_scaled;       /* T40: AO frame after the software volume */
+    size_t ao_scaled_size;
     int ai_mute;        /* software mute, like the vendor T41 libimp (no driver ioctl) */
     int ao_mute;
     pthread_mutex_t ao_mute_lock;   /* guards ao_silence and the cache in the mute path */
@@ -212,7 +216,8 @@ static struct {
     unsigned int cap_depth;         /* FIFO depth, usrFrmDepth (EnableChn) */
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
 #if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
-               .ai_volume = 60    /* vendor 1.3.1 reads 60 before any SetVol */
+               .ai_volume = 60,   /* vendor 1.3.1 reads 60 before any SetVol */
+               .ai_vgain = 1.0
 #endif
 };
 
@@ -228,6 +233,53 @@ static int p3_audio_open(void)
     p3_audio.fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC);
     return p3_audio.fd >= 0 ? 0 : -1;
 }
+
+#if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
+/* T40 1.3.1 IMP_AI_SetVol / IMP_AO_SetVol (ai.c.o 0x54c8, ao.c.o 0x3338):
+ * the volume is NOT a codec register.  The value is clamped to -30..120 and
+ * kept; the factor pow(10, (0.5 * vol - 30) / 20) (60 = 1.0, 0.5 dB per
+ * step, -30 = 0 = silence) scales every captured / played 16-bit sample in
+ * the library (_audio_set_volume: trunc(sample * factor), clipped to
+ * +-32767).  Get answers the kept value.  10^(1/40) per step instead of pow()
+ * (libimp does not link libm); the factors agree to < 1e-12. */
+static double p3_volume_factor(int volume)
+{
+    const double step = 1.0592537251772889;    /* 10^(0.5/20) */
+    double factor = 1.0;
+    int steps;
+
+    if (volume <= -30)
+        return 0.0;
+    if (volume > 120)
+        volume = 120;
+    for (steps = volume - 60; steps > 0; steps--)
+        factor *= step;
+    for (; steps < 0; steps++)
+        factor /= step;
+    return factor;
+}
+
+static void p3_soft_volume(int16_t *out, const int16_t *in, int count,
+                           double factor)
+{
+    int i;
+
+    if (factor == 1.0) {
+        if (out != in)
+            memcpy(out, in, (size_t)count * sizeof(*out));
+        return;
+    }
+    for (i = 0; i < count; i++) {
+        int value = (int)(in[i] * factor);      /* trunc, as the vendor */
+
+        if (value > 32767)
+            value = 32767;
+        else if (value < -32767)
+            value = -32767;
+        out[i] = (int16_t)value;
+    }
+}
+#endif
 
 static void *p3_capture_main(void *argument)
 {
@@ -539,6 +591,11 @@ int IMP_AI_EnableChn(int device, int channel)
     if (bytes &&
         p3_capture_start(bytes, depth > 0 ? (unsigned int)depth : 0U) != 0)
         return -1;
+#if !defined(PLATFORM_T41)
+    /* vendor T40 1.3.1 IMP_AI_EnableChn: volume back to 60 (factor 1.0) */
+    p3_audio.ai_volume = 60;
+    p3_audio.ai_vgain = 1.0;
+#endif
     p3_audio.ai_channel_enabled = 1;
     return 0;
 }
@@ -691,6 +748,13 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         openimp_t23_ai_pre_effects((int16_t *)p3_audio.frame_buffer,
                                    (int)(bytes / sizeof(int16_t)),
                                    p3_audio.ai_attr.samplerate);
+#if !defined(PLATFORM_T41)
+    /* vendor T40 _ai_record_thread: software volume after the howling
+     * suppression (#519) */
+    p3_soft_volume((int16_t *)p3_audio.frame_buffer,
+                   (const int16_t *)p3_audio.frame_buffer,
+                   (int)(bytes / sizeof(int16_t)), p3_audio.ai_vgain);
+#endif
     p3_process_effects((int16_t *)p3_audio.frame_buffer,
                        (int)(bytes / sizeof(int16_t)));
     if (p3_audio.ai_mute)
@@ -749,6 +813,7 @@ static int p3_get_volume(int command, int channel, int *value)
     return 0;
 }
 
+#if defined(PLATFORM_T41)   /* T40: software volume, see p3_volume_factor */
 /*
  * The IMP API expresses AI volume as half-decibels in [-30, 120], with 60
  * representing 0 dB and -30 representing mute.  The T40/T41 codec driver
@@ -779,6 +844,7 @@ static int p3_volume_from_raw(int value, int raw_unity)
         return 120;
     return value;
 }
+#endif
 
 #if defined(PLATFORM_T41)
 int IMP_AI_SetVol(int device, int channel, int value)
@@ -837,20 +903,20 @@ static int p3_ai_args(int device, int channel)
     return device >= 0 && device < 2 && channel == 0;
 }
 
+/* Software volume as the vendor (see p3_volume_factor): the codec ADC
+ * volume register stays at the driver's value.  Programming it from the IMP
+ * volume made the mic 10 dB quieter than the vendor at SetVol(60) (#519). */
 int IMP_AI_SetVol(int device, int channel, int value)
 {
-    int result;
-
     if (!p3_ai_args(device, channel))
         return -1;
     if (value < -30)
         value = -30;
     else if (value > 120)
         value = 120;
-    result = p3_set_volume(AMIC_AI_SET_VOLUME, channel,
-                           p3_volume_to_raw(value, 195));
+    p3_audio.ai_vgain = p3_volume_factor(value);
     p3_audio.ai_volume = value;
-    return result;
+    return 0;
 }
 
 int IMP_AI_GetVol(int device, int channel, int *value)
@@ -1152,6 +1218,13 @@ int IMP_AO_EnableChn(int device, int channel)
     (void)device;
     if (!p3_audio.ao_enabled || channel != 0)
         return -1;
+#if !defined(PLATFORM_T41)
+    /* vendor T40 _ao_chn_enable: volume back to 60 (factor 1.0) */
+    pthread_mutex_lock(&p3_audio.ao_mute_lock);
+    p3_audio.ao_volume = 60;
+    p3_audio.ao_vgain = 1.0;
+    pthread_mutex_unlock(&p3_audio.ao_mute_lock);
+#endif
     p3_audio.ao_channel_enabled = 1;
     /* vendor _ao_chn_enable: cache switch back to its default, filling;
      * threshold = OPENIMP_AO_CACHE_PERIODS periods of 20 ms (no fixed
@@ -1206,6 +1279,35 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
         pthread_mutex_unlock(&p3_audio.ao_mute_lock);
         return result;
     }
+#if !defined(PLATFORM_T41)
+    /* vendor T40 IMP_AO_SendFrame: software volume on a copy (#518) */
+    pthread_mutex_lock(&p3_audio.ao_mute_lock);
+    if (p3_audio.ao_vgain != 1.0) {
+        int result;
+
+        if ((size_t)frame->len > p3_audio.ao_scaled_size) {
+            unsigned char *grown =
+                realloc(p3_audio.ao_scaled, (size_t)frame->len);
+            if (!grown) {
+                pthread_mutex_unlock(&p3_audio.ao_mute_lock);
+                return -1;
+            }
+            p3_audio.ao_scaled = grown;
+            p3_audio.ao_scaled_size = (size_t)frame->len;
+        }
+        p3_soft_volume((int16_t *)(void *)p3_audio.ao_scaled,
+                       (const int16_t *)(const void *)frame->virAddr,
+                       frame->len / (int)sizeof(int16_t), p3_audio.ao_vgain);
+        result = openimp_ao_cache_submit(&p3_audio.ao_cache,
+                                         p3_audio.ao_scaled,
+                                         (size_t)frame->len, p3_ao_now_ns(),
+                                         p3_ao_bytes_per_sec(),
+                                         p3_ao_driver_write, NULL);
+        pthread_mutex_unlock(&p3_audio.ao_mute_lock);
+        return result;
+    }
+    pthread_mutex_unlock(&p3_audio.ao_mute_lock);
+#endif
     /* cache off (default): straight to the driver as before */
     return openimp_ao_cache_submit(&p3_audio.ao_cache, frame->virAddr,
                                    (size_t)frame->len, p3_ao_now_ns(),
@@ -1272,6 +1374,34 @@ int IMP_AO_GetDigitalGain(int device, int channel, int *dgain)
 }
 
 #if !defined(PLATFORM_T32)
+#if !defined(PLATFORM_T41)
+/* vendor T40 1.3.1: device 0, AO enabled, channel 0, else -1; software
+ * volume (p3_volume_factor) applied in IMP_AO_SendFrame, the codec DAC
+ * register is not touched.  The old CDGSR mapping (raw = vol + 181, capped at
+ * 255) read SetVol(90) back as 74 (#518). */
+int IMP_AO_SetVol(int device, int channel, int value)
+{
+    if (device != 0 || !p3_audio.ao_enabled || channel != 0)
+        return -1;
+    if (value < -30)
+        value = -30;
+    else if (value > 120)
+        value = 120;
+    pthread_mutex_lock(&p3_audio.ao_mute_lock);
+    p3_audio.ao_vgain = p3_volume_factor(value);
+    p3_audio.ao_volume = value;
+    pthread_mutex_unlock(&p3_audio.ao_mute_lock);
+    return 0;
+}
+
+int IMP_AO_GetVol(int device, int channel, int *value)
+{
+    if (device != 0 || !p3_audio.ao_enabled || channel != 0 || !value)
+        return -1;
+    *value = p3_audio.ao_volume;
+    return 0;
+}
+#else
 int IMP_AO_SetVol(int device, int channel, int value)
 {
     int result;
@@ -1295,6 +1425,7 @@ int IMP_AO_GetVol(int device, int channel, int *value)
     }
     return result;
 }
+#endif
 
 int IMP_AO_SetGain(int device, int channel, int value)
 {
