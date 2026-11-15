@@ -20,6 +20,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `docs/status/driver_port.json` / matrix readable-C table: T10 1017/1201 proven readable functions (84.7 %, was 994/1188), machine-like lines 18.0 % (was 20.9 %); T20 878/1046 (shared firmware unit), 20.3 % (was 23.5 %). Open-tx-isp next f6e6b5ae1: the Apical sensor-bus sample callbacks (I2C / SPI read / write), `scene_mode` and the crop / down-scaler FSM (`_update_fr` / `_update_ds` / `_update_ds2`, `crop_initialize`, the `image_resize_` / `image_crop_` commands) are readable C written from the vendor code. They no longer match the old lifted machine code on purpose: the lifted bodies differed from the vendor module (bus data bytes not copied, signed scaler ratio for inputs of 2048 pixels and more, 16-bit window clamp). Proof is a fuzz of each function against the vendor `tx-isp-t10.ko` (0 of 3000 calls differing; before up to 2684), the vendor scenario diff, the host oracle, `make -C tests check`, and a T10 camera run (492 frames, 0 decode errors, 0 oops, picture OK).
 
+## 2026-11-15: status: T10 / T20 readable-C card 1036/1201 and 897/1046 (driver de-lift f4, #539)
+
+- `docs/status/driver_port.json` / matrix readable-C table: T10 1036/1201 proven readable functions (86.3 %, was 1017/1201), machine-like lines 15.3 % (was 18.0 %); T20 897/1046 (shared firmware unit), 17.4 % (was 20.3 %). Open-tx-isp next 96f8b3e63: 38 firmware functions (cmos / AE / AWB, colour matrix, iridix, flash, `apical_isp_init`, `apical_fw_init` ...) moved onto named struct fields with identical machine code (whole T10 and T20 objects 443 of 443 functions SAME), vendor mutation fuzz 0 of 3000 per function, host oracle, `make -C tests check`, T10 camera run. No behaviour change.
+
 ## 2026-11-15: status: T33 driver-port "wired" 130 of 308 proven (#99)
 
 - `docs/status/driver_port.json` T33 `wired` 121 -> 130 and the card / matrix row: open-tx-isp next d355ec68 wiring group 8 (TMO switch_para + frame done on a vendor-layout tmoInfo, with the tmoA bin / IC para ports as callees). Count = `audit/t33-port/wire/wired.py`. Host + QEMU only, not device-tested.

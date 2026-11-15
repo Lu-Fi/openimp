@@ -32,28 +32,28 @@
    "note": ""
   },
   "T10": {
-   "proven": 1017,
+   "proven": 1036,
    "total": 1201,
-   "machine_lines": 5729,
-   "lines": 31868,
-   "pct_machine_lines": 18.0,
+   "machine_lines": 4890,
+   "lines": 31879,
+   "pct_machine_lines": 15.3,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-15",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18 and Fable round 3 merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math, sensor-bus callbacks, crop/scaler FSM), host oracles + vendor vdiff/fuzz + T10 cam stream proof per batch"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18, Fable round 3 and the f4 struct-field batch (38 functions, vendor mutation fuzz) merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math, sensor-bus callbacks, crop/scaler FSM), host oracles + vendor vdiff/fuzz + T10 cam stream proof per batch"
   },
   "T20": {
-   "proven": 878,
+   "proven": 897,
    "total": 1046,
-   "machine_lines": 5882,
-   "lines": 28916,
-   "pct_machine_lines": 20.3,
+   "machine_lines": 5043,
+   "lines": 28927,
+   "pct_machine_lines": 17.4,
    "base_proven": 695,
    "base_pct_machine_lines": 41.4,
    "date": "2026-11-15",
    "issue": "539",
-   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-18 + Fable round 3: sensor-bus callbacks, crop/scaler FSM); inventory"
+   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-18 + Fable round 3, f4 struct-field batch: sensor-bus callbacks, crop/scaler FSM); inventory"
   },
   "T21": {
    "proven": 143,
