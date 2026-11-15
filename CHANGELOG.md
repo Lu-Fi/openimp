@@ -11,6 +11,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-15: Driver-port card shows "unreachable" for T33 (#99)
 
 - Of the 409 T33-only vendor functions, 62 are unreachable (no caller and no function-pointer reference, or only reachable from such code); the card counts them separately instead of "open" (`tools/status_driver_port.py --t33-unreachable`). The other open ones are reachable (tuning node, /proc, irq, AOV) and tracked in #589, #590, #524.
+## 2026-11-15: T40 audio: IMP_AI/AO_SetVol software volume like the vendor (#518, #519)
+
+- Vendor T40 1.3.1 (`ai.c.o` IMP_AI_SetVol 0x54c8, `ao.c.o` IMP_AO_SetVol 0x3338, `_audio_set_volume`) never programs the codec for the IMP volume: it clamps to -30..120, keeps the value and scales every captured / played 16-bit sample by `pow(10, (0.5*vol - 30)/20)` (trunc, clip +-32767); Get answers the kept value; AI/AO EnableChn reset it to 60. OpenIMP wrote the codec ADC/DAC volume registers instead: AO SetVol(90) hit the 255 register cap and read back 74 (#518), AI SetVol(60) set the ADC volume to 195, 10 dB below the driver value the vendor leaves in place (#519). Now the same software volume (no libm: 10^(1/40) per step). AO SetVol/GetVol need device 0 enabled, channel 0, as the vendor. T41 unchanged (checked separately). Host test `tests/t40/audio_volume_test.c`.
 
 ## 2026-11-15: Light box, Eufy T40XP, sc830ai full run 5000 K (#230)
 
