@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-07",
+  "asof": "2026-11-15",
   "socs": [
     "T10",
     "T20",
@@ -2295,7 +2295,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2317,12 +2317,12 @@
           "r†"
         ]
       },
-      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T41: vendor 1.2.6 error ladder (claude/t41-isp-round2, not in agg-25); not device-tested; T40: Get dev, Set host (only the Get is device-tested on cam-K 2026-10-10, OpenIMP vs vendor library) T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. | T33 2026-11-15 (#608, open-tx-isp next 5798f67ea): SetGammaAttr runs on the vendor gamma_para block (curve reaches list 11 at irq 46); in QEMU (vendor T33 ko against ours, same sample) every read-back and the list 11 write sequence equal the vendor, day and night bin; no camera result yet.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "QEMU run 2026-11-13: FAIL = no picture effect, QEMU renders no picture (not judgeable; vendor libimp same); call and read-back ok"
+        "T33": "QEMU run 2026-11-15 (#608): read-backs and list 11 sequence = vendor 2.0.2.1 ko"
       }
     },
     "ISP_Tuning_Get/SetHLDCAttr": {
@@ -2354,7 +2354,7 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "host",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2378,13 +2378,14 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "audit: reaches the driver/kernel; used by: T23/T31: raptor†; T41: raptor†, timps T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. | T33 2026-11-15 (#575, #577, open-tx-isp next): the ISP mirror / flip reaches the MSCA list 23, and mirror / flip, OSD, mask and draw windows are reset at ISP close / open like the vendor (QEMU, vendor T33 ko against ours); no camera result (T33 cell ? -> qemu).",
       "ref": {
         "T41": "apitest agg47 2026-10-26 .34",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T23": "apitest agg47 stock 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "QEMU runs 2026-11-15 (#575, #577): list 23 and read-backs = vendor 2.0.2.1 ko"
       }
     },
     "ISP_Tuning_Get/SetHiLightDepress": {
@@ -5503,7 +5504,7 @@
         "T40": "dev",
         "T41": "rt"
       },
-      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls.",
+      "note": "audit: reaches the driver/kernel | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): round trip (new case t41pass, QEMU first): attribute written back as read, read again, mode/freeze/start equal, frames flow; no picture-effect claim (night/IR scene). T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. T33 (2026-11-13, #54-#60): apitest t33pass in QEMU -M ingenic-t33: the OpenIMP line equals the vendor libimp 2.0.2.1 line (return codes, read-back, frames flow), on the vendor tx-isp-t33.ko and on open-tx-isp claude/t33-ctl-ioctls. | T40 2026-11-15 (#576): GetAwbAttr returns the live AWB colour temperature like the vendor (the driver snapshot returned the last SetAwbAttr value, 0 before a set); open-tx-isp next 6cdd7f92e, host test only, device read-back (3000 / 5000 K, vendor 2912 / 5352 K) planned for the next Eufy run: cell unchanged.",
       "ref": {
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
@@ -6768,7 +6769,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (H264 chn 0 640x360).",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (H264 chn 0 640x360). | T40 2026-11-15 (#556, #604, #610; Eufy T40XP light box 3000 K, vendor 1.3.1 against open at the same exposure): the H.265 command lists, EP1 and EP3, the H.264 CBR hardware-RC words and the CBR eRcOptions start-up now equal the vendor (CBR 1000 H.264: I 57446 -> 57480 B, picture QP within 2 of the vendor on 141/150 pictures, was 122).",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -7172,7 +7173,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetChnAttrRcMode: ret=0 rcMode 1 bitrate 512 (created with 512); Encoder_SetChnAttrRcMode: ret=0 bitra).",
+      "note": "audit: reaches the driver/kernel; userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetChnAttrRcMode: ret=0 rcMode 1 bitrate 512 (created with 512); Encoder_SetChnAttrRcMode: ret=0 bitra). | T40 2026-11-15 (#556, #604, #610): CBR start-up QP trajectory (CreateChn hands eRcOptions to the codec), H.264 and H.265 CBR hardware-RC words and EP3 targets as the vendor 1.3.1, device-tested in the Eufy light box (see Encoder_CreateChn). T40 plain VBR has the same eRcOptions gap (#613, open).",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -14974,7 +14975,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (target 10 dBfs gain 20 dB; 5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (target 10 dBfs gain 20 dB; 5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#591, #605): the T40 / T41 record chain runs in the vendor order (AEC or NS, AGC, HPF, howling suppression, volume last). The vendor binds NS / AGC / HPF / HS to AI device 1 only; OpenIMP runs them on the recording device (device 0 included), user decision 2026-11-15, beyond vendor (docs/OPENIMP_BEYOND_VENDOR.md 6.11). T40 light box, NS level 3 on AI device 1: vendor -73.9 / open -74.5 dBFS.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -15177,7 +15178,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#591, #605): the T40 / T41 record chain runs in the vendor order (AEC or NS, AGC, HPF, howling suppression, volume last). The vendor binds NS / AGC / HPF / HS to AI device 1 only; OpenIMP runs them on the recording device (device 0 included), user decision 2026-11-15, beyond vendor (docs/OPENIMP_BEYOND_VENDOR.md 6.11). T40 light box, NS level 3 on AI device 1: vendor -73.9 / open -74.5 dBFS.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -15212,7 +15213,7 @@
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
       },
-      "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
+      "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#591, #605): the T40 / T41 record chain runs in the vendor order (AEC or NS, AGC, HPF, howling suppression, volume last). The vendor binds NS / AGC / HPF / HS to AI device 1 only; OpenIMP runs them on the recording device (device 0 included), user decision 2026-11-15, beyond vendor (docs/OPENIMP_BEYOND_VENDOR.md 6.11). T40 light box, NS level 3 on AI device 1: vendor -73.9 / open -74.5 dBFS."
     },
     "AI_EnableNs": {
       "area": "Audio",
@@ -15280,7 +15281,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (moderate; 5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (moderate; 5 of 5 frames follow, rms 0). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#591, #605): the T40 / T41 record chain runs in the vendor order (AEC or NS, AGC, HPF, howling suppression, volume last). The vendor binds NS / AGC / HPF / HS to AI device 1 only; OpenIMP runs them on the recording device (device 0 included), user decision 2026-11-15, beyond vendor (docs/OPENIMP_BEYOND_VENDOR.md 6.11). T40 light box, NS level 3 on AI device 1: vendor -73.9 / open -74.5 dBFS.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
@@ -15650,14 +15651,14 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (AI_GetVol: ret=0 60; AI_SetVol: ret=0 set 60, read back 60 (was 60)). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only.",
+      "note": "audit: reaches the driver/kernel; userspace implementation; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (AI_GetVol: ret=0 60; AI_SetVol: ret=0 set 60, read back 60 (was 60)). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#519, #585, #592): AI SetVol is a software volume like the vendor (no codec write; EnableChn resets to 60; GetVol reads 0 before the first EnableChn). T40 device (light-box audio phase, Eufy T40XP): mic floor at AI volume 60 vendor -58.8 / open -58.9 dBFS (was -68.2 with the codec write); T10 API read-back and mic RMS 27.8 / 146.0 / 0.0 at volume 60 / 90 / -30 (no sound played).",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31",
         "T20": "apitest rc3-cases 2026-10-26 .107",
         "T21": "apitest rc3-cases 2026-10-27 .24",
         "T23": "apitest rc3-cases 2026-10-27 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-        "T40": "apitest t40pass 2026-11-04 .184",
+        "T40": "light-box audio phase 2026-11-15 Eufy T40XP, run-t40-1115-1225 (mic floor vendor = open)",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
@@ -17039,7 +17040,7 @@
         "T31": "rt",
         "T32": "qemu",
         "T33": "qemu",
-        "T40": "rt",
+        "T40": "dev",
         "T41": "rt"
       },
       "used": {
@@ -17081,12 +17082,12 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #26): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (AO_GetVol: ret=0 -30; AO_SetVol: ret=0 rt: set the minimum -30, read back -30 (was 60), -29 accepted; volume l). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only.",
+      "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T31: prudynt†, raptor†, timps; T21/T23/T41: prudynt†, raptor†; Set dev, Get host on T10/T20/T21/T31 where the cell was aud (2026-10-10 AEC test: SetVol/SetGain called, getter not checked). T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #26): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): RT (AO_GetVol: ret=0 -30; AO_SetVol: ret=0 rt: set the minimum -30, read back -30 (was 60), -29 accepted; volume l). | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#518, #519, #585, #592): software volume like the vendor on all SoCs (clamp -30..120 returns 0, kept value, factor pow(10,(0.5*vol-30)/20) on the samples, EnableChn resets to 60, AO Set/Get return -1 while the AO is off). T40: light-box audio phase on the Eufy T40XP, vendor 1.3.1 and OpenIMP read back 20/40/60/90 -> 20/40/60/90 (was 30/60/74 on the open stack): cell dev. T10..T31: host tests plus a T10 API read-back without sound (no AO enable on the camera): cell stays rt. T41: host test only, the T41 boards have no speaker: cell stays rt.",
       "ref": {
         "T10": "apitest rc3-cases 2026-10-26 .31 (API round trip, no visible effect expected)",
         "T20": "apitest rc3-cases 2026-10-26 .107 (API round trip, no visible effect expected)",
         "T21": "apitest rc3-cases 2026-10-27 .24 (API round trip, no visible effect expected)",
-        "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
+        "T40": "light-box audio phase 2026-11-15 Eufy T40XP, run-t40-1115-1225 (AO read-back vendor = open)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",

@@ -468,6 +468,7 @@ set in production.
 | `OPENIMP_AI_STALE` (`_LOG`) | `0` passes the cleared fragments of the OSS2 capture driver on like the vendor library (section 6.4); `_LOG=1` or a file path logs every run | on, log off | debug-only |
 | `OPENIMP_T31_HW_JPEG` | `0` selects the software JPEG encoder on T31 | on | user-facing |
 | `OPENIMP_T31_OSD` | `0` disables the IPU OSD backend on T31 | on | user-facing |
+| `OPENIMP_T40_LDA131`, `OPENIMP_T40_GOP_IDR`, `OPENIMP_T40_HEVC_HWRC_QP`, `OPENIMP_T40_CBR_RCOPT` | `=0` rolls the T40 encoder back to the older value for A/B: the vendor 1.3.1 FixQP lambda table (#495), the GOP IDR words (#443), the HWRC window and EP3 targets of H.264 / H.265 (#556, #604), the CBR `eRcOptions` start-up (#610). `OPENIMP_T40_HEVC_TOOLS`: 15 = the vendor H.265 default scaling lists, 13 = off (#556) | on (vendor behaviour) | debug-only |
 | `OPENIMP_MXU` | `0` (or `off`) keeps every MXU2 kernel on its C reference (today: `nv12_rotate`); otherwise each kernel runs a bit-exact selftest once and uses MXU2 when it passes | on | user-facing |
 | `OPENIMP_T31_ROI` | `0` refuses `IMP_Encoder_SetChnRoiAttr` on T31 | on | user-facing |
 | `OPENIMP_T21_ROI` | `0` switches the T21 encoder ROI programming off | on | user-facing |
