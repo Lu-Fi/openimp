@@ -215,8 +215,10 @@ static struct {
     int64_t cap_time[P3_CAPTURE_SLOTS];
     unsigned int cap_depth;         /* FIFO depth, usrFrmDepth (EnableChn) */
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
-#if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
+#if !defined(PLATFORM_T32)
+#if !defined(PLATFORM_T41)
                .ai_volume = 60,   /* vendor 1.3.1 reads 60 before any SetVol */
+#endif                            /* T41 1.2.5: aiDev is zero until EnableChn */
                .ai_vgain = 1.0
 #endif
 };
@@ -234,8 +236,8 @@ static int p3_audio_open(void)
     return p3_audio.fd >= 0 ? 0 : -1;
 }
 
-#if !defined(PLATFORM_T41) && !defined(PLATFORM_T32)
-/* T40 1.3.1 IMP_AI_SetVol / IMP_AO_SetVol (ai.c.o 0x54c8, ao.c.o 0x3338):
+#if !defined(PLATFORM_T32)
+/* T40 1.3.1 / T41 1.2.5 IMP_AI_SetVol / IMP_AO_SetVol (ai.c.o 0x54c8, ao.c.o 0x3338):
  * the volume is NOT a codec register.  The value is clamped to -30..120 and
  * kept; the factor pow(10, (0.5 * vol - 30) / 20) (60 = 1.0, 0.5 dB per
  * step, -30 = 0 = silence) scales every captured / played 16-bit sample in
@@ -591,8 +593,8 @@ int IMP_AI_EnableChn(int device, int channel)
     if (bytes &&
         p3_capture_start(bytes, depth > 0 ? (unsigned int)depth : 0U) != 0)
         return -1;
-#if !defined(PLATFORM_T41)
-    /* vendor T40 1.3.1 IMP_AI_EnableChn: volume back to 60 (factor 1.0) */
+#if !defined(PLATFORM_T32)
+    /* vendor T40 1.3.1 / T41 1.2.5 IMP_AI_EnableChn: volume back to 60 (factor 1.0) */
     p3_audio.ai_volume = 60;
     p3_audio.ai_vgain = 1.0;
 #endif
@@ -748,8 +750,8 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         openimp_t23_ai_pre_effects((int16_t *)p3_audio.frame_buffer,
                                    (int)(bytes / sizeof(int16_t)),
                                    p3_audio.ai_attr.samplerate);
-#if !defined(PLATFORM_T41)
-    /* vendor T40 _ai_record_thread: software volume after the howling
+#if !defined(PLATFORM_T32)
+    /* vendor T40 / T41 _ai_record_thread: software volume after the howling
      * suppression (#519) */
     p3_soft_volume((int16_t *)p3_audio.frame_buffer,
                    (const int16_t *)p3_audio.frame_buffer,
@@ -813,61 +815,35 @@ static int p3_get_volume(int command, int channel, int *value)
     return 0;
 }
 
-#if defined(PLATFORM_T41)   /* T40: software volume, see p3_volume_factor */
-/*
- * The IMP API expresses AI volume as half-decibels in [-30, 120], with 60
- * representing 0 dB and -30 representing mute.  The T40/T41 codec driver
- * ioctl instead consumes the CLAVR register value: 195 is 0 dB, each step is
- * 0.5 dB, and zero is mute.  Passing the public value through unchanged makes
- * Raptor's default volume of 80 program roughly -57.5 dB.
- */
-static int p3_volume_to_raw(int value, int raw_unity)
+#if defined(PLATFORM_T41)
+/* T41 1.2.5 (ai.c.o IMP_AI_SetVol 0x6e98, IMP_AI_GetVol 0x70cc): the same
+ * software volume as T40 (pow(10, (0.5 * vol - 30) / 20), clamp -30..120,
+ * kept value, EnableChn resets to 60), no codec write (#585).  Device < 2
+ * and channel 0 as on T40; Gain stays on the codec ioctl. */
+static int p3_ai_args(int device, int channel)
 {
+    return device >= 0 && device < 2 && channel == 0;
+}
+
+int IMP_AI_SetVol(int device, int channel, int value)
+{
+    if (!p3_ai_args(device, channel))
+        return -1;
     if (value < -30)
         value = -30;
     else if (value > 120)
         value = 120;
-    if (value == -30)
-        return 0;
-    value += raw_unity - 60;
-    return value > 255 ? 255 : value;
-}
-
-static int p3_volume_from_raw(int value, int raw_unity)
-{
-    if (value <= 0)
-        return -30;
-    value -= raw_unity - 60;
-    if (value < -29)
-        return -29;
-    if (value > 120)
-        return 120;
-    return value;
-}
-#endif
-
-#if defined(PLATFORM_T41)
-int IMP_AI_SetVol(int device, int channel, int value)
-{
-    int result;
-    (void)device;
-    result = p3_set_volume(AMIC_AI_SET_VOLUME, channel,
-                           p3_volume_to_raw(value, 195));
-    if (result == 0)
-        p3_audio.ai_volume = value;
-    return result;
+    p3_audio.ai_vgain = p3_volume_factor(value);
+    p3_audio.ai_volume = value;
+    return 0;
 }
 
 int IMP_AI_GetVol(int device, int channel, int *value)
 {
-    int result;
-    (void)device;
-    result = p3_get_volume(AMIC_AI_GET_VOLUME, channel, value);
-    if (result == 0) {
-        *value = p3_volume_from_raw(*value, 195);
-        p3_audio.ai_volume = *value;
-    }
-    return result;
+    if (!value || !p3_ai_args(device, channel))
+        return -1;
+    *value = p3_audio.ai_volume;
+    return 0;
 }
 
 int IMP_AI_SetGain(int device, int channel, int value)
@@ -1218,8 +1194,8 @@ int IMP_AO_EnableChn(int device, int channel)
     (void)device;
     if (!p3_audio.ao_enabled || channel != 0)
         return -1;
-#if !defined(PLATFORM_T41)
-    /* vendor T40 _ao_chn_enable: volume back to 60 (factor 1.0) */
+#if !defined(PLATFORM_T32)
+    /* vendor T40 / T41 _ao_chn_enable: volume back to 60 (factor 1.0) */
     pthread_mutex_lock(&p3_audio.ao_mute_lock);
     p3_audio.ao_volume = 60;
     p3_audio.ao_vgain = 1.0;
@@ -1279,8 +1255,8 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
         pthread_mutex_unlock(&p3_audio.ao_mute_lock);
         return result;
     }
-#if !defined(PLATFORM_T41)
-    /* vendor T40 IMP_AO_SendFrame: software volume on a copy (#518) */
+#if !defined(PLATFORM_T32)
+    /* vendor T40 / T41 IMP_AO_SendFrame: software volume on a copy (#518) */
     pthread_mutex_lock(&p3_audio.ao_mute_lock);
     if (p3_audio.ao_vgain != 1.0) {
         int result;
@@ -1374,8 +1350,7 @@ int IMP_AO_GetDigitalGain(int device, int channel, int *dgain)
 }
 
 #if !defined(PLATFORM_T32)
-#if !defined(PLATFORM_T41)
-/* vendor T40 1.3.1: device 0, AO enabled, channel 0, else -1; software
+/* vendor T40 1.3.1 / T41 1.2.5 (ao.c.o 0x3cb0): device 0, AO enabled, channel 0, else -1; software
  * volume (p3_volume_factor) applied in IMP_AO_SendFrame, the codec DAC
  * register is not touched.  The old CDGSR mapping (raw = vol + 181, capped at
  * 255) read SetVol(90) back as 74 (#518). */
@@ -1401,31 +1376,6 @@ int IMP_AO_GetVol(int device, int channel, int *value)
     *value = p3_audio.ao_volume;
     return 0;
 }
-#else
-int IMP_AO_SetVol(int device, int channel, int value)
-{
-    int result;
-    (void)device;
-    /* The T40/T41 DAC's CDGSR register uses 241, rather than 195, for 0 dB. */
-    result = p3_set_volume(AMIC_SPK_SET_VOLUME, channel,
-                           p3_volume_to_raw(value, 241));
-    if (result == 0)
-        p3_audio.ao_volume = value;
-    return result;
-}
-
-int IMP_AO_GetVol(int device, int channel, int *value)
-{
-    int result;
-    (void)device;
-    result = p3_get_volume(AMIC_SPK_GET_VOLUME, channel, value);
-    if (result == 0) {
-        *value = p3_volume_from_raw(*value, 241);
-        p3_audio.ao_volume = *value;
-    }
-    return result;
-}
-#endif
 
 int IMP_AO_SetGain(int device, int channel, int value)
 {

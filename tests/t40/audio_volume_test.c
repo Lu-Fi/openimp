@@ -1,5 +1,5 @@
-/* T40 IMP_AI/AO_SetVol / GetVol (vendor 1.3.1 ai.c.o 0x54c8, ao.c.o 0x3338,
- * #518/#519): software volume, factor pow(10, (0.5 * vol - 30) / 20), no
+/* T40 / T41 IMP_AI/AO_SetVol / GetVol (vendor T40 1.3.1 ai.c.o 0x54c8, ao.c.o
+ * 0x3338, #518/#519; T41 1.2.5 ai.c.o 0x6e98, ao.c.o 0x3cb0, #585): software volume, factor pow(10, (0.5 * vol - 30) / 20), no
  * codec ioctl; clamp -30..120; Get answers the kept value; EnableChn resets
  * to 60; samples scaled with trunc and clipped to +-32767.  The driver ioctl
  * is faked. */
@@ -55,7 +55,12 @@ int main(void)
     assert(p3_volume_factor(60) == 1.0 && p3_volume_factor(-30) == 0.0);
 
     /* AI: 60 before any Set, no codec ioctl, clamp, Get = kept value */
+#ifdef PLATFORM_T41
+    /* vendor T41 1.2.5: aiDev is zero until EnableChn */
+    assert(IMP_AI_GetVol(0, 0, &v) == 0 && v == 0);
+#else
     assert(IMP_AI_GetVol(0, 0, &v) == 0 && v == 60);
+#endif
     assert(IMP_AI_SetVol(0, 0, 90) == 0 && IMP_AI_GetVol(0, 0, &v) == 0 && v == 90);
     assert(IMP_AI_SetVol(1, 0, 200) == 0 && IMP_AI_GetVol(0, 0, &v) == 0 && v == 120);
     assert(IMP_AI_SetVol(0, 0, -99) == 0 && IMP_AI_GetVol(0, 0, &v) == 0 && v == -30);
@@ -105,6 +110,10 @@ int main(void)
         for (i = 0; i < 8; i++)
             assert(fake_out[i] == 0);
     }
+    #ifdef PLATFORM_T41
+    puts("T41 audio volume: all checks passed");
+#else
     puts("T40 audio volume: all checks passed");
+#endif
     return 0;
 }
