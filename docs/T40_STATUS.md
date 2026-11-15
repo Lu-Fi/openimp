@@ -280,14 +280,16 @@ now vendor-equal:
 
 - FixQP lambda table: the intra lane (byte 2) of the vendor 1.3.1 table is
   about twice the T31 value from QP 22 up (QP 30 `0x08060800`, QP 51
-  `0x6b506b00`; same at both sizes).  HEVC keeps the T31 table (not
-  captured); `OPENIMP_T40_LDA131=0` restores it for AVC.
+  `0x6b506b00`; same at both sizes).  HEVC uses the same table (vendor
+  HEVC FixQP 25 1080p capture, #556, 2026-11-15); `OPENIMP_T40_LDA131=0`
+  restores the T31 table for both codecs.
 - The intra-only lambda words are written for the first picture of a
   channel only; every later picture, requested and GOP IDRs included,
   carries the P table.
 - An IDR of the GOP schedule carries the P words `cmd[0x08] = 0x11000000`
   and `cmd[0x12] = 0x8001b01d` (bits 27:24 by width); the first picture and a
-  requested IDR keep `0x77000000` / `0x803ff3ff`.
+  requested IDR keep `0x77000000` / `0x803ff3ff`.  HEVC likewise (#556):
+  GOP IDRs carry `cmd[0x08] = 0x33000000` and the P `cmd[0x12]`.
 - A requested IDR (`IMP_Encoder_RequestIDR`) restarts the GOP count: the
   vendor's GOP IDRs follow one GOP after it (requested at picture 2, GOP 20:
   IDRs at 22, 42; OpenIMP had 20, 40).

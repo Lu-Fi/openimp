@@ -223,6 +223,43 @@ still to do (next full light-box run); the 2026-11-14 vendor numbers
 (FixQP 25 994 kbit/s, SSIM 0.9749) were taken with the earlier lamps.
 
 
+## Command lists, EP1 and EP3 against the vendor (#556, 2026-11-15)
+
+Method as #443: `cmdcap.so` (LD_PRELOAD into the streamer, read-only
+`/dev/mem` at every AVPU push) on both stacks, Eufy T40XP, light box
+3000 K, 1920x1080 H.265, FixQP 25 and CBR 1000, matched manual exposure,
+150 pushes per case (runner phase `cmd556`; runs run-t40-1115-556c..h).
+Four differences, now vendor-equal:
+
+- FixQP lambda table: the vendor HEVC table is the AVC 1.3.1 table (intra
+  lane about twice the T31 value from QP 22, QP 35 `0x10061000` ->
+  `0x100c1000`); HEVC used the T31 table.  `OPENIMP_T40_LDA131=0` restores
+  the T31 table for both codecs.
+- GOP IDRs carry the P words `cmd[0x08] = 0x33000000` and the P
+  `cmd[0x12]` (first picture and requested IDRs keep `0x77000000` /
+  `0x803ff3ff`), as on AVC (#443).  `OPENIMP_T40_GOP_IDR=0` restores it.
+- HWRC `cmd[0x17]` (CBR): the QP window is the one of the channel
+  attributes (SetDefaultParam 15..48 -> `0x10` / `0x30`); the vendor keeps
+  it when `IMP_Encoder_SetChnQpBounds(20, 45)` narrows the software RC
+  (its picture QPs stay >= 20).  Bits 23:16 hold the first IDR's QP (34)
+  on every later picture, over six GOPs with IDR QPs 22..20.  OpenIMP wrote
+  the SetChnQpBounds window and the last IDR's QP.
+- EP3 HWRC targets (CBR): the vendor IDR slot is based on
+  `uMaxPictureSize * 1000` (2000 kbit at CBR 1000: row 0 `0x2b7cd0` =
+  2000000 x 95 % x 150 %), the P slot on 5/7 of it (`RateCtrl_7.c`
+  `GetTargetSize`: `pMaxPictureSize[type] * 95 / 100`); OpenIMP used the
+  bit rate.  `OPENIMP_T40_HEVC_HWRC_QP=0` restores both HWRC items.
+
+Remaining word differences are buffer layout only: the stream window
+`cmd[0x31]` / `cmd[0x33]` and the map size `cmd[0x68]` / `cmd[0x69]`
+(`0x2200` = 1088 rows vs the vendor `0x21c0` = 1080 rows; the map layout
+words are otherwise equal).  The CBR picture QPs follow the same steady
+state on both stacks (IDR 20-21, P 24-25).
+
+Box rows: see #556 (I-frame bytes before / after, SSIM / PSNR against each
+stack's own H.264 QP 15 mean image at the same exposure).
+
+
 ## Implementation
 
 `avpu_t40_hevc_fill_cmd()` in `src/t40/codec-t40.c`; headers, EP1/EP2 and
