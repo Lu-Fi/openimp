@@ -24,7 +24,7 @@ template:
 | 0x02 | `0xc010ad50`, P `0xc090ad50` | bit 31 always, bit 23 on P |
 | 0x06/0x07/0x0b | CTB grid | as T31 |
 | 0x08 | IDR `0x77000000`, P `0x33000000` | AVC P: `0x11000000` |
-| 0x09 | `0xfc058000` | vendor runs scaling lists + transform skip; OpenIMP clears bits 31/30/15 and signals none (as T31) |
+| 0x09 | `0xfc058000` | scaling list enable/load (bits 30/31) and transform skip (bit 15) on every picture; OpenIMP the same since #556 |
 | 0x0a | `area_1k << 16 \| 0x5000` | AVC area, HEVC PCM size |
 | 0x0c..0x11 | POC words `2n` | AVC numbering, not the T31 HEVC `n` |
 | 0x12 | bit 31, bits 27:24 = `(min(512 / ceil(w/64), 128) - 1) & 0xf` | L2 cache rows (UpdateCommand); 4K 7, 720p 8 |
@@ -60,11 +60,11 @@ Tested on the T40XP at 720p (5 s each, `OPENIMP_T40_HEVC_TOOLS`):
 | 1 | 1 | HWRC only | broken |
 | 4 | 0 | 1 | broken, cu_qp_delta errors |
 | 5 | 1 | 1 | correct, ffmpeg and VA-API clean |
-| 7 | + SPS default scaling lists, cmd[9] bits 31/30 | 1 | grey, about 330 bytes per picture |
+| 7 | + SPS default scaling lists, cmd[9] bits 31/30 | 1 | grey, about 330 bytes per picture (EP1+0x100 table missing, fixed in #556, see below) |
 
 OpenIMP now writes both PPS flags on T40 (cmd[9] bit 15 set as the
-vendor), keeps scaling lists off and signals full range in the VUI like
-the vendor (default `OPENIMP_T40_HEVC_TOOLS=13`).  The PPS no longer
+vendor) and signals full range in the VUI like the vendor (default
+`OPENIMP_T40_HEVC_TOOLS=13` until #556, now 15 with the scaling lists).  The PPS no longer
 depends on the RC mode, so a switch between FixQP and CBR does not force
 an IDR on T40.
 
@@ -171,6 +171,57 @@ H.264 (same code path, 4K CBR 6000, 15 s): vendor 19.90 fps, before 19.81,
 after 19.83; 640x360 CBR 1000: 19.90 / 19.88.  The vendor two-channel test
 process hung at teardown again (killed; device and streaming application
 fine).
+
+## Default scaling lists (#556, 2026-11-15)
+
+The vendor SPS has `scaling_list_enabled_flag = 1` with
+`sps_scaling_list_data_present_flag = 0` (H.265 default lists, PPS without
+lists); OpenIMP had the flag off, and at FixQP 25 its streams were about
+40 % larger than the vendor's at a lower SSIM.  Vendor path (libimp 1.3.1,
+SDK `libimp.a`):
+
+- `AL_HEVC_GenerateSPS` with `eScalingList` (settings +272) = 1
+  (`AL_SCL_DEFAULT`) copies `AL_HEVC_DefaultScalingLists8x8/4x4`
+  (H.265 Table 7-5/7-6, raster order) into the SPS scaling block
+  (SPS + 546): DC bytes +0x30..0x36 and +0x39 = 16, lists at
+  +0x3c + (size * 6 + matrix) * 0x40 (4x4 flat, 8x8 and 16x16 matrices
+  0..2 intra / 3..5 inter, 32x32 matrices 0 and 3).
+- `HEVC_Encoder.c preprocessEp1` -> `AL_HEVC_PreprocessScalingList`:
+  `AL_HEVC_GenerateHwScalingList` (forward scale per QP % 6 divided by
+  the list entry) and `AL_HEVC_WriteEncHwScalingList` write 0x6200 bytes to
+  EP1+0x100 (up to EP1+0x62ff, inside the 0x6400-byte EP1).
+- `SliceParamToCmdRegsEnc1`: cmd[9] bit 30 = sp[0x71] (enable),
+  bit 31 = sp[0x72] (load); both set on every picture in the captures.
+
+The earlier test set the SPS flag and the cmd[9] bits but left EP1+0x100
+zero: the core quantised with a zero matrix, hence the grey picture.
+`openimp_t40_init_hevc_ep1()` (`src/t40/t40_ep1.c`) builds the same block
+and runs the existing `AL_HEVC_*` ports once per channel (the lambda
+rewrites only touch EP1+0x00..0xcf).  Proof of the table: the SDK objects
+`HwScalingList.c.o` / `EncHwScalingList.c.o` and the OpenIMP code run side
+by side in an emulator (mipsel, unicorn) give identical 0x6200 bytes; the
+host test `tests/t40 vendor-cmd` checks the scaling block against the
+vendor `.rodata`.  `OPENIMP_T40_HEVC_TOOLS=13` restores the old behaviour.
+
+Device (Eufy T40XP, light box 3000 K, 1920x1080, runner `enc` phase,
+open stack only, same library e903740f, A = `OPENIMP_T40_HEVC_TOOLS=13`
+(old default), B = 15; 2026-11-15 night): SPS/PPS flags now equal to the
+vendor stream (`scaling_list_enabled_flag 1`, `sps/pps_scaling_list_data
+_present_flag 0`, transform skip 1, cu_qp_delta 1), picture correct,
+0 decode errors.
+
+| case | A (no lists) | B (default lists) |
+|------|--------------|-------------------|
+| FixQP 25 | 1103 kbit/s, I 68.0 KB, P 3.50 KB, SSIM 0.9735 | 1041 kbit/s (-5.6 %), I 65.4 KB, P 3.24 KB, SSIM 0.9739 |
+| FixQP 35 | 150 kbit/s, SSIM 0.9664 | 150 kbit/s, SSIM 0.9662 |
+| CBR 1000 | 1020 kbit/s, SSIM 0.9734 | 1017 kbit/s, SSIM 0.9742 |
+| CBR 2000 | 1304 kbit/s, SSIM 0.9736 | 1158 kbit/s, SSIM 0.9742 |
+
+(CBR 2000 undershoots on the static chart on both stacks; the vendor gave
+1298 kbit/s in the 2026-11-14 run.)  A vendor run under the same lamps is
+still to do (next full light-box run); the 2026-11-14 vendor numbers
+(FixQP 25 994 kbit/s, SSIM 0.9749) were taken with the earlier lamps.
+
 
 ## Implementation
 
