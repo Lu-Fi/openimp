@@ -1627,6 +1627,9 @@ static uint32_t avpu_t40_ep3_target(uint32_t bitrate, unsigned int slot)
     return (uint32_t)target;
 }
 
+static int avpu_t40_knob(int index, const char *name);
+#define AVPU_T40_KNOB_HEVC_HWRC_QP 7  /* OPENIMP_T40_HEVC_HWRC_QP */
+
 static size_t avpu_t40_init_ep3_ring(ALAvpuContext *ctx)
 {
     static const uint8_t row_percent[11] = {
@@ -1643,6 +1646,15 @@ static size_t avpu_t40_init_ep3_ring(ALAvpuContext *ctx)
 
     base = (uint8_t *)ctx->rec_trace_buf.map;
     bitrate = ctx->bitrate ? ctx->bitrate : 2000000u;
+#if defined(AVPU_T40_NATIVE)
+    /* #556 HEVC CBR (vendor 1.3.1, Eufy T40XP 1080p CBR 1000, EP3 read at
+     * the push): the IDR slot holds uMaxPictureSize * 1000 (2000 kbit ->
+     * row 0 0x2b7cd0 = 2000000 * 95 % * 150 %), the P slot 5/7 of it. */
+    if (ctx->codec_hevc && ctx->rc_mode != HW_RC_MODE_FIXQP &&
+        ctx->t40_max_picture_bits &&
+        avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP, "OPENIMP_T40_HEVC_HWRC_QP"))
+        bitrate = ctx->t40_max_picture_bits;
+#endif
     memset(base, 0,
            AVPU_T40_EP3_SLOT_SIZE * AVPU_T40_EP3_SLOT_COUNT);
 
@@ -4800,7 +4812,6 @@ static int avpu_t40_knob(int index, const char *name)
 #define AVPU_T40_KNOB_HWRC_TARGET 3   /* OPENIMP_T40_HWRC_TARGET */
 #define AVPU_T40_KNOB_FIXQP_LDA 4     /* OPENIMP_T40_FIXQP_LDA */
 #define AVPU_T40_KNOB_LDA131 6        /* OPENIMP_T40_LDA131 */
-#define AVPU_T40_KNOB_HEVC_HWRC_QP 7  /* OPENIMP_T40_HEVC_HWRC_QP */
 
 static uint32_t avpu_t40_cmd12_hi(uint32_t width)
 {
@@ -12569,11 +12580,13 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                          * Create / SetRcParam) survives the context reset. */
                         uint32_t attr_min_qp = enc->avpu.t40_attr_min_qp;
                         uint32_t attr_max_qp = enc->avpu.t40_attr_max_qp;
+                        uint32_t max_picture_bits = enc->avpu.t40_max_picture_bits;
 #endif
                         memset(&enc->avpu, 0, sizeof(enc->avpu));
 #if defined(AVPU_T40_NATIVE)
                         enc->avpu.t40_attr_min_qp = attr_min_qp;
                         enc->avpu.t40_attr_max_qp = attr_max_qp;
+                        enc->avpu.t40_max_picture_bits = max_picture_bits;
 #endif
                         enc->avpu.fd = fd;
                         enc->avpu.event_fd = enc->event ? (int)(uintptr_t)enc->event : -1;
@@ -14892,6 +14905,17 @@ int AL_Codec_Encode_SetMaxPictureSizeT41(void *codec, uint32_t i_bits,
            sizeof(enc->avpu.t41_max_picture_bits));
     LOG_CODEC("SetMaxPictureSize: codec=%p I=%u P=%u bits", codec,
               enc->t41_max_picture_bits[2], enc->t41_max_picture_bits[1]);
+    return 0;
+}
+#endif
+
+#if defined(AVPU_T40_NATIVE)
+/* #556: uMaxPictureSize of a CBR channel in bits (EP3 HWRC targets). */
+int AL_Codec_Encode_SetMaxPictureSizeT40(void *codec, uint32_t i_bits)
+{
+    if (codec == NULL)
+        return -1;
+    ((AL_CodecEncode *)codec)->avpu.t40_max_picture_bits = i_bits;
     return 0;
 }
 #endif

@@ -334,6 +334,9 @@ typedef struct ALAvpuContext {
     uint32_t t40_first_idr_qp;
     uint32_t t40_attr_min_qp;
     uint32_t t40_attr_max_qp;
+    /* HEVC CBR (#556): uMaxPictureSize * 1000, the base of the EP3 HWRC
+     * targets (vendor GetTargetSize pMaxPictureSize[I]); 0 = bit rate. */
+    uint32_t t40_max_picture_bits;
     /* Picture SSE from the status image (+0x158 high, +0x15c low word, as
      * the OEM EncodingStatusRegsToSliceStatus 0x54bc4), for the capped
      * modes' PSNR cap; [buf][0] high, [buf][1] low. */

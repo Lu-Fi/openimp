@@ -1512,6 +1512,9 @@ extern int AL_Codec_Encode_SetRcOptionsT41(void *codec, uint32_t options);
 extern int AL_Codec_Encode_SetMaxPictureSizeT41(void *codec, uint32_t i_bits,
                                                 uint32_t p_bits, int set_p);
 #endif
+#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+extern int AL_Codec_Encode_SetMaxPictureSizeT40(void *codec, uint32_t i_bits);
+#endif
 extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
 extern int AL_Codec_Encode_SetGopParam(void *codec, void *gop);
@@ -2855,6 +2858,12 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         AL_Codec_Encode_SetMaxPictureSizeT41(
             ch->codec, attr->rcAttr.attrRcMode.attrVbr.uMaxPictureSize * 1000u,
             0u, 0);
+#elif defined(PLATFORM_T40)
+    /* #556: vendor 1.3.1 HEVC CBR EP3 targets from uMaxPictureSize */
+    if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&
+        attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize <= 0xffffffffu / 1000u)
+        AL_Codec_Encode_SetMaxPictureSizeT40(
+            ch->codec, attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize * 1000u);
 #endif
     if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
         AL_Codec_Encode_SetQpIPDelta(
