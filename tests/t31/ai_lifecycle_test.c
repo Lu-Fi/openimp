@@ -183,15 +183,56 @@ static void test_bad_numbers(void)
     CHECK(IMP_AI_Enable(-1) != 0 && IMP_AI_Enable(2) != 0, "AI Enable");
     CHECK(IMP_AI_EnableChn(0, 1) != 0 && IMP_AI_EnableChn(0, -1) != 0,
           "AI EnableChn channel");
-    CHECK(IMP_AI_SetVol(0, 0, 121) != 0 && IMP_AI_SetVol(0, 0, -31) != 0,
-          "AI SetVol range");
+    CHECK(IMP_AI_GetVol(0, 0, &value) == 0 && value == 0,
+          "AI GetVol before EnableChn reads %d, vendor 0", value);
+    /* vendor: out-of-range volume is clamped to -30..120, the call succeeds */
+    CHECK(IMP_AI_SetVol(0, 0, 121) == 0 && IMP_AI_GetVol(0, 0, &value) == 0 &&
+          value == 120, "AI SetVol 121 -> %d", value);
+    CHECK(IMP_AI_SetVol(0, 0, -31) == 0 && IMP_AI_GetVol(0, 0, &value) == 0 &&
+          value == -30, "AI SetVol -31 -> %d", value);
+    CHECK(IMP_AI_SetVol(0, 1, 60) != 0 && IMP_AI_SetVol(2, 0, 60) != 0 &&
+          IMP_AI_GetVol(0, 0, NULL) != 0, "AI SetVol device/channel");
     CHECK(IMP_AI_SetGain(0, 0, 32) != 0 && IMP_AI_SetGain(0, 0, -1) != 0,
           "AI SetGain range");
     CHECK(IMP_AI_GetVol(0, 1, &value) != 0, "AI GetVol channel");
     CHECK(IMP_AO_SetPubAttr(1, &attr) != 0, "AO SetPubAttr 1");
     CHECK(IMP_AO_Enable(1) != 0 && IMP_AO_Enable(-1) != 0, "AO Enable");
-    CHECK(IMP_AO_SetVol(0, 0, 121) != 0, "AO SetVol range");
+    /* vendor: AO SetVol/GetVol need the AO enabled (here: not yet) */
+    CHECK(IMP_AO_SetVol(0, 0, 60) != 0 && IMP_AO_GetVol(0, 0, &value) != 0,
+          "AO SetVol/GetVol with the AO disabled");
     CHECK(open_count == 0, "%d descriptors open", open_count);
+}
+
+/* #592: EnableChn resets the volume to 60, the AI record is 0 before the
+ * first EnableChn (vendor aiDev), AO volume needs an enabled AO. */
+static void test_volume(void)
+{
+    IMPAudioIOAttr attr = attr_for(16000, 160, 8);
+    int value = -1;
+
+    CHECK(IMP_AO_SetPubAttr(0, &attr) == 0 && IMP_AO_Enable(0) == 0,
+          "AO enable");
+    CHECK(IMP_AO_SetVol(0, 0, 500) == 0 && IMP_AO_GetVol(0, 0, &value) == 0 &&
+          value == 120, "AO SetVol 500 -> %d", value);
+    CHECK(IMP_AO_SetVol(0, 0, -99) == 0 && IMP_AO_GetVol(0, 0, &value) == 0 &&
+          value == -30, "AO SetVol -99 -> %d", value);
+    CHECK(IMP_AO_EnableChn(0, 0) == 0 && IMP_AO_GetVol(0, 0, &value) == 0 &&
+          value == 60, "AO EnableChn resets to 60, got %d", value);
+    CHECK(IMP_AO_SetVol(0, 0, 80) == 0, "AO SetVol 80");
+    CHECK(IMP_AO_DisableChn(0, 0) == 0 && IMP_AO_EnableChn(0, 0) == 0 &&
+          IMP_AO_GetVol(0, 0, &value) == 0 && value == 60,
+          "AO re-EnableChn resets to 60, got %d", value);
+    IMP_AO_DisableChn(0, 0);
+    IMP_AO_Disable(0);
+    CHECK(IMP_AO_GetVol(0, 0, &value) != 0, "AO GetVol after Disable");
+
+    CHECK(IMP_AI_SetPubAttr(0, &attr) == 0 && IMP_AI_Enable(0) == 0,
+          "AI enable");
+    CHECK(IMP_AI_SetVol(0, 0, 90) == 0, "AI SetVol 90");
+    CHECK(IMP_AI_EnableChn(0, 0) == 0 && IMP_AI_GetVol(0, 0, &value) == 0 &&
+          value == 60, "AI EnableChn resets to 60, got %d", value);
+    IMP_AI_DisableChn(0, 0);
+    IMP_AI_Disable(0);
 }
 
 static void test_cycles(void)
@@ -378,6 +419,7 @@ static void test_ao_hpf_cutoff(void)
 int main(void)
 {
     test_bad_numbers();
+    test_volume();
     test_cycles();
     test_reference_grows();
     test_effects_while_capturing();

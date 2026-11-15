@@ -312,6 +312,22 @@ int main(void)
     CHECK(IMP_AO_SetVol(0, 0, 120) == 0, "SetVol 120");
     CHECK(send() == 0 && sink_len >= sizeof(pcm), "SendFrame at volume 120");
     CHECK(peak() > 4000, "volume 120 peak %ld, input 4000", peak());
+    /* #592: vendor scaling trunc(sample * factor), clip +-32767 (not -32768) */
+    {
+        const int16_t *o = (const int16_t *)(const void *)sink;
+
+        CHECK(o[0] == 32767 && o[16] == -32767,
+              "volume 120 clip %d / %d, vendor +-32767", o[0], o[16]);
+    }
+    CHECK(IMP_AO_SetVol(0, 0, 72) == 0 && send() == 0, "SetVol 72");
+    {
+        const int16_t *o = (const int16_t *)(const void *)sink;
+        int e = (int)(4000 * pow(10.0, (0.5 * 72 - 30.0) / 20.0));
+
+        CHECK(o[0] == e && o[16] == -e && e == 7981,
+              "volume 72: %d / %d, vendor trunc %d", o[0], o[16], e);
+    }
+    CHECK(IMP_AO_SetVol(0, 0, 500) == 0, "SetVol 500 is clamped, returns 0");
 
     CHECK(IMP_AO_SetVol(0, 0, 20) == 0, "SetVol 20");
     CHECK(send() == 0 && peak() < 4000, "volume 20 peak %ld", peak());

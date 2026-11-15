@@ -300,7 +300,7 @@ static struct {
 } t31_audio = {
     .ai_fd = -1,
     .ao_fd = -1,
-    .ai_volume = 60,
+    .ai_volume = 0,     /* vendor: aiDev is zero until IMP_AI_EnableChn */
     .ao_volume = 60,
     .agc_mode = 3,
 };
@@ -636,73 +636,65 @@ static void t31_process_effects(int16_t *samples, int count)
     }
 }
 
-/* IMP volume is expressed in half-decibels; 60 represents unity. */
-static void t31_apply_ai_volume(int16_t *samples, int count)
+/* Vendor libimp (T10 3.12.0, T20 3.12.0, T21 1.0.33, T23 1.3.0, T30 1.0.5,
+ * T31 1.1.6) IMP_AI/AO_SetVol: no codec write.  The value is clamped to
+ * -30..120 and kept; factor pow(10, (0.5 * vol - 30) / 20) (60 = 1.0, -30 =
+ * 0 = silence) scales every captured / played 16-bit sample:
+ * trunc(sample * factor), clipped to +-32767 (_audio_set_volume).  10^(1/40)
+ * per step instead of pow() (libimp does not link libm); the factors agree
+ * to < 1e-12 (#592). */
+static double t31_volume_factor(int volume)
 {
-    int steps = t31_audio.ai_volume - 60;
-    uint64_t gain = 65536;
-    int i;
+    const double step = 1.0592537251772889;    /* 10^(0.5/20) */
+    double factor = 1.0;
+    int steps;
 
-    if (t31_audio.ai_muted || t31_audio.ai_volume <= -30) {
-        memset(samples, 0, (size_t)count * sizeof(*samples));
-        return;
-    }
-    if (steps > 60)
-        steps = 60;
-    if (steps < -89)
-        steps = -89;
-    if (steps > 0) {
-        for (i = 0; i < steps; i++)
-            gain = (gain * 69419U + 32768U) >> 16;
-    } else {
-        for (i = 0; i > steps; i--)
-            gain = (gain * 61870U + 32768U) >> 16;
-    }
-    for (i = 0; i < count; i++) {
-        int64_t value = ((int64_t)samples[i] * (int64_t)gain) >> 16;
-        if (value > 32767)
-            value = 32767;
-        else if (value < -32768)
-            value = -32768;
-        samples[i] = (int16_t)value;
-    }
+    if (volume <= -30)
+        return 0.0;
+    if (volume > 120)
+        volume = 120;
+    for (steps = volume - 60; steps > 0; steps--)
+        factor *= step;
+    for (; steps < 0; steps++)
+        factor /= step;
+    return factor;
 }
 
-/* Same 0.5 dB/step curve as t31_apply_ai_volume, for the speaker path
- * (IMP_AO_SetVol/SetVolMute; the vendor applies a software gain in its play
- * thread too). */
-static void t31_apply_ao_volume(int16_t *samples, int count, int volume,
-                                int muted)
+static void t31_scale_samples(int16_t *samples, int count, int volume,
+                              int muted)
 {
-    int steps = volume - 60;
-    uint64_t gain = 65536;
+    double factor;
     int i;
 
     if (muted || volume <= -30) {
         memset(samples, 0, (size_t)count * sizeof(*samples));
         return;
     }
-    if (!steps)
+    if (volume == 60)
         return;
-    if (steps > 60)
-        steps = 60;
-    if (steps < -89)
-        steps = -89;
-    if (steps > 0) {
-        for (i = 0; i < steps; i++)
-            gain = (gain * 69419U + 32768U) >> 16;
-    } else {
-        for (i = 0; i > steps; i--)
-            gain = (gain * 61870U + 32768U) >> 16;
-    }
+    factor = t31_volume_factor(volume);
     for (i = 0; i < count; i++) {
-        int64_t value = ((int64_t)samples[i] * (int64_t)gain) >> 16;
+        int value = (int)(samples[i] * factor);   /* trunc, as the vendor */
+
         if (value > 32767)
             value = 32767;
-        else if (value < -32768)
-            value = -32768;
+        else if (value < -32767)
+            value = -32767;
         samples[i] = (int16_t)value;
     }
+}
+
+static void t31_apply_ai_volume(int16_t *samples, int count)
+{
+    t31_scale_samples(samples, count, t31_audio.ai_volume,
+                      t31_audio.ai_muted);
+}
+
+/* Same curve for the speaker path (IMP_AO_SetVol/SetVolMute). */
+static void t31_apply_ao_volume(int16_t *samples, int count, int volume,
+                                int muted)
+{
+    t31_scale_samples(samples, count, volume, muted);
 }
 
 static void t31_capture_init_cond(void)
@@ -1260,6 +1252,7 @@ int IMP_AI_EnableChn(int device, int channel)
         !t31_audio.ai_enabled || t31_capture_start() != 0)
         return -1;
     t31_audio.ai_channel_enabled = 1;
+    t31_audio.ai_volume = 60;       /* vendor IMP_AI_EnableChn: reset to 60 */
     return 0;
 }
 
@@ -1431,9 +1424,13 @@ int IMP_AI_ReleaseFrame(int device, int channel, IMPAudioFrame *frame)
 
 int IMP_AI_SetVol(int device, int channel, int value)
 {
-    if ((device != 0 && device != 1) || channel != 0 ||
-        value < -30 || value > 120)
+    if ((device != 0 && device != 1) || channel != 0)
         return -1;
+    /* vendor: out-of-range values are clamped, the call succeeds */
+    if (value < -30)
+        value = -30;
+    else if (value > 120)
+        value = 120;
     t31_audio.ai_volume = value;
     return 0;
 }
@@ -2061,6 +2058,7 @@ int IMP_AO_EnableChn(int device, int channel)
     if (device != 0 || channel != 0 || !t31_audio.ao_enabled)
         return -1;
     t31_audio.ao_channel_enabled = 1;
+    t31_audio.ao_volume = 60;       /* vendor _ao_chn_enable: reset to 60 */
     /* vendor _ao_chn_enable: cache switch back to its default, filling */
     openimp_ao_cache_reset(&t31_audio.ao_cache,
                            t31_audio.ao_period_bytes *
@@ -2238,15 +2236,19 @@ int IMP_AO_SendFrame(int device, int channel, IMPAudioFrame *frame,
 
 int IMP_AO_SetVol(int device, int channel, int value)
 {
-    if (device != 0 || channel != 0 || value < -30 || value > 120)
+    if (device != 0 || channel != 0 || !t31_audio.ao_enabled)
         return -1;
+    if (value < -30)
+        value = -30;
+    else if (value > 120)
+        value = 120;
     t31_audio.ao_volume = value;
     return 0;
 }
 
 int IMP_AO_GetVol(int device, int channel, int *value)
 {
-    if (device != 0 || channel != 0 || !value)
+    if (device != 0 || channel != 0 || !t31_audio.ao_enabled || !value)
         return -1;
     *value = t31_audio.ao_volume;
     return 0;
