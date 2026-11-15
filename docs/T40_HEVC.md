@@ -249,6 +249,10 @@ Four differences, now vendor-equal:
   2000000 x 95 % x 150 %), the P slot on 5/7 of it (`RateCtrl_7.c`
   `GetTargetSize`: `pMaxPictureSize[type] * 95 / 100`); OpenIMP used the
   bit rate.  `OPENIMP_T40_HEVC_HWRC_QP=0` restores both HWRC items.
+  H.264 CBR is the same (#604, capture at CBR 1000 / 2000): both items
+  apply to AVC, and the AVC path also sets `cmd[0x18]` bit 31 on every IDR
+  and the next P and uses the IDR / P EP3 slots (no three-slot rotation);
+  the switch restores all of it for both codecs.
 
 Remaining word differences are buffer layout only: the stream window
 `cmd[0x31]` / `cmd[0x33]` and the map size `cmd[0x68]` / `cmd[0x69]`

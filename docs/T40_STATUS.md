@@ -266,7 +266,10 @@ checked by `tests/t40/vendor_cmd_test.c`:
   0..51 and the fixed-QP lambda table per picture type (IDR: intra lane only);
 - hardware RC targets cmd[0x15] = 1.9 x bit/s per group (I), 5/7 of it (P),
   cmd[0x16] = per-frame maximum per group, cmd[0x17] min max(min, max - 32) and
-  the IDR QP in bits 23:16; cmd[0x12] bits 27:24 from 512 / 64-pixel columns;
+  the IDR QP in bits 23:16;
+  CBR (both codecs, #556/#604): cmd[0x17] window of the channel attributes and
+  the first IDR's QP, EP3 targets from uMaxPictureSize, EP3 IDR / P slots,
+  cmd[0x18] bit 31 on every IDR and the next P; cmd[0x12] bits 27:24 from 512 / 64-pixel columns;
   picture numbers in cmd[0x0c..0x11]; no picture size in cmd[0x64/0x65];
 - SetDefaultParam CBR/VBR: QP 15..48, eRcOptions 1 (as vendor and T31).
 
