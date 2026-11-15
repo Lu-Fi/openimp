@@ -271,7 +271,10 @@ checked by `tests/t40/vendor_cmd_test.c`:
   the first IDR's QP, EP3 targets from uMaxPictureSize, EP3 IDR / P slots,
   cmd[0x18] bit 31 on every IDR and the next P; cmd[0x12] bits 27:24 from 512 / 64-pixel columns;
   picture numbers in cmd[0x0c..0x11]; no picture size in cmd[0x64/0x65];
-- SetDefaultParam CBR/VBR: QP 15..48, eRcOptions 1 (as vendor and T31).
+- SetDefaultParam CBR/VBR: QP 15..48, eRcOptions 1 (as vendor and T31);
+  CBR (#610): CreateChn hands eRcOptions to the Allegro core (it stayed 0, so
+  the core ran with opt_flag set and the IDR after the start-up picture fell to
+  iMinQP: QP 20 where the vendor uses 43). `OPENIMP_T40_CBR_RCOPT=0` restores it.
 
 `OPENIMP_T40_{FIXQP_NOHWRC,FIXQP_LDA,CMD12,POC,HWRC_TARGET}=0` restore the old
 words one by one for comparisons.

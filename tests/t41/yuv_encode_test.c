@@ -280,6 +280,7 @@ int AL_Codec_Encode_SetRcOptionsT41(void *c, uint32_t a) { (void)c; (void)a; ret
 #endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
 int AL_Codec_Encode_SetMaxPictureSizeT40(void *c, uint32_t b) { (void)c; (void)b; return 0; }
+int AL_Codec_Encode_SetRcOptionsT40(void *c, uint32_t o) { (void)c; (void)o; return 0; }
 #endif
 int AL_Codec_Encode_SetRcParam(void *c, void *p) { (void)c; (void)p; return 0; }
 int AL_Codec_Encode_SetRcQualityCap(void *c, int m, unsigned int p) { (void)c; (void)m; (void)p; return 0; }

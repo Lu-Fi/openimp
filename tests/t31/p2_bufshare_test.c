@@ -241,6 +241,7 @@ int AL_Codec_Encode_SetQpBounds(void *c, int a, int b) { (void)c; (void)a; (void
 int AL_Codec_Encode_SetQpIPDelta(void *c, int a) { (void)c; (void)a; return 0; }
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
 int AL_Codec_Encode_SetMaxPictureSizeT40(void *c, uint32_t b) { (void)c; (void)b; return 0; }
+int AL_Codec_Encode_SetRcOptionsT40(void *c, uint32_t o) { (void)c; (void)o; return 0; }
 #endif
 #if defined(PLATFORM_T41)
 int AL_Codec_Encode_SetQpBoundsPerFrame(void *c, int a, int b, int d, int e) { (void)c; (void)a; (void)b; (void)d; (void)e; return 0; }
