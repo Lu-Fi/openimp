@@ -14936,6 +14936,24 @@ int AL_Codec_Encode_SetMaxPictureSizeT40(void *codec, uint32_t i_bits)
     ((AL_CodecEncode *)codec)->avpu.t40_max_picture_bits = i_bits;
     return 0;
 }
+
+/* #610: eRcOptions of a CBR channel at CreateChn, as the vendor 1.3.1
+ * channel_encoder_init hands it to the RC (default 1).  Left at 0 (the codec
+ * struct is memset at create) the Allegro core ran with opt_flag set
+ * ((options & 5) != 1): the I QP after the start-up IDR came from the
+ * empty-GOP P average and fell to iMinQP (QP 20 at picture 2 where the
+ * vendor uses 43). */
+int AL_Codec_Encode_SetRcOptionsT40(void *codec, uint32_t options)
+{
+    AL_CodecEncode *enc;
+
+    if (codec == NULL)
+        return -1;
+    enc = (AL_CodecEncode *)codec;
+    enc->rc_options = options;
+    enc->avpu.t31_rc_options = options;
+    return 0;
+}
 #endif
 
 int AL_Codec_Encode_SetBitRate(void *codec, int targetBitrate, int maxBitrate)

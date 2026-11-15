@@ -47,6 +47,7 @@ static void fill_param(T31AlRcParam *p, T31AlGopParam *g, int cbr,
     p->max_qp = 45;
     p->ip_delta = -1;
     p->pb_delta = -1;
+    p->options = cbr ? 1u : 0u;   /* #610: CBR eRcOptions 1 from CreateChn */
     p->num_pixels = w * h;
     p->max_psnr_x100 = 4200u;
     p->max_pel = 255u;
@@ -200,9 +201,73 @@ static int capped_tests(void)
     return fail;
 }
 
+/* #610: start-up QP trajectory of the Eufy 1080p20 CBR 1000 channel
+ * (iInitialQP 40, QP window 20..45, GOP 25, IDR requested at picture 2).
+ * Vendor 1.3.1 capture: I40 P44 I43 P44 P44 P40 ... (descends over ~30
+ * pictures).  With eRcOptions 0 (OpenIMP before #610) the core took the
+ * picture-2 IDR QP from the empty-GOP P average and fell to iMinQP 20. */
+static int startup_qp(uint32_t options, int *qp_out, int n)
+{
+    T31AlRcParam p;
+    T31AlGopParam g;
+    static T31AlRc rc;
+    int k;
+
+    fill_param(&p, &g, 1, 1000000u, 1920u, 1080u, 20u);
+    p.options = options;
+    p.initial_qp = 40;
+    p.min_qp = 20;
+    p.max_qp = 45;
+    g.length = 25u;
+    if (t31_al_rc_init(&rc, 0u, &p, &g) != 0)
+        return -1;
+    for (k = 0; k < n; ++k) {
+        int idr = k == 0 || k == 2;
+        T31AlRcPicture pic;
+        T31AlRcStatus st;
+        uint32_t bits;
+        int32_t filler;
+
+        memset(&pic, 0, sizeof(pic));
+        pic.type = idr ? 2u : 1u;
+        pic.flags = idr ? 3u : 2u;
+        qp_out[k] = t31_al_rc_picture_qp(&rc, &pic);
+        /* measured sizes: I 14.6 kB at QP 43, P ~0.8 kB at QP 44 */
+        bits = idr ? (uint32_t)(116800.0 * pow(2.0, (43.0 - qp_out[k]) / 11.0))
+                   : (uint32_t)(6400.0 * pow(2.0, (44.0 - qp_out[k]) / 8.0));
+        memset(&st, 0, sizeof(st));
+        st.bits = bits;
+        st.qp = (int16_t)qp_out[k];
+        filler = t31_al_rc_picture_start(&rc, &pic, &st, bits);
+        t31_al_rc_update(&rc, &pic, &st, bits, 0u,
+                         filler > 0 ? (uint32_t)(filler < 8 ? 8 : filler) * 8u : 0u);
+    }
+    return 0;
+}
+
+static int startup_tests(void)
+{
+    int v[6], o[6];
+
+    if (startup_qp(1u, v, 6) != 0 || startup_qp(0u, o, 6) != 0)
+        return 1;
+    printf("startup eRcOptions 1: I%d P%d I%d P%d P%d P%d (vendor I40 P44 I43 P44 P44 P40)\n",
+           v[0], v[1], v[2], v[3], v[4], v[5]);
+    printf("startup eRcOptions 0: I%d P%d I%d P%d P%d P%d\n",
+           o[0], o[1], o[2], o[3], o[4], o[5]);
+    if (v[0] != 40 || v[1] != 44 || v[2] != 43 || v[3] != 44 || v[4] != 44 ||
+        v[5] != 40) {
+        fprintf(stderr, "startup: CBR trajectory differs from vendor 1.3.1\n");
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     int fail = 0;
+
+    fail |= startup_tests();
 
     /* detailed scene: the target is reachable inside the QP bounds */
     fail |= run("ch1 cbr 500", 1, 500, 640, 360, 0.25, 0.90, 1.10);

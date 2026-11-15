@@ -1514,6 +1514,14 @@ extern int AL_Codec_Encode_SetMaxPictureSizeT41(void *codec, uint32_t i_bits,
 #endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
 extern int AL_Codec_Encode_SetMaxPictureSizeT40(void *codec, uint32_t i_bits);
+extern int AL_Codec_Encode_SetRcOptionsT40(void *codec, uint32_t options);
+/* #610: OPENIMP_T40_CBR_RCOPT=0 restores eRcOptions 0 at CreateChn */
+static int p2_t40_cbr_rcopt_enabled(void)
+{
+    const char *v = getenv("OPENIMP_T40_CBR_RCOPT");
+
+    return !v || strcmp(v, "0") != 0;
+}
 #endif
 extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
@@ -2864,6 +2872,12 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize <= 0xffffffffu / 1000u)
         AL_Codec_Encode_SetMaxPictureSizeT40(
             ch->codec, attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize * 1000u);
+    /* #610: CBR eRcOptions into the Allegro core from the start (vendor
+     * channel_encoder_init); 0 set opt_flag and dropped the IDR QP to iMinQP */
+    if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&
+        p2_t40_cbr_rcopt_enabled())
+        AL_Codec_Encode_SetRcOptionsT40(
+            ch->codec, (uint32_t)attr->rcAttr.attrRcMode.attrCbr.eRcOptions);
 #endif
     if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
         AL_Codec_Encode_SetQpIPDelta(
