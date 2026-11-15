@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-15: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
+
+- New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-15-3000.html` (104 pass / 6 fail; open-tx-isp 12171ad5 + OpenIMP libimp d7370b09), both stacks, runtime only, charts/numbers only, no pictures.
+
 ## 2026-11-15: status: T33 driver-port "wired" 154 of 308 proven (#99)
 
 - `docs/status/driver_port.json` T33 `wired` 131 -> 154 and the card / matrix row: open-tx-isp next 53170faf wiring group 10a (the AE runs the proven vendor entry points tisp_normal_ae_init / _interrupt_hist / _interrupt_static / _calc_process, tisp_ae_malloc_info, tisp_ae_set_start_param, tisp_flicker_init, tisp_normal_ae_par_sensor_trig, normal_ae_dn_par_refresh and tisp_ae_switch_para on the vendor-layout ae_cache / stAeInfo; QEMU day equal to the vendor per frame). Counting basis widened: wired.py now also scans the MDNS glue (tx_isp_t33_mdns.h, 13 of the increase, already wired in group 9) and the AE / AWB glue (driver/t33/tx_isp_t33_aec.c, awbc.c; 10 new).
