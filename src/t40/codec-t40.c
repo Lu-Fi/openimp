@@ -4932,6 +4932,13 @@ static void avpu_t40_native_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                         (mx << 8) | (cmd[0x17] & 0xffu);
         }
         cmd[0x18] = (cmd[0x18] & 0xffff0000u) | ((word15 >> 7) & 0xffffu);
+        /* #604 AVC CBR (vendor 1.3.1, Eufy T40XP 1080p CBR 1000/2000):
+         * bit 31 is set on every IDR and on the first P after it (as on
+         * the HEVC path), not only on the first two pictures. */
+        if (avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP,
+                          "OPENIMP_T40_HEVC_HWRC_QP"))
+            cmd[0x18] = (cmd[0x18] & 0x7fffffffu) |
+                        ((is_idr || n == 1u) ? 0x80000000u : 0u);
     }
 }
 #endif
