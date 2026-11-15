@@ -465,17 +465,24 @@ def main():
     # every protocol is kept: <alias>-<YYYY-MM-DD>[-<HHMM>].html; one card per camera alias (newest run),
     # the earlier runs of that camera in a "history" list below it
     reports = sorted(glob.glob("docs/lightbox/*-20??-??-??*.html"), reverse=True)
-    groups = {}
+    groups, aliases = {}, {}
     for p in reports:
         f = os.path.basename(p)
-        m = re.match(r"(.+?)-(20\d\d-\d\d-\d\d)(?:-(\d{4}))?\.html$", f)
+        # <alias>-<YYYY-MM-DD>[-<lamp CT>][-<HHMM>].html ; a 4-digit suffix is NOT a time by itself (-5000 is the lamp CT)
+        m = re.match(r"(.+?)-(20\d\d-\d\d-\d\d)((?:-\d{4})*)\.html$", f)
         if not m:
             continue
-        t = m.group(3)[:2] + ":" + m.group(3)[2:] if m.group(3) else ""
-        if not t:   # no -HHMM in the file name: the run time from the protocol's key-number file (user 2026-11-10: always a time)
-            j = load_json(p[:-5] + ".json")
-            t = str(j.get("time") or "") if j else ""
-        groups.setdefault(m.group(1), []).append((m.group(2) + (" " + t if t else ""), f))
+        j = load_json(p[:-5] + ".json")
+        t = str(j.get("time") or "") if j else ""      # the run time comes from the key-number file, never from the name
+        if not t:
+            mt = re.search(r"\s(\d\d:\d\d)\s*$", rows.get(f, ("", "", "", "", ""))[2])   # README row "date HH:MM"
+            t = mt.group(1) if mt else ""
+        if not t and len(m.group(3).split("-")) > 2:   # last resort: a second 4-digit suffix after the CT is a real -HHMM
+            h = m.group(3)[-4:]; t = h[:2] + ":" + h[2:]
+        key = (rows[f][0].lower() + "/" + rows[f][1].lower()) if f in rows else m.group(1)   # one card per camera, lamp variants merge
+        aliases.setdefault(key, set()).add(m.group(1))
+        groups.setdefault(key, []).append((m.group(2) + (" " + t if t else ""), f))
+    groups = {min(aliases[k], key=len): v for k, v in groups.items()}
     reps, socset, ncam = [], set(), 0
     for alias, runs in sorted(groups.items(), key=lambda kv: max(r[0] for r in kv[1]), reverse=True):
         runs.sort(reverse=True)
