@@ -4800,6 +4800,7 @@ static int avpu_t40_knob(int index, const char *name)
 #define AVPU_T40_KNOB_HWRC_TARGET 3   /* OPENIMP_T40_HWRC_TARGET */
 #define AVPU_T40_KNOB_FIXQP_LDA 4     /* OPENIMP_T40_FIXQP_LDA */
 #define AVPU_T40_KNOB_LDA131 6        /* OPENIMP_T40_LDA131 */
+#define AVPU_T40_KNOB_HEVC_HWRC_QP 7  /* OPENIMP_T40_HEVC_HWRC_QP */
 
 static uint32_t avpu_t40_cmd12_hi(uint32_t width)
 {
@@ -4901,6 +4902,22 @@ static void avpu_t40_native_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
         cmd[0x17] = (cmd[0x17] & 0xff00ffffu) |
                     ((is_idr ? cmd[0x17] & 0x3fu : ctx->t40_idr_qp & 0x3fu)
                      << 16);
+        /* #556 HEVC (vendor 1.3.1, Eufy T40XP CBR 1000 1080p, 150 pictures,
+         * IDR QPs 34..20): the window is the one of the channel attributes
+         * (15..48 -> 0x10/0x30), not SetChnQpBounds (the software RC keeps
+         * its picture QPs at >= 20), and bits 23:16 hold the first IDR's
+         * QP on every later picture. */
+        if (ctx->codec_hevc && ctx->t40_attr_max_qp &&
+            avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP,
+                          "OPENIMP_T40_HEVC_HWRC_QP")) {
+            uint32_t mx = ctx->t40_attr_max_qp & 0x3fu;
+            uint32_t mn = t40_vendor_hwrc_min_qp(ctx->t40_attr_min_qp, mx);
+            uint32_t first = ctx->t40_first_idr_qp ? ctx->t40_first_idr_qp
+                                                   : (cmd[0x17] & 0x3fu);
+
+            cmd[0x17] = ((mn & 0x3fu) << 24) | ((first & 0x3fu) << 16) |
+                        (mx << 8) | (cmd[0x17] & 0xffu);
+        }
         cmd[0x18] = (cmd[0x18] & 0xffff0000u) | ((word15 >> 7) & 0xffffu);
     }
 }
@@ -10835,6 +10852,10 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     enc->avpu.qp = enc->hw_params.qp;
     enc->avpu.min_qp = enc->hw_params.min_qp;
     enc->avpu.max_qp = enc->hw_params.max_qp;
+#if defined(AVPU_T40_NATIVE)
+    enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
+    enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
+#endif
     enc->avpu.qp_ip_delta = -1;
     enc->avpu.rc_mode = enc->hw_params.rc_mode;
 
@@ -13730,6 +13751,8 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #if defined(AVPU_T40_NATIVE)
             if (is_idr)
                 ctx->t40_idr_qp = ctx->t31_rate_control_qp_by_buf[buf_idx];
+            if (is_idr && !ctx->t40_first_idr_qp)
+                ctx->t40_first_idr_qp = ctx->t40_idr_qp ? ctx->t40_idr_qp : 1u;
 #endif
 #endif
             OpenIMPProfileStamp header_profile = openimp_profile_begin();
@@ -15023,6 +15046,10 @@ int AL_Codec_Encode_SetRcParam(void *codec, void *rcAttr)
     enc->avpu.qp = enc->hw_params.qp;
     enc->avpu.min_qp = enc->hw_params.min_qp;
     enc->avpu.max_qp = enc->hw_params.max_qp;
+#if defined(AVPU_T40_NATIVE)
+    enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
+    enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
+#endif
     codec_sync_rc_cache(enc);
     codec_set_error(enc, 0);
     return 0;

@@ -327,6 +327,13 @@ typedef struct ALAvpuContext {
     uint32_t t40_periodic_idr;
     /* Slice QP of the last IDR (HWRC cmd[0x17] bits 23:16). */
     uint32_t t40_idr_qp;
+    /* HEVC (#556): QP of the first IDR of the channel (cmd[0x17] bits
+     * 23:16, 0 = not yet) and the QP window of the channel attributes,
+     * which the vendor HWRC word keeps when SetChnQpBounds narrows the
+     * software RC. */
+    uint32_t t40_first_idr_qp;
+    uint32_t t40_attr_min_qp;
+    uint32_t t40_attr_max_qp;
     /* Picture SSE from the status image (+0x158 high, +0x15c low word, as
      * the OEM EncodingStatusRegsToSliceStatus 0x54bc4), for the capped
      * modes' PSNR cap; [buf][0] high, [buf][1] low. */
