@@ -34,28 +34,28 @@
    "note": ""
   },
   "T10": {
-   "proven": 1052,
-   "total": 1202,
-   "machine_lines": 4008,
-   "lines": 31815,
-   "pct_machine_lines": 12.6,
+   "proven": 1088,
+   "total": 1205,
+   "machine_lines": 2520,
+   "lines": 31882,
+   "pct_machine_lines": 7.9,
    "base_proven": 700,
    "base_pct_machine_lines": 45.2,
    "date": "2026-11-15",
    "issue": "539",
-   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18, Fable round 3 and the f4 struct-field batch (38 functions, vendor mutation fuzz) and the h1 round (last 12 machine-like FSM functions, identical objects) merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math, sensor-bus callbacks, crop/scaler FSM), host oracles + vendor vdiff/fuzz + T10 cam stream proof per batch"
+   "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18, Fable round 3 and the f4 struct-field batch (38 functions, vendor mutation fuzz) and the h1 round (last 12 machine-like FSM functions, identical objects) and the k1 round (38 more firmware functions on struct fields, identical objects) merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math, sensor-bus callbacks, crop/scaler FSM), host oracles + vendor vdiff/fuzz + T10 cam stream proof per batch"
   },
   "T20": {
-   "proven": 913,
-   "total": 1047,
-   "machine_lines": 4161,
-   "lines": 28863,
-   "pct_machine_lines": 14.4,
+   "proven": 947,
+   "total": 1048,
+   "machine_lines": 2673,
+   "lines": 28880,
+   "pct_machine_lines": 9.3,
    "base_proven": 695,
    "base_pct_machine_lines": 41.4,
    "date": "2026-11-15",
    "issue": "539",
-   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-18 + Fable round 3, f4 struct-field batch, h1 last 12 FSM functions: sensor-bus callbacks, crop/scaler FSM); inventory"
+   "note": "shares the recovered firmware unit with T10 (open-tx-isp batches 1-18 + Fable round 3, f4 struct-field batch, h1 last 12 FSM functions and k1 round (38 more firmware functions): sensor-bus callbacks, crop/scaler FSM); inventory"
   },
   "T21": {
    "proven": 143,
