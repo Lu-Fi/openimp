@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-15: status: T33 driver-port "wired" 204 of 308 proven (#99)
+
+- `docs/status/driver_port.json` T33 `wired` 154 -> 204 and the card / matrix row: open-tx-isp next 7586b1c42 (wiring groups 10b..13c; 13c: the DPC / CTR / CAC gain update runs the proven tisp_dpc_l_gain_update and the new vendor-form DPC / CTR / CAC parameter ports on dpcInfo). Counting basis (Lu-Fi audit/t33-port/wire/wired.py, g13c): a port also counts when a driver-called port runs it (the LCE / LSF blocks lceev / lcepf); base on that basis 200, the 13c code adds 4.
+
 ## 2026-11-15: T10/T20/T21/T23/T30/T31 audio: IMP_AI/AO_SetVol like the vendor (#592)
 
 - Shared `src/t31/openimp_t31_audio.c` now matches the vendor libimp of all six SoCs (T10/T20 3.12.0, T21 1.0.33, T23 1.3.0, T30 1.0.5, T31 1.1.6): SetVol outside -30..120 is clamped and returns 0 (was -1); `IMP_AI_EnableChn` / `IMP_AO_EnableChn` reset the volume to 60; `IMP_AO_SetVol` / `IMP_AO_GetVol` return -1 while the AO is disabled; samples are scaled as `trunc(sample * pow(10, (0.5 * vol - 30) / 20))` clipped to +-32767 (was a rounded fixed-point table clipping at -32768); AI GetVol reads 0 until the first EnableChn. Host tests `tests/t31/ai_lifecycle_test.c`, `ao_sendframe_test.c`; T10 camera read-back (API only, no sound) in the issue.

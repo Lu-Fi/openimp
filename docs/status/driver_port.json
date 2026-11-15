@@ -3,7 +3,7 @@
   "T33": {
    "proven": 308,
    "ported": 313,
-   "wired": 154,
+   "wired": 204,
    "unreachable": 62,
    "total": 409,
    "branch": "next",
