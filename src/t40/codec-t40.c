@@ -1649,8 +1649,9 @@ static size_t avpu_t40_init_ep3_ring(ALAvpuContext *ctx)
 #if defined(AVPU_T40_NATIVE)
     /* #556 HEVC CBR (vendor 1.3.1, Eufy T40XP 1080p CBR 1000, EP3 read at
      * the push): the IDR slot holds uMaxPictureSize * 1000 (2000 kbit ->
-     * row 0 0x2b7cd0 = 2000000 * 95 % * 150 %), the P slot 5/7 of it. */
-    if (ctx->codec_hevc && ctx->rc_mode != HW_RC_MODE_FIXQP &&
+     * row 0 0x2b7cd0 = 2000000 * 95 % * 150 %), the P slot 5/7 of it.
+     * #604: GetTargetSize has no codec test, H.264 CBR the same. */
+    if (ctx->rc_mode != HW_RC_MODE_FIXQP &&
         ctx->t40_max_picture_bits &&
         avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP, "OPENIMP_T40_HEVC_HWRC_QP"))
         bitrate = ctx->t40_max_picture_bits;
@@ -4917,8 +4918,9 @@ static void avpu_t40_native_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
          * IDR QPs 34..20): the window is the one of the channel attributes
          * (15..48 -> 0x10/0x30), not SetChnQpBounds (the software RC keeps
          * its picture QPs at >= 20), and bits 23:16 hold the first IDR's
-         * QP on every later picture. */
-        if (ctx->codec_hevc && ctx->t40_attr_max_qp &&
+         * QP on every later picture.  #604: SliceParamToCmdRegsEnc1 has
+         * no codec test, H.264 CBR the same. */
+        if (ctx->t40_attr_max_qp &&
             avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP,
                           "OPENIMP_T40_HEVC_HWRC_QP")) {
             uint32_t mx = ctx->t40_attr_max_qp & 0x3fu;
