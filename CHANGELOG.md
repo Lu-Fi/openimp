@@ -22,6 +22,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Host test `tests/t40` frame-rc: VBR start-up I40 P44 I43 P44 P44 P40 with options 1 (options 0: I40 P44 I20 P21), the VBR bit-rate rows still pass with options 1; make check rc 0.
 - Not device-checked yet: the Eufy capture (runner cmd604 with `CMD604_RC=vbr`, run-t40-1116-613a) was refused by the day/night guard on both stacks (camera outside the light box, dark scene). Vendor VBR QP trajectory capture is still open.
 
+## 2026-11-16: T33 wiring group 14b-2: status card shared_wired 12 (#99)
+
+- open-tx-isp next 059a151f8: the T33 DMSC init, refresh and par_refresh run the proven vendor-form ports (blocks i9B, refB, i9N); QEMU lists = vendor (known L15 / L5 / L21), not device-tested. Card: 12 of the 122 T32-namesake functions proven against the T33 binary run in the driver; T33-only bar unchanged (308/409, wired 208).
+
 ## 2026-11-16: T33 wiring group 14a-1: status card shared_wired 9 (#99)
 
 - open-tx-isp next 30953e79e: the T33 YDNS / SDNS / CDNS init, refresh and par_refresh run the vendor-form ports proven in port-loop rounds 8/9 (blocks i9A, refA, refB, parA, parB) on the vendor-layout block state; QEMU day / night / switch lists = vendor (known L15 / L5 / L21 only), not device-tested. Status card (driver_port.json `shared_wired`, matrix row): 9 of the 122 T32-namesake functions proven against the T33 binary now run in the driver; the T33-only bar (308/409, wired 208) is unchanged.
