@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-16: driver-port card: T10 vendor-proven 372 (extra vdiff scenarios, #539)
+
+- `docs/status/driver_port.json` (+ matrix): T10 vendor-proven 371 -> 372: open-tx-isp next d1fd55f2b adds the vdiff extra scenarios night / day-night / WDR / antiflicker / tuning API with the jxh42 calibration (apical_api_calibration, apical_sensor_calibration_update now replayed); orientation_hflip leaves the count (open finding #624). T20 unchanged (not re-run against the T20 vendor module).
+
 ## 2026-11-16: T40 plain VBR hands eRcOptions to the Allegro RC at CreateChn (#613; host only)
 
 - `src/t40/openimp_p2_encoder.c`: vendor 1.3.1 `channel_encoder_init` hands the RC attribute's `eRcOptions` (default 1) to the RC for every mode. OpenIMP did that for CBR (#610) and the capped modes (has_rc) only, so a plain VBR channel ran the Allegro core with options 0 (`opt_flag` set) until `IMP_Encoder_SetChnAttrRcMode`: the IDR after the start-up picture took the empty-GOP P average and fell to iMinQP. VBR now uses `AL_Codec_Encode_SetRcOptionsT40` like CBR; `OPENIMP_T40_VBR_RCOPT=0` restores the old value.
