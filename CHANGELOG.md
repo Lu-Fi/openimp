@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-16: T33 wiring group 14-2a: status card shared_wired 19 (#99)
+
+- open-tx-isp next e7a4c033f: the T33 DPC init runs the proven vendor-form tisp_dpc_init port (block i9G) on the vendor-layout dpcInfo; tisp_gsm_init / tisp_rcfg_init / tisp_gamma_init state checked equal to the proven ports (no change, not counted). QEMU lists = vendor (known L15 / L5 / L21), not device-tested. Card: 19 of the 185 proven T32-namesake functions wired (basis: functions whose proven port the driver calls).
+
 ## 2026-11-16: T33 wiring group 14-1: status card shared_wired 18 (#99)
 
 - open-tx-isp next 456663d94: the T33 RDNS and YSP init, refresh and par_refresh run the proven vendor-form ports (blocks i9B, refA, i9H, i9M); QEMU lists = vendor (known L15 / L5 / L21), not device-tested. Card: 18 of the 185 T32-namesake functions proven against the T33 binary run in the driver (counting basis: functions whose proven port the driver calls; wired.py shared rows 40 -> 44); T33-only bar unchanged (308/409, wired 208).
