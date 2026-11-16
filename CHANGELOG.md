@@ -8,6 +8,10 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-16: T33 port loop round 9: status card shared_proven 114, port-loop page 349 attempts (#99)
+
+- 26 more T32-namesake functions (the `tisp_*_init` group, `tisp_rdns_par_refresh`, `tisp_dpc_l_gain_update`, `tisp_bin_data_parse`, the `*_deinit` group) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks i9A..i9L; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 88 -> 114; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
+
 ## 2026-11-15: Light-box index times and grouping (#623)
 
 - `tools/gen_site_index.py`: run time from the key-number file (no more lamp CT read as HHMM), `-CT-HHMM` names are matched, one card per camera across lamp variants, newest run first.
