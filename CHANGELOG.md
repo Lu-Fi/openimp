@@ -18,6 +18,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Host test `tests/t40` frame-rc: VBR start-up I40 P44 I43 P44 P44 P40 with options 1 (options 0: I40 P44 I20 P21), the VBR bit-rate rows still pass with options 1; make check rc 0.
 - Not device-checked yet: the Eufy capture (runner cmd604 with `CMD604_RC=vbr`, run-t40-1116-613a) was refused by the day/night guard on both stacks (camera outside the light box, dark scene). Vendor VBR QP trajectory capture is still open.
 
+## 2026-11-16: T33 port loop round 10: status card shared_proven 122, port-loop page 354 attempts (#99)
+
+- 8 more T32-namesake functions (`tisp_awb_init`, `tisp_defog_init`, `tisp_ae_face_get/set`, `tisp_g/s_antiflick`, `tisp_ysp_par_refresh`, `tisp_dmsc_par_refresh`) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks i9F i9J i9M i9N; host only, ports and oracle blocks, no wiring). `tisp_mdns_par_refresh` stays unproven (all its callees are). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 114 -> 122; `docs/status/port_loop.json` + `docs/port-loop.html` +5 attempts.
+
 ## 2026-11-16: T33 port loop round 9: status card shared_proven 114, port-loop page 349 attempts (#99)
 
 - 26 more T32-namesake functions (the `tisp_*_init` group, `tisp_rdns_par_refresh`, `tisp_dpc_l_gain_update`, `tisp_bin_data_parse`, the `*_deinit` group) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks i9A..i9L; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 88 -> 114; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
