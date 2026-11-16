@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-16: Start page: one card per camera when the README camera name changed between runs (T10 'Secuplug SP1 T10L' vs 'Secuplug SP1')
+
+- `tools/gen_site_index.py` groups light-box runs by a normalised camera key (trailing `(variant)` note dropped, renamed names mapped); the T10 camera is one card with all runs as history.
+
 ## 2026-11-16: T33 wiring group 15: status card wired 209, shared_wired 49 (#99, #639)
 
 - open-tx-isp next 42ee3fbab (15-1, 15-2, 15-3): tisp_awb_init and tisp_defog_init run the proven i9F port (with the awbQ params_refresh / r11B show_para_update callees), the T33 MSCA buffer push runs tisp_msca_t33_addr_fifo_write (msca-api6). QEMU: day / night / switch and ISP close / open = base = vendor (known L15 / L5 / L21). Counting basis unchanged (driver calls the proven port): T33-only wired 208 -> 209 (audit wired.py reports 210, lib_tisp_msca_addr_fifo_write is a name hit), shared_wired 45 -> 49 (wired.py 71 -> 78 incl. 3 awbQ rows counted by the block rule only). New #639: MSCA done-FIFO pop order / mask vs the vendor (device check).

@@ -22,6 +22,16 @@ def esc(s):
     return html.escape(str(s), quote=True)
 
 
+# camera display names that were renamed between runs: old/variant name -> canonical name (lower case, as cam_key() sees it)
+CAM_ALIASES = {"secuplug sp1 t10l, jxh42": "secuplug sp1, jxh42"}
+
+
+def cam_key(soc, cam):
+    """stable card key of a README camera cell: SoC + name without a trailing '(variant note)' and without renamed-model aliases"""
+    c = re.sub(r"\s*\([^)]*\)\s*$", "", cam).strip().lower()
+    return soc.lower() + "/" + CAM_ALIASES.get(c, c)
+
+
 def readme_rows():
     """file name -> (soc, camera, date, lamps, result text) from the docs/lightbox/README.md table"""
     rows = {}
@@ -479,7 +489,7 @@ def main():
             t = mt.group(1) if mt else ""
         if not t and len(m.group(3).split("-")) > 2:   # last resort: a second 4-digit suffix after the CT is a real -HHMM
             h = m.group(3)[-4:]; t = h[:2] + ":" + h[2:]
-        key = (rows[f][0].lower() + "/" + rows[f][1].lower()) if f in rows else m.group(1)   # one card per camera, lamp variants merge
+        key = cam_key(rows[f][0], rows[f][1]) if f in rows else m.group(1)   # one card per camera, lamp variants merge
         aliases.setdefault(key, set()).add(m.group(1))
         groups.setdefault(key, []).append((m.group(2) + (" " + t if t else ""), f))
     groups = {min(aliases[k], key=len): v for k, v in groups.items()}
