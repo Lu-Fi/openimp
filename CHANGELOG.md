@@ -20,6 +20,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - New report `docs/lightbox/secuplug-t10-jxh42-kajplats-2026-11-16-3000.html` (83 pass / 5 fail, 2 rows invalid by the runner guards; open-tx-isp d1fd55f2 + OpenIMP libimp dcf64976), both stacks, runtime only, charts/numbers only, no pictures.
 
+## 2026-11-16: T33 port loop round 12: status card shared_proven 240, port-loop page 375 attempts (#99)
+
+- 55 more T32-namesake functions (tuning node / ioctl entries, AE antiflick + face-AE API, `system_reg_*`, sensor gain helpers, `lib_tisp_*` memory space / msca chx / vic start-stop-reset / intp helpers, frame-done wakeup, irq work, frame-drop check) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks r12A..r12I; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` shared_proven 185 -> 240, port-loop page and matrix regenerated.
+
 ## 2026-11-16: T33 port loop round 11: status card shared_proven 185, port-loop page 365 attempts (#99)
 
 - 63 more T32-namesake functions (AWB long_par_update / spec_calculate / setters / getters, AE stat getters, AF + LCE malloc / gauss, ccm attr, scaler level, autozoom, frame drop, module control, top ipc mem, msca state / fifo clear, `lib_tisp_refresh_para`, intp enable/disable, `tisp_event_*`, the remaining block deinits) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks r11A..r11H; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 122 -> 185; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
