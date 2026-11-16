@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-15",
+  "asof": "2026-11-16",
   "socs": [
     "T10",
     "T20",
@@ -1745,7 +1745,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "rt",
         "T40": "dev",
         "T41": "dev"
       },
@@ -1812,7 +1812,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest T30X lab 2026-11-03 .231",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko c15ed736, T33L .N): 50 / 60 / off read-back ok, /proc shows the selection; no picture effect expected"
       }
     },
     "ISP_Tuning_Get/SetBacklightComp": {
@@ -1857,7 +1857,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1900,7 +1900,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest rc3-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2, T33L .N): read-back = set, hue 200 visible (U +5.8 -> +51, V +53 -> -17), restore within 2 %"
       }
     },
     "ISP_Tuning_Get/SetCCMAttr": {
@@ -1913,7 +1913,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "rt"
       },
@@ -1934,7 +1934,7 @@
         "T23": "apitest apitest-cov 2026-10-27 .30",
         "T31": "apitest apitest-cov 2026-10-27 .26",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2 / c15ed736, T33L .N): manual matrix stays applied (#635), picture R/G 4.9 -> 2.2; restore within 1-3 % when set after AE convergence (#636 = test-start artefact)"
       }
     },
     "ISP_Tuning_Get/SetColorfxMode": {
@@ -1986,7 +1986,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2052,7 +2052,8 @@
         "T21": "apitest rc3-cases 2026-10-26 .24",
         "T30": "apitest t30b26 2026-11-05 .231",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2, T33L .N): read-back = set, contrast changes the picture (Y 70 -> 3, flat), restore within 2 %"
       }
     },
     "ISP_Tuning_Get/SetCsc_Attr": {
@@ -2295,7 +2296,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2322,7 +2323,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "QEMU run 2026-11-15 (#608): read-backs and list 11 sequence = vendor 2.0.2.1 ko"
+        "T33": "DEVCHECK 2026-11-15 (#608, ko b637d477, T33L .N): own S-curve read back exactly, picture Y 75 -> 23; restore with the original curve = list 11 identical to before"
       }
     },
     "ISP_Tuning_Get/SetHLDCAttr": {
@@ -2354,7 +2355,7 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2385,7 +2386,7 @@
         "T23": "apitest agg47 stock 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "QEMU runs 2026-11-15 (#575, #577): list 23 and read-backs = vendor 2.0.2.1 ko"
+        "T33": "DEVCHECK 2026-11-15 (#577, ko b637d477, T33L .N): SetHVFLIP 0..3 mirrors the picture, getters = set, ISP close/open resets to the pristine state (list 23 0 diffs) = vendor reset"
       }
     },
     "ISP_Tuning_Get/SetHiLightDepress": {
@@ -2454,7 +2455,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2463,7 +2464,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko c15ed736, T33L .N): set/read-back = the QEMU vendor hashes, mode 2 = default picture; restore drifts like a no-CSC control run (#649 closed)"
       }
     },
     "ISP_Tuning_Get/SetISPCustomMode": {
@@ -2943,7 +2944,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3009,7 +3010,8 @@
         "T41": "apitest agg47 2026-10-26 .34",
         "T30": "T30X lab b71/b75 2026-11-13 (apitest picture, vendor 1.0.5 and OpenIMP on the same camera, 0 oopses)",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2, T33L .N): read-back = set, saturation 220 visible (sat 55.8 -> 83.9), restore within 2 %"
       }
     },
     "ISP_Tuning_Get/SetSensorHflip": {
@@ -3237,7 +3239,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3247,7 +3249,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko ec725ae9, T33L .N): channel 0 visibly zoomed on the centre quarter, restored; Get/Set/Get = the QEMU vendor sums"
       }
     },
     "ISP_Tuning_GetBlcAttr": {
@@ -3287,7 +3289,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3342,7 +3344,8 @@
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest agg47 2026-10-26 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2, T33L .N): read-back = set, picture Y 69 -> 177, restore within 2 %"
       }
     },
     "ISP_Tuning_GetEVAttr": {
@@ -3457,7 +3460,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "rt"
       },
@@ -3466,7 +3469,7 @@
         "T41": "apitest t41pass 2026-11-04 .34 .32 (API round trip, no visible effect expected)",
         "T23": "apitest t23pass 2026-11-04 .30",
         "T32": "QEMU #336 2026-11-11",
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "DEVCHECK 2026-11-15 (#577, T33L .N): mask visible in the picture, getters = set, reset on ISP close/open"
       }
     },
     "ISP_Tuning_GetRawDRC": {
@@ -3823,7 +3826,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "rt",
         "T41": "rt"
       },
@@ -3854,7 +3857,7 @@
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33-qemu 2026-11-13 QEMU (no camera)"
+        "T33": "DEVCHECK 2026-11-16 (ko ec725ae9, T33L .N): channel 0 visibly zoomed on the centre quarter, restored; Get/Set/Get = the QEMU vendor sums"
       }
     },
     "ISP_Tuning_SetBrightness": {
@@ -3867,7 +3870,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3936,7 +3939,8 @@
         "T41": "apitest agg47 2026-10-26 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "DEVCHECK 2026-11-16 (ko b2dcc6a2, T33L .N): read-back = set, picture Y 69 -> 177, restore within 2 %"
       }
     },
     "ISP_Tuning_SetDPStrength": {
@@ -4110,7 +4114,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -4130,7 +4134,7 @@
         "T41": "apitest agg47 2026-10-26 .34",
         "T23": "apitest t23pass 2026-11-04 .30",
         "T32": "QEMU #336 2026-11-11",
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "DEVCHECK 2026-11-15 (#577, T33L .N): mask visible in the picture, getters = set, reset on ISP close/open"
       }
     },
     "ISP_Tuning_SetMeshShadingScale": {
@@ -5756,7 +5760,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "rt",
         "T41": "dev"
       },
@@ -5764,7 +5768,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "QEMU run 2026-11-13: FAIL = metering effect in the picture, QEMU renders none (not judgeable; vendor libimp same); read-back ok"
+        "T33": "DEVCHECK 2026-11-16 (ko c15ed736, T33L .N): ROI set/read-back = QEMU vendor, exposure ramp slower while on, baseline again after off"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },

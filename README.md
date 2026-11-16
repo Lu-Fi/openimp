@@ -47,22 +47,22 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-15, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-16, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
-| T10 | 331 | 326 (98.5 %) | 3 | 0 | 2 | RC3 gate |
-| T20 | 331 | 326 (98.5 %) | 3 | 0 | 2 | RC3 gate |
-| T21 | 335 | 330 (98.5 %) | 3 | 0 | 2 | RC3 gate |
-| T23 | 459 | 454 (98.9 %) | 3 | 0 | 2 | RC3 gate |
+| T10 | 331 | 328 (99.1 %) | 3 | 0 | 0 | RC3 gate |
+| T20 | 331 | 328 (99.1 %) | 3 | 0 | 0 | RC3 gate |
+| T21 | 335 | 332 (99.1 %) | 3 | 0 | 0 | RC3 gate |
+| T23 | 459 | 456 (99.3 %) | 3 | 0 | 0 | RC3 gate |
 | T30 | 352 | 350 (99.4 %) | 2 | 0 | 0 | RC3 gate |
 | T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
-| T32 | 610 | 4 | 537 | 67 | 2 | in development |
-| T33 | 571 | 8 | 413 | 75 | 75 | in development |
+| T32 | 610 | 4 | 542 | 62 | 2 | in development |
+| T33 | 571 | 32 | 406 | 70 | 63 | in development |
 
-T32 and T33 are in development (not a release gate, no camera yet): the "implemented" cells are checked in QEMU against the vendor libraries, the few "works" cells are vendor no-ops, nothing is device-tested yet.
+T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 32 "works" cells are device-tested (tuning calls with picture effect, device checks 2026-11-15 / 2026-11-16) or vendor no-ops.
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 
