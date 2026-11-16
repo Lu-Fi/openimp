@@ -7404,8 +7404,11 @@ int IMP_Encoder_SetChnRcTrigLevel(int channel, float level, int mode)
  * T21 1.0.33 IMP_Encoder_Enable/DisableAllNCUDenoise (0x4c6a0): the NCU
  * denoise exists for CPU ids 3..5 only; on a T21 both log and return -1.
  * T20 / T10 3.12.0 (0x4e000 / 0x4e1cc) do have it, and return -1 as well
- * unless get_ncu_params() (0x55638) holds the NCU parameter set (read from
- * the ISP tuning bin, interpolated per gain by refresh_ncu_params).  With it
+ * unless get_ncu_params() (0x55638) holds the NCU parameter set (loaded by
+ * init_ncu_params() from IMP_ISP_AddSensor out of /etc/sensor/<sensor>_nd.bin,
+ * not from the tuning bin; interpolated per gain by refresh_ncu_params).  No
+ * T10/T20 camera image ships such a file, so the vendor returns -1 there too
+ * (vendor no-op, matched; issue #629).  With it
  * Enable sets bit 0x400 of the NCU register 0x13380040 (/dev/mem, regrw),
  * sleeps 200 ms and, per created H.264 channel, clears its two denoise
  * buffers and sets +2004; do_channel_process_h264e (0x412fc) then loads the
