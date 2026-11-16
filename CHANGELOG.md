@@ -16,6 +16,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-16: T33 port loop round 9: status card shared_proven 114, port-loop page 349 attempts (#99)
 
 - 26 more T32-namesake functions (the `tisp_*_init` group, `tisp_rdns_par_refresh`, `tisp_dpc_l_gain_update`, `tisp_bin_data_parse`, the `*_deinit` group) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks i9A..i9L; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 88 -> 114; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
+## 2026-11-16: readable-C card shows the vendor proof next to "readable" (#539)
+
+- `tools/driver_port.py`, `tools/status_driver_port.py`, `docs/status/driver_port.json`: the readable-C table now has a second number per SoC. T10: readable 1088/1205 (90.3 %) · vendor-proven 371/1205 (30.8 %) · SDK source 267 (+142 patched) · unreachable 7. T20: readable 947/1048 (90.4 %) · vendor-proven 369/1048 (35.2 %) · SDK source 246 (+151 patched) · unreachable 7. Vendor-proven = firmware function replayed against the vendor tx-isp-t10.ko / tx-isp-t20.ko in an emulator (default, DIS-on and general-FSM scenarios plus helper fuzz) with 0 differences on open-tx-isp next 245f39d86, no open finding; mutation fuzz is not counted (only run on 37 functions). SDK source = body identical to the published Ingenic SDK C (not compared), unreachable = no vendor entry reaches it. Other SoCs: "vendor-proven: not measured". The note under the table says what is counted.
 
 ## 2026-11-15: Light-box index times and grouping (#623)
 

@@ -10,7 +10,9 @@ T33 has no recovered driver: its row counts the T33-only functions of the vendor
            (functions that pass the binary oracle: the vendor instructions in Unicorn against our C)
 Readable-C (de-lift) metric per SoC: --readable DIR reads DIR/<soc>/summary.json (+ summary_base.json = before the de-lift),
 written by Lu-Fi tools/delift_inventory.py (rules: DIR/t10/README.md); proven = functions that are real C and proven
-(vendor SDK / own code, or a de-lift oracle), total = every C function compiled into the module.  --readable-only updates
+(vendor SDK / own code, or a de-lift oracle), total = every C function compiled into the module.
+Optional DIR/<soc>/vendor_proof.json adds the vendor-proven count (functions replayed against the vendor binary with 0 unexplained
+diffs), the Ingenic SDK source count and the unreachable count; the card shows them next to the readable number.  --readable-only updates
 only that section (T32/T33 rows untouched).
 Usage: python3 tools/status_driver_port.py [--repo /path/to/open-tx-isp] [--recovered REF] [--oracle REF] [--t33-oracle REF]
        [--t33-total N] [--t33-ported N] [--t33-wired N] [--t33-proven N] [--t33-unreachable N] [--print]
@@ -36,6 +38,7 @@ def readable(d, top):
     if not top or not os.path.isdir(top):
         return
     r = d.setdefault("readable", {})
+    old = json.loads(json.dumps(r))
     for soc in sorted(os.listdir(top)):
         f = os.path.join(top, soc, "summary.json")
         if not os.path.isfile(f):
@@ -48,6 +51,13 @@ def readable(d, top):
                           "pct_machine_lines": cur["pct_machine_lines"],
                           "base_proven": base["proven_readable"], "base_pct_machine_lines": base["pct_machine_lines"],
                           "date": cur.get("date", ""), "issue": cur.get("issue", ""), "note": cur.get("note", "")}
+        for k in ("date", "issue", "note"):      # hand-written round info stays when the inventory summary carries none
+            if not r[soc.upper()][k] and old.get(soc.upper(), {}).get(k):
+                r[soc.upper()][k] = old[soc.upper()][k]
+        vf = os.path.join(top, soc, "vendor_proof.json")   # written by Lu-Fi audit/delift/vp/proof.py (vdiff logs + inventory)
+        if os.path.isfile(vf):
+            v = json.load(open(vf, encoding="utf-8"))
+            r[soc.upper()].update({k: v[k] for k in ("vendor_proven", "sdk_source", "sdk_patched", "unreachable", "vendor_basis") if k in v})
 
 
 def main():

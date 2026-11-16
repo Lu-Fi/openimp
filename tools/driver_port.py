@@ -53,7 +53,22 @@ RTITLE = "Readable C (driver de-lift, open-tx-isp)"
 RINTRO = ("Per SoC: C functions compiled into the open module that are real, readable C and proven (Ingenic SDK source, our own "
           "code, or a recovered function rewritten and proven bit-exact by a de-lift oracle), out of all C functions of the module. "
           "Machine-like = recovered code that still has register-variable names, raw *(T *)(p + 0x..) accesses, goto chains or "
-          "magic offsets. 'before' = the module when the de-lift of that SoC started.")
+          "magic offsets. 'before' = the module when the de-lift of that SoC started. "
+          "'Readable' only says the C is readable and checked by a de-lift oracle or is SDK/own source; it is not a statement about the vendor. "
+          "'Vendor-proven' counts the functions whose behaviour was replayed against the vendor binary in an emulator (Unicorn: recorded scenario calls, "
+          "DIS-on and general-FSM scenarios, argument fuzz, mutation fuzz) with 0 unexplained differences; a difference that is a documented "
+          "beyond-vendor decision (vendor traps) counts as proven. Functions with an open finding are not counted. "
+          "'SDK source' = functions whose body is the published Ingenic SDK C (not lifted, not compared: the SDK is the vendor's own source; "
+          "'patched' = SDK function changed by us). 'Unreachable' = no vendor entry point reaches the function, nothing to compare. "
+          "Counts are over all C functions of the module; the percentages are not rounded up. A dash = vendor proof not measured for that SoC yet.")
+
+
+def vtxt(r):
+    """one-line vendor proof summary (text)"""
+    if r.get("vendor_proven") is None:
+        return "vendor-proven: not measured"
+    return "vendor-proven %d/%d (%.1f %%) · SDK source %d (+%d patched) · unreachable %d" % (
+        r["vendor_proven"], r["total"], 100.0 * r["vendor_proven"] / r["total"], r.get("sdk_source", 0), r.get("sdk_patched", 0), r.get("unreachable", 0))
 
 
 def rrows():
@@ -65,6 +80,8 @@ def rnote(r):
     t = r.get("note") or "inventory only"
     if r.get("issue"):
         t += " (openimp #%s)" % r["issue"]
+    if r.get("vendor_basis"):
+        t += "; vendor proof: " + r["vendor_basis"]
     return t + ("; as of %s" % r["date"] if r.get("date") else "")
 
 
@@ -72,10 +89,10 @@ def md_readable():
     rs = rrows()
     if not rs:
         return []
-    o = ["### " + RTITLE, "", RINTRO, "", "| SoC | readable / all functions | progress | machine-like lines | note |", "|---|--:|---|--:|---|"]
+    o = ["### " + RTITLE, "", RINTRO, "", "| SoC | readable / all functions | vendor proof | progress | machine-like lines | note |", "|---|--:|---|---|--:|---|"]
     for r in rs:
-        o.append("| %s | %d/%d (%.1f %%; before %d) | `%s` | %.1f %% (before %.1f %%) | %s |" % (
-            r["soc"], r["proven"], r["total"], 100.0 * r["proven"] / r["total"], r["base_proven"], bar(r["proven"], r["total"]),
+        o.append("| %s | %d/%d (%.1f %%; before %d) | %s | `%s` | %.1f %% (before %.1f %%) | %s |" % (
+            r["soc"], r["proven"], r["total"], 100.0 * r["proven"] / r["total"], r["base_proven"], vtxt(r), bar(r["proven"], r["total"]),
             r["pct_machine_lines"], r["base_pct_machine_lines"], rnote(r)))
     o.append("")
     return o
@@ -87,12 +104,12 @@ def html_readable():
         pct = 100.0 * r["proven"] / r["total"]
         tr.append("<tr><td>%s</td><td class='c'>%d/%d <span class='small'>(%.1f %%, before %d)</span></td>"
                   "<td><div class=\"pb\"><i class=\"b-dev\" style=\"width:%.2f%%\"></i><i class=\"b-gap\" style=\"width:%.2f%%\"></i></div></td>"
-                  "<td class='c'>%.1f %% <span class='small'>(before %.1f %%)</span></td><td class='small'>%s</td></tr>" % (
-                      html.escape(r["soc"]), r["proven"], r["total"], pct, r["base_proven"], pct, 100 - pct,
+                  "<td class='c small'>%s</td><td class='c'>%.1f %% <span class='small'>(before %.1f %%)</span></td><td class='small'>%s</td></tr>" % (
+                      html.escape(r["soc"]), r["proven"], r["total"], pct, r["base_proven"], pct, 100 - pct, html.escape(vtxt(r)),
                       r["pct_machine_lines"], r["base_pct_machine_lines"], html.escape(rnote(r))))
     if not tr:
         return ""
-    return ('<h3>%s</h3><p class="small">%s</p><table class="mi"><thead><tr><th>SoC</th><th>readable / all functions</th><th>progress</th>'
+    return ('<h3>%s</h3><p class="small">%s</p><table class="mi"><thead><tr><th>SoC</th><th>readable / all functions</th><th>progress</th><th>vendor proof</th>'
             '<th>machine-like lines</th><th>note</th></tr></thead><tbody>%s</tbody></table>' % (html.escape(RTITLE), html.escape(RINTRO), "".join(tr)))
 
 
