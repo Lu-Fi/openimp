@@ -1522,6 +1522,14 @@ static int p2_t40_cbr_rcopt_enabled(void)
 
     return !v || strcmp(v, "0") != 0;
 }
+
+/* #613: OPENIMP_T40_VBR_RCOPT=0 restores eRcOptions 0 for a plain VBR channel */
+static int p2_t40_vbr_rcopt_enabled(void)
+{
+    const char *v = getenv("OPENIMP_T40_VBR_RCOPT");
+
+    return !v || strcmp(v, "0") != 0;
+}
 #endif
 extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
@@ -2878,6 +2886,12 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         p2_t40_cbr_rcopt_enabled())
         AL_Codec_Encode_SetRcOptionsT40(
             ch->codec, (uint32_t)attr->rcAttr.attrRcMode.attrCbr.eRcOptions);
+    /* #613: plain VBR the same (vendor channel_encoder_init hands eRcOptions
+     * for every mode; the capped modes get it through has_rc below) */
+    else if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_VBR &&
+             p2_t40_vbr_rcopt_enabled())
+        AL_Codec_Encode_SetRcOptionsT40(
+            ch->codec, (uint32_t)attr->rcAttr.attrRcMode.attrVbr.eRcOptions);
 #endif
     if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
         AL_Codec_Encode_SetQpIPDelta(

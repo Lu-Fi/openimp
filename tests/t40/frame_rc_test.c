@@ -47,7 +47,7 @@ static void fill_param(T31AlRcParam *p, T31AlGopParam *g, int cbr,
     p->max_qp = 45;
     p->ip_delta = -1;
     p->pb_delta = -1;
-    p->options = cbr ? 1u : 0u;   /* #610: CBR eRcOptions 1 from CreateChn */
+    p->options = 1u;   /* #610 CBR, #613 VBR: eRcOptions 1 from CreateChn */
     p->num_pixels = w * h;
     p->max_psnr_x100 = 4200u;
     p->max_pel = 255u;
@@ -206,14 +206,14 @@ static int capped_tests(void)
  * Vendor 1.3.1 capture: I40 P44 I43 P44 P44 P40 ... (descends over ~30
  * pictures).  With eRcOptions 0 (OpenIMP before #610) the core took the
  * picture-2 IDR QP from the empty-GOP P average and fell to iMinQP 20. */
-static int startup_qp(uint32_t options, int *qp_out, int n)
+static int startup_qp(int cbr, uint32_t options, int *qp_out, int n)
 {
     T31AlRcParam p;
     T31AlGopParam g;
     static T31AlRc rc;
     int k;
 
-    fill_param(&p, &g, 1, 1000000u, 1920u, 1080u, 20u);
+    fill_param(&p, &g, cbr, 1000000u, 1920u, 1080u, 20u);
     p.options = options;
     p.initial_qp = 40;
     p.min_qp = 20;
@@ -247,17 +247,29 @@ static int startup_qp(uint32_t options, int *qp_out, int n)
 
 static int startup_tests(void)
 {
-    int v[6], o[6];
+    int v[6], o[6], vb[6], ob[6];
 
-    if (startup_qp(1u, v, 6) != 0 || startup_qp(0u, o, 6) != 0)
+    if (startup_qp(1, 1u, v, 6) != 0 || startup_qp(1, 0u, o, 6) != 0 ||
+        startup_qp(0, 1u, vb, 6) != 0 || startup_qp(0, 0u, ob, 6) != 0)
         return 1;
     printf("startup eRcOptions 1: I%d P%d I%d P%d P%d P%d (vendor I40 P44 I43 P44 P44 P40)\n",
            v[0], v[1], v[2], v[3], v[4], v[5]);
     printf("startup eRcOptions 0: I%d P%d I%d P%d P%d P%d\n",
            o[0], o[1], o[2], o[3], o[4], o[5]);
+    /* #613: plain VBR with the CreateChn eRcOptions 1 keeps the picture-2 IDR
+     * QP near the start-up QP like CBR; options 0 (OpenIMP before #613) drop it
+     * to iMinQP.  No vendor VBR capture yet: only the options-1 shape is checked. */
+    printf("startup VBR eRcOptions 1: I%d P%d I%d P%d P%d P%d\n",
+           vb[0], vb[1], vb[2], vb[3], vb[4], vb[5]);
+    printf("startup VBR eRcOptions 0: I%d P%d I%d P%d P%d P%d\n",
+           ob[0], ob[1], ob[2], ob[3], ob[4], ob[5]);
     if (v[0] != 40 || v[1] != 44 || v[2] != 43 || v[3] != 44 || v[4] != 44 ||
         v[5] != 40) {
         fprintf(stderr, "startup: CBR trajectory differs from vendor 1.3.1\n");
+        return 1;
+    }
+    if (vb[2] < 40) {
+        fprintf(stderr, "startup: VBR picture-2 IDR QP %d fell towards iMinQP (eRcOptions not 1?)\n", vb[2]);
         return 1;
     }
     return 0;
