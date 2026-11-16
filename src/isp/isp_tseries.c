@@ -1794,6 +1794,8 @@ static __attribute__((unused)) int tseries_table_tuning_ratio(uint32_t table, ui
 
 #endif /* PLATFORM_T21 || PLATFORM_T30: table ratio */
 
+#include "isp_t20_ccm_option.h"
+
 #if defined(PLATFORM_T21)
 /*
  * T21 1.0.33 / T20 3.12.0 SetISPRunningMode: after 0x80000e1 succeeds the
@@ -2087,6 +2089,9 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
         if (mode != tseries_running_mode) {
             tseries_table_baseline_reset();
         }
+#endif
+#if defined(PLATFORM_T20)
+        tseries_t20_ccm_apply("SetISPRunningMode");  /* #102 option: retry if not written yet */
 #endif
 #if defined(PLATFORM_T30)
         /* the driver may load the other day/night table: drop the strength baseline */
@@ -6123,6 +6128,10 @@ int IMP_ISP_EnableTuning(void)
                     "IMP_ISP_EnableTuning", "IMP_ISP_Tuning_SetTemperDnsAttr failed\n");
         }
     }
+#endif
+#if defined(PLATFORM_T20)
+    tseries_t20_ccm_done = 0;                   /* #102 option (OPENIMP_CCM_FILE, off by default) */
+    tseries_t20_ccm_apply("EnableTuning");
 #endif
     if (tseries_start_tuning_worker() != 0)
         kmsg_trace("libimp/ISP: failed to start gain/contrast tuning worker\n");
