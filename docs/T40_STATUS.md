@@ -275,6 +275,9 @@ checked by `tests/t40/vendor_cmd_test.c`:
   CBR (#610): CreateChn hands eRcOptions to the Allegro core (it stayed 0, so
   the core ran with opt_flag set and the IDR after the start-up picture fell to
   iMinQP: QP 20 where the vendor uses 43). `OPENIMP_T40_CBR_RCOPT=0` restores it.
+  Plain VBR (#613): the same hand-over at CreateChn (it also stayed 0; the
+  capped modes already had it). `OPENIMP_T40_VBR_RCOPT=0` restores it. Host
+  test only so far; the vendor VBR capture on the Eufy is open.
 
 `OPENIMP_T40_{FIXQP_NOHWRC,FIXQP_LDA,CMD12,POC,HWRC_TARGET}=0` restore the old
 words one by one for comparisons.

@@ -8,6 +8,11 @@
 
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
+## 2026-11-16: T40 plain VBR hands eRcOptions to the Allegro RC at CreateChn (#613; host only)
+
+- `src/t40/openimp_p2_encoder.c`: vendor 1.3.1 `channel_encoder_init` hands the RC attribute's `eRcOptions` (default 1) to the RC for every mode. OpenIMP did that for CBR (#610) and the capped modes (has_rc) only, so a plain VBR channel ran the Allegro core with options 0 (`opt_flag` set) until `IMP_Encoder_SetChnAttrRcMode`: the IDR after the start-up picture took the empty-GOP P average and fell to iMinQP. VBR now uses `AL_Codec_Encode_SetRcOptionsT40` like CBR; `OPENIMP_T40_VBR_RCOPT=0` restores the old value.
+- Host test `tests/t40` frame-rc: VBR start-up I40 P44 I43 P44 P44 P40 with options 1 (options 0: I40 P44 I20 P21), the VBR bit-rate rows still pass with options 1; make check rc 0.
+- Not device-checked yet: the Eufy capture (runner cmd604 with `CMD604_RC=vbr`, run-t40-1116-613a) was refused by the day/night guard on both stacks (camera outside the light box, dark scene). Vendor VBR QP trajectory capture is still open.
 ## 2026-11-16: T33 port loop round 9: status card shared_proven 114, port-loop page 349 attempts (#99)
 
 - 26 more T32-namesake functions (the `tisp_*_init` group, `tisp_rdns_par_refresh`, `tisp_dpc_l_gain_update`, `tisp_bin_data_parse`, the `*_deinit` group) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks i9A..i9L; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 88 -> 114; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
