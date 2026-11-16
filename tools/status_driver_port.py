@@ -60,6 +60,24 @@ def readable(d, top):
             r[soc.upper()].update({k: v[k] for k in ("vendor_proven", "sdk_source", "sdk_patched", "unreachable", "vendor_basis") if k in v})
 
 
+def real_elsewhere(a, sfx):
+    """names a block proves with a real body (FUNCS not in that block's STUBS, or PROVES), so a STUBS entry of another block does not drop them"""
+    r = set()
+    for p in git(a.repo, "ls-tree", "-r", "--name-only", a.t33_oracle, "tests/t33_binoracle").split("\n"):
+        if p.endswith(".conf"):
+            c = git(a.repo, "show", "%s:%s" % (a.t33_oracle, p))
+            m = re.search(r"^STUBS=(['\"])(.*?)\1", c, re.S | re.M)
+            st = {sfx.sub("", x) for x in (m.group(2) if m else "").split()}
+            m = re.search(r"^FUNCS=(['\"])(.*?)\1", c, re.S | re.M)
+            for ln in (m.group(2) if m else "").splitlines():
+                w = ln.split()
+                if w and not w[0].startswith("#") and w[0] not in ("VEC", "GLOBAL", "CALLS", "NOP") and sfx.sub("", w[0]) not in st:
+                    r.add(sfx.sub("", w[0]))
+            m = re.search(r"^PROVES=(['\"])(.*?)\1", c, re.S | re.M)
+            r |= {sfx.sub("", x) for x in (m.group(2) if m else "").split()}
+    return r
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.environ.get("OPEN_TX_ISP", "../open-tx-isp"))
@@ -68,6 +86,8 @@ def main():
     ap.add_argument("--t33-oracle", default="origin/next")
     ap.add_argument("--t33-total", type=int, default=None)
     ap.add_argument("--t33-ported", type=int, default=None)
+    ap.add_argument("--t33-inventory", default=os.environ.get("T33_INVENTORY"),
+                    help="Lu-Fi audit/t33-port/INVENTORY.tsv: split the real-body names into T33-only (proven) and T32-namesake (shared_proven)")
     ap.add_argument("--t33-wired", type=int, default=None)
     ap.add_argument("--t33-proven", type=int, default=None, help="override the proven count (inventory basis incl. oracle callees)")
     ap.add_argument("--t33-unreachable", type=int, default=None, help="T33-only vendor functions no vendor entry reaches (Lu-Fi audit/t33-port/reach/REACH_T33.tsv)")
@@ -91,17 +111,23 @@ def main():
     day = git(a.repo, "log", "-1", "--format=%cs", a.oracle).strip()
     d = json.load(open(OUT, encoding="utf-8")) if os.path.exists(OUT) else {"socs": {}}
     d["asof"] = day
-    t33 = set()
+    t33 = set(); stubs = set()
+    sfx = re.compile(r"(\.(part|constprop|isra|cold|clone)\.\d+)+$")
     for p in git(a.repo, "ls-tree", "-r", "--name-only", a.t33_oracle, "tests/t33_binoracle").split("\n"):
         if p.endswith(".conf"):
             c = git(a.repo, "show", "%s:%s" % (a.t33_oracle, p))
-            m = re.search(r"^FUNCS='(.*?)'", c, re.S | re.M)
-            for ln in (m.group(1) if m else "").splitlines():
+            m = re.search(r"^FUNCS=(['\"])(.*?)\1", c, re.S | re.M)
+            for ln in (m.group(2) if m else "").splitlines():
                 w = ln.split()
-                if w and not w[0].startswith("#") and w[0] not in ("VEC", "GLOBAL", "CALLS"):
-                    t33.add(w[0])
-            m = re.search(r"^PROVES='(.*?)'", c, re.S | re.M)
-            t33 |= set((m.group(1) if m else "").split())
+                if w and not w[0].startswith("#") and w[0] not in ("VEC", "GLOBAL", "CALLS", "NOP"):
+                    t33.add(sfx.sub("", w[0]))
+            m = re.search(r"^PROVES=(['\"])(.*?)\1", c, re.S | re.M)
+            t33 |= {sfx.sub("", x) for x in (m.group(2) if m else "").split()}
+            # openimp #643: FUNCS entries without a real ported body in their block (STUBS) are not proven; a name another block
+            # proves with a real body stays (it is re-added by that block's own FUNCS / PROVES line)
+            m = re.search(r"^STUBS=(['\"])(.*?)\1", c, re.S | re.M)
+            stubs |= {sfx.sub("", x) for x in (m.group(2) if m else "").split()}
+    t33 -= stubs - real_elsewhere(a, sfx)
     o = d["socs"].get("T33", {})
     tot = a.t33_total or o.get("total") or 409
     ported = a.t33_ported if a.t33_ported is not None else o.get("ported", 0)
@@ -109,6 +135,17 @@ def main():
     unreach = a.t33_unreachable if a.t33_unreachable is not None else o.get("unreachable", 0)
     t33day = git(a.repo, "log", "-1", "--format=%cs", a.t33_oracle).strip()
     nproven = a.t33_proven if a.t33_proven is not None else len(t33)
+    shared = None
+    if a.t33_inventory and os.path.exists(a.t33_inventory):
+        # counting basis: a function is proven only when a block of tests/t33_binoracle lists it (FUNCS / PROVES) with a real
+        # ported body; callees the vendor code runs inside a compared function do not count (openimp #643)
+        only, sh = set(), set()
+        for ln in open(a.t33_inventory, encoding="utf-8").read().splitlines()[1:]:
+            f = ln.split("\t")
+            (only if f[4] == "n" else sh).add(sfx.sub("", f[0]))
+        if a.t33_proven is None:
+            nproven = len(only & t33)
+        shared = len(sh & t33)
     d["socs"]["T33"] = {"proven": nproven, "ported": ported, "wired": wired, "unreachable": unreach, "total": tot, "branch": a.t33_oracle.replace("origin/", ""), "date": t33day,
                         "note": "counting basis differs from T32 (no recovered T33 C): of the vendor tx-isp-t33.ko (1571 functions) 1162 have a "
                                 "T32 namesake and run on the shared driver/t32 port; the bar counts the %d T33-only functions; proven = %d that "
@@ -117,6 +154,11 @@ def main():
                                 "%d are unreachable (no caller and no function-pointer reference in the vendor module, or only from such code: nothing to prove); "
                                 "the remaining %d are reachable (tuning node, /proc, irq, AOV) and not proven, see openimp #589, #590, #524; "
                                 "not device-tested" % (tot, nproven, max(ported - nproven, 0), unreach, tot - nproven - unreach)}
+    if shared is not None:
+        d["socs"]["T33"]["shared_proven"] = shared
+        d["socs"]["T33"]["shared_wired"] = o.get("shared_wired", 0)
+    elif "shared_proven" in o:
+        d["socs"]["T33"]["shared_proven"] = o["shared_proven"]; d["socs"]["T33"]["shared_wired"] = o.get("shared_wired", 0)
     d["asof"] = max(day, t33day)
     d["socs"]["T32"] = {"proven": len(names), "total": total, "branch": a.oracle.replace("origin/", ""), "date": day,
                         "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"}

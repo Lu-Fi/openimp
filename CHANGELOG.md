@@ -9,9 +9,17 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+<<<<<<< Updated upstream
 ## 2026-11-16: Start page: one card per camera when the README camera name changed between runs (T10 'Secuplug SP1 T10L' vs 'Secuplug SP1')
 
 - `tools/gen_site_index.py` groups light-box runs by a normalised camera key (trailing `(variant)` note dropped, renamed names mapped); the T10 camera is one card with all runs as history.
+=======
+## 2026-11-16: T33 proof audit: proven 308 -> 272, shared_proven 301 -> 313, guard in the oracle runner (#643, #99)
+
+- Audit of all 173 open-tx-isp tests/t33_binoracle blocks (633 FUNCS / PROVES names): each name needs a real ported body (driver/t32 header C reached from the block wrapper) that the oracle compares with the vendor function. Result: 12 PROVES names were callee-only (extern / CALLS, vendor code on both sides, or a stub in the wrapper) and 2 FUNCS names had only a wrapper getter; the 37 T33-only functions (41 minus 4 promoted after a check) the inventory marked proven as "callee of" a compared function (e.g. `tisp_msca_t33_chx_cfg_load`, `tisp_msca_t33_chx_en`) never had a compared body. T33-only proven 308 -> 272 of 409 (unreachable 62 unchanged, 75 reachable and not proven); T32-namesake proven against the T33 binary 301 -> 313 (same rule plus rounds merged since).
+- Guard: open-tx-isp `tests/t33_binoracle/proof_audit.py` (run by `run.sh`, `make check` target `t33_proof_audit`, loop `judge.sh`) fails a block whose FUNCS / PROVES lists a function without a real body; known non-real FUNCS names go to the conf's `STUBS` line and are not counted. `tools/status_driver_port.py` counts real-body names only (`--t33-inventory` splits T33-only / shared). The stub and callee-only functions are the port-loop targets for December (list on #643 / #99).
+- T32 (card 1591/1591, reference-C oracles on claude/t32-ds-batch): 170 of 1575 REFS names are linked reference callees that the oracle source never names; not re-counted here (the reference C is not in next), listed on #643 for a separate pass.
+>>>>>>> Stashed changes
 
 ## 2026-11-16: T33 wiring group 15: status card wired 209, shared_wired 49 (#99, #639)
 
