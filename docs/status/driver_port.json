@@ -44,11 +44,11 @@
    "date": "2026-11-15",
    "issue": "539",
    "note": "T10 = driver/t10 wrappers + shared driver/t20 sources + Ingenic SDK; machine-like part = recovered Apical firmware unit driver/t20/tx_isp_t20_firmware.c (shared with T20); batches 1-18, Fable round 3 and the f4 struct-field batch (38 functions, vendor mutation fuzz) and the h1 round (last 12 machine-like FSM functions, identical objects) and the k1 round (38 more firmware functions on struct fields, identical objects) merged (system_tab, FSM family, ISP context layout, small helpers, API handlers, math, sensor-bus callbacks, crop/scaler FSM), host oracles + vendor vdiff/fuzz + T10 cam stream proof per batch",
-   "vendor_proven": 372,
+   "vendor_proven": 377,
    "sdk_source": 267,
    "sdk_patched": 142,
    "unreachable": 7,
-   "vendor_basis": "firmware functions replayed against the vendor tx-isp-t10.ko in Unicorn (default, DIS-on, general-FSM and the extra night / day-night / WDR / antiflicker / tuning scenarios with the jxh42 calibration, plus helper fuzz), 0 differences, open-tx-isp next d1fd55f2b; no function with an open finding (orientation_hflip excluded, #624); mutation fuzz not counted (run on 37 functions only)"
+   "vendor_basis": "firmware functions replayed against the vendor tx-isp-t10.ko in Unicorn (default, DIS-on, general-FSM and the extra night / day-night / WDR / antiflicker / tuning scenarios with the jxh42 calibration, plus helper fuzz) or proven by the per-function binary oracle tests/t10_binoracle (2000 cases, all mutations caught), 0 differences, open-tx-isp next bc50fe4a0; functions with an open finding excluded (#624 orientation_hflip, #631, #632 gain_log2); mutation fuzz not counted"
   },
   "T20": {
    "proven": 947,
