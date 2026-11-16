@@ -32,6 +32,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - New report `docs/lightbox/secuplug-t10-jxh42-kajplats-2026-11-16-3000.html` (83 pass / 5 fail, 2 rows invalid by the runner guards; open-tx-isp d1fd55f2 + OpenIMP libimp dcf64976), both stacks, runtime only, charts/numbers only, no pictures.
 
+## 2026-11-16: T33 port loop round 13: status card shared_proven 301, port-loop page 385 attempts (#99)
+
+- 61 more T32-namesake functions (tmo_init callees, log2 / exp2 / sin / fix_point math, AE algorithm helpers, gamma / defog / bcsh / clm / ccm interpolators, AE scene / at / ev-list API, AWB mode / ct / face API) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks r13A..r13G; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` shared_proven 240 -> 301, port-loop page and matrix regenerated. Last paid-API round of the month.
+
 ## 2026-11-16: T33 port loop round 12: status card shared_proven 240, port-loop page 375 attempts (#99)
 
 - 55 more T32-namesake functions (tuning node / ioctl entries, AE antiflick + face-AE API, `system_reg_*`, sensor gain helpers, `lib_tisp_*` memory space / msca chx / vic start-stop-reset / intp helpers, frame-done wakeup, irq work, frame-drop check) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks r12A..r12I; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` shared_proven 185 -> 240, port-loop page and matrix regenerated.
