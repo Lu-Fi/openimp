@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-16: Light box, Secuplug SP1, jxh42 full run 3000 K (#230)
+
+- Re-generated report `docs/lightbox/secuplug-t10-jxh42-kajplats-2026-11-16-3000.html` (84 pass / 2 fail, 2 rows invalid by the runner guards; open-tx-isp d1fd55f2 + OpenIMP libimp dcf64976), both stacks, runtime only, charts/numbers only, no pictures.
+
 ## 2026-11-16: T33 wiring group 16 (TMO / done FIFO / MSCA): status card proven 275, wired 221, shared_wired 59 (#99, #639, #643)
 
 - open-tx-isp next 9ac2c95b7: tisp_tmo_init on the proven tmoR port with the round-13 callees, the MSCA done-FIFO pop in the vendor order / mask (#639), tisp_msca_t33_chx_cfg_load / chx_en hand-ported and proven with real bodies (block mscachx), chx_en + api_chx_stream_on / off in the channel start / stop. QEMU day / night / switch / restart = vendor (known L15 / L5 / L21), 0 oops; not device-tested (.122 check list in the audit notes). Counting: deltas of wire16/wired.py on the INVENTORY basis (wired +11, shared +6), proven +2 (chx_cfg_load, chx_en; fifo_state is unreachable in the vendor).
