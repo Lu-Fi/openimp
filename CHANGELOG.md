@@ -12,6 +12,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - New report `docs/lightbox/secuplug-t10-jxh42-kajplats-2026-11-16-3000.html` (83 pass / 5 fail, 2 rows invalid by the runner guards; open-tx-isp d1fd55f2 + OpenIMP libimp dcf64976), both stacks, runtime only, charts/numbers only, no pictures.
 
+## 2026-11-16: T33 port loop round 11: status card shared_proven 185, port-loop page 365 attempts (#99)
+
+- 63 more T32-namesake functions (AWB long_par_update / spec_calculate / setters / getters, AE stat getters, AF + LCE malloc / gauss, ccm attr, scaler level, autozoom, frame drop, module control, top ipc mem, msca state / fifo clear, `lib_tisp_refresh_para`, intp enable/disable, `tisp_event_*`, the remaining block deinits) proven against the T33 vendor binary in open-tx-isp (tests/t33_binoracle blocks r11A..r11H; host only, ports and oracle blocks, no wiring). Not in the 409 bar; `docs/status/driver_port.json` T33 `shared_proven` 122 -> 185; `docs/status/port_loop.json` + `docs/port-loop.html` regenerated (counts only).
+
 ## 2026-11-16: driver-port card: T10 vendor-proven 377 (per-function binary oracle tests/t10_binoracle, #539)
 
 - `docs/status/driver_port.json` (+ matrix): T10 vendor-proven 372 -> 377: open-tx-isp next bc50fe4a0 proves 11 firmware functions with the new per-function oracle (2000 cases, all mutations caught; 6 of them were never compared by vdiff); gain_log2 leaves the count (open finding #632). Open findings #624 / #631 / #632 excluded. T20 unchanged.
