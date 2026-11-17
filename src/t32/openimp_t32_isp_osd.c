@@ -263,9 +263,24 @@ int IMP_OSD_Init_ISP(void)
     int c, h;
 
     pthread_mutex_lock(&isp_osd_lock);
+    /* Vendor 2.0.2.1 IMP_OSD_Init_ISP has no "already done" check: every
+     * call builds a new state and a new pool of the size set last
+     * (IMP_OSD_SetPoolSize_ISP), also after the init that IMP_System_Init
+     * runs (OSDInit).  So a pool size set after System_Init takes effect
+     * with an explicit Init (#679).  Regions of the old state are dropped,
+     * as the vendor. */
     if (isp_osd_ready) {
-        pthread_mutex_unlock(&isp_osd_lock);
-        return 0;
+        int busy = 0;
+
+        for (c = 0; c < ISPOSD_CHNS; c++)
+            busy |= isp_osd_used[c].head != NULL;
+        /* a region the ISP may still read keeps its memory (the vendor
+         * never frees it); an unused pool is freed */
+        if (busy)
+            IMP_LOG_WARN(TAG, "Init: regions still created, the old pool is kept");
+        else
+            DMA_FreePhys(isp_osd_pool.phys_addr);
+        isp_osd_ready = 0;
     }
     memset(&isp_osd_pool, 0, sizeof(isp_osd_pool));
     if (DMA_AllocDescriptor(&isp_osd_pool, isp_osd_pool_size, "IspOsdMem") < 0) {
