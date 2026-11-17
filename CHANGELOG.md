@@ -15,6 +15,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-17: tests/t30 build output p2_t30_enc_test no longer tracked (#683; host)
 
 - `tests/t30/p2_t30_enc_test` (the binary `make check` builds from `p2_t30_enc_test.c`) was committed, so every `make check` left the tree modified and blocked rebases and worktree removal. It is now untracked and listed in `tests/t30/.gitignore`. No other tracked ELF in the repository.
+## 2026-11-17 (night): apitest SetGammaAttr restore writes the start curve as USER first (#673)
+
+- T33 `IMP_ISP_Tuning_SetGammaAttr` restore left the picture dark (Y 71 -> 23) and the later SetModuleControl / SetFaceAe cases ran on it. Cause: vendor behaviour, not a driver or library fault. Curve_type DEFAULT (mode 0) rebuilds the curve from the bin's curve table. With section 13 byte 0x45 == 1 (all cv2005 PRJ008 bins, one curve), the vendor `tisp_gamma_strength_transform` copies every USER curve into that table, so DEFAULT after a user curve keeps the last user curve. Vendor tx-isp-t33.ko in ko_emu, night bin, x^0.3 / linear / DEFAULT: g[64] 2849 -> 3326 -> 2047 -> 2047, ours identical. The cs_gamma case now writes the curve read at the start as USER, then the original attr. In ko_emu that gives exactly the tuned curve again on the vendor and ours, day and night bin.
 
 ## 2026-11-17: T40 VBR / capped EP3 targets from uMaxPictureSize (#677)
 

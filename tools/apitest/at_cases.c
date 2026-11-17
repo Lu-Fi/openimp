@@ -1109,6 +1109,14 @@ static void cs_gamma(void)
         r4 = IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); steep_s = fst(100); steep = fst(1400);
         for (k = 0; k < 129; k++) u->gamma[k] = (uint16_t)(k * 4095 / 128);
         IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u); lin_s = fst(100); lin = fst(1400);
+        /* Restore (#673): Curve_type DEFAULT rebuilds the curve from the bin's curve table, and with section 13 byte 0x45 == 1
+         * (T33 cv2005 PRJ008 bins: one curve) the vendor tisp_gamma_strength_transform has copied each USER curve into that
+         * table, so DEFAULT alone keeps the last user curve (vendor tx-isp-t33.ko in ko_emu: g[64] 2047 after linear + DEFAULT).
+         * Write the curve read at the start as USER first (puts it back into the table), then the original attr. */
+        if (o->Curve_type == IMP_ISP_GAMMA_CURVE_DEFAULT) {
+            memcpy(u->gamma, o->gamma, sizeof(u->gamma));
+            IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, u);
+        }
         IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, o); back = recover(base.y, &ms);
         /* The closed-loop AE presumably sees the luma AFTER the gamma stage (T40: the AE converges at a fraction of the exposure with the
          * gamma LUT, docs/T40_TUNING_HURDLES.md 06-09), so a fixed curve change may be compensated by the AE within ~1 s and a settled
