@@ -321,7 +321,27 @@ PASS_GET(IMP_ISP_Tuning_GetAwbStatistics, IMPISPAWBStatisInfo, ID_AWB_STATIS)
 PASS_GET(IMP_ISP_Tuning_GetAwbGlobalStatistics, IMPISPAWBGlobalStatisInfo, ID_AWB_GLOBAL_STATIS)
 PASS_GET(IMP_ISP_Tuning_GetAeStatistics, IMPISPAEStatisInfo, ID_AE_STATIS)
 PASS_GET(IMP_ISP_Tuning_GetAFMetricesInfo, IMPISPAFMetricsInfo, ID_AF_METRICS)
-PASS_GET(IMP_ISP_Tuning_GetAEFlickerFlag, IMPISPFlickerFlag, ID_AE_FLICKER_FLAG)
+/*
+ * Beyond vendor (#672, docs/OPENIMP_BEYOND_VENDOR.md): the driver answers
+ * control 0x08000028 with 8 bytes (vendor tx-isp-t33.ko tx_isp_core_ops_g_ctrl
+ * case 0x28: copy_to_user n=8; ours driver/t32/tx_isp_t32_txgctrl.h the same),
+ * while IMPISPFlickerFlag is one int.  The vendor library hands the caller's
+ * pointer to the driver and so writes 4 bytes behind the caller's structure;
+ * here the driver fills a local 8-byte block and only the flag is copied out.
+ */
+int32_t IMP_ISP_Tuning_GetAEFlickerFlag(IMPVI_NUM num, IMPISPFlickerFlag *p)
+{
+    uint32_t blk[2] = { 0, 0 };
+    int32_t rc = tun_check(num, p);
+
+    if (rc)
+        return rc;
+    rc = tun_ptr(num, T32_GET, ID_AE_FLICKER_FLAG, blk);
+    if (!rc)
+        memcpy(p, blk, sizeof(*p));
+    return rc;
+}
+_Static_assert(sizeof(IMPISPFlickerFlag) == 4, "IMPISPFlickerFlag");
 PASS_GET(IMP_ISP_Tuning_GetAwbOnlyReadAttr, IMPISPAwbOnlyReadAttr, ID_AWB_ONLY_READ)
 PASS_GET(IMP_ISP_Tuning_GetFaceAeLuma, IMPISPFaceAeLuma, ID_FACE_AE_LUMA)
 PASS_GET(IMP_ISP_Tuning_GetHVFLIP, IMPISPHVFLIPAttr, ID_HVFLIP)

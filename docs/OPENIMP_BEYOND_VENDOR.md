@@ -457,6 +457,10 @@ The vendor libimp (T40 1.3.1, T41 1.2.5, T31 static check) has no device argumen
 
 T10/T20 (vendor libimp 3.12.0, T10 = T20 binary; user OK 2026-11-16, #633): here the vendor NS and AGC have no effect on device 0 **or** on device 1. Light box, T10 camera: vendor NS level 3 floor -52.6 dBFS on device 0 and -52.3 dBFS on device 1, the same as without NS (-52.4); vendor AGC on a quiet signal +1.9 dB. OpenIMP NS acts (-64 to -68 dBFS on device 0 and on device 1 across the T10 runs) and its AGC lifts the quiet signal by 7.7 dB. The record-thread order is the vendor's (NS, AGC, HPF, then the software volume, each behind its own enable flag, checked in the binary). Why the vendor NS stays inert on device 1 as well is the open RE question of #612 (on T31/T40 the vendor NS acts on device 1 only together with HPF). No switch: OpenIMP keeps NS and AGC working on both devices.
 
+### 6.12 T32/T33 IMP_ISP_Tuning_GetAEFlickerFlag writes only the flag (T33, user OK 2026-11-17, #672)
+
+The driver answers control 0x08000028 with 8 bytes: vendor tx-isp-t33.ko `tx_isp_core_ops_g_ctrl` case 0x28 copies 8 bytes to the user (`li a2,8`, word 1 is stale kernel stack), and open-tx-isp does the same (`driver/t32/tx_isp_t32_txgctrl.h`). `IMPISPFlickerFlag` is one `int`. The vendor libimp T33 2.0.2.1 hands the caller's pointer straight to the ioctl, so it overwrites the 4 bytes behind the caller's structure. OpenIMP reads into a local 8-byte block and copies only the flag (`src/t32/openimp_t32_tuning.c`). The flag value and the return codes are the vendor's. No switch.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

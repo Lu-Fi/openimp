@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T32/T33 GetAEFlickerFlag no longer writes behind the caller's structure (#672; T33L module)
+
+- `src/t32/openimp_t32_tuning.c`: `IMP_ISP_Tuning_GetAEFlickerFlag` reads the driver's 8-byte answer (vendor tx-isp-t33.ko and open-tx-isp both copy 8 bytes for control 0x08000028) into a local block and copies the 4-byte `IMPISPFlickerFlag` out. The vendor libimp passes the caller's pointer and overwrites 4 bytes behind it; this is beyond vendor with the user's OK (docs/OPENIMP_BEYOND_VENDOR.md 6.12).
+
 ## 2026-11-17: T40 VBR / capped EP3 targets from uMaxPictureSize (#677)
 
 - On T40 only CBR handed `uMaxPictureSize` to the AVPU EP3 hardware-RC tables (#556/#604); VBR and the capped modes built them from the bit rate, i.e. half the vendor table at the default uMaxPictureSize = 2 x target (Eufy T40XP H.264 VBR 1000: IDR row 0 0x15be68 vs vendor 0x2b7cd0, P 0x0f87ff vs 0x1f1001). Vendor 1.3.1 `channel_encoder_set_rc_param` stores uMaxPictureSize x 1000 at pMaxPictureSize for CBR, VBR and both capped modes (vendor VBR EP3 = CBR EP3 word for word). `IMP_Encoder_CreateChn` now sets it for those modes too; open VBR I frames were 0.64 / 0.68x of the vendor. `OPENIMP_T40_VBR_MAXPIC=0` restores the bit-rate targets.
