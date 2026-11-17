@@ -1530,6 +1530,15 @@ static int p2_t40_vbr_rcopt_enabled(void)
 
     return !v || strcmp(v, "0") != 0;
 }
+
+/* #677: OPENIMP_T40_VBR_MAXPIC=0 restores the bit-rate EP3 targets for
+ * VBR / capped channels */
+static int p2_t40_vbr_maxpic_enabled(void)
+{
+    const char *v = getenv("OPENIMP_T40_VBR_MAXPIC");
+
+    return !v || strcmp(v, "0") != 0;
+}
 #endif
 extern int AL_Codec_Encode_SetQp(void *codec, void *qp);
 extern int AL_Codec_Encode_SetEntropyMode(void *codec, int mode);
@@ -2880,6 +2889,20 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize <= 0xffffffffu / 1000u)
         AL_Codec_Encode_SetMaxPictureSizeT40(
             ch->codec, attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize * 1000u);
+    /* #677: VBR and the capped modes the same (vendor 1.3.1
+     * channel_encoder_set_rc_param stores uMaxPictureSize * 1000 at
+     * pMaxPictureSize for modes 1/2/4/8; the attributes share the VBR layout
+     * up to uMaxPictureSize).  Without it the EP3 targets came from the bit
+     * rate: half the vendor table at the default 2 x target, I 0.64x. */
+    else if ((attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_VBR ||
+              attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CAPPED_VBR ||
+              attr->rcAttr.attrRcMode.rcMode ==
+                  IMP_ENC_RC_MODE_CAPPED_QUALITY) &&
+             attr->rcAttr.attrRcMode.attrVbr.uMaxPictureSize <=
+                 0xffffffffu / 1000u &&
+             p2_t40_vbr_maxpic_enabled())
+        AL_Codec_Encode_SetMaxPictureSizeT40(
+            ch->codec, attr->rcAttr.attrRcMode.attrVbr.uMaxPictureSize * 1000u);
     /* #610: CBR eRcOptions into the Allegro core from the start (vendor
      * channel_encoder_init); 0 set opt_flag and dropped the IDR QP to iMinQP */
     if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&

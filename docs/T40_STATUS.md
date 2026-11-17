@@ -270,6 +270,8 @@ checked by `tests/t40/vendor_cmd_test.c`:
   CBR (both codecs, #556/#604): cmd[0x17] window of the channel attributes and
   the first IDR's QP, EP3 targets from uMaxPictureSize, EP3 IDR / P slots,
   cmd[0x18] bit 31 on every IDR and the next P; cmd[0x12] bits 27:24 from 512 / 64-pixel columns;
+  VBR and the capped modes (#677): EP3 targets from uMaxPictureSize as CBR (vendor
+  channel_encoder_set_rc_param, all four modes), `OPENIMP_T40_VBR_MAXPIC=0` restores the bit-rate targets;
   picture numbers in cmd[0x0c..0x11]; no picture size in cmd[0x64/0x65];
 - SetDefaultParam CBR/VBR: QP 15..48, eRcOptions 1 (as vendor and T31);
   CBR (#610): CreateChn hands eRcOptions to the Allegro core (it stayed 0, so

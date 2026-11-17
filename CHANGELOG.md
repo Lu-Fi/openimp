@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T40 VBR / capped EP3 targets from uMaxPictureSize (#677)
+
+- On T40 only CBR handed `uMaxPictureSize` to the AVPU EP3 hardware-RC tables (#556/#604); VBR and the capped modes built them from the bit rate, i.e. half the vendor table at the default uMaxPictureSize = 2 x target (Eufy T40XP H.264 VBR 1000: IDR row 0 0x15be68 vs vendor 0x2b7cd0, P 0x0f87ff vs 0x1f1001). Vendor 1.3.1 `channel_encoder_set_rc_param` stores uMaxPictureSize x 1000 at pMaxPictureSize for CBR, VBR and both capped modes (vendor VBR EP3 = CBR EP3 word for word). `IMP_Encoder_CreateChn` now sets it for those modes too; open VBR I frames were 0.64 / 0.68x of the vendor. `OPENIMP_T40_VBR_MAXPIC=0` restores the bit-rate targets.
+
 ## 2026-11-17: T40 plain VBR carries uMaxBitRate from CreateChn (#677)
 
 - `IMP_Encoder_CreateChn` on T40 applied the rate-control attribute to the codec only for the capped modes, so plain VBR ran with `t31_max_bitrate` 0 and the AVPU command word cmd[0x16] (hardware RC maximum) fell back to the target. The vendor codes uMaxBitRate = 4/3 x target (SetDefaultParam default). Plain VBR now takes the same SetRcParam path as the runtime `SetChnAttrRcMode`; CBR unchanged. Eufy T40XP check: VBR 1000/2000 kbps cmd[0x16] 0x41/0x82 expected (was 0x31/0x62).
