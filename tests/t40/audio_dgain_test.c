@@ -23,6 +23,15 @@ static int fake_ioctl(int fd, unsigned long request, long arg)
 {
     (void)fd;
     fake_req = request;
+    if ((request & 0xffffu) == 0x505du || (request & 0xffffu) == 0x505cu) {
+        /* AMIC_ENABLE_AEC / AMIC_DISABLE_AEC: pointer to one int (#681);
+         * enable returns the AEC sample offset through it */
+        memcpy(fake_words, (const void *)arg, sizeof(int));
+        if ((request & 0xffffu) == 0x505du && !fake_fail)
+            *(int *)arg = 160;
+        fake_calls++;
+        return fake_fail ? -1 : 0;
+    }
     memcpy(fake_words, (const void *)arg, sizeof(fake_words));
     fake_calls++;
     return fake_fail ? -1 : 0;
@@ -33,6 +42,20 @@ int main(void)
     int g = -5;
 
     p3_audio.fd = 3;
+    /* #681: AEC enable / disable pass a pointer to an int (vendor
+     * __ai_dev_enable_aec / __ai_dev_disable_aec, 0x4004505d / 0x4004505c,
+     * T33 2.0.2.1, T40 1.3.1, T41 1.2.5); a literal 1 crashes the fake */
+    fake_words[0] = 0xdead;
+    assert(IMP_AI_EnableAec(1, 0, 0, 0) == 0);
+    assert((uint32_t)fake_req == (uint32_t)AMIC_ENABLE_AEC && (fake_req & 0xffffu) == 0x505du && fake_words[0] == 0);
+    assert(p3_audio.aec_sample_offset == 160);
+    fake_words[0] = 0xdead;
+    assert(IMP_AI_DisableAec(1, 0) == 0);
+    assert((uint32_t)fake_req == (uint32_t)AMIC_DISABLE_AEC && (fake_req & 0xffffu) == 0x505cu && fake_words[0] == 0);
+    fake_fail = 1;
+    p3_audio.aec_sample_offset = 7;
+    assert(IMP_AI_EnableAec(1, 0, 0, 0) == -1 && p3_audio.aec_sample_offset == 7);
+    fake_fail = 0;
     /* AI: register value, clamped */
     assert(IMP_AI_SetDigitalGain(0, 0, 300) == 0);
     assert((uint32_t)fake_req == (uint32_t)AMIC_AI_SET_VOLUME && (fake_req & 0xffffu) == 0x505bu);

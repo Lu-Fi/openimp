@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T32/T33/T40/T41 IMP_AI_EnableAec passes the AEC sample-offset pointer like the vendor (#681; T33L module, silent)
+
+- `src/t40/openimp_p3_audio.c` (shared by T32, T33, T40, T41): `IMP_AI_EnableAec` (and `EnableAecRefFrame`) called `ioctl(AMIC_ENABLE_AEC)` with the literal 1. The audio driver treats the argument as a user pointer and copies the AEC sample offset into it, so the copy failed and the call returned -1. The vendor `__ai_dev_enable_aec` (T33 2.0.2.1, T40 1.3.1, T41 1.2.5: ioctl 0x4004505d) passes a pointer to an int initialised to 0 and keeps the returned offset. OpenIMP now does the same and keeps the offset. `__ai_dev_disable_aec` (0x4004505c) passes a pointer to a zeroed int. `AMIC_AO_CLEAR_STREAM` / `AMIC_AO_SYNC_STREAM` now pass 0 as the vendor does (were 1). The stream enables keep 1, as the vendor.
+- `tests/t40/audio_dgain_test.c`: the fake driver writes the offset through the pointer; the old code crashes the test.
+- T33L module, silent AO/AEC apitest (muted, zero PCM): EnableAec / EnableAecRefFrame PASS (were -1 with "failed to copy_to_user"), audio area 106 PASS / 0 FAIL. T40/T41: host test and vendor binary check only, no device run.
+
 ## 2026-11-17: T32/T33 GetAEFlickerFlag no longer writes behind the caller's structure (#672; T33L module)
 
 - `src/t32/openimp_t32_tuning.c`: `IMP_ISP_Tuning_GetAEFlickerFlag` reads the driver's 8-byte answer (vendor tx-isp-t33.ko and open-tx-isp both copy 8 bytes for control 0x08000028) into a local block and copies the 4-byte `IMPISPFlickerFlag` out. The vendor libimp passes the caller's pointer and overwrites 4 bytes behind it; this is beyond vendor with the user's OK (docs/OPENIMP_BEYOND_VENDOR.md 6.12).

@@ -178,6 +178,7 @@ static struct {
     int frame_outstanding;
     int sequence;
     char aec_profile[128];
+    int aec_sample_offset;      /* written back by AMIC_ENABLE_AEC (#681) */
     void *effects_library;
     P3HpfCreate hpf_create;
     P3HpfProcess hpf_process;
@@ -1081,14 +1082,27 @@ int IMP_AI_EnableAec(int ai_device, int ai_channel, int ao_device, int ao_channe
     (void)ai_channel;
     (void)ao_device;
     (void)ao_channel;
-    return p3_audio_open() == 0 ? ioctl(p3_audio.fd, AMIC_ENABLE_AEC, 1) : -1;
+    int off = 0;
+    int ret;
+
+    if (p3_audio_open() != 0)
+        return -1;
+    /* as the vendor __ai_dev_enable_aec (T33 2.0.2.1, T40 1.3.1, T41 1.2.5):
+     * the argument is a pointer to an int the driver fills with the AEC
+     * sample offset (#681; a plain 1 made the driver's copy_to_user fail) */
+    ret = ioctl(p3_audio.fd, AMIC_ENABLE_AEC, &off);
+    if (ret == 0)
+        p3_audio.aec_sample_offset = off;
+    return ret;
 }
 
 int IMP_AI_DisableAec(int ai_device, int ai_channel)
 {
     (void)ai_device;
     (void)ai_channel;
-    return p3_audio.fd >= 0 ? ioctl(p3_audio.fd, AMIC_DISABLE_AEC, 1) : 0;
+    int zero = 0;       /* vendor __ai_dev_disable_aec: pointer to a zeroed int (#681) */
+
+    return p3_audio.fd >= 0 ? ioctl(p3_audio.fd, AMIC_DISABLE_AEC, &zero) : 0;
 }
 
 int IMP_AI_EnableAecRefFrame(int ai_device, int ai_channel, int ao_device,
@@ -1420,7 +1434,7 @@ int IMP_AO_ClearChnBuf(int device, int channel)
     if (channel != 0 || p3_audio.fd < 0)
         return -1;
     openimp_ao_cache_drop(&p3_audio.ao_cache);
-    return ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 1);
+    return ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 0);   /* vendor: 0 (#681) */
 }
 
 int IMP_AO_FlushChnBuf(int device, int channel)
@@ -1433,7 +1447,7 @@ int IMP_AO_FlushChnBuf(int device, int channel)
                                  p3_ao_bytes_per_sec(), p3_ao_driver_write,
                                  NULL) != 0)
         return -1;
-    return ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 1);
+    return ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 0);    /* vendor: 0 (#681) */
 }
 
 int IMP_AO_PauseChn(int device, int channel)
