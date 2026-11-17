@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-17: T32/T33 GetAEFlickerFlag no longer writes behind the caller's structure (#672; T33L module)
 
 - `src/t32/openimp_t32_tuning.c`: `IMP_ISP_Tuning_GetAEFlickerFlag` reads the driver's 8-byte answer (vendor tx-isp-t33.ko and open-tx-isp both copy 8 bytes for control 0x08000028) into a local block and copies the 4-byte `IMPISPFlickerFlag` out. The vendor libimp passes the caller's pointer and overwrites 4 bytes behind it; this is beyond vendor with the user's OK (docs/OPENIMP_BEYOND_VENDOR.md 6.12).
+## 2026-11-17: tests/t30 build output p2_t30_enc_test no longer tracked (#683; host)
+
+- `tests/t30/p2_t30_enc_test` (the binary `make check` builds from `p2_t30_enc_test.c`) was committed, so every `make check` left the tree modified and blocked rebases and worktree removal. It is now untracked and listed in `tests/t30/.gitignore`. No other tracked ELF in the repository.
 
 ## 2026-11-17: T40 VBR / capped EP3 targets from uMaxPictureSize (#677)
 
