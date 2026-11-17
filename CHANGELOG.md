@@ -13,6 +13,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `IMP_Encoder_CreateChn` on T40 applied the rate-control attribute to the codec only for the capped modes, so plain VBR ran with `t31_max_bitrate` 0 and the AVPU command word cmd[0x16] (hardware RC maximum) fell back to the target. The vendor codes uMaxBitRate = 4/3 x target (SetDefaultParam default). Plain VBR now takes the same SetRcParam path as the runtime `SetChnAttrRcMode`; CBR unchanged. Eufy T40XP check: VBR 1000/2000 kbps cmd[0x16] 0x41/0x82 expected (was 0x31/0x62).
 
+## 2026-11-17 (night): T33 silent AO / AEC device test (#99, #674, #681)
+
+- apitest `audio` on the T33L module with the user's OK for a silence-only playback test (branch `claude/apitest-t33-ao-silent`, not merged yet): AO muted, volume at the minimum, only zero-filled PCM; new guard `ao_send_silent` refuses any non-zero byte before `IMP_AO_SendFrame`, the AEC case sets the AI channel parameters (usrFrmDepth 2..frmNum) before `EnableChn`, `run_cam.sh` takes `APITEST_AO=1` explicitly. Result: 28 AO / AEC API cells to rt (round trips, no sound), T33 streamer functions that work 187 -> 215 of 258, 0 oops.
+- Finding #681: `IMP_AI_EnableAec` / `EnableAecRefFrame` return -1 on T33 (ioctl argument 1 instead of a pointer for the AEC sample offset). The two cells are err; no symbol changed (docs round 14).
+
 ## 2026-11-17 (evening): T33 device API cases, audio input evidence (#99, #674)
 
 - apitest on the T33L module (bench; code on branch `claude/apitest-t33-cases`, not merged yet): new case `t33gaps` (`IMP_ISP_Tuning_Get/SetSharpness` read-back at two values and restore, `IMP_ISP_Tuning_SwitchBin` day bin to itself and back with enable 0), the generic cases `osdalloc_t23` (`IMP_OSD_Alloc` / `IMP_ISPOSD_Alloc`) and the ISP OSD cases `isposd` / `isposdapi` now compile for T33 (pool size set before `IMP_OSD_Init_ISP`; `APITEST_NOEFFECT=1` for QEMU), the `modctl` gamma-bypass check accepts an effect in either direction on T33 (the bypassed gamma raises Y), `APITEST_ISPOSD_NOCONS` / `APITEST_ISPOSD_NOEXIT` diagnostics. The ISP OSD cases are QEMU only for now: OpenIMP keeps the 1-byte pool made by `IMP_System_Init` (#679) and frames stop after `IMP_OSD_Exit_ISP` (#680).
