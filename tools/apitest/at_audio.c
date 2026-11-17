@@ -1,6 +1,6 @@
 /* apitest: Audio area.  AI (microphone) is exercised fully; AO only by return
- * codes (no IMP_AO_SendFrame, nothing is played); AEC functions are not run
- * (they need the speaker path).  AENC/ADEC are software codecs (G.711A). */
+ * codes (zero-filled PCM only, muted); AEC with a muted AO reference
+ * AENC/ADEC are software codecs (G.711A). */
 #include <errno.h>
 #include "apitest.h"
 
@@ -409,6 +409,17 @@ static void ai_flow(int dev)
     gfree(attr); gfree(got);
 }
 
+/* Silence guard (user rule 2026-11-17): the only way a frame reaches the AO in this file. Refuses (-1, nothing sent) unless every byte is zero. */
+static int ao_send_silent(int ao, IMPAudioFrame *f)
+{
+    const unsigned char *b = (const unsigned char *)f->virAddr;
+    int i;
+
+    for (i = 0; i < f->len; i++)
+        if (b[i]) { fprintf(stderr, "ao_send_silent: non-zero PCM byte at %d, NOT sent\n", i); return -1; }
+    return IMP_AO_SendFrame(ao, 0, f, BLOCK);
+}
+
 /* AO / AEC: SILENCE ONLY (user decision 2026-10-26): muted, volume at the minimum, only zero-filled PCM frames (a few), return codes and round trips. */
 static void ao_flow(void)
 {
@@ -446,7 +457,7 @@ static void ao_flow(void)
 
         memset(&zf, 0, sizeof(zf)); memset(zbuf, 0, sizeof(zbuf));
         zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zbuf; zf.len = 1280;
-        for (k = 0; k < 3; k++) rs |= IMP_AO_SendFrame(ao, 0, &zf, BLOCK);
+        for (k = 0; k < 3; k++) rs |= ao_send_silent(ao, &zf);
         rep(FN(IMP_AO_SendFrame), rs, rs == 0 ? V_PASS : V_FAIL, "rt: 3 zero-filled frames of 1280 bytes (silence), muted, volume minimum");
     }
     NEED(IMP_AO_SetGain) {
@@ -514,13 +525,18 @@ static void ao_flow(void)
 
         memset(&zf, 0, sizeof(zf)); zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zb; zf.len = 1280;
         r = IMP_AI_SetPubAttr(adev, attr);
-        int rs = r, re = -99, rc = -99;
+        int rs = r, re = -99, rc = -99, rcp = -99;
         if (r == 0) { r = IMP_AI_Enable(adev); re = r; }
-        if (r == 0) { r = IMP_AI_EnableChn(adev, 0); rc = r; }
+        if (r == 0) {        /* the vendor refuses EnableChn without channel parameters ("The channel parameters are not set") */
+            G(IMPAudioIChnParam, acp);
+            acp->usrFrmDepth = 4;       /* must be 2 .. frmNum of the AI attributes (frmNum here is 10) */
+            rcp = IMP_AI_SetChnParam(adev, 0, acp); gfree(acp);
+            r = IMP_AI_EnableChn(adev, 0); rc = r;
+        }
         if (r == 0) {
             r2 = IMP_AI_EnableAec(adev, 0, ao, 0);
             rep(FN(IMP_AI_EnableAec), r2, r2 == 0 ? V_PASS : V_FAIL, "rt: AI dev %d chn 0 with the muted AO dev %d chn 0 as reference", adev, ao);
-            for (k = 0; k < 3; k++) IMP_AO_SendFrame(ao, 0, &zf, BLOCK);
+            for (k = 0; k < 3; k++) ao_send_silent(ao, &zf);
 #if HAS_IMP_AI_GetFrameAndRef
             NEED(IMP_AI_GetFrameAndRef) {
                 r3 = IMP_AI_GetFrameAndRef(adev, 0, fr, ref, BLOCK); gchk(fr); gchk(ref);
@@ -536,7 +552,7 @@ static void ao_flow(void)
             NEED(IMP_AI_DisableAec) { r4 = IMP_AI_DisableAec(adev, 0); RET0(IMP_AI_DisableAec, r4, "rt: AEC off"); }
             IMP_AI_DisableChn(adev, 0); IMP_AI_Disable(adev);
         } else
-            rep(FN(IMP_AI_EnableAec), r, V_FAIL, "AI enable for the AEC test failed (SetPubAttr %d, Enable %d, EnableChn %d)", rs, re, rc);
+            rep(FN(IMP_AI_EnableAec), r, V_FAIL, "AI enable for the AEC test failed (SetPubAttr %d, Enable %d, SetChnParam %d, EnableChn %d)", rs, re, rcp, rc);
         gfree(fr); gfree(ref);
     }
 #endif

@@ -13,6 +13,7 @@
 # env: S (session dir, default below)  BIN  AREAS (default sys,fs,enc,osd,ivs,audio,isp,su)  RISKY=1 (imgfx
 #      bypass/FPS cases)  NOIMG=1 (skip imgfx)  T40_MASK (t40_devtest phases, hex)  TAG (label, default agg47)
 #      SENSOR I2C W H (override the table)  DRY=1 (print what would run)
+#      APITEST_AO=1 (AO/AEC silence-only cases: muted, volume minimum, zero PCM; default 1 only for AREAS=audio)
 #      OLIB=<libimp.so> (run against this libimp via LD_LIBRARY_PATH instead of the installed one)
 #      IMGFX_FILTER=name (picture area: only the cases whose name contains it, e.g. exp-; the base cases always run)
 S=${S:?set S=<scratch dir with audit/ and locks/>}
@@ -80,7 +81,7 @@ if [ -n "$OLIB" ]; then cam 'mkdir -p /tmp/at/olib'; cat "$OLIB" | cam 'cat > /t
 
 # run NAME CMD  -  output streamed to the host, remote PID recorded for the cleanup, host watchdog 20 min
 run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
-  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=$([ "$AREAS" = audio ] && echo 1 || echo 0) $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
+  timeout 1200 $SSH "cd /tmp/at; echo \$\$ > /tmp/at/$name.pid; exec env APITEST_AO=${APITEST_AO:-$([ "$AREAS" = audio ] && echo 1 || echo 0)} $EXTRA_ENV $*" > "$OUT/$name.log" 2> "$OUT/$name.err"
   echo "   rc=$? lines=$(wc -l < "$OUT/$name.log")" >> "$OUT/run.log"; }
 run apitest ./apitest --json /tmp/at/apitest.json "$SENSOR" "$I2C" "$W" "$H" "$AREAS"
 cam "cat /tmp/at/apitest.json" > "$OUT/apitest.json" 2>/dev/null
