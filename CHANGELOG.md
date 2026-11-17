@@ -13,6 +13,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `IMP_Encoder_CreateChn` on T40 applied the rate-control attribute to the codec only for the capped modes, so plain VBR ran with `t31_max_bitrate` 0 and the AVPU command word cmd[0x16] (hardware RC maximum) fell back to the target. The vendor codes uMaxBitRate = 4/3 x target (SetDefaultParam default). Plain VBR now takes the same SetRcParam path as the runtime `SetChnAttrRcMode`; CBR unchanged. Eufy T40XP check: VBR 1000/2000 kbps cmd[0x16] 0x41/0x82 expected (was 0x31/0x62).
 
+## 2026-11-17 (evening): T33 device API cases, audio input evidence (#99, #674)
+
+- apitest on the T33L module (bench; code on branch `claude/apitest-t33-cases`, not merged yet): new case `t33gaps` (`IMP_ISP_Tuning_Get/SetSharpness` read-back at two values and restore, `IMP_ISP_Tuning_SwitchBin` day bin to itself and back with enable 0), the generic cases `osdalloc_t23` (`IMP_OSD_Alloc` / `IMP_ISPOSD_Alloc`) and the ISP OSD cases `isposd` / `isposdapi` now compile for T33 (pool size set before `IMP_OSD_Init_ISP`; `APITEST_NOEFFECT=1` for QEMU), the `modctl` gamma-bypass check accepts an effect in either direction on T33 (the bypassed gamma raises Y), `APITEST_ISPOSD_NOCONS` / `APITEST_ISPOSD_NOEXIT` diagnostics. The ISP OSD cases are QEMU only for now: OpenIMP keeps the 1-byte pool made by `IMP_System_Init` (#679) and frames stop after `IMP_OSD_Exit_ISP` (#680).
+- Evidence: 39 T33 API cells to dev / rt (31 `IMP_AI_*` cells and the AENC / ADEC round trip from the record-only audio run on the oss3 `audio.ko` of #674, `Get/SetModuleControl`, `Get/SetSharpness`, `SwitchBin`, `IMP_OSD_AttachToGroup`, `IMP_OSD_Alloc`, `IMP_ISPOSD_Alloc`, `Get/SetH264Vui` / `Get/SetH265Vui`); T33 streamer functions that work 143 -> 187 of 258. No symbol changed (docs round 13).
+
 ## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
 
 - New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000-1707.html` (75 pass / 0 fail; open-tx-isp 5fa382ae + OpenIMP libimp 1330ca18), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).

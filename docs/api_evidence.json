@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-16",
+  "asof": "2026-11-17",
   "socs": [
     "T10",
     "T20",
@@ -453,7 +453,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_Bypass_Bind": {
@@ -548,7 +548,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_DelSensor": {
@@ -628,7 +628,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_DisableSensor": {
@@ -708,7 +708,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_DisableTuning": {
@@ -788,7 +788,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "QEMU #296 2026-11-11",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_EnableSensor": {
@@ -868,7 +868,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_EnableTuning": {
@@ -948,7 +948,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "QEMU #296 2026-11-11",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_Get/SetCsccrMode": {
@@ -1327,7 +1327,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "ISP_RAW_RwControl": {
@@ -2884,7 +2884,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2910,7 +2910,7 @@
         "T21": "apitest apitest-cov 2026-10-27 .24",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "QEMU run 2026-11-13: FAIL = no picture effect, QEMU renders no picture (not judgeable; vendor libimp same); read-back ok"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case modctl run alone: same value written and read back equal; the gamma-bypass bit moves the picture, Y 67.6 -> 74.2 after 250 ms and 78.7 settled, restored; the earlier FAIL in the full run was the picture left dark by the SetGammaAttr case, #673)"
       }
     },
     "ISP_Tuning_Get/SetModule_Ratio": {
@@ -3664,7 +3664,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -3719,7 +3719,8 @@
         "T31": "apitest agg47 2026-10-26 .26",
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33gaps: default 128, set 20 and 235 read back as set, restored)"
       }
     },
     "ISP_Tuning_GetTotalGain": {
@@ -4357,7 +4358,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "?",
+        "T33": "rt",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4423,7 +4424,8 @@
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34",
         "T30": "apitest t30b26 2026-11-05 .231",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)"
+        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T33": "apitest t33c1117 2026-11-17 .122 (API round trip; the detail energy of ch1 does not move, 6.03 at 20 / 6.07 at 235: no visible effect measured, not compared with the vendor on a camera)"
       }
     },
     "ISP_Tuning_SetSinterStrength": {
@@ -4651,7 +4653,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "rt",
         "T40": "dev",
         "T41": "rt"
       },
@@ -4669,7 +4671,8 @@
       "note": "T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested) T23: the agg-36 driver rejects 0x8000185 (-EINVAL); a handler exists in open-tx-isp claude/gaps-t23-t31-drv (tisp_switch_bin around the driver's IQ loader: file, header, size and CRC checks, day and night banks swapped under the AE/AWB pause; module build only), held back because the bank swap must be reworked first (review: memcpy over live banks); T40/T41 (claude/switchbin-t4x, 2026-10-10): control 0x80000a5 from the vendor T40 1.3.1 and T41 1.2.6 libimp disassembly (ioctl 0xc0105436 / 0xc0105435, payload IMPISPBinAttr, 68 / 132 bytes, vendor check order and return codes); T40 device-tested on the Eufy (sc830ai, vendor kernel driver): switch to a copy of the bin, back, and enable 0 return 0, the stream keeps decoding cleanly, picture unchanged; T41 library host-tested only, the T41 kernel side is in open-tx-isp claude/switchbin-t41 (module build and host test, no device test yet; the vendor T41 module was not tested)  T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched): the agg67 driver answers control 0x8000185 (the agg-36 -EINVAL is gone): the bin file in use is switched to itself (ret 0, twice), enable 0 is refused as stock (-1), a file that is no bin (the passwd file) is refused by the driver (-5, kernel log \"SwitchBin /etc/passwd rejected\"), frames keep flowing. Switching to the same bin has no visible effect (Y 110.0 -> 109.7 -> 110.4), so the cell is rt; a switch to a different bin with different day/night banks was not run (no second bin on the camera). T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_bin.c, #289); the bin swap itself runs in the running-mode QEMU run.",
       "ref": {
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
-        "T23": "apitest t23pass 2026-11-04 .30"
+        "T23": "apitest t23pass 2026-11-04 .30",
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33gaps: the day bin in use switched to itself, then enable 0 back to the default: both ret 0, picture recovers, frames flow; QEMU vendor 2.0.2.1 gives the same return codes)"
       }
     },
     "ISP_Tuning_WaitFrame": {
@@ -8209,7 +8212,7 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
         "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "Encoder_GetStream": {
@@ -8357,7 +8360,7 @@
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231 ; b62 2026-11-12: H.265 vendor finds the SEI, open did not (#399); b63 2026-11-12 (libimp 0c3ea363 with claude/t30-399): H.264 and H.265 PASS on open (prefix SEI found in the next 30 frames), vendor H.264 PASS (vendor H.265 = b62 PASS).",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "Encoder_PollingModuleStream": {
@@ -9103,7 +9106,7 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "Encoder_SetChnQpIPDelta": {
@@ -9190,7 +9193,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "Encoder_SetFrameRelease": {
@@ -9253,7 +9256,7 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
         "T32": "apitest t32 enc 2026-11-12 QEMU, = vendor 2.2.0 run (no camera); gop33_test vs vendor encoder_get_fps_mask",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "Encoder_SetIvpuBsSize": {
@@ -10053,7 +10056,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_DequeueBuffer": {
@@ -10154,7 +10157,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_DisableChn": {
@@ -10234,7 +10237,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_EnableChn": {
@@ -10314,7 +10317,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_ExternInject_CreateChn": {
@@ -10589,7 +10592,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_Get/SetDirectModeAttr": {
@@ -10748,7 +10751,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "FrameSource_Get/SetPool": {
@@ -11233,7 +11236,7 @@
           "r†"
         ]
       },
-      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T41: implemented on the ISP OSD of the open driver (open-tx-isp next); an older stock ko draws nothing T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
@@ -11375,7 +11378,7 @@
           "r†"
         ]
       },
-      "note": "T41: 2 insns, returns ? T41: 2 insns, returns ? T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T41: 2 insns, returns ? T41: 2 insns, returns ? T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed.",
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
@@ -11468,7 +11471,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11481,7 +11484,8 @@
         "T23": "apitest t23pass 2026-11-04 .30",
         "T31": "apitest t31-mx 2026-11-11 .26 (open stack and vendor 1.1.6 ko + libimp on the same camera, same scene)",
         "T40": "apitest t40dev 400/2000/2000000 2026-11-11 (Eufy T40XP, t40-mx, #310): OpenIMP on tx_isp_t40 vs vendor 1.3.1 libimp on the vendor module, QEMU T40 first",
-        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): attach_t30: FS -> ENC became FS -> OSD -> ENC, 5 frames through the OSD group, vendor and open identical"
+        "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): attach_t30: FS -> ENC became FS -> OSD -> ENC, 5 frames through the OSD group, vendor and open identical",
+        "T33": "apitest t33c1117 2026-11-17 .122 (osd area with APITEST_ATTACH=1: FS -> ENC became FS -> OSD -> ENC, 5 frames through the OSD group; QEMU PASS too)"
       }
     },
     "OSD_CreateGroup": {
@@ -11561,7 +11565,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_CreateRgn": {
@@ -11641,7 +11645,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_CreateRgn_ISP": {
@@ -11664,7 +11668,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed."
     },
     "OSD_DestroyGroup": {
       "area": "OSD",
@@ -11743,7 +11747,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_DestroyRgn": {
@@ -11823,7 +11827,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_DestroyRgn_ISP": {
@@ -11946,7 +11950,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_Get/SetRgnAttr": {
@@ -12026,7 +12030,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_Get/SetRgnAttr_ISP": {
@@ -12173,7 +12177,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_RgnCreate_Query": {
@@ -12196,7 +12200,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_RgnRegister_Query": {
@@ -12219,7 +12223,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_SetGroupCallback": {
@@ -12263,7 +12267,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_SetPoolSize": {
@@ -12343,7 +12347,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_SetPoolSize_ISP": {
@@ -12425,7 +12429,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_SetRgnAttr_PicISP": {
@@ -12527,7 +12531,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_ShowRgn_ISP": {
@@ -12629,7 +12633,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_Stop": {
@@ -12689,7 +12693,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_UnRegisterRgn": {
@@ -12769,7 +12773,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "OSD_UpdateRgnAttrData": {
@@ -12839,7 +12843,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "IVS_CreateBaseMoveInterface": {
@@ -14078,7 +14082,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14120,7 +14124,7 @@
         "T40": "apitest rc3-cases 2026-10-27 .184 (T41-audio: AENC G.711A and ADEC round trip of a microphone frame; custom codec registration SKIP as on every SoC)",
         "T30": "apitest t30b29 2026-11-05 .231: audio area 92 PASS / 0 FAIL with the silent PCM-copy codec (OpenIMP claude/t30-audio-codec): AENC/ADEC CreateChn/DestroyChn/SendFrame/SendStream/GetStream/PollingStream/ReleaseStream/ClearChnBuf and Register/UnRegisterEncoder/Decoder (handle 6, bytes equal, 1 callback each), all 17 lines PASS; nothing played (silent test)",
         "T32": "QEMU 2026-11-13 #298 (tools/t32/t32_misc_sample.c acodec 6, audit/issue298 vac/oac): vendor libimp 2.2.0 and OpenIMP in the same guest give identical G.711A/G.711U/G.726/ADPCM stream bytes, decoded PCM, user encoder/decoder handles and calls and error return codes; AENC time stamp = frame time stamp as the vendor (fixed, a9861dfa); host test tests/t32/acodec_test.c; no camera",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33-audio674 2026-11-17 .122 (sys,audio, no AO: AENC G.711A and ADEC round trip of a microphone frame, all create/send/poll/get/release/clear/destroy lines PASS; custom codec Register* not exercised; audio.ko from the kernel oss3 sources, #674)"
       },
       "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #20): all AENC/ADEC calls except the custom codec registration pass in QEMU T30 (G.711A encode and decode round trip). T32 (2026-11-11 #300 follow-up): all 17 vendor names exported by build/t32/libimp.so (shared src/audio/openimp_audio_enc_dec.c, dev on T31/T40/T41); no T32 QEMU call in tools/t32 or the #297/#329 audio runs. | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. ADEC_GetStream: vendor returns 1280 bytes where the node holds 800 (FAIL in the apitest), OpenIMP 800 (as on T32)."
     },
@@ -14150,7 +14154,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14217,7 +14221,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_DisableAec": {
@@ -14347,7 +14351,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14414,7 +14418,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_DisableAlgo": {
@@ -14427,7 +14431,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -14435,7 +14439,7 @@
         "T23": "apitest rc3-cases 2026-10-27 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -14449,7 +14453,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14516,7 +14520,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_DisableGetRaw": {
@@ -14529,14 +14533,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -14550,7 +14554,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14617,7 +14621,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_DisableHs": {
@@ -14630,7 +14634,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14639,7 +14643,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -14653,7 +14657,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14720,7 +14724,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_Enable": {
@@ -14733,7 +14737,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "err",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14800,7 +14804,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "FAIL apitest t33-1117 2026-11-17 .122: ret=-1 dev 1"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_EnableAec": {
@@ -14923,7 +14927,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -14990,7 +14994,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_EnableAlgo": {
@@ -15003,7 +15007,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -15011,7 +15015,7 @@
         "T23": "apitest rc3-cases 2026-10-27 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -15025,7 +15029,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15092,7 +15096,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_EnableGetRaw": {
@@ -15105,14 +15109,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -15126,7 +15130,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15193,7 +15197,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_EnableHs": {
@@ -15206,7 +15210,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15215,7 +15219,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only. | 2026-11-15 (#591, #605): the T40 / T41 record chain runs in the vendor order (AEC or NS, AGC, HPF, howling suppression, volume last). The vendor binds NS / AGC / HPF / HS to AI device 1 only; OpenIMP runs them on the recording device (device 0 included), user decision 2026-11-15, beyond vendor (docs/OPENIMP_BEYOND_VENDOR.md 6.11). T40 light box, NS level 3 on AI device 1: vendor -73.9 / open -74.5 dBFS."
     },
@@ -15229,7 +15233,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15296,7 +15300,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_Get/SetAlcGain": {
@@ -15337,7 +15341,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15404,7 +15408,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_Get/SetDigitalGain": {
@@ -15417,7 +15421,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15425,7 +15429,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -15439,7 +15443,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15506,7 +15510,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_Get/SetPubAttr": {
@@ -15586,7 +15590,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_Get/SetVol": {
@@ -15599,7 +15603,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15666,7 +15670,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_GetFrame": {
@@ -15679,7 +15683,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15746,7 +15750,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_GetFrameAndRaw": {
@@ -15759,14 +15763,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": " | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -15839,7 +15843,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15906,7 +15910,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       }
     },
     "AI_ReleaseFrame": {
@@ -15919,7 +15923,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -15986,7 +15990,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_SetAgcMode": {
@@ -16018,7 +16022,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -16055,7 +16059,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_SetVolMute": {
@@ -16068,7 +16072,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -16115,7 +16119,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b29 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_Set_WebrtcProfileIni_Path": {
@@ -16128,7 +16132,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -16159,7 +16163,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AO_CacheSwitch": {
@@ -17584,14 +17588,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "nohw"
       },
       "ref": {
         "T41": "mx1112-r2 2026-11-12 T41 test camera (Cinnado, agg68a, timps stopped, AI dev 1 chn 0 enabled, microphone only): OpenIMP libimp and the vendor 1.2.6 libimp answer the same: before AI enable -1, device 2 -1, channel 1 -1, dev 1 chn 0 -1 errno EPERM with the kernel line 'ioctl command 1074024522 is not supported' (0x4004504a) for both: the board's audio module has no select-codec command, vendor-equal (audit/matrix1112/r2/out-34.txt, tool acodec)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest audio QEMU 2026-11-13 (#481, audit/t33backlog/runs a1-vend vs a4-oi; vendor audio.ko H20250929a in the T33 guest)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (record-only on the T33L module with the oss3 audio.ko of #674: sys,audio PASS 80 / FAIL 0, no AO call, no sound)"
       },
       "note": "T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): stays: with AI enabled the ioctl answers -1 (errno 1) on the Cinnado, the dsp_ioctl of the image's audio module (ingenic-sdk common/audio/t41/oss3/audio_dsp.c) has no select-codec command (default branch 'not supported'); device 2 and channel 1 are refused with -1 as in the library code; the external codec is not selected (routing change); needs a board whose audio module has the command. | T33 (2026-11-13, #481): QEMU -M ingenic-t33 models the AIC and the T32/T33 internal codec; the vendor audio.ko (H20250929a) loads in the 3.10.14 guest (/dev/dsp), apitest area audio vendor 2.0.2.1 vs OpenIMP: 101 of 102 lines equal (AO/AI/AENC/ADEC), 0 oopses; silence only."
     },
@@ -18894,7 +18898,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_GetBindbyDest": {
@@ -19024,7 +19028,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_GetTimeStamp": {
@@ -19094,7 +19098,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_GetVersion": {
@@ -19174,7 +19178,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_Init": {
@@ -19254,7 +19258,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_MemPoolFree": {
@@ -19275,7 +19279,7 @@
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T32": "QEMU run-oi-buf vs run-vendor-buf (#299, audit/issue299)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_MemPoolRequest": {
@@ -19298,7 +19302,7 @@
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       },
       "note": "T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25) T23+T31: real memory pools (claude/t23t31-cacheonly, not in agg-25)"
     },
@@ -19359,7 +19363,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_RebaseTimeStamp": {
@@ -19429,7 +19433,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "System_UnBind": {
@@ -19569,7 +19573,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T30": "apitest t30lab 2026-11-03 .231",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33c1117 2026-11-17 .122"
       }
     },
     "AI_DisableDrcAndEq": {
@@ -20059,12 +20063,12 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33e1: argument checks, get = set read-back, SAR / signal type visible in the SPS of the stream after RequestIDR, SetH264Vui on an H.265 channel accepted like the vendor)"
       },
       "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (NULL 0x80040010); read-back changes at the next IDR like the vendor (timing 1/30, format 5, colour 2/2/2). T32: same source, no T32 2.2.0 run."
     },
@@ -20078,12 +20082,12 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33e1: argument checks, get = set read-back, SAR / signal type visible in the SPS of the stream after RequestIDR, SetH264Vui on an H.265 channel accepted like the vendor)"
       },
       "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal; read-back from the next IDR (timing 1/15). T32: same source, no T32 2.2.0 run."
     },
@@ -20559,12 +20563,12 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33e1: argument checks, get = set read-back, SAR / signal type visible in the SPS of the stream after RequestIDR, SetH264Vui on an H.265 channel accepted like the vendor)"
       },
       "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): SPS VUI after the next IDR equal to vendor 2.0.2.1 byte for byte except level_idc (#502): video signal type (format, full range; no colour description), aspect ratio from the SAR (4:3 -> idc 14), bitstream restriction (1,0,0,11,11,0,1); on an H.265 channel 0. T32: same source, no T32 2.2.0 run."
     },
@@ -20578,12 +20582,12 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33e1: argument checks, get = set read-back, SAR / signal type visible in the SPS of the stream after RequestIDR, SetH264Vui on an H.265 channel accepted like the vendor)"
       },
       "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): SPS VUI after the next IDR byte-equal to the vendor (aspect idc as given, signal type, restriction 1,1,1,0,0,0,10,10). T32: same source, no T32 2.2.0 run."
     },
@@ -21177,13 +21181,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T23": "apitest agg62 2026-10-31 .30"
+        "T23": "apitest agg62 2026-10-31 .30",
+        "T33": "apitest t33c1117 2026-11-17 .122 (case osdalloc_t23 on T33: 4096 bytes allocated, written, physical address known; QEMU vendor 2.0.2.1 equal)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (vendor 2.x only; build/t32/libimp.so exports it)."
     },
@@ -22373,13 +22378,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T23": "apitest agg62 2026-10-31 .30"
+        "T23": "apitest agg62 2026-10-31 .30",
+        "T33": "apitest t33c1117 2026-11-17 .122 (case osdalloc_t23 on T33: 4096 bytes copied into rmem, content equals the source; QEMU vendor 2.0.2.1 equal)"
       },
       "note": "T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (vendor 2.x only; build/t32/libimp.so exports it)."
     },
@@ -22424,7 +22430,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed."
     },
     "OSD_UpdateRgnAttrData_ISP": {
       "area": "OSD",
