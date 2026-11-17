@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T40 plain VBR carries uMaxBitRate from CreateChn (#677)
+
+- `IMP_Encoder_CreateChn` on T40 applied the rate-control attribute to the codec only for the capped modes, so plain VBR ran with `t31_max_bitrate` 0 and the AVPU command word cmd[0x16] (hardware RC maximum) fell back to the target. The vendor codes uMaxBitRate = 4/3 x target (SetDefaultParam default). Plain VBR now takes the same SetRcParam path as the runtime `SetChnAttrRcMode`; CBR unchanged. Eufy T40XP check: VBR 1000/2000 kbps cmd[0x16] 0x41/0x82 expected (was 0x31/0x62).
+
 ## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
 
 - New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000-1707.html` (75 pass / 0 fail; open-tx-isp 5fa382ae + OpenIMP libimp 1330ca18), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).

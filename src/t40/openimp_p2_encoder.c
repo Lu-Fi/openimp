@@ -2961,8 +2961,13 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
             break;      /* FIXQP and JPEG channels have no Allegro rate control */
         }
 #if defined(PLATFORM_T40)
-        if (codec_rc.attrRcMode.rcMode != IMP_ENC_RC_MODE_CAPPED_VBR &&
-            codec_rc.attrRcMode.rcMode != IMP_ENC_RC_MODE_CAPPED_QUALITY)
+        /* #677: plain VBR needs uMaxBitRate from the start too: without it
+         * t31_max_bitrate stayed 0, the hardware RC maximum (cmd[0x16])
+         * fell back to the target (CBR value) while the vendor codes
+         * uMaxBitRate = 4/3 target (Eufy T40XP, 1080p VBR 1000/2000 kbps:
+         * 0x41/0x82 vs 0x31/0x62, I frames 0.58-0.68x of the vendor's).
+         * CBR keeps its own path. */
+        if (codec_rc.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
             has_rc = 0;
 #elif defined(PLATFORM_T41)
         /* T41 plain VBR runs the Allegro core as well and needs uMaxBitRate
