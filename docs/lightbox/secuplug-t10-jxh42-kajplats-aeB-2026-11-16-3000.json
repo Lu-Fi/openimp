@@ -2,12 +2,13 @@
  "alias": "secuplug-t10-jxh42",
  "counts": {
   "beyond": 1,
-  "fail": 10,
+  "fail": 12,
   "fail_by_handling": {
-   "issue": 10
+   "issue": 10,
+   "open": 2
   },
   "flaky": 0,
-  "info": 122,
+  "info": 114,
   "invalid": 2,
   "n/a": 1,
   "not_run": 1,
@@ -15,7 +16,7 @@
   "not_run_preflight": 0,
   "pass": 76,
   "reference": 0,
-  "warn": 26
+  "warn": 32
  },
  "date": "2026-11-16",
  "encoder": {
@@ -100,7 +101,7 @@
    }
   }
  },
- "generated": "2026-11-17 15:45",
+ "generated": "2026-11-17 15:51",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
