@@ -233,6 +233,64 @@ static void test_volume(void)
           value == 60, "AI EnableChn resets to 60, got %d", value);
     IMP_AI_DisableChn(0, 0);
     IMP_AI_Disable(0);
+
+    /* #660: libimp keeps the volume per device; device 1 reads 0 after
+     * Enable even though device 0 was set before (T30X b94: vendor 0) */
+    CHECK(IMP_AI_SetPubAttr(1, &attr) == 0 && IMP_AI_Enable(1) == 0 &&
+          IMP_AI_GetVol(1, 0, &value) == 0 && value == 0,
+          "AI device 1 GetVol after Enable reads %d, vendor 0", value);
+    CHECK(IMP_AI_EnableChn(1, 0) == 0 && IMP_AI_GetVol(1, 0, &value) == 0 &&
+          value == 60, "AI device 1 EnableChn resets to 60, got %d", value);
+    CHECK(IMP_AI_GetVol(0, 0, &value) == 0 && value == 60,
+          "AI device 0 keeps its own volume, got %d", value);
+    IMP_AI_DisableChn(1, 0);
+    IMP_AI_Disable(1);
+}
+
+/* #272: EnableAec runs libaudioProcess's AEC like libimp: created with the
+ * AI rate and the WebRTC profile path, called per frame with {reference,
+ * mic, out = mic, bytes}; OPENIMP_AEC=aecm keeps OpenIMP's AECM. */
+static void test_lib_aec(void)
+{
+    IMPAudioIOAttr attr = attr_for(16000, 160, 8);
+    void *lib = dlopen("libaudioProcess.so", RTLD_NOW);
+    void (*info)(int *, int *, const char **) =
+        lib ? (void (*)(int *, int *, const char **))dlsym(lib, "fake_aec_info")
+            : NULL;
+    int calls0 = 0, calls = 0, rate = 0;
+    const char *profile = "";
+    IMPAudioFrame frame;
+
+    CHECK(info != NULL, "fake library with AEC");
+    if (!info)
+        return;
+    info(&calls0, &rate, &profile);
+    CHECK(IMP_AI_SetPubAttr(0, &attr) == 0 && IMP_AI_Enable(0) == 0 &&
+          IMP_AI_EnableChn(0, 0) == 0, "channel");
+    CHECK(IMP_AI_EnableAec(0, 0, 0, 0) == 0, "EnableAec");
+    CHECK(pull_frames(3) == 3, "frames with AEC");
+    CHECK(IMP_AI_PollingFrame(0, 0, 1000) == 0 &&
+          IMP_AI_GetFrame(0, 0, &frame, BLOCK) == 0, "frame");
+    /* mic 0x1111 minus reference 0x2222 */
+    CHECK(((int16_t *)(void *)frame.virAddr)[0] == (int16_t)(0x1111 - 0x2222),
+          "libaudioProcess AEC output, got %d",
+          ((int16_t *)(void *)frame.virAddr)[0]);
+    IMP_AI_ReleaseFrame(0, 0, &frame);
+    info(&calls, &rate, &profile);
+    CHECK(calls - calls0 >= 4 && rate == 16000 &&
+          strcmp(profile, "/etc/webrtc_profile.ini") == 0,
+          "aec calls %d rate %d profile '%s'", calls - calls0, rate, profile);
+    CHECK(IMP_AI_DisableAec(0, 0) == 0, "DisableAec");
+    setenv("OPENIMP_AEC", "aecm", 1);
+    CHECK(IMP_AI_EnableAec(0, 0, 0, 0) == 0, "EnableAec AECM");
+    info(&calls0, &rate, &profile);
+    CHECK(pull_frames(3) == 3, "frames with AECM");
+    info(&calls, &rate, &profile);
+    CHECK(calls == calls0, "OPENIMP_AEC=aecm: library AEC not called");
+    IMP_AI_DisableAec(0, 0);
+    unsetenv("OPENIMP_AEC");
+    IMP_AI_DisableChn(0, 0);
+    IMP_AI_Disable(0);
 }
 
 static void test_cycles(void)
@@ -426,6 +484,7 @@ int main(void)
     test_whole_fragments();
     test_ai_hpf_cutoff();
     test_ao_hpf_cutoff();
+    test_lib_aec();
     CHECK(open_count == 0, "%d descriptors left at exit", open_count);
     if (failures) {
         fprintf(stderr, "AI lifecycle: %d check(s) failed\n", failures);

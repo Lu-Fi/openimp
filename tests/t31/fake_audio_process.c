@@ -5,6 +5,7 @@
  * shows (as an abort here, as use-after-free under ASan).
  */
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -148,4 +149,49 @@ int audio_process_agc_process(void *agc, const int16_t *const *in,
 int audio_process_agc_free(void *agc)
 {
     return fake_free(agc);
+}
+
+/* AEC as libimp takes it from libaudioProcess (#272): create(rate, profile),
+ * process(handle, {far, near, out, bytes}) in place, free.  The fake
+ * subtracts the reference from the microphone and counts the calls. */
+typedef struct {
+    const int16_t *far;
+    int16_t *near;
+    int16_t *out;
+    int bytes;
+} FakeAecFrame;
+
+static int aec_calls, aec_rate;
+static char aec_profile[64];
+
+void *audio_process_aec_create(int rate, const char *profile)
+{
+    aec_rate = rate;
+    snprintf(aec_profile, sizeof(aec_profile), "%s", profile ? profile : "");
+    return fake_create();
+}
+
+int audio_process_aec_process(void *aec, FakeAecFrame *frame)
+{
+    int i;
+
+    fake_check(aec);
+    if (!frame || frame->out != frame->near || frame->bytes <= 0)
+        abort();
+    for (i = 0; i < frame->bytes / 2; i++)
+        frame->out[i] = (int16_t)(frame->near[i] - frame->far[i]);
+    aec_calls++;
+    return 0;
+}
+
+int audio_process_aec_free(void *aec)
+{
+    return fake_free(aec);
+}
+
+void fake_aec_info(int *calls, int *rate, const char **profile)
+{
+    *calls = aec_calls;
+    *rate = aec_rate;
+    *profile = aec_profile;
 }

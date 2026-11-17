@@ -9,6 +9,14 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T10-T31 audio vendor flow: libaudioProcess AEC, per-device AI volume, NS -> AGC -> HPF (#272 #666 #660 #661)
+
+- AEC (#272, #666): `IMP_AI_EnableAec` now runs the AEC of the installed `libaudioProcess.so` like the vendor libimp (T30 1.0.5 / T31 1.1.6 decompiled: `audio_process_aec_create(rate)`, `audio_process_aec_process(handle, {reference, mic, out = mic, bytes})`, `audio_process_aec_free`; original library = full WebRTC APM with `/etc/webrtc_profile.ini`, libaudioProcess-neo = full WebRTC AEC). OpenIMP's AECM (`src/audio/openimp_aec.c`, #499 echo gate) stays as fallback when the library has no AEC, or with `OPENIMP_AEC=aecm`. T30X b95 (band 300-7500 Hz) before the change: speech 300-1000 Hz open ERLE 12.6 dB vs vendor 20.7 dB. Device proof pending (audit/t30/b96).
+- AI volume (#660): `IMP_AI_SetVol/GetVol` keep the value per AI device like libimp (dev * 600 + chn * 0x1c8 in the vendor state): device 1 reads 0 after `IMP_AI_Enable` until its own `EnableChn` (T30X b94: vendor 0, open was 60).
+- AI effects order (#661): NS, then AGC, then HPF last, as in the vendor `_ai_record_thread` (OpenIMP ran the HPF first). The b94 HPF gap (open -28.5 vs vendor -34.8 dBFS) was a test fault: the tool set `IMP_AI_SetHpfCoFrequency(200)` on the open stack only (T30 vendor 1.0.5 has no such call; the default coefficients are identical, kFilterCoefficients 3665/-7330/3665/7285/-3280).
+- Found, not changed (decision needed, #667): the vendor skips NS/AGC/HPF on frames the AEC processed.
+- Tests: `tests/t31/ai_lifecycle_test.c` (device-1 volume, libaudioProcess AEC through the fake library incl. `OPENIMP_AEC=aecm`), `tests/t31/fake_audio_process.c` (fake `audio_process_aec_*`). `make check` green; T30 cross build (build-t30.sh) clean.
+
 ## 2026-11-17: Light box, Secuplug SP1, jxh42 (open AE variant B: vendor AE graph, t20_simple_ae=0) full run 5000 K (#230)
 
 - New report `docs/lightbox/secuplug-t10-jxh42-kajplats-aeB-1117-2026-11-17-5000.html` (37 pass / 0 fail; open-tx-isp 095c9469 + OpenIMP libimp 8dd7474f), both stacks, runtime only, charts/numbers only, no pictures.
