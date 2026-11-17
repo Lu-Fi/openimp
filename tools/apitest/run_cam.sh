@@ -13,6 +13,7 @@
 # env: S (session dir, default below)  BIN  AREAS (default sys,fs,enc,osd,ivs,audio,isp,su)  RISKY=1 (imgfx
 #      bypass/FPS cases)  NOIMG=1 (skip imgfx)  T40_MASK (t40_devtest phases, hex)  TAG (label, default agg47)
 #      SENSOR I2C W H (override the table)  DRY=1 (print what would run)
+#      OLIB=<libimp.so> (run against this libimp via LD_LIBRARY_PATH instead of the installed one)
 #      IMGFX_FILTER=name (picture area: only the cases whose name contains it, e.g. exp-; the base cases always run)
 S=${S:?set S=<scratch dir with audit/ and locks/>}
 D=$(cd "$(dirname "$0")" && pwd)
@@ -37,6 +38,7 @@ case "$SOC:$IP" in
   T31:*)   : ${SENSOR:=sc2336}; : ${I2C:=0x30}; : ${W:=1920}; : ${H:=1080};;
   T40:*)   : ${SENSOR:=sc830ai};: ${I2C:=0x30}; : ${W:=3840}; : ${H:=2160};;
   T41:*)   : ${SENSOR:=sc5336}; : ${I2C:=0x30}; : ${W:=2880}; : ${H:=1620};;     # sc5336 mode of the open driver (2592x1944 distorts the geometry cases)
+  T33:*)   : ${SENSOR:=cv2005}; : ${I2C:=0x35}; : ${W:=1920}; : ${H:=1080}; : ${EXTRA_ENV:=T32_NO_PROC=1};;   # T33L module (bench), cv2005 PRJ008 mode
   *) echo "unknown SoC $SOC"; exit 2;;
 esac
 
@@ -72,6 +74,9 @@ echo "streamer: ${STREAMER:-none found}" | tee -a "$OUT/before.txt"
 cam 'dmesg -c > /dev/null; [ -n "'"$STREAMER"'" ] && '"$STREAMER"' stop > /dev/null 2>&1; sleep 3; mkdir -p /tmp/at'
 copy() { cat "$1" | cam "cat > /tmp/at/$2; chmod 755 /tmp/at/$2"; }
 copy "$BIN/apitest_$lc" apitest
+# OLIB=<libimp.so>: run against that OpenIMP build instead of the installed one (copied to /tmp/at/olib, removed with /tmp/at; ~800 KB)
+if [ -n "$OLIB" ]; then cam 'mkdir -p /tmp/at/olib'; cat "$OLIB" | cam 'cat > /tmp/at/olib/libimp.so'; EXTRA_ENV="LD_LIBRARY_PATH=/tmp/at/olib $EXTRA_ENV"
+  echo "OLIB $OLIB md5 $(md5sum < "$OLIB" | cut -d' ' -f1)" | tee -a "$OUT/before.txt"; fi
 
 # run NAME CMD  -  output streamed to the host, remote PID recorded for the cleanup, host watchdog 20 min
 run() { local name=$1; shift; echo "== $name: $*" >> "$OUT/run.log"
