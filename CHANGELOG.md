@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
+
+- New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000.html` (75 pass / 0 fail; open-tx-isp 5fa382ae + OpenIMP libimp 1330ca18), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+
 ## 2026-11-17: T33 first device API test on the T33L module (#99; bench, no light box)
 
 - The apitest ran all areas (sys, fs, enc, osd, ivs, audio, isp, su, cases) on the T33L module with the installed open-tx-isp `next` f96210bc and the OpenIMP `next` libimp (and the installed libimp: same result): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 0 oops. 227 API cells moved qemu -> dev (`docs/api_evidence.json`, ref `apitest t33-1117 2026-11-17 .122`); the T33 streamer functions that work went from 18 to 143 of 258 (matrix row now labelled "T33 (T33L module, bench, no light box)"), API table 288 of 571 works. `tools/apitest/run_cam.sh` T33 line (cv2005 0x35 1920x1080) and `OLIB=<libimp.so>` option are on the branch `claude/apitest-t33-runcam` (not merged).
