@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: soak summary excludes announced and in-session reboots (review 2026-11-17)
+
+- `tools/status_soak.py`: a boot inside a planned test session (a `planned test` start line up to the next `done` / `free` line of the same author, e.g. lb_run with vendor = sysrq reboot between runs) is planned; a STATUS line that announces a reboot / OTA / SD autoupdate / recovery without the word `planned` (k7 session lines) explains a boot within 10 min. Against the 2026-11-17 07:34 data: .21 1 -> 0, .31 7 -> 0, .184 12 -> 0 unplanned; unexplained stay .32 (11-15 09:39, then offline) and the unlogged k7 reboots of .34 / .107 on 11-14/15.
+
 ## 2026-11-17: driver-port card: T10 vendor-proven 385, T20 381 (tests/t10_binoracle blocks, #539)
 
 - `docs/status/driver_port.json` (+ matrix): T10 377 -> 385, T20 369 -> 381. open-tx-isp next ae27b62eb adds the oracle blocks fix631 / system / apictx (53 system_* and 33 AE / AWB / sharpening API handlers), every block run against both vendor modules (tx-isp-t10.ko and tx-isp-t20.ko, 0 mismatches); #631 / #632 / #655 fixed and proven, so their functions count again. Open finding #624 (orientation_hflip) stays excluded.

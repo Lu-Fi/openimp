@@ -8,6 +8,9 @@ Runs on the HOST (not in CI): it reads the fleet soak sampler logs and the camer
   STATUS files   <locks>/cam-N.STATUS             "<date> <hh:mm> <who>: <text>"; read: "full OTA" (image flash, planned by
                  definition, starts a new image counter), "reboot" lines (recovery reboot, ...). A line containing the word
                  "planned" (not "unplanned") marks the event as planned; any other line with the marker explains a boot near it.
+                 A planned start line up to the next "done"/"free" line of the same author is a test session: boots inside it
+                 (lb_run vendor = sysrq reboot between runs) are planned. Lines that announce a reboot / OTA / SD autoupdate /
+                 recovery without the word "planned" (k7 session) explain a boot within 10 min too (review 2026-11-17).
 
 Rules come from docs/status/release.yaml (fleet camera -> SoC, planned marker). The file is rebuilt completely from the logs on every
 run (idempotent), so a daily cron or a manual run by the coordinator is enough:
@@ -34,6 +37,8 @@ S = os.environ.get("LUFI_SCRATCH") or sys.exit("set LUFI_SCRATCH=<scratch dir wi
 OUT = os.path.join(sd.SDIR, "soak.json")
 FMT = "%Y-%m-%d %H:%M:%S"
 BOOT_TOL = 150          # s: boot times closer than this are the same boot
+SPAN_MAX = 4 * 3600     # s: cap of an open planned-test span (start line without a done line)
+ANNOUNCE = re.compile(r"\b(reboot(ing)?|full OTA|autoupdate|cloner|recovered|flash(ing|ed)?|sysrq|power[- ]?cycl\w*|swapping\b.*\.ko)\b", re.I)
 EXPLAIN_TOL = 600       # s: a STATUS event within this distance of a boot explains the boot
 
 
@@ -72,8 +77,33 @@ def parse_status(path, marker):
         elif is_planned(text, marker):
             # any other "planned test" line (flash-one, lb_run, apitest, ...): not a reboot itself, but it explains a boot
             # within EXPLAIN_TOL (test tools reboot or swap modules without writing the word "reboot")
-            ev.append(dict(t=t, kind="test", planned=True, text=text))
+            ev.append(dict(t=t, kind="test", planned=True, text=text, who=who,
+                           done=re.search(r"\bdone\b|\bfree\b", text, re.I) is not None))
+        elif ANNOUNCE.search(text) and not re.search(r"\bunplanned\b|\bhung\b|\bOFFLINE\b|\bno (reboot|flash)\b|\bnot (reboot|flash)", text, re.I):
+            # a session announced a reboot / OTA / recovery in the log without the word "planned" (k7 session lines): explains a boot
+            ev.append(dict(t=t, kind="test", planned=True, text=text, who=who, done=False, announced=True))
     return ev
+
+
+def planned_spans(sev):
+    """(start, end) spans of planned test sessions: a planned start line up to the next 'done'/'free' line of the same who
+    (open start: capped at SPAN_MAX). A boot inside a span is a test-induced boot (lb_run: vendor = sysrq reboot between runs)."""
+    spans, open_ = [], {}
+    for e in sev:
+        if e["kind"] != "test":
+            continue
+        w = e.get("who")
+        if e.get("done"):
+            st = open_.pop(w, None)
+            if st is not None:
+                spans.append((st, e["t"]))
+        elif not e.get("announced"):
+            if w in open_ and (e["t"] - open_[w]).total_seconds() <= SPAN_MAX:
+                continue  # repeated start line of a running session
+            open_[w] = e["t"]
+    for w, st in open_.items():
+        spans.append((st, st + dt.timedelta(seconds=SPAN_MAX)))
+    return spans
 
 
 def parse_log(path):
@@ -137,6 +167,7 @@ def build(audit, locks, image=None, rel=None):
                 events.append(dict(time=fmt(e["t"]), kind="reboot", planned=e["planned"], reason=e["text"][:140]))
         # sampler: boots that no STATUS event explains; oops increases
         known = [e["t"] for e in sev if e["t"] >= win0]
+        spans = planned_spans(sev)
         boots, oops_ev = [], []
         prev_o, prev_boot = None, None
         for t, up, oo in up_s:
@@ -153,6 +184,8 @@ def build(audit, locks, image=None, rel=None):
         for k, (b, seen) in enumerate(boots):
             if any(abs((b - k2).total_seconds()) <= EXPLAIN_TOL for k2 in known):
                 continue
+            if any(a - dt.timedelta(seconds=EXPLAIN_TOL) <= b <= z + dt.timedelta(seconds=EXPLAIN_TOL) for a, z in spans):
+                continue  # inside a planned test session (STATUS start .. done line)
             if k == 0 and first is not None and abs((b - first).total_seconds()) <= EXPLAIN_TOL:
                 continue
             events.append(dict(time=fmt(b), kind="reboot", planned=False, reason="no STATUS entry (boot time derived from uptime, seen %s)" % fmt(seen)))
