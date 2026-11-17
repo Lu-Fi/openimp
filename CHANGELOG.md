@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-15: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
 
 - Re-generated report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-15-3000-2154.html` (77 pass / 5 fail; open-tx-isp 8512a6b1 + OpenIMP libimp ca490e08), both stacks, runtime only, numbers and light-box pictures.
+## 2026-11-16: Light box, Secuplug SP1, jxh42 full run 3000 K (#230)
+
+- Re-generated report `docs/lightbox/secuplug-t10-jxh42-kajplats-2026-11-16-3000.html` (84 pass / 2 fail, 2 rows invalid by the runner guards; open-tx-isp d1fd55f2 + OpenIMP libimp dcf64976), both stacks, runtime only, numbers and light-box pictures.
 
 ## 2026-11-17: Light box, Secuplug SP1, jxh42 (open AE variant B: vendor AE graph, t20_simple_ae=0) full run 5000 K (#230)
 
