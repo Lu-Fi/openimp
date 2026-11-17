@@ -1,12 +1,13 @@
 {
  "alias": "eufy-t40xp-sc830",
  "counts": {
-  "fail": 5,
+  "fail": 6,
   "fail_by_handling": {
-   "issue": 5
+   "issue": 5,
+   "open": 1
   },
   "flaky": 0,
-  "info": 76,
+  "info": 70,
   "invalid": 0,
   "n/a": 19,
   "not_run": 10,
@@ -14,7 +15,7 @@
   "not_run_preflight": 0,
   "pass": 77,
   "reference": 0,
-  "warn": 0
+  "warn": 5
  },
  "date": "2026-11-15",
  "encoder": {
@@ -259,7 +260,7 @@
    }
   }
  },
- "generated": "2026-11-17 15:46",
+ "generated": "2026-11-17 15:51",
  "generator": "lightbox_report.py",
  "image": {
   "BUILD_ID": null,
