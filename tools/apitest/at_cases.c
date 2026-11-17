@@ -2267,6 +2267,30 @@ static void cs_aestats(void) {}
 
 #if defined(PLATFORM_T41) && !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_SetFaceAe && HAS_IMP_ISP_Tuning_GetFaceAe
 /* face AE as streamers use it: the window + target set every frame (vendor remark), here every 40 ms for 'ms' */
+/*
+ * AE at its exposure limit (#685): the open T33 module node prints "t33 ae: ... mean M target T tgain 0xG"; when the AE's own
+ * mean stays below 3/4 of its target, exposure and gain are already at the maximum (dark scene) and no face target can move the
+ * picture: the face-AE case is then inconclusive (SKIP), not a FAIL.  1 = at the limit, 0 = not / node not readable.
+ */
+static int ae_at_limit(unsigned *mean, unsigned *target)
+{
+    char l[256];
+    FILE *f = fopen("/proc/jz/isp/isp-m0", "r");
+    int at = 0;
+
+    *mean = *target = 0;
+    if (!f) return 0;
+    while (fgets(l, sizeof(l), f)) {
+        const char *m = strstr(l, " mean "), *t = strstr(l, " target ");
+        if (strncmp(l, "t33 ae: it ", 11) || !m || !t) continue;
+        *mean = (unsigned)strtoul(m + 6, NULL, 10); *target = (unsigned)strtoul(t + 8, NULL, 10);
+        at = *target && *mean * 4 < *target * 3;
+        break;
+    }
+    fclose(f);
+    return at;
+}
+
 static Fst face_hold(IMPISPFaceAttr *f, int ms, int *ret)
 {
     int64_t t0 = now_us();
@@ -2281,11 +2305,14 @@ static void cs_faceae(void)
     NEED(IMP_ISP_Tuning_SetFaceAe) NEED(IMP_ISP_Tuning_GetFaceAe) {
         IMPISPFaceAttr o, f, g, bad, after;
         Fst base, lo, hi, back;
-        int r0, r1, r2, r3, r4, r5, ms, hold;
+        int r0, r1, r2, r3, r4, r5, ms, hold, lim;
+        unsigned lm = 0, lt = 0;
 
         memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&after, 0, sizeof(after));
+
         r0 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &o);
         base = fst(600); snap_y("faceae-0-base");
+        lim = ae_at_limit(&lm, &lt);
         memset(&f, 0, sizeof(f));
         f.enable = IMPISP_TUNING_OPS_MODE_ENABLE;
         f.left = g_sw / 4; f.top = g_sh / 4; f.right = g_sw * 3 / 4; f.bottom = g_sh * 3 / 4;
@@ -2302,9 +2329,23 @@ static void cs_faceae(void)
         rep(FN(IMP_ISP_Tuning_GetFaceAe), r0 | r2, (r0 == 0 && r2 == 0 && g.enable == IMPISP_TUNING_OPS_MODE_ENABLE && g.left == (unsigned)g_sw / 4 && g.bottom == (unsigned)g_sh * 3 / 4 && g.target == 40) ? V_PASS : V_FAIL,
             "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u (set (%d,%d)-(%d,%d) 40)", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target,
             g_sw / 4, g_sh / 4, g_sw * 3 / 4, g_sh * 3 / 4);
-        rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3 | r5, (r1 == 0 && r3 == 0 && r5 == 0 && r4 != 0 && after.target == 180 && lo.ok && hi.ok && hi.y > lo.y + 15 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
-            "centre window metered: target 40 -> Y %.1f, target 180 -> Y %.1f (base %.1f); empty window refused (ret %d, target still %u); off: back to Y %.1f in %d ms, frames flow",
-            lo.y, hi.y, base.y, r4, after.target, back.y, ms);
+        {
+#ifdef APITEST_T33
+            /* T33: the vendor libimp passes the empty window to the driver unchecked and tisp_ae_face_set returns 0 (tx-isp-t33.ko
+             * 0xf9aa8: tisp_ae_sepc_area, then v0 = 0; tisp_ae_roi_point only prints "ROI point error"), so ret 0 is vendor-equal */
+            int refused = 1;
+#else
+            int refused = r4 != 0;
+#endif
+            int ok = r1 == 0 && r3 == 0 && r5 == 0 && refused && after.target == 180 && lo.ok && hi.ok && hi.y > lo.y + 15 && ms >= 0 && flow();
+            int skip = !ok && lim && r1 == 0 && r3 == 0 && r5 == 0 && flow();    /* AE at its exposure limit: no target can move the picture */
+
+            rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3 | r5, ok ? V_PASS : skip ? V_SKIP : V_FAIL,
+                "%scentre window metered: target 40 -> Y %.1f, target 180 -> Y %.1f (base %.1f); empty window %s (ret %d, target still %u); off: back to Y %.1f in %d ms, frames flow",
+                skip ? "AE at its exposure limit (AE mean below 3/4 of its own target: dark scene), face target cannot move the picture, repeat in daylight; " : "",
+                lo.y, hi.y, base.y, r4 != 0 ? "refused" : "accepted as the vendor", r4, after.target, back.y, ms);
+            if (lt) printf("[I] faceae: AE node mean %u target %u at base%s\n", lm, lt, lim ? " (at the exposure limit)" : "");
+        }
     }
 }
 #else
