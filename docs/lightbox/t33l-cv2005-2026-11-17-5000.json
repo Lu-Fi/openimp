@@ -1,0 +1,495 @@
+{
+ "alias": "t33l-cv2005",
+ "counts": {
+  "beyond": 0,
+  "fail": 11,
+  "fail_by_handling": {
+   "open": 11
+  },
+  "flaky": 0,
+  "info": 84,
+  "invalid": 5,
+  "n/a": 16,
+  "not_run": 7,
+  "not_run_planned": 7,
+  "not_run_preflight": 0,
+  "pass": 36,
+  "reference": 0,
+  "warn": 26
+ },
+ "date": "2026-11-17",
+ "encoder": {
+  "h264_cbr1000": {
+   "open": {
+    "I_mean_B": 74652.8,
+    "P_mean_B": 2254.5165,
+    "P_over_I": 0.0302,
+    "kbps": 1052.2617,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 43318.6,
+    "P_mean_B": 3510.7522,
+    "P_over_I": 0.081,
+    "kbps": 1032.8663,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h264_cbr2000": {
+   "open": {
+    "I_mean_B": 111167.32,
+    "P_mean_B": 5996.4402,
+    "P_over_I": 0.0539,
+    "kbps": 2072.8866,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 70907.96,
+    "P_mean_B": 7687.9393,
+    "P_over_I": 0.1084,
+    "kbps": 2062.8427,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h264_fixqp25": {
+   "open": {
+    "I_mean_B": 111499.1429,
+    "P_mean_B": 9955.842,
+    "P_over_I": 0.0893,
+    "kbps": 2846.7,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 233908.9524,
+    "P_mean_B": 85522.0915,
+    "P_over_I": 0.3656,
+    "kbps": 18383.513,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h264_fixqp35": {
+   "open": {
+    "I_mean_B": 30447.9524,
+    "P_mean_B": 658.6279,
+    "P_over_I": 0.0216,
+    "kbps": 381.7591,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 56538.0,
+    "P_mean_B": 11710.5717,
+    "P_over_I": 0.2071,
+    "kbps": 2722.735,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h265_cbr1000": {
+   "open": {
+    "I_mean_B": 74044.2,
+    "P_mean_B": 2223.8943,
+    "P_over_I": 0.03,
+    "kbps": 1041.3363,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 46024.44,
+    "P_mean_B": 3346.0399,
+    "P_over_I": 0.0727,
+    "kbps": 1023.7649,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h265_cbr2000": {
+   "open": {
+    "I_mean_B": 99869.88,
+    "P_mean_B": 6303.7088,
+    "P_over_I": 0.0631,
+    "kbps": 2038.039,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 72702.4,
+    "P_mean_B": 7455.8215,
+    "P_over_I": 0.1026,
+    "kbps": 2033.2486,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h265_fixqp25": {
+   "open": {
+    "I_mean_B": 86610.0476,
+    "P_mean_B": 1586.6216,
+    "P_over_I": 0.0183,
+    "kbps": 1030.8361,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 208426.0952,
+    "P_mean_B": 70803.3077,
+    "P_over_I": 0.3397,
+    "kbps": 15343.4786,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  },
+  "h265_fixqp35": {
+   "open": {
+    "I_mean_B": 23044.6667,
+    "P_mean_B": 239.6674,
+    "P_over_I": 0.0104,
+    "kbps": 239.2337,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   },
+   "vendor": {
+    "I_mean_B": 60645.8571,
+    "P_mean_B": 6794.8025,
+    "P_over_I": 0.112,
+    "kbps": 1813.2168,
+    "psnr_mean": null,
+    "psnr_min": null,
+    "ssim_mean": null
+   }
+  }
+ },
+ "generated": "2026-11-17 15:56",
+ "generator": "lightbox_report.py",
+ "image": {
+  "BUILD_ID": null,
+  "build": "claude/t33-thingino+f4e1146, 2026-11-14 20:03:37 UTC",
+  "commits": {
+   "open-tx-isp": null,
+   "openimp": null
+  },
+  "name": "jzt33l_d61_t33l_cv2005_eth"
+ },
+ "lamp_ct": 5000.0,
+ "metrics": {
+  "cpu.kernel_threads": {
+   "better": "lower",
+   "open": 0.0,
+   "unit": "%",
+   "vendor": 10.86
+  },
+  "cpu.streamer": {
+   "better": "lower",
+   "open": 1.1,
+   "unit": "% of all CPU",
+   "vendor": 3.34
+  },
+  "cpu.system_busy": {
+   "better": "lower",
+   "open": 2.4,
+   "unit": "%",
+   "vendor": 3.7
+  },
+  "enc.h264_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 111499.1429,
+   "unit": "bytes",
+   "vendor": 233908.9524
+  },
+  "enc.h264_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 9955.842,
+   "unit": "bytes",
+   "vendor": 85522.0915
+  },
+  "enc.h264_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.0893,
+   "unit": "ratio",
+   "vendor": 0.3656
+  },
+  "enc.h264_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 30447.9524,
+   "unit": "bytes",
+   "vendor": 56538.0
+  },
+  "enc.h264_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 658.6279,
+   "unit": "bytes",
+   "vendor": 11710.5717
+  },
+  "enc.h264_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.0216,
+   "unit": "ratio",
+   "vendor": 0.2071
+  },
+  "enc.h265_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 86610.0476,
+   "unit": "bytes",
+   "vendor": 208426.0952
+  },
+  "enc.h265_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 1586.6216,
+   "unit": "bytes",
+   "vendor": 70803.3077
+  },
+  "enc.h265_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.0183,
+   "unit": "ratio",
+   "vendor": 0.3397
+  },
+  "enc.h265_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 23044.6667,
+   "unit": "bytes",
+   "vendor": 60645.8571
+  },
+  "enc.h265_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 239.6674,
+   "unit": "bytes",
+   "vendor": 6794.8025
+  },
+  "enc.h265_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.0104,
+   "unit": "ratio",
+   "vendor": 0.112
+  },
+  "noise_gain.16.Yrel_pct": {
+   "better": "lower",
+   "open": 5.7541,
+   "unit": "temporal std / mean Y %",
+   "vendor": 4.6017
+  },
+  "noise_gain.16.Ytemporal": {
+   "better": "lower",
+   "open": 0.992,
+   "unit": "temporal std",
+   "vendor": 0.774
+  },
+  "noise_gain.2.Yrel_pct": {
+   "better": "lower",
+   "open": 15.7971,
+   "unit": "temporal std / mean Y %",
+   "vendor": null
+  },
+  "noise_gain.2.Ytemporal": {
+   "better": "lower",
+   "open": 0.218,
+   "unit": "temporal std",
+   "vendor": null
+  },
+  "noise_gain.4.Yrel_pct": {
+   "better": "lower",
+   "open": 19.3116,
+   "unit": "temporal std / mean Y %",
+   "vendor": null
+  },
+  "noise_gain.4.Ytemporal": {
+   "better": "lower",
+   "open": 0.533,
+   "unit": "temporal std",
+   "vendor": null
+  },
+  "noise_gain.8.Yrel_pct": {
+   "better": "lower",
+   "open": 7.8092,
+   "unit": "temporal std / mean Y %",
+   "vendor": 4.3877
+  },
+  "noise_gain.8.Ytemporal": {
+   "better": "lower",
+   "open": 0.884,
+   "unit": "temporal std",
+   "vendor": 0.498
+  },
+  "noise_gain.max.Yrel_pct": {
+   "better": "lower",
+   "open": null,
+   "unit": "temporal std / mean Y %",
+   "vendor": 2.564
+  },
+  "noise_gain.max.Ytemporal": {
+   "better": "lower",
+   "open": null,
+   "unit": "temporal std",
+   "vendor": 0.741
+  },
+  "p1.day.luma": {
+   "better": "",
+   "open": 69.7,
+   "unit": "Y 0..255",
+   "vendor": 70.8
+  },
+  "p1.night.luma": {
+   "better": "",
+   "open": 76.4,
+   "unit": "Y 0..255",
+   "vendor": 87.7
+  },
+  "reload.ok_cycles": {
+   "better": "higher",
+   "open": 5,
+   "unit": "of 10 cycles",
+   "vendor": null
+  },
+  "startup.first_rtsp_s": {
+   "better": "lower",
+   "open": 2.16,
+   "unit": "s",
+   "vendor": 2.13
+  },
+  "startup.first_snapshot_s": {
+   "better": "lower",
+   "open": 0.3,
+   "unit": "s",
+   "vendor": 0.31
+  }
+ },
+ "noise_curve": {
+  "open": [
+   {
+    "Yrel_pct": null,
+    "Ytemporal": null,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 15.7971,
+    "Ytemporal": 0.218,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 19.3116,
+    "Ytemporal": 0.533,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 7.8092,
+    "Ytemporal": 0.884,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 5.7541,
+    "Ytemporal": 0.992,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": null,
+    "Ytemporal": null,
+    "gain_req": "max",
+    "gain_x": 32.0
+   }
+  ],
+  "vendor": [
+   {
+    "Yrel_pct": null,
+    "Ytemporal": null,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": null,
+    "Ytemporal": null,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": null,
+    "Ytemporal": null,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 4.3877,
+    "Ytemporal": 0.498,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 4.6017,
+    "Ytemporal": 0.774,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": 2.564,
+    "Ytemporal": 0.741,
+    "gain_req": "max",
+    "gain_x": 32.0
+   }
+  ]
+ },
+ "reload": {
+  "open": {
+   "i2c_released": {
+    "n": 10,
+    "of": 10
+   },
+   "ok_cycles": {
+    "n": 5,
+    "of": 10
+   },
+   "oops_cycles": 0.0
+  }
+ },
+ "runs": [
+  "run-t33-1117-bench2"
+ ],
+ "schema": 1,
+ "sensor": "cv2005",
+ "soc": "T33",
+ "stack": {
+  "open": {
+   "desc": "open-tx-isp tx_isp_t33 origin/next f96210bc (insmod from /tmp, = the flashed ko md5) + OpenIMP libimp origin/next 42bb79db (T33 build, LD_LIBRARY_PATH /tmp/olib) + streamer e56ae34 (the installed streamer build) under LD_PRELOAD fair_preload_t33.so; direct_mode=0",
+   "ko": "tx_isp_t33 md5=6aafd1f7 libimp=db448374",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=7a5892db version=0.00",
+   "streamer": "e56ae345b29a08c305b32ff1574733751c3cae9b"
+  },
+  "vendor": {
+   "desc": "Ingenic T33L tx-isp-t33.ko (3028d4ac, vermagic 3.10.14__isvp_goat_1.0__) + sensor_cv2005_t33.ko (6351e2d9) + vendor libimp 2.0.2.1 (818b0f11), all extracted from the module's own flash backup (fw V4.3.EO-37AI), + streamer e56ae34 USE_OPENIMP=0; direct_mode=0 like the open overlay (vendor default direct_mode=1 spins in the IVDC reset on this platform about half the time, #526); osd.enabled=0 (vendor libimp OSD thread SIGSEGV with streamer); ends with a sysrq reboot",
+   "ko": "tx_isp_PRJ008 md5= libimp=818b0f11",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=bed526de version=0.00",
+   "streamer": "lb-vendor-t33-e56ae34"
+  }
+ },
+ "stacks": [
+  "open",
+  "vendor"
+ ],
+ "time": "14:13"
+}
