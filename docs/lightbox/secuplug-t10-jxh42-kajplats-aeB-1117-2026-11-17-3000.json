@@ -1,0 +1,310 @@
+{
+ "alias": "secuplug-t10-jxh42",
+ "counts": {
+  "beyond": 0,
+  "fail": 0,
+  "fail_by_handling": {},
+  "flaky": 0,
+  "info": 60,
+  "invalid": 0,
+  "n/a": 0,
+  "not_run": 12,
+  "not_run_planned": 12,
+  "not_run_preflight": 0,
+  "pass": 37,
+  "reference": 0,
+  "warn": 7
+ },
+ "date": "2026-11-17",
+ "encoder": {
+  "h264_cbr1000": {
+   "open": {
+    "I_mean_B": 37273.5833,
+    "P_mean_B": 3845.7115,
+    "P_over_I": 0.1032,
+    "kbps": 1029.7071,
+    "psnr_mean": 43.4312,
+    "psnr_min": 42.486,
+    "ssim_mean": 0.9826
+   },
+   "vendor": {
+    "I_mean_B": 37199.4,
+    "P_mean_B": 3863.2743,
+    "P_over_I": 0.1039,
+    "kbps": 1050.0812,
+    "psnr_mean": 42.6031,
+    "psnr_min": 41.7327,
+    "ssim_mean": 0.9801
+   }
+  },
+  "h264_cbr2000": {
+   "open": {
+    "I_mean_B": 51506.96,
+    "P_mean_B": 8623.6615,
+    "P_over_I": 0.1674,
+    "kbps": 2081.5852,
+    "psnr_mean": 43.6112,
+    "psnr_min": 42.7298,
+    "ssim_mean": 0.9837
+   },
+   "vendor": {
+    "I_mean_B": 51723.12,
+    "P_mean_B": 8620.9635,
+    "P_over_I": 0.1667,
+    "kbps": 2082.9533,
+    "psnr_mean": 42.5796,
+    "psnr_min": 41.9455,
+    "ssim_mean": 0.9812
+   }
+  },
+  "h264_fixqp25": {
+   "open": {
+    "I_mean_B": 58784.1429,
+    "P_mean_B": 5282.0104,
+    "P_over_I": 0.0899,
+    "kbps": 1507.9388,
+    "psnr_mean": 43.3804,
+    "psnr_min": 42.739,
+    "ssim_mean": 0.9832
+   },
+   "vendor": {
+    "I_mean_B": 59022.4286,
+    "P_mean_B": 5463.0458,
+    "P_over_I": 0.0926,
+    "kbps": 1544.622,
+    "psnr_mean": 42.9183,
+    "psnr_min": 42.2563,
+    "ssim_mean": 0.9809
+   }
+  },
+  "h264_fixqp35": {
+   "open": {
+    "I_mean_B": 22405.15,
+    "P_mean_B": 203.1625,
+    "P_over_I": 0.0091,
+    "kbps": 218.2265,
+    "psnr_mean": 40.8871,
+    "psnr_min": 40.5003,
+    "ssim_mean": 0.9756
+   },
+   "vendor": {
+    "I_mean_B": 22184.2381,
+    "P_mean_B": 206.4208,
+    "P_over_I": 0.0093,
+    "kbps": 225.9473,
+    "psnr_mean": 40.4777,
+    "psnr_min": 40.1502,
+    "ssim_mean": 0.973
+   }
+  }
+ },
+ "generated": "2026-11-17 11:04",
+ "generator": "lightbox_report.py",
+ "image": {
+  "BUILD_ID": null,
+  "build": null,
+  "commits": {
+   "open-tx-isp": null,
+   "openimp": null
+  },
+  "name": null
+ },
+ "lamp_ct": 3000.0,
+ "metrics": {
+  "ae_step.off.overshoot_pct": {
+   "better": "lower",
+   "open": 3.9215,
+   "unit": "%",
+   "vendor": 7.6352
+  },
+  "ae_step.off.settle_s": {
+   "better": "lower",
+   "open": 40.9199,
+   "unit": "s",
+   "vendor": 40.9219
+  },
+  "ae_step.on.overshoot_pct": {
+   "better": "lower",
+   "open": 0.1443,
+   "unit": "%",
+   "vendor": 0.3035
+  },
+  "ae_step.on.settle_s": {
+   "better": "lower",
+   "open": 2.2802,
+   "unit": "s",
+   "vendor": 5.5201
+  },
+  "colour.chroma_ratio": {
+   "better": "one",
+   "open": 0.8482,
+   "unit": "chroma / chart (1 = chart)",
+   "vendor": 0.8514
+  },
+  "colour.dE00_grey_normalised": {
+   "better": "lower",
+   "open": 7.7428,
+   "unit": "dE00",
+   "vendor": 7.7689
+  },
+  "colour.dE00_mean": {
+   "better": "lower",
+   "open": 8.9584,
+   "unit": "dE00",
+   "vendor": 9.056
+  },
+  "colour.dE00_mean_unclipped": {
+   "better": "lower",
+   "open": 8.9992,
+   "unit": "dE00",
+   "vendor": 9.1005
+  },
+  "colour.dE00_open_vs_vendor": {
+   "better": "lower",
+   "unit": "dE00",
+   "value": 0.3129
+  },
+  "colour.saturation_open_over_vendor": {
+   "better": "one",
+   "unit": "ratio (1 = vendor)",
+   "value": 0.9963
+  },
+  "enc.h264_cbr1000.psnr_mean": {
+   "better": "higher",
+   "open": 43.4312,
+   "unit": "dB",
+   "vendor": 42.6031
+  },
+  "enc.h264_cbr1000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9826,
+   "unit": "SSIM",
+   "vendor": 0.9801
+  },
+  "enc.h264_cbr2000.psnr_mean": {
+   "better": "higher",
+   "open": 43.6112,
+   "unit": "dB",
+   "vendor": 42.5796
+  },
+  "enc.h264_cbr2000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9837,
+   "unit": "SSIM",
+   "vendor": 0.9812
+  },
+  "enc.h264_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 58784.1429,
+   "unit": "bytes",
+   "vendor": 59022.4286
+  },
+  "enc.h264_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 5282.0104,
+   "unit": "bytes",
+   "vendor": 5463.0458
+  },
+  "enc.h264_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.0899,
+   "unit": "ratio",
+   "vendor": 0.0926
+  },
+  "enc.h264_fixqp25.psnr_mean": {
+   "better": "higher",
+   "open": 43.3804,
+   "unit": "dB",
+   "vendor": 42.9183
+  },
+  "enc.h264_fixqp25.ssim_mean": {
+   "better": "higher",
+   "open": 0.9832,
+   "unit": "SSIM",
+   "vendor": 0.9809
+  },
+  "enc.h264_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 22405.15,
+   "unit": "bytes",
+   "vendor": 22184.2381
+  },
+  "enc.h264_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 203.1625,
+   "unit": "bytes",
+   "vendor": 206.4208
+  },
+  "enc.h264_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.0091,
+   "unit": "ratio",
+   "vendor": 0.0093
+  },
+  "enc.h264_fixqp35.psnr_mean": {
+   "better": "higher",
+   "open": 40.8871,
+   "unit": "dB",
+   "vendor": 40.4777
+  },
+  "enc.h264_fixqp35.ssim_mean": {
+   "better": "higher",
+   "open": 0.9756,
+   "unit": "SSIM",
+   "vendor": 0.973
+  },
+  "p1.day.luma": {
+   "better": "",
+   "open": 95.0,
+   "unit": "Y 0..255",
+   "vendor": 95.0
+  },
+  "p1.night.luma": {
+   "better": "",
+   "open": 76.5,
+   "unit": "Y 0..255",
+   "vendor": 76.4
+  },
+  "sharpness.mtf50": {
+   "better": "higher",
+   "open": 0.4319,
+   "unit": "cycles/pixel",
+   "vendor": 0.4617
+  },
+  "sharpness.rise_10_90": {
+   "better": "lower",
+   "open": 0.8732,
+   "unit": "px",
+   "vendor": 0.9013
+  }
+ },
+ "noise_curve": {},
+ "reload": {},
+ "runs": [
+  "run-t10-1117-aeB2-3000"
+ ],
+ "schema": 1,
+ "sensor": "jxh42",
+ "soc": "T10",
+ "stack": {
+  "open": {
+   "desc": "VARIANT B t20_simple_ae=0 (vendor AE graph): open-tx-isp tx_isp_t10 origin/next 095c9469 (insmod from /tmp, sensor shvflip=1 as flashed) + OpenIMP libimp origin/next 8dd7474f (T20 build, LD_LIBRARY_PATH /tmp/olib) + streamer 0175904 (dev/dn-609 daynight fix) under LD_PRELOAD fair_preload.so",
+   "ko": null,
+   "pieces_md5": [],
+   "streamer": null,
+   "streamer": "lb-t10-0175904"
+  },
+  "vendor": {
+   "desc": "ingenic-sdk tx-isp-t10.ko (vendor ISP blob 3.12.0, agg69a kernel build) + sensor_jxh42_t10.ko (same build) + vendor libimp 3.12.0 (da38e940) + streamer 0175904 USE_OPENIMP=0; ends with a reboot",
+   "ko": null,
+   "pieces_md5": [],
+   "streamer": null,
+   "streamer": "lb-vendor-t10-0175904"
+  }
+ },
+ "stacks": [
+  "open",
+  "vendor"
+ ],
+ "time": "07:51"
+}
