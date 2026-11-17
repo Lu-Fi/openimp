@@ -9,6 +9,22 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: T33 first device API test on the T33L module (#99; bench, no light box)
+
+- The apitest ran all areas (sys, fs, enc, osd, ivs, audio, isp, su, cases) on the T33L module with the installed open-tx-isp `next` f96210bc and the OpenIMP `next` libimp (and the installed libimp: same result): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 0 oops. 227 API cells moved qemu -> dev (`docs/api_evidence.json`, ref `apitest t33-1117 2026-11-17 .122`); the T33 streamer functions that work went from 18 to 143 of 258 (matrix row now labelled "T33 (T33L module, bench, no light box)"), API table 288 of 571 works. `tools/apitest/run_cam.sh` T33 line (cv2005 0x35 1920x1080) and `OLIB=<libimp.so>` option are on the branch `claude/apitest-t33-runcam` (not merged).
+- 10 of 10 planned reload cycles (streamer stopped first) without oops. Real FAILs: #522 and #523 were open already; new #672 (`GetAEFlickerFlag` overwrites its struct), #673 (`SetGammaAttr` restore leaves the picture dark; `SetModuleControl` / `SetFaceAe` fail as a consequence and keep their 2026-11-16 device cells), #674 (no audio driver in the image), #675 (black snapshot 14 s after a reload). The light-box bench A/B run of the same day lowers two matrix cells: forced night (#670) and mirror / flip through the streamer (#669), ✅ -> ⚠️.
+- Docs round 12: matrix, README table, both wikis (Changelog, Per-SoC-Status, Feature-Matrix, Beyond-the-Vendor, Module-Parameters, Environment-Variables); T30 echo cancellation ⚠️ -> ✅ (#272), T10/T20 vendor AE default (below).
+
+## 2026-11-17: T10/T20 exposure runs the vendor AE graph by default (open-tx-isp next 5fa382aef, #609 #657)
+
+- User decision B: the open-tx-isp T10/T20 firmware now starts with `t20_simple_ae=0`, so the exposure runs the recovered vendor AE graph (AE statistics event -> `ae_calculate_exposure` -> exposure event -> CMOS allocators -> sensor writes at frame start) like the vendor firmware; the firmware thread never parks. `t20_simple_ae=1` at insmod restores the compact histogram AE. The compact AWB stays on (`t20_simple_awb=1`): its start gate follows the compact AE only (#609 part 2) and its colour-matrix update from the AWB irq runs only while the thread is parked (#657, torn CCM / saturation / LSC bank under the vendor AE). The full vendor AWB needs its own light-box run first.
+- Evidence: host gates (`make -C tests check` 623/0, vdiff 0/0/0, harness fails on irq-context colour-matrix writes) and the T10 light-box runs of 2026-11-17 (37 pass / 0 fail at 3000 K and at 5000 K; reports under `docs/lightbox/`), T10 desk check. T20: build only. Feature matrix row 4: text only, no symbol change.
+
+## 2026-11-17: Light-box reports keep their pictures, vendor-relative verdict for numeric rows (lab runner, #230)
+
+- Published light-box reports keep the box pictures (chart, grey card, box; user decision 2026-11-17); bench runs outside the box publish numbers only (the T33L report below). Camera pictures of rooms and people stay local.
+- Numeric rows with a better direction no longer stay `info` however far the open stack is behind: open worse than the vendor by more than 10 % = warn, more than 25 % = fail (with an absolute minimum difference); vendor-equal or better stays info. Reports generated before this change keep their old verdicts.
+
 ## 2026-11-17: Light box, t33l-cv2005 full run 5000 K (#230)
 
 - New report `docs/lightbox/t33l-cv2005-2026-11-17-5000.html` (36 pass / 11 fail, 5 rows invalid by the runner guards; open-tx-isp f96210bc + OpenIMP libimp 42bb79db), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).

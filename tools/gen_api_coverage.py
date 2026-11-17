@@ -612,7 +612,7 @@ class Model:
                 '</section><section class="card" id="backlog"><h2>Long-term backlog</h2>'
                 '<p class="small">Separate from the streamer priorities: vendor functions that are missing, partial or of unknown state and '
                 'that no streamer calls today, per SoC, grouped by area with the suggested action (implement / documented ENOTSUP / '
-                'not applicable). T32/T33 are in development (QEMU only, no camera, not a release gate).</p>' + self.html_backlog() +
+                'not applicable). T32 (QEMU only, no camera) and T33 (T33L module on the bench, no light box) are in development, not a release gate.</p>' + self.html_backlog() +
                 '</section><section class="card"><h3>API coverage at a glance</h3>'
                 '<p class="small">Works (device-tested or vendor no-op) / functions that exist in the SoC\'s vendor API; functions the '
                 'vendor API does not have are not counted. Click an area for the full function table.</p>'

@@ -209,10 +209,11 @@ class Gates:
               "| SoC | works | progress | missing |", "|---|--:|---|--:|"]
         for s in self.socs + self.extra:
             v = self.rc3[s]
-            o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (QEMU only, no camera)" if s in self.extra else ""),
+            o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (%s)" % self.extra_label(s) if s in self.extra else ""),
                      v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
         if self.extra:
-            o += ["", "%s are not gate SoCs: they run in QEMU only (no test camera), so no streamer function counts as working there yet (in development). "
+            o += ["", "%s are not gate SoCs (in development). T32 runs in QEMU only (no test camera), so no streamer function counts as working there yet; "
+                  "T33 runs on the T33L module on the bench (no light box): its count is the streamer functions with device evidence (API test on the module). "
                   "The count uses the same vendor-function weighting as the other SoCs." % ", ".join(self.extra)]
         o.append("")
         for s in self.socs:
@@ -256,6 +257,9 @@ class Gates:
         return ('<div class="pb"><i class="%s" style="width:%.2f%%" title="%d of %d"></i><i class="%s" style="width:%.2f%%"></i></div>'
                 % (cls, pct, n, total, gap, 100 - pct if total else 0))
 
+    def extra_label(self, soc):
+        return {"T33": "T33L module, bench, no light box"}.get(soc, "QEMU only, no camera")
+
     def html(self):
         def head(ok, label, sub):
             return ('<h3><span class="sym %s" style="padding:2px 10px;border-radius:5px">%s %s</span> %s</h3><p class="small">%s</p>'
@@ -289,12 +293,12 @@ class Gates:
         for s in self.socs + self.extra:
             v = self.rc3[s]
             rows.append("<tr><td>%s</td><td class='c'>%d/%d</td><td>%s</td><td class='c'>%d</td></tr>" % (
-                s + (" <span class='small'>(QEMU only, no camera)</span>" if s in self.extra else ""),
+                s + (" <span class='small'>(%s)</span>" % self.extra_label(s) if s in self.extra else ""),
                 v["ok"], v["total"], self._pb(v["ok"], v["total"]), v["total"] - v["ok"]))
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>streamer functions that work</th><th>progress</th><th>missing</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
         if self.extra:
-            h.append('<p class="small">%s are not gate SoCs: they run in QEMU only (no test camera), so 0 count as working (in development).</p>' % ", ".join(self.extra))
+            h.append('<p class="small">%s are not gate SoCs (in development): T32 runs in QEMU only (no test camera, 0 count as working), T33 on the T33L module on the bench (no light box; the count is the streamer functions with device evidence).</p>' % ", ".join(self.extra))
         for s in self.socs:
             v = self.rc3[s]
             if not v["missing"]:

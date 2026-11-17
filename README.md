@@ -60,9 +60,9 @@ Vendor IMP/SU functions per SoC on 2026-11-16, `next` after RC3 `v2026.11.07-rc3
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
 | T32 | 610 | 4 | 542 | 62 | 2 | in development |
-| T33 | 571 | 32 | 406 | 70 | 63 | in development |
+| T33 | 571 | 288 | 149 | 78 | 56 | in development |
 
-T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 32 "works" cells are device-tested (tuning calls with picture effect, device checks 2026-11-15 / 2026-11-16) or vendor no-ops.
+T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 288 "works" cells are device-tested (first full device API test on the module 2026-11-17: 227 cells, plus the tuning calls with picture effect of the device checks 2026-11-15 / 2026-11-16) or vendor no-ops; the module is on the bench, not in the light box.
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 
