@@ -2975,7 +2975,7 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         if (codec_rc.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
             has_rc = 0;
 #endif
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
         /* vendor ComputeRCParam: iInitialQP -1 takes the bits-per-pixel
          * table in every rate-control mode (VBR/capped run the AL core) */
         if (has_rc && codec_rc.attrRcMode.rcMode != IMP_ENC_RC_MODE_CBR &&
