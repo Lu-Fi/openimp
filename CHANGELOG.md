@@ -11,6 +11,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 ## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
 
+- New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000-1707.html` (75 pass / 0 fail; open-tx-isp 5fa382ae + OpenIMP libimp 1330ca18), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+
+## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
+
 - New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000.html` (75 pass / 0 fail; open-tx-isp 5fa382ae + OpenIMP libimp 1330ca18), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
 
 ## 2026-11-17: T33 first device API test on the T33L module (#99; bench, no light box)
