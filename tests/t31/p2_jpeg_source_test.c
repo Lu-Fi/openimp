@@ -410,6 +410,21 @@ int main(void)
               "release after flush (%d codec releases)", stub_released);
         CHECK(IMP_Encoder_FlushStream(9) != 0 && IMP_Encoder_FlushStream(-1) != 0,
               "FlushStream accepted a bad channel");
+        /* #693: StopRecvPic drains an unread stream like libimp, so the
+         * first GetStream after StartRecvPic is no stale picture */
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0, "JPEG before stop");
+        CHECK(IMP_Encoder_StopRecvPic(2) == 0, "StopRecvPic");
+        CHECK(stub_released == 5 && !fs_outstanding[2],
+              "unread stream not dropped by StopRecvPic (%d codec "
+              "releases, frame held %d)", stub_released, fs_outstanding[2]);
+        CHECK(IMP_Encoder_StartRecvPic(2) == 0, "StartRecvPic after stop");
+        CHECK(IMP_Encoder_GetStream(2, &stream, 0) != 0,
+              "GetStream after restart returned the stream from before the stop");
+        CHECK(IMP_Encoder_PollingStream(2, 200) == 0 &&
+              IMP_Encoder_GetStream(2, &stream, 0) == 0 &&
+              IMP_Encoder_ReleaseStream(2, &stream) == 0 &&
+              stub_released == 6 && !fs_outstanding[2],
+              "fresh JPEG after restart (%d codec releases)", stub_released);
     }
 
 #if defined(PLATFORM_T31)

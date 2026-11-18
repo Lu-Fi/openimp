@@ -34,6 +34,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
 
 - New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000-2318.html` (117 pass / 1 fail; open-tx-isp 5fa382ae + OpenIMP libimp e548910c), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+## 2026-11-18: T10-T31, T40/T41 IMP_Encoder_StopRecvPic drops an unread stream as the vendor (#693; host)
+
+- `src/t40/openimp_p2_encoder.c` (shared P2 encoder): `IMP_Encoder_StopRecvPic` now waits for a running PollingStream and drops the stream a PollingStream left for GetStream (back to the codec, capture frame back to the FrameSource), as `IMP_Encoder_FlushStream` does. Before, the first GetStream after StopRecvPic + StartRecvPic could return that old picture. Vendor: StopRecvPic drains the queued streams with PollingStream/GetStream/ReleaseStream (up to 10 rounds) on T31 1.1.6, T30 1.0.5, T40 1.3.1 (0x7af08) and T41 1.2.6 (0x4b308). A stream the application holds (GetStream done) stays until its ReleaseStream.
+- Test: `tests/t31/p2_jpeg_source_test.c` (Polling, StopRecvPic, StartRecvPic: no stale GetStream, the next stream is fresh; fails without the fix). Same cross-SoC fix as #691 on T32/T33.
 
 ## 2026-11-18 (night): T32/T33 IMP_Encoder_StopRecvPic drains the queued streams as the vendor; first snapshot after an idle period is fresh (#691)
 

@@ -3467,7 +3467,16 @@ int IMP_Encoder_StopRecvPic(int channel)
     if (ch->source_channel >= 0)
         VBMWakeReaders(ch->source_channel);
 #endif
+    /* #693: libimp drains the streams already encoded before it returns
+     * (T31 1.1.6 0x9591c, T30 1.0.5, T32 2.2.0, T33 2.0.2.1: up to 10 rounds
+     * of PollingStream/GetStream/ReleaseStream).  OpenIMP encodes on demand,
+     * so the only one is the stream a PollingStream left for GetStream; a
+     * poll still running may yet leave one, so wait for it first.  Without
+     * this the first GetStream after StartRecvPic returned that old picture.
+     * With receiving cleared the GetFd pump starts no new encode. */
+    p2_wait_poll_idle(ch);
     pthread_mutex_unlock(&ch->lock);
+    p2_drop_unread_stream(ch);
     return 0;
 }
 
@@ -5339,7 +5348,7 @@ static void p2_drop_unread_stream(P2EncoderChannel *ch)
     }
     pthread_mutex_unlock(&ch->lock);
     if (raw) {
-        p2_trace("openimp/P2: FlushStream ch=%d dropped an unread stream\n",
+        p2_trace("openimp/P2: ch=%d dropped an unread stream\n",
                  channel);
         (void)p2_return_stream(ch, raw, user, frame);
     }
