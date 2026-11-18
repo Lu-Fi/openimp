@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-17",
+  "asof": "2026-11-18",
   "socs": [
     "T10",
     "T20",
@@ -5897,14 +5897,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "err",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "FAIL apitest t33-1117 2026-11-17 .122: ret=0 flicker flag read"
+        "T33": "apitest t33-1118 2026-11-17 .122"
       },
       "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
@@ -11215,7 +11215,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11240,7 +11240,8 @@
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd 2026-11-18 .122 (open-tx-isp next 52ad22893 test ko, direct_mode=0, #680): region luma 65 -> 233, hidden 65, destroyed, frames flow, 5/5 extra flow"
       }
     },
     "ISP_Tuning_DestroyOsdRgn": {
@@ -11253,7 +11254,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11278,7 +11279,8 @@
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd 2026-11-18 .122 (open-tx-isp next 52ad22893 test ko, direct_mode=0, #680): region luma 65 -> 233, hidden 65, destroyed, frames flow, 5/5 extra flow"
       }
     },
     "ISP_Tuning_Get/SetOSDAttr": {
@@ -11357,7 +11359,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11382,7 +11384,8 @@
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd 2026-11-18 .122 (open-tx-isp next 52ad22893 test ko, direct_mode=0, #680): region luma 65 -> 233, hidden 65, destroyed, frames flow, 5/5 extra flow"
       }
     },
     "ISP_Tuning_SetOsdRgnAttr": {
@@ -11395,7 +11398,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11420,7 +11423,8 @@
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd 2026-11-18 .122 (open-tx-isp next 52ad22893 test ko, direct_mode=0, #680): region luma 65 -> 233, hidden 65, destroyed, frames flow, 5/5 extra flow"
       }
     },
     "ISP_Tuning_ShowOsdRgn": {
@@ -11433,7 +11437,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11458,7 +11462,8 @@
       "ref": {
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd 2026-11-18 .122 (open-tx-isp next 52ad22893 test ko, direct_mode=0, #680): region luma 65 -> 233, hidden 65, destroyed, frames flow, 5/5 extra flow"
       }
     },
     "OSD_AttachToGroup": {
@@ -14819,7 +14824,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "?",
-        "T33": "err",
+        "T33": "rt",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14859,7 +14864,7 @@
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T33": "FAIL apitest t33-silent-ao 2026-11-17 .122: ret=-1 rt: AI dev 1 chn 0 with the muted AO dev 0 chn 0 as reference"
+        "T33": "apitest t33-1118 2026-11-17 .122 (API round trip, no visible effect expected)"
       }
     },
     "AI_EnableAecRefFrame": {
@@ -14872,7 +14877,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "?",
-        "T33": "err",
+        "T33": "rt",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14918,7 +14923,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T33": "FAIL apitest t33-silent-ao 2026-11-17 .122: ret=-1 rt: reference frame on"
+        "T33": "apitest t33-1118 2026-11-17 .122 (API round trip, no visible effect expected)"
       }
     },
     "AI_EnableAgc": {
