@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-17: Light box, Eufy T40XP, sc830ai full run 3000 K (#230)
+
+- New report `docs/lightbox/eufy-t40xp-sc830ai-kajplats-2026-11-17-3000-2318.html` (117 pass / 1 fail; open-tx-isp 5fa382ae + OpenIMP libimp e548910c), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+
 ## 2026-11-18 (night): T32/T33 IMP_Encoder_StopRecvPic drains the queued streams as the vendor; first snapshot after an idle period is fresh (#691)
 
 - `src/t32/openimp_t32_encoder.c`: a channel whose stream buffers were full ("GetStream is behind") dropped the new frames and kept the queued ones (vendor-equal: libimp T33 2.0.2.1 `get_empty_framestream_noblock`, "the bitstream buf is full"), but `StopRecvPic` also kept them, so the first `GetStream` after `StopRecvPic` + `StartRecvPic` returned a stream coded before the stop. On the T33L module the streamer stops the JPEG channel after its idle linger, so the first `/snapshot.jpg` after ~10 s showed the previous picture (night in colour, day grey, #688). The vendor `StopRecvPic` (T33 2.0.2.1 0xf6520, T32 2.2.0, T31 1.1.6 0x9591c, T30 1.0.5) waits for the frames in work and then drains every queued stream with PollingStream / GetStream / ReleaseStream; OpenIMP now drops them the same way (a stream the application holds stays with it). `StartRecvPic` keeps nothing, as the vendor.

@@ -1,0 +1,1035 @@
+{
+ "alias": "eufy-t40xp-sc830",
+ "counts": {
+  "beyond": 0,
+  "fail": 1,
+  "fail_by_handling": {
+   "issue": 1
+  },
+  "flaky": 0,
+  "info": 152,
+  "invalid": 0,
+  "n/a": 3,
+  "not_run": 2,
+  "not_run_planned": 2,
+  "not_run_preflight": 0,
+  "pass": 117,
+  "reference": 0,
+  "warn": 37
+ },
+ "date": "2026-11-17",
+ "encoder": {
+  "h264_cbr1000": {
+   "open": {
+    "I_mean_B": 54967.52,
+    "P_mean_B": 3636.8114,
+    "P_over_I": 0.0662,
+    "kbps": 1008.7564,
+    "psnr_mean": 44.3482,
+    "psnr_min": 43.5638,
+    "ssim_mean": 0.982
+   },
+   "vendor": {
+    "I_mean_B": 49734.76,
+    "P_mean_B": 3933.8509,
+    "P_over_I": 0.0791,
+    "kbps": 1010.2969,
+    "psnr_mean": 45.945,
+    "psnr_min": 44.8608,
+    "ssim_mean": 0.9868
+   }
+  },
+  "h264_cbr1000c": {
+   "open": {
+    "I_mean_B": 55040.36,
+    "P_mean_B": 3690.2779,
+    "P_over_I": 0.067,
+    "kbps": 1016.5862,
+    "psnr_mean": 33.7785,
+    "psnr_min": 33.6555,
+    "ssim_mean": 0.9835
+   },
+   "vendor": {
+    "I_mean_B": 54972.16,
+    "P_mean_B": 3640.4617,
+    "P_over_I": 0.0662,
+    "kbps": 1008.505,
+    "psnr_mean": 35.0477,
+    "psnr_min": 34.9521,
+    "ssim_mean": 0.9841
+   }
+  },
+  "h264_cbr2000": {
+   "open": {
+    "I_mean_B": 73663.96,
+    "P_mean_B": 9566.9211,
+    "P_over_I": 0.1299,
+    "kbps": 2063.4809,
+    "psnr_mean": 46.0625,
+    "psnr_min": 45.5874,
+    "ssim_mean": 0.9823
+   },
+   "vendor": {
+    "I_mean_B": 65168.08,
+    "P_mean_B": 7350.407,
+    "P_over_I": 0.1128,
+    "kbps": 1655.9487,
+    "psnr_mean": 46.4509,
+    "psnr_min": 45.6735,
+    "ssim_mean": 0.9876
+   }
+  },
+  "h264_cbr2000c": {
+   "open": {
+    "I_mean_B": 73261.0,
+    "P_mean_B": 9368.8753,
+    "P_over_I": 0.1279,
+    "kbps": 2029.3295,
+    "psnr_mean": 33.7741,
+    "psnr_min": 33.7172,
+    "ssim_mean": 0.9831
+   },
+   "vendor": {
+    "I_mean_B": 72649.8,
+    "P_mean_B": 9470.4693,
+    "P_over_I": 0.1304,
+    "kbps": 2040.6749,
+    "psnr_mean": 33.938,
+    "psnr_min": 33.8649,
+    "ssim_mean": 0.9834
+   }
+  },
+  "h264_fixqp25": {
+   "open": {
+    "I_mean_B": 81282.9524,
+    "P_mean_B": 7947.9895,
+    "P_over_I": 0.0978,
+    "kbps": 1890.883,
+    "psnr_mean": 45.4046,
+    "psnr_min": 45.255,
+    "ssim_mean": 0.9836
+   },
+   "vendor": {
+    "I_mean_B": 72181.4762,
+    "P_mean_B": 6205.8871,
+    "P_over_I": 0.086,
+    "kbps": 1548.3181,
+    "psnr_mean": 44.9485,
+    "psnr_min": 44.8355,
+    "ssim_mean": 0.9879
+   }
+  },
+  "h264_fixqp25auto": {
+   "open": null,
+   "vendor": {
+    "I_mean_B": 71935.0952,
+    "P_mean_B": 6152.4605,
+    "P_over_I": 0.0855,
+    "kbps": 1539.3613,
+    "psnr_mean": 49.9647,
+    "psnr_min": 49.7325,
+    "ssim_mean": 0.9944
+   }
+  },
+  "h264_fixqp25c": {
+   "open": {
+    "I_mean_B": 72216.2857,
+    "P_mean_B": 6060.7402,
+    "P_over_I": 0.0839,
+    "kbps": 1526.4669,
+    "psnr_mean": 49.9971,
+    "psnr_min": 49.7506,
+    "ssim_mean": 0.9943
+   },
+   "vendor": {
+    "I_mean_B": 71593.8095,
+    "P_mean_B": 6194.3079,
+    "P_over_I": 0.0865,
+    "kbps": 1542.8551,
+    "psnr_mean": 49.9514,
+    "psnr_min": 49.7487,
+    "ssim_mean": 0.9944
+   }
+  },
+  "h264_fixqp25m": {
+   "open": {
+    "I_mean_B": 72106.8095,
+    "P_mean_B": 6171.0316,
+    "P_over_I": 0.0856,
+    "kbps": 1543.7036,
+    "psnr_mean": 50.0814,
+    "psnr_min": 49.8002,
+    "ssim_mean": 0.9944
+   },
+   "vendor": null
+  },
+  "h264_fixqp25m2025": {
+   "open": {
+    "I_mean_B": 73597.9524,
+    "P_mean_B": 6787.2658,
+    "P_over_I": 0.0922,
+    "kbps": 1649.8975,
+    "psnr_mean": 49.7754,
+    "psnr_min": 49.4805,
+    "ssim_mean": 0.9939
+   },
+   "vendor": {
+    "I_mean_B": 73834.6667,
+    "P_mean_B": 6795.2105,
+    "P_over_I": 0.092,
+    "kbps": 1653.0107,
+    "psnr_mean": 49.7756,
+    "psnr_min": 49.5187,
+    "ssim_mean": 0.9938
+   }
+  },
+  "h264_fixqp25m2241": {
+   "open": {
+    "I_mean_B": 73883.0476,
+    "P_mean_B": 6720.5211,
+    "P_over_I": 0.091,
+    "kbps": 1642.1471,
+    "psnr_mean": 49.7064,
+    "psnr_min": 49.4699,
+    "ssim_mean": 0.9938
+   },
+   "vendor": {
+    "I_mean_B": 73430.7143,
+    "P_mean_B": 6728.2553,
+    "P_over_I": 0.0916,
+    "kbps": 1639.523,
+    "psnr_mean": 49.6888,
+    "psnr_min": 49.4448,
+    "ssim_mean": 0.9939
+   }
+  },
+  "h264_fixqp35": {
+   "open": {
+    "I_mean_B": 27217.4286,
+    "P_mean_B": 157.3895,
+    "P_over_I": 0.0058,
+    "kbps": 252.5512,
+    "psnr_mean": 42.4166,
+    "psnr_min": 42.356,
+    "ssim_mean": 0.9768
+   },
+   "vendor": {
+    "I_mean_B": 26245.2381,
+    "P_mean_B": 166.0553,
+    "P_over_I": 0.0063,
+    "kbps": 245.6896,
+    "psnr_mean": 43.1099,
+    "psnr_min": 43.063,
+    "ssim_mean": 0.9818
+   }
+  },
+  "h264_vbr1000c": {
+   "open": {
+    "I_mean_B": 54053.44,
+    "P_mean_B": 3592.4223,
+    "P_over_I": 0.0665,
+    "kbps": 993.5925,
+    "psnr_mean": 33.6699,
+    "psnr_min": 33.5421,
+    "ssim_mean": 0.9832
+   },
+   "vendor": {
+    "I_mean_B": 54324.6,
+    "P_mean_B": 3233.1597,
+    "P_over_I": 0.0595,
+    "kbps": 941.3792,
+    "psnr_mean": 33.5207,
+    "psnr_min": 33.3977,
+    "ssim_mean": 0.9833
+   }
+  },
+  "h264_vbr2000c": {
+   "open": {
+    "I_mean_B": 73181.52,
+    "P_mean_B": 9088.8315,
+    "P_over_I": 0.1242,
+    "kbps": 1986.2678,
+    "psnr_mean": 33.8205,
+    "psnr_min": 33.7282,
+    "ssim_mean": 0.9835
+   },
+   "vendor": {
+    "I_mean_B": 72616.44,
+    "P_mean_B": 9443.8009,
+    "P_over_I": 0.1301,
+    "kbps": 2035.347,
+    "psnr_mean": 33.8233,
+    "psnr_min": 33.6928,
+    "ssim_mean": 0.9836
+   }
+  },
+  "h265_cbr1000": {
+   "open": {
+    "I_mean_B": 51856.92,
+    "P_mean_B": 3923.7965,
+    "P_over_I": 0.0757,
+    "kbps": 1025.6353,
+    "psnr_mean": 32.6861,
+    "psnr_min": 32.6243,
+    "ssim_mean": 0.9722
+   },
+   "vendor": {
+    "I_mean_B": 42506.64,
+    "P_mean_B": 4301.6915,
+    "P_over_I": 0.1012,
+    "kbps": 1005.3241,
+    "psnr_mean": 32.6418,
+    "psnr_min": 32.5903,
+    "ssim_mean": 0.9769
+   }
+  },
+  "h265_cbr2000": {
+   "open": {
+    "I_mean_B": 64122.76,
+    "P_mean_B": 8185.2254,
+    "P_over_I": 0.1276,
+    "kbps": 1773.848,
+    "psnr_mean": 32.8082,
+    "psnr_min": 32.7563,
+    "ssim_mean": 0.9726
+   },
+   "vendor": {
+    "I_mean_B": 51542.8,
+    "P_mean_B": 5575.7987,
+    "P_over_I": 0.1082,
+    "kbps": 1273.5967,
+    "psnr_mean": 32.6472,
+    "psnr_min": 32.6095,
+    "ssim_mean": 0.9774
+   }
+  },
+  "h265_fixqp25": {
+   "open": {
+    "I_mean_B": 49755.2381,
+    "P_mean_B": 5133.4304,
+    "P_over_I": 0.1032,
+    "kbps": 1197.4128,
+    "psnr_mean": 32.7922,
+    "psnr_min": 32.7573,
+    "ssim_mean": 0.9728
+   },
+   "vendor": {
+    "I_mean_B": 41500.7143,
+    "P_mean_B": 4042.378,
+    "P_over_I": 0.0974,
+    "kbps": 962.2647,
+    "psnr_mean": 32.4262,
+    "psnr_min": 32.3807,
+    "ssim_mean": 0.9768
+   }
+  },
+  "h265_fixqp35": {
+   "open": {
+    "I_mean_B": 13014.7143,
+    "P_mean_B": 90.6299,
+    "P_over_I": 0.007,
+    "kbps": 122.8354,
+    "psnr_mean": 32.4178,
+    "psnr_min": 32.3578,
+    "ssim_mean": 0.964
+   },
+   "vendor": {
+    "I_mean_B": 12523.3333,
+    "P_mean_B": 89.0341,
+    "P_over_I": 0.0071,
+    "kbps": 118.4694,
+    "psnr_mean": 32.0817,
+    "psnr_min": 32.032,
+    "ssim_mean": 0.9691
+   }
+  }
+ },
+ "generated": "2026-11-18 14:18",
+ "generator": "lightbox_report.py",
+ "image": {
+  "BUILD_ID": null,
+  "build": "claude/agg69-fw+1c0e775, 2026-11-13 16:15:07 UTC",
+  "commits": {
+   "open-tx-isp": null,
+   "openimp": null
+  },
+  "name": "eufy_t8416_t40xp_sc830_aic8800d40"
+ },
+ "lamp_ct": 3000.0,
+ "metrics": {
+  "ae_step.off.overshoot_pct": {
+   "better": "lower",
+   "open": 0.0022,
+   "unit": "%",
+   "vendor": 0.0055
+  },
+  "ae_step.off.settle_s": {
+   "better": "lower",
+   "open": 0.3493,
+   "unit": "s",
+   "vendor": 0.35
+  },
+  "ae_step.on.overshoot_pct": {
+   "better": "lower",
+   "open": 2.3551,
+   "unit": "%",
+   "vendor": 0.68
+  },
+  "ae_step.on.settle_s": {
+   "better": "lower",
+   "open": 1.7,
+   "unit": "s",
+   "vendor": 1.6511
+  },
+  "colour.chroma_ratio": {
+   "better": "one",
+   "open": 0.9576,
+   "unit": "chroma / chart (1 = chart)",
+   "vendor": 0.9006
+  },
+  "colour.dE00_grey_normalised": {
+   "better": "lower",
+   "open": 4.9298,
+   "unit": "dE00",
+   "vendor": 4.97
+  },
+  "colour.dE00_mean": {
+   "better": "lower",
+   "open": 10.1524,
+   "unit": "dE00",
+   "vendor": 10.2449
+  },
+  "colour.dE00_mean_unclipped": {
+   "better": "lower",
+   "open": 6.3076,
+   "unit": "dE00",
+   "vendor": 6.528
+  },
+  "colour.dE00_open_vs_vendor": {
+   "better": "lower",
+   "unit": "dE00",
+   "value": 0.8216
+  },
+  "colour.saturation_open_over_vendor": {
+   "better": "one",
+   "unit": "ratio (1 = vendor)",
+   "value": 1.0633
+  },
+  "cpu.kernel_threads": {
+   "better": "lower",
+   "open": 2.94,
+   "unit": "%",
+   "vendor": 3.73
+  },
+  "cpu.streamer": {
+   "better": "lower",
+   "open": 0.35,
+   "unit": "% of all CPU",
+   "vendor": 1.96
+  },
+  "cpu.system_busy": {
+   "better": "lower",
+   "open": 0.7,
+   "unit": "%",
+   "vendor": 5.0
+  },
+  "enc.h264_cbr1000.psnr_mean": {
+   "better": "higher",
+   "open": 44.3482,
+   "unit": "dB",
+   "vendor": 45.945
+  },
+  "enc.h264_cbr1000.ssim_mean": {
+   "better": "higher",
+   "open": 0.982,
+   "unit": "SSIM",
+   "vendor": 0.9868
+  },
+  "enc.h264_cbr1000c.psnr_mean": {
+   "better": "higher",
+   "open": 33.7785,
+   "unit": "dB",
+   "vendor": 35.0477
+  },
+  "enc.h264_cbr1000c.ssim_mean": {
+   "better": "higher",
+   "open": 0.9835,
+   "unit": "SSIM",
+   "vendor": 0.9841
+  },
+  "enc.h264_cbr2000.psnr_mean": {
+   "better": "higher",
+   "open": 46.0625,
+   "unit": "dB",
+   "vendor": 46.4509
+  },
+  "enc.h264_cbr2000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9823,
+   "unit": "SSIM",
+   "vendor": 0.9876
+  },
+  "enc.h264_cbr2000c.psnr_mean": {
+   "better": "higher",
+   "open": 33.7741,
+   "unit": "dB",
+   "vendor": 33.938
+  },
+  "enc.h264_cbr2000c.ssim_mean": {
+   "better": "higher",
+   "open": 0.9831,
+   "unit": "SSIM",
+   "vendor": 0.9834
+  },
+  "enc.h264_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 81282.9524,
+   "unit": "bytes",
+   "vendor": 72181.4762
+  },
+  "enc.h264_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 7947.9895,
+   "unit": "bytes",
+   "vendor": 6205.8871
+  },
+  "enc.h264_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.0978,
+   "unit": "ratio",
+   "vendor": 0.086
+  },
+  "enc.h264_fixqp25.psnr_mean": {
+   "better": "higher",
+   "open": 45.4046,
+   "unit": "dB",
+   "vendor": 44.9485
+  },
+  "enc.h264_fixqp25.ssim_mean": {
+   "better": "higher",
+   "open": 0.9836,
+   "unit": "SSIM",
+   "vendor": 0.9879
+  },
+  "enc.h264_fixqp25auto.I_mean_B": {
+   "better": "lower",
+   "open": null,
+   "unit": "bytes",
+   "vendor": 71935.0952
+  },
+  "enc.h264_fixqp25auto.P_mean_B": {
+   "better": "lower",
+   "open": null,
+   "unit": "bytes",
+   "vendor": 6152.4605
+  },
+  "enc.h264_fixqp25auto.P_over_I": {
+   "better": "lower",
+   "open": null,
+   "unit": "ratio",
+   "vendor": 0.0855
+  },
+  "enc.h264_fixqp25auto.psnr_mean": {
+   "better": "higher",
+   "open": null,
+   "unit": "dB",
+   "vendor": 49.9647
+  },
+  "enc.h264_fixqp25auto.ssim_mean": {
+   "better": "higher",
+   "open": null,
+   "unit": "SSIM",
+   "vendor": 0.9944
+  },
+  "enc.h264_fixqp25c.I_mean_B": {
+   "better": "lower",
+   "open": 72216.2857,
+   "unit": "bytes",
+   "vendor": 71593.8095
+  },
+  "enc.h264_fixqp25c.P_mean_B": {
+   "better": "lower",
+   "open": 6060.7402,
+   "unit": "bytes",
+   "vendor": 6194.3079
+  },
+  "enc.h264_fixqp25c.P_over_I": {
+   "better": "lower",
+   "open": 0.0839,
+   "unit": "ratio",
+   "vendor": 0.0865
+  },
+  "enc.h264_fixqp25c.psnr_mean": {
+   "better": "higher",
+   "open": 49.9971,
+   "unit": "dB",
+   "vendor": 49.9514
+  },
+  "enc.h264_fixqp25c.ssim_mean": {
+   "better": "higher",
+   "open": 0.9943,
+   "unit": "SSIM",
+   "vendor": 0.9944
+  },
+  "enc.h264_fixqp25m.I_mean_B": {
+   "better": "lower",
+   "open": 72106.8095,
+   "unit": "bytes",
+   "vendor": null
+  },
+  "enc.h264_fixqp25m.P_mean_B": {
+   "better": "lower",
+   "open": 6171.0316,
+   "unit": "bytes",
+   "vendor": null
+  },
+  "enc.h264_fixqp25m.P_over_I": {
+   "better": "lower",
+   "open": 0.0856,
+   "unit": "ratio",
+   "vendor": null
+  },
+  "enc.h264_fixqp25m.psnr_mean": {
+   "better": "higher",
+   "open": 50.0814,
+   "unit": "dB",
+   "vendor": null
+  },
+  "enc.h264_fixqp25m.ssim_mean": {
+   "better": "higher",
+   "open": 0.9944,
+   "unit": "SSIM",
+   "vendor": null
+  },
+  "enc.h264_fixqp25m2025.I_mean_B": {
+   "better": "lower",
+   "open": 73597.9524,
+   "unit": "bytes",
+   "vendor": 73834.6667
+  },
+  "enc.h264_fixqp25m2025.P_mean_B": {
+   "better": "lower",
+   "open": 6787.2658,
+   "unit": "bytes",
+   "vendor": 6795.2105
+  },
+  "enc.h264_fixqp25m2025.P_over_I": {
+   "better": "lower",
+   "open": 0.0922,
+   "unit": "ratio",
+   "vendor": 0.092
+  },
+  "enc.h264_fixqp25m2025.psnr_mean": {
+   "better": "higher",
+   "open": 49.7754,
+   "unit": "dB",
+   "vendor": 49.7756
+  },
+  "enc.h264_fixqp25m2025.ssim_mean": {
+   "better": "higher",
+   "open": 0.9939,
+   "unit": "SSIM",
+   "vendor": 0.9938
+  },
+  "enc.h264_fixqp25m2241.I_mean_B": {
+   "better": "lower",
+   "open": 73883.0476,
+   "unit": "bytes",
+   "vendor": 73430.7143
+  },
+  "enc.h264_fixqp25m2241.P_mean_B": {
+   "better": "lower",
+   "open": 6720.5211,
+   "unit": "bytes",
+   "vendor": 6728.2553
+  },
+  "enc.h264_fixqp25m2241.P_over_I": {
+   "better": "lower",
+   "open": 0.091,
+   "unit": "ratio",
+   "vendor": 0.0916
+  },
+  "enc.h264_fixqp25m2241.psnr_mean": {
+   "better": "higher",
+   "open": 49.7064,
+   "unit": "dB",
+   "vendor": 49.6888
+  },
+  "enc.h264_fixqp25m2241.ssim_mean": {
+   "better": "higher",
+   "open": 0.9938,
+   "unit": "SSIM",
+   "vendor": 0.9939
+  },
+  "enc.h264_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 27217.4286,
+   "unit": "bytes",
+   "vendor": 26245.2381
+  },
+  "enc.h264_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 157.3895,
+   "unit": "bytes",
+   "vendor": 166.0553
+  },
+  "enc.h264_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.0058,
+   "unit": "ratio",
+   "vendor": 0.0063
+  },
+  "enc.h264_fixqp35.psnr_mean": {
+   "better": "higher",
+   "open": 42.4166,
+   "unit": "dB",
+   "vendor": 43.1099
+  },
+  "enc.h264_fixqp35.ssim_mean": {
+   "better": "higher",
+   "open": 0.9768,
+   "unit": "SSIM",
+   "vendor": 0.9818
+  },
+  "enc.h264_vbr1000c.psnr_mean": {
+   "better": "higher",
+   "open": 33.6699,
+   "unit": "dB",
+   "vendor": 33.5207
+  },
+  "enc.h264_vbr1000c.ssim_mean": {
+   "better": "higher",
+   "open": 0.9832,
+   "unit": "SSIM",
+   "vendor": 0.9833
+  },
+  "enc.h264_vbr2000c.psnr_mean": {
+   "better": "higher",
+   "open": 33.8205,
+   "unit": "dB",
+   "vendor": 33.8233
+  },
+  "enc.h264_vbr2000c.ssim_mean": {
+   "better": "higher",
+   "open": 0.9835,
+   "unit": "SSIM",
+   "vendor": 0.9836
+  },
+  "enc.h265_cbr1000.psnr_mean": {
+   "better": "higher",
+   "open": 32.6861,
+   "unit": "dB",
+   "vendor": 32.6418
+  },
+  "enc.h265_cbr1000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9722,
+   "unit": "SSIM",
+   "vendor": 0.9769
+  },
+  "enc.h265_cbr2000.psnr_mean": {
+   "better": "higher",
+   "open": 32.8082,
+   "unit": "dB",
+   "vendor": 32.6472
+  },
+  "enc.h265_cbr2000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9726,
+   "unit": "SSIM",
+   "vendor": 0.9774
+  },
+  "enc.h265_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 49755.2381,
+   "unit": "bytes",
+   "vendor": 41500.7143
+  },
+  "enc.h265_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 5133.4304,
+   "unit": "bytes",
+   "vendor": 4042.378
+  },
+  "enc.h265_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.1032,
+   "unit": "ratio",
+   "vendor": 0.0974
+  },
+  "enc.h265_fixqp25.psnr_mean": {
+   "better": "higher",
+   "open": 32.7922,
+   "unit": "dB",
+   "vendor": 32.4262
+  },
+  "enc.h265_fixqp25.ssim_mean": {
+   "better": "higher",
+   "open": 0.9728,
+   "unit": "SSIM",
+   "vendor": 0.9768
+  },
+  "enc.h265_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 13014.7143,
+   "unit": "bytes",
+   "vendor": 12523.3333
+  },
+  "enc.h265_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 90.6299,
+   "unit": "bytes",
+   "vendor": 89.0341
+  },
+  "enc.h265_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.007,
+   "unit": "ratio",
+   "vendor": 0.0071
+  },
+  "enc.h265_fixqp35.psnr_mean": {
+   "better": "higher",
+   "open": 32.4178,
+   "unit": "dB",
+   "vendor": 32.0817
+  },
+  "enc.h265_fixqp35.ssim_mean": {
+   "better": "higher",
+   "open": 0.964,
+   "unit": "SSIM",
+   "vendor": 0.9691
+  },
+  "noise_gain.1.Yrel_pct": {
+   "better": "lower",
+   "open": 1.3165,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.3394
+  },
+  "noise_gain.1.Ytemporal": {
+   "better": "lower",
+   "open": 1.497,
+   "unit": "temporal std",
+   "vendor": 1.521
+  },
+  "noise_gain.16.Yrel_pct": {
+   "better": "lower",
+   "open": 0.975,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.0065
+  },
+  "noise_gain.16.Ytemporal": {
+   "better": "lower",
+   "open": 1.234,
+   "unit": "temporal std",
+   "vendor": 1.266
+  },
+  "noise_gain.2.Yrel_pct": {
+   "better": "lower",
+   "open": 0.9307,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.9488
+  },
+  "noise_gain.2.Ytemporal": {
+   "better": "lower",
+   "open": 1.168,
+   "unit": "temporal std",
+   "vendor": 1.19
+  },
+  "noise_gain.4.Yrel_pct": {
+   "better": "lower",
+   "open": 1.3644,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.4043
+  },
+  "noise_gain.4.Ytemporal": {
+   "better": "lower",
+   "open": 1.743,
+   "unit": "temporal std",
+   "vendor": 1.782
+  },
+  "noise_gain.8.Yrel_pct": {
+   "better": "lower",
+   "open": 1.1036,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.1363
+  },
+  "noise_gain.8.Ytemporal": {
+   "better": "lower",
+   "open": 1.407,
+   "unit": "temporal std",
+   "vendor": 1.438
+  },
+  "noise_gain.max.Yrel_pct": {
+   "better": "lower",
+   "open": 0.9767,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.0081
+  },
+  "noise_gain.max.Ytemporal": {
+   "better": "lower",
+   "open": 1.236,
+   "unit": "temporal std",
+   "vendor": 1.268
+  },
+  "p1.day.luma": {
+   "better": "",
+   "open": 110.0,
+   "unit": "Y 0..255",
+   "vendor": 111.5
+  },
+  "p1.night.luma": {
+   "better": "",
+   "open": 69.7,
+   "unit": "Y 0..255",
+   "vendor": 71.3
+  },
+  "reload.ok_cycles": {
+   "better": "higher",
+   "open": 10,
+   "unit": "of 10 cycles",
+   "vendor": null
+  },
+  "sharpness.mtf50": {
+   "better": "higher",
+   "open": 0.1118,
+   "unit": "cycles/pixel",
+   "vendor": 0.1103
+  },
+  "sharpness.rise_10_90": {
+   "better": "lower",
+   "open": 4.4808,
+   "unit": "px",
+   "vendor": 4.4342
+  },
+  "startup.first_rtsp_s": {
+   "better": "lower",
+   "open": 2.44,
+   "unit": "s",
+   "vendor": 2.42
+  },
+  "startup.first_snapshot_s": {
+   "better": "lower",
+   "open": 0.46,
+   "unit": "s",
+   "vendor": 0.49
+  }
+ },
+ "noise_curve": {
+  "open": [
+   {
+    "Yrel_pct": 1.3165,
+    "Ytemporal": 1.497,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 0.9307,
+    "Ytemporal": 1.168,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 1.3644,
+    "Ytemporal": 1.743,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 1.1036,
+    "Ytemporal": 1.407,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 0.975,
+    "Ytemporal": 1.234,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": 0.9767,
+    "Ytemporal": 1.236,
+    "gain_req": "max",
+    "gain_x": 16.0
+   }
+  ],
+  "vendor": [
+   {
+    "Yrel_pct": 1.3394,
+    "Ytemporal": 1.521,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 0.9488,
+    "Ytemporal": 1.19,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 1.4043,
+    "Ytemporal": 1.782,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 1.1363,
+    "Ytemporal": 1.438,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 1.0065,
+    "Ytemporal": 1.266,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": 1.0081,
+    "Ytemporal": 1.268,
+    "gain_req": "max",
+    "gain_x": 16.0
+   }
+  ]
+ },
+ "reload": {
+  "open": {
+   "i2c_released": {
+    "n": 10,
+    "of": 10
+   },
+   "ok_cycles": {
+    "n": 10,
+    "of": 10
+   },
+   "oops_cycles": 0.0
+  }
+ },
+ "runs": [
+  "run-t40-1117-kaj-3000"
+ ],
+ "schema": 1,
+ "sensor": "sc830ai",
+ "soc": "T40",
+ "stack": {
+  "open": {
+   "desc": "open-tx-isp tx_isp_t40 origin/next 5fa382ae (insmod from /tmp) + OpenIMP libimp origin/next e548910c (built from source, LD_LIBRARY_PATH /tmp/olib) + streamer e56ae34 (origin/main) under LD_PRELOAD fair_preload.so",
+   "ko": "tx_isp_t40 md5=7db06275 libimp=3e82d05b",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=e6b64cde version=websocket version 13 required",
+   "streamer": "lb-t40-e56ae34"
+  },
+  "vendor": {
+   "desc": "Ingenic T40 tx-isp-t40.ko (e48557c2) + sensor_sc830ai_t40.ko (873c0cd7) + vendor libimp 1.3.1 (7f00f861), all from the thingino vendor image build, + streamer e56ae34 USE_OPENIMP=0; ends with a sysrq reboot",
+   "ko": "tx_isp_t40 md5=7db06275 libimp=7f00f861",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=e3502c34 version=websocket version 13 required",
+   "streamer": "lb-vendor-t40-e56ae34"
+  }
+ },
+ "stacks": [
+  "open",
+  "vendor"
+ ],
+ "time": "23:18"
+}
