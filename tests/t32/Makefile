@@ -69,8 +69,13 @@ AUDIO_BIN := $(BUILD)/t32-audio2x-test
 AUDIO_DEPS := audio2x_test.c $(PROJECT_DIR)/src/t40/openimp_p3_audio.c \
 	$(PROJECT_DIR)/src/t32/openimp_t32_audio2x.inc
 
+# encoder stream slots (#691): full buffer drops the new frame, StopRecvPic drains the queue
+ENCQ_BIN := $(BUILD)/t32-encq-test
+ENCQ_DEPS := encq_test.c $(PROJECT_DIR)/src/t32/openimp_t32_encq.h
+
 .PHONY: check check-drv
-check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+check: $(ENCQ_BIN) $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+	$(ENCQ_BIN)
 	$(TEST_BIN)
 	$(DEC_BIN)
 	gzip -dc vendor-2.2.0-gop33.txt.gz | $(GOP33_BIN) /dev/stdin
@@ -118,6 +123,10 @@ check: $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $
 	# ISP tuning (#296): id, direction, VI and payload of every IMP_ISP_Tuning_*
 	# request and the return codes, vendor 2.2.0 vs OpenIMP
 	python3 $(PROJECT_DIR)/tools/t32/t32_tuning_table.py diff vendor-2.2.0-tuning.txt openimp-tuning.txt --rc
+
+$(ENCQ_BIN): $(ENCQ_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src -o $@ encq_test.c
 
 $(DEC_BIN): $(DEC_DEPS)
 	@mkdir -p $(BUILD)

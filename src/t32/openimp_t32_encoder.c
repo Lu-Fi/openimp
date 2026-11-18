@@ -72,6 +72,7 @@
 #include "t32/t32_gop33.h"
 #include "t32/openimp_t32_rc.h"
 #include "t32/openimp_t32_hera_h265.h"
+#include "t32/openimp_t32_encq.h"
 #ifdef PLATFORM_T33
 #include "t32/openimp_t33_hera.h"
 #include "t32/openimp_t33_hera_h265.h"
@@ -88,7 +89,7 @@
 
 #define T32_ENC_GROUPS      6
 #define T32_ENC_CHNS        9
-#define T32_ENC_MAX_STREAMS 8
+#define T32_ENC_MAX_STREAMS T32_ENCQ_MAX
 #define T32_ENC_DEF_STREAMS 3
 #define T32_JPEG_DEF_QP     40          /* vendor: initial QP out of 0..98 */
 #define T32_JPEG_MAX_QP     98
@@ -121,15 +122,12 @@ static const uint8_t jpeg_base_chroma[64] = {
     99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
 };
 
-enum { SLOT_FREE, SLOT_READY, SLOT_USER };
-
 struct t32_enc_slot {
     T32VpuBuf bs;
     IMPEncoderPack pack[T32_H264_PACKS];
     uint32_t npacks, length;
     IMPRefType ref;
     uint32_t seq;
-    int state;
 };
 
 struct t32_h264 {                       /* H.264 / H.265 channel state */
@@ -179,8 +177,7 @@ struct t32_enc_chn {
     struct t32_enc_slot slot[T32_ENC_MAX_STREAMS];
     int nslots, max_streams;
     uint32_t bs_size;
-    int ready[T32_ENC_MAX_STREAMS];     /* FIFO of SLOT_READY slots */
-    int rhead, rcount;
+    struct t32_encq q;                  /* slot states + FIFO of coded streams (openimp_t32_encq.h) */
     uint32_t seq;
     int pending, busy;                  /* a frame of the group is waiting / in work */
     uint64_t rate_acc;                  /* frame-rate drop */
@@ -1164,12 +1161,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 /* ---- channel thread ------------------------------------------------------- */
 static int slot_free_locked(struct t32_enc_chn *e)
 {
-    int i;
-
-    for (i = 0; i < e->nslots; i++)
-        if (e->slot[i].state == SLOT_FREE)
-            return i;
-    return -1;
+    return t32_encq_free(&e->q);
 }
 
 static void *enc_thread(void *arg)
@@ -1219,9 +1211,7 @@ static void *enc_thread(void *arg)
                 s->ref = IMP_Encoder_FSTYPE_IDR;
             }
             s->seq = e->seq++;
-            s->state = SLOT_READY;
-            e->ready[(e->rhead + e->rcount) % T32_ENC_MAX_STREAMS] = si;
-            e->rcount++;
+            t32_encq_ready(&e->q, si);
             e->encoded++;
             if (write(e->pipefd[1], "s", 1) != 1)
                 IMP_LOG_WARN(TAG, "stream notify pipe full");
@@ -1625,7 +1615,7 @@ static void chn_free_bufs(struct t32_enc_chn *e)
     for (i = 0; i < e->nslots; i++)
         slot_buf_free(&e->slot[i].bs);
     e->nslots = 0;
-    e->rhead = e->rcount = 0;
+    t32_encq_init(&e->q, 0);
 }
 
 static int chn_alloc_bufs(struct t32_enc_chn *e, int n)
@@ -1635,7 +1625,6 @@ static int chn_alloc_bufs(struct t32_enc_chn *e, int n)
     for (i = 0; i < n; i++) {
         T32VpuBuf *b = &e->slot[i].bs;
 
-        e->slot[i].state = SLOT_FREE;
         if (slot_buf_alloc(b, e->bs_size) != 0) {
             e->nslots = i;
             chn_free_bufs(e);
@@ -1643,6 +1632,7 @@ static int chn_alloc_bufs(struct t32_enc_chn *e, int n)
         }
         e->nslots = i + 1;
     }
+    t32_encq_init(&e->q, e->nslots);
     return 0;
 }
 
@@ -1762,6 +1752,23 @@ static int chn_ivdc_codec(const struct t32_enc_chn *e)
     return e->hevc ? OI_T32_IVDC_H265 : e->h264 ? OI_T32_IVDC_H264 : OI_T32_IVDC_JPEG;
 }
 
+/* @n dropped streams leave with their notify bytes (IMP_Encoder_GetFd) */
+static void chn_notify_drop_locked(struct t32_enc_chn *e, int n)
+{
+    char c;
+
+    while (n-- > 0)
+        if (read(e->pipefd[0], &c, 1) != 1)
+            break;
+}
+
+/*
+ * Vendor StopRecvPic (T33 2.0.2.1 0xf6520, T32 2.2.0, T31 1.1.6 0x9591c):
+ * stop taking frames, wait for the ones in work, then drain every queued
+ * stream (PollingStream / GetStream / ReleaseStream).  The next
+ * StartRecvPic thus starts with the current picture, not with the streams
+ * coded before the stop while GetStream was behind (#691).
+ */
 static void chn_stop_locked(struct t32_enc_chn *e)
 {
     int was = e->recv;
@@ -1769,6 +1776,8 @@ static void chn_stop_locked(struct t32_enc_chn *e)
     e->recv = 0;
     while (e->pending || e->busy)
         pthread_cond_wait(&e->done, &enc_lock);
+    if (was)
+        chn_notify_drop_locked(e, t32_encq_stop(&e->q));
     if (was && OpenIMP_T32_IvdcMode())
         OpenIMP_T32_IvdcEncStop(chn_ivdc_codec(e), e->ivdc);
     if (was)
@@ -2240,11 +2249,8 @@ int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
         return -1;
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
-    if (e && !e->recv && !e->busy && !e->pending && !e->rcount) {
-        int i, held = 0;
-        for (i = 0; i < e->nslots; i++)
-            held |= e->slot[i].state != SLOT_FREE;
-        if (!held) {
+    if (e && !e->recv && !e->busy && !e->pending && !e->q.rcount) {
+        if (!t32_encq_busy(&e->q)) {
             chn_free_bufs(e);
             e->max_streams = cnt;
             rc = chn_alloc_bufs(e, cnt);
@@ -2358,7 +2364,7 @@ static int wait_ready_locked(struct t32_enc_chn *e, int64_t timeout_ms)
 {
     struct timespec t;
 
-    if (e->rcount)
+    if (e->q.rcount)
         return 0;
     if (timeout_ms == 0)
         return -1;
@@ -2371,13 +2377,13 @@ static int wait_ready_locked(struct t32_enc_chn *e, int64_t timeout_ms)
             t.tv_nsec -= 1000000000L;
         }
     }
-    while (!e->rcount && e->created && !e->quit) {
+    while (!e->q.rcount && e->created && !e->quit) {
         if (timeout_ms < 0)
             pthread_cond_wait(&e->done, &enc_lock);
         else if (pthread_cond_timedwait(&e->done, &enc_lock, &t) == ETIMEDOUT)
             break;
     }
-    return e->rcount ? 0 : -1;
+    return e->q.rcount ? 0 : -1;
 }
 
 int IMP_Encoder_PollingStream(int encChn, uint32_t timeoutMsec)
@@ -2408,11 +2414,8 @@ int IMP_Encoder_GetStream(int encChn, IMPEncoderStream *stream, int block)
         pthread_mutex_unlock(&enc_lock);
         return -1;
     }
-    si = e->ready[e->rhead];
-    e->rhead = (e->rhead + 1) % T32_ENC_MAX_STREAMS;
-    e->rcount--;
+    si = t32_encq_take(&e->q);
     s = &e->slot[si];
-    s->state = SLOT_USER;
     if (read(e->pipefd[0], &c, 1) != 1)
         IMP_LOG_DBG(TAG, "stream notify pipe empty");
     memset(stream, 0, sizeof(*stream));
@@ -2434,9 +2437,8 @@ int IMP_Encoder_ReleaseStream(int encChn, IMPEncoderStream *stream)
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     for (i = 0; e && i < e->nslots; i++)
-        if (stream->pack == e->slot[i].pack && e->slot[i].state == SLOT_USER) {
-            e->slot[i].state = SLOT_FREE;
-            rc = 0;
+        if (stream->pack == e->slot[i].pack) {
+            rc = t32_encq_release(&e->q, i);
             break;
         }
     pthread_mutex_unlock(&enc_lock);
@@ -2448,17 +2450,11 @@ int IMP_Encoder_ReleaseStream(int encChn, IMPEncoderStream *stream)
 int IMP_Encoder_FlushStream(int encChn)
 {
     struct t32_enc_chn *e;
-    char c;
 
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
-    while (e && e->rcount) {
-        e->slot[e->ready[e->rhead]].state = SLOT_FREE;
-        e->rhead = (e->rhead + 1) % T32_ENC_MAX_STREAMS;
-        e->rcount--;
-        if (read(e->pipefd[0], &c, 1) != 1)
-            break;
-    }
+    if (e)
+        chn_notify_drop_locked(e, t32_encq_drop_ready(&e->q));
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
 }
@@ -2476,10 +2472,10 @@ int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
         memset(stat, 0, sizeof(*stat));
         stat->registered = e->registered;
         stat->leftPics = (uint32_t)(e->pending + e->busy);
-        for (i = 0; i < e->rcount; i++)
-            stat->leftStreamBytes += e->slot[e->ready[(e->rhead + i) % T32_ENC_MAX_STREAMS]].length;
-        stat->leftStreamFrames = (uint32_t)e->rcount;
-        stat->curPacks = e->rcount ? e->slot[e->ready[e->rhead]].npacks : 0;
+        for (i = 0; i < e->q.rcount; i++)
+            stat->leftStreamBytes += e->slot[t32_encq_peek(&e->q, i)].length;
+        stat->leftStreamFrames = (uint32_t)e->q.rcount;
+        stat->curPacks = e->q.rcount ? e->slot[t32_encq_peek(&e->q, 0)].npacks : 0;
         stat->work_done = e->recv ? 0 : 1;
     }
     pthread_mutex_unlock(&enc_lock);
