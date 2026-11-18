@@ -269,6 +269,50 @@ static void test_vendor(const char *path)
     CHECK(blocks > 0, "no vendor blocks in %s", path);
 }
 
+/* #538: IMP_Encoder_SetChnMaxPictureSize on an H.265 channel.  The vendor
+ * 2.0.2.1 stores the sizes in the I265eReconfig copy (setMaxPicSize @ 0x9abac,
+ * flag 0x200000) and ReconfigIdrFrame (0x98628) writes them into the encoder
+ * parameters and runs reset() with the rate-control init at the next IDR.
+ * OpenIMP: rc_setter updates the attribute and sets rc_restart; at the next
+ * IDR rc_setup -> t32_rc_reconfig(hevc) -> t32_rc_init -> t32_rc65_params ->
+ * t65_sizes.  Checked: the controller's words 0xdc / 0xe0 (max I / P picture
+ * size) carry the new sizes after the reconfig, for every mode with sizes. */
+static void test_hevc_maxpic(void)
+{
+    static const int modes[] = { IMP_ENC_RC_MODE_CBR, IMP_ENC_RC_MODE_VBR, IMP_ENC_RC_MODE_SMART };
+    unsigned i;
+
+    for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+        IMPEncoderAttrRcMode m;
+        T32Rc rc;
+
+        fill(&m, modes[i], 2000);
+        memset(&rc, 0, sizeof(rc));
+        CHECK(t32_rc_init(&rc, &m, 1920, 1088, 0, 50, 25, 1, 1) == 0 && rc.on && rc.t65,
+              "H.265 mode %d init", modes[i]);
+        if (!rc.t65)
+            continue;
+        /* the attribute fields rc_setter writes for id 0x14 */
+        if (modes[i] == IMP_ENC_RC_MODE_CBR) {
+            m.attrH264Cbr.maxIPictureSize = 123456;
+            m.attrH264Cbr.maxPPictureSize = 34567;
+        } else if (modes[i] == IMP_ENC_RC_MODE_VBR) {
+            m.attrH264Vbr.maxIPictureSize = 123456;
+            m.attrH264Vbr.maxPPictureSize = 34567;
+        } else {
+            m.attrH264Smart.maxIPictureSize = 123456;
+            m.attrH264Smart.maxPPictureSize = 34567;
+        }
+        CHECK(t32_rc_reconfig(&rc, &m, 1920, 1088, 0, 50, 25, 1, 1) == 0 && rc.on && rc.t65,
+              "H.265 mode %d reconfig", modes[i]);
+        if (rc.t65)
+            CHECK(t32_rc65_get(rc.t65, 0xdc) == 123456 && t32_rc65_get(rc.t65, 0xe0) == 34567,
+                  "H.265 mode %d max picture size after reconfig: I %u P %u (want 123456 34567)",
+                  modes[i], t32_rc65_get(rc.t65, 0xdc), t32_rc65_get(rc.t65, 0xe0));
+        t32_rc_free(&rc);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc > 2 && !strcmp(argv[1], "trace")) {
@@ -281,6 +325,7 @@ int main(int argc, char **argv)
     }
     test_mapping();
     test_loop();
+    test_hevc_maxpic();
     if (argc > 1)
         test_vendor(argv[1]);
     if (fails) {

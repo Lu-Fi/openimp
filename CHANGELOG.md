@@ -43,6 +43,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - `src/t40/openimp_p2_encoder.c` (shared P2 encoder): `IMP_Encoder_StopRecvPic` now waits for a running PollingStream and drops the stream a PollingStream left for GetStream (back to the codec, capture frame back to the FrameSource), as `IMP_Encoder_FlushStream` does. Before, the first GetStream after StopRecvPic + StartRecvPic could return that old picture. Vendor: StopRecvPic drains the queued streams with PollingStream/GetStream/ReleaseStream (up to 10 rounds) on T31 1.1.6, T30 1.0.5, T40 1.3.1 (0x7af08) and T41 1.2.6 (0x4b308). A stream the application holds (GetStream done) stays until its ReleaseStream.
 - Test: `tests/t31/p2_jpeg_source_test.c` (Polling, StopRecvPic, StartRecvPic: no stale GetStream, the next stream is fresh; fails without the fix). Same cross-SoC fix as #691 on T32/T33.
+## 2026-11-18: T32/T33 H.265 SetChnMaxPictureSize reaches the rate control at the next IDR (#538; host)
+
+- Checked against vendor 2.0.2.1: `IMP_Encoder_SetChnMaxPictureSize` on H.265 calls `i265e_set_param(0x15)` -> `I265eReconfig::setMaxPicSize` (0x9abac, flag 0x200000); `ReconfigIdrFrame` (0x98628) writes the sizes at the next IDR and resets the encoder with the rate-control init. OpenIMP does the same since e2992abd / bb985391: `rc_setter` updates the attribute and restarts the controller at the next IDR (`t32_rc_reconfig` -> `t32_rc_init` -> `t32_rc65_params` -> words 0xdc / 0xe0). No code change.
+- Test: `tests/t32/rc_test.c` `test_hevc_maxpic` (CBR / VBR / SMART: max I / P picture size in the H.265 controller after the reconfig). Device check on T33 silicon still open.
 
 ## 2026-11-18 (night): T32/T33 IMP_Encoder_StopRecvPic drains the queued streams as the vendor; first snapshot after an idle period is fresh (#691)
 
