@@ -26,6 +26,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
   - A 64 KiB guard behind the frame is checked at DisableSensor, and every N seconds with `OPENIMP_T30_TEMPER_CANARY=N`. On a T30N with Temper on, the guard stayed intact.
   - `OPENIMP_T30_TEMPER_VENDOR_SIZE=1` restores the vendor size.
 - **Result:** 1080p + 360p needs about 25.8 MB of rmem on T30 instead of about 32.5 MB (rmem=28M with JPEG headroom).
+## 2026-11-18: T31 / T41 CBR HWRC QP word like the vendor (#604)
+
+- Vendor capture on both stacks (T41 libimp 1.2.6 on a T41NQ, T31 1.1.6 on a T31L, 1080p CBR 1000, SetChnQpBounds 20/45, AVPU command lists at the push): the vendor HWRC QP word (T31 cmd[0x17], T41 command-slot word 179) keeps the first IDR's QP in bits 23:16 on every picture; OpenIMP wrote the picture QP. T31 also keeps the channel-attribute QP window there (15..48 -> 16/48, as T40 #556), OpenIMP used the SetChnQpBounds window.
+- Fix: both rules on T31 and T41 (`OPENIMP_HWRC_VENDOR_QP=0` restores the old word). Re-capture: T31 window 0x10/0x30 and constant bits 23:16; T41 bits 23:16 = 40 (H.264) / 35 (H.265) as the vendor.
+- Still different (open in #604): T41 window minimum (vendor 18, open 20), the HWRC P words 177/180 (open = half of the vendor), HEVC-only words on both SoCs, and the RC start trajectory (#610).
 
 ## 2026-11-18: Light box, Eufy T40XP, sc830ai full run 5000 K (#230)
 

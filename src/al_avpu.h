@@ -320,6 +320,16 @@ typedef struct ALAvpuContext {
     uint64_t t41_submit_ms;
     uint32_t t41_timeouts;
 #endif
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+    /* #604 HWRC QP word (T31 cmd[0x17], T41 slot word 179), vendor capture
+     * T31 1.1.6 / T41 1.2.6 CBR: bits 23:16 hold the QP of the channel's
+     * first IDR on every picture (0 = not yet); T31 also keeps the QP
+     * window of the channel attributes there when SetChnQpBounds narrows
+     * the software RC. */
+    uint32_t hwrc_first_idr_qp;
+    uint32_t hwrc_attr_min_qp;
+    uint32_t hwrc_attr_max_qp;
+#endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     /* FixQP: picture type whose lambda words EP1 holds (0 = not yet). */
     uint32_t t40_ep1_lambda_type;

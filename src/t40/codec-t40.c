@@ -523,6 +523,22 @@ int MergeEncodingStatus(void *merged_status, const void *slice_status)
     return result;
 }
 
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
+/* #604: vendor HWRC QP word on T31/T41 (first-IDR QP in bits 23:16, T31
+ * attribute window); OPENIMP_HWRC_VENDOR_QP=0 restores the old word. */
+static int avpu_hwrc_vendor_qp(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_HWRC_VENDOR_QP");
+
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+#endif
+
 static inline int avpu_sys_ioctl(int fd, unsigned long cmd, void *arg)
 {
     /* Bypass libc varargs to avoid any ABI/shim issues on MIPS o32 */
@@ -4647,6 +4663,12 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
     params.picture_qp = picture_qp;
     params.max_qp = max_qp;
     params.rate_control_qp = rate_control_qp;
+    /* #604 (vendor 1.2.6 capture, .34 CBR 1000): word 179 bits 23:16 keep
+     * the first IDR's QP (H.264 40, H.265 35) on every later picture. */
+    if (is_idr && !ctx->hwrc_first_idr_qp)
+        ctx->hwrc_first_idr_qp = picture_qp ? picture_qp : 1u;
+    if (avpu_hwrc_vendor_qp())
+        params.hwrc_hold_qp = ctx->hwrc_first_idr_qp;
     params.picture_number = picture_number;
     params.is_idr = is_idr;
     params.max_picture_bits = ctx->t41_max_picture_bits[is_idr ? 2 : 1];
@@ -5602,6 +5624,22 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
                   | ((uint32_t)t31_long_term_target & 0x00ffffffu);
         cmd[0x17] = (min_qp << 24) | (t31_picture_qp << 16)
                   | (max_qp << 8) | t31_picture_qp;
+        /* #604 (vendor 1.1.6 capture, .26 CBR 1000, SetChnQpBounds 20/45):
+         * the window is the channel attributes' (15..48 -> 0x10/0x30, as
+         * T40 #556: lowest QP at most 32 below the maximum) and bits 23:16
+         * hold the first IDR's QP (latched by the caller after the IDR). */
+        if (avpu_hwrc_vendor_qp()) {
+            uint32_t mx = ctx->hwrc_attr_max_qp ? ctx->hwrc_attr_max_qp & 0x3fu
+                                                : max_qp;
+            uint32_t mn = ctx->hwrc_attr_max_qp ? ctx->hwrc_attr_min_qp : min_qp;
+            uint32_t first = ctx->hwrc_first_idr_qp ? ctx->hwrc_first_idr_qp
+                                                    : t31_picture_qp;
+
+            if (mx > 32u && mn < mx - 32u)
+                mn = mx - 32u;
+            cmd[0x17] = ((mn & 0x3fu) << 24) | ((first & 0x3fu) << 16) |
+                        (mx << 8) | (cmd[0x17] & 0xffu);
+        }
         /*
          * T31 restarts HWRC on the IDR and retains the restart bit for the
          * first P picture of the new GOP.  Later P pictures carry only bit 30.
@@ -10885,6 +10923,10 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
 #endif
+#if defined(PLATFORM_T31)
+    enc->avpu.hwrc_attr_min_qp = enc->hw_params.min_qp;
+    enc->avpu.hwrc_attr_max_qp = enc->hw_params.max_qp;
+#endif
     enc->avpu.qp_ip_delta = -1;
     enc->avpu.rc_mode = enc->hw_params.rc_mode;
 
@@ -12600,11 +12642,20 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         uint32_t attr_max_qp = enc->avpu.t40_attr_max_qp;
                         uint32_t max_picture_bits = enc->avpu.t40_max_picture_bits;
 #endif
+#if defined(PLATFORM_T31)
+                        /* #604: the attribute window survives as on T40 */
+                        uint32_t hwrc_attr_min = enc->avpu.hwrc_attr_min_qp;
+                        uint32_t hwrc_attr_max = enc->avpu.hwrc_attr_max_qp;
+#endif
                         memset(&enc->avpu, 0, sizeof(enc->avpu));
 #if defined(AVPU_T40_NATIVE)
                         enc->avpu.t40_attr_min_qp = attr_min_qp;
                         enc->avpu.t40_attr_max_qp = attr_max_qp;
                         enc->avpu.t40_max_picture_bits = max_picture_bits;
+#endif
+#if defined(PLATFORM_T31)
+                        enc->avpu.hwrc_attr_min_qp = hwrc_attr_min;
+                        enc->avpu.hwrc_attr_max_qp = hwrc_attr_max;
 #endif
                         enc->avpu.fd = fd;
                         enc->avpu.event_fd = enc->event ? (int)(uintptr_t)enc->event : -1;
@@ -13877,6 +13928,11 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
 #endif
                 fill_cmd_regs_enc1(ctx, cmd, buf_idx, phys_addr, hdr_offset,
                                    is_idr, ref_phys);
+#if defined(PLATFORM_T31)
+                /* #604: latch the first IDR's QP for cmd[0x17] bits 23:16 */
+                if (is_idr && !ctx->hwrc_first_idr_qp)
+                    ctx->hwrc_first_idr_qp = (cmd[0x17] & 0x3fu) ? (cmd[0x17] & 0x3fu) : 1u;
+#endif
 #if defined(PLATFORM_T31) || defined(AVPU_T40_NATIVE)
                 avpu_t31_roi_track_qp(ctx, cmd);
 #endif
@@ -15119,6 +15175,10 @@ int AL_Codec_Encode_SetRcParam(void *codec, void *rcAttr)
 #if defined(AVPU_T40_NATIVE)
     enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
+#endif
+#if defined(PLATFORM_T31)
+    enc->avpu.hwrc_attr_min_qp = enc->hw_params.min_qp;
+    enc->avpu.hwrc_attr_max_qp = enc->hw_params.max_qp;
 #endif
     codec_sync_rc_cache(enc);
     codec_set_error(enc, 0);

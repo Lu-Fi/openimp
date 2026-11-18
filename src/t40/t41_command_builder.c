@@ -426,7 +426,8 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
         cmd[177] = (uint32_t)target;
         cmd[178] = 0x3f000000u | (uint32_t)long_term;
         cmd[179] = (params->min_qp << 24) |
-                   (params->picture_qp << 16) |
+                   ((params->hwrc_hold_qp ? params->hwrc_hold_qp
+                                          : params->picture_qp) << 16) |
                    (params->max_qp << 8) |
                    params->rate_control_qp;
         cmd[180] = ((params->is_idr || params->picture_number == 1u)
