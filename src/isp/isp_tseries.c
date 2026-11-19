@@ -4141,13 +4141,8 @@ int IMP_ISP_Tuning_GetHVFLIP(IMPISPHVFLIP *hvflip)
 }
 
 #if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
-/* IMPISPITAttr of the T10/T20/T21/T30 SDKs (not in the T31-style headers
- * OpenIMP builds against). */
-typedef struct {
-    int32_t mode;                   /* 0 auto, 1 manual, 2 range */
-    uint16_t integration_time;      /* sensor lines, manual mode */
-    uint16_t max_integration_time;  /* sensor lines, range mode */
-} TSeriesLegacyITAttr;
+/* IMPISPITAttr (include/imp/imp_isp.h): the vendor layout, 8 bytes. */
+_Static_assert(sizeof(IMPISPITAttr) == 8, "IMPISPITAttr size");
 
 /*
  * The stock T20 3.12.0, T21 1.0.33 and T30 1.0.5 libraries send a zeroed
@@ -4160,9 +4155,9 @@ typedef struct {
  */
 #define TISP_CID_LEGACY_IT_ATTR 0x800002c
 
-int IMP_ISP_Tuning_SetIntegrationTime(void *itattr)
+int IMP_ISP_Tuning_SetIntegrationTime(IMPISPITAttr *itattr)
 {
-    const TSeriesLegacyITAttr *attr = itattr;
+    const IMPISPITAttr *attr = itattr;
     uint8_t ae[0x70];
 
     if (attr == NULL)
@@ -4195,9 +4190,9 @@ int IMP_ISP_Tuning_SetIntegrationTime(void *itattr)
 /* Stock T20 3.12.0 reads the same 0x70-byte block back on CID 0x0800002C:
  * mode = [0x03] != 0 (manual flag), integration_time = u16 [0x18],
  * max_integration_time = u16 [0x1a]. */
-int IMP_ISP_Tuning_GetIntegrationTime(void *itattr)
+int IMP_ISP_Tuning_GetIntegrationTime(IMPISPITAttr *itattr)
 {
-    TSeriesLegacyITAttr *attr = itattr;
+    IMPISPITAttr *attr = itattr;
     uint8_t ae[0x70];
     int result;
 

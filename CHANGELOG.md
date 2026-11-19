@@ -31,6 +31,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Vendor capture on both stacks (T41 libimp 1.2.6 on a T41NQ, T31 1.1.6 on a T31L, 1080p CBR 1000, SetChnQpBounds 20/45, AVPU command lists at the push): the vendor HWRC QP word (T31 cmd[0x17], T41 command-slot word 179) keeps the first IDR's QP in bits 23:16 on every picture; OpenIMP wrote the picture QP. T31 also keeps the channel-attribute QP window there (15..48 -> 16/48, as T40 #556), OpenIMP used the SetChnQpBounds window.
 - Fix: both rules on T31 and T41 (`OPENIMP_HWRC_VENDOR_QP=0` restores the old word). Re-capture: T31 window 0x10/0x30 and constant bits 23:16; T41 bits 23:16 = 40 (H.264) / 35 (H.265) as the vendor.
 - Still different (open in #604): T41 window minimum (vendor 18, open 20), the HWRC P words 177/180 (open = half of the vendor), HEVC-only words on both SoCs, and the RC start trajectory (#610).
+## 2026-11-19: T20/T21/T30 public headers declare IMPISPITAttr and IMP_ISP_Tuning_Set/GetIntegrationTime like the vendor (#696)
+
+- `include/imp/imp_isp.h` now declares `IMPISPTuningMode`, `IMPISPITAttr` (8 bytes, vendor layout) and both prototypes for T20/T21/T30 (T10 builds as T20). The vendor 3.12.0, 1.0.33 and 1.0.5 headers declare them, and the library already exported both functions.
+- `src/isp/isp_tseries.c` uses the public type instead of a private copy and has a size assert. T30/T20/T21 libraries build; no behaviour change.
 
 ## 2026-11-18: Light box, Eufy T40XP, sc830ai full run 5000 K (#230)
 

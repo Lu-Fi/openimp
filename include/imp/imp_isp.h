@@ -453,6 +453,38 @@ int IMP_ISP_Tuning_SetISPBypass(IMPISPTuningOpsMode enable);
 int IMP_ISP_Tuning_SetISPLDC(IMPISPTuningOpsMode enable);
 #endif
 
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+/* T10/T20/T21/T30 SDK (3.12.0 / 1.0.33 / 1.0.5): integration time control. */
+typedef enum {
+	IMPISP_TUNING_MODE_AUTO,	/**< automatic */
+	IMPISP_TUNING_MODE_MANUAL,	/**< manual */
+	IMPISP_TUNING_MODE_RANGE,	/**< range */
+	IMPISP_TUNING_MODE_BUTT,	/**< number of modes */
+} IMPISPTuningMode;
+
+typedef struct {
+	IMPISPTuningMode mode;		/**< auto, manual or range */
+	uint16_t integration_time;	/**< sensor lines, manual mode */
+	uint16_t max_integration_time;	/**< sensor lines, range mode */
+} IMPISPITAttr;
+
+/**
+ * Set the integration time (auto, manual or maximum in range mode).
+ *
+ * @param itattr Mode and time in sensor lines
+ * @return 0 on success, negative on error
+ */
+int IMP_ISP_Tuning_SetIntegrationTime(IMPISPITAttr *itattr);
+
+/**
+ * Get the integration time attributes.
+ *
+ * @param itattr Filled with mode and times in sensor lines
+ * @return 0 on success, negative on error
+ */
+int IMP_ISP_Tuning_GetIntegrationTime(IMPISPITAttr *itattr);
+#endif
+
 /**
  * Set horizontal flip
  *
