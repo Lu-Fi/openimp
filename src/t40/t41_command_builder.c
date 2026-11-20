@@ -425,10 +425,12 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
                                              log2_ctb);
         cmd[177] = (uint32_t)target;
         cmd[178] = 0x3f000000u | (uint32_t)long_term;
-        cmd[179] = (params->min_qp << 24) |
+        cmd[179] = ((params->hwrc_max_qp ? params->hwrc_min_qp
+                                         : params->min_qp) << 24) |
                    ((params->hwrc_hold_qp ? params->hwrc_hold_qp
                                           : params->picture_qp) << 16) |
-                   (params->max_qp << 8) |
+                   ((params->hwrc_max_qp ? params->hwrc_max_qp
+                                         : params->max_qp) << 8) |
                    params->rate_control_qp;
         cmd[180] = ((params->is_idr || params->picture_number == 1u)
                         ? 0xc0000000u : 0x40000000u) |

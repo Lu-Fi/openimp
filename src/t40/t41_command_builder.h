@@ -24,6 +24,10 @@ typedef struct OpenIMPT41CommandParams {
     uint32_t rate_control_qp;
     /* HWRC word 179 bits 23:16 (#604: the first IDR's QP); 0 = picture_qp. */
     uint32_t hwrc_hold_qp;
+    /* HWRC word 179 window bytes (#604: channel attribute window); 0/0 =
+     * min_qp/max_qp. */
+    uint32_t hwrc_min_qp;
+    uint32_t hwrc_max_qp;
     uint32_t picture_number;
     int is_idr;
     /* uMaxPictureSize of this picture type in bits (0 = bit rate based):

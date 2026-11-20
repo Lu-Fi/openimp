@@ -9,6 +9,13 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T41 CBR HWRC P target and QP window like the vendor (#604)
+
+- **P target (word 177, word 180 bits 15:0):** when only the I max picture size is set (CreateChn `uMaxPictureSize * 1000`), P pictures now get 5/7 of it, as the vendor 1.2.6. Before, OpenIMP took 5/7 of the bit rate, which was half the vendor value at 1080p CBR 1000 (H.264 665 vs 1330, H.265 1663 vs 3326). An explicit `SetChnMaxPictureSize` P value is used as before.
+- **QP window (word 179 bits 31:24 / 15:8):** this is the channel attribute window from CreateChn (18/45 after `SetDefaultParam`), not the `SetChnQpBounds` window (20/45). The same holds on T31 and T40 (#556).
+- `OPENIMP_HWRC_VENDOR_QP=0` restores both old words.
+- Still open in #604: the T41 H.265 stream headers differ from the vendor (tier/level, POC 2n with a 10-bit lsb, default scaling lists, deblocking override, reorder 1), together with command words 3/8..0x0c/0x1c/0x21/0x98. T31 cmd[0x15]/[0x18] are also open.
+
 ## 2026-11-20: T30 Sinter/Temper strength is the vendor percentage (#700)
 
 - **Behaviour change T30:** `IMP_ISP_Tuning_SetSinterStrength` / `SetTemperStrength` take the vendor percentage (100 = tuning table, capped at 200), as the vendor 1.0.5 does with `isp_table_tuning_ratio(109/132, min(ratio, 200))`. Before, OpenIMP read the value on a 128-neutral scale.

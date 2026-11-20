@@ -707,6 +707,29 @@ static void test_runtime_rate_change(void)
     assert(((b[179] >> 16) & 0xffu) == 40u && ((b[179] >> 8) & 0xffu) == 51u);
     assert((b[179] & 0xffu) == 40u && (b[24] >> 16 & 0xffu) == 40u);
 
+    /* #604: the window bytes come from the channel attributes when set
+     * (vendor 1.2.6: 0x12/0x2d with SetChnQpBounds 20/45); 1080p CBR 1000
+     * with I max 2000 kbit: P max = 5/7 of it -> word 177 1330, word 180
+     * bits 15:0 = 10 (vendor capture). */
+    params.hwrc_min_qp = 18;
+    params.hwrc_max_qp = 45;
+    params.max_qp = 45;
+    assert(openimp_t41_build_command(b, sizeof(b), &params) == 0);
+    assert((b[179] >> 24) == 18u && ((b[179] >> 8) & 0xffu) == 45u);
+    params.hwrc_min_qp = 0;
+    params.hwrc_max_qp = 0;
+    params.max_qp = 51;
+    {
+        OpenIMPT41CommandParams p = params;
+
+        p.width = 1920;
+        p.height = 1080;
+        p.bitrate = 1000000;
+        p.max_picture_bits = 2000000u * 5u / 7u;
+        assert(openimp_t41_build_command(b, sizeof(b), &p) == 0);
+        assert(b[177] == 1330u && (b[180] & 0xffffu) == 10u);
+    }
+
     assert(openimp_t41_hwrc_ring_init(ring, sizeof(ring), 512000u) != 0u);
     for (slot = 0; slot < OPENIMP_T41_EP3_SLOT_COUNT; ++slot) {
         size_t base = slot * OPENIMP_T41_EP3_SLOT_STRIDE / 4u;
