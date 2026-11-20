@@ -7469,16 +7469,24 @@ int IMP_Encoder_DisableAllNCUDenoise(void)
 #if !defined(PLATFORM_T21)
 /* ---- T30 1.0.5 only (gap work 2026-10-10) --------------------------------
  * OEM IMP_Encoder_SetPoolSize (0xb45b0): logs, stores a size > 0 in a global
- * for the next EncoderInit and returns 0, otherwise -1.  The T30 Helix path
- * sizes its stream buffers from the picture (src/t30/t30_helix_encoder.c),
- * so the value is only kept. */
+ * for the next EncoderInit and returns 0, otherwise -1.  T30: the size of
+ * the shared Helix bitstream buffer ("vpuBs", src/t30/helix_bitstream.c)
+ * that the next IMP_System_Init allocates (#697). */
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T23)
+#include "t30/helix_bitstream.h"
+#else
 static int p2_pool_size;
+#endif
 
 int IMP_Encoder_SetPoolSize(int size)
 {
     if (size <= 0)
         return -1;
+#if defined(PLATFORM_T30) && !defined(PLATFORM_T23)
+    OpenIMP_HelixBitstream_SetPoolSize((uint32_t)size);
+#else
     p2_pool_size = size;
+#endif
     return 0;
 }
 

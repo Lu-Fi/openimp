@@ -186,6 +186,13 @@ static void make_attr(IMPEncoderCHNAttr *attr, int denoise)
     attr->rcAttr.attrDenoise.enable = denoise;
 }
 
+/* T30: IMP_Encoder_SetPoolSize sizes the shared Helix bitstream buffer (#697) */
+static uint32_t pool_size_seen;
+void OpenIMP_HelixBitstream_SetPoolSize(uint32_t size)
+{
+    pool_size_seen = size;
+}
+
 int main(void)
 {
     IMPEncoderCHNAttr attr;
@@ -193,6 +200,8 @@ int main(void)
     IMPEncoderSuperFrmCfg sf;
     IMPEncoderCHNAttr jattr;
 
+    CHECK(IMP_Encoder_SetPoolSize(0) == -1 && pool_size_seen == 0);
+    CHECK(IMP_Encoder_SetPoolSize(0x100000) == 0 && pool_size_seen == 0x100000);
     CHECK(IMP_Encoder_CreateGroup(0) == 0);
     make_attr(&attr, 0);
     attr.rcAttr.attrHSkip.hSkipAttr.skipType = IMP_Encoder_STYPE_N1X;

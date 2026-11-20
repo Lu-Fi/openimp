@@ -5419,12 +5419,132 @@ int IMP_ISP_SetAwbAlgoFunc_close(void)
 
 #if defined(PLATFORM_T30)
 int32_t IMP_Alloc(void *info, int32_t size, const char *name);
+
+/* Temper frame buffer size (beyond vendor, #697).  The vendor 1.0.5 mode 2 takes
+ * vi_max_width^2 * 4 bytes; the driver programs the Temper DMA writer with
+ * width 0xa10 = input width, lines 0xa14 = input height and line offset
+ * 0xa24 = width * 4 (open-tx-isp tx_isp_t30_recovered.c:12278-12283), so it
+ * writes width * height * 4 bytes, the size the vendor's own mode 1 allocates.
+ * A guard area behind the frame is filled with a pattern and checked at
+ * DisableSensor; OPENIMP_T30_TEMPER_CANARY=<s> also checks it every <s>
+ * seconds while streaming.  OPENIMP_T30_TEMPER_VENDOR_SIZE=1 restores w^2*4. */
+#define T30_TEMPER_GUARD_BYTES 0x10000u
+#define T30_TEMPER_GUARD_WORD 0x7e3a5c91u
+
+static uint32_t tseries_t30_temper_frame_bytes;
+static uint32_t tseries_t30_temper_guard_phys;
+static volatile int tseries_t30_temper_canary_run;
+static pthread_t tseries_t30_temper_canary_tid;
+static int tseries_t30_temper_canary_started;
+
+static int tseries_t30_temper_vendor_size(void)
+{
+    const char *v = getenv("OPENIMP_T30_TEMPER_VENDOR_SIZE");
+
+    return v != NULL && v[0] == '1';
+}
+
+/* Fill (fill != 0) or check the guard through an uncached /dev/mem mapping, so
+ * neither the fill nor the check goes through a stale cache line.  Returns the
+ * number of changed words, or -1 when the guard could not be mapped. */
+static int tseries_t30_temper_guard(int fill, uint32_t *first_bad)
+{
+    uint32_t phys = tseries_t30_temper_guard_phys;
+    uint32_t base, span, i, bad = 0;
+    volatile uint32_t *g;
+    void *m;
+    int fd;
+
+    if (phys == 0)
+        return -1;
+    base = phys & ~0xfffu;
+    span = ((phys - base) + T30_TEMPER_GUARD_BYTES + 0xfffu) & ~0xfffu;
+    fd = open("/dev/mem", O_RDWR | O_SYNC | O_CLOEXEC);
+    if (fd < 0)
+        return -1;
+    m = mmap(NULL, span, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)base);
+    close(fd);
+    if (m == MAP_FAILED)
+        return -1;
+    g = (volatile uint32_t *)((uint8_t *)m + (phys - base));
+    for (i = 0; i < T30_TEMPER_GUARD_BYTES / 4u; i++) {
+        uint32_t want = T30_TEMPER_GUARD_WORD ^ i;
+
+        if (fill) {
+            g[i] = want;
+        } else if (g[i] != want) {
+            if (bad == 0 && first_bad != NULL)
+                *first_bad = i * 4u;
+            bad++;
+        }
+    }
+    munmap(m, span);
+    return (int)bad;
+}
+
+static void tseries_t30_temper_guard_report(const char *when)
+{
+    uint32_t first = 0;
+    int bad = tseries_t30_temper_guard(0, &first);
+
+    if (bad < 0)
+        return;
+    if (bad == 0)
+        printf("info: T30 temper guard intact (%s, frame %u bytes)\n", when,
+               (unsigned)tseries_t30_temper_frame_bytes);
+    else
+        printf("error: T30 temper guard overwritten (%s): %d words changed, first at frame end + 0x%x\n",
+               when, bad, (unsigned)first);
+    kmsg_trace("libimp/ISP: T30 temper guard %s: %d bad words\n", when, bad);
+}
+
+static void *tseries_t30_temper_canary_main(void *arg)
+{
+    unsigned period = (unsigned)(uintptr_t)arg;
+    unsigned elapsed = 0;
+
+    while (tseries_t30_temper_canary_run) {
+        sleep(1);
+        if (++elapsed >= period && tseries_t30_temper_canary_run) {
+            elapsed = 0;
+            tseries_t30_temper_guard_report("periodic");
+        }
+    }
+    return NULL;
+}
+
+static void tseries_t30_temper_canary_start(void)
+{
+    const char *v = getenv("OPENIMP_T30_TEMPER_CANARY");
+    long period = v != NULL ? strtol(v, NULL, 0) : 0;
+
+    if (period <= 0 || tseries_t30_temper_canary_started)
+        return;
+    tseries_t30_temper_canary_run = 1;
+    if (pthread_create(&tseries_t30_temper_canary_tid, NULL, tseries_t30_temper_canary_main,
+                       (void *)(uintptr_t)period) == 0)
+        tseries_t30_temper_canary_started = 1;
+    else
+        tseries_t30_temper_canary_run = 0;
+}
+
+static void tseries_t30_temper_canary_stop(void)
+{
+    if (!tseries_t30_temper_canary_started)
+        return;
+    tseries_t30_temper_canary_run = 0;
+    pthread_join(tseries_t30_temper_canary_tid, NULL);
+    tseries_t30_temper_canary_started = 0;
+}
+
 /* vendor EnableSensor 0xd3fe4 ncu block, temper branch (mode 2): the Temper frame buffer.
  * A failed allocation leaves Temper off (vendor: EnableSensor fails). */
 static void tseries_t30_temper_alloc(ISPDevice *isp)
 {
     uint8_t *isp_b = (uint8_t *)isp;
     uint32_t w = tseries_t30_vi_max_wh >> 16;
+    uint32_t h = tseries_t30_vi_max_wh & 0xffffu;
+    uint32_t frame, total;
     char path[64];
     void *buf;
 
@@ -5442,20 +5562,37 @@ static void tseries_t30_temper_alloc(ISPDevice *isp)
         printf("error(%s,%d): no sensor width, temper off\n", "IMP_ISP_EnableSensor", __LINE__);
         return;
     }
+    if (h == 0 || h > w || tseries_t30_temper_vendor_size()) {
+        frame = w * w * 4;
+        total = frame;
+    } else {
+        frame = ((w * h * 4) + 0xfffu) & ~0xfffu;
+        total = frame + T30_TEMPER_GUARD_BYTES;
+    }
     buf = malloc(0x94);
     if (buf == NULL) {
         printf("error(%s,%d): maloc err\n", "IMP_ISP_EnableSensor", __LINE__);
         return;
     }
-    if (IMP_Alloc(buf, (int32_t)(w * w * 4), "ncubuf") != 0) {
+    if (IMP_Alloc(buf, (int32_t)total, "ncubuf") != 0) {
         printf("error(%s,%d): IMP_Alloc %u bytes, temper off\n", "IMP_ISP_EnableSensor", __LINE__,
-               (unsigned)(w * w * 4));
+               (unsigned)total);
         free(buf);
         return;
     }
     *(void **)(isp_b + 0xac) = buf;
     tseries_t30_ncu_mode = 2;
-    kmsg_trace("libimp/ISP: T30 temper buffer %u bytes phys=0x%x\n", (unsigned)(w * w * 4),
+    tseries_t30_temper_frame_bytes = frame;
+    tseries_t30_temper_guard_phys = 0;
+    if (total > frame) {
+        tseries_t30_temper_guard_phys = ((const IMPDMABufferInfo *)buf)->phys_addr + frame;
+        if (tseries_t30_temper_guard(1, NULL) < 0)
+            tseries_t30_temper_guard_phys = 0;
+        else
+            tseries_t30_temper_canary_start();
+    }
+    kmsg_trace("libimp/ISP: T30 temper buffer %u bytes (frame %u, %ux%u) phys=0x%x\n", (unsigned)total,
+               (unsigned)frame, (unsigned)w, (unsigned)h,
                (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
 }
 
@@ -5465,6 +5602,11 @@ static void tseries_t30_temper_free(ISPDevice *isp)
     uint8_t *isp_b = (uint8_t *)isp;
     void *buf = *(void **)(isp_b + 0xac);
 
+    tseries_t30_temper_canary_stop();
+    if (tseries_t30_temper_guard_phys != 0) {
+        tseries_t30_temper_guard_report("DisableSensor");
+        tseries_t30_temper_guard_phys = 0;
+    }
     if (buf != NULL) {
         DMA_FreePhys(((const IMPDMABufferInfo *)buf)->phys_addr);
         free(buf);

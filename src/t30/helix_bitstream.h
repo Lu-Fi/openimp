@@ -6,7 +6,8 @@
 #include "dma_alloc.h"
 
 /*
- * One bitstream buffer for every Helix job of the process (T21).
+ * One bitstream buffer for every Helix job of the process (T21, T20/T10,
+ * T30).
  *
  * The stock T21 libimp allocates a single bitstream buffer in EncoderInit
  * ("vpuBs", 1920 * 1080 bytes unless IMP_Encoder_SetPoolSize says
@@ -44,6 +45,10 @@ int OpenIMP_HelixBitstream_Init(void);
 /* The stock EncoderExit (IMP_System_Exit): frees the buffer. */
 void OpenIMP_HelixBitstream_Exit(void);
 
+/* Stores the size for the next Init(); 0 = the stock default (T30: the
+ * IMP_Encoder_SetPoolSize of src/t40/openimp_p2_encoder.c). */
+void OpenIMP_HelixBitstream_SetPoolSize(uint32_t size);
+
 /* Current size in bytes (0: not allocated). */
 uint32_t OpenIMP_HelixBitstream_Size(void);
 /* The size Init() allocates. */
@@ -51,7 +56,8 @@ uint32_t OpenIMP_HelixBitstream_PoolSize(void);
 
 /* Stock default ("vpuBs", EncoderInit): 1920 * 1080 bytes for the T21 CPU
  * ids, 0x12c000 for the T20/T10 ones (libimp 3.12.0 0x432e8, CPU id < 3;
- * the T20 build serves the T10 too). */
+ * the T20 build serves the T10 too).  T30: 0xfd200 or 0x258000 by the
+ * SoC subtype (helix_bitstream.c, stock 1.0.5 EncoderInit). */
 #if defined(PLATFORM_T20)
 #define OPENIMP_HELIX_BS_DEFAULT_POOL 0x12c000u
 #else

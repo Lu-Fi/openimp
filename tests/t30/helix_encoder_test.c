@@ -257,8 +257,8 @@ int DMA_RmemFlushCache(void *virt_addr, uint32_t size, int dir)
     return 0;
 }
 
-#if defined(PLATFORM_T21)
-/* T21, T20/T10: one bitstream buffer shared by every channel (stock
+#if defined(PLATFORM_T21) || defined(PLATFORM_T30)
+/* T21, T20/T10, T30: one bitstream buffer shared by every channel (stock
  * "vpuBs") */
 #define BS_TAG "helix-bs"
 #else

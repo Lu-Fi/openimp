@@ -16,15 +16,82 @@ static struct {
     uint32_t skipped;          /* requests not retried since */
 } helix_bs = { .lock = PTHREAD_MUTEX_INITIALIZER };
 
+#if defined(PLATFORM_T30)
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+static uint32_t helix_bs_read_reg(uint32_t phys)
+{
+    long page = sysconf(_SC_PAGESIZE);
+    uint32_t base, value = 0;
+    void *m;
+    int fd;
+
+    if (page <= 0)
+        page = 4096;
+    base = phys & ~((uint32_t)page - 1u);
+    fd = open("/dev/mem", O_RDONLY | O_SYNC | O_CLOEXEC);
+    if (fd < 0)
+        return 0;
+    m = mmap(NULL, (size_t)page, PROT_READ, MAP_SHARED, fd, (off_t)base);
+    close(fd);
+    if (m == MAP_FAILED)
+        return 0;
+    value = *(volatile uint32_t *)((uint8_t *)m + (phys - base));
+    munmap(m, (size_t)page);
+    return value;
+}
+
+/* Stock T30 1.0.5 EncoderInit (0xa9cf0..0xa9d3c, 0xa9f44..0xa9f90) sizes
+ * "vpuBs" by get_cpu_id (0x202cc): T30 (soc id 0x1300002c family 1, id
+ * 0x30) with cppsr 0x10000034 = 0x10, or cppsr 1 and subtype (0x13540238
+ * bits 31..16) 0x3333 / 0x1111, is cpu id 6 / 7 -> 0xfd200 bytes; the
+ * subtypes 0x2222 / 0x4444 / 0x5555 / 0x6666 and any other are cpu id
+ * 8..11 -> 0x258000.  An unreadable id takes the larger size. */
+static uint32_t helix_bs_t30_default_pool(void)
+{
+    static uint32_t cached;
+    uint32_t soc, cppsr, sub;
+
+    if (cached)
+        return cached;
+    cached = 0x258000u;
+    soc = helix_bs_read_reg(0x1300002cu);
+    if ((soc >> 28) == 1u && ((soc >> 12) & 0xffffu) == 0x30u) {
+        cppsr = helix_bs_read_reg(0x10000034u) & 0xffu;
+        sub = helix_bs_read_reg(0x13540238u) >> 16;
+        if (cppsr == 0x10u || (cppsr == 1u && (sub == 0x3333u || sub == 0x1111u)))
+            cached = 0xfd200u;
+    }
+    return cached;
+}
+#endif
+
+static uint32_t helix_bs_default_pool(void)
+{
+#if defined(PLATFORM_T30)
+    return helix_bs_t30_default_pool();
+#else
+    return OPENIMP_HELIX_BS_DEFAULT_POOL;
+#endif
+}
+
 uint32_t OpenIMP_HelixBitstream_PoolSize(void)
 {
     uint32_t size;
 
     pthread_mutex_lock(&helix_bs.lock);
-    size = helix_bs.pool_size ? helix_bs.pool_size
-                              : OPENIMP_HELIX_BS_DEFAULT_POOL;
+    size = helix_bs.pool_size;
     pthread_mutex_unlock(&helix_bs.lock);
-    return size;
+    return size ? size : helix_bs_default_pool();
+}
+
+void OpenIMP_HelixBitstream_SetPoolSize(uint32_t size)
+{
+    pthread_mutex_lock(&helix_bs.lock);
+    helix_bs.pool_size = size;
+    pthread_mutex_unlock(&helix_bs.lock);
 }
 
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T23)
@@ -75,7 +142,7 @@ static int helix_bs_grow_locked(uint32_t size)
     /* a new buffer has at least the pool size, as the stock vpuBs */
     if (!helix_bs.dma.phys_addr) {
         uint32_t pool = helix_bs.pool_size ? helix_bs.pool_size
-                                           : OPENIMP_HELIX_BS_DEFAULT_POOL;
+                                           : helix_bs_default_pool();
 
         if (size < pool)
             size = pool;

@@ -160,7 +160,7 @@ int main(void)
     CHECK(IMP_Encoder_DisableAllNCUDenoise() == -1);
     CHECK(IMP_Encoder_SetPoolSize(0) == -1);
     CHECK(IMP_Encoder_SetPoolSize(-5) == -1);
-    CHECK(IMP_Encoder_SetPoolSize(4 << 20) == 0 && p2_pool_size == (4 << 20));
+    CHECK(IMP_Encoder_SetPoolSize(4 << 20) == 0 && OpenIMP_HelixBitstream_PoolSize() == (4u << 20));
     CHECK(IMP_Encoder_SetChnRcTrigLevel(P2_MAX_CHANNELS, 0.5f, 1) == -1);
     CHECK(IMP_Encoder_SetChnRcTrigLevel(4, 0.5f, 1) == 0);   /* idle: ignored */
     CHECK(p2_rc_trig[4].mode == 0);

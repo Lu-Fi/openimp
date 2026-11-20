@@ -63,9 +63,9 @@
 #endif
 
 #if (defined(HELIX_T21_SYNTAX) && !defined(PLATFORM_T23)) || \
-    defined(PLATFORM_T20)
-/* T21, T20/T10: one bitstream buffer for all H.264 channels (and, on T21,
- * JPEG), like the stock "vpuBs" (src/t30/helix_bitstream.h). */
+    defined(PLATFORM_T20) || defined(PLATFORM_T30)
+/* T21, T20/T10, T30: one bitstream buffer for all H.264 channels (and, on
+ * T21, JPEG), like the stock "vpuBs" (src/t30/helix_bitstream.h). */
 #define HELIX_SHARED_BITSTREAM 1
 #include "t30/helix_bitstream.h"
 #endif
@@ -803,6 +803,15 @@ static uint32_t t30_bitstream_bytes(const T30HelixEncoder *encoder)
      * the earlier per-channel buffer, slice header area included */
     (void)encoder;
     return T30_BITSTREAM_WINDOW;
+#elif defined(PLATFORM_T30)
+    /* T30: the command list has no window size either; as the stock 1.0.5
+     * i264e, every picture gets the whole shared "vpuBs" (the pool size:
+     * 0xfd200 on T30N/T30L, 0x258000 on the other T30 parts, or
+     * IMP_Encoder_SetPoolSize), so the buffer never grows per channel
+     * (#697).  The length check after the job drops a picture that did not
+     * fit. */
+    (void)encoder;
+    return OpenIMP_HelixBitstream_PoolSize();
 #else
     return (encoder->bitstream_kib << 10) + 4096u;
 #endif
@@ -3223,7 +3232,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
     /* Only the T21 command list points the VPU at an EMC scratch area.
      * The bitstream goes to the shared buffer, taken per picture. */
     if (
-#if !defined(PLATFORM_T20)
+#if defined(HELIX_T21_SYNTAX)
         t30_dma_allocate(&encoder->emc, encoder->scratch_size,
                          "t30-helix-emc") != 0 ||
 #endif
@@ -3847,7 +3856,11 @@ int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
     /* this picture's part of the shared buffer: the slice header area and
      * the window, so cache maintenance and the length check cover the
      * window and not the whole (2 MB) buffer */
+#if !defined(PLATFORM_T30)
     encoder->temporary.size = t30_bitstream_bytes(encoder);
+#endif
+    /* T30: the whole shared buffer (Lock() filled the size; the pool size
+     * is not read again here, Lock() holds the buffer lock) */
 #if defined(HELIX_HSKIP)
     {
         /* a picture that fails leaves the reference structure where it was (the contract of
