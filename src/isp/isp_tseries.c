@@ -2099,7 +2099,7 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
 #if defined(PLATFORM_T30)
     /* day with NCU mode 1: NCU bypassed, Temper back on (before the driver switches) */
     if (mode == IMPISP_RUNNING_MODE_DAY && tseries_t30_ncu_engine && tseries_t30_ncu_mode == 1) {
-        IMP_LOG_INFO("IMP-ISP", "T30 day: ncu bypassed, temper on");
+        IMP_LOG_NOTICE("IMP-ISP", "T30 day: ncu bypassed, temper on");
         t30_ncu_ctrl_bypass(1);
         tseries_t30_temper_off = 0;
         tseries_t30_temper_bypass_bit(0);
@@ -2150,7 +2150,7 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
      * bypassed, NCU on with the night set; mode 0: NCU set follows day / night. */
     if (tseries_t30_ncu_engine) {
         if (mode == IMPISP_RUNNING_MODE_NIGHT && tseries_t30_ncu_mode == 1) {
-            IMP_LOG_INFO("IMP-ISP", "T30 night: temper bypassed, ncu on (night set)");
+            IMP_LOG_NOTICE("IMP-ISP", "T30 night: temper bypassed, ncu on (night set)");
             tseries_t30_temper_bypass_bit(1);
             tseries_t30_temper_off = 1;
             t30_ncu_ctrl_bypass(0);
@@ -5687,9 +5687,9 @@ static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32
     tseries_t30_ncu_engine = 1;
     tseries_t30_temper_frame_bytes = 0;
     tseries_t30_temper_guard_phys = 0;
-    IMP_LOG_INFO("IMP-ISP", "T30 ncu mode %d: ncu %ux%u (vi max %ux%u), ncubuf %u bytes phys 0x%x", mode3d,
-                 (unsigned)nw, (unsigned)nh, (unsigned)w, (unsigned)h, (unsigned)size,
-                 (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
+    IMP_LOG_NOTICE("IMP-ISP", "T30 ncu mode %d: ncu %ux%u (vi max %ux%u), ncubuf %u bytes phys 0x%x", mode3d,
+                   (unsigned)nw, (unsigned)nh, (unsigned)w, (unsigned)h, (unsigned)size,
+                   (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
 }
 
 static void tseries_t30_temper_alloc(ISPDevice *isp)
