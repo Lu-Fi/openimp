@@ -215,7 +215,29 @@ static struct {
     unsigned char *cap_data;
     int64_t cap_time[P3_CAPTURE_SLOTS];
     unsigned int cap_depth;         /* FIFO depth, usrFrmDepth (EnableChn) */
+#if defined(PLATFORM_T32)
+    /* vendor 2.x: AI and AO each open their own /dev/dsp (__ai_dev_init
+     * O_RDONLY, __ao_dev_init O_WRONLY); p3_audio.fd is the AI one (#712) */
+    int ao_fd;
+    /* AEC reference (#712, vendor _ai_ref_enable / chn +0x164): one
+     * reference frame per capture slot, filled by the driver through
+     * AMIC_AI_GET_STREAM's aec pointer while ref_on or aec_on */
+    unsigned char *cap_ref;
+    unsigned char cap_ref_valid[P3_CAPTURE_SLOTS];
+    unsigned char *ref_buffer;      /* reference of the outstanding frame */
+    size_t ref_capacity;
+    int ref_valid;
+    int ref_on;                     /* IMP_AI_EnableAecRefFrame (+0x160) */
+    int aec_on;                     /* IMP_AI_EnableAec (+0x170) */
+    void *aec;                      /* audio_process_aec_create handle */
+    void *(*aec_create)(int, const char *);
+    int (*aec_process)(void *, void *);
+    int (*aec_free)(void *);
+#endif
 } p3_audio = { .fd = -1, .ao_mute_lock = PTHREAD_MUTEX_INITIALIZER,
+#if defined(PLATFORM_T32)
+               .ao_fd = -1,
+#endif
 #if !defined(PLATFORM_T32)
 #if !defined(PLATFORM_T41)
                .ai_volume = 60,   /* vendor 1.3.1 reads 60 before any SetVol */
@@ -233,9 +255,46 @@ static int p3_audio_open(void)
 {
     if (p3_audio.fd >= 0)
         return 0;
+#if defined(PLATFORM_T32)
+    p3_audio.fd = open("/dev/dsp", O_RDONLY | O_CLOEXEC);  /* __ai_dev_init */
+#else
     p3_audio.fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC);
+#endif
     return p3_audio.fd >= 0 ? 0 : -1;
 }
+
+#if defined(PLATFORM_T32)
+#define P3_AO_FD p3_audio.ao_fd
+static int p3_ao_open(void)
+{
+    if (p3_audio.ao_fd >= 0)
+        return 0;
+    p3_audio.ao_fd = open("/dev/dsp", O_WRONLY | O_CLOEXEC); /* __ao_dev_init */
+    return p3_audio.ao_fd >= 0 ? 0 : -1;
+}
+
+/* the fd an ioctl goes to: AO / speaker commands use the AO device's */
+static int p3_command_fd(int command)
+{
+    switch ((unsigned int)command) {
+    case AMIC_AO_SET_PARAM:
+    case AMIC_SPK_SET_VOLUME:
+    case AMIC_SPK_SET_GAIN:
+    case AMIC_SPK_GET_VOLUME:
+    case AMIC_SPK_GET_GAIN:
+        return p3_ao_open() == 0 ? p3_audio.ao_fd : -1;
+    default:
+        return p3_audio_open() == 0 ? p3_audio.fd : -1;
+    }
+}
+#else
+#define P3_AO_FD p3_audio.fd
+static int p3_command_fd(int command)
+{
+    (void)command;
+    return p3_audio_open() == 0 ? p3_audio.fd : -1;
+}
+#endif
 
 #if !defined(PLATFORM_T32)
 /* T40 1.3.1 / T41 1.2.5 IMP_AI_SetVol / IMP_AO_SetVol (ai.c.o 0x54c8, ao.c.o 0x3338):
@@ -299,11 +358,25 @@ static void *p3_capture_main(void *argument)
 #if defined(PLATFORM_T41) || defined(PLATFORM_T32)
         typeof(*stream.timestamp) capture_timestamp = { 0, 0 };
 #endif
+#if defined(PLATFORM_T32)
+        /* vendor __ai_dev_read: the reference pointer only while reference
+         * frames or the AEC are on, size = bytes / channels */
+        const int with_ref = (p3_audio.ref_on || p3_audio.aec_on) &&
+                             p3_audio.cap_ref != NULL;
+#endif
 
         pthread_mutex_unlock(&p3_cap_lock);
         memset(&stream, 0, sizeof(stream));
         stream.data = chunk;
         stream.size = (uint32_t)bytes;
+#if defined(PLATFORM_T32)
+        if (with_ref) {
+            stream.aec = chunk + bytes;
+            stream.aec_size =
+                (uint32_t)(bytes / (p3_audio.ai_attr.soundmode ==
+                                            AUDIO_SOUND_MODE_STEREO ? 2U : 1U));
+        }
+#endif
 #if defined(PLATFORM_T41) || defined(PLATFORM_T32)
         stream.timestamp = &capture_timestamp;
 #endif
@@ -328,6 +401,14 @@ static void *p3_capture_main(void *argument)
                                 P3_CAPTURE_DEPTH;
 
             memcpy(p3_audio.cap_data + (size_t)slot * bytes, chunk, bytes);
+#if defined(PLATFORM_T32)
+            p3_audio.cap_ref_valid[slot] = 0;
+            if (with_ref && p3_audio.cap_ref) {
+                memcpy(p3_audio.cap_ref + (size_t)slot * bytes, chunk + bytes,
+                       stream.aec_size);
+                p3_audio.cap_ref_valid[slot] = 1;
+            }
+#endif
 #if defined(PLATFORM_T32)
             /* vendor 2.x: the driver's (raw monotonic) capture time of the
              * fragment, less 20 ms */
@@ -363,7 +444,11 @@ static int p3_capture_start(size_t bytes, unsigned int depth)
         depth = P3_CAPTURE_FRAMES;
     if (depth > P3_CAPTURE_SLOTS)
         depth = P3_CAPTURE_SLOTS;
+#if defined(PLATFORM_T32)
+    chunk = malloc(bytes * 2U);     /* frame + AEC reference */
+#else
     chunk = malloc(bytes);
+#endif
     data = malloc(bytes * depth);
 
     if (!chunk || !data) {
@@ -390,6 +475,14 @@ static int p3_capture_start(size_t bytes, unsigned int depth)
     p3_audio.cap_depth = depth;
     free(p3_audio.cap_data);
     p3_audio.cap_data = data;
+#if defined(PLATFORM_T32)
+    memset(p3_audio.cap_ref_valid, 0, sizeof(p3_audio.cap_ref_valid));
+    if (p3_audio.cap_ref) {
+        /* reference ring of the new frame size and depth */
+        free(p3_audio.cap_ref);
+        p3_audio.cap_ref = calloc(depth, bytes);
+    }
+#endif
     p3_audio.cap_running = 1;
     pthread_mutex_unlock(&p3_cap_lock);
     if (pthread_create(&thread, NULL, p3_capture_main, chunk) != 0) {
@@ -428,27 +521,41 @@ static void p3_capture_stop(void)
 
 static void p3_audio_maybe_close(void)
 {
+#if defined(PLATFORM_T32)
+    /* __ai_dev_deinit / __ao_dev_deinit close their own fd */
+    if (p3_audio.fd >= 0 && !p3_audio.ai_enabled) {
+        close(p3_audio.fd);
+        p3_audio.fd = -1;
+    }
+    if (p3_audio.ao_fd >= 0 && !p3_audio.ao_enabled) {
+        close(p3_audio.ao_fd);
+        p3_audio.ao_fd = -1;
+    }
+#else
     if (p3_audio.fd >= 0 && !p3_audio.ai_enabled && !p3_audio.ao_enabled) {
         close(p3_audio.fd);
         p3_audio.fd = -1;
     }
+#endif
 }
 
 static int p3_audio_parameter(int command, const IMPAudioIOAttr *attribute)
 {
     P3AudioParameter parameter;
+    int fd;
 
     if (!attribute || attribute->samplerate <= 0 ||
         attribute->bitwidth != AUDIO_BIT_WIDTH_16 ||
         (attribute->soundmode != AUDIO_SOUND_MODE_MONO &&
          attribute->soundmode != AUDIO_SOUND_MODE_STEREO))
         return -1;
-    if (p3_audio_open() != 0)
+    fd = p3_command_fd(command);
+    if (fd < 0)
         return -1;
     parameter.rate = (uint32_t)attribute->samplerate;
     parameter.format = (uint16_t)attribute->bitwidth;
     parameter.channel = (uint16_t)attribute->soundmode;
-    return ioctl(p3_audio.fd, command, &parameter);
+    return ioctl(fd, command, &parameter);
 }
 
 static int p3_effects_load(void)
@@ -564,6 +671,10 @@ int IMP_AI_Enable(int device)
 }
 #endif
 
+#if defined(PLATFORM_T32)
+static void t32_ai_aec_release(void);
+#endif
+
 int IMP_AI_Disable(int device)
 {
     int result = 0;
@@ -576,6 +687,9 @@ int IMP_AI_Disable(int device)
         result = ioctl(p3_audio.fd, AMIC_AI_DISABLE_STREAM, 1);
         p3_capture_stop();
     }
+#if defined(PLATFORM_T32)
+    t32_ai_aec_release();
+#endif
     p3_audio.ai_enabled = 0;
     p3_audio.ai_channel_enabled = 0;
     p3_audio.frame_outstanding = 0;
@@ -661,7 +775,8 @@ extern void openimp_t23_ai_pre_effects(int16_t *samples, int count,
 static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
                            IMPAudioFrame *raw, IMPBlock block);
 #if defined(PLATFORM_T32)
-static void t32_ai_effects(int16_t *samples, int count);
+static void t32_ai_effects(int16_t *samples, int count, int aec_done);
+static int t32_ai_aec_run(size_t bytes);
 #endif
 
 int IMP_AI_GetFrame(int device, int channel, IMPAudioFrame *frame,
@@ -698,6 +813,16 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         p3_audio.frame_buffer = buffer;
         p3_audio.frame_capacity = bytes;
     }
+#if defined(PLATFORM_T32)
+    if (bytes > p3_audio.ref_capacity) {
+        void *buffer = realloc(p3_audio.ref_buffer, bytes);
+        if (!buffer)
+            return -1;
+        p3_audio.ref_buffer = buffer;
+        p3_audio.ref_capacity = bytes;
+    }
+    p3_audio.ref_valid = 0;
+#endif
     pthread_mutex_lock(&p3_cap_lock);
     if (!p3_audio.cap_running && block == NOBLOCK) {
         pthread_mutex_unlock(&p3_cap_lock);
@@ -722,6 +847,15 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
         memcpy(p3_audio.frame_buffer,
                p3_audio.cap_data + (size_t)p3_audio.cap_head * bytes, bytes);
         stamp = p3_audio.cap_time[p3_audio.cap_head];
+#if defined(PLATFORM_T32)
+        /* the reference the driver recorded with this frame (vendor
+         * GetFrameAndRef: chn +0x164 at the node index) */
+        if (p3_audio.cap_ref && p3_audio.cap_ref_valid[p3_audio.cap_head]) {
+            memcpy(p3_audio.ref_buffer,
+                   p3_audio.cap_ref + (size_t)p3_audio.cap_head * bytes, bytes);
+            p3_audio.ref_valid = 1;
+        }
+#endif
         p3_audio.cap_head = (p3_audio.cap_head + 1U) % P3_CAPTURE_DEPTH;
         p3_audio.cap_count--;
         pthread_mutex_unlock(&p3_cap_lock);
@@ -753,7 +887,7 @@ static int p3_ai_get_frame(int channel, IMPAudioFrame *frame,
     /* vendor 2.x record chain: NS/AGC/HPF in IMP_AI_SetAlgoOrder order,
      * DRC/EQ, LPF, howling suppression, then the software volume */
     t32_ai_effects((int16_t *)p3_audio.frame_buffer,
-                   (int)(bytes / sizeof(int16_t)));
+                   (int)(bytes / sizeof(int16_t)), t32_ai_aec_run(bytes));
 #else
     /* vendor T40 1.3.1 / T41 1.2.5 _ai_record_thread: NS, AGC, HPF
      * (p3_process_effects), then the howling suppression (IMP_AI_EnableHs),
@@ -798,14 +932,15 @@ int IMP_AI_ReleaseFrame(int device, int channel, IMPAudioFrame *frame)
 static int p3_set_volume(int command, int channel, int value)
 {
     P3AudioVolume volume;
+    int fd = p3_command_fd(command);
 
-    if (p3_audio_open() != 0)
+    if (fd < 0)
         return -1;
     memset(&volume, 0, sizeof(volume));
     volume.channel = (uint32_t)channel + 1U;
     volume.gain[0] = (uint32_t)value;
     volume.gain[1] = (uint32_t)value;
-    return ioctl(p3_audio.fd, command, &volume);
+    return ioctl(fd, command, &volume);
 }
 
 #if !defined(PLATFORM_T32)
@@ -1076,6 +1211,7 @@ int IMP_AI_Set_WebrtcProfileIni_Path(char *path)
     return 0;
 }
 
+#if !defined(PLATFORM_T32)   /* T32/T33: openimp_t32_audio2x.inc (#712) */
 int IMP_AI_EnableAec(int ai_device, int ai_channel, int ao_device, int ao_channel)
 {
     (void)ai_device;
@@ -1127,6 +1263,7 @@ int IMP_AI_GetFrameAndRef(int device, int channel, IMPAudioFrame *frame,
         memset(reference, 0, sizeof(*reference));
     return result;
 }
+#endif
 
 #if !defined(PLATFORM_T32)
 int IMP_AO_SetPubAttr(int device, IMPAudioIOAttr *attribute)
