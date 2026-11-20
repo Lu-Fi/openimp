@@ -207,7 +207,8 @@ static void put_profile_tier_level(HevcBits *bits,
     put_bit(bits, config->tier);           /* general_tier_flag */
     put_bits(bits, 1u, 5);                 /* general_profile_idc: Main */
     for (flag = 0u; flag < 32u; flag++)    /* Main is Main10-decodable */
-        put_bit(bits, flag == 1u || flag == 2u);
+        put_bit(bits, flag == 1u ||
+                          (flag == 2u && !config->compat_main_only));
     put_bit(bits, 1u);                     /* progressive_source */
     put_bit(bits, 0u);                     /* interlaced_source */
     put_bit(bits, 0u);                     /* non_packed_constraint */
@@ -236,7 +237,7 @@ int openimp_t31_hevc_write_vps(uint8_t *dst, size_t capacity,
     put_profile_tier_level(&bits, config);
     put_bit(&bits, 0u);             /* vps_sub_layer_ordering_info_present */
     put_ue(&bits, 1u);              /* vps_max_dec_pic_buffering_minus1 */
-    put_ue(&bits, 0u);              /* vps_max_num_reorder_pics */
+    put_ue(&bits, config->vps_max_num_reorder); /* vps_max_num_reorder_pics */
     put_ue(&bits, 0u);              /* vps_max_latency_increase_plus1 */
     put_bits(&bits, 0u, 6);         /* vps_max_layer_id */
     put_ue(&bits, 0u);              /* vps_num_layer_sets_minus1 */
@@ -293,7 +294,7 @@ int openimp_t31_hevc_write_sps(uint8_t *dst, size_t capacity,
     put_ue(&bits, config->log2_max_tb_size - config->log2_min_tb_size);
     put_ue(&bits, config->max_transform_depth_inter);
     put_ue(&bits, config->max_transform_depth_intra);
-#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     put_bit(&bits, config->scaling_list_enabled ? 1u : 0u);
     if (config->scaling_list_enabled)
         put_bit(&bits, 0u);         /* sps_scaling_list_data_present_flag */
@@ -379,12 +380,12 @@ int openimp_t31_hevc_write_pps(uint8_t *dst, size_t capacity,
     put_bit(&bits, 0u);             /* entropy_coding_sync_enabled_flag */
     put_bit(&bits, config->loop_filter_across_slices ? 1u : 0u);
     put_bit(&bits, 1u);             /* deblocking_filter_control_present */
-    put_bit(&bits, 0u);             /* deblocking_filter_override_enabled */
+    put_bit(&bits, config->deblocking_override_enabled ? 1u : 0u);
     put_bit(&bits, 0u);             /* pps_deblocking_filter_disabled_flag */
     put_se(&bits, config->beta_offset_div2);
     put_se(&bits, config->tc_offset_div2);
     put_bit(&bits, 0u);             /* pps_scaling_list_data_present_flag */
-    put_bit(&bits, 0u);             /* lists_modification_present_flag */
+    put_bit(&bits, config->lists_modification_present ? 1u : 0u);
     put_ue(&bits, 0u);              /* log2_parallel_merge_level_minus2 */
     put_bit(&bits, 0u);             /* slice_segment_header_extension */
     put_bit(&bits, 0u);             /* pps_extension_present_flag */
@@ -433,6 +434,8 @@ int openimp_t31_hevc_write_slice_header(uint8_t *dst, size_t capacity,
         put_ue(&bits, 5u - config->max_merge_cand);
     }
     put_se(&bits, slice->qp - 26);  /* slice_qp_delta (init_qp 26) */
+    if (config->deblocking_override_enabled)
+        put_bit(&bits, 0u);         /* deblocking_filter_override_flag */
     if (config->loop_filter_across_slices)
         put_bit(&bits, 1u);         /* slice_loop_filter_across_slices */
     put_trailing_bits(&bits);       /* byte_alignment() */

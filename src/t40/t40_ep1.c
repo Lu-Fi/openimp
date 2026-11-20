@@ -80,6 +80,8 @@ int32_t AL_AVC_WriteEncHwScalingListT41(void *scaling, void *scratch,
 int32_t AL_HEVC_GenerateHwScalingList(void *scaling, void *scratch);
 int32_t AL_HEVC_WriteEncHwScalingList(void *scaling, void *scratch,
                                       uint32_t *output);
+int32_t AL_HEVC_WriteEncHwScalingListT41(void *scaling, void *scratch,
+                                         uint32_t *output);
 
 /* The stock AVC/HEVC lambda tables (used when no external Lambdas.hex
  * override exists) are generated from the HM/JM lambda formula, see
@@ -194,7 +196,7 @@ static int openimp_init_ep1(void *ep1, size_t size, int use_fixqp_lda,
  * HEVC runs without scaling lists, so nothing is written at EP1+0x100.
  */
 
-#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
 /* H.265 Table 7-6 default 8x8 lists in raster order (intra, inter) and the
  * flat 4x4 lists, as AL_HEVC_DefaultScalingLists8x8/4x4 in the vendor T40
  * libimp 1.3.1 (HEVC_EncUtils.c.o .rodata 0x14 and 0x94). */
@@ -253,6 +255,7 @@ static void t40_hevc_default_scaling(uint8_t *scl)
  * lists only, so writing it once per channel is enough; the lambda rewrites
  * only touch EP1+0x00..0xcf.
  */
+#if !defined(PLATFORM_T41)
 int openimp_t40_init_hevc_ep1(void *ep1, size_t size, int scaling_list)
 {
     uint8_t *scl;
@@ -273,6 +276,7 @@ int openimp_t40_init_hevc_ep1(void *ep1, size_t size, int scaling_list)
     free(scl);
     return 0;
 }
+#endif
 #endif
 
 int openimp_t31_init_hevc_ep1(void *ep1, size_t size)
@@ -325,12 +329,33 @@ int openimp_t41_update_ep1_lambda_codec(void *ep1, size_t size,
     return 0;
 }
 
-int openimp_t41_init_hevc_ep1(void *ep1, size_t size)
+int openimp_t41_init_hevc_ep1(void *ep1, size_t size, int scaling_list)
 {
     if (ep1 == NULL || size < 0x6400u)
         return -1;
     memset(ep1, 0, size);
-    return openimp_t41_update_ep1_lambda_codec(ep1, size, 2u, 1u);
+    if (openimp_t41_update_ep1_lambda_codec(ep1, size, 2u, 1u) != 0)
+        return -1;
+#if defined(PLATFORM_T41)
+    /* #604: default scaling lists as the vendor 1.2.6 (SPS
+     * scaling_list_enabled_flag, cmd[152] bit 6): the hardware tables of
+     * the default lists at EP1+0x100, T41 coefficient order (the lambda
+     * rewrites touch only EP1+0x00..0xcf). */
+    if (scaling_list) {
+        uint8_t *scl = (uint8_t *)calloc(1, T40_HEVC_SCL_SIZE + 0x5dd0u);
+
+        if (scl == NULL)
+            return -1;
+        t40_hevc_default_scaling(scl);
+        AL_HEVC_GenerateHwScalingList(scl, scl + T40_HEVC_SCL_SIZE);
+        AL_HEVC_WriteEncHwScalingListT41(scl, scl + T40_HEVC_SCL_SIZE,
+                                         (uint32_t *)((uint8_t *)ep1 + 0x100));
+        free(scl);
+    }
+#else
+    (void)scaling_list;
+#endif
+    return 0;
 }
 
 /*

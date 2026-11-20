@@ -67,6 +67,9 @@ typedef struct OpenIMPT41CommandParams {
      * carries cu_qp_delta_enabled_flag 0). */
     uint32_t codec_hevc;
     uint32_t hevc_no_hwrc;
+    /* HEVC as the vendor 1.2.6 (#604): POC step 2 in cmd[8..12], scaling
+     * list tool (cmd[152] bit 6), cmd[3] bit 23 on P; 0 = the old words */
+    uint32_t hevc_vendor;
     uint32_t hevc_no_tmvp;
     uint32_t hevc_cabac_init_idc0;
 

@@ -16,6 +16,7 @@ T41_P3_HEADERS := $(or $(T41_HEADERS),$(lastword $(sort $(wildcard $(PROJECT_DIR
 COMMAND_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-command-layout-test
 RATE_CONTROL_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-rate-control-test
 EP1_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-ep1-layout-test
+HEVC_SCL_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-hevc-scaling-test
 STREAM_LAYOUT_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-stream-layout-test
 TUNING_AWB_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-tuning-awb-test
 TUNING_POLICY_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-tuning-policy-test
@@ -31,7 +32,7 @@ SNAP_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-snap-test
 I2D_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-i2d-test
 JPEG_PITCH_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-jpeg-pitch-test
 JPEG_RANGE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-jpeg-range-test
-TEST_BINS := $(IVS_FRAMEWORK_TEST_BIN) $(CORE_LEASE_TEST_BIN) $(COMMAND_TEST_BIN) $(RATE_CONTROL_TEST_BIN) $(EP1_TEST_BIN) \
+TEST_BINS := $(IVS_FRAMEWORK_TEST_BIN) $(CORE_LEASE_TEST_BIN) $(COMMAND_TEST_BIN) $(RATE_CONTROL_TEST_BIN) $(EP1_TEST_BIN) $(HEVC_SCL_TEST_BIN) \
 	$(STREAM_LAYOUT_TEST_BIN) $(TUNING_AWB_TEST_BIN) $(TUNING_STARTUP_TEST_BIN) $(TUNING_POLICY_TEST_BIN) $(JPEG_DCT_TEST_BIN) \
 	$(RMEM_FIT_TEST_BIN) $(RMEM_FIT_T40_TEST_BIN) $(JPEG_QL_TEST_BIN) $(SNAP_TEST_BIN) $(I2D_TEST_BIN) $(JPEG_PITCH_TEST_BIN) $(JPEG_RANGE_TEST_BIN)
 
@@ -63,6 +64,7 @@ check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(COMMAND_TEST_BIN)
 	$(RATE_CONTROL_TEST_BIN)
 	$(EP1_TEST_BIN)
+	$(HEVC_SCL_TEST_BIN)
 	$(STREAM_LAYOUT_TEST_BIN)
 	$(TUNING_AWB_TEST_BIN)
 	$(TUNING_STARTUP_TEST_BIN)
@@ -161,6 +163,18 @@ $(EP1_TEST_BIN): ep1_layout_test.c \
 	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src \
 		ep1_layout_test.c \
 		$(PROJECT_DIR)/src/t40/t40_ep1.c \
+		-o "$@"
+
+$(HEVC_SCL_TEST_BIN): hevc_scaling_test.c \
+	$(PROJECT_DIR)/src/t40/t40_ep1.c \
+	$(PROJECT_DIR)/src/t40/t40_ep1.h \
+	$(PROJECT_DIR)/src/alcodec/EncHwScalingList.c
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -Wno-unused-parameter -Wno-sign-compare -Wno-unused-variable -Wno-unused-but-set-variable \
+		-DPLATFORM_T41 -I$(PROJECT_DIR)/src \
+		hevc_scaling_test.c \
+		$(PROJECT_DIR)/src/t40/t40_ep1.c \
+		$(PROJECT_DIR)/src/alcodec/EncHwScalingList.c \
 		-o "$@"
 
 $(STREAM_LAYOUT_TEST_BIN): stream_layout_test.c \

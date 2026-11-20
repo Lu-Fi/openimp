@@ -35,6 +35,7 @@ int openimp_t41_update_ep1_lambda_codec(void *ep1, size_t size,
                                         unsigned int picture_type,
                                         unsigned int hevc);
 /* T41 HEVC: HEVC lambda words for an I picture, no scaling list. */
-int openimp_t41_init_hevc_ep1(void *ep1, size_t size);
+/* scaling_list: also the default scaling-list tables at EP1+0x100 (#604) */
+int openimp_t41_init_hevc_ep1(void *ep1, size_t size, int scaling_list);
 
 #endif

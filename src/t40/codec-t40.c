@@ -3276,6 +3276,28 @@ static uint32_t avpu_t40_hevc_tools(void)
 }
 #endif
 
+#if defined(PLATFORM_T41)
+/* #604: HEVC as the vendor T41 1.2.6 (.34 CBR capture; the T31 1.1.6
+ * capture shows the same headers plus transform skip, T31 follows
+ * separately): High tier, level 5 (150), Main-only compatibility,
+ * vps_max_num_reorder_pics 1, POC 2n with a 10-bit lsb, deblocking
+ * override enabled, lists_modification_present, default scaling lists
+ * (SPS flag, EP1 tables, cmd[152] bit 6), cmd[3] bit 23 on P pictures.
+ * VPS/SPS/PPS are byte-identical to the vendor's at 1920x1080.
+ * OPENIMP_HEVC_VENDOR_HDR=0 restores the old HEVC stream. */
+static int avpu_hevc_vendor_hdr(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_HEVC_VENDOR_HDR");
+
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+#endif
+
 static void avpu_t31_hevc_config(const ALAvpuContext *ctx,
                                  OpenIMPT31HevcConfig *config)
 {
@@ -3293,6 +3315,19 @@ static void avpu_t31_hevc_config(const ALAvpuContext *ctx,
     /* Always present, so either uCabacInitIdc can be signalled. */
     config->cabac_init_present = 1u;
     config->tmvp_enabled = avpu_t31_hevc_tmvp_enabled() ? 1u : 0u;
+#if defined(PLATFORM_T41)
+    if (avpu_hevc_vendor_hdr()) {
+        config->scaling_list_enabled = 1u;
+        config->tier = 1u;
+        if (config->level_idc < 150u)
+            config->level_idc = 150u;
+        config->log2_max_poc_lsb = 10u;
+        config->compat_main_only = 1u;
+        config->vps_max_num_reorder = 1u;
+        config->deblocking_override_enabled = 1u;
+        config->lists_modification_present = 1u;
+    }
+#endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     {
         uint32_t tools = avpu_t40_hevc_tools();
@@ -3336,6 +3371,14 @@ static uint32_t avpu_t31_hevc_write_headers(ALAvpuContext *ctx,
     slice.is_idr = is_idr ? 1u : 0u;
     slice.poc = is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
     slice.ref_poc_delta = 1u;
+#if defined(PLATFORM_T41)
+    /* #604: the vendor counts the HEVC POC in steps of two, as AVC; the
+     * T41 command words follow (hevc_vendor) */
+    if (avpu_hevc_vendor_hdr()) {
+        slice.poc *= 2u;
+        slice.ref_poc_delta = 2u;
+    }
+#endif
     slice.qp = (int32_t)(qp <= 51u ? qp : 51u);
     slice.cabac_init_flag = avpu_t31_hevc_cabac_init_flag() ? 1u : 0u;
     written = openimp_t31_hevc_write_slice_header(buf + pos, limit - pos,
@@ -4746,6 +4789,9 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
         params.hevc_no_tmvp = avpu_t31_hevc_tmvp_enabled() ? 0u : 1u;
         params.hevc_cabac_init_idc0 =
             avpu_t31_hevc_cabac_init_flag() ? 0u : 1u;
+        /* #604: POC 2n as the slice header (words 8..0x0c), scaling-list
+         * tool (word 152 bit 6), word 3 bit 23 on P (vendor 1.2.6) */
+        params.hevc_vendor = avpu_hevc_vendor_hdr() ? 1u : 0u;
     }
 
     if (openimp_t41_build_command(slot, ctx->cl_entry_size, &params) != 0)
@@ -13066,7 +13112,8 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                         (enc->avpu.codec_hevc
                                             ? openimp_t41_init_hevc_ep1(
                                                   enc->avpu.interm_buf.map,
-                                                  interm_total_sz)
+                                                  interm_total_sz,
+                                                  avpu_hevc_vendor_hdr())
                                             : openimp_t41_init_ep1(
                                                   enc->avpu.interm_buf.map,
                                                   interm_total_sz))
