@@ -315,6 +315,8 @@ static int pull(int chn, int codec, int maxf, int stop, int rp, SI *si, int tmo_
         si->frames++;
         si->bytes += n;
         if ((int)n > si->bytes_max) si->bytes_max = (int)n;
+        if (getenv("APITEST_SIZES"))        /* opt-in trace: every picture size, '*' = IDR picture */
+            printf("[I] size %s chn %d pic %d: %zu%s\n", cname[codec], chn, k, n, si->last_frame_idr ? " *" : "");
         if (rp && k == 0) {
             rep(FN(IMP_Encoder_GetStream), 0, (s->packCount > 0 && n > 0) ? V_PASS : V_FAIL,
                 "%s chn %d: %u packs, %zu bytes%s", cname[codec], chn, s->packCount, n, trunc ? " (truncated by test buffer)" : "");
@@ -521,8 +523,10 @@ static int chn_up(int chn, int codec, int first, int start)
     fill_attr(a, codec, EGOP);
 #if HAS_IMP_Encoder_SetPool
 # if defined(APITEST_T32)
-    /* T32 2.2.0 / T33 2.0.2.1 (disassembly, #447): the pool must exist (MemPoolRequest), else -1 */
-    NEED(IMP_Encoder_SetPool) {
+    /* T32 2.2.0 / T33 2.0.2.1 (disassembly, #447): the pool must exist (MemPoolRequest), else -1.
+     * APITEST_NOPOOL=1: no pool binding (the vendor encoder then allocates from rmem; the 64 KB test pool is far too small
+     * for the real T33 vendor encoder on silicon: hwicodec "malloc buf_base size:489216 failed, pool id:0") */
+    if (!getenv("APITEST_NOPOOL")) NEED(IMP_Encoder_SetPool) {
         static int pool_req;
         if (!pool_req && IMP_System_MemPoolRequest) pool_req = IMP_System_MemPoolRequest(ENC_POOL_ID, 65536, "apitest-enc") == 0 ? 1 : -1;
         if (first) { int rn = IMP_Encoder_SetPool(chn, 30); rep(LBL("IMP_Encoder_SetPool (pool never requested)"), rn, rn == -1 ? V_PASS : V_FAIL, "chn %d pool 30: %d (vendor -1)", chn, rn); }
@@ -764,6 +768,42 @@ static void live_common(int chn, int codec)
         }
 #endif
         IMP_Encoder_SetChnQpBounds(chn, 20, 45);
+    }
+#endif
+#if HAS_IMP_Encoder_SetChnQpBounds && defined(APITEST_T32) && HAS_IMP_Encoder_GetChnAttrRcMode
+    /* T32 / T33 (2.x rc unions): the bounds reach the controller at the next IDR (i264e_set_param 0x12 / I265e
+     * reconfig); read back through GetChnAttrRcMode, effect: low bounds 15..20 vs high bounds 40..48, mean
+     * picture size over 30 pictures after a requested IDR must drop to less than half */
+    if (codec != CODEC_JPEG) NEED(IMP_Encoder_SetChnQpBounds) {
+        G(IMPEncoderAttrRcMode, rc);
+        SI sl, sh;
+        int r2, r3, mn0 = -1, mx0 = -1, mn = -1, mx = -1;
+        long al, ah;
+
+        if (IMP_Encoder_GetChnAttrRcMode(chn, rc) == 0) {
+            gchk(rc);
+# ifdef HAVE_H265
+            if (codec == CODEC_H265) { mn0 = rc->attrH265Cbr.minQp; mx0 = rc->attrH265Cbr.maxQp; } else
+# endif
+            { mn0 = rc->attrH264Cbr.minQp; mx0 = rc->attrH264Cbr.maxQp; }
+        }
+        r = IMP_Encoder_SetChnQpBounds(chn, 15, 20);
+        RB_IDR(chn, codec); IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &sl, 3000);
+        r2 = IMP_Encoder_SetChnQpBounds(chn, 40, 48);
+        RB_IDR(chn, codec); IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &sh, 3000);
+        r3 = IMP_Encoder_GetChnAttrRcMode(chn, rc); gchk(rc);
+# ifdef HAVE_H265
+        if (codec == CODEC_H265) { mn = rc->attrH265Cbr.minQp; mx = rc->attrH265Cbr.maxQp; } else
+# endif
+        { mn = rc->attrH264Cbr.minQp; mx = rc->attrH264Cbr.maxQp; }
+        al = sl.frames ? (long)(sl.bytes / sl.frames) : 0;
+        ah = sh.frames ? (long)(sh.bytes / sh.frames) : 0;
+        CHECK(IMP_Encoder_SetChnQpBounds, r | r2, r3 == 0 && mn == 40 && mx == 48 && sl.frames > 10 && sh.frames > 10 && ah * 2 < al,
+              "%s: 15..20 mean %ld B (%d pictures), 40..48 mean %ld B (%d pictures), read back %d..%d (created %d..%d)",
+              cname[codec], al, sl.frames, ah, sh.frames, mn, mx, mn0, mx0);
+        if (mn0 > 0 && mx0 >= mn0) IMP_Encoder_SetChnQpBounds(chn, mn0, mx0);
+        RB_IDR(chn, codec);
+        gfree(rc);
     }
 #endif
 #if HAS_IMP_Encoder_SetChnQpBoundsPerFrame

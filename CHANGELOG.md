@@ -35,6 +35,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
   - Like the vendor, a zero scale factor in the group attribute becomes 1.0 and a bitmap rectangle is clamped to the frame in the attribute.
 - Host test `tests/t33` (`make -C tests/t33 check`): 2000 random cases (all formats, alpha modes, scales, clipping; 1451 change the frame) drawn pixel-equal to vendor libimp 2.0.2.1 run under an emulator (`tools/t33_osd_oracle.py`, vectors `tests/t33/vendor-2.0.2.1-osd-sw.txt.gz`).
 - T33L device run (timps with OSD): first snapshot after the start 0.07 s with a normal picture (before 15 s timeout, then black), `/dev/ipu` not opened, the timps overlays are in the picture (bright text pixels in three corners, none before). T32 build unchanged (preprocessed OSD source identical).
+## 2026-11-20: T32/T33 apitest: QpBounds effect case, picture size trace, no-pool switch (#99, #706)
+
+- **Tests T32/T33:** new `IMP_Encoder_SetChnQpBounds` case for the 2.x rc unions: bounds 15..20 vs 40..48 (each after a requested IDR, 30 pictures), the mean picture size must drop below half, read-back through `GetChnAttrRcMode`, created bounds restored. T33L device run: vendor 2.0.2.1 H.264 4647 -> 260 B, H.265 4200 -> 228 B; OpenIMP H.264 4225 -> 223 B, H.265 1444 -> 117 B, read back 40..48 on both (vendor-equal).
+- `APITEST_SIZES=1` prints every coded picture size (`*` = IDR); `APITEST_NOPOOL=1` skips the encoder pool binding, because the 64 KB test pool is too small for the real vendor encoder on silicon (hwicodec "malloc buf_base size:489216 failed").
+- Case `sensorreg` knows the cv2005 chip id (0x3003 / 0x3002 = 0x2005, from the vendor sensor_cv2005_t33.ko): Get/SetSensorRegister now run on the T33L instead of SKIP (QEMU PASS).
+- Found with it: on the T33 the H.264 controller gets no picture statistics (#706), and `SetSharpness` has no picture effect on the open driver (#707).
 
 ## 2026-11-20: T30 black start without an extra buffer (#702)
 
