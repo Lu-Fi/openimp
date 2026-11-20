@@ -1111,7 +1111,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1157,7 +1157,7 @@
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
+        "T33": "apitest d-dev1 2026-11-20 .122 (#709, open-tx-isp next 194fa4cf0 / b93660e11 as test ko e17e7084): GetSensorRegister chip id 0x3003/0x3002 = 0x2005 PASS, SetSensorRegister same value 0x20 to 0x3003 read back 0x20, frames flow; QEMU q/sreg-709a 0x2005"
       }
     },
     "ISP_GetCameraInputMode": {
@@ -4358,7 +4358,7 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "host",
-        "T33": "rt",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -4425,7 +4425,7 @@
         "T30": "apitest t30b26 2026-11-05 .231",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "apitest t33c1117 2026-11-17 .122 (API round trip; the detail energy of ch1 does not move, 6.03 at 20 / 6.07 at 235: no visible effect measured, not compared with the vendor on a camera)"
+        "T33": "apitest d-dev1 2026-11-20 .122 (#707, open-tx-isp next 12fd4da21 / 24c927d03 as test ko e17e7084, vendor tisp_set_sharpness port): set 20/235/128 read back, detail energy 5.06 -> 4.14 (20) / 30.70 (235) / 5.08 restored (vendor 2.0.2.1 run 4.1 / 29.2); oracles sharp/dsharp PASS"
       }
     },
     "ISP_Tuning_SetSinterStrength": {

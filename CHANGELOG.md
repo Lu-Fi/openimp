@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: matrix: T33 Get/SetSensorRegister qemu -> dev, SetSharpness rt -> dev (#709, #707)
+
+- open-tx-isp next 12fd4da21 has both fixes: #709 (VIN core-op g/s_register, T32 + T33) and #707 (vendor `tisp_set_sharpness` port). Device run d-dev1 on the T33L .122 (test ko e17e7084 built from those commits): GetSensorRegister reads the cv2005 chip id 0x2005, SetSensorRegister round trip PASS. SetSharpness moves the detail energy 5.06 -> 4.14 (20) / 30.70 (235) / 5.08 restored, against 4.1 / 29.2 on the vendor 2.0.2.1. `docs/api_evidence.json` cells and refs updated, matrix regenerated (T33 streamer functions 224 -> 226 of 258).
+
 ## 2026-11-20: matrix: T33 Get/SetGammaAttr err -> dev (#673)
 
 - The T33 API cell still showed the 2026-11-17 FAIL. #673 found it vendor behaviour (the USER curve is copied into the bin table, cv2005 bins section 13 +0x45 = 1) and fixed the apitest restore (b366861d); device run 1117-T33-gamma673 on the T33L: SetGammaAttr PASS (x^0.3 Y 100.6, linear Y 10.2, restored Y 61.4 vs 60.9). `docs/api_evidence.json` cell and ref updated, matrix regenerated (T33 streamer functions 222 -> 224 of 258).
