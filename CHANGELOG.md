@@ -9,6 +9,14 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T33 H.264 rate control: the revision-7 row block goes into the HERA list, MaxPictureSize caps the IDR (#706)
+
+- **Cause:** the T33 HERA v1.6 list builder (`openimp_t33_hera.c`) wrote the FIXQP defaults for the rate-control registers, so the engine never got the controller's per-unit budgets. Vendor 2.0.2.1 `H264E_T32V_SliceInit` 0x4b6c8 (revision 7 branch, s+0x874 == 7) takes them from the controller's slice block: EFE 0x2001c (QP, MB QP window s+0x155/s+0x154), 0x2029c (MB QP clamp, map enables), VMAU 0x40100 (unit MBs - 1, enable, unit count s+0x530), 0x40104, 0x40108/0x40114..0x40124 (s+0x54e, s+0x552..), 0x402a0/0x402a4 (s+0x774/0x778/0x77c/0x77e), and after the context states one 0x40800 + 4 i word per unit (s+0x568). The T33 encoder now passes the slice block and the per-MB maps to the T33 builder, as the T32 path already does for revision 6. On T32 the library is byte-identical.
+- **QEMU (vendor 2.0.2.1 vs OpenIMP, H.264 CBR 1920x1080, MaxPictureSize 31 kbit at picture 10):** the I list has 793 pairs, the P list 828, on both stacks (before: 776 / 811). All rate-control registers and the 17 unit targets are equal on pictures 0-9 and after the change (audit/issue706 v-cbr-m31 / o7-cbr-m31). The IDR after the change arrives one picture earlier than on the vendor.
+- **Device (T33L .122, apitest enc):** H.264 SetChnMaxPictureSize PASS: limit 3750 B, biggest picture 3102 B (before 7508 B). Vendor run: 5751 B for 5250 B. Before this change: 32491 B for 3875 B.
+- **Open:** H.265 is not capped yet (15206 B for 7125 B; the vendor reduces to 4576 B for 3750 B). Tracked as its own issue.
+- Trace sample: `T32_ENC_CHANGES=<n>:M<kbit>` sets SetChnMaxPictureSize(I = P) at picture n and requests an IDR.
+
 ## 2026-11-20: T31 H.265 stream headers, scaling lists and transform skip like the vendor (#604)
 
 - **Headers:** T31 H.265 VPS/SPS/PPS are now byte-identical to the vendor 1.1.6. They carry the same fields as T41 (High tier, level 5, 10-bit POC lsb, default scaling lists, deblocking override, lists_modification_present) plus PPS transform skip. Slices have POC 2n.
