@@ -31,6 +31,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
   - timps already converts to percent, so the value was scaled twice: the timps default 128 gave 78 % of the table and 180 gave 94 %. On a T30N at night, strength 180 had no visible effect.
   - Streamers that pass the vendor percentage (as against the vendor stack) now get the same result on both stacks.
 - `GetSinterStrength` / `GetTemperStrength` return the last percentage set (default 100). The vendor 1.0.5 has no getters.
+- **Day/night re-apply (beyond vendor, user-approved, separate commit):** the driver reloads the day or night tables 109/132 at the next frame end, which drops the strength (the vendor 1.0.5 does not re-apply either). `SetISPRunningMode` now waits for that frame and scales the fresh tables again; 100 needs nothing.
 - T10/T20/T21 unchanged. Build-tested on T30, T20 and T21; device proof on the T30N pending.
 
 ## 2026-11-20: T30 rmem budget, one shared bitstream buffer and a Temper buffer of width x height x 4 (#697)
