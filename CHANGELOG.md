@@ -9,6 +9,13 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T30 NCU mode / day-night lines reach the log (#705)
+
+- **Observed.** The #701 lines ("T30 ncu mode ...", "T30 night: temper bypassed, ncu on") never appeared in syslog or logcat on the ABUS image.
+- **Cause.** They were `IMP_LOG_INFO`; the documented default level of `IMP_LOG` is 5 = notice (`OPENIMP_LOG_LEVEL`, kept so per-frame info lines stay silent on the single-core T31), so every info line is dropped from syslog and stderr on a camera that does not set the variable. The sink itself (`imp_log_emit`: syslog + stderr) is fine, and release builds only compile out LOG_DEBUG.
+- **Fix.** New `IMP_LOG_NOTICE` macro; the three one-shot T30 NCU mode / day / night status lines use it, so they reach the log at the default level. Default level unchanged (per-frame info stays silent; `OPENIMP_LOG_LEVEL=6` shows all info lines).
+- **Evidence.** `tests/t31/log_level_test` (release and debug build, in `make check`): an `IMP_LOG_NOTICE` line is written at the default level, with garbage level and with `OPENIMP_DEBUG_TRACE=0`, dropped only at level 4 and below.
+
 ## 2026-11-20: T30 NCU denoise engine (#701; oracle + QEMU, device test pending)
 
 - **Observed.** The stock ABUS T30N firmware (libimp 1.0.4) denoises at night with the NCU from `/etc/sensor/ncu_imx307.bin`; OpenIMP T30 only drove Temper and ignored the file, so at max gain the open stack needed far more bitrate.

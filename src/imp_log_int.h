@@ -73,6 +73,8 @@ void imp_log_emit(int prio, const char *tag, const char *fmt, ...)
 #define IMP_LOG_WARN(tag, fmt, ...) IMP_LOG(LOG_WARNING, tag, fmt, ##__VA_ARGS__)
 #define IMP_LOG_ERR(tag, fmt, ...)  IMP_LOG(LOG_ERR,     tag, fmt, ##__VA_ARGS__)
 #define IMP_LOG_INFO(tag, fmt, ...) IMP_LOG(LOG_INFO,    tag, fmt, ##__VA_ARGS__)
+/* one-shot status line that must reach the log of a production camera (default level) */
+#define IMP_LOG_NOTICE(tag, fmt, ...) IMP_LOG(LOG_NOTICE, tag, fmt, ##__VA_ARGS__)
 
 /*
  * IMP_LOG_LIMITED(prio, tag, fmt, ...): IMP_LOG for a line a caller bug or a
