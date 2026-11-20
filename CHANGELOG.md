@@ -9,6 +9,15 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T30 black start without an extra buffer (#702)
+
+- **rmem T30:** the black start (`OPENIMP_T30_BLACK_START`, #216, beyond vendor) no longer allocates its own NV12 picture ("t30-helix-black", 3060 KB at 1080p, 4.7 MB at 2048x1536, held for up to 0.5 s). On a 28M T30N that peak did not fit, so the stream started live there.
+  - The black IDR is coded from the reconstruction buffer that the IDR does not write (same size), filled Y 16 / UV 128 once.
+  - The further black pictures are all-skip P slices written in software (`hskip_black_slice_data`, the vendor `i264e_icodec_black` technique): no VPU run, no rate controller, frame_num continues, the reference stays the black IDR. The first live picture is an IDR with a fresh controller, as before.
+  - The capture frame is only read. It is shared with the hardware JPEG channel and the FrameSource observers, so blackening it in place (rejected branch) would black out or tear snapshots.
+- Unchanged: the settle rule, the bound (<= 8 pictures, <= 0.5 s) and `OPENIMP_T30_BLACK_START=0`.
+- Host test: no allocation, frame unchanged, the VPU runs only for the IDRs; the stream (black IDR + all-skip P + live IDR, plain GOP and HSkip structures 1..4) decodes with ffmpeg and every picture is exact (the fake VPU codes I_PCM). Device proof on the T30N pending.
+
 ## 2026-11-20: T30 Sinter/Temper strength is the vendor percentage (#700)
 
 - **Behaviour change T30:** `IMP_ISP_Tuning_SetSinterStrength` / `SetTemperStrength` take the vendor percentage (100 = tuning table, capped at 200), as the vendor 1.0.5 does with `isp_table_tuning_ratio(109/132, min(ratio, 200))`. Before, OpenIMP read the value on a 128-neutral scale.

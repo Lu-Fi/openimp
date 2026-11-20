@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include "dma_alloc.h"
 #include "t30/t30_helix_encoder.h"
@@ -96,6 +97,14 @@ static unsigned int reg_reads;
 #endif
 /* the frame mapping: T20 macroblock rate control, T30 black start */
 static uint32_t frame_virt;
+#if defined(PLATFORM_T30)
+/* run_pcm (T30 black start, #702): RUN codes the input it is given as a
+ * real CABAC I slice of I_PCM macroblocks (pcm_w x pcm_h16), so the stream
+ * decodes and the decoded picture is the VPU input */
+static int run_pcm;
+static uint32_t pcm_w, pcm_h16;
+static void pcm_slice(uint32_t luma, uint32_t chroma, uint32_t qp);
+#endif
 #if defined(PLATFORM_T20)
 static unsigned int reg_reads;
 /* the command list of the last RUN: 0x4006c, the QP table writes, 0x80034 */
@@ -478,6 +487,21 @@ int __wrap_ioctl(int fd, unsigned long request, ...)
         errno = EIO;
         return -1;
     }
+#if defined(PLATFORM_T30)
+    if (run_pcm) {
+        const FakeAllocation *list = allocation("t30-helix-desc");
+        const uint32_t *w = (const uint32_t *)list->mapping;
+        uint32_t raw_y = 0, i;
+
+        for (i = 0; i + 1u < list->size / 4u; i += 2u) {
+            if ((w[i + 1u] & 0xffffcu) == 0x40010u && !raw_y)
+                raw_y = w[i];
+            if (w[i + 1u] & 0x40000000u)
+                break;
+        }
+        pcm_slice(raw_y, run_raw_c, (t30_list_40074 >> 8) & 0xffu);
+    }
+#endif
     memcpy((uint8_t *)allocation(BS_TAG)->mapping + 256u, payload,
            payload_length);
     if (run_sets_length)
@@ -2912,8 +2936,203 @@ static void test_t30_start_qp(void)
     setenv("OPENIMP_T30_EPRC", "0", 1);
 }
 
+/* ---- #702: a CABAC I slice of I_PCM macroblocks (H.264 7.3.5, 9.3.4) as
+ * the fake VPU output, so the black start stream really decodes ---- */
+static const uint8_t pcm_lps[64][4] = {
+    {128, 176, 208, 240}, {128, 167, 197, 227}, {128, 158, 187, 216}, {123, 150, 178, 205},
+    {116, 142, 169, 195}, {111, 135, 160, 185}, {105, 128, 152, 175}, {100, 122, 144, 166},
+    {95, 116, 137, 158}, {90, 110, 130, 150}, {85, 104, 123, 142}, {81, 99, 117, 135},
+    {77, 94, 111, 128}, {73, 89, 105, 122}, {69, 85, 100, 116}, {66, 80, 95, 110},
+    {62, 76, 90, 104}, {59, 72, 86, 99}, {56, 69, 81, 94}, {53, 65, 77, 89},
+    {51, 62, 73, 85}, {48, 59, 69, 80}, {46, 56, 66, 76}, {43, 53, 63, 72},
+    {41, 50, 59, 69}, {39, 48, 56, 65}, {37, 45, 54, 62}, {35, 43, 51, 59},
+    {33, 41, 48, 56}, {32, 39, 46, 53}, {30, 37, 43, 50}, {29, 35, 41, 48},
+    {27, 33, 39, 45}, {26, 31, 37, 43}, {24, 30, 35, 41}, {23, 28, 33, 39},
+    {22, 27, 32, 37}, {21, 26, 30, 35}, {20, 24, 29, 33}, {19, 23, 27, 31},
+    {18, 22, 26, 30}, {17, 21, 25, 28}, {16, 20, 23, 27}, {15, 19, 22, 25},
+    {14, 18, 21, 24}, {14, 17, 20, 23}, {13, 16, 19, 22}, {12, 15, 18, 21},
+    {12, 14, 17, 20}, {11, 14, 16, 19}, {11, 13, 15, 18}, {10, 12, 15, 17},
+    {10, 12, 14, 16}, {9, 11, 13, 15}, {9, 11, 12, 14}, {8, 10, 12, 14},
+    {8, 9, 11, 13}, {7, 9, 11, 12}, {7, 9, 10, 12}, {7, 8, 10, 11},
+    {6, 8, 9, 11}, {6, 7, 9, 10}, {6, 7, 8, 9}, {2, 2, 2, 2},
+};
+static const uint8_t pcm_trans_lps[64] = {
+    0, 0, 1, 2, 2, 4, 4, 5, 6, 7, 8, 9, 9, 11, 11, 12,
+    13, 13, 15, 15, 16, 16, 18, 18, 19, 19, 21, 21, 22, 22, 23, 24,
+    24, 25, 26, 26, 27, 27, 28, 29, 29, 30, 30, 30, 31, 32, 32, 33,
+    33, 33, 34, 34, 35, 35, 35, 36, 36, 36, 37, 37, 37, 38, 38, 63,
+};
+
+typedef struct {
+    uint32_t low, range, n, acc;
+    int first, outstanding, nbits;
+} PcmEnc;
+
+static void pe_raw(PcmEnc *e, int b)
+{
+    e->acc = (e->acc << 1) | (uint32_t)b;
+    if (++e->nbits == 8) {
+        assert(e->n < sizeof(payload));
+        payload[e->n++] = (uint8_t)e->acc;
+        e->acc = 0;
+        e->nbits = 0;
+    }
+}
+
+static void pe_put(PcmEnc *e, int b)
+{
+    if (e->first)
+        e->first = 0;
+    else
+        pe_raw(e, b);
+    for (; e->outstanding > 0; e->outstanding--)
+        pe_raw(e, 1 - b);
+}
+
+static void pe_renorm(PcmEnc *e)
+{
+    while (e->range < 256u) {
+        if (e->low < 256u) {
+            pe_put(e, 0);
+        } else if (e->low >= 512u) {
+            e->low -= 512u;
+            pe_put(e, 1);
+        } else {
+            e->low -= 256u;
+            e->outstanding++;
+        }
+        e->range <<= 1;
+        e->low <<= 1;
+    }
+}
+
+static void pe_init(PcmEnc *e)
+{
+    e->low = 0;
+    e->range = 510;
+    e->first = 1;
+    e->outstanding = 0;
+}
+
+/* context: state[0] pStateIdx, state[1] valMPS */
+static void pe_decision(PcmEnc *e, uint8_t *state, int bin)
+{
+    uint32_t rlps = pcm_lps[state[0]][(e->range >> 6) & 3u];
+
+    e->range -= rlps;
+    if (bin != state[1]) {
+        e->low += e->range;
+        e->range = rlps;
+        if (state[0] == 0)
+            state[1] = (uint8_t)(1 - state[1]);
+        state[0] = pcm_trans_lps[state[0]];
+    } else if (state[0] < 62) {
+        state[0]++;
+    }
+    pe_renorm(e);
+}
+
+static void pe_terminate(PcmEnc *e, int bin)
+{
+    e->range -= 2;
+    if (!bin) {
+        pe_renorm(e);
+        return;
+    }
+    /* EncodeFlush (9.3.4.5) */
+    e->low += e->range;
+    e->range = 2;
+    pe_renorm(e);
+    pe_put(e, (int)((e->low >> 9) & 1u));
+    pe_raw(e, (int)((e->low >> 8) & 1u));
+    pe_raw(e, 1);
+}
+
+static const uint8_t *pcm_map(uint32_t address)
+{
+    if (address >= 0x10000000u && address < 0x14000000u)
+        return (const uint8_t *)(uintptr_t)(frame_virt + (address - 0x10000000u));
+    return (const uint8_t *)(uintptr_t)address;        /* fake rmem: phys = mapping */
+}
+
+static void pcm_slice(uint32_t luma_address, uint32_t chroma_address, uint32_t qp)
+{
+    /* I slice mb_type contexts 3..5 (m, n of Table 9-12) */
+    static const int mn[3][2] = { {20, -15}, {2, 54}, {3, 74} };
+    const uint8_t *luma = pcm_map(luma_address);
+    const uint8_t *chroma = pcm_map(chroma_address);
+    uint32_t mbw = pcm_w / 16u, mbh = pcm_h16 / 16u, x, y, r, c;
+    uint8_t ctx[3][2];
+    PcmEnc e;
+    int i;
+
+    assert(luma && chroma && frame_virt);
+    for (i = 0; i < 3; i++) {
+        int pre = ((mn[i][0] * (int)(qp > 51u ? 51u : qp)) >> 4) + mn[i][1];
+
+        pre = pre < 1 ? 1 : pre > 126 ? 126 : pre;
+        ctx[i][0] = (uint8_t)(pre <= 63 ? 63 - pre : pre - 64);
+        ctx[i][1] = (uint8_t)(pre > 63);
+    }
+    memset(&e, 0, sizeof(e));
+    pe_init(&e);
+    for (y = 0; y < mbh; y++)
+        for (x = 0; x < mbw; x++) {
+            /* mb_type I_PCM: bin 0 = 1 (ctxIdxInc: neighbours not I_NxN),
+             * bin 1 = terminate 1, then flush, alignment, samples */
+            pe_decision(&e, ctx[(x > 0u) + (y > 0u)], 1);
+            pe_terminate(&e, 1);
+            while (e.nbits)
+                pe_raw(&e, 0);
+            for (r = 0; r < 16u; r++)
+                for (c = 0; c < 16u; c++) {
+                    uint8_t v = luma[(y * 16u + r) * pcm_w + x * 16u + c];
+
+                    for (i = 7; i >= 0; i--)
+                        pe_raw(&e, (v >> i) & 1);
+                }
+            for (i = 0; i < 2; i++)
+                for (r = 0; r < 8u; r++)
+                    for (c = 0; c < 8u; c++) {
+                        uint8_t v = chroma[(y * 8u + r) * pcm_w + (x * 8u + c) * 2u + (uint32_t)i];
+                        int b;
+
+                        for (b = 7; b >= 0; b--)
+                            pe_raw(&e, (v >> b) & 1);
+                    }
+            pe_init(&e);
+            pe_terminate(&e, x + 1u == mbw && y + 1u == mbh);  /* end_of_slice_flag */
+        }
+    while (e.nbits)             /* the flush wrote the stop bit */
+        pe_raw(&e, 0);
+    payload_length = e.n;
+}
+
+static unsigned int live_allocations(void)
+{
+    unsigned int i, n = 0;
+
+    for (i = 0; i < 16u; i++)
+        n += allocations[i].mapping != NULL;
+    return n;
+}
+
+/* the reconstruction buffer whose chroma plane the last RUN read (#702) */
+static const FakeAllocation *bs_input_ref(uint32_t luma_size)
+{
+    unsigned int i;
+
+    for (i = 0; i < 16u; i++)
+        if (allocations[i].mapping && !strcmp(allocations[i].tag, "t30-helix-ref") &&
+            run_raw_c == (uint32_t)(uintptr_t)allocations[i].mapping + luma_size)
+            return &allocations[i];
+    return NULL;
+}
+
 /* OPENIMP_T30_BLACK_START (#216, default on): black pictures until the
- * picture settled, then a live IDR with a fresh controller. */
+ * picture settled, then a live IDR with a fresh controller.  #702: no
+ * buffer of its own (the black IDR reads the idle reconstruction buffer,
+ * the black P pictures are all-skip slices), the frame is only read. */
 static void t30_bs_fill(uint8_t *f, uint32_t w, uint32_t h16, uint8_t y,
                         uint8_t c)
 {
@@ -2921,18 +3140,117 @@ static void t30_bs_fill(uint8_t *f, uint32_t w, uint32_t h16, uint8_t y,
     memset(f + (size_t)w * h16, c, (size_t)w * h16 / 2u);
 }
 
+/* #702: encode a black start with I_PCM pictures from the fake VPU, decode
+ * the stream with ffmpeg (errors fatal) and compare every picture: `black`
+ * black pictures (Y 16, UV 128), then the live IDR equal to its input.
+ * Returns the number of pictures decoded. */
+static unsigned int t30_bs_decode(const HWEncoderParams *params,
+                                  unsigned int black)
+{
+    const uint32_t dw = params->width, dh = params->height;
+    const uint32_t dh16 = (dh + 15u) & ~15u;
+    const size_t dsize = (size_t)dw * dh16 * 3u / 2u;
+    const size_t osize = (size_t)dw * dh * 3u / 2u;
+    char dump[] = "/tmp/helix702-XXXXXX";
+    char cmd[512], yuv[64];
+    uint8_t *frame = malloc(dsize), *live = malloc(dsize);
+    uint8_t *out = malloc((black + 2u) * osize);
+    T30HelixEncoder *encoder = NULL;
+    PictureInfo info;
+    unsigned int i, runs0;
+    uint32_t k, x, y;
+    size_t got;
+    FILE *f;
+    int fd = mkstemp(dump);
+
+    assert(fd >= 0 && frame && live && out);
+    close(fd);
+    for (k = 0; k < dw * dh16; k++)                 /* a live gradient */
+        live[k] = (uint8_t)(32u + (k % dw) / 2u + (k / dw) / 4u);
+    for (; k < dsize; k += 2u) {
+        live[k] = (uint8_t)(100u + (k % dw) / 8u);
+        live[k + 1u] = (uint8_t)(150u - ((k - dw * dh16) / dw) / 4u);
+    }
+    frame_virt = (uint32_t)(uintptr_t)frame;
+    run_pcm = 1;
+    pcm_w = dw;
+    pcm_h16 = dh16;
+    setenv("HELIX_TEST_DUMP", dump, 1);
+    assert(OpenIMP_T30_HelixCreate(&encoder, params) == 0);
+    runs0 = runs;
+    /* black pictures: a picture that keeps changing, the live gradient
+     * last (the bound) or twice (settled) */
+    for (i = 0; i < black; i++) {
+        if (i + 1u == black)
+            memcpy(frame, live, dsize);
+        else
+            t30_bs_fill(frame, dw, dh16, (uint8_t)(60u + 30u * i), 128);
+        assert(encode(encoder, &info) == 0 && info.idr == (i == 0u));
+        if (i == 0u)
+            runs0 = runs;       /* the IDR may be coded again (eprc) */
+        assert(i == 0u || (info.qp == 0u && info.slice_bytes < 60u));
+        assert(runs == runs0);  /* the all-skip pictures do not run */
+    }
+    assert(encode(encoder, &info) == 0 && info.idr);    /* live */
+    assert(runs > runs0);
+    OpenIMP_T30_HelixDestroy(encoder);
+    unsetenv("HELIX_TEST_DUMP");
+    run_pcm = 0;
+    frame_virt = 0;
+    snprintf(yuv, sizeof(yuv), "%s.yuv", dump);
+    snprintf(cmd, sizeof(cmd),
+             "ffmpeg -nostdin -v error -xerror -err_detect explode -i %s "
+             "-fps_mode passthrough -f rawvideo -pix_fmt yuv420p -y %s",
+             dump, yuv);
+    assert(system(cmd) == 0);
+    f = fopen(yuv, "rb");
+    assert(f);
+    got = fread(out, 1, (black + 2u) * osize, f);
+    fclose(f);
+    assert(got == (black + 1u) * osize);
+    for (i = 0; i < black; i++) {
+        const uint8_t *p = out + i * osize;
+
+        for (k = 0; k < dw * dh; k++)
+            assert(p[k] == 16u);
+        for (; k < osize; k++)
+            assert(p[k] == 128u);
+    }
+    {
+        const uint8_t *p = out + black * osize;
+
+        for (y = 0; y < dh; y++)
+            for (x = 0; x < dw; x++)
+                assert(p[y * dw + x] == live[y * dw + x]);
+        for (y = 0; y < dh / 2u; y++)
+            for (x = 0; x < dw / 2u; x++) {
+                assert(p[dw * dh + y * (dw / 2u) + x] ==
+                       live[dw * dh16 + y * dw + 2u * x]);
+                assert(p[dw * dh * 5u / 4u + y * (dw / 2u) + x] ==
+                       live[dw * dh16 + y * dw + 2u * x + 1u]);
+            }
+    }
+    remove(yuv);
+    remove(dump);
+    free(frame);
+    free(live);
+    free(out);
+    return black + 1u;
+}
+
 static void test_t30_black_start(void)
 {
     const uint32_t w = 640, h = 360, h16 = 368;
     const uint32_t chroma = 0x10000000u + w * h16;
     uint8_t a[T30_BLACK_START_SAMPLES], b[T30_BLACK_START_SAMPLES];
+    const size_t fsize = (size_t)w * h16 * 3u / 2u;
     T30BlackStart bs;
     T30HelixEncoder *encoder;
     PictureInfo info;
-    FakeAllocation *black;
-    uint8_t *frame;
+    const FakeAllocation *ref;
+    uint8_t *frame, *copy;
     uint32_t k;
-    unsigned int i;
+    unsigned int i, n0, n1, runs0;
 
     /* the pure parts */
     assert(t30_black_start_wanted(NULL) && t30_black_start_wanted("1") &&
@@ -2967,57 +3285,77 @@ static void test_t30_black_start(void)
     unsetenv("OPENIMP_T30_START_QP");
     unsetenv("OPENIMP_T30_BLACK_START");
     frame_virt = (uint32_t)(uintptr_t)frame;
-    /* settles at picture 2: black IDR, black P, live IDR */
+    copy = malloc(fsize);
+    assert(copy);
+    hs_parse = 1;               /* the all-skip pictures carry their own payload */
+    /* settles at picture 2: black IDR, black all-skip P, live IDR (#702:
+     * no buffer of its own, the frame only read) */
+    n0 = live_allocations();
     encoder = create(w, h, 25, 50);
+    n1 = live_allocations();
     t30_bs_fill(frame, w, h16, 60, 128);
-    assert(encode(encoder, &info) == 0 && info.idr);
-    black = allocation("t30-helix-black");
-    assert(black && black->size == w * h16 * 3u / 2u);
+    memcpy(copy, frame, fsize);
+    runs0 = runs;
+    assert(encode(encoder, &info) == 0 && info.idr && info.frame_num == 0u);
+    assert(runs == runs0 + 1u && !memcmp(frame, copy, fsize));
+    assert(live_allocations() == n1 && !allocation("t30-helix-black"));
+    ref = bs_input_ref(w * h16);        /* the idle reconstruction buffer */
+    assert(ref && ref->size == w * h16 * 3u / 2u);
     for (k = 0; k < w * h16; k += 997u)
-        assert(((const uint8_t *)black->mapping)[k] == 16u);
-    for (k = w * h16; k < black->size; k += 499u)
-        assert(((const uint8_t *)black->mapping)[k] == 128u);
-    assert(run_raw_c == (uint32_t)(uintptr_t)black->mapping + w * h16);
+        assert(((const uint8_t *)ref->mapping)[k] == 16u);
+    for (k = w * h16; k < ref->size; k += 499u)
+        assert(((const uint8_t *)ref->mapping)[k] == 128u);
     t30_bs_fill(frame, w, h16, 80, 128);                /* AE still moving */
+    memcpy(copy, frame, fsize);
     assert(encode(encoder, &info) == 0 && !info.idr);
-    assert(run_raw_c == (uint32_t)(uintptr_t)black->mapping + w * h16);
+    assert(info.frame_num == 1u && info.qp == 0u && !info.reorder && !info.mmco);
+    assert(runs == runs0 + 1u);         /* all-skip: the VPU does not run */
+    assert(!memcmp(frame, copy, fsize));
     t30_bs_fill(frame, w, h16, 81, 128);                /* settled */
-    assert(encode(encoder, &info) == 0 && info.idr);
-    assert(run_raw_c == chroma && !allocation("t30-helix-black"));
+    assert(encode(encoder, &info) == 0 && info.idr && info.frame_num == 0u);
+    assert(info.idr_pic_id == 1u && runs == runs0 + 2u);
+    assert(run_raw_c == chroma && live_allocations() == n1);
     assert(info.qp == 26);      /* fresh controller: the start QP (auto, 360p = 26) */
     for (i = 0; i < 3u; i++) {
         t30_bs_fill(frame, w, h16, (uint8_t)(10u + 40u * i), 128);
         assert(encode(encoder, &info) == 0 && !info.idr);
-        assert(run_raw_c == chroma);
+        assert(run_raw_c == chroma && info.frame_num == i + 1u && info.qp);
     }
     OpenIMP_T30_HelixDestroy(encoder);
-    /* never settles: the bound, 8 black pictures at 25 fps, 7 at 15 fps */
+    assert(live_allocations() == n0);
+    /* never settles: the bound, 8 black pictures at 25 fps, 7 at 15 fps;
+     * one VPU run (the black IDR), frame_num 0..limit-1 */
     for (k = 25; k >= 15u; k -= 10u) {
         uint32_t limit = t30_black_start_limit(k, 1);
 
         encoder = create(w, h, k, 50);
+        runs0 = runs;
         for (i = 0; i < limit; i++) {
             t30_bs_fill(frame, w, h16, (uint8_t)(20u + 20u * i), 128);
             assert(encode(encoder, &info) == 0 && info.idr == (i == 0u));
-            assert(allocation("t30-helix-black"));
+            assert(info.frame_num == i && runs == runs0 + 1u);
+            assert(live_allocations() == n1);
         }
         t30_bs_fill(frame, w, h16, 250, 128);
-        assert(encode(encoder, &info) == 0 && info.idr);
-        assert(run_raw_c == chroma && !allocation("t30-helix-black"));
+        assert(encode(encoder, &info) == 0 && info.idr && runs == runs0 + 2u);
+        assert(run_raw_c == chroma);
         assert(info.qp == 26);  /* not the QP the controller reached on black */
         OpenIMP_T30_HelixDestroy(encoder);
     }
     /* destroyed during the black start: nothing leaks */
     encoder = create(w, h, 25, 50);
-    assert(encode(encoder, &info) == 0 && allocation("t30-helix-black"));
+    assert(encode(encoder, &info) == 0 && live_allocations() == n1);
+    t30_bs_fill(frame, w, h16, 120, 128);
+    assert(encode(encoder, &info) == 0 && !info.idr);   /* destroyed after an all-skip P */
     OpenIMP_T30_HelixDestroy(encoder);
-    assert(!allocation("t30-helix-black"));
+    assert(live_allocations() == n0);
     /* off: live from picture 0 */
     setenv("OPENIMP_T30_BLACK_START", "0", 1);
     encoder = create(w, h, 25, 50);
+    runs0 = runs;
     assert(encode(encoder, &info) == 0 && info.idr && run_raw_c == chroma);
-    assert(!allocation("t30-helix-black"));
     assert(encode(encoder, &info) == 0 && !info.idr && run_raw_c == chroma);
+    assert(runs == runs0 + 2u && info.qp);
     OpenIMP_T30_HelixDestroy(encoder);
     unsetenv("OPENIMP_T30_BLACK_START");
     /* no mapping (frame without virAddr): live as before */
@@ -3025,6 +3363,48 @@ static void test_t30_black_start(void)
     encoder = create(w, h, 25, 50);
     assert(encode(encoder, &info) == 0 && info.idr && run_raw_c == chroma);
     OpenIMP_T30_HelixDestroy(encoder);
+
+    /* the stream decodes (ffmpeg on the host, when installed): the fake
+     * VPU codes its input as I_PCM, so the decoded pictures are what the
+     * VPU read: black IDR + all-skip P (black) + the live IDR, for the
+     * plain GOP and under the HSkip structures (long-term references) */
+    if (system("command -v ffmpeg >/dev/null 2>&1") == 0) {
+        HWEncoderParams p;
+        unsigned int type, pictures = 0;
+
+        free(frame);
+        frame = NULL;
+        memset(&p, 0, sizeof(p));
+        p.width = 320;
+        p.height = 180;
+        p.fps_num = 25;
+        p.fps_den = 1;
+        p.gop_length = 50;
+        p.rc_mode = HW_RC_MODE_CBR;
+        p.bitrate = 2000000;
+        p.qp = 30;
+        p.min_qp = 20;
+        p.max_qp = 45;
+        pictures += t30_bs_decode(&p, 3u);
+        for (type = 1; type <= 4u; type++) {
+            t30_hs_params(&p, 8u, 2);
+            p.width = 320;
+            p.height = 180;
+            p.hskip_type = type;
+            p.hskip_m = 4;
+            p.hskip_n = 2;
+            p.hskip_flags = HW_HSKIP_SET;
+            pictures += t30_bs_decode(&p, 4u);   /* 8 fps: 4 black at most */
+        }
+        printf("T30 black start: %u pictures (black IDR, all-skip P, live "
+               "IDR; plain and HSkip 1..4) decode with ffmpeg, exact\n",
+               pictures);
+    } else {
+        printf("T30 black start: ffmpeg not installed, decode check skipped\n");
+    }
+    hs_parse = 0;
+    frame_virt = 0;
+    free(copy);
     free(frame);
     setenv("OPENIMP_T30_EPRC", "0", 1);
 }

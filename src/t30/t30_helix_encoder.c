@@ -407,11 +407,15 @@ struct T30HelixEncoder {
     uint32_t eprc30_frames, eprc30_idrs;
     uint64_t eprc30_bytes, eprc30_qp_sum[2];
     /* OPENIMP_T30_BLACK_START (t30_black_start.h): black pictures until the
-     * ISP picture settled; black is the NV12 black picture, bs_now says
-     * that this picture is coded from it */
+     * ISP picture settled, without a buffer of their own (#702): the black
+     * IDR is coded from the reconstruction buffer the IDR leaves idle,
+     * filled black (bs_filled: done for this picture), the black P
+     * pictures are all-skip slices written in software.  bs_now: this
+     * picture is black; bs_ran: black pictures were coded (the next live
+     * picture is an IDR with a fresh controller) */
     T30BlackStart bs;
-    IMPDMABufferInfo black;
-    int bs_now;
+    int bs_now, bs_ran, bs_filled;
+    uint32_t bs_skips;
     /* OPENIMP_T30_START_FLOOR: pictures left with the start QP floor in the
      * controller, and the controller's own P/IDR min QP to restore */
     uint32_t eprc30_floor_left;
@@ -1154,11 +1158,14 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
         slice->raw[1] = encoder->grey.phys_addr;
 #endif
 #if defined(PLATFORM_T30)
-    if (encoder->bs_now) {      /* OPENIMP_T30_BLACK_START */
-        slice->raw[0] = encoder->black.phys_addr;
-        slice->raw[1] = encoder->black.phys_addr +
-                        (uint32_t)encoder->params.width *
-                        (uint32_t)encoder->sps.i_mb_height * 16u;
+    if (encoder->bs_now && idr && encoder->bs_filled) {
+        /* OPENIMP_T30_BLACK_START: the black IDR reads the reconstruction
+         * buffer it does not write (t30_black_start_input), laid out as
+         * the frame (luma, chroma at the macroblock-aligned luma size) */
+        unsigned int idle = output_index ? 0u : 1u;
+
+        slice->raw[0] = encoder->reference[idle].y;
+        slice->raw[1] = encoder->reference[idle].c;
     }
 #endif
     if (!idr) {
@@ -2709,7 +2716,9 @@ static void t30_start_rate_control(T30HelixEncoder *encoder,
 /* OPENIMP_T30_BLACK_START: decide whether this picture is coded black
  * (encoder->bs_now).  The first live picture after black ones is an IDR
  * with a fresh rate controller (start QP as at channel start), so the
- * controller does not carry the QP it reached on the black pictures. */
+ * controller does not carry the QP it reached on the black pictures.
+ * Nothing is allocated and the frame is only read (#702: it is shared
+ * with the JPEG channel, the observers and the frame FIFO). */
 static void t30_black_start_picture(T30HelixEncoder *encoder,
                                     const IMPFrameInfo *frame)
 {
@@ -2721,6 +2730,7 @@ static void t30_black_start_picture(T30HelixEncoder *encoder,
     uint32_t r;
 
     encoder->bs_now = 0;
+    encoder->bs_filled = 0;
     if (!encoder->bs.active)
         return;
     if (!frame->virAddr || width < 64u || height < 64u ||
@@ -2745,37 +2755,49 @@ static void t30_black_start_picture(T30HelixEncoder *encoder,
     t30_black_start_sample(luma, chroma, width, width, height, samples);
     if (t30_black_start_step(&encoder->bs, samples, encoder->params.fps_num,
                              encoder->params.fps_den)) {
-        if (!encoder->black.phys_addr) {
-            uint32_t size = (uint32_t)encoder->sps.i_mb_width * 16u *
-                            (uint32_t)encoder->sps.i_mb_height * 16u * 3u / 2u;
-
-            if (t30_dma_allocate(&encoder->black, size, "t30-helix-black") != 0) {
-                IMP_LOG_WARN("Encoder", "Helix: no memory for the black "
-                             "start picture (%u bytes), live from now", size);
-                encoder->bs.active = 0;
-                goto live;
-            }
-            memset((void *)(uintptr_t)encoder->black.virt_addr, 16, luma_size);
-            memset((uint8_t *)(uintptr_t)encoder->black.virt_addr + luma_size,
-                   128, size - luma_size);
-            if (DMA_RmemFlushCache((void *)(uintptr_t)encoder->black.virt_addr,
-                                   size, 1) != 0) {
-                t30_dma_release(&encoder->black);
-                encoder->bs.active = 0;
-                goto live;
-            }
-        }
         encoder->bs_now = 1;
+        encoder->bs_ran = 1;
         return;
     }
 live:
-    if (encoder->black.phys_addr) {
-        t30_dma_release(&encoder->black);
+    if (encoder->bs_ran) {
+        encoder->bs_ran = 0;
         IMP_LOG_INFO("Encoder", "Helix: live picture after %u black start "
-                     "pictures (OPENIMP_T30_BLACK_START)", encoder->bs.pictures);
+                     "pictures (%u all-skip, OPENIMP_T30_BLACK_START)",
+                     encoder->bs.pictures, encoder->bs_skips);
         t30_start_rate_control(encoder, encoder->params.qp);
         encoder->force_idr = 1;
     }
+}
+
+/* The input of a black IDR: the reconstruction buffer the IDR does not
+ * write (an IDR predicts from nothing; the T23 list points its reference
+ * address at the same idle buffer), filled with Y 16 / UV 128 and written
+ * back.  Its size is that of the macroblock-aligned frame.  Returns -1
+ * when it cannot be prepared: the picture is coded live. */
+static int t30_black_start_input(T30HelixEncoder *encoder,
+                                 unsigned int output_index)
+{
+    unsigned int idle = output_index ? 0u : 1u;
+    const IMPDMABufferInfo *ref = &encoder->reference[idle].dma;
+    uint32_t luma_size = (uint32_t)encoder->sps.i_mb_width * 16u *
+                         (uint32_t)encoder->sps.i_mb_height * 16u;
+
+    if (encoder->bs_filled)
+        return 0;
+    if (!ref->virt_addr || ref->size < luma_size + luma_size / 2u ||
+        encoder->reference[idle].c != encoder->reference[idle].y + luma_size)
+        return -1;
+    memset((void *)(uintptr_t)ref->virt_addr, 16, luma_size);
+    memset((uint8_t *)(uintptr_t)ref->virt_addr + luma_size, 128,
+           ref->size - luma_size);
+    /* write back only: the CPU never reads the buffer, and the clean
+     * lines cannot overwrite what the VPU writes there later */
+    if (DMA_RmemFlushCache((void *)(uintptr_t)ref->virt_addr, ref->size,
+                           1) != 0)
+        return -1;
+    encoder->bs_filled = 1;
+    return 0;
 }
 #endif
 
@@ -3940,6 +3962,7 @@ static int t30_helix_encode_job(T30HelixEncoder *encoder,
     size_t descriptor_pairs;
 #if defined(HELIX_HSKIP)
     int hs_black = 0;           /* BlackEnhance: an all-skip slice instead of the encoder */
+    int bs_skip = 0;            /* OPENIMP_T30_BLACK_START P picture: the same all-skip slice */
     uint8_t black_buf[256];
     const uint8_t *payload = NULL;
     int sc_force = 0;           /* bEnableScenecut: the picture is coded again as an IDR picture */
@@ -4027,6 +4050,12 @@ t20_picture:
 #if defined(HELIX_VENDOR_GOP)
     if (idr)
         t30_idr_reconfig(encoder);
+#endif
+#if defined(PLATFORM_T30)
+    /* OPENIMP_T30_BLACK_START: a black P picture predicts the black IDR
+     * unchanged, so it is written in software as all-skip (no input, no
+     * VPU run, no rate controller: the live IDR starts a fresh one) */
+    bs_skip = encoder->bs_now && !idr;
 #endif
 #if defined(HELIX_T21_SYNTAX)
     if (!idr
@@ -4122,7 +4151,7 @@ t20_again:
     hdr_ptr = NULL;
 #endif
 #if defined(PLATFORM_T30)
-    if (encoder->eprc30_on) {
+    if (encoder->eprc30_on && !bs_skip) {
         EprcPicture pic;
 
         if (encoder->eprc30_floor_left && --encoder->eprc30_floor_left == 0u)
@@ -4175,6 +4204,16 @@ t30_again:
                    (encoder->params.hskip_flags & HW_HSKIP_BLACK);
         if (hs_black)
             qp = 0;             /* the OEM codes the all-skip picture at QP 0 */
+    }
+    if (bs_skip) {
+        /* QP 0 as the OEM all-skip picture.  Nothing is reconstructed: the
+         * plain GOP logic keeps the buffer of the black IDR as the
+         * reference (the decoder's copy equals it); a running HSkip
+         * structure keeps its own buffer bookkeeping, as for BlackEnhance */
+        hs_black = 0;
+        qp = 0;
+        if (!encoder->hs_on)
+            output_index = encoder->reference_index;
     }
 #if defined(PLATFORM_T20)
     if (!t20_reencodes && !cr_second && !sc_force)
@@ -4253,6 +4292,16 @@ again:
     }
 #endif
     helix_watermark(encoder, frame, idr);
+#if defined(PLATFORM_T30)
+    if (encoder->bs_now && idr &&
+        t30_black_start_input(encoder, output_index) != 0) {
+        IMP_LOG_WARN("Encoder", "Helix: black start input not ready, "
+                     "live from now");
+        encoder->bs.active = 0;
+        encoder->bs_now = 0;
+        encoder->bs_ran = 0;
+    }
+#endif
     t30_fill_slice(encoder, frame, qp, idr, output_index);
 #if defined(PLATFORM_T20)
     if (encoder->t20rc_on) {
@@ -4478,7 +4527,7 @@ again:
      * previous picture's size over stale bitstream bytes. */
     encoder->channel.output_len = 0;
 #if defined(HELIX_HSKIP)
-    if (hs_black) {
+    if (hs_black || bs_skip) {
         /* BlackEnhance: the OEM i264e_icodec_black writes the slice data of an
          * all-skip P picture in software and the encoder does not run; the
          * decoder copies the reference picture */
@@ -4490,7 +4539,12 @@ again:
             return -1;
         payload = black_buf;
         encoder->channel.output_len = (uint32_t)n;
-        encoder->hs_black_pics++;
+        if (hs_black)
+            encoder->hs_black_pics++;
+#if defined(PLATFORM_T30)
+        else
+            encoder->bs_skips++;
+#endif
     } else
 #endif
     {
@@ -4592,7 +4646,7 @@ again:
 #endif
     if (
 #if defined(HELIX_HSKIP)
-        !hs_black &&
+        !hs_black && !bs_skip &&
 #endif
         DMA_RmemFlushCache(temporary + T30_SLICE_OFFSET,
                            encoder->channel.output_len, 2) != 0) {
@@ -4828,7 +4882,11 @@ again:
     encoder->have_reference = 1;
     encoder->gop_position++;
     encoder->frame_number++;
-    if (encoder->rate_control_enabled)
+    if (encoder->rate_control_enabled
+#if defined(HELIX_HSKIP)
+        && !bs_skip
+#endif
+       )
         (void)openimp_t31_rate_controller_complete(
             &encoder->rate_control, stream->length * 8u, qp, idr);
 #if defined(PLATFORM_T20)
@@ -5488,7 +5546,6 @@ void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder)
 #endif
 #if defined(PLATFORM_T30)
     t30_eprc_stop(encoder);
-    t30_dma_release(&encoder->black);
 #endif
     free(encoder);
 }
