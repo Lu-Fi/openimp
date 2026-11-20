@@ -892,6 +892,16 @@ int t32_rc_start(T32Rc *rc, int idr, uint32_t gop_pos)
     return rc->qp;
 }
 
+void t32_rc_row_regs(T32Rc *rc, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg)
+{
+    if (rc->on && rc->t33) {
+        t32_rc33_row_regs(rc->t33, j, sel, sel_val, reg);
+        return;
+    }
+    *sel = T33_HERA_ROW_SEL;
+    *sel_val = *reg = T33_HERA_ROW(j);
+}
+
 unsigned t32_rc_idr_rows(T32Rc *rc)
 {
     if (rc->on && rc->t65)

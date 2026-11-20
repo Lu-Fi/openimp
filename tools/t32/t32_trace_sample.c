@@ -822,6 +822,11 @@ again:
                     } else if (t == 'G' && sscanf(ch + k, "%d", &a) == 1) {
                         IMPEncoderGOPSizeCfg g = { a };
                         printf("T32C %d SetGOPSize %d = %d\n", i, a, IMP_Encoder_SetGOPSize(0, &g));
+                    } else if (t == 'M' && sscanf(ch + k, "%d", &a) == 1) {
+                        /* #706: I and P picture size limit (kbit), then IDR */
+                        printf("T32C %d SetChnMaxPictureSize %d = %d\n", i, a,
+                               IMP_Encoder_SetChnMaxPictureSize(0, (uint32_t)a, (uint32_t)a));
+                        printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
                     } else if (t == 'I') {
                         printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
                     }

@@ -858,12 +858,10 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.ai = aux[1];
     p.qpt = aux[2];
     p.ipc = aux[3];
-#ifdef PLATFORM_T33
-    n = t33_h264_list(e, &p, w, h, idr);
-#else
-    /* rate control (T33): the controller's slice block goes into the list,
+    /* rate control (T33 controller): the slice block goes into the list,
      * its per-MB maps (SMART, ROI, MB flags) into the buffers the list names,
-     * as the vendor engine reads them from the controller's memory */
+     * as the vendor engine reads them from the controller's memory (T33:
+     * revision 7, #706) */
     p.rc_slice = t32_rc_slice(&a->rc);
     {
         static const int map_aux[3][2] = { { T33_MAP_SMART, 2 }, { T33_MAP_ROI, 1 }, { T33_MAP_MB, 3 } };
@@ -880,6 +878,9 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
             }
         }
     }
+#ifdef PLATFORM_T33
+    n = t33_h264_list(e, &p, w, h, idr);
+#else
     n = (uint32_t)t32_hera_h264_list(&p, t32_vpu_buf_va(&a->list));
 #endif
     if (!n) {
@@ -925,9 +926,11 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         unsigned nrows = t32_rc_idr_rows(&a->rc), r;
 
         for (r = 0; r < nrows; r++) {
+            uint32_t sel, sv, reg;
+
             rows[r] = 0;
-            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
-                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+            t32_rc_row_regs(&a->rc, r, &sel, &sv, &reg);
+            if (OpenIMP_T32_VpuWriteReg(sel, sv) != 0 || OpenIMP_T32_VpuReadReg(reg, &rows[r]) != 0)
                 rows[r] = 0;
         }
         t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA_STATS, rows, nrows);

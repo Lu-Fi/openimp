@@ -90,8 +90,8 @@ int t32_rc33_open(T32Rc33 *c, uint32_t width, uint32_t height)
         SP32(t33_pdef[i][0], t33_pdef[i][1]);
     SP32(T33P_WIDTH, width);
     SP32(T33P_HEIGHT, height);
-    SP32(T33P_REV, 6);
-    SP32(0xc20, 1);             /* the register window (vendor: /dev/mem at 0x13240000) */
+    SP32(T33P_REV, T33_RC_HERA_REV);
+    SP32(0xc20, 1);             /* the register window (vendor: /dev/mem at 0x13240000, rev 7 0x13220000) */
     SP32(0xc24, A_REG);
     SP32(0x3088, wb);           /* the VPU work buffer the slice block lays its maps out in */
     return 0;
@@ -596,9 +596,34 @@ unsigned t32_rc33_idr_rows(T32Rc33 *c)
     E33 *X = &c->X;
     int32_t n = PS32(T33P_HEIGHT) >> 6;
 
+    if (P32(T33P_MODE) > 5 || P32(T33P_REV) - 4u > 3u)
+        return 0;
+    if (P32(T33P_REV) == 7) {
+        int32_t h = PS32(T33P_HEIGHT);
+
+        n = (h + 0x3f < 0 ? h + 0x7e : h + 0x3f) >> 6;
+        if (h > 0x800)
+            n = (n + 1) / 2;
+        n *= 2;                 /* two words per row, every picture */
+        return n <= 0 ? 0 : n < T33_RC_ROWS ? (unsigned)n : T33_RC_ROWS;
+    }
     if (P32(T33P_REV) != 6 || P32(0x3a8) == 0 || n <= 0)
         return 0;
     return n < T33_RC_ROWS ? (unsigned)n : T33_RC_ROWS;
+}
+
+void t32_rc33_row_regs(T32Rc33 *c, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg)
+{
+    E33 *X = &c->X;
+
+    if (P32(T33P_REV) == 7) {
+        *sel = T33_HERA7_ROW_SEL;
+        *sel_val = 4u * j;
+        *reg = T33_HERA7_ROW(j);
+    } else {
+        *sel = T33_HERA_ROW_SEL;
+        *sel_val = *reg = T33_HERA_ROW(j);
+    }
 }
 
 /* i264e_ratecontrol_is_reenc (0x7966c), FRAME_REPEATE_JUDGE skipped (F+0x4c < 0) */
@@ -611,7 +636,7 @@ void t32_rc33_end_rows(T32Rc33 *c, uint32_t bytes, const uint32_t *stats, const 
         e33_st_U32(X, A_TB + 8 * i + 4, stats ? stats[i] : 0);
     /* the HERA window the per-row loop below reads (vendor: /dev/mem) */
     for (unsigned i = 0; i < nrows && i < T33_RC_ROWS; i++)
-        e33_st_U32(X, reg + (0x201u + 2u * i) * 4u, rows[i]);
+        e33_st_U32(X, reg + (P32(T33P_REV) == 7 ? 0x400u + 4u * i : (0x201u + 2u * i) * 4u), rows[i]);
     e33_st_U32(X, A_H + 0xfa8, bytes);
     e33_st_U32(X, A_H + 0x350, 0);
     c->n++;

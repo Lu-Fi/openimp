@@ -107,14 +107,32 @@ int t32_rc33_start(T32Rc33 *c, uint32_t since_idr);
  * in bytes, @stats the T33_RC_STATS engine statistics or NULL */
 void t32_rc33_end(T32Rc33 *c, uint32_t bytes, const uint32_t *stats);
 
-/* HERA (revision 6) after an IDR: vendor i264e_ratecontrol_is_reenc reads
- * the coded size of every 64-line row, for row i by writing 0x13240804 + 8 i
- * to 0x13240044 and reading 0x13240804 + 8 i.  t32_rc33_idr_rows gives the
- * rows the picture in work needs (0: none), t32_rc33_end_rows takes them. */
+/* The HERA revision of the parameter block (P+0x4): vendor libimp 2.0.2.1
+ * EncoderInit sets 7 when system_get_cpu_type() is 1 (system_init: T33 cpu
+ * ids 0xd..0x14), else 6 (T32); i264e_ratecontrol_init maps the HERA
+ * window at 0x13220000 (7) or 0x13240000 (6) (openimp #706). */
+#ifdef PLATFORM_T33
+#define T33_RC_HERA_REV 7u
+#else
+#define T33_RC_HERA_REV 6u
+#endif
+
+/* Per-row coded sizes vendor i264e_ratecontrol_is_reenc reads:
+ * - revision 6, after an IDR: row i by writing 0x13240804 + 8 i to
+ *   0x13240044 and reading 0x13240804 + 8 i;
+ * - revision 7, after every picture: words j = 0 .. 2 n - 1 (n 64-line rows,
+ *   halved above 2048 lines; row = (word 2k+1 & 0x3fff) << 14 | (word 2k &
+ *   0x3fff)), word j by writing 4 j to 0x132203b0 and reading 0x13220400 + 4 j.
+ * t32_rc33_idr_rows gives the words the picture in work needs (0: none),
+ * t32_rc33_row_regs their select / read addresses, t32_rc33_end_rows takes
+ * them. */
 #define T33_RC_ROWS 64
 #define T33_HERA_ROW_SEL 0x13240044u
 #define T33_HERA_ROW(i) (0x13240804u + 8u * (uint32_t)(i))
+#define T33_HERA7_ROW_SEL 0x132203b0u
+#define T33_HERA7_ROW(j) (0x13220400u + 4u * (uint32_t)(j))
 unsigned t32_rc33_idr_rows(T32Rc33 *c);
+void t32_rc33_row_regs(T32Rc33 *c, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg);
 void t32_rc33_end_rows(T32Rc33 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows);
 
 /* The slice block the controller fills at every FRAME_START (vendor
