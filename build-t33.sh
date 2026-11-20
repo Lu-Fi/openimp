@@ -151,6 +151,8 @@ compile t32_sys src/t32/openimp_t32_sys.c
 # region attribute, 200-byte jz_ipu_v13 request with the 2-bit OSD fields),
 # OSD groups as FrameSource receivers (FS -> OSD -> encoder)
 compile t32_osd src/t23/openimp_t23_osd.c -O2
+# T33 (#675): no IPU; the vendor 2.0.2.1 CPU drawing of pictures, covers and bitmaps
+compile t33_osd_sw src/t32/openimp_t33_osd_sw.c -O2
 # Audio (#298): AI/AO on the OSS3 /dev/dsp ABI of the T32 2.x kernel, which is
 # the T41 one (vendor 2.0.0 drivers/audio/oss3 audio_dsp.h); the T41 paths of
 # the shared modules with PLATFORM_T32: P3 AI/AO, DMIC (OSS3 variant), AENC/ADEC,
