@@ -314,23 +314,35 @@ int main(void)
          * leaves the table as read and 256 doubles it.  The table is rescaled
          * from the first read, so repeated calls do not compound. */
         uint32_t sv = 0, tv = 0;
+#ifdef PLATFORM_T30
+/* T30 takes the vendor percentage (#700): 100 = table, 200 cap */
+#define SINTER_NEUTRAL 100
+#define SINTER_DOUBLE 200
+#define SINTER_CAPPED_GET 200
+#define TEMPER_HALF 50
+#else
+#define SINTER_NEUTRAL 128
+#define SINTER_DOUBLE 256
+#define SINTER_CAPPED_GET 1000
+#define TEMPER_HALF 64
+#endif
 
         tbl_calls = 0; tbl_set_table = 0;
-        CHECK(IMP_ISP_Tuning_SetSinterStrength(128) == 0 && tbl_set_table == 109);
+        CHECK(IMP_ISP_Tuning_SetSinterStrength(SINTER_NEUTRAL) == 0 && tbl_set_table == 109);
         CHECK(tbl_last[0][1] == 100 && tbl_last[1][1] == 120 && tbl_last[2][1] == 140);
-        CHECK(IMP_ISP_Tuning_SetSinterStrength(256) == 0);
+        CHECK(IMP_ISP_Tuning_SetSinterStrength(SINTER_DOUBLE) == 0);
         CHECK(tbl_last[0][1] == 200 && tbl_last[1][1] == 240 && tbl_last[2][1] == 280);
         CHECK(tbl_last[0][0] == 10 && tbl_last[2][0] == 12);      /* column 0 untouched */
-        CHECK(IMP_ISP_Tuning_SetSinterStrength(256) == 0 && tbl_last[0][1] == 200);
+        CHECK(IMP_ISP_Tuning_SetSinterStrength(SINTER_DOUBLE) == 0 && tbl_last[0][1] == 200);
         CHECK(IMP_ISP_Tuning_SetSinterStrength(1000) == 0 && tbl_last[0][1] == 200); /* cap 200 % */
-        CHECK(IMP_ISP_Tuning_GetSinterStrength(&sv) == 0 && sv == 1000);
+        CHECK(IMP_ISP_Tuning_GetSinterStrength(&sv) == 0 && sv == SINTER_CAPPED_GET);
         CHECK(IMP_ISP_Tuning_GetSinterStrength(NULL) == -1);
-        CHECK(IMP_ISP_Tuning_SetTemperStrength(64) == 0 && tbl_set_table == 132);
+        CHECK(IMP_ISP_Tuning_SetTemperStrength(TEMPER_HALF) == 0 && tbl_set_table == 132);
         CHECK(tbl_last[0][1] == 50 && tbl_last[1][1] == 60 && tbl_last[2][1] == 70);
-        CHECK(IMP_ISP_Tuning_GetTemperStrength(&tv) == 0 && tv == 64);
+        CHECK(IMP_ISP_Tuning_GetTemperStrength(&tv) == 0 && tv == TEMPER_HALF);
         CHECK(IMP_ISP_Tuning_GetTemperStrength(NULL) == -1);
         isp.tuning_state = 1;
-        CHECK(IMP_ISP_Tuning_SetSinterStrength(128) == -1);
+        CHECK(IMP_ISP_Tuning_SetSinterStrength(SINTER_NEUTRAL) == -1);
         isp.tuning_state = 2;
 
         /* scene mode and colour effect: V4L2 controls 0x9a091a / 0x98091f, value by value */
