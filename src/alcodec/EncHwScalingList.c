@@ -810,7 +810,9 @@ int32_t AL_AVC_WriteEncHwScalingListT41(void *arg1, void *arg2,
     return AL_AVC_WriteEncHwScalingListWithOrder(arg1, arg2, arg3, NULL);
 }
 
-int32_t AL_HEVC_WriteEncHwScalingList(void *arg1, void *arg2, uint32_t *arg3)
+static int32_t AL_HEVC_WriteEncHwScalingListWithOrder(void *arg1, void *arg2,
+                                                      uint32_t *arg3,
+                                                      void *fast8x8)
 {
     uint32_t *i_10 = arg3;
 
@@ -822,12 +824,12 @@ int32_t AL_HEVC_WriteEncHwScalingList(void *arg1, void *arg2, uint32_t *arg3)
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0x3fc, (void *)AL_SLOW_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0x43c, (void *)AL_SLOW_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0x47c, (void *)AL_SLOW_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x1bc, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x1fc, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x23c, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x27c, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x2bc, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
-    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x2fc, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x1bc, fast8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x1fc, fast8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x23c, fast8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x27c, fast8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x2bc, fast8x8, 0x40, &i_10);
+    AL_sWriteInvCoeff((uint8_t *)arg1 + 0x2fc, fast8x8, 0x40, &i_10);
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0x3c, (void *)AL_HEVC_ENC_SCL_ORDER_4x4, 0x10, &i_10);
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0x7c, (void *)AL_HEVC_ENC_SCL_ORDER_4x4, 0x10, &i_10);
     AL_sWriteInvCoeff((uint8_t *)arg1 + 0xbc, (void *)AL_HEVC_ENC_SCL_ORDER_4x4, 0x10, &i_10);
@@ -943,12 +945,12 @@ int32_t AL_HEVC_WriteEncHwScalingList(void *arg1, void *arg2, uint32_t *arg3)
             do {
                 uint8_t *a1_7;
 
-                AL_sWriteFwdCoeffs(&i_10, i_12, 0x10, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8);
+                AL_sWriteFwdCoeffs(&i_10, i_12, 0x10, fast8x8);
                 j_1 += 1;
-                AL_sWriteFwdCoeffs(&i_10, i_8 + 0x100, 0x10, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8);
+                AL_sWriteFwdCoeffs(&i_10, i_8 + 0x100, 0x10, fast8x8);
                 a1_7 = i_8 + 0x200;
                 i_8 += 0x2ee0;
-                AL_sWriteFwdCoeffs(&i_10, a1_7, 0x10, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8);
+                AL_sWriteFwdCoeffs(&i_10, a1_7, 0x10, fast8x8);
                 i_12 = i_8;
             } while (j_1 != 2);
             i_3 += 0x7d0;
@@ -979,4 +981,20 @@ int32_t AL_HEVC_WriteEncHwScalingList(void *arg1, void *arg2, uint32_t *arg3)
                 return result;
         } while (1);
     }
+}
+
+int32_t AL_HEVC_WriteEncHwScalingList(void *arg1, void *arg2, uint32_t *arg3)
+{
+    return AL_HEVC_WriteEncHwScalingListWithOrder(
+        arg1, arg2, arg3, (void *)AL_FAST_HEVC_ENC_SCL_ORDER_8x8);
+}
+
+/* #604: the T41 vendor 1.2.6 AL_HEVC_WriteEncHwScalingList writes the
+ * "fast" 8x8 coefficients in raster order, as its AVC variant (run of the
+ * vendor function on a T41 against this one: equal with a NULL order,
+ * 1200 words apart with the T31/T40 order). */
+int32_t AL_HEVC_WriteEncHwScalingListT41(void *arg1, void *arg2,
+                                         uint32_t *arg3)
+{
+    return AL_HEVC_WriteEncHwScalingListWithOrder(arg1, arg2, arg3, NULL);
 }

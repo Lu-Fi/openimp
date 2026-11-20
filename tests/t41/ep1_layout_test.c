@@ -195,7 +195,7 @@ int main(void)
         unsigned int i;
 
         memset(hevc, 0xa5, sizeof(hevc));
-        assert(openimp_t41_init_hevc_ep1(hevc, sizeof(hevc)) == 0);
+        assert(openimp_t41_init_hevc_ep1(hevc, sizeof(hevc), 0) == 0);
         assert(hevc[51u * 4u + 1u] == 67u && hevc[51u * 4u + 3u] == 59u);
         assert(hevc[37u * 4u + 3u] == 12u && intra[37u * 4u + 3u] == 13u);
         hevc[37u * 4u + 3u] = 13u;
@@ -208,7 +208,7 @@ int main(void)
         assert(openimp_t41_update_ep1_lambda_codec(ep1, sizeof(ep1),
                                                    0u, 0u) == 0);
         assert(ep1[51u * 4u + 1u] == 91u);
-        assert(openimp_t41_init_hevc_ep1(hevc, 0x63ffu) == -1);
+        assert(openimp_t41_init_hevc_ep1(hevc, 0x63ffu, 0) == -1);
     }
 
     puts("T41 EP1 lambda layout: OK");

@@ -298,8 +298,9 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
     lcu_w = (params->width + ctb - 1u) >> log2_ctb;
     lcu_h = (params->height + ctb - 1u) >> log2_ctb;
     lcu_count = lcu_w * lcu_h;
-    /* AVC frame POC is 2n; the HEVC POC steps by one. */
-    picture_step = hevc ? 1u : 2u;
+    /* AVC frame POC is 2n; the HEVC POC steps by one, or by two as the
+     * vendor 1.2.6 (#604, hevc_poc_step2). */
+    picture_step = (hevc && !params->hevc_vendor) ? 1u : 2u;
     picture_word = params->picture_number * picture_step;
     luma_size = openimp_t41_reconstruction_luma_size_ctb(
         params->width, params->height, log2_ctb);
@@ -339,6 +340,8 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
         cmd[3] &= ~0x40000000u;
     if (hevc && params->hevc_cabac_init_idc0)
         cmd[3] &= ~0x00000300u;
+    if (hevc && params->hevc_vendor && !params->is_idr)
+        cmd[3] |= 0x00800000u;      /* vendor 1.2.6 HEVC P pictures */
     cmd[5] = lcu_count - 1u;
 
     if (!params->is_idr) {
@@ -406,9 +409,9 @@ int openimp_t41_build_command(void *slot, size_t slot_size,
     cmd[141] = params->stream_part_offset -
                OPENIMP_T41_STREAM_PAYLOAD_OFFSET;
 
-    /* bit 6 is the channel's scaling-list tool; HEVC runs without
-     * scaling lists (SPS scaling_list_enabled_flag 0). */
-    cmd[152] = hevc ? 0x000000b6u : 0x000000f6u;
+    /* bit 6 is the channel's scaling-list tool; HEVC sets it with the
+     * vendor default scaling lists (#604), else runs without them. */
+    cmd[152] = (hevc && !params->hevc_vendor) ? 0x000000b6u : 0x000000f6u;
     if (params->is_idr)
         cmd[153] = 0x007fe7ffu;
     else

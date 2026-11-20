@@ -13,7 +13,9 @@ int openimp_t40_update_fixqp_ep1_table(void *ep1, size_t size, int is_idr,
 int openimp_t31_init_hevc_ep1(void *ep1, size_t size);
 /* T40 HEVC: HEVC default lambda table and, with scaling_list, the vendor
  * hardware tables of the H.265 default scaling lists at EP1+0x100. */
-#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#if (defined(PLATFORM_T40) && !defined(PLATFORM_T41)) || defined(PLATFORM_T31)
+/* T40, and T31 with the vendor 1.1.6 default scaling lists (#604: the
+ * vendor T31 table equals this writer's output) */
 int openimp_t40_init_hevc_ep1(void *ep1, size_t size, int scaling_list);
 #endif
 
@@ -35,6 +37,7 @@ int openimp_t41_update_ep1_lambda_codec(void *ep1, size_t size,
                                         unsigned int picture_type,
                                         unsigned int hevc);
 /* T41 HEVC: HEVC lambda words for an I picture, no scaling list. */
-int openimp_t41_init_hevc_ep1(void *ep1, size_t size);
+/* scaling_list: also the default scaling-list tables at EP1+0x100 (#604) */
+int openimp_t41_init_hevc_ep1(void *ep1, size_t size, int scaling_list);
 
 #endif

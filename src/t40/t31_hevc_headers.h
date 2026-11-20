@@ -53,13 +53,29 @@ typedef struct {
     uint8_t loop_filter_across_slices;
     int8_t beta_offset_div2;
     int8_t tc_offset_div2;
+    /* #604 vendor T31 1.1.6 / T41 1.2.6 header fields (0 = the old
+     * OpenIMP header): profile compatibility Main only (no Main10 bit),
+     * vps_max_num_reorder_pics, PPS deblocking_filter_override_enabled
+     * (the slice then carries deblocking_filter_override_flag 0) and
+     * lists_modification_present (no slice syntax with one reference). */
+    uint8_t compat_main_only;
+    uint8_t vps_max_num_reorder;
+    uint8_t deblocking_override_enabled;
+    uint8_t lists_modification_present;
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T31)
+    /* SPS, default lists (no data); T40, T41 and T31 (#604) load the matching
+     * hardware tables into EP1 */
+    uint8_t scaling_list_enabled;
+#endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     /* T40: the HEVC core codes transform_skip_flag and cu_qp_delta whatever
      * the command list says, so the headers must enable both (vendor T40
      * headers); scaling lists and the VUI range follow the vendor too. */
-    uint8_t scaling_list_enabled;   /* SPS, default lists (no data) */
-    uint8_t transform_skip_enabled; /* PPS */
     uint8_t video_full_range;       /* VUI */
+#endif
+#if (defined(PLATFORM_T40) && !defined(PLATFORM_T41)) || defined(PLATFORM_T31)
+    /* PPS transform skip: T40 always, T31 as the vendor 1.1.6 (#604) */
+    uint8_t transform_skip_enabled;
 #endif
 } OpenIMPT31HevcConfig;
 
