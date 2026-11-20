@@ -496,7 +496,10 @@ int IMP_AI_DisableDrcAndEq(void)
     return 0;
 }
 
-static void t32_ai_effects(int16_t *samples, int count)
+/* aec_done: the AEC processed this frame; the vendor record thread then
+ * skips NS/AGC/HPF (#712; the T10-T31 beyond-vendor #667 keeps them, not
+ * approved for T32/T33) */
+static void t32_ai_effects(int16_t *samples, int count, int aec_done)
 {
     const IMPAudioIOAttr *attr = &p3_audio.ai_attr;
     int i;
@@ -505,7 +508,7 @@ static void t32_ai_effects(int16_t *samples, int count)
         t32_ten_ms(attr->numPerFrm, attr->samplerate)) {
         int frame = t32_algo_frame(attr->samplerate);
 
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < 3 && !aec_done; i++) {
             switch (t32_ai.order_set ? t32_ai.order[i] : i) {
             case AI_MODULE_NS:
                 if (p3_audio.ns_enabled)
@@ -530,6 +533,261 @@ static void t32_ai_effects(int16_t *samples, int count)
             openimp_t23_ai_pre_effects(samples, count, attr->samplerate);
     }
     t32_apply_volume(samples, samples, (size_t)count, t32_ai.vol_live);
+}
+
+/* ---- AEC and reference frames (#712) ------------------------------------
+ *
+ * Vendor T33 2.0.2.1 (Ghidra t33lib): IMP_AI_EnableAec 0x164130,
+ * IMP_AI_DisableAec 0x16470c, IMP_AI_EnableAecRefFrame 0x162d9c,
+ * IMP_AI_DisableAecRefFrame 0x1631e4, IMP_AI_GetFrameAndRef 0x161efc,
+ * _ai_ref_enable 0x15c25c, __ai_dev_read 0x15a4d0, record thread 0x15b300.
+ * - _ai_ref_enable: AMIC_ENABLE_AEC (pointer to an int 0) and a reference
+ *   ring of depth frames; while reference frames (+0x160) or the AEC (+0x170)
+ *   are on, every AMIC_AI_GET_STREAM carries the ring slot as aec pointer
+ *   (size bytes / channels) and the driver fills it with the playback
+ *   reference.  _ai_ref_disable: AMIC_DISABLE_AEC (pointer to 0).
+ * - EnableAec: device and channel enabled, 16-bit only, returns 0 without
+ *   doing anything while reference frames are on (log 0xda2); libaudioProcess
+ *   audio_process_aec_create(rate, "/etc/webrtc_profile.ini" or the path of
+ *   IMP_AI_Set_WebrtcProfileIni_Path), then _ai_ref_enable.  The record
+ *   thread runs audio_process_aec_process(h, {ref, mic, out, bytes per
+ *   channel}) on frames with a reference and skips NS/AGC/HPF for them.
+ * - EnableAecRefFrame: -1 while the AEC is on (0xc8f "AEC and Ref can not
+ *   enable both"), else _ai_ref_enable and +0x160 = 1.
+ * - GetFrameAndRef: the frame plus the reference of the same slot, same
+ *   attributes and length.
+ * Differences: OpenIMP runs the AEC when the frame is handed out, not in
+ * the record thread (same data and order); without a reference (neither on)
+ * the reference comes back zeroed (the vendor returns a pointer into a NULL
+ * ring); IMP_AI_Disable releases the AEC state. */
+
+typedef struct {
+    void *ref;
+    void *mic;
+    void *out;
+    int len;
+} T32AecFrame;
+
+static int t32_ai_enabled_chn(int device, int channel)
+{
+    return t32_ai_args(device, channel) && p3_audio.ai_enabled &&
+           p3_audio.ai_channel_enabled;
+}
+
+/* _ai_ref_enable: driver reference on, ring of depth reference frames */
+static int t32_ai_ref_enable(void)
+{
+    int offset = 0;
+    unsigned char *ring;
+
+    if (ioctl(p3_audio.fd, AMIC_ENABLE_AEC, &offset) != 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "ai err: AMIC_AI_ENABLE_AEC");
+        return -1;
+    }
+    p3_audio.aec_sample_offset = offset;
+    pthread_mutex_lock(&p3_cap_lock);
+    if (!p3_audio.cap_ref && p3_audio.cap_frame_bytes && p3_audio.cap_depth) {
+        ring = calloc(p3_audio.cap_depth, p3_audio.cap_frame_bytes);
+        if (!ring) {
+            pthread_mutex_unlock(&p3_cap_lock);
+            return -1;
+        }
+        memset(p3_audio.cap_ref_valid, 0, sizeof(p3_audio.cap_ref_valid));
+        p3_audio.cap_ref = ring;
+    }
+    pthread_mutex_unlock(&p3_cap_lock);
+    return p3_audio.cap_ref ? 0 : -1;
+}
+
+/* _ai_ref_disable + the ring release of the Disable* callers; the record
+ * thread drops the reference pointer under p3_cap_lock */
+static int t32_ai_ref_disable(void)
+{
+    int zero = 0;
+    int result = 0;
+
+    if (p3_audio.fd >= 0 && ioctl(p3_audio.fd, AMIC_DISABLE_AEC, &zero) != 0) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "err: __ai_dev_disable_aec");
+        result = -1;
+    }
+    pthread_mutex_lock(&p3_cap_lock);
+    p3_audio.ref_on = 0;
+    if (!p3_audio.aec_on) {
+        free(p3_audio.cap_ref);
+        p3_audio.cap_ref = NULL;
+        memset(p3_audio.cap_ref_valid, 0, sizeof(p3_audio.cap_ref_valid));
+    }
+    pthread_mutex_unlock(&p3_cap_lock);
+    return result;
+}
+
+static void t32_ai_aec_release(void)
+{
+    void *handle;
+
+    pthread_mutex_lock(&p3_cap_lock);
+    handle = p3_audio.aec;
+    p3_audio.aec = NULL;
+    p3_audio.aec_on = 0;
+    p3_audio.ref_on = 0;
+    free(p3_audio.cap_ref);
+    p3_audio.cap_ref = NULL;
+    memset(p3_audio.cap_ref_valid, 0, sizeof(p3_audio.cap_ref_valid));
+    pthread_mutex_unlock(&p3_cap_lock);
+    if (handle && p3_audio.aec_free)
+        (void)p3_audio.aec_free(handle);
+}
+
+/* the AEC on the handed-out frame; 1 when it ran (vendor: then no NS/AGC/HPF) */
+static int t32_ai_aec_run(size_t bytes)
+{
+    T32AecFrame frame;
+    int16_t *mic = (int16_t *)(void *)p3_audio.frame_buffer;
+    int16_t *ref = (int16_t *)(void *)p3_audio.ref_buffer;
+    int stereo = p3_audio.ai_attr.soundmode == AUDIO_SOUND_MODE_STEREO;
+    size_t samples = bytes / sizeof(int16_t) / (stereo ? 2U : 1U);
+    size_t i;
+    int result;
+    int16_t *lane = NULL;
+    unsigned int pick = (unsigned int)p3_audio.ai_channel.aecChn & 1U;
+
+    if (!p3_audio.aec_on || !p3_audio.aec || !p3_audio.ref_valid ||
+        !p3_audio.aec_process)
+        return 0;
+    if (stereo) {
+        /* vendor: the aecChn lane goes through the AEC and back */
+        lane = malloc(samples * sizeof(int16_t));
+        if (!lane)
+            return 0;
+        for (i = 0; i < samples; i++)
+            lane[i] = mic[2 * i + pick];
+    }
+    frame.ref = ref;
+    frame.mic = stereo ? lane : mic;
+    frame.out = frame.mic;
+    frame.len = (int)(bytes / (stereo ? 2U : 1U));
+    result = p3_audio.aec_process(p3_audio.aec, &frame);
+    if (result != 0)
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "ai aec process error.");
+    if (stereo) {
+        for (i = 0; i < samples; i++)
+            mic[2 * i + pick] = lane[i];
+        free(lane);
+    }
+    return 1;
+}
+
+int IMP_AI_EnableAec(int ai_device, int ai_channel, int ao_device, int ao_channel)
+{
+    void *handle;
+
+    (void)ao_device;
+    (void)ao_channel;
+    if (!t32_ai_enabled_chn(ai_device, ai_channel))
+        return -1;
+    if (p3_audio.ai_attr.bitwidth != AUDIO_BIT_WIDTH_16) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "Aec not support bitwidth(%d) > 16.",
+                        (int)p3_audio.ai_attr.bitwidth);
+        return -1;
+    }
+    if (p3_audio.ref_on || p3_audio.aec_on)
+        return 0;               /* vendor 0xda2: logged, nothing enabled */
+    p3_audio.aec_create = (void *(*)(int, const char *))t32_effect_symbol(
+        "audio_process_aec_create");
+    p3_audio.aec_process =
+        (int (*)(void *, void *))t32_effect_symbol("audio_process_aec_process");
+    p3_audio.aec_free =
+        (int (*)(void *))t32_effect_symbol("audio_process_aec_free");
+    if (!p3_audio.aec_create || !p3_audio.aec_process || !p3_audio.aec_free) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "init audioProcess library failed");
+        return -1;
+    }
+    handle = p3_audio.aec_create(p3_audio.ai_attr.samplerate,
+                                 p3_audio.aec_profile[0]
+                                     ? p3_audio.aec_profile
+                                     : "/etc/webrtc_profile.ini");
+    if (!handle) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI", "audio_process_aec_create failed");
+        return -1;
+    }
+    if (t32_ai_ref_enable() != 0) {
+        (void)p3_audio.aec_free(handle);
+        return -1;
+    }
+    pthread_mutex_lock(&p3_cap_lock);
+    p3_audio.aec = handle;
+    p3_audio.aec_on = 1;
+    pthread_mutex_unlock(&p3_cap_lock);
+    return 0;
+}
+
+int IMP_AI_DisableAec(int ai_device, int ai_channel)
+{
+    void *handle;
+
+    if (!t32_ai_enabled_chn(ai_device, ai_channel))
+        return -1;
+    if (!p3_audio.aec_on)
+        return 0;
+    pthread_mutex_lock(&p3_cap_lock);
+    handle = p3_audio.aec;
+    p3_audio.aec = NULL;
+    p3_audio.aec_on = 0;
+    pthread_mutex_unlock(&p3_cap_lock);
+    if (handle && p3_audio.aec_free(handle) != 0)
+        return -1;
+    return t32_ai_ref_disable();
+}
+
+int IMP_AI_EnableAecRefFrame(int ai_device, int ai_channel, int ao_device,
+                             int ao_channel)
+{
+    (void)ao_device;
+    (void)ao_channel;
+    if (!t32_ai_enabled_chn(ai_device, ai_channel))
+        return -1;
+    if (p3_audio.aec_on) {
+        IMP_LOG_LIMITED(LOG_ERR, "AI",
+                        "Internal AEC has enabled. AEC and Ref can not enable both.");
+        return -1;
+    }
+    if (t32_ai_ref_enable() != 0)
+        return -1;
+    pthread_mutex_lock(&p3_cap_lock);
+    p3_audio.ref_on = 1;
+    pthread_mutex_unlock(&p3_cap_lock);
+    return 0;
+}
+
+int IMP_AI_DisableAecRefFrame(int ai_device, int ai_channel, int ao_device,
+                              int ao_channel)
+{
+    (void)ao_device;
+    (void)ao_channel;
+    if (!t32_ai_enabled_chn(ai_device, ai_channel))
+        return -1;
+    if (!p3_audio.ref_on)
+        return 0;
+    return t32_ai_ref_disable();
+}
+
+int IMP_AI_GetFrameAndRef(int device, int channel, IMPAudioFrame *frame,
+                          IMPAudioFrame *reference, IMPBlock block)
+{
+    int result;
+
+    if (!t32_ai_args(device, channel) || !frame || !reference)
+        return -1;
+    result = p3_ai_get_frame(channel, frame, NULL, block);
+    if (result != 0)
+        return result;
+    if (p3_audio.ref_valid) {
+        *reference = *frame;
+        reference->virAddr = (uint32_t *)(void *)p3_audio.ref_buffer;
+    } else {
+        memset(reference, 0, sizeof(*reference));
+    }
+    return 0;
 }
 
 /* ---- AO ---------------------------------------------------------------- */
@@ -558,6 +816,7 @@ static struct {
     int busy;
     int head;
     unsigned generation;        /* ClearChnBuf */
+    int clear_flag;             /* vendor clear_flag: Clear until the next Flush */
     double vol_live;
     double vol_saved;
     int vol;
@@ -610,7 +869,7 @@ static void t32_ao_write(const unsigned char *data, size_t len)
         memset(&stream, 0, sizeof(stream));
         stream.data = (void *)(uintptr_t)data;
         stream.size = (uint32_t)len;
-        if (ioctl(p3_audio.fd, AMIC_AO_SET_STREAM, &stream) != 0)
+        if (ioctl(P3_AO_FD, AMIC_AO_SET_STREAM, &stream) != 0)
             IMP_LOG_LIMITED(LOG_ERR, "AO", "write to /dev/dsp failed");
         /* the driver answers the bytes it took in size */
         if ((int32_t)stream.size <= 0 || stream.size > len)
@@ -700,7 +959,7 @@ int IMP_AO_Enable(int device)
     if (p3_audio.ao_enabled)
         return 0;
     if (p3_audio_parameter(AMIC_AO_SET_PARAM, &p3_audio.ao_attr) != 0 ||
-        ioctl(p3_audio.fd, AMIC_AO_ENABLE_STREAM, 1) != 0) {
+        ioctl(P3_AO_FD, AMIC_AO_ENABLE_STREAM, 1) != 0) {
         p3_audio_maybe_close();
         return -1;
     }
@@ -710,7 +969,7 @@ int IMP_AO_Enable(int device)
     pthread_mutex_unlock(&t32_ao.lock);
     if (pthread_create(&t32_ao.thread, NULL, t32_ao_play_main, NULL) != 0) {
         t32_ao.thread_run = 0;
-        (void)ioctl(p3_audio.fd, AMIC_AO_DISABLE_STREAM, 1);
+        (void)ioctl(P3_AO_FD, AMIC_AO_DISABLE_STREAM, 1);
         p3_audio_maybe_close();
         return -1;
     }
@@ -744,7 +1003,7 @@ int IMP_AO_Disable(int device)
     if (t32_ao.thread_started)
         pthread_join(t32_ao.thread, NULL);
     t32_ao.thread_started = 0;
-    if (ioctl(p3_audio.fd, AMIC_AO_DISABLE_STREAM, 1) != 0) {
+    if (ioctl(P3_AO_FD, AMIC_AO_DISABLE_STREAM, 1) != 0) {
         IMP_LOG_LIMITED(LOG_ERR, "AO", "AMIC_AO_DISABLE_STREAM failed");
         result = 0;     /* vendor: logged only */
     }
@@ -958,7 +1217,23 @@ int IMP_AO_FlushChnBuf(int device, int channel)
 {
     struct timespec deadline;
 
-    if (!t32_ao_ready(device, channel) || !t32_ao.chn_enabled)
+    if (!t32_ao_ready(device, channel))
+        return -1;
+#if defined(PLATFORM_T33)
+    if (t32_ao.clear_flag) {
+        /* vendor T33 2.0.2.1 0x16af50 (#712; T32 2.2.0 0x172e38 has no
+         * clear_flag): after ClearChnBuf the next Flush only empties the
+         * open block: no padded block, no AMIC_AO_SYNC_STREAM */
+        pthread_mutex_lock(&t32_ao.send_lock);
+        if (t32_ao.open_block)
+            memset(t32_ao.open_block, 0, t32_ao.node_bytes);
+        t32_ao.fill = 0;
+        t32_ao.clear_flag = 0;
+        pthread_mutex_unlock(&t32_ao.send_lock);
+        return 0;
+    }
+#endif
+    if (!t32_ao.chn_enabled)
         return -1;
     pthread_mutex_lock(&t32_ao.send_lock);
     if (t32_ao.open_block) {
@@ -976,7 +1251,7 @@ int IMP_AO_FlushChnBuf(int device, int channel)
         ;
     pthread_mutex_unlock(&t32_ao.lock);
     pthread_mutex_unlock(&t32_ao.send_lock);
-    if (ioctl(p3_audio.fd, AMIC_AO_SYNC_STREAM, 0) != 0) {
+    if (ioctl(P3_AO_FD, AMIC_AO_SYNC_STREAM, 0) != 0) {
         IMP_LOG_LIMITED(LOG_ERR, "AO", "ao dev sync chn buf error");
         return -1;
     }
@@ -993,11 +1268,12 @@ int IMP_AO_ClearChnBuf(int device, int channel)
     t32_ao.busy = 0;
     t32_ao.free_n = t32_ao.total;
     t32_ao.head = 0;
-    if (ioctl(p3_audio.fd, AMIC_AO_CLEAR_STREAM, 0) != 0)
+    if (ioctl(P3_AO_FD, AMIC_AO_CLEAR_STREAM, 0) != 0)
         IMP_LOG_LIMITED(LOG_ERR, "AO", "ao dev clear buf error");
     if (t32_ao.open_block)
         memset(t32_ao.open_block, 0, t32_ao.node_bytes);
     t32_ao.fill = 0;
+    t32_ao.clear_flag = 1;
     pthread_cond_broadcast(&t32_ao.done);
     pthread_mutex_unlock(&t32_ao.lock);
     pthread_mutex_unlock(&t32_ao.send_lock);
@@ -1096,7 +1372,7 @@ int IMP_AO_SetGain(int device, int channel, int value)
     memset(&volume, 0, sizeof(volume));
     volume.channel = 1;
     volume.gain[0] = volume.gain[1] = (uint32_t)value;
-    if (ioctl(p3_audio.fd, AMIC_SPK_SET_GAIN, &volume) != 0)
+    if (ioctl(P3_AO_FD, AMIC_SPK_SET_GAIN, &volume) != 0)
         IMP_LOG_LIMITED(LOG_ERR, "AO", "Set ao Play Gain Error");
     t32_ao.gain = value;
     return 0;
