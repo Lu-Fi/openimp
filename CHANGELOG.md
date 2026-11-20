@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: matrix: T33 AO device / channel / attribute / volume / gain cells rt -> nohw (no speaker on the T33L)
+
+- apitest audio on the T33L .122 (audio allowed there, no speaker / mic, user 2026-11-20) with OpenIMP and with vendor libimp 2.0.2.1, both under an LD_PRELOAD trace of the /dev/dsp ioctls: AO attribute 0x4008506f, enable 0x4004505e, volume / gain 0x400c5058 / 0x400c5059 and disable 0x40045064 are the same calls with the same arguments, and the AI side (attribute, enable, frames, volume, gain, disable) as well. `AO_Enable`, `AO_Disable`, `AO_EnableChn`, `AO_DisableChn`, `AO_Get/SetPubAttr`, `AO_Get/SetVol`, `AO_Get/SetGain` -> nohw (the sound is not verifiable on this board). The AO DSP cells (AGC, HPF, algorithms, digital gain, soft mute), SendFrame / buffer / pause cells (the vendor plays from its own thread) and the AEC cells stay rt; the AEC reference path differs from the vendor (#712).
+
 ## 2026-11-20: T31 H.265 stream headers, scaling lists and transform skip like the vendor (#604)
 
 - **Headers:** T31 H.265 VPS/SPS/PPS are now byte-identical to the vendor 1.1.6. They carry the same fields as T41 (High tier, level 5, 10-bit POC lsb, default scaling lists, deblocking override, lists_modification_present) plus PPS transform skip. Slices have POC 2n.

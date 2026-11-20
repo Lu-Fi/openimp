@@ -16303,7 +16303,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16356,7 +16356,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_DisableAgc": {
@@ -16449,7 +16449,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16502,7 +16502,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_DisableHpf": {
@@ -16574,7 +16574,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16623,7 +16623,7 @@
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_EnableAgc": {
@@ -16716,7 +16716,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16765,7 +16765,7 @@
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_EnableHpf": {
@@ -16925,7 +16925,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -16978,7 +16978,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_Get/SetPubAttr": {
@@ -16991,7 +16991,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17044,7 +17044,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_Get/SetVol": {
@@ -17057,7 +17057,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "dev",
         "T41": "rt"
       },
@@ -17110,7 +17110,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
     },
     "AO_PauseChn": {
