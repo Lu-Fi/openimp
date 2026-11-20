@@ -17,7 +17,7 @@
    "total": 1591,
    "branch": "claude/t32-ds-batch",
    "date": "2026-11-13",
-   "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested"
+   "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; the 1591 counts every reference function a conf links (REFS); recount 2026-11-20 (open-tx-isp tests/t32_oracle/refs_audit.py, openimp #645): of 1574 distinct names 1287 are called by an oracle, 158 only named, 129 only linked as callees, and the T33-style real-body audit of T32 is not done"
   }
  },
  "asof": "2026-11-16",

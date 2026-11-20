@@ -16,6 +16,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - **Fix (vendor-equal, 1.0.4 layout).** New `src/t30/t30_ncu.c` (HAL) and `src/t30/t30_ncu_par104.c` (transcribed `ncu_func_par_download`); EnableSensor, EnableTuning, SetISPRunningMode, the 1 s tuning worker and DisableSensor follow the vendor. The 1.0.5 layout (generic SDK bins) is detected and keeps Temper. Details: [docs/T30_NCU.md](docs/T30_NCU.md).
 - **Device test 1 (ABUS) fix.** The first build configured the NCU with the sensor size (vi max 1948x1109) while the NCU receives the cropped ISP output (1920x1080): psn/sta strides (0x68/0x74/0x80), statistics rows 0x94 (0xcd0 vs 0xc80) and the per-gain block counts 0x2c4 / 0x400 described more blocks than arrive, so at the night switch the NCU never finished a frame and isp-m2/m3 stopped. The NCU now takes the CREATE_LINKS geometry (ispw x isph) like vendor 1.0.5 EnableSensor; the mode and day/night switches are logged at info level.
 - **Evidence.** `tests/t30/ncu_test` (in `make check`): every NCU register write identical to the vendor libimp 1.0.4 trace (modes 0 and 1, day and night, 10 gains; host and mipsel). QEMU T30 run: see #701. Device run on the ABUS camera pending.
+## 2026-11-20: T32 proof card shows what the 1591 counts (#645)
+
+- The T32 row of the driver-proof table counted every function a `t32_*_oracle.conf` links (REFS). A source-level recount (`tests/t32_oracle/refs_audit.py` in open-tx-isp, comments stripped): of 1574 distinct reference names 1287 are called by an oracle, 158 are only named (pointer / declaration) and 129 are only linked as callees. The card keeps 1591/1591 but states the recount and that the T33-style real-body audit of T32 is still open. T33 `wired` recount stays on #645.
+
 ## 2026-11-20: T30 black start without an extra buffer (#702)
 
 - **rmem T30:** the black start (`OPENIMP_T30_BLACK_START`, #216, beyond vendor) no longer allocates its own NV12 picture ("t30-helix-black", 3060 KB at 1080p, 4.7 MB at 2048x1536, held for up to 0.5 s). On a 28M T30N that peak did not fit, so the stream started live there.
