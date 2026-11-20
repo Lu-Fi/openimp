@@ -278,10 +278,13 @@ static int root_init(enum openimp_root_id root)
             state.encoder.channels[i].stream_pool_id = -1;
             state.encoder.channels[i].frame_pool_id = -1;
         }
-#if defined(OPENIMP_HELIX_SHARED_BS)
+#if defined(OPENIMP_HELIX_SHARED_BS) && !defined(PLATFORM_T30)
         /* a failure is logged; the first channel tries again */
         (void)OpenIMP_HelixBitstream_Init();
 #endif
+        /* T30: the first CreateChn allocates it at its final size
+         * (width x height x 2 of the channel, src/t30/t30_helix_encoder.c
+         * t30_bitstream_bytes), not the stock vpuBs size first (#697) */
         state.encoder.initialized = 1;
         break;
     case OPENIMP_ROOT_FB:

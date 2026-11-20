@@ -9,15 +9,15 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
-## 2026-11-20: T30 rmem budget, shared vpuBs like the vendor and a Temper buffer of width x height x 4 (#697)
+## 2026-11-20: T30 rmem budget, one shared bitstream buffer and a Temper buffer of width x height x 4 (#697)
 
-- **Shared bitstream buffer (vendor-equal):** T30 H.264 channels no longer get their own w*h*2 bitstream buffer (4050 KB at 1080p, 450 KB at 360p). They use one shared "vpuBs" like the stock 1.0.5 EncoderInit, and every picture gets the whole buffer.
-  - The size follows the stock get_cpu_id: 0xfd200 on T30N/T30L (subtypes 0x3333 and 0x1111, or cppsr 0x10), 0x258000 on the other parts.
-  - `IMP_Encoder_SetPoolSize` before `IMP_System_Init` sets another size.
+- **Shared bitstream buffer:** T30 H.264 channels no longer get their own w*h*2 bitstream buffer (4050 KB at 1080p plus 450 KB at 360p). They share one buffer like the stock "vpuBs", and every picture gets the whole buffer.
+  - The shared buffer has the w*h*2 size of the largest channel (4050 KB at 1080p), or the `IMP_Encoder_SetPoolSize` / stock size when that is larger. The first CreateChn allocates it.
+  - **Why not the stock 0xfd200 on T30N:** the T30 command list has no bitstream end (stock H264E_T30_SliceInit writes only the start), so a large picture is written past the buffer end. On a T30N with a noisy 1080p picture the 1 MiB stock size hung the encoder; the stock stack relies on its rate control alone.
 - **Temper buffer (beyond vendor, user-approved):** "ncubuf" is now width x height x 4 instead of width x width x 4, which saves 6.3 MB at 1920x1080. The driver writes height lines of width x 4 bytes.
-  - A 64 KiB guard behind the frame is checked at DisableSensor, and every N seconds with `OPENIMP_T30_TEMPER_CANARY=N`.
+  - A 64 KiB guard behind the frame is checked at DisableSensor, and every N seconds with `OPENIMP_T30_TEMPER_CANARY=N`. On a T30N with Temper on, the guard stayed intact.
   - `OPENIMP_T30_TEMPER_VENDOR_SIZE=1` restores the vendor size.
-- **Result:** 1080p + 360p needs about 26 MB of rmem on T30N instead of about 32.5 MB.
+- **Result:** 1080p + 360p needs about 25.8 MB of rmem on T30 instead of about 32.5 MB (rmem=28M with JPEG headroom).
 
 ## 2026-11-18: Light box, Eufy T40XP, sc830ai full run 5000 K (#230)
 

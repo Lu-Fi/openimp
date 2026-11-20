@@ -804,14 +804,23 @@ static uint32_t t30_bitstream_bytes(const T30HelixEncoder *encoder)
     (void)encoder;
     return T30_BITSTREAM_WINDOW;
 #elif defined(PLATFORM_T30)
-    /* T30: the command list has no window size either; as the stock 1.0.5
-     * i264e, every picture gets the whole shared "vpuBs" (the pool size:
-     * 0xfd200 on T30N/T30L, 0x258000 on the other T30 parts, or
-     * IMP_Encoder_SetPoolSize), so the buffer never grows per channel
-     * (#697).  The length check after the job drops a picture that did not
-     * fit. */
-    (void)encoder;
-    return OpenIMP_HelixBitstream_PoolSize();
+    /* T30: the command list has no bitstream end (stock 1.0.5
+     * H264E_T30_SliceInit 0x35eb0 writes only the start, 0x90024), so the
+     * VPU writes a large picture past any buffer end.  The stock vpuBs
+     * (0xfd200 on T30N/T30L, 0x258000 otherwise) relies on its rate control
+     * alone; at 1080p a noisy picture overran it and hung the encoder
+     * (#697).  The shared buffer therefore has at least the earlier
+     * per-channel size, width x height x 2, of the largest channel, and the
+     * pool size when that is larger.  Every picture gets the whole buffer. */
+    {
+        uint32_t pool = OpenIMP_HelixBitstream_PoolSize();
+        uint64_t need = (uint64_t)encoder->params.width *
+                        encoder->params.height * 2u;
+
+        if (need > UINT32_MAX - 4096u)
+            need = UINT32_MAX - 4096u;
+        return (uint32_t)need > pool ? (uint32_t)need : pool;
+    }
 #else
     return (encoder->bitstream_kib << 10) + 4096u;
 #endif
