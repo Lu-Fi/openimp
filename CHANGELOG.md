@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-20: matrix: T33 Get/SetGammaAttr err -> dev (#673)
 
 - The T33 API cell still showed the 2026-11-17 FAIL. #673 found it vendor behaviour (the USER curve is copied into the bin table, cv2005 bins section 13 +0x45 = 1) and fixed the apitest restore (b366861d); device run 1117-T33-gamma673 on the T33L: SetGammaAttr PASS (x^0.3 Y 100.6, linear Y 10.2, restored Y 61.4 vs 60.9). `docs/api_evidence.json` cell and ref updated, matrix regenerated (T33 streamer functions 222 -> 224 of 258).
+## 2026-11-20: matrix: T33 AO device / channel / attribute / volume / gain cells rt -> nohw (no speaker on the T33L)
+
+- apitest audio on the T33L .122 (audio allowed there, no speaker / mic, user 2026-11-20) with OpenIMP and with vendor libimp 2.0.2.1, both under an LD_PRELOAD trace of the /dev/dsp ioctls: AO attribute 0x4008506f, enable 0x4004505e, volume / gain 0x400c5058 / 0x400c5059 and disable 0x40045064 are the same calls with the same arguments, and the AI side (attribute, enable, frames, volume, gain, disable) as well. `AO_Enable`, `AO_Disable`, `AO_EnableChn`, `AO_DisableChn`, `AO_Get/SetPubAttr`, `AO_Get/SetVol`, `AO_Get/SetGain` -> nohw (the sound is not verifiable on this board). The AO DSP cells (AGC, HPF, algorithms, digital gain, soft mute), SendFrame / buffer / pause cells (the vendor plays from its own thread) and the AEC cells stay rt; the AEC reference path differs from the vendor (#712).
 
 ## 2026-11-20: T31 H.265 stream headers, scaling lists and transform skip like the vendor (#604)
 
