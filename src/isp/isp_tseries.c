@@ -2059,6 +2059,10 @@ int IMP_ISP_Tuning_GetAntiFlickerAttr(IMPISPAntiflickerAttr *pattr)
     return 0;
 }
 
+#if defined(PLATFORM_T30)
+static void tseries_t30_nr_reapply(void);
+#endif
+
 int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
 {
 #if defined(PLATFORM_T20)
@@ -2094,9 +2098,12 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
         tseries_t20_ccm_apply("SetISPRunningMode");  /* #102 option: retry if not written yet */
 #endif
 #if defined(PLATFORM_T30)
-        /* the driver may load the other day/night table: drop the strength baseline */
+        /* the driver loads the other day/night tables (calibration 109 sinter,
+         * 132 temper) at the next frame end: drop the strength baseline and
+         * scale the fresh tables again (#700) */
         if (mode != tseries_running_mode) {
             tseries_table_baseline_reset();
+            tseries_t30_nr_reapply();
         }
 #endif
         tseries_running_mode = mode;
@@ -3626,6 +3633,37 @@ int IMP_ISP_Tuning_GetSinterStrength(uint32_t *pratio)
     return result;
 #endif
 }
+
+#if defined(PLATFORM_T30)
+/*
+ * #700: SetISPRunningMode makes the driver reload the day or night sinter
+ * (109) and temper (132) tables at the next frame end, which drops a
+ * strength the caller set.  Wait for that frame, then scale the fresh tables
+ * again.  Neutral (100) needs nothing.  Without a running stream the wait
+ * times out and the strength stays at the table until the next Set call.
+ */
+static void tseries_t30_nr_reapply(void)
+{
+    IMPISPWaitFrameAttr wait;
+
+    if (tseries_t2x_sinter_ratio == 100u && tseries_t20_temper_ratio == 100u) {
+        return;
+    }
+    memset(&wait, 0, sizeof(wait));
+    wait.timeout = 100;
+    if (IMP_ISP_Tuning_WaitFrame(&wait) != 0) {
+        IMP_LOG_INFO("IMP-ISP", "SetISPRunningMode: no frame, sinter %u%% / temper %u%% not re-applied",
+                tseries_t2x_sinter_ratio, tseries_t20_temper_ratio);
+        return;
+    }
+    if (tseries_t2x_sinter_ratio != 100u) {
+        (void)IMP_ISP_Tuning_SetSinterStrength(tseries_t2x_sinter_ratio);
+    }
+    if (tseries_t20_temper_ratio != 100u) {
+        (void)IMP_ISP_Tuning_SetTemperStrength(tseries_t20_temper_ratio);
+    }
+}
+#endif
 
 #if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
 int IMP_ISP_Tuning_SetBcshHue(unsigned char hue)
