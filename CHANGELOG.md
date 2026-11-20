@@ -26,6 +26,15 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-20: T32 proof card shows what the 1591 counts (#645)
 
 - The T32 row of the driver-proof table counted every function a `t32_*_oracle.conf` links (REFS). A source-level recount (`tests/t32_oracle/refs_audit.py` in open-tx-isp, comments stripped): of 1574 distinct reference names 1287 are called by an oracle, 158 are only named (pointer / declaration) and 129 are only linked as callees. The card keeps 1591/1591 but states the recount and that the T33-style real-body audit of T32 is still open. T33 `wired` recount stays on #645.
+## 2026-11-20: T33 OSD drawn by the CPU like vendor 2.0.2.1, no /dev/ipu (#675)
+
+- **Behaviour change T33:** `IMP_OSD_*` regions are drawn by the CPU into the NV12 frame; OpenIMP never opens `/dev/ipu` on the T33 (selected by SoC, not by a timeout). The T33 has no IPU (T33L datasheet: image engine = LDC only; the 0x13080000 block takes no writes on the T33L), and vendor libimp 2.0.2.1 does the same: its OSD group update asks `system_get_cpu_type()` and on the T33 (type 1) never calls the IPU drawer.
+  - Before: every OSD job timed out in the kernel (2 s x 10), the first snapshot after a streamer start took 15 s and was black, and no picture or cover was ever drawn.
+  - Pictures (`OSD_REG_PIC`, `OSD_REG_PIC_RMEM`): vendor `osd_draw_pic` / `osd_draw_pic_rgb` (NV12, ARGB, RGBA, ABGR, BGRA, RGB565LE, RGB555LE, BGR555LE; scale, offset, clamp, per-pixel or global alpha, BT.601 integer conversion) in `src/t32/openimp_t33_osd_sw.c`, drawn from the caller's buffer at every frame as the vendor does.
+  - Covers: the vendor's five colours (white, black, red, green, blue; any other colour is black), global alpha. Bitmaps: one luma byte per pixel, 0 transparent, chroma 0x80. Lines, rectangles, slashes and mosaics: the CPU drawers as before. The four-corner rectangle is not drawn (as the vendor update, whose jump table skips type 4).
+  - Like the vendor, a zero scale factor in the group attribute becomes 1.0 and a bitmap rectangle is clamped to the frame in the attribute.
+- Host test `tests/t33` (`make -C tests/t33 check`): 2000 random cases (all formats, alpha modes, scales, clipping; 1451 change the frame) drawn pixel-equal to vendor libimp 2.0.2.1 run under an emulator (`tools/t33_osd_oracle.py`, vectors `tests/t33/vendor-2.0.2.1-osd-sw.txt.gz`).
+- T33L device run (timps with OSD): first snapshot after the start 0.07 s with a normal picture (before 15 s timeout, then black), `/dev/ipu` not opened, the timps overlays are in the picture (bright text pixels in three corners, none before). T32 build unchanged (preprocessed OSD source identical).
 
 ## 2026-11-20: T30 black start without an extra buffer (#702)
 

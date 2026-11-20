@@ -31,6 +31,17 @@
 #if defined(PLATFORM_T32)
 #include "t32/openimp_t32_abi.h"
 #include "t32/openimp_t32_fs.h"
+#endif
+#if defined(PLATFORM_T33)
+#include "t32/openimp_t33_osd_sw.h"
+/* the views of openimp_t33_osd_sw.h on the 2.0.2.1 attributes (32-bit ABI) */
+_Static_assert(offsetof(IMPOSDRgnAttr, rect) == offsetof(T33OsdRgn, x0), "T33 OSD rect");
+_Static_assert(offsetof(IMPOSDRgnAttr, fmt) == offsetof(T33OsdRgn, fmt), "T33 OSD fmt");
+_Static_assert(offsetof(IMPOSDRgnAttr, data) == offsetof(T33OsdRgn, data), "T33 OSD data");
+_Static_assert(sizeof(IMPOSDGrpRgnAttr) == sizeof(T33OsdGrp), "T33 OSD group attribute");
+_Static_assert(offsetof(IMPOSDGrpRgnAttr, gAlphaEn) == offsetof(T33OsdGrp, alpha_en), "T33 OSD gAlphaEn");
+#endif
+#if defined(PLATFORM_T32)
 /* the T32 2.x region attribute pinned in openimp_t32_abi.h (#286) */
 _Static_assert(sizeof(IMPOSDRgnAttr) == sizeof(T32OSDRgnAttrABI), "T32 IMPOSDRgnAttr size");
 _Static_assert(offsetof(IMPOSDRgnAttr, fontData) == offsetof(T32OSDRgnAttrABI, fontData),
@@ -307,6 +318,11 @@ static void load_region(struct t23_osd_region *r)
     case OSD_REG_PIC:
     case OSD_REG_PIC_RMEM:
     case OSD_REG_BITMAP:
+#if defined(PLATFORM_T33)
+        /* T33 (#675): no IPU; the vendor draws from the caller's buffer at
+         * every frame (osd_draw_pic), nothing to convert or copy here */
+        return;
+#endif
         break;
     default:
         return;
@@ -588,6 +604,11 @@ static int ipu_open_locked(void)
         return 0;
     if (osd_ipu_disabled)
         return -1;
+#if defined(PLATFORM_T33)
+    /* T33 (#675): no IPU block; vendor 2.0.2.1 never uses /dev/ipu there */
+    osd_ipu_disabled = 1;
+    return -1;
+#endif
     osd_ipu_fd = open("/dev/ipu", O_RDWR | O_CLOEXEC);
     if (osd_ipu_fd < 0) {
         osd_ipu_disabled = 1;
@@ -605,6 +626,146 @@ static int region_draws_ipu(const struct t23_osd_region *r)
     return (r->attr.type == OSD_REG_PIC || r->attr.type == OSD_REG_PIC_RMEM ||
             r->attr.type == OSD_REG_BITMAP) && r->active >= 0 && r->pic_phys;
 }
+
+#if defined(PLATFORM_T33)
+/*
+ * T33 (#675): the OSD group update of vendor libimp 2.0.2.1 for chip type 1
+ * (static function 0x170794, region-type jump table 0x1dc004): every shown
+ * region of the group in turn, drawn by the CPU into the NV12 frame; no IPU.
+ * Pictures osd_draw_pic, covers and bitmaps as in the update itself
+ * (openimp_t33_osd_sw.c), lines / rectangles / slashes and mosaics with the
+ * CPU drawers below; the four-corner rectangle and the ISP types are not drawn
+ * by this update (the ISP draws its own).  Called with osd_lock held.
+ */
+static void osd_apply_draw_t33(int group, uint32_t width, uint32_t height, uint32_t virt, uint32_t pitch)
+{
+    int order[T23_OSD_REGIONS];
+    int count = 0, i;
+    uint32_t bg_h = (height + 15u) & ~15u;
+    T33OsdFrame sf;
+    T23Frame f;
+
+    if (!virt)
+        return;
+    for (i = 0; i < T23_OSD_REGIONS; i++) {
+        const struct t23_osd_region *r = osd_regions[i];
+        int j;
+
+        if (!r || !(r->registered & (1u << group)) || !r->grp[group].show)
+            continue;
+        for (j = count; j > 0 && osd_regions[order[j - 1]]->grp[group].layer > r->grp[group].layer; j--)
+            order[j] = order[j - 1];
+        order[j] = i;
+        count++;
+    }
+    if (!count)
+        return;
+    sf.width = (int32_t)width;
+    sf.height = (int32_t)height;
+    sf.virt = (uint8_t *)(uintptr_t)virt;
+    memset(&f, 0, sizeof(f));
+    f.y = sf.virt;
+    f.uv = f.y + pitch * bg_h;
+    f.w = width;
+    f.pitch = pitch;
+    f.h = height;
+    /* rows the regions can touch (scaled, offset, clamped), for the cache work */
+    {
+        uint32_t lo = height, hi = 0;
+
+        for (i = 0; i < count; i++) {
+            const struct t23_osd_region *r = osd_regions[order[i]];
+            const IMPOSDGrpRgnAttr *g = &r->grp[group];
+            float sy = g->scaley == 0.0f ? 1.0f : g->scaley;
+            int32_t a, b;
+
+            if (r->attr.type == OSD_REG_MOSAIC) {
+                a = r->attr.mosaicAttr.y;
+                b = a + r->attr.mosaicAttr.mosaic_height;
+            } else if (r->attr.type != OSD_REG_PIC && r->attr.type != OSD_REG_PIC_RMEM &&
+                       r->attr.type != OSD_REG_COVER && r->attr.type != OSD_REG_BITMAP) {
+                /* lines: the plain rectangle plus the line width */
+                int32_t lw = (int32_t)r->attr.data.lineRectData.linewidth;
+
+                a = (r->attr.rect.p0.y < r->attr.rect.p1.y ? r->attr.rect.p0.y : r->attr.rect.p1.y) - lw;
+                b = (r->attr.rect.p0.y > r->attr.rect.p1.y ? r->attr.rect.p0.y : r->attr.rect.p1.y) + lw + 1;
+            } else {
+                a = (int32_t)((float)r->attr.rect.p0.y * sy) + g->offPos.y;
+                b = (int32_t)((float)r->attr.rect.p1.y * sy) + g->offPos.y;
+                if (a > b) {
+                    int32_t t = a;
+                    a = b;
+                    b = t;
+                }
+                b++;
+                if (r->attr.type == OSD_REG_BITMAP)
+                    b = (int32_t)height;   /* clamped by the drawer, offset not scaled */
+            }
+            a = a < 0 ? 0 : a;
+            b = b > (int32_t)height ? (int32_t)height : b;
+            if (a < b) {
+                lo = (uint32_t)a < lo ? (uint32_t)a : lo;
+                hi = (uint32_t)b > hi ? (uint32_t)b : hi;
+            }
+        }
+        if (lo >= hi)
+            return;
+        f.band_y0 = lo & ~1u;
+        f.band_y1 = (hi + 1u) & ~1u;
+    }
+    /* the CPU reads the frame the ISP wrote: drop stale cache lines first */
+    DMA_RmemFlushCache(f.y + f.band_y0 * pitch, (f.band_y1 - f.band_y0) * pitch, 2);
+    DMA_RmemFlushCache(f.uv + f.band_y0 / 2u * pitch, (f.band_y1 - f.band_y0) / 2u * pitch, 2);
+    for (i = 0; i < count; i++) {
+        struct t23_osd_region *r = osd_regions[order[i]];
+        IMPOSDGrpRgnAttr *g = &r->grp[group];
+        T33OsdRgn *v = (T33OsdRgn *)(void *)&r->attr;
+        IMPOSDMosaicAttr m;
+
+        switch (r->attr.type) {
+        case OSD_REG_PIC:
+        case OSD_REG_PIC_RMEM: {
+            void *p = r->attr.data.picData.pData;
+            uint32_t phys = p ? DMA_VirtToPhys(p) : 0;
+
+            /* an rmem picture given by its physical address (IMP_OSD_Alloc) */
+            if (p && phys == (uint32_t)(uintptr_t)p && DMA_PhysToVirt(phys)) {
+                T33OsdRgn tmp = *v;
+
+                tmp.data = (void *)DMA_PhysToVirt(phys);
+                (void)t33_osd_draw_pic(&sf, &tmp, (T33OsdGrp *)(void *)g);
+            } else {
+                (void)t33_osd_draw_pic(&sf, v, (T33OsdGrp *)(void *)g);
+            }
+            break;
+        }
+        case OSD_REG_COVER:
+            (void)t33_osd_draw_cover(&sf, v, (T33OsdGrp *)(void *)g, r->attr.data.coverData.color);
+            break;
+        case OSD_REG_BITMAP:
+            (void)t33_osd_draw_bitmap(&sf, v, (const T33OsdGrp *)(const void *)g);
+            break;
+        case OSD_REG_MOSAIC:
+            m = r->attr.mosaicAttr;
+            m.frame_width = (int)width;
+            m.frame_height = (int)height;
+            (void)mosaic(f.y, &m, (int)pitch);
+            break;
+        case OSD_REG_HORIZONTAL_LINE:
+        case OSD_REG_VERTICAL_LINE:
+        case OSD_REG_RECT:
+        case OSD_REG_SLASH:
+            draw_line_region(&f, r, g);
+            break;
+        default:
+            break;
+        }
+    }
+    /* write the drawn rows back for the encoder / JPEG DMA */
+    DMA_RmemFlushCache(f.y + f.band_y0 * pitch, (f.band_y1 - f.band_y0) * pitch, 1);
+    DMA_RmemFlushCache(f.uv + f.band_y0 / 2u * pitch, (f.band_y1 - f.band_y0) / 2u * pitch, 1);
+}
+#endif
 
 static void osd_apply_draw(int group, void *frame)
 {
@@ -643,6 +804,11 @@ static void osd_apply_draw(int group, void *frame)
         pthread_mutex_unlock(&osd_lock);
         return;
     }
+#if defined(PLATFORM_T33)
+    osd_apply_draw_t33(group, width, height, virt, pitch);
+    pthread_mutex_unlock(&osd_lock);
+    return;
+#endif
 
     /* 1. IPU: covers and pictures, sorted by layer, four per request */
     for (i = 0; i < T23_OSD_REGIONS; i++) {
