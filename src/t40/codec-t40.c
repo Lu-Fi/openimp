@@ -4667,11 +4667,29 @@ static int avpu_t41_fill_command(ALAvpuContext *ctx, void *slot,
      * the first IDR's QP (H.264 40, H.265 35) on every later picture. */
     if (is_idr && !ctx->hwrc_first_idr_qp)
         ctx->hwrc_first_idr_qp = picture_qp ? picture_qp : 1u;
-    if (avpu_hwrc_vendor_qp())
+    if (avpu_hwrc_vendor_qp()) {
         params.hwrc_hold_qp = ctx->hwrc_first_idr_qp;
+        /* #604 (same capture, SetChnQpBounds 20/45 after SetDefaultParam
+         * 18/45): the window bytes are the channel attributes' (0x12/0x2d),
+         * not the SetChnQpBounds window, as T31 and T40 #556. */
+        if (ctx->hwrc_attr_max_qp && ctx->hwrc_attr_max_qp <= 51u &&
+            ctx->hwrc_attr_min_qp <= ctx->hwrc_attr_max_qp) {
+            params.hwrc_min_qp = ctx->hwrc_attr_min_qp;
+            params.hwrc_max_qp = ctx->hwrc_attr_max_qp;
+        }
+    }
     params.picture_number = picture_number;
     params.is_idr = is_idr;
     params.max_picture_bits = ctx->t41_max_picture_bits[is_idr ? 2 : 1];
+    /* #604 (vendor 1.2.6 capture, .34 1080p CBR 1000, uMaxPictureSize
+     * 2000): with only pMaxPictureSize[I] set, the P pictures' word 177
+     * is 5/7 of the I size (H.264 1330 = 2000000 * 5/7 * 95 % * 8/8160,
+     * H.265 3326), not 5/7 of the bit rate (665 / 1663); word 180 bits
+     * 15:0 follow.  OPENIMP_HWRC_VENDOR_QP=0 keeps the bit-rate target. */
+    if (!is_idr && !params.max_picture_bits &&
+        ctx->t41_max_picture_bits[2] && avpu_hwrc_vendor_qp())
+        params.max_picture_bits =
+            (uint32_t)((uint64_t)ctx->t41_max_picture_bits[2] * 5u / 7u);
 
     params.source_y = src_phys;
     params.source_pitch = avpu_src_pitch_hint(src_phys);
@@ -10923,7 +10941,7 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
 #endif
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
     enc->avpu.hwrc_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.hwrc_attr_max_qp = enc->hw_params.max_qp;
 #endif
@@ -12642,7 +12660,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         uint32_t attr_max_qp = enc->avpu.t40_attr_max_qp;
                         uint32_t max_picture_bits = enc->avpu.t40_max_picture_bits;
 #endif
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
                         /* #604: the attribute window survives as on T40 */
                         uint32_t hwrc_attr_min = enc->avpu.hwrc_attr_min_qp;
                         uint32_t hwrc_attr_max = enc->avpu.hwrc_attr_max_qp;
@@ -12653,7 +12671,7 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                         enc->avpu.t40_attr_max_qp = attr_max_qp;
                         enc->avpu.t40_max_picture_bits = max_picture_bits;
 #endif
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
                         enc->avpu.hwrc_attr_min_qp = hwrc_attr_min;
                         enc->avpu.hwrc_attr_max_qp = hwrc_attr_max;
 #endif
@@ -15176,7 +15194,7 @@ int AL_Codec_Encode_SetRcParam(void *codec, void *rcAttr)
     enc->avpu.t40_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.t40_attr_max_qp = enc->hw_params.max_qp;
 #endif
-#if defined(PLATFORM_T31)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
     enc->avpu.hwrc_attr_min_qp = enc->hw_params.min_qp;
     enc->avpu.hwrc_attr_max_qp = enc->hw_params.max_qp;
 #endif
