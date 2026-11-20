@@ -295,8 +295,15 @@ isp_t20_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c
 isp_t21_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c
 	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T21 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c -lpthread
 
-isp_t30_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c
-	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T30 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c -lpthread
+# T30 ISP links the NCU engine (#701).
+T30_NCU_SOURCES := $(ROOT)/src/t30/t30_ncu.c $(ROOT)/src/t30/t30_ncu_par104.c
+
+isp_t30_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(T30_NCU_SOURCES)
+	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T30 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c $(T30_NCU_SOURCES) -lpthread
+
+# T30 NCU engine against the vendor libimp 1.0.4 register trace (#701, fixtures/ncu104_*.txt).
+ncu_test: ncu_test.c ncu_synth_bin.h $(T30_NCU_SOURCES) $(ROOT)/tools/t30_ncu/ncu_oracle_seq.h
+	$(CC) $(CFLAGS) -I$(ROOT)/src/t30 -o $@ ncu_test.c $(T30_NCU_SOURCES) -lpthread
 
 # T31 GetAwbZone (vendor 1.1.x ABI, fresh-statistics contract) against a fake tuning ioctl.
 isp_t31_awbzone_test: isp_t31_awbzone_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/include/imp/imp_isp.h
@@ -378,7 +385,8 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	fs_lifecycle_test_t21 fs_lifecycle_test_t20 fs_lifecycle_test_t23 fs_lifecycle_test_t30 fs_lifecycle_test_t31 \
 	system_test rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \
 	p2_gap_test_t21 p2_gap_test_t20 osd_attach_test isp_gap_test_t21 isp_gap_test_t20 \
-	p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test radix_cmdlist_test radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test codec_rc_helix_test
+	p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test radix_cmdlist_test radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test codec_rc_helix_test ncu_test
+	./ncu_test
 	./codec_rc_helix_test
 	./radix_cmdlist_test
 	./radix_cabac_test
@@ -503,10 +511,11 @@ decoder_test_t30: ../t20/decoder_test.c $(ROOT)/src/t23/openimp_t23_decoder.c $(
 		-DOPENIMP_DECODER_SW_ONLY -I$(ROOT)/src -I$(ROOT)/include -o $@ ../t20/decoder_test.c \
 		$(ROOT)/src/t23/openimp_t23_decoder.c $(ROOT)/src/t23/openimp_t23_jpegdec.c -lpthread
 
-isp_gap_test_t30: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c
+isp_gap_test_t30: isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c $(T30_NCU_SOURCES)
 	$(CC) $(CFLAGS) -Wno-format-security -Wno-unused-result '-D_Static_assert(c,m)=' \
 		-I$(ROOT)/include -I$(ROOT)/src -Wl,--wrap=ioctl -DPLATFORM_T30 -o $@ \
-		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c -lpthread
+		isp_gap_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c \
+		$(T30_NCU_SOURCES) -lpthread
 
 # T30 DMIC (the T31 implementation) against a fake /dev/dsp.
 dmic_t30_test: dmic_t30_test.c $(ROOT)/src/t31/openimp_t31_dmic.c
@@ -516,7 +525,7 @@ dmic_t30_test: dmic_t30_test.c $(ROOT)/src/t31/openimp_t31_dmic.c
 
 clean:
 	$(RM) codec_rc_helix_test p2_t30_enc_test radix_cmdlist_test radix_diff radix_cabac_test radix_hevc_test radix_hevc_chan_test radix_encoder_test radix_smoke radix_hevc_headers.265 hevc_diff hevc_cfg_diff
-	$(RM) p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test
+	$(RM) p2_gap_test_t30 osd_attach_test_t30 isp_gap_test_t30 decoder_test_t30 dmic_t30_test ncu_test
 	$(RM) isp_t31_movestate_test isp_t20_movestate_test isp_t21_movestate_test isp_t30_movestate_test isp_t31_awbzone_test isp_t1x_test_t20 isp_t1x_test_t21 p2_t1x_test_t20 p2_t1x_test_t21
 	$(RM) descriptor_test annexb_test level_test helix_encoder_test \
 		rc_readback_test_t21 rc_readback_test_t20 rc_readback_test_t23 \

@@ -40,6 +40,9 @@
 #include "isp_tseries_dev.h"
 #include "isp_mask_rgb2yuv.h"
 #include "isp_ae_attr.h"
+#if defined(PLATFORM_T30)
+#include "t30/t30_ncu.h"
+#endif
 
 /* Offset of the sensor bus type (IMPSensorInfo.cbus_type) in the ISPDevice
  * copy of the sensor record at 0x28.  The T23 1.3.0 record has a sensor_id
@@ -126,12 +129,16 @@ static IMPISPTemperDenoiseAttr tseries_temper_dns = {
  *  - EnableTuning (0xd76f4) tail: mode 0 -> temper flag (+0x15cc) = 1, Set*Temper* become no-ops; mode 1/2 ->
  *    tuning SET 0x8000084 (TEMPER_BUF, ncubuf phys) then SetTemperDnsAttr({AUTO}).
  *  - SetTemperDnsAttr (0xd6520) / GetTemperDnsAttr (0xd66f8): tuning SET/GET 0x8000083 with the 8-byte attr.
- * OpenIMP has no NCU engine: an ncu bin is reported and Temper is used anyway (the vendor would run the NCU).
+ * NCU engine (#701, src/t30/t30_ncu.c, docs/T30_NCU.md): an ncu bin in the vendor 1.0.4 layout (stock ABUS
+ * firmware libimp 1.0.4, AddSensor 0xc5ed0) selects the 3D mode (flags >> 16 & 3): 0 NCU always on, 1 Temper by
+ * day and NCU at night (SetISPRunningMode), 2 Temper.  A 1.0.5-layout bin (0xec8 bytes) is not supported yet
+ * and falls back to Temper.
  */
 #define TSERIES_T30_CID_TEMPER_ATTR 0x8000083
 #define TSERIES_T30_CID_TEMPER_BUF  0x8000084
 static uint32_t tseries_t30_vi_max_wh;   /* AddSensor S_INPUT result */
-static int tseries_t30_ncu_mode;         /* vendor ISPDevice+0xb0: 0 none, 2 temper */
+static int tseries_t30_ncu_mode;         /* vendor ISPDevice+0xb0: 0 NCU (or none), 1 temper day / NCU night, 2 temper */
+static int tseries_t30_ncu_engine;       /* t30_ncu_hal_init done: the 1 s gain update runs */
 static uint8_t tseries_t30_temper_off;   /* vendor +0x15cc: no temper buffer, Set*Temper* no-ops */
 #endif
 
@@ -1896,6 +1903,21 @@ static void *tseries_tuning_worker(void *unused)
     while (!tseries_tuning_thread_stop) {
         int32_t total_gain = 0;
 
+#if defined(PLATFORM_T30)
+        /* vendor isp_tuning_func_update_total_gain + isp_tuning_func_update_ncu_params
+         * (1.0.4 0xc7320 / 0xc4d80): every second ncu_ctrl_update(total gain) unless
+         * Temper only (mode 2) or the gain is 0 / unreadable. */
+        if (tseries_t30_ncu_engine) {
+            int32_t g = 0;
+
+            if (tseries_tuning_get_val(TISP_CID_TOTAL_GAIN, &g) != 0)
+                g = 0;
+            t30_ncu_set_total_gain(g);
+            if (tseries_t30_ncu_mode != 2 && g != 0)
+                t30_ncu_ctrl_update(g);
+        }
+#endif
+
 #if defined(PLATFORM_T20)
         /* openimp #246: the T20 SDK apical_isp_g_totalgain copy_to_user()s
          * the gain through control->value (see IMP_ISP_Tuning_GetTotalGain);
@@ -2059,8 +2081,28 @@ int IMP_ISP_Tuning_GetAntiFlickerAttr(IMPISPAntiflickerAttr *pattr)
     return 0;
 }
 
+#if defined(PLATFORM_T30)
+/* vendor SetISPRunningMode (1.0.4 0xca010, 1.0.5 0xd8b30), NCU mode 1: ISP core 0x13380040
+ * bit 10 bypasses Temper while the NCU denoises (night). */
+static void tseries_t30_temper_bypass_bit(int set)
+{
+    uint32_t v = 0;
+
+    if (t30_phys_read32(0x13380040, &v) == 0)
+        t30_phys_write32(0x13380040, set ? (v | 0x400u) : (v & ~0x400u));
+}
+#endif
+
 int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
 {
+#if defined(PLATFORM_T30)
+    /* day with NCU mode 1: NCU bypassed, Temper back on (before the driver switches) */
+    if (mode == IMPISP_RUNNING_MODE_DAY && tseries_t30_ncu_engine && tseries_t30_ncu_mode == 1) {
+        t30_ncu_ctrl_bypass(1);
+        tseries_t30_temper_off = 0;
+        tseries_t30_temper_bypass_bit(0);
+    }
+#endif
 #if defined(PLATFORM_T20)
     /* T20 apical_isp_day_or_night_s_ctrl copy_from_user()s the mode from
      * the address in control->value.  An inline value made that copy fail
@@ -2101,6 +2143,20 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
 #endif
         tseries_running_mode = mode;
     }
+#if defined(PLATFORM_T30)
+    /* vendor: after the driver switch, whatever its result.  Mode 1 at night: Temper
+     * bypassed, NCU on with the night set; mode 0: NCU set follows day / night. */
+    if (tseries_t30_ncu_engine) {
+        if (mode == IMPISP_RUNNING_MODE_NIGHT && tseries_t30_ncu_mode == 1) {
+            tseries_t30_temper_bypass_bit(1);
+            tseries_t30_temper_off = 1;
+            t30_ncu_ctrl_bypass(0);
+            t30_ncu_ctrl_update_mode(1);
+        } else if (tseries_t30_ncu_mode == 0) {
+            t30_ncu_ctrl_update_mode(mode == IMPISP_RUNNING_MODE_NIGHT);
+        }
+    }
+#endif
     return result;
 }
 
@@ -5569,12 +5625,64 @@ static void tseries_t30_temper_canary_stop(void)
 
 /* vendor EnableSensor 0xd3fe4 ncu block, temper branch (mode 2): the Temper frame buffer.
  * A failed allocation leaves Temper off (vendor: EnableSensor fails). */
+/* vendor 1.0.4 AddSensor (0xc5ed0) NCU modes 0 and 1: one "ncubuf" for the NCU reference
+ * frames and statistics (mode 1: shared with Temper by day).  Mode 1 takes w*h*4 bytes,
+ * 0x847c00 (1952x1112x4) for the imx307 ("day temper night ncu 1948"); mode 0 the
+ * ncu_hal_buf_size.  A failed allocation leaves the NCU and Temper off. */
+static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32_t h)
+{
+    uint8_t *isp_b = (uint8_t *)isp;
+    const char *sensor = (const char *)(isp_b + 0x28);
+    uint32_t size;
+    void *buf;
+
+    if (w == 0 || h == 0) {
+        printf("error(%s,%d): no sensor size, ncu off\n", "IMP_ISP_EnableSensor", __LINE__);
+        return;
+    }
+    if (mode3d == 1) {
+        if (strcmp(sensor, "imx307") == 0) {
+            puts("day temper night ncu  1948 ******");
+            size = 0x847c00u;
+        } else {
+            size = w * h * 4u;
+        }
+    } else {
+        t30_ncu_hal_init(sensor, (int)w, (int)h);
+        size = t30_ncu_hal_buf_size();
+    }
+    buf = malloc(0x94);
+    if (buf == NULL) {
+        printf("error(%s,%d): maloc err\n", "IMP_ISP_EnableSensor", __LINE__);
+        return;
+    }
+    if (IMP_Alloc(buf, (int32_t)size, "ncubuf") != 0) {
+        printf("error(%s,%d): IMP_Alloc %u bytes, ncu off\n", "IMP_ISP_EnableSensor", __LINE__,
+               (unsigned)size);
+        free(buf);
+        return;
+    }
+    *(void **)(isp_b + 0xac) = buf;
+    if (mode3d == 1)
+        t30_ncu_hal_init(sensor, (int)w, (int)h);
+    t30_ncu_hal_buf_init(((const IMPDMABufferInfo *)buf)->virt_addr,
+                         ((const IMPDMABufferInfo *)buf)->phys_addr, size);
+    t30_ncu_ctrl_bypass(mode3d == 1);
+    tseries_t30_ncu_mode = mode3d;
+    tseries_t30_ncu_engine = 1;
+    tseries_t30_temper_frame_bytes = 0;
+    tseries_t30_temper_guard_phys = 0;
+    kmsg_trace("libimp/ISP: T30 ncu mode %d buffer %u bytes (%ux%u) phys=0x%x\n", mode3d,
+               (unsigned)size, (unsigned)w, (unsigned)h,
+               (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
+}
+
 static void tseries_t30_temper_alloc(ISPDevice *isp)
 {
     uint8_t *isp_b = (uint8_t *)isp;
     uint32_t w = tseries_t30_vi_max_wh >> 16;
     uint32_t h = tseries_t30_vi_max_wh & 0xffffu;
-    uint32_t frame, total;
+    uint32_t frame, total, mode3d = 2;
     char path[64];
     void *buf;
 
@@ -5584,10 +5692,28 @@ static void tseries_t30_temper_alloc(ISPDevice *isp)
         return;
     }
     snprintf(path, sizeof(path), "/etc/sensor/ncu_%s.bin", (const char *)(isp_b + 0x28));
-    if (access(path, R_OK) != 0)
+    switch (t30_ncu_bin_probe(path, &mode3d)) {
+    case T30_NCU_BIN_104:
+        printf("flags = 0x%x\n", (unsigned)mode3d);
+        if (mode3d == 0 || mode3d == 1) {
+            tseries_t30_ncu_alloc(isp, (int)mode3d, w, h);
+            return;
+        }
+        if (mode3d != 2) {
+            printf("error: do not support this 3d mode %u\n", (unsigned)mode3d);
+            return;   /* vendor 1.0.4: no buffer, mode stays 0 (temper off) */
+        }
+        break;
+    case T30_NCU_BIN_105:
+        printf("warn: %s has the 1.0.5 NCU layout, not supported: use temper\n", path);
+        break;
+    case T30_NCU_BIN_INVALID:
+        printf("warn: %s: unknown NCU bin layout: use temper\n", path);
+        break;
+    default:
         printf("warn: do not have %s, try to use temper\n", path);
-    else
-        printf("warn: %s found, but OpenIMP has no NCU: use temper\n", path);
+        break;
+    }
     if (w == 0) {
         printf("error(%s,%d): no sensor width, temper off\n", "IMP_ISP_EnableSensor", __LINE__);
         return;
@@ -5633,6 +5759,10 @@ static void tseries_t30_temper_free(ISPDevice *isp)
     void *buf = *(void **)(isp_b + 0xac);
 
     tseries_t30_temper_canary_stop();
+    if (tseries_t30_ncu_engine) {
+        t30_ncu_deinit();
+        tseries_t30_ncu_engine = 0;
+    }
     if (tseries_t30_temper_guard_phys != 0) {
         tseries_t30_temper_guard_report("DisableSensor");
         tseries_t30_temper_guard_phys = 0;

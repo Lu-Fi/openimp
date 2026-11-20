@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T30 NCU denoise engine (#701; oracle + QEMU, device test pending)
+
+- **Observed.** The stock ABUS T30N firmware (libimp 1.0.4) denoises at night with the NCU from `/etc/sensor/ncu_imx307.bin`; OpenIMP T30 only drove Temper and ignored the file, so at max gain the open stack needed far more bitrate.
+- **Vendor.** `/etc/sensor/ncu_<sensor>.bin` selects the 3D mode (0 NCU always, 1 Temper by day / NCU at night, 2 Temper). libimp programs the NCU block 0x13090000 itself through `/dev/mem`: strides and buffers once, then 122 per-gain registers from 9-point tables at init, at every day/night switch and every second (tuning daemon, total gain). Mode 1 bypasses Temper at night via ISP 0x13380040 bit 10.
+- **Fix (vendor-equal, 1.0.4 layout).** New `src/t30/t30_ncu.c` (HAL) and `src/t30/t30_ncu_par104.c` (transcribed `ncu_func_par_download`); EnableSensor, EnableTuning, SetISPRunningMode, the 1 s tuning worker and DisableSensor follow the vendor. The 1.0.5 layout (generic SDK bins) is detected and keeps Temper. Details: [docs/T30_NCU.md](docs/T30_NCU.md).
+- **Evidence.** `tests/t30/ncu_test` (in `make check`): every NCU register write identical to the vendor libimp 1.0.4 trace (modes 0 and 1, day and night, 10 gains; host and mipsel). QEMU T30 run: see #701. Device run on the ABUS camera pending.
 ## 2026-11-20: T30 black start without an extra buffer (#702)
 
 - **rmem T30:** the black start (`OPENIMP_T30_BLACK_START`, #216, beyond vendor) no longer allocates its own NV12 picture ("t30-helix-black", 3060 KB at 1080p, 4.7 MB at 2048x1536, held for up to 0.5 s). On a 28M T30N that peak did not fit, so the stream started live there.
