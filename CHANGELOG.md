@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T32/T33 apitest: QpBounds effect case, picture size trace, no-pool switch (#99, #706)
+
+- **Tests T32/T33:** new `IMP_Encoder_SetChnQpBounds` case for the 2.x rc unions: bounds 15..20 vs 40..48 (each after a requested IDR, 30 pictures), the mean picture size must drop below half, read-back through `GetChnAttrRcMode`, created bounds restored. T33L device run: vendor 2.0.2.1 H.264 4647 -> 260 B, H.265 4200 -> 228 B; OpenIMP H.264 4225 -> 223 B, H.265 1444 -> 117 B, read back 40..48 on both (vendor-equal).
+- `APITEST_SIZES=1` prints every coded picture size (`*` = IDR); `APITEST_NOPOOL=1` skips the encoder pool binding, because the 64 KB test pool is too small for the real vendor encoder on silicon (hwicodec "malloc buf_base size:489216 failed").
+- Found with it: on the T33 the H.264 controller gets no picture statistics (#706), and `SetSharpness` has no picture effect on the open driver (#707).
+
 ## 2026-11-20: T30 black start without an extra buffer (#702)
 
 - **rmem T30:** the black start (`OPENIMP_T30_BLACK_START`, #216, beyond vendor) no longer allocates its own NV12 picture ("t30-helix-black", 3060 KB at 1080p, 4.7 MB at 2048x1536, held for up to 0.5 s). On a 28M T30N that peak did not fit, so the stream started live there.
