@@ -17,6 +17,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - **T33 only:** after IMP_AO_ClearChnBuf the next IMP_AO_FlushChnBuf only empties the open block (vendor `clear_flag`, 0x16af50; T32 2.2.0 does not have it).
 - **Device check (T33L .122, apitest audio, /dev/dsp ioctl trace):** the ioctl command sequence and the AI/AO fd pattern are identical to the vendor 2.0.2.1 run. GetFrameAndRef gives a 1280-byte frame and a 1280-byte reference; EnableAecRefFrame with the AEC on returns -1, as the vendor.
 - **Differences:** OpenIMP runs the AEC when it hands out the frame, not in the record thread (same data, same order). Without a reference, GetFrameAndRef returns a zeroed reference, where the vendor hands out a pointer into a NULL ring. IMP_AI_Disable releases the AEC state. DisableAec does not wait for the record thread, so one more read in flight can still carry the reference pointer.
+## 2026-11-21: matrix: T33 Get/SetSensorRegister qemu -> dev, SetSharpness rt -> dev (#709, #707)
+
+- open-tx-isp next 12fd4da21 has both fixes: #709 (VIN core-op g/s_register, T32 + T33) and #707 (vendor `tisp_set_sharpness` port). Device run d-dev1 on the T33L .122 (test ko e17e7084 built from those commits): GetSensorRegister reads the cv2005 chip id 0x2005, SetSensorRegister round trip PASS. SetSharpness moves the detail energy 5.06 -> 4.14 (20) / 30.70 (235) / 5.08 restored, against 4.1 / 29.2 on the vendor 2.0.2.1. `docs/api_evidence.json` cells and refs updated, matrix regenerated (T33 streamer functions 224 -> 226 of 258).
 
 ## 2026-11-20: matrix: T33 Get/SetGammaAttr err -> dev (#673)
 
