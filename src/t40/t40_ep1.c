@@ -196,7 +196,7 @@ static int openimp_init_ep1(void *ep1, size_t size, int use_fixqp_lda,
  * HEVC runs without scaling lists, so nothing is written at EP1+0x100.
  */
 
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T31)
 /* H.265 Table 7-6 default 8x8 lists in raster order (intra, inter) and the
  * flat 4x4 lists, as AL_HEVC_DefaultScalingLists8x8/4x4 in the vendor T40
  * libimp 1.3.1 (HEVC_EncUtils.c.o .rodata 0x14 and 0x94). */

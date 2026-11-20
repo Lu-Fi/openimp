@@ -62,8 +62,8 @@ typedef struct {
     uint8_t vps_max_num_reorder;
     uint8_t deblocking_override_enabled;
     uint8_t lists_modification_present;
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
-    /* SPS, default lists (no data); T40 and T41 (#604) load the matching
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T31)
+    /* SPS, default lists (no data); T40, T41 and T31 (#604) load the matching
      * hardware tables into EP1 */
     uint8_t scaling_list_enabled;
 #endif
@@ -71,8 +71,11 @@ typedef struct {
     /* T40: the HEVC core codes transform_skip_flag and cu_qp_delta whatever
      * the command list says, so the headers must enable both (vendor T40
      * headers); scaling lists and the VUI range follow the vendor too. */
-    uint8_t transform_skip_enabled; /* PPS */
     uint8_t video_full_range;       /* VUI */
+#endif
+#if (defined(PLATFORM_T40) && !defined(PLATFORM_T41)) || defined(PLATFORM_T31)
+    /* PPS transform skip: T40 always, T31 as the vendor 1.1.6 (#604) */
+    uint8_t transform_skip_enabled;
 #endif
 } OpenIMPT31HevcConfig;
 

@@ -3276,7 +3276,7 @@ static uint32_t avpu_t40_hevc_tools(void)
 }
 #endif
 
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
 /* #604: HEVC as the vendor T41 1.2.6 (.34 CBR capture; the T31 1.1.6
  * capture shows the same headers plus transform skip, T31 follows
  * separately): High tier, level 5 (150), Main-only compatibility,
@@ -3284,6 +3284,8 @@ static uint32_t avpu_t40_hevc_tools(void)
  * override enabled, lists_modification_present, default scaling lists
  * (SPS flag, EP1 tables, cmd[152] bit 6), cmd[3] bit 23 on P pictures.
  * VPS/SPS/PPS are byte-identical to the vendor's at 1920x1080.
+ * T31 (vendor 1.1.6, .26): the same plus transform skip; Enc1 cmd[0x02]
+ * bits 31/23, cmd[0x08] 0x33 on P, cmd[0x09] bits 31/30/15, POC 2n.
  * OPENIMP_HEVC_VENDOR_HDR=0 restores the old HEVC stream. */
 static int avpu_hevc_vendor_hdr(void)
 {
@@ -3315,9 +3317,12 @@ static void avpu_t31_hevc_config(const ALAvpuContext *ctx,
     /* Always present, so either uCabacInitIdc can be signalled. */
     config->cabac_init_present = 1u;
     config->tmvp_enabled = avpu_t31_hevc_tmvp_enabled() ? 1u : 0u;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
     if (avpu_hevc_vendor_hdr()) {
         config->scaling_list_enabled = 1u;
+#if defined(PLATFORM_T31)
+        config->transform_skip_enabled = 1u;
+#endif
         config->tier = 1u;
         if (config->level_idc < 150u)
             config->level_idc = 150u;
@@ -3371,9 +3376,9 @@ static uint32_t avpu_t31_hevc_write_headers(ALAvpuContext *ctx,
     slice.is_idr = is_idr ? 1u : 0u;
     slice.poc = is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
     slice.ref_poc_delta = 1u;
-#if defined(PLATFORM_T41)
+#if defined(PLATFORM_T31) || defined(PLATFORM_T41)
     /* #604: the vendor counts the HEVC POC in steps of two, as AVC; the
-     * T41 command words follow (hevc_vendor) */
+     * command words follow (T41 hevc_vendor, T31 avpu_t31_hevc_fill_cmd) */
     if (avpu_hevc_vendor_hdr()) {
         slice.poc *= 2u;
         slice.ref_poc_delta = 2u;
@@ -3415,6 +3420,12 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     uint32_t space;
     uint64_t pcm_cap;
 
+#if defined(PLATFORM_T31)
+    const int vendor_hevc = avpu_hevc_vendor_hdr();
+#else
+    const int vendor_hevc = 0;
+#endif
+
     if (!ctb_w || !ctb_h)
         return;
 
@@ -3441,20 +3452,36 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
     cmd[0x09] = (cmd[0x09] & 0x3fffffffu) | 0x00040000u;
     if (!hwrc)
         cmd[0x09] &= ~0x00010000u;
+#if defined(PLATFORM_T31)
+    /* #604 vendor 1.1.6 (.26 CBR 1000): default scaling lists (bits
+     * 31/30, EP1 tables) and transform skip (bit 15) with the SPS/PPS
+     * flags; cmd[0x02] bit 31 always and bit 23 on P, cmd[0x08] 0x33 on
+     * P (as T40). */
+    if (vendor_hevc) {
+        cmd[0x09] |= 0xc0008000u;
+        cmd[0x02] |= 0x80000000u | (is_idr ? 0u : 0x00800000u);
+        if (!is_idr)
+            cmd[0x08] = 0x33000000u;
+    }
+#endif
 
     /* sp+0x74: PCM bytes of one CTB, (8 * 32 * 32 * 1.5) * 5 / 3. */
     cmd[0x0a] = ((ctb * ctb * 8u + ((ctb * ctb) >> 1) * 8u) * 5u / 3u) &
                 0xffffu;
     cmd[0x0b] = ((ctb_w - 1u) & 0x3ffu) << 12;
 
-    /* Picture numbers for the single reference: HEVC POC steps by one,
-     * the collocated picture is the reference. */
+    /* Picture numbers for the single reference: HEVC POC steps by one
+     * (by two as the vendor, #604), the collocated picture is the
+     * reference. */
     if (!is_idr) {
-        cmd[0x0c] = picture_number;
-        cmd[0x0d] = picture_number - 1u;
+        uint32_t poc_step = vendor_hevc ? 2u : 1u;
+
+        cmd[0x0c] = picture_number * poc_step;
+        cmd[0x0d] = (picture_number - 1u) * poc_step;
         cmd[0x0e] = 0u;
-        cmd[0x0f] = picture_number - 1u;
-        cmd[0x10] = picture_number > 1u ? picture_number - 2u : 0xffffffffu;
+        cmd[0x0f] = (picture_number - 1u) * poc_step;
+        cmd[0x10] = picture_number > 1u ? (picture_number - 2u) * poc_step
+                                        : 0xffffffffu;
         cmd[0x11] = 0xffffffffu;
 
         /* InitMERange: HEVC searches the picture size, vertically capped
@@ -13119,9 +13146,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
                                                   interm_total_sz))
 #elif defined(PLATFORM_T31)
                                         (enc->avpu.codec_hevc
-                                            ? openimp_t31_init_hevc_ep1(
+                                            ? openimp_t40_init_hevc_ep1(
                                                   enc->avpu.interm_buf.map,
-                                                  interm_total_sz)
+                                                  interm_total_sz,
+                                                  avpu_hevc_vendor_hdr())
                                             : openimp_t40_init_ep1(
                                                   enc->avpu.interm_buf.map,
                                                   interm_total_sz,

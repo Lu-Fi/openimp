@@ -294,7 +294,7 @@ int openimp_t31_hevc_write_sps(uint8_t *dst, size_t capacity,
     put_ue(&bits, config->log2_max_tb_size - config->log2_min_tb_size);
     put_ue(&bits, config->max_transform_depth_inter);
     put_ue(&bits, config->max_transform_depth_intra);
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T31)
     put_bit(&bits, config->scaling_list_enabled ? 1u : 0u);
     if (config->scaling_list_enabled)
         put_bit(&bits, 0u);         /* sps_scaling_list_data_present_flag */
@@ -362,7 +362,7 @@ int openimp_t31_hevc_write_pps(uint8_t *dst, size_t capacity,
     put_ue(&bits, 0u);              /* num_ref_idx_l1_default_active_minus1 */
     put_se(&bits, 0);               /* init_qp_minus26 */
     put_bit(&bits, 0u);             /* constrained_intra_pred_flag */
-#if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
+#if (defined(PLATFORM_T40) && !defined(PLATFORM_T41)) || defined(PLATFORM_T31)
     put_bit(&bits, config->transform_skip_enabled ? 1u : 0u);
 #else
     put_bit(&bits, 0u);             /* transform_skip_enabled_flag */

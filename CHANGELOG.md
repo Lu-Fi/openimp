@@ -9,12 +9,20 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T31 H.265 stream headers, scaling lists and transform skip like the vendor (#604)
+
+- **Headers:** T31 H.265 VPS/SPS/PPS are now byte-identical to the vendor 1.1.6. They carry the same fields as T41 (High tier, level 5, 10-bit POC lsb, default scaling lists, deblocking override, lists_modification_present) plus PPS transform skip. Slices have POC 2n.
+- **Hardware:** the default scaling-list tables go to EP1+0x100. The existing writer's output equals the vendor T31 table, which I checked by running the vendor function. Enc1 words now as the vendor: cmd[0x09] bits 31/30/15, cmd[0x02] bit 31 always and bit 23 on P, cmd[0x08] 0x33 on P, POC 2n in cmd[0x0c..0x10].
+- **Device check (.26, CBR 1000):** the trace_headers diff against the vendor shows only slice_qp_delta. Clean decode, intact picture over several GOPs. The IDR frame-to-frame MSE is 7.3, against 15.0 before and 14.3 at the vendor.
+- Still different: the IDR target in cmd[0x15]/[0x18] (vendor 0x33e, open 0x50f) and the RC start QP (#610).
+- `OPENIMP_HEVC_VENDOR_HDR=0` restores the old stream.
+
 ## 2026-11-20: T41 H.265 stream headers and scaling lists like the vendor (#604)
 
 - **Headers:** T41 H.265 VPS/SPS/PPS are now byte-identical to the vendor 1.2.6 at 1920x1080. They use High tier, level 5, Main-only compatibility, vps_max_num_reorder_pics 1, a 10-bit POC lsb, default scaling lists, deblocking override enabled and lists_modification_present. Slice headers equal the vendor apart from the QP: POC 2n, delta_poc_s0_minus1 1, deblocking_filter_override_flag 0.
 - **Hardware:** the default scaling-list tables go to EP1+0x100. The T41 coefficient order was found by running the vendor `AL_HEVC_WriteEncHwScalingList` on a T41; the output is byte-equal (host test `t41-hevc-scaling-test`). Command word 152 bit 6, word 3 bit 23 on P pictures and POC 2n in words 8..12 match the vendor too.
 - **Device check (.34, CBR 1000):** clean decode. The jump at the IDR (frame-to-frame MSE 1.7) is smaller than with the old stream (3.0), so no encoder/decoder drift. Still different from the vendor: words 28 (0x48000) and 33 (0x13 vs 0x12), meaning unknown.
-- `OPENIMP_HEVC_VENDOR_HDR=0` restores the old H.265 stream. T31 is not changed yet: its vendor stream has the same headers plus transform skip, and a T31 device check is needed.
+- `OPENIMP_HEVC_VENDOR_HDR=0` restores the old H.265 stream. T31: see the next entry.
 
 ## 2026-11-20: T30 NCU mode / day-night lines reach the log (#705)
 
