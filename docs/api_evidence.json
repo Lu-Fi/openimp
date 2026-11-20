@@ -5762,7 +5762,7 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "host",
+        "T32": "qemu",
         "T33": "dev",
         "T40": "rt",
         "T41": "dev"
@@ -5770,10 +5770,10 @@
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest agg47z-combo 2026-10-29 .184 (open-tx-isp #139): GetFaceAe/SetFaceAe round trip, frames flow, 0 oops",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T32": "open-tx-isp next 7aaa7a08e (#686, 2026-11-20): QEMU -M ingenic-t32 gc4653: SetFaceAe {1,600,300,1300,800,250} -> zones h 3..8 v 3..9, AE target 40 -> 200, exposure up, disable -> 40, 0 oops; t32_aeroi_oracle 40000/0, t32_aechain_oracle 400 cases 0 mismatches",
         "T33": "DEVCHECK 2026-11-16 (ko c15ed736, T33L .N): ROI set/read-back = QEMU vendor, exposure ramp slower while on, baseline again after off"
       },
-      "note": "T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
+      "note": "T32 (2026-11-20, #686): driver/t32 runs the vendor tisp_ae_face_set -> tisp_ae_sepc_area / tisp_ae_roi_point on the live AE (binary oracles + QEMU); not device-tested (no T32 camera). Earlier: T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect."
     },
     "ISP_Tuning_Get/SetFaceAeWeiget": {
       "area": "AE / AWB / AF",
