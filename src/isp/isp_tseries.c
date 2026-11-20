@@ -139,6 +139,7 @@ static IMPISPTemperDenoiseAttr tseries_temper_dns = {
 static uint32_t tseries_t30_vi_max_wh;   /* AddSensor S_INPUT result */
 static int tseries_t30_ncu_mode;         /* vendor ISPDevice+0xb0: 0 NCU (or none), 1 temper day / NCU night, 2 temper */
 static int tseries_t30_ncu_engine;       /* t30_ncu_hal_init done: the 1 s gain update runs */
+static uint32_t tseries_t30_link_wh;      /* CREATE_LINKS result: ISP output ispw << 16 | isph = NCU input */
 static uint8_t tseries_t30_temper_off;   /* vendor +0x15cc: no temper buffer, Set*Temper* no-ops */
 #endif
 
@@ -2098,6 +2099,7 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
 #if defined(PLATFORM_T30)
     /* day with NCU mode 1: NCU bypassed, Temper back on (before the driver switches) */
     if (mode == IMPISP_RUNNING_MODE_DAY && tseries_t30_ncu_engine && tseries_t30_ncu_mode == 1) {
+        IMP_LOG_INFO("IMP-ISP", "T30 day: ncu bypassed, temper on");
         t30_ncu_ctrl_bypass(1);
         tseries_t30_temper_off = 0;
         tseries_t30_temper_bypass_bit(0);
@@ -2148,6 +2150,7 @@ int IMP_ISP_Tuning_SetISPRunningMode(IMPISPRunningMode mode)
      * bypassed, NCU on with the night set; mode 0: NCU set follows day / night. */
     if (tseries_t30_ncu_engine) {
         if (mode == IMPISP_RUNNING_MODE_NIGHT && tseries_t30_ncu_mode == 1) {
+            IMP_LOG_INFO("IMP-ISP", "T30 night: temper bypassed, ncu on (night set)");
             tseries_t30_temper_bypass_bit(1);
             tseries_t30_temper_off = 1;
             t30_ncu_ctrl_bypass(0);
@@ -5633,8 +5636,20 @@ static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32
 {
     uint8_t *isp_b = (uint8_t *)isp;
     const char *sensor = (const char *)(isp_b + 0x28);
+    /* The NCU is configured for the frame it receives: the ISP output after the core crop,
+     * i.e. the CREATE_LINKS geometry (vendor 1.0.5 EnableSensor: ioctl 0x800456d0 result,
+     * vi max only when it is 0).  With the vi max (ABUS 1948x1109 while the NCU gets
+     * 1920x1080, ispw/isph) strides, statistics rows (0x94) and block counts (0x3f8..0x400)
+     * describe 29 lines more than arrive: the NCU never finishes a frame and isp-m2/m3 stop
+     * (#701 device test 1). */
+    uint32_t nw = tseries_t30_link_wh >> 16, nh = tseries_t30_link_wh & 0xffffu;
     uint32_t size;
     void *buf;
+
+    if (nw == 0 || nh == 0) {
+        nw = w;
+        nh = h;
+    }
 
     if (w == 0 || h == 0) {
         printf("error(%s,%d): no sensor size, ncu off\n", "IMP_ISP_EnableSensor", __LINE__);
@@ -5648,7 +5663,7 @@ static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32
             size = w * h * 4u;
         }
     } else {
-        t30_ncu_hal_init(sensor, (int)w, (int)h);
+        t30_ncu_hal_init(sensor, (int)nw, (int)nh);
         size = t30_ncu_hal_buf_size();
     }
     buf = malloc(0x94);
@@ -5664,7 +5679,7 @@ static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32
     }
     *(void **)(isp_b + 0xac) = buf;
     if (mode3d == 1)
-        t30_ncu_hal_init(sensor, (int)w, (int)h);
+        t30_ncu_hal_init(sensor, (int)nw, (int)nh);
     t30_ncu_hal_buf_init(((const IMPDMABufferInfo *)buf)->virt_addr,
                          ((const IMPDMABufferInfo *)buf)->phys_addr, size);
     t30_ncu_ctrl_bypass(mode3d == 1);
@@ -5672,9 +5687,9 @@ static void tseries_t30_ncu_alloc(ISPDevice *isp, int mode3d, uint32_t w, uint32
     tseries_t30_ncu_engine = 1;
     tseries_t30_temper_frame_bytes = 0;
     tseries_t30_temper_guard_phys = 0;
-    kmsg_trace("libimp/ISP: T30 ncu mode %d buffer %u bytes (%ux%u) phys=0x%x\n", mode3d,
-               (unsigned)size, (unsigned)w, (unsigned)h,
-               (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
+    IMP_LOG_INFO("IMP-ISP", "T30 ncu mode %d: ncu %ux%u (vi max %ux%u), ncubuf %u bytes phys 0x%x", mode3d,
+                 (unsigned)nw, (unsigned)nh, (unsigned)w, (unsigned)h, (unsigned)size,
+                 (unsigned)((const IMPDMABufferInfo *)buf)->phys_addr);
 }
 
 static void tseries_t30_temper_alloc(ISPDevice *isp)
@@ -5843,6 +5858,9 @@ int IMP_ISP_EnableSensor(void)
         return -1;
     }
     kmsg_trace("libimp/ISP: EnableSensor CREATE_LINKS ok arg=%d\n", sensor_index);
+#if defined(PLATFORM_T30)
+    tseries_t30_link_wh = (uint32_t)sensor_index;   /* link geometry ispw << 16 | isph (#701) */
+#endif
 
     if (ioctl(isp->fd, TISP_VIDIOC_ENABLE_LINKS, 0) != 0) {
         kmsg_trace("libimp/ISP: EnableSensor ENABLE_LINKS failed errno=%d\n", errno);

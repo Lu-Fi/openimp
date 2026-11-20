@@ -13,6 +13,7 @@ size, start, 0x24 bits 7:0). The denoise itself is configured from user space by
 | mode 0 (NCU always) | `ncu_hal_init`, `ncu_hal_buf_size`, IMP_Alloc "ncubuf", `ncu_hal_buf_init`, `ncu_ctrl_bypass(0)` | same |
 | mode 1 (Temper day, NCU night) | IMP_Alloc w*h*4 (imx307: 0x847c00 = 1952x1112x4), `ncu_hal_init`, `ncu_hal_buf_init`, `ncu_ctrl_bypass(1)`; Temper uses the same buffer (EnableTuning 0x8000084) | same |
 | mode 2 / no file | Temper only | unchanged (w*h*4 + guard, #697) |
+| NCU geometry | 1.0.5 EnableSensor: width/height = CREATE_LINKS (0x800456d0) result = ISP output ispw x isph, vi max only if 0 | same (`tseries_t30_link_wh`); the vi max (ABUS 1948x1109 vs NCU input 1920x1080) stalls the NCU: device test 1 |
 | `ncu_hal_init` 0xe29fc | psn/sta strides 0x68..0xac, 0x24 low byte kept, fread 0x1548 bytes, day set active, first download | `t30_ncu_hal_init` (debug server `/tmp/ncudbg.cfg` not ported) |
 | buffers 0xe52e0 / 0xe4fc8 | ref0 = ref1 = phys (Y) / phys+w*h (UV), statistics at phys+w*h*3/2, 0x88 = 49, 0x94 = rows | `t30_ncu_hal_buf_init` |
 | per-gain download 0xd94b0 | 122 registers 0x180..0x400 from 9-point gain tables (linear / step interpolation), 0x0c = 4 ... 5 | `t30_ncu_par104.c` (transcribed, oracle-checked) |
