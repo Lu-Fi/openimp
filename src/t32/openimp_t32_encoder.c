@@ -925,9 +925,11 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         unsigned nrows = t32_rc_idr_rows(&a->rc), r;
 
         for (r = 0; r < nrows; r++) {
+            uint32_t sel, sv, reg;
+
             rows[r] = 0;
-            if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
-                OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
+            t32_rc_row_regs(&a->rc, r, &sel, &sv, &reg);
+            if (OpenIMP_T32_VpuWriteReg(sel, sv) != 0 || OpenIMP_T32_VpuReadReg(reg, &rows[r]) != 0)
                 rows[r] = 0;
         }
         t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA_STATS, rows, nrows);

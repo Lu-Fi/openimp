@@ -103,6 +103,9 @@ void t32_rc_end(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstat
 /* after an IDR: the HERA per-row coded sizes the controller wants
  * (t32_rc_idr_rows rows, read as T33_HERA_ROW_SEL / T33_HERA_ROW) */
 unsigned t32_rc_idr_rows(T32Rc *rc);
+/* select register, select value and read register of row word @j (H.264:
+ * revision 6 or 7, t32_rc33_row_regs; H.265 the revision 6 pair) */
+void t32_rc_row_regs(T32Rc *rc, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg);
 void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned nstats, const uint32_t *rows,
                      unsigned nrows);
 
