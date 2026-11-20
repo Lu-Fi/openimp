@@ -9,6 +9,14 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-20: T30 Sinter/Temper strength is the vendor percentage (#700)
+
+- **Behaviour change T30:** `IMP_ISP_Tuning_SetSinterStrength` / `SetTemperStrength` take the vendor percentage (100 = tuning table, capped at 200), as the vendor 1.0.5 does with `isp_table_tuning_ratio(109/132, min(ratio, 200))`. Before, OpenIMP read the value on a 128-neutral scale.
+  - timps already converts to percent, so the value was scaled twice: the timps default 128 gave 78 % of the table and 180 gave 94 %. On a T30N at night, strength 180 had no visible effect.
+  - Streamers that pass the vendor percentage (as against the vendor stack) now get the same result on both stacks.
+- `GetSinterStrength` / `GetTemperStrength` return the last percentage set (default 100). The vendor 1.0.5 has no getters.
+- T10/T20/T21 unchanged. Build-tested on T30, T20 and T21; device proof on the T30N pending.
+
 ## 2026-11-20: T30 rmem budget, one shared bitstream buffer and a Temper buffer of width x height x 4 (#697)
 
 - **Shared bitstream buffer:** T30 H.264 channels no longer get their own w*h*2 bitstream buffer (4050 KB at 1080p plus 450 KB at 360p). They share one buffer like the stock "vpuBs", and every picture gets the whole buffer.

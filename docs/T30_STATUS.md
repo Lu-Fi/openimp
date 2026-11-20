@@ -205,7 +205,12 @@ read: 0 oopses, no slab reports (`slub_debug=FZPU`).
 OpenIMP side: `Set/GetSinterStrength` and `Set/GetTemperStrength` scale the driver tables
 109 and 132 through control 0x8000161 like the vendor 1.0.5, and `Get/SetSceneMode` /
 `Get/SetColorfxMode` send the V4L2 controls 0x9a091a / 0x98091f like the vendor (before:
-refused). The stock T30 scene handler is a no-op; the open driver stores the value so that the
+refused). Since 2026-11-20 (#700) the strength argument is the vendor percentage (100 = tuning
+table, capped at 200) as in the vendor 1.0.5 (`SetSinterStrength` 0xcb8f4, `SetTemperStrength`
+0xcb80c); before it was read on a 128-neutral scale, so timps (which already converts to percent)
+got 78 % at its default. The getters return the last percentage set (the vendor 1.0.5 has no
+getters).
+The stock T30 scene handler is a no-op; the open driver stores the value so that the
 getter reads it back (as the open T31 driver), there is no picture effect.
 
 Not shown by QEMU: any picture effect (colour effect, exposure time, the strengths): the
