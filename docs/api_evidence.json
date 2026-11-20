@@ -2296,7 +2296,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "host",
-        "T33": "err",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -2323,7 +2323,7 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
-        "T33": "FAIL apitest t33-1117 2026-11-17 .122: ISP_Tuning_GetGammaAttr: ret=0 type 0 g[0]=0 g[64]=2849 g[128]=4095; ISP_Tuning_SetGammaAttr: ret=0 same value written (set ret 0), read back equal; user curve x^0.3 Y 114.2 vs linear Y 15.9 after 250 ms (settled 102.0 vs 23.3, base 71.4): effect; picture NOT restored (Y 23.1)"
+        "T33": "apitest 1117-T33-gamma673 2026-11-17 .122 (#673): SetGammaAttr PASS (x^0.3 Y 100.6, linear Y 10.2, restored Y 61.4 vs base 60.9), GetGammaAttr ret 0; the earlier dark restore was vendor behaviour (USER curve copied into the bin table, cv2005 bins section 13 +0x45 = 1), apitest restore fixed in OpenIMP next b366861d"
       }
     },
     "ISP_Tuning_Get/SetHLDCAttr": {
