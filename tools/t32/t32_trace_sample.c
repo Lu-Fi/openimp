@@ -159,7 +159,9 @@ static void stream_dump(int n, const IMPEncoderStream *st)
     }
     if (f)
         fflush(f);
-    printf("T32J %d %u packs %u seq %u\n", n, total, st->packCount, st->seq);
+    /* pa 0: the stream buffer is process memory (T33 #391, T32 #743) */
+    printf("T32J %d %u packs %u seq %u pa 0x%08x\n", n, total, st->packCount, st->seq,
+           st->packCount ? st->pack[0].phyAddr : 0u);
     fflush(stdout);
 }
 

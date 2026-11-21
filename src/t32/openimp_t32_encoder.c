@@ -78,8 +78,8 @@
 #include "t32/openimp_t33_hera.h"
 #include "t32/openimp_t33_hera_h265.h"
 int OpenIMP_T32_EncTakeRdBufShareOff(int encChn);    /* openimp_t32_fs_enc_ext.c: SetRdBufShare(0) */
-int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c: SetJpegMultiSectionMode */
 #endif
+int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c: SetJpegMultiSectionMode */
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
 #include "t32/openimp_t32_enc_e1.h"
@@ -98,7 +98,6 @@ int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c
 #define T32_JPEG_MAX_QP     98
 #define T32_JPEG_RETRY_STEP 8           /* quality index step after an over-limit picture */
 #define T32_JPEG_BS_1080P   512000u     /* vendor default stream buffer / limit at 1920x1080 */
-#define T32_JPEG_BS_MIN     65536u
 #define T32_JPEG_VPU_ID     (OI_T32_VPU_HELIX_ID | 1u)
 #define T32_JPEG_VERSION_REG 0x132f0200u
 
@@ -157,8 +156,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t recon_y, recon_c;          /* the last picture's reconstruction (the next reference) */
     int noshare;                        /* SetRdBufShare(0) before CreateChn (#736) */
     uint32_t pp;                        /* no share: the picture buffer the next picture writes */
-    int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
 #endif
+    int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
     /* vendor GetChnAttrRcMode reads the encoder's live parameters (i264e_get_param 3 =
      * i264e_reconfig_rc_get, +0xdc..), which the run-time setters change only at the next IDR
      * (i264e_idr_reconfig): until then the getters show @rb, the attribute before the setter */
@@ -221,10 +220,9 @@ static struct t32_enc_grp enc_grp[T32_ENC_GROUPS];
 static struct t32_enc_chn enc_chn[T32_ENC_CHNS];
 static uint32_t enc_jpeg_bs_size;       /* IMP_Encoder_SetJpegBsSize, 0 = default */
 
-#ifdef PLATFORM_T33
 /*
- * T33 (#391): one 2 x 250 KiB section buffer per engine, shared by all of
- * its channels as vendor libimp 2.0.2.1 has them (rmem "ivpuBs" for HERA,
+ * T33 (#391), T32 (#743): one 2 x 250 KiB section buffer per engine, shared by all of
+ * its channels as vendor libimp 2.0.2.1 / 2.2.0 have them (rmem "ivpuBs" for HERA,
  * "jpegBs" for JPEG); a channel holds the engine's lock from START until
  * the last part is copied out.  A channel with another section size
  * (OPENIMP_T32_HERA_SECTION_KB, test only) keeps its own buffer.
@@ -308,8 +306,6 @@ static void t33_bs_put(struct t32_enc_chn *e)
     memset(&e->avc.ebs, 0, sizeof(e->avc.ebs));
     e->avc.bs_engine = 0;
 }
-
-#endif
 
 static struct t32_enc_chn *chn_get(int n)
 {
@@ -442,10 +438,10 @@ static void jpeg_fill_job(struct t32_enc_chn *e, const IMPFrameInfo *f, const T3
     j->limit_bs_len = bs->size;
 }
 
-#ifdef PLATFORM_T33
-static int h264_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t *at,
-                     uint32_t from, uint32_t to, int half, int *esc);
+static inline int sec_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t *at,
+                           uint32_t from, uint32_t to, int half);
 
+#ifdef PLATFORM_T33
 /*
  * T33 (#391): vendor libimp 2.0.2.1 runs the JPEG engine in sections:
  * the job's stream address is the 2 x 250 KiB section buffer, no length
@@ -463,7 +459,7 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
     for (;;) {
         T32IocJpegRegInfo *j = t32_vpu_buf_va(&e->job);
         uint32_t at = 0, k = 0, sec = e->avc.section_kb * 1024u;
-        int full = 0, esc = 0;
+        int full = 0;
 
         jpeg_fill_job(e, f, &e->avc.ebs, index);
         /* control word as vendor 2.0.2.1 on the T33L silicon (job dump,
@@ -483,8 +479,8 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
                 break;
             /* a full half, as vendor ijpege_encode (#742) */
             if (r.output_len >= (k + 1u) * sec) {
-                if (h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, (k + 1u) * sec,
-                              (int)(k & 1u), &esc) != 0)
+                if (sec_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, (k + 1u) * sec,
+                             (int)(k & 1u)) != 0)
                     full = 1;
                 k++;
                 e->avc.sections++;
@@ -493,8 +489,7 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
                 return -1;
         }
         if (r.rc == 0 && r.output_len > 0 && !full &&
-            h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, r.output_len, (int)(k & 1u),
-                      &esc) == 0) {
+            sec_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, r.output_len, (int)(k & 1u)) == 0) {
             *len = at;
             return 0;
         }
@@ -525,7 +520,13 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     return rc;
 }
 #else
-/* one picture into a free slot: 0 with the length, -1 dropped */
+/*
+ * T32 (#743): the PRJ007 helix driver has no JPEG section mode (wait_bs_complete / set_bsfull_reg only
+ * with CONFIG_SOC_PRJ008; vendor 2.2.0 ijpege_encode 0x7b578 takes its whole-picture path, codec
+ * buffer + 1320 / limit + 1312), so the engine writes into the channel's rmem output buffer (ebs) and
+ * the picture is copied into the stream slot (process memory, as the vendor's malloc'd one).  A
+ * picture over the buffer is coded again with a lower quality.
+ */
 static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s,
                        uint32_t *len)
 {
@@ -533,7 +534,7 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     T32VpuResult r;
 
     for (;;) {
-        jpeg_fill_job(e, f, &s->bs, index);
+        jpeg_fill_job(e, f, &e->avc.ebs, index);
         OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&e->job), T32_JPEG_JOB_BYTES, OI_T32_VPU_FLUSH_WBACK);
         if (vpu_test_mode()) {          /* the two-step path: START, WAIT_COMPLETE */
             if (OpenIMP_T32_VpuStart(&e->vpu, T32_JPEG_VPU_ID, t32_vpu_buf_pa(&e->job)) != 0 ||
@@ -542,12 +543,13 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         } else if (OpenIMP_T32_VpuRun(&e->vpu, T32_JPEG_VPU_ID, t32_vpu_buf_pa(&e->job), &r) != 0) {
             return -1;
         }
-        if (r.rc == 0 && r.output_len > 0 && r.output_len <= s->bs.size) {
-            OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&s->bs), r.output_len, OI_T32_VPU_FLUSH_INV);
+        if (r.rc == 0 && r.output_len > 0 && r.output_len <= e->avc.ebs.size && r.output_len <= s->bs.size) {
+            OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&e->avc.ebs), r.output_len, OI_T32_VPU_FLUSH_INV);
+            memcpy(t32_vpu_buf_va(&s->bs), t32_vpu_buf_va(&e->avc.ebs), r.output_len);
             *len = r.output_len;
             return 0;
         }
-        if (r.rc != OI_T32_VPU_RET_JPEG_BSLESS || index >= T32_JPEG_MAX_QP) {
+        if ((r.rc != OI_T32_VPU_RET_JPEG_BSLESS && r.rc != 0) || index >= T32_JPEG_MAX_QP) {
             IMP_LOG_ERR(TAG, "JPEG job: result 0x%lx status 0x%x length %u", r.rc, r.status,
                         r.output_len);
             return -1;
@@ -556,10 +558,9 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
                 index + T32_JPEG_RETRY_STEP;
         e->retries++;
         IMP_LOG_WARN(TAG, "picture over the %u byte buffer, again at quality index %u",
-                     s->bs.size, index);
+                     e->avc.ebs.size, index);
     }
 }
-
 #endif
 
 /* ---- H.264 on HERA ---------------------------------------------------------- */
@@ -604,11 +605,31 @@ static void h264_set_qp(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *rc)
     }
 }
 
-/* the engine's next part (bytes @from..@to of the picture, in half @half)
- * escaped onto the slot: 0, -1 when the slot is full */
+/* the engine's next part (bytes @from..@to of the picture, in half @half) copied onto the slot as it is:
+ * 0, -1 when the slot is full (JPEG; T33 HERA v1.6) */
+static inline int sec_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t *at,
+                           uint32_t from, uint32_t to, int half)
+{
+    uint32_t half_bytes = e->avc.section_kb * 1024u, n = to - from;
+    const uint8_t *src = (const uint8_t *)t32_vpu_buf_va(&e->avc.ebs) + (half ? half_bytes : 0u);
+
+    if (to < from || n > half_bytes || *at + n > cap)
+        return -1;
+    OpenIMP_T32_VpuFlush(src, n, OI_T32_VPU_FLUSH_INV);
+    memcpy(out + *at, src, n);
+    *at += n;
+    return 0;
+}
+
+/* the same for H.264 / H.265; the T32 HERA leaves the emulation prevention to us */
 static int h264_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t *at,
                      uint32_t from, uint32_t to, int half, int *esc)
 {
+#ifdef PLATFORM_T33
+    /* HERA v1.6: the core added the emulation prevention bytes (SDE bit 7) */
+    (void)esc;
+    return sec_take(e, out, cap, at, from, to, half);
+#else
     uint32_t half_bytes = e->avc.section_kb * 1024u, n = to - from;
     const uint8_t *src = (const uint8_t *)t32_vpu_buf_va(&e->avc.ebs) + (half ? half_bytes : 0u);
 
@@ -616,21 +637,12 @@ static int h264_take(struct t32_enc_chn *e, uint8_t *out, uint32_t cap, uint32_t
         return -1;
     if (!n)
         return 0;
-#ifdef PLATFORM_T33
-    /* HERA v1.6: the core added the emulation prevention bytes (SDE bit 7) */
-    (void)esc;
-    if (*at + n > cap)
-        return -1;
-    OpenIMP_T32_VpuFlush(src, n, OI_T32_VPU_FLUSH_INV);
-    memcpy(out + *at, src, n);
-    *at += n;
-#else
     if (*at + n + n / 2u + 1u > cap)
         return -1;
     OpenIMP_T32_VpuFlush(src, n, OI_T32_VPU_FLUSH_INV);
     *at += (uint32_t)t32_h264_escape(out + *at, src, n, esc);
-#endif
     return 0;
+#endif
 }
 
 static void h264_pack(struct t32_enc_slot *s, uint32_t off, uint32_t len, int type, int64_t ts)
@@ -648,11 +660,10 @@ static void h264_pack(struct t32_enc_slot *s, uint32_t off, uint32_t len, int ty
 static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_t cap, uint32_t *at,
                     int *esc, const uint32_t *stat_regs, unsigned nstats);
 
-/* hera_run; on the T33 under the HERA section buffer's lock while it is shared (#391) */
+/* hera_run under the HERA section buffer's lock while it is shared (T33 #391, T32 #743) */
 static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_t cap, uint32_t *at,
                            int *esc, const uint32_t *stat_regs, unsigned nstats)
 {
-#ifdef PLATFORM_T33
     int rc;
 
     if (e->avc.bs_engine)
@@ -663,9 +674,6 @@ static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, 
         pthread_mutex_unlock(&t33_bs[e->avc.bs_engine - 1].lock);
     }
     return rc;
-#else
-    return hera_run(e, pairs, out, cap, at, esc, stat_regs, nstats);
-#endif
 }
 
 /* start the channel's rate control from @m (#295); @again: a rate control
@@ -1610,9 +1618,9 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     return 0;
 }
 
-#ifdef PLATFORM_T33
 /*
- * Vendor 2.0.2.1 CreateChn (#740): the channel's stream buffer size (channel table word +0xc, what Query's
+ * Vendor 2.0.2.1 CreateChn (#740), T32 2.2.0 CreateChn 0xdbe7c the same (#743: 801 / 601 0xdc22c / 0xdc60c,
+ * 0x4100 0xdc658, 1921 / 1089 0xdc6e4, 4-byte round 0xdc26c; the buffer is malloc'd, 0xd6cc0): the channel's stream buffer size (channel table word +0xc, what Query's
  * leftStreamBytes counts down from).  No encAttr.bufSize: w x h x 3 x 0.5 + 8192 + 128 for every type.  An
  * H.264 / H.265 bufSize is raised to (w x h x 3 x 0.5 / f) x 0.5 + 8320, at least 0x4100, f = 2.0 up to
  * 1920x1088 (H.264, RdBufShare on) or 800x600 (H.264 RdBufShare off, H.265), else 2.5 / 3.0.  JPEG: capped at
@@ -1646,8 +1654,11 @@ static uint32_t t33_bs_size(const IMPEncoderCHNAttr *a, int share)
     }
     return (size + 3u) & ~3u;
 }
-#else
-static uint32_t jpeg_bs_size(const IMPEncoderCHNAttr *a)
+
+#ifndef PLATFORM_T33
+/* T32 (#743): the JPEG engine's output buffer in rmem (the old stream buffer size: bufSize, SetJpegBsSize or
+ * 512000 scaled from 1920x1080, at least 64 KiB) */
+static uint32_t t32_jpeg_out_size(const IMPEncoderCHNAttr *a)
 {
     uint64_t area = (uint64_t)a->encAttr.picWidth * a->encAttr.picHeight, size;
 
@@ -1657,26 +1668,15 @@ static uint32_t jpeg_bs_size(const IMPEncoderCHNAttr *a)
         return (enc_jpeg_bs_size + 4095u) & ~4095u;
     size = (T32_JPEG_BS_1080P * area + 1920u * 1080u - 1u) / (1920u * 1080u);
     size = (size + 4095u) & ~(uint64_t)4095u;
-    return size < T32_JPEG_BS_MIN ? T32_JPEG_BS_MIN : (uint32_t)size;
-}
-
-static uint32_t h264_bs_size(const IMPEncoderCHNAttr *a)
-{
-    uint32_t size = a->encAttr.bufSize ? a->encAttr.bufSize :
-                    (uint32_t)ALIGN16(a->encAttr.picWidth) * ALIGN16(a->encAttr.picHeight);
-
-    size = (size + 4095u) & ~4095u;
-    return size < 262144u ? 262144u : size;
+    return size < 65536u ? 65536u : (uint32_t)size;
 }
 #endif
 
-/* the HERA section buffer: per channel; on the T33 the engine's shared one (#391) */
+/* the HERA section buffer: the engine's shared one (T33 #391, T32 #743); per channel only with a test section size */
 static int ebs_alloc(struct t32_enc_chn *e)
 {
-#ifdef PLATFORM_T33
     if (e->avc.section_kb == T32_HERA_SECTION_KB)
         return t33_bs_get(e);
-#endif
     return OpenIMP_T32_VpuBufAlloc(&e->avc.ebs, 2u * e->avc.section_kb * 1024u, "t32_hera_bs");
 }
 
@@ -1686,9 +1686,7 @@ static void h264_free(struct t32_enc_chn *e)
 
     OpenIMP_T32_VpuBufFree(&e->avc.list);
     OpenIMP_T32_VpuBufFree(&e->avc.ring);
-#ifdef PLATFORM_T33
     t33_bs_put(e);                      /* the engine's shared buffer: not ours to free */
-#endif
     OpenIMP_T32_VpuBufFree(&e->avc.ebs);
     for (i = 0; i < T32_HERA5_AUX; i++)
         OpenIMP_T32_VpuBufFree(&e->avc.aux[i]);
@@ -1796,12 +1794,12 @@ static int h264_setup(struct t32_enc_chn *e)
     return 0;
 }
 
-#ifdef PLATFORM_T33
 /*
- * T33 (#391): the engines write into the 2 x 250 KiB section
+ * T33 (#391), T32 (#743): the engines write into the 2 x 250 KiB section
  * buffer only and every picture is copied out of it, so the stream slots
- * are process memory, as vendor libimp 2.0.2.1 has them (packs with
- * phyAddr 0): the T33L's 12.4 MiB rmem holds the engines' buffers alone.
+ * are process memory, as vendor libimp 2.0.2.1 / 2.2.0 (malloc at T32
+ * 0xd6cc0, pointer chn+500, size chn+504) have them (packs with phyAddr 0):
+ * rmem holds the engines' buffers alone.
  */
 static int slot_buf_alloc(T32VpuBuf *b, uint32_t size)
 {
@@ -1820,22 +1818,6 @@ static void slot_buf_free(T32VpuBuf *b)
     free(t32_vpu_buf_va(b));
     memset(b, 0, sizeof(*b));
 }
-#else
-static int slot_buf_alloc(T32VpuBuf *b, uint32_t size)
-{
-    if (OpenIMP_T32_VpuBufAlloc(b, size, "t32_jpeg_bs") != 0)
-        return -1;
-    /* the CPU never writes a stream buffer again: no dirty line may
-     * land on the engine's output later */
-    DMA_RmemFlushCache(t32_vpu_buf_va(b), b->size, 1);
-    return 0;
-}
-
-static void slot_buf_free(T32VpuBuf *b)
-{
-    OpenIMP_T32_VpuBufFree(b);
-}
-#endif
 
 #ifdef PLATFORM_T33
 /* IMP_Encoder_SetMaxStreamCnt before CreateChn (vendor: the channel table field survives the CreateChn memset) */
@@ -1932,9 +1914,6 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 #else
     e->max_streams = T32_ENC_DEF_STREAMS;
 #endif
-#ifndef PLATFORM_T33
-    e->bs_size = e->h264 ? h264_bs_size(attr) : jpeg_bs_size(attr);
-#endif
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
     chn_info(encChn, e, &ci);
@@ -1952,11 +1931,20 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 #ifdef PLATFORM_T33
     /* after h264_setup: it took the SetRdBufShare switch (#736) */
     e->bs_size = t33_bs_size(attr, !(e->h264 && e->avc.noshare));
+#else
+    e->bs_size = t33_bs_size(attr, 1);
+#endif
+#ifdef PLATFORM_T33
     /* JPEG out through 2 x 250 KiB sections, as the vendor (jpegBs, #391);
      * H.26x keeps h264_setup's (the OPENIMP_T32_HERA_SECTION_KB test knob, #746) */
-    if (!e->h264)
+    if (!e->h264) {
         e->avc.section_kb = T32_HERA_SECTION_KB;
-    if (!e->h264 && t33_bs_get(e) != 0)
+        if (t33_bs_get(e) != 0)
+            goto fail_bufs;
+    }
+#else
+    /* JPEG out through the channel's whole-picture rmem buffer (#743) */
+    if (!e->h264 && OpenIMP_T32_VpuBufAlloc(&e->avc.ebs, t32_jpeg_out_size(attr), "t32_jpeg_bs") != 0)
         goto fail_bufs;
 #endif
     if (chn_alloc_bufs(e, alloc_streams(e->max_streams)) != 0)

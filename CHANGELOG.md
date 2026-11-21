@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32 encoder stream buffers in process memory, size like vendor 2.2.0 (#743)
+
+- **Cause:** T32 CreateChn allocated every stream slot in rmem (ALIGN16(w) x ALIGN16(h), at least 256 KiB, for H.264 / H.265; 512000 scaled by the area for JPEG), and each H.264 / H.265 channel had its own 2 x 250 KiB HERA section buffer. Vendor T32 2.2.0 mallocs the stream buffer (internal create 0xd6cc0, pointer chn+500, size chn+504; the only rmem IMP_Alloc of CreateChn is a 0xb000 buffer at 0xd73e0) with the #740 size formula (CreateChn 0xdbe7c: 801 / 601 at 0xdc22c / 0xdc60c, 0x4100 at 0xdc658, 1921 / 1089 at 0xdc6e4).
+- **Fix (T32 build):** stream slots are calloc'd process memory (packs with phyAddr 0) sized by the #740 formula (`t33_bs_size`, RdBufShare on); H.264 / H.265 channels share the engine's 2 x 250 KiB HERA section buffer as on the T33 (#391). JPEG: the PRJ007 helix driver has no JPEG section mode (wait_bs_complete / set_bsfull_reg only with CONFIG_SOC_PRJ008), so the engine writes into one rmem output buffer per JPEG channel (the old JPEG size) and the picture is copied into the slot. T33 unchanged.
+- **Evidence:** QEMU -M ingenic-t32 (PRJ007 gc4653, audit/issue743/qrun.sh): JPEG 10/10 and H.264 30/30 streams, every pack phyAddr 0, ffmpeg decode 0 errors, test pattern correct, 0 oops. No T32 device.
+
 ## 2026-11-21: T33 OPENIMP_T32_HERA_SECTION_KB test knob works for H.264 / H.265 again; #742 reproducible in QEMU (#746)
 
 - **Fix (T33 build, test knob only):** CreateChn set the 250 KiB half for every codec after `h264_setup` had taken the knob; now only for JPEG. Default behaviour unchanged.
