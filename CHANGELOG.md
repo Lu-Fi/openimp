@@ -14,6 +14,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `T32_ENC_RDBS=0|1` calls `IMP_Encoder_SetRdBufShare(0, v)` before CreateChn (row 37 QEMU list check: the vendor 2.0.2.1 clears BUF_SHARE bit 31 in ODMA_CTRL / JRFD_CTRL and uses separate reference surfaces, OpenIMP ignores the flag, #736; the default lists are equal).
 - `T32_ENC_QUERY=1` prints `IMP_Encoder_Query` after the poll, after GetStream and after ReleaseStream (row 44: frames / bytes / registered like the vendor; work_done and the IDR curPacks differ, #738).
 - Test tool only, no library change.
+## 2026-11-21: T32/T33 H.264 SPS level_idc and PPS pic_init_qp like vendor i264e (#502)
+
+- **Cause:** the T32/T33 SPS took the T30 Helix level table (floor 3.1, bitrate check) and the PPS coded pic_init_qp = the initial I QP for every rate control mode; 640x360 15 fps CBR gave level_idc 31 and pic_init_qp_minus26 4, the vendor 22 and 0.
+- **Fix (T32 + T33):** `t32_h264_level` is the vendor auto level (2.0.2.1 / 2.2.0 `i264e_validate_parameters` with `i264e_param_default` level -1 and mv_range -1: first `i264e_levels` entry 10, 9, 11 ... 52 that `i264e_validate_levels` accepts: frame size, MB width/height square rule, DPB x 1, MB rate; no bitrate check). `i264e_pps_init`: pic_init_qp 26, CQP (FIXQP) the constant QP clipped to 51. Slice QPs stay coded relative to it.
+- **Evidence:** QEMU -M ingenic-t33 (vendor userland, apitest t33e1): `e1 H264 base stream` SPS `67640016...`, PPS `68ee3ce1...`, all H.264 base / VUI lines equal to the vendor run; hera_list_test: new 2.0.2.1 SPS/PPS vectors, the 2.2.0 FIXQP vectors stay identical. TransCfg chroma offset / crop SPS rows stay #480 cache rows.
 
 ## 2026-11-21: T32 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.2.0 (#734)
 

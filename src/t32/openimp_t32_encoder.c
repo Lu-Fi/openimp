@@ -1579,7 +1579,10 @@ static int h264_setup(struct t32_enc_chn *e)
     a->seq.fps_den = at->rcAttr.outFrmRate.frmRateDen;
     a->seq.bitrate = at->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR ?
                      at->rcAttr.attrRcMode.attrH264Cbr.outBitRate * 1000u : 0u;
-    a->seq.init_qp = a->qp_i;
+    /* vendor i264e_pps_init (#502): pic_init_qp 26 unless the rate control is CQP (FIXQP), then
+     * the constant QP clipped to 51; slice QPs are coded relative to it */
+    a->seq.init_qp = at->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_FIXQP ?
+                     (a->qp_i > 51 ? 51 : a->qp_i) : 26;
     a->sps_len = t32_h264_sps(&a->seq, a->sps);
     a->pps_len = t32_h264_pps(&a->seq, a->pps);
     rc_setup(e, &at->rcAttr.attrRcMode, 0);
