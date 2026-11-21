@@ -960,10 +960,8 @@ void t32_rc_end_rows(T32Rc *rc, uint32_t bytes, const uint32_t *stats, unsigned 
 
 const uint8_t *t32_rc_slice(T32Rc *rc)
 {
-#ifdef PLATFORM_T33
     if (rc->on && rc->t65)
-        return t32_rc65_slice(rc->t65);       /* H.265 revision 7 (#714) */
-#endif
+        return t32_rc65_slice(rc->t65);       /* H.265: T33 revision 7 (#714), T32 revision 6 (#720) */
     return rc->on && rc->t33 ? t32_rc33_slice(rc->t33) : NULL;
 }
 

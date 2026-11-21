@@ -264,8 +264,9 @@ void t32_rc65_end_rows(T32Rc65 *c, uint32_t bytes, const uint32_t *stats, const 
  * IDR row-size sum) */
 uint32_t t32_rc65_rc_word(T32Rc65 *c, uint32_t off);
 /* the slice block the controller fills for vendor H265E_T32V_SliceInit
- * (revision s+0xdbc, rate control s+0x90a..s+0xb5f; #714) */
+ * (revision s+0xdbc, rate control s+0x90a..s+0xb5f; T33 revision 7 #714,
+ * T32 revision 6 #720) */
 #define T65_SLICE_BYTES 0xdc0u
-const uint8_t *t32_rc65_slice(T32Rc65 *c);  /* T33 build */
+const uint8_t *t32_rc65_slice(T32Rc65 *c);
 
 #endif

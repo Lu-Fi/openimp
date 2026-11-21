@@ -16,6 +16,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - **Host (vendor 2.2.0 = T32 library, unicorn):** `rc65_test` 164 runs / 21740 pictures, 0 runs differ (without the fix 36 runs differ).
 - **QEMU T33 (vendor 2.0.2.1 vs OpenIMP, H.265 CBR 1080p, 1000 and 8000 kbit/s):** 0x40500 per job 0 (jobs 0..5), 362b2237 (job 6), 2b221b2d (from job 7) in both; the remaining list differences are buffer addresses and the pre-existing 0x10028/0x1002c on P pictures (#723).
 - **Device (T33L .122, H.265 CBR 8000 kbit/s, 150 pictures, debug build):** level 6 x 6, 5, then 4; table word 0, 362b2237, 2b221b2d as in QEMU; 150/150 streams, no oops. The HERA window does not read the 0x40500 run back (0 with both libraries).
+## 2026-11-21: T32 H.265 rate control: the revision 6 row block goes into the HERA list like vendor 2.2.0 (#720)
+
+- **Cause:** the T32 H.265 list (`t32_hera_h265_list`) never read the controller's slice block, so MD 0x40100..0x40124 and EFE 0x2029c kept the FIXQP defaults and the per-unit targets were missing (vendor CBR 1080p: I 709 / P 857 pairs, OpenIMP 692 / 840). Vendor 2.2.0 `H265E_T32V_SliceInit` (revision 6 branch, s+0xdbc == 6) writes 0x40100 from s+0x910/0x90a/0x90c/0xb4d (enable 0x500000), 0x40104 from s+0xb48..0xb4c/0x914 (revision 6 packing), 0x40108 / 0x40114..0x40124 from s+0x916 / 0x91a.., the units 0x40900 + 4 i (s+0x910 of them from s+0x948) right after 0x40124, and the EFE 0x2029c rate-control fields (s+0x90a, 0xb4d..0xb4f); no 0x402a0/4 on revision 6.
+- **Fix (T32 build):** the H.265 picture gets the controller's slice block (`t32_rc_slice` / `t32_rc65_slice` on both builds); the list takes those fields and the unit run from it when the block is a revision 6 one. T33 H.265 path unchanged (its own list, #714).
+- **QEMU T32 (-M ingenic-t32, PRJ007 image, open tx-isp-t32, vendor 2.2.0 vs OpenIMP, H.265 CBR 1080p, 20 pictures):** pairs 709 / 857 as the vendor, register order equal, 0x40100..0x40124, 0x2029c and the 17 unit targets equal in every job, MD QP equal (45 .. 17); the remaining differences are buffer addresses. No T32 device.
 
 ## 2026-11-21: T33 H.265 run-time rate-control setters keep the controller like vendor 2.0.2.1 (#718)
 

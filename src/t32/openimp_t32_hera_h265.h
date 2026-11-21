@@ -48,6 +48,8 @@ typedef struct {
     uint32_t bs0, bs1;                  /* stream: one buffer (bs1 0) or two halves */
     uint32_t section_kb;                /* 0: no sections; else BSFULL after this many KiB */
     uint32_t aux[T32_HERA5_AUX];        /* analysis buffers (t32_hera_h265_aux_sizes) */
+    const uint8_t *rc_slice;            /* NULL (FIXQP), or the H.265 controller's slice block
+                                         * (T65_SLICE_BYTES, vendor layout; revision 6, #720) */
 } T32HeraH265Pic;
 
 /* sizes of the analysis buffers the engine reads and writes */
