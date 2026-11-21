@@ -103,6 +103,21 @@ typedef struct {
 #define EMC_AI2         0x90050u
 #define EMC_BSFULL_EN   0x9005cu
 #define EMC_BSFULL_SIZE 0x90064u
+/* MD row rate control (revision 7, #714; as H.264 VMAU, #706) */
+#define RC_ROW_CFG      0x40100u        /* unit CTUs - 1, enable, unit count */
+#define RC_ROW_SHIFT    0x40104u
+#define RC_ROW_TGT      0x40108u        /* s+0x92e; 0x40114..0x40124: s+0x932.. */
+#define RC_ROW_TGT_END  0x40124u
+#define RC_ROW_UNIT     0x402a0u
+#define RC_ROW_UNIT2    0x402a4u
+#define RC_ROW_BITS     0x40800u        /* one target a unit, s+0x948 */
+#define MD_GDR          0x40400u        /* 32 words from s+0x430 (refresh masks) */
+#define MD_GDR_END      0x4047cu
+#define MD_QPT          0x40500u        /* 11 words from s+0x548 (the controller's QP table) */
+#define RC_ROW_RUN_END  0x40528u        /* the units follow the 0x40500 run */
+#define EFE_MBQP_CFG    0x2029cu        /* MB QP clamp and row enable (rate control fields) */
+#define EFE_MBQP_RC     (1u << 22 | 0x3fu << 16 | 0x3fu << 10 | 1u << 9)
+#define RC_ROWS_MAX     128u            /* s+0x948..0xb47 */
 
 /* BC context run (33): per position the T30 Radix HEVC state index, found
  * by matching the vendor's I and P lists at QP 0..51 */
@@ -134,6 +149,65 @@ static uint32_t band(unsigned b, int qp, uint32_t def)
     return t->v;
 }
 
+static uint32_t rd32(const uint8_t *b)
+{
+    return (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24;
+}
+
+static uint32_t rd16(const uint8_t *b)
+{
+    return (uint32_t)b[0] | (uint32_t)b[1] << 8;
+}
+
+/* the controller's slice block when it is a revision 7 one (vendor 2.0.2.1) */
+static const uint8_t *t33_rc_slice5(const T33HeraH265Pic *t)
+{
+    return t->rc_slice && t->rc_slice[0xdbc] == 7u ? t->rc_slice : NULL;
+}
+
+/* rate control: vendor 2.0.2.1 H265E_T32V_SliceInit 0x59298 (revision 7
+ * branch, s+0xdbc == 7) takes these from the controller's slice block (the
+ * H.264 block of #706 at +0x3e0); 1 when @reg is one of them */
+static int t33_h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
+{
+    if (reg >= MD_GDR && reg <= MD_GDR_END) {
+        *v = rd32(sl + 0x430 + (reg - MD_GDR));
+        return 1;
+    }
+    if (reg >= MD_QPT && reg <= RC_ROW_RUN_END) {
+        *v = rd32(sl + 0x548 + (reg - MD_QPT));
+        return 1;
+    }
+    switch (reg) {
+    case EFE_MBQP_CFG:                  /* the rate-control fields; the rest stays the default */
+        *v = (*v & ~EFE_MBQP_RC) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
+             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9;
+        return 1;
+    case RC_ROW_CFG:
+        *v = (uint32_t)sl[0x910] << 23 | (sl[0x90a] & 1u) | 0x400000u | ((rd32(sl + 0x90c) - 1u) & 0xffffu) << 4;
+        *v += (uint32_t)sl[0xb4d] << 31;
+        return 1;
+    case RC_ROW_SHIFT:
+        *v = (sl[0xb49] & 0x7fu) << 7 | (sl[0xb48] & 0x7fu) | (sl[0xb4c] & 7u) << 14 | (sl[0xb4b] & 7u) << 17 |
+             (sl[0x914] & 7u) << 20 | (uint32_t)(sl[0xb50] & 0x7fu) << 23;
+        return 1;
+    case RC_ROW_TGT:
+        *v = rd32(sl + 0x92e);
+        return 1;
+    case RC_ROW_TGT + 0xc: case RC_ROW_TGT + 0x10: case RC_ROW_TGT + 0x14: case RC_ROW_TGT + 0x18:
+    case RC_ROW_TGT_END:
+        *v = rd32(sl + 0x932 + (reg - (RC_ROW_TGT + 0xc)));
+        return 1;
+    case RC_ROW_UNIT:
+        *v = rd16(sl + 0xb54) + (rd32(sl + 0xb58) << 16);
+        return 1;
+    case RC_ROW_UNIT2:
+        *v = ((uint32_t)(sl[0xb5c] - 1u) & 0xffu) << 16 | ((rd16(sl + 0xb5e) - 1u) & 0xffffu);
+        return 1;
+    }
+    return 0;
+}
+
 static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v, const uint8_t *st,
                                unsigned idx)
 {
@@ -141,6 +215,11 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     uint32_t w = p->width, h = p->height, h16 = (h + 15u) & ~15u, qp = (uint32_t)p->qp;
     uint32_t ctb_w = (w + 63u) / 64u, ctb_h = (h + 63u) / 64u;
     uint32_t ft = p->p_frame ? 1u : 2u;     /* HEVC slice type */
+    const uint8_t *sl = t33_rc_slice5(t);
+    uint32_t rc = v;
+
+    if (sl && t33_h265_rc_field(sl, reg, &rc))
+        return rc;
 
     switch (reg) {
     case BC_CTRL:                       /* cu_qp_delta, slice type, size in 8x8 units */
@@ -299,6 +378,21 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
             list[2 * n] = v;
             list[2 * n + 1] = t32_hera_cmd(reg, v, i + 1 == ents);
             n++;
+        }
+        /* rate control: the unit targets follow the 0x40500 run (vendor
+         * order; 0x40800 + 4 i, s+0x910 of them from s+0x948) */
+        if (e->reg == RC_ROW_RUN_END && t33_rc_slice5(t)) {
+            uint32_t units = rd32(t->rc_slice + 0x910);
+
+            for (k = 0; k < units && k < RC_ROWS_MAX; k++) {
+                uint32_t v = rd32(t->rc_slice + 0x948 + 4u * k);
+
+                if (n >= T32_HERA5_LIST_MAX_PAIRS)
+                    return 0;
+                list[2 * n] = v;
+                list[2 * n + 1] = t32_hera_cmd(RC_ROW_BITS + 4u * k, v, 0);
+                n++;
+            }
         }
     }
     return n;

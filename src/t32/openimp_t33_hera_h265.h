@@ -29,6 +29,8 @@ typedef struct {
     uint32_t hdr_ry, hdr_rc;            /* the set its reference wrote */
     uint32_t recon_y, recon_c;          /* P: where the reconstruction starts (engine read-back) */
     uint32_t ref_y, ref_c;              /* P: the reference's reconstruction (the last recon_*) */
+    const uint8_t *rc_slice;            /* NULL (FIXQP), or the H.265 controller's slice block
+                                         * (T65_SLICE_BYTES, vendor layout; rate control, #714) */
 } T33HeraH265Pic;
 
 /* the header sets of an H.265 area of @width x @height after @hdr: set @set's

@@ -829,7 +829,11 @@ int t32_rc65_open(T32Rc65 *c, uint32_t width, uint32_t height)
         SP32(t65_pdef[i][0], t65_pdef[i][1]);
     for (unsigned i = 0; i < sizeof(t65_pdbl) / sizeof(t65_pdbl[0]); i++)
         e33_st_F64(X, A_P + t65_pdbl[i].o, t65_pdbl[i].v);
-    /* channel_i265e_encoder_init: the words of every channel */
+    /* channel_i265e_encoder_init: the words of every channel; vendor
+     * 2.0.2.1 (0xe9b2c) sets the HERA revision 7 on the T33 (#714) */
+#ifdef PLATFORM_T33
+    SP32(T65P_REV, T33_RC_HERA_REV);
+#endif
     SP8(0x8, 1);
     SP32(0xc, 1);
     SP32(0x10, 1);
@@ -1275,15 +1279,50 @@ uint32_t t32_rc65_rc_word(T32Rc65 *c, uint32_t off)
     return e33_ld_U32(&c->X, A5_RC + off);
 }
 
+#ifdef PLATFORM_T33
+const uint8_t *t32_rc65_slice(T32Rc65 *c)
+{
+    return c->mem ? e33_at(&c->X, A5_SL, T65_SLICE_BYTES) : NULL;
+}
+#endif
+
 unsigned t32_rc65_idr_rows(T32Rc65 *c)
 {
     E33 *X = &c->X;
     uint32_t n = P32(T65P_HEIGHT) >> 6;
 
+#ifdef PLATFORM_T33
+    if (RCU8(0x8c) == 7) {
+        /* vendor 2.0.2.1 rcEnd (0x9730c): two words a row, every picture */
+        uint32_t h = P32(T65P_HEIGHT);
+
+        n = (h + 0x3f) >> 6;
+        if (h > 0x800)
+            n = (n + 1) >> 1;
+        n *= 2;
+        return n < T33_RC_ROWS ? n : T33_RC_ROWS;
+    }
+#endif
     if (RCU8(0x8c) != 6 || F32(0x1de * 4) != 2 || n == 0)
         return 0;
     return n < T33_RC_ROWS ? n : T33_RC_ROWS;
 }
+
+#ifdef PLATFORM_T33
+void t32_rc65_row_regs(T32Rc65 *c, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg)
+{
+    E33 *X = &c->X;
+
+    if (RCU8(0x8c) == 7) {
+        *sel = T33_HERA7_ROW_SEL;
+        *sel_val = 4u * j;
+        *reg = T33_HERA7_ROW(j);
+    } else {
+        *sel = T33_HERA_ROW_SEL;
+        *sel_val = *reg = T33_HERA_ROW(j);
+    }
+}
+#endif
 
 /* I265eRatectrl_rcEnd (0x84040) */
 void t32_rc65_end_rows(T32Rc65 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows)
@@ -1294,7 +1333,11 @@ void t32_rc65_end_rows(T32Rc65 *c, uint32_t bytes, const uint32_t *stats, const 
     for (int i = 0; i < T65_RC_STATS; i++)
         e33_st_U32(X, tb + 8 * i + 4, stats ? stats[i] : 0);
     for (unsigned i = 0; i < nrows && i < T33_RC_ROWS; i++)
+#ifdef PLATFORM_T33
+        e33_st_U32(X, reg + (RCU8(0x8c) == 7 ? 0x400u + 4u * i : (0x201u + 2u * i) * 4u), rows[i]);
+#else
         e33_st_U32(X, reg + (0x201u + 2u * i) * 4u, rows[i]);
+#endif
     e33_st_U32(X, A5_F + 0x448 * 4, bytes);
     c->n++;
     type = F32(0x1de * 4);
