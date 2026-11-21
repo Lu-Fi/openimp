@@ -13,9 +13,6 @@ static inline int32_t imin(int32_t a, int32_t b) { return a < b ? a : b; }
 static inline int32_t imax(int32_t a, int32_t b) { return a > b ? a : b; }
 static inline uint32_t al16(int32_t v) { return ((uint32_t)v + 15u) & ~15u; }
 
-/* (x + 127) / 255 for x >= 0 (vendor: the 0x80808081 multiply) */
-static inline uint8_t div255(int32_t x) { return (uint8_t)((x + 127) / 255); }
-
 /*
  * The scaled, offset and clamped rectangle of osd_draw_pic_rgb (0x16f8ec..
  * 0x16f9d8) and of the NV12 branch of osd_draw_pic: each corner times the
@@ -40,45 +37,103 @@ static void scaled_rect(const T33OsdFrame *f, const T33OsdRgn *r, const T33OsdGr
     *y1 = imin(hy, f->height - 1);
 }
 
-/* the luma and chroma of one RGB picture pixel, its alpha (vendor fetch cases
- * of the jump table at 0x1dbfb0 and the common BT.601 integer conversion at
- * 0x16fbc8..0x16fc9c); 0 for a format it does not draw */
-static int rgb_pixel(int fmt, const uint8_t *p, int *A, int *R, int *G, int *B)
+/*
+ * (x + 127) / 255 without a multiply for 0 <= x <= 65662 (checked for every
+ * value; the blend sums stay <= 255 * 255), what the vendor gets from its
+ * 0x80808081 multiply
+ */
+static inline uint32_t div255s(uint32_t x) { return (x + 128u + ((x + 128u) >> 8)) >> 8; }
+
+/*
+ * One RGB picture pixel (vendor fetch cases of the jump table at 0x1dbfb0):
+ * the alpha first, so a transparent pixel costs one load.  fmt is a constant
+ * in every caller (draw_rgb_row is inlined per format), the switch folds.
+ */
+static inline __attribute__((always_inline)) int rgb_alpha(int fmt, const uint8_t *p)
+{
+    switch (fmt) {
+    case 14: case 16: return p[0];              /* ARGB, ABGR */
+    case 15: case 17: return p[3];              /* RGBA, BGRA */
+    case 19: return 255;                        /* RGB565LE: opaque */
+    default: return (p[0] & 1) ? 255 : 0;       /* RGB555LE / BGR555LE remapped: alpha in bit 0 */
+    }
+}
+
+static inline __attribute__((always_inline)) void rgb_colour(int fmt, const uint8_t *p, int *R, int *G, int *B)
 {
     uint32_t v = (uint32_t)p[0] | (uint32_t)p[1] << 8;
 
     switch (fmt) {
-    case 14:    /* ARGB, 0x16fe68 */
-        *A = p[0]; *R = p[1]; *G = p[2]; *B = p[3];
-        return 4;
-    case 15:    /* RGBA, 0x16fe4c */
-        *R = p[0]; *G = p[1]; *B = p[2]; *A = p[3];
-        return 4;
-    case 16:    /* ABGR, 0x16fe30 */
-        *A = p[0]; *B = p[1]; *G = p[2]; *R = p[3];
-        return 4;
-    case 17:    /* BGRA, 0x16fee4 */
-        *B = p[0]; *G = p[1]; *R = p[2]; *A = p[3];
-        return 4;
-    case 19:    /* RGB565LE, 0x16feb8: opaque */
-        *R = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xfc); *B = (int)((v << 3) & 0xff); *A = 255;
-        return 2;
-    case 6:     /* PIX_FMT_RGB555LE as remapped by the vendor (0x16fe84): R5 G5 B5 A1, alpha in bit 0 */
-        *R = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xf8); *B = (int)((v << 2) & 0xf8); *A = (v & 1) ? 255 : 0;
-        return 2;
-    case 26:    /* PIX_FMT_BGR555LE as remapped by the vendor (0x16fb54): B5 G5 R5 A1 */
-        *B = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xf8); *R = (int)((v << 2) & 0xf8); *A = (v & 1) ? 255 : 0;
-        return 2;
-    default:
-        return 0;
+    case 14: *R = p[1]; *G = p[2]; *B = p[3]; break;    /* ARGB, 0x16fe68 */
+    case 15: *R = p[0]; *G = p[1]; *B = p[2]; break;    /* RGBA, 0x16fe4c */
+    case 16: *B = p[1]; *G = p[2]; *R = p[3]; break;    /* ABGR, 0x16fe30 */
+    case 17: *B = p[0]; *G = p[1]; *R = p[2]; break;    /* BGRA, 0x16fee4 */
+    case 19:    /* RGB565LE, 0x16feb8 */
+        *R = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xfc); *B = (int)((v << 3) & 0xff);
+        break;
+    case 6:     /* PIX_FMT_RGB555LE as remapped by the vendor (0x16fe84): R5 G5 B5 A1 */
+        *R = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xf8); *B = (int)((v << 2) & 0xf8);
+        break;
+    default:    /* 26: PIX_FMT_BGR555LE as remapped by the vendor (0x16fb54): B5 G5 R5 A1 */
+        *B = (int)((v >> 11) << 3); *G = (int)((v >> 3) & 0xf8); *R = (int)((v << 2) & 0xf8);
+        break;
     }
 }
 
-/* vendor osd_draw_pic_rgb (0x16f894) */
+/*
+ * One picture row blended into the frame with the vendor arithmetic (BT.601
+ * integer conversion at 0x16fbc8..0x16fc9c, (x + 127) / 255 blend): luma on
+ * every row, chroma at the even columns of the even rows only.  galpha < 0:
+ * per-pixel alpha, a transparent pixel is skipped; else that alpha (1..255)
+ * for every pixel.  An opaque pixel stores the colour itself, which the blend
+ * gives exactly ((c * 255 + 127) / 255 == c).
+ */
+static inline __attribute__((always_inline)) void draw_rgb_row(int fmt, uint32_t bpp, const uint8_t *src,
+                                                               uint8_t *yl, uint8_t *uvl, int32_t x0, int32_t x1,
+                                                               int chroma, int galpha)
+{
+    for (int32_t x = x0; x <= x1; x++, src += bpp) {
+        int R, G, B, Y, a;
+
+        if (galpha >= 0) {
+            a = galpha;
+        } else {
+            a = rgb_alpha(fmt, src);
+            if (a == 0)
+                continue;
+        }
+        rgb_colour(fmt, src, &R, &G, &B);
+        Y = ((66 * R + 129 * G + 25 * B + 128) >> 8) & 0xff;
+        if (a == 255)
+            yl[x] = (uint8_t)Y;
+        else
+            yl[x] = (uint8_t)div255s((uint32_t)yl[x] * (uint32_t)(255 - a) + (uint32_t)Y * (uint32_t)a);
+        if (chroma && !(x & 1)) {
+            int U = (((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128) & 0xff;
+            int V = (((112 * R - 94 * G - 18 * B + 128) >> 8) + 128) & 0xff;
+
+            if (a == 255) {
+                uvl[x] = (uint8_t)U;
+                uvl[x + 1] = (uint8_t)V;
+            } else {
+                uvl[x] = (uint8_t)div255s((uint32_t)uvl[x] * (uint32_t)(255 - a) + (uint32_t)U * (uint32_t)a);
+                uvl[x + 1] = (uint8_t)div255s((uint32_t)uvl[x + 1] * (uint32_t)(255 - a) + (uint32_t)V * (uint32_t)a);
+            }
+        }
+    }
+}
+
+#define DRAW_RGB_ROWS(FMT, BPP)                                                              \
+    for (y = y0; y <= y1; y++, src += (uint32_t)cols * (BPP))                                \
+        draw_rgb_row(FMT, BPP, src, f->virt + (uint32_t)y * stride,                         \
+                     f->virt + uv0 + (uint32_t)(y / 2) * stride, x0, x1, !(y & 1), galpha)
+
+/* vendor osd_draw_pic_rgb (0x16f894); the per-pixel format switch of the
+ * vendor is hoisted out of the loops (one row loop per format), same pixels */
 int t33_osd_draw_pic_rgb(const T33OsdFrame *f, const T33OsdRgn *r, const T33OsdGrp *g)
 {
-    int32_t x0, y0, x1, y1, cols, x, y;
-    uint32_t stride, uv0, srow = 0, bpp;
+    int32_t x0, y0, x1, y1, cols, y;
+    uint32_t stride, uv0;
     int fmt, galpha;
     const uint8_t *src;
 
@@ -92,40 +147,19 @@ int t33_osd_draw_pic_rgb(const T33OsdFrame *f, const T33OsdRgn *r, const T33OsdG
     fmt = r->fmt;
     if ((uint32_t)fmt > 25u || !((1u << fmt) & (0x2280000u | 0x3c000u)))
         return -1;
-    if (fmt == 25)
-        fmt = 26;
-    else if (fmt == 21)
-        fmt = 6;
-    bpp = ((1u << r->fmt) & 0x3c000u) ? 4u : 2u;
     galpha = g->alpha_en > 0 ? (uint8_t)g->fg_alpha : -1;
     stride = al16(f->width);
     uv0 = stride * al16(f->height);
     cols = x1 - x0 + 1;
     src = r->data;
-    for (y = y0; y <= y1; y++, srow += (uint32_t)cols * bpp) {
-        uint8_t *yl = f->virt + (uint32_t)y * stride;
-        uint8_t *uvl = f->virt + uv0 + (uint32_t)(y / 2) * stride;
-
-        for (x = x0; x <= x1; x++) {
-            int A, R, G, B, a, Y, U, V;
-
-            if (!rgb_pixel(fmt, src + srow + (uint32_t)(x - x0) * bpp, &A, &R, &G, &B))
-                return -1;
-            if (galpha >= 0)
-                a = galpha;
-            else if (A == 0)
-                continue;
-            else
-                a = A;
-            Y = (66 * R + 129 * G + 25 * B + 128) >> 8;
-            U = ((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128;
-            V = ((112 * R - 94 * G - 18 * B + 128) >> 8) + 128;
-            yl[x] = div255(yl[x] * (255 - a) + (Y & 0xff) * a);
-            if (((x | y) & 1) == 0) {
-                uvl[x] = div255(uvl[x] * (255 - a) + (U & 0xff) * a);
-                uvl[x + 1] = div255(uvl[x + 1] * (255 - a) + (V & 0xff) * a);
-            }
-        }
+    switch (fmt) {
+    case 14: DRAW_RGB_ROWS(14, 4u); break;
+    case 15: DRAW_RGB_ROWS(15, 4u); break;
+    case 16: DRAW_RGB_ROWS(16, 4u); break;
+    case 17: DRAW_RGB_ROWS(17, 4u); break;
+    case 19: DRAW_RGB_ROWS(19, 2u); break;
+    case 21: DRAW_RGB_ROWS(6, 2u); break;      /* the vendor remaps RGB555LE to 6 */
+    default: DRAW_RGB_ROWS(26, 2u); break;     /* 25 BGR555LE, remapped to 26 */
     }
     return 0;
 }
