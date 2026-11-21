@@ -1179,6 +1179,73 @@ int t32_rc65_init(T32Rc65 *c)
     return 0;
 }
 
+#ifdef PLATFORM_T33
+int t32_rc65_set_param(T32Rc65 *c, unsigned id, const uint32_t *a)
+{
+    T65Pending *p = &c->pend;
+
+    switch (id) {
+    case 0x11:                  /* setBitrate: both, the mode picks at the IDR */
+        p->kbps = a[0];
+        p->kbps_max = a[1];
+        p->flags |= T65_SET_BITRATE;
+        return 0;
+    case 0x12:                  /* setQpbound */
+        p->max_qp = a[0];
+        p->min_qp = a[1];
+        p->flags |= T65_SET_QPBOUND;
+        return 0;
+    case 0x13:                  /* setPerQpbound */
+        p->max_iqp = a[0];
+        p->min_iqp = a[1];
+        p->max_pqp = a[2];
+        p->min_pqp = a[3];
+        p->flags |= T65_SET_IQPBOUND;
+        return 0;
+    case 0x14:                  /* setMaxPicSize */
+        p->pic_i = a[0];
+        p->pic_p = a[1];
+        p->flags |= T65_SET_PICSIZE;
+        return 0;
+    }
+    return -1;
+}
+
+/* ReconfigIdrFrame (0x88628), flags 0x40000..0x200000, then
+ * reset_without_rcinit: I265e_configure without rcInit */
+static void t65_take_pending(T32Rc65 *c)
+{
+    E33 *X = &c->X;
+    const T65Pending *p = &c->pend;
+    uint32_t f = p->flags, mode = P32(T65P_MODE);
+
+    if (f & T65_SET_BITRATE) {
+        if (mode == 1)
+            SP32(T65P_KBPS, p->kbps);
+        else if (mode - 2u < 2u)
+            SP32(T65P_KBPS, p->kbps_max);
+    }
+    if (f & T65_SET_QPBOUND) {
+        SP32(T65P_MAX_QP, p->max_qp);
+        SP32(T65P_MIN_QP, p->min_qp);
+    }
+    if (f & T65_SET_IQPBOUND) {
+        SP32(T65P_MAX_IQP, p->max_iqp);
+        SP32(T65P_MIN_IQP, p->min_iqp);
+        if (mode == 0) {
+            SP32(T65P_FIX_IQP, p->max_iqp);
+            SP32(T65P_FIX_PQP, p->max_pqp);
+        }
+    }
+    if (f & T65_SET_PICSIZE) {
+        SP32(0xdc, p->pic_i);
+        SP32(0xe0, p->pic_p);
+    }
+    memset(&c->pend, 0, sizeof(c->pend));
+    t32_rc65_configure(c);
+}
+#endif
+
 /* I265eRatectrl_rcStart (0x83ba0) */
 int t32_rc65_start(T32Rc65 *c, int idr)
 {
@@ -1188,6 +1255,13 @@ int t32_rc65_start(T32Rc65 *c, int idr)
     int8_t mode;
     int upd, keep;
 
+#ifdef PLATFORM_T33
+    /* i265e_encode: decTypeAndRef marks the IDR (F+0x22ed, vendor 2.0.2.1
+     * +0x22e5 = 2), I265e::reconfig takes the pending setters (#718) */
+    e33_st_U8(X, A5_F + 0x22ed, idr ? 2u : 0u);
+    if (idr && c->pend.flags)
+        t65_take_pending(c);
+#endif
     e33_st_U32(X, A5_F + 0x1de * 4, type);
     if ((F8(0x22d8) == 0 && F8(0x22d9) == 0) ? F8(0x22da) != 0 : 1)
         SP8(0x341, 0);
