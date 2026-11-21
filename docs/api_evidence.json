@@ -3826,7 +3826,7 @@
         "T23": "rt",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "host",
+        "T32": "qemu",
         "T33": "dev",
         "T40": "rt",
         "T41": "rt"
@@ -3851,13 +3851,13 @@
           "r†"
         ]
       },
-      "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect.",
+      "note": "T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T23: stock autozoom control 0x80000e8: crop window and scaler output into the channel MSCA record (agg-28; windows outside the picture, below 64x64 or odd are refused, beyond stock), host/build-tested only; T31: programs scaler/crop, refuses size change; T41: control 0x08000077 is handled by the open driver (open-tx-isp next); used by: T23: raptor; T31: prudynt†, raptor†; T41: prudynt†; T41: live MSCA reprogramming is avoided (hang risk), blocks are applied at the next output start T32 (2026-11-11 matrix-x): tests/t32 make check 2026-11-11: request (VI, dir, id, payload, rc) identical to vendor 2.2.0 in QEMU; driver/t32 does not serve this id yet (ENOTTY, #296), no end-to-end effect. 2026-11-21 matrix refresh (#753): T32 MSCA crop state applied (#721); QEMU only, vendor-ko A/B blocked (no T32 device).",
       "ref": {
         "T23": "apitest rc3gaps2 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T41": "apitest next+ko/libimp swap 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26",
-        "T32": "tests/t32 openimp-tuning.txt vs vendor-2.2.0-tuning.txt (2026-11-11)",
+        "T32": "QEMU T32 2026-11-21 (#721, open-tx-isp f5970fb38): next-vs-branch trace 20/20 frames",
         "T33": "DEVCHECK 2026-11-16 (ko ec725ae9, T33L .N): channel 0 visibly zoomed on the centre quarter, restored; Get/Set/Get = the QEMU vendor sums"
       }
     },
@@ -7508,8 +7508,8 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "n.a.",
-        "T32": "cache",
-        "T33": "cache",
+        "T32": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -7518,7 +7518,7 @@
           "r†"
         ]
       },
-      "note": "T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): FAIL (Encoder_GetChnROI: ret=0 enabled 0; Encoder_SetChnROI: ret=-1 roi 0 (64,64)-(319,255) dQP -4, read back en 0 (0,0)-(0,0) qp 0). Documented T30 limitation: an enabled region is refused (-1) because the command list's ROI registers are not known (src/t40/openimp_p2_encoder.c); the vendor 1.0.5 (0xc1ec0) hands the table to the closed i264e. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (rect in 16-pixel units, H.264 at once, H.265 from the next IDR); no ROI QP in the HERA; cache. T32: same source, no T32 2.2.0 run.",
+      "note": "T10: EFE ROI registers per the OEM slice init, device-tested 2026-10-09; T20: dev (apitest PASS; H.264 check: QP51 region blocky, QP15 fine); T21: the vendor 1.0.33 never programs IMP ROIs; OpenIMP applies them by default (beyond vendor), device-tested; T23: the native Helix encoder programs the regions like T21 (the vendor 1.3.0 writes the same registers), device-tested 2026-10-10, QP map and VA-API/strict ffmpeg clean; from agg-34 all Helix paths keep the stream valid H.264: deltas -25..+25, spread at most 25, absolute QPs in `[max_qp - 25, min_qp + 25]` (`Helix_H264_RoiSanitize`); before, a relative -26 or an absolute QP more than 25 from the macroblock QP gave broken pictures in hardware decoders (VA-API, VLC, browsers); details: docs/ROI.md. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): FAIL (Encoder_GetChnROI: ret=0 enabled 0; Encoder_SetChnROI: ret=-1 roi 0 (64,64)-(319,255) dQP -4, read back en 0 (0,0)-(0,0) qp 0). Documented T30 limitation: an enabled region is refused (-1) because the command list's ROI registers are not known (src/t40/openimp_p2_encoder.c); the vendor 1.0.5 (0xc1ec0) hands the table to the closed i264e. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (rect in 16-pixel units, H.264 at once, H.265 from the next IDR); no ROI QP in the HERA; cache. T32: same source, no T32 2.2.0 run. 2026-11-21 matrix refresh (#753): T33 regions now feed the controller and the EFE ROI registers like vendor 2.0.2.1 (IMP_Encoder_SetChnROI 0xfc8c4, i264e_reconfig 0x818e4, I265eReconfig::ReconfigPFrame 0x983ec): no longer cache. 2026-11-21 matrix refresh (#753): T32 same source as T33 #726, QEMU only (no T32 device).",
       "better": [
         "T21"
       ],
@@ -7528,7 +7528,8 @@
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "device T33L .122 2026-11-21 (#726, 892ff9aa): Sobel edge level H.264 4.74->0.89 (QP 45) / 4.98->12.33 (QP 18), H.265 8.31->0.46 / 8.41->12.55, 60/60 streams decode clean",
+        "T32": "QEMU T32 2026-11-21 (#734, 728636fc): ROI registers equal to vendor 2.2.0, H.265 one frame earlier like #726"
       }
     },
     "Encoder_Get/SetChnRcAttr": {
@@ -9006,7 +9007,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "err",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -9021,12 +9022,12 @@
           "r†"
         ]
       },
-      "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only)",
+      "note": "T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) T23: as the OEM stores it, re-encode on overshoot (claude/t23-enc-rest, not in agg-25); T41: written into rcAttr copy, codec not updated (T23: loss threshold kept only) 2026-11-21 matrix refresh (#753): T33 H.264 (#706, af8496e1) and H.265 (#714, a181af9a) apply the limit through the HERA rc registers like vendor 2.0.2.1 (channel_i265e_encoder_init 0xe9b2c rev 7, H265E_T32V_SliceInit 0x59298); device proof on .122. T32 H.265 #720 (8345bfc3).",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "apitest t32 enc 2026-11-12 QEMU (no camera); rc33_test setters vs vendor 2.2.0",
-        "T33": "FAIL apitest t33-1117 2026-11-17 .122: ret=0 H264: I and P limited to 67 kbit (8375 B): biggest picture 30841 B (before: 16868 B), limit +15 %"
+        "T33": "apitest t33-1117/#714 2026-11-21 .122: H.264 #706 3102 B for 3750 B limit, H.265 #714 7911 B for 7375 B limit (before 14953 B)"
       }
     },
     "Encoder_SetChnQp": {
@@ -20793,16 +20794,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
         "T23": "apitest agg62 2026-10-31 .30 (API round trip, no visible effect expected)",
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "device T33L .122 2026-11-21 (#736, 1d0ee9c4): H.264/H.265 1080p 50/50 pictures share on/off, decode clean, SSIM 0.97..0.99; QEMU 0 non-address differences vs vendor 2.0.2.1"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. 2026-11-21 matrix refresh (#753): T33 SetRdBufShare(0) clears BUF_SHARE and uses two reconstruction pictures like vendor 2.0.2.1 (chn+0x14d8): no longer cache."
     },
     "Encoder_SetSrdCfg": {
       "area": "Encoder",
