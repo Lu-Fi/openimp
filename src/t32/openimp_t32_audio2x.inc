@@ -496,9 +496,9 @@ int IMP_AI_DisableDrcAndEq(void)
     return 0;
 }
 
-/* aec_done: the AEC processed this frame; the vendor record thread then
- * skips NS/AGC/HPF (#712; the T10-T31 beyond-vendor #667 keeps them, not
- * approved for T32/T33) */
+/* aec_done: the AEC processed this frame.  The vendor record thread then
+ * skips NS/AGC/HPF (#712); OpenIMP runs them on every frame as on T10-T31
+ * (#667, beyond vendor, user decision 2026-11-21 for T32/T33). */
 static void t32_ai_effects(int16_t *samples, int count, int aec_done)
 {
     const IMPAudioIOAttr *attr = &p3_audio.ai_attr;
@@ -508,7 +508,8 @@ static void t32_ai_effects(int16_t *samples, int count, int aec_done)
         t32_ten_ms(attr->numPerFrm, attr->samplerate)) {
         int frame = t32_algo_frame(attr->samplerate);
 
-        for (i = 0; i < 3 && !aec_done; i++) {
+        (void)aec_done;
+        for (i = 0; i < 3; i++) {
             switch (t32_ai.order_set ? t32_ai.order[i] : i) {
             case AI_MODULE_NS:
                 if (p3_audio.ns_enabled)

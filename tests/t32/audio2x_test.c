@@ -291,6 +291,36 @@ static void test_ao(void)
     assert(IMP_AO_QueryChnStat(0, 0, NULL) == -1);
 }
 
+/* #667 (beyond vendor, T32/T33 like T10-T31): NS/AGC/HPF also run on a
+ * frame the AEC processed (the vendor record thread skips them) */
+static int hpf_calls;
+static int count_hpf(int16_t *state, int16_t *samples, int n)
+{
+    (void)state; (void)samples; (void)n;
+    hpf_calls++;
+    return 0;
+}
+
+static void test_aec_post_effects(void)
+{
+    int16_t buf[160] = { 0 };
+    P3HpfProcess saved = p3_audio.hpf_process;
+    int saved_en = p3_audio.hpf_enabled;
+
+    p3_audio.ai_attr.bitwidth = AUDIO_BIT_WIDTH_16;
+    p3_audio.ai_attr.samplerate = AUDIO_SAMPLE_RATE_16000;
+    p3_audio.ai_attr.numPerFrm = 160;
+    p3_audio.hpf_process = count_hpf;
+    p3_audio.hpf_enabled = 1;
+    hpf_calls = 0;
+    t32_ai_effects(buf, 160, 1);       /* AEC frame */
+    assert(hpf_calls == 1);
+    t32_ai_effects(buf, 160, 0);       /* plain frame */
+    assert(hpf_calls == 2);
+    p3_audio.hpf_process = saved;
+    p3_audio.hpf_enabled = saved_en;
+}
+
 int main(void)
 {
     /* the 20 vendor 2.0.0 extras exist (DMIC ones in openimp_t31_dmic.c) */
@@ -310,7 +340,8 @@ int main(void)
     test_volume_curve();
     test_ai();
     test_ao();
-    printf("t32 audio2x: ok (volume curve, AI vol/gain/mute/order, AO queue 20/15/5, "
+    test_aec_post_effects();
+    printf("t32 audio2x: ok (HPF after AEC #667, volume curve, AI vol/gain/mute/order, AO queue 20/15/5, "
            "flush 6 blocks, cache, pause/clear)\n");
     return 0;
 }
