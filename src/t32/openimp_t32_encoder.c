@@ -50,6 +50,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -200,9 +201,12 @@ struct t32_enc_chn {
      * the channel's status words after every picture (0xdd6bc / 0xdebf4:
      * packs and the stream buffer size minus the stream's length), work_done
      * 0 while a picture is coded and 1 otherwise (0xdd140 / 0xdd36c, CreateChn
-     * 0xe2ac0); GetStream / ReleaseStream leave them */
-    uint32_t q_packs, q_bytes;
-    int q_done;
+     * 0xe2ac0); GetStream / ReleaseStream leave them.  JPEG (#741): the
+     * JPEG thread writes packs, bytes and leftStreamFrames (sem_getvalue of
+     * the stream semaphore) only after its stream-ready notify (bal 0xdb1e0,
+     * words at 0xdc504..0xdc520), and never sets work_done back to 1 */
+    uint32_t q_packs, q_bytes, q_frames;
+    int q_done, q_post;                 /* q_post: JPEG picture notified, words pending */
 #endif
 };
 
@@ -1368,11 +1372,38 @@ static void *enc_thread(void *arg)
             }
             s->seq = e->seq++;
 #ifdef PLATFORM_T33
-            e->q_packs = (uint32_t)s->npacks;
-            e->q_bytes = s->length < e->bs_size ? e->bs_size - s->length : 0u;
+            if (e->h264) {
+                e->q_packs = (uint32_t)s->npacks;
+                e->q_bytes = s->length < e->bs_size ? e->bs_size - s->length : 0u;
+            }
 #endif
             t32_encq_ready(&e->q, si);
             e->encoded++;
+#ifdef PLATFORM_T33
+            if (!e->h264) {
+                /* vendor 2.0.2.1 JPEG (#741): queue (0xdc46c __jz_Fifo_Queue)
+                 * and notify (0xdc4b0 bal 0xdb1e0) outside the status lock,
+                 * then sem_getvalue + lock + words (0xdc504..0xdc520) + unlock:
+                 * a reader woken by the notify can Query, get and release
+                 * before the words of this picture are written */
+                uint32_t packs = (uint32_t)s->npacks, slen = s->length;
+
+                e->q_post = 1;                  /* coded: no longer a left picture */
+                pthread_cond_broadcast(&e->done);   /* 0xdb1e0: sem_post / cond_signal */
+                pthread_mutex_unlock(&enc_lock);
+                if (write(e->pipefd[1], "s", 1) != 1)
+                    IMP_LOG_WARN(TAG, "stream notify pipe full");
+                /* the vendor poller and JPEG thread run SCHED_RR at max
+                 * priority (PollingStream 0xe62b0, #747); the woken reader
+                 * runs here before the words: yield for the same order */
+                sched_yield();
+                pthread_mutex_lock(&enc_lock);
+                e->q_post = 0;
+                e->q_packs = packs;
+                e->q_bytes = slen < e->bs_size ? e->bs_size - slen : 0u;
+                e->q_frames = (uint32_t)e->q.rcount;
+            } else
+#endif
             if (write(e->pipefd[1], "s", 1) != 1)
                 IMP_LOG_WARN(TAG, "stream notify pipe full");
         } else {
@@ -1380,7 +1411,8 @@ static void *enc_thread(void *arg)
         }
         e->busy = 0;
 #ifdef PLATFORM_T33
-        e->q_done = 1;
+        if (e->h264)
+            e->q_done = 1;              /* JPEG: no +212 store (#741) */
 #endif
         if (--g->refs == 0) {
             g->frame = NULL;
@@ -2710,6 +2742,11 @@ int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
         stat->leftStreamBytes = e->q_bytes;
         stat->curPacks = e->q_packs;
         stat->work_done = (uint32_t)e->q_done;
+        if (!e->h264) {
+            stat->leftStreamFrames = e->q_frames;
+            if (e->q_post)
+                stat->leftPics = (uint32_t)e->pending;
+        }
 #endif
     }
     pthread_mutex_unlock(&enc_lock);

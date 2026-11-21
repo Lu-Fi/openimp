@@ -14,6 +14,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - The vendor record thread (T32 2.2.0, T33 2.0.2.1) skips NS / AGC / HPF on a frame the AEC processed; #712 had made T32/T33 vendor-equal there. User decision 2026-11-21: keep them on T32/T33 too, like T10-T31 (#667). Streamers that enable NS / AGC together with the AEC keep them.
 - Host test `t32-audio2x-test`: an AEC frame goes through the HPF (fails without the change). Device (T33L .N, apitest audio with this libimp, RAM only): PASS 105 / FAIL 1, 0 oops. The FAIL is `EnableAecRefFrame` with the AEC on returning -1, which the vendor does too (#712).
 
+## 2026-11-21: T33 JPEG IMP_Encoder_Query words like vendor 2.0.2.1 (#741)
+
+- **Cause:** vendor 2.0.2.1's JPEG thread queues the picture and signals it (0xdc46c / bal 0xdb1e0) before it writes the channel status words (0xdc504..0xdc520: leftStreamBytes = buffer - length, curPacks, leftStreamFrames = sem_getvalue of the stream semaphore), and the JPEG path never stores work_done back to 1. A poller woken by the signal (vendor pollers run SCHED_RR max, #747) queries, gets and releases before the words: Query shows the previous picture, leftStreamFrames 0, work_done 0. OpenIMP used the H.264 rule (#738): current picture, frames 1, work_done 1.
+- **Fix (T33 build only, JPEG only):** the JPEG notify runs outside the encoder lock and before the words (with a yield in that window standing in for the vendor's real-time preemption); words written after it, leftStreamFrames = ready streams at that time, work_done stays 0 after the first picture, a notified picture no longer counts in leftPics. H.264 / H.265 and the T32 build unchanged.
+- **Evidence:** QEMU -M ingenic-t33, JPEG 1280x720, 4 pictures, `t32_trace_sample` T32_ENC_QUERY=1 (audit/issue741/run.sh): all 12 Query lines equal to the vendor lib (audit/issue740/v-jp) except the byte values (the QEMU coder's JPEG lengths differ by ~0.1 %, as in #740); H.264 Query pattern unchanged.
+
 ## 2026-11-21: Light box, Wyze Cam v2, jxf23 (open AE variant B: vendor AE graph, t20_simple_ae=0) full run 5000 K (#230)
 
 - New report `docs/lightbox/wyze-t20x-jxf23-kajplats-aeB-1120-2026-11-21-5000.html` (78 pass / 6 fail; open-tx-isp be037b1b + OpenIMP libimp 6b55a690), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
