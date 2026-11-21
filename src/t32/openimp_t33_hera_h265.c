@@ -159,6 +159,10 @@ static uint32_t rd16(const uint8_t *b)
     return (uint32_t)b[0] | (uint32_t)b[1] << 8;
 }
 
+#define T33_ROI_INFO    0x20054u        /* ..0x20060: 16 region QP / mode bytes */
+#define T33_ROI_RECT    0x20064u        /* ..0x200a0: 16 region rectangles (MBs) */
+#define T33_ROI_EN      0x200c0u        /* one enable bit a region */
+
 /* the controller's slice block when it is a revision 7 one (vendor 2.0.2.1) */
 static const uint8_t *t33_rc_slice5(const T33HeraH265Pic *t)
 {
@@ -178,10 +182,28 @@ static int t33_h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
         *v = rd32(sl + 0x548 + (reg - MD_QPT));
         return 1;
     }
+    /* ROI regions (#726): s+0x55 + 7 i = enable, mode, QP, x0, x1, y0, y1 */
+    if (reg >= T33_ROI_RECT && reg < T33_ROI_RECT + 0x40u && !(reg & 3u)) {
+        *v = rd32(sl + 0x58 + 7u * ((reg - T33_ROI_RECT) / 4u));
+        return 1;
+    }
+    if (reg >= T33_ROI_INFO && reg < T33_ROI_INFO + 0x10u && !(reg & 3u)) {
+        unsigned i0 = (reg - T33_ROI_INFO) / 4u * 4u;
+
+        *v = 0;
+        for (unsigned i = 0; i < 4u; i++)
+            *v += ((uint32_t)(sl[0x57 + 7u * (i0 + i)] & 0x3fu) << 2 | (sl[0x56 + 7u * (i0 + i)] & 3u)) << (8u * i);
+        return 1;
+    }
     switch (reg) {
-    case EFE_MBQP_CFG:                  /* the rate-control fields; the rest stays the default */
-        *v = (*v & ~EFE_MBQP_RC) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
-             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9;
+    case T33_ROI_EN:
+        *v = 0;
+        for (unsigned i = 0; i < 16u; i++)
+            *v += (uint32_t)(sl[0x55 + 7u * i] & 1u) << i;
+        return 1;
+    case EFE_MBQP_CFG:                  /* the rate-control fields and the ROI enable (s+0x1c9) */
+        *v = (*v & ~(EFE_MBQP_RC | 1u << 3)) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
+             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9 | (sl[0x1c9] & 1u) << 3;
         return 1;
     case RC_ROW_CFG:
         *v = (uint32_t)sl[0x910] << 23 | (sl[0x90a] & 1u) | 0x400000u | ((rd32(sl + 0x90c) - 1u) & 0xffffu) << 4;

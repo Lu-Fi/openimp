@@ -829,6 +829,25 @@ again:
                         printf("T32C %d SetChnMaxPictureSize %d = %d\n", i, a,
                                IMP_Encoder_SetChnMaxPictureSize(0, (uint32_t)a, (uint32_t)a));
                         printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
+                    } else if (t == 'R') {
+                        /* #726: one ROI region "N:R<idx>/<en>/<rel>/<qp>/<x0>/<y0>/<x1>/<y1>"
+                         * (vendor 2.x layout: 16 x {index, enable, relative, QP, p0, p1}) */
+                        static struct { uint32_t idx; uint8_t en, rel; int32_t qp, x0, y0, x1, y1; } roi[16];
+                        int v[8] = { 0 };   /* regions accumulate over the changes */
+                        int (*set)(int, void *) = (int (*)(int, void *))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetChnROI");
+                        if (sscanf(ch + k, "%d/%d/%d/%d/%d/%d/%d/%d", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5],
+                                   &v[6], &v[7]) == 8 && set && v[0] >= 0 && v[0] < 16) {
+                            for (int r = 0; r < 16; r++)
+                                roi[r].idx = (uint32_t)r;
+                            roi[v[0]].en = (uint8_t)v[1];
+                            roi[v[0]].rel = (uint8_t)v[2];
+                            roi[v[0]].qp = v[3];
+                            roi[v[0]].x0 = v[4];
+                            roi[v[0]].y0 = v[5];
+                            roi[v[0]].x1 = v[6];
+                            roi[v[0]].y1 = v[7];
+                            printf("T32C %d SetChnROI %d = %d\n", i, v[0], set(0, roi));
+                        }
                     } else if (t == 'I') {
                         printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
                     }

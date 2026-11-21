@@ -60,6 +60,8 @@ struct t32_e1 {
     int dn_type, dn_iqp, dn_pqp;
     IMPEncoderAttrHSkip hskip;
     IMPEncoderROICfg roi[IMP_ENC_ROI_WIN_COUNT], roi_pend[IMP_ENC_ROI_WIN_COUNT];
+    uint8_t roi_rec[IMP_ENC_ROI_WIN_COUNT][9];  /* the vendor's set_param(2) records (#726) */
+    int roi_new;
     IMPEncoderMotionQuality mq;
     uint32_t ud_cnt, ud_size, ud_head, ud_n, ud_len[T32_E1_UD_MAX];
     uint8_t ud[T32_E1_UD_MAX][T32_E1_UD_BYTES];
@@ -801,6 +803,44 @@ int IMP_Encoder_SetChnHSkipBlackEnhance(int encChn, const int bBlackEnhance)
     return rc;
 }
 
+/* the record vendor 2.0.2.1 IMP_Encoder_SetChnROI (0xfc8c4) hands to
+ * i264e_set_param / i265e_set_param (id 2) for region @i (the loop index):
+ * type 0, index, enable, relative, QP, then the rectangle in macroblocks,
+ * x and y each sorted (min, max), divided by 16 toward zero */
+static void e1_roi_rec(uint8_t *b, unsigned i, const IMPEncoderROICfg *c)
+{
+    int x0 = c->rect.p0.x / 16, x1 = c->rect.p1.x / 16, y0 = c->rect.p0.y / 16, y1 = c->rect.p1.y / 16;
+    int xs = c->rect.p0.x < c->rect.p1.x, ys = c->rect.p0.y < c->rect.p1.y;
+
+    b[0] = 0;
+    b[1] = (uint8_t)i;
+    b[2] = (uint8_t)c->bEnable;
+    b[3] = (uint8_t)c->bRelatedQp;
+    b[4] = (uint8_t)c->s32Qp;
+    b[5] = (uint8_t)(xs ? x0 : x1);
+    b[6] = (uint8_t)(xs ? x1 : x0);
+    b[7] = (uint8_t)(ys ? y0 : y1);
+    b[8] = (uint8_t)(ys ? y1 : y0);
+}
+
+/* the encoder thread, after the controller's start of a picture (vendor
+ * i264e_reconfig / I265eReconfig::ReconfigPFrame, flag 4): 1 = new region
+ * records in @rec (16 x 9 bytes, the parameter block's ROI table) */
+int OpenIMP_T32_E1RoiTake(int encChn, uint8_t rec[16][9])
+{
+    int n;
+
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return 0;
+    pthread_mutex_lock(&e1_lock);
+    n = E1.roi_new;
+    E1.roi_new = 0;
+    if (n)
+        memcpy(rec, E1.roi_rec, sizeof(E1.roi_rec));
+    pthread_mutex_unlock(&e1_lock);
+    return n;
+}
+
 int IMP_Encoder_SetChnROI(int encChn, const IMPEncoderROIAttr *r)
 {
     T32EncChnInfo ci;
@@ -830,7 +870,10 @@ int IMP_Encoder_SetChnROI(int encChn, const IMPEncoderROIAttr *r)
             }
             if (ci.codec == 1)          /* H.264 reads back at once, H.265 from the next IDR */
                 E1.roi[i] = *s;
+            e1_roi_rec(E1.roi_rec[i], (unsigned)i, c);
         }
+    if (!rc && ci.codec != 0)
+        E1.roi_new = 1;
     pthread_mutex_unlock(&e1_lock);
     return rc;
 }

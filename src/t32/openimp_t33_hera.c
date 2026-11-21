@@ -42,6 +42,9 @@ typedef struct {
 #define EFE_CPLX_QP1    0x20040u
 #define EFE_QPG_DLT     0x20300u
 #define EFE_MBQP_CFG    0x2029cu        /* MB QP clamp and map enables (rate control) */
+#define EFE_ROI_INFO    0x20054u        /* ..0x20060: 16 region QP / mode bytes */
+#define EFE_ROI_RECT    0x20064u        /* ..0x200a0: 16 region rectangles (MBs) */
+#define EFE_ROI_EN      0x200c0u        /* one enable bit a region */
 /* VMAU row rate control (revision 7, #706) */
 #define RC_ROW_CFG      0x40100u        /* unit MBs - 1, enable, unit count */
 #define RC_ROW_SHIFT    0x40104u
@@ -121,6 +124,22 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
             return (sl[0x52a] & 1u) << 22 | (sl[0x76f] & 0x3fu) << 16 | (sl[0x76e] & 0x3fu) << 10 |
                    (sl[0x76d] & 1u) << 9 | (sl[0x112] & 1u) << 8 | (sl[0x113] & 0xfu) << 4 |
                    (sl[0x15a] & 1u) << 3 | (sl[0x158] & 1u) << 2 | (sl[0x18c] & 1u);
+        /* ROI regions (#726): s+0x54 + 7 i = enable, mode, QP, x0, x1, y0, y1 */
+        case EFE_ROI_EN: {
+            uint32_t m = 0;
+
+            for (unsigned i = 0; i < 16u; i++)
+                m += (uint32_t)sl[0x54 + 7u * i] << i;
+            return m;
+        }
+        case EFE_ROI_INFO: case EFE_ROI_INFO + 4: case EFE_ROI_INFO + 8: case EFE_ROI_INFO + 0xc: {
+            unsigned i0 = (reg - EFE_ROI_INFO) / 4u * 4u;
+            uint32_t m = 0;
+
+            for (unsigned i = 0; i < 4u; i++)
+                m |= (((uint32_t)(sl[0x56 + 7u * (i0 + i)] & 0x3fu) << 2) + sl[0x55 + 7u * (i0 + i)]) << (8u * i);
+            return m;
+        }
         case RC_ROW_CFG:
             return (((rd32(sl + 0x52c) - 1u) & 0xffffu) << 4) + (sl[0x52a] & 1u) + 0x400000u +
                    ((uint32_t)sl[0x530] << 23) + ((uint32_t)sl[0x76d] << 31);
@@ -137,6 +156,10 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
         case RC_ROW_UNIT2:
             return ((uint32_t)(sl[0x77c] - 1u) & 0xffu) << 16 |
                    ((((uint32_t)sl[0x77e] | (uint32_t)sl[0x77f] << 8) - 1u) & 0xffffu);
+        default:
+            if (reg >= EFE_ROI_RECT && reg < EFE_ROI_RECT + 0x40u && !(reg & 3u))
+                return rd32(sl + 0x57 + 7u * ((reg - EFE_ROI_RECT) / 4u));
+            break;
         }
     }
     switch (reg) {

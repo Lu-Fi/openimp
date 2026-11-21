@@ -119,6 +119,8 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a);
  * sets (vendor: P+0xe0 / +0xe4 = max I / max P), 1 when there were any; the
  * pending changes are taken either way */
 int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p);
+/* ROI regions (#726): 16 records of 9 bytes into the parameter block's ROI table */
+void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9]);
 
 /* H.264 (T33 revision): the slice block of the picture in work (after
  * t32_rc_start) for the HERA command list, NULL without it; and its per-MB

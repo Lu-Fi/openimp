@@ -1024,6 +1024,23 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
     return 0;
 }
 
+/* vendor 2.0.2.1 i264e_reconfig (0x818e4, flag 4): h+0x2a64.. -> P+0x1c0
+ * (16 x 9 bytes), which i264e_ratecontrol_start copies for the controller;
+ * H.265 I265eReconfig::ReconfigPFrame (0x983ec): -> i265e+0x110, rcStart
+ * copies it to rc+0x2a8 */
+void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9])
+{
+    if (!rc->on)
+        return;
+    for (unsigned i = 0; i < 16; i++)
+        for (unsigned j = 0; j < 9; j++) {
+            if (rc->t33)
+                t32_rc33_set8(rc->t33, 0x1c0 + 9 * i + j, rec[i][j]);
+            else if (rc->t65)
+                t32_rc65_set8(rc->t65, 0x110 + 9 * i + j, rec[i][j]);
+        }
+}
+
 int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p)
 {
     T33Pending *p = &rc->pend;
