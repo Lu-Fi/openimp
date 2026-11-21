@@ -30,8 +30,8 @@ typedef struct {
 typedef struct {
     uint32_t width, height;             /* picture (cropped) size */
     uint32_t fps_num, fps_den;
-    uint32_t bitrate;                   /* bits/s for the level, 0 = none */
-    int init_qp;                        /* pic_init_qp */
+    uint32_t bitrate;                   /* bits/s (H.265 level only; the H.264 level has no bitrate check) */
+    int init_qp;                        /* pic_init_qp: 26, FIXQP = the I QP (vendor i264e_pps_init) */
     T32Vui vui;
 } T32H264Seq;
 
@@ -45,6 +45,8 @@ typedef struct {
 #define T32_H264_LOG2_MAX_FRAME_NUM 10u
 
 /* SPS / PPS NAL with a 4-byte start code into @out (>= 64 bytes): length */
+/* vendor i264e auto level_idc for the size and frame rate (#502) */
+uint32_t t32_h264_level(uint32_t width, uint32_t height, uint32_t fps_num, uint32_t fps_den);
 size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out);
 size_t t32_h264_pps(const T32H264Seq *s, uint8_t *out);
 

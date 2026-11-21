@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32/T33 H.264 SPS level_idc and PPS pic_init_qp like vendor i264e (#502)
+
+- **Cause:** the T32/T33 SPS took the T30 Helix level table (floor 3.1, bitrate check) and the PPS coded pic_init_qp = the initial I QP for every rate control mode; 640x360 15 fps CBR gave level_idc 31 and pic_init_qp_minus26 4, the vendor 22 and 0.
+- **Fix (T32 + T33):** `t32_h264_level` is the vendor auto level (2.0.2.1 / 2.2.0 `i264e_validate_parameters` with `i264e_param_default` level -1 and mv_range -1: first `i264e_levels` entry 10, 9, 11 ... 52 that `i264e_validate_levels` accepts: frame size, MB width/height square rule, DPB x 1, MB rate; no bitrate check). `i264e_pps_init`: pic_init_qp 26, CQP (FIXQP) the constant QP clipped to 51. Slice QPs stay coded relative to it.
+- **Evidence:** QEMU -M ingenic-t33 (vendor userland, apitest t33e1): `e1 H264 base stream` SPS `67640016...`, PPS `68ee3ce1...`, all H.264 base / VUI lines equal to the vendor run; hera_list_test: new 2.0.2.1 SPS/PPS vectors, the 2.2.0 FIXQP vectors stay identical. TransCfg chroma offset / crop SPS rows stay #480 cache rows.
+
 ## 2026-11-21: T32 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.2.0 (#734)
 
 - **Cause:** the #726 port was T33 only; on T32 `IMP_Encoder_SetChnROI` still only stored the regions and the T32 H.264 / H.265 lists kept the defaults of 0x200c0, 0x20064..0x200a0 and computed 0x20054..0x20060 from the picture QP.

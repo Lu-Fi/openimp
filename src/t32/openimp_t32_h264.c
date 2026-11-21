@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "t32/openimp_t32_h264.h"
-#include "t30/t30_h264_level.h"
 
 typedef struct {
     uint8_t buf[64];
@@ -104,6 +103,41 @@ static void put_aspect(T32Bits *b, uint32_t w, uint32_t h)
     put(b, 16, h);
 }
 
+/*
+ * Vendor libimp 2.0.2.1 (T33) / 2.2.0 (T32) level choice (#502): i264e_param_default
+ * leaves i_level_idc and i_mv_range at -1, and i264e_validate_parameters takes the first
+ * entry of i264e_levels (the x264 table, 10, 9 (1b), 11 ... 52) that i264e_validate_levels
+ * accepts: frame size, the square rule on the MB width / height, DPB = frame MBs x
+ * max_dec_frame_buffering (1) and the macroblock rate fps_num * MBs / fps_den.  No bitrate
+ * or CPB check (640x360 15 fps CBR 512 kbit/s = level 22).
+ */
+uint32_t t32_h264_level(uint32_t width, uint32_t height, uint32_t fps_num, uint32_t fps_den)
+{
+    static const struct {
+        uint8_t level_idc;
+        uint32_t mbps, frame_size, dpb;
+    } lv[] = {
+        { 10, 1485, 99, 396 }, { 9, 1485, 99, 396 }, { 11, 3000, 396, 900 },
+        { 12, 6000, 396, 2376 }, { 13, 11880, 396, 2376 }, { 20, 11880, 396, 2376 },
+        { 21, 19800, 792, 4752 }, { 22, 20250, 1620, 8100 }, { 30, 40500, 1620, 8100 },
+        { 31, 108000, 3600, 18000 }, { 32, 216000, 5120, 20480 }, { 40, 245760, 8192, 32768 },
+        { 41, 245760, 8192, 32768 }, { 42, 522240, 8704, 34816 }, { 50, 589824, 22080, 110400 },
+        { 51, 983040, 36864, 184320 }, { 52, 2073600, 36864, 184320 },
+    };
+    uint64_t wm = (width + 15u) >> 4, hm = (height + 15u) >> 4, mbs = wm * hm;
+    unsigned i;
+
+    for (i = 0; i < sizeof(lv) / sizeof(lv[0]); i++) {
+        if (mbs > lv[i].frame_size || wm * wm > 8u * lv[i].frame_size ||
+            hm * hm > 8u * lv[i].frame_size || mbs > lv[i].dpb)
+            continue;
+        if (fps_den && (uint64_t)fps_num * mbs / fps_den > lv[i].mbps)
+            continue;
+        return lv[i].level_idc;
+    }
+    return 52;              /* the vendor keeps the last entry when none fits */
+}
+
 size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
 {
     T32Bits b;
@@ -113,7 +147,7 @@ size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
     memset(&b, 0, sizeof(b));
     put(&b, 8, 100);                    /* High */
     put(&b, 8, 0);                      /* constraint flags, reserved */
-    put(&b, 8, t30_h264_level(s->width, s->height, s->fps_num, s->fps_den, s->bitrate, 1));
+    put(&b, 8, t32_h264_level(s->width, s->height, s->fps_num, s->fps_den));
     put_ue(&b, 0);                      /* sps id */
     put_ue(&b, 1);                      /* 4:2:0 */
     put_ue(&b, 0);
