@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-18",
+  "asof": "2026-11-21",
   "socs": [
     "T10",
     "T20",
@@ -16592,7 +16592,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
         "T33": "nohw",
@@ -16642,7 +16642,7 @@
       "ref": {
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
@@ -16734,7 +16734,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
         "T33": "nohw",
@@ -16784,7 +16784,7 @@
       "ref": {
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
@@ -16943,7 +16943,7 @@
         "T20": "rt",
         "T21": "rt",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "rt",
         "T32": "qemu",
         "T33": "nohw",
@@ -16997,7 +16997,7 @@
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
@@ -17009,7 +17009,7 @@
         "T20": "rt",
         "T21": "rt",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "rt",
         "T32": "qemu",
         "T33": "nohw",
@@ -17063,7 +17063,7 @@
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
@@ -17075,7 +17075,7 @@
         "T20": "rt",
         "T21": "rt",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "rt",
         "T32": "qemu",
         "T33": "nohw",
@@ -17129,7 +17129,7 @@
         "T40": "light-box audio phase 2026-11-15 Eufy T40XP, run-t40-1115-1225 (AO read-back vendor = open)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "nohw: T33L .122 has no speaker (user 2026-11-20); apitest audio 2026-11-20 PASS on OpenIMP and vendor 2.0.2.1, /dev/dsp ioctl sequence and arguments equal (LD_PRELOAD trace: 0x4008506f attr, 0x4004505e enable, 0x400c5058 / 0x400c5059 volume / gain, 0x40045064 disable; audit/t33-audio-1120 o1 / v2); the sound itself is not verifiable on this board"
       }
@@ -17318,7 +17318,7 @@
         "T20": "dev",
         "T21": "dev",
         "T23": "dev",
-        "T30": "rt",
+        "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
         "T33": "rt",
@@ -17368,7 +17368,7 @@
       "ref": {
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
-        "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
+        "T30": "timps v1.13.0 backchannel (BC_WS) 2026-11-21 on an ABUS T30 camera, OpenIMP libimp 58fdb82e: 100 frames, 0 drops, 1 kHz FFT bin 20000 (was 3); needs spk_gpio=63; AEC on T30 not tested",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
         "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
       }
@@ -21426,7 +21426,7 @@
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122",
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
         "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
       "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
@@ -21467,7 +21467,7 @@
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122",
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
         "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
       "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
@@ -21488,7 +21488,7 @@
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122",
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
         "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
       "note": "T33 (2026-11-13, batch L1): mode check f009 as vendor. 2026-11-14 (#491): the open T32/T33 module registers /dev/offline_ldc (vendor ioctls 0 LUT memory, 1 free, 2 one job on the ISP LDC at 0x27000, done interrupt isp-m1); OfflineInit(1) opens it (0, as vendor) and a driver-level rotation job turns a 64x32 picture in QEMU on the open and the vendor module alike (apitest t33drv). The library's job protocol (CreateJob/SubmitTask/UpdateLutToJob with real job attributes: struct layouts not in the 2.0.2.1 headers) is still not implemented (f001); NULL / unknown-job answers equal vendor (f004). Vendor 2.0.2.1 crashes in OfflineInit(0) after Init(1) (QEMU). T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
@@ -21509,7 +21509,7 @@
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122",
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
         "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
       "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
@@ -21530,7 +21530,7 @@
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122",
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
         "T32": "apitest t32l2 2026-11-14 QEMU -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP + open module, ioctl log shim (audit night1114/o1/runs o32l, v32l, o32m)"
       },
       "note": "T33 2026-11-14 (#491): the offline job protocol follows vendor 2.0.2.1: CreateJob registers the job (12 slots, handle in attr word 36) and returns f004 like the vendor also on success; SubmitTask builds the 40-byte /dev/offline_ldc job (I2D angle / LDC LUT + block) and waits; DestroyJob frees the slot and gives the LUT block to ioctl 1; UpdateLutToJob needs a LUT job (f004). QEMU t33l2: the four lines and the ioctl blocks equal on the vendor library + module and on OpenIMP + open module (rotation job turns the picture on both). Not as the vendor: a LUT job has no LUT memory (the vendor CreateJob allocates none and UpdateLutToJob would map physical 0): f001; LUT from parameters (ldc_param_to_lut) not ported. T32 2026-11-14 (#491): the vendor 2.2.0 T32 protocol (its get_cpu_id mode 0): OfflineInit opens /dev/offline_ldc and /dev/i2d; CreateJob returns 0 (LDC jobs read the 0x444-byte parameter file); I2D jobs run through /dev/i2d (IOCTL_I2D_START, angle code 0-3 rotate, 4 mirror, 5 flip), LDC jobs through /dev/offline_ldc ioctl 2 with the parameter block; DestroyJob frees the slot; LDC_SetMode only once (f009 afterwards). QEMU t32l2: the four lines and the i2d_param block equal on vendor and open stack, rotation turns the picture on both. LDC (parameter-block) jobs not run in QEMU (no parameter file / T32 engine model check)."
@@ -21641,14 +21641,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33-1117 2026-11-17 .122"
+        "T33": "apitest t33-1117 2026-11-17 T33L module",
+        "T32": "QEMU -M ingenic-t32 2026-11-21 (#751): AddSensor T32 branch like vendor 2.2.0 (openimp a291ca98), open module online LDC + DMA config (open-tx-isp f3e956a54): 541 LDC/DMA writes = decompiled vendor flow, 10/10 frames, 0 oops; binoracle t32-ldcdma 4005 cases 0 diff; image effect not device-proven (no T32 camera), follow-up #759"
       },
       "note": "T33 (2026-11-13, batch L1): codes and read-backs equal to vendor 2.0.2.1 in QEMU. 2026-11-14 (#491): IMP_ISP_AddSensor sends the online state like the vendor: 0xc00454b9 (LUT memory 0x8408 B for LDC 16x16 at 1920x1080), the LUT filled through /dev/mem from the LUT file or, for a strength, the vendor's identity mesh (gen_undistort_lut of 2.0.2.1 ignores the strength), 0xc00454bb, 0xc00454ba (QEMU o33e, open module records the attribute). 2026-11-14 round 4: the open T33 module switches online LDC on at ISP init like the vendor (open-tx-isp 04be28e19: init flag, list 25, IPC LDC memory, LDC/WDMA/RDMA addresses): the 50 online-LDC register writes of a vendor QEMU run equal (ldcdiff.sh), frames flow. QEMU does not model the online LDC pass (no picture proof). Vendor 2.0.2.1 with a strength corrupts kernel memory in QEMU (its LUT header overruns the driver block); OpenIMP passes the header size."
     },
@@ -21661,14 +21662,15 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "qemu",
         "T33": "cache",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
+        "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)",
+        "T32": "QEMU -M ingenic-t32 2026-11-21 (#751): AddSensor T32 branch like vendor 2.2.0 (openimp a291ca98), open module online LDC + DMA config (open-tx-isp f3e956a54): 541 LDC/DMA writes = decompiled vendor flow, 10/10 frames, 0 oops; binoracle t32-ldcdma 4005 cases 0 diff; image effect not device-proven (no T32 camera), follow-up #759"
       },
       "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache."
     },
