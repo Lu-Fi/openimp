@@ -674,7 +674,7 @@ features:
       - 428
     T31:
       sym: ✅
-      text: '2026-11-15 (#563, host oracle, device check pending): the ADR rebuilds its map every frame like the vendor; two equal EV nodes return the lower node value instead of dividing by zero (beyond vendor, user OK 2026-11-15, BEYOND_VENDOR.md of open-tx-isp). No symbol change. Earlier: WDR buffer lazy; AE1 (short frame) stub = vendor no-op without WDR sensor'
+      text: '2026-11-20 (#563 step 2, open-tx-isp next 8cb311376, host oracle, device check pending): `Tiziano_adr_fpga` runs as a binary-oracle block against the vendor tx-isp-t31.ko (0 / 900 mismatches); three deviations fixed (signed >> 10 of the rounded products, no clamp in the per-block knee path, signed subsection_up / subsection_light); the fixed-point helpers are bit-exact over the full input range (#710). Earlier: 2026-11-15 (#563, host oracle, device check pending): the ADR rebuilds its map every frame like the vendor; two equal EV nodes return the lower node value instead of dividing by zero (beyond vendor, user OK 2026-11-15, BEYOND_VENDOR.md of open-tx-isp). No symbol change. Earlier: WDR buffer lazy; AE1 (short frame) stub = vendor no-op without WDR sensor'
       issues:
       - 563
     T32:
