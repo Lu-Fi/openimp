@@ -16,6 +16,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-21: Light box, Wyze Cam v2, jxf23 (open AE variant B: vendor AE graph, t20_simple_ae=0) full run 3000 K (#230)
 
 - New report `docs/lightbox/wyze-t20x-jxf23-kajplats-aeB-1120-2026-11-21-3000.html` (80 pass / 6 fail; open-tx-isp be037b1b + OpenIMP libimp 6b55a690), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+## 2026-11-21: T33 / T32 H.264, H.265 and JPEG pictures over one 250 KiB section no longer lost (#742)
+
+- **Cause:** the engines write a picture in 2 x 250 KiB sections and stop at each full half (BSFULL). The length the engine reports at a stop already counts the first bytes of the next half (T33L: 256033 at the first 256000 byte stop, vendor 2.0.2.1 and OpenIMP alike); OpenIMP took "last length .. this length" as the part, failed its half size check and dropped every picture over 250 KiB (T33L 1080p FIXQP QP 20: 19/30 streams, big IDRs at high bitrate).
+- **Fix (T32 and T33 builds):** each BSFULL stop takes exactly one full half, none while the length is below the next half's end, the rest at the end of the picture, as vendor `i264e_nal_end` and `ijpege_encode` do (T33 2.0.2.1 libimp 818b0f11, T32 libimp afe092fb, same rule). Test only: `OPENIMP_T33_BS_GUARD=<KiB>` puts a guard area behind the shared section buffer and logs any byte the engine wrote past it; `t32_trace_sample` `T32_NO_COPYOUT=1` skips its QEMU-only `/dev/mem` copy-out on a camera.
+- **Evidence:** T33L .122, 1920x1080 FIXQP, vendor A/B (vendor libimp 818b0f11 + vendor tx-isp-t33.ko): vendor QP 4 IDR 1341283 bytes in 5 BSFULL stops (first stop length 256033); OpenIMP before: same stops, IDR lost (1324043 "stream slot full"); OpenIMP now: QP 4 / 12 / 20 / 32 10/10 streams each (IDR 1344745 / 1167443 / 678065 / 166406 bytes, P up to 1288597), ffmpeg decode 0 errors, IDR picture complete (collage local), section guard (64 KiB) untouched; JPEG quality index 0: 1248031 and 595339 byte pictures, 5/5, decode clean. QEMU -M ingenic-t33 H.264 QP 4: 3/3, lists check clean.
 
 ## 2026-11-21: T33 encoder stream buffer size like vendor 2.0.2.1 (#740)
 
