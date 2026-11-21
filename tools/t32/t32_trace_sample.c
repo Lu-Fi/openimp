@@ -605,6 +605,18 @@ static int step(const char *name, int rc)
 
 #define MUST(call) do { if (STEP(call)) goto fail; } while (0)
 
+/* row 44: IMP_Encoder_Query (vendor 2.x IMPEncoderCHNStat, 6 words) */
+static void query_print(int i, const char *at)
+{
+    IMPEncoderCHNStat q;
+    int rc;
+
+    memset(&q, 0xee, sizeof(q));
+    rc = IMP_Encoder_Query(0, &q);
+    printf("T32Q %d %s rc %d reg %d leftPics %u bytes %u frames %u packs %u work_done %u\n", i, at, rc,
+           (int)q.registered, q.leftPics, q.leftStreamBytes, q.leftStreamFrames, q.curPacks, q.work_done);
+}
+
 int main(int argc, char **argv)
 {
     const char *codec = argc > 1 ? argv[1] : "h264";
@@ -830,6 +842,11 @@ again:
         }
         if (getenv("T32_ENC_IVDC"))     /* #301: ISP -> encoder direct (IVDC) */
             ea.bEnableIvdc = atoi(getenv("T32_ENC_IVDC")) != 0;
+        if (getenv("T32_ENC_RDBS")) {   /* row 37: IMP_Encoder_SetRdBufShare before CreateChn */
+            extern int IMP_Encoder_SetRdBufShare(int encChn, int enable);  /* exported, not in the T32 header */
+            int rv = atoi(getenv("T32_ENC_RDBS"));
+            printf("T32S rdbufshare %d ret %d\n", rv, IMP_Encoder_SetRdBufShare(0, rv));
+        }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
         if (osd) {
@@ -903,6 +920,8 @@ again:
             ms = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
             if (ms > wait_max)
                 wait_max = ms;
+            if (getenv("T32_ENC_QUERY"))    /* row 44: channel state after the poll */
+                query_print(i, "poll");
             if (prc || IMP_Encoder_GetStream(0, &st, 1)) {
                 printf("T32S stream %d missed (poll rc=%d after %ld ms)\n", i, prc, ms);
                 continue;
@@ -917,7 +936,11 @@ again:
             if (getenv("T32_STREAM_DUMP"))
                 stream_dump(got, &st);
             got++;
+            if (getenv("T32_ENC_QUERY"))
+                query_print(i, "get");
             IMP_Encoder_ReleaseStream(0, &st);
+            if (getenv("T32_ENC_QUERY"))
+                query_print(i, "rel");
         }
         printf("T32S streams %d/%d (longest wait %ld ms, poll timeout %d ms)\n", got, streams, wait_max, poll_ms);
         if (isposd)

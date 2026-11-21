@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: t32_trace_sample probes for the T33 matrix rows 37 and 44 (#736, #738)
+
+- `T32_ENC_RDBS=0|1` calls `IMP_Encoder_SetRdBufShare(0, v)` before CreateChn (row 37 QEMU list check: the vendor 2.0.2.1 clears BUF_SHARE bit 31 in ODMA_CTRL / JRFD_CTRL and uses separate reference surfaces, OpenIMP ignores the flag, #736; the default lists are equal).
+- `T32_ENC_QUERY=1` prints `IMP_Encoder_Query` after the poll, after GetStream and after ReleaseStream (row 44: frames / bytes / registered like the vendor; work_done and the IDR curPacks differ, #738).
+- Test tool only, no library change.
+
 ## 2026-11-21: T32 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.2.0 (#734)
 
 - **Cause:** the #726 port was T33 only; on T32 `IMP_Encoder_SetChnROI` still only stored the regions and the T32 H.264 / H.265 lists kept the defaults of 0x200c0, 0x20064..0x200a0 and computed 0x20054..0x20060 from the picture QP.
